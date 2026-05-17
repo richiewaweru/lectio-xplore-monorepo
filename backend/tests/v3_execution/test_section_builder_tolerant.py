@@ -191,7 +191,6 @@ def test_series_visual_takes_precedence_over_singleton_diagram() -> None:
     bp = _load_example("james_mitosis_booklet.json")
     section_id = "diagram_sequence"
     builder = V3SectionBuilder()
-    section = next(s for s in bp.sections if s.section_id == section_id)
 
     sections, _warnings, _diagnostics = builder.build_sections(
         bp,
