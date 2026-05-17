@@ -53,7 +53,7 @@ export async function generateBlueprint(payload: {
 	signals: V3SignalSummary;
 	form: V3InputForm;
 	clarification_answers: V3ClarificationAnswer[];
-	architect_mode: ArchitectMode;
+	architect_mode?: ArchitectMode;
 }): Promise<BlueprintPreviewDTO> {
 	const res = await apiFetch('/api/v1/v3/blueprint', {
 		method: 'POST',

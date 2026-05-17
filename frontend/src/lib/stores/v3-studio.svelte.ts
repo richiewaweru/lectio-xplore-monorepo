@@ -46,7 +46,7 @@ export type V3StudioStore = {
 
 export const v3Studio = $state<V3StudioStore>({
 	stage: 'input',
-	architectMode: 'chunked',
+	architectMode: 'standard',
 	form: null,
 	signals: null,
 	clarifications: [],
@@ -106,7 +106,7 @@ export function restoreParentFromSupplementReview(): void {
 export function resetV3Studio(): void {
 	v3Studio.streamCancel?.();
 	v3Studio.stage = 'input';
-	v3Studio.architectMode = 'chunked';
+	v3Studio.architectMode = 'standard';
 	v3Studio.form = null;
 	v3Studio.signals = null;
 	v3Studio.clarifications = [];

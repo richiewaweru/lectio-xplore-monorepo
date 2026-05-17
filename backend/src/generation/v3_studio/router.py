@@ -260,6 +260,7 @@ async def post_blueprint(
             form=body.form,
             clarification_answers=body.clarification_answers,
             architect_mode=body.architect_mode,
+            generation_id=None,
             trace_id=str(uuid.uuid4()),
         )
         blueprint_id = str(uuid.uuid4())
@@ -277,6 +278,20 @@ async def post_blueprint(
             template_id=template_id,
             form=body.form,
         )
+    except Stage1PlanFailure as exc:
+        logger.warning(
+            "Stage 1 plan failed user=%s errors=%s",
+            current_user.id,
+            exc.errors,
+        )
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "stage1_plan_failure",
+                "message": "Could not generate a valid structural lesson plan.",
+                "errors": exc.errors,
+            },
+        ) from exc
     except Exception as exc:  # noqa: BLE001
         logger.exception(
             "Blueprint generation failed user=%s error=%s",
