@@ -452,7 +452,7 @@ async def _ensure_chunked_generation_row(
 
 
 async def _chunked_emit_event(generation_id: str, event: str, payload: dict[str, Any]) -> None:
-    queue = await v3_studio_store.get_queue(generation_id)
+    queue = await v3_studio_store.get_chunked_queue(generation_id)
     if queue is None:
         return
     await queue.put(_render_chunked_sse(event, payload))
@@ -626,7 +626,28 @@ async def _ensure_chunked_stream(
     existing_owner = await v3_studio_store.get_generation_owner(generation_id)
     if existing_owner is not None and existing_owner != user_id:
         raise HTTPException(status_code=404, detail="Generation not found")
-    queue = await v3_studio_store.get_queue(generation_id)
+    queue = await v3_studio_store.get_chunked_queue(generation_id)
+    if queue is None:
+        queue = asyncio.Queue()
+    await v3_studio_store.register_chunked_stream(
+        user_id=user_id,
+        generation_id=generation_id,
+        blueprint_id=blueprint_id,
+        queue=queue,
+    )
+    return queue
+
+
+async def _ensure_generation_stream(
+    *,
+    generation_id: str,
+    user_id: str,
+    blueprint_id: str,
+) -> asyncio.Queue[str | None]:
+    existing_owner = await v3_studio_store.get_generation_owner(generation_id)
+    if existing_owner is not None and existing_owner != user_id:
+        raise HTTPException(status_code=404, detail="Generation not found")
+    queue = await v3_studio_store.get_generation_queue(generation_id)
     if queue is None:
         queue = asyncio.Queue()
     await v3_studio_store.register_generation_stream(
@@ -694,6 +715,14 @@ async def _attempt_chunked_assembly(
                 "execution_started": False,
             },
         )
+        await _chunked_emit_event(
+            generation_id,
+            "assembly_blocked",
+            {
+                "generation_id": generation_id,
+                "failed_sections": list(exc.failed_sections),
+            },
+        )
         return
 
     print(
@@ -714,7 +743,7 @@ async def _attempt_chunked_assembly(
         form=form,
         planning_source={"kind": "teacher_approved_blueprint"},
     )
-    queue = await _ensure_chunked_stream(
+    queue = await _ensure_generation_stream(
         generation_id=generation_id,
         user_id=user_id,
         blueprint_id=blueprint_id,
@@ -933,6 +962,42 @@ async def get_chunked_plan_status(
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=404, detail="Chunked state not found") from exc
     return _normalize_chunked_state(generation_id, state)
+
+
+@v3_studio_router.get("/chunked/{generation_id}/events")
+async def get_chunked_generation_events(
+    generation_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    owns_stream = await v3_studio_store.owns_generation(current_user.id, generation_id)
+    if not owns_stream:
+        raise HTTPException(status_code=404, detail="Chunked stream not found")
+    queue = await v3_studio_store.get_chunked_queue(generation_id)
+    if queue is None:
+        raise HTTPException(status_code=404, detail="Chunked stream not found")
+
+    async def event_generator():
+        finished = False
+        try:
+            while True:
+                chunk = await queue.get()
+                if chunk is None:
+                    finished = True
+                    break
+                yield chunk
+        finally:
+            if finished:
+                await v3_studio_store.cleanup_chunked_stream(generation_id)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @v3_studio_router.post("/chunked/{generation_id}/approve", response_model=V3ChunkedPlanStateDTO)
@@ -1274,7 +1339,7 @@ async def post_v3_generate_start(
     current_user: User = Depends(get_current_user),
     trace_repo: V3TraceRepository = Depends(get_v3_trace_repository),
 ) -> V3GenerateStartResponse:
-    existing = await v3_studio_store.get_queue(body.generation_id)
+    existing = await v3_studio_store.get_generation_queue(body.generation_id)
     if existing is not None:
         raise HTTPException(status_code=409, detail="generation_id already started")
 
@@ -1360,12 +1425,10 @@ async def post_v3_generate_start(
             detail="Could not start generation.",
         ) from exc
 
-    queue: asyncio.Queue[str | None] = asyncio.Queue()
-    await v3_studio_store.register_generation_stream(
-        user_id=current_user.id,
+    queue = await _ensure_generation_stream(
         generation_id=body.generation_id,
+        user_id=current_user.id,
         blueprint_id=body.blueprint_id,
-        queue=queue,
     )
     asyncio.create_task(
         _pump_sse_to_queue(
@@ -1598,7 +1661,7 @@ async def get_v3_generation_events(
         model = await generation_writer.get_generation_model(generation_id, current_user.id)
         if model is None:
             raise HTTPException(status_code=404, detail="Generation stream not found")
-    queue = await v3_studio_store.get_queue(generation_id)
+    queue = await v3_studio_store.get_generation_queue(generation_id)
     if queue is None:
         raise HTTPException(status_code=404, detail="Generation stream not found")
     stored = await v3_studio_store.get_blueprint_for_generation(generation_id)
@@ -1622,7 +1685,7 @@ async def get_v3_generation_events(
                 yield chunk
         finally:
             if finished:
-                await v3_studio_store.cleanup_generation(generation_id)
+                await v3_studio_store.cleanup_generation_stream(generation_id)
 
     return StreamingResponse(
         event_generator(),

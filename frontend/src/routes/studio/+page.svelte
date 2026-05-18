@@ -17,6 +17,7 @@
 	import {
 		approveChunkedPlan,
 		adjustBlueprint,
+		connectV3ChunkedStream,
 		connectV3StudioGenerationStream,
 		getChunkedPlanStatus,
 		createV3SupplementBlueprint,
@@ -72,6 +73,38 @@
 	let exportDate = $state('');
 	let includeAnswers = $state(true);
 	const currentExportPolicy = $derived(getBookletExportPolicy(v3Studio.bookletStatus));
+	let stage2Progress = $state<{
+		completed: string[];
+		failed: string[];
+		active: string | null;
+	}>({ completed: [], failed: [], active: null });
+	let disconnectChunkedStream: (() => void) | null = null;
+
+	function disconnectActiveChunkedStream(): void {
+		disconnectChunkedStream?.();
+		disconnectChunkedStream = null;
+	}
+
+	function syncStage2Progress(state: V3ChunkedPlanState | null): void {
+		const sections = state?.structural_plan?.sections ?? [];
+		const sectionBriefs = state?.section_briefs ?? {};
+		const failedSections = new Set(state?.failed_sections ?? []);
+		stage2Progress = {
+			completed: sections
+				.map((section) => section.id)
+				.filter((sectionId) => {
+					const brief = sectionBriefs[sectionId];
+					return typeof brief === 'object' && brief !== null && !failedSections.has(sectionId);
+				}),
+			failed: Array.from(failedSections),
+			active: null
+		};
+	}
+
+	function handleStartOver(): void {
+		disconnectActiveChunkedStream();
+		resetV3Studio();
+	}
 
 	function setGenerationQuery(generationId: string | null): void {
 		if (!browser) return;
@@ -128,22 +161,26 @@
 		v3Studio.chunkedState = resolved;
 		v3Studio.generationId = resolved.generation_id;
 		hydrateChunkedSectionState(resolved);
+		syncStage2Progress(resolved);
 
 		if (resolved.stage === 'plan_ready') {
+			disconnectActiveChunkedStream();
 			v3Studio.stage = 'chunked_review';
 			return;
 		}
 		if (resolved.stage === 'assembly_blocked') {
+			disconnectActiveChunkedStream();
 			v3Studio.stage = 'chunked_blocked';
 			return;
 		}
 		if (resolved.stage === 'stage2_running') {
 			// Keep the chunked UI in planning while Stage 2 progresses, even if execution_started is true.
 			v3Studio.stage = 'planning';
-			connectGenerationStream(resolved.generation_id);
+			connectChunkedStage2Stream(resolved.generation_id);
 			return;
 		}
 		if (resolved.stage === 'blueprint_ready') {
+			disconnectActiveChunkedStream();
 			v3Studio.stage = 'generating';
 			connectGenerationStream(resolved.generation_id);
 			try {
@@ -158,6 +195,7 @@
 			return;
 		}
 		if (resolved.stage === 'complete') {
+			disconnectActiveChunkedStream();
 			v3Studio.stage = 'complete';
 			try {
 				const preview = await getV3GenerationBlueprint(resolved.generation_id);
@@ -371,7 +409,108 @@
 		}
 	}
 
+	function connectChunkedStage2Stream(generationId: string): void {
+		disconnectActiveChunkedStream();
+		disconnectChunkedStream = connectV3ChunkedStream(generationId, {
+			onSectionStart(sectionId) {
+				stage2Progress = {
+					...stage2Progress,
+					active: sectionId
+				};
+				v3Studio.chunkedSectionStatus = {
+					...v3Studio.chunkedSectionStatus,
+					[sectionId]: 'running'
+				};
+			},
+			onSectionDone(sectionId) {
+				stage2Progress = {
+					completed: Array.from(new Set([...stage2Progress.completed, sectionId])),
+					failed: stage2Progress.failed.filter((id) => id !== sectionId),
+					active: null
+				};
+				v3Studio.chunkedSectionStatus = {
+					...v3Studio.chunkedSectionStatus,
+					[sectionId]: 'done'
+				};
+				v3Studio.chunkedSectionErrors = {
+					...v3Studio.chunkedSectionErrors,
+					[sectionId]: []
+				};
+			},
+			onSectionRetry(sectionId) {
+				stage2Progress = {
+					...stage2Progress,
+					active: sectionId
+				};
+				v3Studio.chunkedSectionStatus = {
+					...v3Studio.chunkedSectionStatus,
+					[sectionId]: 'retrying'
+				};
+			},
+			onSectionFailed(sectionId, errors) {
+				console.warn('[chunked] section failed', sectionId, errors);
+				stage2Progress = {
+					completed: stage2Progress.completed.filter((id) => id !== sectionId),
+					failed: Array.from(new Set([...stage2Progress.failed, sectionId])),
+					active: null
+				};
+				v3Studio.chunkedSectionStatus = {
+					...v3Studio.chunkedSectionStatus,
+					[sectionId]: 'failed'
+				};
+				v3Studio.chunkedSectionErrors = {
+					...v3Studio.chunkedSectionErrors,
+					[sectionId]: errors
+				};
+			},
+			onStage2Complete(failedSections) {
+				if (v3Studio.chunkedState) {
+					v3Studio.chunkedState = {
+						...v3Studio.chunkedState,
+						stage: failedSections.length > 0 ? 'assembly_blocked' : 'stage2_complete',
+						failed_sections: failedSections
+					};
+				}
+				stage2Progress = {
+					completed: stage2Progress.completed,
+					failed: failedSections,
+					active: null
+				};
+				if (failedSections.length > 0) {
+					v3Studio.stage = 'chunked_blocked';
+					disconnectActiveChunkedStream();
+					return;
+				}
+				setTimeout(() => {
+					disconnectActiveChunkedStream();
+					connectGenerationStream(generationId);
+				}, 1500);
+			},
+			onAssemblyBlocked(failedSections) {
+				console.warn('[chunked] assembly blocked', failedSections);
+				if (v3Studio.chunkedState) {
+					v3Studio.chunkedState = {
+						...v3Studio.chunkedState,
+						stage: 'assembly_blocked',
+						failed_sections: failedSections
+					};
+				}
+				stage2Progress = {
+					completed: stage2Progress.completed,
+					failed: failedSections,
+					active: null
+				};
+				v3Studio.stage = 'chunked_blocked';
+				disconnectActiveChunkedStream();
+			},
+			onError(msg) {
+				console.error('[chunked stream error]', msg);
+			}
+		});
+	}
+
 	function connectGenerationStream(generationId: string) {
+		disconnectActiveChunkedStream();
 		v3Studio.streamCancel?.();
 		v3Studio.streamCancel = connectV3StudioGenerationStream(generationId, {
 			onCoherenceReviewStarted: () => {
@@ -609,6 +748,7 @@
 	}
 
 	async function handleBlueprintApproved() {
+		disconnectActiveChunkedStream();
 		v3Studio.error = null;
 		const blueprint = v3Studio.blueprint;
 		if (!blueprint) return;
@@ -655,14 +795,17 @@
 		v3Studio.generationId = generationId;
 		v3Studio.error = null;
 		v3Studio.stage = 'planning';
+		stage2Progress = { completed: [], failed: [], active: null };
 		try {
 			const next = await approveChunkedPlan(generationId);
 			v3Studio.chunkedState = next;
+			hydrateChunkedSectionState(next);
+			syncStage2Progress(next);
 			if (next.stage === 'assembly_blocked') {
 				v3Studio.stage = 'chunked_blocked';
 				return;
 			}
-			connectGenerationStream(generationId);
+			connectChunkedStage2Stream(generationId);
 		} catch (err) {
 			v3Studio.error = friendly(err);
 			v3Studio.stage = 'chunked_review';
@@ -672,6 +815,7 @@
 	async function handleChunkedRegenerate(note: string) {
 		const chunked = v3Studio.chunkedState;
 		if (!chunked) return;
+		disconnectActiveChunkedStream();
 		v3Studio.error = null;
 		v3Studio.stage = 'planning';
 		try {
@@ -680,8 +824,8 @@
 				note
 			});
 			v3Studio.chunkedState = next;
-			v3Studio.chunkedSectionStatus = {};
-			v3Studio.chunkedSectionErrors = {};
+			hydrateChunkedSectionState(next);
+			syncStage2Progress(next);
 			v3Studio.stage = 'chunked_review';
 		} catch (err) {
 			v3Studio.error = friendly(err);
@@ -692,6 +836,7 @@
 	async function handleChunkedRetrySection(sectionId: string) {
 		const chunked = v3Studio.chunkedState;
 		if (!chunked) return;
+		disconnectActiveChunkedStream();
 		v3Studio.error = null;
 		v3Studio.stage = 'planning';
 		try {
@@ -700,15 +845,19 @@
 				section_id: sectionId
 			});
 			v3Studio.chunkedState = next;
+			hydrateChunkedSectionState(next);
 			if (next.stage === 'assembly_blocked') {
+				disconnectActiveChunkedStream();
 				v3Studio.stage = 'chunked_blocked';
 			} else if (next.stage === 'blueprint_ready') {
 				v3Studio.stage = 'generating';
 				connectGenerationStream(next.generation_id);
 			} else if (next.stage === 'stage2_running') {
+				syncStage2Progress(next);
 				v3Studio.stage = 'planning';
-				connectGenerationStream(next.generation_id);
+				connectChunkedStage2Stream(next.generation_id);
 			} else {
+				disconnectActiveChunkedStream();
 				v3Studio.stage = 'chunked_review';
 			}
 		} catch (err) {
@@ -735,6 +884,7 @@
 	}
 
 	onDestroy(() => {
+		disconnectActiveChunkedStream();
 		v3Studio.streamCancel?.();
 	});
 
@@ -802,7 +952,7 @@
 				<button
 					type="button"
 					class="text-xs text-muted-foreground underline-offset-4 hover:underline"
-					onclick={() => resetV3Studio()}
+					onclick={handleStartOver}
 				>
 					Start over
 				</button>
@@ -817,6 +967,7 @@
 	{:else if v3Studio.stage === 'clarifying' && v3Studio.clarifications.length}
 		<V3Clarification questions={v3Studio.clarifications} onAnswered={handleClarificationAnswered} />
 	{:else if v3Studio.stage === 'planning'}
+		<div class="space-y-4">
 		<V3PlanningState
 			form={v3Studio.form}
 			planningLabel={pendingSupplementLabel
@@ -840,6 +991,21 @@
 						]
 					: undefined}
 		/>
+			{#if v3Studio.chunkedState?.structural_plan?.sections?.length}
+				<div class="mx-auto flex max-w-3xl flex-wrap justify-center gap-2 px-4 stage2-progress">
+					{#each v3Studio.chunkedState.structural_plan.sections as section (section.id)}
+						<div
+							class="section-pill rounded-full border px-3 py-1 text-xs font-medium transition-colors"
+							class:done={stage2Progress.completed.includes(section.id)}
+							class:active={stage2Progress.active === section.id}
+							class:failed={stage2Progress.failed.includes(section.id)}
+						>
+							{section.id}
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</div>
 	{:else if (v3Studio.stage === 'chunked_review' || v3Studio.stage === 'chunked_blocked') && v3Studio.chunkedState?.structural_plan}
 		<V3PlanPreview plan={v3Studio.chunkedState.structural_plan} />
 		<V3PlanActions

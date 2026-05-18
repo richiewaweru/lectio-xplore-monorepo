@@ -208,7 +208,7 @@ async def test_v3_generate_start_returns_json_and_sse_stream_closes() -> None:
                 payload = await resp.aread()
                 assert b"component_ready" in payload
 
-    assert await v3_studio_store.get_queue(generation_id) is None
+    assert await v3_studio_store.get_generation_queue(generation_id) is None
 
 
 @pytest.mark.asyncio
@@ -429,7 +429,7 @@ async def test_v3_generate_start_fails_when_trace_initialization_fails() -> None
             assert post.status_code == 500
             assert "could not start generation" in post.json()["detail"].lower()
 
-    assert await v3_studio_store.get_queue(generation_id) is None
+    assert await v3_studio_store.get_generation_queue(generation_id) is None
 
 
 @pytest.mark.asyncio

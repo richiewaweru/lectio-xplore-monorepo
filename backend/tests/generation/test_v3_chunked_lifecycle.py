@@ -201,11 +201,76 @@ async def test_chunked_plan_start_returns_plan_ready_state() -> None:
     assert payload["stage"] == "plan_ready"
     assert payload["generation_id"]
     assert payload["structural_plan"]["anchor"]["example"] == "splitting a pizza into 8 equal slices"
-    queue = await v3_studio_store.get_queue(payload["generation_id"])
+    queue = await v3_studio_store.get_chunked_queue(payload["generation_id"])
     assert queue is not None
     chunk = await asyncio.wait_for(queue.get(), timeout=3)
     assert isinstance(chunk, str)
     assert _parse_sse_event_name(chunk) == "plan_ready"
+
+
+@pytest.mark.asyncio
+async def test_chunked_events_route_streams_planning_events_and_keeps_generation_queue() -> None:
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+    generation_id = str(uuid.uuid4())
+
+    from generation.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream, _ensure_generation_stream
+
+    await _ensure_chunked_generation_row(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        subject="Math",
+        context="Equivalent fractions",
+    )
+    chunked_queue = await _ensure_chunked_stream(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        blueprint_id=f"chunked-plan-{generation_id}",
+    )
+    await _ensure_generation_stream(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        blueprint_id=f"bp-{generation_id}",
+    )
+    await chunked_queue.put('event: stage2_section_start\ndata: {"section_id":"orient"}\n\n')
+    await chunked_queue.put('event: generation_warning\ndata: {"message":"warning"}\n\n')
+    await chunked_queue.put(None)
+
+    async with _client() as client:
+        async with client.stream("GET", f"/api/v1/v3/chunked/{generation_id}/events") as resp:
+            assert resp.status_code == 200
+            payload = await resp.aread()
+
+    assert b"stage2_section_start" in payload
+    assert b"generation_warning" in payload
+    assert await v3_studio_store.get_chunked_queue(generation_id) is None
+    assert await v3_studio_store.get_generation_queue(generation_id) is not None
+
+
+@pytest.mark.asyncio
+async def test_generation_events_404_before_execution_queue_registration_for_chunked_flow() -> None:
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+    generation_id = str(uuid.uuid4())
+
+    from generation.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream
+
+    await _ensure_chunked_generation_row(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        subject="Math",
+        context="Equivalent fractions",
+    )
+    await _ensure_chunked_stream(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        blueprint_id=f"chunked-plan-{generation_id}",
+    )
+
+    async with _client() as client:
+        resp = await client.get(f"/api/v1/v3/generations/{generation_id}/events")
+
+    assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -573,7 +638,7 @@ async def test_chunked_approve_emits_stage2_progress_events() -> None:
             approve = await client.post(f"/api/v1/v3/chunked/{generation_id}/approve")
             assert approve.status_code == 200
 
-    queue = await v3_studio_store.get_queue(generation_id)
+    queue = await v3_studio_store.get_chunked_queue(generation_id)
     assert queue is not None
     event_names: list[str] = []
     for _ in range(4):

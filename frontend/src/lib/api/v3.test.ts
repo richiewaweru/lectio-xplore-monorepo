@@ -41,6 +41,7 @@ vi.mock('$lib/stores/auth', () => ({
 
 import {
 	approveChunkedPlan,
+	connectV3ChunkedStream,
 	connectV3StudioGenerationStream,
 	fetchV3Document,
 	generateBlueprint,
@@ -298,6 +299,55 @@ describe('connectV3StudioGenerationStream', () => {
 		expect(onPlanReady).toHaveBeenCalledTimes(1);
 		expect(onStage2SectionFailed).toHaveBeenCalledTimes(1);
 		expect(onGenerationStarting).toHaveBeenCalledTimes(1);
+	});
+
+	it('connects chunked planning SSE and dispatches planning events', () => {
+		const onSectionStart = vi.fn();
+		const onSectionRetry = vi.fn();
+		const onSectionDone = vi.fn();
+		const onSectionFailed = vi.fn();
+		const onStage2Complete = vi.fn();
+		const onAssemblyBlocked = vi.fn();
+		const onError = vi.fn();
+
+		connectV3ChunkedStream('gen-1', {
+			onSectionStart,
+			onSectionRetry,
+			onSectionDone,
+			onSectionFailed,
+			onStage2Complete,
+			onAssemblyBlocked,
+			onError
+		});
+
+		expect(fetchEventSourceMock).toHaveBeenCalledWith(
+			'/api/v1/v3/chunked/gen-1/events',
+			expect.any(Object)
+		);
+
+		const onmessage = capturedOptions.current?.onmessage as
+			| ((msg: { event?: string; data?: string }) => void)
+			| undefined;
+		expect(onmessage).toBeTypeOf('function');
+
+		onmessage?.({ event: 'stage2_section_start', data: '{"section_id":"orient"}' });
+		onmessage?.({ event: 'stage2_section_retry', data: '{"section_id":"orient","attempt":3}' });
+		onmessage?.({ event: 'stage2_section_done', data: '{"section_id":"orient"}' });
+		onmessage?.({
+			event: 'stage2_section_failed',
+			data: '{"section_id":"model","errors":["bad"]}'
+		});
+		onmessage?.({ event: 'stage2_complete', data: '{"failed_sections":["model"]}' });
+		onmessage?.({ event: 'assembly_blocked', data: '{"failed_sections":["model"]}' });
+		onmessage?.({ event: 'generation_warning', data: '{"message":"warning"}' });
+
+		expect(onSectionStart).toHaveBeenCalledWith('orient');
+		expect(onSectionRetry).toHaveBeenCalledWith('orient', 3);
+		expect(onSectionDone).toHaveBeenCalledWith('orient');
+		expect(onSectionFailed).toHaveBeenCalledWith('model', ['bad']);
+		expect(onStage2Complete).toHaveBeenCalledWith(['model']);
+		expect(onAssemblyBlocked).toHaveBeenCalledWith(['model']);
+		expect(onError).toHaveBeenCalledWith('warning');
 	});
 
 	it('calls chunked lifecycle endpoints', async () => {

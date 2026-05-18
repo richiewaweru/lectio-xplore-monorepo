@@ -201,6 +201,16 @@ export type V3StudioStreamHandlers = {
 	onError?: (err: unknown) => void;
 };
 
+export interface V3ChunkedStreamHandlers {
+	onSectionStart?: (sectionId: string) => void;
+	onSectionDone?: (sectionId: string) => void;
+	onSectionRetry?: (sectionId: string, attempt: number) => void;
+	onSectionFailed?: (sectionId: string, errors: string[]) => void;
+	onStage2Complete?: (failedSections: string[]) => void;
+	onAssemblyBlocked?: (failedSections: string[]) => void;
+	onError?: (msg: string) => void;
+}
+
 export type V3DocumentResponse = Record<string, unknown>;
 
 export async function fetchV3Document(generationId: string): Promise<V3DocumentResponse> {
@@ -364,6 +374,82 @@ export function connectV3StudioGenerationStream(
 		onerror(err) {
 			handlers.onError?.(err);
 			throw err;
+		}
+	});
+
+	return () => ctrl.abort();
+}
+
+export function connectV3ChunkedStream(
+	generationId: string,
+	handlers: V3ChunkedStreamHandlers
+): () => void {
+	const ctrl = new AbortController();
+	const url = buildApiUrl(`/api/v1/v3/chunked/${encodeURIComponent(generationId)}/events`);
+	const headers: Record<string, string> = {};
+	const token = get(authToken);
+	if (token) headers.Authorization = `Bearer ${token}`;
+
+	fetchEventSource(url, {
+		signal: ctrl.signal,
+		headers,
+		async onopen(response) {
+			if (!response.ok) {
+				throw new Error(`chunked SSE failed: ${response.status}`);
+			}
+		},
+		onmessage(msg) {
+			const type = msg.event ?? '';
+			let payload: Record<string, unknown> = {};
+			try {
+				payload = JSON.parse(msg.data ?? '{}') as Record<string, unknown>;
+			} catch {
+				payload = {};
+			}
+			switch (type) {
+				case 'stage2_section_start':
+					handlers.onSectionStart?.(String(payload.section_id ?? ''));
+					break;
+				case 'stage2_section_done':
+					handlers.onSectionDone?.(String(payload.section_id ?? ''));
+					break;
+				case 'stage2_section_retry':
+					handlers.onSectionRetry?.(
+						String(payload.section_id ?? ''),
+						Number(payload.attempt ?? 2)
+					);
+					break;
+				case 'stage2_section_failed':
+					handlers.onSectionFailed?.(
+						String(payload.section_id ?? ''),
+						Array.isArray(payload.errors)
+							? payload.errors.filter((item): item is string => typeof item === 'string')
+							: []
+					);
+					break;
+				case 'stage2_complete':
+					handlers.onStage2Complete?.(
+						Array.isArray(payload.failed_sections)
+							? payload.failed_sections.filter((item): item is string => typeof item === 'string')
+							: []
+					);
+					break;
+				case 'assembly_blocked':
+					handlers.onAssemblyBlocked?.(
+						Array.isArray(payload.failed_sections)
+							? payload.failed_sections.filter((item): item is string => typeof item === 'string')
+							: []
+					);
+					break;
+				case 'generation_warning':
+					handlers.onError?.(String(payload.message ?? 'Unknown error'));
+					break;
+				default:
+					break;
+			}
+		},
+		onerror(err) {
+			handlers.onError?.(String(err));
 		}
 	});
 
