@@ -29,14 +29,25 @@ async def run_stage1_with_retry(
 
     errors: list[str] = []
     for attempt in range(1, 3):  # max 2 attempts
-        plan = await _call_stage1(
-            signals,
-            form,
-            resource_spec,
-            generation_id=generation_id,
-            trace_id=trace_id,
-            previous_errors=errors if attempt == 2 else None,
-        )
+        try:
+            plan = await _call_stage1(
+                signals,
+                form,
+                resource_spec,
+                generation_id=generation_id,
+                trace_id=trace_id,
+                previous_errors=errors if attempt == 2 else None,
+            )
+        except Exception as exc:
+            import traceback
+            print(
+                f"\n[STAGE1 ATTEMPT {attempt} EXCEPTION]"
+                f" generation_id={generation_id}"
+                f" type={type(exc).__name__}"
+                f"\n{traceback.format_exc()}",
+                flush=True,
+            )
+            raise
         errors = validate_structural_plan(plan)
 
         if not errors:
@@ -255,4 +266,3 @@ __all__ = [
     "run_stage1_with_retry",
     "run_stage2",
 ]
-

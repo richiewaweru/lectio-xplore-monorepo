@@ -333,47 +333,60 @@ async def _call_stage1(
     generation_id: str | None = None,
     previous_errors: list[str] | None = None,
 ) -> StructuralPlan:
-    node = STAGE1_NODE
-    tid = trace_id or generation_id or str(uuid.uuid4())
-    model = get_v3_model(node)
-    spec = get_v3_spec(node)
-    slot = get_v3_slot(node)
-    agent = Agent(
-        model=model,
-        output_type=StructuralPlan,
-        system_prompt=build_stage1_system_prompt(),
-    )
-    result = await run_llm(
-        trace_id=tid,
-        caller=_CALLER,
-        generation_id=generation_id,
-        agent=agent,
-        user_prompt=build_stage1_user_message(
-            signals=signals,
-            form=form,
-            resource_spec=resource_spec,
-            previous_errors=previous_errors,
-        ),
-        model=model,
-        slot=slot,
-        spec=spec,
-        section_id=None,
-        node=node,
-        model_settings={
-            "anthropic_thinking": STAGE1_THINKING,
-            "max_tokens": STAGE1_MAX_TOKENS,
-        },
-        retry_policy=RetryPolicy(
-            max_attempts=1,
-            call_timeout_seconds=float(settings.v3_timeout_stage1_seconds),
-        ),
-    )
-    raw = result.output
-    if isinstance(raw, StructuralPlan):
-        return raw
-    if hasattr(raw, "model_dump"):
-        return StructuralPlan.model_validate(raw.model_dump())
-    return StructuralPlan.model_validate(raw)
+    import traceback
+    try:
+        node = STAGE1_NODE
+        tid = trace_id or generation_id or str(uuid.uuid4())
+        model = get_v3_model(node)
+        spec = get_v3_spec(node)
+        slot = get_v3_slot(node)
+        agent = Agent(
+            model=model,
+            output_type=StructuralPlan,
+            system_prompt=build_stage1_system_prompt(),
+        )
+        result = await run_llm(
+            trace_id=tid,
+            caller=_CALLER,
+            generation_id=generation_id,
+            agent=agent,
+            user_prompt=build_stage1_user_message(
+                signals=signals,
+                form=form,
+                resource_spec=resource_spec,
+                previous_errors=previous_errors,
+            ),
+            model=model,
+            slot=slot,
+            spec=spec,
+            section_id=None,
+            node=node,
+            model_settings={
+                "anthropic_thinking": STAGE1_THINKING,
+                "max_tokens": STAGE1_MAX_TOKENS,
+            },
+            retry_policy=RetryPolicy(
+                max_attempts=1,
+                call_timeout_seconds=float(settings.v3_timeout_stage1_seconds),
+            ),
+        )
+        raw = result.output
+        if isinstance(raw, StructuralPlan):
+            return raw
+        if hasattr(raw, "model_dump"):
+            return StructuralPlan.model_validate(raw.model_dump())
+        return StructuralPlan.model_validate(raw)
+    except Exception as exc:
+        tb = traceback.format_exc()
+        print(
+            f"\n[_CALL_STAGE1 ERROR]"
+            f" generation_id={generation_id}"
+            f" type={type(exc).__name__}"
+            f"\nmessage={str(exc)}"
+            f"\ntraceback:\n{tb}",
+            flush=True,
+        )
+        raise
 
 
 __all__ = [

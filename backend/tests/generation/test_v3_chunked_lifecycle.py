@@ -226,6 +226,33 @@ async def test_chunked_plan_start_surfaces_stage1_failure() -> None:
 
 
 @pytest.mark.asyncio
+async def test_chunked_plan_start_surfaces_unexpected_stage1_exception_detail() -> None:
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+    captured_generation_id: str | None = None
+
+    async def fake_stage1(*, generation_id, **kwargs):  # noqa: ANN001
+        nonlocal captured_generation_id
+        captured_generation_id = generation_id
+        raise RuntimeError("stage1 exploded for diagnostics")
+
+    with patch(
+        "generation.v3_studio.router.run_stage1_with_retry",
+        new=AsyncMock(side_effect=fake_stage1),
+    ):
+        async with _client() as client:
+            resp = await client.post("/api/v1/v3/chunked/plan/start", json=_chunked_start_payload())
+
+    assert resp.status_code == 500
+    body = resp.json()
+    assert body["detail"] == "[RuntimeError] stage1 exploded for diagnostics"
+    assert captured_generation_id is not None
+    state = await load_chunked_state(captured_generation_id)
+    assert state["stage"] == "stage1_failed"
+    assert state["errors"] == ["RuntimeError: stage1 exploded for diagnostics"]
+
+
+@pytest.mark.asyncio
 async def test_chunked_approve_marks_stage2_running() -> None:
     app.dependency_overrides[get_current_user] = _override_user_a
     await _ensure_user(TEST_USER_A)

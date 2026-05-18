@@ -846,22 +846,32 @@ async def post_chunked_plan_start(
             },
         ) from exc
     except Exception as exc:  # noqa: BLE001
+        import traceback
+        tb = traceback.format_exc()
+        print(
+            f"\n[CHUNKED STAGE1 ERROR] generation_id={generation_id}\n"
+            f"type={type(exc).__name__}\n"
+            f"message={str(exc)}\n"
+            f"traceback:\n{tb}",
+            flush=True,
+        )
         logger.exception(
-            "chunked stage1 failed generation_id=%s error=%s",
+            "chunked stage1 failed generation_id=%s type=%s error=%s",
             generation_id,
-            str(exc)[:400],
+            type(exc).__name__,
+            str(exc)[:800],
         )
         await persist_chunked_state(
             generation_id,
             {
                 "stage": "stage1_failed",
-                "errors": [str(exc)[:400]],
+                "errors": [f"{type(exc).__name__}: {str(exc)[:400]}"],
                 "execution_started": False,
             },
         )
         raise HTTPException(
             status_code=500,
-            detail="Could not generate a structural lesson plan.",
+            detail=f"[{type(exc).__name__}] {str(exc)[:600]}",
         ) from exc
 
     state = await load_chunked_state(generation_id)
