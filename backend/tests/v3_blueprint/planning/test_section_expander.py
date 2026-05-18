@@ -119,6 +119,11 @@ def test_prefix_user_content_uses_default_cache_point_without_ttl() -> None:
     assert content[-1] is cache_point
 
 
+def test_stage2_max_tokens_uses_settings_default() -> None:
+    assert section_expander.STAGE2_MAX_TOKENS == 8000
+    assert section_expander.STAGE2_MAX_TOKENS == section_expander.settings.v3_stage2_max_tokens
+
+
 @pytest.mark.asyncio
 async def test_call_stage2_section_omits_extended_cache_beta_header() -> None:
     signals = _signals()
@@ -150,5 +155,5 @@ async def test_call_stage2_section_omits_extended_cache_beta_header() -> None:
     call_kwargs = mock_run_llm.await_args.kwargs
     assert call_kwargs["model_settings"] == {
         "anthropic_thinking": section_expander.STAGE2_THINKING,
-        "max_tokens": section_expander.STAGE2_MAX_TOKENS,
+        "max_tokens": 8000,
     }
