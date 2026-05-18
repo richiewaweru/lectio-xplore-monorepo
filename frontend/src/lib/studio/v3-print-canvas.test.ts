@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import { blocksForSection } from './v3-print-fields';
 import { mapPackSectionsToCanvas } from './v3-print-canvas';
 
 describe('mapPackSectionsToCanvas', () => {
@@ -27,7 +26,7 @@ describe('mapPackSectionsToCanvas', () => {
 		expect(canvas[0]?.title).toBe('practice-1');
 	});
 
-	it('preserves ordering metadata and yields ordered print blocks', () => {
+	it('preserves ordering metadata in mergedFields', () => {
 		const source = [
 			{
 				section_id: 'ordered',
@@ -45,9 +44,5 @@ describe('mapPackSectionsToCanvas', () => {
 			diagram: 0,
 			explanation: 1
 		});
-
-		const blocks = blocksForSection(canvas[0]!);
-		expect(blocks[0]).toEqual({ kind: 'img', src: 'https://cdn.example/first.png', alt: 'First block' });
-		expect(blocks[1]).toEqual({ kind: 'p', text: 'Second block' });
 	});
 });

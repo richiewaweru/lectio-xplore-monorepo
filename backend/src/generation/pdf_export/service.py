@@ -246,7 +246,7 @@ async def export_v3_studio_pdf(
         request=request,
         settings=settings,
         request_id=request_id,
-        render_path=f"/studio/print/{generation_id}?renderer=safe",
+        render_path=f"/studio/print/{generation_id}",
         v3_answer_key=v3_ak_dict,
     )
 

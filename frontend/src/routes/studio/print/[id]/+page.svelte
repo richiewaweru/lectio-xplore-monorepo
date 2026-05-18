@@ -1,7 +1,6 @@
 <!--
-	Production V3 PDF: default renderer is Lectio (omit ?renderer or use renderer=lectio).
-	Debug only: renderer=safe (flat V3PrintView), renderer=canvas-test (V3Canvas + diagnostics).
-	Diagnostics: ?debugPrint=true or renderer=canvas-test — never in normal student PDFs.
+	V3 PDF print route — Lectio renderer only.
+	Diagnostics: ?debugPrint=true for adapter diagnostic overlay.
 -->
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
@@ -9,9 +8,7 @@
 	import { providePrintMode } from 'lectio';
 	import '$lib/styles/print.css';
 	import { buildApiUrl } from '$lib/api/client';
-	import V3Canvas from '$lib/components/studio/V3Canvas.svelte';
 	import V3LectioPrintDocumentView from '$lib/components/studio/V3LectioPrintDocumentView.svelte';
-	import V3PrintView from '$lib/components/studio/V3PrintView.svelte';
 	import {
 		adaptV3PackToLectioDocument,
 		adaptV3PackToLectioDocumentWithDiagnostics,
@@ -19,15 +16,12 @@
 		type V3PackDocument
 	} from '$lib/studio/v3-pack-to-lectio-document';
 	import { forceEagerImages, waitForPrintImages, type PrintImageWaitResult } from '$lib/studio/print-readiness';
-	import { mapPackSectionsToCanvas } from '$lib/studio/v3-print-canvas';
 	import type { GenerationDocument } from '$lib/types';
-	import type { CanvasSection } from '$lib/types/v3';
 
 	const generationId = $derived(page.params.id);
 	const token = $derived(page.url.searchParams.get('token'));
-	const renderer = $derived(page.url.searchParams.get('renderer') ?? 'lectio');
 	const debugPrint = $derived(page.url.searchParams.get('debugPrint') === 'true');
-	const showPrintDiagnostics = $derived(debugPrint || renderer === 'canvas-test');
+	const showPrintDiagnostics = $derived(debugPrint);
 
 	providePrintMode(() => page.url.searchParams.get('print') === 'true');
 
@@ -37,28 +31,15 @@
 	let sectionCount = $state(0);
 	let templateId = $state('none');
 	let loadError = $state<string | null>(null);
-	let rawSections = $state<unknown[]>([]);
 	let lectioDocument = $state<GenerationDocument | null>(null);
 	let adapterDiagnostic = $state<V3PackAdapterDiagnostic | null>(null);
 	let subject = $state('');
 	let imageDebug = $state<PrintImageWaitResult | null>(null);
 
-	const sections = $derived<CanvasSection[]>(
-		renderer === 'safe' || renderer === 'canvas-test'
-			? mapPackSectionsToCanvas(rawSections)
-			: []
-	);
-
-	const templateIdForCanvas = $derived(
-		templateId && templateId !== 'missing' && templateId !== 'none' ? templateId : 'guided-concept-path'
-	);
-
 	/** DOM `data-renderer` for Playwright: reflects the branch that actually rendered. */
 	const dataRenderer = $derived.by(() => {
-		if (renderer === 'canvas-test') return 'canvas-test';
-		if (renderer === 'safe') return 'safe';
-		if (!dataReady) return renderer;
-		if (loadError) return renderer;
+		if (!dataReady) return 'lectio';
+		if (loadError) return 'lectio';
 		if (lectioDocument) return 'lectio';
 		return 'lectio-adapter-failed';
 	});
@@ -94,7 +75,6 @@
 			const data = (await res.json()) as V3PackDocument;
 
 			const list = Array.isArray(data.sections) ? data.sections : [];
-			rawSections = list;
 			sectionCount = list.length;
 			templateId = typeof data.template_id === 'string' ? data.template_id : 'missing';
 			subject = typeof data.subject === 'string' ? data.subject.trim() : '';
@@ -155,11 +135,7 @@
 		{#if showPrintDiagnostics}
 			<div class="print-diagnostics">
 				<p>
-					<span class="print-diagnostics-label">Renderer (query):</span>
-					{renderer}
-				</p>
-				<p>
-					<span class="print-diagnostics-label">Renderer (DOM path):</span>
+					<span class="print-diagnostics-label">Renderer:</span>
 					{dataRenderer}
 				</p>
 				<p><span class="print-diagnostics-label">Fetch status:</span> {fetchStatus}</p>
@@ -192,14 +168,10 @@
 			</div>
 		{/if}
 
-		{#if renderer === 'canvas-test'}
-			<V3Canvas {sections} stage="complete" templateId={templateIdForCanvas} />
-		{:else if renderer === 'safe'}
-			<V3PrintView {sections} {subject} />
-		{:else if lectioDocument}
+		{#if lectioDocument}
 			<V3LectioPrintDocumentView document={lectioDocument} />
 		{:else}
-			<p class="print-error">Unable to adapt V3 pack for print.</p>
+			<p class="print-error">Unable to render print view.</p>
 		{/if}
 	{/if}
 </div>
