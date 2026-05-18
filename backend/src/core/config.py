@@ -117,8 +117,8 @@ class Settings(BaseSettings):
     learning_pack_max_resources: int = Field(default=7, ge=1)
     learning_pack_status_poll_seconds: float = Field(default=3.0, gt=0)
     learning_pack_runner_poll_seconds: float = Field(default=5.0, gt=0)
-    v3_timeout_stage1_seconds: int = Field(default=60, ge=1)
-    v3_timeout_stage2_section_seconds: int = Field(default=45, ge=1)
+    v3_timeout_stage1_seconds: int = Field(default=240, ge=1)
+    v3_timeout_stage2_section_seconds: int = Field(default=240, ge=1)
 
     # Output
     report_output_dir: str = "outputs/reports"
