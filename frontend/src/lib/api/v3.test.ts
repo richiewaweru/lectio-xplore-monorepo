@@ -47,6 +47,61 @@ describe('connectV3StudioGenerationStream', () => {
 		apiFetchMock.mockReset();
 	});
 
+	function buildSignals() {
+		return {
+			topic: 'Fractions',
+			subtopic: 'Equivalent fractions',
+			prior_knowledge: ['equal sharing'],
+			learner_needs: [],
+			teacher_goal: 'Build understanding',
+			inferred_resource_type: 'worksheet',
+			confidence: 'medium' as const,
+			missing_signals: []
+		};
+	}
+
+	function buildForm() {
+		return {
+			grade_level: 'Grade 5',
+			subject: 'Mathematics',
+			duration_minutes: 45,
+			topic: 'Equivalent fractions',
+			subtopics: ['pizza model'],
+			prior_knowledge: 'Equal sharing',
+			lesson_mode: 'first_exposure' as const,
+			lesson_mode_other: '',
+			intended_outcome: 'understand' as const,
+			intended_outcome_other: '',
+			learner_level: 'on_grade' as const,
+			reading_level: 'on_grade' as const,
+			language_support: 'none' as const,
+			prior_knowledge_level: 'some_background' as const,
+			support_needs: ['visuals'],
+			learning_preferences: [],
+			free_text: ''
+		};
+	}
+
+	function buildPreview() {
+		return {
+			blueprint_id: 'bp-123',
+			resource_type: 'worksheet',
+			title: 'Equivalent Fractions',
+			template_id: 'guided-concept-path',
+			lenses: [],
+			anchor: {
+				label: 'Pizza anchor',
+				facts: {},
+				correct_result: null,
+				reuse_scope: 'whole lesson'
+			},
+			section_plan: [],
+			question_plan: [],
+			register_summary: 'simple',
+			support_summary: []
+		};
+	}
+
 	it('routes new pack events to dedicated handlers', () => {
 		const onDraftPackReady = vi.fn();
 		const onFinalPackReady = vi.fn();
@@ -124,42 +179,65 @@ describe('connectV3StudioGenerationStream', () => {
 		expect(row.id).toBe('gen-1');
 	});
 
-	it('sends architect_mode when generating a blueprint', async () => {
+	it('sends architect_mode=standard in body when specified', async () => {
 		apiFetchMock.mockResolvedValue({
 			ok: true,
-			json: async () => ({ blueprint_id: 'bp-1' })
+			json: async () => buildPreview()
 		});
 
 		await generateBlueprint({
-			signals: {
-				topic: 'Area',
-				subtopic: null,
-				prior_knowledge: [],
-				learner_needs: [],
-				teacher_goal: 'Build confidence',
-				inferred_resource_type: 'lesson',
-				confidence: 'high',
-				missing_signals: []
-			},
-			form: {
-				grade_level: 'Grade 8',
-				subject: 'Mathematics',
-				duration_minutes: 45,
-				topic: 'Compound area',
-				subtopics: [],
-				prior_knowledge: '',
-				lesson_mode: 'first_exposure',
-				lesson_mode_other: '',
-				intended_outcome: 'understand',
-				intended_outcome_other: '',
-				learner_level: 'on_grade',
-				reading_level: 'on_grade',
-				language_support: 'none',
-				prior_knowledge_level: 'new_topic',
-				support_needs: [],
-				learning_preferences: [],
-				free_text: ''
-			},
+			signals: buildSignals(),
+			form: buildForm(),
+			clarification_answers: [],
+			architect_mode: 'standard'
+		});
+
+		const payload = JSON.parse(apiFetchMock.mock.calls[0][1].body as string);
+		expect(payload.architect_mode).toBe('standard');
+	});
+
+	it('sends architect_mode=chunked in body when specified', async () => {
+		apiFetchMock.mockResolvedValue({
+			ok: true,
+			json: async () => buildPreview()
+		});
+
+		await generateBlueprint({
+			signals: buildSignals(),
+			form: buildForm(),
+			clarification_answers: [],
+			architect_mode: 'chunked'
+		});
+
+		const payload = JSON.parse(apiFetchMock.mock.calls[0][1].body as string);
+		expect(payload.architect_mode).toBe('chunked');
+	});
+
+	it('does NOT include architect_mode key in body when omitted', async () => {
+		apiFetchMock.mockResolvedValue({
+			ok: true,
+			json: async () => buildPreview()
+		});
+
+		await generateBlueprint({
+			signals: buildSignals(),
+			form: buildForm(),
+			clarification_answers: []
+		});
+
+		const payload = JSON.parse(apiFetchMock.mock.calls[0][1].body as string);
+		expect(payload.architect_mode).toBeUndefined();
+	});
+
+	it('always posts to /api/v1/v3/blueprint', async () => {
+		apiFetchMock.mockResolvedValue({
+			ok: true,
+			json: async () => buildPreview()
+		});
+
+		await generateBlueprint({
+			signals: buildSignals(),
+			form: buildForm(),
 			clarification_answers: [],
 			architect_mode: 'chunked'
 		});
@@ -169,8 +247,23 @@ describe('connectV3StudioGenerationStream', () => {
 			headers: { 'Content-Type': 'application/json' },
 			body: expect.any(String)
 		});
-		const payload = JSON.parse(apiFetchMock.mock.calls[0][1].body as string);
-		expect(payload.architect_mode).toBe('chunked');
+	});
+
+	it('returns BlueprintPreviewDTO from response', async () => {
+		apiFetchMock.mockResolvedValue({
+			ok: true,
+			json: async () => buildPreview()
+		});
+
+		const result = await generateBlueprint({
+			signals: buildSignals(),
+			form: buildForm(),
+			clarification_answers: [],
+			architect_mode: 'chunked'
+		});
+
+		expect(result.blueprint_id).toBe('bp-123');
+		expect(result.title).toBe('Equivalent Fractions');
 	});
 
 	it('routes chunked stage events to handlers', () => {

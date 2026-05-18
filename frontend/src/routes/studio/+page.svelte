@@ -791,8 +791,8 @@
 			<span class="text-sm font-semibold tracking-tight">Studio</span>
 			<div class="flex items-center gap-3">
 				<V3ArchitectModeToggle
-					value={v3Studio.architectMode}
-					onChange={(mode) => {
+					selected={v3Studio.architectMode}
+					onModeChange={(mode) => {
 						v3Studio.architectMode = mode;
 					}}
 				/>
