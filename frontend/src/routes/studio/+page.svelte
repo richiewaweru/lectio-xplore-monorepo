@@ -138,11 +138,12 @@
 			return;
 		}
 		if (resolved.stage === 'stage2_running') {
+			// Keep the chunked UI in planning while Stage 2 progresses, even if execution_started is true.
 			v3Studio.stage = 'planning';
 			connectGenerationStream(resolved.generation_id);
 			return;
 		}
-		if (resolved.stage === 'blueprint_ready' || resolved.execution_started) {
+		if (resolved.stage === 'blueprint_ready') {
 			v3Studio.stage = 'generating';
 			connectGenerationStream(resolved.generation_id);
 			try {
@@ -660,8 +661,6 @@
 			v3Studio.chunkedState = next;
 			if (next.stage === 'assembly_blocked') {
 				v3Studio.stage = 'chunked_blocked';
-			} else if (next.execution_started) {
-				v3Studio.stage = 'generating';
 			}
 		} catch (err) {
 			v3Studio.error = friendly(err);
@@ -702,8 +701,11 @@
 			v3Studio.chunkedState = next;
 			if (next.stage === 'assembly_blocked') {
 				v3Studio.stage = 'chunked_blocked';
-			} else if (next.execution_started) {
+			} else if (next.stage === 'blueprint_ready') {
 				v3Studio.stage = 'generating';
+				connectGenerationStream(next.generation_id);
+			} else if (next.stage === 'stage2_running') {
+				v3Studio.stage = 'planning';
 				connectGenerationStream(next.generation_id);
 			} else {
 				v3Studio.stage = 'chunked_review';

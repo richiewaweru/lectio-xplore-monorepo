@@ -140,7 +140,7 @@ describe('studio chunked URL resume', () => {
 			section_briefs: {},
 			failed_sections: [],
 			blueprint_id: null,
-			execution_started: false,
+			execution_started: true,
 			next_action: 'wait_for_stage2'
 		});
 		mocks.approveChunkedPlan.mockResolvedValue({
@@ -165,7 +165,7 @@ describe('studio chunked URL resume', () => {
 			section_briefs: {},
 			failed_sections: [],
 			blueprint_id: null,
-			execution_started: false,
+			execution_started: true,
 			next_action: 'wait_for_stage2'
 		});
 
@@ -175,6 +175,57 @@ describe('studio chunked URL resume', () => {
 		await waitFor(() => expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-live'));
 		await waitFor(() => expect(mocks.connectV3StudioGenerationStream).toHaveBeenCalledWith('gen-live', expect.any(Object)));
 		expect(v3Studio.stage).toBe('planning');
+	});
+
+	it('keeps planning after approve while stage2 is still running', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-approve');
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-approve',
+			stage: 'plan_ready',
+			structural_plan: {
+				lesson_mode: 'first_exposure',
+				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
+				sections: [],
+				question_plan: []
+			},
+			section_briefs: {},
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: false,
+			next_action: 'approve_or_regenerate'
+		});
+		mocks.approveChunkedPlan.mockResolvedValue({
+			generation_id: 'gen-approve',
+			stage: 'stage2_running',
+			structural_plan: {
+				lesson_mode: 'first_exposure',
+				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
+				sections: [],
+				question_plan: []
+			},
+			section_briefs: {},
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: true,
+			next_action: 'wait_for_stage2'
+		});
+
+		render(StudioPage);
+		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-approve'));
+
+		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
+
+		await waitFor(() => expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-approve'));
+		await waitFor(() =>
+			expect(mocks.connectV3StudioGenerationStream).toHaveBeenCalledWith(
+				'gen-approve',
+				expect.any(Object)
+			)
+		);
+		expect(v3Studio.stage).toBe('planning');
+		expect(mocks.fetchV3Document).not.toHaveBeenCalled();
 	});
 
 	it('fails soft when generation_id cannot be resumed', async () => {
@@ -189,7 +240,7 @@ describe('studio chunked URL resume', () => {
 		expect(screen.getByRole('alert').textContent).toMatch(/could not resume/i);
 	});
 
-	it('transitions blocked -> retry -> generating', async () => {
+	it('keeps planning when blocked retry returns to stage2_running', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-blocked');
 		mocks.getChunkedPlanStatus.mockResolvedValue({
 			generation_id: 'gen-blocked',
@@ -218,7 +269,7 @@ describe('studio chunked URL resume', () => {
 		});
 		mocks.retryChunkedSection.mockResolvedValue({
 			generation_id: 'gen-blocked',
-			stage: 'blueprint_ready',
+			stage: 'stage2_running',
 			structural_plan: {
 				lesson_mode: 'first_exposure',
 				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
@@ -237,9 +288,9 @@ describe('studio chunked URL resume', () => {
 			},
 			section_briefs: {},
 			failed_sections: [],
-			blueprint_id: 'bp-1',
+			blueprint_id: null,
 			execution_started: true,
-			next_action: 'generation_running'
+			next_action: 'wait_for_stage2'
 		});
 
 		render(StudioPage);
@@ -253,7 +304,44 @@ describe('studio chunked URL resume', () => {
 				section_id: 'orient'
 			})
 		);
-		await waitFor(() => expect(v3Studio.stage).toBe('generating'));
+		await waitFor(() => expect(v3Studio.stage).toBe('planning'));
 		await waitFor(() => expect(mocks.connectV3StudioGenerationStream).toHaveBeenCalledWith('gen-blocked', expect.any(Object)));
+	});
+
+	it('enters generating and recovers blueprint preview when chunked state is blueprint_ready', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-blueprint');
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-blueprint',
+			stage: 'blueprint_ready',
+			structural_plan: {
+				lesson_mode: 'first_exposure',
+				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
+				sections: [],
+				question_plan: []
+			},
+			section_briefs: {},
+			failed_sections: [],
+			blueprint_id: 'bp-1',
+			execution_started: true,
+			next_action: 'generation_running'
+		});
+		mocks.getV3GenerationBlueprint.mockResolvedValue({
+			blueprint_id: 'bp-1',
+			template_id: 'guided-concept-path',
+			sections: []
+		});
+
+		render(StudioPage);
+
+		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-blueprint'));
+		await waitFor(() =>
+			expect(mocks.connectV3StudioGenerationStream).toHaveBeenCalledWith(
+				'gen-blueprint',
+				expect.any(Object)
+			)
+		);
+		await waitFor(() => expect(mocks.getV3GenerationBlueprint).toHaveBeenCalledWith('gen-blueprint'));
+		expect(v3Studio.stage).toBe('generating');
 	});
 });
