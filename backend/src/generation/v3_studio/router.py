@@ -743,10 +743,19 @@ async def _attempt_chunked_assembly(
         form=form,
         planning_source={"kind": "teacher_approved_blueprint"},
     )
+    print(
+        f"\n[EXECUTION QUEUE REGISTERING] generation_id={generation_id}",
+        flush=True,
+    )
     queue = await _ensure_generation_stream(
         generation_id=generation_id,
         user_id=user_id,
         blueprint_id=blueprint_id,
+    )
+    print(
+        f"\n[EXECUTION QUEUE REGISTERED] generation_id={generation_id}"
+        f" queue_exists={queue is not None}",
+        flush=True,
     )
     await persist_chunked_state(
         generation_id,
@@ -757,14 +766,35 @@ async def _attempt_chunked_assembly(
             "execution_started": True,
         },
     )
-    await _start_generation_from_chunked_blueprint(
-        generation_id=generation_id,
-        blueprint_id=blueprint_id,
-        blueprint=blueprint,
-        form=form,
-        user_id=user_id,
-        queue=queue,
+    print(
+        f"\n[EXECUTION STARTING] generation_id={generation_id}"
+        f" blueprint_id={blueprint_id}",
+        flush=True,
     )
+    try:
+        await _start_generation_from_chunked_blueprint(
+            generation_id=generation_id,
+            blueprint_id=blueprint_id,
+            blueprint=blueprint,
+            form=form,
+            user_id=user_id,
+            queue=queue,
+        )
+        print(
+            f"\n[EXECUTION STARTED] generation_id={generation_id}",
+            flush=True,
+        )
+    except Exception as exc:  # noqa: BLE001
+        import traceback
+
+        print(
+            f"\n[EXECUTION START FAILED] generation_id={generation_id}"
+            f" type={type(exc).__name__}"
+            f"\nmessage={str(exc)}"
+            f"\n{traceback.format_exc()}",
+            flush=True,
+        )
+        raise
 
 
 async def _run_chunked_stage2_pipeline(

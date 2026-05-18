@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from unittest.mock import MagicMock
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -594,6 +595,119 @@ async def test_chunked_retry_section_can_unblock_assembly() -> None:
     body = resp.json()
     assert body["stage"] == "blueprint_ready"
     assert body["execution_started"] is True
+
+
+@pytest.mark.asyncio
+async def test_attempt_chunked_assembly_logs_execution_handoff_success() -> None:
+    sample_plan = _sample_structural_plan()
+    generation_id = str(uuid.uuid4())
+    _signals, form = _seed_context_models()
+    queue = asyncio.Queue()
+    brief = SectionBrief(
+        section_id="orient",
+        components=[
+            ComponentBrief(
+                component_id="hook-hero",
+                content_intent="Use the recovered anchor.",
+            )
+        ],
+        question_briefs=[],
+        visual_strategy=None,
+    )
+    blueprint = MagicMock(name="blueprint")
+
+    with (
+        patch("generation.v3_studio.router.assemble_blueprint", return_value=blueprint),
+        patch("generation.v3_studio.router._validate_blueprint"),
+        patch("generation.v3_studio.router.v3_studio_store.put_blueprint", new=AsyncMock()),
+        patch("generation.v3_studio.router._ensure_generation_stream", new=AsyncMock(return_value=queue)),
+        patch(
+            "generation.v3_studio.router._start_generation_from_chunked_blueprint",
+            new=AsyncMock(),
+        ),
+        patch("generation.v3_studio.router.persist_chunked_state", new=AsyncMock()),
+        patch("builtins.print") as mock_print,
+    ):
+        from generation.v3_studio.router import _attempt_chunked_assembly
+
+        await _attempt_chunked_assembly(
+            generation_id=generation_id,
+            user_id=TEST_USER_A.id,
+            plan=sample_plan,
+            briefs=[brief],
+            form=form,
+            resource_spec={"resource_type": "lesson"},
+        )
+
+    printed = [call.args[0] for call in mock_print.call_args_list]
+    queue_registering = next(line for line in printed if "[EXECUTION QUEUE REGISTERING]" in line)
+    queue_registered = next(line for line in printed if "[EXECUTION QUEUE REGISTERED]" in line)
+    execution_starting = next(line for line in printed if "[EXECUTION STARTING]" in line)
+    execution_started = next(line for line in printed if "[EXECUTION STARTED]" in line)
+
+    assert f"generation_id={generation_id}" in queue_registering
+    assert f"generation_id={generation_id}" in queue_registered
+    assert "queue_exists=True" in queue_registered
+    assert f"generation_id={generation_id}" in execution_starting
+    assert "blueprint_id=" in execution_starting
+    assert f"generation_id={generation_id}" in execution_started
+
+    queue_registering_idx = printed.index(queue_registering)
+    queue_registered_idx = printed.index(queue_registered)
+    execution_starting_idx = printed.index(execution_starting)
+    execution_started_idx = printed.index(execution_started)
+    assert queue_registering_idx < queue_registered_idx < execution_starting_idx < execution_started_idx
+
+
+@pytest.mark.asyncio
+async def test_attempt_chunked_assembly_logs_execution_start_failure_and_reraises() -> None:
+    sample_plan = _sample_structural_plan()
+    generation_id = str(uuid.uuid4())
+    _signals, form = _seed_context_models()
+    queue = asyncio.Queue()
+    brief = SectionBrief(
+        section_id="orient",
+        components=[
+            ComponentBrief(
+                component_id="hook-hero",
+                content_intent="Use the recovered anchor.",
+            )
+        ],
+        question_briefs=[],
+        visual_strategy=None,
+    )
+    blueprint = MagicMock(name="blueprint")
+
+    with (
+        patch("generation.v3_studio.router.assemble_blueprint", return_value=blueprint),
+        patch("generation.v3_studio.router._validate_blueprint"),
+        patch("generation.v3_studio.router.v3_studio_store.put_blueprint", new=AsyncMock()),
+        patch("generation.v3_studio.router._ensure_generation_stream", new=AsyncMock(return_value=queue)),
+        patch(
+            "generation.v3_studio.router._start_generation_from_chunked_blueprint",
+            new=AsyncMock(side_effect=RuntimeError("executor boot failed")),
+        ),
+        patch("generation.v3_studio.router.persist_chunked_state", new=AsyncMock()),
+        patch("builtins.print") as mock_print,
+    ):
+        from generation.v3_studio.router import _attempt_chunked_assembly
+
+        with pytest.raises(RuntimeError, match="executor boot failed"):
+            await _attempt_chunked_assembly(
+                generation_id=generation_id,
+                user_id=TEST_USER_A.id,
+                plan=sample_plan,
+                briefs=[brief],
+                form=form,
+                resource_spec={"resource_type": "lesson"},
+            )
+
+    printed = [call.args[0] for call in mock_print.call_args_list]
+    failure_log = next(line for line in printed if "[EXECUTION START FAILED]" in line)
+    assert f"generation_id={generation_id}" in failure_log
+    assert "type=RuntimeError" in failure_log
+    assert "message=executor boot failed" in failure_log
+    assert "Traceback" in failure_log
 
 
 @pytest.mark.asyncio

@@ -17,7 +17,6 @@ _CALLER = "v3_chunked_architect"
 STAGE2_NODE = "v3_stage2_expander"
 STAGE2_THINKING = {"type": "adaptive"}
 STAGE2_MAX_TOKENS = 4000
-STAGE2_CACHE_BETA_HEADER = "extended-cache-ttl-2025-04-11"
 
 
 def build_stage2_system_prompt() -> str:
@@ -297,7 +296,7 @@ def _prefix_user_content(
         form.model_dump_json(),
         json.dumps(resource_spec),
         plan.model_dump_json(),
-        CachePoint(ttl="1h"),
+        CachePoint(),
     ]
 
 
@@ -374,7 +373,6 @@ async def _call_stage2_section(
             model_settings={
                 "anthropic_thinking": STAGE2_THINKING,
                 "max_tokens": STAGE2_MAX_TOKENS,
-                "extra_headers": {"anthropic-beta": STAGE2_CACHE_BETA_HEADER},
             },
             retry_policy=RetryPolicy(
                 max_attempts=1,
@@ -410,7 +408,6 @@ async def _call_stage2_section(
 
 
 __all__ = [
-    "STAGE2_CACHE_BETA_HEADER",
     "STAGE2_MAX_TOKENS",
     "STAGE2_NODE",
     "STAGE2_THINKING",
