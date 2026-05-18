@@ -177,3 +177,5 @@ For pull requests, the required merge gate is intentionally lean:
 - `frontend-quality`
 
 Additional checks such as architecture validation, tooling tests, frontend `vitest`, and app smoke tests are still recommended for release prep or operator verification, but they are not required GitHub merge blockers.
+
+<!-- No-op doc touch to retrigger deployment -->
