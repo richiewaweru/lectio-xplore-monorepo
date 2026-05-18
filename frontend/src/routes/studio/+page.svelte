@@ -655,13 +655,14 @@
 		v3Studio.generationId = generationId;
 		v3Studio.error = null;
 		v3Studio.stage = 'planning';
-		connectGenerationStream(generationId);
 		try {
 			const next = await approveChunkedPlan(generationId);
 			v3Studio.chunkedState = next;
 			if (next.stage === 'assembly_blocked') {
 				v3Studio.stage = 'chunked_blocked';
+				return;
 			}
+			connectGenerationStream(generationId);
 		} catch (err) {
 			v3Studio.error = friendly(err);
 			v3Studio.stage = 'chunked_review';

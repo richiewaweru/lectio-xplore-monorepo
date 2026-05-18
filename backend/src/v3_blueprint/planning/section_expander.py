@@ -314,6 +314,9 @@ async def _call_stage2_section(
     trace_id: str | None = None,
     previous_errors: list[str] | None = None,
 ) -> SectionBrief:
+    import time
+    import traceback
+
     node = STAGE2_NODE
     tid = trace_id or generation_id or str(uuid.uuid4())
     model = get_v3_model(node)
@@ -347,26 +350,56 @@ async def _call_stage2_section(
         section_message,
     ]
 
-    result = await run_llm(
-        trace_id=tid,
-        caller=_CALLER,
-        generation_id=generation_id,
-        agent=agent,
-        user_prompt=user_prompt,  # type: ignore[arg-type]
-        model=model,
-        slot=slot,
-        spec=spec,
-        section_id=section.id,
-        node=node,
-        model_settings={
-            "anthropic_thinking": STAGE2_THINKING,
-            "max_tokens": STAGE2_MAX_TOKENS,
-            "extra_headers": {"anthropic-beta": STAGE2_CACHE_BETA_HEADER},
-        },
-        retry_policy=RetryPolicy(
-            max_attempts=1,
-            call_timeout_seconds=float(settings.v3_timeout_stage2_section_seconds),
-        ),
+    print(
+        f"\n[_CALL_STAGE2] generation_id={generation_id}"
+        f" section_id={section.id}"
+        f" model={STAGE2_NODE}"
+        f" max_tokens={STAGE2_MAX_TOKENS}"
+        f" timeout={settings.v3_timeout_stage2_section_seconds}s",
+        flush=True,
+    )
+    t0 = time.perf_counter()
+    try:
+        result = await run_llm(
+            trace_id=tid,
+            caller=_CALLER,
+            generation_id=generation_id,
+            agent=agent,
+            user_prompt=user_prompt,  # type: ignore[arg-type]
+            model=model,
+            slot=slot,
+            spec=spec,
+            section_id=section.id,
+            node=node,
+            model_settings={
+                "anthropic_thinking": STAGE2_THINKING,
+                "max_tokens": STAGE2_MAX_TOKENS,
+                "extra_headers": {"anthropic-beta": STAGE2_CACHE_BETA_HEADER},
+            },
+            retry_policy=RetryPolicy(
+                max_attempts=1,
+                call_timeout_seconds=float(settings.v3_timeout_stage2_section_seconds),
+            ),
+        )
+    except Exception as exc:
+        elapsed = round(time.perf_counter() - t0, 1)
+        print(
+            f"\n[_CALL_STAGE2 ERROR] generation_id={generation_id}"
+            f" section_id={section.id}"
+            f" elapsed={elapsed}s"
+            f" type={type(exc).__name__}"
+            f"\nmessage={str(exc)}"
+            f"\n{traceback.format_exc()}",
+            flush=True,
+        )
+        raise
+
+    elapsed = round(time.perf_counter() - t0, 1)
+    print(
+        f"\n[_CALL_STAGE2 DONE] generation_id={generation_id}"
+        f" section_id={section.id}"
+        f" elapsed={elapsed}s",
+        flush=True,
     )
     raw = result.output
     if isinstance(raw, SectionBrief):

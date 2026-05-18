@@ -188,8 +188,21 @@ async def resume_stage2(
                 "Cannot resume Stage 2: missing persisted resource_spec context."
             )
 
+        print(
+            f"\n[STAGE2 START] generation_id={generation_id}"
+            f" sections={[s.id for s in plan.sections]}",
+            flush=True,
+        )
+
         # Continue loop from next incomplete section
         for section in remaining:
+            print(
+                f"\n[STAGE2 SECTION START] generation_id={generation_id}"
+                f" section_id={section.id}"
+                f" role={section.role}"
+                f" components={[c.slug for c in section.components]}",
+                flush=True,
+            )
             if emit_event:
                 await emit_event("stage2_section_start", {
                     "section_id": section.id,
@@ -208,6 +221,12 @@ async def resume_stage2(
             completed_briefs.append(brief)
             await persist_section_brief(generation_id, brief, db)
             if getattr(brief, "_failed", False):
+                print(
+                    f"\n[STAGE2 SECTION FAILED] generation_id={generation_id}"
+                    f" section_id={section.id}"
+                    f" errors={getattr(brief, '_errors', [])}",
+                    flush=True,
+                )
                 if emit_event:
                     await emit_event("stage2_section_failed", {
                         "section_id": section.id,
@@ -215,18 +234,35 @@ async def resume_stage2(
                         "errors": getattr(brief, "_errors", []),
                     })
             else:
+                print(
+                    f"\n[STAGE2 SECTION DONE] generation_id={generation_id}"
+                    f" section_id={section.id}"
+                    f" components_briefed={len(brief.components)}"
+                    f" questions_briefed={len(brief.question_briefs)}"
+                    f" has_visual={'yes' if brief.visual_strategy else 'no'}",
+                    flush=True,
+                )
                 if emit_event:
                     await emit_event("stage2_section_done", {
                         "section_id": section.id,
                         "generation_id": generation_id,
                     })
 
+        failed_sections = [
+            brief.section_id
+            for brief in completed_briefs
+            if getattr(brief, "_failed", False)
+        ]
+        print(
+            f"\n[STAGE2 COMPLETE] generation_id={generation_id}"
+            f" total={len(completed_briefs)}"
+            f" failed={failed_sections}",
+            flush=True,
+        )
         if emit_event:
             await emit_event("stage2_complete", {
                 "generation_id": generation_id,
-                "failed_sections": [
-                    brief.section_id for brief in completed_briefs if getattr(brief, "_failed", False)
-                ],
+                "failed_sections": failed_sections,
             })
 
         return completed_briefs

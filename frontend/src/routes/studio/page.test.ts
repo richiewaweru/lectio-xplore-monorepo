@@ -72,6 +72,16 @@ vi.mock('$lib/components/studio/V3SupplementTray.svelte', async () => ({
 import StudioPage from './+page.svelte';
 import { resetV3Studio, v3Studio } from '$lib/stores/v3-studio.svelte';
 
+function deferred<T>() {
+	let resolve!: (value: T) => void;
+	let reject!: (reason?: unknown) => void;
+	const promise = new Promise<T>((res, rej) => {
+		resolve = res;
+		reject = rej;
+	});
+	return { promise, resolve, reject };
+}
+
 describe('studio chunked URL resume', () => {
 	beforeEach(() => {
 		resetV3Studio();
@@ -195,7 +205,34 @@ describe('studio chunked URL resume', () => {
 			execution_started: false,
 			next_action: 'approve_or_regenerate'
 		});
-		mocks.approveChunkedPlan.mockResolvedValue({
+		const approval = deferred<{
+			generation_id: string;
+			stage: 'stage2_running';
+			structural_plan: {
+				lesson_mode: string;
+				lesson_intent: { goal: string; structure_rationale: string };
+				anchor: { example: string; reuse_scope: string };
+				sections: never[];
+				question_plan: never[];
+			};
+			section_briefs: Record<string, never>;
+			failed_sections: never[];
+			blueprint_id: null;
+			execution_started: true;
+			next_action: 'wait_for_stage2';
+		}>();
+		mocks.approveChunkedPlan.mockReturnValue(approval.promise);
+
+		render(StudioPage);
+		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-approve'));
+
+		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
+
+		await waitFor(() => expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-approve'));
+		expect(v3Studio.stage).toBe('planning');
+		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
+
+		approval.resolve({
 			generation_id: 'gen-approve',
 			stage: 'stage2_running',
 			structural_plan: {
@@ -211,13 +248,6 @@ describe('studio chunked URL resume', () => {
 			execution_started: true,
 			next_action: 'wait_for_stage2'
 		});
-
-		render(StudioPage);
-		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-approve'));
-
-		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
-
-		await waitFor(() => expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-approve'));
 		await waitFor(() =>
 			expect(mocks.connectV3StudioGenerationStream).toHaveBeenCalledWith(
 				'gen-approve',
@@ -226,6 +256,55 @@ describe('studio chunked URL resume', () => {
 		);
 		expect(v3Studio.stage).toBe('planning');
 		expect(mocks.fetchV3Document).not.toHaveBeenCalled();
+	});
+
+	it('does not connect the stream when approve returns assembly_blocked', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-approve-blocked');
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-approve-blocked',
+			stage: 'plan_ready',
+			structural_plan: {
+				lesson_mode: 'first_exposure',
+				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
+				sections: [],
+				question_plan: []
+			},
+			section_briefs: {},
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: false,
+			next_action: 'approve_or_regenerate'
+		});
+		mocks.approveChunkedPlan.mockResolvedValue({
+			generation_id: 'gen-approve-blocked',
+			stage: 'assembly_blocked',
+			structural_plan: {
+				lesson_mode: 'first_exposure',
+				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
+				sections: [],
+				question_plan: []
+			},
+			section_briefs: {},
+			failed_sections: ['orient'],
+			blueprint_id: null,
+			execution_started: false,
+			next_action: 'retry_failed_sections'
+		});
+
+		render(StudioPage);
+		await waitFor(() =>
+			expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-approve-blocked')
+		);
+
+		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
+
+		await waitFor(() =>
+			expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-approve-blocked')
+		);
+		expect(v3Studio.stage).toBe('chunked_blocked');
+		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
 	});
 
 	it('fails soft when generation_id cannot be resumed', async () => {

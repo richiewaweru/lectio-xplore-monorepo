@@ -33,7 +33,17 @@ def assemble_blueprint(
 ) -> ProductionBlueprint:
     # GATE — block if any section failed
     failed = [b for b in briefs if getattr(b, "_failed", False)]
+    print(
+        f"\n[ASSEMBLER] briefs={len(briefs)}"
+        f" failed={[b.section_id for b in failed]}",
+        flush=True,
+    )
     if failed:
+        print(
+            f"\n[ASSEMBLER BLOCKED] failed_sections="
+            f"{[b.section_id for b in failed]}",
+            flush=True,
+        )
         raise BlueprintAssemblyBlocked(
             failed_sections=[b.section_id for b in failed]
         )
@@ -57,6 +67,14 @@ def assemble_blueprint(
             components=components,
         ))
 
+    question_plan = _assemble_question_plan(plan, briefs)
+    visual_strategy = _assemble_visual_strategy(plan, briefs)
+    print(
+        f"\n[ASSEMBLER OK] sections={len(sections)}"
+        f" questions={len(question_plan)}"
+        f" visuals={len(visual_strategy.visuals)}",
+        flush=True,
+    )
     return ProductionBlueprint(
         metadata=_build_metadata(title=title, subject=subject),
         lesson=LessonModePlan(
@@ -84,8 +102,8 @@ def assemble_blueprint(
             else None
         ),
         sections=sections,
-        question_plan=_assemble_question_plan(plan, briefs),
-        visual_strategy=_assemble_visual_strategy(plan, briefs),
+        question_plan=question_plan,
+        visual_strategy=visual_strategy,
         answer_key=AnswerKeyPlan(style=plan.answer_key_style),
     )
 

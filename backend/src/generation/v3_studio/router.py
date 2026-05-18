@@ -667,6 +667,11 @@ async def _attempt_chunked_assembly(
     form: V3InputForm,
     resource_spec: dict[str, Any],
 ) -> None:
+    print(
+        f"\n[ASSEMBLY ATTEMPT] generation_id={generation_id}"
+        f" sections={len(briefs)}",
+        flush=True,
+    )
     try:
         blueprint = assemble_blueprint(
             plan,
@@ -676,6 +681,11 @@ async def _attempt_chunked_assembly(
             resource_type=str(resource_spec.get("resource_type") or "lesson"),
         )
     except BlueprintAssemblyBlocked as exc:
+        print(
+            f"\n[ASSEMBLY BLOCKED] generation_id={generation_id}"
+            f" failed_sections={exc.failed_sections}",
+            flush=True,
+        )
         await persist_chunked_state(
             generation_id,
             {
@@ -686,7 +696,15 @@ async def _attempt_chunked_assembly(
         )
         return
 
+    print(
+        f"\n[ASSEMBLY OK] generation_id={generation_id}",
+        flush=True,
+    )
     _validate_blueprint(blueprint)
+    print(
+        f"\n[BLUEPRINT VALIDATED] generation_id={generation_id}",
+        flush=True,
+    )
     blueprint_id = str(uuid.uuid4())
     await v3_studio_store.put_blueprint(
         user_id,
@@ -728,6 +746,10 @@ async def _run_chunked_stage2_pipeline(
     async def emit_event(event: str, payload: dict[str, Any]) -> None:
         await _chunked_emit_event(generation_id, event, payload)
 
+    print(
+        f"\n[STAGE2 PIPELINE START] generation_id={generation_id}",
+        flush=True,
+    )
     try:
         state = await load_chunked_state(generation_id)
         plan_raw = state.get("structural_plan")
@@ -752,6 +774,11 @@ async def _run_chunked_stage2_pipeline(
             generation_id,
             emit_event=emit_event,
         )
+        print(
+            f"\n[STAGE2 PIPELINE BRIEFS DONE] generation_id={generation_id}"
+            f" briefs={len(briefs)}",
+            flush=True,
+        )
         await _attempt_chunked_assembly(
             generation_id=generation_id,
             user_id=user_id,
@@ -760,7 +787,20 @@ async def _run_chunked_stage2_pipeline(
             form=form,
             resource_spec=resource_spec,
         )
+        print(
+            f"\n[STAGE2 PIPELINE ASSEMBLY CALLED] generation_id={generation_id}",
+            flush=True,
+        )
     except Exception as exc:  # noqa: BLE001
+        import traceback
+
+        print(
+            f"\n[STAGE2 PIPELINE ERROR] generation_id={generation_id}"
+            f" type={type(exc).__name__}"
+            f"\nmessage={str(exc)}"
+            f"\n{traceback.format_exc()}",
+            flush=True,
+        )
         logger.exception(
             "chunked stage2 pipeline failed generation_id=%s error=%s",
             generation_id,
@@ -783,6 +823,10 @@ async def _run_chunked_stage2_pipeline(
         )
     finally:
         _chunked_stage2_tasks.pop(generation_id, None)
+        print(
+            f"\n[STAGE2 PIPELINE DONE] generation_id={generation_id}",
+            flush=True,
+        )
 
 
 @v3_studio_router.post("/chunked/plan/start", response_model=V3ChunkedPlanStateDTO)

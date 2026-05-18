@@ -92,7 +92,20 @@ async def run_stage2(
 
     completed_briefs: list[SectionBrief] = []
 
+    print(
+        f"\n[STAGE2 START] generation_id={generation_id}"
+        f" sections={[s.id for s in plan.sections]}",
+        flush=True,
+    )
+
     for section in plan.sections:
+        print(
+            f"\n[STAGE2 SECTION START] generation_id={generation_id}"
+            f" section_id={section.id}"
+            f" role={section.role}"
+            f" components={[c.slug for c in section.components]}",
+            flush=True,
+        )
         if emit_event:
             await emit_event("stage2_section_start", {
                 "section_id": section.id,
@@ -112,6 +125,12 @@ async def run_stage2(
         )
 
         if getattr(brief, "_failed", False):
+            print(
+                f"\n[STAGE2 SECTION FAILED] generation_id={generation_id}"
+                f" section_id={section.id}"
+                f" errors={getattr(brief, '_errors', [])}",
+                flush=True,
+            )
             if emit_event:
                 await emit_event("stage2_section_failed", {
                     "section_id": section.id,
@@ -119,6 +138,14 @@ async def run_stage2(
                     "errors": getattr(brief, "_errors", []),
                 })
         else:
+            print(
+                f"\n[STAGE2 SECTION DONE] generation_id={generation_id}"
+                f" section_id={section.id}"
+                f" components_briefed={len(brief.components)}"
+                f" questions_briefed={len(brief.question_briefs)}"
+                f" has_visual={'yes' if brief.visual_strategy else 'no'}",
+                flush=True,
+            )
             if emit_event:
                 await emit_event("stage2_section_done", {
                     "section_id": section.id,
@@ -132,6 +159,12 @@ async def run_stage2(
             await persist_section_brief(generation_id, brief)
 
     failed = [b.section_id for b in completed_briefs if getattr(b, "_failed", False)]
+    print(
+        f"\n[STAGE2 COMPLETE] generation_id={generation_id}"
+        f" total={len(completed_briefs)}"
+        f" failed={failed}",
+        flush=True,
+    )
     if emit_event:
         await emit_event("stage2_complete", {
             "generation_id": generation_id,
@@ -158,6 +191,12 @@ async def _run_section_with_retry(
     errors: list[str] = []
 
     for attempt in range(1, 3):  # max 2 attempts
+        print(
+            f"\n[STAGE2 CALL] generation_id={generation_id}"
+            f" section_id={section.id}"
+            f" attempt={attempt}",
+            flush=True,
+        )
         if attempt == 2 and emit_event:
             await emit_event("stage2_section_retry", {
                 "section_id": section.id,
@@ -165,23 +204,50 @@ async def _run_section_with_retry(
                 "generation_id": generation_id,
             })
 
-        brief = await _call_stage2_section(
-            plan=plan,
-            section=section,
-            prior_briefs=prior_briefs,
-            component_cards=component_cards,
-            signals=signals,
-            form=form,
-            resource_spec=resource_spec,
-            generation_id=generation_id,
-            trace_id=trace_id,
-            previous_errors=errors if attempt == 2 else None,
-        )
+        try:
+            brief = await _call_stage2_section(
+                plan=plan,
+                section=section,
+                prior_briefs=prior_briefs,
+                component_cards=component_cards,
+                signals=signals,
+                form=form,
+                resource_spec=resource_spec,
+                generation_id=generation_id,
+                trace_id=trace_id,
+                previous_errors=errors if attempt == 2 else None,
+            )
+        except Exception as exc:
+            import traceback
+
+            print(
+                f"\n[STAGE2 CALL EXCEPTION] generation_id={generation_id}"
+                f" section_id={section.id}"
+                f" attempt={attempt}"
+                f" type={type(exc).__name__}"
+                f"\nmessage={str(exc)}"
+                f"\n{traceback.format_exc()}",
+                flush=True,
+            )
+            raise
         errors = validate_section_brief(brief, section, plan.question_plan)
 
         if not errors:
+            print(
+                f"\n[STAGE2 CALL OK] generation_id={generation_id}"
+                f" section_id={section.id}"
+                f" attempt={attempt}",
+                flush=True,
+            )
             return brief
 
+        print(
+            f"\n[STAGE2 VALIDATION FAIL] generation_id={generation_id}"
+            f" section_id={section.id}"
+            f" attempt={attempt}"
+            f" errors={errors}",
+            flush=True,
+        )
         if attempt == 1:
             log.warning(
                 "Section '%s' attempt 1 failed: %s",
@@ -191,6 +257,12 @@ async def _run_section_with_retry(
             continue
 
     # Both attempts failed — return placeholder
+    print(
+        f"\n[STAGE2 SECTION EXHAUSTED] generation_id={generation_id}"
+        f" section_id={section.id}"
+        f" final_errors={errors}",
+        flush=True,
+    )
     placeholder = SectionBrief(
         section_id=section.id,
         components=[],
