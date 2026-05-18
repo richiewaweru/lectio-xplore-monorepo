@@ -16,7 +16,7 @@ from v3_execution.config import get_v3_model, get_v3_slot, get_v3_spec
 _CALLER = "v3_chunked_architect"
 STAGE1_NODE = "v3_stage1_planner"
 STAGE1_THINKING = {"type": "adaptive"}
-STAGE1_MAX_TOKENS = 2000
+STAGE1_MAX_TOKENS = 8000
 
 
 def build_stage1_system_prompt() -> str:
