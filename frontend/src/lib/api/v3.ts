@@ -19,6 +19,12 @@ import type {
 	V3SupplementResourceType
 } from '$lib/types/v3';
 
+export interface V3SubtopicCandidate {
+	id: string;
+	title: string;
+	description: string;
+}
+
 function bearerHeaders(): Record<string, string> {
 	const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 	const token = get(authToken);
@@ -47,6 +53,21 @@ export async function getClarifications(
 	});
 	await ensureOk(res, 'Could not load clarification questions.');
 	return res.json() as Promise<V3ClarificationQuestion[]>;
+}
+
+export async function narrowTopic(payload: {
+	topic: string;
+	grade_level: string;
+	subject: string;
+}): Promise<V3SubtopicCandidate[]> {
+	const res = await apiFetch('/api/v1/v3/narrow', {
+		method: 'POST',
+		headers: bearerHeaders(),
+		body: JSON.stringify(payload)
+	});
+	await ensureOk(res, 'Could not narrow this topic.');
+	const data = (await res.json()) as { candidates: V3SubtopicCandidate[] };
+	return data.candidates ?? [];
 }
 
 export async function generateBlueprint(payload: {

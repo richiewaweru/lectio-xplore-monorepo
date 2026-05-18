@@ -71,7 +71,7 @@ def assemble_blueprint(
             for lens in plan.applied_lenses
         ],
         voice=VoicePlan.model_validate(
-            {"register": plan.voice.register, "tone": plan.voice.tone}
+            {"register": plan.voice.register_name, "tone": plan.voice.tone}
         ),
         anchor=AnchorPlan(reuse_scope=plan.anchor.reuse_scope),
         prior_knowledge=list(plan.prior_knowledge),
@@ -154,4 +154,3 @@ def _assemble_visual_strategy(
 __all__ = [
     "assemble_blueprint",
 ]
-

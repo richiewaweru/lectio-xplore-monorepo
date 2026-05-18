@@ -30,6 +30,15 @@ vi.mock('$lib/api/errors', () => ({
 	}
 }));
 
+vi.mock('$lib/stores/auth', () => ({
+	authToken: {
+		subscribe(callback: (value: string | null) => void) {
+			callback(null);
+			return () => {};
+		}
+	}
+}));
+
 import {
 	approveChunkedPlan,
 	connectV3StudioGenerationStream,
@@ -321,5 +330,57 @@ describe('connectV3StudioGenerationStream', () => {
 			headers: { 'Content-Type': 'application/json' }
 		});
 		expect(preview.blueprint_id).toBe('bp-1');
+	});
+
+	describe('narrowTopic', () => {
+		it('posts to /api/v1/v3/narrow and returns candidates', async () => {
+			apiFetchMock.mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					candidates: [
+						{
+							id: 'seed-dispersal',
+							title: 'Seed dispersal',
+							description: 'How plants spread seeds.'
+						},
+						{
+							id: 'pollination',
+							title: 'Pollination',
+							description: 'Role of insects.'
+						}
+					]
+				})
+			});
+
+			const { narrowTopic } = await import('./v3');
+			const result = await narrowTopic({
+				topic: 'Reproduction in plants',
+				grade_level: 'Grade 6',
+				subject: 'Biology'
+			});
+
+			expect(apiFetchMock).toHaveBeenCalledWith(
+				'/api/v1/v3/narrow',
+				expect.objectContaining({ method: 'POST' })
+			);
+			const body = JSON.parse(apiFetchMock.mock.calls[0][1].body);
+			expect(body.topic).toBe('Reproduction in plants');
+			expect(result).toHaveLength(2);
+			expect(result[0].title).toBe('Seed dispersal');
+		});
+
+		it('returns empty array when response has no candidates', async () => {
+			apiFetchMock.mockResolvedValue({
+				ok: true,
+				json: async () => ({})
+			});
+			const { narrowTopic } = await import('./v3');
+			const result = await narrowTopic({
+				topic: 'Photosynthesis',
+				grade_level: 'Grade 5',
+				subject: 'Science'
+			});
+			expect(result).toEqual([]);
+		});
 	});
 });

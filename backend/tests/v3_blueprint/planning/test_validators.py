@@ -59,7 +59,7 @@ def _base_plan_with_components(*, components: list[ComponentSlot]) -> Structural
             reuse_scope="used in orient and model",
         ),
         applied_lenses=[LensEffect(lens_id="concrete_first", effects=["anchor before abstraction"])],
-        voice=VoiceSpec(register="simple", tone="encouraging"),
+        voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[
             SectionPlan(

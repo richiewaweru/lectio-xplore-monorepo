@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { narrowTopic } from '$lib/api/v3';
 	import type { V3InputForm } from '$lib/types/v3';
 
 	interface Props {
@@ -166,9 +167,17 @@
 
 	async function resolveTopic() {
 		const cleaned = topic.trim();
-		if (!cleaned) return;
+		if (!cleaned || !grade_level || !subject) return;
 		resolving_topic = true;
 		try {
+			const candidates = await narrowTopic({
+				topic: cleaned,
+				grade_level,
+				subject
+			});
+			subtopic_candidates = candidates;
+			subtopics = [];
+		} catch {
 			const parts = cleaned
 				.split(/[,;:()/-]+/)
 				.map((part) => part.trim())
@@ -280,7 +289,7 @@
 					<button
 						type="button"
 						class="rounded-md border px-3 py-2 text-sm"
-						disabled={resolving_topic || !topic.trim() || !grade_level}
+						disabled={resolving_topic || !topic.trim() || !grade_level || !subject}
 						onclick={resolveTopic}
 					>
 						{resolving_topic ? '…' : 'Narrow'}

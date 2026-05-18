@@ -9,6 +9,8 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
+from pydantic import BaseModel, Field
+from pydantic_ai import Agent
 from sqlalchemy import select
 from starlette.background import BackgroundTask
 
@@ -18,6 +20,7 @@ from core.database.models import GenerationModel
 from core.database.session import async_session_factory
 from core.dependencies import get_jwt_handler, get_settings
 from core.entities.user import User
+from core.llm.runner import RetryPolicy, run_llm
 from v3_blueprint.models import ProductionBlueprint
 from v3_blueprint.planning.assembler import assemble_blueprint
 from v3_blueprint.planning.models import (
@@ -35,6 +38,8 @@ from v3_blueprint.planning.retry import (
     retry_failed_section,
     run_stage1_with_retry,
 )
+from v3_execution.config import get_v3_model, get_v3_slot, get_v3_spec
+from v3_execution.config.timeouts import V3_TIMEOUTS
 from v3_execution.runtime.runner import sse_event_stream
 
 from generation.v3_studio.agents import (
@@ -89,8 +94,31 @@ from telemetry.v3_trace.writer import V3TraceWriter
 
 logger = logging.getLogger(__name__)
 
+_CALLER = "v3_studio"
 v3_studio_router = APIRouter(prefix="/v3", tags=["v3-studio"])
 _chunked_stage2_tasks: dict[str, asyncio.Task[None]] = {}
+
+
+class V3NarrowRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    topic: str
+    grade_level: str
+    subject: str
+
+
+class V3SubtopicCandidate(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    id: str
+    title: str
+    description: str
+
+
+class V3NarrowResponse(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    candidates: list[V3SubtopicCandidate]
 
 
 def _iso(dt: datetime | None) -> str | None:
@@ -247,6 +275,84 @@ async def post_clarify(
 ):
     _ = current_user
     return await get_clarifications(body.signals, body.form, trace_id=str(uuid.uuid4()))
+
+
+@v3_studio_router.post("/narrow", response_model=V3NarrowResponse)
+async def post_v3_narrow(
+    body: V3NarrowRequest,
+    current_user: User = Depends(get_current_user),
+) -> V3NarrowResponse:
+    class NarrowEnvelope(BaseModel):
+        candidates: list[V3SubtopicCandidate] = Field(
+            default_factory=list
+        )
+
+    node = "v3_clarify"
+    model = get_v3_model(node)
+    spec = get_v3_spec(node)
+    slot = get_v3_slot(node)
+
+    system = (
+        "You break broad lesson topics into focused subtopic candidates. "
+        "Each candidate must be teachable in a single 45-60 minute lesson. "
+        "Return 3-5 candidates. Each has: id (short slug, no spaces), "
+        "title (plain short name), description (one sentence). "
+        "Output valid JSON only. No preamble."
+    )
+
+    user = (
+        f"Topic: {body.topic.strip()}\n"
+        f"Grade level: {body.grade_level}\n"
+        f"Subject: {body.subject}\n\n"
+        "Break this into 3-5 focused subtopics a teacher could build "
+        "a single lesson around. Be specific."
+    )
+
+    agent = Agent(
+        model=model,
+        output_type=NarrowEnvelope,
+        system_prompt=system,
+    )
+
+    try:
+        result = await run_llm(
+            trace_id=str(uuid.uuid4()),
+            caller=_CALLER,
+            generation_id=None,
+            agent=agent,
+            user_prompt=user,
+            model=model,
+            slot=slot,
+            spec=spec,
+            section_id=None,
+            node=node,
+            retry_policy=RetryPolicy(
+                call_timeout_seconds=float(
+                    V3_TIMEOUTS["clarification"]
+                )
+            ),
+        )
+        raw = result.output
+        if isinstance(raw, NarrowEnvelope):
+            candidates = raw.candidates
+        elif hasattr(raw, "candidates"):
+            raw_candidates = getattr(raw, "candidates", [])
+            candidates = raw_candidates if isinstance(raw_candidates, list) else []
+        else:
+            candidates = []
+    except Exception:
+        logger.exception(
+            "v3 narrow failed topic=%s user=%s",
+            body.topic[:80],
+            current_user.id,
+        )
+        candidates = []
+
+    for i, c in enumerate(candidates):
+        if not c.id:
+            c.id = f"candidate-{i + 1}"
+
+    return V3NarrowResponse(candidates=candidates[:5])
 
 
 @v3_studio_router.post("/blueprint", response_model=BlueprintPreviewDTO)

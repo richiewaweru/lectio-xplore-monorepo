@@ -1,6 +1,14 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
+
+const { narrowTopic } = vi.hoisted(() => ({
+	narrowTopic: vi.fn()
+}));
+
+vi.mock('$lib/api/v3', () => ({
+	narrowTopic
+}));
 
 import V3InputSurface from './V3InputSurface.svelte';
 
@@ -39,5 +47,85 @@ describe('V3InputSurface', () => {
 		expect(payload.lesson_mode).toBeDefined();
 		expect(payload.learner_level).toBeDefined();
 	});
-});
 
+	it('calls narrowTopic with topic, grade_level, and subject when Narrow is clicked', async () => {
+		narrowTopic.mockResolvedValue([
+			{ id: 'seed-dispersal', title: 'Seed dispersal', description: 'How plants spread seeds.' },
+			{ id: 'pollination', title: 'Pollination', description: 'Role of insects.' }
+		]);
+
+		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+
+		const gradeSelect = screen.getByLabelText('Grade level') as HTMLSelectElement;
+		gradeSelect.value = 'Grade 6';
+		await fireEvent.change(gradeSelect);
+
+		const subjectSelect = screen.getByLabelText('Subject') as HTMLSelectElement;
+		subjectSelect.value = 'Biology';
+		await fireEvent.change(subjectSelect);
+
+		const topicInput = screen.getByLabelText('Topic') as HTMLInputElement;
+		topicInput.value = 'Reproduction in plants';
+		await fireEvent.input(topicInput);
+
+		await fireEvent.click(screen.getByRole('button', { name: /narrow/i }));
+
+		expect(narrowTopic).toHaveBeenCalledWith({
+			topic: 'Reproduction in plants',
+			grade_level: 'Grade 6',
+			subject: 'Biology'
+		});
+	});
+
+	it('shows chips from narrowTopic response after Narrow is clicked', async () => {
+		narrowTopic.mockResolvedValue([
+			{ id: 'seed-dispersal', title: 'Seed dispersal', description: 'How plants spread seeds.' },
+			{ id: 'pollination', title: 'Pollination', description: 'Role of insects.' }
+		]);
+
+		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+
+		const gradeSelect = screen.getByLabelText('Grade level') as HTMLSelectElement;
+		gradeSelect.value = 'Grade 6';
+		await fireEvent.change(gradeSelect);
+
+		const subjectSelect = screen.getByLabelText('Subject') as HTMLSelectElement;
+		subjectSelect.value = 'Biology';
+		await fireEvent.change(subjectSelect);
+
+		const topicInput = screen.getByLabelText('Topic') as HTMLInputElement;
+		topicInput.value = 'Reproduction in plants';
+		await fireEvent.input(topicInput);
+
+		await fireEvent.click(screen.getByRole('button', { name: /narrow/i }));
+
+		await waitFor(() => {
+			expect(screen.getByText('Seed dispersal')).toBeTruthy();
+			expect(screen.getByText('Pollination')).toBeTruthy();
+		});
+	});
+
+	it('runs local split fallback when narrowTopic rejects for "Seeds, Pollination"', async () => {
+		narrowTopic.mockRejectedValue(new Error('Network error'));
+
+		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+
+		const gradeSelect = screen.getByLabelText('Grade level') as HTMLSelectElement;
+		gradeSelect.value = 'Grade 6';
+		await fireEvent.change(gradeSelect);
+
+		const subjectSelect = screen.getByLabelText('Subject') as HTMLSelectElement;
+		subjectSelect.value = 'Biology';
+		await fireEvent.change(subjectSelect);
+
+		const topicInput = screen.getByLabelText('Topic') as HTMLInputElement;
+		topicInput.value = 'Seeds, Pollination';
+		await fireEvent.input(topicInput);
+
+		await fireEvent.click(screen.getByRole('button', { name: /narrow/i }));
+
+		await waitFor(() => {
+			expect(screen.getByText('Seeds')).toBeTruthy();
+		});
+	});
+});

@@ -15,7 +15,7 @@ from v3_execution.config import get_v3_model, get_v3_slot, get_v3_spec
 
 _CALLER = "v3_chunked_architect"
 STAGE1_NODE = "v3_stage1_planner"
-STAGE1_THINKING = {"type": "enabled", "budget_tokens": 4000}
+STAGE1_THINKING = {"type": "adaptive"}
 STAGE1_MAX_TOKENS = 2000
 
 
@@ -211,7 +211,7 @@ Output ONLY valid JSON matching this schema exactly.
   ],
 
   "voice": {{
-    "register": "simple",
+    "register_name": "simple",
     "tone": "encouraging"
   }},
 
@@ -384,4 +384,3 @@ __all__ = [
     "build_stage1_system_prompt",
     "build_stage1_user_message",
 ]
-

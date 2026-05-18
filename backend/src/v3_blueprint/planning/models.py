@@ -110,7 +110,7 @@ class LensEffect(BaseModel):
 class VoiceSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    register: Literal["simple", "balanced", "formal"]
+    register_name: Literal["simple", "balanced", "formal"]
     tone: Literal["encouraging", "neutral", "direct"]
 
 
@@ -253,4 +253,3 @@ class BlueprintAssemblyBlocked(Exception):
         super().__init__(
             f"Assembly blocked — sections failed: {failed_sections}"
         )
-

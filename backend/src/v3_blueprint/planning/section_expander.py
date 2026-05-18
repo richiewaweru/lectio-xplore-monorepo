@@ -246,7 +246,7 @@ Structure rationale:{plan.lesson_intent.structure_rationale}
 Lesson mode:        {plan.lesson_mode}
 Anchor:             {plan.anchor.example}
 Anchor reuse:       {plan.anchor.reuse_scope}
-Voice:              {plan.voice.register}, {plan.voice.tone}
+Voice:              {plan.voice.register_name}, {plan.voice.tone}
 Lenses:             {", ".join(e.lens_id for e in plan.applied_lenses)}
 Lens effects:       {"; ".join(eff for lens in plan.applied_lenses for eff in lens.effects)}
 Prior knowledge:    {", ".join(plan.prior_knowledge)}
@@ -386,4 +386,3 @@ __all__ = [
     "build_stage2_system_prompt",
     "build_stage2_user_message",
 ]
-
