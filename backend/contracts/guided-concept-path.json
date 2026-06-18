@@ -1,45 +1,143 @@
 {
   "id": "guided-concept-path",
-  "always_present": [],
-  "available_components": [
+  "name": "Guided Concept Path",
+  "family": "guided-concept",
+  "intent": "introduce-concept",
+  "tagline": "Lead with felt need, then move steadily toward formal understanding and practice.",
+  "reading_style": "linear-guided",
+  "tags": [
+    "Universal",
+    "Sidebar glossary",
+    "Step reveal",
+    "Screen-first"
+  ],
+  "best_for": [
+    "first exposure to a concept",
+    "math, science, economics, and grammar lessons",
+    "teacher-led or student-led structured reading"
+  ],
+  "not_ideal_for": [
+    "highly visual topics that need the figure to lead",
+    "comparison-heavy lessons with multiple equal concepts"
+  ],
+  "learner_fit": [
+    "general",
+    "scaffolded"
+  ],
+  "subjects": [
+    "mathematics",
+    "science",
+    "economics",
+    "english"
+  ],
+  "interaction_level": "medium",
+  "always_present": [
     "section-header",
     "hook-hero",
     "explanation-block",
-    "prerequisite-strip",
-    "what-next-bridge",
-    "interview-anchor",
-    "callout-block",
-    "summary-block",
-    "section-divider",
+    "what-next-bridge"
+  ],
+  "contextually_present": [],
+  "available_components": [
     "definition-card",
-    "definition-family",
-    "glossary-rail",
-    "insight-strip",
-    "key-fact",
-    "comparison-grid",
     "worked-example-card",
-    "process-steps",
     "practice-stack",
-    "quiz-check",
-    "reflection-prompt",
-    "student-textbox",
-    "short-answer",
-    "fill-in-blank",
     "pitfall-alert",
+    "glossary-rail",
     "diagram-block",
-    "diagram-compare",
-    "diagram-series",
-    "timeline-block",
-    "simulation-block"
+    "callout-block",
+    "student-textbox",
+    "summary-block",
+    "short-answer",
+    "key-fact",
+    "fill-in-blank",
+    "reflection-prompt",
+    "section-divider"
   ],
   "component_budget": {
-    "diagram-block": 3,
-    "diagram-series": 2,
-    "simulation-block": 1
+    "diagram-block": 2
   },
   "max_per_section": {
+    "worked-example-card": 1,
     "practice-stack": 1,
     "quiz-check": 1,
     "reflection-prompt": 1
+  },
+  "default_behaviours": {
+    "worked-example-card": "step-reveal",
+    "practice-stack": "accordion",
+    "glossary-rail": "sticky",
+    "diagram-block": "zoom"
+  },
+  "section_role_defaults": {
+    "intro": [
+      "hook-hero",
+      "callout-block"
+    ],
+    "explain": [
+      "explanation-block",
+      "definition-card",
+      "worked-example-card"
+    ],
+    "practice": [
+      "practice-stack",
+      "student-textbox"
+    ],
+    "summary": [
+      "summary-block",
+      "what-next-bridge"
+    ]
+  },
+  "signal_affinity": {
+    "topic_type": {
+      "concept": 0.9,
+      "process": 0.5,
+      "facts": 0.6,
+      "mixed": 0.7
+    },
+    "learning_outcome": {
+      "understand-why": 0.9,
+      "be-able-to-do": 0.5,
+      "remember-terms": 0.6,
+      "apply-to-new": 0.6
+    },
+    "class_style": {
+      "needs-explanation-first": 0.9,
+      "responds-to-worked-examples": 0.8,
+      "engages-with-visuals": 0.5,
+      "restless-without-activity": 0.4,
+      "tries-before-told": 0.3
+    },
+    "format": {
+      "printed-booklet": 0.7,
+      "screen-based": 0.8,
+      "both": 0.7
+    }
+  },
+  "layout_notes": [
+    "Main reading column leads the page.",
+    "Glossary can live in a sticky right rail on desktop.",
+    "Examples and practice arrive after the core explanation."
+  ],
+  "print_rules": [
+    "Expand step-based content for print.",
+    "Flatten the glossary rail into inline vocabulary notes at the end of the section."
+  ],
+  "allowed_presets": [
+    "blue-classroom",
+    "warm-paper",
+    "calm-green",
+    "high-contrast-focus"
+  ],
+  "why_this_template_exists": "This is the stable baseline Lectio lesson: predictable enough for first exposure, flexible enough to fit most classroom subjects.",
+  "generation_guidance": {
+    "tone": "clear and teacherly",
+    "pacing": "steady",
+    "chunking": "medium",
+    "emphasis": "explanation before formality",
+    "avoid": [
+      "long uninterrupted prose",
+      "overloaded side content"
+    ]
   }
 }

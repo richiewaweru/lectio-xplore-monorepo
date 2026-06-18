@@ -84,6 +84,10 @@ function deferred<T>() {
 	return { promise, resolve, reject };
 }
 
+function latestChunkedHandlers(): unknown {
+	return (mocks.connectV3ChunkedStream.mock.calls as unknown as Array<[string, unknown]>).at(-1)?.[1];
+}
+
 describe('studio chunked URL resume', () => {
 	beforeEach(() => {
 		resetV3Studio();
@@ -351,7 +355,7 @@ describe('studio chunked URL resume', () => {
 		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
 		await waitFor(() => expect(mocks.connectV3ChunkedStream).toHaveBeenCalledWith('gen-switch', expect.any(Object)));
 
-		const handlers = mocks.connectV3ChunkedStream.mock.calls.at(-1)?.[1] as {
+		const handlers = latestChunkedHandlers() as {
 			onStage2Complete?: (failedSections: string[]) => void;
 		};
 		handlers.onStage2Complete?.([]);
@@ -412,7 +416,7 @@ describe('studio chunked URL resume', () => {
 		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
 		await waitFor(() => expect(mocks.connectV3ChunkedStream).toHaveBeenCalled());
 
-		const handlers = mocks.connectV3ChunkedStream.mock.calls.at(-1)?.[1] as {
+		const handlers = latestChunkedHandlers() as {
 			onStage2Complete?: (failedSections: string[]) => void;
 			onAssemblyBlocked?: (failedSections: string[]) => void;
 		};
@@ -470,7 +474,7 @@ describe('studio chunked URL resume', () => {
 		render(StudioPage);
 		await waitFor(() => expect(mocks.connectV3ChunkedStream).toHaveBeenCalledWith('gen-pills', expect.any(Object)));
 
-		const handlers = mocks.connectV3ChunkedStream.mock.calls.at(-1)?.[1] as {
+		const handlers = latestChunkedHandlers() as {
 			onSectionStart?: (sectionId: string) => void;
 			onSectionDone?: (sectionId: string) => void;
 			onSectionFailed?: (sectionId: string, errors: string[]) => void;

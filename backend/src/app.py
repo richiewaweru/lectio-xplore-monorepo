@@ -129,7 +129,10 @@ async def lifespan(app: FastAPI):
     telemetry_monitor.configure(
         llm_call_repository_factory=load_llm_call_repository,
             )
-    if settings.run_migrations_on_startup:
+    should_run_migrations = settings.run_migrations_on_startup and not settings.database_url.startswith(
+        "sqlite"
+    )
+    if should_run_migrations:
         await asyncio.to_thread(upgrade_database)
     initialize_resource_registry()
     initialize_pack_registry()

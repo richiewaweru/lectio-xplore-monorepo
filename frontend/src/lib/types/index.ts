@@ -1,49 +1,16 @@
 import type { SectionContent } from 'lectio';
+import type {
+	Brevity,
+	ExplanationStyle,
+	ExampleStyle,
+	GenerationMode,
+	PlanningGenerationSpec,
+	ReadingLevel,
+	Tone
+} from './studio';
 
 export type TeacherRole = 'teacher' | 'tutor' | 'homeschool' | 'instructor';
 export type GradeBand = 'primary' | 'middle' | 'high_school' | 'undergraduate' | 'adult';
-export type GenerationMode = 'draft' | 'balanced' | 'strict' | 'v3';
-export type Tone = 'supportive' | 'neutral' | 'rigorous';
-export type ReadingLevel = 'simple' | 'standard' | 'advanced';
-export type ExplanationStyle = 'concrete-first' | 'concept-first' | 'balanced';
-export type ExampleStyle = 'everyday' | 'academic' | 'exam';
-export type Brevity = 'tight' | 'balanced' | 'expanded';
-export type SectionRole =
-	| 'intro'
-	| 'explain'
-	| 'practice'
-	| 'summary'
-	| 'process'
-	| 'compare'
-	| 'timeline'
-	| 'visual'
-	| 'discover';
-
-export interface VisualPolicy {
-	required: boolean;
-	mode: 'svg' | 'image' | 'none';
-	intent?: string | null;
-	goal?: string | null;
-}
-
-export interface PlanningSectionPlan {
-	section_id: string;
-	title: string;
-	position: number;
-	role: SectionRole;
-	focus: string;
-	components: string[];
-	visual_policy: VisualPolicy | null;
-}
-
-export interface PlanningGenerationSpec {
-	subject: string;
-	context: string;
-	mode: GenerationMode;
-	template_id: string;
-	preset_id: string;
-	sections: PlanningSectionPlan[];
-}
 
 export interface User {
 	id: string;
@@ -101,6 +68,13 @@ export interface TeacherProfileUpsertRequest {
 	delivery_preferences: TeacherDeliveryPreferences;
 }
 
+export interface BriefRequest {
+	intent: string;
+	audience: string;
+	extra_context: string;
+	mode?: GenerationMode;
+}
+
 export interface OutlineSection {
 	section_id: string;
 	position: number;
@@ -118,16 +92,35 @@ export interface SectionPlan extends OutlineSection {
 	continuity_notes: string | null;
 }
 
+export interface GenerationSpec {
+	template_id: string;
+	preset_id: string;
+	mode: GenerationMode;
+	section_count: number;
+	sections: SectionPlan[];
+	warning: string | null;
+	rationale: string;
+	source_brief: BriefRequest;
+}
+
+export type BriefResponse = GenerationSpec;
+
+export interface GenerationRequest {
+	subject: string;
+	context: string;
+	mode?: GenerationMode;
+	template_id: string;
+	preset_id: string;
+	section_count?: number;
+	generation_spec?: GenerationSpec | null;
+}
+
 export interface GenerationAccepted {
 	generation_id: string;
 	status: string;
 	events_url: string;
 	document_url: string;
 	report_url?: string;
-	section_count?: number;
-	sections_with_visuals?: number;
-	subtopics_covered?: string[];
-	warning?: string | null;
 }
 
 export interface PDFExportRequest {
@@ -175,7 +168,7 @@ export interface GenerationDetail {
 	created_at: string | null;
 	completed_at: string | null;
 	document_path: string | null;
-	planning_spec: PlanningGenerationSpec | null;
+	planning_spec: GenerationSpec | PlanningGenerationSpec | null;
 }
 
 export interface PipelineSectionManifestItem {
@@ -569,3 +562,37 @@ export type GenerationStreamEvent =
 	| GenerationFailedEvent
 	| ErrorEvent;
 
+export type {
+	Brevity,
+	ClassStyle,
+	DeliveryPreferences,
+	ExampleStyle,
+	ExplanationStyle,
+	GenerationMode,
+	GenerationDirectives,
+	LearningOutcome,
+	LessonFormat,
+	PlanningCompleteEvent,
+	PlanningErrorEvent,
+	PlanningGenerationSpec,
+	PlanningSectionPlan,
+	PlanningSectionPlannedEvent,
+	PlanningStreamEvent,
+	PlanningTemplateSelectedEvent,
+	PlanDraft,
+	ReadingLevel,
+	SectionGenerationNotes,
+	SectionRole,
+	StudioBriefRequest,
+	StudioGenerationState,
+	StudioState,
+	StudioTemplateContract,
+	TeacherConstraints,
+	TeacherSignals,
+	TemplateAlternative,
+	TemplateDecision,
+	TopicType,
+	Tone,
+	UserBriefDraft,
+	VisualPolicy
+} from './studio';
