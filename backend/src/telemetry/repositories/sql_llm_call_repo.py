@@ -31,8 +31,10 @@ class SqlLLMCallRepository:
         latency_ms: float | None,
         tokens_in: int | None,
         tokens_out: int | None,
+        thinking_tokens: int | None,
         cost_usd: float | None,
         error: str | None,
+        node: str | None = None,
     ) -> None:
         async with self._session_factory() as session:
             session.add(
@@ -42,7 +44,7 @@ class SqlLLMCallRepository:
                     generation_id=generation_id,
                     user_id=user_id,
                     caller=caller,
-                    node=caller,
+                    node=node or caller,
                     slot=slot,
                     family=family,
                     model_name=model_name,
@@ -53,6 +55,7 @@ class SqlLLMCallRepository:
                     latency_ms=latency_ms,
                     tokens_in=tokens_in,
                     tokens_out=tokens_out,
+                    thinking_tokens=thinking_tokens,
                     cost_usd=cost_usd,
                     error=error,
                 )

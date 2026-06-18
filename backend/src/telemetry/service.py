@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import asyncio
 import logging
@@ -10,41 +10,9 @@ from sqlalchemy import select
 from core.database.models import GenerationModel
 from core.database.session import async_session_factory
 from core.events import event_bus
-from telemetry.dtos.generation_report import GenerationReport
 from telemetry.repositories.sql_llm_call_repo import SqlLLMCallRepository
 
 logger = logging.getLogger(__name__)
-
-
-def hydrate_report_section_event_fallbacks(report: GenerationReport) -> GenerationReport:
-    sections = {section.section_id: section.model_copy(deep=True) for section in report.sections}
-    if not sections:
-        return report
-
-    for event in report.timeline:
-        section_id = event.section_id
-        if not section_id or section_id not in sections:
-            continue
-        section = sections[section_id]
-        payload = event.payload or {}
-        if event.type == "interaction_outcome":
-            if section.interaction_outcome is None:
-                section.interaction_outcome = payload.get("outcome")
-            if section.interaction_skip_reason is None:
-                section.interaction_skip_reason = payload.get("skip_reason")
-            if not section.interaction_count:
-                section.interaction_count = payload.get("interaction_count", 0)
-        elif event.type == "image_outcome":
-            if section.image_outcome is None:
-                section.image_outcome = payload.get("outcome")
-            if section.image_error is None:
-                section.image_error = payload.get("error_message")
-            if section.image_provider is None:
-                section.image_provider = payload.get("provider")
-        elif event.type == "diagram_outcome" and section.diagram_outcome is None:
-            section.diagram_outcome = payload.get("outcome")
-
-    return report.model_copy(update={"sections": list(sections.values())})
 
 
 @dataclass

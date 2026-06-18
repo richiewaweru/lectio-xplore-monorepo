@@ -11,7 +11,10 @@
 
 	let { selected, onModeChange }: Props = $props();
 	const user = fromStore(authUser);
-	const isAdmin = $derived(true);
+	const adminEmails = new Set(['richie@lectio.app']);
+	const isAdmin = $derived(
+		Boolean(user.current?.email && adminEmails.has(user.current.email.toLowerCase()))
+	);
 
 	function setMode(mode: ArchitectMode) {
 		if (selected === mode) return;
