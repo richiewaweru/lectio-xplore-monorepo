@@ -44,7 +44,6 @@ import {
 	connectV3ChunkedStream,
 	connectV3StudioGenerationStream,
 	fetchV3Document,
-	generateBlueprint,
 	getChunkedPlanStatus,
 	getV3GenerationBlueprint,
 	getV3GenerationDetail,
@@ -65,8 +64,7 @@ describe('connectV3StudioGenerationStream', () => {
 			learner_needs: [],
 			teacher_goal: 'Build understanding',
 			inferred_resource_type: 'worksheet',
-			confidence: 'medium' as const,
-			missing_signals: []
+			confidence: 'medium' as const
 		};
 	}
 
@@ -89,26 +87,6 @@ describe('connectV3StudioGenerationStream', () => {
 			support_needs: ['visuals'],
 			learning_preferences: [],
 			free_text: ''
-		};
-	}
-
-	function buildPreview() {
-		return {
-			blueprint_id: 'bp-123',
-			resource_type: 'worksheet',
-			title: 'Equivalent Fractions',
-			template_id: 'guided-concept-path',
-			lenses: [],
-			anchor: {
-				label: 'Pizza anchor',
-				facts: {},
-				correct_result: null,
-				reuse_scope: 'whole lesson'
-			},
-			section_plan: [],
-			question_plan: [],
-			register_summary: 'simple',
-			support_summary: []
 		};
 	}
 
@@ -187,93 +165,6 @@ describe('connectV3StudioGenerationStream', () => {
 			headers: { 'Content-Type': 'application/json' }
 		});
 		expect(row.id).toBe('gen-1');
-	});
-
-	it('sends architect_mode=standard in body when specified', async () => {
-		apiFetchMock.mockResolvedValue({
-			ok: true,
-			json: async () => buildPreview()
-		});
-
-		await generateBlueprint({
-			signals: buildSignals(),
-			form: buildForm(),
-			clarification_answers: [],
-			architect_mode: 'standard'
-		});
-
-		const payload = JSON.parse(apiFetchMock.mock.calls[0][1].body as string);
-		expect(payload.architect_mode).toBe('standard');
-	});
-
-	it('sends architect_mode=chunked in body when specified', async () => {
-		apiFetchMock.mockResolvedValue({
-			ok: true,
-			json: async () => buildPreview()
-		});
-
-		await generateBlueprint({
-			signals: buildSignals(),
-			form: buildForm(),
-			clarification_answers: [],
-			architect_mode: 'chunked'
-		});
-
-		const payload = JSON.parse(apiFetchMock.mock.calls[0][1].body as string);
-		expect(payload.architect_mode).toBe('chunked');
-	});
-
-	it('does NOT include architect_mode key in body when omitted', async () => {
-		apiFetchMock.mockResolvedValue({
-			ok: true,
-			json: async () => buildPreview()
-		});
-
-		await generateBlueprint({
-			signals: buildSignals(),
-			form: buildForm(),
-			clarification_answers: []
-		});
-
-		const payload = JSON.parse(apiFetchMock.mock.calls[0][1].body as string);
-		expect(payload.architect_mode).toBeUndefined();
-	});
-
-	it('always posts to /api/v1/v3/blueprint', async () => {
-		apiFetchMock.mockResolvedValue({
-			ok: true,
-			json: async () => buildPreview()
-		});
-
-		await generateBlueprint({
-			signals: buildSignals(),
-			form: buildForm(),
-			clarification_answers: [],
-			architect_mode: 'chunked'
-		});
-
-		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/blueprint', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: expect.any(String)
-		});
-	});
-
-	it('returns BlueprintPreviewDTO from response', async () => {
-		apiFetchMock.mockResolvedValue({
-			ok: true,
-			json: async () => buildPreview()
-		});
-
-		const result = await generateBlueprint({
-			signals: buildSignals(),
-			form: buildForm(),
-			clarification_answers: [],
-			architect_mode: 'chunked'
-		});
-
-		expect(result.blueprint_id).toBe('bp-123');
-		expect(result.title).toBe('Equivalent Fractions');
 	});
 
 	it('routes chunked stage events to handlers', () => {
@@ -366,6 +257,25 @@ describe('connectV3StudioGenerationStream', () => {
 		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/chunked/gen-1/status', {
 			method: 'GET',
 			headers: { 'Content-Type': 'application/json' }
+		});
+	});
+
+	it('posts chunked plan start to the chunked endpoint', async () => {
+		apiFetchMock.mockResolvedValue({
+			ok: true,
+			json: async () => ({ generation_id: 'gen-1', stage: 'plan_ready' })
+		});
+
+		const { startChunkedPlan } = await import('./v3');
+		await startChunkedPlan({
+			signals: buildSignals(),
+			form: buildForm()
+		});
+
+		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/chunked/plan/start', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: expect.any(String)
 		});
 	});
 

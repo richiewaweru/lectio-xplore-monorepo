@@ -4,9 +4,7 @@ import json
 import uuid
 from collections.abc import Awaitable, Callable
 from typing import Any
-from typing import Literal
 
-from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
 from core.llm.runner import run_llm
@@ -23,16 +21,12 @@ from v3_execution.config.timeouts import V3_TIMEOUTS
 
 from generation.v3_studio.dtos import (
     ProductionBlueprintEnvelope,
-    V3ClarificationAnswer,
-    V3ClarificationQuestion,
     V3InputForm,
     V3SignalSummary,
 )
 from generation.v3_studio.prompts import (
     ADJUST_SYSTEM,
-    CLARIFY_SYSTEM,
     SIGNAL_SYSTEM,
-    build_architect_system_prompt,
     build_parent_context_for_supplement,
     build_supplement_architect_system_prompt,
     build_supplement_user_prompt,
@@ -46,58 +40,6 @@ SUPPLEMENT_DEFAULT_DEPTH = {
     "quiz": "standard",
     "worksheet": "standard",
 }
-
-
-class ClarifyEnvelope(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    questions: list[V3ClarificationQuestion] = Field(default_factory=list)
-
-
-def form_to_lens_hints(form: V3InputForm) -> str:
-    hints = [f"lesson_mode: {form.lesson_mode}"]
-    if form.lesson_mode_other.strip():
-        hints.append(f"lesson_mode_detail: {form.lesson_mode_other.strip()}")
-    hints.append(f"intended_outcome: {form.intended_outcome}")
-    if form.intended_outcome_other.strip():
-        hints.append(f"intended_outcome_detail: {form.intended_outcome_other.strip()}")
-    hints.append(f"learner_level: {form.learner_level}")
-    hints.append(f"reading_level: {form.reading_level}")
-    hints.append(f"language_support: {form.language_support}")
-    hints.append(f"prior_knowledge_level: {form.prior_knowledge_level}")
-    if form.support_needs:
-        hints.append(f"support_needs: {', '.join(form.support_needs)}")
-    if form.learning_preferences:
-        hints.append(f"learning_preferences: {', '.join(form.learning_preferences)}")
-    if form.subtopics:
-        hints.append(f"subtopics: {', '.join(form.subtopics)}")
-    if form.prior_knowledge.strip():
-        hints.append(f"prior_knowledge: {form.prior_knowledge.strip()}")
-    return "\n".join(hints)
-
-
-def has_required_structured_fields(form: V3InputForm) -> bool:
-    if not form.grade_level.strip():
-        return False
-    if not form.subject.strip():
-        return False
-    if not form.topic.strip() or len(form.topic.strip()) < 3:
-        return False
-    if not (15 <= form.duration_minutes <= 90):
-        return False
-    if not form.lesson_mode.strip():
-        return False
-    if not form.learner_level.strip():
-        return False
-    if not form.reading_level.strip():
-        return False
-    if not form.language_support.strip():
-        return False
-    if not form.prior_knowledge_level.strip():
-        return False
-    if not form.intended_outcome.strip():
-        return False
-    return True
 
 
 async def extract_signals(form: V3InputForm, *, trace_id: str | None = None) -> V3SignalSummary:
@@ -147,48 +89,6 @@ async def extract_signals(form: V3InputForm, *, trace_id: str | None = None) -> 
     if isinstance(raw, V3SignalSummary):
         return raw
     raise RuntimeError("signal extractor returned unexpected output")
-
-
-async def get_clarifications(
-    signals: V3SignalSummary,
-    form: V3InputForm,
-    *,
-    trace_id: str | None = None,
-) -> list[V3ClarificationQuestion]:
-    if has_required_structured_fields(form) and not signals.missing_signals:
-        return []
-
-    node = "v3_clarify"
-    tid = trace_id or str(uuid.uuid4())
-    model = get_v3_model(node)
-    spec = get_v3_spec(node)
-    slot = get_v3_slot(node)
-    agent = Agent(
-        model=model,
-        output_type=ClarifyEnvelope,
-        system_prompt=CLARIFY_SYSTEM,
-    )
-    user = f"Signals JSON:\n{signals.model_dump_json(indent=2)}\n\nForm:\n{form.model_dump_json(indent=2)}"
-    result = await run_llm(
-        trace_id=tid,
-        caller=_CALLER,
-        generation_id=None,
-        agent=agent,
-        user_prompt=user,
-        model=model,
-        slot=slot,
-        spec=spec,
-        section_id=None,
-        node=node,
-        retry_policy=RetryPolicy(call_timeout_seconds=float(V3_TIMEOUTS["clarification"])),
-    )
-    raw = result.output
-    if hasattr(raw, "questions"):
-        qs = list(raw.questions)[:2]  # type: ignore[attr-defined]
-        return qs
-    if isinstance(raw, ClarifyEnvelope):
-        return raw.questions[:2]
-    return []
 
 
 def _validate_blueprint(bp: ProductionBlueprint) -> None:
@@ -295,94 +195,41 @@ async def generate_production_blueprint(
     *,
     signals: V3SignalSummary,
     form: V3InputForm,
-    clarification_answers: list[V3ClarificationAnswer] | None,
-    architect_mode: Literal["standard", "chunked"] = "standard",
     generation_id: str | None = None,
     emit_event: EmitFn | None = None,
     trace_id: str | None = None,
 ) -> ProductionBlueprint:
-    if architect_mode == "chunked":
-        from v3_blueprint.planning.assembler import assemble_blueprint
-        from v3_blueprint.planning.retry import run_stage1_with_retry, run_stage2
+    from v3_blueprint.planning.assembler import assemble_blueprint
+    from v3_blueprint.planning.retry import run_stage1_with_retry, run_stage2
 
-        chunked_resource_spec = _build_chunked_resource_spec(
-            inferred_resource_type=signals.inferred_resource_type,
-            duration_minutes=form.duration_minutes,
-        )
-        plan = await run_stage1_with_retry(
-            signals=signals,
-            form=form,
-            resource_spec=chunked_resource_spec,
-            emit_event=emit_event,
-            generation_id=generation_id,
-            trace_id=trace_id,
-        )
-        briefs = await run_stage2(
-            plan=plan,
-            signals=signals,
-            form=form,
-            resource_spec=chunked_resource_spec,
-            emit_event=emit_event,
-            generation_id=generation_id,
-            trace_id=trace_id,
-        )
-        bp = assemble_blueprint(
-            plan,
-            briefs,
-            subject=form.subject.strip() or "General",
-            title=form.topic.strip() or "Generated Lesson",
-            resource_type=(signals.inferred_resource_type or "lesson").strip().lower(),
-        )
-        _validate_blueprint(bp)
-        return bp
-
-    # ── STANDARD PATH — untouched below this line ─────────────────────────
-    node = "v3_lesson_architect"
-    tid = trace_id or str(uuid.uuid4())
-    model = get_v3_model(node)
-    spec = get_v3_spec(node)
-    slot = get_v3_slot(node)
-    agent = Agent(
-        model=model,
-        output_type=ProductionBlueprintEnvelope,
-        system_prompt=build_architect_system_prompt(),
-    )
-    clar = clarification_answers or []
-    clar_txt = "\n".join(f"Q: {c.question}\nA: {c.answer}" for c in clar)
-    resource_spec_block = _render_resource_spec(
+    chunked_resource_spec = _build_chunked_resource_spec(
         inferred_resource_type=signals.inferred_resource_type,
         duration_minutes=form.duration_minutes,
     )
-
-    user = (
-        f"Signals:\n{signals.model_dump_json(indent=2)}\n\n"
-        f"Form:\n{form.model_dump_json(indent=2)}\n\n"
-        f"Clarifications:\n{clar_txt or '(none)'}\n\n"
-        f"RESOURCE SPEC — treat structural rules as hard constraints:\n"
-        f"{resource_spec_block}"
+    plan = await run_stage1_with_retry(
+        signals=signals,
+        form=form,
+        resource_spec=chunked_resource_spec,
+        emit_event=emit_event,
+        generation_id=generation_id,
+        trace_id=trace_id,
     )
-    result = await run_llm(
-        trace_id=tid,
-        caller=_CALLER,
-        generation_id=None,
-        agent=agent,
-        user_prompt=user,
-        model=model,
-        slot=slot,
-        spec=spec,
-        section_id=None,
-        node=node,
-        model_settings=lesson_architect_model_settings(),
-        retry_policy=RetryPolicy(call_timeout_seconds=float(V3_TIMEOUTS["lesson_architect"])),
+    briefs = await run_stage2(
+        plan=plan,
+        signals=signals,
+        form=form,
+        resource_spec=chunked_resource_spec,
+        emit_event=emit_event,
+        generation_id=generation_id,
+        trace_id=trace_id,
     )
-    raw = result.output
-    envelope = raw if isinstance(raw, ProductionBlueprintEnvelope) else None
-    if envelope is None and hasattr(raw, "blueprint"):
-        envelope = ProductionBlueprintEnvelope(blueprint=raw.blueprint)  # type: ignore[arg-type]
-    if envelope is None:
-        raise RuntimeError("lesson architect returned unexpected output")
-    bp = envelope.blueprint
-    bp.metadata.subject = form.subject.strip() or bp.metadata.subject
+    bp = assemble_blueprint(
+        plan,
+        briefs,
+        subject=form.subject.strip() or "General",
+        title=form.topic.strip() or "Generated Lesson",
+        resource_type=(signals.inferred_resource_type or "lesson").strip().lower(),
+    )
     _validate_blueprint(bp)
     return bp
 
@@ -539,5 +386,4 @@ __all__ = [
     "extract_signals",
     "generate_production_blueprint",
     "generate_supplement_blueprint",
-    "get_clarifications",
 ]

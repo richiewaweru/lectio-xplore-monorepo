@@ -28,7 +28,6 @@ from core.routes.profile import router as profile_router
 from core.routes.shares import router as shares_router
 from builder.routes import router as builder_router
 from generation.routes import router as generation_router
-from learning.pack_spec_loader import initialize_pack_registry
 from learning.routes import router as learning_router
 from resource_specs.loader import initialize_registry as initialize_resource_registry
 from telemetry import telemetry_router
@@ -132,7 +131,6 @@ async def lifespan(app: FastAPI):
     if settings.run_migrations_on_startup:
         await asyncio.to_thread(upgrade_database)
     initialize_resource_registry()
-    initialize_pack_registry()
     await telemetry_monitor.start()
     pdf_temp_cleaned = cleanup_stale_pdf_exports(
         path_value=settings.pdf_temp_dir,
@@ -201,6 +199,5 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
 
 

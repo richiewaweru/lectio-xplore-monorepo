@@ -1,12 +1,9 @@
 import type {
-	ArchitectMode,
 	BlueprintPreviewDTO,
 	BookletStatus,
 	CanvasSection,
 	V3DraftPack,
 	V3ChunkedPlanState,
-	V3ClarificationAnswer,
-	V3ClarificationQuestion,
 	V3InputForm,
 	V3ParentSnapshot,
 	V3SignalSummary,
@@ -17,11 +14,8 @@ import type {
 
 export type V3StudioStore = {
 	stage: V3Stage;
-	architectMode: ArchitectMode;
 	form: V3InputForm | null;
 	signals: V3SignalSummary | null;
-	clarifications: V3ClarificationQuestion[];
-	answers: V3ClarificationAnswer[];
 	chunkedState: V3ChunkedPlanState | null;
 	chunkedSectionStatus: Record<string, 'pending' | 'running' | 'retrying' | 'done' | 'failed'>;
 	chunkedSectionErrors: Record<string, string[]>;
@@ -46,11 +40,8 @@ export type V3StudioStore = {
 
 export const v3Studio = $state<V3StudioStore>({
 	stage: 'input',
-	architectMode: 'standard',
 	form: null,
 	signals: null,
-	clarifications: [],
-	answers: [],
 	chunkedState: null,
 	chunkedSectionStatus: {},
 	chunkedSectionErrors: {},
@@ -106,11 +97,8 @@ export function restoreParentFromSupplementReview(): void {
 export function resetV3Studio(): void {
 	v3Studio.streamCancel?.();
 	v3Studio.stage = 'input';
-	v3Studio.architectMode = 'standard';
 	v3Studio.form = null;
 	v3Studio.signals = null;
-	v3Studio.clarifications = [];
-	v3Studio.answers = [];
 	v3Studio.chunkedState = null;
 	v3Studio.chunkedSectionStatus = {};
 	v3Studio.chunkedSectionErrors = {};

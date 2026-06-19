@@ -8,22 +8,6 @@
     "lesson_mode": "first_exposure",
     "resource_type": "lesson"
   },
-  "applied_lenses": [
-    {
-      "lens_id": "first_exposure",
-      "effects": [
-        "sequence concrete to abstract explanations",
-        "limit independent cognitive jumps in early tasks"
-      ]
-    },
-    {
-      "lens_id": "eal",
-      "effects": [
-        "define technical words before first use",
-        "use short sentence structures throughout"
-      ]
-    }
-  ],
   "voice": {
     "register": "simple",
     "tone": "supportive"

@@ -6,7 +6,7 @@ from core.llm import ModelFamily, ModelSlot, ModelSpec, build_model
 
 # Canonical v3 node names (must match call sites).
 V3_SIGNAL_EXTRACTOR = "v3_signal_extractor"
-V3_CLARIFY = "v3_clarify"
+V3_NARROW = "v3_narrow"
 V3_LESSON_ARCHITECT = "v3_lesson_architect"
 V3_STAGE1_PLANNER = "v3_stage1_planner"
 V3_STAGE2_EXPANDER = "v3_stage2_expander"
@@ -20,7 +20,7 @@ V3_COHERENCE_REVIEWER = "v3_coherence_reviewer"
 
 V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V3_SIGNAL_EXTRACTOR: ModelSlot.FAST,
-    V3_CLARIFY: ModelSlot.FAST,
+    V3_NARROW: ModelSlot.FAST,
     V3_LESSON_ARCHITECT: ModelSlot.PREMIUM,
     V3_STAGE1_PLANNER: ModelSlot.PREMIUM,
     V3_STAGE2_EXPANDER: ModelSlot.STANDARD,
@@ -152,7 +152,7 @@ __all__ = [
     "V3_ANSWER_KEY_GENERATOR",
     "V3_ANSWER_KEY_GENERATOR_HEAVY",
     "V3_BLUEPRINT_ADJUST",
-    "V3_CLARIFY",
+    "V3_NARROW",
     "V3_COHERENCE_REVIEWER",
     "V3_DEFAULT_SPECS",
     "V3_LESSON_ARCHITECT",

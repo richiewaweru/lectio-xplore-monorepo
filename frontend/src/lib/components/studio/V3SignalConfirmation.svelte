@@ -46,13 +46,6 @@
 			</div>
 		{/if}
 	</dl>
-
-	{#if signals.missing_signals.length}
-		<p class="text-sm text-muted-foreground">
-			We may ask about: {signals.missing_signals.join(', ')}
-		</p>
-	{/if}
-
 	<div class="flex flex-col gap-3 sm:flex-row">
 		<button
 			type="button"

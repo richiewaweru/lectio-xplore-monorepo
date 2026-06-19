@@ -39,8 +39,6 @@ def build_llm_review_payload(
 ) -> dict[str, Any]:
     """Compressed text-only briefing for LLM coherence review — no image bytes."""
 
-    lens_ids = [ln.lens_id for ln in blueprint.applied_lenses]
-
     section_summaries: list[dict[str, Any]] = []
     for sec in draft_pack.sections:
         if not isinstance(sec, dict):
@@ -128,11 +126,9 @@ def build_llm_review_payload(
         "blueprint_summary": {
             "lesson_mode": blueprint.lesson.lesson_mode,
             "resource_type": blueprint.lesson.resource_type,
-            "lenses": lens_ids,
             "register": blueprint.voice.register_name,
             "tone": blueprint.voice.tone,
             "learner_profile_level": blueprint.metadata.subject,
-            "support_adaptations": lens_ids,
             "question_plan": [
                 {
                     "id": q.question_id,

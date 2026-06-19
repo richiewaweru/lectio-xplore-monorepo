@@ -8,15 +8,6 @@
     "lesson_mode": "first_exposure",
     "resource_type": "mini_booklet"
   },
-  "applied_lenses": [
-    {
-      "lens_id": "first_exposure",
-      "effects": [
-        "sequence stages from orient to guided practice",
-        "maintain explicit stage transitions and recap checkpoints"
-      ]
-    }
-  ],
   "voice": {
     "register": "clear",
     "tone": "scientific_supportive"

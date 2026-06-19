@@ -79,7 +79,6 @@ class V3TraceWriter:
         component_count: int,
         visual_required_count: int,
         question_count: int,
-        lenses: list[str],
     ) -> None:
         payload = {
             "blueprint_id": blueprint_id,
@@ -89,7 +88,6 @@ class V3TraceWriter:
             "component_count": component_count,
             "visual_required_count": visual_required_count,
             "question_count": question_count,
-            "lenses": lenses,
         }
         await self._record_event(
             phase="blueprint",

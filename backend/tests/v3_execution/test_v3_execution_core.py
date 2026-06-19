@@ -208,23 +208,7 @@ async def test_runner_with_stubbed_executors(monkeypatch: pytest.MonkeyPatch) ->
             repair_targets=[],
         )
 
-    async def stub_route_repairs(
-        report,
-        blueprint,
-        work_orders,
-        draft_pack,
-        emit_event,
-        execution_result,
-        **_kwargs: object,
-    ):
-        _ = blueprint
-        _ = work_orders
-        _ = execution_result
-        _ = emit_event
-        return draft_pack, report
-
     monkeypatch.setattr("v3_execution.runtime.runner.run_coherence_review", stub_coherence_review)
-    monkeypatch.setattr("v3_execution.runtime.runner.route_repairs", stub_route_repairs)
 
     captured: list[tuple[str, dict]] = []
 
@@ -358,7 +342,7 @@ async def test_runner_emits_draft_status_updated_when_blocking_issues_remain(
         return CoherenceReport(
             blueprint_id=draft_pack.blueprint_id,
             generation_id=draft_pack.generation_id,
-            status="escalated",
+            status="failed",
             deterministic_passed=False,
             llm_review_passed=False,
             issues=[issue],
@@ -368,23 +352,7 @@ async def test_runner_emits_draft_status_updated_when_blocking_issues_remain(
             minor_count=0,
         )
 
-    async def stub_route_repairs(
-        report,
-        blueprint,
-        work_orders,
-        draft_pack,
-        emit_event,
-        execution_result,
-        **_kwargs: object,
-    ):
-        _ = blueprint
-        _ = work_orders
-        _ = emit_event
-        _ = execution_result
-        return draft_pack, report
-
     monkeypatch.setattr("v3_execution.runtime.runner.run_coherence_review", stub_coherence_review)
-    monkeypatch.setattr("v3_execution.runtime.runner.route_repairs", stub_route_repairs)
 
     captured: list[tuple[str, dict]] = []
 
@@ -514,20 +482,7 @@ async def test_runner_records_strategic_trace_checkpoints(
             minor_count=1,
         )
 
-    async def stub_route_repairs(
-        report,
-        blueprint,
-        work_orders,
-        draft_pack,
-        emit_event,
-        execution_result,
-        **_kwargs: object,
-    ):
-        _ = report, blueprint, work_orders, emit_event, execution_result
-        return draft_pack, report
-
     monkeypatch.setattr("v3_execution.runtime.runner.run_coherence_review", stub_coherence_review)
-    monkeypatch.setattr("v3_execution.runtime.runner.route_repairs", stub_route_repairs)
 
     class StubTraceWriter:
         def __init__(self) -> None:

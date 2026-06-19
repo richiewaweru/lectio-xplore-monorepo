@@ -14,7 +14,6 @@ const blueprintFixture = (): BlueprintPreviewDTO => ({
 	resource_type: 'lesson',
 	title: 'Test',
 	template_id: 'guided-concept-path',
-	lenses: [],
 	anchor: null,
 	section_plan: [
 		{

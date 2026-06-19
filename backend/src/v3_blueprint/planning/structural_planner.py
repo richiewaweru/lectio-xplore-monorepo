@@ -7,7 +7,6 @@ from pydantic_ai import Agent
 
 from core.config import settings
 from core.llm.runner import RetryPolicy, run_llm
-from generation.v3_lenses.loader import format_lenses_for_prompt
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 from generation.v3_studio.prompts import _planner_index_block
 from v3_blueprint.planning.models import StructuralPlan
@@ -20,285 +19,138 @@ STAGE1_MAX_TOKENS = 8000
 
 
 def build_stage1_system_prompt() -> str:
-    planner_block = _planner_index_block()   # unchanged — component palette
-    lenses_block = format_lenses_for_prompt() # unchanged — lenses with effects
+    planner_block = _planner_index_block()
 
-    return f"""You are a lesson architect. Your job is to produce a \
-StructuralPlan — the complete structural and pedagogical blueprint \
-for this lesson.
+    return f"""You are a lesson architect. Produce only valid StructuralPlan JSON.
 
-You do NOT write content. You do NOT write question text. You do NOT \
-write component prose. A second stage will elaborate each component \
-brief from your plan. Your job is to make every decision that requires \
-seeing the whole lesson at once.
+You do NOT write lesson prose, question text, or finished component content.
+Your job is to decide structure, section flow, slot choices, and question placement.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-COMPONENT PALETTE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {planner_block}
 
-CONSTRAINT: Each section_field (shown in brackets) may appear at most \
-once per section. Never plan two components with the same section_field \
-in the same section.
+CONSTRAINT: Each section_field (shown in brackets) may appear at most once per section.
+Never plan two components with the same section_field in the same section.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-PEDAGOGICAL LENSES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{lenses_block}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REASONING STEPS — work through these in order before producing JSON
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-STEP 1 — LEARNER PROFILE
-  Who is this learner group?
-  What do they already know? What is fragile or absent?
-  What does their support profile mean for content density,
-  language load, and visual complexity?
-  Does anything in their needs (EAL, low confidence, fragile prior
-  knowledge) constrain your approach before you choose components?
-  Answer in 3–4 sentences. Be specific — "mixed class" is not an answer.
+STEP 1 — RESTATE
+  Restate the learner group and lesson_mode from the signals.
+  Do not re-derive them. Keep this to one line.
 
-STEP 2 — LESSON MODE AND INTENT
-  What mode does this lesson require?
-  Choose one: first_exposure | consolidation | repair | retrieval | transfer
+STEP 2 — GOAL
+  Write one testable goal:
+  "By the end the student can ___."
 
-  Then write:
-    goal:               "By the end of this lesson the student can..."
-                        One sentence. Specific and testable.
-    structure_rationale: Why you structured it this way given what
-                         you know about this group and this concept.
-                         Max 3 sentences.
-
-  If mode is repair: name the fault line precisely.
-  What specifically went wrong? What must NOT be retaught?
-
-STEP 3 — LENS SELECTION
-  Select 1–3 lenses that fit this class and lesson_mode.
-  For each lens:
-    - State why it fits this learner group (one sentence)
-    - State the mechanical effect it has on your sequencing or
-      component choices (one sentence — be concrete)
-    - Check conflicts_with — do not apply conflicting lenses
-
-  Example:
-    concrete_first → learner has no prior model → anchor must appear
-    before any abstraction; worked example before explanation-block
-    eal → multilingual class → definition before explanation;
-    all diagram labels must be plain one-word nouns
+STEP 3 — SPEC GATE
+  Read the resource spec in your context.
+  State required roles and forbidden components.
+  Remove anything the spec forbids before continuing. This is a gate.
 
 STEP 4 — ANCHOR
-  Name the anchor example for this lesson.
-  It must be concrete, specific, and usable across all sections.
-  Then write reuse_scope: exactly how it recurs across each section.
-
-  Bad anchor:      "an everyday example of fractions"
-  Good anchor:     "splitting a pizza into 8 equal slices"
-
-  Bad reuse_scope: "used throughout"
-  Good reuse_scope: "introduced in orient as the problem setup;
-                     walked through in model to show equivalence;
-                     varied in practice (different slice counts);
-                     returned in summary to consolidate the rule"
+  Choose one concrete anchor example for the whole lesson.
+  Name it exactly and explain how it recurs across sections.
+  Never substitute or generalise it later.
 
 STEP 5 — SECTION SEQUENCE
-  Design the section arc: 3–6 sections max.
-  For each section state: id, title, role.
-  Use these roles: orient | model | practice | alert | summary | assess
+  List sections in order: all required roles plus any optional roles that fit.
+  Emit role using the exact role strings allowed by the active resource spec.
+  Do not emit phase words as roles.
+  For each section after the first, write one transition_note stating what the
+  prior section established and what this section now does with it.
 
-  Then for every section after the first write a transition_note:
-  one sentence explaining why this section follows the previous one.
-  This note must name what the previous section established and what
-  this section does with it.
-
-  Bad transition_note:  "builds on the previous section"
-  Good transition_note: "prior section established the anchor via
-                          area model; this section applies the same
-                          model to symbolic notation for the first time"
-
-STEP 6 — COMPONENT MAPPING
-  For each section, map pedagogical moves to component slugs.
-  Follow this order for every component:
-    a. Name the pedagogical role of this move
-    b. Find the matching phase in AVAILABLE COMPONENTS
-    c. Choose the right slug for this learner and context
-    d. Check section_field — no two components share a field
-       in the same section
-    e. Write one-line purpose: what this component does
-       for the learner at this exact point in the lesson
-
-  Bad purpose:  "explains the concept"
-  Good purpose: "introduces symbolic fraction notation using the
-                 pizza anchor before students attempt symbolic practice"
+STEP 6 — SLOT MAPPING
+  For each section, choose components only from that role's preferred or allowed
+  set in the resource spec.
+  Never use a forbidden component.
+  No two components may share a section_field within one section.
+  Each purpose must tell the writer exactly what the component must do now.
 
 STEP 7 — MISCONCEPTIONS
-  Are there known misconceptions for this concept at this learner level?
-  If you planned a pitfall-alert component anywhere, name the specific
-  misconception it must target and which component_id it feeds.
-  If no pitfall-alert is planned, return an empty list.
+  Only if a pitfall-alert component is slotted:
+  name the specific misconception and the component_id it feeds.
+  Otherwise return an empty list.
 
-  Bad:  "students may be confused"
-  Good: "students believe a larger denominator means a larger fraction
-         because they read numerals left to right"
-
-STEP 8 — VISUALS AND QUESTIONS
-  VISUALS:
-  For each section: does this concept require a visual here?
-  Visual is required when the concept involves spatial structure,
-  relational reasoning, or a procedure where step order matters visually.
-  Visual is NOT required for definitions, pitfall warnings, or
-  consolidation text. Max 2 sections with visual_required=true.
-  Answer as: section_id → yes/no, one-word reason.
-
-  QUESTIONS:
-  Given the lesson_mode, what is the right difficulty arc?
-    first_exposure  → warm and medium only
-    consolidation   → medium to cold; at least one transfer
-    repair          → warm only until fault line is resolved
-    retrieval       → cold and transfer; no warm
-    transfer        → transfer; cold acceptable; no warm or medium
-
-  For each question state: which section it belongs to, temperature,
-  and what cognitive move it tests (one sentence).
-  Question count must stay within the resource spec depth limits.
+STEP 8 — VISUALS & QUESTIONS
+  Visuals: mark visual_required only where the concept needs spatial or
+  relational structure. Max 2 sections total.
+  Questions: follow this lesson_mode arc:
+    first_exposure → warm and medium only
+    consolidation  → medium to cold; at least one transfer
+    repair         → warm only until the fault line is resolved
+    retrieval      → cold and transfer; no warm
+    transfer       → transfer; cold acceptable; no warm or medium
+  Keep question counts within the resource spec depth limits.
 
 STEP 9 — SELF CHECK
-  Before emitting JSON, verify each of these:
-  — Every section has components that can carry its stated role
-  — The anchor name from Step 4 appears in at least one
-    component purpose per section
-  — The question temperatures match the lesson_mode rule from Step 8
-  — No two components in any section share a section_field
-  — Visual placements reflect actual conceptual need, not decoration
-  — Max 2 sections with visual_required=true
-  — transition_notes name something specific, not generic connectors
-  — known_pitfalls are named specifically, not described vaguely
-  — First section has transition_note=null
-  — repair_focus is present if lesson_mode=repair
+  Verify:
+  - every section has components that can carry its role
+  - every emitted role exists in the active resource spec
+  - the anchor appears by exact name where the concept is taught
+  - question temperatures match lesson_mode
+  - no two components in any section share a section_field
+  - max 2 sections have visual_required=true
+  - transition_notes are specific, first section only has null
+  - repair_focus is present if lesson_mode=repair
 
-  If any check fails: correct it now before producing JSON.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OUTPUT — produce this JSON after completing all steps
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Do not include reasoning steps in the JSON.
-Do not add any keys not shown below.
-Output ONLY valid JSON matching this schema exactly.
-
+Output ONLY valid JSON matching this schema exactly:
 {{
   "lesson_mode": "first_exposure",
-
   "lesson_intent": {{
     "goal": "By the end of this lesson the student can...",
-    "structure_rationale": "Why this structure for this group..."
+    "structure_rationale": "Why this structure fits this class and concept."
   }},
-
   "anchor": {{
     "example": "splitting a pizza into 8 equal slices",
-    "reuse_scope": "introduced in orient as setup; walked through
-                    in model; varied in practice; returned in summary"
+    "reuse_scope": "introduced in orient; reused in model; varied in practice; returned in summary"
   }},
-
-  "applied_lenses": [
-    {{
-      "lens_id": "concrete_first",
-      "effects": [
-        "anchor must appear before any abstraction",
-        "worked example precedes explanation-block"
-      ]
-    }}
-  ],
-
   "voice": {{
     "register_name": "simple",
     "tone": "encouraging"
   }},
-
   "prior_knowledge": ["equal sharing", "basic division"],
-
   "repair_focus": null,
-
   "known_pitfalls": [
     {{
-      "misconception": "students believe larger denominator means larger fraction",
+      "misconception": "students believe a larger denominator means a larger fraction",
       "component_id": "pitfall-alert"
     }}
   ],
-
   "sections": [
     {{
       "id": "orient",
       "title": "What do you already know about sharing equally?",
-      "role": "orient",
+      "role": "intro",
       "visual_required": false,
       "transition_note": null,
       "components": [
         {{
           "slug": "hook-hero",
-          "purpose": "surfaces anchor problem before any instruction"
-        }},
-        {{
-          "slug": "recall-box",
-          "purpose": "activates prior knowledge about equal sharing"
-        }}
-      ]
-    }},
-    {{
-      "id": "model",
-      "title": "Splitting the pizza",
-      "role": "model",
-      "visual_required": true,
-      "transition_note": "orient surfaced anchor intuition; model now
-                          formalises it with symbolic notation for the first time",
-      "components": [
-        {{
-          "slug": "explanation-block",
-          "purpose": "introduces equivalent fraction definition
-                      via anchor before symbolic form appears"
-        }},
-        {{
-          "slug": "diagram-block",
-          "purpose": "shows area model of anchor; labels numerator
-                      and denominator on the pizza slices"
-        }},
-        {{
-          "slug": "worked-example-card",
-          "purpose": "models the comparison step using anchor fractions;
-                      annotates each reasoning move"
+          "purpose": "surface the anchor problem before any instruction"
         }}
       ]
     }}
   ],
-
   "question_plan": [
     {{
       "question_id": "q1",
       "section_id": "practice",
       "temperature": "warm",
       "diagram_required": false
-    }},
-    {{
-      "question_id": "q2",
-      "section_id": "practice",
-      "temperature": "medium",
-      "diagram_required": true
     }}
   ],
-
   "answer_key_style": "brief_explanations"
 }}
 
-HARD RULES — violations will be caught by the plan validator and trigger a retry:
+HARD RULES:
 - Only use slugs from AVAILABLE COMPONENTS. Never invent slugs.
 - Max 6 sections.
 - Max 4 component slugs per section.
 - Max 2 sections with visual_required=true.
 - transition_note is null for the first section only.
-- known_pitfalls is an empty list [] if no pitfall-alert was planned.
+- Every emitted role must exist in the active resource spec.
+- known_pitfalls is [] if no pitfall-alert was planned.
 - repair_focus is null unless lesson_mode is repair.
-- Do not include content_intent, question prompt text, or visual
-  subject descriptions — those belong to Stage 2.
+- Do not include content_intent, question prompt text, or visual subject descriptions.
 - Do not add any JSON keys not shown in the schema above.
 """
 

@@ -4,7 +4,7 @@ from learning.models import LearningJob, PackLearningPlan
 from learning.pack_planner import plan_pack
 
 
-def _job(job_type: str = "introduce") -> LearningJob:
+def _job(job_type: str = "reteach") -> LearningJob:
     return LearningJob(
         job=job_type,
         subject="Mathematics",
@@ -33,7 +33,7 @@ def _plan() -> PackLearningPlan:
 
 
 def test_plan_pack_respects_max_resources() -> None:
-    pack = plan_pack(_job("introduce"), _plan(), max_resources=2)
+    pack = plan_pack(_job("reteach"), _plan(), max_resources=2)
     assert len(pack.resources) == 2
 
 
@@ -44,4 +44,3 @@ def test_plan_pack_uses_pack_spec_order() -> None:
         "worksheet",
         "exit_ticket",
     ]
-

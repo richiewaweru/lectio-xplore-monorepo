@@ -60,27 +60,6 @@
 		</section>
 	{/if}
 
-	{#if blueprint.lenses.length}
-		<section class="space-y-3">
-			<h3 class="text-lg font-semibold">How we planned this</h3>
-			<ul class="space-y-3">
-				{#each blueprint.lenses as lens}
-					<li class="rounded-xl border border-border/60 bg-card p-4 shadow-sm">
-						<p class="font-semibold">{lens.label}</p>
-						<p class="text-sm text-muted-foreground">{lens.reason}</p>
-						{#if lens.effects.length}
-							<ul class="mt-2 list-inside list-disc text-sm">
-								{#each lens.effects as effect}
-									<li>{effect}</li>
-								{/each}
-							</ul>
-						{/if}
-					</li>
-				{/each}
-			</ul>
-		</section>
-	{/if}
-
 	{#if blueprint.anchor}
 		<section class="space-y-3">
 			<h3 class="text-lg font-semibold">Anchor</h3>

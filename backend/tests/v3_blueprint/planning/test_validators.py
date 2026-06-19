@@ -5,7 +5,6 @@ from v3_blueprint.planning.models import (
     AnchorSpec,
     ComponentBrief,
     ComponentSlot,
-    LensEffect,
     LessonIntent,
     QPlanItem,
     QuestionBrief,
@@ -58,7 +57,6 @@ def _base_plan_with_components(*, components: list[ComponentSlot]) -> Structural
             example="splitting a pizza into 8 equal slices",
             reuse_scope="used in orient and model",
         ),
-        applied_lenses=[LensEffect(lens_id="concrete_first", effects=["anchor before abstraction"])],
         voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[

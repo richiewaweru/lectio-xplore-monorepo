@@ -12,7 +12,7 @@ class NodeLogger(logging.LoggerAdapter):
         node_name: str,
     ) -> None:
         super().__init__(
-            logging.getLogger(f"pipeline.{node_name}"),
+            logging.getLogger(f"lectio.{node_name}"),
             {
                 "generation_id": generation_id,
                 "section_id": section_id,

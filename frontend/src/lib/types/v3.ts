@@ -35,21 +35,7 @@ export interface V3SignalSummary {
 	teacher_goal: string;
 	inferred_resource_type: string;
 	confidence: 'low' | 'medium' | 'high';
-	missing_signals: string[];
 }
-
-export interface V3ClarificationQuestion {
-	question: string;
-	reason: string;
-	optional: boolean;
-}
-
-export interface V3ClarificationAnswer {
-	question: string;
-	answer: string;
-}
-
-export type ArchitectMode = 'standard' | 'chunked';
 
 export interface V3StructuralPlanComponent {
 	slug: string;
@@ -97,13 +83,6 @@ export interface V3ChunkedPlanState {
 	next_action: string | null;
 }
 
-export interface V3AppliedLens {
-	id: string;
-	label: string;
-	reason: string;
-	effects: string[];
-}
-
 export interface V3SectionPlanItem {
 	id: string;
 	title: string;
@@ -140,7 +119,6 @@ export interface BlueprintPreviewDTO {
 	resource_type: string;
 	title: string;
 	template_id: string;
-	lenses: V3AppliedLens[];
 	anchor: V3AnchorExample | null;
 	section_plan: V3SectionPlanItem[];
 	question_plan: V3QuestionPlan[];
@@ -317,7 +295,6 @@ export interface V3ParentSnapshot {
 export type V3Stage =
 	| 'input'
 	| 'confirming'
-	| 'clarifying'
 	| 'planning'
 	| 'chunked_review'
 	| 'chunked_blocked'

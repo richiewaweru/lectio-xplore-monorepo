@@ -4,7 +4,7 @@ import os
 
 V3_MAX_RETRIES: dict[str, int] = {
     "signal_extractor": int(os.getenv("V3_RETRY_SIGNAL_MAX", "2")),
-    "clarification": int(os.getenv("V3_RETRY_CLARIFY_MAX", "1")),
+    "narrow": int(os.getenv("V3_RETRY_CLARIFY_MAX", "1")),
     "lesson_architect": int(os.getenv("V3_RETRY_ARCHITECT_MAX", "1")),
     "section_writer": int(os.getenv("V3_RETRY_SECTION_MAX", "1")),
     "question_writer": int(os.getenv("V3_RETRY_QUESTION_MAX", "1")),

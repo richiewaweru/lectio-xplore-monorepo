@@ -20,7 +20,7 @@ ResourceType = Literal[
     "quiz",  # formal assessment (spec exists)
     "exit_ticket",  # short end-of-lesson check (spec exists)
     "practice_set",  # drill-style repetition (spec exists)
-    "quick_explainer",  # focused concept clarification (spec exists)
+    "quick_explainer",  # focused concept explainer/reference card (spec exists)
 ]
 
 
@@ -30,13 +30,6 @@ class BlueprintMetadata(BaseModel):
     version: str = "3.0"
     title: str
     subject: str
-
-
-class AppliedLens(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    lens_id: str
-    effects: list[str] = Field(default_factory=list, min_length=1)
 
 
 class LessonModePlan(BaseModel):
@@ -119,7 +112,6 @@ class ProductionBlueprint(BaseModel):
 
     metadata: BlueprintMetadata
     lesson: LessonModePlan
-    applied_lenses: list[AppliedLens] = Field(default_factory=list, min_length=1)
     voice: VoicePlan
     anchor: AnchorPlan
     sections: list[SectionPlan] = Field(default_factory=list, min_length=1)

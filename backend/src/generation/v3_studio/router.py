@@ -46,9 +46,7 @@ from generation.v3_studio.agents import (
     _validate_blueprint,
     adjust_production_blueprint,
     extract_signals,
-    generate_production_blueprint,
     generate_supplement_blueprint,
-    get_clarifications,
 )
 from generation.pdf_export.cleanup import cleanup_files
 from generation.pdf_export.rendering.playwright import PDFRenderError
@@ -56,8 +54,6 @@ from generation.pdf_export.service import PDFExportRequest, export_v3_studio_pdf
 from generation.v3_studio.dtos import (
     AdjustBlueprintRequest,
     BlueprintPreviewDTO,
-    ClarifyRequest,
-    GenerateBlueprintRequest,
     V3ChunkedPlanStartRequest,
     V3ChunkedPlanStateDTO,
     V3ChunkedRegenerateRequest,
@@ -66,7 +62,6 @@ from generation.v3_studio.dtos import (
     V3CreateSupplementBlueprintResponse,
     V3GenerationDetailDTO,
     V3GenerationHistoryItemDTO,
-    V3ClarificationQuestion,
     V3GenerateStartRequest,
     V3GenerateStartResponse,
     V3InputForm,
@@ -242,23 +237,6 @@ def _build_chunked_resource_spec(
         }
 
 
-def _apply_clarifications_to_form(form: V3InputForm, clarification_answers: list[Any]) -> V3InputForm:
-    if not clarification_answers:
-        return form
-    clar_lines: list[str] = []
-    for item in clarification_answers:
-        question = getattr(item, "question", None)
-        answer = getattr(item, "answer", None)
-        if isinstance(question, str) and isinstance(answer, str):
-            clar_lines.append(f"Q: {question}\nA: {answer}")
-    if not clar_lines:
-        return form
-    clar_text = "Clarifications:\n" + "\n".join(clar_lines)
-    existing = form.free_text.strip()
-    merged_free_text = f"{existing}\n\n{clar_text}" if existing else clar_text
-    return form.model_copy(update={"free_text": merged_free_text})
-
-
 @v3_studio_router.post("/signals", response_model=V3SignalSummary)
 async def post_signals(
     body: V3InputForm,
@@ -266,15 +244,6 @@ async def post_signals(
 ) -> V3SignalSummary:
     _ = current_user
     return await extract_signals(body, trace_id=str(uuid.uuid4()))
-
-
-@v3_studio_router.post("/clarify", response_model=list[V3ClarificationQuestion])
-async def post_clarify(
-    body: ClarifyRequest,
-    current_user: User = Depends(get_current_user),
-):
-    _ = current_user
-    return await get_clarifications(body.signals, body.form, trace_id=str(uuid.uuid4()))
 
 
 @v3_studio_router.post("/narrow", response_model=V3NarrowResponse)
@@ -287,7 +256,7 @@ async def post_v3_narrow(
             default_factory=list
         )
 
-    node = "v3_clarify"
+    node = "v3_narrow"
     model = get_v3_model(node)
     spec = get_v3_spec(node)
     slot = get_v3_slot(node)
@@ -328,7 +297,7 @@ async def post_v3_narrow(
             node=node,
             retry_policy=RetryPolicy(
                 call_timeout_seconds=float(
-                    V3_TIMEOUTS["clarification"]
+                    V3_TIMEOUTS["narrow"]
                 )
             ),
         )
@@ -353,61 +322,6 @@ async def post_v3_narrow(
             c.id = f"candidate-{i + 1}"
 
     return V3NarrowResponse(candidates=candidates[:5])
-
-
-@v3_studio_router.post("/blueprint", response_model=BlueprintPreviewDTO)
-async def post_blueprint(
-    body: GenerateBlueprintRequest,
-    current_user: User = Depends(get_current_user),
-) -> BlueprintPreviewDTO:
-    try:
-        bp = await generate_production_blueprint(
-            signals=body.signals,
-            form=body.form,
-            clarification_answers=body.clarification_answers,
-            architect_mode=body.architect_mode,
-            generation_id=None,
-            trace_id=str(uuid.uuid4()),
-        )
-        blueprint_id = str(uuid.uuid4())
-        template_id = "guided-concept-path"
-        await v3_studio_store.put_blueprint(
-            current_user.id,
-            blueprint_id,
-            bp,
-            template_id,
-            form=body.form,
-        )
-        return blueprint_to_preview_dto(
-            blueprint_id=blueprint_id,
-            blueprint=bp,
-            template_id=template_id,
-            form=body.form,
-        )
-    except Stage1PlanFailure as exc:
-        logger.warning(
-            "Stage 1 plan failed user=%s errors=%s",
-            current_user.id,
-            exc.errors,
-        )
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "error": "stage1_plan_failure",
-                "message": "Could not generate a valid structural lesson plan.",
-                "errors": exc.errors,
-            },
-        ) from exc
-    except Exception as exc:  # noqa: BLE001
-        logger.exception(
-            "Blueprint generation failed user=%s error=%s",
-            current_user.id,
-            str(exc)[:400],
-        )
-        raise HTTPException(
-            status_code=500,
-            detail=f"{type(exc).__name__}: {str(exc)[:400]}",
-        ) from exc
 
 
 async def _ensure_chunked_generation_row(
@@ -546,7 +460,6 @@ async def _start_generation_from_chunked_blueprint(
         )
         component_count = sum(len(section.components) for section in blueprint.sections)
         visual_required_count = sum(1 for section in blueprint.sections if section.visual_required)
-        lenses = [lens.lens_id for lens in blueprint.applied_lenses]
         await trace_writer.record_blueprint_snapshot(
             blueprint_id=blueprint_id,
             template_id=template_id,
@@ -555,7 +468,6 @@ async def _start_generation_from_chunked_blueprint(
             component_count=component_count,
             visual_required_count=visual_required_count,
             question_count=len(blueprint.question_plan),
-            lenses=lenses,
         )
         await telemetry_monitor.initialise_v3_recorder(
             generation_id=generation_id,
@@ -894,7 +806,7 @@ async def post_chunked_plan_start(
     current_user: User = Depends(get_current_user),
 ) -> V3ChunkedPlanStateDTO:
     generation_id = str(uuid.uuid4())
-    form = _apply_clarifications_to_form(body.form, body.clarification_answers)
+    form = body.form
     resource_spec = _build_chunked_resource_spec(
         inferred_resource_type=body.signals.inferred_resource_type,
         duration_minutes=form.duration_minutes,
@@ -1401,7 +1313,6 @@ async def post_v3_generate_start(
         )
         component_count = sum(len(section.components) for section in blueprint.sections)
         visual_required_count = sum(1 for section in blueprint.sections if section.visual_required)
-        lenses = [lens.lens_id for lens in blueprint.applied_lenses]
         await trace_writer.record_blueprint_snapshot(
             blueprint_id=body.blueprint_id,
             template_id=template_id,
@@ -1410,7 +1321,6 @@ async def post_v3_generate_start(
             component_count=component_count,
             visual_required_count=visual_required_count,
             question_count=len(blueprint.question_plan),
-            lenses=lenses,
         )
         await telemetry_monitor.initialise_v3_recorder(
             generation_id=body.generation_id,

@@ -31,7 +31,7 @@ from v3_execution.models import (
 )
 
 from v3_execution.runtime import events
-from v3_review import coherence_report_to_generation_summary, route_repairs, run_coherence_review
+from v3_review import coherence_report_to_generation_summary, run_coherence_review
 
 
 def _summarize_status_reason(status: str) -> str:
@@ -348,30 +348,15 @@ async def run_generation(
         artifact_status: BookletStatus = draft_pack.status
         try:
             async with sem["llm_coherence_reviewer"]:
-
-                async def _coherence():
-                    coherence_report = await run_coherence_review(
+                coherence_report = await asyncio.wait_for(
+                    run_coherence_review(
                         blueprint,
                         draft_pack,
                         emit_event,
                         trace_id=trace_id or generation_id,
                         generation_id=generation_id,
                         model_overrides=model_overrides,
-                    )
-                    return await route_repairs(
-                        coherence_report,
-                        blueprint,
-                        bundle,
-                        draft_pack,
-                        emit_event,
-                        execution_result=result,
-                        trace_id=trace_id or generation_id,
-                        generation_id=generation_id,
-                        model_overrides=model_overrides,
-                    )
-
-                draft_pack, coherence_report = await asyncio.wait_for(
-                    _coherence(),
+                    ),
                     timeout=V3_TIMEOUTS["coherence_pipeline"],
                 )
                 await emit_event(
@@ -409,17 +394,15 @@ async def run_generation(
                         minor_count=coherence_report.minor_count,
                         major_count=coherence_report.major_count,
                         blocking_count=coherence_report.blocking_count,
-                        repair_target_count=len(coherence_report.repair_targets),
+                        repair_target_count=0,
                         fatal_categories=sorted(fatal_categories),
-                        llm_review_used=coherence_report.llm_review_passed,
+                        llm_review_used=False,
                     )
-                    attempted_count = sum(coherence_report.repair_attempts.values())
-                    succeeded_count = len(coherence_report.repaired_target_ids)
                     await trace_writer.record_repair_summary(
-                        attempted_count=attempted_count,
-                        succeeded_count=succeeded_count,
-                        failed_count=max(attempted_count - succeeded_count, 0),
-                        repaired_target_ids=list(coherence_report.repaired_target_ids),
+                        attempted_count=0,
+                        succeeded_count=0,
+                        failed_count=0,
+                        repaired_target_ids=[],
                         remaining_minor_count=coherence_report.minor_count,
                         remaining_major_count=coherence_report.major_count,
                         remaining_blocking_count=coherence_report.blocking_count,

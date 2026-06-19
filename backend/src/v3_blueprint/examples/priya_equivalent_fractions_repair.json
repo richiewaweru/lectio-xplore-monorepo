@@ -8,15 +8,6 @@
     "lesson_mode": "repair",
     "resource_type": "lesson"
   },
-  "applied_lenses": [
-    {
-      "lens_id": "repair",
-      "effects": [
-        "target misconception directly before broad practice",
-        "sequence concrete visuals ahead of symbolic procedure"
-      ]
-    }
-  ],
   "voice": {
     "register": "clear",
     "tone": "diagnostic"

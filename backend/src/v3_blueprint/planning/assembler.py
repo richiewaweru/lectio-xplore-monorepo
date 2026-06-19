@@ -3,7 +3,6 @@ from __future__ import annotations
 from v3_blueprint.models import (
     AnchorPlan,
     AnswerKeyPlan,
-    AppliedLens,
     BlueprintMetadata,
     ComponentPlan,
     LessonModePlan,
@@ -81,13 +80,6 @@ def assemble_blueprint(
             lesson_mode=plan.lesson_mode,
             resource_type=resource_type if resource_type else "lesson",
         ),
-        applied_lenses=[
-            AppliedLens(
-                lens_id=lens.lens_id,
-                effects=lens.effects,
-            )
-            for lens in plan.applied_lenses
-        ],
         voice=VoicePlan.model_validate(
             {"register": plan.voice.register_name, "tone": plan.voice.tone}
         ),

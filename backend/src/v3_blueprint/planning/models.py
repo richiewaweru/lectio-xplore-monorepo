@@ -54,7 +54,7 @@ class SectionPlan(BaseModel):
 
     id: str = Field(description="Unique section identifier slug e.g. 'orient', 'model'")
     title: str = Field(description="Section title. Max 80 chars.", max_length=80)
-    role: Literal["orient", "model", "practice", "alert", "summary", "assess"]
+    role: str = Field(description="Spec-vocabulary role string for this section.")
     visual_required: bool
     transition_note: str | None = Field(
         default=None,
@@ -98,15 +98,6 @@ class KnownPitfall(BaseModel):
     )
 
 
-class LensEffect(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    lens_id: str
-    effects: list[str] = Field(
-        description="Mechanical effects this lens has on structure and sequencing."
-    )
-
-
 class VoiceSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -133,7 +124,6 @@ class StructuralPlan(BaseModel):
     ]
     lesson_intent: LessonIntent
     anchor: AnchorSpec
-    applied_lenses: list[LensEffect]
     voice: VoiceSpec
     prior_knowledge: list[str]
     repair_focus: RepairFocus | None = None

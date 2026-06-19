@@ -26,7 +26,6 @@ def build_planning_artifact(
     section_ids = [section.section_id for section in blueprint.sections]
     component_count = sum(len(section.components) for section in blueprint.sections)
     visual_required_count = sum(1 for section in blueprint.sections if section.visual_required)
-    lenses = [lens.lens_id for lens in blueprint.applied_lenses]
 
     source_payload = {
         "kind": "teacher_approved_blueprint",
@@ -55,7 +54,6 @@ def build_planning_artifact(
             "component_count": component_count,
             "question_count": len(blueprint.question_plan),
             "visual_required_count": visual_required_count,
-            "lenses": lenses,
         },
     }
 
@@ -77,7 +75,6 @@ def planning_summary_from_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
         "component_count": derived.get("component_count", 0),
         "question_count": derived.get("question_count", 0),
         "visual_required_count": derived.get("visual_required_count", 0),
-        "lenses": derived.get("lenses", []),
         "has_full_planning_artifact": True,
         "source": artifact.get("source", {}),
     }

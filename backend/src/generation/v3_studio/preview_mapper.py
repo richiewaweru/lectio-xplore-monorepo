@@ -6,7 +6,6 @@ from v3_execution.component_aliases import canonical_component_id
 from generation.v3_studio.dtos import (
     BlueprintPreviewDTO,
     V3AnchorExampleDTO,
-    V3AppliedLensDTO,
     V3ComponentPlanDTO,
     V3InputForm,
     V3LearnerContextDTO,
@@ -36,20 +35,22 @@ def blueprint_to_preview_dto(
         register_summary_parts.append(blueprint.voice.tone.replace("_", " ").title())
     register_summary = " · ".join(register_summary_parts)
 
-    lenses_out: list[V3AppliedLensDTO] = []
-    for lens in blueprint.applied_lenses:
-        lenses_out.append(
-            V3AppliedLensDTO(
-                id=lens.lens_id,
-                label=lens.lens_id.replace("_", " ").title(),
-                reason=f"Applied because lesson signals indicated fit for {lens.lens_id}.",
-                effects=list(lens.effects),
-            )
-        )
-
     support_summary: list[str] = []
-    for lens in blueprint.applied_lenses:
-        support_summary.extend(lens.effects[:2])
+    if form is not None:
+        if form.language_support != "none":
+            support_summary.append(f"Language support: {form.language_support.replace('_', ' ')}")
+        if form.reading_level != "on_grade":
+            support_summary.append(f"Reading level: {form.reading_level.replace('_', ' ')}")
+        if form.learner_level != "on_grade":
+            support_summary.append(f"Learner level: {form.learner_level.replace('_', ' ')}")
+        if form.prior_knowledge_level != "some_background":
+            support_summary.append(
+                f"Prior knowledge: {form.prior_knowledge_level.replace('_', ' ')}"
+            )
+        for need in form.support_needs[:4]:
+            support_summary.append(f"Support need: {need}")
+        for pref in form.learning_preferences[:4]:
+            support_summary.append(f"Preference: {pref.replace('_', ' ')}")
 
     section_plan: list[V3SectionPlanItemDTO] = []
     for order, sec in enumerate(blueprint.sections):
@@ -120,7 +121,6 @@ def blueprint_to_preview_dto(
         resource_type=blueprint.lesson.resource_type,
         title=blueprint.metadata.title,
         template_id=template_id,
-        lenses=lenses_out,
         anchor=anchor,
         section_plan=section_plan,
         question_plan=question_plan,

@@ -65,31 +65,6 @@ class V3SignalSummary(BaseModel):
     teacher_goal: str
     inferred_resource_type: str
     confidence: Literal["low", "medium", "high"]
-    missing_signals: list[str] = Field(default_factory=list)
-
-
-class V3ClarificationQuestion(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    question: str
-    reason: str
-    optional: bool = False
-
-
-class V3ClarificationAnswer(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    question: str
-    answer: str
-
-
-class V3AppliedLensDTO(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    id: str
-    label: str
-    reason: str
-    effects: list[str] = Field(default_factory=list)
 
 
 class V3ComponentPlanDTO(BaseModel):
@@ -153,7 +128,6 @@ class BlueprintPreviewDTO(BaseModel):
     resource_type: str
     title: str
     template_id: str = "guided-concept-path"
-    lenses: list[V3AppliedLensDTO] = Field(default_factory=list)
     anchor: V3AnchorExampleDTO | None = None
     section_plan: list[V3SectionPlanItemDTO] = Field(default_factory=list)
     question_plan: list[V3QuestionPlanDTO] = Field(default_factory=list)
@@ -162,28 +136,11 @@ class BlueprintPreviewDTO(BaseModel):
     learner_context: V3LearnerContextDTO | None = None
 
 
-class ClarifyRequest(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    signals: V3SignalSummary
-    form: V3InputForm
-
-
-class GenerateBlueprintRequest(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    signals: V3SignalSummary
-    form: V3InputForm
-    clarification_answers: list[V3ClarificationAnswer] = Field(default_factory=list)
-    architect_mode: Literal["standard", "chunked"] = "standard"
-
-
 class V3ChunkedPlanStartRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
     signals: V3SignalSummary
     form: V3InputForm
-    clarification_answers: list[V3ClarificationAnswer] = Field(default_factory=list)
 
 
 class V3ChunkedRegenerateRequest(BaseModel):
@@ -330,16 +287,11 @@ class V3CreateSupplementBlueprintResponse(BaseModel):
 __all__ = [
     "AdjustBlueprintRequest",
     "BlueprintPreviewDTO",
-    "ClarifyRequest",
-    "GenerateBlueprintRequest",
     "V3ChunkedPlanStartRequest",
     "V3ChunkedPlanStateDTO",
     "V3ChunkedRegenerateRequest",
     "V3ChunkedRetrySectionRequest",
     "ProductionBlueprintEnvelope",
-    "V3AppliedLensDTO",
-    "V3ClarificationAnswer",
-    "V3ClarificationQuestion",
     "V3ComponentPlanDTO",
     "V3GenerateStartRequest",
     "V3GenerateStartResponse",

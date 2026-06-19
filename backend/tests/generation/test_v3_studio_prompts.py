@@ -26,5 +26,5 @@ def test_architect_prompt_includes_contract_limits() -> None:
 def test_architect_prompt_includes_reasoning_scaffold() -> None:
     prompt = build_architect_system_prompt()
     assert "REASONING STEPS" in prompt
-    assert "STEP 1 — LEARNER" in prompt
-    assert "Now produce the ProductionBlueprint JSON" in prompt
+    assert "STEP 1 - LEARNER CONTEXT" in prompt
+    assert "teacher form signals" in prompt

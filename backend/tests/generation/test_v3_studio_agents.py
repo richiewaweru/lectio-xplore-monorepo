@@ -8,13 +8,9 @@ import pytest
 
 from generation.v3_studio.agents import (
     extract_signals,
-    form_to_lens_hints,
     generate_production_blueprint,
-    get_clarifications,
 )
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
-from generation.v3_studio.dtos import ProductionBlueprintEnvelope
-from v3_blueprint.models import ProductionBlueprint
 
 
 def _example_form(**overrides: Any) -> V3InputForm:
@@ -57,7 +53,6 @@ async def test_extract_signals_includes_structured_form_in_user_prompt(monkeypat
                     teacher_goal="Learners can decompose shapes to find area.",
                     inferred_resource_type="lesson",
                     confidence="high",
-                    missing_signals=[],
                 )
             },
         )()
@@ -76,23 +71,9 @@ async def test_extract_signals_includes_structured_form_in_user_prompt(monkeypat
 
 
 @pytest.mark.asyncio
-async def test_generate_blueprint_passes_retry_policy_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
-    captured: dict[str, Any] = {}
-
-    async def fake_run_llm(**kwargs):  # type: ignore[no-untyped-def]
-        captured.update(kwargs)
-        raw = (
-            Path(__file__).resolve().parents[2]
-            / "src"
-            / "v3_blueprint"
-            / "examples"
-            / "amara_compound_area.json"
-        )
-        bp = ProductionBlueprint.model_validate(json.loads(raw.read_text(encoding="utf-8")))
-        return type("Result", (), {"output": ProductionBlueprintEnvelope(blueprint=bp)})()
-
-    monkeypatch.setattr("generation.v3_studio.agents.run_llm", fake_run_llm)
-
+async def test_generate_blueprint_uses_chunked_stage1_and_stage2(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     form = _example_form()
     signals = V3SignalSummary(
         topic="Compound area",
@@ -102,85 +83,43 @@ async def test_generate_blueprint_passes_retry_policy_timeout(monkeypatch: pytes
         teacher_goal="Learners can decompose shapes to find area.",
         inferred_resource_type="lesson",
         confidence="high",
-        missing_signals=[],
     )
 
-    _ = await generate_production_blueprint(
-        signals=signals,
-        form=form,
-        clarification_answers=[],
-        trace_id="tid-test",
+    raw = (
+        Path(__file__).resolve().parents[2]
+        / "src"
+        / "v3_blueprint"
+        / "examples"
+        / "amara_compound_area.json"
+    )
+    assembled_bp = json.loads(raw.read_text(encoding="utf-8"))
+    stage1_calls: dict[str, Any] = {}
+    stage2_calls: dict[str, Any] = {}
+
+    async def fake_stage1(**kwargs):  # type: ignore[no-untyped-def]
+        stage1_calls.update(kwargs)
+        return {"sections": []}
+
+    async def fake_stage2(**kwargs):  # type: ignore[no-untyped-def]
+        stage2_calls.update(kwargs)
+        return []
+
+    monkeypatch.setattr("v3_blueprint.planning.retry.run_stage1_with_retry", fake_stage1)
+    monkeypatch.setattr("v3_blueprint.planning.retry.run_stage2", fake_stage2)
+    monkeypatch.setattr(
+        "v3_blueprint.planning.assembler.assemble_blueprint",
+        lambda *_args, **_kwargs: assembled_bp,
+    )
+    monkeypatch.setattr(
+        "generation.v3_studio.agents._validate_blueprint",
+        lambda _bp: None,
     )
 
-    retry_policy = captured.get("retry_policy")
-    assert retry_policy is not None
-    assert getattr(retry_policy, "call_timeout_seconds", None) is not None
-    user_prompt = str(captured.get("user_prompt", ""))
-    assert "RESOURCE SPEC — treat structural rules as hard constraints:" in user_prompt
+    result = await generate_production_blueprint(signals=signals, form=form, trace_id="tid-test")
+    assert stage1_calls["signals"] == signals
+    assert stage2_calls["signals"] == signals
+    assert stage2_calls["plan"] == {"sections": []}
+    assert result == assembled_bp
 
 
-def test_form_to_lens_hints_contains_key_fields() -> None:
-    hints = form_to_lens_hints(_example_form())
-    assert "lesson_mode: first_exposure" in hints
-    assert "learner_level: on_grade" in hints
-    assert "reading_level: on_grade" in hints
-    assert "language_support: some_ell" in hints
-    assert "support_needs: visuals, worked_examples" in hints
-
-
-@pytest.mark.asyncio
-async def test_get_clarifications_skips_llm_when_form_is_complete(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    called = {"run_llm": False}
-
-    async def fake_run_llm(**_kwargs):  # type: ignore[no-untyped-def]
-        called["run_llm"] = True
-        return type("Result", (), {"output": type("Raw", (), {"questions": []})()})()
-
-    monkeypatch.setattr("generation.v3_studio.agents.run_llm", fake_run_llm)
-
-    form = _example_form()
-    signals = V3SignalSummary(
-        topic="Compound area",
-        subtopic="L-shapes",
-        prior_knowledge=[],
-        learner_needs=[],
-        teacher_goal="Learners can decompose shapes to find area.",
-        inferred_resource_type="lesson",
-        confidence="high",
-        missing_signals=[],
-    )
-
-    qs = await get_clarifications(signals, form, trace_id="tid-test")
-    assert qs == []
-    assert called["run_llm"] is False
-
-
-@pytest.mark.asyncio
-async def test_get_clarifications_calls_llm_when_form_is_incomplete(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    called = {"run_llm": False}
-
-    async def fake_run_llm(**_kwargs):  # type: ignore[no-untyped-def]
-        called["run_llm"] = True
-        return type("Result", (), {"output": type("Raw", (), {"questions": []})()})()
-
-    monkeypatch.setattr("generation.v3_studio.agents.run_llm", fake_run_llm)
-
-    form = _example_form(topic="")
-    signals = V3SignalSummary(
-        topic="",
-        subtopic=None,
-        prior_knowledge=[],
-        learner_needs=[],
-        teacher_goal="Needs topic clarification.",
-        inferred_resource_type="lesson",
-        confidence="low",
-        missing_signals=["topic"],
-    )
-
-    _ = await get_clarifications(signals, form, trace_id="tid-test")
-    assert called["run_llm"] is True
 

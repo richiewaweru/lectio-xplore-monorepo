@@ -14,8 +14,6 @@ const mocks = vi.hoisted(() => ({
 	extractSignals: vi.fn(),
 	fetchV3Document: vi.fn(),
 	getV3GenerationBlueprint: vi.fn(),
-	generateBlueprint: vi.fn(),
-	getClarifications: vi.fn(),
 	getV3SupplementOptions: vi.fn(),
 	regenerateChunkedPlan: vi.fn(),
 	retryChunkedSection: vi.fn(),
@@ -34,8 +32,6 @@ vi.mock('$lib/api/v3', () => ({
 	extractSignals: mocks.extractSignals,
 	fetchV3Document: mocks.fetchV3Document,
 	getV3GenerationBlueprint: mocks.getV3GenerationBlueprint,
-	generateBlueprint: mocks.generateBlueprint,
-	getClarifications: mocks.getClarifications,
 	getV3SupplementOptions: mocks.getV3SupplementOptions,
 	regenerateChunkedPlan: mocks.regenerateChunkedPlan,
 	retryChunkedSection: mocks.retryChunkedSection,
@@ -50,12 +46,6 @@ vi.mock('$lib/components/studio/V3PlanningState.svelte', async () => ({
 	default: (await import('./__fixtures__/MockGeneric.svelte')).default
 }));
 vi.mock('$lib/components/studio/V3SignalConfirmation.svelte', async () => ({
-	default: (await import('./__fixtures__/MockGeneric.svelte')).default
-}));
-vi.mock('$lib/components/studio/V3Clarification.svelte', async () => ({
-	default: (await import('./__fixtures__/MockGeneric.svelte')).default
-}));
-vi.mock('$lib/components/studio/V3ArchitectModeToggle.svelte', async () => ({
 	default: (await import('./__fixtures__/MockGeneric.svelte')).default
 }));
 vi.mock('$lib/components/studio/V3BlueprintPreview.svelte', async () => ({

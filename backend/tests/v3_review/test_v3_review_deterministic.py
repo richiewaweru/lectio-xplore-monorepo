@@ -22,7 +22,6 @@ from v3_review.deterministic_checks import (
     check_planned_visuals_exist,
 )
 from v3_review.models import CoherenceReport
-from v3_review.repair_router import route_repairs
 
 
 def _load_example(filename: str) -> ProductionBlueprint:
@@ -219,68 +218,3 @@ def test_planned_components_skip_diagram_series_but_visual_check_flags_missing()
     assert all("diagram-series" not in issue.message for issue in component_issues)
     assert any(issue.repair_target_id == "visual:diagram_sequence" for issue in visual_issues)
 
-
-@pytest.mark.asyncio
-async def test_route_repairs_finalises_when_final_checks_patched(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    bp = _load_example("amara_compound_area.json")
-    bundle = compile_execution_bundle(
-        bp,
-        generation_id="g1",
-        blueprint_id="b1",
-        template_id="guided-concept-path",
-    )
-    dp = _minimal_draft_pack(sections=[], answer_key=None)
-    report = CoherenceReport(
-        blueprint_id=dp.blueprint_id,
-        generation_id=dp.generation_id,
-        status="passed",
-        deterministic_passed=True,
-        llm_review_passed=True,
-        issues=[],
-        repair_targets=[],
-    )
-    exec_result = ExecutionResult(generation_id="g1", blueprint_id="b1")
-
-    monkeypatch.setattr(
-        "v3_review.repair_router.check_planned_sections_exist",
-        lambda _bp, _dp: [],
-    )
-    monkeypatch.setattr(
-        "v3_review.repair_router.check_planned_components_exist",
-        lambda _bp, _dp: [],
-    )
-    monkeypatch.setattr(
-        "v3_review.repair_router.check_planned_questions_exist",
-        lambda _bp, _dp: [],
-    )
-    monkeypatch.setattr(
-        "v3_review.repair_router.check_planned_visuals_exist",
-        lambda _bp, _dp: [],
-    )
-    monkeypatch.setattr(
-        "v3_review.repair_router.check_expected_answers_preserved",
-        lambda _bp, _dp: [],
-    )
-
-    emitted: list[str] = []
-
-    async def capture(ev: str, _: dict) -> None:
-        emitted.append(ev)
-
-    out_pack, out_report = await route_repairs(
-        report,
-        bp,
-        bundle,
-        dp,
-        capture,
-        exec_result,
-        trace_id="t",
-        generation_id="g1",
-        model_overrides=None,
-    )
-
-    assert v3_events.RESOURCE_FINALISED not in emitted
-    assert out_pack.generation_id == dp.generation_id
-    assert out_report.status == "passed"

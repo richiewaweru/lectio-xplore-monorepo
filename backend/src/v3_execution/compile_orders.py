@@ -24,6 +24,7 @@ from v3_execution.models import (
     WriterSection,
     WriterSectionComponent,
 )
+from generation.v3_studio.signal_map import derive_support_adaptations
 
 
 def _truth_from_blueprint(blueprint: ProductionBlueprint) -> list[SourceOfTruthEntry]:
@@ -153,7 +154,7 @@ def compile_execution_bundle(
             ),
             register=register,
             learner_profile=LearnerProfileSpec(),
-            support_adaptations=[e.effects[0] for e in blueprint.applied_lenses if e.effects],
+            support_adaptations=derive_support_adaptations(blueprint),
             source_of_truth=truth,
             consistency_rules=consistency_rules,
             component_cards=_component_cards_for_components(

@@ -85,25 +85,11 @@ def write_composite_context(repo_root: Path) -> Path:
                     },
                     {
                         'type': 'forbidden-import-prefix',
-                        'name': 'planning-no-pipeline-internals',
-                        'package_root': 'backend/src/planning',
-                        'module_prefix': 'planning',
-                        'source_label': 'planning',
-                        'forbidden_prefixes': [
-                            'pipeline.llm_runner',
-                            'pipeline.providers',
-                            'pipeline.events',
-                            'pipeline.api',
-                            'pipeline.runtime_diagnostics',
-                        ],
-                    },
-                    {
-                        'type': 'forbidden-import-prefix',
-                        'name': 'pipeline-no-shell',
-                        'package_root': 'backend/src/pipeline',
-                        'module_prefix': 'pipeline',
-                        'source_label': 'pipeline',
-                        'forbidden_prefixes': ['generation', 'planning'],
+                        'name': 'generation-no-core',
+                        'package_root': 'backend/src/generation',
+                        'module_prefix': 'generation',
+                        'source_label': 'generation',
+                        'forbidden_prefixes': ['core.app'],
                     },
                 ],
             }
@@ -159,13 +145,13 @@ def test_architecture_guard_detects_forbidden_domain_import(tmp_path: Path):
     assert violation.line == 1
 
 
-def test_architecture_guard_detects_pipeline_importing_shell(tmp_path: Path):
+def test_architecture_guard_detects_generation_importing_forbidden_module(tmp_path: Path):
     context_path = write_composite_context(tmp_path)
-    pipeline_root = tmp_path / 'backend' / 'src' / 'pipeline'
-    pipeline_root.mkdir(parents=True)
+    generation_root = tmp_path / 'backend' / 'src' / 'generation'
+    generation_root.mkdir(parents=True)
 
-    (pipeline_root / 'run.py').write_text(
-        'from generation.entities.user import User\n',
+    (generation_root / 'run.py').write_text(
+        'from core.app import create_app\n',
         encoding='utf-8',
     )
 
@@ -173,6 +159,6 @@ def test_architecture_guard_detects_pipeline_importing_shell(tmp_path: Path):
 
     assert len(violations) == 1
     violation = violations[0]
-    assert violation.source_layer == 'pipeline'
-    assert violation.target_layer == 'generation'
+    assert violation.source_layer == 'generation'
+    assert violation.target_layer == 'core.app'
     assert violation.line == 1

@@ -5,14 +5,11 @@ import { ensureOk } from '$lib/api/errors';
 import { apiFetch, buildApiUrl } from '$lib/api/client';
 import { authToken } from '$lib/stores/auth';
 import type {
-	ArchitectMode,
 	BlueprintPreviewDTO,
 	V3ChunkedPlanState,
 	V3CreateSupplementBlueprintResponse,
 	V3GenerationDetail,
 	V3GenerationHistoryItem,
-	V3ClarificationAnswer,
-	V3ClarificationQuestion,
 	V3InputForm,
 	V3SignalSummary,
 	V3SupplementOptionsResponse,
@@ -42,19 +39,6 @@ export async function extractSignals(form: V3InputForm): Promise<V3SignalSummary
 	return res.json() as Promise<V3SignalSummary>;
 }
 
-export async function getClarifications(
-	signals: V3SignalSummary,
-	form: V3InputForm
-): Promise<V3ClarificationQuestion[]> {
-	const res = await apiFetch('/api/v1/v3/clarify', {
-		method: 'POST',
-		headers: bearerHeaders(),
-		body: JSON.stringify({ signals, form })
-	});
-	await ensureOk(res, 'Could not load clarification questions.');
-	return res.json() as Promise<V3ClarificationQuestion[]>;
-}
-
 export async function narrowTopic(payload: {
 	topic: string;
 	grade_level: string;
@@ -70,25 +54,9 @@ export async function narrowTopic(payload: {
 	return data.candidates ?? [];
 }
 
-export async function generateBlueprint(payload: {
-	signals: V3SignalSummary;
-	form: V3InputForm;
-	clarification_answers: V3ClarificationAnswer[];
-	architect_mode?: ArchitectMode;
-}): Promise<BlueprintPreviewDTO> {
-	const res = await apiFetch('/api/v1/v3/blueprint', {
-		method: 'POST',
-		headers: bearerHeaders(),
-		body: JSON.stringify(payload)
-	});
-	await ensureOk(res, 'Could not build the lesson plan.');
-	return res.json() as Promise<BlueprintPreviewDTO>;
-}
-
 export async function startChunkedPlan(payload: {
 	signals: V3SignalSummary;
 	form: V3InputForm;
-	clarification_answers: V3ClarificationAnswer[];
 }): Promise<V3ChunkedPlanState> {
 	const res = await apiFetch('/api/v1/v3/chunked/plan/start', {
 		method: 'POST',

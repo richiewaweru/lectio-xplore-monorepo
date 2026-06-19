@@ -4,7 +4,7 @@ import os
 
 V3_TIMEOUTS: dict[str, int] = {
     "signal_extractor": int(os.getenv("V3_TIMEOUT_SIGNAL_SECONDS", "30")),
-    "clarification": int(os.getenv("V3_TIMEOUT_CLARIFY_SECONDS", "30")),
+    "narrow": int(os.getenv("V3_TIMEOUT_CLARIFY_SECONDS", "30")),
     "lesson_architect": int(os.getenv("V3_TIMEOUT_ARCHITECT_SECONDS", "300")),
     "section_writer": int(os.getenv("V3_TIMEOUT_SECTION_SECONDS", "90")),
     "question_writer": int(os.getenv("V3_TIMEOUT_QUESTION_SECONDS", "60")),

@@ -1,8 +1,6 @@
 ﻿from __future__ import annotations
 
 import json
-import logging
-import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
@@ -10,123 +8,14 @@ from core.auth.middleware import get_current_user
 from core.database.models import LearningPackModel
 from core.database.session import async_session_factory
 from core.entities.user import User
-from core.llm import build_model, run_llm
-from core.rate_limit import limiter
-from learning.models import (
-    LearningJob,
-    LearningPackPlan,
-    PackBriefRequest,
-    PackGenerateRequest,
-    PackGenerateResponse,
-    PackLearningPlan,
-    PackStatusResponse,
-    ResourceStatus,
-)
-from learning.pack_planner import generate_pack_learning_plan, plan_pack
+from learning.models import PackStatusResponse, ResourceStatus
 from learning.pack_repository import LearningPackRepository
-from learning.llm_config import PLANNING_SECTION_COMPOSER_CALLER, get_planning_slot, get_planning_spec
 
-
-logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/packs", tags=["learning-packs"])
 
 
 def get_pack_repository() -> LearningPackRepository:
     return LearningPackRepository(async_session_factory)
-
-
-async def _run_llm_fn(**kwargs):
-    caller = kwargs.get("caller", PLANNING_SECTION_COMPOSER_CALLER)
-    return await run_llm(
-        slot=get_planning_slot(caller),
-        spec=get_planning_spec(caller),
-        **kwargs,
-    )
-
-
-_OUTCOME_TO_JOB: dict[str, str] = {
-    "understand": "introduce",
-    "practice": "practice",
-    "review": "reteach",
-    "assess": "assess",
-    "compare": "introduce",
-    "vocabulary": "introduce",
-}
-
-
-def _brief_to_learning_job(brief: PackBriefRequest) -> LearningJob:
-    profile = brief.class_profile
-    signals: list[str] = []
-    if profile.reading_level == "below_grade":
-        signals.append("below grade reading level")
-    if profile.language_support in ("some_ell", "many_ell"):
-        signals.append(f"{profile.language_support.replace('_', ' ')} students")
-    if profile.confidence == "low":
-        signals.append("low confidence")
-    if profile.prior_knowledge == "new_topic":
-        signals.append("first exposure to this topic")
-    if profile.pacing == "short_chunks":
-        signals.append("needs shorter tasks")
-
-    return LearningJob(
-        job=_OUTCOME_TO_JOB.get(brief.intended_outcome, "introduce"),
-        subject=brief.subject or brief.topic,
-        topic=brief.topic,
-        grade_level=brief.grade_level,
-        grade_band=brief.grade_band,
-        objective=brief.subtopics[0] if brief.subtopics else brief.topic,
-        class_signals=signals,
-        assumptions=[],
-        warnings=[],
-        recommended_depth=brief.depth,
-        inferred_supports=list(brief.supports),
-        inferred_class_profile=profile.model_dump(),
-    )
-
-
-@router.post("/plan-from-brief", response_model=LearningPackPlan)
-@limiter.limit("20/minute")
-async def plan_pack_from_brief(
-    request: Request,
-    brief: PackBriefRequest,
-    current_user: User = Depends(get_current_user),
-) -> LearningPackPlan:
-    _ = (request, current_user)
-    trace_id = uuid.uuid4().hex
-    model = build_model(get_planning_spec(PLANNING_SECTION_COMPOSER_CALLER))
-    job = _brief_to_learning_job(brief)
-    try:
-        pack_learning_plan = await generate_pack_learning_plan(
-            job,
-            model=model,
-            run_llm_fn=_run_llm_fn,
-            generation_id=trace_id,
-        )
-    except Exception:
-        logger.exception("Pack learning plan LLM failed; using minimal fallback")
-        pack_learning_plan = PackLearningPlan(
-            objective=job.objective,
-            success_criteria=[],
-            prerequisite_skills=[],
-            likely_misconceptions=[],
-            shared_vocabulary=[],
-            shared_examples=[],
-        )
-    return plan_pack(job, pack_learning_plan)
-
-
-@router.post("/generate", response_model=PackGenerateResponse)
-@limiter.limit("10/minute")
-async def generate_learning_pack(
-    request: Request,
-    payload: PackGenerateRequest,
-    current_user: User = Depends(get_current_user),
-) -> PackGenerateResponse:
-    _ = (request, payload, current_user)
-    raise HTTPException(
-        status_code=410,
-        detail="Learning pack generation used the removed V2 pipeline and is disabled until a V3-native runner is added.",
-    )
 
 
 @router.get("", response_model=list[PackStatusResponse])

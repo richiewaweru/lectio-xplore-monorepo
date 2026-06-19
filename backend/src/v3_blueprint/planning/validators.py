@@ -13,7 +13,25 @@ def _get_component_registry(slugs: set[str]) -> dict[str, dict]:
     return registry
 
 
-def validate_structural_plan(plan: StructuralPlan) -> list[str]:
+def _allowed_roles_from_resource_spec(resource_spec: dict | None) -> set[str]:
+    if not isinstance(resource_spec, dict):
+        return set()
+    spec = resource_spec.get("spec")
+    if not isinstance(spec, dict):
+        return set()
+
+    roles: set[str] = set()
+    for key in ("required_roles", "optional_roles"):
+        raw_roles = spec.get(key)
+        if isinstance(raw_roles, list):
+            roles.update(role for role in raw_roles if isinstance(role, str) and role)
+    return roles
+
+
+def validate_structural_plan(
+    plan: StructuralPlan,
+    resource_spec: dict | None = None,
+) -> list[str]:
     errors: list[str] = []
     all_slugs = {
         component.slug
@@ -93,6 +111,15 @@ def validate_structural_plan(plan: StructuralPlan) -> list[str]:
             f"transition_note=null."
         )
 
+    allowed_roles = _allowed_roles_from_resource_spec(resource_spec)
+    if allowed_roles:
+        for section in plan.sections:
+            if section.role not in allowed_roles:
+                errors.append(
+                    f"Section '{section.id}' emitted role '{section.role}' "
+                    f"which is not in the active resource spec roles: {sorted(allowed_roles)}."
+                )
+
     return errors
 
 
@@ -157,4 +184,3 @@ def validate_section_brief(
         )
 
     return errors
-

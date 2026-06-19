@@ -19,7 +19,6 @@ from v3_blueprint.planning.models import (
     AnchorSpec,
     ComponentBrief,
     ComponentSlot,
-    LensEffect,
     LessonIntent,
     QPlanItem,
     SectionBrief,
@@ -88,7 +87,6 @@ def _chunked_start_payload() -> dict:
             "teacher_goal": "Build confidence",
             "inferred_resource_type": "lesson",
             "confidence": "medium",
-            "missing_signals": [],
         },
         "form": {
             "grade_level": "Grade 6",
@@ -109,7 +107,6 @@ def _chunked_start_payload() -> dict:
             "learning_preferences": [],
             "free_text": "",
         },
-        "clarification_answers": [],
     }
 
 
@@ -132,7 +129,6 @@ def _sample_structural_plan() -> StructuralPlan:
             example="splitting a pizza into 8 equal slices",
             reuse_scope="orient then model then practice",
         ),
-        applied_lenses=[LensEffect(lens_id="concrete_first", effects=["anchor first"])],
         voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[

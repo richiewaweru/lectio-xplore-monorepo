@@ -5,8 +5,6 @@
 	import V3InputSurface from '$lib/components/studio/V3InputSurface.svelte';
 	import V3PlanningState from '$lib/components/studio/V3PlanningState.svelte';
 	import V3SignalConfirmation from '$lib/components/studio/V3SignalConfirmation.svelte';
-	import V3Clarification from '$lib/components/studio/V3Clarification.svelte';
-	import V3ArchitectModeToggle from '$lib/components/studio/V3ArchitectModeToggle.svelte';
 	import V3PlanPreview from '$lib/components/studio/V3PlanPreview.svelte';
 	import V3PlanActions from '$lib/components/studio/V3PlanActions.svelte';
 	import V3BlueprintPreview from '$lib/components/studio/V3BlueprintPreview.svelte';
@@ -25,8 +23,6 @@
 		extractSignals,
 		fetchV3Document,
 		getV3GenerationBlueprint,
-		generateBlueprint,
-		getClarifications,
 		getV3SupplementOptions,
 		regenerateChunkedPlan,
 		retryChunkedSection,
@@ -53,10 +49,8 @@
 	import { mapPackSectionsToCanvas } from '$lib/studio/v3-print-canvas';
 	import { getBookletExportPolicy, isBookletStatus } from '$lib/studio/v3-booklet';
 	import { coerceV3DocumentToPack } from '$lib/studio/v3-document';
-	import { hasRequiredStructuredFields } from '$lib/studio/v3-clarify';
 	import type {
 		BookletStatus,
-		V3ClarificationAnswer,
 		V3ChunkedPlanState,
 		V3DraftPack,
 		V3InputForm,
@@ -294,37 +288,12 @@
 		const form = v3Studio.form;
 		if (!signals || !form) return;
 
-		if (hasRequiredStructuredFields(form)) {
-			await runLessonArchitect();
-			return;
-		}
-
-		if (signals.missing_signals.length > 0) {
-			v3Studio.stage = 'planning';
-			try {
-				v3Studio.clarifications = await getClarifications(signals, form);
-				if (v3Studio.clarifications.length === 0) {
-					await runLessonArchitect();
-				} else {
-					v3Studio.stage = 'clarifying';
-				}
-			} catch (err) {
-				v3Studio.stage = 'confirming';
-				v3Studio.error = friendly(err);
-			}
-		} else {
-			await runLessonArchitect();
-		}
+		await runLessonArchitect();
 	}
 
 	function handleSignalCorrection() {
 		v3Studio.error = null;
 		v3Studio.stage = 'input';
-	}
-
-	async function handleClarificationAnswered(answers: V3ClarificationAnswer[]) {
-		v3Studio.answers = answers;
-		await runLessonArchitect();
 	}
 
 	async function runLessonArchitect() {
@@ -334,25 +303,13 @@
 		const form = v3Studio.form;
 		if (!signals || !form) return;
 		try {
-			if (v3Studio.architectMode === 'chunked') {
-				const chunkedState = await startChunkedPlan({
-					signals,
-					form,
-					clarification_answers: v3Studio.answers
-				});
-				await applyChunkedState(chunkedState);
-				return;
-			}
-			const blueprint = await generateBlueprint({
+			const chunkedState = await startChunkedPlan({
 				signals,
-				form,
-				clarification_answers: v3Studio.answers,
-				architect_mode: v3Studio.architectMode
+				form
 			});
-			v3Studio.blueprint = blueprint;
-			v3Studio.stage = 'reviewing';
+			await applyChunkedState(chunkedState);
 		} catch (err) {
-			v3Studio.stage = v3Studio.clarifications.length ? 'clarifying' : 'confirming';
+			v3Studio.stage = 'confirming';
 			v3Studio.error = friendly(err);
 		}
 	}
@@ -942,21 +899,13 @@
 	<div class="sticky top-0 z-10 border-b border-border/60 bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/75">
 		<div class="mx-auto flex max-w-5xl items-center justify-between gap-3">
 			<span class="text-sm font-semibold tracking-tight">Studio</span>
-			<div class="flex items-center gap-3">
-				<V3ArchitectModeToggle
-					selected={v3Studio.architectMode}
-					onModeChange={(mode) => {
-						v3Studio.architectMode = mode;
-					}}
-				/>
-				<button
-					type="button"
-					class="text-xs text-muted-foreground underline-offset-4 hover:underline"
-					onclick={handleStartOver}
-				>
-					Start over
-				</button>
-			</div>
+			<button
+				type="button"
+				class="text-xs text-muted-foreground underline-offset-4 hover:underline"
+				onclick={handleStartOver}
+			>
+				Start over
+			</button>
 		</div>
 	</div>
 
@@ -964,8 +913,6 @@
 		<V3InputSurface onSubmit={handleInputSubmit} />
 	{:else if v3Studio.stage === 'confirming' && v3Studio.signals}
 		<V3SignalConfirmation signals={v3Studio.signals} onConfirm={handleSignalsConfirmed} onCorrect={handleSignalCorrection} />
-	{:else if v3Studio.stage === 'clarifying' && v3Studio.clarifications.length}
-		<V3Clarification questions={v3Studio.clarifications} onAnswered={handleClarificationAnswered} />
 	{:else if v3Studio.stage === 'planning'}
 		<div class="space-y-4">
 		<V3PlanningState

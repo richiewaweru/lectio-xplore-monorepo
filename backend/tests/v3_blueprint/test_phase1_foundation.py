@@ -57,7 +57,6 @@ def test_blueprint_compiler_is_deterministic() -> None:
 def test_amara_has_no_cold_questions() -> None:
     blueprint = _load_blueprint("amara_compound_area.json")
     assert blueprint.lesson.lesson_mode == "first_exposure"
-    assert sorted(lens.lens_id for lens in blueprint.applied_lenses) == ["eal", "first_exposure"]
     assert blueprint.anchor.reuse_scope == "entire_resource"
     assert all(item.temperature != "cold" for item in blueprint.question_plan)
 

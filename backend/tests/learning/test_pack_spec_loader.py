@@ -9,7 +9,7 @@ SPECS_DIR = Path(__file__).parents[2] / "resources" / "pack_specs"
 
 def test_all_pack_specs_load() -> None:
     specs = load_all_pack_specs(SPECS_DIR)
-    assert set(specs) == {"introduce", "practice", "reteach", "assess", "differentiate"}
+    assert set(specs) == {"reteach", "assess", "differentiate"}
 
 
 def test_reteach_order_is_spec_driven() -> None:
@@ -26,4 +26,3 @@ def test_assess_has_no_instruction_resources() -> None:
     types = [entry.resource_type for entry in spec.resources]
     assert "mini_booklet" not in types
     assert "worksheet" not in types
-

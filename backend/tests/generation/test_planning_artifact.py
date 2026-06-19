@@ -67,9 +67,6 @@ def test_build_planning_artifact_contains_full_blueprint() -> None:
     assert derived["visual_required_count"] == sum(
         1 for section in blueprint.sections if section.visual_required
     )
-    assert derived["lenses"] == [lens.lens_id for lens in blueprint.applied_lenses]
-
-
 def test_planning_summary_from_artifact_is_lightweight() -> None:
     blueprint = _example_bp("amara_compound_area.json")
     artifact = build_planning_artifact(

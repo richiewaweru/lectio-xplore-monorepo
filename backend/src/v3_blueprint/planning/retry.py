@@ -48,7 +48,7 @@ async def run_stage1_with_retry(
                 flush=True,
             )
             raise
-        errors = validate_structural_plan(plan)
+        errors = validate_structural_plan(plan, resource_spec)
 
         if not errors:
             if generation_id:

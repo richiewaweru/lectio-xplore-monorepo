@@ -28,12 +28,10 @@ from core.database.session import async_session_factory
 from core.dependencies import get_jwt_handler
 from core.entities.user import User
 from core.events import LLMCallStartedEvent, LLMCallSucceededEvent, event_bus
-from curriculum_enrichment.models import CurriculumEnrichmentOutput, SectionPlanEnrichment
 from generation import routes as generation_routes
 from pipeline.api import PipelineDocument, PipelineResult
 from pipeline.events import CompleteEvent, SectionReadyEvent, SectionStartedEvent
 from planning.llm_config import (
-    PLANNING_ENRICHMENT_CALLER,
     PLANNING_SECTION_COMPOSER_CALLER,
 )
 from planning.models import CompositionResult, PlanningSectionPlan
@@ -238,20 +236,6 @@ async def fake_planning_run_llm(
                         rationale="Open with a graph-based explanation.",
                     )
                 ],
-            )
-        )
-
-    if caller == PLANNING_ENRICHMENT_CALLER:
-        return SimpleNamespace(
-            output=CurriculumEnrichmentOutput(
-                sections=[
-                    SectionPlanEnrichment(
-                        section_id="section-1",
-                        terms_to_define=["limit"],
-                        terms_assumed=["graph"],
-                        practice_target="Explain what a limit describes on a graph.",
-                    )
-                ]
             )
         )
 

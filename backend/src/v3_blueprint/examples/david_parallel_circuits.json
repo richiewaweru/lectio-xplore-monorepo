@@ -8,22 +8,6 @@
     "lesson_mode": "consolidation",
     "resource_type": "lesson"
   },
-  "applied_lenses": [
-    {
-      "lens_id": "consolidation",
-      "effects": [
-        "prioritize retrieval and spaced reinforcement",
-        "increase question novelty while preserving core objective"
-      ]
-    },
-    {
-      "lens_id": "advanced",
-      "effects": [
-        "use exam-formal register and concise precision",
-        "maintain low scaffolding with explicit challenge ramp"
-      ]
-    }
-  ],
   "voice": {
     "register": "formal",
     "tone": "exam_formal"

@@ -120,7 +120,7 @@
 			<textarea
 				bind:value={context}
 				rows="4"
-				placeholder="What should this generation teach, reinforce, or clarify?"
+				placeholder="What should this generation teach, reinforce, or focus on?"
 				required
 			></textarea>
 		</label>

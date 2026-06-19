@@ -10,6 +10,7 @@ from contracts.lectio import get_component_card
 from core.config import settings
 from core.llm.runner import RetryPolicy, run_llm
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
+from generation.v3_studio.signal_map import summarise_form_supports
 from v3_blueprint.planning.models import SectionBrief, SectionPlan, StructuralPlan
 from v3_execution.config import get_v3_model, get_v3_slot, get_v3_spec
 
@@ -170,6 +171,7 @@ def build_stage2_user_message(
     current_section: SectionPlan,
     prior_briefs: list[SectionBrief],
     component_cards: dict[str, dict],
+    form: V3InputForm,
 ) -> str:
 
     # Format prior briefs — full content, not summarised
@@ -246,9 +248,8 @@ Lesson mode:        {plan.lesson_mode}
 Anchor:             {plan.anchor.example}
 Anchor reuse:       {plan.anchor.reuse_scope}
 Voice:              {plan.voice.register_name}, {plan.voice.tone}
-Lenses:             {", ".join(e.lens_id for e in plan.applied_lenses)}
-Lens effects:       {"; ".join(eff for lens in plan.applied_lenses for eff in lens.effects)}
 Prior knowledge:    {", ".join(plan.prior_knowledge)}
+Signal supports:    {", ".join(summarise_form_supports(form)) or "none"}
 
 FULL SECTION SEQUENCE (your section is marked →):
 {sequence_block}
@@ -331,6 +332,7 @@ async def _call_stage2_section(
         current_section=section,
         prior_briefs=prior_briefs,
         component_cards=component_cards,
+        form=form,
     )
     if previous_errors:
         section_message += (

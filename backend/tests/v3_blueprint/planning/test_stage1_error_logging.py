@@ -17,7 +17,6 @@ def _signals() -> V3SignalSummary:
         teacher_goal="Build confidence",
         inferred_resource_type="lesson",
         confidence="medium",
-        missing_signals=[],
     )
 
 
