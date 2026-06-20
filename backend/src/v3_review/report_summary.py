@@ -12,13 +12,9 @@ def coherence_report_to_generation_summary(report: CoherenceReport) -> dict[str,
         "generation_id": report.generation_id,
         "status": report.status,
         "deterministic_passed": report.deterministic_passed,
-        "llm_review_passed": report.llm_review_passed,
         "blocking_count": report.blocking_count,
         "major_count": report.major_count,
         "minor_count": report.minor_count,
-        "repair_target_count": len(report.repair_targets),
-        "repaired_target_count": len(report.repaired_target_ids),
-        "repair_attempts": dict(report.repair_attempts),
         "issue_categories": _category_histogram(report),
     }
 

@@ -55,15 +55,15 @@ def _base_plan_with_components(*, components: list[ComponentSlot]) -> Structural
         ),
         anchor=AnchorSpec(
             example="splitting a pizza into 8 equal slices",
-            reuse_scope="used in orient and model",
+            reuse_scope="used in intro and explain",
         ),
         voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[
             SectionPlan(
-                id="orient",
-                title="Orient",
-                role="orient",
+                id="intro",
+                title="Intro",
+                role="intro",
                 visual_required=False,
                 transition_note=None,
                 components=components,
@@ -72,7 +72,7 @@ def _base_plan_with_components(*, components: list[ComponentSlot]) -> Structural
         question_plan=[
             QPlanItem(
                 question_id="q1",
-                section_id="orient",
+                section_id="intro",
                 temperature="warm",
                 diagram_required=False,
             )
@@ -110,6 +110,23 @@ def test_validate_structural_plan_catches_duplicate_section_field(monkeypatch) -
         "share section_field" in error and "same_field" in error
         for error in errors
     )
+
+
+def test_validate_structural_plan_catches_role_outside_resource_spec() -> None:
+    plan = _base_plan_with_components(
+        components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")]
+    )
+    plan.sections[0].role = "invalid_role"
+    errors = validate_structural_plan(
+        plan,
+        {
+            "spec": {
+                "required_roles": ["intro", "practice"],
+                "optional_roles": ["summary"],
+            }
+        },
+    )
+    assert any("which is not in the active resource spec roles" in error for error in errors)
 
 
 def test_validate_section_brief_catches_dropped_component() -> None:

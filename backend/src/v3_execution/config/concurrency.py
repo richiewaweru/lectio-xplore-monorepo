@@ -10,7 +10,6 @@ def make_semaphores() -> dict[str, asyncio.Semaphore]:
         "question_writer": asyncio.Semaphore(int(os.getenv("V3_CONCURRENCY_QUESTION_MAX", "3"))),
         "visual_executor": asyncio.Semaphore(int(os.getenv("V3_CONCURRENCY_VISUAL_MAX", "2"))),
         "answer_key_generator": asyncio.Semaphore(1),
-        "llm_coherence_reviewer": asyncio.Semaphore(1),
     }
 
 

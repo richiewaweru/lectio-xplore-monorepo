@@ -248,9 +248,7 @@ class V3TraceWriter:
         minor_count: int,
         major_count: int,
         blocking_count: int,
-        repair_target_count: int,
         fatal_categories: list[str],
-        llm_review_used: bool,
     ) -> None:
         await self._record_event(
             phase="review",
@@ -259,9 +257,7 @@ class V3TraceWriter:
                 "minor_count": minor_count,
                 "major_count": major_count,
                 "blocking_count": blocking_count,
-                "repair_target_count": repair_target_count,
                 "fatal_categories": fatal_categories,
-                "llm_review_used": llm_review_used,
             },
         )
         await self._update_report(
@@ -273,31 +269,6 @@ class V3TraceWriter:
                     "blocking_issues": blocking_count,
                 }
             }
-        )
-
-    async def record_repair_summary(
-        self,
-        *,
-        attempted_count: int,
-        succeeded_count: int,
-        failed_count: int,
-        repaired_target_ids: list[str],
-        remaining_minor_count: int,
-        remaining_major_count: int,
-        remaining_blocking_count: int,
-    ) -> None:
-        await self._record_event(
-            phase="repair",
-            event_type=et.REPAIR_SUMMARY_READY,
-            payload={
-                "attempted_count": attempted_count,
-                "succeeded_count": succeeded_count,
-                "failed_count": failed_count,
-                "repaired_target_ids": repaired_target_ids,
-                "remaining_minor_count": remaining_minor_count,
-                "remaining_major_count": remaining_major_count,
-                "remaining_blocking_count": remaining_blocking_count,
-            },
         )
 
     async def record_final_pack(

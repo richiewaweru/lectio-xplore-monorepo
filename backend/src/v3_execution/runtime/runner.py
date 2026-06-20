@@ -347,109 +347,95 @@ async def run_generation(
         resource_final_status = "failed"
         artifact_status: BookletStatus = draft_pack.status
         try:
-            async with sem["llm_coherence_reviewer"]:
-                coherence_report = await asyncio.wait_for(
-                    run_coherence_review(
-                        blueprint,
-                        draft_pack,
-                        emit_event,
-                        trace_id=trace_id or generation_id,
-                        generation_id=generation_id,
-                        model_overrides=model_overrides,
-                    ),
-                    timeout=V3_TIMEOUTS["coherence_pipeline"],
+            coherence_report = await run_coherence_review(
+                blueprint,
+                draft_pack,
+                emit_event,
+                trace_id=trace_id or generation_id,
+                generation_id=generation_id,
+                model_overrides=model_overrides,
+            )
+            await emit_event(
+                events.COHERENCE_REPORT_READY,
+                {
+                    "generation_id": generation_id,
+                    "status": coherence_report.status,
+                    "blocking_count": coherence_report.blocking_count,
+                    "major_count": coherence_report.major_count,
+                    "minor_count": coherence_report.minor_count,
+                    "coherence_report": coherence_report.model_dump(mode="json"),
+                },
+            )
+            finalised = coherence_report.status in {"passed", "passed_with_warnings"}
+            fatal_categories = collect_fatal_issue_categories(coherence_report.issues)
+            artifact_status = derive_booklet_status(
+                draft_section_count=len(draft_pack.sections),
+                render_valid=bool(draft_pack.sections),
+                review_done=True,
+                finalised=finalised,
+                blocking_count=coherence_report.blocking_count,
+                major_count=coherence_report.major_count,
+                minor_count=coherence_report.minor_count,
+                fatal_issue_categories=fatal_categories,
+            )  # type: ignore[assignment]
+            draft_pack = draft_pack.model_copy(
+                update={
+                    "status": artifact_status,
+                    "booklet_issues": _booklet_issues_from_report(coherence_report),
+                }
+            )
+            coherence_report_payload = coherence_report_to_generation_summary(coherence_report)
+            resource_final_status = coherence_report.status
+            if trace_writer is not None:
+                await trace_writer.record_review_summary(
+                    minor_count=coherence_report.minor_count,
+                    major_count=coherence_report.major_count,
+                    blocking_count=coherence_report.blocking_count,
+                    fatal_categories=sorted(fatal_categories),
                 )
+                draft_available, final_available, classroom_ready, export_allowed = _status_flags(
+                    artifact_status,
+                    len(draft_pack.sections),
+                )
+                await trace_writer.record_booklet_status(
+                    booklet_status=artifact_status,
+                    reason=_summarize_status_reason(artifact_status),
+                    draft_available=draft_available,
+                    final_available=final_available,
+                    classroom_ready=classroom_ready,
+                    export_allowed=export_allowed,
+                )
+
+            if artifact_status in {"final_ready", "final_with_warnings"}:
                 await emit_event(
-                    events.COHERENCE_REPORT_READY,
+                    events.FINAL_PACK_READY,
                     {
                         "generation_id": generation_id,
-                        "status": coherence_report.status,
-                        "blocking_count": coherence_report.blocking_count,
-                        "repair_target_count": len(coherence_report.repair_targets),
-                        "coherence_report": coherence_report.model_dump(mode="json"),
+                        "booklet_status": artifact_status,
+                        "pack": draft_pack.model_dump(mode="json", exclude_none=True),
                     },
                 )
-                finalised = coherence_report.status in {"passed", "passed_with_warnings"}
-                fatal_categories = collect_fatal_issue_categories(coherence_report.issues)
-                artifact_status = derive_booklet_status(
-                    draft_section_count=len(draft_pack.sections),
-                    render_valid=bool(draft_pack.sections),
-                    review_done=True,
-                    finalised=finalised,
-                    blocking_count=coherence_report.blocking_count,
-                    major_count=coherence_report.major_count,
-                    minor_count=coherence_report.minor_count,
-                    fatal_issue_categories=fatal_categories,
-                )  # type: ignore[assignment]
-                draft_pack = draft_pack.model_copy(
-                    update={
-                        "status": artifact_status,
-                        "booklet_issues": _booklet_issues_from_report(coherence_report),
-                    }
-                )
-                coherence_report_payload = coherence_report_to_generation_summary(coherence_report)
-                resource_final_status = coherence_report.status
                 if trace_writer is not None:
-                    await trace_writer.record_review_summary(
-                        minor_count=coherence_report.minor_count,
-                        major_count=coherence_report.major_count,
-                        blocking_count=coherence_report.blocking_count,
-                        repair_target_count=0,
-                        fatal_categories=sorted(fatal_categories),
-                        llm_review_used=False,
-                    )
-                    await trace_writer.record_repair_summary(
-                        attempted_count=0,
-                        succeeded_count=0,
-                        failed_count=0,
-                        repaired_target_ids=[],
-                        remaining_minor_count=coherence_report.minor_count,
-                        remaining_major_count=coherence_report.major_count,
-                        remaining_blocking_count=coherence_report.blocking_count,
-                    )
                     draft_available, final_available, classroom_ready, export_allowed = _status_flags(
                         artifact_status,
                         len(draft_pack.sections),
                     )
-                    await trace_writer.record_booklet_status(
+                    await trace_writer.record_final_pack(
                         booklet_status=artifact_status,
-                        reason=_summarize_status_reason(artifact_status),
-                        draft_available=draft_available,
-                        final_available=final_available,
+                        final_section_count=len(draft_pack.sections),
+                        warnings=list(draft_pack.warnings),
                         classroom_ready=classroom_ready,
                         export_allowed=export_allowed,
                     )
-
-                if artifact_status in {"final_ready", "final_with_warnings"}:
-                    await emit_event(
-                        events.FINAL_PACK_READY,
-                        {
-                            "generation_id": generation_id,
-                            "booklet_status": artifact_status,
-                            "pack": draft_pack.model_dump(mode="json", exclude_none=True),
-                        },
-                    )
-                    if trace_writer is not None:
-                        draft_available, final_available, classroom_ready, export_allowed = _status_flags(
-                            artifact_status,
-                            len(draft_pack.sections),
-                        )
-                        await trace_writer.record_final_pack(
-                            booklet_status=artifact_status,
-                            final_section_count=len(draft_pack.sections),
-                            warnings=list(draft_pack.warnings),
-                            classroom_ready=classroom_ready,
-                            export_allowed=export_allowed,
-                        )
-                else:
-                    await emit_event(
-                        events.DRAFT_STATUS_UPDATED,
-                        {
-                            "generation_id": generation_id,
-                            "booklet_status": artifact_status,
-                            "pack": draft_pack.model_dump(mode="json", exclude_none=True),
-                        },
-                    )
+            else:
+                await emit_event(
+                    events.DRAFT_STATUS_UPDATED,
+                    {
+                        "generation_id": generation_id,
+                        "booklet_status": artifact_status,
+                        "pack": draft_pack.model_dump(mode="json", exclude_none=True),
+                    },
+                )
         except Exception as exc:  # noqa: BLE001
             result.warnings.append(f"coherence_review: {exc}")
             artifact_status = draft_pack.status

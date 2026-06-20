@@ -190,9 +190,7 @@ def test_coherence_report_summary_json_safe() -> None:
         generation_id="g",
         status="passed",
         deterministic_passed=True,
-        llm_review_passed=True,
         issues=[],
-        repair_targets=[],
     )
     summary = coherence_report_to_generation_summary(report)
     assert summary["status"] == "passed"

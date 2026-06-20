@@ -203,9 +203,7 @@ async def test_runner_with_stubbed_executors(monkeypatch: pytest.MonkeyPatch) ->
             generation_id=draft_pack.generation_id,
             status="passed",
             deterministic_passed=True,
-            llm_review_passed=True,
             issues=[],
-            repair_targets=[],
         )
 
     monkeypatch.setattr("v3_execution.runtime.runner.run_coherence_review", stub_coherence_review)
@@ -344,9 +342,7 @@ async def test_runner_emits_draft_status_updated_when_blocking_issues_remain(
             generation_id=draft_pack.generation_id,
             status="failed",
             deterministic_passed=False,
-            llm_review_passed=False,
             issues=[issue],
-            repair_targets=[],
             blocking_count=1,
             major_count=0,
             minor_count=0,
@@ -476,9 +472,7 @@ async def test_runner_records_strategic_trace_checkpoints(
             generation_id=draft_pack.generation_id,
             status="passed_with_warnings",
             deterministic_passed=True,
-            llm_review_passed=True,
             issues=[issue],
-            repair_targets=[],
             minor_count=1,
         )
 
@@ -502,9 +496,6 @@ async def test_runner_records_strategic_trace_checkpoints(
 
         async def record_review_summary(self, **_kwargs):
             self.calls.append("record_review_summary")
-
-        async def record_repair_summary(self, **_kwargs):
-            self.calls.append("record_repair_summary")
 
         async def record_final_pack(self, **_kwargs):
             self.calls.append("record_final_pack")
@@ -532,7 +523,6 @@ async def test_runner_records_strategic_trace_checkpoints(
     assert "record_draft_pack" in writer.calls
     assert "record_booklet_status" in writer.calls
     assert "record_review_summary" in writer.calls
-    assert "record_repair_summary" in writer.calls
     assert "record_final_pack" in writer.calls
     assert writer.calls[-1] == "record_terminal"
 

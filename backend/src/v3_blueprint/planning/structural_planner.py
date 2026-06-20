@@ -10,12 +10,13 @@ from core.llm.runner import RetryPolicy, run_llm
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 from generation.v3_studio.prompts import _planner_index_block
 from v3_blueprint.planning.models import StructuralPlan
+from v3_blueprint.planning.validators import _allowed_roles_from_resource_spec
 from v3_execution.config import get_v3_model, get_v3_slot, get_v3_spec
 
 _CALLER = "v3_chunked_architect"
 STAGE1_NODE = "v3_stage1_planner"
 STAGE1_THINKING = {"type": "adaptive"}
-STAGE1_MAX_TOKENS = 8000
+STAGE1_MAX_TOKENS = 4000
 
 
 def build_stage1_system_prompt() -> str:
@@ -101,7 +102,7 @@ Output ONLY valid JSON matching this schema exactly:
   }},
   "anchor": {{
     "example": "splitting a pizza into 8 equal slices",
-    "reuse_scope": "introduced in orient; reused in model; varied in practice; returned in summary"
+    "reuse_scope": "introduced in intro; reused in explain; varied in practice; returned in summary"
   }},
   "voice": {{
     "register_name": "simple",
@@ -117,7 +118,7 @@ Output ONLY valid JSON matching this schema exactly:
   ],
   "sections": [
     {{
-      "id": "orient",
+      "id": "intro",
       "title": "What do you already know about sharing equally?",
       "role": "intro",
       "visual_required": false,
@@ -176,6 +177,18 @@ def build_stage1_user_message(
     return payload
 
 
+def _validate_stage1_roles(plan: StructuralPlan, resource_spec: dict) -> None:
+    allowed_roles = _allowed_roles_from_resource_spec(resource_spec)
+    if not allowed_roles:
+        return
+    for section in plan.sections:
+        if section.role not in allowed_roles:
+            raise ValueError(
+                f"Section '{section.id}' emitted role '{section.role}' "
+                f"which is not in the active resource spec roles: {sorted(allowed_roles)}."
+            )
+
+
 async def _call_stage1(
     signals: V3SignalSummary,
     form: V3InputForm,
@@ -224,10 +237,13 @@ async def _call_stage1(
         )
         raw = result.output
         if isinstance(raw, StructuralPlan):
-            return raw
-        if hasattr(raw, "model_dump"):
-            return StructuralPlan.model_validate(raw.model_dump())
-        return StructuralPlan.model_validate(raw)
+            plan = raw
+        elif hasattr(raw, "model_dump"):
+            plan = StructuralPlan.model_validate(raw.model_dump())
+        else:
+            plan = StructuralPlan.model_validate(raw)
+        _validate_stage1_roles(plan, resource_spec)
+        return plan
     except Exception as exc:
         tb = traceback.format_exc()
         print(

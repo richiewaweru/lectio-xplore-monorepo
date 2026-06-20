@@ -22,13 +22,10 @@ COMPONENT_PATCHED = "component_patched"
 GENERATION_COMPLETE = "generation_complete"
 GENERATION_WARNING = "generation_warning"
 
-# Proposal 3 — coherence reviewer / repair streaming
+# Proposal 3 - coherence review / repair streaming
 COHERENCE_REVIEW_STARTED = "coherence_review_started"
 DETERMINISTIC_REVIEW_STARTED = "deterministic_review_started"
 DETERMINISTIC_REVIEW_COMPLETE = "deterministic_review_complete"
-LLM_REVIEW_STARTED = "llm_review_started"
-LLM_REVIEW_COMPLETE = "llm_review_complete"
-LLM_REVIEW_SKIPPED = "llm_review_skipped"
 COHERENCE_REPORT_READY = "coherence_report_ready"
 REPAIR_STARTED = "repair_started"
 REPAIR_FAILED = "repair_failed"
@@ -58,9 +55,6 @@ __all__ = [
     "GENERATION_COMPLETE",
     "GENERATION_STARTED",
     "GENERATION_WARNING",
-    "LLM_REVIEW_COMPLETE",
-    "LLM_REVIEW_SKIPPED",
-    "LLM_REVIEW_STARTED",
     "QUESTION_READY",
     "QUESTIONS_STARTED",
     "REPAIR_ESCALATED",

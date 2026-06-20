@@ -63,15 +63,15 @@ def _plan() -> StructuralPlan:
         ),
         anchor=AnchorSpec(
             example="splitting a pizza into 8 equal slices",
-            reuse_scope="orient then model then practice",
+            reuse_scope="intro then explain then practice",
         ),
         voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[
             SectionPlan(
-                id="orient",
-                title="Orient",
-                role="orient",
+                id="intro",
+                title="Intro",
+                role="intro",
                 visual_required=False,
                 transition_note=None,
                 components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")],
@@ -80,7 +80,7 @@ def _plan() -> StructuralPlan:
         question_plan=[
             QPlanItem(
                 question_id="q1",
-                section_id="orient",
+                section_id="intro",
                 temperature="warm",
                 diagram_required=False,
             )
@@ -91,7 +91,7 @@ def _plan() -> StructuralPlan:
 
 def _brief() -> SectionBrief:
     return SectionBrief(
-        section_id="orient",
+        section_id="intro",
         components=[ComponentBrief(component_id="hook-hero", content_intent="Use the pizza anchor.")],
         question_briefs=[],
         visual_strategy=None,

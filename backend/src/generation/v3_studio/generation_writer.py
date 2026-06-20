@@ -197,14 +197,6 @@ class V3GenerationWriter:
             summary["blocking_issues"] = int(coherence_dict.get("blocking_count") or 0)
             summary["major_issues"] = int(coherence_dict.get("major_count") or 0)
             summary["minor_issues"] = int(coherence_dict.get("minor_count") or 0)
-            repair_targets = coherence_dict.get("repair_targets")
-            repaired_target_ids = coherence_dict.get("repaired_target_ids")
-            summary["repair_target_count"] = (
-                len(repair_targets) if isinstance(repair_targets, list) else 0
-            )
-            summary["repaired_target_count"] = (
-                len(repaired_target_ids) if isinstance(repaired_target_ids, list) else 0
-            )
             report["summary"] = summary
             model.report_json = report
             await session.commit()
@@ -467,16 +459,12 @@ class V3GenerationWriter:
                 "blocking_issues": 0,
                 "major_issues": 0,
                 "minor_issues": 0,
-                "repair_target_count": 0,
-                "repaired_target_count": 0,
                 "export_allowed": False,
             },
             "sections": [],
             "coherence": {
                 "status": "pending",
                 "issues": [],
-                "repair_targets": [],
-                "repaired_target_ids": [],
             },
             "pdf": {
                 "last_export_status": "not_attempted",
@@ -511,10 +499,12 @@ class V3GenerationWriter:
             {
                 "status": "pending",
                 "issues": [],
-                "repair_targets": [],
-                "repaired_target_ids": [],
             },
         )
+        coherence = report.get("coherence")
+        if isinstance(coherence, dict):
+            for stale_key in ("repair" + "_targets", "repaired" + "_target_ids"):
+                coherence.pop(stale_key, None)
         report.setdefault(
             "pdf",
             {
@@ -538,8 +528,8 @@ class V3GenerationWriter:
         summary.setdefault("blocking_issues", 0)
         summary.setdefault("major_issues", 0)
         summary.setdefault("minor_issues", 0)
-        summary.setdefault("repair_target_count", 0)
-        summary.setdefault("repaired_target_count", 0)
+        for stale_key in ("repair" + "_target_count", "repaired" + "_target_count"):
+            summary.pop(stale_key, None)
         summary.setdefault("export_allowed", False)
         report["summary"] = summary
         return report

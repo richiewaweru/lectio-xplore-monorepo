@@ -127,15 +127,15 @@ def _sample_structural_plan() -> StructuralPlan:
         ),
         anchor=AnchorSpec(
             example="splitting a pizza into 8 equal slices",
-            reuse_scope="orient then model then practice",
+            reuse_scope="intro then explain then practice",
         ),
         voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[
             SectionPlan(
-                id="orient",
-                title="Orient",
-                role="orient",
+                id="intro",
+                title="Intro",
+                role="intro",
                 visual_required=False,
                 transition_note=None,
                 components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")],
@@ -144,7 +144,7 @@ def _sample_structural_plan() -> StructuralPlan:
         question_plan=[
             QPlanItem(
                 question_id="q1",
-                section_id="orient",
+                section_id="intro",
                 temperature="warm",
                 diagram_required=False,
             )
@@ -229,7 +229,7 @@ async def test_chunked_events_route_streams_planning_events_and_keeps_generation
         user_id=TEST_USER_A.id,
         blueprint_id=f"bp-{generation_id}",
     )
-    await chunked_queue.put('event: stage2_section_start\ndata: {"section_id":"orient"}\n\n')
+    await chunked_queue.put('event: stage2_section_start\ndata: {"section_id":"intro"}\n\n')
     await chunked_queue.put('event: generation_warning\ndata: {"message":"warning"}\n\n')
     await chunked_queue.put(None)
 
@@ -419,7 +419,7 @@ async def test_chunked_retry_section_rejects_non_failed_section() -> None:
     async with _client() as client:
         resp = await client.post(
             f"/api/v1/v3/chunked/{generation_id}/retry-section",
-            json={"section_id": "orient"},
+            json={"section_id": "intro"},
         )
     assert resp.status_code == 409
 
@@ -543,8 +543,8 @@ async def test_chunked_retry_section_can_unblock_assembly() -> None:
         generation_id,
         {
             "stage": "assembly_blocked",
-            "failed_sections": ["orient"],
-            "section_briefs": {"orient": None},
+            "failed_sections": ["intro"],
+            "section_briefs": {"intro": None},
             "execution_started": False,
         },
     )
@@ -566,7 +566,7 @@ async def test_chunked_retry_section_can_unblock_assembly() -> None:
             new=AsyncMock(
                 return_value=[
                     SectionBrief(
-                        section_id="orient",
+                        section_id="intro",
                         components=[
                             ComponentBrief(
                                 component_id="hook-hero",
@@ -584,7 +584,7 @@ async def test_chunked_retry_section_can_unblock_assembly() -> None:
         async with _client() as client:
             resp = await client.post(
                 f"/api/v1/v3/chunked/{generation_id}/retry-section",
-                json={"section_id": "orient"},
+                json={"section_id": "intro"},
             )
 
     assert resp.status_code == 200
@@ -600,7 +600,7 @@ async def test_attempt_chunked_assembly_logs_execution_handoff_success() -> None
     _signals, form = _seed_context_models()
     queue = asyncio.Queue()
     brief = SectionBrief(
-        section_id="orient",
+        section_id="intro",
         components=[
             ComponentBrief(
                 component_id="hook-hero",
@@ -662,7 +662,7 @@ async def test_attempt_chunked_assembly_logs_execution_start_failure_and_reraise
     _signals, form = _seed_context_models()
     queue = asyncio.Queue()
     brief = SectionBrief(
-        section_id="orient",
+        section_id="intro",
         components=[
             ComponentBrief(
                 component_id="hook-hero",
@@ -737,11 +737,11 @@ async def test_chunked_approve_emits_stage2_progress_events() -> None:
 
     async def fake_stage2_pipeline(*, generation_id: str, user_id: str):  # noqa: ANN001
         _ = user_id
-        await _chunked_emit_event(generation_id, "stage2_section_start", {"generation_id": generation_id, "section_id": "orient"})
-        await _chunked_emit_event(generation_id, "stage2_section_retry", {"generation_id": generation_id, "section_id": "orient", "attempt": 2})
-        await _chunked_emit_event(generation_id, "stage2_section_failed", {"generation_id": generation_id, "section_id": "orient", "errors": ["capacity"]})
-        await _chunked_emit_event(generation_id, "stage2_complete", {"generation_id": generation_id, "failed_sections": ["orient"]})
-        await persist_chunked_state(generation_id, {"stage": "assembly_blocked", "failed_sections": ["orient"]})
+        await _chunked_emit_event(generation_id, "stage2_section_start", {"generation_id": generation_id, "section_id": "intro"})
+        await _chunked_emit_event(generation_id, "stage2_section_retry", {"generation_id": generation_id, "section_id": "intro", "attempt": 2})
+        await _chunked_emit_event(generation_id, "stage2_section_failed", {"generation_id": generation_id, "section_id": "intro", "errors": ["capacity"]})
+        await _chunked_emit_event(generation_id, "stage2_complete", {"generation_id": generation_id, "failed_sections": ["intro"]})
+        await persist_chunked_state(generation_id, {"stage": "assembly_blocked", "failed_sections": ["intro"]})
 
     with patch("generation.v3_studio.router._run_chunked_stage2_pipeline", new=AsyncMock(side_effect=fake_stage2_pipeline)):
         async with _client() as client:

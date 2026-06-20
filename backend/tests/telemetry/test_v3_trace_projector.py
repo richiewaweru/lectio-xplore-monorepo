@@ -87,7 +87,7 @@ def test_coherence_issues_and_repairs_appear_in_review() -> None:
         {
             "event_type": COHERENCE_REVIEWED,
             "payload": {
-                "status": "repair_required",
+                "status": "failed",
                 "blocking_count": 3,
                 "major_count": 1,
                 "minor_count": 0,

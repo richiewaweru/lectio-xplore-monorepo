@@ -15,13 +15,13 @@ describe('V3PlanPreview', () => {
 					},
 					anchor: {
 						example: 'splitting a pizza into 8 equal slices',
-						reuse_scope: 'used in orient and practice'
+						reuse_scope: 'used in intro and practice'
 					},
 					sections: [
 						{
-							id: 'orient',
-							title: 'Orient',
-							role: 'orient',
+							id: 'intro',
+							title: 'Intro',
+							role: 'intro',
 							visual_required: false,
 							transition_note: null,
 							components: [{ slug: 'hook-hero', purpose: 'surface anchor' }]
@@ -30,7 +30,7 @@ describe('V3PlanPreview', () => {
 					question_plan: [
 						{
 							question_id: 'q1',
-							section_id: 'orient',
+							section_id: 'intro',
 							temperature: 'warm',
 							diagram_required: false
 						}
@@ -41,6 +41,7 @@ describe('V3PlanPreview', () => {
 
 		expect(screen.getByText('Structural plan')).toBeTruthy();
 		expect(screen.getByText(/splitting a pizza/i)).toBeTruthy();
-		expect(screen.getByText(/q1 → orient/i)).toBeTruthy();
+		expect(screen.getByText('1. Intro')).toBeTruthy();
+		expect(screen.getByText(/q1\s*→\s*intro/i)).toBeTruthy();
 	});
 });

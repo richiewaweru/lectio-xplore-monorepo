@@ -65,15 +65,13 @@ async def run_coherence_review(
         },
     )
 
-    status = derive_coherence_status(det_issues, [])
+    status = derive_coherence_status(det_issues)
     report = CoherenceReport(
         blueprint_id=draft_pack.blueprint_id,
         generation_id=draft_pack.generation_id,
         status=status,
         deterministic_passed=not any(issue.severity == "blocking" for issue in det_issues),
-        llm_review_passed=False,
         issues=det_issues,
-        repair_targets=[],
     )
     refresh_issue_counts(report)
 
@@ -83,7 +81,6 @@ async def run_coherence_review(
             "generation_id": gid,
             "status": status,
             "blocking_count": report.blocking_count,
-            "repair_target_count": 0,
         },
     )
 

@@ -59,7 +59,7 @@ async def test_v3_generation_writer_persists_flat_document_json_and_report_snaps
                     "template_id": "guided-concept-path",
                     "subject": "Science",
                     "status": "draft_ready",
-                    "sections": [{"section_id": "orient", "header": {"title": "Intro"}}],
+                    "sections": [{"section_id": "intro", "header": {"title": "Intro"}}],
                     "warnings": [],
                     "section_diagnostics": [],
                     "booklet_issues": [],
@@ -128,7 +128,7 @@ async def test_v3_generation_writer_handles_resource_finalised_and_pdf_status() 
         await writer.write_resource_finalised(
             generation_id,
             {
-                "status": "repair_required",
+                "status": "failed",
                 "booklet_status": "draft_needs_review",
             },
         )
@@ -232,13 +232,11 @@ async def test_v3_generation_writer_persists_full_coherence_report() -> None:
             section_count=1,
         )
         coherence = {
-            "status": "repair_required",
+            "status": "failed",
             "blocking_count": 3,
             "major_count": 1,
             "minor_count": 0,
             "issues": [{"issue_id": "i-1", "severity": "blocking"}],
-            "repair_targets": [{"target_id": "t-1"}],
-            "repaired_target_ids": [],
         }
         await writer.write_coherence_result(generation_id, coherence)
         await writer.write_generation_complete(
@@ -246,7 +244,7 @@ async def test_v3_generation_writer_persists_full_coherence_report() -> None:
             {
                 "booklet_status": "final_ready",
                 "coherence_review": {
-                    "status": "repair_required",
+                    "status": "failed",
                     "blocking_count": 3,
                     "major_count": 1,
                     "minor_count": 0,
@@ -260,7 +258,5 @@ async def test_v3_generation_writer_persists_full_coherence_report() -> None:
         assert model.report_json["summary"]["blocking_issues"] == 3
         assert model.report_json["summary"]["major_issues"] == 1
         assert model.report_json["summary"]["minor_issues"] == 0
-        assert model.report_json["summary"]["repair_target_count"] == 1
-        assert model.report_json["summary"]["repaired_target_count"] == 0
     finally:
         await _cleanup_generation(generation_id)

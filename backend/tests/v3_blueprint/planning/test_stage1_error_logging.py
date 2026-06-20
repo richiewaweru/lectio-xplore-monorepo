@@ -6,6 +6,15 @@ import pytest
 
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 from v3_blueprint.planning import retry, structural_planner
+from v3_blueprint.planning.models import (
+    AnchorSpec,
+    ComponentSlot,
+    LessonIntent,
+    QPlanItem,
+    SectionPlan,
+    StructuralPlan,
+    VoiceSpec,
+)
 
 
 def _signals() -> V3SignalSummary:
@@ -94,3 +103,60 @@ async def test_run_stage1_with_retry_prints_attempt_exception_and_reraises() -> 
     assert "generation_id=gen-456" in printed
     assert "type=ValueError" in printed
     assert mock_print.call_args.kwargs["flush"] is True
+
+
+@pytest.mark.asyncio
+async def test_call_stage1_rejects_role_outside_active_resource_spec() -> None:
+    signals = _signals()
+    form = _form()
+    invalid_plan = StructuralPlan(
+        lesson_mode="first_exposure",
+        lesson_intent=LessonIntent(
+            goal="By the end students can compare fractions.",
+            structure_rationale="Concrete-first structure for novice learners.",
+        ),
+        anchor=AnchorSpec(
+            example="splitting a pizza into 8 equal slices",
+            reuse_scope="used in intro and practice",
+        ),
+        voice=VoiceSpec(register_name="simple", tone="encouraging"),
+        prior_knowledge=["equal sharing"],
+        sections=[
+            SectionPlan(
+                id="intro",
+                title="Intro",
+                role="invalid_role",
+                visual_required=False,
+                transition_note=None,
+                components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")],
+            )
+        ],
+        question_plan=[
+            QPlanItem(
+                question_id="q1",
+                section_id="intro",
+                temperature="warm",
+                diagram_required=False,
+            )
+        ],
+        answer_key_style="brief_explanations",
+    )
+
+    with patch.object(
+        structural_planner,
+        "run_llm",
+        new=AsyncMock(return_value=type("Result", (), {"output": invalid_plan})()),
+    ):
+        with pytest.raises(ValueError, match="which is not in the active resource spec roles"):
+            await structural_planner._call_stage1(
+                signals,
+                form,
+                {
+                    "resource_type": "lesson",
+                    "spec": {
+                        "required_roles": ["intro", "practice"],
+                        "optional_roles": ["summary"],
+                    },
+                },
+                generation_id="gen-role-guard",
+            )

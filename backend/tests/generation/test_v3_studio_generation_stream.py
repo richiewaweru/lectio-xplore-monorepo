@@ -546,7 +546,7 @@ async def test_v3_pdf_export_surfaces_actionable_error_detail() -> None:
             "template_id": "guided-concept-path",
             "status": "draft_ready",
             "subject": "Math",
-            "sections": [{"section_id": "orient", "header": {"title": "Intro"}}],
+            "sections": [{"section_id": "intro", "header": {"title": "Intro"}}],
             "warnings": [],
             "section_diagnostics": [],
             "booklet_issues": [],
@@ -589,7 +589,7 @@ async def test_pump_sse_parses_events_and_dispatches_generation_writer() -> None
         )
         yield (
             'event: coherence_report_ready\n'
-            'data: {"generation_id":"gen-1","status":"repair_required","coherence_report":{"status":"repair_required","blocking_count":2,"major_count":0,"minor_count":0,"issues":[{"issue_id":"i-1"}],"repair_targets":[],"repaired_target_ids":[]}}\n\n'
+            'data: {"generation_id":"gen-1","status":"failed","coherence_report":{"status":"failed","blocking_count":2,"major_count":0,"minor_count":0,"issues":[{"issue_id":"i-1"}]}}\n\n'
         )
         yield (
             'event: generation_complete\n'
@@ -597,7 +597,7 @@ async def test_pump_sse_parses_events_and_dispatches_generation_writer() -> None
         )
         yield (
             'event: coherence_report_ready\n'
-            'data: {"generation_id":"gen-1","status":"passed","blocking_count":0,"repair_target_count":0}\n\n'
+            'data: {"generation_id":"gen-1","status":"passed","blocking_count":0,"major_count":0,"minor_count":0}\n\n'
         )
         yield (
             'event: resource_finalised\n'
