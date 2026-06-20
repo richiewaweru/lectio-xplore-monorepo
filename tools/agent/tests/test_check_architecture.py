@@ -28,7 +28,7 @@ def write_context(repo_root: Path) -> Path:
                 'package_root': 'backend/src/core',
                 'module_prefix': 'core',
                 'source_label': 'core',
-                'forbidden_prefixes': ['generation', 'planning', 'pipeline'],
+                'forbidden_prefixes': ['generation'],
             }
         },
         'github': {'required_checks': ['agent-governance'], 'pr_required_sections': ['Summary']},
@@ -81,7 +81,7 @@ def write_composite_context(repo_root: Path) -> Path:
                         'package_root': 'backend/src/core',
                         'module_prefix': 'core',
                         'source_label': 'core',
-                        'forbidden_prefixes': ['generation', 'planning', 'pipeline'],
+                        'forbidden_prefixes': ['generation'],
                     },
                     {
                         'type': 'forbidden-import-prefix',
