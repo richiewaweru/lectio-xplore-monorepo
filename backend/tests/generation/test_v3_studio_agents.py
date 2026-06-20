@@ -1,15 +1,10 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Any
 
 import pytest
 
-from generation.v3_studio.agents import (
-    extract_signals,
-    generate_production_blueprint,
-)
+from generation.v3_studio.agents import extract_signals
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 
 
@@ -69,57 +64,6 @@ async def test_extract_signals_includes_structured_form_in_user_prompt(monkeypat
     assert "Lesson mode: first_exposure" in user_prompt
     assert "Learning preferences: step_by_step" in user_prompt
 
-
-@pytest.mark.asyncio
-async def test_generate_blueprint_uses_chunked_stage1_and_stage2(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    form = _example_form()
-    signals = V3SignalSummary(
-        topic="Compound area",
-        subtopic="L-shapes",
-        prior_knowledge=[],
-        learner_needs=[],
-        teacher_goal="Learners can decompose shapes to find area.",
-        inferred_resource_type="lesson",
-        confidence="high",
-    )
-
-    raw = (
-        Path(__file__).resolve().parents[2]
-        / "src"
-        / "v3_blueprint"
-        / "examples"
-        / "amara_compound_area.json"
-    )
-    assembled_bp = json.loads(raw.read_text(encoding="utf-8"))
-    stage1_calls: dict[str, Any] = {}
-    stage2_calls: dict[str, Any] = {}
-
-    async def fake_stage1(**kwargs):  # type: ignore[no-untyped-def]
-        stage1_calls.update(kwargs)
-        return {"sections": []}
-
-    async def fake_stage2(**kwargs):  # type: ignore[no-untyped-def]
-        stage2_calls.update(kwargs)
-        return []
-
-    monkeypatch.setattr("v3_blueprint.planning.retry.run_stage1_with_retry", fake_stage1)
-    monkeypatch.setattr("v3_blueprint.planning.retry.run_stage2", fake_stage2)
-    monkeypatch.setattr(
-        "v3_blueprint.planning.assembler.assemble_blueprint",
-        lambda *_args, **_kwargs: assembled_bp,
-    )
-    monkeypatch.setattr(
-        "generation.v3_studio.agents._validate_blueprint",
-        lambda _bp: None,
-    )
-
-    result = await generate_production_blueprint(signals=signals, form=form, trace_id="tid-test")
-    assert stage1_calls["signals"] == signals
-    assert stage2_calls["signals"] == signals
-    assert stage2_calls["plan"] == {"sections": []}
-    assert result == assembled_bp
 
 
 

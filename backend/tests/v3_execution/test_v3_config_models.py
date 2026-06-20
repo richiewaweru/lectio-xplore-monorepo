@@ -9,14 +9,13 @@ from v3_execution.config.models import (
     V3_ANSWER_KEY_GENERATOR_HEAVY,
     get_v3_slot,
     get_v3_spec,
-    lesson_architect_model_settings,
 )
 from v3_execution.models import AnswerKeyExecutorWorkOrder, AnswerKeyPlanSpec, WriterQuestion
 
 
 def test_v3_slot_mapping() -> None:
-    assert get_v3_slot("v3_lesson_architect") == ModelSlot.PREMIUM
     assert get_v3_slot("v3_signal_extractor") == ModelSlot.FAST
+    assert get_v3_slot("v3_stage1_planner") == ModelSlot.PREMIUM
     assert get_v3_slot("v3_section_writer") == ModelSlot.STANDARD
     assert get_v3_slot("v3_answer_key_generator") == ModelSlot.FAST
     assert get_v3_slot("v3_answer_key_generator_heavy") == ModelSlot.STANDARD
@@ -25,24 +24,8 @@ def test_v3_slot_mapping() -> None:
 def test_get_v3_spec_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("V3_PREMIUM_MODEL_NAME", "claude-opus-test")
     monkeypatch.setenv("V3_PREMIUM_PROVIDER", "anthropic")
-    spec = get_v3_spec("v3_lesson_architect")
+    spec = get_v3_spec("v3_stage1_planner")
     assert spec.model_name == "claude-opus-test"
-
-
-def test_lesson_architect_thinking_type_is_adaptive(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.delenv("V3_ARCHITECT_MAX_TOKENS", raising=False)
-    settings = lesson_architect_model_settings()
-    assert settings["anthropic_thinking"]["type"] == "adaptive"
-    assert "budget_tokens" not in settings["anthropic_thinking"]
-    assert settings["max_tokens"] == 8000
-
-
-def test_lesson_architect_max_tokens_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("V3_ARCHITECT_MAX_TOKENS", "12000")
-    settings = lesson_architect_model_settings()
-    assert settings["max_tokens"] == 12000
 
 
 def test_answer_key_effective_node_fast_when_answers_present() -> None:

@@ -7,7 +7,6 @@ from core.llm import ModelFamily, ModelSlot, ModelSpec, build_model
 # Canonical v3 node names (must match call sites).
 V3_SIGNAL_EXTRACTOR = "v3_signal_extractor"
 V3_NARROW = "v3_narrow"
-V3_LESSON_ARCHITECT = "v3_lesson_architect"
 V3_STAGE1_PLANNER = "v3_stage1_planner"
 V3_STAGE2_EXPANDER = "v3_stage2_expander"
 V3_BLUEPRINT_ADJUST = "v3_blueprint_adjust"
@@ -16,12 +15,10 @@ V3_QUESTION_WRITER = "v3_question_writer"
 V3_ANSWER_KEY_GENERATOR = "v3_answer_key_generator"
 """Sonnet-tier answer key when FAST is insufficient (missing expected/working for full_working)."""
 V3_ANSWER_KEY_GENERATOR_HEAVY = "v3_answer_key_generator_heavy"
-V3_COHERENCE_REVIEWER = "v3_coherence_reviewer"
 
 V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V3_SIGNAL_EXTRACTOR: ModelSlot.FAST,
     V3_NARROW: ModelSlot.FAST,
-    V3_LESSON_ARCHITECT: ModelSlot.PREMIUM,
     V3_STAGE1_PLANNER: ModelSlot.PREMIUM,
     V3_STAGE2_EXPANDER: ModelSlot.STANDARD,
     V3_BLUEPRINT_ADJUST: ModelSlot.STANDARD,
@@ -29,7 +26,6 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V3_QUESTION_WRITER: ModelSlot.STANDARD,
     V3_ANSWER_KEY_GENERATOR: ModelSlot.FAST,
     V3_ANSWER_KEY_GENERATOR_HEAVY: ModelSlot.STANDARD,
-    V3_COHERENCE_REVIEWER: ModelSlot.STANDARD,
 }
 
 V3_DEFAULT_SPECS: dict[ModelSlot, ModelSpec] = {
@@ -46,10 +42,6 @@ V3_DEFAULT_SPECS: dict[ModelSlot, ModelSpec] = {
         model_name="claude-opus-4-6",
     ),
 }
-
-LESSON_ARCHITECT_THINKING_BUDGET_TOKENS = int(
-    os.getenv("V3_ARCHITECT_THINKING_BUDGET_TOKENS", "10000")
-)
 
 
 def _first_env(*names: str) -> str | None:
@@ -127,35 +119,12 @@ def get_v3_model(node_name: str, *, model_overrides: dict | None = None):
     return build_model(spec)
 
 
-def lesson_architect_model_settings() -> dict:
-    """Model settings for the Lesson Architect Opus call.
-
-    max_tokens: A full ProductionBlueprint is roughly 3000–4000 output tokens.
-    With adaptive thinking, Opus may use additional internal reasoning tokens;
-    8000 gives headroom without fixing spend (Anthropic charges per token used,
-    not the ceiling).
-
-    anthropic_thinking.type = adaptive per Anthropic guidance:
-    https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking
-    Do not pass budget_tokens with adaptive (invalid for that type).
-    """
-    return {
-        "anthropic_thinking": {
-            "type": "adaptive",
-        },
-        "max_tokens": int(os.getenv("V3_ARCHITECT_MAX_TOKENS", "8000")),
-    }
-
-
 __all__ = [
-    "LESSON_ARCHITECT_THINKING_BUDGET_TOKENS",
     "V3_ANSWER_KEY_GENERATOR",
     "V3_ANSWER_KEY_GENERATOR_HEAVY",
     "V3_BLUEPRINT_ADJUST",
-    "V3_NARROW",
-    "V3_COHERENCE_REVIEWER",
     "V3_DEFAULT_SPECS",
-    "V3_LESSON_ARCHITECT",
+    "V3_NARROW",
     "V3_NODE_SLOTS",
     "V3_QUESTION_WRITER",
     "V3_SECTION_WRITER",
@@ -165,5 +134,4 @@ __all__ = [
     "get_v3_model",
     "get_v3_slot",
     "get_v3_spec",
-    "lesson_architect_model_settings",
 ]

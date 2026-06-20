@@ -1030,7 +1030,7 @@ async def _seed_parent_generation_with_artifact(
 
 
 @pytest.mark.asyncio
-async def test_supplement_options_returns_cards_for_parent_with_artifact() -> None:
+async def test_supplement_options_are_parked() -> None:
     app.dependency_overrides[get_current_user] = _override_user_a
     await _ensure_user(TEST_USER_A)
 
@@ -1039,95 +1039,22 @@ async def test_supplement_options_returns_cards_for_parent_with_artifact() -> No
 
     async with _client() as client:
         resp = await client.get(f"/api/v1/v3/generations/{generation_id}/supplements/options")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["available"] is True
-    assert body["parent_resource_type"] == "lesson"
-    types = {opt["resource_type"] for opt in body["options"]}
-    assert types == {"exit_ticket", "quiz", "worksheet"}
+    assert resp.status_code == 410
+    assert "parked" in resp.json()["detail"].lower()
 
 
 @pytest.mark.asyncio
-async def test_supplement_options_unavailable_without_artifact() -> None:
+async def test_create_supplement_blueprint_is_parked() -> None:
     app.dependency_overrides[get_current_user] = _override_user_a
     await _ensure_user(TEST_USER_A)
 
     generation_id = str(uuid.uuid4())
-    await _upsert_generation_row(
-        generation_id=generation_id,
-        user_id=TEST_USER_A.id,
-        document_json=None,
-        report_json={},
-        mode="v3",
-        status="completed",
-    )
-
-    async with _client() as client:
-        resp = await client.get(f"/api/v1/v3/generations/{generation_id}/supplements/options")
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["available"] is False
-    assert body["options"] == []
-    assert body["unavailable_reason"]
-
-
-@pytest.mark.asyncio
-async def test_create_supplement_blueprint_stores_planning_source() -> None:
-    app.dependency_overrides[get_current_user] = _override_user_a
-    await _ensure_user(TEST_USER_A)
-
-    generation_id = str(uuid.uuid4())
-    parent_blueprint_id, parent_bp = await _seed_parent_generation_with_artifact(
-        generation_id=generation_id
-    )
-
-    child_bp = _example_bp("amara_compound_area.json")
-    child_bp.lesson.resource_type = "exit_ticket"
-    for index, section in enumerate(child_bp.sections):
-        section.section_id = f"supplement_{index}_{section.section_id}"
-
-    with patch(
-        "generation.v3_studio.router.generate_supplement_blueprint",
-        new=AsyncMock(return_value=child_bp),
-    ):
-        async with _client() as client:
-            resp = await client.post(
-                f"/api/v1/v3/generations/{generation_id}/supplements/blueprint",
-                json={"resource_type": "exit_ticket"},
-            )
-            assert resp.status_code == 200
-            body = resp.json()
-
-    assert body["resource_type"] == "exit_ticket"
-    assert body["parent_generation_id"] == generation_id
-    child_blueprint_id = body["blueprint_id"]
-    stored = await v3_studio_store.get_blueprint(TEST_USER_A.id, child_blueprint_id)
-    assert stored is not None
-    assert stored.planning_source is not None
-    assert stored.planning_source["kind"] == "supplement"
-    assert stored.planning_source["parent_generation_id"] == generation_id
-    assert stored.planning_source["parent_blueprint_id"] == parent_blueprint_id
-    assert stored.planning_source["target_resource_type"] == "exit_ticket"
-
-
-@pytest.mark.asyncio
-async def test_create_supplement_blueprint_rejects_without_artifact() -> None:
-    app.dependency_overrides[get_current_user] = _override_user_a
-    await _ensure_user(TEST_USER_A)
-
-    generation_id = str(uuid.uuid4())
-    await _upsert_generation_row(
-        generation_id=generation_id,
-        user_id=TEST_USER_A.id,
-        document_json=None,
-        report_json={},
-        mode="v3",
-        status="completed",
-    )
+    await _seed_parent_generation_with_artifact(generation_id=generation_id)
 
     async with _client() as client:
         resp = await client.post(
             f"/api/v1/v3/generations/{generation_id}/supplements/blueprint",
             json={"resource_type": "exit_ticket"},
         )
-    assert resp.status_code == 409
+    assert resp.status_code == 410
+    assert "parked" in resp.json()["detail"].lower()

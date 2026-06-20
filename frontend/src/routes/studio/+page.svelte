@@ -7,61 +7,39 @@
 	import V3SignalConfirmation from '$lib/components/studio/V3SignalConfirmation.svelte';
 	import V3PlanPreview from '$lib/components/studio/V3PlanPreview.svelte';
 	import V3PlanActions from '$lib/components/studio/V3PlanActions.svelte';
-	import V3BlueprintPreview from '$lib/components/studio/V3BlueprintPreview.svelte';
 	import V3Canvas from '$lib/components/studio/V3Canvas.svelte';
 	import V3BookletPackView from '$lib/components/studio/V3BookletPackView.svelte';
-	import V3SupplementTray from '$lib/components/studio/V3SupplementTray.svelte';
 
 	import {
 		approveChunkedPlan,
-		adjustBlueprint,
 		connectV3ChunkedStream,
 		connectV3StudioGenerationStream,
-		getChunkedPlanStatus,
-		createV3SupplementBlueprint,
 		downloadV3GenerationPdf,
 		extractSignals,
 		fetchV3Document,
+		getChunkedPlanStatus,
 		getV3GenerationBlueprint,
-		getV3SupplementOptions,
 		regenerateChunkedPlan,
 		retryChunkedSection,
-		startChunkedPlan,
-		startV3Generation
+		startChunkedPlan
 	} from '$lib/api/v3';
 	import { isApiError } from '$lib/api/errors';
-	import {
-		captureParentSnapshot,
-		resetV3Studio,
-		restoreParentFromSupplementReview,
-		v3Studio
-	} from '$lib/stores/v3-studio.svelte';
+	import { resetV3Studio, v3Studio } from '$lib/stores/v3-studio.svelte';
 	import {
 		applyComponentPatchedToCanvas,
 		applyComponentReadyToCanvas,
 		applySectionWriterFailedToCanvas
 	} from '$lib/studio/v3-stream-state';
-	import {
-		buildCanvasSkeleton,
-		mergeDiagramFrame,
-		mergePracticeProblem
-	} from '$lib/studio/v3-canvas';
-	import { mapPackSectionsToCanvas } from '$lib/studio/v3-print-canvas';
+	import { buildCanvasSkeleton, mergeDiagramFrame, mergePracticeProblem } from '$lib/studio/v3-canvas';
 	import { getBookletExportPolicy, isBookletStatus } from '$lib/studio/v3-booklet';
 	import { coerceV3DocumentToPack } from '$lib/studio/v3-document';
-	import type {
-		BookletStatus,
-		V3ChunkedPlanState,
-		V3DraftPack,
-		V3InputForm,
-		V3SupplementResourceType
-	} from '$lib/types/v3';
+	import { mapPackSectionsToCanvas } from '$lib/studio/v3-print-canvas';
+	import type { BookletStatus, V3ChunkedPlanState, V3DraftPack, V3InputForm } from '$lib/types/v3';
 
 	let pdfLoading = $state(false);
 	let pdfError = $state<string | null>(null);
 	let pdfConfirming = $state(false);
 	let pdfOpen = $state(false);
-	let pendingSupplementLabel = $state<string | null>(null);
 	let schoolName = $state('');
 	let teacherName = $state('');
 	let exportDate = $state('');
@@ -168,7 +146,6 @@
 			return;
 		}
 		if (resolved.stage === 'stage2_running') {
-			// Keep the chunked UI in planning while Stage 2 progresses, even if execution_started is true.
 			v3Studio.stage = 'planning';
 			connectChunkedStage2Stream(resolved.generation_id);
 			return;
@@ -250,9 +227,6 @@
 			if (pack.status !== 'streaming_preview') {
 				v3Studio.coherenceHint = null;
 				v3Studio.stage = 'complete';
-				if (!v3Studio.supplementContext) {
-					void loadSupplementOptions(generationId);
-				}
 			}
 			return true;
 		} catch {
@@ -310,58 +284,6 @@
 			await applyChunkedState(chunkedState);
 		} catch (err) {
 			v3Studio.stage = 'confirming';
-			v3Studio.error = friendly(err);
-		}
-	}
-
-	async function loadSupplementOptions(generationId: string | null): Promise<void> {
-		if (!generationId) return;
-		v3Studio.supplementOptionsLoading = true;
-		v3Studio.supplementOptionsError = null;
-		try {
-			const res = await getV3SupplementOptions(generationId);
-			v3Studio.supplementOptions = res.available ? res.options : [];
-			v3Studio.supplementOptionsError = res.unavailable_reason;
-		} catch (err) {
-			v3Studio.supplementOptions = [];
-			v3Studio.supplementOptionsError = friendly(err);
-		} finally {
-			v3Studio.supplementOptionsLoading = false;
-		}
-	}
-
-	async function handleCreateSupplementPlan(resourceType: V3SupplementResourceType) {
-		const parentGenerationId = v3Studio.generationId;
-		if (!parentGenerationId) return;
-
-		v3Studio.error = null;
-		v3Studio.parentSnapshot = captureParentSnapshot();
-		pendingSupplementLabel =
-			v3Studio.supplementOptions.find((option) => option.resource_type === resourceType)?.label ??
-			'companion resource';
-		v3Studio.stage = 'planning';
-
-		try {
-			const result = await createV3SupplementBlueprint({
-				parent_generation_id: parentGenerationId,
-				resource_type: resourceType
-			});
-
-			v3Studio.blueprint = result.preview;
-			v3Studio.supplementContext = {
-				mode: 'supplement_review',
-				parentGenerationId: result.parent_generation_id,
-				parentTitle: result.parent_title,
-				resourceType: result.resource_type,
-				label: result.label,
-				childGenerationId: result.generation_id,
-				childBlueprintId: result.blueprint_id
-			};
-			v3Studio.stage = 'reviewing';
-			pendingSupplementLabel = null;
-		} catch (err) {
-			restoreParentFromSupplementReview();
-			pendingSupplementLabel = null;
 			v3Studio.error = friendly(err);
 		}
 	}
@@ -518,9 +440,6 @@
 				v3Studio.streamCancel?.();
 				v3Studio.streamCancel = null;
 				v3Studio.stage = 'complete';
-				if (v3Studio.supplementContext?.mode === 'supplement_generation') {
-					v3Studio.supplementContext = null;
-				}
 			},
 			onComponentReady: (data) => {
 				const next = applyComponentReadyToCanvas(v3Studio.canvas, data);
@@ -704,47 +623,6 @@
 		});
 	}
 
-	async function handleBlueprintApproved() {
-		disconnectActiveChunkedStream();
-		v3Studio.error = null;
-		const blueprint = v3Studio.blueprint;
-		if (!blueprint) return;
-
-		const generationId = v3Studio.supplementContext?.childGenerationId ?? crypto.randomUUID();
-		v3Studio.generationId = generationId;
-		v3Studio.canvas = buildCanvasSkeleton(blueprint);
-		v3Studio.draftPack = null;
-		v3Studio.finalPack = null;
-		v3Studio.activePack = null;
-		v3Studio.bookletStatus = 'streaming_preview';
-		v3Studio.bookletIssues = [];
-		v3Studio.stage = 'generating';
-
-		try {
-			await startV3Generation({
-				generation_id: generationId,
-				blueprint_id: blueprint.blueprint_id,
-				template_id: blueprint.template_id
-			});
-		} catch (err) {
-			v3Studio.stage = 'reviewing';
-			v3Studio.error = friendly(err);
-			return;
-		}
-
-		if (v3Studio.supplementContext) {
-			v3Studio.supplementContext = {
-				...v3Studio.supplementContext,
-				mode: 'supplement_generation'
-			};
-			v3Studio.parentSnapshot = null;
-			v3Studio.supplementOptions = [];
-			v3Studio.supplementOptionsError = null;
-		}
-
-		connectGenerationStream(generationId);
-	}
-
 	async function handleChunkedApprove() {
 		const chunked = v3Studio.chunkedState;
 		if (!chunked) return;
@@ -823,23 +701,6 @@
 		}
 	}
 
-	async function handleBlueprintAdjust(instruction: string) {
-		v3Studio.error = null;
-		const blueprint = v3Studio.blueprint;
-		if (!blueprint) return;
-		v3Studio.stage = 'planning';
-		try {
-			v3Studio.blueprint = await adjustBlueprint({
-				blueprint_id: blueprint.blueprint_id,
-				adjustment: instruction
-			});
-			v3Studio.stage = 'reviewing';
-		} catch (err) {
-			v3Studio.stage = 'reviewing';
-			v3Studio.error = friendly(err);
-		}
-	}
-
 	onDestroy(() => {
 		disconnectActiveChunkedStream();
 		v3Studio.streamCancel?.();
@@ -915,29 +776,20 @@
 		<V3SignalConfirmation signals={v3Studio.signals} onConfirm={handleSignalsConfirmed} onCorrect={handleSignalCorrection} />
 	{:else if v3Studio.stage === 'planning'}
 		<div class="space-y-4">
-		<V3PlanningState
-			form={v3Studio.form}
-			planningLabel={pendingSupplementLabel
-				? `Creating your ${pendingSupplementLabel} plan`
-				: v3Studio.chunkedState?.stage === 'stage2_running'
+			<V3PlanningState
+				form={v3Studio.form}
+				planningLabel={v3Studio.chunkedState?.stage === 'stage2_running'
 					? 'Expanding section briefs and validating each section'
 					: undefined}
-			messages={pendingSupplementLabel
-				? [
-						'Reading the parent lesson blueprint…',
-						'Loading the resource rules…',
-						'Creating a focused companion plan…',
-						'Checking the plan against the resource spec…'
-					]
-				: v3Studio.chunkedState?.stage === 'stage2_running'
+				messages={v3Studio.chunkedState?.stage === 'stage2_running'
 					? [
-							'Expanding section briefs one by one…',
-							'Checking continuity across prior sections…',
-							'Validating each section against plan constraints…',
-							'Attempting final assembly…'
+							'Expanding section briefs one by oneâ€¦',
+							'Checking continuity across prior sectionsâ€¦',
+							'Validating each section against plan constraintsâ€¦',
+							'Attempting final assemblyâ€¦'
 						]
 					: undefined}
-		/>
+			/>
 			{#if v3Studio.chunkedState?.structural_plan?.sections?.length}
 				<div class="mx-auto flex max-w-3xl flex-wrap justify-center gap-2 px-4 stage2-progress">
 					{#each v3Studio.chunkedState.structural_plan.sections as section (section.id)}
@@ -961,21 +813,6 @@
 			onApprove={handleChunkedApprove}
 			onRegenerate={handleChunkedRegenerate}
 			onRetrySection={handleChunkedRetrySection}
-		/>
-	{:else if v3Studio.stage === 'reviewing' && v3Studio.blueprint}
-		<V3BlueprintPreview
-			blueprint={v3Studio.blueprint}
-			contextLabel={v3Studio.supplementContext
-				? `${v3Studio.supplementContext.label} plan`
-				: 'Lesson plan'}
-			approveLabel={v3Studio.supplementContext
-				? `Approve and generate ${v3Studio.supplementContext.label}`
-				: 'Approve and generate'}
-			cancelLabel="Back to lesson"
-			parentTitle={v3Studio.supplementContext?.parentTitle ?? null}
-			onCancel={v3Studio.supplementContext ? restoreParentFromSupplementReview : undefined}
-			onApprove={handleBlueprintApproved}
-			onAdjust={handleBlueprintAdjust}
 		/>
 	{:else if v3Studio.stage === 'generating' || v3Studio.stage === 'finalising' || v3Studio.stage === 'complete'}
 		{#if v3Studio.activePack}
@@ -1039,16 +876,6 @@
 		{/if}
 		{#if v3Studio.coherenceHint && v3Studio.stage === 'finalising'}
 			<p class="mx-auto max-w-3xl px-4 pt-6 text-center text-sm text-muted-foreground">{v3Studio.coherenceHint}</p>
-		{/if}
-		{#if v3Studio.stage === 'complete' && v3Studio.generationId}
-			<V3SupplementTray
-				parentGenerationId={v3Studio.generationId}
-				options={v3Studio.supplementOptions}
-				loading={v3Studio.supplementOptionsLoading}
-				error={v3Studio.supplementOptionsError}
-				unavailableReason={v3Studio.supplementOptionsError}
-				onCreatePlan={handleCreateSupplementPlan}
-			/>
 		{/if}
 		{#if v3Studio.activePack}
 			<V3BookletPackView

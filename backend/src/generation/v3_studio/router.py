@@ -46,7 +46,6 @@ from generation.v3_studio.agents import (
     _validate_blueprint,
     adjust_production_blueprint,
     extract_signals,
-    generate_supplement_blueprint,
 )
 from generation.pdf_export.cleanup import cleanup_files
 from generation.pdf_export.rendering.playwright import PDFRenderError
@@ -58,8 +57,6 @@ from generation.v3_studio.dtos import (
     V3ChunkedPlanStateDTO,
     V3ChunkedRegenerateRequest,
     V3ChunkedRetrySectionRequest,
-    V3CreateSupplementBlueprintRequest,
-    V3CreateSupplementBlueprintResponse,
     V3GenerationDetailDTO,
     V3GenerationHistoryItemDTO,
     V3GenerateStartRequest,
@@ -67,14 +64,6 @@ from generation.v3_studio.dtos import (
     V3InputForm,
     V3PdfExportRequest,
     V3SignalSummary,
-    V3SupplementOptionDTO,
-    V3SupplementOptionsResponse,
-)
-from generation.v3_studio.supplement_rules import (
-    SUPPLEMENT_OPTION_METADATA,
-    allowed_supplements_for,
-    assert_supplement_allowed,
-    parent_resource_type_from_artifact,
 )
 from resource_specs.loader import get_spec, list_spec_ids
 from resource_specs.renderer import render_spec_for_prompt
@@ -1445,149 +1434,23 @@ async def get_v3_generation_detail(
     )
 
 
-@v3_studio_router.get(
-    "/generations/{generation_id}/supplements/options",
-    response_model=V3SupplementOptionsResponse,
-)
+@v3_studio_router.get("/generations/{generation_id}/supplements/options")
 async def get_generation_supplement_options(
     generation_id: str,
     current_user: User = Depends(get_current_user),
-) -> V3SupplementOptionsResponse:
-    generation_writer = V3GenerationWriter(async_session_factory)
-    model = await generation_writer.get_generation_model(generation_id, current_user.id)
-    if model is None:
-        raise HTTPException(status_code=404, detail="Generation not found")
-
-    artifact = await generation_writer.read_planning_artifact(
-        generation_id,
-        current_user.id,
-    )
-    parent_title = _generation_title(model)
-    if artifact is None:
-        return V3SupplementOptionsResponse(
-            parent_generation_id=generation_id,
-            parent_title=parent_title,
-            parent_resource_type=None,
-            available=False,
-            unavailable_reason=(
-                "Companion resources are unavailable for this older generation "
-                "because no persisted planning artifact exists."
-            ),
-            options=[],
-        )
-
-    parent_resource_type = parent_resource_type_from_artifact(artifact)
-    spec_ids = set(list_spec_ids())
-    allowed_types = allowed_supplements_for(parent_resource_type, spec_ids)
-    options = [
-        V3SupplementOptionDTO(
-            resource_type=resource_type,
-            **SUPPLEMENT_OPTION_METADATA[resource_type],
-        )
-        for resource_type in allowed_types
-        if resource_type in SUPPLEMENT_OPTION_METADATA
-    ]
-    return V3SupplementOptionsResponse(
-        parent_generation_id=generation_id,
-        parent_title=parent_title,
-        parent_resource_type=parent_resource_type,
-        available=True,
-        unavailable_reason=None,
-        options=options,
-    )
+):
+    _ = generation_id, current_user
+    raise HTTPException(status_code=410, detail="Companion resources are parked for Lectio v4.")
 
 
-@v3_studio_router.post(
-    "/generations/{generation_id}/supplements/blueprint",
-    response_model=V3CreateSupplementBlueprintResponse,
-)
+@v3_studio_router.post("/generations/{generation_id}/supplements/blueprint")
 async def post_generation_supplement_blueprint(
     generation_id: str,
-    body: V3CreateSupplementBlueprintRequest,
+    body: dict[str, Any],
     current_user: User = Depends(get_current_user),
-) -> V3CreateSupplementBlueprintResponse:
-    generation_writer = V3GenerationWriter(async_session_factory)
-    model = await generation_writer.get_generation_model(generation_id, current_user.id)
-    if model is None:
-        raise HTTPException(status_code=404, detail="Generation not found")
-
-    artifact = await generation_writer.read_planning_artifact(
-        generation_id,
-        current_user.id,
-    )
-    if artifact is None:
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                "Companion resources require a persisted planning artifact on the parent generation."
-            ),
-        )
-
-    parent_resource_type = parent_resource_type_from_artifact(artifact)
-    target_resource_type = body.resource_type.lower().strip().replace(" ", "_")
-    spec_ids = set(list_spec_ids())
-    assert_supplement_allowed(
-        parent_resource_type=parent_resource_type,
-        target_resource_type=target_resource_type,
-        available_spec_ids=spec_ids,
-    )
-
-    try:
-        child_blueprint = await generate_supplement_blueprint(
-            parent_artifact=artifact,
-            target_resource_type=target_resource_type,
-            trace_id=str(uuid.uuid4()),
-        )
-    except Exception as exc:  # noqa: BLE001
-        logger.exception(
-            "Supplement blueprint generation failed generation_id=%s error=%s",
-            generation_id,
-            str(exc)[:400],
-        )
-        raise HTTPException(
-            status_code=500,
-            detail="Could not create companion resource plan.",
-        ) from exc
-
-    child_blueprint_id = str(uuid.uuid4())
-    child_generation_id = str(uuid.uuid4())
-    template_id = str(artifact.get("template_id") or "guided-concept-path")
-    form_raw = artifact.get("form")
-    form = V3InputForm.model_validate(form_raw) if isinstance(form_raw, dict) else None
-    parent_blueprint_id = artifact.get("blueprint_id")
-    planning_source = {
-        "kind": "supplement",
-        "parent_generation_id": generation_id,
-        "parent_blueprint_id": parent_blueprint_id,
-        "target_resource_type": target_resource_type,
-    }
-    await v3_studio_store.put_blueprint(
-        current_user.id,
-        child_blueprint_id,
-        child_blueprint,
-        template_id,
-        form=form,
-        planning_source=planning_source,
-    )
-    meta = SUPPLEMENT_OPTION_METADATA.get(target_resource_type, {})
-    label = meta.get("label", target_resource_type.replace("_", " ").title())
-    parent_title = _generation_title(model)
-    preview = blueprint_to_preview_dto(
-        blueprint_id=child_blueprint_id,
-        blueprint=child_blueprint,
-        template_id=template_id,
-        form=form,
-    )
-    return V3CreateSupplementBlueprintResponse(
-        generation_id=child_generation_id,
-        blueprint_id=child_blueprint_id,
-        template_id=template_id,
-        resource_type=target_resource_type,
-        parent_generation_id=generation_id,
-        parent_title=parent_title,
-        label=label,
-        preview=preview,
-    )
+):
+    _ = generation_id, body, current_user
+    raise HTTPException(status_code=410, detail="Companion resources are parked for Lectio v4.")
 
 
 @v3_studio_router.get("/generations/{generation_id}/events")

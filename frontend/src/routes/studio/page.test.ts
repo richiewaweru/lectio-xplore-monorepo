@@ -17,8 +17,7 @@ const mocks = vi.hoisted(() => ({
 	getV3SupplementOptions: vi.fn(),
 	regenerateChunkedPlan: vi.fn(),
 	retryChunkedSection: vi.fn(),
-	startChunkedPlan: vi.fn(),
-	startV3Generation: vi.fn()
+	startChunkedPlan: vi.fn()
 }));
 
 vi.mock('$lib/api/v3', () => ({
@@ -35,8 +34,7 @@ vi.mock('$lib/api/v3', () => ({
 	getV3SupplementOptions: mocks.getV3SupplementOptions,
 	regenerateChunkedPlan: mocks.regenerateChunkedPlan,
 	retryChunkedSection: mocks.retryChunkedSection,
-	startChunkedPlan: mocks.startChunkedPlan,
-	startV3Generation: mocks.startV3Generation
+	startChunkedPlan: mocks.startChunkedPlan
 }));
 
 vi.mock('$lib/components/studio/V3InputSurface.svelte', async () => ({

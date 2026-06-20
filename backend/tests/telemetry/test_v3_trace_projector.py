@@ -140,7 +140,7 @@ def test_llm_summary_in_terminal() -> None:
                 "sections_failed": 1,
                 "duration_seconds": 143.0,
                 "llm_summary": {
-                    "v3_lesson_architect": {
+                    "v3_stage1_planner": {
                         "calls": 1,
                         "cost_usd": 0.81,
                         "tokens_in": 3840,
@@ -155,4 +155,4 @@ def test_llm_summary_in_terminal() -> None:
 
     report = project_report(events)
     assert report["terminal"]["error_type"] == "coherence_unrecoverable"
-    assert report["llm_summary"]["v3_lesson_architect"]["cost_usd"] == 0.81
+    assert report["llm_summary"]["v3_stage1_planner"]["cost_usd"] == 0.81
