@@ -33,7 +33,12 @@ describe('V3InputSurface', () => {
 		await fireEvent.input(topicInput);
 		await tick();
 
-		const submit = screen.getByRole('button', { name: 'Build my lesson plan' }) as HTMLButtonElement;
+		const outcomeInput = screen.getByLabelText('Desired outcome') as HTMLTextAreaElement;
+		outcomeInput.value = 'Students can break compound shapes into rectangles and find the total area.';
+		await fireEvent.input(outcomeInput);
+		await tick();
+
+		const submit = screen.getByRole('button', { name: 'Build the skeleton' }) as HTMLButtonElement;
 		expect(submit.disabled).toBe(false);
 
 		await fireEvent.click(submit);
@@ -44,7 +49,8 @@ describe('V3InputSurface', () => {
 		expect(payload.grade_level).toBe('Grade 7');
 		expect(payload.topic).toBe('Compound area');
 		expect(Array.isArray(payload.subtopics)).toBe(true);
-		expect(payload.lesson_mode).toBeDefined();
+		expect(payload.resource_type).toBeDefined();
+		expect(payload.outcome).toContain('compound shapes');
 		expect(payload.learner_level).toBeDefined();
 	});
 

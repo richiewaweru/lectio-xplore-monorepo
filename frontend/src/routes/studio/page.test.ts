@@ -118,7 +118,7 @@ describe('studio chunked URL resume', () => {
 		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-plan'));
 		expect(await screen.findByText('Structural plan')).toBeTruthy();
 		expect(await screen.findByRole('button', { name: /adjust \(regenerate with note\)/i })).toBeTruthy();
-		expect(v3Studio.stage).toBe('chunked_review');
+		expect(v3Studio.stage).toBe('skeleton');
 		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
 	});
 
@@ -133,9 +133,9 @@ describe('studio chunked URL resume', () => {
 				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
 				sections: [
 					{
-						id: 'orient',
-						title: 'Orient',
-						role: 'orient',
+						id: 'intro',
+						title: 'Intro',
+						role: 'intro',
 						visual_required: false,
 						transition_note: null,
 						components: []
@@ -158,9 +158,9 @@ describe('studio chunked URL resume', () => {
 				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
 				sections: [
 					{
-						id: 'orient',
-						title: 'Orient',
-						role: 'orient',
+						id: 'intro',
+						title: 'Intro',
+						role: 'intro',
 						visual_required: false,
 						transition_note: null,
 						components: []
@@ -180,7 +180,7 @@ describe('studio chunked URL resume', () => {
 		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-live'));
 		await waitFor(() => expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-live'));
 		await waitFor(() => expect(mocks.connectV3ChunkedStream).toHaveBeenCalledWith('gen-live', expect.any(Object)));
-		expect(v3Studio.stage).toBe('planning');
+		expect(v3Studio.stage).toBe('fill');
 	});
 
 	it('keeps planning after approve while stage2 is still running', async () => {
@@ -225,7 +225,7 @@ describe('studio chunked URL resume', () => {
 		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
 
 		await waitFor(() => expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-approve'));
-		expect(v3Studio.stage).toBe('planning');
+		expect(v3Studio.stage).toBe('fill');
 		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
 
 		approval.resolve({
@@ -247,7 +247,7 @@ describe('studio chunked URL resume', () => {
 		await waitFor(() =>
 			expect(mocks.connectV3ChunkedStream).toHaveBeenCalledWith('gen-approve', expect.any(Object))
 		);
-		expect(v3Studio.stage).toBe('planning');
+		expect(v3Studio.stage).toBe('fill');
 		expect(mocks.fetchV3Document).not.toHaveBeenCalled();
 	});
 
@@ -280,7 +280,7 @@ describe('studio chunked URL resume', () => {
 				question_plan: []
 			},
 			section_briefs: {},
-			failed_sections: ['orient'],
+			failed_sections: ['intro'],
 			blueprint_id: null,
 			execution_started: false,
 			next_action: 'retry_failed_sections'
@@ -296,7 +296,7 @@ describe('studio chunked URL resume', () => {
 		await waitFor(() =>
 			expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-approve-blocked')
 		);
-		expect(v3Studio.stage).toBe('chunked_blocked');
+		expect(v3Studio.stage).toBe('skeleton');
 		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
 	});
 
@@ -310,7 +310,7 @@ describe('studio chunked URL resume', () => {
 				lesson_mode: 'first_exposure',
 				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
 				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
-				sections: [{ id: 'orient', title: 'Orient', role: 'orient', visual_required: false, transition_note: null, components: [] }],
+				sections: [{ id: 'intro', title: 'Intro', role: 'intro', visual_required: false, transition_note: null, components: [] }],
 				question_plan: []
 			},
 			section_briefs: {},
@@ -326,7 +326,7 @@ describe('studio chunked URL resume', () => {
 				lesson_mode: 'first_exposure',
 				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
 				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
-				sections: [{ id: 'orient', title: 'Orient', role: 'orient', visual_required: false, transition_note: null, components: [] }],
+				sections: [{ id: 'intro', title: 'Intro', role: 'intro', visual_required: false, transition_note: null, components: [] }],
 				question_plan: []
 			},
 			section_briefs: {},
@@ -371,7 +371,7 @@ describe('studio chunked URL resume', () => {
 				lesson_mode: 'first_exposure',
 				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
 				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
-				sections: [{ id: 'orient', title: 'Orient', role: 'orient', visual_required: false, transition_note: null, components: [] }],
+				sections: [{ id: 'intro', title: 'Intro', role: 'intro', visual_required: false, transition_note: null, components: [] }],
 				question_plan: []
 			},
 			section_briefs: {},
@@ -387,7 +387,7 @@ describe('studio chunked URL resume', () => {
 				lesson_mode: 'first_exposure',
 				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
 				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
-				sections: [{ id: 'orient', title: 'Orient', role: 'orient', visual_required: false, transition_note: null, components: [] }],
+				sections: [{ id: 'intro', title: 'Intro', role: 'intro', visual_required: false, transition_note: null, components: [] }],
 				question_plan: []
 			},
 			section_briefs: {},
@@ -408,13 +408,13 @@ describe('studio chunked URL resume', () => {
 			onStage2Complete?: (failedSections: string[]) => void;
 			onAssemblyBlocked?: (failedSections: string[]) => void;
 		};
-		handlers.onStage2Complete?.(['orient']);
-		expect(v3Studio.stage).toBe('chunked_blocked');
+		handlers.onStage2Complete?.(['intro']);
+		expect(v3Studio.stage).toBe('skeleton');
 		expect(disconnectChunked).toHaveBeenCalled();
 		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
 
-		handlers.onAssemblyBlocked?.(['orient']);
-		expect(v3Studio.stage).toBe('chunked_blocked');
+		handlers.onAssemblyBlocked?.(['intro']);
+		expect(v3Studio.stage).toBe('skeleton');
 		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
 	});
 
@@ -428,7 +428,7 @@ describe('studio chunked URL resume', () => {
 				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
 				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
 				sections: [
-					{ id: 'orient', title: 'Orient', role: 'orient', visual_required: false, transition_note: null, components: [] },
+					{ id: 'intro', title: 'Intro', role: 'intro', visual_required: false, transition_note: null, components: [] },
 					{ id: 'model', title: 'Model', role: 'model', visual_required: false, transition_note: null, components: [] }
 				],
 				question_plan: []
@@ -447,7 +447,7 @@ describe('studio chunked URL resume', () => {
 				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
 				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
 				sections: [
-					{ id: 'orient', title: 'Orient', role: 'orient', visual_required: false, transition_note: null, components: [] },
+					{ id: 'intro', title: 'Intro', role: 'intro', visual_required: false, transition_note: null, components: [] },
 					{ id: 'model', title: 'Model', role: 'model', visual_required: false, transition_note: null, components: [] }
 				],
 				question_plan: []
@@ -467,14 +467,14 @@ describe('studio chunked URL resume', () => {
 			onSectionDone?: (sectionId: string) => void;
 			onSectionFailed?: (sectionId: string, errors: string[]) => void;
 		};
-		const orient = await screen.findByText('orient');
+		const intro = await screen.findByText('intro');
 		const model = await screen.findByText('model');
 
-		handlers.onSectionStart?.('orient');
-		await waitFor(() => expect(orient.className).toContain('active'));
+		handlers.onSectionStart?.('intro');
+		await waitFor(() => expect(intro.className).toContain('active'));
 
-		handlers.onSectionDone?.('orient');
-		await waitFor(() => expect(orient.className).toContain('done'));
+		handlers.onSectionDone?.('intro');
+		await waitFor(() => expect(intro.className).toContain('done'));
 
 		handlers.onSectionFailed?.('model', ['boom']);
 		await waitFor(() => expect(model.className).toContain('failed'));
@@ -487,7 +487,7 @@ describe('studio chunked URL resume', () => {
 		render(StudioPage);
 
 		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-missing'));
-		await waitFor(() => expect(v3Studio.stage).toBe('input'));
+		await waitFor(() => expect(v3Studio.stage).toBe('intent'));
 		expect(await screen.findByRole('alert')).toBeTruthy();
 		expect(screen.getByRole('alert').textContent).toMatch(/could not resume/i);
 	});
@@ -503,9 +503,9 @@ describe('studio chunked URL resume', () => {
 				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
 				sections: [
 					{
-						id: 'orient',
-						title: 'Orient',
-						role: 'orient',
+						id: 'intro',
+						title: 'Intro',
+						role: 'intro',
 						visual_required: false,
 						transition_note: null,
 						components: []
@@ -513,8 +513,8 @@ describe('studio chunked URL resume', () => {
 				],
 				question_plan: []
 			},
-			section_briefs: { orient: null },
-			failed_sections: ['orient'],
+			section_briefs: { intro: null },
+			failed_sections: ['intro'],
 			blueprint_id: null,
 			execution_started: false,
 			next_action: 'retry_failed_sections'
@@ -528,9 +528,9 @@ describe('studio chunked URL resume', () => {
 				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
 				sections: [
 					{
-						id: 'orient',
-						title: 'Orient',
-						role: 'orient',
+						id: 'intro',
+						title: 'Intro',
+						role: 'intro',
 						visual_required: false,
 						transition_note: null,
 						components: []
@@ -547,16 +547,16 @@ describe('studio chunked URL resume', () => {
 
 		render(StudioPage);
 		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-blocked'));
-		expect(v3Studio.stage).toBe('chunked_blocked');
+		expect(v3Studio.stage).toBe('skeleton');
 
-		await fireEvent.click(await screen.findByRole('button', { name: /retry orient/i }));
+		await fireEvent.click(await screen.findByRole('button', { name: /retry intro/i }));
 		await waitFor(() =>
 			expect(mocks.retryChunkedSection).toHaveBeenCalledWith({
 				generation_id: 'gen-blocked',
-				section_id: 'orient'
+				section_id: 'intro'
 			})
 		);
-		await waitFor(() => expect(v3Studio.stage).toBe('planning'));
+		await waitFor(() => expect(v3Studio.stage).toBe('fill'));
 		await waitFor(() => expect(mocks.connectV3ChunkedStream).toHaveBeenCalledWith('gen-blocked', expect.any(Object)));
 	});
 
@@ -594,6 +594,6 @@ describe('studio chunked URL resume', () => {
 			)
 		);
 		await waitFor(() => expect(mocks.getV3GenerationBlueprint).toHaveBeenCalledWith('gen-blueprint'));
-		expect(v3Studio.stage).toBe('generating');
+		expect(v3Studio.stage).toBe('fill');
 	});
 });

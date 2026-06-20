@@ -8,34 +8,23 @@
 
 	let { onSubmit }: Props = $props();
 
-	// --- Step 1 state ---
 	let grade_level = $state('');
 	let subject = $state('');
 	let duration_minutes = $state(50);
+	let resource_type = $state<V3InputForm['resource_type']>('lesson');
 
-	// --- Step 2 state ---
 	let topic = $state('');
 	let subtopics = $state<string[]>([]);
 	let subtopic_candidates = $state<Array<{ id: string; title: string; description: string }>>([]);
 	let prior_knowledge = $state('');
+	let outcome = $state('');
+	let struggle = $state('');
 	let resolving_topic = $state(false);
 
-	// --- Step 3 state ---
-	let lesson_mode = $state<V3InputForm['lesson_mode']>('first_exposure');
-	let lesson_mode_other = $state('');
-	let intended_outcome = $state<V3InputForm['intended_outcome']>('understand');
-	let intended_outcome_other = $state('');
-
-	// --- Step 4 state ---
 	let learner_level = $state<V3InputForm['learner_level']>('on_grade');
 	let reading_level = $state<V3InputForm['reading_level']>('on_grade');
 	let language_support = $state<V3InputForm['language_support']>('none');
 	let prior_knowledge_level = $state<V3InputForm['prior_knowledge_level']>('new_topic');
-	let support_needs = $state<string[]>([]);
-	let support_other = $state('');
-	let learning_preferences = $state<Array<V3InputForm['learning_preferences'][number]>>([]);
-
-	// --- Step 5 state ---
 	let free_text = $state('');
 
 	const GRADE_LEVELS = [
@@ -71,25 +60,51 @@
 		'Other'
 	];
 
-	const DURATIONS = [
-		15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 75, 90
-	].map((v) => ({ label: `${v} min`, value: v }));
+	const DURATIONS = [15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 75, 90].map((value) => ({
+		label: `${value} min`,
+		value
+	}));
 
-	const LESSON_MODES: Array<{ value: V3InputForm['lesson_mode']; label: string }> = [
-		{ value: 'first_exposure', label: 'First time teaching this' },
-		{ value: 'consolidation', label: 'They know it — need more practice' },
-		{ value: 'repair', label: 'Something went wrong — fix it' },
-		{ value: 'retrieval', label: 'Quick recall from earlier' },
-		{ value: 'transfer', label: 'Apply it in a new context' },
-		{ value: 'other', label: 'Other (describe below)' }
-	];
-
-	const OUTCOMES: Array<{ value: V3InputForm['intended_outcome']; label: string }> = [
-		{ value: 'understand', label: 'Understand the concept' },
-		{ value: 'practise', label: 'Practise and apply' },
-		{ value: 'review', label: 'Review and consolidate' },
-		{ value: 'assess', label: 'Check understanding' },
-		{ value: 'other', label: 'Other (describe below)' }
+	const RESOURCE_TYPES: Array<{
+		value: V3InputForm['resource_type'];
+		label: string;
+		description: string;
+	}> = [
+		{
+			value: 'lesson',
+			label: 'Lesson',
+			description: 'Full explanation and guided practice.'
+		},
+		{
+			value: 'mini_booklet',
+			label: 'Mini booklet',
+			description: 'Compact guided learning students can work through.'
+		},
+		{
+			value: 'worksheet',
+			label: 'Worksheet',
+			description: 'Practice once the concept has already been taught.'
+		},
+		{
+			value: 'quiz',
+			label: 'Quiz',
+			description: 'Formal assessment with scored questions.'
+		},
+		{
+			value: 'exit_ticket',
+			label: 'Exit ticket',
+			description: 'Short end-of-lesson understanding check.'
+		},
+		{
+			value: 'practice_set',
+			label: 'Practice set',
+			description: 'Repetition and fluency with minimal explanation.'
+		},
+		{
+			value: 'quick_explainer',
+			label: 'Quick explainer',
+			description: 'Focused concept explainer or reference card.'
+		}
 	];
 
 	const LEVELS: Array<{ value: V3InputForm['learner_level']; label: string }> = [
@@ -107,62 +122,25 @@
 	];
 
 	const LANGUAGE_OPTIONS: Array<{ value: V3InputForm['language_support']; label: string }> = [
-		{ value: 'none', label: 'English only / no ELL needs' },
+		{ value: 'none', label: 'No additional language support' },
 		{ value: 'some_ell', label: 'Some ELL learners' },
-		{ value: 'many_ell', label: 'Mostly ELL learners' }
+		{ value: 'many_ell', label: 'Many ELL learners' }
 	];
 
 	const PRIOR_KNOWLEDGE_OPTIONS: Array<{ value: V3InputForm['prior_knowledge_level']; label: string }> =
 		[
-			{ value: 'new_topic', label: 'Brand new — no prior exposure' },
+			{ value: 'new_topic', label: 'Brand new topic' },
 			{ value: 'some_background', label: 'Some background knowledge' },
 			{ value: 'reviewing', label: 'Reviewing something taught before' }
-		];
-
-	const SUPPORT_OPTIONS: Array<{ value: string; label: string }> = [
-		{ value: 'visuals', label: 'Visual supports' },
-		{ value: 'step_by_step', label: 'Step-by-step scaffolding' },
-		{ value: 'vocabulary_support', label: 'Vocabulary support' },
-		{ value: 'worked_examples', label: 'Worked examples' },
-		{ value: 'simpler_reading', label: 'Simplified reading level' },
-		{ value: 'challenge', label: 'Challenge questions' }
-	];
-
-	const LEARNING_PREFERENCES: Array<{ value: V3InputForm['learning_preferences'][number]; label: string }> =
-		[
-			{ value: 'visual', label: 'Visual' },
-			{ value: 'step_by_step', label: 'Step-by-step' },
-			{ value: 'discussion', label: 'Discussion' },
-			{ value: 'hands_on', label: 'Hands-on' },
-			{ value: 'challenge', label: 'Challenge' }
 		];
 
 	function toggleSubtopic(title: string) {
 		const already = subtopics.includes(title);
 		if (already) {
-			subtopics = subtopics.filter((s) => s !== title);
+			subtopics = subtopics.filter((item) => item !== title);
 		} else if (subtopics.length < 3) {
 			subtopics = [...subtopics, title];
 		}
-	}
-
-	function toggleSupport(val: string) {
-		support_needs = support_needs.includes(val)
-			? support_needs.filter((s) => s !== val)
-			: [...support_needs, val];
-	}
-
-	function togglePreference(val: V3InputForm['learning_preferences'][number]) {
-		learning_preferences = learning_preferences.includes(val)
-			? learning_preferences.filter((p) => p !== val)
-			: [...learning_preferences, val];
-	}
-
-	function addSupportOther() {
-		const cleaned = support_other.trim();
-		if (!cleaned) return;
-		if (!support_needs.includes(cleaned)) support_needs = [...support_needs, cleaned];
-		support_other = '';
 	}
 
 	async function resolveTopic() {
@@ -184,9 +162,9 @@
 				.filter((part) => part.length > 2)
 				.slice(0, 3);
 			subtopic_candidates = (parts.length > 0 ? parts : [cleaned]).map((title, index) => ({
-				id: 'local-' + String(index + 1),
+				id: `local-${index + 1}`,
 				title,
-				description: 'Use this focus for the generated lesson.'
+				description: 'Use this focus for the generated resource.'
 			}));
 			subtopics = [];
 		} finally {
@@ -194,112 +172,138 @@
 		}
 	}
 
-	const canSubmit = $derived(grade_level !== '' && subject !== '' && topic.trim().length > 2);
+	const canSubmit = $derived(
+		grade_level !== '' && subject !== '' && topic.trim().length > 2 && outcome.trim().length > 2
+	);
 
-	function handleSubmit(e: Event) {
-		e.preventDefault();
+	function handleSubmit(event: Event) {
+		event.preventDefault();
 		if (!canSubmit) return;
 		onSubmit({
 			grade_level,
 			subject,
 			duration_minutes: Number(duration_minutes),
+			resource_type,
 			topic: topic.trim(),
 			subtopics,
 			prior_knowledge: prior_knowledge.trim(),
-			lesson_mode,
-			lesson_mode_other: lesson_mode_other.trim(),
-			intended_outcome,
-			intended_outcome_other: intended_outcome_other.trim(),
+			outcome: outcome.trim(),
+			struggle: struggle.trim(),
 			learner_level,
 			reading_level,
 			language_support,
 			prior_knowledge_level,
-			support_needs,
-			learning_preferences,
 			free_text: free_text.trim()
 		});
 	}
 </script>
 
-<div class="mx-auto max-w-xl space-y-6 px-4 py-10">
-	<header class="space-y-2 text-center">
-		<h1 class="text-3xl font-semibold tracking-tight">What do you want to teach?</h1>
-		<p class="text-muted-foreground">Answer a few quick questions — we’ll build the lesson plan.</p>
+<div class="mx-auto max-w-4xl space-y-8 px-4 py-10">
+	<header class="space-y-3 text-center">
+		<p class="text-sm font-semibold uppercase tracking-[0.24em] text-muted-foreground">Lectio v4 Studio</p>
+		<h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">Start with intent, not format.</h1>
+		<p class="mx-auto max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+			Pick the resource you want, describe what learners should achieve, and tell us where they may
+			get stuck. We will infer the best lesson mode from there.
+		</p>
 	</header>
 
-	<form class="space-y-10" onsubmit={handleSubmit}>
-		<!-- STEP 1 — BASICS -->
-		<section class="space-y-4">
-			<h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">The basics</h2>
+	<form class="space-y-8" onsubmit={handleSubmit}>
+		<section class="rounded-3xl border border-border/60 bg-card p-5 shadow-sm space-y-4">
+			<h2 class="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">Class setup</h2>
 			<div class="grid gap-3 sm:grid-cols-3">
-			<label class="grid gap-1 text-sm font-medium">
-				<span>Grade level</span>
-				<select
-					class="rounded-md border border-input bg-background px-3 py-2"
-					bind:value={grade_level}
-					aria-label="Grade level"
-				>
-					<option value="">Choose…</option>
-					{#each GRADE_LEVELS as grade}
-						<option value={grade}>{grade}</option>
-					{/each}
-				</select>
-			</label>
-			<label class="grid gap-1 text-sm font-medium">
-				<span>Subject</span>
-				<select
-					class="rounded-md border border-input bg-background px-3 py-2"
-					bind:value={subject}
-					aria-label="Subject"
-				>
-					<option value="">Choose…</option>
-					{#each SUBJECTS as s}
-						<option value={s}>{s}</option>
-					{/each}
-				</select>
-			</label>
-			<label class="grid gap-1 text-sm font-medium">
-				<span>Duration</span>
-				<select
-					class="rounded-md border border-input bg-background px-3 py-2"
-					bind:value={duration_minutes}
-					aria-label="Duration"
-				>
-					{#each DURATIONS as d}
-						<option value={d.value}>{d.label}</option>
-					{/each}
-				</select>
-			</label>
+				<label class="grid gap-1 text-sm font-medium">
+					<span>Grade level</span>
+					<select
+						class="rounded-xl border border-input bg-background px-3 py-2"
+						bind:value={grade_level}
+						aria-label="Grade level"
+					>
+						<option value="">Choose...</option>
+						{#each GRADE_LEVELS as grade}
+							<option value={grade}>{grade}</option>
+						{/each}
+					</select>
+				</label>
+				<label class="grid gap-1 text-sm font-medium">
+					<span>Subject</span>
+					<select
+						class="rounded-xl border border-input bg-background px-3 py-2"
+						bind:value={subject}
+						aria-label="Subject"
+					>
+						<option value="">Choose...</option>
+						{#each SUBJECTS as item}
+							<option value={item}>{item}</option>
+						{/each}
+					</select>
+				</label>
+				<label class="grid gap-1 text-sm font-medium">
+					<span>Duration</span>
+					<select
+						class="rounded-xl border border-input bg-background px-3 py-2"
+						bind:value={duration_minutes}
+						aria-label="Duration"
+					>
+						{#each DURATIONS as duration}
+							<option value={duration.value}>{duration.label}</option>
+						{/each}
+					</select>
+				</label>
 			</div>
 		</section>
 
-		<!-- STEP 2 — CONCEPT -->
-		<section class="space-y-4">
-			<h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">The concept</h2>
+		<section class="rounded-3xl border border-border/60 bg-card p-5 shadow-sm space-y-4">
+			<div class="space-y-1">
+				<p class="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">Step 1</p>
+				<h2 class="text-xl font-semibold tracking-tight">Choose the resource type</h2>
+			</div>
+			<div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+				{#each RESOURCE_TYPES as option}
+					<button
+						type="button"
+						class={`rounded-2xl border p-4 text-left transition-colors ${
+							resource_type === option.value
+								? 'border-primary bg-primary/10'
+								: 'border-border/60 bg-background hover:border-primary/40'
+						}`}
+						onclick={() => (resource_type = option.value)}
+					>
+						<p class="text-sm font-semibold">{option.label}</p>
+						<p class="mt-1 text-sm leading-5 text-muted-foreground">{option.description}</p>
+					</button>
+				{/each}
+			</div>
+		</section>
 
+		<section class="rounded-3xl border border-border/60 bg-card p-5 shadow-sm space-y-4">
+			<div class="space-y-1">
+				<p class="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">Step 2</p>
+				<h2 class="text-xl font-semibold tracking-tight">Define the learning intent</h2>
+			</div>
 			<label class="grid gap-1 text-sm font-medium">
 				<span>Topic</span>
 				<div class="flex gap-2">
 					<input
-						class="flex-1 rounded-md border border-input bg-background px-3 py-2"
+						class="flex-1 rounded-xl border border-input bg-background px-3 py-2"
 						bind:value={topic}
-						placeholder="e.g. Photosynthesis"
+						placeholder="e.g. Equivalent fractions"
 						onblur={resolveTopic}
 					/>
 					<button
 						type="button"
-						class="rounded-md border px-3 py-2 text-sm"
+						class="rounded-xl border border-input px-3 py-2 text-sm"
 						disabled={resolving_topic || !topic.trim() || !grade_level || !subject}
 						onclick={resolveTopic}
 					>
-						{resolving_topic ? '…' : 'Narrow'}
+						{resolving_topic ? '...' : 'Narrow'}
 					</button>
 				</div>
 			</label>
 
 			{#if subtopic_candidates.length > 0}
 				<div class="space-y-2">
-					<p class="text-sm text-muted-foreground">Pick up to 3 subtopics for this lesson</p>
+					<p class="text-sm text-muted-foreground">Pick up to 3 focus areas</p>
 					<div class="flex flex-wrap gap-2">
 						{#each subtopic_candidates as candidate}
 							{@const selected = subtopics.includes(candidate.title)}
@@ -307,8 +311,8 @@
 								type="button"
 								class={`rounded-full border px-3 py-1 text-sm ${
 									selected
-										? 'bg-primary text-primary-foreground border-primary'
-										: 'bg-background border-input'
+										? 'border-primary bg-primary text-primary-foreground'
+										: 'border-input bg-background'
 								}`}
 								onclick={() => toggleSubtopic(candidate.title)}
 								title={candidate.description}
@@ -320,180 +324,100 @@
 				</div>
 			{/if}
 
+			<div class="grid gap-3 sm:grid-cols-2">
+				<label class="grid gap-1 text-sm font-medium">
+					<span>Desired outcome</span>
+					<textarea
+						class="min-h-[110px] rounded-xl border border-input bg-background px-3 py-2 text-sm"
+						bind:value={outcome}
+						placeholder="By the end, students should be able to..."
+					></textarea>
+				</label>
+				<label class="grid gap-1 text-sm font-medium">
+					<span>Likely struggle</span>
+					<textarea
+						class="min-h-[110px] rounded-xl border border-input bg-background px-3 py-2 text-sm"
+						bind:value={struggle}
+						placeholder="Where are they most likely to get stuck?"
+					></textarea>
+				</label>
+			</div>
+
 			<label class="grid gap-1 text-sm font-medium">
 				<span>
 					What have they already covered?
-					<span class="text-muted-foreground">(optional)</span>
+					<span class="font-normal text-muted-foreground">(optional)</span>
 				</span>
 				<input
-					class="rounded-md border border-input bg-background px-3 py-2"
+					class="rounded-xl border border-input bg-background px-3 py-2"
 					bind:value={prior_knowledge}
-					placeholder="e.g. Cell structure, plant parts"
+					placeholder="e.g. Unit fractions, equal sharing"
 				/>
 			</label>
 		</section>
 
-		<!-- STEP 3 — LESSON SHAPE -->
-		<section class="space-y-4">
-			<h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Lesson shape</h2>
-
-			<label class="grid gap-1 text-sm font-medium">
-				<span>What is this lesson for?</span>
-				<select bind:value={lesson_mode} class="rounded-md border border-input bg-background px-3 py-2">
-					{#each LESSON_MODES as m}
-						<option value={m.value}>{m.label}</option>
-					{/each}
-				</select>
-			</label>
-
-			{#if lesson_mode === 'other'}
-				<input
-					class="rounded-md border border-input bg-background px-3 py-2 w-full"
-					bind:value={lesson_mode_other}
-					placeholder="Describe the lesson mode…"
-				/>
-			{/if}
-
-			<label class="grid gap-1 text-sm font-medium">
-				<span>What should learners leave able to do?</span>
-				<select
-					bind:value={intended_outcome}
-					class="rounded-md border border-input bg-background px-3 py-2"
-				>
-					{#each OUTCOMES as o}
-						<option value={o.value}>{o.label}</option>
-					{/each}
-				</select>
-			</label>
-
-			{#if intended_outcome === 'other'}
-				<input
-					class="rounded-md border border-input bg-background px-3 py-2 w-full"
-					bind:value={intended_outcome_other}
-					placeholder="Describe the intended outcome…"
-				/>
-			{/if}
-		</section>
-
-		<!-- STEP 4 — CLASS PROFILE -->
-		<section class="space-y-4">
-			<h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Your class</h2>
-
+		<section class="rounded-3xl border border-border/60 bg-card p-5 shadow-sm space-y-4">
+			<div class="space-y-1">
+				<p class="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">Step 3</p>
+				<h2 class="text-xl font-semibold tracking-tight">Tune for this class</h2>
+			</div>
 			<div class="grid gap-3 sm:grid-cols-2">
 				<label class="grid gap-1 text-sm font-medium">
 					<span>Overall level</span>
-					<select bind:value={learner_level} class="rounded-md border border-input bg-background px-3 py-2">
-						{#each LEVELS as l}
-							<option value={l.value}>{l.label}</option>
+					<select bind:value={learner_level} class="rounded-xl border border-input bg-background px-3 py-2">
+						{#each LEVELS as option}
+							<option value={option.value}>{option.label}</option>
 						{/each}
 					</select>
 				</label>
 
 				<label class="grid gap-1 text-sm font-medium">
 					<span>Reading level</span>
-					<select bind:value={reading_level} class="rounded-md border border-input bg-background px-3 py-2">
-						{#each READING_LEVELS as r}
-							<option value={r.value}>{r.label}</option>
+					<select bind:value={reading_level} class="rounded-xl border border-input bg-background px-3 py-2">
+						{#each READING_LEVELS as option}
+							<option value={option.value}>{option.label}</option>
 						{/each}
 					</select>
 				</label>
 
 				<label class="grid gap-1 text-sm font-medium">
 					<span>Language support</span>
-					<select
-						bind:value={language_support}
-						class="rounded-md border border-input bg-background px-3 py-2"
-					>
-						{#each LANGUAGE_OPTIONS as l}
-							<option value={l.value}>{l.label}</option>
+					<select bind:value={language_support} class="rounded-xl border border-input bg-background px-3 py-2">
+						{#each LANGUAGE_OPTIONS as option}
+							<option value={option.value}>{option.label}</option>
 						{/each}
 					</select>
 				</label>
 
 				<label class="grid gap-1 text-sm font-medium">
-					<span>Prior knowledge</span>
-					<select
-						bind:value={prior_knowledge_level}
-						class="rounded-md border border-input bg-background px-3 py-2"
-					>
-						{#each PRIOR_KNOWLEDGE_OPTIONS as p}
-							<option value={p.value}>{p.label}</option>
+					<span>Prior knowledge level</span>
+					<select bind:value={prior_knowledge_level} class="rounded-xl border border-input bg-background px-3 py-2">
+						{#each PRIOR_KNOWLEDGE_OPTIONS as option}
+							<option value={option.value}>{option.label}</option>
 						{/each}
 					</select>
 				</label>
 			</div>
 
-			<div class="space-y-2">
-				<p class="text-sm font-medium">Support needs</p>
-				<div class="flex flex-wrap gap-3">
-					{#each SUPPORT_OPTIONS as s}
-						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
-								checked={support_needs.includes(s.value)}
-								onchange={() => toggleSupport(s.value)}
-							/>
-							{s.label}
-						</label>
-					{/each}
-				</div>
-
-				<div class="flex gap-2">
-					<input
-						class="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-						bind:value={support_other}
-						placeholder="Other support need…"
-						onkeydown={(e) => e.key === 'Enter' && addSupportOther()}
-					/>
-					<button
-						type="button"
-						class="rounded-md border px-3 py-2 text-sm"
-						onclick={addSupportOther}
-						disabled={!support_other.trim()}
-					>
-						Add
-					</button>
-				</div>
-			</div>
-
-			<div class="space-y-2">
-				<p class="text-sm font-medium">
-					Learning preferences
-					<span class="text-muted-foreground">(optional)</span>
-				</p>
-				<div class="flex flex-wrap gap-3">
-					{#each LEARNING_PREFERENCES as pref}
-						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="checkbox"
-								checked={learning_preferences.includes(pref.value)}
-								onchange={() => togglePreference(pref.value)}
-							/>
-							{pref.label}
-						</label>
-					{/each}
-				</div>
-			</div>
-		</section>
-
-		<!-- STEP 5 — OPTIONAL INTENT -->
-		<section class="space-y-2">
-			<h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-				Anything else? <span class="text-muted-foreground font-normal">(optional)</span>
-			</h2>
-			<textarea
-				class="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm"
-				bind:value={free_text}
-				placeholder="Any specific angles, examples, or constraints to include…"
-			></textarea>
+			<label class="grid gap-1 text-sm font-medium">
+				<span>
+					Anything else to keep in mind?
+					<span class="font-normal text-muted-foreground">(optional)</span>
+				</span>
+				<textarea
+					class="min-h-[90px] rounded-xl border border-input bg-background px-3 py-2 text-sm"
+					bind:value={free_text}
+					placeholder="Specific examples, constraints, tone, or anything else worth knowing..."
+				></textarea>
+			</label>
 		</section>
 
 		<button
 			type="submit"
 			disabled={!canSubmit}
-			class="w-full rounded-md bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+			class="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
 		>
-			Build my lesson plan
+			Build the skeleton
 		</button>
 	</form>
 </div>

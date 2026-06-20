@@ -4,7 +4,6 @@
 
 	import V3InputSurface from '$lib/components/studio/V3InputSurface.svelte';
 	import V3PlanningState from '$lib/components/studio/V3PlanningState.svelte';
-	import V3SignalConfirmation from '$lib/components/studio/V3SignalConfirmation.svelte';
 	import V3PlanPreview from '$lib/components/studio/V3PlanPreview.svelte';
 	import V3PlanActions from '$lib/components/studio/V3PlanActions.svelte';
 	import V3Canvas from '$lib/components/studio/V3Canvas.svelte';
@@ -137,22 +136,22 @@
 
 		if (resolved.stage === 'plan_ready') {
 			disconnectActiveChunkedStream();
-			v3Studio.stage = 'chunked_review';
+			v3Studio.stage = 'skeleton';
 			return;
 		}
 		if (resolved.stage === 'assembly_blocked') {
 			disconnectActiveChunkedStream();
-			v3Studio.stage = 'chunked_blocked';
+			v3Studio.stage = 'skeleton';
 			return;
 		}
 		if (resolved.stage === 'stage2_running') {
-			v3Studio.stage = 'planning';
+			v3Studio.stage = 'fill';
 			connectChunkedStage2Stream(resolved.generation_id);
 			return;
 		}
 		if (resolved.stage === 'blueprint_ready') {
 			disconnectActiveChunkedStream();
-			v3Studio.stage = 'generating';
+			v3Studio.stage = 'fill';
 			connectGenerationStream(resolved.generation_id);
 			try {
 				const preview = await getV3GenerationBlueprint(resolved.generation_id);
@@ -167,7 +166,7 @@
 		}
 		if (resolved.stage === 'complete') {
 			disconnectActiveChunkedStream();
-			v3Studio.stage = 'complete';
+			v3Studio.stage = 'edit';
 			try {
 				const preview = await getV3GenerationBlueprint(resolved.generation_id);
 				v3Studio.blueprint = preview;
@@ -226,7 +225,7 @@
 			v3Studio.canvas = mapPackSectionsToCanvas(pack.sections);
 			if (pack.status !== 'streaming_preview') {
 				v3Studio.coherenceHint = null;
-				v3Studio.stage = 'complete';
+				v3Studio.stage = 'edit';
 			}
 			return true;
 		} catch {
@@ -246,44 +245,16 @@
 	async function handleInputSubmit(form: V3InputForm) {
 		v3Studio.error = null;
 		v3Studio.form = form;
-		v3Studio.stage = 'planning';
+		v3Studio.stage = 'fill';
 		try {
 			v3Studio.signals = await extractSignals(form);
-			v3Studio.stage = 'confirming';
-		} catch (err) {
-			v3Studio.stage = 'input';
-			v3Studio.error = friendly(err);
-		}
-	}
-
-	async function handleSignalsConfirmed() {
-		v3Studio.error = null;
-		const signals = v3Studio.signals;
-		const form = v3Studio.form;
-		if (!signals || !form) return;
-
-		await runLessonArchitect();
-	}
-
-	function handleSignalCorrection() {
-		v3Studio.error = null;
-		v3Studio.stage = 'input';
-	}
-
-	async function runLessonArchitect() {
-		v3Studio.error = null;
-		v3Studio.stage = 'planning';
-		const signals = v3Studio.signals;
-		const form = v3Studio.form;
-		if (!signals || !form) return;
-		try {
 			const chunkedState = await startChunkedPlan({
-				signals,
+				signals: v3Studio.signals,
 				form
 			});
 			await applyChunkedState(chunkedState);
 		} catch (err) {
-			v3Studio.stage = 'confirming';
+			v3Studio.stage = 'intent';
 			v3Studio.error = friendly(err);
 		}
 	}
@@ -356,7 +327,7 @@
 					active: null
 				};
 				if (failedSections.length > 0) {
-					v3Studio.stage = 'chunked_blocked';
+					v3Studio.stage = 'skeleton';
 					disconnectActiveChunkedStream();
 					return;
 				}
@@ -379,7 +350,7 @@
 					failed: failedSections,
 					active: null
 				};
-				v3Studio.stage = 'chunked_blocked';
+				v3Studio.stage = 'skeleton';
 				disconnectActiveChunkedStream();
 			},
 			onError(msg) {
@@ -393,15 +364,13 @@
 		v3Studio.streamCancel?.();
 		v3Studio.streamCancel = connectV3StudioGenerationStream(generationId, {
 			onCoherenceReviewStarted: () => {
-				v3Studio.stage = 'finalising';
+				v3Studio.stage = 'fill';
 			},
 			onCoherenceReportReady: (data) => {
 				const blocking = typeof data.blocking_count === 'number' ? data.blocking_count : 0;
-				const repairs =
-					typeof data.repair_target_count === 'number' ? data.repair_target_count : 0;
 				v3Studio.coherenceHint =
-					repairs > 0
-						? `Consistency pass: ${blocking} blocking issues flagged - refining (${repairs} repair targets).`
+					blocking > 0
+						? `Consistency review finished with ${blocking} blocking issue(s) flagged.`
 						: 'Consistency review finished.';
 			},
 			onDraftPackReady: (data) => {
@@ -439,7 +408,7 @@
 				}
 				v3Studio.streamCancel?.();
 				v3Studio.streamCancel = null;
-				v3Studio.stage = 'complete';
+				v3Studio.stage = 'edit';
 			},
 			onComponentReady: (data) => {
 				const next = applyComponentReadyToCanvas(v3Studio.canvas, data);
@@ -520,7 +489,7 @@
 					execution_started: false,
 					next_action: 'approve_or_regenerate'
 				};
-				v3Studio.stage = 'chunked_review';
+				v3Studio.stage = 'skeleton';
 			},
 			onStage2SectionStart: (data) => {
 				const sectionId = String(data.section_id ?? '');
@@ -577,13 +546,13 @@
 					};
 				}
 				if (failedSections.length) {
-					v3Studio.stage = 'chunked_blocked';
+					v3Studio.stage = 'skeleton';
 				}
 			},
 			onGenerationStarting: () => {
 				const gid = v3Studio.generationId;
 				if (!gid) return;
-				v3Studio.stage = 'generating';
+				v3Studio.stage = 'fill';
 				void (async () => {
 					try {
 						const preview = await getV3GenerationBlueprint(gid);
@@ -629,7 +598,7 @@
 		const generationId = chunked.generation_id;
 		v3Studio.generationId = generationId;
 		v3Studio.error = null;
-		v3Studio.stage = 'planning';
+		v3Studio.stage = 'fill';
 		stage2Progress = { completed: [], failed: [], active: null };
 		try {
 			const next = await approveChunkedPlan(generationId);
@@ -637,13 +606,13 @@
 			hydrateChunkedSectionState(next);
 			syncStage2Progress(next);
 			if (next.stage === 'assembly_blocked') {
-				v3Studio.stage = 'chunked_blocked';
+				v3Studio.stage = 'skeleton';
 				return;
 			}
 			connectChunkedStage2Stream(generationId);
 		} catch (err) {
 			v3Studio.error = friendly(err);
-			v3Studio.stage = 'chunked_review';
+			v3Studio.stage = 'skeleton';
 		}
 	}
 
@@ -652,7 +621,7 @@
 		if (!chunked) return;
 		disconnectActiveChunkedStream();
 		v3Studio.error = null;
-		v3Studio.stage = 'planning';
+		v3Studio.stage = 'fill';
 		try {
 			const next = await regenerateChunkedPlan({
 				generation_id: chunked.generation_id,
@@ -661,10 +630,10 @@
 			v3Studio.chunkedState = next;
 			hydrateChunkedSectionState(next);
 			syncStage2Progress(next);
-			v3Studio.stage = 'chunked_review';
+			v3Studio.stage = 'skeleton';
 		} catch (err) {
 			v3Studio.error = friendly(err);
-			v3Studio.stage = 'chunked_review';
+			v3Studio.stage = 'skeleton';
 		}
 	}
 
@@ -673,7 +642,7 @@
 		if (!chunked) return;
 		disconnectActiveChunkedStream();
 		v3Studio.error = null;
-		v3Studio.stage = 'planning';
+		v3Studio.stage = 'fill';
 		try {
 			const next = await retryChunkedSection({
 				generation_id: chunked.generation_id,
@@ -683,21 +652,21 @@
 			hydrateChunkedSectionState(next);
 			if (next.stage === 'assembly_blocked') {
 				disconnectActiveChunkedStream();
-				v3Studio.stage = 'chunked_blocked';
+				v3Studio.stage = 'skeleton';
 			} else if (next.stage === 'blueprint_ready') {
-				v3Studio.stage = 'generating';
+				v3Studio.stage = 'fill';
 				connectGenerationStream(next.generation_id);
 			} else if (next.stage === 'stage2_running') {
 				syncStage2Progress(next);
-				v3Studio.stage = 'planning';
+				v3Studio.stage = 'fill';
 				connectChunkedStage2Stream(next.generation_id);
 			} else {
 				disconnectActiveChunkedStream();
-				v3Studio.stage = 'chunked_review';
+				v3Studio.stage = 'skeleton';
 			}
 		} catch (err) {
 			v3Studio.error = friendly(err);
-			v3Studio.stage = 'chunked_blocked';
+			v3Studio.stage = 'skeleton';
 		}
 	}
 
@@ -770,17 +739,16 @@
 		</div>
 	</div>
 
-	{#if v3Studio.stage === 'input'}
+	{#if v3Studio.stage === 'intent'}
 		<V3InputSurface onSubmit={handleInputSubmit} />
-	{:else if v3Studio.stage === 'confirming' && v3Studio.signals}
-		<V3SignalConfirmation signals={v3Studio.signals} onConfirm={handleSignalsConfirmed} onCorrect={handleSignalCorrection} />
-	{:else if v3Studio.stage === 'planning'}
+	{:else if v3Studio.stage === 'fill'}
 		<div class="space-y-4">
 			<V3PlanningState
 				form={v3Studio.form}
+				signals={v3Studio.signals}
 				planningLabel={v3Studio.chunkedState?.stage === 'stage2_running'
 					? 'Expanding section briefs and validating each section'
-					: undefined}
+					: 'Turning your intent into a resource skeleton'}
 				messages={v3Studio.chunkedState?.stage === 'stage2_running'
 					? [
 							'Expanding section briefs one by oneâ€¦',
@@ -805,16 +773,42 @@
 				</div>
 			{/if}
 		</div>
-	{:else if (v3Studio.stage === 'chunked_review' || v3Studio.stage === 'chunked_blocked') && v3Studio.chunkedState?.structural_plan}
-		<V3PlanPreview plan={v3Studio.chunkedState.structural_plan} />
-		<V3PlanActions
-			failedSections={v3Studio.chunkedState.failed_sections}
-			isRunning={v3Studio.chunkedState.stage === 'stage2_running'}
-			onApprove={handleChunkedApprove}
-			onRegenerate={handleChunkedRegenerate}
-			onRetrySection={handleChunkedRetrySection}
-		/>
-	{:else if v3Studio.stage === 'generating' || v3Studio.stage === 'finalising' || v3Studio.stage === 'complete'}
+		{:else if v3Studio.stage === 'skeleton' && v3Studio.chunkedState?.structural_plan}
+			{#if v3Studio.signals}
+				<div class="mx-auto max-w-4xl px-4 pt-6">
+					<div class="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+						<div class="flex flex-wrap items-center gap-2">
+							<span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+								{v3Studio.signals.inferred_lesson_mode.replace(/_/g, ' ')}
+							</span>
+							<span
+								class={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
+									v3Studio.signals.lesson_mode_confidence === 'low'
+										? 'bg-amber-100 text-amber-900'
+										: 'bg-emerald-100 text-emerald-900'
+								}`}
+							>
+								{v3Studio.signals.lesson_mode_confidence} confidence
+							</span>
+						</div>
+						<p class="mt-3 text-sm text-muted-foreground">
+							{v3Studio.signals.teacher_goal}
+							{#if v3Studio.signals.lesson_mode_confidence === 'low'}
+								If this inferred mode feels off, go back and sharpen the outcome or struggle before approving.
+							{/if}
+						</p>
+					</div>
+				</div>
+			{/if}
+			<V3PlanPreview plan={v3Studio.chunkedState.structural_plan} />
+			<V3PlanActions
+				failedSections={v3Studio.chunkedState.failed_sections}
+				isRunning={v3Studio.chunkedState.stage === 'stage2_running'}
+				onApprove={handleChunkedApprove}
+				onRegenerate={handleChunkedRegenerate}
+				onRetrySection={handleChunkedRetrySection}
+			/>
+		{:else if v3Studio.stage === 'edit'}
 		{#if v3Studio.activePack}
 			<div class="mx-auto max-w-4xl px-4 pt-4">
 				<div class="flex justify-end">
@@ -874,7 +868,7 @@
 				{/if}
 			</div>
 		{/if}
-		{#if v3Studio.coherenceHint && v3Studio.stage === 'finalising'}
+		{#if v3Studio.coherenceHint}
 			<p class="mx-auto max-w-3xl px-4 pt-6 text-center text-sm text-muted-foreground">{v3Studio.coherenceHint}</p>
 		{/if}
 		{#if v3Studio.activePack}

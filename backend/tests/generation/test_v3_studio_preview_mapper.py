@@ -47,16 +47,16 @@ def test_blueprint_to_preview_dto_includes_learner_context_when_form_provided() 
         grade_level="Grade 8",
         subject="Mathematics",
         duration_minutes=50,
+        resource_type="lesson",
         topic="Compound area",
         subtopics=["L-shapes"],
         prior_knowledge="Rectangle area",
-        lesson_mode="first_exposure",
+        outcome="Students can find the area of compound shapes.",
+        struggle="They may not know how to split the shape into rectangles.",
         learner_level="on_grade",
         reading_level="on_grade",
         language_support="some_ell",
         prior_knowledge_level="some_background",
-        support_needs=["visuals"],
-        learning_preferences=[],
         free_text="",
     )
     dto = blueprint_to_preview_dto(
@@ -68,7 +68,8 @@ def test_blueprint_to_preview_dto_includes_learner_context_when_form_provided() 
     assert dto.learner_context is not None
     assert dto.learner_context.grade_level == "Grade 8"
     assert dto.learner_context.subject == "Mathematics"
-    assert dto.learner_context.support_needs == ["visuals"]
+    assert dto.learner_context.resource_type == "lesson"
+    assert dto.learner_context.outcome == "Students can find the area of compound shapes."
 
 
 @pytest.mark.asyncio

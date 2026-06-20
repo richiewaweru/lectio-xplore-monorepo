@@ -1,29 +1,31 @@
 export interface V3InputForm {
-	// Step 1
+	// Setup
 	grade_level: string;
 	subject: string;
 	duration_minutes: number;
+	resource_type:
+		| 'lesson'
+		| 'mini_booklet'
+		| 'worksheet'
+		| 'quiz'
+		| 'exit_ticket'
+		| 'practice_set'
+		| 'quick_explainer';
 
-	// Step 2
+	// Step 1
 	topic: string;
 	subtopics: string[];
 	prior_knowledge: string;
+	outcome: string;
+	struggle: string;
 
-	// Step 3
-	lesson_mode: 'first_exposure' | 'consolidation' | 'repair' | 'retrieval' | 'transfer' | 'other';
-	lesson_mode_other: string;
-	intended_outcome: 'understand' | 'practise' | 'review' | 'assess' | 'other';
-	intended_outcome_other: string;
-
-	// Step 4
+	// Step 2
 	learner_level: 'below_grade' | 'on_grade' | 'above_grade' | 'mixed';
 	reading_level: 'below_grade' | 'on_grade' | 'above_grade' | 'mixed';
 	language_support: 'none' | 'some_ell' | 'many_ell';
 	prior_knowledge_level: 'new_topic' | 'some_background' | 'reviewing';
-	support_needs: string[];
-	learning_preferences: ('visual' | 'step_by_step' | 'discussion' | 'hands_on' | 'challenge')[];
 
-	// Step 5
+	// Step 3
 	free_text: string;
 }
 
@@ -33,8 +35,8 @@ export interface V3SignalSummary {
 	prior_knowledge: string[];
 	learner_needs: string[];
 	teacher_goal: string;
-	inferred_resource_type: string;
-	confidence: 'low' | 'medium' | 'high';
+	inferred_lesson_mode: 'first_exposure' | 'consolidation' | 'repair' | 'retrieval' | 'transfer';
+	lesson_mode_confidence: 'low' | 'medium' | 'high';
 }
 
 export interface V3StructuralPlanComponent {
@@ -81,6 +83,8 @@ export interface V3ChunkedPlanState {
 	blueprint_id: string | null;
 	execution_started: boolean;
 	next_action: string | null;
+	inferred_lesson_mode: V3SignalSummary['inferred_lesson_mode'] | null;
+	lesson_mode_confidence: V3SignalSummary['lesson_mode_confidence'] | null;
 }
 
 export interface V3SectionPlanItem {
@@ -293,14 +297,9 @@ export interface V3ParentSnapshot {
 }
 
 export type V3Stage =
-	| 'input'
-	| 'confirming'
-	| 'planning'
-	| 'chunked_review'
-	| 'chunked_blocked'
-	| 'reviewing'
-	| 'generating'
-	| 'finalising'
-	| 'complete';
+	| 'intent'
+	| 'skeleton'
+	| 'fill'
+	| 'edit';
 
 export type { V3PackAdapterDiagnostic, V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';

@@ -47,10 +47,10 @@ def blueprint_to_preview_dto(
             support_summary.append(
                 f"Prior knowledge: {form.prior_knowledge_level.replace('_', ' ')}"
             )
-        for need in form.support_needs[:4]:
-            support_summary.append(f"Support need: {need}")
-        for pref in form.learning_preferences[:4]:
-            support_summary.append(f"Preference: {pref.replace('_', ' ')}")
+        if form.outcome.strip():
+            support_summary.append(f"Outcome: {form.outcome.strip()}")
+        if form.struggle.strip():
+            support_summary.append(f"Struggle: {form.struggle.strip()}")
 
     section_plan: list[V3SectionPlanItemDTO] = []
     for order, sec in enumerate(blueprint.sections):
@@ -107,12 +107,13 @@ def blueprint_to_preview_dto(
             grade_level=form.grade_level,
             subject=form.subject,
             duration_minutes=form.duration_minutes,
-            lesson_mode=form.lesson_mode,
+            resource_type=form.resource_type,
+            outcome=form.outcome,
+            struggle=form.struggle,
             learner_level=form.learner_level,
             reading_level=form.reading_level,
             language_support=form.language_support,
             prior_knowledge_level=form.prior_knowledge_level,
-            support_needs=list(form.support_needs),
             prior_knowledge=form.prior_knowledge,
         )
 

@@ -24,8 +24,8 @@ def _signals() -> V3SignalSummary:
         prior_knowledge=["equal sharing"],
         learner_needs=[],
         teacher_goal="Build confidence",
-        inferred_resource_type="lesson",
-        confidence="medium",
+        inferred_lesson_mode="first_exposure",
+        lesson_mode_confidence="medium",
     )
 
 
@@ -34,19 +34,16 @@ def _form() -> V3InputForm:
         grade_level="Grade 6",
         subject="Math",
         duration_minutes=45,
+        resource_type="lesson",
         topic="Equivalent fractions",
         subtopics=["pizza slices"],
         prior_knowledge="equal sharing",
-        lesson_mode="first_exposure",
-        lesson_mode_other="",
-        intended_outcome="understand",
-        intended_outcome_other="",
+        outcome="Students can identify and generate equivalent fractions.",
+        struggle="Some learners still mix up numerator and denominator.",
         learner_level="on_grade",
         reading_level="on_grade",
         language_support="none",
         prior_knowledge_level="some_background",
-        support_needs=[],
-        learning_preferences=[],
         free_text="",
     )
 

@@ -170,7 +170,9 @@ async def test_v3_generation_writer_write_planning_artifact_persists_json_and_re
         grade_level="Grade 8",
         subject="Mathematics",
         duration_minutes=50,
+        resource_type="lesson",
         topic="Compound area",
+        outcome="Students can find the area of compound shapes.",
     )
     artifact = build_planning_artifact(
         generation_id=generation_id,

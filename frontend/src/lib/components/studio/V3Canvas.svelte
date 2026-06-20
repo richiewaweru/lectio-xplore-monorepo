@@ -1,20 +1,18 @@
 <script lang="ts">
-	import type { CanvasSection } from '$lib/types/v3';
-	import type { V3Stage } from '$lib/types/v3';
 	import V3CanvasSection from '$lib/components/studio/V3CanvasSection.svelte';
+	import type { CanvasSection, V3Stage } from '$lib/types/v3';
 
 	interface Props {
 		sections: CanvasSection[];
-		stage: V3Stage | 'complete';
+		stage: V3Stage;
 		templateId: string;
 	}
 
 	let { sections, stage, templateId }: Props = $props();
 
 	const progressLabel: Record<string, string> = {
-		generating: 'Writing your lesson…',
-		finalising: 'Checking consistency…',
-		complete: 'Resource ready'
+		fill: 'Writing your resource...',
+		edit: 'Resource ready'
 	};
 </script>
 

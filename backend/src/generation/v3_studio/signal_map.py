@@ -31,10 +31,10 @@ def summarise_form_supports(form: V3InputForm) -> list[str]:
         summary.append(f"Learner level: {form.learner_level.replace('_', ' ')}")
     if form.prior_knowledge_level != "some_background":
         summary.append(f"Prior knowledge: {form.prior_knowledge_level.replace('_', ' ')}")
-    for need in form.support_needs[:4]:
-        summary.append(f"Support need: {need}")
-    for pref in form.learning_preferences[:4]:
-        summary.append(f"Preference: {pref.replace('_', ' ')}")
+    if form.outcome.strip():
+        summary.append(f"Outcome: {form.outcome.strip()}")
+    if form.struggle.strip():
+        summary.append(f"Struggle: {form.struggle.strip()}")
     return summary
 
 

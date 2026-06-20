@@ -639,7 +639,9 @@ async def test_v3_generate_start_persists_planning_artifact_before_stream() -> N
         subject="Mathematics",
         duration_minutes=50,
         topic="Compound area",
-        support_needs=["visuals"],
+        resource_type="lesson",
+        outcome="Students can find the area of compound shapes.",
+        struggle="They miss one of the rectangles when splitting the shape.",
     )
     await v3_studio_store.put_blueprint(
         TEST_USER_A.id,
@@ -759,6 +761,9 @@ async def test_v3_generation_blueprint_endpoint_uses_db_after_session_store_miss
         subject="Mathematics",
         duration_minutes=50,
         topic="Compound area",
+        resource_type="lesson",
+        outcome="Students can find the area of compound shapes.",
+        struggle="They miss one of the rectangles when splitting the shape.",
     )
     artifact = build_planning_artifact(
         generation_id=generation_id,

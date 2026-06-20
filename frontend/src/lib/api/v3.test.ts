@@ -63,8 +63,8 @@ describe('connectV3StudioGenerationStream', () => {
 			prior_knowledge: ['equal sharing'],
 			learner_needs: [],
 			teacher_goal: 'Build understanding',
-			inferred_resource_type: 'worksheet',
-			confidence: 'medium' as const
+			inferred_lesson_mode: 'consolidation' as const,
+			lesson_mode_confidence: 'medium' as const
 		};
 	}
 
@@ -73,19 +73,16 @@ describe('connectV3StudioGenerationStream', () => {
 			grade_level: 'Grade 5',
 			subject: 'Mathematics',
 			duration_minutes: 45,
+			resource_type: 'worksheet' as const,
 			topic: 'Equivalent fractions',
 			subtopics: ['pizza model'],
 			prior_knowledge: 'Equal sharing',
-			lesson_mode: 'first_exposure' as const,
-			lesson_mode_other: '',
-			intended_outcome: 'understand' as const,
-			intended_outcome_other: '',
+			outcome: 'Students can identify equivalent fractions.',
+			struggle: 'They still confuse how many equal parts the whole has.',
 			learner_level: 'on_grade' as const,
 			reading_level: 'on_grade' as const,
 			language_support: 'none' as const,
 			prior_knowledge_level: 'some_background' as const,
-			support_needs: ['visuals'],
-			learning_preferences: [],
 			free_text: ''
 		};
 	}

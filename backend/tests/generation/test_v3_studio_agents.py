@@ -13,17 +13,16 @@ def _example_form(**overrides: Any) -> V3InputForm:
         "grade_level": "Grade 7",
         "subject": "Mathematics",
         "duration_minutes": 50,
+        "resource_type": "lesson",
         "topic": "Compound area",
         "subtopics": ["L-shapes", "Decompose into rectangles"],
         "prior_knowledge": "Rectangle area",
-        "lesson_mode": "first_exposure",
-        "intended_outcome": "understand",
+        "outcome": "Students can decompose compound figures and calculate the total area.",
+        "struggle": "They often forget to separate the shape into rectangles before calculating.",
         "learner_level": "on_grade",
         "reading_level": "on_grade",
         "language_support": "some_ell",
         "prior_knowledge_level": "some_background",
-        "support_needs": ["visuals", "worked_examples"],
-        "learning_preferences": ["step_by_step"],
         "free_text": "Use real-world floorplan examples if possible.",
     }
     payload.update(overrides)
@@ -46,8 +45,8 @@ async def test_extract_signals_includes_structured_form_in_user_prompt(monkeypat
                     prior_knowledge=[],
                     learner_needs=[],
                     teacher_goal="Learners can decompose shapes to find area.",
-                    inferred_resource_type="lesson",
-                    confidence="high",
+                    inferred_lesson_mode="repair",
+                    lesson_mode_confidence="high",
                 )
             },
         )()
@@ -61,8 +60,9 @@ async def test_extract_signals_includes_structured_form_in_user_prompt(monkeypat
     assert "Grade level: Grade 7" in user_prompt
     assert "Topic: Compound area" in user_prompt
     assert "Subtopics: L-shapes, Decompose into rectangles" in user_prompt
-    assert "Lesson mode: first_exposure" in user_prompt
-    assert "Learning preferences: step_by_step" in user_prompt
+    assert "Resource type: lesson" in user_prompt
+    assert "Outcome: Students can decompose compound figures and calculate the total area." in user_prompt
+    assert "Struggle: They often forget to separate the shape into rectangles before calculating." in user_prompt
 
 
 

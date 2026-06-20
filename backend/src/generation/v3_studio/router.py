@@ -155,6 +155,8 @@ def _render_chunked_sse(event: str, payload: dict[str, Any]) -> str:
 def _normalize_chunked_state(generation_id: str, state: dict[str, Any]) -> V3ChunkedPlanStateDTO:
     next_action: str | None = None
     stage = str(state.get("stage") or "unknown")
+    context = state.get("context")
+    signals = context.get("signals") if isinstance(context, dict) else None
     if stage == "plan_ready":
         next_action = "approve_or_regenerate"
     elif stage == "stage2_running":
@@ -187,15 +189,21 @@ def _normalize_chunked_state(generation_id: str, state: dict[str, Any]) -> V3Chu
         else None,
         execution_started=bool(state.get("execution_started") is True),
         next_action=next_action,
+        inferred_lesson_mode=signals.get("inferred_lesson_mode")
+        if isinstance(signals, dict) and isinstance(signals.get("inferred_lesson_mode"), str)
+        else None,
+        lesson_mode_confidence=signals.get("lesson_mode_confidence")
+        if isinstance(signals, dict) and isinstance(signals.get("lesson_mode_confidence"), str)
+        else None,
     )
 
 
 def _build_chunked_resource_spec(
     *,
-    inferred_resource_type: str | None,
+    resource_type: str,
     duration_minutes: int,
 ) -> dict[str, Any]:
-    resource_type = (inferred_resource_type or "lesson").lower().strip().replace(" ", "_")
+    resource_type = resource_type.lower().strip().replace(" ", "_")
     if resource_type not in list_spec_ids():
         resource_type = "lesson"
     depth = "quick" if duration_minutes < 20 else "deep" if duration_minutes > 45 else "standard"
@@ -797,7 +805,7 @@ async def post_chunked_plan_start(
     generation_id = str(uuid.uuid4())
     form = body.form
     resource_spec = _build_chunked_resource_spec(
-        inferred_resource_type=body.signals.inferred_resource_type,
+        resource_type=form.resource_type,
         duration_minutes=form.duration_minutes,
     )
 

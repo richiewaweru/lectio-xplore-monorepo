@@ -4,54 +4,32 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from v3_blueprint.models import ProductionBlueprint
+from v3_blueprint.models import LessonMode, ProductionBlueprint, ResourceType
 
 
 class V3InputForm(BaseModel):
     model_config = {"extra": "forbid"}
 
-    # Step 1 — Basics
+    # Step 1 - Basics
     grade_level: str  # e.g. "Grade 9"
     subject: str
     duration_minutes: int = Field(ge=15, le=90)
+    resource_type: ResourceType = "lesson"
 
-    # Step 2 — Concept
+    # Step 2 - Intent
     topic: str  # raw topic text
     subtopics: list[str] = Field(default_factory=list)  # resolved subtopics
     prior_knowledge: str = ""  # what they've already covered
+    outcome: str
+    struggle: str = ""
 
-    # Step 3 — Lesson shape
-    lesson_mode: Literal[
-        "first_exposure",
-        "consolidation",
-        "repair",
-        "retrieval",
-        "transfer",
-        "other",
-    ] = "first_exposure"
-    lesson_mode_other: str = ""  # when lesson_mode == "other"
-
-    intended_outcome: Literal[
-        "understand",
-        "practise",
-        "review",
-        "assess",
-        "other",
-    ] = "understand"
-    intended_outcome_other: str = ""  # when intended_outcome == "other"
-
-    # Step 4 — Class profile
+    # Step 3 - Tuning
     learner_level: Literal["below_grade", "on_grade", "above_grade", "mixed"] = "on_grade"
     reading_level: Literal["below_grade", "on_grade", "above_grade", "mixed"] = "on_grade"
     language_support: Literal["none", "some_ell", "many_ell"] = "none"
     prior_knowledge_level: Literal["new_topic", "some_background", "reviewing"] = "new_topic"
 
-    support_needs: list[str] = Field(default_factory=list)
-    learning_preferences: list[
-        Literal["visual", "step_by_step", "discussion", "hands_on", "challenge"]
-    ] = Field(default_factory=list)
-
-    # Step 5 — Optional intent
+    # Step 4 - Optional intent
     free_text: str = ""  # anything not captured above
 
 
@@ -63,8 +41,8 @@ class V3SignalSummary(BaseModel):
     prior_knowledge: list[str] = Field(default_factory=list)
     learner_needs: list[str] = Field(default_factory=list)
     teacher_goal: str
-    inferred_resource_type: str
-    confidence: Literal["low", "medium", "high"]
+    inferred_lesson_mode: LessonMode
+    lesson_mode_confidence: Literal["low", "medium", "high"]
 
 
 class V3ComponentPlanDTO(BaseModel):
@@ -112,12 +90,14 @@ class V3LearnerContextDTO(BaseModel):
     grade_level: str
     subject: str
     duration_minutes: int
-    lesson_mode: str
+    resource_type: ResourceType
+    outcome: str
+    struggle: str
+    inferred_lesson_mode: str | None = None
     learner_level: str
     reading_level: str
     language_support: str
     prior_knowledge_level: str
-    support_needs: list[str] = Field(default_factory=list)
     prior_knowledge: str
 
 
@@ -166,6 +146,8 @@ class V3ChunkedPlanStateDTO(BaseModel):
     blueprint_id: str | None = None
     execution_started: bool = False
     next_action: str | None = None
+    inferred_lesson_mode: LessonMode | None = None
+    lesson_mode_confidence: Literal["low", "medium", "high"] | None = None
 
 
 class AdjustBlueprintRequest(BaseModel):

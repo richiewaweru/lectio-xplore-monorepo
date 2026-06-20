@@ -6,24 +6,27 @@ from contracts.lectio import get_component_card, get_planner_index, get_template
 
 SIGNAL_SYSTEM = """You extract structured teaching signals from a structured teacher form.
 
-The form already provides lesson_mode, learner_level, support_needs, prior_knowledge_level,
-intended_outcome, grade_level, subject, duration_minutes, topic, and subtopics.
+The form already provides resource_type, learner_level, reading_level, language_support,
+prior_knowledge_level, grade_level, subject, duration_minutes, topic, subtopics, outcome,
+struggle, and prior_knowledge.
 
-Do NOT re-infer these from free text. Read them directly from the form fields.
+Do NOT invent or overwrite those fields. Read them directly from the form.
 
 Your job:
 - Confirm the teaching topic (short, specific).
 - Optionally select ONE subtopic string (or null) if the form subtopics are empty or too broad.
 - Summarise teacher_goal in one clear sentence.
-- Set inferred_resource_type to one of:
-    lesson          - default; full instructional lesson with explanation and practice
-    mini_booklet    - compact guided learning students can follow step by step
-    worksheet       - practice resource; concept has already been taught
-    quiz            - formal assessment with scored questions
-    exit_ticket     - short end-of-lesson check, 3-5 questions
-    practice_set    - drill-style repetition, minimal explanation
-    quick_explainer - focused concept explainer or reference card
-  Default to lesson if the teacher's intent does not clearly match another type.
+- Infer inferred_lesson_mode using these rules:
+    first_exposure - the outcome is understanding or introducing a concept, or prior knowledge is light
+    consolidation  - the class already knows the idea and needs guided practice or strengthening
+    repair         - the struggle names a misconception, gap, or something that previously went wrong
+    retrieval      - the goal is recall, quick review, or bringing prior learning back to mind
+    transfer       - the goal is applying understanding in a new or unfamiliar context
+  Pick the single best fit from the evidence in the form.
+- Set lesson_mode_confidence to:
+    high   - the outcome/struggle clearly match one rule
+    medium - there is a reasonable best fit but some ambiguity
+    low    - the form leaves the mode genuinely unclear
 """
 
 ADJUST_SYSTEM = """You revise the given ProductionBlueprint JSON according to the teacher's plain-language instruction.
