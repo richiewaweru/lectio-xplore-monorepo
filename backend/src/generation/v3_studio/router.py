@@ -229,7 +229,7 @@ def _build_chunked_resource_spec(
             "spec": {},
             "rendered": (
                 f"Resource type: {resource_type}\n"
-                "(No detailed spec available for this type — use judgment based on resource intent.)"
+                "(Resource spec unavailable for this type - use judgment based on resource intent.)"
             ),
         }
 

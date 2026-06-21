@@ -42,7 +42,7 @@ class V3SignalSummary(BaseModel):
     learner_needs: list[str] = Field(default_factory=list)
     teacher_goal: str
     inferred_lesson_mode: LessonMode
-    lesson_mode_confidence: Literal["low", "medium", "high"]
+    lesson_mode_confidence: Literal["low", "high"]
 
 
 class V3ComponentPlanDTO(BaseModel):
@@ -147,7 +147,7 @@ class V3ChunkedPlanStateDTO(BaseModel):
     execution_started: bool = False
     next_action: str | None = None
     inferred_lesson_mode: LessonMode | None = None
-    lesson_mode_confidence: Literal["low", "medium", "high"] | None = None
+    lesson_mode_confidence: Literal["low", "high"] | None = None
 
 
 class AdjustBlueprintRequest(BaseModel):
@@ -225,47 +225,6 @@ class ProductionBlueprintEnvelope(BaseModel):
     blueprint: ProductionBlueprint
 
 
-class V3SupplementOptionDTO(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    resource_type: str
-    label: str
-    description: str
-    best_for: str | None = None
-    estimated_length: str | None = None
-    cta: str = "Create plan"
-
-
-class V3SupplementOptionsResponse(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    parent_generation_id: str
-    parent_title: str | None = None
-    parent_resource_type: str | None = None
-    available: bool = True
-    unavailable_reason: str | None = None
-    options: list[V3SupplementOptionDTO] = Field(default_factory=list)
-
-
-class V3CreateSupplementBlueprintRequest(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    resource_type: str
-
-
-class V3CreateSupplementBlueprintResponse(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    generation_id: str
-    blueprint_id: str
-    template_id: str
-    resource_type: str
-    parent_generation_id: str
-    parent_title: str | None = None
-    label: str
-    preview: BlueprintPreviewDTO
-
-
 __all__ = [
     "AdjustBlueprintRequest",
     "BlueprintPreviewDTO",
@@ -285,8 +244,4 @@ __all__ = [
     "V3QuestionPlanDTO",
     "V3SectionPlanItemDTO",
     "V3SignalSummary",
-    "V3CreateSupplementBlueprintRequest",
-    "V3CreateSupplementBlueprintResponse",
-    "V3SupplementOptionDTO",
-    "V3SupplementOptionsResponse",
 ]

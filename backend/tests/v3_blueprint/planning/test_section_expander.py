@@ -28,7 +28,7 @@ def _signals() -> V3SignalSummary:
         learner_needs=[],
         teacher_goal="Build confidence",
         inferred_lesson_mode="first_exposure",
-        lesson_mode_confidence="medium",
+        lesson_mode_confidence="high",
     )
 
 

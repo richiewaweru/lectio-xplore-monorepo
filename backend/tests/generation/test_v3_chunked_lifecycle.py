@@ -86,7 +86,7 @@ def _chunked_start_payload() -> dict:
             "learner_needs": [],
             "teacher_goal": "Build confidence",
             "inferred_lesson_mode": "first_exposure",
-            "lesson_mode_confidence": "medium",
+            "lesson_mode_confidence": "high",
         },
         "form": {
             "grade_level": "Grade 6",

@@ -115,7 +115,6 @@ class Settings(BaseSettings):
     learning_pack_max_active_per_user: int = Field(default=1, ge=1)
     learning_pack_max_active_resources_per_pack: int = Field(default=2, ge=1)
     learning_pack_max_resources: int = Field(default=7, ge=1)
-    learning_pack_status_poll_seconds: float = Field(default=3.0, gt=0)
     v3_timeout_stage1_seconds: int = Field(default=240, ge=1)
     v3_timeout_stage2_section_seconds: int = Field(default=240, ge=1)
     v3_stage2_max_tokens: int = Field(default=8000, ge=1)

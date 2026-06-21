@@ -29,7 +29,7 @@ describe('V3PlanningState', () => {
 					learner_needs: [],
 					teacher_goal: 'Students can find the area of compound shapes.',
 					inferred_lesson_mode: 'first_exposure',
-					lesson_mode_confidence: 'medium'
+					lesson_mode_confidence: 'high'
 				}
 			}
 		});

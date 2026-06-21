@@ -17,16 +17,15 @@ Your job:
 - Optionally select ONE subtopic string (or null) if the form subtopics are empty or too broad.
 - Summarise teacher_goal in one clear sentence.
 - Infer inferred_lesson_mode using these rules:
-    first_exposure - the outcome is understanding or introducing a concept, or prior knowledge is light
+    repair         - the struggle names a misconception, gap, or something students keep getting wrong
+    first_exposure - the outcome introduces a concept for the first time, or prior knowledge is light
     consolidation  - the class already knows the idea and needs guided practice or strengthening
-    repair         - the struggle names a misconception, gap, or something that previously went wrong
     retrieval      - the goal is recall, quick review, or bringing prior learning back to mind
     transfer       - the goal is applying understanding in a new or unfamiliar context
   Pick the single best fit from the evidence in the form.
 - Set lesson_mode_confidence to:
-    high   - the outcome/struggle clearly match one rule
-    medium - there is a reasonable best fit but some ambiguity
-    low    - the form leaves the mode genuinely unclear
+    high - the outcome/struggle clearly match one rule
+    low  - the form leaves the mode genuinely unclear or multiple rules compete
 """
 
 ADJUST_SYSTEM = """You revise the given ProductionBlueprint JSON according to the teacher's plain-language instruction.

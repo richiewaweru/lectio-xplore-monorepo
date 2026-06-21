@@ -3,15 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 from contracts.lectio import get_section_field_for_component
 
 from v3_blueprint.models import ProductionBlueprint
-from v3_execution.compile_orders import compile_execution_bundle
 from v3_execution.component_aliases import canonical_component_id
-from v3_execution.models import DraftPack, ExecutionResult, GeneratedAnswerKeyBlock
-from v3_execution.runtime import events as v3_events
+from v3_execution.models import DraftPack, GeneratedAnswerKeyBlock
 from v3_review import coherence_report_to_generation_summary
 from v3_review.deterministic_checks import (
     check_expected_answers_preserved,

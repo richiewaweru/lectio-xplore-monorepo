@@ -10,6 +10,7 @@ SPECS_DIR = Path(__file__).parents[2] / "resources" / "specs"
 def test_all_resource_specs_load() -> None:
     specs = load_all_specs(SPECS_DIR)
     assert set(specs) == {
+        "lesson",
         "mini_booklet",
         "worksheet",
         "exit_ticket",
@@ -34,7 +35,7 @@ def test_specs_have_required_sections_and_depths() -> None:
 def test_resource_type_enum_matches_available_specs() -> None:
     """
     ResourceType enum in v3_blueprint/models.py must contain exactly the spec IDs
-    that exist on disk, plus 'lesson' as the fallback (which has no spec file).
+    that exist on disk.
 
     If this test fails:
     - A new spec YAML was added but ResourceType was not updated, OR
@@ -44,7 +45,7 @@ def test_resource_type_enum_matches_available_specs() -> None:
     from v3_blueprint.models import ResourceType
 
     spec_ids = set(load_all_specs(SPECS_DIR).keys())
-    enum_values = set(ResourceType.__args__) - {"lesson"}  # lesson is fallback only
+    enum_values = set(ResourceType.__args__)
 
     in_enum_not_in_specs = enum_values - spec_ids
     in_specs_not_in_enum = spec_ids - enum_values

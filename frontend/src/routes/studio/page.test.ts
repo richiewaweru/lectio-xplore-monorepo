@@ -9,12 +9,10 @@ const mocks = vi.hoisted(() => ({
 	connectV3ChunkedStream: vi.fn(() => vi.fn()),
 	connectV3StudioGenerationStream: vi.fn(() => vi.fn()),
 	getChunkedPlanStatus: vi.fn(),
-	createV3SupplementBlueprint: vi.fn(),
 	downloadV3GenerationPdf: vi.fn(),
 	extractSignals: vi.fn(),
 	fetchV3Document: vi.fn(),
 	getV3GenerationBlueprint: vi.fn(),
-	getV3SupplementOptions: vi.fn(),
 	regenerateChunkedPlan: vi.fn(),
 	retryChunkedSection: vi.fn(),
 	startChunkedPlan: vi.fn()
@@ -26,12 +24,10 @@ vi.mock('$lib/api/v3', () => ({
 	connectV3ChunkedStream: mocks.connectV3ChunkedStream,
 	connectV3StudioGenerationStream: mocks.connectV3StudioGenerationStream,
 	getChunkedPlanStatus: mocks.getChunkedPlanStatus,
-	createV3SupplementBlueprint: mocks.createV3SupplementBlueprint,
 	downloadV3GenerationPdf: mocks.downloadV3GenerationPdf,
 	extractSignals: mocks.extractSignals,
 	fetchV3Document: mocks.fetchV3Document,
 	getV3GenerationBlueprint: mocks.getV3GenerationBlueprint,
-	getV3SupplementOptions: mocks.getV3SupplementOptions,
 	regenerateChunkedPlan: mocks.regenerateChunkedPlan,
 	retryChunkedSection: mocks.retryChunkedSection,
 	startChunkedPlan: mocks.startChunkedPlan
@@ -55,10 +51,6 @@ vi.mock('$lib/components/studio/V3Canvas.svelte', async () => ({
 vi.mock('$lib/components/studio/V3BookletPackView.svelte', async () => ({
 	default: (await import('./__fixtures__/MockGeneric.svelte')).default
 }));
-vi.mock('$lib/components/studio/V3SupplementTray.svelte', async () => ({
-	default: (await import('./__fixtures__/MockGeneric.svelte')).default
-}));
-
 import StudioPage from './+page.svelte';
 import { resetV3Studio, v3Studio } from '$lib/stores/v3-studio.svelte';
 
@@ -74,6 +66,10 @@ function deferred<T>() {
 
 function latestChunkedHandlers(): unknown {
 	return (mocks.connectV3ChunkedStream.mock.calls as unknown as Array<[string, unknown]>).at(-1)?.[1];
+}
+
+function latestGenerationHandlers(): unknown {
+	return (mocks.connectV3StudioGenerationStream.mock.calls as unknown as Array<[string, unknown]>).at(-1)?.[1];
 }
 
 describe('studio chunked URL resume', () => {
@@ -226,6 +222,7 @@ describe('studio chunked URL resume', () => {
 
 		await waitFor(() => expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-approve'));
 		expect(v3Studio.stage).toBe('fill');
+		expect(v3Studio.canvas).toHaveLength(0);
 		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
 
 		approval.resolve({
@@ -301,7 +298,6 @@ describe('studio chunked URL resume', () => {
 	});
 
 	it('switches from chunked SSE to generation SSE after stage2 completes', async () => {
-		vi.useFakeTimers();
 		window.history.replaceState({}, '', '/studio?generation_id=gen-switch');
 		mocks.getChunkedPlanStatus.mockResolvedValue({
 			generation_id: 'gen-switch',
@@ -348,10 +344,6 @@ describe('studio chunked URL resume', () => {
 		};
 		handlers.onStage2Complete?.([]);
 
-		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
-		await vi.advanceTimersByTimeAsync(1499);
-		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
-		await vi.advanceTimersByTimeAsync(1);
 		await waitFor(() =>
 			expect(mocks.connectV3StudioGenerationStream).toHaveBeenCalledWith(
 				'gen-switch',
@@ -359,7 +351,6 @@ describe('studio chunked URL resume', () => {
 			)
 		);
 		expect(disconnectChunked).toHaveBeenCalled();
-		vi.useRealTimers();
 	});
 
 	it('stays blocked and skips generation SSE when chunked stage2 completes with failures', async () => {
@@ -595,5 +586,122 @@ describe('studio chunked URL resume', () => {
 		);
 		await waitFor(() => expect(mocks.getV3GenerationBlueprint).toHaveBeenCalledWith('gen-blueprint'));
 		expect(v3Studio.stage).toBe('fill');
+	});
+
+	it('paints the structural plan into the canvas immediately on approve', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-canvas');
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-canvas',
+			stage: 'plan_ready',
+			structural_plan: {
+				lesson_mode: 'first_exposure',
+				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
+				sections: [
+					{
+						id: 'orient',
+						title: 'Orient',
+						role: 'orient',
+						visual_required: true,
+						transition_note: null,
+						components: [{ slug: 'hook-hero', purpose: 'Open the lesson' }]
+					}
+				],
+				question_plan: [{ question_id: 'q1', section_id: 'orient', temperature: 'warm', diagram_required: false }]
+			},
+			section_briefs: {},
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: false,
+			next_action: 'approve_or_regenerate'
+		});
+		const approval = deferred<{
+			generation_id: string;
+			stage: 'stage2_running';
+			structural_plan: {
+				lesson_mode: string;
+				lesson_intent: { goal: string; structure_rationale: string };
+				anchor: { example: string; reuse_scope: string };
+				sections: Array<Record<string, unknown>>;
+				question_plan: Array<Record<string, unknown>>;
+			};
+			section_briefs: Record<string, never>;
+			failed_sections: never[];
+			blueprint_id: null;
+			execution_started: true;
+			next_action: 'wait_for_stage2';
+		}>();
+		mocks.approveChunkedPlan.mockReturnValue(approval.promise);
+
+		render(StudioPage);
+		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-canvas'));
+		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
+
+		expect(v3Studio.stage).toBe('fill');
+		expect(v3Studio.canvas).toHaveLength(1);
+		expect(v3Studio.canvas[0]?.id).toBe('orient');
+		expect(v3Studio.canvas[0]?.components[0]?.id).toBe('hook-hero');
+		expect(v3Studio.canvas[0]?.visual?.status).toBe('pending');
+	});
+
+	it('repaints the canvas from draft snapshot events during generation', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-snapshot');
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-snapshot',
+			stage: 'blueprint_ready',
+			structural_plan: {
+				lesson_mode: 'first_exposure',
+				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
+				sections: [],
+				question_plan: []
+			},
+			section_briefs: {},
+			failed_sections: [],
+			blueprint_id: 'bp-1',
+			execution_started: true,
+			next_action: 'generation_running'
+		});
+		mocks.getV3GenerationBlueprint.mockResolvedValue({
+			blueprint_id: 'bp-1',
+			template_id: 'guided-concept-path',
+			section_plan: [],
+			question_plan: [],
+			resource_type: 'lesson',
+			title: 'Test lesson',
+			anchor: null,
+			register_summary: '',
+			support_summary: []
+		});
+
+		render(StudioPage);
+		await waitFor(() => expect(mocks.connectV3StudioGenerationStream).toHaveBeenCalled());
+
+		const handlers = latestGenerationHandlers() as {
+			onDraftPackReady?: (data: Record<string, unknown>) => void;
+			onDraftStatusUpdated?: (data: Record<string, unknown>) => void;
+		};
+
+		handlers.onDraftPackReady?.({
+			booklet_status: 'draft_ready',
+			pack: {
+				sections: [{ section_id: 'build', header: { title: 'Build understanding' } }],
+				booklet_issues: [],
+				status: 'draft_ready'
+			}
+		});
+		expect(v3Studio.canvas).toHaveLength(1);
+		expect(v3Studio.canvas[0]?.id).toBe('build');
+
+		handlers.onDraftStatusUpdated?.({
+			booklet_status: 'draft_with_warnings',
+			pack: {
+				sections: [{ section_id: 'practice', header: { title: 'Practice' } }],
+				booklet_issues: [],
+				status: 'draft_with_warnings'
+			}
+		});
+		expect(v3Studio.canvas).toHaveLength(1);
+		expect(v3Studio.canvas[0]?.id).toBe('practice');
 	});
 });

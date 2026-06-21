@@ -4,8 +4,6 @@ from telemetry.v3_trace.event_types import (
     BLUEPRINT_GENERATED,
     COHERENCE_REVIEWED,
     GENERATION_FAILED,
-    REPAIR_ATTEMPTED,
-    REPAIR_ESCALATED,
     SECTION_COMPLETED,
     SECTION_FAILED,
     VISUAL_FAILED,
@@ -82,7 +80,7 @@ def test_project_failed_section_visible() -> None:
     assert report["execution"]["visuals"][0]["ok"] is False
 
 
-def test_coherence_issues_and_repairs_appear_in_review() -> None:
+def test_coherence_issues_appear_in_review() -> None:
     events = [
         {
             "event_type": COHERENCE_REVIEWED,
@@ -101,31 +99,11 @@ def test_coherence_issues_and_repairs_appear_in_review() -> None:
                 ],
             },
         },
-        {
-            "event_type": REPAIR_ATTEMPTED,
-            "payload": {
-                "target_id": "section:practice",
-                "executor": "section_writer",
-                "attempt": 1,
-                "ok": False,
-                "target_type": "section_component",
-                "reason": "missing practice-stack",
-            },
-        },
-        {
-            "event_type": REPAIR_ESCALATED,
-            "payload": {
-                "target_id": "section:practice",
-                "reason": "blocking issue remained after retries",
-                "attempts": 2,
-            },
-        },
     ]
 
     report = project_report(events)
     assert report["review"]["blocking_count"] == 3
     assert report["review"]["issues"][0]["category"] == "missing_planned_content"
-    assert len(report["repairs"]) == 2
 
 
 def test_llm_summary_in_terminal() -> None:

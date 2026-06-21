@@ -29,7 +29,12 @@
 		applyComponentReadyToCanvas,
 		applySectionWriterFailedToCanvas
 	} from '$lib/studio/v3-stream-state';
-	import { buildCanvasSkeleton, mergeDiagramFrame, mergePracticeProblem } from '$lib/studio/v3-canvas';
+	import {
+		buildCanvasSkeleton,
+		buildStructuralPlanCanvas,
+		mergeDiagramFrame,
+		mergePracticeProblem
+	} from '$lib/studio/v3-canvas';
 	import { getBookletExportPolicy, isBookletStatus } from '$lib/studio/v3-booklet';
 	import { coerceV3DocumentToPack } from '$lib/studio/v3-document';
 	import { mapPackSectionsToCanvas } from '$lib/studio/v3-print-canvas';
@@ -136,11 +141,17 @@
 
 		if (resolved.stage === 'plan_ready') {
 			disconnectActiveChunkedStream();
+			if (resolved.structural_plan) {
+				v3Studio.canvas = buildStructuralPlanCanvas(resolved.structural_plan);
+			}
 			v3Studio.stage = 'skeleton';
 			return;
 		}
 		if (resolved.stage === 'assembly_blocked') {
 			disconnectActiveChunkedStream();
+			if (resolved.structural_plan) {
+				v3Studio.canvas = buildStructuralPlanCanvas(resolved.structural_plan);
+			}
 			v3Studio.stage = 'skeleton';
 			return;
 		}
@@ -331,10 +342,8 @@
 					disconnectActiveChunkedStream();
 					return;
 				}
-				setTimeout(() => {
-					disconnectActiveChunkedStream();
-					connectGenerationStream(generationId);
-				}, 1500);
+				disconnectActiveChunkedStream();
+				connectGenerationStream(generationId);
 			},
 			onAssemblyBlocked(failedSections) {
 				console.warn('[chunked] assembly blocked', failedSections);
@@ -381,6 +390,8 @@
 				v3Studio.activePack = pack;
 				v3Studio.bookletStatus = status;
 				v3Studio.bookletIssues = Array.isArray(pack.booklet_issues) ? pack.booklet_issues : [];
+				v3Studio.canvas = mapPackSectionsToCanvas(pack.sections);
+				v3Studio.stage = 'fill';
 			},
 			onFinalPackReady: (data) => {
 				const pack = parsePack(data);
@@ -390,6 +401,7 @@
 				v3Studio.activePack = pack;
 				v3Studio.bookletStatus = status;
 				v3Studio.bookletIssues = Array.isArray(pack.booklet_issues) ? pack.booklet_issues : [];
+				v3Studio.canvas = mapPackSectionsToCanvas(pack.sections);
 			},
 			onDraftStatusUpdated: (data) => {
 				const status = statusFromPayload(data, v3Studio.bookletStatus);
@@ -398,8 +410,10 @@
 					v3Studio.draftPack = pack;
 					v3Studio.activePack = pack;
 					v3Studio.bookletIssues = Array.isArray(pack.booklet_issues) ? pack.booklet_issues : [];
+					v3Studio.canvas = mapPackSectionsToCanvas(pack.sections);
 				}
 				v3Studio.bookletStatus = status;
+				v3Studio.stage = 'fill';
 			},
 			onResourceFinalised: () => {
 				const gid = v3Studio.generationId;
@@ -487,7 +501,9 @@
 					failed_sections: [],
 					blueprint_id: null,
 					execution_started: false,
-					next_action: 'approve_or_regenerate'
+					next_action: 'approve_or_regenerate',
+					inferred_lesson_mode: null,
+					lesson_mode_confidence: null
 				};
 				v3Studio.stage = 'skeleton';
 			},
@@ -599,6 +615,9 @@
 		v3Studio.generationId = generationId;
 		v3Studio.error = null;
 		v3Studio.stage = 'fill';
+		if (chunked.structural_plan) {
+			v3Studio.canvas = buildStructuralPlanCanvas(chunked.structural_plan);
+		}
 		stage2Progress = { completed: [], failed: [], active: null };
 		try {
 			const next = await approveChunkedPlan(generationId);
@@ -771,6 +790,13 @@
 						</div>
 					{/each}
 				</div>
+			{/if}
+			{#if v3Studio.canvas.length > 0}
+				<V3Canvas
+					sections={v3Studio.canvas}
+					stage={v3Studio.stage}
+					templateId={v3Studio.blueprint?.template_id ?? 'guided-concept-path'}
+				/>
 			{/if}
 		</div>
 		{:else if v3Studio.stage === 'skeleton' && v3Studio.chunkedState?.structural_plan}

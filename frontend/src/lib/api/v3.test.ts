@@ -64,7 +64,7 @@ describe('connectV3StudioGenerationStream', () => {
 			learner_needs: [],
 			teacher_goal: 'Build understanding',
 			inferred_lesson_mode: 'consolidation' as const,
-			lesson_mode_confidence: 'medium' as const
+			lesson_mode_confidence: 'high' as const
 		};
 	}
 

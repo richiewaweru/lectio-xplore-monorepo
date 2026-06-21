@@ -14,7 +14,7 @@ LessonMode = Literal[
 ]
 QuestionTemperature = Literal["warm", "medium", "cold", "transfer"]
 ResourceType = Literal[
-    "lesson",  # fallback only — no spec file; architect uses judgment
+    "lesson",  # default full lesson (spec exists)
     "mini_booklet",  # full guided lesson with scaffolding (spec exists)
     "worksheet",  # practice resource; concept already taught (spec exists)
     "quiz",  # formal assessment (spec exists)

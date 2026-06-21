@@ -27,9 +27,6 @@ COHERENCE_REVIEW_STARTED = "coherence_review_started"
 DETERMINISTIC_REVIEW_STARTED = "deterministic_review_started"
 DETERMINISTIC_REVIEW_COMPLETE = "deterministic_review_complete"
 COHERENCE_REPORT_READY = "coherence_report_ready"
-REPAIR_STARTED = "repair_started"
-REPAIR_FAILED = "repair_failed"
-REPAIR_ESCALATED = "repair_escalated"
 RESOURCE_FINALISED = "resource_finalised"
 
 
@@ -57,9 +54,6 @@ __all__ = [
     "GENERATION_WARNING",
     "QUESTION_READY",
     "QUESTIONS_STARTED",
-    "REPAIR_ESCALATED",
-    "REPAIR_FAILED",
-    "REPAIR_STARTED",
     "RESOURCE_FINALISED",
     "SECTION_WRITING_STARTED",
     "SECTION_WRITER_FAILED",

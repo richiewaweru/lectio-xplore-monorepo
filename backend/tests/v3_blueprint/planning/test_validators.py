@@ -129,6 +129,20 @@ def test_validate_structural_plan_catches_role_outside_resource_spec() -> None:
     assert any("which is not in the active resource spec roles" in error for error in errors)
 
 
+def test_validate_structural_plan_catches_role_outside_real_spec_dump_shape() -> None:
+    from resource_specs.loader import get_spec
+
+    plan = _base_plan_with_components(
+        components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")]
+    )
+    plan.sections[0].role = "model"
+    errors = validate_structural_plan(
+        plan,
+        {"spec": get_spec("worksheet").model_dump(mode="json")},
+    )
+    assert any("which is not in the active resource spec roles" in error for error in errors)
+
+
 def test_validate_section_brief_catches_dropped_component() -> None:
     slug_a, slug_b = _first_two_distinct_slugs()
     section = SectionPlan(

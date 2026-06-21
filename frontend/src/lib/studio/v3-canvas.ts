@@ -1,4 +1,9 @@
-import type { BlueprintPreviewDTO, CanvasSection, ComponentStatus } from '$lib/types/v3';
+import type {
+	BlueprintPreviewDTO,
+	CanvasSection,
+	ComponentStatus,
+	V3StructuralPlan
+} from '$lib/types/v3';
 
 export function buildCanvasSkeleton(blueprint: BlueprintPreviewDTO): CanvasSection[] {
 	const sorted = [...blueprint.section_plan].sort((a, b) => a.order - b.order);
@@ -26,6 +31,38 @@ export function buildCanvasSkeleton(blueprint: BlueprintPreviewDTO): CanvasSecti
 			.map((q) => ({
 				id: q.id,
 				difficulty: q.difficulty,
+				status: 'pending' as ComponentStatus,
+				data: null
+			})),
+		mergedFields: {}
+	}));
+}
+
+export function buildStructuralPlanCanvas(plan: V3StructuralPlan): CanvasSection[] {
+	return plan.sections.map((section, index) => ({
+		id: section.id,
+		title: section.title,
+		teacher_labels: section.components.map((component) => component.slug).join(' · '),
+		order: index,
+		components: section.components.map((component) => ({
+			id: component.slug,
+			teacher_label: component.slug,
+			status: 'pending' as ComponentStatus,
+			data: null
+		})),
+		visual: section.visual_required
+			? {
+					id: `visual-${section.id}`,
+					status: 'pending' as ComponentStatus,
+					image_url: null,
+					frame_index: null
+				}
+			: null,
+		questions: plan.question_plan
+			.filter((question) => question.section_id === section.id)
+			.map((question) => ({
+				id: question.question_id,
+				difficulty: question.temperature,
 				status: 'pending' as ComponentStatus,
 				data: null
 			})),

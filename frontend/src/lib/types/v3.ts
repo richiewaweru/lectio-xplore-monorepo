@@ -36,7 +36,7 @@ export interface V3SignalSummary {
 	learner_needs: string[];
 	teacher_goal: string;
 	inferred_lesson_mode: 'first_exposure' | 'consolidation' | 'repair' | 'retrieval' | 'transfer';
-	lesson_mode_confidence: 'low' | 'medium' | 'high';
+	lesson_mode_confidence: 'low' | 'high';
 }
 
 export interface V3StructuralPlanComponent {
@@ -176,47 +176,6 @@ export interface V3GenerationDetail {
 	planning_artifact?: V3PlanningArtifact | null;
 	created_at: string | null;
 	completed_at: string | null;
-}
-
-export type V3SupplementResourceType = 'exit_ticket' | 'quiz' | 'worksheet';
-
-export interface V3SupplementOption {
-	resource_type: V3SupplementResourceType;
-	label: string;
-	description: string;
-	best_for?: string | null;
-	estimated_length?: string | null;
-	cta: string;
-}
-
-export interface V3SupplementOptionsResponse {
-	parent_generation_id: string;
-	parent_title: string | null;
-	parent_resource_type: string | null;
-	available: boolean;
-	unavailable_reason: string | null;
-	options: V3SupplementOption[];
-}
-
-export interface V3CreateSupplementBlueprintResponse {
-	generation_id: string;
-	blueprint_id: string;
-	template_id: string;
-	resource_type: V3SupplementResourceType;
-	parent_generation_id: string;
-	parent_title: string | null;
-	label: string;
-	preview: BlueprintPreviewDTO;
-}
-
-export interface V3SupplementContext {
-	mode: 'supplement_review' | 'supplement_generation';
-	parentGenerationId: string;
-	parentTitle: string | null;
-	resourceType: V3SupplementResourceType;
-	label: string;
-	childGenerationId: string;
-	childBlueprintId: string;
 }
 
 export type ComponentStatus = 'pending' | 'generating' | 'ready' | 'patched' | 'failed';

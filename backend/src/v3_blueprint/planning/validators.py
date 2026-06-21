@@ -25,6 +25,19 @@ def _allowed_roles_from_resource_spec(resource_spec: dict | None) -> set[str]:
         raw_roles = spec.get(key)
         if isinstance(raw_roles, list):
             roles.update(role for role in raw_roles if isinstance(role, str) and role)
+
+    sections = spec.get("sections")
+    if isinstance(sections, dict):
+        for key in ("required", "optional"):
+            raw_sections = sections.get(key)
+            if not isinstance(raw_sections, list):
+                continue
+            for section in raw_sections:
+                if not isinstance(section, dict):
+                    continue
+                role = section.get("role")
+                if isinstance(role, str) and role:
+                    roles.add(role)
     return roles
 
 

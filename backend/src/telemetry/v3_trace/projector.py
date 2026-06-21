@@ -14,9 +14,6 @@ from telemetry.v3_trace.event_types import (
     GENERATION_START_REQUESTED,
     GENERATION_STARTED,
     QUESTIONS_COMPLETED,
-    REPAIR_SUMMARY_READY,
-    REPAIR_ATTEMPTED,
-    REPAIR_ESCALATED,
     RESOURCE_FINALISED,
     SECTION_COMPLETED,
     SECTION_FAILED,
@@ -38,7 +35,6 @@ def project_report(events: list[dict]) -> dict:
             "answer_key": None,
         },
         "review": None,
-        "repairs": [],
         "terminal": None,
         "llm_summary": {},
     }
@@ -142,12 +138,6 @@ def project_report(events: list[dict]) -> dict:
 
         elif event_type == COHERENCE_REPORT_READY:
             report["review"] = payload
-
-        elif event_type == REPAIR_SUMMARY_READY:
-            report["repair_summary"] = payload
-
-        elif event_type in (REPAIR_ATTEMPTED, REPAIR_ESCALATED):
-            report["repairs"].append(payload)
 
         elif event_type == FINAL_PACK_READY:
             report["final_pack"] = payload
