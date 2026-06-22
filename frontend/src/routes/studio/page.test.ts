@@ -3,6 +3,10 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const navigationMocks = vi.hoisted(() => ({
+	goto: vi.fn()
+}));
+
 const mocks = vi.hoisted(() => ({
 	approveChunkedPlan: vi.fn(),
 	adjustBlueprint: vi.fn(),
@@ -18,6 +22,16 @@ const mocks = vi.hoisted(() => ({
 	startChunkedPlan: vi.fn()
 }));
 
+const builderMocks = vi.hoisted(() => ({
+	createBuilderLesson: vi.fn(),
+	saveDocument: vi.fn(),
+	v3PackToBuilderDocument: vi.fn()
+}));
+
+vi.mock('$app/navigation', () => ({
+	goto: navigationMocks.goto
+}));
+
 vi.mock('$lib/api/v3', () => ({
 	approveChunkedPlan: mocks.approveChunkedPlan,
 	adjustBlueprint: mocks.adjustBlueprint,
@@ -31,6 +45,18 @@ vi.mock('$lib/api/v3', () => ({
 	regenerateChunkedPlan: mocks.regenerateChunkedPlan,
 	retryChunkedSection: mocks.retryChunkedSection,
 	startChunkedPlan: mocks.startChunkedPlan
+}));
+
+vi.mock('$lib/builder/api/lesson-crud', () => ({
+	createBuilderLesson: builderMocks.createBuilderLesson
+}));
+
+vi.mock('$lib/builder/persistence/idb-store', () => ({
+	saveDocument: builderMocks.saveDocument
+}));
+
+vi.mock('$lib/builder/adapters/from-generation', () => ({
+	v3PackToBuilderDocument: builderMocks.v3PackToBuilderDocument
 }));
 
 vi.mock('$lib/components/studio/V3InputSurface.svelte', async () => ({
@@ -75,6 +101,7 @@ function latestGenerationHandlers(): unknown {
 describe('studio chunked URL resume', () => {
 	beforeEach(() => {
 		resetV3Studio();
+		navigationMocks.goto.mockReset();
 		mocks.approveChunkedPlan.mockReset();
 		mocks.connectV3ChunkedStream.mockReset();
 		mocks.connectV3ChunkedStream.mockImplementation(() => vi.fn());
@@ -83,6 +110,9 @@ describe('studio chunked URL resume', () => {
 		mocks.getChunkedPlanStatus.mockReset();
 		mocks.fetchV3Document.mockReset();
 		mocks.getV3GenerationBlueprint.mockReset();
+		builderMocks.createBuilderLesson.mockReset();
+		builderMocks.saveDocument.mockReset();
+		builderMocks.v3PackToBuilderDocument.mockReset();
 		window.history.replaceState({}, '', '/studio');
 	});
 
@@ -730,5 +760,168 @@ describe('studio chunked URL resume', () => {
 		expect(v3Studio.canvas).toHaveLength(1);
 		expect(v3Studio.canvas[0]?.id).toBe('practice');
 		expect(v3Studio.canvas[0]?.sectionStatus).toBe('failed');
+	});
+
+	it('opens the current studio pack in Builder from the edit stage', async () => {
+		v3Studio.stage = 'edit';
+		v3Studio.generationId = 'gen-builder';
+		v3Studio.bookletStatus = 'final_ready';
+		v3Studio.activePack = {
+			generation_id: 'gen-builder',
+			blueprint_id: 'bp-1',
+			template_id: 'guided-concept-path',
+			subject: 'Mathematics',
+			status: 'final_ready',
+			sections: [{ section_id: 'intro', header: { title: 'Quadratic review' } }],
+			warnings: [],
+			section_diagnostics: [],
+			booklet_issues: []
+		};
+		builderMocks.v3PackToBuilderDocument.mockReturnValue({
+			id: 'lesson-doc-1',
+			title: 'Quadratic review',
+			subject: 'Mathematics',
+			sections: [],
+			blocks: {},
+			media: {},
+			version: 1,
+			preset_id: 'blue-classroom',
+			source: 'generated',
+			created_at: '2026-06-22T00:00:00Z',
+			updated_at: '2026-06-22T00:00:00Z'
+		});
+		builderMocks.createBuilderLesson.mockResolvedValue({
+			id: 'builder-1',
+			source_generation_id: 'gen-builder',
+			source_type: 'v3_generation',
+			title: 'Quadratic review',
+			created_at: '2026-06-22T00:00:00Z',
+			updated_at: '2026-06-22T00:00:00Z',
+			document: { id: 'lesson-doc-1' }
+		});
+		builderMocks.saveDocument.mockResolvedValue(undefined);
+
+		render(StudioPage);
+
+		await fireEvent.click(await screen.findByRole('button', { name: 'Open in Builder' }));
+
+		expect(builderMocks.v3PackToBuilderDocument).toHaveBeenCalledWith(
+			expect.objectContaining({ generation_id: 'gen-builder' }),
+			{ routeGenerationId: 'gen-builder' }
+		);
+		expect(builderMocks.createBuilderLesson).toHaveBeenCalledWith(
+			expect.objectContaining({
+				source_type: 'v3_generation',
+				source_generation_id: 'gen-builder',
+				title: 'Quadratic review'
+			})
+		);
+		expect(builderMocks.saveDocument).toHaveBeenCalled();
+		await waitFor(() => expect(navigationMocks.goto).toHaveBeenCalledWith('/builder/builder-1'));
+	});
+
+	it('shows review flags in the active studio edit surface', async () => {
+		v3Studio.stage = 'edit';
+		v3Studio.generationId = 'gen-issues';
+		v3Studio.bookletStatus = 'draft_needs_review';
+		v3Studio.activePack = {
+			generation_id: 'gen-issues',
+			blueprint_id: 'bp-1',
+			template_id: 'guided-concept-path',
+			subject: 'Mathematics',
+			status: 'draft_needs_review',
+			sections: [{ section_id: 'practice', header: { title: 'Practice' } }],
+			warnings: [],
+			section_diagnostics: [],
+			booklet_issues: [{ message: 'Check worked example wording.', section_id: 'practice', category: 'clarity' }]
+		};
+		v3Studio.bookletIssues = v3Studio.activePack.booklet_issues;
+
+		render(StudioPage);
+
+		expect(await screen.findByText('Review flags')).toBeTruthy();
+		expect(screen.getByText('Check worked example wording.')).toBeTruthy();
+		expect(screen.getByText('practice - clarity')).toBeTruthy();
+	});
+
+	it('clears stale rendered booklet state before chunked regenerate resolves', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-regenerate');
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-regenerate',
+			stage: 'plan_ready',
+			structural_plan: {
+				lesson_mode: 'first_exposure',
+				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
+				sections: [],
+				question_plan: []
+			},
+			section_briefs: {},
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: false,
+			next_action: 'approve_or_regenerate'
+		});
+		const regeneration = deferred<{
+			generation_id: string;
+			stage: 'plan_ready';
+			structural_plan: {
+				lesson_mode: string;
+				lesson_intent: { goal: string; structure_rationale: string };
+				anchor: { example: string; reuse_scope: string };
+				sections: never[];
+				question_plan: never[];
+			};
+			section_briefs: Record<string, never>;
+			failed_sections: never[];
+			blueprint_id: null;
+			execution_started: false;
+			next_action: 'approve_or_regenerate';
+		}>();
+		mocks.regenerateChunkedPlan.mockReturnValue(regeneration.promise);
+
+		render(StudioPage);
+		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-regenerate'));
+
+		v3Studio.canvas = [
+			{
+				id: 'stale',
+				title: 'Stale section',
+				teacher_labels: '',
+				order: 0,
+				sectionStatus: 'complete',
+				renderable: true,
+				missingComponents: [],
+				missingVisuals: [],
+				diagnosticWarnings: [],
+				components: [],
+				visual: null,
+				questions: [],
+				mergedFields: { explanation: { body: 'old' } }
+			}
+		];
+		v3Studio.draftPack = {
+			generation_id: 'gen-regenerate',
+			blueprint_id: 'bp-old',
+			template_id: 'guided-concept-path',
+			subject: 'Mathematics',
+			status: 'draft_ready',
+			sections: [{ section_id: 'stale' }],
+			warnings: [],
+			section_diagnostics: [],
+			booklet_issues: []
+		};
+		v3Studio.finalPack = v3Studio.draftPack;
+		v3Studio.activePack = v3Studio.draftPack;
+		v3Studio.bookletIssues = [{ message: 'Old issue' }];
+
+		await fireEvent.click(await screen.findByRole('button', { name: 'Regenerate' }));
+		await fireEvent.click(await screen.findByRole('button', { name: 'Submit' }));
+
+		expect(v3Studio.canvas).toEqual([]);
+		expect(v3Studio.draftPack).toBeNull();
+		expect(v3Studio.finalPack).toBeNull();
+		expect(v3Studio.activePack).toBeNull();
+		expect(v3Studio.bookletIssues).toEqual([]);
 	});
 });

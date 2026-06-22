@@ -2,33 +2,33 @@
 	import { LectioThemeSurface, basePresetMap, templateRegistryMap } from 'lectio';
 	import type { SectionContent } from 'lectio';
 	import type { BookletStatus, V3DraftPack } from '$lib/types/v3';
+	import V3BookletIssuesPanel from '$lib/components/studio/V3BookletIssuesPanel.svelte';
+	import {
+		getBookletPrintReadiness,
+		getBookletStatusSummary
+	} from '$lib/studio/v3-booklet';
 
 	interface Props {
 		pack: V3DraftPack;
 		status: BookletStatus;
 		issues?: Array<Record<string, unknown>>;
+		showIssues?: boolean;
 	}
 
-	let { pack, status, issues = [] }: Props = $props();
+	let { pack, status, issues = [], showIssues = true }: Props = $props();
 
 	const template = $derived(templateRegistryMap[pack.template_id]);
 	const preset = $derived(basePresetMap['blue-classroom'] ?? Object.values(basePresetMap)[0]);
-
-	const labelByStatus: Record<BookletStatus, string> = {
-		streaming_preview: 'Writing lesson pieces...',
-		draft_ready: 'Draft booklet ready - checking consistency.',
-		draft_with_warnings: 'Draft booklet available with warnings.',
-		draft_needs_review: 'Draft needs review before classroom use.',
-		final_ready: 'Final booklet ready.',
-		final_with_warnings: 'Final booklet ready with minor warnings.',
-		failed_unusable: 'No usable booklet could be assembled.'
-	};
+	const printReadiness = $derived(getBookletPrintReadiness(status, pack));
+	const statusSummary = $derived(getBookletStatusSummary(status));
 </script>
 
 <section class="mx-auto max-w-4xl space-y-4 px-4 py-4">
-	<p class="rounded-lg border border-border/60 bg-muted/30 px-4 py-3 text-sm font-medium">
-		{labelByStatus[status]}
-	</p>
+	<div class="rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
+		<p class="text-sm font-medium">{printReadiness.label}</p>
+		<p class="mt-1 text-sm text-muted-foreground">{printReadiness.detail}</p>
+		<p class="mt-2 text-xs uppercase tracking-wide text-muted-foreground">{statusSummary}</p>
+	</div>
 
 	{#if pack.warnings.length}
 		<div class="rounded-lg border border-amber-300/60 bg-amber-50/60 px-4 py-3 text-sm">
@@ -41,15 +41,8 @@
 		</div>
 	{/if}
 
-	{#if issues.length}
-		<div class="rounded-lg border border-border/60 bg-card px-4 py-3 text-sm">
-			<p class="font-semibold">Issues to review</p>
-			<ul class="ml-5 list-disc">
-				{#each issues as issue}
-					<li>{String(issue.message ?? 'Unknown issue')}</li>
-				{/each}
-			</ul>
-		</div>
+	{#if showIssues}
+		<V3BookletIssuesPanel {issues} />
 	{/if}
 
 	{#if template && preset}

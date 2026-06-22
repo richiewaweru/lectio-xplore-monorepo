@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import { goto } from '$app/navigation';
 	import { onDestroy, onMount } from 'svelte';
 
 	import V3InputSurface from '$lib/components/studio/V3InputSurface.svelte';
@@ -8,6 +9,7 @@
 	import V3PlanActions from '$lib/components/studio/V3PlanActions.svelte';
 	import V3Canvas from '$lib/components/studio/V3Canvas.svelte';
 	import V3BookletPackView from '$lib/components/studio/V3BookletPackView.svelte';
+	import V3BookletIssuesPanel from '$lib/components/studio/V3BookletIssuesPanel.svelte';
 
 	import {
 		approveChunkedPlan,
@@ -24,6 +26,9 @@
 	} from '$lib/api/v3';
 	import { isApiError } from '$lib/api/errors';
 	import { resetV3Studio, v3Studio } from '$lib/stores/v3-studio.svelte';
+	import { createBuilderLesson } from '$lib/builder/api/lesson-crud';
+	import { v3PackToBuilderDocument } from '$lib/builder/adapters/from-generation';
+	import { saveDocument } from '$lib/builder/persistence/idb-store';
 	import {
 		applyComponentPatchedToCanvas,
 		applyComponentReadyToCanvas,
@@ -35,20 +40,30 @@
 		mergeDiagramFrame,
 		mergePracticeProblem
 	} from '$lib/studio/v3-canvas';
-	import { getBookletExportPolicy, isBookletStatus } from '$lib/studio/v3-booklet';
+	import {
+		getBookletExportPolicy,
+		getBookletPrintReadiness,
+		isBookletStatus
+	} from '$lib/studio/v3-booklet';
 	import { coerceV3DocumentToPack } from '$lib/studio/v3-document';
+	import type { V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
 	import { mapPackSectionsToCanvas } from '$lib/studio/v3-print-canvas';
 	import type { BookletStatus, V3ChunkedPlanState, V3DraftPack, V3InputForm } from '$lib/types/v3';
 
 	let pdfLoading = $state(false);
 	let pdfError = $state<string | null>(null);
-	let pdfConfirming = $state(false);
 	let pdfOpen = $state(false);
 	let schoolName = $state('');
 	let teacherName = $state('');
 	let exportDate = $state('');
 	let includeAnswers = $state(true);
+	let builderLoading = $state(false);
+	let builderError = $state<string | null>(null);
 	const currentExportPolicy = $derived(getBookletExportPolicy(v3Studio.bookletStatus));
+	const currentPrintReadiness = $derived(
+		getBookletPrintReadiness(v3Studio.bookletStatus, v3Studio.activePack)
+	);
+	const builderSourcePack = $derived(v3Studio.activePack ?? v3Studio.finalPack ?? v3Studio.draftPack);
 	let stage2Progress = $state<{
 		completed: string[];
 		failed: string[];
@@ -79,6 +94,10 @@
 
 	function handleStartOver(): void {
 		disconnectActiveChunkedStream();
+		builderLoading = false;
+		builderError = null;
+		pdfOpen = false;
+		pdfError = null;
 		resetV3Studio();
 	}
 
@@ -129,6 +148,19 @@
 		);
 	}
 
+	function clearRenderedBookletState(): void {
+		v3Studio.canvas = [];
+		v3Studio.draftPack = null;
+		v3Studio.finalPack = null;
+		v3Studio.activePack = null;
+		v3Studio.bookletIssues = [];
+		v3Studio.bookletStatus = 'streaming_preview';
+		v3Studio.coherenceHint = null;
+		pdfOpen = false;
+		pdfError = null;
+		builderError = null;
+	}
+
 	async function applyChunkedState(
 		state: V3ChunkedPlanState,
 		{ resume = false }: { resume?: boolean } = {}
@@ -149,6 +181,7 @@
 
 		if (resolved.stage === 'plan_ready') {
 			disconnectActiveChunkedStream();
+			clearRenderedBookletState();
 			if (resolved.structural_plan) {
 				v3Studio.canvas = buildStructuralPlanCanvas(resolved.structural_plan);
 			}
@@ -157,6 +190,7 @@
 		}
 		if (resolved.stage === 'assembly_blocked') {
 			disconnectActiveChunkedStream();
+			clearRenderedBookletState();
 			if (resolved.structural_plan) {
 				v3Studio.canvas = buildStructuralPlanCanvas(resolved.structural_plan);
 			}
@@ -263,6 +297,7 @@
 
 	async function handleInputSubmit(form: V3InputForm) {
 		v3Studio.error = null;
+		builderError = null;
 		v3Studio.form = form;
 		v3Studio.stage = 'fill';
 		try {
@@ -619,6 +654,7 @@
 		const generationId = chunked.generation_id;
 		v3Studio.generationId = generationId;
 		v3Studio.error = null;
+		builderError = null;
 		v3Studio.stage = 'fill';
 		if (chunked.structural_plan) {
 			v3Studio.canvas = buildStructuralPlanCanvas(chunked.structural_plan);
@@ -645,6 +681,7 @@
 		if (!chunked) return;
 		disconnectActiveChunkedStream();
 		v3Studio.error = null;
+		clearRenderedBookletState();
 		v3Studio.stage = 'fill';
 		try {
 			const next = await regenerateChunkedPlan({
@@ -666,6 +703,7 @@
 		if (!chunked) return;
 		disconnectActiveChunkedStream();
 		v3Studio.error = null;
+		builderError = null;
 		v3Studio.stage = 'fill';
 		try {
 			const next = await retryChunkedSection({
@@ -718,14 +756,6 @@
 			pdfError = 'Export is unavailable for the current booklet status.';
 			return;
 		}
-		if (policy.requiresConfirm && !pdfConfirming) {
-			pdfConfirming = true;
-			const proceed = window.confirm(
-				'This draft needs review before classroom use. Export this draft anyway?'
-			);
-			pdfConfirming = false;
-			if (!proceed) return;
-		}
 		if (!schoolName.trim() || !teacherName.trim()) {
 			pdfError = 'School name and teacher name are required.';
 			return;
@@ -745,6 +775,34 @@
 			pdfError = friendly(err);
 		} finally {
 			pdfLoading = false;
+		}
+	}
+
+	async function handleOpenInBuilder() {
+		const generationId = v3Studio.generationId;
+		const pack = builderSourcePack;
+		if (!generationId || !pack) {
+			builderError = 'A renderable lesson is required before opening Builder.';
+			return;
+		}
+		builderLoading = true;
+		builderError = null;
+		try {
+			const lesson = v3PackToBuilderDocument(pack as V3PackDocument, {
+				routeGenerationId: generationId
+			});
+			const created = await createBuilderLesson({
+				source_type: 'v3_generation',
+				source_generation_id: generationId,
+				title: lesson.title,
+				document: lesson
+			});
+			await saveDocument(created.document);
+			await goto(`/builder/${created.id}`);
+		} catch (err) {
+			builderError = friendly(err);
+		} finally {
+			builderLoading = false;
 		}
 	}
 </script>
@@ -804,6 +862,11 @@
 					onRetrySection={handleChunkedRetrySection}
 				/>
 			{/if}
+			{#if v3Studio.bookletIssues.length}
+				<div class="mx-auto max-w-4xl px-4">
+					<V3BookletIssuesPanel issues={v3Studio.bookletIssues} title="Review flags" />
+				</div>
+			{/if}
 		</div>
 		{:else if v3Studio.stage === 'skeleton' && v3Studio.chunkedState?.structural_plan}
 			{#if v3Studio.signals}
@@ -840,10 +903,22 @@
 				onRegenerate={handleChunkedRegenerate}
 				onRetrySection={handleChunkedRetrySection}
 			/>
-		{:else if v3Studio.stage === 'edit'}
+	{:else if v3Studio.stage === 'edit'}
 		{#if v3Studio.activePack}
 			<div class="mx-auto max-w-4xl px-4 pt-4">
-				<div class="flex justify-end">
+				<div class="rounded-lg border border-border/60 bg-card px-4 py-3">
+					<p class="text-sm font-medium">{currentPrintReadiness.label}</p>
+					<p class="mt-1 text-sm text-muted-foreground">{currentPrintReadiness.detail}</p>
+				</div>
+				<div class="mt-3 flex flex-wrap justify-end gap-2">
+					<button
+						type="button"
+						class="rounded-md border border-input px-4 py-2 text-sm font-medium disabled:opacity-60"
+						onclick={handleOpenInBuilder}
+						disabled={!builderSourcePack || !v3Studio.generationId || builderLoading}
+					>
+						{builderLoading ? 'Opening Builder...' : 'Open in Builder'}
+					</button>
 					<button
 						type="button"
 						class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
@@ -853,6 +928,9 @@
 						{currentExportPolicy.label}
 					</button>
 				</div>
+				{#if builderError}
+					<p class="mt-3 text-sm text-destructive" role="alert">{builderError}</p>
+				{/if}
 				{#if pdfOpen}
 					<div class="mt-3 rounded-lg border border-border/60 bg-card p-4 space-y-3">
 						<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -903,11 +981,17 @@
 		{#if v3Studio.coherenceHint}
 			<p class="mx-auto max-w-3xl px-4 pt-6 text-center text-sm text-muted-foreground">{v3Studio.coherenceHint}</p>
 		{/if}
+		{#if v3Studio.bookletIssues.length}
+			<div class="mx-auto max-w-4xl px-4 pt-4">
+				<V3BookletIssuesPanel issues={v3Studio.bookletIssues} title="Review flags" />
+			</div>
+		{/if}
 		{#if v3Studio.activePack}
 			<V3BookletPackView
 				pack={v3Studio.activePack}
 				status={v3Studio.bookletStatus}
 				issues={v3Studio.bookletIssues}
+				showIssues={false}
 			/>
 			<details class="mx-auto max-w-4xl px-4 pb-6">
 				<summary class="cursor-pointer text-sm font-medium text-muted-foreground">Show generation progress</summary>

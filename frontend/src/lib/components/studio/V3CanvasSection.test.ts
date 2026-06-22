@@ -39,6 +39,31 @@ describe('V3CanvasSection', () => {
 		expect(screen.getByText(/"header":/)).toBeTruthy();
 	});
 
+	it('hides inspect section payload outside debug mode', () => {
+		render(V3CanvasSection, {
+			section: {
+				id: 'sec-1',
+				title: 'Section 1',
+				teacher_labels: '',
+				order: 0,
+				sectionStatus: 'complete',
+				renderable: true,
+				missingComponents: [],
+				missingVisuals: [],
+				diagnosticWarnings: [],
+				components: [],
+				visual: null,
+				questions: [],
+				mergedFields: { header: { title: 'Section 1' } }
+			},
+			templateId: 'guided-concept-path',
+			debugInspect: false
+		});
+
+		expect(screen.queryByText('Inspect section')).toBeNull();
+		expect(screen.queryByText(/"header":/)).toBeNull();
+	});
+
 	it('shows a retryable failure card for failed sections', () => {
 		render(V3CanvasSection, {
 			section: {
