@@ -48,6 +48,11 @@ def _form() -> V3InputForm:
     )
 
 
+def test_stage1_uses_bounded_thinking_and_8000_tokens() -> None:
+    assert structural_planner.STAGE1_THINKING == {"type": "enabled", "budget_tokens": 2000}
+    assert structural_planner.STAGE1_MAX_TOKENS == 8000
+
+
 @pytest.mark.asyncio
 async def test_call_stage1_prints_traceback_and_reraises() -> None:
     signals = _signals()

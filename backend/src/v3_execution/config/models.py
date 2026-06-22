@@ -19,7 +19,7 @@ V3_ANSWER_KEY_GENERATOR_HEAVY = "v3_answer_key_generator_heavy"
 V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V3_SIGNAL_EXTRACTOR: ModelSlot.FAST,
     V3_NARROW: ModelSlot.FAST,
-    V3_STAGE1_PLANNER: ModelSlot.PREMIUM,
+    V3_STAGE1_PLANNER: ModelSlot.STANDARD,
     V3_STAGE2_EXPANDER: ModelSlot.STANDARD,
     V3_BLUEPRINT_ADJUST: ModelSlot.STANDARD,
     V3_SECTION_WRITER: ModelSlot.STANDARD,

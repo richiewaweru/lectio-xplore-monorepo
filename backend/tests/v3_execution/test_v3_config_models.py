@@ -15,17 +15,17 @@ from v3_execution.models import AnswerKeyExecutorWorkOrder, AnswerKeyPlanSpec, W
 
 def test_v3_slot_mapping() -> None:
     assert get_v3_slot("v3_signal_extractor") == ModelSlot.FAST
-    assert get_v3_slot("v3_stage1_planner") == ModelSlot.PREMIUM
+    assert get_v3_slot("v3_stage1_planner") == ModelSlot.STANDARD
     assert get_v3_slot("v3_section_writer") == ModelSlot.STANDARD
     assert get_v3_slot("v3_answer_key_generator") == ModelSlot.FAST
     assert get_v3_slot("v3_answer_key_generator_heavy") == ModelSlot.STANDARD
 
 
 def test_get_v3_spec_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("V3_PREMIUM_MODEL_NAME", "claude-opus-test")
-    monkeypatch.setenv("V3_PREMIUM_PROVIDER", "anthropic")
+    monkeypatch.setenv("V3_STANDARD_MODEL_NAME", "claude-sonnet-test")
+    monkeypatch.setenv("V3_STANDARD_PROVIDER", "anthropic")
     spec = get_v3_spec("v3_stage1_planner")
-    assert spec.model_name == "claude-opus-test"
+    assert spec.model_name == "claude-sonnet-test"
 
 
 def test_answer_key_effective_node_fast_when_answers_present() -> None:
