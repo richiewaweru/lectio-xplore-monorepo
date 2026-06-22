@@ -234,6 +234,20 @@ class SectionBrief(BaseModel):
     _errors: list[str] = PrivateAttr(default_factory=list)
 
 
+def stage2_brief_preview_payload(brief: SectionBrief) -> dict[str, object]:
+    return {
+        "components": [
+            {
+                "component_id": component.component_id,
+                "content_intent": component.content_intent,
+            }
+            for component in brief.components
+        ],
+        "question_prompts": [question.prompt_text for question in brief.question_briefs],
+        "visual_subject": brief.visual_strategy.subject if brief.visual_strategy else None,
+    }
+
+
 # ── Stage 2 error types ───────────────────────────────────────────────────
 
 

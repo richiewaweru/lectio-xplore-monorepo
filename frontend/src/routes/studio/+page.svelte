@@ -38,7 +38,8 @@
 		buildCanvasSkeleton,
 		buildStructuralPlanCanvas,
 		mergeDiagramFrame,
-		mergePracticeProblem
+		mergePracticeProblem,
+		patchCanvasSection
 	} from '$lib/studio/v3-canvas';
 	import {
 		getBookletExportPolicy,
@@ -140,6 +141,12 @@
 		v3Studio.chunkedSectionErrors = sectionErrors;
 	}
 
+	type Stage2BriefPreview = {
+		components: { component_id: string; content_intent: string }[];
+		question_prompts: string[];
+		visual_subject: string | null;
+	};
+
 	function paintCanvasFromPack(pack: V3DraftPack): void {
 		v3Studio.canvas = mapPackSectionsToCanvas(
 			pack.sections,
@@ -198,6 +205,9 @@
 			return;
 		}
 		if (resolved.stage === 'stage2_running') {
+			if (resolved.structural_plan && v3Studio.canvas.length === 0) {
+				v3Studio.canvas = buildStructuralPlanCanvas(resolved.structural_plan);
+			}
 			v3Studio.stage = 'fill';
 			connectChunkedStage2Stream(resolved.generation_id);
 			return;
@@ -325,8 +335,12 @@
 					...v3Studio.chunkedSectionStatus,
 					[sectionId]: 'running'
 				};
+				v3Studio.canvas = patchCanvasSection(v3Studio.canvas, sectionId, (section) => ({
+					...section,
+					sectionStatus: 'running'
+				}));
 			},
-			onSectionDone(sectionId) {
+			onSectionDone(sectionId, brief?: Stage2BriefPreview) {
 				stage2Progress = {
 					completed: Array.from(new Set([...stage2Progress.completed, sectionId])),
 					failed: stage2Progress.failed.filter((id) => id !== sectionId),
@@ -340,6 +354,20 @@
 					...v3Studio.chunkedSectionErrors,
 					[sectionId]: []
 				};
+				v3Studio.canvas = patchCanvasSection(v3Studio.canvas, sectionId, (section) => ({
+					...section,
+					sectionStatus: 'complete',
+					stage2Preview: brief
+						? {
+								componentIntents: brief.components.map((component) => ({
+									componentId: component.component_id,
+									intent: component.content_intent
+								})),
+								questionPrompts: brief.question_prompts,
+								visualSubject: brief.visual_subject
+							}
+						: section.stage2Preview
+				}));
 			},
 			onSectionRetry(sectionId) {
 				stage2Progress = {
@@ -350,6 +378,10 @@
 					...v3Studio.chunkedSectionStatus,
 					[sectionId]: 'retrying'
 				};
+				v3Studio.canvas = patchCanvasSection(v3Studio.canvas, sectionId, (section) => ({
+					...section,
+					sectionStatus: 'running'
+				}));
 			},
 			onSectionFailed(sectionId, errors) {
 				console.warn('[chunked] section failed', sectionId, errors);
@@ -366,6 +398,10 @@
 					...v3Studio.chunkedSectionErrors,
 					[sectionId]: errors
 				};
+				v3Studio.canvas = patchCanvasSection(v3Studio.canvas, sectionId, (section) => ({
+					...section,
+					sectionStatus: 'failed'
+				}));
 			},
 			onStage2Complete(failedSections) {
 				if (v3Studio.chunkedState) {
@@ -840,6 +876,11 @@
 						]
 					: undefined}
 			/>
+			{#if stage2Progress.completed.length === 0 && stage2Progress.active === null}
+				<p class="mx-auto max-w-3xl px-4 text-center text-sm font-medium text-muted-foreground">
+					Designing your lesson…
+				</p>
+			{/if}
 			{#if v3Studio.chunkedState?.structural_plan?.sections?.length}
 				<div class="mx-auto flex max-w-3xl flex-wrap justify-center gap-2 px-4 stage2-progress">
 					{#each v3Studio.chunkedState.structural_plan.sections as section (section.id)}

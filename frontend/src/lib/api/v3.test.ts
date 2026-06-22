@@ -220,7 +220,10 @@ describe('connectV3StudioGenerationStream', () => {
 
 		onmessage?.({ event: 'stage2_section_start', data: '{"section_id":"orient"}' });
 		onmessage?.({ event: 'stage2_section_retry', data: '{"section_id":"orient","attempt":3}' });
-		onmessage?.({ event: 'stage2_section_done', data: '{"section_id":"orient"}' });
+		onmessage?.({
+			event: 'stage2_section_done',
+			data: '{"section_id":"orient","brief":{"components":[{"component_id":"hook-hero","content_intent":"Open with a quick anchor."}],"question_prompts":["Which shapes show equivalent fractions?"],"visual_subject":"Fraction bars"}}'
+		});
 		onmessage?.({
 			event: 'stage2_section_failed',
 			data: '{"section_id":"model","errors":["bad"]}'
@@ -231,7 +234,11 @@ describe('connectV3StudioGenerationStream', () => {
 
 		expect(onSectionStart).toHaveBeenCalledWith('orient');
 		expect(onSectionRetry).toHaveBeenCalledWith('orient', 3);
-		expect(onSectionDone).toHaveBeenCalledWith('orient');
+		expect(onSectionDone).toHaveBeenCalledWith('orient', {
+			components: [{ component_id: 'hook-hero', content_intent: 'Open with a quick anchor.' }],
+			question_prompts: ['Which shapes show equivalent fractions?'],
+			visual_subject: 'Fraction bars'
+		});
 		expect(onSectionFailed).toHaveBeenCalledWith('model', ['bad']);
 		expect(onStage2Complete).toHaveBeenCalledWith(['model']);
 		expect(onAssemblyBlocked).toHaveBeenCalledWith(['model']);

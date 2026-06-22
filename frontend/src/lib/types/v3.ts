@@ -200,6 +200,11 @@ export interface CanvasSection {
 	teacher_labels: string;
 	order: number;
 	sectionStatus: SectionAssemblyStatus;
+	stage2Preview: {
+		componentIntents: { componentId: string; intent: string }[];
+		questionPrompts: string[];
+		visualSubject: string | null;
+	} | null;
 	renderable: boolean;
 	missingComponents: string[];
 	missingVisuals: string[];
@@ -225,7 +230,7 @@ export type BookletStatus =
 	| 'final_with_warnings'
 	| 'failed_unusable';
 
-export type SectionAssemblyStatus = 'complete' | 'incomplete' | 'failed';
+export type SectionAssemblyStatus = 'complete' | 'incomplete' | 'failed' | 'running';
 
 export interface SectionAssemblyDiagnostic {
 	section_id: string;

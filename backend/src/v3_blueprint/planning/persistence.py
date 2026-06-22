@@ -10,7 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.session import async_session_factory
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
-from v3_blueprint.planning.models import SectionBrief, StructuralPlan
+from v3_blueprint.planning.models import (
+    SectionBrief,
+    StructuralPlan,
+    stage2_brief_preview_payload,
+)
 
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
 
@@ -246,6 +250,7 @@ async def resume_stage2(
                     await emit_event("stage2_section_done", {
                         "section_id": section.id,
                         "generation_id": generation_id,
+                        "brief": stage2_brief_preview_payload(brief),
                     })
 
         failed_sections = [

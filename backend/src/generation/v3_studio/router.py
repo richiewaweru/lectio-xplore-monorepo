@@ -28,6 +28,7 @@ from v3_blueprint.planning.models import (
     SectionBrief,
     Stage1PlanFailure,
     StructuralPlan,
+    stage2_brief_preview_payload,
 )
 from v3_blueprint.planning.persistence import (
     load_chunked_state,
@@ -1133,6 +1134,7 @@ async def post_chunked_retry_section(
             {
                 "generation_id": generation_id,
                 "section_id": body.section_id,
+                "brief": stage2_brief_preview_payload(retried) if retried is not None else None,
             },
         )
 

@@ -154,7 +154,14 @@ export type V3StudioStreamHandlers = {
 
 export interface V3ChunkedStreamHandlers {
 	onSectionStart?: (sectionId: string) => void;
-	onSectionDone?: (sectionId: string) => void;
+	onSectionDone?: (
+		sectionId: string,
+		brief?: {
+			components: { component_id: string; content_intent: string }[];
+			question_prompts: string[];
+			visual_subject: string | null;
+		}
+	) => void;
 	onSectionRetry?: (sectionId: string, attempt: number) => void;
 	onSectionFailed?: (sectionId: string, errors: string[]) => void;
 	onStage2Complete?: (failedSections: string[]) => void;
@@ -332,7 +339,16 @@ export function connectV3ChunkedStream(
 					handlers.onSectionStart?.(String(payload.section_id ?? ''));
 					break;
 				case 'stage2_section_done':
-					handlers.onSectionDone?.(String(payload.section_id ?? ''));
+					handlers.onSectionDone?.(
+						String(payload.section_id ?? ''),
+						payload.brief as
+							| {
+									components: { component_id: string; content_intent: string }[];
+									question_prompts: string[];
+									visual_subject: string | null;
+							  }
+							| undefined
+					);
 					break;
 				case 'stage2_section_retry':
 					handlers.onSectionRetry?.(

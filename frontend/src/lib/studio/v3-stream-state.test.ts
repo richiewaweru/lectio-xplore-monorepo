@@ -16,6 +16,7 @@ function baseCanvas(): CanvasSection[] {
 			teacher_labels: '',
 			order: 0,
 			sectionStatus: 'complete',
+			stage2Preview: null,
 			renderable: true,
 			missingComponents: [],
 			missingVisuals: [],

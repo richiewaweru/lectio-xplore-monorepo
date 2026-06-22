@@ -113,7 +113,6 @@
 							<th class="px-3 py-2">Item</th>
 							<th class="px-3 py-2">Difficulty</th>
 							<th class="px-3 py-2">Diagram</th>
-							<th class="px-3 py-2">Answer</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -122,7 +121,6 @@
 								<td class="px-3 py-2">Q{i + 1}</td>
 								<td class="px-3 py-2 capitalize">{difficultyLabel[q.difficulty] ?? q.difficulty}</td>
 								<td class="px-3 py-2">{q.diagram_required ? 'Yes' : '—'}</td>
-								<td class="max-w-xs truncate px-3 py-2">{q.expected_answer}</td>
 							</tr>
 						{/each}
 					</tbody>

@@ -490,7 +490,14 @@ describe('studio chunked URL resume', () => {
 
 		const handlers = latestChunkedHandlers() as {
 			onSectionStart?: (sectionId: string) => void;
-			onSectionDone?: (sectionId: string) => void;
+			onSectionDone?: (
+				sectionId: string,
+				brief?: {
+					components: { component_id: string; content_intent: string }[];
+					question_prompts: string[];
+					visual_subject: string | null;
+				}
+			) => void;
 			onSectionFailed?: (sectionId: string, errors: string[]) => void;
 		};
 		const intro = await screen.findByText('intro');
@@ -498,12 +505,24 @@ describe('studio chunked URL resume', () => {
 
 		handlers.onSectionStart?.('intro');
 		await waitFor(() => expect(intro.className).toContain('active'));
+		expect(v3Studio.canvas[0]?.sectionStatus).toBe('running');
 
-		handlers.onSectionDone?.('intro');
+		handlers.onSectionDone?.('intro', {
+			components: [{ component_id: 'hook-hero', content_intent: 'Open with a concrete anchor.' }],
+			question_prompts: ['Which two fractions show the same amount?'],
+			visual_subject: 'Fraction strip comparison'
+		});
 		await waitFor(() => expect(intro.className).toContain('done'));
+		expect(v3Studio.canvas[0]?.sectionStatus).toBe('complete');
+		expect(v3Studio.canvas[0]?.stage2Preview).toEqual({
+			componentIntents: [{ componentId: 'hook-hero', intent: 'Open with a concrete anchor.' }],
+			questionPrompts: ['Which two fractions show the same amount?'],
+			visualSubject: 'Fraction strip comparison'
+		});
 
 		handlers.onSectionFailed?.('model', ['boom']);
 		await waitFor(() => expect(model.className).toContain('failed'));
+		expect(v3Studio.canvas[1]?.sectionStatus).toBe('failed');
 	});
 
 	it('fails soft when generation_id cannot be resumed', async () => {
@@ -890,6 +909,7 @@ describe('studio chunked URL resume', () => {
 				teacher_labels: '',
 				order: 0,
 				sectionStatus: 'complete',
+				stage2Preview: null,
 				renderable: true,
 				missingComponents: [],
 				missingVisuals: [],

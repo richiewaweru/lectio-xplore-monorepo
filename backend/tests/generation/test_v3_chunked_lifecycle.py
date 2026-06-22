@@ -207,6 +207,13 @@ def _parse_sse_event_name(chunk: str) -> str:
     return ""
 
 
+def _parse_sse_payload(chunk: str) -> dict:
+    for line in chunk.splitlines():
+        if line.startswith("data:"):
+            return __import__("json").loads(line.partition(":")[2].strip())
+    return {}
+
+
 @pytest.fixture(autouse=True)
 def _reset_overrides():
     app.dependency_overrides.clear()
@@ -638,6 +645,28 @@ async def test_chunked_retry_section_can_unblock_assembly() -> None:
     body = resp.json()
     assert body["stage"] == "blueprint_ready"
     assert body["execution_started"] is True
+    queue = await v3_studio_store.get_chunked_queue(generation_id)
+    assert queue is not None
+    start_chunk = await asyncio.wait_for(queue.get(), timeout=5)
+    done_chunk = await asyncio.wait_for(queue.get(), timeout=5)
+    assert isinstance(start_chunk, str)
+    assert isinstance(done_chunk, str)
+    assert _parse_sse_event_name(start_chunk) == "stage2_section_start"
+    assert _parse_sse_event_name(done_chunk) == "stage2_section_done"
+    assert _parse_sse_payload(done_chunk) == {
+        "generation_id": generation_id,
+        "section_id": "intro",
+        "brief": {
+            "components": [
+                {
+                    "component_id": "hook-hero",
+                    "content_intent": "recovered brief",
+                }
+            ],
+            "question_prompts": [],
+            "visual_subject": None,
+        },
+    }
 
 
 @pytest.mark.asyncio
@@ -898,7 +927,21 @@ async def test_chunked_approve_emits_stage2_progress_events() -> None:
         _ = user_id
         await _chunked_emit_event(generation_id, "stage2_section_start", {"generation_id": generation_id, "section_id": "intro"})
         await _chunked_emit_event(generation_id, "stage2_section_retry", {"generation_id": generation_id, "section_id": "intro", "attempt": 2})
-        await _chunked_emit_event(generation_id, "stage2_section_failed", {"generation_id": generation_id, "section_id": "intro", "errors": ["capacity"]})
+        await _chunked_emit_event(
+            generation_id,
+            "stage2_section_done",
+            {
+                "generation_id": generation_id,
+                "section_id": "intro",
+                "brief": {
+                    "components": [
+                        {"component_id": "hook-hero", "content_intent": "Set up the anchor visually."}
+                    ],
+                    "question_prompts": ["Which two fractions show the same amount?"],
+                    "visual_subject": "A fraction strip comparison",
+                },
+            },
+        )
         await _chunked_emit_event(generation_id, "stage2_complete", {"generation_id": generation_id, "failed_sections": ["intro"]})
         await persist_chunked_state(generation_id, {"stage": "assembly_blocked", "failed_sections": ["intro"]})
 
@@ -909,15 +952,26 @@ async def test_chunked_approve_emits_stage2_progress_events() -> None:
 
     queue = await v3_studio_store.get_chunked_queue(generation_id)
     assert queue is not None
-    event_names: list[str] = []
+    events: list[tuple[str, dict]] = []
     for _ in range(4):
         chunk = await asyncio.wait_for(queue.get(), timeout=5)
         assert isinstance(chunk, str)
-        event_names.append(_parse_sse_event_name(chunk))
+        events.append((_parse_sse_event_name(chunk), _parse_sse_payload(chunk)))
 
-    assert event_names == [
+    assert [event for event, _payload in events] == [
         "stage2_section_start",
         "stage2_section_retry",
-        "stage2_section_failed",
+        "stage2_section_done",
         "stage2_complete",
     ]
+    assert events[2][1] == {
+        "generation_id": generation_id,
+        "section_id": "intro",
+        "brief": {
+            "components": [
+                {"component_id": "hook-hero", "content_intent": "Set up the anchor visually."}
+            ],
+            "question_prompts": ["Which two fractions show the same amount?"],
+            "visual_subject": "A fraction strip comparison",
+        },
+    }

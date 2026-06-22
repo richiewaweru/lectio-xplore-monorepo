@@ -25,10 +25,17 @@
 	});
 </script>
 
-<div class="v3-canvas-section space-y-4 rounded-xl border border-border/60 bg-muted/20 p-4" id="section-{section.id}">
+<div
+	class="v3-canvas-section space-y-4 rounded-xl border border-border/60 bg-muted/20 p-4"
+	class:border-primary={section.sectionStatus === 'running'}
+	id="section-{section.id}"
+>
 	<div class="flex flex-col gap-1 border-b border-border/40 pb-3">
 		<h3 class="text-lg font-semibold tracking-tight">{section.title}</h3>
 		<p class="text-xs text-muted-foreground">{section.teacher_labels}</p>
+		{#if section.sectionStatus === 'running'}
+			<p class="text-xs font-medium text-primary">Planning…</p>
+		{/if}
 	</div>
 
 	{#if section.sectionStatus === 'failed'}
@@ -64,6 +71,24 @@
 
 		{#if section.visual}
 			<V3CanvasVisual visual={section.visual} />
+		{/if}
+
+		{#if section.stage2Preview && section.components.every((component) => component.status === 'pending')}
+			<div class="stage2-preview space-y-2 rounded-md border border-border/30 bg-muted/10 p-3">
+				{#each section.stage2Preview.componentIntents as item (item.componentId)}
+					<p class="text-xs text-muted-foreground">
+						<span class="font-medium">{item.componentId}:</span> {item.intent}
+					</p>
+				{/each}
+				{#each section.stage2Preview.questionPrompts as prompt, i}
+					<p class="text-xs italic text-muted-foreground">Q{i + 1}: {prompt}</p>
+				{/each}
+				{#if section.stage2Preview.visualSubject}
+					<p class="text-xs text-muted-foreground">
+						Diagram: {section.stage2Preview.visualSubject}
+					</p>
+				{/if}
+			</div>
 		{/if}
 
 		<div class="space-y-2">

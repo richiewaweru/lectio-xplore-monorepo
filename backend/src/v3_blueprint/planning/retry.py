@@ -4,7 +4,13 @@ import logging
 from collections.abc import Awaitable, Callable
 
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
-from v3_blueprint.planning.models import SectionBrief, SectionPlan, Stage1PlanFailure, StructuralPlan
+from v3_blueprint.planning.models import (
+    SectionBrief,
+    SectionPlan,
+    Stage1PlanFailure,
+    StructuralPlan,
+    stage2_brief_preview_payload,
+)
 from v3_blueprint.planning.persistence import persist_section_brief, persist_structural_plan
 from v3_blueprint.planning.section_expander import (
     _call_stage2_section,
@@ -150,6 +156,7 @@ async def run_stage2(
                 await emit_event("stage2_section_done", {
                     "section_id": section.id,
                     "generation_id": generation_id,
+                    "brief": stage2_brief_preview_payload(brief),
                 })
 
         completed_briefs.append(brief)
