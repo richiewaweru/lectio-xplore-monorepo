@@ -117,7 +117,7 @@ sections:
         - summary-block
         - what-next-bridge
         - definition-card
-        - glossary-strip
+        - glossary-rail
         - reflection-prompt    # too open-ended — exit ticket needs specific evidence
 
   optional:
@@ -147,7 +147,7 @@ forbidden_components:
   - process-steps          # no procedural instruction in assessment
   - definition-card        # no vocabulary instruction
   - definition-family      # no vocabulary instruction
-  - glossary-strip         # no vocabulary instruction
+  - glossary-rail          # no vocabulary instruction
   - summary-block          # not appropriate — no lesson arc to summarise
   - what-next-bridge       # exit tickets are standalone
   - diagram-block          # visual complexity slows the check

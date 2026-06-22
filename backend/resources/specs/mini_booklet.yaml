@@ -107,7 +107,7 @@ sections:
         - process-steps
         - worked-example-card
       allowed_components:
-        - glossary-strip
+        - glossary-rail
         - key-fact
         - callout-block
         - comparison-grid
@@ -186,7 +186,7 @@ sections:
       allowed_components:
         - explanation-block
         - worked-example-card
-        - glossary-strip
+        - glossary-rail
       max_count: 1
 
 # ── FORBIDDEN COMPONENTS (globally, across all sections) ────────────────────

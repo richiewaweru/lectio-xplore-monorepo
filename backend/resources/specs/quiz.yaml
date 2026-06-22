@@ -226,7 +226,7 @@ forbidden_components:
   - process-steps          # instructional — not appropriate in assessment
   - definition-card        # vocabulary instruction — not appropriate in assessment
   - definition-family      # vocabulary instruction
-  - glossary-strip         # vocabulary reference — invalidates vocabulary assessment
+  - glossary-rail          # vocabulary reference — invalidates vocabulary assessment
   - summary-block          # quizzes do not summarise content
   - what-next-bridge       # quizzes are standalone
   - diagram-block          # standalone visual not appropriate in formal assessment
@@ -344,6 +344,6 @@ validation:
   - "At standard and deep depth, must include an answer key summary section"
   - "At quick depth, answer key is optional"
   - "Question count must meet the minimum for the selected depth"
-  - "Must not contain definition-card, definition-family, or glossary-strip unless vocabulary_support is active in the intro section"
+  - "Must not contain definition-card, definition-family, or glossary-rail unless vocabulary_support is active in the intro section"
   - "If practice-stack is used, it must be in flat-list mode with no hints"
   - "Must include at least two different question types (components) at standard/deep depth"

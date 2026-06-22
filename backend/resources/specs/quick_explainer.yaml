@@ -108,7 +108,7 @@ sections:
         - key-fact
         - process-steps
       allowed_components:
-        - glossary-strip
+        - glossary-rail
         - comparison-grid
         - callout-block
         - insight-strip

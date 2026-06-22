@@ -198,7 +198,7 @@ forbidden_components:
   - explanation-block      # practice sets do not teach
   - definition-card        # vocabulary instruction belongs in mini booklet
   - definition-family      # vocabulary instruction belongs in mini booklet
-  - glossary-strip         # not appropriate in a fluency drill
+  - glossary-rail          # not appropriate in a fluency drill
   - summary-block          # practice sets do not summarise
   - what-next-bridge       # practice sets are self-contained units
   - diagram-block          # standalone visuals not appropriate for drills

@@ -174,7 +174,7 @@ forbidden_components:
   - hook-hero              # teacher already introduced the concept
   - explanation-block      # must not re-teach
   - definition-card        # must not re-teach vocabulary
-  - glossary-strip         # vocabulary support handled by mini booklet
+  - glossary-rail          # vocabulary support handled by mini booklet
   - summary-block          # worksheets close with student reflection
   - what-next-bridge       # worksheets are self-contained units
   - diagram-block          # diagrams belong in the booklet, not the worksheet

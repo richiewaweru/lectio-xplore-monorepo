@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from contracts.lectio import get_component_card
-from resource_specs.loader import get_spec
 from resource_specs.loader import load_all_specs
 
 SPECS_DIR = Path(__file__).parents[2] / "resources" / "specs"
@@ -64,17 +63,18 @@ def test_resource_type_enum_matches_available_specs() -> None:
     )
 
 
-def test_lesson_section_component_slugs_resolve_in_registry() -> None:
-    lesson = get_spec("lesson")
+def test_all_spec_section_component_slugs_resolve_in_registry() -> None:
+    specs = load_all_specs(SPECS_DIR)
 
-    for section in [*lesson.sections.required, *lesson.sections.optional]:
-        for field_name in (
-            "preferred_components",
-            "allowed_components",
-            "forbidden_components",
-        ):
-            for slug in getattr(section, field_name, []):
-                assert get_component_card(slug) is not None, (
-                    f"lesson.{section.role}.{field_name} references "
-                    f"unknown component slug '{slug}'"
-                )
+    for spec_id, spec in specs.items():
+        for section in [*spec.sections.required, *spec.sections.optional]:
+            for field_name in (
+                "preferred_components",
+                "allowed_components",
+                "forbidden_components",
+            ):
+                for slug in getattr(section, field_name, []):
+                    assert get_component_card(slug) is not None, (
+                        f"{spec_id}.{section.role}.{field_name} references "
+                        f"unknown component slug '{slug}'"
+                    )
