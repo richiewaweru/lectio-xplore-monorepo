@@ -199,6 +199,11 @@ export interface CanvasSection {
 	title: string;
 	teacher_labels: string;
 	order: number;
+	sectionStatus: SectionAssemblyStatus;
+	renderable: boolean;
+	missingComponents: string[];
+	missingVisuals: string[];
+	diagnosticWarnings: string[];
 	components: CanvasComponent[];
 	visual: CanvasVisual | null;
 	questions: Array<{

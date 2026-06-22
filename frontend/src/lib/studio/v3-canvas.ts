@@ -10,11 +10,16 @@ export function buildCanvasSkeleton(blueprint: BlueprintPreviewDTO): CanvasSecti
 	return sorted.map((section) => ({
 		id: section.id,
 		title: section.title,
-		teacher_labels: section.components.map((c) => c.teacher_label).join(' · '),
+		teacher_labels: section.components.map((component) => component.teacher_label).join(' | '),
 		order: section.order,
-		components: section.components.map((c) => ({
-			id: c.component_id,
-			teacher_label: c.teacher_label,
+		sectionStatus: 'complete',
+		renderable: true,
+		missingComponents: [],
+		missingVisuals: [],
+		diagnosticWarnings: [],
+		components: section.components.map((component) => ({
+			id: component.component_id,
+			teacher_label: component.teacher_label,
 			status: 'pending' as ComponentStatus,
 			data: null
 		})),
@@ -27,10 +32,10 @@ export function buildCanvasSkeleton(blueprint: BlueprintPreviewDTO): CanvasSecti
 				}
 			: null,
 		questions: blueprint.question_plan
-			.filter((q) => q.attaches_to_section_id === section.id)
-			.map((q) => ({
-				id: q.id,
-				difficulty: q.difficulty,
+			.filter((question) => question.attaches_to_section_id === section.id)
+			.map((question) => ({
+				id: question.id,
+				difficulty: question.difficulty,
 				status: 'pending' as ComponentStatus,
 				data: null
 			})),
@@ -42,8 +47,13 @@ export function buildStructuralPlanCanvas(plan: V3StructuralPlan): CanvasSection
 	return plan.sections.map((section, index) => ({
 		id: section.id,
 		title: section.title,
-		teacher_labels: section.components.map((component) => component.slug).join(' · '),
+		teacher_labels: section.components.map((component) => component.slug).join(' | '),
 		order: index,
+		sectionStatus: 'complete',
+		renderable: true,
+		missingComponents: [],
+		missingVisuals: [],
+		diagnosticWarnings: [],
 		components: section.components.map((component) => ({
 			id: component.slug,
 			teacher_label: component.slug,
@@ -75,10 +85,9 @@ export function patchCanvasSection(
 	sectionId: string,
 	patch: (section: CanvasSection) => CanvasSection
 ): CanvasSection[] {
-	return sections.map((s) => (s.id === sectionId ? patch(s) : s));
+	return sections.map((section) => (section.id === sectionId ? patch(section) : section));
 }
 
-/** Merge component block into Lectio-shaped section fields */
 export function mergeComponentField(
 	merged: Record<string, unknown>,
 	sectionField: string,
@@ -92,31 +101,31 @@ export function mergeDiagramFrame(
 	payload: { image_url?: string | null; frame_index?: number | null }
 ): Record<string, unknown> {
 	const url = payload.image_url ?? '';
-	const fi = payload.frame_index;
+	const frameIndex = payload.frame_index;
 	const next = { ...merged };
-	if (fi == null) {
+	if (frameIndex == null) {
 		next.diagram = { image_url: url, caption: '', alt_text: '' };
 		return next;
 	}
-	const ds = (next.diagram_series as Record<string, unknown> | undefined) ?? {
+	const diagramSeries = (next.diagram_series as Record<string, unknown> | undefined) ?? {
 		title: '',
 		diagrams: [] as unknown[]
 	};
-	const diagrams = [...((ds.diagrams as unknown[]) ?? [])];
-	while (diagrams.length <= fi) {
+	const diagrams = [...((diagramSeries.diagrams as unknown[]) ?? [])];
+	while (diagrams.length <= frameIndex) {
 		diagrams.push({
 			step_label: `Frame ${diagrams.length + 1}`,
 			caption: '',
 			image_url: ''
 		});
 	}
-	const step = diagrams[fi] as Record<string, unknown>;
-	diagrams[fi] = {
+	const step = diagrams[frameIndex] as Record<string, unknown>;
+	diagrams[frameIndex] = {
 		...step,
 		image_url: url,
-		caption: step.caption ?? `Frame ${fi + 1}`
+		caption: step.caption ?? `Frame ${frameIndex + 1}`
 	};
-	next.diagram_series = { ...ds, diagrams };
+	next.diagram_series = { ...diagramSeries, diagrams };
 	return next;
 }
 
@@ -133,7 +142,7 @@ export function mergePracticeProblem(
 		(typeof data.question === 'string' && data.question) ||
 		(typeof data.stem === 'string' && data.stem) ||
 		'';
-	const idx = problems.findIndex((p) => (p as { _qid?: string })._qid === questionId);
+	const index = problems.findIndex((problem) => (problem as { _qid?: string })._qid === questionId);
 	const row: Record<string, unknown> = {
 		_qid: questionId,
 		difficulty,
@@ -142,7 +151,7 @@ export function mergePracticeProblem(
 		problem_type: typeof data.problem_type === 'string' ? data.problem_type : 'open'
 	};
 	if (typeof data.diagram === 'object' && data.diagram) row.diagram = data.diagram;
-	if (idx >= 0) problems[idx] = row;
+	if (index >= 0) problems[index] = row;
 	else problems.push(row);
 	next.practice = {
 		...practice,

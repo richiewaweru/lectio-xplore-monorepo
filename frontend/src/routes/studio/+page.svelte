@@ -121,6 +121,14 @@
 		v3Studio.chunkedSectionErrors = sectionErrors;
 	}
 
+	function paintCanvasFromPack(pack: V3DraftPack): void {
+		v3Studio.canvas = mapPackSectionsToCanvas(
+			pack.sections,
+			pack.section_diagnostics,
+			v3Studio.chunkedState?.structural_plan?.sections ?? []
+		);
+	}
+
 	async function applyChunkedState(
 		state: V3ChunkedPlanState,
 		{ resume = false }: { resume?: boolean } = {}
@@ -233,7 +241,7 @@
 			}
 			v3Studio.bookletStatus = pack.status;
 			v3Studio.bookletIssues = pack.booklet_issues;
-			v3Studio.canvas = mapPackSectionsToCanvas(pack.sections);
+			paintCanvasFromPack(pack);
 			if (pack.status !== 'streaming_preview') {
 				v3Studio.coherenceHint = null;
 				v3Studio.stage = 'edit';
@@ -328,7 +336,7 @@
 				if (v3Studio.chunkedState) {
 					v3Studio.chunkedState = {
 						...v3Studio.chunkedState,
-						stage: failedSections.length > 0 ? 'assembly_blocked' : 'stage2_complete',
+						stage: 'stage2_complete',
 						failed_sections: failedSections
 					};
 				}
@@ -337,11 +345,6 @@
 					failed: failedSections,
 					active: null
 				};
-				if (failedSections.length > 0) {
-					v3Studio.stage = 'skeleton';
-					disconnectActiveChunkedStream();
-					return;
-				}
 				disconnectActiveChunkedStream();
 				connectGenerationStream(generationId);
 			},
@@ -359,6 +362,9 @@
 					failed: failedSections,
 					active: null
 				};
+				if (v3Studio.chunkedState?.structural_plan) {
+					v3Studio.canvas = buildStructuralPlanCanvas(v3Studio.chunkedState.structural_plan);
+				}
 				v3Studio.stage = 'skeleton';
 				disconnectActiveChunkedStream();
 			},
@@ -390,7 +396,7 @@
 				v3Studio.activePack = pack;
 				v3Studio.bookletStatus = status;
 				v3Studio.bookletIssues = Array.isArray(pack.booklet_issues) ? pack.booklet_issues : [];
-				v3Studio.canvas = mapPackSectionsToCanvas(pack.sections);
+				paintCanvasFromPack(pack);
 				v3Studio.stage = 'fill';
 			},
 			onFinalPackReady: (data) => {
@@ -401,7 +407,7 @@
 				v3Studio.activePack = pack;
 				v3Studio.bookletStatus = status;
 				v3Studio.bookletIssues = Array.isArray(pack.booklet_issues) ? pack.booklet_issues : [];
-				v3Studio.canvas = mapPackSectionsToCanvas(pack.sections);
+				paintCanvasFromPack(pack);
 			},
 			onDraftStatusUpdated: (data) => {
 				const status = statusFromPayload(data, v3Studio.bookletStatus);
@@ -410,7 +416,7 @@
 					v3Studio.draftPack = pack;
 					v3Studio.activePack = pack;
 					v3Studio.bookletIssues = Array.isArray(pack.booklet_issues) ? pack.booklet_issues : [];
-					v3Studio.canvas = mapPackSectionsToCanvas(pack.sections);
+					paintCanvasFromPack(pack);
 				}
 				v3Studio.bookletStatus = status;
 				v3Studio.stage = 'fill';
@@ -557,12 +563,9 @@
 				if (v3Studio.chunkedState) {
 					v3Studio.chunkedState = {
 						...v3Studio.chunkedState,
-						stage: failedSections.length ? 'assembly_blocked' : 'stage2_complete',
+						stage: 'stage2_complete',
 						failed_sections: failedSections
 					};
-				}
-				if (failedSections.length) {
-					v3Studio.stage = 'skeleton';
 				}
 			},
 			onGenerationStarting: () => {
@@ -573,7 +576,9 @@
 					try {
 						const preview = await getV3GenerationBlueprint(gid);
 						v3Studio.blueprint = preview;
-						v3Studio.canvas = buildCanvasSkeleton(preview);
+						if (v3Studio.canvas.length === 0) {
+							v3Studio.canvas = buildCanvasSkeleton(preview);
+						}
 					} catch {
 						// Stream will continue; preview can be recovered from status endpoints later.
 					}
@@ -796,6 +801,7 @@
 					sections={v3Studio.canvas}
 					stage={v3Studio.stage}
 					templateId={v3Studio.blueprint?.template_id ?? 'guided-concept-path'}
+					onRetrySection={handleChunkedRetrySection}
 				/>
 			{/if}
 		</div>
@@ -906,11 +912,11 @@
 			<details class="mx-auto max-w-4xl px-4 pb-6">
 				<summary class="cursor-pointer text-sm font-medium text-muted-foreground">Show generation progress</summary>
 				<div class="pt-4">
-					<V3Canvas sections={v3Studio.canvas} stage={v3Studio.stage} templateId={v3Studio.blueprint?.template_id ?? 'guided-concept-path'} />
+					<V3Canvas sections={v3Studio.canvas} stage={v3Studio.stage} templateId={v3Studio.blueprint?.template_id ?? 'guided-concept-path'} onRetrySection={handleChunkedRetrySection} />
 				</div>
 			</details>
 		{:else}
-			<V3Canvas sections={v3Studio.canvas} stage={v3Studio.stage} templateId={v3Studio.blueprint?.template_id ?? 'guided-concept-path'} />
+			<V3Canvas sections={v3Studio.canvas} stage={v3Studio.stage} templateId={v3Studio.blueprint?.template_id ?? 'guided-concept-path'} onRetrySection={handleChunkedRetrySection} />
 		{/if}
 	{/if}
 

@@ -95,7 +95,7 @@ sections:
         - explanation-block
       allowed_components:
         - definition-family
-        - glossary-strip
+        - glossary-rail
         - insight-strip
         - comparison-grid
         - callout-block

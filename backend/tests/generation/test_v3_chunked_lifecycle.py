@@ -21,6 +21,7 @@ from v3_blueprint.planning.models import (
     ComponentSlot,
     LessonIntent,
     QPlanItem,
+    QuestionBrief,
     SectionBrief,
     SectionPlan,
     Stage1PlanFailure,
@@ -145,6 +146,55 @@ def _sample_structural_plan() -> StructuralPlan:
                 temperature="warm",
                 diagram_required=False,
             )
+        ],
+        answer_key_style="brief_explanations",
+    )
+
+
+def _two_section_structural_plan() -> StructuralPlan:
+    return StructuralPlan(
+        lesson_mode="first_exposure",
+        lesson_intent=LessonIntent(
+            goal="By the end students can compare equivalent fractions.",
+            structure_rationale="Move from hook into modeled reasoning.",
+        ),
+        anchor=AnchorSpec(
+            example="splitting fraction strips",
+            reuse_scope="intro then model then practice",
+        ),
+        voice=VoiceSpec(register_name="simple", tone="encouraging"),
+        prior_knowledge=["equal sharing"],
+        sections=[
+            SectionPlan(
+                id="orient",
+                title="Orient",
+                role="orient",
+                visual_required=False,
+                transition_note=None,
+                components=[ComponentSlot(slug="hook-hero", purpose="Open the lesson")],
+            ),
+            SectionPlan(
+                id="practice",
+                title="Practice",
+                role="practice",
+                visual_required=False,
+                transition_note="Try the idea independently.",
+                components=[ComponentSlot(slug="practice-stack", purpose="Independent practice")],
+            ),
+        ],
+        question_plan=[
+            QPlanItem(
+                question_id="q1",
+                section_id="orient",
+                temperature="warm",
+                diagram_required=False,
+            ),
+            QPlanItem(
+                question_id="q2",
+                section_id="practice",
+                temperature="cold",
+                diagram_required=False,
+            ),
         ],
         answer_key_style="brief_explanations",
     )
@@ -650,6 +700,118 @@ async def test_attempt_chunked_assembly_logs_execution_handoff_success() -> None
     execution_starting_idx = printed.index(execution_starting)
     execution_started_idx = printed.index(execution_started)
     assert queue_registering_idx < queue_registered_idx < execution_starting_idx < execution_started_idx
+
+
+@pytest.mark.asyncio
+async def test_attempt_chunked_assembly_proceeds_with_partial_failed_sections() -> None:
+    sample_plan = _two_section_structural_plan()
+    generation_id = str(uuid.uuid4())
+    _signals, form = _seed_context_models()
+    queue = asyncio.Queue()
+    from generation.v3_studio.router import _ensure_chunked_generation_row
+
+    await _ensure_chunked_generation_row(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        subject="Math",
+        context="Equivalent fractions",
+    )
+    orient_brief = SectionBrief(
+        section_id="orient",
+        components=[
+            ComponentBrief(
+                component_id="hook-hero",
+                content_intent="Use a fraction strip hook.",
+            )
+        ],
+        question_briefs=[
+            QuestionBrief(
+                question_id="q1",
+                prompt_text="Which fraction strips show the same amount?",
+                expected_answer="The strips that cover the same length are equivalent.",
+            )
+        ],
+        visual_strategy=None,
+    )
+    practice_failed = SectionBrief(
+        section_id="practice",
+        components=[],
+        question_briefs=[],
+        visual_strategy=None,
+    )
+    practice_failed._failed = True
+    practice_failed._errors = ["retry exhausted"]
+
+    with (
+        patch("generation.v3_studio.router._validate_blueprint"),
+        patch("generation.v3_studio.router.v3_studio_store.put_blueprint", new=AsyncMock()),
+        patch("generation.v3_studio.router._ensure_generation_stream", new=AsyncMock(return_value=queue)),
+        patch("generation.v3_studio.router._start_generation_from_chunked_blueprint", new=AsyncMock()),
+    ):
+        from generation.v3_studio.router import _attempt_chunked_assembly
+
+        await _attempt_chunked_assembly(
+            generation_id=generation_id,
+            user_id=TEST_USER_A.id,
+            plan=sample_plan,
+            briefs=[orient_brief, practice_failed],
+            form=form,
+            resource_spec={"resource_type": "lesson"},
+        )
+
+    state = await load_chunked_state(generation_id)
+    assert state["stage"] == "blueprint_ready"
+    assert state["execution_started"] is True
+    assert state["failed_sections"] == ["practice"]
+
+
+@pytest.mark.asyncio
+async def test_attempt_chunked_assembly_blocks_only_when_no_sections_renderable() -> None:
+    sample_plan = _two_section_structural_plan()
+    generation_id = str(uuid.uuid4())
+    _signals, form = _seed_context_models()
+    from generation.v3_studio.router import _ensure_chunked_generation_row
+
+    await _ensure_chunked_generation_row(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        subject="Math",
+        context="Equivalent fractions",
+    )
+    orient_failed = SectionBrief(
+        section_id="orient",
+        components=[],
+        question_briefs=[],
+        visual_strategy=None,
+    )
+    practice_failed = SectionBrief(
+        section_id="practice",
+        components=[],
+        question_briefs=[],
+        visual_strategy=None,
+    )
+    orient_failed._failed = True
+    practice_failed._failed = True
+
+    with (
+        patch("generation.v3_studio.router._chunked_emit_event", new=AsyncMock()),
+        patch("generation.v3_studio.router._start_generation_from_chunked_blueprint", new=AsyncMock()),
+    ):
+        from generation.v3_studio.router import _attempt_chunked_assembly
+
+        await _attempt_chunked_assembly(
+            generation_id=generation_id,
+            user_id=TEST_USER_A.id,
+            plan=sample_plan,
+            briefs=[orient_failed, practice_failed],
+            form=form,
+            resource_spec={"resource_type": "lesson"},
+        )
+
+    state = await load_chunked_state(generation_id)
+    assert state["stage"] == "assembly_blocked"
+    assert state["execution_started"] is False
+    assert state["failed_sections"] == ["orient", "practice"]
 
 
 @pytest.mark.asyncio

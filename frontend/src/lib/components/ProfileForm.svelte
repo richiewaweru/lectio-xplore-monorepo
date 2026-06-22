@@ -98,7 +98,7 @@
 				<p class="eyebrow">Generation Brief</p>
 				<h3>Describe the lesson you want</h3>
 				<p class="copy">
-					The shell keeps profile data outside the pipeline. Here you are choosing the lesson
+					The shell keeps profile data outside the generation flow. Here you are choosing the lesson
 					brief, and a fully wired Lectio template plus live preset.
 				</p>
 			</div>

@@ -1,5 +1,16 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
+import { vi } from 'vitest';
+
+vi.mock('./V3CanvasComponent.svelte', async () => ({
+	default: (await import('../../../routes/studio/__fixtures__/MockGeneric.svelte')).default
+}));
+vi.mock('./V3CanvasVisual.svelte', async () => ({
+	default: (await import('../../../routes/studio/__fixtures__/MockGeneric.svelte')).default
+}));
+vi.mock('./V3LectioSectionEmbed.svelte', async () => ({
+	default: (await import('../../../routes/studio/__fixtures__/MockGeneric.svelte')).default
+}));
 
 import V3CanvasSection from './V3CanvasSection.svelte';
 
@@ -11,6 +22,11 @@ describe('V3CanvasSection', () => {
 				title: 'Section 1',
 				teacher_labels: '',
 				order: 0,
+				sectionStatus: 'complete',
+				renderable: true,
+				missingComponents: [],
+				missingVisuals: [],
+				diagnosticWarnings: [],
 				components: [],
 				visual: null,
 				questions: [],
@@ -22,5 +38,29 @@ describe('V3CanvasSection', () => {
 		expect(screen.getByText('Inspect section')).toBeTruthy();
 		expect(screen.getByText(/"header":/)).toBeTruthy();
 	});
-});
 
+	it('shows a retryable failure card for failed sections', () => {
+		render(V3CanvasSection, {
+			section: {
+				id: 'sec-failed',
+				title: 'Failed Section',
+				teacher_labels: 'practice',
+				order: 1,
+				sectionStatus: 'failed',
+				renderable: false,
+				missingComponents: ['practice-stack'],
+				missingVisuals: [],
+				diagnosticWarnings: ['Section writer failed after retries.'],
+				components: [],
+				visual: null,
+				questions: [],
+				mergedFields: {}
+			},
+			templateId: 'guided-concept-path',
+			onRetrySection: () => {}
+		});
+
+		expect(screen.getByText('Section failed')).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Retry section' })).toBeTruthy();
+	});
+});

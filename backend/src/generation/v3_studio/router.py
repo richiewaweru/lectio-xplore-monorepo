@@ -597,6 +597,11 @@ async def _attempt_chunked_assembly(
     form: V3InputForm,
     resource_spec: dict[str, Any],
 ) -> None:
+    failed_sections = [
+        brief.section_id
+        for brief in briefs
+        if getattr(brief, "_failed", False)
+    ]
     print(
         f"\n[ASSEMBLY ATTEMPT] generation_id={generation_id}"
         f" sections={len(briefs)}",
@@ -671,7 +676,7 @@ async def _attempt_chunked_assembly(
         {
             "stage": "blueprint_ready",
             "blueprint_id": blueprint_id,
-            "failed_sections": [],
+            "failed_sections": failed_sections,
             "execution_started": True,
         },
     )

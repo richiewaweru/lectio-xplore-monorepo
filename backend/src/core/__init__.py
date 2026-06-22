@@ -1,2 +1,1 @@
-"""Shared infrastructure for the shell and the pipeline."""
-
+"""Shared infrastructure for the shell and backend runtime."""

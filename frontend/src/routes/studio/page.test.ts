@@ -248,7 +248,7 @@ describe('studio chunked URL resume', () => {
 		expect(mocks.fetchV3Document).not.toHaveBeenCalled();
 	});
 
-	it('does not connect the stream when approve returns assembly_blocked', async () => {
+	it('does not connect the stream when approve returns true assembly_blocked', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-approve-blocked');
 		mocks.getChunkedPlanStatus.mockResolvedValue({
 			generation_id: 'gen-approve-blocked',
@@ -353,7 +353,7 @@ describe('studio chunked URL resume', () => {
 		expect(disconnectChunked).toHaveBeenCalled();
 	});
 
-	it('stays blocked and skips generation SSE when chunked stage2 completes with failures', async () => {
+	it('keeps generation SSE alive when chunked stage2 completes with partial failures', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-failed');
 		mocks.getChunkedPlanStatus.mockResolvedValue({
 			generation_id: 'gen-failed',
@@ -400,13 +400,18 @@ describe('studio chunked URL resume', () => {
 			onAssemblyBlocked?: (failedSections: string[]) => void;
 		};
 		handlers.onStage2Complete?.(['intro']);
-		expect(v3Studio.stage).toBe('skeleton');
+		expect(v3Studio.stage).toBe('fill');
 		expect(disconnectChunked).toHaveBeenCalled();
-		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
+		await waitFor(() =>
+			expect(mocks.connectV3StudioGenerationStream).toHaveBeenCalledWith(
+				'gen-failed',
+				expect.any(Object)
+			)
+		);
+		expect(v3Studio.chunkedState?.failed_sections).toEqual(['intro']);
 
 		handlers.onAssemblyBlocked?.(['intro']);
 		expect(v3Studio.stage).toBe('skeleton');
-		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
 	});
 
 	it('shows stage2 section pills updating from chunked SSE events', async () => {
@@ -685,6 +690,16 @@ describe('studio chunked URL resume', () => {
 		handlers.onDraftPackReady?.({
 			booklet_status: 'draft_ready',
 			pack: {
+				section_diagnostics: [
+					{
+						section_id: 'build',
+						status: 'incomplete',
+						renderable: true,
+						missing_components: ['practice-stack'],
+						missing_visuals: [],
+						warnings: ['Missing practice block']
+					}
+				],
 				sections: [{ section_id: 'build', header: { title: 'Build understanding' } }],
 				booklet_issues: [],
 				status: 'draft_ready'
@@ -692,10 +707,21 @@ describe('studio chunked URL resume', () => {
 		});
 		expect(v3Studio.canvas).toHaveLength(1);
 		expect(v3Studio.canvas[0]?.id).toBe('build');
+		expect(v3Studio.canvas[0]?.sectionStatus).toBe('incomplete');
 
 		handlers.onDraftStatusUpdated?.({
 			booklet_status: 'draft_with_warnings',
 			pack: {
+				section_diagnostics: [
+					{
+						section_id: 'practice',
+						status: 'failed',
+						renderable: false,
+						missing_components: ['practice-stack'],
+						missing_visuals: [],
+						warnings: ['Writer failed']
+					}
+				],
 				sections: [{ section_id: 'practice', header: { title: 'Practice' } }],
 				booklet_issues: [],
 				status: 'draft_with_warnings'
@@ -703,5 +729,6 @@ describe('studio chunked URL resume', () => {
 		});
 		expect(v3Studio.canvas).toHaveLength(1);
 		expect(v3Studio.canvas[0]?.id).toBe('practice');
+		expect(v3Studio.canvas[0]?.sectionStatus).toBe('failed');
 	});
 });

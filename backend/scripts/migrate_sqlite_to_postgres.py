@@ -17,8 +17,8 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from core.config import Settings  # noqa: E402
+from contracts.document import PipelineDocument  # noqa: E402
 from generation.repositories.file_generation_report_repo import FileGenerationReportRepository  # noqa: E402
-from pipeline.api import PipelineDocument  # noqa: E402
 
 logger = logging.getLogger("migrate_sqlite_to_postgres")
 LEGACY_DOCUMENT_OUTPUT_DIR = "outputs/documents"
@@ -42,7 +42,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--source-document-dir",
         default=LEGACY_DOCUMENT_OUTPUT_DIR,
-        help="Legacy document directory for importing PipelineDocument JSON files.",
+        help="Legacy document directory for importing document JSON files.",
     )
     parser.add_argument(
         "--source-report-dir",

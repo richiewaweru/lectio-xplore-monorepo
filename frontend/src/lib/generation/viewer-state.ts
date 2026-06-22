@@ -226,7 +226,7 @@ export function applySectionPartial(
 			document,
 			warning: {
 				message:
-					error instanceof Error ? error.message : '[Lectio] Invalid partial section from pipeline.'
+					error instanceof Error ? error.message : '[Lectio] Invalid partial section from generation stream.'
 			}
 		};
 	}
@@ -310,7 +310,7 @@ export function applySectionReady(
 			document,
 			warning: {
 				message:
-					error instanceof Error ? error.message : '[Lectio] Invalid section from pipeline.'
+					error instanceof Error ? error.message : '[Lectio] Invalid section from generation stream.'
 			}
 		};
 	}

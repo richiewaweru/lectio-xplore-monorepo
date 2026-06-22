@@ -15,6 +15,11 @@ function baseCanvas(): CanvasSection[] {
 			title: 'Section 1',
 			teacher_labels: '',
 			order: 0,
+			sectionStatus: 'complete',
+			renderable: true,
+			missingComponents: [],
+			missingVisuals: [],
+			diagnosticWarnings: [],
 			components: [
 				{ id: 'c1', teacher_label: 'Hook', status: 'pending', data: null },
 				{ id: 'c2', teacher_label: 'Explain', status: 'pending', data: null }
@@ -63,4 +68,3 @@ describe('v3 stream state reducers', () => {
 		});
 	});
 });
-

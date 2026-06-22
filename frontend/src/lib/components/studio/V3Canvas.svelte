@@ -6,9 +6,10 @@
 		sections: CanvasSection[];
 		stage: V3Stage;
 		templateId: string;
+		onRetrySection?: (sectionId: string) => void;
 	}
 
-	let { sections, stage, templateId }: Props = $props();
+	let { sections, stage, templateId, onRetrySection }: Props = $props();
 
 	const progressLabel: Record<string, string> = {
 		fill: 'Writing your resource...',
@@ -23,7 +24,7 @@
 
 	<div class="space-y-8">
 		{#each sections as section (section.id)}
-			<V3CanvasSection {section} {templateId} />
+			<V3CanvasSection {section} {templateId} {onRetrySection} />
 		{/each}
 	</div>
 </div>

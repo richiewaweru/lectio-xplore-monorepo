@@ -30,34 +30,36 @@ def assemble_blueprint(
     title: str = "Generated Lesson",
     resource_type: str = "lesson",
 ) -> ProductionBlueprint:
-    # GATE — block if any section failed
-    failed = [b for b in briefs if getattr(b, "_failed", False)]
+    failed = [brief for brief in briefs if getattr(brief, "_failed", False)]
+    brief_by_section_id = {brief.section_id: brief for brief in briefs}
+    failed_section_ids = {brief.section_id for brief in failed}
     print(
         f"\n[ASSEMBLER] briefs={len(briefs)}"
-        f" failed={[b.section_id for b in failed]}",
+        f" failed={[brief.section_id for brief in failed]}",
         flush=True,
     )
-    if failed:
-        print(
-            f"\n[ASSEMBLER BLOCKED] failed_sections="
-            f"{[b.section_id for b in failed]}",
-            flush=True,
-        )
-        raise BlueprintAssemblyBlocked(
-            failed_sections=[b.section_id for b in failed]
-        )
 
-    # Assemble sections
     sections: list[BlueprintSection] = []
-    for section_plan, brief in zip(plan.sections, briefs):
+    included_section_ids: set[str] = set()
+    for section_plan in plan.sections:
+        brief = brief_by_section_id.get(section_plan.id)
+        if brief is None or section_plan.id in failed_section_ids:
+            continue
+
+        component_briefs = {
+            component_brief.component_id: component_brief
+            for component_brief in brief.components
+        }
         components: list[ComponentPlan] = []
-        for comp_plan, comp_brief in zip(
-            section_plan.components, brief.components
-        ):
+        for comp_plan in section_plan.components:
+            comp_brief = component_briefs.get(comp_plan.slug)
+            if comp_brief is None:
+                continue
             components.append(ComponentPlan(
                 component=comp_plan.slug,
                 content_intent=comp_brief.content_intent,
             ))
+
         sections.append(BlueprintSection(
             section_id=section_plan.id,
             title=section_plan.title,
@@ -65,9 +67,30 @@ def assemble_blueprint(
             visual_required=section_plan.visual_required,
             components=components,
         ))
+        included_section_ids.add(section_plan.id)
 
-    question_plan = _assemble_question_plan(plan, briefs)
-    visual_strategy = _assemble_visual_strategy(plan, briefs)
+    if not sections:
+        blocked_sections = [
+            section.id
+            for section in plan.sections
+            if section.id not in included_section_ids
+        ]
+        print(
+            f"\n[ASSEMBLER BLOCKED] failed_sections={blocked_sections}",
+            flush=True,
+        )
+        raise BlueprintAssemblyBlocked(failed_sections=blocked_sections)
+
+    question_plan = _assemble_question_plan(
+        plan,
+        briefs,
+        included_section_ids,
+    )
+    visual_strategy = _assemble_visual_strategy(
+        plan,
+        briefs,
+        included_section_ids,
+    )
     print(
         f"\n[ASSEMBLER OK] sections={len(sections)}"
         f" questions={len(question_plan)}"
@@ -111,29 +134,28 @@ def _build_metadata(*, title: str, subject: str) -> BlueprintMetadata:
 def _assemble_question_plan(
     plan: StructuralPlan,
     briefs: list[SectionBrief],
+    included_section_ids: set[str],
 ) -> list[QuestionPlanItem]:
-    # Index Stage 2 question briefs by question_id
     q_briefs: dict[str, QuestionBrief] = {
-        qb.question_id: qb
+        question_brief.question_id: question_brief
         for brief in briefs
-        for qb in brief.question_briefs
+        for question_brief in brief.question_briefs
     }
 
     assembled: list[QuestionPlanItem] = []
-    for q in plan.question_plan:
-        if q.question_id not in q_briefs:
-            raise ValueError(
-                f"question_id '{q.question_id}' from Stage 1 plan has no "
-                f"matching brief from Stage 2. Assembly cannot proceed."
-            )
-        qb = q_briefs[q.question_id]
+    for question in plan.question_plan:
+        if question.section_id not in included_section_ids:
+            continue
+        question_brief = q_briefs.get(question.question_id)
+        if question_brief is None:
+            continue
         assembled.append(QuestionPlanItem(
-            question_id=q.question_id,
-            section_id=q.section_id,
-            temperature=q.temperature,
-            diagram_required=q.diagram_required,
-            prompt=qb.prompt_text,
-            expected_answer=qb.expected_answer,
+            question_id=question.question_id,
+            section_id=question.section_id,
+            temperature=question.temperature,
+            diagram_required=question.diagram_required,
+            prompt=question_brief.prompt_text,
+            expected_answer=question_brief.expected_answer,
         ))
     return assembled
 
@@ -141,23 +163,30 @@ def _assemble_question_plan(
 def _assemble_visual_strategy(
     plan: StructuralPlan,
     briefs: list[SectionBrief],
+    included_section_ids: set[str],
 ) -> VisualStrategyPlan:
     visuals: list[VisualInstruction] = []
-    for section_plan, brief in zip(plan.sections, briefs):
-        if brief.visual_strategy is not None:
-            must_show = ", ".join(brief.visual_strategy.must_show)
-            must_not_show = ", ".join(brief.visual_strategy.must_not_show)
-            strategy = (
-                f"{brief.visual_strategy.subject} "
-                f"(anchor: {brief.visual_strategy.anchor_link}; "
-                f"must_show: {must_show or 'none'}; "
-                f"must_not_show: {must_not_show or 'none'})"
-            )
-            visuals.append(VisualInstruction(
-                section_id=section_plan.id,
-                strategy=strategy,
-                density=brief.visual_strategy.type_hint,
-            ))
+    brief_by_section_id = {brief.section_id: brief for brief in briefs}
+    for section_plan in plan.sections:
+        if section_plan.id not in included_section_ids:
+            continue
+        brief = brief_by_section_id.get(section_plan.id)
+        if brief is None or brief.visual_strategy is None:
+            continue
+
+        must_show = ", ".join(brief.visual_strategy.must_show)
+        must_not_show = ", ".join(brief.visual_strategy.must_not_show)
+        strategy = (
+            f"{brief.visual_strategy.subject} "
+            f"(anchor: {brief.visual_strategy.anchor_link}; "
+            f"must_show: {must_show or 'none'}; "
+            f"must_not_show: {must_not_show or 'none'})"
+        )
+        visuals.append(VisualInstruction(
+            section_id=section_plan.id,
+            strategy=strategy,
+            density=brief.visual_strategy.type_hint,
+        ))
     return VisualStrategyPlan(visuals=visuals)
 
 
