@@ -73,7 +73,7 @@ STEP 7 — MISCONCEPTIONS
 
 STEP 8 — VISUALS & QUESTIONS
   Visuals: mark visual_required only where the concept needs spatial or
-  relational structure. Max 2 sections total.
+  relational structure.
   Questions: follow this lesson_mode arc:
     first_exposure → warm and medium only
     consolidation  → medium to cold; at least one transfer
@@ -89,7 +89,6 @@ STEP 9 — SELF CHECK
   - the anchor appears by exact name where the concept is taught
   - question temperatures match lesson_mode
   - no two components in any section share a section_field
-  - max 2 sections have visual_required=true
   - transition_notes are specific, first section only has null
   - repair_focus is present if lesson_mode=repair
 
@@ -146,7 +145,6 @@ HARD RULES:
 - Only use slugs from AVAILABLE COMPONENTS. Never invent slugs.
 - Max 6 sections.
 - Max 4 component slugs per section.
-- Max 2 sections with visual_required=true.
 - transition_note is null for the first section only.
 - Every emitted role must exist in the active resource spec.
 - known_pitfalls is [] if no pitfall-alert was planned.

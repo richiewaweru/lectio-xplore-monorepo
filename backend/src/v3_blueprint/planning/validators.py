@@ -189,6 +189,34 @@ def validate_section_brief(
             f"but no visual_strategy returned."
         )
 
+    if section_plan.visual_required and brief.visual_strategy:
+        vs = brief.visual_strategy
+        visual_slugs = {c.slug for c in section_plan.components}
+        if "diagram-series" in visual_slugs:
+            if len(vs.frames) < 2:
+                errors.append(
+                    f"Section '{section_plan.id}': diagram-series component "
+                    f"requires >= 2 frames in visual_strategy, got {len(vs.frames)}."
+                )
+        elif vs.frames:
+            errors.append(
+                f"Section '{section_plan.id}': frames provided but "
+                f"component is not diagram-series. frames must be []."
+            )
+
+    if brief.visual_strategy and brief.visual_strategy.source_question_ids:
+        bad_qids = set(brief.visual_strategy.source_question_ids) - this_section_qids
+        if bad_qids:
+            errors.append(
+                f"Section '{section_plan.id}': source_question_ids references "
+                f"questions not in this section: {sorted(bad_qids)}"
+            )
+
+    if brief.visual_strategy and not brief.visual_strategy.visual_job.strip():
+        errors.append(
+            f"Section '{section_plan.id}': visual_strategy.visual_job is empty."
+        )
+
     # 6. section_id matches
     if brief.section_id != section_plan.id:
         errors.append(

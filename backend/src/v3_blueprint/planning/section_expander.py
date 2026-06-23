@@ -150,16 +150,33 @@ Do not add any keys not shown.
 If visual_required is true for this section, replace null with:
 {
   "subject": "what the visual depicts — one sentence",
+  "visual_job": "what the visual is FOR - e.g. introduce anchor visually, summarize section explanation as labeled diagram, support question q-practice-2 with unlabeled figure - max 120 chars",
   "type_hint": "diagram | chart | illustration | comparison",
   "anchor_link": "how this visual connects to the anchor example",
   "must_show": ["label 1", "label 2"],
-  "must_not_show": ["anything that would distract or mislead"]
+  "must_not_show": ["anything that would distract or mislead"],
+  "source_question_ids": ["question IDs this visual supports - empty list if none"],
+  "frames": [
+    {
+      "description": "what frame 1 shows",
+      "must_show": ["..."]
+    },
+    {
+      "description": "what frame 2 shows",
+      "must_show": ["..."]
+    }
+  ]
 }
 
 HARD RULES:
 - question_briefs is an empty list [] if no questions are assigned to this section
 - visual_strategy is null if visual_required is false for this section
 - visual_strategy must be populated if visual_required is true
+- visual_job describes PURPOSE, not runtime timing
+- If the section's visual-capable component is diagram-series, frames must have at least 2 entries
+- If the component is not diagram-series, frames must be []
+- If the visual supports a specific question, add its ID to source_question_ids
+- visual_job max 120 characters
 - component_id values must exactly match slugs from the section plan
 - content_intent max 300 chars
 - Do not add JSON keys not shown above

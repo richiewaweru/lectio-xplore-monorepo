@@ -10,6 +10,7 @@ from v3_blueprint.models import (
     QuestionPlanItem,
     RepairFocus,
     SectionPlan as BlueprintSection,
+    VisualFrameInstruction,
     VisualInstruction,
     VisualStrategyPlan,
     VoicePlan,
@@ -20,6 +21,22 @@ from v3_blueprint.planning.models import (
     SectionBrief,
     StructuralPlan,
 )
+
+VISUAL_CAPABLE_COMPONENTS = {
+    "diagram-block",
+    "diagram-series",
+    "diagram-compare",
+    "worked-example-card",
+    "timeline-block",
+}
+
+
+def _find_visual_component_id(section_plan) -> str | None:
+    """Return the first visual-capable component slug in this section."""
+    for comp in section_plan.components:
+        if comp.slug in VISUAL_CAPABLE_COMPONENTS:
+            return comp.slug
+    return None
 
 
 def assemble_blueprint(
@@ -174,18 +191,37 @@ def _assemble_visual_strategy(
         if brief is None or brief.visual_strategy is None:
             continue
 
-        must_show = ", ".join(brief.visual_strategy.must_show)
-        must_not_show = ", ".join(brief.visual_strategy.must_not_show)
+        vs = brief.visual_strategy
+        component_id = _find_visual_component_id(section_plan)
+        must_show = ", ".join(vs.must_show)
+        must_not_show = ", ".join(vs.must_not_show)
         strategy = (
-            f"{brief.visual_strategy.subject} "
-            f"(anchor: {brief.visual_strategy.anchor_link}; "
+            f"{vs.subject} "
+            f"(job: {vs.visual_job}; "
+            f"anchor: {vs.anchor_link}; "
             f"must_show: {must_show or 'none'}; "
             f"must_not_show: {must_not_show or 'none'})"
         )
+        frame_instructions = [
+            VisualFrameInstruction(
+                description=frame.description,
+                must_show=frame.must_show,
+            )
+            for frame in vs.frames
+        ]
         visuals.append(VisualInstruction(
             section_id=section_plan.id,
+            component_id=component_id or "diagram-block",
+            subject=vs.subject,
+            visual_job=vs.visual_job,
+            type_hint=vs.type_hint,
+            anchor_link=vs.anchor_link,
+            must_show=vs.must_show,
+            must_not_show=vs.must_not_show,
+            source_question_ids=vs.source_question_ids,
+            frames=frame_instructions,
             strategy=strategy,
-            density=brief.visual_strategy.type_hint,
+            density=vs.type_hint,
         ))
     return VisualStrategyPlan(visuals=visuals)
 

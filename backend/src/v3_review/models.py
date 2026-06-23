@@ -21,6 +21,7 @@ IssueCategory = Literal[
     "extra_unplanned_content",
     "anchor_drift",
     "visual_mismatch",
+    "visual_generation_failed",
     "question_mismatch",
     "answer_key_mismatch",
     "register_mismatch",

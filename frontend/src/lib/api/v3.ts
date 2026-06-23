@@ -137,6 +137,7 @@ export type V3StudioStreamHandlers = {
 	onComponentReady?: (data: Record<string, unknown>) => void;
 	onSectionWriterFailed?: (data: Record<string, unknown>) => void;
 	onVisualReady?: (data: Record<string, unknown>) => void;
+	onVisualFailed?: (data: Record<string, unknown>) => void;
 	onQuestionReady?: (data: Record<string, unknown>) => void;
 	onComponentPatched?: (data: Record<string, unknown>) => void;
 	onGenerationComplete?: (data: Record<string, unknown>) => void;
@@ -261,6 +262,9 @@ export function connectV3StudioGenerationStream(
 					break;
 				case 'visual_ready':
 					handlers.onVisualReady?.(payload);
+					break;
+				case 'visual_failed':
+					handlers.onVisualFailed?.(payload);
 					break;
 				case 'question_ready':
 					handlers.onQuestionReady?.(payload);

@@ -5,7 +5,8 @@ import type { CanvasSection } from '$lib/types/v3';
 import {
 	applyComponentPatchedToCanvas,
 	applyComponentReadyToCanvas,
-	applySectionWriterFailedToCanvas
+	applySectionWriterFailedToCanvas,
+	applyVisualFailedToCanvas
 } from './v3-stream-state';
 
 function baseCanvas(): CanvasSection[] {
@@ -67,5 +68,31 @@ describe('v3 stream state reducers', () => {
 			errors: ['timeout'],
 			warnings: ['retry exhausted']
 		});
+	});
+
+	it('marks section visual failed on visual_failed', () => {
+		const canvas = baseCanvas();
+		canvas[0]!.visual = {
+			id: 'visual-sec-1',
+			status: 'pending',
+			mode: 'diagram',
+			image_url: null,
+			frame_index: null
+		};
+
+		const result = applyVisualFailedToCanvas(canvas, {
+			visual_id: 'vis-1',
+			attaches_to: 'sec-1',
+			component_id: 'diagram-block',
+			parent_visual_id: null,
+			mode: 'diagram',
+			frame_count: 1,
+			error_summary: 'provider timeout'
+		});
+
+		expect(result.warning).toContain('provider timeout');
+		expect(result.canvas[0]?.visual?.status).toBe('failed');
+		expect(result.canvas[0]?.visual?.component_id).toBe('diagram-block');
+		expect(result.canvas[0]?.visual?.error_message).toBe('provider timeout');
 	});
 });

@@ -11,6 +11,7 @@ from v3_blueprint.planning.models import (
     SectionBrief,
     SectionPlan,
     StructuralPlan,
+    VisualFrameBrief,
     VisualStrategySpec,
     VoiceSpec,
 )
@@ -211,6 +212,7 @@ def test_validate_section_brief_catches_visual_strategy_on_non_visual_section() 
         ],
         visual_strategy=VisualStrategySpec(
             subject="fraction circles",
+            visual_job="introduce the concept visually",
             type_hint="diagram",
             anchor_link="pizza slices",
             must_show=["equal parts"],
@@ -219,3 +221,137 @@ def test_validate_section_brief_catches_visual_strategy_on_non_visual_section() 
     )
     errors = validate_section_brief(brief, section, [])
     assert any("visual_strategy returned but visual_required is false" in error for error in errors)
+
+
+def test_structural_plan_allows_more_than_two_visual_sections() -> None:
+    plan = StructuralPlan(
+        lesson_mode="first_exposure",
+        lesson_intent=LessonIntent(
+            goal="By the end of this lesson the student can compare simple fractions.",
+            structure_rationale="Concrete-first sequence for novice learners.",
+        ),
+        anchor=AnchorSpec(
+            example="splitting a pizza into 8 equal slices",
+            reuse_scope="used across the lesson",
+        ),
+        voice=VoiceSpec(register_name="simple", tone="encouraging"),
+        prior_knowledge=["equal sharing"],
+        sections=[
+            SectionPlan(
+                id=f"s{idx}",
+                title=f"Section {idx}",
+                role="intro",
+                visual_required=True,
+                transition_note=None if idx == 0 else "build next idea",
+                components=[ComponentSlot(slug="hook-hero", purpose="surface idea")],
+            )
+            for idx in range(4)
+        ],
+        question_plan=[
+            QPlanItem(
+                question_id="q1",
+                section_id="s0",
+                temperature="warm",
+                diagram_required=False,
+            )
+        ],
+        answer_key_style="brief_explanations",
+    )
+
+    assert len(plan.sections) == 4
+
+
+def test_validate_section_brief_rejects_series_with_too_few_frames() -> None:
+    section = SectionPlan(
+        id="model",
+        title="Model",
+        role="model",
+        visual_required=True,
+        transition_note=None,
+        components=[ComponentSlot(slug="diagram-series", purpose="show progression")],
+    )
+    brief = SectionBrief(
+        section_id="model",
+        components=[ComponentBrief(component_id="diagram-series", content_intent="show progression")],
+        question_briefs=[],
+        visual_strategy=VisualStrategySpec(
+            subject="A sequence",
+            visual_job="show a stepwise progression",
+            type_hint="diagram",
+            anchor_link="same anchor",
+            must_show=["step markers"],
+            must_not_show=[],
+            frames=[VisualFrameBrief(description="Only one frame", must_show=["step 1"])],
+        ),
+    )
+
+    errors = validate_section_brief(brief, section, [])
+    assert any("requires >= 2 frames" in error for error in errors)
+
+
+def test_validate_section_brief_rejects_frames_on_non_series_component() -> None:
+    section = SectionPlan(
+        id="model",
+        title="Model",
+        role="model",
+        visual_required=True,
+        transition_note=None,
+        components=[ComponentSlot(slug="worked-example-card", purpose="show example")],
+    )
+    brief = SectionBrief(
+        section_id="model",
+        components=[ComponentBrief(component_id="worked-example-card", content_intent="show example")],
+        question_briefs=[],
+        visual_strategy=VisualStrategySpec(
+            subject="A worked example",
+            visual_job="summarize the example",
+            type_hint="diagram",
+            anchor_link="same anchor",
+            must_show=["labels"],
+            must_not_show=[],
+            frames=[
+                VisualFrameBrief(description="Frame 1", must_show=["label a"]),
+                VisualFrameBrief(description="Frame 2", must_show=["label b"]),
+            ],
+        ),
+    )
+
+    errors = validate_section_brief(brief, section, [])
+    assert any("frames provided but component is not diagram-series" in error for error in errors)
+
+
+def test_validate_section_brief_rejects_bad_source_question_ids_and_empty_visual_job() -> None:
+    section = SectionPlan(
+        id="practice",
+        title="Practice",
+        role="practice",
+        visual_required=True,
+        transition_note=None,
+        components=[ComponentSlot(slug="diagram-block", purpose="support practice")],
+    )
+    brief = SectionBrief(
+        section_id="practice",
+        components=[ComponentBrief(component_id="diagram-block", content_intent="support practice")],
+        question_briefs=[],
+        visual_strategy=VisualStrategySpec(
+            subject="Practice figure",
+            visual_job=" ",
+            type_hint="diagram",
+            anchor_link="same anchor",
+            must_show=["shape"],
+            must_not_show=[],
+            source_question_ids=["q-missing"],
+        ),
+    )
+    question_plan = [
+        QPlanItem(
+            question_id="q-real",
+            section_id="practice",
+            temperature="warm",
+            diagram_required=True,
+        )
+    ]
+
+    errors = validate_section_brief(brief, section, question_plan)
+    assert any("source_question_ids references questions not in this section" in error for error in errors)
+    assert any("visual_strategy.visual_job is empty" in error for error in errors)

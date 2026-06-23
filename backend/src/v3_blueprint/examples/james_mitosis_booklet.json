@@ -111,22 +111,71 @@
     "visuals": [
       {
         "section_id": "orient",
-        "strategy": "single orienting cell lifecycle visual",
+        "component_id": "diagram-block",
+        "subject": "A simple cell division overview visual",
+        "visual_job": "introduce the context for mitosis visually",
+        "type_hint": "diagram",
+        "anchor_link": "Shows the big-picture place of mitosis in cell division",
+        "must_show": ["one parent cell", "two daughter cells", "simple lifecycle cue"],
+        "must_not_show": ["full stage detail", "dense labels"],
+        "source_question_ids": [],
+        "frames": [],
+        "strategy": "orienting cell division overview",
         "density": "medium"
       },
       {
         "section_id": "explain",
-        "strategy": "stage-by-stage labeled micrographs",
+        "component_id": "diagram-block",
+        "subject": "Labeled mitosis stage reference visuals",
+        "visual_job": "summarize the section explanation as labeled stage diagrams",
+        "type_hint": "diagram",
+        "anchor_link": "Keeps the same cell geometry while highlighting stage changes",
+        "must_show": ["stage labels", "chromosome arrangement cues", "cell boundary"],
+        "must_not_show": ["unrelated organelles", "photo-noise"],
+        "source_question_ids": [],
+        "frames": [],
+        "strategy": "labeled mitosis stage reference diagrams",
         "density": "high"
       },
       {
         "section_id": "model",
+        "component_id": "worked-example-card",
+        "subject": "An annotated cell image for stage identification",
+        "visual_job": "summarize the worked example as an annotated diagram",
+        "type_hint": "diagram",
+        "anchor_link": "Reuses the same stage cues introduced in explain",
+        "must_show": ["visible chromosomes", "one or two annotation callouts", "stage cue labels"],
+        "must_not_show": ["all stage labels at once"],
+        "source_question_ids": [],
+        "frames": [],
         "strategy": "annotated stage-identification walkthrough",
         "density": "medium"
       },
       {
         "section_id": "diagram_sequence",
-        "strategy": "diagram_series_core",
+        "component_id": "diagram-series",
+        "subject": "A mitosis stage progression series",
+        "visual_job": "show the stage progression as a diagram series",
+        "type_hint": "diagram",
+        "anchor_link": "Shows one consistent cell changing stage by stage",
+        "must_show": ["consistent cell outline", "chromosome movement", "clear stage progression"],
+        "must_not_show": ["mixed stages in one frame", "style drift"],
+        "source_question_ids": [],
+        "frames": [
+          {
+            "description": "Prophase with chromosomes condensing inside the nucleus.",
+            "must_show": ["condensing chromosomes", "nuclear boundary", "single cell"]
+          },
+          {
+            "description": "Metaphase with chromosomes aligned across the cell equator.",
+            "must_show": ["aligned chromosomes", "equator line or central alignment", "single cell"]
+          },
+          {
+            "description": "Anaphase with chromatids separating toward opposite poles.",
+            "must_show": ["chromatids moving apart", "opposite poles", "single cell"]
+          }
+        ],
+        "strategy": "core mitosis diagram series",
         "density": "high"
       }
     ]

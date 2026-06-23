@@ -89,6 +89,94 @@ async def test_record_execution_summary_writes_payload(db_session_factory) -> No
 
 
 @pytest.mark.asyncio
+async def test_record_visual_failed_writes_canonical_payload(db_session_factory) -> None:
+    await _seed_user(db_session_factory)
+    repo = V3TraceRepository(db_session_factory)
+    writer = V3TraceWriter(
+        repository=repo,
+        trace_id="tw-trace-visual-failed",
+        generation_id="tw-gen-visual-failed",
+    )
+    await writer.start_run(
+        user_id="trace-writer-user",
+        blueprint_id="bp-vf",
+        template_id="guided-concept-path",
+        title="Title",
+        subject="Science",
+    )
+
+    await writer.record_visual_failed(
+        generation_id="tw-gen-visual-failed",
+        visual_id="vis-practice-0",
+        attaches_to="practice",
+        component_id="diagram-block",
+        parent_visual_id=None,
+        mode="diagram",
+        frame_count=1,
+        error_summary="provider timeout",
+    )
+
+    full = await repo.get_full_trace("tw-trace-visual-failed")
+    assert full is not None
+    visual_event = next(event for event in full["events"] if event["event_type"] == et.VISUAL_FAILED)
+    assert visual_event["payload"] == {
+        "generation_id": "tw-gen-visual-failed",
+        "visual_id": "vis-practice-0",
+        "attaches_to": "practice",
+        "component_id": "diagram-block",
+        "parent_visual_id": None,
+        "mode": "diagram",
+        "frame_count": 1,
+        "ok": False,
+        "error_summary": "provider timeout",
+    }
+
+
+@pytest.mark.asyncio
+async def test_record_visual_completed_writes_canonical_payload(db_session_factory) -> None:
+    await _seed_user(db_session_factory)
+    repo = V3TraceRepository(db_session_factory)
+    writer = V3TraceWriter(
+        repository=repo,
+        trace_id="tw-trace-visual-ready",
+        generation_id="tw-gen-visual-ready",
+    )
+    await writer.start_run(
+        user_id="trace-writer-user",
+        blueprint_id="bp-vc",
+        template_id="guided-concept-path",
+        title="Title",
+        subject="Science",
+    )
+
+    await writer.record_visual_completed(
+        generation_id="tw-gen-visual-ready",
+        visual_id="vis-model-0",
+        attaches_to="model",
+        component_id="diagram-series",
+        parent_visual_id=None,
+        mode="diagram_series",
+        frame_count=3,
+    )
+
+    full = await repo.get_full_trace("tw-trace-visual-ready")
+    assert full is not None
+    visual_event = next(
+        event for event in full["events"] if event["event_type"] == et.VISUAL_COMPLETED
+    )
+    assert visual_event["payload"] == {
+        "generation_id": "tw-gen-visual-ready",
+        "visual_id": "vis-model-0",
+        "attaches_to": "model",
+        "component_id": "diagram-series",
+        "parent_visual_id": None,
+        "mode": "diagram_series",
+        "frame_count": 3,
+        "ok": True,
+    }
+
+
+@pytest.mark.asyncio
 async def test_record_booklet_status_dedupes_unchanged_status(db_session_factory) -> None:
     await _seed_user(db_session_factory)
     repo = V3TraceRepository(db_session_factory)

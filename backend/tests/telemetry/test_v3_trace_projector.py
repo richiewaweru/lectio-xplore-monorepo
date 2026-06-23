@@ -65,10 +65,15 @@ def test_project_failed_section_visible() -> None:
         {
             "event_type": VISUAL_FAILED,
             "payload": {
-                "section_id": "practice",
+                "generation_id": "g-1",
+                "visual_id": "vis-practice-0",
+                "attaches_to": "practice",
+                "component_id": "diagram-block",
+                "parent_visual_id": None,
                 "mode": "diagram",
+                "frame_count": 1,
+                "ok": False,
                 "error_summary": "provider timeout",
-                "attempt": 1,
             },
         },
     ]
@@ -78,6 +83,8 @@ def test_project_failed_section_visible() -> None:
     assert section["ok"] is False
     assert section["error_type"] == "schema_validation"
     assert report["execution"]["visuals"][0]["ok"] is False
+    assert report["execution"]["visuals"][0]["attaches_to"] == "practice"
+    assert report["execution"]["visuals"][0]["component_id"] == "diagram-block"
 
 
 def test_coherence_issues_appear_in_review() -> None:

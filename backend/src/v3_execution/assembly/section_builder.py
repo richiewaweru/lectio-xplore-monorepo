@@ -134,9 +134,14 @@ class V3SectionBuilder:
 
             series_frames = sorted(
                 [v for v in diagrams if v.mode == "diagram_series"],
-                key=lambda v: v.frame_index or 0,
+                key=lambda v: (v.parent_visual_id or v.visual_id, v.frame_index or 0),
             )
-            singletons = [v for v in diagrams if v not in series_frames]
+            compare_visuals = [v for v in diagrams if v.mode == "diagram_compare"]
+            singletons = [
+                v
+                for v in diagrams
+                if v.mode not in {"diagram_series", "diagram_compare"}
+            ]
 
             if series_frames:
                 steps = []
@@ -152,6 +157,16 @@ class V3SectionBuilder:
                 bucket["diagram_series"] = {
                     "title": section_plan.title,
                     "diagrams": steps,
+                }
+            elif compare_visuals:
+                # Compare-mode visuals currently render as one composite image, so they
+                # flow through the singleton diagram field until the executor emits a
+                # distinct before/after asset pair.
+                vis_block = compare_visuals[0]
+                bucket["diagram"] = {
+                    "image_url": vis_block.image_url,
+                    "caption": vis_block.caption or section_plan.title,
+                    "alt_text": vis_block.alt_text or section_plan.title,
                 }
             elif singletons:
                 vis_block = singletons[0]

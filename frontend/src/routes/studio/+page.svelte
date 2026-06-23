@@ -32,7 +32,8 @@
 	import {
 		applyComponentPatchedToCanvas,
 		applyComponentReadyToCanvas,
-		applySectionWriterFailedToCanvas
+		applySectionWriterFailedToCanvas,
+		applyVisualFailedToCanvas
 	} from '$lib/studio/v3-stream-state';
 	import {
 		buildCanvasSkeleton,
@@ -521,6 +522,17 @@
 				const url = typeof data.image_url === 'string' ? data.image_url : null;
 				const fi =
 					data.frame_index === undefined ? null : (data.frame_index as number | null);
+				const mode =
+					data.mode === 'diagram' ||
+					data.mode === 'diagram_series' ||
+					data.mode === 'diagram_compare' ||
+					data.mode === 'simulation'
+						? data.mode
+						: undefined;
+				const componentId =
+					typeof data.component_id === 'string' ? data.component_id : null;
+				const parentVisualId =
+					typeof data.parent_visual_id === 'string' ? data.parent_visual_id : null;
 				if (!sid) return;
 				v3Studio.canvas = v3Studio.canvas.map((s) => {
 					if (s.id !== sid) return s;
@@ -532,12 +544,23 @@
 						? {
 								...s.visual,
 								status: 'ready' as const,
+								mode: mode ?? s.visual.mode,
 								image_url: url ?? s.visual.image_url,
-								frame_index: fi ?? s.visual.frame_index
+								frame_index: fi ?? s.visual.frame_index,
+								component_id: componentId,
+								parent_visual_id: parentVisualId,
+								error_message: null
 							}
 						: null;
 					return { ...s, mergedFields, visual };
 				});
+			},
+			onVisualFailed: (data) => {
+				const next = applyVisualFailedToCanvas(v3Studio.canvas, data);
+				v3Studio.canvas = next.canvas;
+				if (next.warning) {
+					v3Studio.error = next.warning;
+				}
 			},
 			onQuestionReady: (data) => {
 				const sid = String(data.section_id ?? '');

@@ -234,6 +234,36 @@ def test_series_visual_takes_precedence_over_singleton_diagram() -> None:
     assert len(bucket["diagram_series"]["diagrams"]) == 2
 
 
+def test_compare_visuals_render_through_singleton_diagram_bucket() -> None:
+    bp = _load_example("amara_compound_area.json")
+    section_id = bp.sections[0].section_id
+    builder = V3SectionBuilder()
+
+    sections, _warnings, _diagnostics = builder.build_sections(
+        bp,
+        [],
+        [],
+        [
+            GeneratedVisualBlock(
+                visual_id="vc-0",
+                attaches_to=section_id,
+                mode="diagram_compare",
+                image_url="https://cdn.example/compare.png",
+                caption="Compare view",
+                alt_text="Compare view",
+                component_id="diagram-compare",
+                source_work_order_id="wo-compare",
+            )
+        ],
+        template_id="guided-concept-path",
+        answer_key=None,
+    )
+
+    bucket = next(s for s in sections if s["section_id"] == section_id)
+    assert bucket["diagram"]["image_url"] == "https://cdn.example/compare.png"
+    assert "diagram_compare" not in bucket
+
+
 def test_component_order_metadata_matches_emitted_component_sequence() -> None:
     bp = _load_example("amara_compound_area.json")
     builder = V3SectionBuilder()

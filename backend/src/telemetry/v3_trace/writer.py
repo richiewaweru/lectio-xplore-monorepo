@@ -169,6 +169,60 @@ class V3TraceWriter:
             }
         )
 
+    async def record_visual_completed(
+        self,
+        *,
+        generation_id: str,
+        visual_id: str,
+        attaches_to: str,
+        component_id: str | None,
+        parent_visual_id: str | None,
+        mode: str,
+        frame_count: int,
+    ) -> None:
+        await self._record_event(
+            phase="execution",
+            event_type=et.VISUAL_COMPLETED,
+            payload={
+                "generation_id": generation_id,
+                "visual_id": visual_id,
+                "attaches_to": attaches_to,
+                "component_id": component_id,
+                "parent_visual_id": parent_visual_id,
+                "mode": mode,
+                "frame_count": frame_count,
+                "ok": True,
+            },
+        )
+
+    async def record_visual_failed(
+        self,
+        *,
+        generation_id: str,
+        visual_id: str,
+        attaches_to: str,
+        component_id: str | None,
+        parent_visual_id: str | None,
+        mode: str,
+        frame_count: int,
+        error_summary: str,
+    ) -> None:
+        await self._record_event(
+            phase="execution",
+            event_type=et.VISUAL_FAILED,
+            payload={
+                "generation_id": generation_id,
+                "visual_id": visual_id,
+                "attaches_to": attaches_to,
+                "component_id": component_id,
+                "parent_visual_id": parent_visual_id,
+                "mode": mode,
+                "frame_count": frame_count,
+                "ok": False,
+                "error_summary": error_summary,
+            },
+        )
+
     async def record_draft_pack(
         self,
         *,

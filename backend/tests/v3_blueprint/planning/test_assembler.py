@@ -92,6 +92,7 @@ def test_assemble_blueprint_keeps_renderable_sections_in_plan_order() -> None:
         ],
         visual_strategy=VisualStrategySpec(
             subject="A paper strip split into equal parts",
+            visual_job="introduce the anchor visually",
             type_hint="diagram",
             anchor_link="Use the same strip from the hook.",
             must_show=["equal partitions"],
@@ -118,6 +119,11 @@ def test_assemble_blueprint_keeps_renderable_sections_in_plan_order() -> None:
     assert [section.section_id for section in blueprint.sections] == ["orient"]
     assert [question.question_id for question in blueprint.question_plan] == ["q-orient"]
     assert [visual.section_id for visual in blueprint.visual_strategy.visuals] == ["orient"]
+    visual = blueprint.visual_strategy.visuals[0]
+    assert visual.subject == "A paper strip split into equal parts"
+    assert visual.visual_job == "introduce the anchor visually"
+    assert visual.must_show == ["equal partitions"]
+    assert visual.component_id == "diagram-block"
 
 
 def test_assemble_blueprint_blocks_when_no_sections_are_renderable() -> None:

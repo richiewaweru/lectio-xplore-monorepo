@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -9,13 +10,17 @@ from contracts.lectio import get_section_field_for_component
 
 from v3_blueprint.models import ProductionBlueprint
 from v3_execution.compile_orders import compile_execution_bundle
+from v3_execution.executors.visual_executor import execute_visual
 from v3_execution.models import (
+    ExecutorOutcome,
     GeneratedAnswerKeyBlock,
     GeneratedComponentBlock,
     GeneratedQuestionBlock,
     GeneratedVisualBlock,
     QuestionWriterWorkOrder,
     VisualGeneratorWorkOrder,
+    VisualFrameSpec,
+    VisualPlanItem,
     WriterQuestion,
 )
 from v3_execution.runtime import validation as v
@@ -44,8 +49,6 @@ def test_compile_execution_bundle() -> None:
 
 
 def test_validate_visual_accepts_http_scheme() -> None:
-    from v3_execution.models import VisualPlanItem
-
     order = VisualGeneratorWorkOrder(
         work_order_id="v1",
         visual=VisualPlanItem(id="v1", attaches_to="practice"),
@@ -69,6 +72,131 @@ def test_validate_visual_accepts_http_scheme() -> None:
         source_work_order_id="v1",
     )
     assert not v.validate_visual_block(good, order)
+
+
+def test_validate_visual_accepts_diagram_compare_mode() -> None:
+    order = VisualGeneratorWorkOrder(
+        work_order_id="v1",
+        visual=VisualPlanItem(id="v1", attaches_to="practice", mode="diagram_compare"),
+        source_of_truth=[],
+    )
+    block = GeneratedVisualBlock(
+        visual_id="v1",
+        attaches_to="practice",
+        mode="diagram_compare",
+        image_url="https://cdn.example/compare.png",
+        source_work_order_id="v1",
+    )
+
+    assert not v.validate_visual_block(block, order)
+
+
+@pytest.mark.asyncio
+async def test_execute_visual_series_sets_parent_visual_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    order = VisualGeneratorWorkOrder(
+        work_order_id="v-series",
+        visual=VisualPlanItem(
+            id="vis-model-0",
+            attaches_to="model",
+            component_id="diagram-series",
+            mode="diagram_series",
+            purpose="show progression",
+            must_show=["consistent cell outline"],
+            frames=[
+                VisualFrameSpec(description="Frame one", must_show=["A"]),
+                VisualFrameSpec(description="Frame two", must_show=["B"]),
+            ],
+        ),
+        source_of_truth=[],
+    )
+
+    class StubClient:
+        async def generate_image(self, *, prompt: str):
+            _ = prompt
+            return SimpleNamespace(bytes=b"img", format="png")
+
+    class StubStore:
+        async def store_image(self, *_args, **kwargs):
+            return f"https://cdn.example/{kwargs['filename']}"
+
+    async def stub_run_with_retries(_label, attempt, max_retries):
+        _ = max_retries
+        return await attempt(False)
+
+    monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: StubClient())
+    monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: StubStore())
+    monkeypatch.setattr("v3_execution.executors.visual_executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
+    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", stub_run_with_retries)
+
+    captured: list[tuple[str, dict]] = []
+
+    async def emit(event_type: str, payload: dict) -> None:
+        captured.append((event_type, payload))
+
+    blocks = await execute_visual(
+        order,
+        emit,
+        trace_id="trace",
+        generation_id="gen",
+    )
+
+    assert len(blocks) == 2
+    assert all(block.parent_visual_id == "vis-model-0" for block in blocks)
+    assert [block.frame_index for block in blocks] == [0, 1]
+    assert all(block.component_id == "diagram-series" for block in blocks)
+    assert all(block.status == "ready" for block in blocks)
+    assert any(event == "visual_ready" for event, _ in captured)
+
+
+@pytest.mark.asyncio
+async def test_execute_visual_returns_failed_block_and_event_on_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    order = VisualGeneratorWorkOrder(
+        work_order_id="v-fail",
+        visual=VisualPlanItem(
+            id="vis-practice-0",
+            attaches_to="practice",
+            component_id="diagram-block",
+            mode="diagram",
+            purpose="support question",
+        ),
+        source_of_truth=[],
+    )
+
+    async def stub_run_with_retries(_label, _attempt, max_retries):
+        _ = max_retries
+        return ExecutorOutcome(ok=False, errors=["provider timeout"])
+
+    monkeypatch.setattr("v3_execution.executors.visual_executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
+    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", stub_run_with_retries)
+
+    captured: list[tuple[str, dict]] = []
+
+    async def emit(event_type: str, payload: dict) -> None:
+        captured.append((event_type, payload))
+
+    blocks = await execute_visual(
+        order,
+        emit,
+        trace_id="trace",
+        generation_id="gen",
+    )
+
+    assert len(blocks) == 1
+    failed = blocks[0]
+    assert failed.status == "failed"
+    assert failed.error_message == "provider timeout"
+    assert failed.parent_visual_id is None
+    assert failed.component_id == "diagram-block"
+    failure_payload = next(payload for event, payload in captured if event == "visual_failed")
+    assert failure_payload["attaches_to"] == "practice"
+    assert failure_payload["component_id"] == "diagram-block"
+    assert failure_payload["mode"] == "diagram"
+    assert failure_payload["frame_count"] == 1
+    assert failure_payload["error_summary"] == "provider timeout"
 
 
 def test_validate_question_block_rejects_answer_drift() -> None:
@@ -488,6 +616,12 @@ async def test_runner_records_strategic_trace_checkpoints(
         async def record_execution_summary(self, **_kwargs):
             self.calls.append("record_execution_summary")
 
+        async def record_visual_completed(self, **_kwargs):
+            self.calls.append("record_visual_completed")
+
+        async def record_visual_failed(self, **_kwargs):
+            self.calls.append("record_visual_failed")
+
         async def record_draft_pack(self, **_kwargs):
             self.calls.append("record_draft_pack")
 
@@ -519,6 +653,7 @@ async def test_runner_records_strategic_trace_checkpoints(
     )
 
     assert "record_work_orders" in writer.calls
+    assert "record_visual_completed" in writer.calls
     assert "record_execution_summary" in writer.calls
     assert "record_draft_pack" in writer.calls
     assert "record_booklet_status" in writer.calls

@@ -261,6 +261,11 @@ def _section_has_visual_media(bucket: dict[str, Any]) -> bool:
     diag = bucket.get("diagram")
     if isinstance(diag, dict) and diag.get("image_url"):
         return True
+    compare = bucket.get("diagram_compare")
+    if isinstance(compare, dict) and (
+        compare.get("before_image_url") or compare.get("after_image_url")
+    ):
+        return True
     ds = bucket.get("diagram_series")
     if isinstance(ds, dict):
         diagrams = ds.get("diagrams")
@@ -315,6 +320,28 @@ def check_visuals_attach_to_valid_targets(
                     blueprint_ref=f"visual_strategy.visuals[{idx}]",
                     generated_ref=vis.section_id,
                     executor="assembler",
+                )
+            )
+    return issues
+
+
+def check_visual_failures(
+    draft_pack: DraftPack,
+) -> list[ReviewIssue]:
+    """Flag visual blocks that failed to generate after all retries."""
+    issues: list[ReviewIssue] = []
+    for block in getattr(draft_pack, "visual_blocks", []):
+        if getattr(block, "status", "ready") == "failed":
+            issues.append(
+                _issue(
+                    severity="minor",
+                    category="visual_generation_failed",
+                    message=(
+                        f"Visual '{block.visual_id}' failed to generate "
+                        f"for section '{block.attaches_to}'. "
+                        f"Error: {block.error_message or 'unknown'}. "
+                        "Section rendered without it."
+                    ),
                 )
             )
     return issues
@@ -540,6 +567,7 @@ RECHECK_MAP: dict[str, list[CheckFn]] = {
     "visual": [
         lambda bp, dp: check_planned_visuals_exist(bp, dp),
         lambda bp, dp: check_visuals_attach_to_valid_targets(bp, dp),
+        lambda bp, dp: check_visual_failures(dp),
         lambda bp, dp: check_anchor_facts(bp, dp),
     ],
     "answer_key": [
@@ -579,6 +607,7 @@ __all__ = [
     "check_planned_questions_exist",
     "check_planned_sections_exist",
     "check_planned_visuals_exist",
+    "check_visual_failures",
     "check_visuals_attach_to_valid_targets",
     "collect_student_facing_text",
     "run_rechecks_for_target",

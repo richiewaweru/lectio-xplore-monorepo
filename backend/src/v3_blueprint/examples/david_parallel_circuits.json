@@ -83,12 +83,30 @@
     "visuals": [
       {
         "section_id": "challenge",
-        "strategy": "circuit diagram variants with branch labels",
+        "component_id": "diagram-block",
+        "subject": "Parallel circuit diagrams with branch labels",
+        "visual_job": "support challenge questions q1 and q2 with circuit figures",
+        "type_hint": "diagram",
+        "anchor_link": "Keeps the same branch structure across challenge variants",
+        "must_show": ["parallel branches", "component labels", "current or voltage labels"],
+        "must_not_show": ["worked solutions", "irrelevant symbols"],
+        "source_question_ids": ["q1", "q2"],
+        "frames": [],
+        "strategy": "parallel circuit variants with labeled branches",
         "density": "medium"
       },
       {
         "section_id": "worked_example",
-        "strategy": "annotated full-working circuit walkthrough",
+        "component_id": "worked-example-card",
+        "subject": "An annotated exam-style parallel circuit diagram",
+        "visual_job": "summarize the section explanation as a labeled diagram",
+        "type_hint": "diagram",
+        "anchor_link": "Uses the same circuit conventions as the challenge set",
+        "must_show": ["branch labels", "component values", "clear node structure"],
+        "must_not_show": ["extra branches not discussed"],
+        "source_question_ids": [],
+        "frames": [],
+        "strategy": "annotated parallel circuit walkthrough",
         "density": "medium"
       }
     ]

@@ -92,12 +92,14 @@ describe('connectV3StudioGenerationStream', () => {
 		const onFinalPackReady = vi.fn();
 		const onDraftStatusUpdated = vi.fn();
 		const onSectionWriterFailed = vi.fn();
+		const onVisualFailed = vi.fn();
 
 		connectV3StudioGenerationStream('gen-1', {
 			onDraftPackReady,
 			onFinalPackReady,
 			onDraftStatusUpdated,
-			onSectionWriterFailed
+			onSectionWriterFailed,
+			onVisualFailed
 		});
 
 		const onmessage = capturedOptions.current?.onmessage as
@@ -112,11 +114,16 @@ describe('connectV3StudioGenerationStream', () => {
 			event: 'section_writer_failed',
 			data: '{"section_id":"sec-1","errors":["boom"],"warnings":[]}'
 		});
+		onmessage?.({
+			event: 'visual_failed',
+			data: '{"visual_id":"vis-1","attaches_to":"sec-1","mode":"diagram","frame_count":1,"error_summary":"provider timeout"}'
+		});
 
 		expect(onDraftPackReady).toHaveBeenCalledTimes(1);
 		expect(onFinalPackReady).toHaveBeenCalledTimes(1);
 		expect(onDraftStatusUpdated).toHaveBeenCalledTimes(1);
 		expect(onSectionWriterFailed).toHaveBeenCalledTimes(1);
+		expect(onVisualFailed).toHaveBeenCalledTimes(1);
 	});
 
 	it('fetches persisted V3 document payload from API', async () => {

@@ -92,9 +92,16 @@ def validate_visual_block(
     work_order: VisualGeneratorWorkOrder,
 ) -> list[str]:
     errors: list[str] = []
-    if block.visual_id != work_order.visual.id:
+    valid_visual_id = block.visual_id == work_order.visual.id
+    if (
+        not valid_visual_id
+        and block.frame_index is not None
+        and work_order.visual.mode == "diagram_series"
+    ):
+        valid_visual_id = block.visual_id == f"{work_order.visual.id}_frame_{block.frame_index}"
+    if not valid_visual_id:
         errors.append("visual_id mismatch")
-    if block.mode in {"diagram", "image", "diagram_series"}:
+    if block.mode in {"diagram", "image", "diagram_series", "diagram_compare"}:
         if not block.image_url or not _image_url_valid(block.image_url):
             errors.append("image_url not a valid hosted URL")
     if block.mode == "simulation":

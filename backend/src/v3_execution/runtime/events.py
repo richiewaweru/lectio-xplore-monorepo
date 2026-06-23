@@ -12,6 +12,7 @@ QUESTIONS_STARTED = "questions_started"
 QUESTION_READY = "question_ready"
 VISUAL_GENERATION_STARTED = "visual_generation_started"
 VISUAL_READY = "visual_ready"
+VISUAL_FAILED = "visual_failed"
 ANSWER_KEY_STARTED = "answer_key_started"
 ANSWER_KEY_READY = "answer_key_ready"
 ASSEMBLY_STARTED = "assembly_started"
@@ -58,6 +59,7 @@ __all__ = [
     "SECTION_WRITING_STARTED",
     "SECTION_WRITER_FAILED",
     "VISUAL_GENERATION_STARTED",
+    "VISUAL_FAILED",
     "VISUAL_READY",
     "WORK_ORDERS_COMPILED",
     "format_sse_payload",

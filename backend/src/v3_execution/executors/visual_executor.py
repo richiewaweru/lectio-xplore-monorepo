@@ -23,6 +23,8 @@ async def _render_frame(
     prompt: str,
     frame_suffix: str,
     frame_index: int | None,
+    component_id: str | None = None,
+    parent_visual_id: str | None = None,
 ) -> GeneratedVisualBlock:
     from media.storage.image_store import get_image_store
 
@@ -48,6 +50,9 @@ async def _render_frame(
         caption=order.visual.purpose,
         alt_text=order.visual.purpose,
         source_work_order_id=order.work_order_id,
+        component_id=component_id,
+        parent_visual_id=parent_visual_id,
+        status="ready",
     )
     errs = validate_visual_block(block, order)
     if errs:
@@ -89,12 +94,16 @@ async def execute_visual(
                     caption=order.visual.purpose,
                     alt_text=order.visual.purpose,
                     source_work_order_id=order.work_order_id,
+                    component_id=order.visual.component_id,
+                    parent_visual_id=None,
+                    status="ready",
                 )
                 errs = validate_visual_block(block, order)
                 if errs:
                     return ExecutorOutcome(ok=False, errors=errs)
                 blocks.append(block)
             elif order.visual.mode == "diagram_series" and order.visual.frames:
+                parent_id = order.visual.id
                 previous = None
                 for idx, frame in enumerate(order.visual.frames):
                     frame_order = order.model_copy(deep=True)
@@ -107,6 +116,8 @@ async def execute_visual(
                         prompt=prompt,
                         frame_suffix=f"_frame_{idx}",
                         frame_index=idx,
+                        component_id=order.visual.component_id,
+                        parent_visual_id=parent_id,
                     )
                     blocks.append(block)
                     previous = frame.description
@@ -118,6 +129,8 @@ async def execute_visual(
                     prompt=prompt,
                     frame_suffix="",
                     frame_index=None,
+                    component_id=order.visual.component_id,
+                    parent_visual_id=None,
                 )
                 blocks.append(block)
 
@@ -128,7 +141,11 @@ async def execute_visual(
                         "generation_id": gid,
                         "visual_id": block.visual_id,
                         "attaches_to": block.attaches_to,
+                        "component_id": block.component_id,
+                        "parent_visual_id": block.parent_visual_id,
+                        "mode": block.mode,
                         "frame_index": block.frame_index,
+                        "frame_count": len(blocks),
                         "image_url": block.image_url,
                         "image_provider": spec.provider,
                         "image_model": spec.model_name,
@@ -144,7 +161,37 @@ async def execute_visual(
         max_retries=V3_MAX_RETRIES["visual_executor_frame"],
     )
     if not outcome.ok:
-        raise RuntimeError("; ".join(outcome.errors))
+        await emit_event(
+            "visual_failed",
+            {
+                "generation_id": gid,
+                "visual_id": order.visual.id,
+                "attaches_to": order.visual.attaches_to,
+                "component_id": order.visual.component_id,
+                "parent_visual_id": None,
+                "mode": order.visual.mode,
+                "frame_count": len(order.visual.frames) if order.visual.frames else 1,
+                "error_summary": "; ".join(outcome.errors),
+                "image_provider": spec.provider,
+                "image_model": spec.model_name,
+            },
+        )
+        return [
+            GeneratedVisualBlock(
+                visual_id=order.visual.id,
+                attaches_to=order.visual.attaches_to,
+                frame_index=None,
+                mode=order.visual.mode,
+                image_url=None,
+                caption=order.visual.purpose,
+                alt_text=order.visual.purpose,
+                source_work_order_id=order.work_order_id,
+                component_id=order.visual.component_id,
+                parent_visual_id=None,
+                status="failed",
+                error_message="; ".join(outcome.errors),
+            )
+        ]
     return [
         block
         for block in outcome.blocks

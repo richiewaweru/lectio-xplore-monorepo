@@ -69,10 +69,28 @@ class SectionPlan(BaseModel):
     components: list[ComponentPlan] = Field(default_factory=list, min_length=1)
 
 
+class VisualFrameInstruction(BaseModel):
+    """One frame in a diagram-series visual instruction."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    description: str
+    must_show: list[str] = Field(default_factory=list)
+
+
 class VisualInstruction(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     section_id: str
+    component_id: str
+    subject: str
+    visual_job: str
+    type_hint: str
+    anchor_link: str | None = None
+    must_show: list[str] = Field(default_factory=list)
+    must_not_show: list[str] = Field(default_factory=list)
+    source_question_ids: list[str] = Field(default_factory=list)
+    frames: list[VisualFrameInstruction] = Field(default_factory=list)
     strategy: str
     density: str | None = None
 

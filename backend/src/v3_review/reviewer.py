@@ -19,6 +19,7 @@ from v3_review.deterministic_checks import (
     check_planned_questions_exist,
     check_planned_sections_exist,
     check_planned_visuals_exist,
+    check_visual_failures,
     check_visuals_attach_to_valid_targets,
 )
 from v3_review.models import CoherenceReport, ReviewIssue, derive_coherence_status, refresh_issue_counts
@@ -49,6 +50,7 @@ async def run_coherence_review(
     det_issues += check_no_extra_questions(blueprint, draft_pack)
     det_issues += check_planned_visuals_exist(blueprint, draft_pack)
     det_issues += check_visuals_attach_to_valid_targets(blueprint, draft_pack)
+    det_issues += check_visual_failures(draft_pack)
     det_issues += check_answer_key_entries(blueprint, draft_pack)
     det_issues += check_expected_answers_preserved(blueprint, draft_pack)
     det_issues += check_anchor_facts(blueprint, draft_pack)

@@ -81,6 +81,47 @@ def _missing_summary(items: list[list[str]]) -> dict[str, int]:
     return summary
 
 
+async def _record_visual_trace(
+    *,
+    trace_writer: V3TraceWriter | None,
+    generation_id: str,
+    order: Any,
+    blocks: list[Any],
+    error_summary: str | None = None,
+) -> None:
+    if trace_writer is None:
+        return
+    frame_count = len(order.visual.frames) if order.visual.frames else 1
+    failed_blocks = [
+        block
+        for block in blocks
+        if isinstance(block, GeneratedVisualBlock) and block.status == "failed"
+    ]
+    if error_summary or failed_blocks:
+        await trace_writer.record_visual_failed(
+            generation_id=generation_id,
+            visual_id=order.visual.id,
+            attaches_to=order.visual.attaches_to,
+            component_id=order.visual.component_id,
+            parent_visual_id=None,
+            mode=order.visual.mode,
+            frame_count=frame_count,
+            error_summary=error_summary
+            or failed_blocks[0].error_message
+            or "visual generation failed",
+        )
+        return
+    await trace_writer.record_visual_completed(
+        generation_id=generation_id,
+        visual_id=order.visual.id,
+        attaches_to=order.visual.attaches_to,
+        component_id=order.visual.component_id,
+        parent_visual_id=None,
+        mode=order.visual.mode,
+        frame_count=frame_count,
+    )
+
+
 async def run_generation(
     *,
     blueprint: ProductionBlueprint,
@@ -179,6 +220,27 @@ async def run_generation(
                     timeout=_visual_deadline(order),
                 )
 
+        async def _run_visual_order(order: Any, *, label: str) -> list[Any]:
+            try:
+                blocks = await _timed_visual(order)
+            except Exception as exc:  # noqa: BLE001
+                result.warnings.append(f"{label}: {exc}")
+                await _record_visual_trace(
+                    trace_writer=trace_writer,
+                    generation_id=generation_id,
+                    order=order,
+                    blocks=[],
+                    error_summary=str(exc),
+                )
+                return []
+            await _record_visual_trace(
+                trace_writer=trace_writer,
+                generation_id=generation_id,
+                order=order,
+                blocks=blocks,
+            )
+            return blocks
+
         blueprint_only_visuals = [v for v in bundle.visual_orders if v.dependency == "blueprint_only"]
         section_tasks = [
             _guard(f"section:{order.section.id}", _timed_section(order))
@@ -189,7 +251,8 @@ async def run_generation(
             for order in bundle.question_orders
         ]
         visual_tasks_wave1 = [
-            _guard(f"visual:{order.visual.id}", _timed_visual(order)) for order in blueprint_only_visuals
+            _run_visual_order(order, label=f"visual:{order.visual.id}")
+            for order in blueprint_only_visuals
         ]
 
         wave1 = await asyncio.gather(*(section_tasks + question_tasks + visual_tasks_wave1))
@@ -208,7 +271,7 @@ async def run_generation(
         if text_visuals:
             wave2 = await asyncio.gather(
                 *[
-                    _guard(f"visual:{order.visual.id}:late", _timed_visual(order))
+                    _run_visual_order(order, label=f"visual:{order.visual.id}:late")
                     for order in text_visuals
                 ]
             )
@@ -295,6 +358,7 @@ async def run_generation(
             blueprint_id=blueprint_id,
             template_id=template_id,
             sections=sections,
+            visual_blocks=result.visual_blocks,
             answer_key=result.answer_key,
             warnings=list(result.warnings),
             booklet_status=initial_booklet_status,  # type: ignore[arg-type]

@@ -5,6 +5,7 @@ from v3_execution.models import (
     BookletStatus,
     DraftPack,
     GeneratedAnswerKeyBlock,
+    GeneratedVisualBlock,
     SectionAssemblyDiagnostic,
 )
 
@@ -18,6 +19,7 @@ class V3PackBuilder:
         blueprint_id: str,
         template_id: str,
         sections: list[dict],
+        visual_blocks: list[GeneratedVisualBlock],
         answer_key: GeneratedAnswerKeyBlock | None,
         warnings: list[str],
         booklet_status: BookletStatus,
@@ -31,6 +33,7 @@ class V3PackBuilder:
             subject=blueprint.metadata.subject,
             status=booklet_status,
             sections=sections,
+            visual_blocks=visual_blocks,
             answer_key=answer_key,
             warnings=warnings,
             section_diagnostics=section_diagnostics or [],

@@ -781,6 +781,67 @@ describe('studio chunked URL resume', () => {
 		expect(v3Studio.canvas[0]?.sectionStatus).toBe('failed');
 	});
 
+	it('marks the live canvas visual failed when visual_failed arrives', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-visual-fail');
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-visual-fail',
+			stage: 'blueprint_ready',
+			structural_plan: {
+				lesson_mode: 'first_exposure',
+				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
+				sections: [],
+				question_plan: []
+			},
+			section_briefs: {},
+			failed_sections: [],
+			blueprint_id: 'bp-visual-fail',
+			execution_started: true,
+			next_action: 'generation_running'
+		});
+		mocks.getV3GenerationBlueprint.mockResolvedValue({
+			blueprint_id: 'bp-visual-fail',
+			template_id: 'guided-concept-path',
+			section_plan: [
+				{
+					id: 'orient',
+					title: 'Orient',
+					order: 0,
+					learning_intent: 'Open the lesson',
+					visual_required: true,
+					components: []
+				}
+			],
+			question_plan: [],
+			resource_type: 'lesson',
+			title: 'Test lesson',
+			anchor: null,
+			register_summary: '',
+			support_summary: []
+		});
+
+		render(StudioPage);
+		await waitFor(() => expect(mocks.connectV3StudioGenerationStream).toHaveBeenCalled());
+		await waitFor(() => expect(v3Studio.canvas[0]?.visual?.status).toBe('pending'));
+
+		const handlers = latestGenerationHandlers() as {
+			onVisualFailed?: (data: Record<string, unknown>) => void;
+		};
+		handlers.onVisualFailed?.({
+			visual_id: 'vis-orient-0',
+			attaches_to: 'orient',
+			component_id: 'diagram-block',
+			parent_visual_id: null,
+			mode: 'diagram',
+			frame_count: 1,
+			error_summary: 'provider timeout'
+		});
+
+		expect(v3Studio.canvas[0]?.visual?.status).toBe('failed');
+		expect(v3Studio.canvas[0]?.visual?.error_message).toBe('provider timeout');
+		expect(v3Studio.error).toContain('provider timeout');
+	});
+
 	it('opens the current studio pack in Builder from the edit stage', async () => {
 		v3Studio.stage = 'edit';
 		v3Studio.generationId = 'gen-builder';

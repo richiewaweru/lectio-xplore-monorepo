@@ -99,7 +99,10 @@ def project_report(events: list[dict]) -> dict:
         elif event_type == VISUAL_COMPLETED:
             report["execution"]["visuals"].append(
                 {
-                    "section_id": payload["section_id"],
+                    "visual_id": payload["visual_id"],
+                    "attaches_to": payload["attaches_to"],
+                    "component_id": payload.get("component_id"),
+                    "parent_visual_id": payload.get("parent_visual_id"),
                     "mode": payload["mode"],
                     "frames": payload["frame_count"],
                     "ok": payload["ok"],
@@ -109,11 +112,14 @@ def project_report(events: list[dict]) -> dict:
         elif event_type == VISUAL_FAILED:
             report["execution"]["visuals"].append(
                 {
-                    "section_id": payload["section_id"],
+                    "visual_id": payload["visual_id"],
+                    "attaches_to": payload["attaches_to"],
+                    "component_id": payload.get("component_id"),
+                    "parent_visual_id": payload.get("parent_visual_id"),
                     "mode": payload["mode"],
+                    "frames": payload["frame_count"],
                     "ok": False,
                     "error": payload["error_summary"],
-                    "attempt": payload["attempt"],
                 }
             )
 

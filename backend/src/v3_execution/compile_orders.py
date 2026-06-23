@@ -26,6 +26,14 @@ from v3_execution.models import (
 )
 from generation.v3_studio.signal_map import derive_support_adaptations
 
+COMPONENT_TO_VISUAL_MODE: dict[str, str] = {
+    "diagram-block": "diagram",
+    "diagram-series": "diagram_series",
+    "diagram-compare": "diagram_compare",
+    "timeline-block": "diagram",
+    "worked-example-card": "diagram",
+}
+
 
 def _truth_from_blueprint(blueprint: ProductionBlueprint) -> list[SourceOfTruthEntry]:
     entries: list[SourceOfTruthEntry] = []
@@ -71,20 +79,41 @@ def _component_cards_for_components(component_ids: list[str]) -> dict[str, dict]
     return cards
 
 
-def _infer_visual_dependency(
-    section_id: str, strategy: str
+def resolve_visual_dependency(
+    *,
+    component_id: str,
+    section_role: str,
+    visual_job: str,
+    section_id: str,
+    question_plan: list[QuestionPlanItem],
+    source_question_ids: list[str],
 ) -> VisualDependency:
-    strat = strategy.lower()
-    if "question" in strat or "practice" in strat:
+    if source_question_ids:
         return "question_text"
-    if "section" in strat or section_id in strat:
-        # Heuristic: annotated walkthroughs tend to depend on section text
-        if "walkthrough" in strat or "annotate" in strat or "model" in strat:
-            return "section_text"
+
+    has_diagram_questions = any(
+        getattr(q, "diagram_required", False)
+        for q in question_plan
+        if getattr(q, "section_id", None) == section_id
+    )
+    if has_diagram_questions:
+        return "question_text"
+
+    job = visual_job.lower()
+    if "question" in job or "practice" in job:
+        return "question_text"
+    if any(kw in job for kw in ("summarize", "recap", "section explanation", "generated")):
+        return "section_text"
+    if component_id == "worked-example-card":
+        return "section_text"
+    if section_role in ("model", "explain") and any(
+        kw in job for kw in ("after", "summary", "walkthrough")
+    ):
+        return "section_text"
     return "blueprint_only"
 
 
-def _extract_series_frames(
+def _extract_series_frames_legacy(
     blueprint: ProductionBlueprint,
     section_id: str,
     fallback_description: str,
@@ -105,6 +134,25 @@ def _extract_series_frames(
             if len(panel_descriptions) >= 2:
                 return [VisualFrameSpec(description=desc) for desc in panel_descriptions]
     return [VisualFrameSpec(description=fallback_description)]
+
+
+def _resolve_frames(vis, blueprint: ProductionBlueprint) -> list[VisualFrameSpec]:
+    if vis.frames and len(vis.frames) >= 2:
+        return [
+            VisualFrameSpec(
+                description=frame.description,
+                must_show=frame.must_show,
+            )
+            for frame in vis.frames
+        ]
+    return _extract_series_frames_legacy(blueprint, vis.section_id, vis.strategy)
+
+
+def _section_role(blueprint: ProductionBlueprint, section_id: str) -> str:
+    for sec in blueprint.sections:
+        if sec.section_id == section_id:
+            return sec.role
+    return "unknown"
 
 
 def compile_execution_bundle(
@@ -194,24 +242,36 @@ def compile_execution_bundle(
 
     visual_orders: list[VisualGeneratorWorkOrder] = []
     for idx, vis in enumerate(blueprint.visual_strategy.visuals):
-        series = "series" in vis.strategy.lower()
-        mode = "diagram_series" if series else "diagram"
-        dependency = _infer_visual_dependency(vis.section_id, vis.strategy)
-        frames = _extract_series_frames(blueprint, vis.section_id, vis.strategy) if series else []
-        if series and len(frames) < 2:
-            mode = "diagram"
-            frames = []
+        mode = COMPONENT_TO_VISUAL_MODE.get(vis.component_id, "diagram")
+        frames: list[VisualFrameSpec] = []
+        if mode == "diagram_series":
+            frames = _resolve_frames(vis, blueprint)
+            if len(frames) < 2:
+                mode = "diagram"
+                frames = []
+
+        dependency = resolve_visual_dependency(
+            component_id=vis.component_id,
+            section_role=_section_role(blueprint, vis.section_id),
+            visual_job=vis.visual_job,
+            section_id=vis.section_id,
+            question_plan=blueprint.question_plan,
+            source_question_ids=vis.source_question_ids,
+        )
+        visual_id = f"vis-{vis.section_id}-{idx}"
         plan = VisualPlanItem(
-            id=f"vis-{vis.section_id}-{idx}",
+            id=visual_id,
             attaches_to=vis.section_id,
+            component_id=vis.component_id,
             mode=mode,
-            purpose=vis.strategy,
-            must_show=[vis.strategy] + ([f"density:{vis.density}"] if vis.density else []),
+            purpose=vis.subject,
+            must_show=vis.must_show,
+            must_not_show=vis.must_not_show,
             frames=frames,
         )
         visual_orders.append(
             VisualGeneratorWorkOrder(
-                work_order_id=plan.id,
+                work_order_id=visual_id,
                 resource_type=blueprint.lesson.resource_type,
                 dependency=dependency,
                 visual=plan,

@@ -190,8 +190,12 @@ export interface CanvasComponent {
 export interface CanvasVisual {
 	id: string;
 	status: ComponentStatus;
+	mode?: 'diagram' | 'diagram_series' | 'diagram_compare' | 'simulation';
 	image_url: string | null;
 	frame_index: number | null;
+	component_id?: string | null;
+	parent_visual_id?: string | null;
+	error_message?: string | null;
 }
 
 export interface CanvasSection {
@@ -248,6 +252,17 @@ export interface V3DraftPack {
 	subject: string;
 	status: BookletStatus;
 	sections: Record<string, unknown>[];
+	visual_blocks?: Array<{
+		visual_id: string;
+		attaches_to: string;
+		frame_index?: number | null;
+		mode: 'diagram' | 'diagram_series' | 'diagram_compare' | 'image' | 'simulation';
+		image_url?: string | null;
+		component_id?: string | null;
+		parent_visual_id?: string | null;
+		status?: 'ready' | 'failed';
+		error_message?: string | null;
+	}>;
 	answer_key?: Record<string, unknown> | null;
 	warnings: string[];
 	section_diagnostics: SectionAssemblyDiagnostic[];

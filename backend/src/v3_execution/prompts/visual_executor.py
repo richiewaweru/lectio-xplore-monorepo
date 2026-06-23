@@ -54,7 +54,7 @@ Maintain consistent style and geometry; only depict new information.
     prints = (
         chr(10).join(f"- {req}" for req in order.visual.print_requirements)
         if order.visual.print_requirements
-        else "- high contrast; large readable labels"
+        else "- high contrast; large readable labels; grayscale-safe"
     )
 
     return f"""Generate a clear educational illustration for print.

@@ -7,7 +7,7 @@ from contracts.lectio import get_section_field_for_component
 
 from v3_blueprint.models import ProductionBlueprint
 from v3_execution.component_aliases import canonical_component_id
-from v3_execution.models import DraftPack, GeneratedAnswerKeyBlock
+from v3_execution.models import DraftPack, GeneratedAnswerKeyBlock, GeneratedVisualBlock
 from v3_review import coherence_report_to_generation_summary
 from v3_review.deterministic_checks import (
     check_expected_answers_preserved,
@@ -15,6 +15,7 @@ from v3_review.deterministic_checks import (
     check_no_extra_questions,
     check_planned_components_exist,
     check_planned_sections_exist,
+    check_visual_failures,
     check_planned_visuals_exist,
 )
 from v3_review.models import CoherenceReport
@@ -29,7 +30,12 @@ def _concept_field() -> str:
     return get_section_field_for_component("explanation-block") or "explanation"
 
 
-def _minimal_draft_pack(*, sections: list[dict], answer_key: GeneratedAnswerKeyBlock | None) -> DraftPack:
+def _minimal_draft_pack(
+    *,
+    sections: list[dict],
+    answer_key: GeneratedAnswerKeyBlock | None,
+    visual_blocks: list[GeneratedVisualBlock] | None = None,
+) -> DraftPack:
     return DraftPack(
         generation_id="g1",
         blueprint_id="b1",
@@ -37,6 +43,7 @@ def _minimal_draft_pack(*, sections: list[dict], answer_key: GeneratedAnswerKeyB
         subject="Mathematics",
         status="draft_ready",
         sections=sections,
+        visual_blocks=visual_blocks or [],
         answer_key=answer_key,
         warnings=[],
     )
@@ -211,4 +218,27 @@ def test_planned_components_skip_diagram_series_but_visual_check_flags_missing()
 
     assert all("diagram-series" not in issue.message for issue in component_issues)
     assert any(issue.repair_target_id == "visual:diagram_sequence" for issue in visual_issues)
+
+
+def test_failed_visual_block_emits_minor_review_issue() -> None:
+    dp = _minimal_draft_pack(
+        sections=[],
+        answer_key=None,
+        visual_blocks=[
+            GeneratedVisualBlock(
+                visual_id="vis-practice-0",
+                attaches_to="practice",
+                mode="diagram",
+                source_work_order_id="wo-v",
+                status="failed",
+                error_message="provider timeout",
+            )
+        ],
+    )
+
+    issues = check_visual_failures(dp)
+
+    assert len(issues) == 1
+    assert issues[0].severity == "minor"
+    assert issues[0].category == "visual_generation_failed"
 

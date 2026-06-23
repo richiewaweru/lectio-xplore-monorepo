@@ -34,7 +34,7 @@ class GeneratedQuestionBlock(BaseModel):
     source_work_order_id: str
 
 
-VisualMode = Literal["diagram", "diagram_series", "image", "simulation"]
+VisualMode = Literal["diagram", "diagram_series", "diagram_compare", "image", "simulation"]
 
 
 class GeneratedVisualBlock(BaseModel):
@@ -50,6 +50,10 @@ class GeneratedVisualBlock(BaseModel):
     caption: str | None = None
     alt_text: str | None = None
     source_work_order_id: str
+    component_id: str | None = None
+    parent_visual_id: str | None = None
+    status: Literal["ready", "failed"] = "ready"
+    error_message: str | None = None
 
 
 AnswerKeyStyle = Literal["answers_only", "brief_explanations", "full_working"]
@@ -207,6 +211,7 @@ class VisualPlanItem(BaseModel):
 
     id: str
     attaches_to: str
+    component_id: str | None = None
     mode: VisualMode = "diagram"
     purpose: str = ""
     must_show: list[str] = Field(default_factory=list)
@@ -298,6 +303,7 @@ class DraftPack(BaseModel):
     subject: str
     status: BookletStatus
     sections: list[dict[str, Any]]
+    visual_blocks: list[GeneratedVisualBlock] = Field(default_factory=list)
     answer_key: GeneratedAnswerKeyBlock | None = None
     warnings: list[str] = Field(default_factory=list)
     section_diagnostics: list[SectionAssemblyDiagnostic] = Field(default_factory=list)

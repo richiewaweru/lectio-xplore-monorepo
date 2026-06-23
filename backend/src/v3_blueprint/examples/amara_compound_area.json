@@ -87,17 +87,44 @@
     "visuals": [
       {
         "section_id": "orient",
-        "strategy": "shape decomposition overview",
+        "component_id": "diagram-block",
+        "subject": "A compound shape split into smaller rectangles",
+        "visual_job": "introduce the shape-splitting idea visually",
+        "type_hint": "diagram",
+        "anchor_link": "Shows the same split-into-parts idea used across the lesson",
+        "must_show": ["one compound shape", "clear split lines", "two or more rectangles"],
+        "must_not_show": ["worked calculations", "decorative textures"],
+        "source_question_ids": [],
+        "frames": [],
+        "strategy": "compound shape overview with visible rectangle partitions",
         "density": "high"
       },
       {
         "section_id": "model",
-        "strategy": "stepwise diagram annotations",
+        "component_id": "worked-example-card",
+        "subject": "A worked compound area diagram with labeled dimensions",
+        "visual_job": "summarize the section explanation as a labeled diagram",
+        "type_hint": "diagram",
+        "anchor_link": "Uses the same partitioning move introduced in orient",
+        "must_show": ["dimension labels", "partition lines", "rectangles named or numbered"],
+        "must_not_show": ["extra shapes unrelated to the example"],
+        "source_question_ids": [],
+        "frames": [],
+        "strategy": "worked compound area diagram with annotations",
         "density": "high"
       },
       {
         "section_id": "practice",
-        "strategy": "question-by-question supporting diagrams",
+        "component_id": "diagram-block",
+        "subject": "Practice compound shapes that match the guided questions",
+        "visual_job": "support practice questions q1 and q2 with clean figures",
+        "type_hint": "diagram",
+        "anchor_link": "Reuses the same partition-then-add routine",
+        "must_show": ["clear compound outlines", "dimension labels where needed"],
+        "must_not_show": ["solution steps", "final answers"],
+        "source_question_ids": ["q1", "q2"],
+        "frames": [],
+        "strategy": "practice-support compound area figures",
         "density": "high"
       }
     ]

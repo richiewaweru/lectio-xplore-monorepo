@@ -137,3 +137,62 @@ export function applySectionWriterFailedToCanvas(
 	};
 }
 
+export function applyVisualFailedToCanvas(
+	canvas: CanvasSection[],
+	payload: Record<string, unknown>
+): StreamApplyResult {
+	const sectionId = String(payload.attaches_to ?? '');
+	const errorMessage = String(payload.error_summary ?? 'Visual generation failed.');
+	const mode = typeof payload.mode === 'string' ? payload.mode : undefined;
+	const componentId =
+		typeof payload.component_id === 'string' ? payload.component_id : null;
+	const parentVisualId =
+		typeof payload.parent_visual_id === 'string' ? payload.parent_visual_id : null;
+	if (!sectionId) {
+		return {
+			canvas,
+			warning: 'Visual failure event missing section attachment.'
+		};
+	}
+	return {
+		canvas: canvas.map((s) =>
+			s.id !== sectionId
+				? s
+				: {
+						...s,
+						visual: s.visual
+							? {
+									...s.visual,
+									status: 'failed' as const,
+									mode:
+										mode === 'diagram' ||
+										mode === 'diagram_series' ||
+										mode === 'diagram_compare' ||
+										mode === 'simulation'
+											? mode
+											: s.visual.mode,
+									component_id: componentId,
+									parent_visual_id: parentVisualId,
+									error_message: errorMessage
+								}
+							: {
+									id: `visual-${sectionId}`,
+									status: 'failed' as const,
+									mode:
+										mode === 'diagram' ||
+										mode === 'diagram_series' ||
+										mode === 'diagram_compare' ||
+										mode === 'simulation'
+											? mode
+											: undefined,
+									image_url: null,
+									frame_index: null,
+									component_id: componentId,
+									parent_visual_id: parentVisualId,
+									error_message: errorMessage
+								}
+					}
+		),
+		warning: `Visual generation failed for ${sectionId}: ${errorMessage}`
+	};
+}

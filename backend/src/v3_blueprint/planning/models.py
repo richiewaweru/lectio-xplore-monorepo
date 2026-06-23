@@ -144,15 +144,6 @@ class StructuralPlan(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def max_two_visuals(self) -> StructuralPlan:
-        visual_count = sum(1 for s in self.sections if s.visual_required)
-        if visual_count > 2:
-            raise ValueError(
-                f"Max 2 sections with visual_required=true, got {visual_count}"
-            )
-        return self
-
-    @model_validator(mode="after")
     def first_section_no_transition(self) -> StructuralPlan:
         if self.sections and self.sections[0].transition_note is not None:
             raise ValueError("First section must have transition_note=null")
@@ -177,11 +168,32 @@ class Stage1PlanFailure(Exception):
 # ── Stage 2 output models ─────────────────────────────────────────────────
 
 
+class VisualFrameBrief(BaseModel):
+    """Stage 2 description of one frame in a diagram-series."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    description: str = Field(
+        description="What this frame shows. One sentence."
+    )
+    must_show: list[str] = Field(default_factory=list)
+
+
 class VisualStrategySpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     subject: str = Field(
         description="What the visual depicts. One sentence.",
+    )
+    visual_job: str = Field(
+        description=(
+            "What this visual is FOR - pedagogical purpose. "
+            "E.g. 'introduce the anchor visually', "
+            "'summarize the section explanation as a labeled diagram', "
+            "'support practice question q-practice-2 with an unlabeled figure'. "
+            "Describes intent, not timing. Max 120 chars."
+        ),
+        max_length=120,
     )
     type_hint: Literal["diagram", "chart", "illustration", "comparison"]
     anchor_link: str = Field(
@@ -189,6 +201,21 @@ class VisualStrategySpec(BaseModel):
     )
     must_show: list[str] = Field(default_factory=list)
     must_not_show: list[str] = Field(default_factory=list)
+    source_question_ids: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Question IDs this visual supports. "
+            "Populate when the visual must match exact question content."
+        ),
+    )
+    frames: list[VisualFrameBrief] = Field(
+        default_factory=list,
+        description=(
+            "Frame descriptions for diagram-series components. "
+            "Must have >= 2 entries when the section's visual-capable "
+            "component is diagram-series. Empty for all other components."
+        ),
+    )
 
 
 class ComponentBrief(BaseModel):
