@@ -196,6 +196,48 @@ describe('connectV3StudioGenerationStream', () => {
 		expect(onGenerationStarting).toHaveBeenCalledTimes(1);
 	});
 
+	it('retries generation SSE failures with bounded backoff and resets after reopen', async () => {
+		connectV3StudioGenerationStream('gen-1', {});
+
+		const onerror = capturedOptions.current?.onerror as ((err: unknown) => number) | undefined;
+		const onopen = capturedOptions.current?.onopen as
+			| ((response: Response) => Promise<void>)
+			| undefined;
+		expect(onerror).toBeTypeOf('function');
+		expect(onopen).toBeTypeOf('function');
+
+		expect(onerror?.(new Error('drop-1'))).toBe(2000);
+		expect(onerror?.(new Error('drop-2'))).toBe(4000);
+		expect(onerror?.(new Error('drop-3'))).toBe(8000);
+		expect(onerror?.(new Error('drop-4'))).toBe(15000);
+		expect(onerror?.(new Error('drop-5'))).toBe(15000);
+		expect(onerror?.(new Error('drop-6'))).toBe(15000);
+		expect(() => onerror?.(new Error('drop-7'))).toThrow('drop-7');
+
+		await onopen?.(new Response(null, { status: 200 }));
+		expect(onerror?.(new Error('drop-after-open'))).toBe(2000);
+	});
+
+	it('aborts generation SSE after terminal events and stops retrying', () => {
+		const onGenerationComplete = vi.fn();
+		connectV3StudioGenerationStream('gen-1', { onGenerationComplete });
+
+		const onmessage = capturedOptions.current?.onmessage as
+			| ((msg: { event?: string; data?: string }) => void)
+			| undefined;
+		const onerror = capturedOptions.current?.onerror as ((err: unknown) => number) | undefined;
+		const signal = capturedOptions.current?.signal as AbortSignal | undefined;
+		expect(onmessage).toBeTypeOf('function');
+		expect(onerror).toBeTypeOf('function');
+		expect(signal).toBeDefined();
+
+		onmessage?.({ event: 'generation_complete', data: '{"generation_id":"gen-1"}' });
+
+		expect(onGenerationComplete).toHaveBeenCalledTimes(1);
+		expect(signal?.aborted).toBe(true);
+		expect(() => onerror?.(new Error('after-terminal'))).toThrow('after-terminal');
+	});
+
 	it('connects chunked planning SSE and dispatches planning events', () => {
 		const onSectionStart = vi.fn();
 		const onSectionRetry = vi.fn();

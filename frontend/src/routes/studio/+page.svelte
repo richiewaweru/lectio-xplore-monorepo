@@ -693,14 +693,14 @@
 			},
 			onOpen: () => {
 				const gid = v3Studio.generationId;
-				if (gid && !v3Studio.activePack) {
+				if (gid) {
 					void hydrateFromDocument(gid);
 				}
 			},
 			onError: (err) => {
 				v3Studio.error = friendly(err);
 				const gid = v3Studio.generationId;
-				if (gid && !v3Studio.activePack) {
+				if (gid) {
 					void hydrateFromDocument(gid);
 				}
 			}

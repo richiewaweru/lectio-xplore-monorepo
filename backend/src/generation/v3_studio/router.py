@@ -80,6 +80,7 @@ from telemetry.v3_trace.writer import V3TraceWriter
 logger = logging.getLogger(__name__)
 
 _CALLER = "v3_studio"
+HEARTBEAT_SECONDS = 15
 v3_studio_router = APIRouter(prefix="/v3", tags=["v3-studio"])
 _chunked_stage2_tasks: dict[str, asyncio.Task[None]] = {}
 
@@ -925,7 +926,14 @@ async def get_chunked_generation_events(
         finished = False
         try:
             while True:
-                chunk = await queue.get()
+                try:
+                    chunk = await asyncio.wait_for(
+                        queue.get(),
+                        timeout=HEARTBEAT_SECONDS,
+                    )
+                except asyncio.TimeoutError:
+                    yield ": ping\n\n"
+                    continue
                 if chunk is None:
                     finished = True
                     break
@@ -1496,7 +1504,14 @@ async def get_v3_generation_events(
         finished = False
         try:
             while True:
-                chunk = await queue.get()
+                try:
+                    chunk = await asyncio.wait_for(
+                        queue.get(),
+                        timeout=HEARTBEAT_SECONDS,
+                    )
+                except asyncio.TimeoutError:
+                    yield ": ping\n\n"
+                    continue
                 if chunk is None:
                     finished = True
                     break

@@ -781,6 +781,76 @@ describe('studio chunked URL resume', () => {
 		expect(v3Studio.canvas[0]?.sectionStatus).toBe('failed');
 	});
 
+	it('rehydrates from the persisted document on generation reopen and stream error even with an active pack', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-reopen');
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-reopen',
+			stage: 'blueprint_ready',
+			structural_plan: {
+				lesson_mode: 'first_exposure',
+				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
+				sections: [],
+				question_plan: []
+			},
+			section_briefs: {},
+			failed_sections: [],
+			blueprint_id: 'bp-reopen',
+			execution_started: true,
+			next_action: 'generation_running'
+		});
+		mocks.getV3GenerationBlueprint.mockResolvedValue({
+			blueprint_id: 'bp-reopen',
+			template_id: 'guided-concept-path',
+			section_plan: [],
+			question_plan: [],
+			resource_type: 'lesson',
+			title: 'Reconnect lesson',
+			anchor: null,
+			register_summary: '',
+			support_summary: []
+		});
+		mocks.fetchV3Document.mockResolvedValue({
+			kind: 'v3_booklet_pack',
+			generation_id: 'gen-reopen',
+			template_id: 'guided-concept-path',
+			subject: 'Mathematics',
+			status: 'draft_ready',
+			sections: [{ section_id: 'recovered', header: { title: 'Recovered section' } }],
+			warnings: [],
+			section_diagnostics: [],
+			booklet_issues: []
+		});
+		v3Studio.activePack = {
+			generation_id: 'gen-reopen',
+			blueprint_id: 'bp-stale',
+			template_id: 'guided-concept-path',
+			subject: 'Mathematics',
+			status: 'draft_ready',
+			sections: [{ section_id: 'stale', header: { title: 'Stale section' } }],
+			warnings: [],
+			section_diagnostics: [],
+			booklet_issues: []
+		};
+
+		render(StudioPage);
+		await waitFor(() => expect(mocks.connectV3StudioGenerationStream).toHaveBeenCalled());
+		expect(mocks.fetchV3Document).not.toHaveBeenCalled();
+
+		const handlers = latestGenerationHandlers() as {
+			onOpen?: () => void;
+			onError?: (err: unknown) => void;
+		};
+
+		handlers.onOpen?.();
+		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-reopen'));
+
+		mocks.fetchV3Document.mockClear();
+		handlers.onError?.(new Error('socket dropped'));
+		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-reopen'));
+		expect(v3Studio.error).toContain('socket dropped');
+	});
+
 	it('marks the live canvas visual failed when visual_failed arrives', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-visual-fail');
 		mocks.getChunkedPlanStatus.mockResolvedValue({

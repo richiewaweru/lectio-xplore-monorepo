@@ -213,6 +213,9 @@ export function connectV3StudioGenerationStream(
 	handlers: V3StudioStreamHandlers
 ): () => void {
 	const ctrl = new AbortController();
+	let terminated = false;
+	let retries = 0;
+	const MAX_RETRIES = 6;
 	const url = buildApiUrl(`/api/v1/v3/generations/${encodeURIComponent(generationId)}/events`);
 	const headers: Record<string, string> = {};
 	const token = get(authToken);
@@ -225,6 +228,7 @@ export function connectV3StudioGenerationStream(
 			if (!response.ok) {
 				throw new Error(`v3 SSE failed: ${response.status}`);
 			}
+			retries = 0;
 			handlers.onOpen?.();
 		},
 		onmessage(msg) {
@@ -253,6 +257,8 @@ export function connectV3StudioGenerationStream(
 					break;
 				case 'resource_finalised':
 					handlers.onResourceFinalised?.(payload);
+					terminated = true;
+					ctrl.abort();
 					break;
 				case 'component_ready':
 					handlers.onComponentReady?.(payload);
@@ -274,6 +280,8 @@ export function connectV3StudioGenerationStream(
 					break;
 				case 'generation_complete':
 					handlers.onGenerationComplete?.(payload);
+					terminated = true;
+					ctrl.abort();
 					break;
 				case 'generation_warning':
 					handlers.onGenerationWarning?.(payload);
@@ -305,7 +313,11 @@ export function connectV3StudioGenerationStream(
 		},
 		onerror(err) {
 			handlers.onError?.(err);
-			throw err;
+			if (terminated || retries >= MAX_RETRIES) {
+				throw err;
+			}
+			retries += 1;
+			return Math.min(1000 * 2 ** retries, 15000);
 		}
 	});
 

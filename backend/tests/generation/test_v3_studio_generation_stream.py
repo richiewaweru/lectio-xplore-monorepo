@@ -15,6 +15,7 @@ from core.auth.middleware import get_current_user
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
 from core.entities.user import User
+from generation.v3_studio import router as v3_router
 from generation.v3_studio.dtos import V3InputForm
 from generation.v3_studio.planning_artifact import (
     SCHEMA_VERSION,
@@ -170,6 +171,41 @@ async def test_v3_generate_start_returns_json_and_sse_stream_closes() -> None:
                 payload = await resp.aread()
                 assert b"component_ready" in payload
 
+    assert await v3_studio_store.get_generation_queue(generation_id) is None
+
+
+@pytest.mark.asyncio
+async def test_v3_generation_events_emit_heartbeat_before_late_chunk() -> None:
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+
+    generation_id = str(uuid.uuid4())
+    queue: asyncio.Queue[str | None] = asyncio.Queue()
+    await v3_studio_store.register_generation_stream(
+        user_id=TEST_USER_A.id,
+        generation_id=generation_id,
+        blueprint_id=f"bp-{generation_id}",
+        queue=queue,
+    )
+
+    async def delayed_emit() -> None:
+        await asyncio.sleep(0.03)
+        await queue.put("event: component_ready\ndata: {}\n\n")
+        await queue.put(None)
+
+    with patch.object(v3_router, "HEARTBEAT_SECONDS", 0.01):
+        producer = asyncio.create_task(delayed_emit())
+        async with _client() as client:
+            async with client.stream(
+                "GET",
+                f"/api/v1/v3/generations/{generation_id}/events",
+            ) as resp:
+                assert resp.status_code == 200
+                payload = await resp.aread()
+        await producer
+
+    assert b": ping\n\n" in payload
+    assert b"component_ready" in payload
     assert await v3_studio_store.get_generation_queue(generation_id) is None
 
 
