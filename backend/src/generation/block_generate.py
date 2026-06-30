@@ -27,6 +27,7 @@ from v3_execution.config.models import (
     V3_ANSWER_KEY_GENERATOR,
     V3_SECTION_WRITER,
     get_v3_model,
+    get_v3_model_settings,
     get_v3_spec,
 )
 
@@ -123,6 +124,8 @@ async def run_block_generation(
             slot=slot,
             spec=spec,
             section_id=None,
+            node=node,
+            model_settings=get_v3_model_settings(node),
         )
 
         raw = result.output

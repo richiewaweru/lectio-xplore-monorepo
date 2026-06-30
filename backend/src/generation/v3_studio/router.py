@@ -39,7 +39,7 @@ from v3_blueprint.planning.retry import (
     retry_failed_section,
     run_stage1_with_retry,
 )
-from v3_execution.config import get_v3_model, get_v3_slot, get_v3_spec
+from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.timeouts import V3_TIMEOUTS
 from v3_execution.runtime.runner import sse_event_stream
 
@@ -294,6 +294,7 @@ async def post_v3_narrow(
             spec=spec,
             section_id=None,
             node=node,
+            model_settings=get_v3_model_settings(node),
             retry_policy=RetryPolicy(
                 call_timeout_seconds=float(
                     V3_TIMEOUTS["narrow"]

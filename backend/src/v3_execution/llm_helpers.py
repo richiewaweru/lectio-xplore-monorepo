@@ -6,7 +6,7 @@ from typing import Any
 from pydantic_ai import Agent
 
 from core.llm.runner import run_llm
-from v3_execution.config import get_v3_model, get_v3_slot, get_v3_spec
+from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 
 _CALLER = "v3_execution"
 
@@ -24,6 +24,10 @@ async def run_json_agent(
     model = get_v3_model(node_name, model_overrides=model_overrides)
     spec = get_v3_spec(node_name)
     slot = get_v3_slot(node_name)
+    effective_model_settings = get_v3_model_settings(
+        node_name,
+        base_settings=model_settings,
+    )
 
     agent = Agent(
         model=model,
@@ -41,7 +45,7 @@ async def run_json_agent(
         spec=spec,
         section_id=None,
         node=node_name,
-        model_settings=model_settings,
+        model_settings=effective_model_settings,
     )
     raw = result.output
     if hasattr(raw, "model_dump"):

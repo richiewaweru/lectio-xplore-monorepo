@@ -11,12 +11,11 @@ from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 from generation.v3_studio.prompts import _planner_index_block
 from v3_blueprint.planning.models import StructuralPlan
 from v3_blueprint.planning.validators import _allowed_roles_from_resource_spec
-from v3_execution.config import get_v3_model, get_v3_slot, get_v3_spec
+from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 
 _CALLER = "v3_chunked_architect"
 STAGE1_NODE = "v3_stage1_planner"
-STAGE1_THINKING = {"type": "enabled", "budget_tokens": 2000}
-STAGE1_MAX_TOKENS = 8000
+STAGE1_MAX_TOKENS = settings.v3_stage1_max_tokens
 
 
 def build_stage1_system_prompt() -> str:
@@ -224,10 +223,10 @@ async def _call_stage1(
             spec=spec,
             section_id=None,
             node=node,
-            model_settings={
-                "anthropic_thinking": STAGE1_THINKING,
-                "max_tokens": STAGE1_MAX_TOKENS,
-            },
+            model_settings=get_v3_model_settings(
+                node,
+                base_settings={"max_tokens": STAGE1_MAX_TOKENS},
+            ),
             retry_policy=RetryPolicy(
                 max_attempts=1,
                 call_timeout_seconds=float(settings.v3_timeout_stage1_seconds),
@@ -258,7 +257,6 @@ async def _call_stage1(
 __all__ = [
     "STAGE1_MAX_TOKENS",
     "STAGE1_NODE",
-    "STAGE1_THINKING",
     "_call_stage1",
     "build_stage1_system_prompt",
     "build_stage1_user_message",

@@ -8,6 +8,7 @@ from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.models.test import TestModel
+from pydantic_ai.profiles.openai import OpenAIModelProfile
 
 from core.llm.types import ModelFamily, ModelSpec
 
@@ -99,7 +100,11 @@ def _build_openai_compatible_model(spec: ModelSpec):
     else:
         provider = OpenAIProvider()
 
-    return OpenAIChatModel(spec.model_name, provider=provider)
+    profile = None
+    if spec.model_name.startswith("deepseek-"):
+        profile = OpenAIModelProfile(openai_chat_thinking_field="reasoning_content")
+
+    return OpenAIChatModel(spec.model_name, provider=provider, profile=profile)
 
 
 def build_model(spec: ModelSpec):
@@ -173,4 +178,3 @@ def effective_text_spec(*, catalog_spec: ModelSpec, model: Any | None) -> ModelS
         return catalog_spec
     described = describe_text_model(model)
     return described if described is not None else catalog_spec
-

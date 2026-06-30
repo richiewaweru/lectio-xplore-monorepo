@@ -49,8 +49,8 @@ def _form() -> V3InputForm:
 
 
 def test_stage1_uses_bounded_thinking_and_8000_tokens() -> None:
-    assert structural_planner.STAGE1_THINKING == {"type": "enabled", "budget_tokens": 2000}
-    assert structural_planner.STAGE1_MAX_TOKENS == 8000
+    assert structural_planner.STAGE1_MAX_TOKENS == 16000
+    assert structural_planner.STAGE1_MAX_TOKENS == structural_planner.settings.v3_stage1_max_tokens
 
 
 @pytest.mark.asyncio
@@ -78,6 +78,57 @@ async def test_call_stage1_prints_traceback_and_reraises() -> None:
     assert "type=RuntimeError" in printed
     assert "message=llm blew up" in printed
     assert mock_print.call_args.kwargs["flush"] is True
+
+
+@pytest.mark.asyncio
+async def test_call_stage1_uses_shared_model_settings_helper() -> None:
+    signals = _signals()
+    form = _form()
+    valid_plan = StructuralPlan(
+        lesson_mode="first_exposure",
+        lesson_intent=LessonIntent(
+            goal="By the end students can compare fractions.",
+            structure_rationale="Concrete-first structure for novice learners.",
+        ),
+        anchor=AnchorSpec(
+            example="splitting a pizza into 8 equal slices",
+            reuse_scope="used in intro and practice",
+        ),
+        voice=VoiceSpec(register_name="simple", tone="encouraging"),
+        prior_knowledge=["equal sharing"],
+        sections=[
+            SectionPlan(
+                id="intro",
+                title="Intro",
+                role="intro",
+                visual_required=False,
+                transition_note=None,
+                components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")],
+            )
+        ],
+        question_plan=[
+            QPlanItem(
+                question_id="q1",
+                section_id="intro",
+                temperature="warm",
+                diagram_required=False,
+            )
+        ],
+        answer_key_style="brief_explanations",
+    )
+
+    with (
+        patch.object(structural_planner, "run_llm", new=AsyncMock(return_value=type("Result", (), {"output": valid_plan})())) as mock_run_llm,
+    ):
+        await structural_planner._call_stage1(
+            signals,
+            form,
+            {"resource_type": "lesson", "spec": {"required_roles": ["intro"]}},
+            generation_id="gen-stage1-settings",
+        )
+
+    call_kwargs = mock_run_llm.await_args.kwargs
+    assert call_kwargs["model_settings"] == {"max_tokens": 16000}
 
 
 @pytest.mark.asyncio

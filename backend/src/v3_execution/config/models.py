@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from typing import Literal
 
 from core.llm import ModelFamily, ModelSlot, ModelSpec, build_model
 
@@ -26,6 +27,21 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V3_QUESTION_WRITER: ModelSlot.STANDARD,
     V3_ANSWER_KEY_GENERATOR: ModelSlot.FAST,
     V3_ANSWER_KEY_GENERATOR_HEAVY: ModelSlot.STANDARD,
+}
+
+V3ReasoningLevel = Literal["low", "medium", "high"]
+V3NodeReasoningPolicy = V3ReasoningLevel | bool
+
+V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
+    V3_SIGNAL_EXTRACTOR: False,
+    V3_NARROW: False,
+    V3_STAGE1_PLANNER: "high",
+    V3_STAGE2_EXPANDER: "medium",
+    V3_BLUEPRINT_ADJUST: "medium",
+    V3_SECTION_WRITER: "low",
+    V3_QUESTION_WRITER: "medium",
+    V3_ANSWER_KEY_GENERATOR: False,
+    V3_ANSWER_KEY_GENERATOR_HEAVY: "low",
 }
 
 V3_DEFAULT_SPECS: dict[ModelSlot, ModelSpec] = {
@@ -108,6 +124,29 @@ def get_v3_spec(node_name: str) -> ModelSpec:
     return _load_slot_spec(get_v3_slot(node_name))
 
 
+def get_v3_model_settings(
+    node_name: str,
+    *,
+    base_settings: dict | None = None,
+) -> dict | None:
+    settings: dict = {}
+    spec = get_v3_spec(node_name)
+    reasoning = V3_NODE_REASONING.get(node_name, False)
+
+    if (
+        spec.family == ModelFamily.OPENAI_COMPATIBLE
+        and spec.model_name.startswith("deepseek-")
+        and isinstance(reasoning, str)
+    ):
+        settings["openai_reasoning_effort"] = reasoning
+        settings["extra_body"] = {"thinking": {"type": "enabled"}}
+
+    if base_settings:
+        settings = settings | base_settings
+
+    return settings or None
+
+
 def get_v3_model(node_name: str, *, model_overrides: dict | None = None):
     slot = get_v3_slot(node_name)
     spec = _load_slot_spec(slot)
@@ -125,6 +164,7 @@ __all__ = [
     "V3_BLUEPRINT_ADJUST",
     "V3_DEFAULT_SPECS",
     "V3_NARROW",
+    "V3_NODE_REASONING",
     "V3_NODE_SLOTS",
     "V3_QUESTION_WRITER",
     "V3_SECTION_WRITER",
@@ -132,6 +172,7 @@ __all__ = [
     "V3_STAGE1_PLANNER",
     "V3_STAGE2_EXPANDER",
     "get_v3_model",
+    "get_v3_model_settings",
     "get_v3_slot",
     "get_v3_spec",
 ]

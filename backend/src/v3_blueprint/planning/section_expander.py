@@ -12,11 +12,10 @@ from core.llm.runner import RetryPolicy, run_llm
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 from generation.v3_studio.signal_map import summarise_form_supports
 from v3_blueprint.planning.models import SectionBrief, SectionPlan, StructuralPlan
-from v3_execution.config import get_v3_model, get_v3_slot, get_v3_spec
+from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 
 _CALLER = "v3_chunked_architect"
 STAGE2_NODE = "v3_stage2_expander"
-STAGE2_THINKING = {"type": "adaptive"}
 STAGE2_MAX_TOKENS: int = settings.v3_stage2_max_tokens
 
 
@@ -389,10 +388,10 @@ async def _call_stage2_section(
             spec=spec,
             section_id=section.id,
             node=node,
-            model_settings={
-                "anthropic_thinking": STAGE2_THINKING,
-                "max_tokens": STAGE2_MAX_TOKENS,
-            },
+            model_settings=get_v3_model_settings(
+                node,
+                base_settings={"max_tokens": STAGE2_MAX_TOKENS},
+            ),
             retry_policy=RetryPolicy(
                 max_attempts=1,
                 call_timeout_seconds=float(settings.v3_timeout_stage2_section_seconds),
@@ -429,7 +428,6 @@ async def _call_stage2_section(
 __all__ = [
     "STAGE2_MAX_TOKENS",
     "STAGE2_NODE",
-    "STAGE2_THINKING",
     "_call_stage2_section",
     "_load_component_cards_for_section",
     "build_stage2_system_prompt",

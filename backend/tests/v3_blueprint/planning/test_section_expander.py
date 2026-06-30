@@ -147,7 +147,4 @@ async def test_call_stage2_section_omits_extended_cache_beta_header() -> None:
 
     assert result == brief
     call_kwargs = mock_run_llm.await_args.kwargs
-    assert call_kwargs["model_settings"] == {
-        "anthropic_thinking": section_expander.STAGE2_THINKING,
-        "max_tokens": 8000,
-    }
+    assert call_kwargs["model_settings"] == {"max_tokens": 8000}

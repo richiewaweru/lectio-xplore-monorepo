@@ -4,7 +4,6 @@ import json
 import os
 from pathlib import Path
 import re
-import sys
 import tomllib
 from types import SimpleNamespace
 
@@ -293,6 +292,22 @@ def test_settings_normalize_log_level(monkeypatch) -> None:
     assert settings.log_level == "DEBUG"
 
 
+def test_settings_stage1_max_tokens_default_and_env_override(monkeypatch) -> None:
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./textbook_agent.db")
+    monkeypatch.setenv("JWT_SECRET_KEY", "super-secret-development-key")
+    monkeypatch.setenv("FRONTEND_ORIGIN", "http://localhost:5173")
+    monkeypatch.setenv("LESSON_BUILDER_PUBLIC_URL", "http://127.0.0.1:5173")
+    monkeypatch.delenv("V3_STAGE1_MAX_TOKENS", raising=False)
+
+    default_settings = Settings(_env_file=None)
+    assert default_settings.v3_stage1_max_tokens == 16000
+
+    monkeypatch.setenv("V3_STAGE1_MAX_TOKENS", "20000")
+    override_settings = Settings(_env_file=None)
+    assert override_settings.v3_stage1_max_tokens == 20000
+
+
 def test_settings_stage2_max_tokens_default_and_env_override(monkeypatch) -> None:
     monkeypatch.setenv("APP_ENV", "development")
     monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./textbook_agent.db")
@@ -391,19 +406,19 @@ def test_gcs_image_store_uses_service_account_json_and_base_url(monkeypatch) -> 
         captured["service_account_info"] = info
         return "creds"
 
-    monkeypatch.setitem(
-        sys.modules,
-        "google.cloud",
-        SimpleNamespace(storage=SimpleNamespace(Client=FakeStorageClient)),
+    import core.storage.gcs_image_store as core_gcs_image_store
+
+    monkeypatch.setattr(
+        core_gcs_image_store,
+        "storage",
+        SimpleNamespace(Client=FakeStorageClient),
     )
-    monkeypatch.setitem(
-        sys.modules,
-        "google.oauth2",
+    monkeypatch.setattr(
+        core_gcs_image_store,
+        "service_account",
         SimpleNamespace(
-            service_account=SimpleNamespace(
-                Credentials=SimpleNamespace(
-                    from_service_account_info=fake_from_service_account_info
-                )
+            Credentials=SimpleNamespace(
+                from_service_account_info=fake_from_service_account_info
             )
         ),
     )
@@ -417,6 +432,52 @@ def test_gcs_image_store_uses_service_account_json_and_base_url(monkeypatch) -> 
     assert captured["service_account_info"] == {"project_id": "proj-1"}
     assert captured["project"] == "proj-1"
     assert captured["bucket_name"] == "prod-diagrams"
+
+
+@pytest.mark.asyncio
+async def test_media_gcs_image_store_delegates_uploads_to_core_store(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    class StubCoreStore:
+        def __init__(self, bucket_name: str | None = None) -> None:
+            captured["bucket_name"] = bucket_name
+            self._base_url = "https://storage.googleapis.com/prod-diagrams"
+            self.credential_source = "service_account_json"
+            self.credentials_resolved = True
+            self.client = SimpleNamespace(__class__=SimpleNamespace(__name__="FakeStorageClient"))
+
+        async def upload_with_key(
+            self,
+            *,
+            key: str,
+            image_bytes: bytes,
+            content_type: str = "image/png",
+        ) -> str:
+            captured["key"] = key
+            captured["image_bytes"] = image_bytes
+            captured["content_type"] = content_type
+            return f"https://storage.googleapis.com/prod-diagrams/{key}"
+
+    monkeypatch.setattr("media.storage.image_store.CoreGCSImageStore", StubCoreStore)
+
+    from media.storage.image_store import GCSImageStore
+
+    store = GCSImageStore("prod-diagrams")
+    url = await store.store_image(
+        b"png-bytes",
+        generation_id="gen-1",
+        section_id="section-1",
+        filename="visual.png",
+        format="png",
+    )
+
+    assert captured["bucket_name"] == "prod-diagrams"
+    assert captured["key"] == "gen-1/section-1/visual.png"
+    assert captured["image_bytes"] == b"png-bytes"
+    assert captured["content_type"] == "image/png"
+    assert url == "https://storage.googleapis.com/prod-diagrams/gen-1/section-1/visual.png"
+    assert store.credential_source == "service_account_json"
+    assert store.credentials_resolved is True
 
 
 def test_docker_compose_maps_root_google_client_id_into_backend_and_frontend() -> None:

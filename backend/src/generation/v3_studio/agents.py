@@ -9,7 +9,7 @@ from generation.v3_studio.dtos import ProductionBlueprintEnvelope, V3InputForm, 
 from generation.v3_studio.prompts import ADJUST_SYSTEM, SIGNAL_SYSTEM
 from v3_blueprint.compiler import BlueprintCompiler
 from v3_blueprint.models import ProductionBlueprint
-from v3_execution.config import get_v3_model, get_v3_slot, get_v3_spec
+from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.timeouts import V3_TIMEOUTS
 
 _CALLER = "v3_studio"
@@ -76,6 +76,7 @@ async def extract_signals(form: V3InputForm, *, trace_id: str | None = None) -> 
         spec=spec,
         section_id=None,
         node=node,
+        model_settings=get_v3_model_settings(node),
         retry_policy=RetryPolicy(call_timeout_seconds=float(V3_TIMEOUTS["signal_extractor"])),
     )
     raw = result.output
@@ -116,6 +117,7 @@ async def adjust_production_blueprint(
         spec=spec,
         section_id=None,
         node=node,
+        model_settings=get_v3_model_settings(node),
     )
     raw = result.output
     envelope = raw if isinstance(raw, ProductionBlueprintEnvelope) else None

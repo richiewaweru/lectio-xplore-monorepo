@@ -53,7 +53,7 @@ def extract_usage(result: Any) -> tuple[int | None, int | None]:
 
 
 def extract_thinking_tokens(result: Any) -> int | None:
-    """Best-effort thinking token count (e.g. Anthropic extended thinking in usage.details)."""
+    """Best-effort thinking token count across provider-specific usage.details keys."""
     usage_obj = getattr(result, "usage", None)
     if usage_obj is None:
         return None
@@ -61,7 +61,12 @@ def extract_thinking_tokens(result: Any) -> int | None:
     details = getattr(usage, "details", None)
     if not isinstance(details, dict):
         return None
-    for key in ("thinking_tokens", "thinking_token_count", "anthropic_thinking_tokens"):
+    for key in (
+        "thinking_tokens",
+        "thinking_token_count",
+        "anthropic_thinking_tokens",
+        "reasoning_tokens",
+    ):
         val = details.get(key)
         if isinstance(val, (int, float)):
             return int(val)
@@ -82,4 +87,3 @@ def compute_cost_usd(
 
     in_usd, out_usd = prices
     return (tokens_in / 1_000_000) * in_usd + (tokens_out / 1_000_000) * out_usd
-
