@@ -2,6 +2,7 @@
 
 import base64
 import json
+import logging
 import urllib.error
 import urllib.request
 
@@ -16,6 +17,7 @@ _SIZE_TO_ASPECT: dict[str, str] = {
     "1792x1024": "16:9",
     "1024x1792": "9:16",
 }
+logger = logging.getLogger(__name__)
 
 
 class XAIImageClient(OpenAICompatibleImageClient):
@@ -69,15 +71,51 @@ class XAIImageClient(OpenAICompatibleImageClient):
             },
             method="POST",
         )
+        logger.info(
+            "xai image request start",
+            extra={
+                "node_name": "visual_executor",
+                "provider": "xai",
+                "request_url": request.full_url,
+                "image_model": self.model_name,
+                "api_key_present": bool(self.api_key),
+                "prompt_length": len(prompt),
+            },
+        )
         try:
             with urllib.request.urlopen(request, timeout=60) as response:
-                parsed = json.loads(response.read().decode("utf-8"))
+                raw_body = response.read()
+                logger.info(
+                    "xai image response received",
+                    extra={
+                        "node_name": "visual_executor",
+                        "provider": "xai",
+                        "request_url": request.full_url,
+                        "image_model": self.model_name,
+                        "status_code": getattr(response, "status", None),
+                        "body_length": len(raw_body),
+                    },
+                )
+                parsed = json.loads(raw_body.decode("utf-8"))
         except urllib.error.HTTPError as exc:
             body = ""
             try:
                 body = exc.read().decode("utf-8", errors="replace")
             except Exception:
                 pass
+            logger.error(
+                "xai image request failed",
+                extra={
+                    "node_name": "visual_executor",
+                    "provider": "xai",
+                    "request_url": request.full_url,
+                    "image_model": self.model_name,
+                    "status_code": exc.code,
+                    "body_length": len(body),
+                    "response_body_preview": body[:500],
+                },
+                exc_info=exc,
+            )
             raise RuntimeError(
                 f"HTTP Error {exc.code}: {exc.reason} | Body: {body[:500]}"
             ) from exc
@@ -97,12 +135,54 @@ class XAIImageClient(OpenAICompatibleImageClient):
 
         url = entry.get("url")
         if url:
-            with urllib.request.urlopen(url, timeout=60) as image_response:
-                return ImageGenerationResult(
-                    bytes=image_response.read(),
-                    format="jpeg",
-                    mime_type="image/jpeg",
+            logger.info(
+                "xai image asset fetch start",
+                extra={
+                    "node_name": "visual_executor",
+                    "provider": "xai",
+                    "asset_url": url,
+                    "image_model": self.model_name,
+                },
+            )
+            try:
+                with urllib.request.urlopen(url, timeout=60) as image_response:
+                    image_bytes = image_response.read()
+                    logger.info(
+                        "xai image asset fetch received",
+                        extra={
+                            "node_name": "visual_executor",
+                            "provider": "xai",
+                            "asset_url": url,
+                            "image_model": self.model_name,
+                            "status_code": getattr(image_response, "status", None),
+                            "body_length": len(image_bytes),
+                        },
+                    )
+                    return ImageGenerationResult(
+                        bytes=image_bytes,
+                        format="jpeg",
+                        mime_type="image/jpeg",
+                    )
+            except urllib.error.HTTPError as exc:
+                body = ""
+                try:
+                    body = exc.read().decode("utf-8", errors="replace")
+                except Exception:
+                    pass
+                logger.error(
+                    "xai image asset fetch failed",
+                    extra={
+                        "node_name": "visual_executor",
+                        "provider": "xai",
+                        "asset_url": url,
+                        "image_model": self.model_name,
+                        "status_code": exc.code,
+                        "body_length": len(body),
+                        "response_body_preview": body[:500],
+                    },
+                    exc_info=exc,
                 )
+                raise
 
         raise RuntimeError("xAI response contained neither b64_json nor url")
 

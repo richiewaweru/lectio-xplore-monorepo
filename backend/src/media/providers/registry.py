@@ -25,10 +25,18 @@ def _first_env(*names: str) -> str | None:
 
 
 def load_image_provider_spec() -> ImageProviderSpec:
-    provider = (_first_env("IMAGE_PROVIDER", "PIPELINE_IMAGE_PROVIDER") or "xai").strip().lower()
-    model_name = _first_env("IMAGE_MODEL_NAME", "PIPELINE_IMAGE_MODEL_NAME")
-    base_url = _first_env("IMAGE_BASE_URL", "PIPELINE_IMAGE_BASE_URL")
-    api_key_env = _first_env("IMAGE_API_KEY_ENV", "PIPELINE_IMAGE_API_KEY_ENV")
+    image_provider = _first_env("IMAGE_PROVIDER")
+    pipeline_provider = _first_env("PIPELINE_IMAGE_PROVIDER")
+    provider = (image_provider or pipeline_provider or "xai").strip().lower()
+
+    if image_provider:
+        model_name = _first_env("IMAGE_MODEL_NAME")
+        base_url = _first_env("IMAGE_BASE_URL")
+        api_key_env = _first_env("IMAGE_API_KEY_ENV")
+    else:
+        model_name = _first_env("PIPELINE_IMAGE_MODEL_NAME")
+        base_url = _first_env("PIPELINE_IMAGE_BASE_URL")
+        api_key_env = _first_env("PIPELINE_IMAGE_API_KEY_ENV")
 
     if provider == "gemini":
         return ImageProviderSpec(

@@ -19,9 +19,13 @@ class GCSImageStore:
                   operations return None — lets local dev run without credentials.
     """
 
-    def __init__(self) -> None:
-        bucket_name = os.getenv("GCS_BUCKET_NAME", "")
-        if not bucket_name:
+    def __init__(self, bucket_name: str | None = None) -> None:
+        resolved_bucket_name = bucket_name or os.getenv("GCS_BUCKET_NAME", "")
+        self.bucket_name = resolved_bucket_name
+        self.credential_source = "application_default"
+        self.credentials_resolved = False
+        self.client = None
+        if not resolved_bucket_name:
             self._bucket = None
             self._base_url = ""
             return
@@ -34,11 +38,14 @@ class GCSImageStore:
                 credentials=credentials,
                 project=info["project_id"],
             )
+            self.credential_source = "service_account_json"
+            self.credentials_resolved = True
         else:
             # Local fallback: gcloud auth application-default login
             client = storage.Client()
 
-        self._bucket = client.bucket(bucket_name)
+        self.client = client
+        self._bucket = client.bucket(resolved_bucket_name)
         self._base_url = os.getenv("GCS_IMAGE_BASE_URL", "")
 
     @property

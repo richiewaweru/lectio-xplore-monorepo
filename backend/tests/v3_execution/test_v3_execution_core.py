@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -115,7 +116,7 @@ async def test_execute_visual_series_sets_parent_visual_id(
     class StubClient:
         async def generate_image(self, *, prompt: str):
             _ = prompt
-            return SimpleNamespace(bytes=b"img", format="png")
+            return SimpleNamespace(bytes=b"img", format="png", mime_type="image/png")
 
     class StubStore:
         async def store_image(self, *_args, **kwargs):
@@ -197,6 +198,94 @@ async def test_execute_visual_returns_failed_block_and_event_on_failure(
     assert failure_payload["mode"] == "diagram"
     assert failure_payload["frame_count"] == 1
     assert failure_payload["error_summary"] == "provider timeout"
+
+
+@pytest.mark.asyncio
+async def test_execute_visual_preserves_stage_and_exception_type_on_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    order = VisualGeneratorWorkOrder(
+        work_order_id="v-stage-fail",
+        visual=VisualPlanItem(
+            id="vis-practice-1",
+            attaches_to="practice",
+            component_id="diagram-block",
+            mode="diagram",
+            purpose="support question",
+        ),
+        source_of_truth=[],
+    )
+
+    class StubClient:
+        async def generate_image(self, *, prompt: str):
+            _ = prompt
+            raise RuntimeError("provider timeout")
+
+    class StubStore:
+        async def store_image(self, *_args, **_kwargs):
+            raise AssertionError("store_image should not run when provider fails")
+
+    async def stub_run_with_retries(_label, attempt, max_retries):
+        _ = max_retries
+        return await attempt(False)
+
+    monkeypatch.setattr(
+        "v3_execution.executors.visual_executor.get_image_client",
+        lambda: StubClient(),
+    )
+    monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: StubStore())
+    monkeypatch.setattr(
+        "v3_execution.executors.visual_executor.load_image_provider_spec",
+        lambda: SimpleNamespace(provider="stub", model_name="stub-model"),
+    )
+    monkeypatch.setattr(
+        "v3_execution.executors.visual_executor.run_with_retries",
+        stub_run_with_retries,
+    )
+
+    captured: list[tuple[str, dict]] = []
+
+    async def emit(event_type: str, payload: dict) -> None:
+        captured.append((event_type, payload))
+
+    with caplog.at_level(logging.INFO):
+        blocks = await execute_visual(
+            order,
+            emit,
+            trace_id="trace",
+            generation_id="gen",
+        )
+
+    assert len(blocks) == 1
+    failed = blocks[0]
+    assert failed.status == "failed"
+    assert (
+        failed.error_message
+        == "image_generation_api_call failed (RuntimeError): provider timeout"
+    )
+
+    failure_payload = next(payload for event, payload in captured if event == "visual_failed")
+    assert (
+        failure_payload["error_summary"]
+        == "image_generation_api_call failed (RuntimeError): provider timeout"
+    )
+
+    request_log = next(
+        record for record in caplog.records if record.message == "v3 visual request constructed"
+    )
+    assert request_log.visual_id == "vis-practice-1"
+    assert request_log.prompt_length > 0
+
+    failure_log = next(
+        record
+        for record in caplog.records
+        if record.message == "v3 visual failed block error_message set"
+    )
+    assert failure_log.failure_stage == "image_generation_api_call"
+    assert failure_log.original_exception_type == "RuntimeError"
+    assert "provider timeout" in failure_log.original_exception_message
+    assert "RuntimeError: provider timeout" in failure_log.traceback
 
 
 def test_validate_question_block_rejects_answer_drift() -> None:

@@ -86,6 +86,23 @@ def test_image_provider_falls_back_to_pipeline_image_env_names():
     assert client.__class__.__name__ == "XAIImageClient"
 
 
+def test_pipeline_provider_does_not_mix_in_image_base_url_override():
+    with _env(
+        IMAGE_BASE_URL="https://storage.googleapis.com/lectio-bucket-1",
+        PIPELINE_IMAGE_PROVIDER="xai",
+        PIPELINE_IMAGE_MODEL_NAME="grok-imagine-image",
+        PIPELINE_IMAGE_BASE_URL="https://api.x.ai/v1",
+        PIPELINE_IMAGE_API_KEY_ENV="XAI_API_KEY",
+        XAI_API_KEY="sk-test",
+    ):
+        spec = load_image_provider_spec()
+        client = get_image_client()
+
+    assert spec.provider == "xai"
+    assert spec.base_url == "https://api.x.ai/v1"
+    assert client.base_url == "https://api.x.ai/v1"
+
+
 def test_image_provider_selects_openai_with_image_env_names():
     with _env(
         IMAGE_PROVIDER="openai",

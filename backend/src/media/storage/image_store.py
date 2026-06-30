@@ -1,13 +1,16 @@
 ﻿from __future__ import annotations
 
 import asyncio
-import json
-import os
+import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from uuid import uuid4
 
 from core.config import settings
+from core.storage.gcs_image_store import GCSImageStore as CoreGCSImageStore
+
+
+logger = logging.getLogger(__name__)
 
 
 class ImageStore(ABC):
@@ -73,25 +76,12 @@ class LocalImageStore(ImageStore):
 
 class GCSImageStore(ImageStore):
     def __init__(self, bucket_name: str):
-        from google.cloud import storage
-        from google.oauth2 import service_account
-
         self.bucket_name = bucket_name
-        self.base_url = os.getenv("GCS_IMAGE_BASE_URL", "").rstrip("/")
-        creds_json = os.getenv("GCS_SERVICE_ACCOUNT_JSON", "").strip()
-        self.credential_source = "application_default"
-
-        if creds_json:
-            info = json.loads(creds_json)
-            credentials = service_account.Credentials.from_service_account_info(info)
-            self.client = storage.Client(
-                credentials=credentials,
-                project=info.get("project_id"),
-            )
-            self.credential_source = "service_account_json"
-        else:
-            self.client = storage.Client()
-        self.bucket = self.client.bucket(bucket_name)
+        self._core_store = CoreGCSImageStore(bucket_name=bucket_name)
+        self.base_url = self._core_store._base_url.rstrip("/")
+        self.credential_source = self._core_store.credential_source
+        self.credentials_resolved = self._core_store.credentials_resolved
+        self.client = self._core_store.client
 
     async def store_image(
         self,
@@ -103,41 +93,81 @@ class GCSImageStore(ImageStore):
         format: str = "png",
     ) -> str:
         blob_path = f"{generation_id}/{section_id}/{filename}"
-        blob = self.bucket.blob(blob_path)
+        content_type = f"image/{format}"
 
-        def _upload() -> str:
-            blob.upload_from_string(image_bytes, content_type=f"image/{format}")
-            if self.base_url:
-                return f"{self.base_url}/{blob_path}"
-            blob.make_public()
-            return blob.public_url
-
-        return await asyncio.to_thread(_upload)
+        logger.info(
+            "v3 visual gcs upload start",
+            extra={
+                "node_name": "visual_executor",
+                "generation_id": generation_id,
+                "bucket_name": self.bucket_name,
+                "blob_path": blob_path,
+                "credential_source": self.credential_source,
+                "credentials_resolved": self.credentials_resolved,
+                "auth_client": type(self.client).__name__ if self.client is not None else None,
+                "content_type": content_type,
+                "byte_count": len(image_bytes),
+            },
+        )
+        try:
+            final_url = await self._core_store.upload_with_key(
+                key=blob_path,
+                image_bytes=image_bytes,
+                content_type=content_type,
+            )
+            if not final_url:
+                raise RuntimeError("GCS upload returned no URL")
+            logger.info(
+                "v3 visual gcs upload complete",
+                extra={
+                    "node_name": "visual_executor",
+                    "generation_id": generation_id,
+                    "bucket_name": self.bucket_name,
+                    "blob_path": blob_path,
+                    "credential_source": self.credential_source,
+                    "credentials_resolved": self.credentials_resolved,
+                    "auth_client": type(self.client).__name__ if self.client is not None else None,
+                    "final_url": final_url,
+                },
+            )
+            return final_url
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "v3 visual gcs upload failed",
+                extra={
+                    "node_name": "visual_executor",
+                    "generation_id": generation_id,
+                    "bucket_name": self.bucket_name,
+                    "blob_path": blob_path,
+                    "credential_source": self.credential_source,
+                    "credentials_resolved": self.credentials_resolved,
+                    "auth_client": type(self.client).__name__ if self.client is not None else None,
+                },
+                exc_info=exc,
+            )
+            raise
 
     async def probe_write_access(self) -> tuple[bool, str]:
-        def _probe() -> tuple[bool, str]:
-            if not self.bucket.exists():
-                return False, f"GCS bucket '{self.bucket_name}' is not accessible"
+        return await asyncio.to_thread(self._core_probe)
 
-            permissions = self.bucket.test_iam_permissions(["storage.objects.create"])
-            if "storage.objects.create" not in permissions:
-                return (
-                    False,
-                    f"GCS bucket '{self.bucket_name}' is missing storage.objects.create permission",
-                )
+    def _core_probe(self) -> tuple[bool, str]:
+        bucket = self._core_store._bucket
+        if bucket is None:
+            return False, "GCS bucket is not configured"
+        if not bucket.exists():
+            return False, f"GCS bucket '{self.bucket_name}' is not accessible"
 
-            return (
-                True,
-                f"GCS bucket '{self.bucket_name}' writable via {self.credential_source}",
-            )
-
-        try:
-            return await asyncio.to_thread(_probe)
-        except Exception as exc:
+        permissions = bucket.test_iam_permissions(["storage.objects.create"])
+        if "storage.objects.create" not in permissions:
             return (
                 False,
-                f"GCS write probe failed for '{self.bucket_name}': {type(exc).__name__}: {exc}",
+                f"GCS bucket '{self.bucket_name}' is missing storage.objects.create permission",
             )
+
+        return (
+            True,
+            f"GCS bucket '{self.bucket_name}' writable via {self.credential_source}",
+        )
 
     def describe_target(self) -> str:
         if self.base_url:
