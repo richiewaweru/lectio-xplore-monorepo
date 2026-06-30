@@ -33,6 +33,17 @@ Preserve IDs where possible; keep schema valid. Output the full revised blueprin
 
 
 @lru_cache(maxsize=1)
+def build_v3_shared_prefix() -> str:
+    """Stable prompt prefix reused across V3 planning and writing nodes."""
+
+    return """TEXTBOOK V3 PIPELINE RULES
+- Work only within the responsibility of the current node.
+- Preserve fixed facts, identifiers, and structural commitments from context.
+- Return only the format requested for this node.
+"""
+
+
+@lru_cache(maxsize=1)
 def _planner_index_block() -> str:
     """Build the component palette block shared by the chunked planner."""
 

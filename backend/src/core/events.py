@@ -87,6 +87,8 @@ class LLMCallSucceededEvent(_LLMCallEvent):
     latency_ms: float | None = None
     tokens_in: int | None = None
     tokens_out: int | None = None
+    prompt_cache_hit_tokens: int | None = None
+    prompt_cache_miss_tokens: int | None = None
     thinking_tokens: int | None = None
     cost_usd: float | None = None
 

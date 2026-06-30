@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from core.llm.types import ModelFamily, ModelSpec
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 from v3_blueprint.planning import section_expander
 from v3_blueprint.planning.models import (
@@ -107,10 +108,29 @@ def test_prefix_user_content_uses_default_cache_point_without_ttl() -> None:
             form=form,
             resource_spec={"resource_type": "lesson"},
             plan=plan,
+            family=ModelFamily.ANTHROPIC,
         )
 
     mock_cache_point.assert_called_once_with()
     assert content[-1] is cache_point
+
+
+def test_prefix_user_content_omits_cache_point_for_openai_compatible() -> None:
+    signals = _signals()
+    form = _form()
+    plan = _plan()
+
+    with patch.object(section_expander, "CachePoint") as mock_cache_point:
+        content = section_expander._prefix_user_content(
+            signals=signals,
+            form=form,
+            resource_spec={"resource_type": "lesson"},
+            plan=plan,
+            family=ModelFamily.OPENAI_COMPATIBLE,
+        )
+
+    mock_cache_point.assert_not_called()
+    assert len(content) == 4
 
 
 def test_stage2_max_tokens_uses_settings_default() -> None:
@@ -129,7 +149,15 @@ async def test_call_stage2_section_omits_extended_cache_beta_header() -> None:
     with (
         patch.object(section_expander, "Agent", return_value=MagicMock(name="agent")) as _agent,
         patch.object(section_expander, "get_v3_model", return_value="model-name"),
-        patch.object(section_expander, "get_v3_spec", return_value={"spec": "value"}),
+        patch.object(
+            section_expander,
+            "get_v3_spec",
+            return_value=ModelSpec(
+                family=ModelFamily.OPENAI_COMPATIBLE,
+                model_name="deepseek-v4-pro",
+                base_url="https://api.deepseek.com",
+            ),
+        ),
         patch.object(section_expander, "get_v3_slot", return_value="slot-name"),
         patch.object(section_expander, "run_llm", new=AsyncMock(return_value=SimpleNamespace(output=brief))) as mock_run_llm,
     ):
@@ -147,4 +175,9 @@ async def test_call_stage2_section_omits_extended_cache_beta_header() -> None:
 
     assert result == brief
     call_kwargs = mock_run_llm.await_args.kwargs
-    assert call_kwargs["model_settings"] == {"max_tokens": 8000}
+    assert call_kwargs["model_settings"] == {
+        "openai_reasoning_effort": "medium",
+        "extra_body": {"thinking": {"type": "enabled"}},
+        "max_tokens": 8000,
+    }
+    assert len(call_kwargs["user_prompt"]) == 5

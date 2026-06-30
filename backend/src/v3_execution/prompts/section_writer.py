@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from generation.v3_studio.prompts import build_v3_shared_prefix
 from v3_execution.prompts.formatting import (
     format_consistency_rules,
     format_source_of_truth,
@@ -106,6 +107,7 @@ def format_component_contract_for_writer(card: dict, content_intent: str) -> str
 def build_section_writer_prompt(order: SectionWriterWorkOrder) -> str:
     from contracts.lectio import get_formatting_policy
 
+    shared_prefix = build_v3_shared_prefix()
     components_list = "\n".join(
         f"- {c.teacher_label or c.component_id} ({c.component_id}): {c.content_intent}"
         for c in order.section.components
@@ -122,7 +124,8 @@ def build_section_writer_prompt(order: SectionWriterWorkOrder) -> str:
         for c in order.section.components
     )
 
-    return f"""You are a section writer, not a lesson planner.
+    return f"""{shared_prefix}
+You are a section writer, not a lesson planner.
 
 Your job is to generate component content for one section of a lesson.
 You have been given a precise work order. Follow it exactly.

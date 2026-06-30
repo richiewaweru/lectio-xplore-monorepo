@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Mapping
 
 from core.llm.types import ModelFamily, ModelSpec
@@ -11,6 +12,14 @@ TOKEN_PRICE_USD_PER_1M_BY_MODEL: dict[str, tuple[float, float]] = {
     "anthropic:claude-opus-4-6": (15.0, 75.0),
     "test:TestModel": (0.0, 0.0),
 }
+
+
+@dataclass(frozen=True)
+class UsageStats:
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    prompt_cache_hit_tokens: int | None = None
+    prompt_cache_miss_tokens: int | None = None
 
 
 def _price_key(effective_spec: ModelSpec) -> str:
@@ -25,10 +34,10 @@ def _price_per_1m(effective_spec: ModelSpec) -> tuple[float, float] | None:
     return TOKEN_PRICE_USD_PER_1M_BY_MODEL.get(_price_key(effective_spec))
 
 
-def extract_usage(result: Any) -> tuple[int | None, int | None]:
+def extract_usage(result: Any) -> UsageStats:
     usage = getattr(result, "usage", None)
     if usage is None:
-        return None, None
+        return UsageStats()
 
     def get_field(obj: Any, key: str) -> int | None:
         val = obj.get(key) if isinstance(obj, Mapping) else getattr(obj, key, None)
@@ -48,8 +57,16 @@ def extract_usage(result: Any) -> tuple[int | None, int | None]:
         or get_field(usage, "output_token_count")
         or get_field(usage, "completion_token_count")
     )
+    details = getattr(usage, "details", None)
+    if not isinstance(details, Mapping):
+        details = {}
 
-    return input_tokens, output_tokens
+    return UsageStats(
+        tokens_in=input_tokens,
+        tokens_out=output_tokens,
+        prompt_cache_hit_tokens=get_field(details, "prompt_cache_hit_tokens"),
+        prompt_cache_miss_tokens=get_field(details, "prompt_cache_miss_tokens"),
+    )
 
 
 def extract_thinking_tokens(result: Any) -> int | None:

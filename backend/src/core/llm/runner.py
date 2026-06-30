@@ -217,9 +217,13 @@ async def run_llm(
             )
             latency_ms = (time.perf_counter() - started_at) * 1000.0
 
-            tokens_in, tokens_out = extract_usage(result)
+            usage = extract_usage(result)
             thinking_tokens = extract_thinking_tokens(result)
-            cost_usd = compute_cost_usd(effective_spec, tokens_in, tokens_out)
+            cost_usd = compute_cost_usd(
+                effective_spec,
+                usage.tokens_in,
+                usage.tokens_out,
+            )
 
             _publish_llm_event(
                 trace_id,
@@ -235,8 +239,10 @@ async def run_llm(
                     attempt=attempt,
                     section_id=section_id,
                     latency_ms=latency_ms,
-                    tokens_in=tokens_in,
-                    tokens_out=tokens_out,
+                    tokens_in=usage.tokens_in,
+                    tokens_out=usage.tokens_out,
+                    prompt_cache_hit_tokens=usage.prompt_cache_hit_tokens,
+                    prompt_cache_miss_tokens=usage.prompt_cache_miss_tokens,
                     thinking_tokens=thinking_tokens,
                     cost_usd=cost_usd,
                 ),

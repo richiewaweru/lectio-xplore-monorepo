@@ -1,4 +1,4 @@
-from core.llm.cost import compute_cost_usd, extract_usage
+from core.llm.cost import UsageStats, compute_cost_usd, extract_usage
 from core.llm.runner import RetryPolicy, run_llm
 from core.llm.transport import (
     build_model,
@@ -18,7 +18,7 @@ __all__ = [
     "endpoint_host",
     "run_llm",
     "RetryPolicy",
+    "UsageStats",
     "compute_cost_usd",
     "extract_usage",
 ]
-

@@ -9,7 +9,9 @@ from pydantic_ai.messages import CachePoint
 from contracts.lectio import get_component_card
 from core.config import settings
 from core.llm.runner import RetryPolicy, run_llm
+from core.llm.types import ModelFamily
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
+from generation.v3_studio.prompts import build_v3_shared_prefix
 from generation.v3_studio.signal_map import summarise_form_supports
 from v3_blueprint.planning.models import SectionBrief, SectionPlan, StructuralPlan
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
@@ -20,7 +22,8 @@ STAGE2_MAX_TOKENS: int = settings.v3_stage2_max_tokens
 
 
 def build_stage2_system_prompt() -> str:
-    return """You are a lesson elaborator.
+    shared_prefix = build_v3_shared_prefix()
+    return shared_prefix + """You are a lesson elaborator.
 
 A lesson architect has already planned this lesson completely.
 You have been given the full structural plan and everything
@@ -307,14 +310,17 @@ def _prefix_user_content(
     form: V3InputForm,
     resource_spec: dict,
     plan: StructuralPlan,
+    family: ModelFamily,
 ) -> list[str | CachePoint]:
-    return [
+    blocks: list[str | CachePoint] = [
         signals.model_dump_json(),
         form.model_dump_json(),
-        json.dumps(resource_spec),
+        json.dumps(resource_spec, sort_keys=True),
         plan.model_dump_json(),
-        CachePoint(),
     ]
+    if family == ModelFamily.ANTHROPIC:
+        blocks.append(CachePoint())
+    return blocks
 
 
 async def _call_stage2_section(
@@ -363,6 +369,7 @@ async def _call_stage2_section(
             form=form,
             resource_spec=resource_spec,
             plan=plan,
+            family=spec.family,
         ),
         section_message,
     ]

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from generation.v3_studio.prompts import build_v3_shared_prefix
 from v3_execution.prompts.formatting import format_source_of_truth
 from v3_execution.models import QuestionWriterWorkOrder
 
 
 def build_question_writer_prompt(order: QuestionWriterWorkOrder) -> str:
+    shared_prefix = build_v3_shared_prefix()
     questions_spec = "\n\n".join(
         f"""Question {q.id}:
   Difficulty: {q.difficulty}
@@ -17,7 +19,8 @@ def build_question_writer_prompt(order: QuestionWriterWorkOrder) -> str:
   Constraints: {", ".join(q.student_facing_constraints) or "none"}"""
         for q in order.questions
     )
-    return f"""You are a question writer, not a lesson planner.
+    return f"""{shared_prefix}
+You are a question writer, not a lesson planner.
 
 Write exactly the questions specified below.
 Do not add questions. Do not remove questions.

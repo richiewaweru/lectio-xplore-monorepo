@@ -8,7 +8,7 @@ from pydantic_ai import Agent
 from core.config import settings
 from core.llm.runner import RetryPolicy, run_llm
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
-from generation.v3_studio.prompts import _planner_index_block
+from generation.v3_studio.prompts import _planner_index_block, build_v3_shared_prefix
 from v3_blueprint.planning.models import StructuralPlan
 from v3_blueprint.planning.validators import _allowed_roles_from_resource_spec
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
@@ -19,9 +19,11 @@ STAGE1_MAX_TOKENS = settings.v3_stage1_max_tokens
 
 
 def build_stage1_system_prompt() -> str:
+    shared_prefix = build_v3_shared_prefix()
     planner_block = _planner_index_block()
 
-    return f"""You are a lesson architect. Produce only valid StructuralPlan JSON.
+    return f"""{shared_prefix}
+You are a lesson architect. Produce only valid StructuralPlan JSON.
 
 You do NOT write lesson prose, question text, or finished component content.
 Your job is to decide structure, section flow, slot choices, and question placement.
@@ -163,7 +165,7 @@ def build_stage1_user_message(
     payload = (
         f"Signals JSON:\n{signals.model_dump_json(indent=2)}\n\n"
         f"Form JSON:\n{form.model_dump_json(indent=2)}\n\n"
-        f"RESOURCE SPEC JSON:\n{json.dumps(resource_spec, indent=2)}"
+        f"RESOURCE SPEC JSON:\n{json.dumps(resource_spec, indent=2, sort_keys=True)}"
     )
     if previous_errors:
         payload += (
