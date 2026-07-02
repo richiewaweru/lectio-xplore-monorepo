@@ -1212,11 +1212,16 @@ async def post_blueprint_adjust(
     stored = await v3_studio_store.get_blueprint(current_user.id, body.blueprint_id)
     if stored is None:
         raise HTTPException(status_code=404, detail="Blueprint not found")
-    revised = await adjust_production_blueprint(
-        stored.blueprint,
-        body.adjustment,
-        trace_id=str(uuid.uuid4()),
-    )
+    trace_id = str(uuid.uuid4())
+    _register_pre_generation_trace(trace_id=trace_id, user_id=str(current_user.id))
+    try:
+        revised = await adjust_production_blueprint(
+            stored.blueprint,
+            body.adjustment,
+            trace_id=trace_id,
+        )
+    finally:
+        _close_pre_generation_trace(trace_id=trace_id)
     await v3_studio_store.put_blueprint(
         current_user.id,
         body.blueprint_id,

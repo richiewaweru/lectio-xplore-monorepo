@@ -12,6 +12,7 @@ from sqlalchemy import select
 
 from app import app
 from core.auth.middleware import get_current_user
+from core.events import TraceClosedEvent, TraceRegisteredEvent
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
 from core.entities.user import User
@@ -899,6 +900,14 @@ async def test_blueprint_adjust_preserves_planning_source() -> None:
     with patch(
         "generation.v3_studio.router.adjust_production_blueprint",
         new=AsyncMock(return_value=bp),
+    ), patch(
+        "generation.v3_studio.router.blueprint_to_preview_dto",
+        return_value={
+            "blueprint_id": blueprint_id,
+            "resource_type": "lesson",
+            "title": "Adjusted blueprint",
+            "template_id": "guided-concept-path",
+        },
     ):
         async with _client() as client:
             resp = await client.post(
@@ -916,6 +925,64 @@ async def test_blueprint_adjust_preserves_planning_source() -> None:
     assert stored.planning_source["kind"] == "supplement"
     assert stored.planning_source["parent_generation_id"] == parent_generation_id
     assert stored.planning_source["target_resource_type"] == "exit_ticket"
+
+
+@pytest.mark.asyncio
+async def test_blueprint_adjust_registers_and_closes_trace_for_telemetry() -> None:
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+
+    blueprint_id = str(uuid.uuid4())
+    bp = _example_bp("amara_compound_area.json")
+    await v3_studio_store.put_blueprint(
+        TEST_USER_A.id,
+        blueprint_id,
+        bp,
+        "guided-concept-path",
+        form=None,
+        planning_source={"kind": "teacher_approved_blueprint"},
+    )
+
+    published: list[tuple[str, object]] = []
+
+    def capture(trace_id: str, event: object) -> None:
+        published.append((trace_id, event))
+
+    with (
+        patch("generation.v3_studio.router.event_bus.publish", side_effect=capture),
+        patch(
+            "generation.v3_studio.router.adjust_production_blueprint",
+            new=AsyncMock(return_value=bp),
+        ),
+        patch(
+            "generation.v3_studio.router.blueprint_to_preview_dto",
+            return_value={
+                "blueprint_id": blueprint_id,
+                "resource_type": "lesson",
+                "title": "Adjusted blueprint",
+                "template_id": "guided-concept-path",
+            },
+        ),
+    ):
+        async with _client() as client:
+            response = await client.post(
+                "/api/v1/v3/blueprint/adjust",
+                json={
+                    "blueprint_id": blueprint_id,
+                    "adjustment": "Make section one shorter.",
+                },
+            )
+
+    assert response.status_code == 200
+    assert len(published) == 2
+    trace_id, registered = published[0]
+    closed_trace_id, closed = published[1]
+    assert trace_id == closed_trace_id
+    assert isinstance(registered, TraceRegisteredEvent)
+    assert registered.user_id == TEST_USER_A.id
+    assert registered.source == "planning"
+    assert isinstance(closed, TraceClosedEvent)
+    assert closed.source == "planning"
 
 
 @pytest.mark.asyncio
