@@ -30,6 +30,42 @@ def test_get_v3_spec_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     assert spec.model_name == "claude-sonnet-test"
 
 
+def test_get_v3_spec_defaults_to_anthropic_baseline(monkeypatch: pytest.MonkeyPatch) -> None:
+    for key in (
+        "V3_FAST_PROVIDER",
+        "V3_FAST_MODEL_NAME",
+        "V3_FAST_BASE_URL",
+        "V3_FAST_API_KEY_ENV",
+        "V3_STANDARD_PROVIDER",
+        "V3_STANDARD_MODEL_NAME",
+        "V3_STANDARD_BASE_URL",
+        "V3_STANDARD_API_KEY_ENV",
+    ):
+        monkeypatch.delenv(key, raising=False)
+
+    fast_spec = get_v3_spec("v3_signal_extractor")
+    standard_spec = get_v3_spec("v3_stage1_planner")
+
+    assert fast_spec.family == ModelFamily.ANTHROPIC
+    assert fast_spec.model_name == "claude-haiku-4-5-20251001"
+    assert standard_spec.family == ModelFamily.ANTHROPIC
+    assert standard_spec.model_name == "claude-sonnet-4-6"
+
+
+def test_get_v3_spec_supports_deepseek_slot_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("V3_FAST_PROVIDER", "openai_compatible")
+    monkeypatch.setenv("V3_FAST_MODEL_NAME", "deepseek-v4-flash")
+    monkeypatch.setenv("V3_FAST_BASE_URL", "https://api.deepseek.com")
+    monkeypatch.setenv("V3_FAST_API_KEY_ENV", "DEEPSEEK_API_KEY")
+
+    fast_spec = get_v3_spec("v3_signal_extractor")
+
+    assert fast_spec.family == ModelFamily.OPENAI_COMPATIBLE
+    assert fast_spec.model_name == "deepseek-v4-flash"
+    assert fast_spec.base_url == "https://api.deepseek.com"
+    assert fast_spec.api_key_env == "DEEPSEEK_API_KEY"
+
+
 def test_get_v3_model_settings_omits_reasoning_for_fast_deepseek_nodes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

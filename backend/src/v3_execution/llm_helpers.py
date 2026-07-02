@@ -17,6 +17,13 @@ def structured_output_type_for_model(
     *,
     spec: ModelSpec,
 ) -> Any:
+    """Apply provider-aware structured output compatibility.
+
+    Anthropic remains the baseline path and keeps native/tool-style structured output.
+    DeepSeek thinking models speak the OpenAI-compatible transport, but reject the
+    `tool_choice` pattern pydantic-ai uses for structured output, so those nodes must
+    receive prompted JSON instead.
+    """
     if spec.family == ModelFamily.OPENAI_COMPATIBLE and spec.model_name.startswith("deepseek-"):
         return PromptedOutput(
             output_type,
