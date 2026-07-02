@@ -1270,6 +1270,9 @@ async def _pump_sse_to_queue(
     async def _write_generation_snapshot(event_type: str, payload: dict[str, Any]) -> None:
         if generation_writer is None:
             return
+        if event_type == "skeleton_ready":
+            await generation_writer.write_draft(generation_id, payload)
+            return
         if event_type in {"draft_pack_ready", "draft_status_updated"}:
             await generation_writer.write_draft(generation_id, payload)
             return

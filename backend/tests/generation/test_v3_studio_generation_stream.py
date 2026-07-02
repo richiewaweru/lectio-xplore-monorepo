@@ -404,6 +404,38 @@ async def test_v3_document_endpoint_returns_persisted_document_for_owner() -> No
 
 
 @pytest.mark.asyncio
+async def test_v3_document_endpoint_returns_persisted_skeleton_document() -> None:
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+
+    generation_id = str(uuid.uuid4())
+    await _upsert_generation_row(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        document_json={
+            "kind": "v3_booklet_pack",
+            "generation_id": generation_id,
+            "template_id": "guided-concept-path",
+            "status": "streaming_preview",
+            "sections": [
+                {
+                    "section_id": "skeleton-1",
+                    "template_id": "guided-concept-path",
+                    "title": "Skeleton 1",
+                    "components": [{"component_id": "explanation-card", "intent": "Explain"}],
+                }
+            ],
+        },
+    )
+
+    async with _client() as client:
+        resp = await client.get(f"/api/v1/v3/generations/{generation_id}/document")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "streaming_preview"
+    assert resp.json()["sections"][0]["section_id"] == "skeleton-1"
+
+
+@pytest.mark.asyncio
 async def test_v3_document_endpoint_forbidden_for_other_user() -> None:
     app.dependency_overrides[get_current_user] = _override_user_a
     await _ensure_user(TEST_USER_A)
@@ -621,6 +653,10 @@ async def test_pump_sse_parses_events_and_dispatches_generation_writer() -> None
 
     async def fake_stream(**_kwargs):
         yield (
+            'event: skeleton_ready\n'
+            'data: {"generation_id":"gen-1","section_count":1,"booklet_status":"streaming_preview","pack":{"generation_id":"gen-1","blueprint_id":"bp-1","template_id":"guided-concept-path","subject":"Mathematics","status":"streaming_preview","sections":[{"section_id":"intro","template_id":"guided-concept-path","title":"Intro","components":[]}],"warnings":[],"section_diagnostics":[],"booklet_issues":[]}}\n\n'
+        )
+        yield (
             'event: draft_pack_ready\n'
             'data: {"generation_id":"gen-1","booklet_status":"draft_ready","pack":{"generation_id":"gen-1","blueprint_id":"bp-1","template_id":"guided-concept-path","subject":"Mathematics","status":"draft_ready","sections":[],"warnings":[],"section_diagnostics":[],"booklet_issues":[]}}\n\n'
         )
@@ -651,7 +687,10 @@ async def test_pump_sse_parses_events_and_dispatches_generation_writer() -> None
             generation_writer=generation_writer,
         )
 
-    generation_writer.write_draft.assert_awaited_once()
+    assert generation_writer.write_draft.await_count == 2
+    first_draft_payload = generation_writer.write_draft.await_args_list[0].args[1]
+    assert first_draft_payload["pack"]["status"] == "streaming_preview"
+    assert first_draft_payload["pack"]["sections"][0]["section_id"] == "intro"
     assert generation_writer.write_coherence_result.await_count == 2
     generation_writer.write_generation_complete.assert_awaited_once()
     generation_writer.write_resource_finalised.assert_awaited_once()

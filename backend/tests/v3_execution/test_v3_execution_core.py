@@ -49,6 +49,106 @@ def test_compile_execution_bundle() -> None:
     assert bundle.answer_key_order is not None
 
 
+@pytest.mark.asyncio
+async def test_runner_emits_skeleton_ready_before_component_events(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bp = _load_example("amara_compound_area.json")
+
+    async def stub_section(order, emit, **_: object) -> list[GeneratedComponentBlock]:
+        component = order.section.components[0]
+        field = get_section_field_for_component(component.component_id) or "explanation"
+        block = GeneratedComponentBlock(
+            block_id=f"b-{component.component_id}",
+            section_id=order.section.id,
+            component_id=component.component_id,
+            section_field=field,
+            position=0,
+            data={"body": component.content_intent, "emphasis": []},
+            source_work_order_id=order.work_order_id,
+        )
+        await emit(
+            "component_ready",
+            {
+                "component_id": block.component_id,
+                "section_id": block.section_id,
+                "section_field": block.section_field,
+                "data": block.data,
+            },
+        )
+        return [block]
+
+    async def stub_questions(order, emit, **_: object) -> list[GeneratedQuestionBlock]:
+        _ = order
+        await emit("question_ready", {"section_id": order.section_id})
+        return []
+
+    async def stub_visual(order, emit, **_kwargs) -> list[GeneratedVisualBlock]:
+        _ = order
+        _ = emit
+        return []
+
+    async def noop_answer(order, emit, **_kwargs) -> GeneratedAnswerKeyBlock:  # noqa: ARG002
+        return GeneratedAnswerKeyBlock(
+            answer_key_id="ak",
+            style="answers_only",
+            entries=[],
+            source_work_order_id="answer-key-main",
+        )
+
+    async def stub_coherence_review(
+        blueprint,
+        draft_pack,
+        emit_event,
+        **_kwargs: object,
+    ) -> CoherenceReport:
+        _ = blueprint
+        _ = emit_event
+        return CoherenceReport(
+            blueprint_id=draft_pack.blueprint_id,
+            generation_id=draft_pack.generation_id,
+            status="passed",
+            deterministic_passed=True,
+            issues=[],
+        )
+
+    monkeypatch.setattr("v3_execution.runtime.runner.execute_section", stub_section)
+    monkeypatch.setattr("v3_execution.runtime.runner.execute_questions", stub_questions)
+    monkeypatch.setattr("v3_execution.runtime.runner.execute_visual", stub_visual)
+    monkeypatch.setattr("v3_execution.runtime.runner.execute_answer_key", noop_answer)
+    monkeypatch.setattr("v3_execution.runtime.runner.run_coherence_review", stub_coherence_review)
+
+    captured: list[tuple[str, dict]] = []
+
+    async def capture(event_type: str, payload: dict) -> None:
+        captured.append((event_type, payload))
+
+    await run_generation(
+        blueprint=bp,
+        generation_id="g-skeleton",
+        blueprint_id="b-skeleton",
+        template_id="guided-concept-path",
+        emit_event=capture,
+        model_overrides=None,
+    )
+
+    event_types = [event for event, _payload in captured]
+    skeleton_idx = event_types.index("skeleton_ready")
+    assert event_types.index("work_orders_compiled") < skeleton_idx
+    assert skeleton_idx < event_types.index("component_ready")
+
+    skeleton_payload = captured[skeleton_idx][1]
+    pack = skeleton_payload["pack"]
+    expected_section_ids = [section.section_id for section in bp.sections]
+    assert skeleton_payload["section_count"] == len(expected_section_ids)
+    assert [section["section_id"] for section in pack["sections"]] == expected_section_ids
+    assert all(section["section_id"] for section in pack["sections"])
+    assert pack["status"] == "streaming_preview"
+    assert pack["sections"][0]["components"][0]["component_id"]
+    component_payload = next(payload for event, payload in captured if event == "component_ready")
+    assert component_payload["section_id"] in expected_section_ids
+
+
 def test_validate_visual_accepts_http_scheme() -> None:
     order = VisualGeneratorWorkOrder(
         work_order_id="v1",

@@ -13,6 +13,7 @@
 
 ### Validation Evidence
 - Phase 1: `cd backend && $env:LECTIO_CONTRACTS_DIR='C:\Projects\Textbook agent\backend\contracts'; uv run pytest tests/v3_execution/test_booklet_status.py tests/v3_execution/test_section_builder_tolerant.py -q` -> 17 passed, 1 warning.
+- Phase 2: `cd backend && $env:LECTIO_CONTRACTS_DIR='C:\Projects\Textbook agent\backend\contracts'; uv run pytest tests/v3_execution/ tests/generation/ -q` -> 138 passed, 1 warning.
 
 ### Risks
 - Skeleton persistence must not weaken export gates or change the empty-document 404 behavior.

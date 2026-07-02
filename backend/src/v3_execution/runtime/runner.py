@@ -73,6 +73,55 @@ def _terminal_process_status(*, resource_status: str, booklet_status: str) -> st
     return "failed_unusable"
 
 
+def _build_skeleton_pack(
+    *,
+    blueprint: ProductionBlueprint,
+    bundle: CompiledWorkOrders,
+    generation_id: str,
+    blueprint_id: str,
+    template_id: str,
+) -> dict[str, Any]:
+    section_plan_by_id = {section.section_id: section for section in blueprint.sections}
+    sections: list[dict[str, Any]] = []
+    for index, order in enumerate(bundle.section_orders):
+        section = order.section
+        section_plan = section_plan_by_id.get(section.id)
+        role = section_plan.role if section_plan is not None else ""
+        sections.append(
+            {
+                "section_id": section.id,
+                "template_id": template_id,
+                "title": section.title,
+                "role": role,
+                "order": index,
+                "visual_required": bool(
+                    section_plan.visual_required if section_plan is not None else False
+                ),
+                "components": [
+                    {
+                        "component_id": component.component_id,
+                        "intent": component.content_intent,
+                    }
+                    for component in section.components
+                ],
+                "header": {
+                    "title": section.title,
+                },
+            }
+        )
+    return {
+        "generation_id": generation_id,
+        "blueprint_id": blueprint_id,
+        "template_id": template_id,
+        "subject": blueprint.metadata.subject,
+        "status": "streaming_preview",
+        "sections": sections,
+        "warnings": [],
+        "section_diagnostics": [],
+        "booklet_issues": [],
+    }
+
+
 def _missing_summary(items: list[list[str]]) -> dict[str, int]:
     summary: dict[str, int] = {}
     for values in items:
@@ -155,6 +204,22 @@ async def run_generation(
         await emit_event(
             events.WORK_ORDERS_COMPILED,
             {"generation_id": generation_id, "blueprint_id": blueprint_id},
+        )
+        skeleton_pack = _build_skeleton_pack(
+            blueprint=blueprint,
+            bundle=bundle,
+            generation_id=generation_id,
+            blueprint_id=blueprint_id,
+            template_id=template_id,
+        )
+        await emit_event(
+            events.SKELETON_READY,
+            {
+                "generation_id": generation_id,
+                "section_count": len(skeleton_pack["sections"]),
+                "booklet_status": "streaming_preview",
+                "pack": skeleton_pack,
+            },
         )
         if trace_writer is not None:
             await trace_writer.record_work_orders(
