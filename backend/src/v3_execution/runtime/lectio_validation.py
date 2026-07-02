@@ -10,6 +10,14 @@ from pydantic import ValidationError
 
 from contracts.section_content import SectionContent
 
+_SECTION_VALIDATION_METADATA_KEYS = frozenset(
+    {
+        "_component_order",
+        "_component_positions",
+        "_schema_warnings",
+    }
+)
+
 _FIELD_MODELS: dict[str, type] = {}
 
 
@@ -82,9 +90,18 @@ def validate_section_content(bucket: dict) -> tuple[dict | None, list[str]]:
     """
     Validate a fully assembled section bucket against SectionContent.
     """
+    validation_bucket = {
+        key: value
+        for key, value in bucket.items()
+        if key not in _SECTION_VALIDATION_METADATA_KEYS
+    }
     try:
-        validated = SectionContent.model_validate(bucket)
-        return validated.model_dump(exclude_none=True), []
+        validated = SectionContent.model_validate(validation_bucket)
+        validated_bucket = validated.model_dump(exclude_none=True)
+        for key in _SECTION_VALIDATION_METADATA_KEYS:
+            if key in bucket:
+                validated_bucket[key] = bucket[key]
+        return validated_bucket, []
     except ValidationError as exc:
         errors = [
             f"{'.'.join(str(p) for p in err['loc'])}: {err['msg']}"
