@@ -48,9 +48,8 @@ def _form() -> V3InputForm:
     )
 
 
-def test_stage1_uses_bounded_thinking_and_8000_tokens() -> None:
-    assert structural_planner.STAGE1_MAX_TOKENS == 16000
-    assert structural_planner.STAGE1_MAX_TOKENS == structural_planner.settings.v3_stage1_max_tokens
+def test_stage1_uses_helper_backstop_without_node_level_cap() -> None:
+    assert not hasattr(structural_planner, "STAGE1_MAX_TOKENS")
 
 
 @pytest.mark.asyncio
@@ -60,6 +59,7 @@ async def test_call_stage1_prints_traceback_and_reraises() -> None:
     error = RuntimeError("llm blew up")
 
     with (
+        patch.object(structural_planner, "build_stage1_system_prompt", return_value="prompt"),
         patch.object(structural_planner, "run_llm", new=AsyncMock(side_effect=error)),
         patch("builtins.print") as mock_print,
     ):
@@ -118,6 +118,7 @@ async def test_call_stage1_uses_shared_model_settings_helper() -> None:
     )
 
     with (
+        patch.object(structural_planner, "build_stage1_system_prompt", return_value="prompt"),
         patch.object(structural_planner, "run_llm", new=AsyncMock(return_value=type("Result", (), {"output": valid_plan})())) as mock_run_llm,
     ):
         await structural_planner._call_stage1(
@@ -128,7 +129,74 @@ async def test_call_stage1_uses_shared_model_settings_helper() -> None:
         )
 
     call_kwargs = mock_run_llm.await_args.kwargs
-    assert call_kwargs["model_settings"] == {"max_tokens": 16000}
+    assert call_kwargs["model_settings"] == {
+        "openai_reasoning_effort": "high",
+        "extra_body": {"thinking": {"type": "enabled"}},
+        "max_tokens": 120000,
+    }
+
+
+@pytest.mark.asyncio
+async def test_run_stage1_with_retry_retries_truncation_and_returns_second_attempt() -> None:
+    signals = _signals()
+    form = _form()
+    valid_plan = StructuralPlan(
+        lesson_mode="first_exposure",
+        lesson_intent=LessonIntent(
+            goal="By the end students can compare fractions.",
+            structure_rationale="Concrete-first structure for novice learners.",
+        ),
+        anchor=AnchorSpec(
+            example="splitting a pizza into 8 equal slices",
+            reuse_scope="used in intro and practice",
+        ),
+        voice=VoiceSpec(register_name="simple", tone="encouraging"),
+        prior_knowledge=["equal sharing"],
+        sections=[
+            SectionPlan(
+                id="intro",
+                title="Intro",
+                role="intro",
+                visual_required=False,
+                transition_note=None,
+                components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")],
+            )
+        ],
+        question_plan=[
+            QPlanItem(
+                question_id="q1",
+                section_id="intro",
+                temperature="warm",
+                diagram_required=False,
+            )
+        ],
+        answer_key_style="brief_explanations",
+    )
+
+    with patch.object(
+        retry,
+        "_call_stage1",
+        new=AsyncMock(
+            side_effect=[
+                retry.TruncatedCompletionError(
+                    node="v3_stage1_planner",
+                    finish_reason="length",
+                    detail="Model completion was truncated before a complete response was produced",
+                ),
+                valid_plan,
+            ]
+        ),
+    ) as mock_call_stage1, patch.object(retry, "validate_structural_plan", return_value=[]):
+        result = await retry.run_stage1_with_retry(
+            signals,
+            form,
+            {"resource_type": "lesson", "spec": {"required_roles": ["intro"]}},
+            generation_id=None,
+            trace_id="trace-stage1-truncation",
+        )
+
+    assert result == valid_plan
+    assert mock_call_stage1.await_count == 2
 
 
 @pytest.mark.asyncio
@@ -199,7 +267,7 @@ async def test_call_stage1_rejects_role_outside_active_resource_spec() -> None:
         structural_planner,
         "run_llm",
         new=AsyncMock(return_value=type("Result", (), {"output": invalid_plan})()),
-    ):
+    ), patch.object(structural_planner, "build_stage1_system_prompt", return_value="prompt"):
         with pytest.raises(ValueError, match="which is not in the active resource spec roles"):
             await structural_planner._call_stage1(
                 signals,

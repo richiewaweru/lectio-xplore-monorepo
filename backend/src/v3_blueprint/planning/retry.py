@@ -4,6 +4,7 @@ import logging
 from collections.abc import Awaitable, Callable
 
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
+from core.llm.runner import TruncatedCompletionError
 from v3_blueprint.planning.models import (
     SectionBrief,
     SectionPlan,
@@ -44,6 +45,20 @@ async def run_stage1_with_retry(
                 trace_id=trace_id,
                 previous_errors=errors if attempt == 2 else None,
             )
+        except TruncatedCompletionError as exc:
+            import traceback
+
+            print(
+                f"\n[STAGE1 ATTEMPT {attempt} EXCEPTION]"
+                f" generation_id={generation_id}"
+                f" type={type(exc).__name__}"
+                f"\n{traceback.format_exc()}",
+                flush=True,
+            )
+            if attempt == 1:
+                log.warning("Stage 1 attempt 1 truncated: %s", exc)
+                continue
+            raise Stage1PlanFailure(errors=[str(exc)]) from exc
         except Exception as exc:
             import traceback
             print(

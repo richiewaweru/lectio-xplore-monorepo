@@ -92,6 +92,9 @@ class SqlLLMCallRepository:
                 func.count(LLMCallModel.id),
                 func.coalesce(func.sum(LLMCallModel.tokens_in), 0),
                 func.coalesce(func.sum(LLMCallModel.tokens_out), 0),
+                func.coalesce(func.sum(LLMCallModel.thinking_tokens), 0),
+                func.coalesce(func.avg(LLMCallModel.tokens_out), 0.0),
+                func.coalesce(func.avg(LLMCallModel.thinking_tokens), 0.0),
                 func.coalesce(func.sum(LLMCallModel.cost_usd), 0.0),
             ).where(*conditions)
             totals_row = (await session.execute(totals_stmt)).one()
@@ -103,6 +106,9 @@ class SqlLLMCallRepository:
                         func.count(LLMCallModel.id),
                         func.coalesce(func.sum(LLMCallModel.tokens_in), 0),
                         func.coalesce(func.sum(LLMCallModel.tokens_out), 0),
+                        func.coalesce(func.sum(LLMCallModel.thinking_tokens), 0),
+                        func.coalesce(func.avg(LLMCallModel.tokens_out), 0.0),
+                        func.coalesce(func.avg(LLMCallModel.thinking_tokens), 0.0),
                         func.coalesce(func.sum(LLMCallModel.cost_usd), 0.0),
                     )
                     .where(*conditions)
@@ -116,7 +122,10 @@ class SqlLLMCallRepository:
                         calls=int(row[1] or 0),
                         tokens_in=int(row[2] or 0),
                         tokens_out=int(row[3] or 0),
-                        cost_usd=float(row[4] or 0.0),
+                        total_thinking_tokens=int(row[4] or 0),
+                        avg_tokens_out=float(row[5] or 0.0),
+                        avg_thinking_tokens=float(row[6] or 0.0),
+                        cost_usd=float(row[7] or 0.0),
                     )
                     for row in rows
                 ]
@@ -125,8 +134,12 @@ class SqlLLMCallRepository:
                 total_calls=int(totals_row[0] or 0),
                 total_tokens_in=int(totals_row[1] or 0),
                 total_tokens_out=int(totals_row[2] or 0),
-                total_cost_usd=float(totals_row[3] or 0.0),
+                total_thinking_tokens=int(totals_row[3] or 0),
+                avg_tokens_out=float(totals_row[4] or 0.0),
+                avg_thinking_tokens=float(totals_row[5] or 0.0),
+                total_cost_usd=float(totals_row[6] or 0.0),
                 by_caller=await breakdown_for(LLMCallModel.caller),
                 by_model=await breakdown_for(LLMCallModel.model_name),
                 by_slot=await breakdown_for(LLMCallModel.slot),
+                by_node=await breakdown_for(LLMCallModel.node),
             )

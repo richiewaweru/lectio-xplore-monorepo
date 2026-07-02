@@ -133,5 +133,8 @@ describe('V3InputSurface', () => {
 		await waitFor(() => {
 			expect(screen.getByText('Seeds')).toBeTruthy();
 		});
+		expect(
+			screen.getByText(/topic narrowing could not reach the live service/i)
+		).toBeTruthy();
 	});
 });

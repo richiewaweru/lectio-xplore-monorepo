@@ -19,6 +19,19 @@ from core.llm.types import ModelFamily, ModelSlot, ModelSpec
 logger = logging.getLogger(__name__)
 
 
+class TruncatedCompletionError(RuntimeError):
+    def __init__(self, *, node: str | None, finish_reason: str | None, detail: str) -> None:
+        self.node = node
+        self.finish_reason = finish_reason
+        self.detail = detail
+        message = detail
+        if finish_reason:
+            message = f"{detail} (finish_reason={finish_reason})"
+        if node:
+            message = f"{node}: {message}"
+        super().__init__(message)
+
+
 @dataclass(frozen=True)
 class RetryPolicy:
     max_attempts: int = 3
@@ -116,6 +129,75 @@ async def _run_agent_with_limits(
         agent.run(**run_kwargs),
         timeout=retry_policy.call_timeout_seconds,
     )
+
+
+def _extract_finish_reason(result: Any) -> str | None:
+    direct = getattr(result, "finish_reason", None)
+    if isinstance(direct, str) and direct.strip():
+        return direct.strip()
+
+    candidates = [
+        getattr(result, "response", None),
+        getattr(result, "raw_response", None),
+        getattr(result, "_raw_response", None),
+        getattr(result, "model_response", None),
+    ]
+    for candidate in candidates:
+        finish_reason = _extract_finish_reason_from_candidate(candidate)
+        if finish_reason:
+            return finish_reason
+    return None
+
+
+def _extract_finish_reason_from_candidate(candidate: Any) -> str | None:
+    if candidate is None:
+        return None
+    if isinstance(candidate, Mapping):
+        direct = candidate.get("finish_reason") or candidate.get("finishReason")
+        if isinstance(direct, str) and direct.strip():
+            return direct.strip()
+        return _extract_finish_reason_from_choices(candidate.get("choices"))
+
+    direct = getattr(candidate, "finish_reason", None)
+    if isinstance(direct, str) and direct.strip():
+        return direct.strip()
+    return _extract_finish_reason_from_choices(getattr(candidate, "choices", None))
+
+
+def _extract_finish_reason_from_choices(choices: Any) -> str | None:
+    if not isinstance(choices, list) or not choices:
+        return None
+    choice = choices[0]
+    if isinstance(choice, Mapping):
+        direct = choice.get("finish_reason") or choice.get("finishReason")
+        if isinstance(direct, str) and direct.strip():
+            return direct.strip()
+        message = choice.get("message")
+        if isinstance(message, Mapping):
+            nested = message.get("finish_reason") or message.get("finishReason")
+            if isinstance(nested, str) and nested.strip():
+                return nested.strip()
+        return None
+
+    direct = getattr(choice, "finish_reason", None)
+    if isinstance(direct, str) and direct.strip():
+        return direct.strip()
+    message = getattr(choice, "message", None)
+    nested = getattr(message, "finish_reason", None)
+    if isinstance(nested, str) and nested.strip():
+        return nested.strip()
+    return None
+
+
+def _is_empty_output(result: Any) -> bool:
+    output = getattr(result, "output", None)
+    if output is None:
+        return True
+    if isinstance(output, str):
+        return not output.strip()
+    if isinstance(output, (list, tuple, dict, set)):
+        return len(output) == 0
+    return False
 
 
 def _is_retryable(exc: BaseException) -> bool:
@@ -216,6 +298,20 @@ async def run_llm(
                 model_settings=effective_settings,
             )
             latency_ms = (time.perf_counter() - started_at) * 1000.0
+
+            finish_reason = _extract_finish_reason(result)
+            if finish_reason == "length":
+                raise TruncatedCompletionError(
+                    node=event_node,
+                    finish_reason=finish_reason,
+                    detail="Model completion was truncated before a complete response was produced",
+                )
+            if _is_empty_output(result):
+                raise TruncatedCompletionError(
+                    node=event_node,
+                    finish_reason=finish_reason,
+                    detail="Model completion returned empty output",
+                )
 
             usage = extract_usage(result)
             thinking_tokens = extract_thinking_tokens(result)

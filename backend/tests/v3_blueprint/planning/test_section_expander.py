@@ -133,9 +133,8 @@ def test_prefix_user_content_omits_cache_point_for_openai_compatible() -> None:
     assert len(content) == 4
 
 
-def test_stage2_max_tokens_uses_settings_default() -> None:
-    assert section_expander.STAGE2_MAX_TOKENS == 8000
-    assert section_expander.STAGE2_MAX_TOKENS == section_expander.settings.v3_stage2_max_tokens
+def test_stage2_uses_helper_backstop_without_node_level_cap() -> None:
+    assert not hasattr(section_expander, "STAGE2_MAX_TOKENS")
 
 
 @pytest.mark.asyncio
@@ -178,6 +177,6 @@ async def test_call_stage2_section_omits_extended_cache_beta_header() -> None:
     assert call_kwargs["model_settings"] == {
         "openai_reasoning_effort": "medium",
         "extra_body": {"thinking": {"type": "enabled"}},
-        "max_tokens": 8000,
+        "max_tokens": 120000,
     }
     assert len(call_kwargs["user_prompt"]) == 5

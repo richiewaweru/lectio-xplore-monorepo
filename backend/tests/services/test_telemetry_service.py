@@ -47,10 +47,14 @@ class RecordingLLMCallRepo:
             total_calls=2,
             total_tokens_in=300,
             total_tokens_out=150,
+            total_thinking_tokens=90,
+            avg_tokens_out=75.0,
+            avg_thinking_tokens=45.0,
             total_cost_usd=0.42,
-            by_caller=[LLMUsageBreakdownItem(key="planner", calls=2, tokens_in=300, tokens_out=150, cost_usd=0.42)],
-            by_model=[LLMUsageBreakdownItem(key="claude-sonnet-4-6", calls=2, tokens_in=300, tokens_out=150, cost_usd=0.42)],
-            by_slot=[LLMUsageBreakdownItem(key="standard", calls=2, tokens_in=300, tokens_out=150, cost_usd=0.42)],
+            by_caller=[LLMUsageBreakdownItem(key="planner", calls=2, tokens_in=300, tokens_out=150, total_thinking_tokens=90, avg_tokens_out=75.0, avg_thinking_tokens=45.0, cost_usd=0.42)],
+            by_model=[LLMUsageBreakdownItem(key="claude-sonnet-4-6", calls=2, tokens_in=300, tokens_out=150, total_thinking_tokens=90, avg_tokens_out=75.0, avg_thinking_tokens=45.0, cost_usd=0.42)],
+            by_slot=[LLMUsageBreakdownItem(key="standard", calls=2, tokens_in=300, tokens_out=150, total_thinking_tokens=90, avg_tokens_out=75.0, avg_thinking_tokens=45.0, cost_usd=0.42)],
+            by_node=[LLMUsageBreakdownItem(key="v3_stage1_planner", calls=2, tokens_in=300, tokens_out=150, total_thinking_tokens=90, avg_tokens_out=75.0, avg_thinking_tokens=45.0, cost_usd=0.42)],
         )
 
     async def save_call(self, **kwargs) -> None:
@@ -88,7 +92,10 @@ async def test_llm_usage_route_scopes_to_authenticated_user() -> None:
     payload = response.json()
     assert payload["total_calls"] == 2
     assert payload["total_tokens_in"] == 300
+    assert payload["total_thinking_tokens"] == 90
+    assert payload["avg_thinking_tokens"] == 45.0
     assert payload["by_caller"][0]["key"] == "planner"
+    assert payload["by_node"][0]["key"] == "v3_stage1_planner"
     assert repo.calls == [
         {
             "user_id": TEST_USER.id,
@@ -129,3 +136,38 @@ async def test_v3_recorder_registration_scopes_llm_events() -> None:
 
     assert repo.saved[0]["user_id"] == TEST_USER.id
     assert repo.saved[0]["caller"] == "section_writer"
+
+
+async def test_trace_registered_event_scopes_pre_generation_llm_events() -> None:
+    repo = RecordingLLMCallRepo()
+    monitor = TelemetryMonitor()
+
+    async def load_llm_repo():
+        return repo
+
+    monitor.configure(llm_call_repository_factory=load_llm_repo)
+    await monitor._handle_event(  # noqa: SLF001
+        {
+            "type": "trace_registered",
+            "trace_id": "studio-preflight-trace",
+            "user_id": TEST_USER.id,
+            "source": "planning",
+        }
+    )
+    await monitor._handle_event(  # noqa: SLF001
+        {
+            "type": "llm_call_failed",
+            "trace_id": "studio-preflight-trace",
+            "generation_id": None,
+            "caller": "v3_studio",
+            "node": "v3_narrow",
+            "slot": "fast",
+            "attempt": 1,
+            "error": "boom",
+        }
+    )
+
+    assert repo.saved[0]["user_id"] == TEST_USER.id
+    assert repo.saved[0]["trace_id"] == "studio-preflight-trace"
+    assert repo.saved[0]["generation_id"] is None
+    assert repo.saved[0]["node"] == "v3_narrow"

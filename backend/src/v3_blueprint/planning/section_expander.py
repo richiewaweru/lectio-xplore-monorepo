@@ -18,7 +18,6 @@ from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot
 
 _CALLER = "v3_chunked_architect"
 STAGE2_NODE = "v3_stage2_expander"
-STAGE2_MAX_TOKENS: int = settings.v3_stage2_max_tokens
 
 
 def build_stage2_system_prompt() -> str:
@@ -378,7 +377,6 @@ async def _call_stage2_section(
         f"\n[_CALL_STAGE2] generation_id={generation_id}"
         f" section_id={section.id}"
         f" model={STAGE2_NODE}"
-        f" max_tokens={STAGE2_MAX_TOKENS}"
         f" timeout={settings.v3_timeout_stage2_section_seconds}s",
         flush=True,
     )
@@ -395,10 +393,7 @@ async def _call_stage2_section(
             spec=spec,
             section_id=section.id,
             node=node,
-            model_settings=get_v3_model_settings(
-                node,
-                base_settings={"max_tokens": STAGE2_MAX_TOKENS},
-            ),
+            model_settings=get_v3_model_settings(node),
             retry_policy=RetryPolicy(
                 max_attempts=1,
                 call_timeout_seconds=float(settings.v3_timeout_stage2_section_seconds),
@@ -433,7 +428,6 @@ async def _call_stage2_section(
 
 
 __all__ = [
-    "STAGE2_MAX_TOKENS",
     "STAGE2_NODE",
     "_call_stage2_section",
     "_load_component_cards_for_section",

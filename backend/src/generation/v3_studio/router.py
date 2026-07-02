@@ -76,6 +76,7 @@ from telemetry.dependencies import get_v3_trace_repository
 from telemetry.service import telemetry_monitor
 from telemetry.v3_trace.repository import V3TraceRepository
 from telemetry.v3_trace.writer import V3TraceWriter
+from core.events import TraceClosedEvent, TraceRegisteredEvent, event_bus
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +84,27 @@ _CALLER = "v3_studio"
 HEARTBEAT_SECONDS = 15
 v3_studio_router = APIRouter(prefix="/v3", tags=["v3-studio"])
 _chunked_stage2_tasks: dict[str, asyncio.Task[None]] = {}
+
+
+def _register_pre_generation_trace(*, trace_id: str, user_id: str) -> None:
+    event_bus.publish(
+        trace_id,
+        TraceRegisteredEvent(
+            trace_id=trace_id,
+            user_id=user_id,
+            source="planning",
+        ),
+    )
+
+
+def _close_pre_generation_trace(*, trace_id: str) -> None:
+    event_bus.publish(
+        trace_id,
+        TraceClosedEvent(
+            trace_id=trace_id,
+            source="planning",
+        ),
+    )
 
 
 class V3NarrowRequest(BaseModel):
@@ -241,8 +263,12 @@ async def post_signals(
     body: V3InputForm,
     current_user: User = Depends(get_current_user),
 ) -> V3SignalSummary:
-    _ = current_user
-    return await extract_signals(body, trace_id=str(uuid.uuid4()))
+    trace_id = str(uuid.uuid4())
+    _register_pre_generation_trace(trace_id=trace_id, user_id=str(current_user.id))
+    try:
+        return await extract_signals(body, trace_id=trace_id)
+    finally:
+        _close_pre_generation_trace(trace_id=trace_id)
 
 
 @v3_studio_router.post("/narrow", response_model=V3NarrowResponse)
@@ -282,9 +308,12 @@ async def post_v3_narrow(
         system_prompt=system,
     )
 
+    trace_id = str(uuid.uuid4())
+    _register_pre_generation_trace(trace_id=trace_id, user_id=str(current_user.id))
+
     try:
         result = await run_llm(
-            trace_id=str(uuid.uuid4()),
+            trace_id=trace_id,
             caller=_CALLER,
             generation_id=None,
             agent=agent,
@@ -316,6 +345,8 @@ async def post_v3_narrow(
             current_user.id,
         )
         candidates = []
+    finally:
+        _close_pre_generation_trace(trace_id=trace_id)
 
     for i, c in enumerate(candidates):
         if not c.id:

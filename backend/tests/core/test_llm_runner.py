@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 
 import core.events as core_events
-from core.llm.runner import run_llm
+from core.llm.runner import TruncatedCompletionError, run_llm
 from core.llm.types import ModelFamily, ModelSlot, ModelSpec
 
 
@@ -14,6 +14,7 @@ class _FakeAgent:
     async def run(self, **kwargs):  # type: ignore[no-untyped-def]
         _ = kwargs
         return SimpleNamespace(
+            output="ok",
             usage=SimpleNamespace(
                 prompt_tokens=120,
                 completion_tokens=45,
@@ -23,6 +24,22 @@ class _FakeAgent:
                     "reasoning_tokens": 12,
                 },
             )
+        )
+
+
+class _LengthLimitedAgent:
+    async def run(self, **kwargs):  # type: ignore[no-untyped-def]
+        _ = kwargs
+        return SimpleNamespace(
+            output="partial",
+            response=SimpleNamespace(
+                choices=[SimpleNamespace(finish_reason="length")]
+            ),
+            usage=SimpleNamespace(
+                prompt_tokens=120,
+                completion_tokens=45,
+                details={},
+            ),
         )
 
 
@@ -58,3 +75,24 @@ async def test_run_llm_publishes_cache_usage_fields_on_success() -> None:
     assert success["prompt_cache_hit_tokens"] == 90
     assert success["prompt_cache_miss_tokens"] == 30
     assert success["thinking_tokens"] == 12
+
+
+@pytest.mark.asyncio
+async def test_run_llm_raises_typed_error_for_length_truncation() -> None:
+    with pytest.raises(TruncatedCompletionError, match="finish_reason=length"):
+        await run_llm(
+            caller="planner",
+            trace_id="trace-truncated",
+            generation_id="gen-truncated",
+            agent=_LengthLimitedAgent(),
+            user_prompt="hello",
+            model="fake-model",
+            slot=ModelSlot.STANDARD,
+            spec=ModelSpec(
+                family=ModelFamily.OPENAI_COMPATIBLE,
+                model_name="deepseek-v4-pro",
+                base_url="https://api.deepseek.com",
+            ),
+            node="v3_stage1_planner",
+            model_settings={"max_tokens": 120000},
+        )

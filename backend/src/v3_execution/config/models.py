@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from typing import Literal
 
+from core.config import settings as app_settings
 from core.llm import ModelFamily, ModelSlot, ModelSpec, build_model
 
 # Canonical v3 node names (must match call sites).
@@ -142,9 +144,35 @@ def get_v3_model_settings(
         settings["extra_body"] = {"thinking": {"type": "enabled"}}
 
     if base_settings:
-        settings = settings | base_settings
+        settings = _merge_model_settings(settings, base_settings)
+
+    settings.setdefault("max_tokens", app_settings.v3_max_tokens_safety)
 
     return settings or None
+
+
+def _merge_model_settings(defaults: dict, overrides: dict) -> dict:
+    merged = dict(defaults)
+    for key, value in overrides.items():
+        if (
+            key == "extra_body"
+            and isinstance(merged.get(key), Mapping)
+            and isinstance(value, Mapping)
+        ):
+            merged[key] = _deep_merge_dicts(dict(merged[key]), value)
+            continue
+        merged[key] = value
+    return merged
+
+
+def _deep_merge_dicts(left: dict, right: Mapping) -> dict:
+    merged = dict(left)
+    for key, value in right.items():
+        if isinstance(merged.get(key), Mapping) and isinstance(value, Mapping):
+            merged[key] = _deep_merge_dicts(dict(merged[key]), value)
+        else:
+            merged[key] = value
+    return merged
 
 
 def get_v3_model(node_name: str, *, model_overrides: dict | None = None):

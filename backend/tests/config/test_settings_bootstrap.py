@@ -292,36 +292,20 @@ def test_settings_normalize_log_level(monkeypatch) -> None:
     assert settings.log_level == "DEBUG"
 
 
-def test_settings_stage1_max_tokens_default_and_env_override(monkeypatch) -> None:
+def test_settings_v3_max_tokens_safety_default_and_env_override(monkeypatch) -> None:
     monkeypatch.setenv("APP_ENV", "development")
     monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./textbook_agent.db")
     monkeypatch.setenv("JWT_SECRET_KEY", "super-secret-development-key")
     monkeypatch.setenv("FRONTEND_ORIGIN", "http://localhost:5173")
     monkeypatch.setenv("LESSON_BUILDER_PUBLIC_URL", "http://127.0.0.1:5173")
-    monkeypatch.delenv("V3_STAGE1_MAX_TOKENS", raising=False)
+    monkeypatch.delenv("V3_MAX_TOKENS_SAFETY", raising=False)
 
     default_settings = Settings(_env_file=None)
-    assert default_settings.v3_stage1_max_tokens == 16000
+    assert default_settings.v3_max_tokens_safety == 120000
 
-    monkeypatch.setenv("V3_STAGE1_MAX_TOKENS", "20000")
+    monkeypatch.setenv("V3_MAX_TOKENS_SAFETY", "150000")
     override_settings = Settings(_env_file=None)
-    assert override_settings.v3_stage1_max_tokens == 20000
-
-
-def test_settings_stage2_max_tokens_default_and_env_override(monkeypatch) -> None:
-    monkeypatch.setenv("APP_ENV", "development")
-    monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:///./textbook_agent.db")
-    monkeypatch.setenv("JWT_SECRET_KEY", "super-secret-development-key")
-    monkeypatch.setenv("FRONTEND_ORIGIN", "http://localhost:5173")
-    monkeypatch.setenv("LESSON_BUILDER_PUBLIC_URL", "http://127.0.0.1:5173")
-    monkeypatch.delenv("V3_STAGE2_MAX_TOKENS", raising=False)
-
-    default_settings = Settings(_env_file=None)
-    assert default_settings.v3_stage2_max_tokens == 8000
-
-    monkeypatch.setenv("V3_STAGE2_MAX_TOKENS", "12000")
-    override_settings = Settings(_env_file=None)
-    assert override_settings.v3_stage2_max_tokens == 12000
+    assert override_settings.v3_max_tokens_safety == 150000
 
 
 def test_settings_expose_image_storage_envs(monkeypatch) -> None:

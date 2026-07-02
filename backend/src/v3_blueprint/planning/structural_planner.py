@@ -15,7 +15,6 @@ from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot
 
 _CALLER = "v3_chunked_architect"
 STAGE1_NODE = "v3_stage1_planner"
-STAGE1_MAX_TOKENS = settings.v3_stage1_max_tokens
 
 
 def build_stage1_system_prompt() -> str:
@@ -225,10 +224,7 @@ async def _call_stage1(
             spec=spec,
             section_id=None,
             node=node,
-            model_settings=get_v3_model_settings(
-                node,
-                base_settings={"max_tokens": STAGE1_MAX_TOKENS},
-            ),
+            model_settings=get_v3_model_settings(node),
             retry_policy=RetryPolicy(
                 max_attempts=1,
                 call_timeout_seconds=float(settings.v3_timeout_stage1_seconds),
@@ -257,7 +253,6 @@ async def _call_stage1(
 
 
 __all__ = [
-    "STAGE1_MAX_TOKENS",
     "STAGE1_NODE",
     "_call_stage1",
     "build_stage1_system_prompt",

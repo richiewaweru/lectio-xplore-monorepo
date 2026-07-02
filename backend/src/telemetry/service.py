@@ -99,6 +99,14 @@ class TelemetryMonitor:
             user_id = self._registry.user_id_for(trace_id)
             if user_id is None and generation_id:
                 user_id = await self._user_id_for_generation(generation_id)
+            if user_id is None:
+                logger.warning(
+                    "Skipping llm_call persistence without user_id trace_id=%s generation_id=%s event_type=%s",
+                    trace_id,
+                    generation_id,
+                    event_type,
+                )
+                return
             try:
                 llm_calls = await self._get_llm_call_repository()
                 await llm_calls.save_call(

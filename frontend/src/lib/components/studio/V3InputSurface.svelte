@@ -20,6 +20,8 @@
 	let outcome = $state('');
 	let struggle = $state('');
 	let resolving_topic = $state(false);
+	let narrowNotice = $state<string | null>(null);
+	let activeNarrowRequest = 0;
 
 	let learner_level = $state<V3InputForm['learner_level']>('on_grade');
 	let reading_level = $state<V3InputForm['reading_level']>('on_grade');
@@ -145,17 +147,24 @@
 
 	async function resolveTopic() {
 		const cleaned = topic.trim();
-		if (!cleaned || !grade_level || !subject) return;
+		if (!cleaned || !grade_level || !subject || resolving_topic) return;
+		const requestId = ++activeNarrowRequest;
 		resolving_topic = true;
+		narrowNotice = null;
 		try {
 			const candidates = await narrowTopic({
 				topic: cleaned,
 				grade_level,
 				subject
 			});
+			if (requestId !== activeNarrowRequest) return;
 			subtopic_candidates = candidates;
 			subtopics = [];
+			if (candidates.length === 0) {
+				narrowNotice = 'No narrower suggestions came back for this topic. You can still continue with the topic as entered.';
+			}
 		} catch {
+			if (requestId !== activeNarrowRequest) return;
 			const parts = cleaned
 				.split(/[,;:()/-]+/)
 				.map((part) => part.trim())
@@ -167,8 +176,12 @@
 				description: 'Use this focus for the generated resource.'
 			}));
 			subtopics = [];
+			narrowNotice =
+				'Topic narrowing could not reach the live service, so local fallback suggestions are shown instead.';
 		} finally {
-			resolving_topic = false;
+			if (requestId === activeNarrowRequest) {
+				resolving_topic = false;
+			}
 		}
 	}
 
@@ -288,7 +301,6 @@
 						class="flex-1 rounded-xl border border-input bg-background px-3 py-2"
 						bind:value={topic}
 						placeholder="e.g. Equivalent fractions"
-						onblur={resolveTopic}
 					/>
 					<button
 						type="button"
@@ -296,10 +308,14 @@
 						disabled={resolving_topic || !topic.trim() || !grade_level || !subject}
 						onclick={resolveTopic}
 					>
-						{resolving_topic ? '...' : 'Narrow'}
+						{resolving_topic ? 'Narrowing...' : 'Narrow'}
 					</button>
 				</div>
 			</label>
+
+			{#if narrowNotice}
+				<p class="text-sm text-muted-foreground" role="status">{narrowNotice}</p>
+			{/if}
 
 			{#if subtopic_candidates.length > 0}
 				<div class="space-y-2">
