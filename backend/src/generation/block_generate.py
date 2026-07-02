@@ -23,6 +23,7 @@ from generation.block_generate_prompts import (
     build_block_user_prompt,
     output_model_for_component,
 )
+from v3_execution.llm_helpers import structured_output_type_for_model
 from v3_execution.config.models import (
     V3_ANSWER_KEY_GENERATOR,
     V3_SECTION_WRITER,
@@ -110,7 +111,7 @@ async def run_block_generation(
 
         agent = Agent(
             model=model,
-            output_type=output_type,
+            output_type=structured_output_type_for_model(output_type, spec=spec),
             system_prompt=system_prompt,
         )
 

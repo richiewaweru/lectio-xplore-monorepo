@@ -12,6 +12,7 @@ from generation.v3_studio.prompts import _planner_index_block, build_v3_shared_p
 from v3_blueprint.planning.models import StructuralPlan
 from v3_blueprint.planning.validators import _allowed_roles_from_resource_spec
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
+from v3_execution.llm_helpers import structured_output_type_for_model
 
 _CALLER = "v3_chunked_architect"
 STAGE1_NODE = "v3_stage1_planner"
@@ -205,7 +206,7 @@ async def _call_stage1(
         slot = get_v3_slot(node)
         agent = Agent(
             model=model,
-            output_type=StructuralPlan,
+            output_type=structured_output_type_for_model(StructuralPlan, spec=spec),
             system_prompt=build_stage1_system_prompt(),
         )
         result = await run_llm(

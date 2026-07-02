@@ -15,6 +15,7 @@ from generation.v3_studio.prompts import build_v3_shared_prefix
 from generation.v3_studio.signal_map import summarise_form_supports
 from v3_blueprint.planning.models import SectionBrief, SectionPlan, StructuralPlan
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
+from v3_execution.llm_helpers import structured_output_type_for_model
 
 _CALLER = "v3_chunked_architect"
 STAGE2_NODE = "v3_stage2_expander"
@@ -345,7 +346,7 @@ async def _call_stage2_section(
     slot = get_v3_slot(node)
     agent = Agent(
         model=model,
-        output_type=SectionBrief,
+        output_type=structured_output_type_for_model(SectionBrief, spec=spec),
         system_prompt=build_stage2_system_prompt(),
     )
     section_message = build_stage2_user_message(

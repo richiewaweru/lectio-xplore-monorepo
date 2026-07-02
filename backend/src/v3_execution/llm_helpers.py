@@ -3,12 +3,30 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from pydantic_ai import Agent
+from pydantic_ai import Agent, PromptedOutput
 
+from core.llm import ModelFamily, ModelSpec
 from core.llm.runner import run_llm
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 
 _CALLER = "v3_execution"
+
+
+def structured_output_type_for_model(
+    output_type: Any,
+    *,
+    spec: ModelSpec,
+) -> Any:
+    if spec.family == ModelFamily.OPENAI_COMPATIBLE and spec.model_name.startswith("deepseek-"):
+        return PromptedOutput(
+            output_type,
+            template=(
+                "Return only valid JSON matching this schema.\n"
+                "Do not call tools.\n"
+                "{schema}"
+            ),
+        )
+    return output_type
 
 
 async def run_json_agent(
@@ -31,7 +49,7 @@ async def run_json_agent(
 
     agent = Agent(
         model=model,
-        output_type=dict[str, Any],
+        output_type=structured_output_type_for_model(dict[str, Any], spec=spec),
         system_prompt=system_prompt,
     )
     result = await run_llm(
@@ -55,4 +73,4 @@ async def run_json_agent(
     return json.loads(str(raw))
 
 
-__all__ = ["run_json_agent"]
+__all__ = ["run_json_agent", "structured_output_type_for_model"]

@@ -4,11 +4,14 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from pydantic_ai import PromptedOutput
 
 from app import app
 from core.auth.middleware import get_current_user
 from core.entities.user import User
 from core.events import TraceClosedEvent, TraceRegisteredEvent
+from core.llm import ModelFamily, ModelSpec
+from generation.v3_studio.agents import extract_signals
 
 TEST_USER = User(
     id="signals-test-user",
@@ -80,3 +83,34 @@ async def test_signals_registers_and_closes_trace_for_telemetry():
     assert registered.source == "planning"
     assert isinstance(closed, TraceClosedEvent)
     assert closed.source == "planning"
+
+
+@pytest.mark.asyncio
+async def test_extract_signals_uses_prompted_output_for_deepseek_models() -> None:
+    captured: dict[str, object] = {}
+
+    class FakeAgent:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    fake_result = type("R", (), {"output": type("S", (), {"topic": "Seeds, Pollination"})()})()
+
+    with (
+        patch("generation.v3_studio.agents.Agent", FakeAgent),
+        patch("generation.v3_studio.agents.get_v3_model", return_value="deepseek-model"),
+        patch(
+            "generation.v3_studio.agents.get_v3_spec",
+            return_value=ModelSpec(
+                family=ModelFamily.OPENAI_COMPATIBLE,
+                model_name="deepseek-v4-flash",
+                base_url="https://api.deepseek.com",
+                api_key_env="DEEPSEEK_API_KEY",
+            ),
+        ),
+        patch("generation.v3_studio.agents.get_v3_slot", return_value="fast"),
+        patch("generation.v3_studio.agents.run_llm", new=AsyncMock(return_value=fake_result)),
+    ):
+        with pytest.raises(RuntimeError, match="unexpected output"):
+            await extract_signals(type("Form", (), PAYLOAD)(), trace_id="signals-trace")
+
+    assert isinstance(captured["output_type"], PromptedOutput)

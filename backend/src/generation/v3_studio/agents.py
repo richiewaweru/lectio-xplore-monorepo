@@ -11,6 +11,7 @@ from v3_blueprint.compiler import BlueprintCompiler
 from v3_blueprint.models import ProductionBlueprint
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.timeouts import V3_TIMEOUTS
+from v3_execution.llm_helpers import structured_output_type_for_model
 
 _CALLER = "v3_studio"
 
@@ -45,7 +46,7 @@ async def extract_signals(form: V3InputForm, *, trace_id: str | None = None) -> 
     slot = get_v3_slot(node)
     agent = Agent(
         model=model,
-        output_type=V3SignalSummary,
+        output_type=structured_output_type_for_model(V3SignalSummary, spec=spec),
         system_prompt=SIGNAL_SYSTEM,
     )
     user = (
@@ -98,7 +99,7 @@ async def adjust_production_blueprint(
     slot = get_v3_slot(node)
     agent = Agent(
         model=model,
-        output_type=ProductionBlueprintEnvelope,
+        output_type=structured_output_type_for_model(ProductionBlueprintEnvelope, spec=spec),
         system_prompt=ADJUST_SYSTEM,
     )
     user = (

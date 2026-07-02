@@ -77,6 +77,7 @@ from telemetry.service import telemetry_monitor
 from telemetry.v3_trace.repository import V3TraceRepository
 from telemetry.v3_trace.writer import V3TraceWriter
 from core.events import TraceClosedEvent, TraceRegisteredEvent, event_bus
+from v3_execution.llm_helpers import structured_output_type_for_model
 
 logger = logging.getLogger(__name__)
 
@@ -304,7 +305,7 @@ async def post_v3_narrow(
 
     agent = Agent(
         model=model,
-        output_type=NarrowEnvelope,
+        output_type=structured_output_type_for_model(NarrowEnvelope, spec=spec),
         system_prompt=system,
     )
 
