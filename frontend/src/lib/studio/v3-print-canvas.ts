@@ -18,6 +18,30 @@ function plannedOrder(sectionId: string, plannedSections: V3StructuralPlanSectio
 	return index >= 0 ? index : null;
 }
 
+function mapSkeletonComponents(raw: unknown) {
+	if (!Array.isArray(raw)) return [];
+	return raw
+		.map((item) => (typeof item === 'object' && item !== null ? (item as Record<string, unknown>) : null))
+		.filter((item): item is Record<string, unknown> => item !== null)
+		.map((item) => {
+			const id = String(item.component_id ?? item.id ?? item.slug ?? '');
+			if (!id) return null;
+			const label =
+				typeof item.teacher_label === 'string'
+					? item.teacher_label
+					: typeof item.intent === 'string'
+						? item.intent
+						: id;
+			return {
+				id,
+				teacher_label: label,
+				status: 'pending' as const,
+				data: null
+			};
+		})
+		.filter((item): item is NonNullable<typeof item> => item !== null);
+}
+
 export function mapPackSectionsToCanvas(
 	sections: unknown[],
 	diagnostics: SectionAssemblyDiagnostic[] = [],
@@ -42,7 +66,7 @@ export function mapPackSectionsToCanvas(
 			missingComponents: diagnostic?.missing_components ?? [],
 			missingVisuals: diagnostic?.missing_visuals ?? [],
 			diagnosticWarnings: diagnostic?.warnings ?? [],
-			components: [],
+			components: mapSkeletonComponents(section.components),
 			visual: null,
 			questions: [],
 			mergedFields: section

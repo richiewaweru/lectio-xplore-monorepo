@@ -156,6 +156,11 @@
 		);
 	}
 
+	function paintSkeletonFromPack(pack: V3DraftPack): void {
+		if (v3Studio.canvas.length > 0) return;
+		paintCanvasFromPack(pack);
+	}
+
 	function clearRenderedBookletState(): void {
 		v3Studio.canvas = [];
 		v3Studio.draftPack = null;
@@ -459,6 +464,20 @@
 					blocking > 0
 						? `Consistency review finished with ${blocking} blocking issue(s) flagged.`
 						: 'Consistency review finished.';
+			},
+			onSkeletonReady: (data) => {
+				const pack = parsePack(data);
+				if (!pack) return;
+				if (!v3Studio.draftPack) {
+					v3Studio.draftPack = pack;
+				}
+				if (!v3Studio.activePack) {
+					v3Studio.activePack = pack;
+				}
+				v3Studio.bookletStatus = 'streaming_preview';
+				v3Studio.bookletIssues = Array.isArray(pack.booklet_issues) ? pack.booklet_issues : [];
+				paintSkeletonFromPack(pack);
+				v3Studio.stage = 'fill';
 			},
 			onDraftPackReady: (data) => {
 				const pack = parsePack(data);

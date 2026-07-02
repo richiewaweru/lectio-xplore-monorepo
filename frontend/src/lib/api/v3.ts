@@ -130,6 +130,7 @@ export async function adjustBlueprint(payload: {
 export type V3StudioStreamHandlers = {
 	onCoherenceReviewStarted?: () => void;
 	onCoherenceReportReady?: (data: Record<string, unknown>) => void;
+	onSkeletonReady?: (data: Record<string, unknown>) => void;
 	onDraftPackReady?: (data: Record<string, unknown>) => void;
 	onFinalPackReady?: (data: Record<string, unknown>) => void;
 	onDraftStatusUpdated?: (data: Record<string, unknown>) => void;
@@ -245,6 +246,9 @@ export function connectV3StudioGenerationStream(
 					break;
 				case 'coherence_report_ready':
 					handlers.onCoherenceReportReady?.(payload);
+					break;
+				case 'skeleton_ready':
+					handlers.onSkeletonReady?.(payload);
 					break;
 				case 'draft_pack_ready':
 					handlers.onDraftPackReady?.(payload);

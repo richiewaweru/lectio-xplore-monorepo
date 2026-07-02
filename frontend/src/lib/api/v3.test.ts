@@ -88,6 +88,7 @@ describe('connectV3StudioGenerationStream', () => {
 	}
 
 	it('routes new pack events to dedicated handlers', () => {
+		const onSkeletonReady = vi.fn();
 		const onDraftPackReady = vi.fn();
 		const onFinalPackReady = vi.fn();
 		const onDraftStatusUpdated = vi.fn();
@@ -95,6 +96,7 @@ describe('connectV3StudioGenerationStream', () => {
 		const onVisualFailed = vi.fn();
 
 		connectV3StudioGenerationStream('gen-1', {
+			onSkeletonReady,
 			onDraftPackReady,
 			onFinalPackReady,
 			onDraftStatusUpdated,
@@ -107,6 +109,7 @@ describe('connectV3StudioGenerationStream', () => {
 			| undefined;
 		expect(onmessage).toBeTypeOf('function');
 
+		onmessage?.({ event: 'skeleton_ready', data: '{"pack":{"sections":[{"section_id":"s-1"}]}}' });
 		onmessage?.({ event: 'draft_pack_ready', data: '{"pack":{"sections":[]}}' });
 		onmessage?.({ event: 'final_pack_ready', data: '{"pack":{"sections":[]}}' });
 		onmessage?.({ event: 'draft_status_updated', data: '{"booklet_status":"draft_ready"}' });
@@ -119,6 +122,7 @@ describe('connectV3StudioGenerationStream', () => {
 			data: '{"visual_id":"vis-1","attaches_to":"sec-1","mode":"diagram","frame_count":1,"error_summary":"provider timeout"}'
 		});
 
+		expect(onSkeletonReady).toHaveBeenCalledTimes(1);
 		expect(onDraftPackReady).toHaveBeenCalledTimes(1);
 		expect(onFinalPackReady).toHaveBeenCalledTimes(1);
 		expect(onDraftStatusUpdated).toHaveBeenCalledTimes(1);

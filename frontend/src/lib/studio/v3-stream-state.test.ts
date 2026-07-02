@@ -70,6 +70,41 @@ describe('v3 stream state reducers', () => {
 		});
 	});
 
+	it('merges component_ready into a skeleton-seeded section', () => {
+		const canvas = baseCanvas();
+		canvas[0] = {
+			...canvas[0]!,
+			id: 'build',
+			components: [
+				{
+					id: 'explanation-card',
+					teacher_label: 'Explain',
+					status: 'pending',
+					data: null
+				}
+			],
+			mergedFields: { section_id: 'build' }
+		};
+
+		const result = applyComponentReadyToCanvas(canvas, {
+			section_id: 'build',
+			component_id: 'explanation-card',
+			section_field: 'explanation',
+			data: { body: 'Live explanation', emphasis: [] }
+		});
+
+		expect(result.warning).toBeNull();
+		expect(result.canvas[0]?.components[0]?.status).toBe('ready');
+		expect(result.canvas[0]?.components[0]?.data).toEqual({
+			body: 'Live explanation',
+			emphasis: []
+		});
+		expect(result.canvas[0]?.mergedFields.explanation).toEqual({
+			body: 'Live explanation',
+			emphasis: []
+		});
+	});
+
 	it('marks section visual failed on visual_failed', () => {
 		const canvas = baseCanvas();
 		canvas[0]!.visual = {

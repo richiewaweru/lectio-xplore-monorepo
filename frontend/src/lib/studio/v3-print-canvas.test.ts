@@ -47,6 +47,30 @@ describe('mapPackSectionsToCanvas', () => {
 		});
 	});
 
+	it('maps skeleton components into pending canvas component stubs', () => {
+		const canvas = mapPackSectionsToCanvas([
+			{
+				section_id: 'build',
+				header: { title: 'Build' },
+				components: [
+					{
+						component_id: 'explanation-card',
+						intent: 'Explain the core idea'
+					}
+				]
+			}
+		]);
+
+		expect(canvas[0]?.components).toEqual([
+			{
+				id: 'explanation-card',
+				teacher_label: 'Explain the core idea',
+				status: 'pending',
+				data: null
+			}
+		]);
+	});
+
 	it('adds failed diagnostic-only sections back into the canvas with planned metadata', () => {
 		const canvas = mapPackSectionsToCanvas(
 			[
