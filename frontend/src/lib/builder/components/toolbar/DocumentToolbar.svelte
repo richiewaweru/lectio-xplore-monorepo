@@ -10,9 +10,11 @@
 	} from '$lib/builder/utils/page-estimate';
 	import { downloadLessonDocument } from '$lib/builder/utils/file-io';
 	import {
+		checkBuilderLessonPrint,
 		downloadBuilderLessonPdf,
 		printDocument,
-		type BuilderPdfAudience
+		type BuilderPdfAudience,
+		type BuilderPrintPreflightResult
 	} from '$lib/builder/utils/pdf-export';
 	import { CloudOff, Eye, EyeOff, History, Printer, Share2, UploadCloud } from 'lucide-svelte';
 
@@ -43,10 +45,21 @@
 	let storageAlmostFull = $state(false);
 	let exportLoadingAudience = $state<BuilderPdfAudience | null>(null);
 	let exportError = $state<string | null>(null);
+	let printCheckLoading = $state(false);
+	let printCheckError = $state<string | null>(null);
+	let printCheckResult = $state<BuilderPrintPreflightResult | null>(null);
+	let printCheckDocumentUpdatedAt = $state<string | null>(null);
 	const blocks = $derived(document ? Object.values(document.blocks) : []);
-	const pageCount = $derived(estimatePageCount(blocks));
+	const heuristicPageCount = $derived(estimatePageCount(blocks));
+	const printCheckStale = $derived(
+		printCheckResult !== null && printCheckDocumentUpdatedAt !== document.updated_at
+	);
+	const pageCount = $derived(
+		printCheckResult && !printCheckStale ? printCheckResult.page_count_estimate : heuristicPageCount
+	);
 	const warningLevel = $derived(pageWarningLevel(pageCount));
 	const pageWarning = $derived(pageWarningMessage(pageCount));
+	const printWarnings = $derived(printCheckResult?.warnings ?? []);
 
 	async function refreshStorageHint(): Promise<void> {
 		const est = await getStorageEstimate();
@@ -67,6 +80,20 @@
 			exportError = error instanceof Error ? error.message : 'Failed to export lesson PDF.';
 		} finally {
 			exportLoadingAudience = null;
+		}
+	}
+
+	async function checkPrint(): Promise<void> {
+		if (!lessonId) return;
+		printCheckLoading = true;
+		printCheckError = null;
+		try {
+			printCheckResult = await checkBuilderLessonPrint(lessonId, 'teacher');
+			printCheckDocumentUpdatedAt = document.updated_at;
+		} catch (error) {
+			printCheckError = error instanceof Error ? error.message : 'Failed to check print layout.';
+		} finally {
+			printCheckLoading = false;
 		}
 	}
 
@@ -134,8 +161,18 @@
 			title={pageWarning ?? `~${pageCount} A4 pages`}
 			data-testid="toolbar-page-count"
 		>
-			~{pageCount} {pageCount === 1 ? 'page' : 'pages'}
+			{printCheckResult && !printCheckStale ? '' : '~'}{pageCount} {pageCount === 1 ? 'page' : 'pages'}
 		</span>
+		<button
+			type="button"
+			class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+			onclick={() => void checkPrint()}
+			disabled={!lessonId || printCheckLoading}
+			data-testid="toolbar-print-check"
+		>
+			<Printer size={16} aria-hidden="true" />
+			{printCheckLoading ? 'Checking...' : 'Check print'}
+		</button>
 		{#if onOpenHistory}
 			<button
 				type="button"
@@ -232,5 +269,32 @@
 	</div>
 	{#if exportError}
 		<p class="w-full text-sm text-red-700" data-testid="toolbar-export-error">{exportError}</p>
+	{/if}
+	{#if printCheckError}
+		<p class="w-full text-sm text-red-700" data-testid="toolbar-print-check-error">{printCheckError}</p>
+	{/if}
+	{#if printCheckResult}
+		<div
+			class="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
+			class:opacity-60={printCheckStale}
+			data-testid="toolbar-print-check-result"
+		>
+			<div class="flex flex-wrap items-center gap-3">
+				<span class="font-medium text-slate-900">{printCheckResult.page_count_estimate} {printCheckResult.page_count_estimate === 1 ? 'page' : 'pages'}</span>
+				<span>Images: {printCheckResult.images.loaded} loaded, {printCheckResult.images.failed} failed, {printCheckResult.images.timed_out} timed out</span>
+				{#if printCheckStale}
+					<span class="font-medium text-amber-700">Document changed</span>
+				{/if}
+			</div>
+			{#if printWarnings.length}
+				<ul class="mt-2 list-disc space-y-1 pl-5 text-amber-800">
+					{#each printWarnings as warning}
+						<li>{warning}</li>
+					{/each}
+				</ul>
+			{:else}
+				<p class="mt-2 text-emerald-700">No print warnings found.</p>
+			{/if}
+		</div>
 	{/if}
 </header>

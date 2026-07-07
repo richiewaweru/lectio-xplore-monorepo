@@ -552,6 +552,10 @@
 					typeof data.component_id === 'string' ? data.component_id : null;
 				const parentVisualId =
 					typeof data.parent_visual_id === 'string' ? data.parent_visual_id : null;
+				const status: 'ready' | 'failed' | 'omitted_quality' =
+					data.status === 'omitted_quality' || data.status === 'failed'
+						? data.status
+						: 'ready';
 				if (!sid) return;
 				v3Studio.canvas = v3Studio.canvas.map((s) => {
 					if (s.id !== sid) return s;
@@ -562,7 +566,7 @@
 					const visual = s.visual
 						? {
 								...s.visual,
-								status: 'ready' as const,
+								status,
 								mode: mode ?? s.visual.mode,
 								image_url: url ?? s.visual.image_url,
 								frame_index: fi ?? s.visual.frame_index,

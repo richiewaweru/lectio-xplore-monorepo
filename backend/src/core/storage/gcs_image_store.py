@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 from datetime import timedelta
 
 from google.cloud import storage
 from google.oauth2 import service_account
+
+logger = logging.getLogger(__name__)
+_PRODUCTION_LIKE_ENVS = {"production", "staging"}
 
 
 class GCSImageStore:
@@ -47,6 +51,9 @@ class GCSImageStore:
         self.client = client
         self._bucket = client.bucket(resolved_bucket_name)
         self._base_url = os.getenv("GCS_IMAGE_BASE_URL", "")
+        app_env = (os.getenv("APP_ENV") or os.getenv("ENVIRONMENT") or "development").strip().lower()
+        if app_env in _PRODUCTION_LIKE_ENVS and not self._base_url:
+            logger.warning("GCS image store falling back to expiring signed URLs in production")
 
     @property
     def enabled(self) -> bool:
@@ -92,6 +99,26 @@ class GCSImageStore:
             return f"{self._base_url.rstrip('/')}/{key}"
 
         return blob.generate_signed_url(
+            expiration=timedelta(hours=1),
+            method="GET",
+            version="v4",
+        )
+
+    async def exists(self, *, key: str) -> bool:
+        if not self.enabled:
+            return False
+        blob = self._bucket.blob(key)
+        return await asyncio.to_thread(blob.exists)
+
+    async def copy(self, *, source_key: str, destination_key: str) -> str | None:
+        if not self.enabled:
+            return None
+        source_blob = self._bucket.blob(source_key)
+        await asyncio.to_thread(self._bucket.copy_blob, source_blob, self._bucket, destination_key)
+        if self._base_url:
+            return f"{self._base_url.rstrip('/')}/{destination_key}"
+        copied_blob = self._bucket.blob(destination_key)
+        return copied_blob.generate_signed_url(
             expiration=timedelta(hours=1),
             method="GET",
             version="v4",

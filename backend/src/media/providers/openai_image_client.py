@@ -1,10 +1,9 @@
 ﻿from __future__ import annotations
 
-import asyncio
 import base64
 import json
-import urllib.error
-import urllib.request
+
+import httpx
 
 from media.providers.image_client import ImageFormat, ImageGenerationResult, ImageSize
 
@@ -40,7 +39,7 @@ class OpenAICompatibleImageClient:
             payload["seed"] = seed
         return payload
 
-    def _call_api(
+    async def _call_api(
         self,
         *,
         prompt: str,
@@ -48,30 +47,27 @@ class OpenAICompatibleImageClient:
         format: ImageFormat,
         seed: int | None,
     ) -> ImageGenerationResult:
-        payload = json.dumps(
-            self._request_payload(prompt=prompt, size=size, format=format, seed=seed)
-        ).encode("utf-8")
-        request = urllib.request.Request(
-            f"{self.base_url}/images/generations",
-            data=payload,
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
+        payload = self._request_payload(prompt=prompt, size=size, format=format, seed=seed)
+        url = f"{self.base_url}/images/generations"
         try:
-            with urllib.request.urlopen(request, timeout=60) as response:
-                parsed = json.loads(response.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            body = ""
-            try:
-                body = exc.read().decode("utf-8", errors="replace")
-            except Exception:
-                pass
+            async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as client:
+                response = await client.post(
+                    url,
+                    json=payload,
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                )
+                response.raise_for_status()
+                parsed = response.json()
+        except httpx.HTTPStatusError as exc:
+            body = exc.response.text
             raise RuntimeError(
-                f"HTTP Error {exc.code}: {exc.reason} | Body: {body[:500]}"
+                f"HTTP Error {exc.response.status_code}: {exc.response.reason_phrase} | Body: {body[:500]}"
             ) from exc
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("Image provider returned invalid JSON") from exc
 
         data = parsed.get("data") or []
         if not data:
@@ -94,8 +90,7 @@ class OpenAICompatibleImageClient:
         format: ImageFormat = "png",
         seed: int | None = None,
     ) -> ImageGenerationResult:
-        return await asyncio.to_thread(
-            self._call_api,
+        return await self._call_api(
             prompt=prompt,
             size=size,
             format=format,

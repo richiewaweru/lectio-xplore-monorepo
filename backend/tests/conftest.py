@@ -16,6 +16,8 @@ _TEST_DB_PATH = _TEST_DB_DIR / "app-runtime.db"
 os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{_TEST_DB_PATH.as_posix()}"
 os.environ.setdefault("RUN_MIGRATIONS_ON_STARTUP", "true")
 os.environ.setdefault("JWT_SECRET_KEY", secrets.token_hex(32))
+os.environ.setdefault("V3_VISUAL_QC_ENABLED", "false")
+os.environ.setdefault("V3_IMAGE_CACHE_ENABLED", "false")
 
 from core.database.models import Base  # noqa: E402
 

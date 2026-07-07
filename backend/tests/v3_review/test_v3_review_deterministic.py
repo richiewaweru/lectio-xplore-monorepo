@@ -12,6 +12,7 @@ from v3_review import coherence_report_to_generation_summary
 from v3_review.deterministic_checks import (
     check_expected_answers_preserved,
     check_internal_artifact_leaks,
+    check_manual_only_components,
     check_no_extra_questions,
     check_planned_components_exist,
     check_planned_sections_exist,
@@ -103,6 +104,26 @@ def test_internal_leak_pattern_blocks() -> None:
     )
     issues = check_internal_artifact_leaks(dp)
     assert issues and issues[0].category == "internal_artifact_leak"
+
+
+def test_manual_only_component_emits_major_issue() -> None:
+    bp = _load_example("amara_compound_area.json")
+    bp.sections[0].components[0].component = "image-block"
+    dp = _minimal_draft_pack(
+        sections=[
+            {
+                "section_id": bp.sections[0].section_id,
+                "components": [{"component_id": "image-block"}],
+            }
+        ],
+        answer_key=None,
+    )
+
+    issues = check_manual_only_components(bp, dp)
+
+    assert issues
+    assert all(issue.severity == "major" for issue in issues)
+    assert any("manual-only" in issue.message for issue in issues)
 
 
 def test_extra_questions_major() -> None:
@@ -241,4 +262,28 @@ def test_failed_visual_block_emits_minor_review_issue() -> None:
     assert len(issues) == 1
     assert issues[0].severity == "minor"
     assert issues[0].category == "visual_generation_failed"
+
+
+def test_quality_omitted_visual_block_emits_minor_review_issue() -> None:
+    dp = _minimal_draft_pack(
+        sections=[],
+        answer_key=None,
+        visual_blocks=[
+            GeneratedVisualBlock(
+                visual_id="vis-practice-0",
+                attaches_to="practice",
+                mode="diagram",
+                source_work_order_id="wo-v",
+                status="omitted_quality",
+                error_message="labels were illegible",
+            )
+        ],
+    )
+
+    issues = check_visual_failures(dp)
+
+    assert len(issues) == 1
+    assert issues[0].severity == "minor"
+    assert issues[0].category == "visual_generation_failed"
+    assert issues[0].message.startswith("image omitted by quality gate: ")
 

@@ -18,6 +18,9 @@ V3_QUESTION_WRITER = "v3_question_writer"
 V3_ANSWER_KEY_GENERATOR = "v3_answer_key_generator"
 """Sonnet-tier answer key when FAST is insufficient (missing expected/working for full_working)."""
 V3_ANSWER_KEY_GENERATOR_HEAVY = "v3_answer_key_generator_heavy"
+V3_VISUAL_QC = "v3_visual_qc"
+V3_BLOCK_WRITER_FAST = "v3_block_writer_fast"
+V3_BLOCK_WRITER_STANDARD = "v3_block_writer_standard"
 
 V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V3_SIGNAL_EXTRACTOR: ModelSlot.FAST,
@@ -29,6 +32,9 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V3_QUESTION_WRITER: ModelSlot.STANDARD,
     V3_ANSWER_KEY_GENERATOR: ModelSlot.FAST,
     V3_ANSWER_KEY_GENERATOR_HEAVY: ModelSlot.STANDARD,
+    V3_VISUAL_QC: ModelSlot.FAST,
+    V3_BLOCK_WRITER_FAST: ModelSlot.FAST,
+    V3_BLOCK_WRITER_STANDARD: ModelSlot.STANDARD,
 }
 
 V3ReasoningLevel = Literal["low", "medium", "high"]
@@ -44,6 +50,9 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     V3_QUESTION_WRITER: "medium",
     V3_ANSWER_KEY_GENERATOR: False,
     V3_ANSWER_KEY_GENERATOR_HEAVY: "low",
+    V3_VISUAL_QC: False,
+    V3_BLOCK_WRITER_FAST: False,
+    V3_BLOCK_WRITER_STANDARD: "low",
 }
 
 V3_DEFAULT_SPECS: dict[ModelSlot, ModelSpec] = {
@@ -113,6 +122,25 @@ def _load_slot_spec(slot: ModelSlot) -> ModelSpec:
     return override if override is not None else base
 
 
+def _env_override_node(node_name: str, *, base: ModelSpec) -> ModelSpec | None:
+    prefix = node_name.upper()
+    family_raw = _first_env(f"{prefix}_PROVIDER")
+    model_name = _first_env(f"{prefix}_MODEL_NAME")
+    base_url = _first_env(f"{prefix}_BASE_URL")
+    api_key_env = _first_env(f"{prefix}_API_KEY_ENV")
+
+    if not any((family_raw, model_name, base_url, api_key_env)):
+        return None
+
+    family = _parse_family(family_raw, base=base.family) if family_raw else base.family
+    return ModelSpec(
+        family=family,
+        model_name=model_name or base.model_name,
+        base_url=base_url if base_url is not None else base.base_url,
+        api_key_env=api_key_env if api_key_env is not None else base.api_key_env,
+    )
+
+
 def get_v3_slot(node_name: str) -> ModelSlot:
     if node_name not in V3_NODE_SLOTS:
         raise ValueError(
@@ -123,7 +151,8 @@ def get_v3_slot(node_name: str) -> ModelSlot:
 
 
 def get_v3_spec(node_name: str) -> ModelSpec:
-    return _load_slot_spec(get_v3_slot(node_name))
+    slot_spec = _load_slot_spec(get_v3_slot(node_name))
+    return _env_override_node(node_name, base=slot_spec) or slot_spec
 
 
 def get_v3_model_settings(
@@ -177,7 +206,7 @@ def _deep_merge_dicts(left: dict, right: Mapping) -> dict:
 
 def get_v3_model(node_name: str, *, model_overrides: dict | None = None):
     slot = get_v3_slot(node_name)
-    spec = _load_slot_spec(slot)
+    spec = get_v3_spec(node_name)
     if model_overrides:
         if slot in model_overrides:
             return model_overrides[slot]
@@ -189,6 +218,8 @@ def get_v3_model(node_name: str, *, model_overrides: dict | None = None):
 __all__ = [
     "V3_ANSWER_KEY_GENERATOR",
     "V3_ANSWER_KEY_GENERATOR_HEAVY",
+    "V3_BLOCK_WRITER_FAST",
+    "V3_BLOCK_WRITER_STANDARD",
     "V3_BLUEPRINT_ADJUST",
     "V3_DEFAULT_SPECS",
     "V3_NARROW",
@@ -199,6 +230,7 @@ __all__ = [
     "V3_SIGNAL_EXTRACTOR",
     "V3_STAGE1_PLANNER",
     "V3_STAGE2_EXPANDER",
+    "V3_VISUAL_QC",
     "get_v3_model",
     "get_v3_model_settings",
     "get_v3_slot",

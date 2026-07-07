@@ -125,6 +125,14 @@ async def _upsert_generation_row(
         await session.commit()
 
 
+async def _write_planning_artifact(generation_id: str, artifact: dict) -> None:
+    async with async_session_factory() as session:
+        model = await session.get(GenerationModel, generation_id)
+        assert model is not None
+        model.planning_spec_json = json.dumps(artifact)
+        await session.commit()
+
+
 def _client() -> AsyncClient:
     return AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
 
@@ -473,6 +481,153 @@ async def test_v3_document_endpoint_missing_when_document_has_no_sections() -> N
     async with _client() as client:
         resp = await client.get(f"/api/v1/v3/generations/{generation_id}/document")
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_v3_visual_regenerate_replaces_visual_block_and_section_diagram() -> None:
+    from v3_execution.compile_orders import compile_execution_bundle
+    from v3_execution.models import GeneratedVisualBlock
+
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+
+    generation_id = str(uuid.uuid4())
+    blueprint_id = str(uuid.uuid4())
+    bp = _example_bp("amara_compound_area.json")
+    bundle = compile_execution_bundle(
+        bp,
+        generation_id=generation_id,
+        blueprint_id=blueprint_id,
+        template_id="guided-concept-path",
+    )
+    order = next(o for o in bundle.visual_orders if o.visual.attaches_to == "practice")
+    old_block = GeneratedVisualBlock(
+        visual_id=order.visual.id,
+        attaches_to=order.visual.attaches_to,
+        mode=order.visual.mode,
+        image_url="https://cdn.example/old.png",
+        caption="old caption",
+        alt_text="old alt",
+        source_work_order_id=order.work_order_id,
+        component_id=order.visual.component_id,
+    )
+    await _upsert_generation_row(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        document_json={
+            "kind": "v3_booklet_pack",
+            "generation_id": generation_id,
+            "blueprint_id": blueprint_id,
+            "template_id": "guided-concept-path",
+            "subject": bp.metadata.subject,
+            "status": "draft_ready",
+            "sections": [
+                {
+                    "section_id": order.visual.attaches_to,
+                    "template_id": "guided-concept-path",
+                    "title": "Practice",
+                    "diagram": {
+                        "image_url": "https://cdn.example/old.png",
+                        "caption": "old caption",
+                        "alt_text": "old alt",
+                    },
+                }
+            ],
+            "visual_blocks": [old_block.model_dump(mode="json", exclude_none=True)],
+            "warnings": [],
+        },
+    )
+    await _write_planning_artifact(
+        generation_id,
+        build_planning_artifact(
+            generation_id=generation_id,
+            blueprint_id=blueprint_id,
+            template_id="guided-concept-path",
+            blueprint=bp,
+            form=None,
+        ),
+    )
+
+    async def fake_execute_visual(regenerated_order, emit, **_kwargs):
+        await emit("visual_ready", {})
+        assert regenerated_order.work_order_id == order.work_order_id
+        assert "Correction: make it cleaner" in regenerated_order.visual.purpose
+        return [
+            GeneratedVisualBlock(
+                visual_id=order.visual.id,
+                attaches_to=order.visual.attaches_to,
+                mode=order.visual.mode,
+                image_url="https://cdn.example/new.png",
+                caption="new caption",
+                alt_text="new alt",
+                source_work_order_id=order.work_order_id,
+                component_id=order.visual.component_id,
+            )
+        ]
+
+    with patch("generation.v3_studio.router.execute_visual", side_effect=fake_execute_visual):
+        async with _client() as client:
+            resp = await client.post(
+                f"/api/v1/v3/generations/{generation_id}/visuals/{order.visual.id}/regenerate",
+                json={"teacher_hint": "make it cleaner"},
+            )
+
+    assert resp.status_code == 200
+    assert resp.json()["image_url"] == "https://cdn.example/new.png"
+
+    async with async_session_factory() as session:
+        model = await session.get(GenerationModel, generation_id)
+        assert model is not None
+        persisted = model.document_json
+    assert persisted["visual_blocks"][0]["image_url"] == "https://cdn.example/new.png"
+    assert persisted["sections"][0]["diagram"]["image_url"] == "https://cdn.example/new.png"
+    assert persisted["sections"][0]["diagram"]["caption"] == "new caption"
+
+
+@pytest.mark.asyncio
+async def test_v3_visual_regenerate_returns_404_for_unknown_visual() -> None:
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+
+    generation_id = str(uuid.uuid4())
+    await _upsert_generation_row(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        document_json={
+            "kind": "v3_booklet_pack",
+            "generation_id": generation_id,
+            "sections": [{"section_id": "s-1"}],
+            "visual_blocks": [],
+        },
+    )
+
+    async with _client() as client:
+        resp = await client.post(
+            f"/api/v1/v3/generations/{generation_id}/visuals/missing/regenerate",
+            json={},
+        )
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_v3_visual_regenerate_returns_409_when_generation_lock_busy() -> None:
+    generation_id = str(uuid.uuid4())
+    lock = asyncio.Lock()
+    await lock.acquire()
+    v3_router._visual_regenerate_locks[generation_id] = lock
+    app.dependency_overrides[get_current_user] = _override_user_a
+
+    try:
+        async with _client() as client:
+            resp = await client.post(
+                f"/api/v1/v3/generations/{generation_id}/visuals/vis-1/regenerate",
+                json={},
+            )
+    finally:
+        lock.release()
+        v3_router._visual_regenerate_locks.pop(generation_id, None)
+
+    assert resp.status_code == 409
 
 
 @pytest.mark.asyncio

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -116,3 +118,6 @@ class PDFExportTelemetry:
 
 
 pdf_export_telemetry = PDFExportTelemetry()
+pdf_render_semaphore = asyncio.Semaphore(
+    max(1, int(os.getenv("PDF_EXPORT_MAX_CONCURRENT_RENDERS", "1")))
+)

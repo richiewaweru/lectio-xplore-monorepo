@@ -25,6 +25,8 @@ from core.rate_limit import limiter
 from core.storage.gcs_image_store import GCSImageStore
 from generation.pdf_export.context import PDFGenerationContext
 from generation.pdf_export.cleanup import cleanup_files
+from generation.pdf_export.config import PDFExportConfig
+from generation.pdf_export.rendering.playwright import render_generation_print_preflight
 from generation.pdf_export.service import PDFExportRequest, export_generation_pdf
 from contracts.document import PipelineDocument, PipelineSectionManifestItem
 from contracts.lectio import get_component_registry_entry
@@ -173,6 +175,24 @@ class BuilderMediaUploadResponse(BaseModel):
 
 class BuilderLessonPDFExportRequest(BaseModel):
     audience: Literal["student", "teacher"] = "teacher"
+
+
+class BuilderLessonPrintPreflightRequest(BaseModel):
+    audience: Literal["student", "teacher"] = "teacher"
+
+
+class BuilderPrintPreflightImages(BaseModel):
+    loaded: int = 0
+    failed: int = 0
+    timed_out: int = 0
+
+
+class BuilderPrintPreflightResponse(BaseModel):
+    page_count_estimate: int
+    oversized_blocks: list[dict[str, Any]] = Field(default_factory=list)
+    images: BuilderPrintPreflightImages
+    print_contract_coverage: dict[str, Any] = Field(default_factory=dict)
+    warnings: list[str] = Field(default_factory=list)
 
 
 def _to_list_item(model: EditableLessonModel) -> BuilderLessonListItem:
@@ -361,6 +381,50 @@ def _builder_pdf_request_for_user(current_user: User) -> PDFExportRequest:
         teacher_name=teacher_name or "Teacher",
         include_toc=True,
         include_answers=False,
+    )
+
+
+def _int_from_report(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _builder_print_preflight_response(snapshot: dict[str, Any]) -> BuilderPrintPreflightResponse:
+    report = snapshot.get("print_layout_report")
+    if not isinstance(report, dict):
+        report = {}
+
+    oversized = report.get("oversized_blocks")
+    oversized_blocks = oversized if isinstance(oversized, list) else []
+    coverage = report.get("print_contract_coverage")
+    if not isinstance(coverage, dict):
+        coverage = {}
+
+    failed_images = _int_from_report(report.get("images_failed"))
+    timed_out_images = _int_from_report(report.get("images_timed_out"))
+    warnings: list[str] = []
+    for block in oversized_blocks:
+        if not isinstance(block, dict):
+            continue
+        label = block.get("block") or block.get("type") or "A block"
+        warnings.append(f"Block {label} is taller than one A4 page.")
+    if failed_images:
+        warnings.append(f"{failed_images} images failed to load.")
+    if timed_out_images:
+        warnings.append(f"{timed_out_images} images timed out while loading.")
+
+    return BuilderPrintPreflightResponse(
+        page_count_estimate=max(1, _int_from_report(report.get("page_count_estimate")) or 1),
+        oversized_blocks=[b for b in oversized_blocks if isinstance(b, dict)],
+        images=BuilderPrintPreflightImages(
+            loaded=_int_from_report(report.get("images_loaded")),
+            failed=failed_images,
+            timed_out=timed_out_images,
+        ),
+        print_contract_coverage=coverage,
+        warnings=warnings,
     )
 
 
@@ -674,6 +738,46 @@ async def export_builder_lesson_pdf(
         },
         background=BackgroundTask(cleanup_files, result.cleanup_paths),
     )
+
+
+@router.post("/lessons/{lesson_id}/print-preflight", response_model=BuilderPrintPreflightResponse)
+@limiter.limit("6/minute")
+async def print_preflight_builder_lesson(
+    request: Request,
+    lesson_id: str,
+    body: BuilderLessonPrintPreflightRequest | None = None,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+    jwt_handler: JWTHandler = Depends(get_jwt_handler),
+) -> BuilderPrintPreflightResponse:
+    model = await _owned_lesson_or_404(session, lesson_id=lesson_id, user_id=current_user.id)
+    if not isinstance(model.document_json, dict):
+        raise HTTPException(status_code=422, detail="Stored lesson document is invalid")
+
+    audience = body.audience if body is not None else "teacher"
+    settings = get_settings()
+    config = PDFExportConfig(settings)
+    if not config.enabled:
+        raise HTTPException(status_code=503, detail="Print preflight is disabled")
+
+    auth_token = jwt_handler.create_access_token(current_user.id, current_user.email)
+    snapshot = await render_generation_print_preflight(
+        generation_id=lesson_id,
+        auth_token=auth_token,
+        config=config,
+        render_path=f"/builder/print/{lesson_id}?audience={audience}",
+    )
+    response = _builder_print_preflight_response(snapshot)
+    _log_builder_event(
+        "print_preflight_checked",
+        user_id=current_user.id,
+        lesson_id=lesson_id,
+        request=request,
+        audience=audience,
+        page_count_estimate=response.page_count_estimate,
+        warning_count=len(response.warnings),
+    )
+    return response
 
 
 

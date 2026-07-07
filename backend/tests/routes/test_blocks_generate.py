@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 from unittest.mock import AsyncMock, patch
+from types import SimpleNamespace
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -10,6 +11,8 @@ from core.auth.middleware import get_current_user
 from core.database.models import EditableLessonModel, UserModel
 from core.database.session import get_async_session
 from core.entities.user import User
+from generation.block_generate import BlockGenerateRequest, run_block_generation
+from v3_execution.config.models import V3_BLOCK_WRITER_FAST, V3_BLOCK_WRITER_STANDARD
 
 TEST_USER = User(
     id="block-gen-user",
@@ -192,4 +195,55 @@ async def test_generate_block_accepts_owned_lesson_and_mode(db_session_factory) 
     assert forwarded_body.lesson_id == "lesson-owned-by-user"
     assert forwarded_body.mode == "custom"
     assert mocked.await_args.kwargs["user_id"] == TEST_USER.id
+
+
+@pytest.mark.asyncio
+async def test_run_block_generation_uses_dedicated_block_writer_nodes() -> None:
+    class DummyAgent:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    async def fake_run_llm(**kwargs):
+        return SimpleNamespace(output={"headline": "ok"})
+
+    base = {
+        "component_id": "hook-hero",
+        "subject": "Biology",
+        "focus": "Photosynthesis intro",
+        "grade_band": "secondary",
+    }
+
+    with (
+        patch("generation.block_generate.Agent", DummyAgent),
+        patch("generation.block_generate.get_v3_model", return_value="test-model"),
+        patch("generation.block_generate.run_llm", side_effect=fake_run_llm) as mocked_run,
+    ):
+        await run_block_generation(
+            BlockGenerateRequest(**base, model_tier="FAST"),
+            user_id=TEST_USER.id,
+        )
+        await run_block_generation(
+            BlockGenerateRequest(**base, model_tier="STANDARD"),
+            user_id=TEST_USER.id,
+        )
+
+    assert mocked_run.await_args_list[0].kwargs["node"] == V3_BLOCK_WRITER_FAST
+    assert mocked_run.await_args_list[1].kwargs["node"] == V3_BLOCK_WRITER_STANDARD
+
+
+@pytest.mark.asyncio
+async def test_run_block_generation_rejects_manual_only_component() -> None:
+    with pytest.raises(Exception) as exc:
+        await run_block_generation(
+            BlockGenerateRequest(
+                component_id="image-block",
+                subject="Biology",
+                focus="Add a diagram",
+                grade_band="secondary",
+            ),
+            user_id=TEST_USER.id,
+        )
+
+    assert getattr(exc.value, "status_code", None) == 400
+    assert "manual-only" in str(getattr(exc.value, "detail", ""))
 

@@ -199,6 +199,7 @@ def _assemble_visual_strategy(
             f"{vs.subject} "
             f"(job: {vs.visual_job}; "
             f"anchor: {vs.anchor_link}; "
+            f"style: {vs.visual_style or 'illustration'}; "
             f"must_show: {must_show or 'none'}; "
             f"must_not_show: {must_not_show or 'none'})"
         )
@@ -216,6 +217,7 @@ def _assemble_visual_strategy(
             visual_job=vs.visual_job,
             type_hint=vs.type_hint,
             anchor_link=vs.anchor_link,
+            visual_style=vs.visual_style,
             must_show=vs.must_show,
             must_not_show=vs.must_not_show,
             source_question_ids=vs.source_question_ids,

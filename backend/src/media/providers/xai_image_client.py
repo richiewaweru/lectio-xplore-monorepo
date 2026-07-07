@@ -3,8 +3,8 @@
 import base64
 import json
 import logging
-import urllib.error
-import urllib.request
+
+import httpx
 
 from media.providers.image_client import ImageFormat, ImageGenerationResult, ImageSize
 from media.providers.openai_image_client import OpenAICompatibleImageClient
@@ -51,7 +51,7 @@ class XAIImageClient(OpenAICompatibleImageClient):
             payload["aspect_ratio"] = aspect_ratio
         return payload
 
-    def _call_api(
+    async def _call_api(
         self,
         *,
         prompt: str,
@@ -59,66 +59,63 @@ class XAIImageClient(OpenAICompatibleImageClient):
         format: ImageFormat,
         seed: int | None,
     ) -> ImageGenerationResult:
-        payload = json.dumps(
-            self._request_payload(prompt=prompt, size=size, format=format, seed=seed)
-        ).encode("utf-8")
-        request = urllib.request.Request(
-            f"{self.base_url}/images/generations",
-            data=payload,
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
+        payload = self._request_payload(prompt=prompt, size=size, format=format, seed=seed)
+        request_url = f"{self.base_url}/images/generations"
         logger.info(
             "xai image request start",
             extra={
                 "node_name": "visual_executor",
                 "provider": "xai",
-                "request_url": request.full_url,
+                "request_url": request_url,
                 "image_model": self.model_name,
                 "api_key_present": bool(self.api_key),
                 "prompt_length": len(prompt),
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=60) as response:
-                raw_body = response.read()
+            async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as client:
+                response = await client.post(
+                    request_url,
+                    json=payload,
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json",
+                    },
+                )
+                raw_body = response.content
+                response.raise_for_status()
                 logger.info(
                     "xai image response received",
                     extra={
                         "node_name": "visual_executor",
                         "provider": "xai",
-                        "request_url": request.full_url,
+                        "request_url": request_url,
                         "image_model": self.model_name,
-                        "status_code": getattr(response, "status", None),
+                        "status_code": response.status_code,
                         "body_length": len(raw_body),
                     },
                 )
                 parsed = json.loads(raw_body.decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            body = ""
-            try:
-                body = exc.read().decode("utf-8", errors="replace")
-            except Exception:
-                pass
+        except httpx.HTTPStatusError as exc:
+            body = exc.response.text
             logger.error(
                 "xai image request failed",
                 extra={
                     "node_name": "visual_executor",
                     "provider": "xai",
-                    "request_url": request.full_url,
+                    "request_url": request_url,
                     "image_model": self.model_name,
-                    "status_code": exc.code,
+                    "status_code": exc.response.status_code,
                     "body_length": len(body),
                     "response_body_preview": body[:500],
                 },
                 exc_info=exc,
             )
             raise RuntimeError(
-                f"HTTP Error {exc.code}: {exc.reason} | Body: {body[:500]}"
+                f"HTTP Error {exc.response.status_code}: {exc.response.reason_phrase} | Body: {body[:500]}"
             ) from exc
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("xAI returned invalid JSON") from exc
 
         data = parsed.get("data") or []
         if not data:
@@ -145,8 +142,10 @@ class XAIImageClient(OpenAICompatibleImageClient):
                 },
             )
             try:
-                with urllib.request.urlopen(url, timeout=60) as image_response:
-                    image_bytes = image_response.read()
+                async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+                    image_response = await client.get(url)
+                    image_bytes = image_response.content
+                    image_response.raise_for_status()
                     logger.info(
                         "xai image asset fetch received",
                         extra={
@@ -154,7 +153,7 @@ class XAIImageClient(OpenAICompatibleImageClient):
                             "provider": "xai",
                             "asset_url": url,
                             "image_model": self.model_name,
-                            "status_code": getattr(image_response, "status", None),
+                            "status_code": image_response.status_code,
                             "body_length": len(image_bytes),
                         },
                     )
@@ -163,12 +162,8 @@ class XAIImageClient(OpenAICompatibleImageClient):
                         format="jpeg",
                         mime_type="image/jpeg",
                     )
-            except urllib.error.HTTPError as exc:
-                body = ""
-                try:
-                    body = exc.read().decode("utf-8", errors="replace")
-                except Exception:
-                    pass
+            except httpx.HTTPStatusError as exc:
+                body = exc.response.text
                 logger.error(
                     "xai image asset fetch failed",
                     extra={
@@ -176,7 +171,7 @@ class XAIImageClient(OpenAICompatibleImageClient):
                         "provider": "xai",
                         "asset_url": url,
                         "image_model": self.model_name,
-                        "status_code": exc.code,
+                        "status_code": exc.response.status_code,
                         "body_length": len(body),
                         "response_body_preview": body[:500],
                     },

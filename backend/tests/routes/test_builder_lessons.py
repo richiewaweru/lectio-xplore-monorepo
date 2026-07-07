@@ -486,6 +486,68 @@ class TestBuilderLessonRoutes:
         assert denied_print.status_code == 404
         assert denied_export.status_code == 404
 
+    async def test_print_preflight_enforces_ownership(self, _install_dependency_overrides):
+        async with await _client() as client:
+            created = await client.post(
+                "/api/v1/builder/lessons",
+                json={"source_type": "manual", "document": _minimal_lesson()},
+            )
+            assert created.status_code == 201
+            lesson_id = created.json()["id"]
+
+            _install_dependency_overrides["user"] = USER_B
+            denied = await client.post(
+                f"/api/v1/builder/lessons/{lesson_id}/print-preflight",
+                json={"audience": "student"},
+            )
+
+        assert denied.status_code == 404
+
+    async def test_print_preflight_returns_playwright_report(self):
+        async with await _client() as client:
+            created = await client.post(
+                "/api/v1/builder/lessons",
+                json={"source_type": "manual", "document": _minimal_lesson()},
+            )
+            assert created.status_code == 201
+            lesson_id = created.json()["id"]
+
+            captured: dict[str, object] = {}
+
+            async def fake_preflight(**kwargs):
+                captured.update(kwargs)
+                return {
+                    "print_layout_report": {
+                        "page_count_estimate": 4,
+                        "images_loaded": "3",
+                        "images_failed": "2",
+                        "images_timed_out": "1",
+                        "print_contract_coverage": {"declared": 5, "total": 6},
+                        "oversized_blocks": [
+                            {"type": "atomic", "block": "practice-stack", "height": 1200}
+                        ],
+                    }
+                }
+
+            with patch("builder.routes.render_generation_print_preflight", side_effect=fake_preflight):
+                response = await client.post(
+                    f"/api/v1/builder/lessons/{lesson_id}/print-preflight",
+                    json={"audience": "student"},
+                )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["page_count_estimate"] == 4
+        assert body["images"] == {"loaded": 3, "failed": 2, "timed_out": 1}
+        assert body["print_contract_coverage"] == {"declared": 5, "total": 6}
+        assert body["oversized_blocks"] == [
+            {"type": "atomic", "block": "practice-stack", "height": 1200}
+        ]
+        assert "Block practice-stack is taller than one A4 page." in body["warnings"]
+        assert "2 images failed to load." in body["warnings"]
+        assert "1 images timed out while loading." in body["warnings"]
+        assert captured["render_path"] == f"/builder/print/{lesson_id}?audience=student"
+
     async def test_export_pdf_uses_builder_print_route_and_audience(self, tmp_path: Path):
         async with await _client() as client:
             created = await client.post(

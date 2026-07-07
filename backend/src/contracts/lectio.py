@@ -41,6 +41,11 @@ _EXTERNAL_FIELDS = {
     "video_embed",
 }
 
+# Components that exist in the Builder palette but require teacher-provided media.
+# AI generation must not plan or fill these until Lectio exposes a generatable
+# media contract for them.
+MANUAL_ONLY_COMPONENT_IDS = {"image-block", "video-embed"}
+
 
 def diag(tag: str, **fields) -> None:
     sys.stderr.write(f"DIAG::{tag}::{json.dumps(fields, default=str)}\n")

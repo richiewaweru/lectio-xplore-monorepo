@@ -26,6 +26,21 @@ class ImageStore(ABC):
     ) -> str:
         ...
 
+    async def store_image_key(
+        self,
+        *,
+        key: str,
+        image_bytes: bytes,
+        content_type: str = "image/png",
+    ) -> str:
+        ...
+
+    async def image_exists(self, *, key: str) -> bool:
+        ...
+
+    async def copy_image(self, *, source_key: str, destination_key: str) -> str | None:
+        ...
+
     @abstractmethod
     async def probe_write_access(self) -> tuple[bool, str]:
         ...
@@ -56,6 +71,35 @@ class LocalImageStore(ImageStore):
         file_path = dir_path / filename
         file_path.write_bytes(image_bytes)
         return f"{self.base_url}/{generation_id}/{section_id}/{filename}"
+
+    async def store_image_key(
+        self,
+        *,
+        key: str,
+        image_bytes: bytes,
+        content_type: str = "image/png",
+    ) -> str:
+        _ = content_type
+        clean_key = key.strip("/")
+        file_path = self.base_path / clean_key
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_bytes(image_bytes)
+        url_key = clean_key.replace("\\", "/")
+        return f"{self.base_url}/{url_key}"
+
+    async def image_exists(self, *, key: str) -> bool:
+        return (self.base_path / key.strip("/")).exists()
+
+    async def copy_image(self, *, source_key: str, destination_key: str) -> str | None:
+        source = self.base_path / source_key.strip("/")
+        if not source.exists():
+            return None
+        clean_destination = destination_key.strip("/")
+        destination = self.base_path / clean_destination
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(source.read_bytes())
+        url_key = clean_destination.replace("\\", "/")
+        return f"{self.base_url}/{url_key}"
 
     async def probe_write_access(self) -> tuple[bool, str]:
         probe_dir = self.base_path / "_health"
@@ -146,6 +190,31 @@ class GCSImageStore(ImageStore):
                 exc_info=exc,
             )
             raise
+
+    async def store_image_key(
+        self,
+        *,
+        key: str,
+        image_bytes: bytes,
+        content_type: str = "image/png",
+    ) -> str:
+        final_url = await self._core_store.upload_with_key(
+            key=key,
+            image_bytes=image_bytes,
+            content_type=content_type,
+        )
+        if not final_url:
+            raise RuntimeError("GCS upload returned no URL")
+        return final_url
+
+    async def image_exists(self, *, key: str) -> bool:
+        return await self._core_store.exists(key=key)
+
+    async def copy_image(self, *, source_key: str, destination_key: str) -> str | None:
+        return await self._core_store.copy(
+            source_key=source_key,
+            destination_key=destination_key,
+        )
 
     async def probe_write_access(self) -> tuple[bool, str]:
         return await asyncio.to_thread(self._core_probe)

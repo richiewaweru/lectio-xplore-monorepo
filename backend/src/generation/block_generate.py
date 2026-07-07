@@ -17,7 +17,7 @@ import core.events as core_events
 from core.events import TraceClosedEvent, TraceRegisteredEvent
 from core.llm.runner import run_llm
 from core.llm.types import ModelSlot
-from contracts.lectio import get_component_registry_entry
+from contracts.lectio import MANUAL_ONLY_COMPONENT_IDS, get_component_registry_entry
 from generation.block_generate_prompts import (
     build_block_system_prompt,
     build_block_user_prompt,
@@ -25,8 +25,8 @@ from generation.block_generate_prompts import (
 )
 from v3_execution.llm_helpers import structured_output_type_for_model
 from v3_execution.config.models import (
-    V3_ANSWER_KEY_GENERATOR,
-    V3_SECTION_WRITER,
+    V3_BLOCK_WRITER_FAST,
+    V3_BLOCK_WRITER_STANDARD,
     get_v3_model,
     get_v3_model_settings,
     get_v3_spec,
@@ -70,6 +70,11 @@ async def run_block_generation(
     *,
     user_id: str,
 ) -> dict[str, Any]:
+    if body.component_id in MANUAL_ONLY_COMPONENT_IDS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"component '{body.component_id}' is manual-only and must not be AI-generated",
+        )
     if get_component_registry_entry(body.component_id) is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -77,7 +82,7 @@ async def run_block_generation(
         )
 
     slot = _slot_for_tier(body.model_tier)
-    node = V3_SECTION_WRITER if slot == ModelSlot.STANDARD else V3_ANSWER_KEY_GENERATOR
+    node = V3_BLOCK_WRITER_STANDARD if slot == ModelSlot.STANDARD else V3_BLOCK_WRITER_FAST
     spec = get_v3_spec(node)
     model = get_v3_model(node)
 

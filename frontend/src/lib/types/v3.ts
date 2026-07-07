@@ -189,7 +189,7 @@ export interface CanvasComponent {
 
 export interface CanvasVisual {
 	id: string;
-	status: ComponentStatus;
+	status: ComponentStatus | 'omitted_quality';
 	mode?: 'diagram' | 'diagram_series' | 'diagram_compare' | 'simulation';
 	image_url: string | null;
 	frame_index: number | null;
@@ -260,7 +260,7 @@ export interface V3DraftPack {
 		image_url?: string | null;
 		component_id?: string | null;
 		parent_visual_id?: string | null;
-		status?: 'ready' | 'failed';
+		status?: 'ready' | 'failed' | 'omitted_quality';
 		error_message?: string | null;
 	}>;
 	answer_key?: Record<string, unknown> | null;

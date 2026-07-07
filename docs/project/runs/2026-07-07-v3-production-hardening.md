@@ -1,0 +1,130 @@
+# V3 Production Hardening Progress
+
+Source handoff: `C:\Users\richi\Downloads\v3-production-hardening-handoff.md`
+
+## Feature: V3 Production Hardening
+
+**Classification**: major
+**Subsystems**: backend, frontend, infrastructure
+**Draft PR**: https://github.com/richiewaweru/text-book-generator/pull/92
+
+### Progress
+- [x] Understood requirements and identified scope
+- [x] Read project onboarding, workflow, and standards
+- [x] Ran baseline validation before new changes
+- [x] Resolve/report red baseline before starting implementation
+- [x] Phase 1: Verify image URL permanence
+- [x] Phase 2: CSP img-src + image health probe
+- [x] Phase 3: Streaming/schema bugs
+- [x] Phase 4: Async image client + real visual concurrency
+- [x] Phase 5: Image quality gate
+- [x] Phase 6: must_show/must_not_show + raster visual style
+- [x] Phase 7: Print preflight endpoint + builder surfacing
+- [x] Phase 8: Per-visual regenerate endpoint
+- [x] Phase 9: Content-hash image caching
+- [x] Phase 10: Block-writer slots + manual-only contract
+- [x] Final integration pass
+- [x] Self-reviewed against `agents/standards/review.md`
+- [x] Wrote commit message(s) following `agents/standards/communication.md`
+- [x] Noted follow-up work or blockers
+
+### Validation Evidence
+- Baseline backend, first run: `uv run pytest -q` failed (`83 failed, 225 passed, 1 warning`) because the process loaded the repo-root `.env`; `LECTIO_CONTRACTS_DIR` pointed at a container path, and SQLite also reported lock errors.
+- Baseline frontend check: `npm run check` passed (`0 errors, 0 warnings`).
+- Baseline backend, local env rerun: with `LECTIO_CONTRACTS_DIR` set to `backend/contracts`, `uv run pytest -q` still failed (`32 failed, 276 passed, 1 warning`). Major remaining causes: FastAPI startup migrations attempt SQLite constraint alters, shared SQLite test DB lock errors, and one existing visual-executor log assertion failure.
+- Baseline frontend tests: `npm test` failed (`1 failed, 49 passed`; `187 passed`, `1 failed`) because `src/lib/no-vendor-lectio-imports.test.ts` exceeded the 5000ms Vitest timeout.
+- Baseline backend, corrected local env: `LECTIO_CONTRACTS_DIR=backend/contracts RUN_MIGRATIONS_ON_STARTUP=false uv run pytest -q` passed (`308 passed, 1 warning`).
+- Baseline frontend, timeout-adjusted rerun: `npm test -- --testTimeout=30000` passed (`50 passed`, `188 passed`). The vendor import guard took about 4.9s, so the default 5s test timeout is tight on this machine.
+- Baseline frontend check rerun: `npm run check` passed (`0 errors, 0 warnings`).
+- Phase 2/diagnostic targeted: `uv run pytest tests/core/health/test_health_routes.py tests/media/test_v3_image_pipeline_diagnostic.py -q` passed (`15 passed, 1 warning`).
+- Phase 3 targeted: skeleton/schema checks passed:
+  - `uv run pytest tests/v3_execution/test_v3_execution_core.py::test_runner_emits_skeleton_ready_before_component_events tests/generation/test_v3_studio_generation_stream.py::test_v3_document_endpoint_returns_persisted_skeleton_document -q` (`2 passed, 1 warning`)
+  - `uv run pytest tests/v3_review/test_v3_review_deterministic.py tests/v3_execution/test_section_builder_tolerant.py::test_component_order_metadata_matches_emitted_component_sequence -q` (`8 passed, 1 warning`)
+- Phase 4 targeted: `uv run pytest tests/media/test_providers_registry.py tests/media/test_v3_image_pipeline_diagnostic.py tests/core/health/test_health_routes.py -q` passed (`27 passed, 1 warning`).
+- Phase 4 lint: `uv run ruff check src/media/providers/openai_image_client.py src/media/providers/xai_image_client.py src/v3_execution/config/concurrency.py tests/media/test_providers_registry.py src/app.py src/core/storage/gcs_image_store.py tests/core/health/test_health_routes.py` passed.
+- Phase 4 grep checkpoint: `rg "urllib.request.urlopen" backend/src/media/providers -n` returned no matches.
+- Phase 5 targeted: `uv run pytest tests/v3_execution/test_v3_execution_core.py tests/v3_review/test_v3_review_deterministic.py tests/media/test_providers_registry.py -q` passed (`35 passed, 1 warning`).
+- Phase 5 lint: `uv run ruff check src/media/qc src/v3_execution/executors/visual_executor.py src/v3_execution/models.py src/v3_execution/runtime/validation.py src/v3_execution/config/models.py src/v3_execution/config/__init__.py src/v3_review/deterministic_checks.py tests/v3_execution/test_v3_execution_core.py tests/v3_review/test_v3_review_deterministic.py` passed.
+- Phase 5 frontend check: `npm run check` passed (`0 errors, 0 warnings`).
+- Phase 5 frontend targeted: `npm test -- src/routes/studio/page.test.ts --testTimeout=30000` passed (`17 passed`).
+- Phase 5 backend full suite: after creating shared SQLite test schema with `Base.metadata.create_all()` and running with `LECTIO_CONTRACTS_DIR=backend/contracts RUN_MIGRATIONS_ON_STARTUP=false`, `uv run pytest -q` passed (`314 passed, 1 warning`).
+- Phase 5 frontend full suite: `npm test -- --testTimeout=30000` passed (`50 files`, `188 passed`).
+- Phase 6 targeted: `uv run pytest tests/v3_blueprint/planning/test_assembler.py tests/v3_blueprint/planning/test_section_expander_prompt.py tests/v3_execution/test_compile_orders_series_frames.py tests/v3_execution/test_visual_prompt_style.py tests/v3_execution/test_v3_execution_core.py tests/v3_review/test_v3_review_deterministic.py -q` passed (`34 passed, 1 warning`).
+- Phase 6 lint: `uv run ruff check src/v3_blueprint/models.py src/v3_blueprint/planning/models.py src/v3_blueprint/planning/assembler.py src/v3_blueprint/planning/section_expander.py src/v3_execution/models.py src/v3_execution/compile_orders.py src/v3_execution/prompts/visual_executor.py tests/v3_blueprint/planning/test_assembler.py tests/v3_blueprint/planning/test_section_expander_prompt.py tests/v3_execution/test_compile_orders_series_frames.py tests/v3_execution/test_visual_prompt_style.py` passed.
+- Phase 7 backend targeted: `uv run pytest tests/routes/test_builder_lessons.py -q` passed (`13 passed, 1 warning`).
+- Phase 7 backend lint: `uv run ruff check src/core/pdf_export_runtime.py src/generation/pdf_export/rendering/playwright.py src/builder/routes.py tests/routes/test_builder_lessons.py` passed.
+- Phase 7 frontend targeted: `npx vitest run src/lib/builder/components/toolbar/DocumentToolbar.test.ts --testTimeout=30000 --pool=threads --reporter=dot` passed (`5 passed`). Note: the default forks pool stalled without output in this session.
+- Phase 7 frontend check: `npm run check` passed (`0 errors, 0 warnings`).
+- Phase 8 targeted: `uv run pytest tests/generation/test_v3_studio_generation_stream.py::test_v3_visual_regenerate_replaces_visual_block_and_section_diagram tests/generation/test_v3_studio_generation_stream.py::test_v3_visual_regenerate_returns_404_for_unknown_visual tests/generation/test_v3_studio_generation_stream.py::test_v3_visual_regenerate_returns_409_when_generation_lock_busy -q` passed (`3 passed, 1 warning`).
+- Phase 8 lint: `uv run ruff check src/generation/v3_studio/router.py tests/generation/test_v3_studio_generation_stream.py` passed.
+- Phase 9 targeted: `uv run pytest tests/v3_execution/test_v3_execution_core.py::test_visual_cache_key_is_stable_and_includes_constraints tests/v3_execution/test_v3_execution_core.py::test_execute_visual_cache_hit_skips_provider_and_copies_cached_image tests/v3_execution/test_v3_execution_core.py::test_execute_visual_cache_miss_uploads_generation_and_cache_objects tests/generation/test_v3_studio_generation_stream.py::test_v3_visual_regenerate_replaces_visual_block_and_section_diagram -q` passed (`4 passed, 1 warning`).
+- Phase 9 lint: `uv run ruff check src/v3_execution/executors/visual_executor.py src/media/storage/image_store.py src/core/storage/gcs_image_store.py src/generation/v3_studio/router.py tests/v3_execution/test_v3_execution_core.py tests/conftest.py` passed.
+- Phase 10 targeted: `uv run pytest tests/routes/test_blocks_generate.py::test_run_block_generation_uses_dedicated_block_writer_nodes tests/routes/test_blocks_generate.py::test_run_block_generation_rejects_manual_only_component tests/v3_review/test_v3_review_deterministic.py::test_manual_only_component_emits_major_issue -q` passed (`3 passed, 1 warning`).
+- Phase 10 lint: `uv run ruff check src/generation/block_generate.py src/v3_execution/config/models.py src/v3_execution/config/__init__.py src/contracts/lectio.py src/v3_review/deterministic_checks.py src/v3_review/reviewer.py tests/routes/test_blocks_generate.py tests/v3_review/test_v3_review_deterministic.py` passed.
+- Phase 10 grep: `rg "V3_ANSWER_KEY_GENERATOR" backend/src/generation/block_generate.py -n` returned no matches; `rg "MANUAL_ONLY_COMPONENT_IDS" backend/src -n` returned contract + reviewer + block generation call sites.
+- Phase 1 Railway env check: production Railway service `text-book-generator Copy Copy` has `GCS_IMAGE_BASE_URL` set; a Railway console env-shape probe printed `GCS_IMAGE_BASE_URL_set= True` and `GCS_IMAGE_BASE_URL_host= storage.googleapis.com` without printing the full value.
+- Phase 1 production stored-pack check: read-only Railway console DB probe scanned the 10 most recent `generations.document_json` rows with stored JSON. Result: `rows_checked=10`, `total_image_urls=8`, `total_signed_marker_urls=0`. The one row with image URLs had `signed_markers=0`; the remaining checked rows had no image URL fields.
+- Final Railway env shape check: production currently reports `V3_CONCURRENCY_VISUAL_MAX=2`; `V3_VISUAL_QC_ENABLED`, `V3_IMAGE_CACHE_ENABLED`, and `V3_VISUAL_QC_*` provider/model/API-key/base-url overrides are unset. Local code defaults cover the new flags after deploy, but the handoff-requested production concurrency update to 4 is still pending.
+- Final backend full suite attempt 1: with seeded shared SQLite runtime DB, `uv run pytest -q` failed with SQLite `database is locked` across V3 generation writer/studio DB tests after `299 passed, 30 failed, 1 warning` in 4m40s. Failures were lock errors, not assertion failures.
+- Final backend full suite attempt 2: reran against a fresh temp SQLite DB file; command exceeded the 5-minute tool timeout before producing a summary.
+- Final backend isolated V3 DB tests: reran V3 database-sensitive tests against a fresh temp SQLite DB and they passed (`33 passed, 1 warning`).
+- Final backend full suite: reran `uv run pytest -q` against a fresh temp SQLite DB with the local contracts path and migrations disabled; passed (`329 passed, 1 warning in 105.69s`).
+- Final frontend check: `npm run check` passed (`0 errors, 0 warnings`).
+- Final frontend vendor guard fix: added a local 30s timeout to `src/lib/no-vendor-lectio-imports.test.ts` because the guard takes about 6s under the full parallel suite on this machine.
+- Final frontend full tests: `npm test` passed (`50 passed`, `189 passed`) in 489.88s.
+- Final frontend build: `npm run build` passed; SvelteKit/Vite built SSR and client output successfully, with the existing large-chunk warning.
+- Final architecture check: `python tools\agent\check_architecture.py --format text` passed (`No architecture violations found.`).
+- Final whitespace check: `git diff --check` passed.
+- Final grep checkpoints:
+  - `rg "urllib.request.urlopen" backend/src/media/providers/ -n` returned no matches.
+  - `rg "_component_order" backend/src/v3_review/ backend/src/v3_execution/ -n` showed section metadata write plus validation stripping.
+  - `rg "skeleton_ready" backend/src -n` showed event const plus snapshot hook.
+  - `rg "_write_generation_snapshot" backend/src -n` showed the helper and one call site.
+  - `rg "omitted_quality" backend/src -n` showed model literal + executor + validation + reviewer.
+  - `rg "media_jobs" backend/ -n` returned no matches.
+  - `rg '"pages"' frontend/src/lib/builder backend/src/builder -n` returned no matches.
+  - `rg "V3_ANSWER_KEY_GENERATOR" backend/src/generation/block_generate.py -n` returned no matches.
+  - `rg "img-src" backend/src/app.py -n` returned the CSP rule.
+  - `rg "MANUAL_ONLY_COMPONENT_IDS" backend/src -n` returned contract + block generation + reviewer call sites.
+  - `rg "svg" backend/src/v3_execution/executors/visual_executor.py -n` returned no matches.
+
+### Phase Notes
+- Recent commits suggest Phases 1-3 may already be implemented:
+  - `b6cda2b fix(v3): document permanent provider compatibility`
+  - `0836141 fix(v3-execution): harden image pipeline diagnostics`
+  - `241342d fix(v3): ignore section metadata during validation`
+  - `9a3201a fix(v3): persist streaming skeleton documents`
+  - `29b4873 fix(v3): paint streaming skeleton canvas`
+- Need verify code state and tests before marking those phases done in this runbook.
+- Phase 1 verified: repo-root `.env` has `GCS_IMAGE_BASE_URL="https://storage.googleapis.com/lectio-bucket-1"`; Railway production has a non-empty `GCS_IMAGE_BASE_URL` on `storage.googleapis.com`; a read-only production DB scan found no `X-Goog-Signature`, `x-goog-signature`, `X-Goog-Expires`, or `Expires=` markers in recent stored image URL fields. Added the production-like warning for empty `GCS_IMAGE_BASE_URL`.
+- Phase 2 completed locally: CSP now includes `img-src 'self' data: https://storage.googleapis.com` plus the configured GCS host, and `create_app()` wires a cached lightweight xAI/GCS probe runner into `/health/image/probe`.
+- Phase 3 verified locally: metadata keys are stripped/restored around section validation, `skeleton_ready` is registered/emitted, and one early skeleton snapshot write exists.
+- Phase 4 completed locally: OpenAI-compatible and xAI image providers use async `httpx.AsyncClient`; GCS upload path was already wrapped via async/to-thread in the core store; default visual concurrency is now 4.
+- Phase 5 completed locally: added `media.qc.visual_qc`, `V3_VISUAL_QC` model node/env overrides, QC accept/retry-once/omit flow in `execute_visual`, `omitted_quality` block status, reviewer minor issue mapping, and frontend type/stream status handling.
+- Phase 6 completed locally: added optional `visual_style` (`diagram_precision` or `illustration`) from Stage 2 planner output through blueprint assembly, execution compilation, visual prompt construction, and QC prompt checks. Stage 2 prompt now asks for 2-5 concrete `must_show`/`must_not_show` items and an explicit visual style. Unknown or missing style falls back to illustration behavior.
+- Phase 7 completed locally: extracted Playwright print render/scan into reusable preflight path, added measured page-count estimate from rendered scroll height, added `POST /api/v1/builder/lessons/{lesson_id}/print-preflight` with ownership check/rate limit, and surfaced a `Check print` action in the builder toolbar with measured pages, image counts, warnings, and stale-result handling.
+- Phase 8 completed locally: added `POST /api/v1/v3/generations/{generation_id}/visuals/{visual_id}/regenerate`, reconstructing the visual work order from the persisted planning artifact, enforcing one in-flight regenerate per generation, applying optional teacher hints, replacing persisted top-level visual blocks, patching rendered section diagram fields, and returning failed/omitted visual blocks as 200 responses when executor output is non-ready.
+- Phase 9 completed locally: added `V3_IMAGE_CACHE_ENABLED`, stable prompt/model/mode/must-show hash keys, cache hit copy to per-generation image path, cache miss write-through for QC-accepted images, storage abstraction support for local/GCS exists/copy/key upload, and regenerate cache-read bypass.
+- Phase 10 completed locally: added dedicated `V3_BLOCK_WRITER_FAST`/`V3_BLOCK_WRITER_STANDARD` nodes, switched builder AI block generation to those nodes, added explicit `MANUAL_ONLY_COMPONENT_IDS`, rejected manual-only AI-fill requests with 400, and added reviewer major issues for manual-only planned/generated components.
+
+### Commit Message Plan
+- `chore(images): verify permanent image URLs in production`
+- `fix(health,security): wire image probe and allow GCS images`
+- `fix(v3): harden streaming schema and skeleton snapshots`
+- `perf(images): use async image clients and raise visual concurrency`
+- `feat(images): add vision quality gate for generated visuals`
+- `feat(v3): carry visual constraints and raster style through planning`
+- `feat(builder): add print preflight checks`
+- `feat(images): add per-visual regeneration endpoint`
+- `perf(images): cache accepted generated visuals by content hash`
+- `fix(builder): use block writer slots and reject manual-only components`
+
+### Risks and Follow-up
+- Railway production env inspection/deploy steps depend on available CLI/session access.
+- Real-provider validation depends on usable local or production API credentials; never record secrets.
+- Railway CLI is not installed in this shell (`railway` command not recognized), but Railway dashboard/browser access was used for the Phase 1 production env and stored-pack checks.
+- Railway production final env update is still pending: set `V3_CONCURRENCY_VISUAL_MAX=4` and decide whether to explicitly set `V3_VISUAL_QC_ENABLED=true` / `V3_IMAGE_CACHE_ENABLED=true` in Railway or rely on code defaults after deploy.
+- Backend full-suite local setup note: if `RUN_MIGRATIONS_ON_STARTUP=false` and the temp SQLite test DB was deleted, create schema with `Base.metadata.create_all()` before running full tests; otherwise runtime-DB tests fail with `no such table: users`.
+- Phase 7 path discrepancy: no existing PDF render semaphore/limit was present in `core/pdf_export_runtime.py`; added a shared `pdf_render_semaphore` and used it for both PDF export rendering and print preflight.
+- Phase 10 path discrepancy: `image-block`/`video-embed` are present in `lectio-content-contract.json` but not in `component-registry.json`, so the block generation manual-only guard runs before the registry lookup to return a clear manual-only error instead of "unknown component".
+- Actual commits are still pending for this large dirty worktree. The original handoff recommended one commit per phase, but these changes are currently interleaved in the working tree; use the commit-message plan above if splitting the work before PR.

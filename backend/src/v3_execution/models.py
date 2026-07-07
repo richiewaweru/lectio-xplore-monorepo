@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # --- Generated blocks (proposal 2 Step 1)
@@ -35,6 +35,8 @@ class GeneratedQuestionBlock(BaseModel):
 
 
 VisualMode = Literal["diagram", "diagram_series", "diagram_compare", "image", "simulation"]
+VisualStyle = Literal["diagram_precision", "illustration"]
+_VISUAL_STYLES = {"diagram_precision", "illustration"}
 
 
 class GeneratedVisualBlock(BaseModel):
@@ -52,7 +54,7 @@ class GeneratedVisualBlock(BaseModel):
     source_work_order_id: str
     component_id: str | None = None
     parent_visual_id: str | None = None
-    status: Literal["ready", "failed"] = "ready"
+    status: Literal["ready", "failed", "omitted_quality"] = "ready"
     error_message: str | None = None
 
 
@@ -213,6 +215,7 @@ class VisualPlanItem(BaseModel):
     attaches_to: str
     component_id: str | None = None
     mode: VisualMode = "diagram"
+    visual_style: VisualStyle | None = None
     purpose: str = ""
     must_show: list[str] = Field(default_factory=list)
     must_not_show: list[str] = Field(default_factory=list)
@@ -221,6 +224,15 @@ class VisualPlanItem(BaseModel):
     consistency_locks: list[str] = Field(default_factory=list)
     print_requirements: list[str] = Field(default_factory=list)
     frames: list[VisualFrameSpec] = Field(default_factory=list)
+
+    @field_validator("visual_style", mode="before")
+    @classmethod
+    def normalize_visual_style(cls, value: object) -> object:
+        if value is None:
+            return None
+        if isinstance(value, str) and value in _VISUAL_STYLES:
+            return value
+        return None
 
 
 VisualDependency = Literal["blueprint_only", "section_text", "question_text"]

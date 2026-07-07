@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import logging
+import math
 from pathlib import Path
 from typing import Any
 
+from core.pdf_export_runtime import pdf_render_semaphore
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from playwright.async_api import async_playwright
 
@@ -90,6 +92,27 @@ _OVERSIZED_SCAN_JS = """
 """
 
 
+_PAGE_MEASURE_JS = """
+(usablePageHeight) => {
+  const root = document.querySelector('[data-generation-complete="true"]');
+  const target = root || document.body;
+  const body = document.body;
+  const doc = document.documentElement;
+  const measuredHeight = Math.max(
+    target.scrollHeight || 0,
+    body ? body.scrollHeight : 0,
+    doc ? doc.scrollHeight : 0,
+    target.getBoundingClientRect ? target.getBoundingClientRect().height : 0
+  );
+  return {
+    scroll_height_px: Math.ceil(measuredHeight),
+    usable_page_height_px: usablePageHeight,
+    page_count_estimate: Math.max(1, Math.ceil(measuredHeight / usablePageHeight)),
+  };
+}
+"""
+
+
 def _log_print_snapshot(generation_id: str, snapshot: dict[str, Any]) -> None:
     if not snapshot.get("found"):
         return
@@ -137,12 +160,48 @@ async def render_generation_pdf(
     render_path: str | None = None,
 ) -> tuple[Path, dict[str, Any]]:
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    print_snapshot = await render_generation_print_preflight(
+        generation_id=generation_id,
+        auth_token=auth_token,
+        config=config,
+        render_path=render_path,
+        output_path=output_path,
+    )
+    return output_path, print_snapshot
+
+
+async def render_generation_print_preflight(
+    *,
+    generation_id: str,
+    auth_token: str,
+    config: PDFExportConfig,
+    render_path: str | None = None,
+    output_path: Path | None = None,
+) -> dict[str, Any]:
     path_part = render_path if render_path is not None else f"/textbook/{generation_id}"
     separator = "&" if "?" in path_part else "?"
     render_url = f"{config.render_base_url}{path_part}{separator}print=true&token={auth_token}"
 
     print_snapshot: dict[str, Any] = {}
 
+    async with pdf_render_semaphore:
+        print_snapshot = await _render_print_route(
+            generation_id=generation_id,
+            render_url=render_url,
+            config=config,
+            output_path=output_path,
+        )
+    return print_snapshot
+
+
+async def _render_print_route(
+    *,
+    generation_id: str,
+    render_url: str,
+    config: PDFExportConfig,
+    output_path: Path | None,
+) -> dict[str, Any]:
+    print_snapshot: dict[str, Any] = {}
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(headless=True)
         try:
@@ -211,6 +270,24 @@ async def render_generation_pdf(
                 if not isinstance(coverage, dict):
                     coverage = {"declared": 0, "total": 0}
 
+                page_measure: dict[str, Any] = {}
+                try:
+                    raw_measure = await page.evaluate(
+                        _PAGE_MEASURE_JS,
+                        float(config.usable_page_height_px),
+                    )
+                    if isinstance(raw_measure, dict):
+                        page_measure = raw_measure
+                except Exception:
+                    logger.exception("PDF print page measurement failed")
+                page_count_estimate = int(page_measure.get("page_count_estimate") or 1)
+                scroll_height_px = int(page_measure.get("scroll_height_px") or 0)
+                if scroll_height_px and not page_count_estimate:
+                    page_count_estimate = max(
+                        1,
+                        math.ceil(scroll_height_px / max(1, config.usable_page_height_px)),
+                    )
+
                 print_snapshot["print_layout_report"] = {
                     "renderer": print_snapshot.get("renderer"),
                     "section_count": print_snapshot.get("section_count"),
@@ -222,15 +299,18 @@ async def render_generation_pdf(
                     "oversized_blocks": oversized_scan.get("oversized", []),
                     "scanned_elements": int(oversized_scan.get("scanned") or 0),
                     "usable_height_px_threshold": config.usable_page_height_px,
+                    "page_count_estimate": page_count_estimate,
+                    "scroll_height_px": scroll_height_px,
                 }
                 _log_print_snapshot(generation_id, print_snapshot)
 
-                await page.pdf(
-                    path=str(output_path),
-                    format="A4",
-                    print_background=True,
-                    prefer_css_page_size=True,
-                )
+                if output_path is not None:
+                    await page.pdf(
+                        path=str(output_path),
+                        format="A4",
+                        print_background=True,
+                        prefer_css_page_size=True,
+                    )
             except PlaywrightTimeoutError as exc:
                 debug: dict[str, Any] = {
                     "render_url": render_url,
@@ -261,4 +341,4 @@ async def render_generation_pdf(
         finally:
             await browser.close()
 
-    return output_path, print_snapshot
+    return print_snapshot

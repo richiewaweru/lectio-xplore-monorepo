@@ -14,6 +14,7 @@ def build_visual_prompt(
     order: VisualGeneratorWorkOrder,
     previous_frame_description: str | None = None,
 ) -> str:
+    visual_style = order.visual.visual_style or "illustration"
     anchor_block = ""
     if order.visual.uses_anchor_id:
         anchor_block = f"""
@@ -56,10 +57,29 @@ Maintain consistent style and geometry; only depict new information.
         if order.visual.print_requirements
         else "- high contrast; large readable labels; grayscale-safe"
     )
+    if visual_style == "diagram_precision":
+        style_requirements = (
+            "- clean vector-style raster diagram, not SVG\n"
+            "- white or very light background with high contrast\n"
+            "- large legible labels; avoid tiny text and garbled lettering\n"
+            "- simple geometry, clear arrows or callouts where useful\n"
+            "- no decorative clutter, photorealism, or background scenery"
+        )
+    else:
+        style_requirements = (
+            "- educational raster illustration\n"
+            "- visually simple enough for print\n"
+            "- no decorative clutter or irrelevant background detail"
+        )
 
     return f"""Generate a clear educational illustration for print.
 
 MODE: {order.visual.mode}
+
+VISUAL STYLE: {visual_style}
+
+STYLE REQUIREMENTS:
+{style_requirements}
 
 PURPOSE: {order.visual.purpose}
 

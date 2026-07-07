@@ -13,6 +13,7 @@ from v3_review.deterministic_checks import (
     check_expected_answers_preserved,
     check_internal_artifact_leaks,
     check_lectio_schema_validity,
+    check_manual_only_components,
     check_no_extra_questions,
     check_no_extra_sections,
     check_planned_components_exist,
@@ -57,6 +58,7 @@ async def run_coherence_review(
     det_issues += check_internal_artifact_leaks(draft_pack)
     det_issues += check_lectio_schema_validity(draft_pack)
     det_issues += check_component_ids_in_lectio_contract(blueprint, draft_pack)
+    det_issues += check_manual_only_components(blueprint, draft_pack)
 
     await emit_event(
         v3_events.DETERMINISTIC_REVIEW_COMPLETE,

@@ -10,6 +10,31 @@ export function printDocument(): void {
 
 export type BuilderPdfAudience = 'teacher' | 'student';
 
+export type BuilderPrintPreflightResult = {
+	page_count_estimate: number;
+	oversized_blocks: Array<Record<string, unknown>>;
+	images: {
+		loaded: number;
+		failed: number;
+		timed_out: number;
+	};
+	print_contract_coverage: Record<string, unknown>;
+	warnings: string[];
+};
+
+export async function checkBuilderLessonPrint(
+	lessonId: string,
+	audience: BuilderPdfAudience = 'teacher'
+): Promise<BuilderPrintPreflightResult> {
+	const response = await apiFetch(`/api/v1/builder/lessons/${encodeURIComponent(lessonId)}/print-preflight`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ audience })
+	});
+	await ensureOk(response, 'Failed to check print layout.');
+	return (await response.json()) as BuilderPrintPreflightResult;
+}
+
 export async function downloadBuilderLessonPdf(
 	lessonId: string,
 	audience: BuilderPdfAudience

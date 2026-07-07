@@ -1,11 +1,13 @@
 ﻿from __future__ import annotations
 
 import base64
-import io
-import json
+import asyncio
+import inspect
 import os
-import urllib.error
+from pathlib import Path
 from contextlib import contextmanager
+
+import httpx
 
 from media.providers.openai_image_client import OpenAICompatibleImageClient
 from media.providers.registry import get_image_client, load_image_provider_spec
@@ -168,31 +170,19 @@ def test_xai_payload_maps_size_to_aspect_ratio():
     assert "aspect_ratio" not in unmapped_payload
 
 
-class _Response:
-    def __init__(self, body: bytes) -> None:
-        self._body = body
-
-    def read(self) -> bytes:
-        return self._body
-
-    def __enter__(self) -> "_Response":
-        return self
-
-    def __exit__(self, exc_type, exc, tb) -> None:
-        _ = (exc_type, exc, tb)
-
-
 def test_xai_call_api_decodes_b64_json_as_jpeg(monkeypatch):
     client = XAIImageClient(api_key="test", base_url="https://api.x.ai/v1")
     encoded = base64.b64encode(b"jpeg-bytes").decode("ascii")
 
-    def _fake_urlopen(request, timeout=60):
-        _ = (request, timeout)
-        return _Response(json.dumps({"data": [{"b64_json": encoded}]}).encode("utf-8"))
+    def _handler(request: httpx.Request) -> httpx.Response:
+        assert request.url == "https://api.x.ai/v1/images/generations"
+        return httpx.Response(200, json={"data": [{"b64_json": encoded}]})
 
-    monkeypatch.setattr("urllib.request.urlopen", _fake_urlopen)
+    _patch_async_client(monkeypatch, _handler)
 
-    result = client._call_api(prompt="test", size="1024x1024", format="png", seed=None)
+    result = asyncio.run(
+        client._call_api(prompt="test", size="1024x1024", format="png", seed=None)
+    )
 
     assert result.bytes == b"jpeg-bytes"
     assert result.format == "jpeg"
@@ -202,17 +192,16 @@ def test_xai_call_api_decodes_b64_json_as_jpeg(monkeypatch):
 def test_xai_call_api_downloads_url_response_as_jpeg(monkeypatch):
     client = XAIImageClient(api_key="test", base_url="https://api.x.ai/v1")
 
-    def _fake_urlopen(request, timeout=60):
-        _ = timeout
-        if isinstance(request, str):
-            return _Response(b"remote-jpeg")
-        return _Response(
-            json.dumps({"data": [{"url": "https://cdn.x.ai/generated.jpg"}]}).encode("utf-8")
-        )
+    def _handler(request: httpx.Request) -> httpx.Response:
+        if str(request.url) == "https://cdn.x.ai/generated.jpg":
+            return httpx.Response(200, content=b"remote-jpeg")
+        return httpx.Response(200, json={"data": [{"url": "https://cdn.x.ai/generated.jpg"}]})
 
-    monkeypatch.setattr("urllib.request.urlopen", _fake_urlopen)
+    _patch_async_client(monkeypatch, _handler)
 
-    result = client._call_api(prompt="test", size="1024x1024", format="png", seed=None)
+    result = asyncio.run(
+        client._call_api(prompt="test", size="1024x1024", format="png", seed=None)
+    )
 
     assert result.bytes == b"remote-jpeg"
     assert result.format == "jpeg"
@@ -225,22 +214,15 @@ def test_openai_compatible_http_error_includes_response_body(monkeypatch):
         model_name="gpt-image-1",
         base_url="https://api.openai.com/v1",
     )
-    error = urllib.error.HTTPError(
-        url="https://api.openai.com/v1/images/generations",
-        code=400,
-        msg="Bad Request",
-        hdrs=None,
-        fp=io.BytesIO(b'{"error":"unsupported"}'),
-    )
 
-    def _fake_urlopen(request, timeout=60):
-        _ = (request, timeout)
-        raise error
+    def _handler(request: httpx.Request) -> httpx.Response:
+        assert request.url == "https://api.openai.com/v1/images/generations"
+        return httpx.Response(400, content=b'{"error":"unsupported"}')
 
-    monkeypatch.setattr("urllib.request.urlopen", _fake_urlopen)
+    _patch_async_client(monkeypatch, _handler)
 
     try:
-        client._call_api(prompt="test", size="1024x1024", format="png", seed=None)
+        asyncio.run(client._call_api(prompt="test", size="1024x1024", format="png", seed=None))
     except RuntimeError as exc:
         assert 'HTTP Error 400: Bad Request | Body: {"error":"unsupported"}' in str(exc)
     else:
@@ -249,23 +231,35 @@ def test_openai_compatible_http_error_includes_response_body(monkeypatch):
 
 def test_xai_http_error_includes_response_body(monkeypatch):
     client = XAIImageClient(api_key="test", base_url="https://api.x.ai/v1")
-    error = urllib.error.HTTPError(
-        url="https://api.x.ai/v1/images/generations",
-        code=400,
-        msg="Bad Request",
-        hdrs=None,
-        fp=io.BytesIO(b'{"error":"size not supported"}'),
-    )
 
-    def _fake_urlopen(request, timeout=60):
-        _ = (request, timeout)
-        raise error
+    def _handler(request: httpx.Request) -> httpx.Response:
+        assert request.url == "https://api.x.ai/v1/images/generations"
+        return httpx.Response(400, content=b'{"error":"size not supported"}')
 
-    monkeypatch.setattr("urllib.request.urlopen", _fake_urlopen)
+    _patch_async_client(monkeypatch, _handler)
 
     try:
-        client._call_api(prompt="test", size="1024x1024", format="png", seed=None)
+        asyncio.run(client._call_api(prompt="test", size="1024x1024", format="png", seed=None))
     except RuntimeError as exc:
         assert 'HTTP Error 400: Bad Request | Body: {"error":"size not supported"}' in str(exc)
     else:
         raise AssertionError("Expected RuntimeError for xAI HTTP error")
+
+
+def test_image_clients_are_coroutines_and_provider_code_does_not_call_urlopen():
+    assert inspect.iscoroutinefunction(OpenAICompatibleImageClient._call_api)
+    assert inspect.iscoroutinefunction(XAIImageClient._call_api)
+
+    provider_dir = Path(__file__).resolve().parents[2] / "src" / "media" / "providers"
+    provider_source = "\n".join(path.read_text(encoding="utf-8") for path in provider_dir.glob("*.py"))
+    assert "urllib.request.urlopen" not in provider_source
+
+
+def _patch_async_client(monkeypatch, handler) -> None:
+    original_async_client = httpx.AsyncClient
+
+    def _factory(*args, **kwargs):
+        kwargs["transport"] = httpx.MockTransport(handler)
+        return original_async_client(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", _factory)

@@ -155,8 +155,9 @@ If visual_required is true for this section, replace null with:
   "visual_job": "what the visual is FOR - e.g. introduce anchor visually, summarize section explanation as labeled diagram, support question q-practice-2 with unlabeled figure - max 120 chars",
   "type_hint": "diagram | chart | illustration | comparison",
   "anchor_link": "how this visual connects to the anchor example",
-  "must_show": ["label 1", "label 2"],
-  "must_not_show": ["anything that would distract or mislead"],
+  "visual_style": "diagram_precision | illustration",
+  "must_show": ["2 to 5 short required elements or labels"],
+  "must_not_show": ["2 to 5 short exclusions that would distract or mislead"],
   "source_question_ids": ["question IDs this visual supports - empty list if none"],
   "frames": [
     {
@@ -175,6 +176,10 @@ HARD RULES:
 - visual_strategy is null if visual_required is false for this section
 - visual_strategy must be populated if visual_required is true
 - visual_job describes PURPOSE, not runtime timing
+- visual_style is required when visual_strategy is populated: use diagram_precision
+  for diagrams/charts/comparisons or any label-heavy image; use illustration
+  only for ordinary explanatory artwork
+- must_show and must_not_show each contain 2 to 5 short, concrete items
 - If the section's visual-capable component is diagram-series, frames must have at least 2 entries
 - If the component is not diagram-series, frames must be []
 - If the visual supports a specific question, add its ID to source_question_ids

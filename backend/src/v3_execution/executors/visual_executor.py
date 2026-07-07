@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
+import os
 import traceback
 import uuid
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from media.qc.visual_qc import evaluate_visual_quality, visual_qc_enabled
 from media.providers.registry import get_image_client, load_image_provider_spec
 
 from v3_execution.models import ExecutorOutcome, GeneratedVisualBlock, VisualGeneratorWorkOrder
@@ -17,6 +21,32 @@ from v3_execution.runtime.validation import validate_visual_block
 
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
 logger = logging.getLogger(__name__)
+
+
+def _image_cache_enabled() -> bool:
+    return os.getenv("V3_IMAGE_CACHE_ENABLED", "true").strip().lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }
+
+
+def _cache_key_for_visual(
+    *,
+    prompt: str,
+    order: VisualGeneratorWorkOrder,
+    model_name: str,
+) -> str:
+    payload = {
+        "prompt": prompt,
+        "mode": order.visual.mode,
+        "model_name": model_name,
+        "must_show": order.visual.must_show,
+        "must_not_show": order.visual.must_not_show,
+    }
+    encoded = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()[:32]
 
 
 class VisualStageError(RuntimeError):
@@ -82,13 +112,95 @@ async def _render_frame(
     *,
     order: VisualGeneratorWorkOrder,
     generation_id: str,
+    trace_id: str | None,
     prompt: str,
     frame_suffix: str,
     frame_index: int | None,
     component_id: str | None = None,
     parent_visual_id: str | None = None,
+    model_name: str,
+    bypass_cache_read: bool = False,
 ) -> GeneratedVisualBlock:
     from media.storage.image_store import get_image_store
+
+    visual_id = f"{order.visual.id}{frame_suffix}"
+    cache_enabled = _image_cache_enabled()
+    cache_key = _cache_key_for_visual(prompt=prompt, order=order, model_name=model_name)
+    cache_object_key = f"images/cache/{cache_key}.png"
+    destination_key = f"{generation_id}/{order.visual.attaches_to or 'visuals'}/{visual_id}.png"
+
+    try:
+        store = get_image_store()
+    except Exception as exc:  # noqa: BLE001
+        raise VisualStageError.from_exception(
+            stage="gcs_upload",
+            exc=exc,
+        ) from exc
+
+    if cache_enabled and not bypass_cache_read:
+        try:
+            if await store.image_exists(key=cache_object_key):
+                url = await store.copy_image(
+                    source_key=cache_object_key,
+                    destination_key=destination_key,
+                )
+                if url:
+                    logger.info(
+                        "v3 visual cache hit",
+                        extra=_visual_log_extra(
+                            order=order,
+                            generation_id=generation_id,
+                            visual_id=visual_id,
+                            frame_index=frame_index,
+                            component_id=component_id,
+                            parent_visual_id=parent_visual_id,
+                            cache_key=cache_key,
+                        ),
+                    )
+                    block = GeneratedVisualBlock(
+                        visual_id=visual_id,
+                        attaches_to=order.visual.attaches_to,
+                        frame_index=frame_index,
+                        mode=order.visual.mode,
+                        image_url=url,
+                        caption=order.visual.purpose,
+                        alt_text=order.visual.purpose,
+                        source_work_order_id=order.work_order_id,
+                        component_id=component_id,
+                        parent_visual_id=parent_visual_id,
+                        status="ready",
+                    )
+                    errs = validate_visual_block(block, order)
+                    if errs:
+                        raise RuntimeError("; ".join(errs))
+                    return block
+            logger.info(
+                "v3 visual cache miss",
+                extra=_visual_log_extra(
+                    order=order,
+                    generation_id=generation_id,
+                    visual_id=visual_id,
+                    frame_index=frame_index,
+                    component_id=component_id,
+                    parent_visual_id=parent_visual_id,
+                    cache_key=cache_key,
+                ),
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "v3 visual cache read failed; generating image",
+                extra=_visual_log_extra(
+                    order=order,
+                    generation_id=generation_id,
+                    visual_id=visual_id,
+                    frame_index=frame_index,
+                    component_id=component_id,
+                    parent_visual_id=parent_visual_id,
+                    cache_key=cache_key,
+                    error_type=type(exc).__name__,
+                    error_message=str(exc),
+                ),
+            )
 
     try:
         client = get_image_client()
@@ -98,14 +210,6 @@ async def _render_frame(
             exc=exc,
         ) from exc
 
-    try:
-        store = get_image_store()
-    except Exception as exc:  # noqa: BLE001
-        raise VisualStageError.from_exception(
-            stage="gcs_upload",
-            exc=exc,
-        ) from exc
-    visual_id = f"{order.visual.id}{frame_suffix}"
     logger.info(
         "v3 visual request constructed",
         extra=_visual_log_extra(
@@ -141,6 +245,85 @@ async def _render_frame(
         ),
     )
 
+    if visual_qc_enabled() and order.visual.mode != "simulation":
+        try:
+            verdict = await evaluate_visual_quality(
+                image_bytes=image.bytes,
+                mime_type=image.mime_type,
+                order=order,
+                trace_id=trace_id,
+                generation_id=generation_id,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "v3 visual qc failed open",
+                extra=_visual_log_extra(
+                    order=order,
+                    generation_id=generation_id,
+                    visual_id=visual_id,
+                    frame_index=frame_index,
+                    component_id=component_id,
+                    parent_visual_id=parent_visual_id,
+                    error_type=type(exc).__name__,
+                    error_message=str(exc),
+                ),
+            )
+        else:
+            if verdict.verdict == "reject":
+                correction_hint = verdict.correction_hint or "; ".join(verdict.reasons)
+                corrected_prompt = f"{prompt}\n\nCorrection: {correction_hint}"
+                logger.info(
+                    "v3 visual qc rejected initial image; retrying once",
+                    extra=_visual_log_extra(
+                        order=order,
+                        generation_id=generation_id,
+                        visual_id=visual_id,
+                        frame_index=frame_index,
+                        component_id=component_id,
+                        parent_visual_id=parent_visual_id,
+                        qc_reasons=verdict.reasons,
+                    ),
+                )
+                try:
+                    image = await client.generate_image(prompt=corrected_prompt)
+                    retry_verdict = await evaluate_visual_quality(
+                        image_bytes=image.bytes,
+                        mime_type=image.mime_type,
+                        order=order,
+                        trace_id=trace_id,
+                        generation_id=generation_id,
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(
+                        "v3 visual qc retry failed open",
+                        extra=_visual_log_extra(
+                            order=order,
+                            generation_id=generation_id,
+                            visual_id=visual_id,
+                            frame_index=frame_index,
+                            component_id=component_id,
+                            parent_visual_id=parent_visual_id,
+                            error_type=type(exc).__name__,
+                            error_message=str(exc),
+                        ),
+                    )
+                else:
+                    if retry_verdict.verdict == "reject":
+                        return GeneratedVisualBlock(
+                            visual_id=visual_id,
+                            attaches_to=order.visual.attaches_to,
+                            frame_index=frame_index,
+                            mode=order.visual.mode,
+                            image_url=None,
+                            caption=order.visual.purpose,
+                            alt_text=order.visual.purpose,
+                            source_work_order_id=order.work_order_id,
+                            component_id=component_id,
+                            parent_visual_id=parent_visual_id,
+                            status="omitted_quality",
+                            error_message="; ".join(retry_verdict.reasons),
+                        )
+
     try:
         url = await store.store_image(
             image.bytes,
@@ -149,6 +332,40 @@ async def _render_frame(
             filename=f"{visual_id}.png",
             format=image.format,
         )
+        if cache_enabled:
+            try:
+                await store.store_image_key(
+                    key=cache_object_key,
+                    image_bytes=image.bytes,
+                    content_type=image.mime_type,
+                )
+                logger.info(
+                    "v3 visual cache write complete",
+                    extra=_visual_log_extra(
+                        order=order,
+                        generation_id=generation_id,
+                        visual_id=visual_id,
+                        frame_index=frame_index,
+                        component_id=component_id,
+                        parent_visual_id=parent_visual_id,
+                        cache_key=cache_key,
+                    ),
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "v3 visual cache write failed",
+                    extra=_visual_log_extra(
+                        order=order,
+                        generation_id=generation_id,
+                        visual_id=visual_id,
+                        frame_index=frame_index,
+                        component_id=component_id,
+                        parent_visual_id=parent_visual_id,
+                        cache_key=cache_key,
+                        error_type=type(exc).__name__,
+                        error_message=str(exc),
+                    ),
+                )
     except Exception as exc:  # noqa: BLE001
         raise VisualStageError.from_exception(
             stage="gcs_upload",
@@ -183,6 +400,7 @@ async def execute_visual(
     *,
     trace_id: str | None,
     generation_id: str | None,
+    bypass_cache_read: bool = False,
 ) -> list[GeneratedVisualBlock]:
     _ = trace_id
     gid = generation_id or str(uuid.uuid4())
@@ -232,11 +450,14 @@ async def execute_visual(
                     block = await _render_frame(
                         order=frame_order,
                         generation_id=gid,
+                        trace_id=trace_id,
                         prompt=prompt,
                         frame_suffix=f"_frame_{idx}",
                         frame_index=idx,
                         component_id=order.visual.component_id,
                         parent_visual_id=parent_id,
+                        model_name=spec.model_name,
+                        bypass_cache_read=bypass_cache_read,
                     )
                     blocks.append(block)
                     previous = frame.description
@@ -245,11 +466,14 @@ async def execute_visual(
                 block = await _render_frame(
                     order=order,
                     generation_id=gid,
+                    trace_id=trace_id,
                     prompt=prompt,
                     frame_suffix="",
                     frame_index=None,
                     component_id=order.visual.component_id,
                     parent_visual_id=None,
+                    model_name=spec.model_name,
+                    bypass_cache_read=bypass_cache_read,
                 )
                 blocks.append(block)
 
@@ -266,6 +490,7 @@ async def execute_visual(
                         "frame_index": block.frame_index,
                         "frame_count": len(blocks),
                         "image_url": block.image_url,
+                        "status": block.status,
                         "image_provider": spec.provider,
                         "image_model": spec.model_name,
                     },

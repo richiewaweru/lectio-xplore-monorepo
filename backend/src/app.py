@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import logging
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -19,7 +20,11 @@ from core.rate_limit import limiter
 from core.database.migrations import upgrade_database
 from core.database.session import engine
 from core.errors import register_error_handlers
-from core.health.routes import configure_health_extensions, router as health_router
+from core.health.routes import (
+    DependencyStatus,
+    configure_health_extensions,
+    router as health_router,
+)
 from core.logging import configure_logging
 from core.middleware.request_id import RequestIdMiddleware
 from core.pdf_export_runtime import cleanup_stale_pdf_exports
@@ -29,6 +34,11 @@ from core.routes.shares import router as shares_router
 from builder.routes import router as builder_router
 from generation.routes import router as generation_router
 from learning.routes import router as learning_router
+from media.diagnostics.v3_image_pipeline_diagnostic import (
+    ProbeResult,
+    run_gcs_probe,
+    run_grok_probe,
+)
 from resource_specs.loader import initialize_registry as initialize_resource_registry
 from telemetry import telemetry_router
 from telemetry.dependencies import get_llm_call_repository
@@ -38,6 +48,78 @@ logger = logging.getLogger("uvicorn.error")
 __version__ = "0.1.0"
 _PRODUCTION_LIKE_ENVS = {"production", "staging"}
 _IMAGES_DIR = Path("data/images")
+_IMAGE_PROBE_CACHE_TTL_SECONDS = 600
+_FALLBACK_PROBE_IMAGE = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x04\x00\x00\x00\xb5\x1c\x0c\x02\x00\x00\x00\x0bIDATx\xdacd\xfc"
+    b"\xff\x1f\x00\x02\xeb\x01\xf5i\xd5u\xd7\x00\x00\x00\x00IEND\xaeB`\x82"
+)
+_image_probe_cache: tuple[float, tuple[list[DependencyStatus], int | None]] | None = None
+
+
+def _csp_img_src_hosts() -> str:
+    hosts = ["https://storage.googleapis.com"]
+    configured_base_url = os.getenv("GCS_IMAGE_BASE_URL", "").strip()
+    if configured_base_url:
+        parsed = urlsplit(configured_base_url)
+        if parsed.scheme and parsed.netloc:
+            host = f"{parsed.scheme}://{parsed.netloc}"
+            if host not in hosts:
+                hosts.append(host)
+    return " ".join(hosts)
+
+
+def _probe_dependency(
+    result: ProbeResult,
+    *,
+    provider: str | None,
+    model: str | None,
+) -> DependencyStatus:
+    details = {
+        key: value
+        for key, value in result.details.items()
+        if key not in {"final_url", "image_bytes"}
+    }
+    detail_parts = [
+        f"provider={provider or details.get('provider') or 'unknown'}",
+        f"model={model or details.get('model') or 'unknown'}",
+    ]
+    if result.stage:
+        detail_parts.append(f"stage={result.stage}")
+    if result.error:
+        detail_parts.append(f"error={result.error}")
+    return DependencyStatus(
+        name=result.name,
+        status="ok" if result.ok else "unreachable",
+        detail="; ".join(detail_parts),
+    )
+
+
+async def _run_cached_image_probe() -> tuple[list[DependencyStatus], int | None]:
+    global _image_probe_cache
+    now = asyncio.get_running_loop().time()
+    if _image_probe_cache is not None:
+        cached_at, cached_result = _image_probe_cache
+        if now - cached_at < _IMAGE_PROBE_CACHE_TTL_SECONDS:
+            return cached_result
+
+    grok_probe = await run_grok_probe()
+    provider = str(grok_probe.details.get("provider") or "xai")
+    model = str(grok_probe.details.get("model") or "grok-imagine-image")
+    image_bytes = grok_probe.details.get("image_bytes")
+    upload_bytes = image_bytes if isinstance(image_bytes, bytes) and image_bytes else _FALLBACK_PROBE_IMAGE
+    upload_source = "grok_probe" if isinstance(image_bytes, bytes) and image_bytes else "embedded_fallback_png"
+    gcs_probe = await run_gcs_probe(upload_bytes, upload_source)
+
+    result = (
+        [
+            _probe_dependency(grok_probe, provider=provider, model=model),
+            _probe_dependency(gcs_probe, provider=provider, model=model),
+        ],
+        len(upload_bytes) if grok_probe.ok else None,
+    )
+    _image_probe_cache = (now, result)
+    return result
 
 
 
@@ -50,6 +132,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' https://accounts.google.com; "
+            f"img-src 'self' data: {_csp_img_src_hosts()}; "
             "frame-src 'none'; "
             "object-src 'none'"
         )
@@ -161,7 +244,7 @@ def create_app() -> FastAPI:
         description="AI-agnostic pipeline for generating personalized textbooks",
         lifespan=lifespan,
     )
-    configure_health_extensions()
+    configure_health_extensions(image_probe_runner=_run_cached_image_probe)
 
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -199,5 +282,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
-

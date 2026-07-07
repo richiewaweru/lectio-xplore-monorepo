@@ -14,7 +14,6 @@ def _load_example(filename: str) -> ProductionBlueprint:
 
 def test_compile_orders_derives_multiple_diagram_series_frames() -> None:
     bp = _load_example("james_mitosis_booklet.json")
-    vis = next(v for v in bp.visual_strategy.visuals if v.section_id == "diagram_sequence")
 
     bundle = compile_execution_bundle(
         bp,
@@ -116,3 +115,22 @@ def test_compile_orders_dependency_uses_source_question_ids() -> None:
 
     assert order.dependency == "question_text"
     assert order.visual.must_show == ["clear compound outlines", "dimension labels where needed"]
+
+
+def test_compile_orders_preserves_visual_style_and_defaults_unknown_to_none() -> None:
+    bp = _load_example("amara_compound_area.json")
+    visual = next(v for v in bp.visual_strategy.visuals if v.section_id == "practice")
+    visual.visual_style = "diagram_precision"
+
+    bundle = compile_execution_bundle(
+        bp,
+        generation_id="g1",
+        blueprint_id="b1",
+        template_id="guided-concept-path",
+    )
+    order = next(o for o in bundle.visual_orders if o.visual.attaches_to == "practice")
+    assert order.visual.visual_style == "diagram_precision"
+
+    payload = visual.model_dump()
+    payload["visual_style"] = "unknown_style"
+    assert type(visual).model_validate(payload).visual_style is None

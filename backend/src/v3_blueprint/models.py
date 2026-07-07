@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 LessonMode = Literal[
@@ -22,6 +22,8 @@ ResourceType = Literal[
     "practice_set",  # drill-style repetition (spec exists)
     "quick_explainer",  # focused concept explainer/reference card (spec exists)
 ]
+VisualStyle = Literal["diagram_precision", "illustration"]
+_VISUAL_STYLES = {"diagram_precision", "illustration"}
 
 
 class BlueprintMetadata(BaseModel):
@@ -87,12 +89,22 @@ class VisualInstruction(BaseModel):
     visual_job: str
     type_hint: str
     anchor_link: str | None = None
+    visual_style: VisualStyle | None = None
     must_show: list[str] = Field(default_factory=list)
     must_not_show: list[str] = Field(default_factory=list)
     source_question_ids: list[str] = Field(default_factory=list)
     frames: list[VisualFrameInstruction] = Field(default_factory=list)
     strategy: str
     density: str | None = None
+
+    @field_validator("visual_style", mode="before")
+    @classmethod
+    def normalize_visual_style(cls, value: object) -> object:
+        if value is None:
+            return None
+        if isinstance(value, str) and value in _VISUAL_STYLES:
+            return value
+        return None
 
 
 class VisualStrategyPlan(BaseModel):

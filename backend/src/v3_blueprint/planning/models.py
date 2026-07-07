@@ -7,6 +7,9 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator,
 
 # ── Stage 1 output models ─────────────────────────────────────────────────
 
+VisualStyle = Literal["diagram_precision", "illustration"]
+_VISUAL_STYLES = {"diagram_precision", "illustration"}
+
 
 class LessonIntent(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -199,8 +202,22 @@ class VisualStrategySpec(BaseModel):
     anchor_link: str = Field(
         description="How this visual connects to the anchor example.",
     )
-    must_show: list[str] = Field(default_factory=list)
-    must_not_show: list[str] = Field(default_factory=list)
+    visual_style: VisualStyle | None = Field(
+        default=None,
+        description=(
+            "Use diagram_precision for label-heavy diagrams, charts, comparisons, "
+            "or visuals that must be inspected. Use illustration for explanatory "
+            "scene-style artwork."
+        ),
+    )
+    must_show: list[str] = Field(
+        default_factory=list,
+        description="Two to five short required visual elements or labels.",
+    )
+    must_not_show: list[str] = Field(
+        default_factory=list,
+        description="Two to five short exclusions that would distract or mislead.",
+    )
     source_question_ids: list[str] = Field(
         default_factory=list,
         description=(
@@ -216,6 +233,15 @@ class VisualStrategySpec(BaseModel):
             "component is diagram-series. Empty for all other components."
         ),
     )
+
+    @field_validator("visual_style", mode="before")
+    @classmethod
+    def normalize_visual_style(cls, value: object) -> object:
+        if value is None:
+            return None
+        if isinstance(value, str) and value in _VISUAL_STYLES:
+            return value
+        return None
 
 
 class ComponentBrief(BaseModel):

@@ -45,5 +45,5 @@ describe('frontend vendor import guard', () => {
 		}
 
 		expect(violations).toEqual([]);
-	});
+	}, 30_000);
 });

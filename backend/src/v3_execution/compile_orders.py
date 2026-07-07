@@ -264,6 +264,7 @@ def compile_execution_bundle(
             attaches_to=vis.section_id,
             component_id=vis.component_id,
             mode=mode,
+            visual_style=vis.visual_style,
             purpose=vis.subject,
             must_show=vis.must_show,
             must_not_show=vis.must_not_show,

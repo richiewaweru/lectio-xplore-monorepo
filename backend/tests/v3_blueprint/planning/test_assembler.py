@@ -95,6 +95,7 @@ def test_assemble_blueprint_keeps_renderable_sections_in_plan_order() -> None:
             visual_job="introduce the anchor visually",
             type_hint="diagram",
             anchor_link="Use the same strip from the hook.",
+            visual_style="diagram_precision",
             must_show=["equal partitions"],
             must_not_show=["unequal parts"],
         ),
@@ -122,6 +123,7 @@ def test_assemble_blueprint_keeps_renderable_sections_in_plan_order() -> None:
     visual = blueprint.visual_strategy.visuals[0]
     assert visual.subject == "A paper strip split into equal parts"
     assert visual.visual_job == "introduce the anchor visually"
+    assert visual.visual_style == "diagram_precision"
     assert visual.must_show == ["equal partitions"]
     assert visual.component_id == "diagram-block"
 

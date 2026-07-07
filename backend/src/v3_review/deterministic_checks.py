@@ -5,6 +5,7 @@ from collections.abc import Callable
 from typing import Any
 
 from contracts.lectio import (
+    MANUAL_ONLY_COMPONENT_IDS,
     get_component_card,
     get_section_field_for_component,
 )
@@ -344,6 +345,17 @@ def check_visual_failures(
                     ),
                 )
             )
+        if getattr(block, "status", "ready") == "omitted_quality":
+            issues.append(
+                _issue(
+                    severity="minor",
+                    category="visual_generation_failed",
+                    message=(
+                        "image omitted by quality gate: "
+                        f"{block.error_message or 'quality criteria not met'}"
+                    ),
+                )
+            )
     return issues
 
 
@@ -550,6 +562,50 @@ def check_component_ids_in_lectio_contract(
     return issues
 
 
+def _manual_only_issue(component_id: str, *, ref: str) -> ReviewIssue:
+    return _issue(
+        severity="major",
+        category="extra_unplanned_content",
+        message=f"component '{component_id}' is manual-only and must not be AI-planned",
+        blueprint_ref=ref,
+        generated_ref=component_id,
+        executor="assembler",
+    )
+
+
+def check_manual_only_components(
+    blueprint: ProductionBlueprint,
+    draft_pack: DraftPack,
+) -> list[ReviewIssue]:
+    issues: list[ReviewIssue] = []
+    seen_refs: set[tuple[str, str]] = set()
+    for sec in blueprint.sections:
+        for comp in sec.components:
+            cid = canonical_component_id(comp.component)
+            if cid in MANUAL_ONLY_COMPONENT_IDS:
+                key = (cid, f"sections[{sec.section_id}].components")
+                if key not in seen_refs:
+                    seen_refs.add(key)
+                    issues.append(_manual_only_issue(cid, ref=key[1]))
+
+    def visit(value: Any, path: str) -> None:
+        if isinstance(value, dict):
+            component_id = value.get("component_id")
+            if isinstance(component_id, str) and component_id in MANUAL_ONLY_COMPONENT_IDS:
+                key = (component_id, path)
+                if key not in seen_refs:
+                    seen_refs.add(key)
+                    issues.append(_manual_only_issue(component_id, ref=path))
+            for child_key, child_value in value.items():
+                visit(child_value, f"{path}.{child_key}")
+        elif isinstance(value, list):
+            for idx, item in enumerate(value):
+                visit(item, f"{path}[{idx}]")
+
+    visit(draft_pack.sections, "sections")
+    return issues
+
+
 CheckFn = Callable[..., list[ReviewIssue]]
 
 RECHECK_MAP: dict[str, list[CheckFn]] = {
@@ -601,6 +657,7 @@ __all__ = [
     "check_expected_answers_preserved",
     "check_internal_artifact_leaks",
     "check_lectio_schema_validity",
+    "check_manual_only_components",
     "check_no_extra_questions",
     "check_no_extra_sections",
     "check_planned_components_exist",

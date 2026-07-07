@@ -101,7 +101,10 @@ def validate_visual_block(
         valid_visual_id = block.visual_id == f"{work_order.visual.id}_frame_{block.frame_index}"
     if not valid_visual_id:
         errors.append("visual_id mismatch")
-    if block.mode in {"diagram", "image", "diagram_series", "diagram_compare"}:
+    if (
+        block.status not in {"failed", "omitted_quality"}
+        and block.mode in {"diagram", "image", "diagram_series", "diagram_compare"}
+    ):
         if not block.image_url or not _image_url_valid(block.image_url):
             errors.append("image_url not a valid hosted URL")
     if block.mode == "simulation":

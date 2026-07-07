@@ -41,6 +41,9 @@ from v3_blueprint.planning.retry import (
 )
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.timeouts import V3_TIMEOUTS
+from v3_execution.compile_orders import compile_execution_bundle
+from v3_execution.executors.visual_executor import execute_visual
+from v3_execution.models import GeneratedVisualBlock, VisualGeneratorWorkOrder
 from v3_execution.runtime.runner import sse_event_stream
 
 from generation.v3_studio.agents import (
@@ -85,6 +88,7 @@ _CALLER = "v3_studio"
 HEARTBEAT_SECONDS = 15
 v3_studio_router = APIRouter(prefix="/v3", tags=["v3-studio"])
 _chunked_stage2_tasks: dict[str, asyncio.Task[None]] = {}
+_visual_regenerate_locks: dict[str, asyncio.Lock] = {}
 
 
 def _register_pre_generation_trace(*, trace_id: str, user_id: str) -> None:
@@ -128,6 +132,12 @@ class V3NarrowResponse(BaseModel):
     model_config = {"extra": "forbid"}
 
     candidates: list[V3SubtopicCandidate]
+
+
+class V3VisualRegenerateRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    teacher_hint: str | None = Field(default=None, max_length=500)
 
 
 def _iso(dt: datetime | None) -> str | None:
@@ -1622,6 +1632,205 @@ async def get_v3_generation_document(
     if not isinstance(sections, list) or not sections:
         raise HTTPException(status_code=404, detail="Document not found")
     return document_json
+
+
+def _find_visual_block(
+    document_json: dict[str, Any],
+    visual_id: str,
+) -> tuple[int, GeneratedVisualBlock]:
+    raw_blocks = document_json.get("visual_blocks")
+    if not isinstance(raw_blocks, list):
+        raise HTTPException(status_code=404, detail="Visual not found")
+    for idx, raw in enumerate(raw_blocks):
+        if not isinstance(raw, dict):
+            continue
+        if raw.get("visual_id") == visual_id:
+            return idx, GeneratedVisualBlock.model_validate(raw)
+    raise HTTPException(status_code=404, detail="Visual not found")
+
+
+def _work_order_for_visual(
+    *,
+    artifact: dict[str, Any],
+    target: GeneratedVisualBlock,
+    generation_id: str,
+) -> VisualGeneratorWorkOrder:
+    blueprint = ProductionBlueprint.model_validate(artifact["blueprint"])
+    blueprint_id = str(artifact.get("blueprint_id") or f"blueprint-{generation_id}")
+    template_id = str(artifact.get("template_id") or "guided-concept-path")
+    bundle = compile_execution_bundle(
+        blueprint,
+        generation_id=generation_id,
+        blueprint_id=blueprint_id,
+        template_id=template_id,
+    )
+    for order in bundle.visual_orders:
+        if order.work_order_id == target.source_work_order_id:
+            return order
+        if order.visual.id == target.visual_id:
+            return order
+        if target.parent_visual_id and order.visual.id == target.parent_visual_id:
+            return order
+    raise HTTPException(status_code=404, detail="Visual work order not found")
+
+
+def _apply_teacher_hint(order: VisualGeneratorWorkOrder, teacher_hint: str | None) -> VisualGeneratorWorkOrder:
+    hint = (teacher_hint or "").strip()
+    if not hint:
+        return order
+    cloned = order.model_copy(deep=True)
+    cloned.visual.purpose = f"{cloned.visual.purpose}\n\nCorrection: {hint}"
+    return cloned
+
+
+def _replace_visual_blocks(
+    document_json: dict[str, Any],
+    *,
+    target: GeneratedVisualBlock,
+    new_blocks: list[GeneratedVisualBlock],
+) -> None:
+    raw_blocks = document_json.get("visual_blocks")
+    if not isinstance(raw_blocks, list):
+        document_json["visual_blocks"] = [b.model_dump(mode="json", exclude_none=True) for b in new_blocks]
+        return
+
+    source_work_order_id = target.source_work_order_id
+    replaced = False
+    updated: list[Any] = []
+    for raw in raw_blocks:
+        if not isinstance(raw, dict):
+            updated.append(raw)
+            continue
+        if raw.get("source_work_order_id") == source_work_order_id:
+            if not replaced:
+                updated.extend(b.model_dump(mode="json", exclude_none=True) for b in new_blocks)
+                replaced = True
+            continue
+        updated.append(raw)
+    if not replaced:
+        updated.extend(b.model_dump(mode="json", exclude_none=True) for b in new_blocks)
+    document_json["visual_blocks"] = updated
+
+
+def _patch_section_visuals(
+    document_json: dict[str, Any],
+    *,
+    target: GeneratedVisualBlock,
+    new_blocks: list[GeneratedVisualBlock],
+) -> None:
+    sections = document_json.get("sections")
+    if not isinstance(sections, list):
+        return
+    affected_ids = {target.attaches_to, *(block.attaches_to for block in new_blocks)}
+    for section in sections:
+        if not isinstance(section, dict) or section.get("section_id") not in affected_ids:
+            continue
+        ready_blocks = [block for block in new_blocks if block.attaches_to == section.get("section_id") and block.image_url]
+        section.pop("diagram", None)
+        section.pop("diagram_series", None)
+        if not ready_blocks:
+            continue
+        series = sorted(
+            [block for block in ready_blocks if block.mode == "diagram_series"],
+            key=lambda block: block.frame_index or 0,
+        )
+        if series:
+            section["diagram_series"] = {
+                "title": section.get("title") or "Diagram",
+                "diagrams": [
+                    {
+                        "step_label": f"Frame {(block.frame_index or 0) + 1}",
+                        "caption": block.caption or block.alt_text or f"Frame {block.frame_index}",
+                        "image_url": block.image_url,
+                    }
+                    for block in series
+                ],
+            }
+            continue
+        block = ready_blocks[0]
+        section["diagram"] = {
+            "image_url": block.image_url,
+            "caption": block.caption or section.get("title") or "",
+            "alt_text": block.alt_text or section.get("title") or "",
+        }
+
+
+async def _persist_regenerated_visual(
+    *,
+    generation_id: str,
+    user_id: str,
+    document_json: dict[str, Any],
+) -> None:
+    async with async_session_factory() as session:
+        model = await session.get(GenerationModel, generation_id)
+        if model is None or model.user_id != user_id:
+            raise HTTPException(status_code=404, detail="Generation not found")
+        model.document_json = document_json
+        await session.commit()
+
+
+def _lock_for_visual_regenerate(generation_id: str) -> asyncio.Lock:
+    lock = _visual_regenerate_locks.get(generation_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _visual_regenerate_locks[generation_id] = lock
+    return lock
+
+
+@v3_studio_router.post("/generations/{generation_id}/visuals/{visual_id}/regenerate")
+async def regenerate_v3_visual(
+    generation_id: str,
+    visual_id: str,
+    body: V3VisualRegenerateRequest | None = None,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    lock = _lock_for_visual_regenerate(generation_id)
+    if lock.locked():
+        raise HTTPException(status_code=409, detail="Visual regeneration already running.")
+
+    async with lock:
+        generation_writer = V3GenerationWriter(async_session_factory)
+        document_json = await generation_writer.get_document_json(generation_id, current_user.id)
+        if document_json is None:
+            raise HTTPException(status_code=404, detail="Generation not found")
+        artifact = await generation_writer.read_planning_artifact(generation_id, current_user.id)
+        if artifact is None:
+            raise HTTPException(status_code=404, detail="Planning artifact not found")
+
+        _, target = _find_visual_block(document_json, visual_id)
+        order = _work_order_for_visual(
+            artifact=artifact,
+            target=target,
+            generation_id=generation_id,
+        )
+        order = _apply_teacher_hint(order, body.teacher_hint if body is not None else None)
+
+        async def emit_noop(_event_type: str, _payload: dict[str, Any]) -> None:
+            return None
+
+        new_blocks = await execute_visual(
+            order,
+            emit_noop,
+            trace_id=generation_id,
+            generation_id=generation_id,
+            bypass_cache_read=True,
+        )
+        if not new_blocks:
+            raise HTTPException(status_code=500, detail="Visual regeneration produced no block")
+
+        _replace_visual_blocks(document_json, target=target, new_blocks=new_blocks)
+        _patch_section_visuals(document_json, target=target, new_blocks=new_blocks)
+        await _persist_regenerated_visual(
+            generation_id=generation_id,
+            user_id=current_user.id,
+            document_json=document_json,
+        )
+
+        response_block = next(
+            (block for block in new_blocks if block.visual_id == visual_id),
+            new_blocks[0],
+        )
+        return response_block.model_dump(mode="json", exclude_none=True)
 
 
 @v3_studio_router.get("/generations/{generation_id}/print-snapshot")

@@ -41,6 +41,9 @@ class TestHealthRoutes:
         assert response.headers["X-Content-Type-Options"] == "nosniff"
         assert response.headers["X-Frame-Options"] == "DENY"
         assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+        csp = response.headers["Content-Security-Policy"]
+        assert "img-src 'self' data:" in csp
+        assert "https://storage.googleapis.com" in csp
 
     def test_deep_and_ready_share_health_shape_when_healthy(self, monkeypatch):
         app = create_app()
