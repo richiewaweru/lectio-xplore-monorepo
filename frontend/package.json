@@ -19,7 +19,7 @@
 		"dompurify": "^3.3.3",
 		"idb": "^8.0.3",
 		"katex": "^0.16.22",
-		"lectio": "^0.5.0",
+		"lectio": "0.5.0",
 		"lucide-svelte": "^0.542.0",
 		"marked": "^18.0.2",
 		"qrcode": "^1.5.4",

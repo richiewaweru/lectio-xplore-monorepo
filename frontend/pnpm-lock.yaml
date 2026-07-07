@@ -27,7 +27,7 @@ importers:
         specifier: ^0.16.22
         version: 0.16.45
       lectio:
-        specifier: ^0.5.0
+        specifier: 0.5.0
         version: 0.5.0(svelte@5.55.4(@typescript-eslint/types@8.57.2))
       lucide-svelte:
         specifier: ^0.542.0

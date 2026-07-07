@@ -75,6 +75,10 @@ Source handoff: `C:\Users\richi\Downloads\v3-production-hardening-handoff.md`
 - Final frontend build: `npm run build` passed; SvelteKit/Vite built SSR and client output successfully, with the existing large-chunk warning.
 - Final architecture check: `python tools\agent\check_architecture.py --format text` passed (`No architecture violations found.`).
 - Final whitespace check: `git diff --check` passed.
+- CI follow-up backend lint: removed an unused diagnostic import after GitHub `backend-quality` reported `F401`; `uv run ruff check src/ tests/` passed.
+- CI follow-up backend tests: made pytest pin `LECTIO_CONTRACTS_DIR` to `backend/contracts`, disable SQLite startup migrations, provide dummy provider keys for mocked LLM tests, and create the shared SQLite runtime schema at session start; `uv run python ../tools/agent/validate_repo.py --context docs/project/context-summary.yaml --scope backend` passed (`backend-ruff` pass; `backend-pytest` pass; `329 passed, 1 warning in 110.70s`).
+- CI follow-up frontend lockfile sync: pinned `lectio` to `0.5.0` in `package.json`, `package-lock.json`, and `pnpm-lock.yaml`; local lockfile sync check printed `Lectio lockfiles are in sync at 0.5.0`.
+- CI follow-up frontend validation: local frontend validator wrapper could not run because `yaml` is unavailable in the frontend uv context, so commands were run directly. `npm run check` passed (`0 errors, 0 warnings`), `npm test -- --run` passed (`50 passed`, `189 passed`), and `npm run build` passed with the existing large-chunk warning.
 - Final grep checkpoints:
   - `rg "urllib.request.urlopen" backend/src/media/providers/ -n` returned no matches.
   - `rg "_component_order" backend/src/v3_review/ backend/src/v3_execution/ -n` showed section metadata write plus validation stripping.
@@ -127,4 +131,4 @@ Source handoff: `C:\Users\richi\Downloads\v3-production-hardening-handoff.md`
 - Backend full-suite local setup note: if `RUN_MIGRATIONS_ON_STARTUP=false` and the temp SQLite test DB was deleted, create schema with `Base.metadata.create_all()` before running full tests; otherwise runtime-DB tests fail with `no such table: users`.
 - Phase 7 path discrepancy: no existing PDF render semaphore/limit was present in `core/pdf_export_runtime.py`; added a shared `pdf_render_semaphore` and used it for both PDF export rendering and print preflight.
 - Phase 10 path discrepancy: `image-block`/`video-embed` are present in `lectio-content-contract.json` but not in `component-registry.json`, so the block generation manual-only guard runs before the registry lookup to return a clear manual-only error instead of "unknown component".
-- Actual commits are still pending for this large dirty worktree. The original handoff recommended one commit per phase, but these changes are currently interleaved in the working tree; use the commit-message plan above if splitting the work before PR.
+- The original handoff recommended one commit per phase, but implementation changes were committed as a single hardening checkpoint because the worktree changes were already interleaved by phase. CI follow-up fixes are being kept in a separate commit.

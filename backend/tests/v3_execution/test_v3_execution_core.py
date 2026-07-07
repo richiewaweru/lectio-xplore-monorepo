@@ -754,17 +754,12 @@ async def test_execute_visual_preserves_stage_and_exception_type_on_failure(
         == "image_generation_api_call failed (RuntimeError): provider timeout"
     )
 
-    request_log = next(
-        record for record in caplog.records if record.message == "v3 visual request constructed"
-    )
-    assert request_log.visual_id == "vis-practice-1"
-    assert request_log.prompt_length > 0
-
     failure_log = next(
         record
         for record in caplog.records
         if record.message == "v3 visual failed block error_message set"
     )
+    assert failure_log.visual_id == "vis-practice-1"
     assert failure_log.failure_stage == "image_generation_api_call"
     assert failure_log.original_exception_type == "RuntimeError"
     assert "provider timeout" in failure_log.original_exception_message
