@@ -8,6 +8,7 @@ from v3_execution.config.answer_key_node import effective_answer_key_node_name
 from v3_execution.config.models import (
     V3_ANSWER_KEY_GENERATOR,
     V3_ANSWER_KEY_GENERATOR_HEAVY,
+    V3_VISUAL_QC,
     get_v3_model_settings,
     get_v3_slot,
     get_v3_spec,
@@ -64,6 +65,21 @@ def test_get_v3_spec_supports_deepseek_slot_override(monkeypatch: pytest.MonkeyP
     assert fast_spec.model_name == "deepseek-v4-flash"
     assert fast_spec.base_url == "https://api.deepseek.com"
     assert fast_spec.api_key_env == "DEEPSEEK_API_KEY"
+
+
+def test_visual_qc_keeps_vision_default_when_fast_slot_uses_deepseek(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("V3_FAST_PROVIDER", "openai_compatible")
+    monkeypatch.setenv("V3_FAST_MODEL_NAME", "deepseek-v4-flash")
+    monkeypatch.setenv("V3_FAST_BASE_URL", "https://api.deepseek.com")
+    monkeypatch.setenv("V3_FAST_API_KEY_ENV", "DEEPSEEK_API_KEY")
+
+    spec = get_v3_spec(V3_VISUAL_QC)
+
+    assert spec.family == ModelFamily.ANTHROPIC
+    assert spec.model_name == "claude-haiku-4-5-20251001"
+    assert spec.api_key_env == "ANTHROPIC_API_KEY"
 
 
 def test_get_v3_model_settings_omits_reasoning_for_fast_deepseek_nodes(

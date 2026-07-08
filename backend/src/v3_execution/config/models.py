@@ -70,6 +70,14 @@ V3_DEFAULT_SPECS: dict[ModelSlot, ModelSpec] = {
     ),
 }
 
+V3_NODE_DEFAULT_SPECS: dict[str, ModelSpec] = {
+    V3_VISUAL_QC: ModelSpec(
+        family=ModelFamily.ANTHROPIC,
+        model_name="claude-haiku-4-5-20251001",
+        api_key_env="ANTHROPIC_API_KEY",
+    ),
+}
+
 
 def _first_env(*names: str) -> str | None:
     for name in names:
@@ -151,6 +159,9 @@ def get_v3_slot(node_name: str) -> ModelSlot:
 
 
 def get_v3_spec(node_name: str) -> ModelSpec:
+    if node_name in V3_NODE_DEFAULT_SPECS:
+        base = V3_NODE_DEFAULT_SPECS[node_name]
+        return _env_override_node(node_name, base=base) or base
     slot_spec = _load_slot_spec(get_v3_slot(node_name))
     return _env_override_node(node_name, base=slot_spec) or slot_spec
 

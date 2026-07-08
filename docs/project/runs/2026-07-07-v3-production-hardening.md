@@ -80,6 +80,12 @@ Source handoff: `C:\Users\richi\Downloads\v3-production-hardening-handoff.md`
 - CI follow-up frontend lockfile sync: pinned `lectio` to `0.5.0` in `package.json`, `package-lock.json`, and `pnpm-lock.yaml`; local lockfile sync check printed `Lectio lockfiles are in sync at 0.5.0`.
 - CI follow-up frontend validation: local frontend validator wrapper could not run because `yaml` is unavailable in the frontend uv context, so commands were run directly. `npm run check` passed (`0 errors, 0 warnings`), `npm test -- --run` passed (`50 passed`, `189 passed`), and `npm run build` passed with the existing large-chunk warning.
 - 2026-07-08 resume check: worktree was clean, PR #92 remained merge-clean with successful backend/frontend/lockfile/Vercel checks at head `09adc6d`. Railway CLI remained unauthenticated (`Unauthorized. Please login with railway login`). Chrome could list the open Railway service tab but timed out claiming it; `npx @railway/cli login` and `npx @railway/cli login --browserless` did not yield a usable authenticated session or visible device code from this shell.
+- 2026-07-08 Railway env update: linked CLI to project `efficient-acceptance`, production environment, backend service `text-book-generator Copy Copy`. Verified `GCS_IMAGE_BASE_URL` was set, then set `V3_CONCURRENCY_VISUAL_MAX=4`, `V3_VISUAL_QC_ENABLED=true`, and `V3_IMAGE_CACHE_ENABLED=true` with deploys skipped before the final deploy.
+- 2026-07-08 Railway deploy: first detached upload created deployment `cd2c2774-3ad1-4752-ab92-ad3ec7d614a8` and failed before an associated build existed; public health briefly returned 404 after removing the stale deployment record. Retried with streamed CI logs and deployed `70647ec4-cd6b-48a0-93e7-0afaa1ecf6b8` successfully from local commit `5dc939b`. Railway service status reported `SUCCESS`, `stopped=false`; `/health/ready` returned 200 with a fresh instance uptime.
+- 2026-07-08 production image probe: `POST https://text-book-generator-copy-copy-production.up.railway.app/health/image/probe` returned 200 with `grok_imagine_only=ok`, `v3_gcs_upload_only=ok`, and `probe_image_bytes=91639`. Deployment logs showed startup without the production image-store signed-URL warning.
+- Real-provider image/QC diagnostic follow-up: initial no-cache local diagnostic exposed `v3_visual_qc` inheriting `V3_FAST_*` DeepSeek config and then an oversized `max_tokens=120000` Anthropic request, both of which caused QC fail-open. Fixed `v3_visual_qc` to keep an Anthropic vision-capable node default unless `V3_VISUAL_QC_*` explicitly overrides it, and capped the QC verdict call at `max_tokens=512`. Rerunning `V3_IMAGE_CACHE_ENABLED=false uv run python scripts/diagnose_v3_image_pipeline.py --env-file .env` passed all probes; Anthropic returned 200 for QC and the visual completed `status=ready`.
+- Full local V3 route smoke attempt: started a small real-provider generation from `david_parallel_circuits.json` through the ASGI app; `/api/v1/v3/generate/start` returned 200 and the SSE stream emitted `generation_started`. The run did not reach document/export/preflight locally because the loaded `.env` database host failed DNS resolution while snapshot/detail reads attempted to connect to Postgres (`socket.gaierror: [Errno 11001] getaddrinfo failed`). No secrets were printed.
+- QC routing fix validation: focused config/QC flow tests passed (`17 passed, 1 warning`); backend validator passed (`backend-ruff` pass; `backend-pytest` pass; `330 passed, 1 warning in 85.60s`).
 - Final grep checkpoints:
   - `rg "urllib.request.urlopen" backend/src/media/providers/ -n` returned no matches.
   - `rg "_component_order" backend/src/v3_review/ backend/src/v3_execution/ -n` showed section metadata write plus validation stripping.
@@ -112,6 +118,22 @@ Source handoff: `C:\Users\richi\Downloads\v3-production-hardening-handoff.md`
 - Phase 9 completed locally: added `V3_IMAGE_CACHE_ENABLED`, stable prompt/model/mode/must-show hash keys, cache hit copy to per-generation image path, cache miss write-through for QC-accepted images, storage abstraction support for local/GCS exists/copy/key upload, and regenerate cache-read bypass.
 - Phase 10 completed locally: added dedicated `V3_BLOCK_WRITER_FAST`/`V3_BLOCK_WRITER_STANDARD` nodes, switched builder AI block generation to those nodes, added explicit `MANUAL_ONLY_COMPONENT_IDS`, rejected manual-only AI-fill requests with 400, and added reviewer major issues for manual-only planned/generated components.
 
+### Closing Summary
+
+| Phase | Status | Notes |
+| --- | --- | --- |
+| 1 | done | Production `GCS_IMAGE_BASE_URL` set; recent stored packs had no signed URL markers. |
+| 2 | done | CSP includes GCS image host; health image probe wired and production probe passes. |
+| 3 | done | Internal metadata tolerated, `skeleton_ready` emitted, early skeleton snapshot written. |
+| 4 | done | Image clients/storage path non-blocking; production visual concurrency set to 4. |
+| 5 | done | QC accept/retry/omit flow wired; QC node now keeps an Anthropic vision default and uses a bounded verdict response. |
+| 6 | done | Planner-owned `must_show`, `must_not_show`, and raster visual style carried through prompts/QC. |
+| 7 | done-with-discrepancy | Print preflight endpoint and toolbar action added; no existing PDF semaphore was present, so a shared limiter was added. |
+| 8 | done | Per-visual regenerate endpoint added with generation-level in-flight guard. |
+| 9 | done | Content-hash cache added for QC-accepted visuals. |
+| 10 | done-with-discrepancy | Dedicated block-writer slots added; manual-only component guard implemented before registry lookup for clearer 400s. |
+| Final | done-with-discrepancy | Backend/frontend validation green, real-provider image/QC diagnostic passed, Railway backend deployed and production image probe passed. Full local lesson export/preflight smoke started but was blocked by local Postgres DNS resolution. |
+
 ### Commit Message Plan
 - `chore(images): verify permanent image URLs in production`
 - `fix(health,security): wire image probe and allow GCS images`
@@ -128,8 +150,7 @@ Source handoff: `C:\Users\richi\Downloads\v3-production-hardening-handoff.md`
 - Railway production env inspection/deploy steps depend on available CLI/session access.
 - Real-provider validation depends on usable local or production API credentials; never record secrets.
 - Railway CLI is not installed in this shell (`railway` command not recognized), but Railway dashboard/browser access was used for the Phase 1 production env and stored-pack checks.
-- Railway production final env update is still pending: set `V3_CONCURRENCY_VISUAL_MAX=4` and decide whether to explicitly set `V3_VISUAL_QC_ENABLED=true` / `V3_IMAGE_CACHE_ENABLED=true` in Railway or rely on code defaults after deploy.
-- Current Railway blocker: need the user to complete Railway CLI authentication in this checkout (`npx @railway/cli login`) or provide a working Railway browser/control session before production env update, deploy, log watch, `/health/image/probe`, and real-provider production e2e can be verified.
+- Railway production update is complete for the backend service: env flags are set, deployment `70647ec4-cd6b-48a0-93e7-0afaa1ecf6b8` is healthy, and the production image probe passes.
 - Backend full-suite local setup note: if `RUN_MIGRATIONS_ON_STARTUP=false` and the temp SQLite test DB was deleted, create schema with `Base.metadata.create_all()` before running full tests; otherwise runtime-DB tests fail with `no such table: users`.
 - Phase 7 path discrepancy: no existing PDF render semaphore/limit was present in `core/pdf_export_runtime.py`; added a shared `pdf_render_semaphore` and used it for both PDF export rendering and print preflight.
 - Phase 10 path discrepancy: `image-block`/`video-embed` are present in `lectio-content-contract.json` but not in `component-registry.json`, so the block generation manual-only guard runs before the registry lookup to return a clear manual-only error instead of "unknown component".

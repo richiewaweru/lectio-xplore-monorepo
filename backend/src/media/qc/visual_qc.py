@@ -93,7 +93,7 @@ async def evaluate_visual_quality(
         spec=spec,
         retry_policy=RetryPolicy(max_attempts=1, call_timeout_seconds=60.0),
         node=V3_VISUAL_QC,
-        model_settings=get_v3_model_settings(V3_VISUAL_QC),
+        model_settings=get_v3_model_settings(V3_VISUAL_QC, base_settings={"max_tokens": 512}),
     )
     raw = result.output
     if isinstance(raw, VisualQCVerdict):
