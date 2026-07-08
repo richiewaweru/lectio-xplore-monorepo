@@ -413,13 +413,16 @@ async def test_execute_visual_cache_hit_skips_provider_and_copies_cached_image(
     class StubStore:
         def __init__(self) -> None:
             self.copied: list[tuple[str, str]] = []
+            self.destinations: set[str] = set()
 
         async def image_exists(self, *, key: str) -> bool:
-            assert key.startswith("images/cache/")
-            return True
+            if key.startswith("images/cache/"):
+                return True
+            return key in self.destinations
 
         async def copy_image(self, *, source_key: str, destination_key: str):
             self.copied.append((source_key, destination_key))
+            self.destinations.add(destination_key)
             return f"https://cdn.example/{destination_key}"
 
         async def store_image(self, *_args, **_kwargs):
@@ -446,6 +449,79 @@ async def test_execute_visual_cache_hit_skips_provider_and_copies_cached_image(
     assert len(store.copied) == 1
     assert store.copied[0][0].startswith("images/cache/")
     assert store.copied[0][1] == "gen/practice/vis-cache-hit.png"
+
+
+@pytest.mark.asyncio
+async def test_execute_visual_stale_cache_copy_falls_back_to_generation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("V3_IMAGE_CACHE_ENABLED", "true")
+    order = VisualGeneratorWorkOrder(
+        work_order_id="v-cache-stale",
+        visual=VisualPlanItem(
+            id="vis-cache-stale",
+            attaches_to="practice",
+            component_id="diagram-block",
+            mode="diagram",
+            purpose="support question",
+        ),
+    )
+
+    class StubClient:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def generate_image(self, *, prompt: str):
+            _ = prompt
+            self.calls += 1
+            return SimpleNamespace(bytes=b"fresh-image", format="png", mime_type="image/png")
+
+    class StubStore:
+        def __init__(self) -> None:
+            self.copied: list[tuple[str, str]] = []
+            self.generated_uploads: list[bytes] = []
+
+        async def image_exists(self, *, key: str) -> bool:
+            if key.startswith("images/cache/"):
+                return True
+            return False
+
+        async def copy_image(self, *, source_key: str, destination_key: str):
+            self.copied.append((source_key, destination_key))
+            return f"https://cdn.example/{destination_key}"
+
+        async def store_image(self, image_bytes, *_args, **kwargs):
+            self.generated_uploads.append(image_bytes)
+            return f"https://cdn.example/{kwargs['filename']}"
+
+        async def store_image_key(self, *, key: str, image_bytes: bytes, content_type: str):
+            _ = key, image_bytes, content_type
+            return "https://cdn.example/cache.png"
+
+    client = StubClient()
+    store = StubStore()
+
+    async def stub_run_with_retries(_label, attempt, max_retries):
+        _ = max_retries
+        return await attempt(False)
+
+    monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: client)
+    monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: store)
+    monkeypatch.setattr("v3_execution.executors.visual_executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
+    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", stub_run_with_retries)
+
+    async def emit(_event_type: str, _payload: dict) -> None:
+        return None
+
+    blocks = await execute_visual(order, emit, trace_id="trace", generation_id="gen")
+
+    assert len(blocks) == 1
+    assert blocks[0].image_url == "https://cdn.example/vis-cache-stale.png"
+    assert client.calls == 1
+    assert store.generated_uploads == [b"fresh-image"]
+    assert len(store.copied) == 1
+    assert store.copied[0][0].startswith("images/cache/")
+    assert store.copied[0][1] == "gen/practice/vis-cache-stale.png"
 
 
 @pytest.mark.asyncio

@@ -145,6 +145,21 @@ async def _render_frame(
                     destination_key=destination_key,
                 )
                 if url:
+                    if not await store.image_exists(key=destination_key):
+                        logger.warning(
+                            "v3 visual cache copy missing destination; generating image",
+                            extra=_visual_log_extra(
+                                order=order,
+                                generation_id=generation_id,
+                                visual_id=visual_id,
+                                frame_index=frame_index,
+                                component_id=component_id,
+                                parent_visual_id=parent_visual_id,
+                                cache_key=cache_key,
+                                destination_key=destination_key,
+                            ),
+                        )
+                        raise RuntimeError("cache copy destination missing")
                     logger.info(
                         "v3 visual cache hit",
                         extra=_visual_log_extra(
