@@ -1,5 +1,33 @@
 # Lesson Builder Merge Progress
 
+## Bugfix: Studio Document Polling Startup — 2026-07-11
+
+**Classification**: minor
+**Root cause**: Studio document polling was started from generation-stream transitions, so a missed stream handoff could leave a post-approve generation with no `/document` polling.
+
+### Progress
+- [x] Reproduced/identified the failing code path.
+- [x] Confirmed polling restart remains single-interval and visibility listener guarded.
+- [x] Started polling immediately after successful approve, except `assembly_blocked`.
+- [x] Started polling on post-approve running resume/apply states.
+- [x] Kept execution-stream polling startup as a harmless restart.
+- [x] Confirmed/hardened quiet not-ready document hydration behavior.
+- [x] Added regression tests for approve startup, assembly-blocked, resume startup, and quiet 404/not-ready polling.
+- [x] Confirmed backend `/document` null-document behavior remains 404/no-store.
+- [x] Ran validation and recorded evidence.
+
+### Validation Evidence
+
+- Backend inspection: `get_v3_generation_document` still returns `404` for missing/non-renderable documents and sets `Cache-Control: no-store` on successful document responses; no backend change was needed.
+- Frontend focused tests: `npm run test -- src/routes/studio/page.test.ts src/lib/api/v3.test.ts` passed (`2` files, `34` tests).
+- Frontend check: `npm run check` passed (`0 errors`, `0 warnings`).
+- Frontend full tests: `npm test` passed (`50` files, `193` tests).
+- Frontend build: `npm run build` passed; Vite reported the existing non-fatal chunk-size warning.
+
+### Risks and Follow-Up
+
+- Live browser network/deploy verification from `fix-polling-startup-handoff.md` remains a manual follow-up for this pass.
+
 ## Addendum Completion Pass C0-C5 — 2026-07-11
 
 **Classification**: major

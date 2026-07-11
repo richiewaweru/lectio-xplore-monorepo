@@ -183,6 +183,9 @@
 		v3Studio.generationId = resolved.generation_id;
 		hydrateChunkedSectionState(resolved);
 		syncStage2Progress(resolved);
+		if (shouldPollForChunkedState(resolved)) {
+			startGenerationPolling(resolved.generation_id);
+		}
 
 		if (resolved.stage === 'plan_ready') {
 			disconnectActiveChunkedStream();
@@ -269,6 +272,16 @@
 
 	function isTerminalProgressStage(stage: string | null): boolean {
 		return stage === 'completed' || stage === 'failed';
+	}
+
+	function shouldPollForChunkedState(state: V3ChunkedPlanState): boolean {
+		if (state.stage === 'plan_ready' || state.stage === 'assembly_blocked' || state.stage === 'complete') {
+			return false;
+		}
+		if (state.next_action === 'done') return false;
+		if (state.execution_started) return true;
+		if (['stage2_running', 'stage2_complete', 'blueprint_ready'].includes(state.stage)) return true;
+		return state.next_action === 'wait_for_stage2' || state.next_action === 'generation_running';
 	}
 
 	function stopGenerationPolling(): void {
@@ -546,6 +559,7 @@
 				v3Studio.stage = 'skeleton';
 				return;
 			}
+			startGenerationPolling(generationId);
 			connectChunkedStage2Stream(generationId);
 		} catch (err) {
 			v3Studio.error = friendly(err);
