@@ -181,6 +181,8 @@ HARD RULES:
   only for ordinary explanatory artwork
 - must_show items are visual elements or short labels, never caption sentences;
   captions belong in the component caption field
+- must_show items are positive statements of what appears; any absence constraint
+  ("no X", "without X", "never X", "avoid X") belongs in must_not_show
 - must_show and must_not_show each contain 2 to 5 short, concrete items
 - If the section's visual-capable component is diagram-series, frames must have at least 2 entries
 - If the component is not diagram-series, frames must be []

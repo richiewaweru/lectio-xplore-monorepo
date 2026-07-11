@@ -68,9 +68,12 @@ _VISUAL_COMPONENT_IDS = frozenset(
     {"diagram-block", "diagram-series", "diagram-compare", "simulation-block"}
 )
 _VISUAL_REFERENCE_RE = re.compile(
-    r"\b(this|the)\s+(shape|figure|diagram|image|picture)\b|shown\s+(below|above)|look\s+at\b",
+    r"look\s+at\b|shown\s+(below|above|here)\b|pictured\b|"
+    r"in\s+the\s+(figure|diagram|image|picture)\s+(below|above)\b|"
+    r"use\s+the\s+(figure|diagram|grid)(?:\s+(below|above))?\b|on\s+the\s+grid\b",
     re.IGNORECASE,
 )
+_SENTENCE_INITIAL_VISUAL_REFERENCE_RE = re.compile(r"^this\s+(shape|figure)\b", re.IGNORECASE)
 _PUNCT_RE = re.compile(r"[^\w\s]", re.UNICODE)
 
 
@@ -332,6 +335,36 @@ def check_planned_visuals_exist(
             continue
         bucket = by_section.get(sec_plan.section_id)
         if not _section_has_visual_media(bucket or {}):
+            attempted = next(
+                (
+                    block
+                    for block in getattr(draft_pack, "visual_blocks", [])
+                    if block.attaches_to == sec_plan.section_id
+                    and getattr(block, "status", "ready") in {"omitted_quality", "failed"}
+                ),
+                None,
+            )
+            if attempted is not None:
+                status_message = (
+                    "omitted by the quality gate"
+                    if attempted.status == "omitted_quality"
+                    else "failed"
+                )
+                issues.append(
+                    _issue(
+                        severity="major",
+                        category="missing_planned_content",
+                        message=(
+                            f"Section '{sec_plan.section_id}' requires a visual; generation was attempted "
+                            f"but {status_message} — regenerate or approve text-only."
+                        ),
+                        blueprint_ref=f"sections[{sec_plan.section_id}].visual_required",
+                        generated_ref=sec_plan.section_id,
+                        executor="visual_executor",
+                        repair_target_id=f"visual:{sec_plan.section_id}",
+                    )
+                )
+                continue
             issues.append(
                 _issue(
                     severity="blocking",
@@ -443,7 +476,9 @@ def check_visual_text_references(
             diagram_required = any(planned)
         if diagram_required:
             continue
-        match = _VISUAL_REFERENCE_RE.search(text)
+        match = _VISUAL_REFERENCE_RE.search(text) or _SENTENCE_INITIAL_VISUAL_REFERENCE_RE.search(
+            text.strip()
+        )
         if match:
             issues.append(
                 _issue(

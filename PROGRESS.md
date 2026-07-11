@@ -1,5 +1,34 @@
 # Lesson Builder Merge Progress
 
+## Bugfix: Generation Pipeline Calibration — Run 33633cbf — 2026-07-11
+
+**Classification**: major
+**Root cause**: streaming section assembly captured an unbound `assembler`; question blocks always populated `practice`; visual omission and reference checks over-escalated otherwise usable lessons.
+
+### Progress
+
+- [x] Reproduced/identified the streaming assembler and unconditional-practice paths.
+- [x] Bound the assembler before streaming closure use and made executor warnings non-empty.
+- [x] Gated practice materialization on `practice-stack` and added unconsumed-question warnings.
+- [x] Downgraded attempted-but-omitted required visuals to major and narrowed visual deixis detection.
+- [x] Added positive-only `must_show` sanitization and QC prompt rule.
+- [x] Updated teacher-facing quality-omission copy.
+- [ ] Add exact `33633cbf` pack/blueprint fixtures (blocked: production JSON exports not supplied locally).
+- [ ] Implement bounded in-process visual auto-repair (deferred pending the exact fixture-driven retry contract).
+- [ ] Run full validation, production deploy, and real-provider generation (blocked: Railway CLI/session unavailable).
+
+### Validation Evidence
+
+- `uv run pytest tests/v3_execution/test_section_builder_tolerant.py tests/v3_review/test_v3_review_deterministic.py tests/media/test_visual_qc_prompt.py -q` — 26 passed.
+- `uv run ruff check` on touched backend modules — passed.
+- Answer-key compilation continues to derive entries from `blueprint.question_plan`; it does not read assembled `practice` fields.
+
+### Found / Skipped / Built
+
+- **Found**: `runner.py` created `assembler` only after early section-ready closures could execute; `section_builder.py` always emitted `practice` for any question block.
+- **Built**: early assembler binding, typed non-empty error formatter, practice gate, visual severity calibration, constraint sanitizer, QC prompt guard, deixis-only rule, and issue-panel translation.
+- **Skipped**: no synthetic 33633cbf fixtures were created; no Railway action was attempted without the required client/session.
+
 ## Bugfix: Studio Document Polling Startup — 2026-07-11
 
 **Classification**: minor

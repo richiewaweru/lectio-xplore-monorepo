@@ -398,6 +398,51 @@ def test_quality_omitted_visual_block_emits_minor_review_issue() -> None:
     assert issues[0].message.startswith("image omitted by quality gate: ")
 
 
+def test_required_visual_omitted_by_quality_is_major_not_blocking() -> None:
+    bp = _load_example("amara_compound_area.json")
+    section_id = next(section.section_id for section in bp.sections if section.visual_required)
+    dp = _minimal_draft_pack(
+        sections=[{"section_id": section_id, "template_id": "guided-concept-path"}],
+        answer_key=None,
+        visual_blocks=[
+            GeneratedVisualBlock(
+                visual_id="vis-omitted",
+                attaches_to=section_id,
+                mode="diagram",
+                source_work_order_id="wo-omitted",
+                status="omitted_quality",
+            )
+        ],
+    )
+
+    issues = check_planned_visuals_exist(bp, dp)
+
+    issue = next(issue for issue in issues if issue.generated_ref == section_id)
+    assert issue.severity == "major"
+    assert "omitted by the quality gate" in issue.message
+
+
+def test_anaphora_is_not_visual_deixis() -> None:
+    bp = _load_example("amara_compound_area.json")
+    q0 = bp.question_plan[0]
+    q0.diagram_required = False
+    dp = _minimal_draft_pack(
+        sections=[
+            {
+                "section_id": q0.section_id,
+                "practice": {
+                    "problems": [
+                        {"question": "An L-shaped figure is made of rectangles. Find the area of the figure."}
+                    ]
+                },
+            }
+        ],
+        answer_key=None,
+    )
+
+    assert check_visual_text_references(bp, dp) == []
+
+
 def test_generation_5aed3804_replay_flags_known_nonblocking_drift() -> None:
     fixture_dir = Path(__file__).resolve().parents[1] / "fixtures"
     blueprint = ProductionBlueprint.model_validate_json(

@@ -73,6 +73,12 @@ def _terminal_process_status(*, resource_status: str, booklet_status: str) -> st
     return "failed_unusable"
 
 
+def _format_exception(exc: Exception) -> str:
+    """Return an actionable warning even for exceptions with an empty message."""
+    detail = str(exc).strip() or repr(exc)
+    return f"{type(exc).__name__}: {detail}"
+
+
 def _build_skeleton_pack(
     *,
     blueprint: ProductionBlueprint,
@@ -271,13 +277,16 @@ async def run_generation(
             generation_id=generation_id,
             blueprint_id=blueprint_id,
         )
+        # Streaming assembly may run before executor tasks complete, so bind this
+        # dependency before the closure below captures it.
+        assembler = V3SectionBuilder()
         sem = make_semaphores()
 
         async def _guard(label: str, coro: Awaitable[list[Any]]) -> list[Any]:
             try:
                 return await coro
             except Exception as exc:  # noqa: BLE001
-                result.warnings.append(f"{label}: {exc}")
+                result.warnings.append(f"{label}: {_format_exception(exc)}")
                 return []
 
         async def _timed_section(order: Any) -> list[Any]:
@@ -327,13 +336,13 @@ async def run_generation(
             try:
                 blocks = await _timed_visual(order)
             except Exception as exc:  # noqa: BLE001
-                result.warnings.append(f"{label}: {exc}")
+                result.warnings.append(f"{label}: {_format_exception(exc)}")
                 await _record_visual_trace(
                     trace_writer=trace_writer,
                     generation_id=generation_id,
                     order=order,
                     blocks=[],
-                    error_summary=str(exc),
+                    error_summary=_format_exception(exc),
                 )
                 return []
             await _record_visual_trace(
@@ -418,7 +427,7 @@ async def run_generation(
                         _build_single_section
                     )
                 except Exception as exc:  # noqa: BLE001
-                    result.warnings.append(f"assembly:{section_id}: {exc}")
+                    result.warnings.append(f"assembly:{section_id}: {_format_exception(exc)}")
                     emitted_sections.add(section_id)
                     continue
                 result.warnings.extend(single_warnings)
@@ -531,7 +540,7 @@ async def run_generation(
 
             result.answer_key = await _answer_key()
         except Exception as exc:  # noqa: BLE001
-            result.warnings.append(f"answer_key: {exc}")
+            result.warnings.append(f"answer_key: {_format_exception(exc)}")
 
         if trace_writer is not None:
             sections_attempted = len(bundle.section_orders)
@@ -550,8 +559,6 @@ async def run_generation(
             )
 
         await emit_event(events.ASSEMBLY_STARTED, {"generation_id": generation_id})
-        assembler = V3SectionBuilder()
-
         def _build_sections():
             return assembler.build_sections(
                 blueprint,
@@ -571,7 +578,7 @@ async def run_generation(
         except Exception as exc:  # noqa: BLE001
             sections = []
             section_diagnostics = []
-            result.warnings.append(f"assembly: {exc}")
+            result.warnings.append(f"assembly: {_format_exception(exc)}")
 
         pack_builder = V3PackBuilder()
         initial_booklet_status = derive_booklet_status(
@@ -765,7 +772,7 @@ async def run_generation(
                     },
                 )
         except Exception as exc:  # noqa: BLE001
-            result.warnings.append(f"coherence_review: {exc}")
+            result.warnings.append(f"coherence_review: {_format_exception(exc)}")
             artifact_status = draft_pack.status
             await emit_event(
                 events.DRAFT_STATUS_UPDATED,

@@ -48,6 +48,9 @@ Accept if the image is usable even if imperfect. Reject only for garbled labels,
 missing required content, unsafe/inappropriate content, clearly unusable output,
 or full-sentence caption/title text inside the image. If rejecting for caption/title
 text, set correction_hint to "remove all sentence text from the image".
+Items in must_show are REQUIRED. Their presence is never grounds for rejection.
+Only reject for must_not_show violations, illegibility, or caption/sentence text.
+Dimension labels are allowed when required; area calculations or sums are not.
 
 Purpose: {order.visual.purpose}
 Mode: {order.visual.mode}

@@ -76,6 +76,31 @@ def _drop_caption_like_must_show(
     return kept
 
 
+def _sanitize_visual_constraints(
+    must_show: list[str],
+    must_not_show: list[str],
+    *,
+    visual_id: str,
+) -> tuple[list[str], list[str]]:
+    """Move negative requirements out of the positive must-show list."""
+    positive: list[str] = []
+    exclusions = list(must_not_show)
+    for item in must_show:
+        cleaned = item.strip()
+        match = re.match(r"^(no|without|never|avoid)\b\s*(.*)$", cleaned, re.IGNORECASE)
+        if not match:
+            positive.append(item)
+            continue
+        migrated = match.group(2).strip() or cleaned
+        exclusions.append(migrated)
+        logger.warning(
+            "Moved negative must_show item to must_not_show for visual_id=%s item=%r",
+            visual_id,
+            item[:160],
+        )
+    return positive, exclusions
+
+
 def _truth_from_blueprint(blueprint: ProductionBlueprint) -> list[SourceOfTruthEntry]:
     entries: list[SourceOfTruthEntry] = []
     for line in blueprint.prior_knowledge:
@@ -306,6 +331,11 @@ def compile_execution_bundle(
             reference_texts=caption_references,
             visual_id=visual_id,
         )
+        must_show, must_not_show = _sanitize_visual_constraints(
+            must_show,
+            vis.must_not_show,
+            visual_id=visual_id,
+        )
         plan = VisualPlanItem(
             id=visual_id,
             attaches_to=vis.section_id,
@@ -314,7 +344,7 @@ def compile_execution_bundle(
             visual_style=vis.visual_style,
             purpose=vis.subject,
             must_show=must_show,
-            must_not_show=vis.must_not_show,
+            must_not_show=must_not_show,
             frames=frames,
         )
         visual_orders.append(

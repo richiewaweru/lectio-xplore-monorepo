@@ -16,6 +16,11 @@ from v3_execution.models import (
 from v3_execution.runtime.lectio_validation import validate_section_content
 
 
+# Question-writer blocks become a Lectio practice bucket only when the plan
+# explicitly asks for the component that owns that bucket.
+PRACTICE_BUCKET_COMPONENTS = {"practice-stack"}
+
+
 def _visual_has_payload(block: GeneratedVisualBlock) -> bool:
     return bool(block.image_url or block.html_content)
 
@@ -93,6 +98,7 @@ class V3SectionBuilder:
                     None,
                 )
                 if block is None:
+                    visual_status: str | None = None
                     if planned_field in _EXTERNAL_FIELDS:
                         visual_status = _visual_status_for_section(
                             visuals_by_attachment.get(section_id, [])
@@ -102,12 +108,15 @@ class V3SectionBuilder:
                             for v in visuals_by_attachment.get(section_id, [])
                         ):
                             continue
-                        if visual_status:
-                            missing_visuals.append(planned_id)
-                            section_warnings.append(
-                                f"Planned visual for {planned_id}@{section_id} was not delivered (status: {visual_status})."
-                            )
-                            continue
+                    if visual_status:
+                        missing_visuals.append(planned_id)
+                        roles = f"{planned_id}@{section_id}"
+                        if section_plan.visual_required:
+                            roles += f" and required_visual@{section_id}"
+                        section_warnings.append(
+                            f"Planned visual for {roles} was not delivered (status: {visual_status})."
+                        )
+                        continue
                     missing_components.append(planned_id)
                     section_warnings.append(
                         f"Missing component output for {planned_id}@{section_id}; section rendered without it."
@@ -127,7 +136,11 @@ class V3SectionBuilder:
                 questions_by_section.get(section_id, []),
                 key=lambda qb: qb.question_id,
             )
-            if questions:
+            planned_component_ids = {
+                canonical_component_id(component.component)
+                for component in planned_components
+            }
+            if questions and planned_component_ids & PRACTICE_BUCKET_COMPONENTS:
                 problems = []
                 for qb in questions:
                     problems.append(
@@ -152,19 +165,29 @@ class V3SectionBuilder:
                     "hints_visible_default": False,
                     "solutions_available": bool(answer_key),
                 }
+            elif questions:
+                for qb in questions:
+                    warnings.append(
+                        f"question {qb.question_id} planned for section {section_id} was not consumed"
+                    )
 
             visuals_for_section = visuals_by_attachment.get(section_id, [])
             ready_visuals_for_section = [
                 visual for visual in visuals_for_section if _visual_has_payload(visual)
             ]
             if section_plan.visual_required and not ready_visuals_for_section:
-                missing_visuals.append("required_visual")
                 failed_status = _visual_status_for_section(visuals_for_section)
-                if failed_status:
+                if failed_status and missing_visuals:
+                    # A planned visual component and the required-visual slot may
+                    # point at the same omitted block; report that failure once.
+                    pass
+                elif failed_status:
+                    missing_visuals.append("required_visual")
                     section_warnings.append(
                         f"Planned visual for required_visual@{section_id} was not delivered (status: {failed_status})."
                     )
                 else:
+                    missing_visuals.append("required_visual")
                     section_warnings.append(
                         f"Missing visuals for section {section_id}; section rendered without required visual."
                     )
