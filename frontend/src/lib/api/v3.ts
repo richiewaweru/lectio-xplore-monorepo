@@ -128,28 +128,7 @@ export async function adjustBlueprint(payload: {
 }
 
 export type V3StudioStreamHandlers = {
-	onCoherenceReviewStarted?: () => void;
-	onCoherenceReportReady?: (data: Record<string, unknown>) => void;
-	onSkeletonReady?: (data: Record<string, unknown>) => void;
-	onDraftPackReady?: (data: Record<string, unknown>) => void;
-	onFinalPackReady?: (data: Record<string, unknown>) => void;
-	onDraftStatusUpdated?: (data: Record<string, unknown>) => void;
-	onResourceFinalised?: (data: Record<string, unknown>) => void;
-	onComponentReady?: (data: Record<string, unknown>) => void;
-	onSectionWriterFailed?: (data: Record<string, unknown>) => void;
-	onVisualReady?: (data: Record<string, unknown>) => void;
-	onVisualFailed?: (data: Record<string, unknown>) => void;
-	onQuestionReady?: (data: Record<string, unknown>) => void;
-	onComponentPatched?: (data: Record<string, unknown>) => void;
-	onGenerationComplete?: (data: Record<string, unknown>) => void;
-	onGenerationWarning?: (data: Record<string, unknown>) => void;
-	onGenerationStarting?: (data: Record<string, unknown>) => void;
-	onPlanReady?: (data: Record<string, unknown>) => void;
-	onStage2SectionStart?: (data: Record<string, unknown>) => void;
-	onStage2SectionRetry?: (data: Record<string, unknown>) => void;
-	onStage2SectionDone?: (data: Record<string, unknown>) => void;
-	onStage2SectionFailed?: (data: Record<string, unknown>) => void;
-	onStage2Complete?: (data: Record<string, unknown>) => void;
+	onPoke?: () => void;
 	onOpen?: () => void;
 	onError?: (err: unknown) => void;
 };
@@ -214,13 +193,28 @@ export function connectV3StudioGenerationStream(
 	handlers: V3StudioStreamHandlers
 ): () => void {
 	const ctrl = new AbortController();
-	let terminated = false;
-	let retries = 0;
-	const MAX_RETRIES = 6;
+	let lastPokeAt = 0;
+	let pokeTimer: ReturnType<typeof setTimeout> | null = null;
 	const url = buildApiUrl(`/api/v1/v3/generations/${encodeURIComponent(generationId)}/events`);
 	const headers: Record<string, string> = {};
 	const token = get(authToken);
 	if (token) headers.Authorization = `Bearer ${token}`;
+
+	function pokeSoon(): void {
+		const now = Date.now();
+		const elapsed = now - lastPokeAt;
+		if (elapsed >= 1000) {
+			lastPokeAt = now;
+			handlers.onPoke?.();
+			return;
+		}
+		if (pokeTimer) return;
+		pokeTimer = setTimeout(() => {
+			pokeTimer = null;
+			lastPokeAt = Date.now();
+			handlers.onPoke?.();
+		}, 1000 - elapsed);
+	}
 
 	fetchEventSource(url, {
 		signal: ctrl.signal,
@@ -229,103 +223,26 @@ export function connectV3StudioGenerationStream(
 			if (!response.ok) {
 				throw new Error(`v3 SSE failed: ${response.status}`);
 			}
-			retries = 0;
 			handlers.onOpen?.();
 		},
-		onmessage(msg) {
-			const type = msg.event ?? '';
-			let payload: Record<string, unknown> = {};
-			try {
-				payload = JSON.parse(msg.data ?? '{}') as Record<string, unknown>;
-			} catch {
-				payload = {};
-			}
-			switch (type) {
-				case 'coherence_review_started':
-					handlers.onCoherenceReviewStarted?.();
-					break;
-				case 'coherence_report_ready':
-					handlers.onCoherenceReportReady?.(payload);
-					break;
-				case 'skeleton_ready':
-					handlers.onSkeletonReady?.(payload);
-					break;
-				case 'draft_pack_ready':
-					handlers.onDraftPackReady?.(payload);
-					break;
-				case 'final_pack_ready':
-					handlers.onFinalPackReady?.(payload);
-					break;
-				case 'draft_status_updated':
-					handlers.onDraftStatusUpdated?.(payload);
-					break;
-				case 'resource_finalised':
-					handlers.onResourceFinalised?.(payload);
-					terminated = true;
-					ctrl.abort();
-					break;
-				case 'component_ready':
-					handlers.onComponentReady?.(payload);
-					break;
-				case 'section_writer_failed':
-					handlers.onSectionWriterFailed?.(payload);
-					break;
-				case 'visual_ready':
-					handlers.onVisualReady?.(payload);
-					break;
-				case 'visual_failed':
-					handlers.onVisualFailed?.(payload);
-					break;
-				case 'question_ready':
-					handlers.onQuestionReady?.(payload);
-					break;
-				case 'component_patched':
-					handlers.onComponentPatched?.(payload);
-					break;
-				case 'generation_complete':
-					handlers.onGenerationComplete?.(payload);
-					terminated = true;
-					ctrl.abort();
-					break;
-				case 'generation_warning':
-					handlers.onGenerationWarning?.(payload);
-					break;
-				case 'generation_starting':
-					handlers.onGenerationStarting?.(payload);
-					break;
-				case 'plan_ready':
-					handlers.onPlanReady?.(payload);
-					break;
-				case 'stage2_section_start':
-					handlers.onStage2SectionStart?.(payload);
-					break;
-				case 'stage2_section_retry':
-					handlers.onStage2SectionRetry?.(payload);
-					break;
-				case 'stage2_section_done':
-					handlers.onStage2SectionDone?.(payload);
-					break;
-				case 'stage2_section_failed':
-					handlers.onStage2SectionFailed?.(payload);
-					break;
-				case 'stage2_complete':
-					handlers.onStage2Complete?.(payload);
-					break;
-				default:
-					break;
-			}
+		onmessage() {
+			pokeSoon();
 		},
 		onerror(err) {
 			handlers.onError?.(err);
-			if (terminated || retries >= MAX_RETRIES) {
-				throw err;
-			}
-			retries += 1;
-			return Math.min(1000 * 2 ** retries, 15000);
+			console.warn('[v3 generation stream] closed; document polling remains active', err);
+			ctrl.abort();
+			throw err;
 		}
 	});
 
-	return () => ctrl.abort();
+	return () => {
+		if (pokeTimer) {
+			clearTimeout(pokeTimer);
+			pokeTimer = null;
+		}
+		ctrl.abort();
+	};
 }
 
 export function connectV3ChunkedStream(

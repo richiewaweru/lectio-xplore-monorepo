@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
@@ -89,6 +89,7 @@ HEARTBEAT_SECONDS = 15
 v3_studio_router = APIRouter(prefix="/v3", tags=["v3-studio"])
 _chunked_stage2_tasks: dict[str, asyncio.Task[None]] = {}
 _visual_regenerate_locks: dict[str, asyncio.Lock] = {}
+_snapshot_write_locks: dict[str, asyncio.Lock] = {}
 
 
 def _register_pre_generation_trace(*, trace_id: str, user_id: str) -> None:
@@ -1259,6 +1260,81 @@ async def _pump_sse_to_queue(
     trace_writer: V3TraceWriter | None = None,
     generation_writer: V3GenerationWriter | None = None,
 ) -> None:
+    def _utc_iso() -> str:
+        return datetime.utcnow().isoformat() + "Z"
+
+    def _section_ids_from_pack(pack: dict[str, Any]) -> list[str]:
+        sections = pack.get("sections")
+        if not isinstance(sections, list):
+            return []
+        ids: list[str] = []
+        for section in sections:
+            if isinstance(section, dict) and isinstance(section.get("section_id"), str):
+                ids.append(section["section_id"])
+        return ids
+
+    def _progress_payload(
+        event_type: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        pack = payload.get("pack")
+        existing: dict[str, Any] = {}
+        section_ids: list[str] = []
+        if isinstance(pack, dict):
+            raw_progress = pack.get("progress")
+            if isinstance(raw_progress, dict):
+                existing = dict(raw_progress)
+            section_ids = _section_ids_from_pack(pack)
+
+        raw_sections = existing.get("sections")
+        sections: dict[str, str] = dict(raw_sections) if isinstance(raw_sections, dict) else {}
+        for section_id in section_ids:
+            sections.setdefault(section_id, "pending")
+
+        stage = str(existing.get("stage") or "writing")
+        if event_type == "skeleton_ready":
+            stage = "writing"
+            sections = {section_id: "pending" for section_id in section_ids}
+        elif event_type == "section_ready":
+            stage = "writing"
+            section_id = payload.get("section_id")
+            if isinstance(section_id, str) and section_id:
+                sections[section_id] = "ready"
+        elif event_type == "coherence_review_started":
+            stage = "reviewing"
+        elif event_type in {"final_pack_ready", "draft_status_updated"}:
+            stage = "finalizing"
+            for section_id in section_ids:
+                sections[section_id] = "ready"
+        elif event_type == "resource_finalised":
+            status = str(payload.get("status") or "")
+            stage = "completed" if status in {"passed", "passed_with_warnings"} else "failed"
+            for section_id in sections:
+                if sections[section_id] not in {"ready", "failed"}:
+                    sections[section_id] = "ready" if stage == "completed" else "failed"
+        elif event_type == "generation_warning":
+            stage = "failed"
+            for section_id in sections:
+                if sections[section_id] != "ready":
+                    sections[section_id] = "failed"
+
+        if not sections and not isinstance(pack, dict):
+            return None
+        return {"stage": stage, "sections": sections, "updated_at": _utc_iso()}
+
+    def _payload_with_progress(event_type: str, payload: dict[str, Any]) -> dict[str, Any]:
+        progress = _progress_payload(event_type, payload)
+        if progress is None:
+            return payload
+        next_payload = dict(payload)
+        pack = next_payload.get("pack")
+        if isinstance(pack, dict):
+            next_pack = dict(pack)
+            next_pack["progress"] = progress
+            next_payload["pack"] = next_pack
+        next_payload["progress"] = progress
+        return next_payload
+
     def _parse_sse_chunk(chunk: str) -> tuple[str | None, dict[str, Any] | None]:
         event_type: str | None = None
         data_lines: list[str] = []
@@ -1280,31 +1356,61 @@ async def _pump_sse_to_queue(
     async def _write_generation_snapshot(event_type: str, payload: dict[str, Any]) -> None:
         if generation_writer is None:
             return
-        if event_type == "skeleton_ready":
-            await generation_writer.write_draft(generation_id, payload)
-            return
-        if event_type in {"draft_pack_ready", "draft_status_updated"}:
-            await generation_writer.write_draft(generation_id, payload)
-            return
-        if event_type == "final_pack_ready":
-            await generation_writer.write_final(generation_id, payload)
-            return
-        if event_type == "generation_complete":
-            await generation_writer.write_generation_complete(generation_id, payload)
-            return
-        if event_type == "coherence_report_ready":
-            coherence = payload.get("coherence_report")
-            if isinstance(coherence, dict):
-                await generation_writer.write_coherence_result(generation_id, coherence)
-            else:
-                await generation_writer.write_coherence_result(generation_id, payload)
-            return
-        if event_type == "resource_finalised":
-            await generation_writer.write_resource_finalised(generation_id, payload)
-            return
-        if event_type == "generation_warning":
-            message = str(payload.get("message") or "Generation warning")
-            await generation_writer.write_failure(generation_id, message=message)
+        lock = _snapshot_write_locks.setdefault(generation_id, asyncio.Lock())
+        async with lock:
+            payload = _payload_with_progress(event_type, payload)
+            if event_type in {"skeleton_ready", "section_ready"}:
+                await generation_writer.write_draft(generation_id, payload)
+                return
+            if event_type in {"draft_pack_ready", "draft_status_updated"}:
+                await generation_writer.write_draft(generation_id, payload)
+                return
+            if event_type == "final_pack_ready":
+                await generation_writer.write_final(generation_id, payload)
+                return
+            if event_type == "coherence_review_started":
+                progress = payload.get("progress")
+                if isinstance(progress, dict):
+                    await generation_writer.update_document_progress(generation_id, progress)
+                else:
+                    await generation_writer.update_document_progress_stage(
+                        generation_id,
+                        stage="reviewing",
+                    )
+                return
+            if event_type == "generation_complete":
+                await generation_writer.write_generation_complete(generation_id, payload)
+                return
+            if event_type == "coherence_report_ready":
+                coherence = payload.get("coherence_report")
+                if isinstance(coherence, dict):
+                    await generation_writer.write_coherence_result(generation_id, coherence)
+                else:
+                    await generation_writer.write_coherence_result(generation_id, payload)
+                return
+            if event_type == "resource_finalised":
+                progress = payload.get("progress")
+                if isinstance(progress, dict):
+                    await generation_writer.update_document_progress(generation_id, progress)
+                else:
+                    status = str(payload.get("status") or "")
+                    await generation_writer.update_document_progress_stage(
+                        generation_id,
+                        stage="completed" if status in {"passed", "passed_with_warnings"} else "failed",
+                    )
+                await generation_writer.write_resource_finalised(generation_id, payload)
+                return
+            if event_type == "generation_warning":
+                progress = payload.get("progress")
+                if isinstance(progress, dict):
+                    await generation_writer.update_document_progress(generation_id, progress)
+                else:
+                    await generation_writer.update_document_progress_stage(
+                        generation_id,
+                        stage="failed",
+                    )
+                message = str(payload.get("message") or "Generation warning")
+                await generation_writer.write_failure(generation_id, message=message)
 
     try:
         async for chunk in sse_event_stream(
@@ -1335,6 +1441,7 @@ async def _pump_sse_to_queue(
     except Exception:  # noqa: BLE001
         pass
     finally:
+        _snapshot_write_locks.pop(generation_id, None)
         await queue.put(None)
 
 
@@ -1622,6 +1729,7 @@ async def get_v3_generation_blueprint(
 @v3_studio_router.get("/generations/{generation_id}/document")
 async def get_v3_generation_document(
     generation_id: str,
+    response: Response,
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     generation_writer = V3GenerationWriter(async_session_factory)
@@ -1631,6 +1739,7 @@ async def get_v3_generation_document(
     sections = document_json.get("sections")
     if not isinstance(sections, list) or not sections:
         raise HTTPException(status_code=404, detail="Document not found")
+    response.headers["Cache-Control"] = "no-store"
     return document_json
 
 

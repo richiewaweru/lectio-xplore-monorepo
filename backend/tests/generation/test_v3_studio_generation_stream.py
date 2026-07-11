@@ -408,6 +408,7 @@ async def test_v3_document_endpoint_returns_persisted_document_for_owner() -> No
     async with _client() as client:
         resp = await client.get(f"/api/v1/v3/generations/{generation_id}/document")
     assert resp.status_code == 200
+    assert resp.headers["Cache-Control"] == "no-store"
     assert resp.json()["sections"][0]["section_id"] == "s-1"
 
 
@@ -812,6 +813,14 @@ async def test_pump_sse_parses_events_and_dispatches_generation_writer() -> None
             'data: {"generation_id":"gen-1","section_count":1,"booklet_status":"streaming_preview","pack":{"generation_id":"gen-1","blueprint_id":"bp-1","template_id":"guided-concept-path","subject":"Mathematics","status":"streaming_preview","sections":[{"section_id":"intro","template_id":"guided-concept-path","title":"Intro","components":[]}],"warnings":[],"section_diagnostics":[],"booklet_issues":[]}}\n\n'
         )
         yield (
+            'event: section_ready\n'
+            'data: {"generation_id":"gen-1","section_id":"intro","booklet_status":"streaming_preview","pack":{"generation_id":"gen-1","blueprint_id":"bp-1","template_id":"guided-concept-path","subject":"Mathematics","status":"streaming_preview","sections":[{"section_id":"intro","template_id":"guided-concept-path","header":{"title":"Intro"},"explanation":{"body":"Ready"}}],"warnings":[],"section_diagnostics":[],"booklet_issues":[]}}\n\n'
+        )
+        yield (
+            'event: coherence_review_started\n'
+            'data: {"generation_id":"gen-1"}\n\n'
+        )
+        yield (
             'event: draft_pack_ready\n'
             'data: {"generation_id":"gen-1","booklet_status":"draft_ready","pack":{"generation_id":"gen-1","blueprint_id":"bp-1","template_id":"guided-concept-path","subject":"Mathematics","status":"draft_ready","sections":[],"warnings":[],"section_diagnostics":[],"booklet_issues":[]}}\n\n'
         )
@@ -842,10 +851,21 @@ async def test_pump_sse_parses_events_and_dispatches_generation_writer() -> None
             generation_writer=generation_writer,
         )
 
-    assert generation_writer.write_draft.await_count == 2
+    assert generation_writer.write_draft.await_count == 3
     first_draft_payload = generation_writer.write_draft.await_args_list[0].args[1]
     assert first_draft_payload["pack"]["status"] == "streaming_preview"
     assert first_draft_payload["pack"]["sections"][0]["section_id"] == "intro"
+    assert first_draft_payload["pack"]["progress"]["stage"] == "writing"
+    section_payload = generation_writer.write_draft.await_args_list[1].args[1]
+    assert section_payload["pack"]["progress"]["sections"]["intro"] == "ready"
+    generation_writer.update_document_progress_stage.assert_any_await(
+        "gen-1",
+        stage="reviewing",
+    )
+    generation_writer.update_document_progress_stage.assert_any_await(
+        "gen-1",
+        stage="completed",
+    )
     assert generation_writer.write_coherence_result.await_count == 2
     generation_writer.write_generation_complete.assert_awaited_once()
     generation_writer.write_resource_finalised.assert_awaited_once()

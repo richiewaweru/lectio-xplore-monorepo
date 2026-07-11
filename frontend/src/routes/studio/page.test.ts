@@ -698,7 +698,7 @@ describe('studio chunked URL resume', () => {
 		expect(v3Studio.canvas[0]?.visual?.status).toBe('pending');
 	});
 
-	it('repaints the canvas from draft snapshot events during generation', async () => {
+	it('repaints the canvas from polled draft snapshots during generation', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-snapshot');
 		mocks.getChunkedPlanStatus.mockResolvedValue({
 			generation_id: 'gen-snapshot',
@@ -727,18 +727,18 @@ describe('studio chunked URL resume', () => {
 			register_summary: '',
 			support_summary: []
 		});
-
-		render(StudioPage);
-		await waitFor(() => expect(mocks.connectV3StudioGenerationStream).toHaveBeenCalled());
-
-		const handlers = latestGenerationHandlers() as {
-			onDraftPackReady?: (data: Record<string, unknown>) => void;
-			onDraftStatusUpdated?: (data: Record<string, unknown>) => void;
-		};
-
-		handlers.onDraftPackReady?.({
-			booklet_status: 'draft_ready',
-			pack: {
+		mocks.fetchV3Document
+			.mockResolvedValueOnce({
+				kind: 'v3_booklet_pack',
+				generation_id: 'gen-snapshot',
+				template_id: 'guided-concept-path',
+				subject: 'Mathematics',
+				status: 'streaming_preview',
+				progress: {
+					stage: 'writing',
+					sections: { build: 'ready' },
+					updated_at: '2026-07-11T00:00:00Z'
+				},
 				section_diagnostics: [
 					{
 						section_id: 'build',
@@ -750,35 +750,50 @@ describe('studio chunked URL resume', () => {
 					}
 				],
 				sections: [{ section_id: 'build', header: { title: 'Build understanding' } }],
-				booklet_issues: [],
-				status: 'draft_ready'
-			}
-		});
+				warnings: [],
+				booklet_issues: []
+			})
+			.mockResolvedValueOnce({
+				kind: 'v3_booklet_pack',
+				generation_id: 'gen-snapshot',
+				template_id: 'guided-concept-path',
+				subject: 'Mathematics',
+				status: 'final_ready',
+				progress: {
+					stage: 'completed',
+					sections: { practice: 'ready' },
+					updated_at: '2026-07-11T00:00:04Z'
+				},
+				section_diagnostics: [
+					{
+						section_id: 'practice',
+						status: 'complete',
+						renderable: true,
+						missing_components: [],
+						missing_visuals: [],
+						warnings: []
+					}
+				],
+				sections: [{ section_id: 'practice', header: { title: 'Practice' } }],
+				warnings: [],
+				booklet_issues: []
+			});
+
+		render(StudioPage);
+		await waitFor(() => expect(mocks.connectV3StudioGenerationStream).toHaveBeenCalled());
+		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-snapshot'));
 		expect(v3Studio.canvas).toHaveLength(1);
 		expect(v3Studio.canvas[0]?.id).toBe('build');
 		expect(v3Studio.canvas[0]?.sectionStatus).toBe('incomplete');
 
-		handlers.onDraftStatusUpdated?.({
-			booklet_status: 'draft_with_warnings',
-			pack: {
-				section_diagnostics: [
-					{
-						section_id: 'practice',
-						status: 'failed',
-						renderable: false,
-						missing_components: ['practice-stack'],
-						missing_visuals: [],
-						warnings: ['Writer failed']
-					}
-				],
-				sections: [{ section_id: 'practice', header: { title: 'Practice' } }],
-				booklet_issues: [],
-				status: 'draft_with_warnings'
-			}
-		});
+		const handlers = latestGenerationHandlers() as {
+			onPoke?: () => void;
+		};
+		handlers.onPoke?.();
+		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledTimes(2));
 		expect(v3Studio.canvas).toHaveLength(1);
 		expect(v3Studio.canvas[0]?.id).toBe('practice');
-		expect(v3Studio.canvas[0]?.sectionStatus).toBe('failed');
+		expect(v3Studio.stage).toBe('edit');
 	});
 
 	it('rehydrates from the persisted document on generation reopen and stream error even with an active pack', async () => {
@@ -835,23 +850,22 @@ describe('studio chunked URL resume', () => {
 
 		render(StudioPage);
 		await waitFor(() => expect(mocks.connectV3StudioGenerationStream).toHaveBeenCalled());
-		expect(mocks.fetchV3Document).not.toHaveBeenCalled();
+		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-reopen'));
 
 		const handlers = latestGenerationHandlers() as {
 			onOpen?: () => void;
-			onError?: (err: unknown) => void;
+			onError?: () => void;
 		};
 
 		handlers.onOpen?.();
-		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-reopen'));
+		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledTimes(2));
 
 		mocks.fetchV3Document.mockClear();
-		handlers.onError?.(new Error('socket dropped'));
+		handlers.onError?.();
 		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-reopen'));
-		expect(v3Studio.error).toContain('socket dropped');
 	});
 
-	it('marks the live canvas visual failed when visual_failed arrives', async () => {
+	it('renders visual failure diagnostics from the polled document', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-visual-fail');
 		mocks.getChunkedPlanStatus.mockResolvedValue({
 			generation_id: 'gen-visual-fail',
@@ -889,27 +903,37 @@ describe('studio chunked URL resume', () => {
 			register_summary: '',
 			support_summary: []
 		});
+		mocks.fetchV3Document.mockResolvedValue({
+			kind: 'v3_booklet_pack',
+			generation_id: 'gen-visual-fail',
+			template_id: 'guided-concept-path',
+			subject: 'Mathematics',
+			status: 'streaming_preview',
+			progress: {
+				stage: 'writing',
+				sections: { orient: 'failed' },
+				updated_at: '2026-07-11T00:00:00Z'
+			},
+			section_diagnostics: [
+				{
+					section_id: 'orient',
+					status: 'failed',
+					renderable: false,
+					missing_components: [],
+					missing_visuals: ['required_visual'],
+					warnings: ['provider timeout']
+				}
+			],
+			sections: [{ section_id: 'orient', header: { title: 'Orient' } }],
+			warnings: [],
+			booklet_issues: []
+		});
 
 		render(StudioPage);
 		await waitFor(() => expect(mocks.connectV3StudioGenerationStream).toHaveBeenCalled());
-		await waitFor(() => expect(v3Studio.canvas[0]?.visual?.status).toBe('pending'));
-
-		const handlers = latestGenerationHandlers() as {
-			onVisualFailed?: (data: Record<string, unknown>) => void;
-		};
-		handlers.onVisualFailed?.({
-			visual_id: 'vis-orient-0',
-			attaches_to: 'orient',
-			component_id: 'diagram-block',
-			parent_visual_id: null,
-			mode: 'diagram',
-			frame_count: 1,
-			error_summary: 'provider timeout'
-		});
-
-		expect(v3Studio.canvas[0]?.visual?.status).toBe('failed');
-		expect(v3Studio.canvas[0]?.visual?.error_message).toBe('provider timeout');
-		expect(v3Studio.error).toContain('provider timeout');
+		await waitFor(() => expect(v3Studio.canvas[0]?.sectionStatus).toBe('failed'));
+		expect(v3Studio.canvas[0]?.missingVisuals).toContain('required_visual');
+		expect(v3Studio.canvas[0]?.diagnosticWarnings).toContain('provider timeout');
 	});
 
 	it('opens the current studio pack in Builder from the edit stage', async () => {

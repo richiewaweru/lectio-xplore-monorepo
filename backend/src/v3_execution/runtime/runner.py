@@ -130,6 +130,44 @@ def _missing_summary(items: list[list[str]]) -> dict[str, int]:
     return summary
 
 
+def _replace_by_section_id(items: list[dict[str, Any]], next_item: dict[str, Any]) -> list[dict[str, Any]]:
+    section_id = str(next_item.get("section_id") or "")
+    replaced = False
+    next_items: list[dict[str, Any]] = []
+    for item in items:
+        if item.get("section_id") == section_id:
+            next_items.append(next_item)
+            replaced = True
+        else:
+            next_items.append(item)
+    if not replaced:
+        next_items.append(next_item)
+    return next_items
+
+
+def _section_ids_for_visual(
+    *,
+    order: Any,
+    section_ids: set[str],
+    question_section_lookup: dict[str, str],
+    visual_component_section_lookup: dict[str, set[str]],
+) -> set[str]:
+    visual = order.visual
+    related: set[str] = set()
+    if visual.attaches_to in section_ids:
+        related.add(visual.attaches_to)
+    mapped = question_section_lookup.get(visual.attaches_to)
+    if mapped:
+        related.add(mapped)
+    for question_id in getattr(visual, "source_question_ids", []) or []:
+        mapped = question_section_lookup.get(question_id)
+        if mapped:
+            related.add(mapped)
+    if visual.component_id:
+        related.update(visual_component_section_lookup.get(visual.component_id, set()))
+    return related
+
+
 async def _record_visual_trace(
     *,
     trace_writer: V3TraceWriter | None,
@@ -306,46 +344,175 @@ async def run_generation(
             )
             return blocks
 
-        blueprint_only_visuals = [v for v in bundle.visual_orders if v.dependency == "blueprint_only"]
-        section_tasks = [
-            _guard(f"section:{order.section.id}", _timed_section(order))
-            for order in bundle.section_orders
-        ]
-        question_tasks = [
-            _guard(f"questions:{order.section_id}", _timed_questions(order))
-            for order in bundle.question_orders
-        ]
-        visual_tasks_wave1 = [
-            _run_visual_order(order, label=f"visual:{order.visual.id}")
-            for order in blueprint_only_visuals
-        ]
-
-        wave1 = await asyncio.gather(*(section_tasks + question_tasks + visual_tasks_wave1))
-        for batch in wave1:
-            if not isinstance(batch, list):
-                continue
-            for item in batch:
-                if isinstance(item, GeneratedComponentBlock):
-                    result.component_blocks.append(item)
-                elif isinstance(item, GeneratedQuestionBlock):
-                    result.question_blocks.append(item)
-                elif isinstance(item, GeneratedVisualBlock):
-                    result.visual_blocks.append(item)
-
-        text_visuals = [v for v in bundle.visual_orders if v.dependency != "blueprint_only"]
-        if text_visuals:
-            wave2 = await asyncio.gather(
-                *[
-                    _run_visual_order(order, label=f"visual:{order.visual.id}:late")
-                    for order in text_visuals
-                ]
+        section_ids = {order.section.id for order in bundle.section_orders}
+        question_section_lookup = {
+            question.question_id: question.section_id for question in blueprint.question_plan
+        }
+        visual_component_section_lookup: dict[str, set[str]] = {}
+        for section in blueprint.sections:
+            for component in section.components:
+                visual_component_section_lookup.setdefault(component.component, set()).add(
+                    section.section_id
+                )
+        visual_sections: dict[str, set[str]] = {}
+        visuals_by_section: dict[str, list[Any]] = {section_id: [] for section_id in section_ids}
+        for order in bundle.visual_orders:
+            related = _section_ids_for_visual(
+                order=order,
+                section_ids=section_ids,
+                question_section_lookup=question_section_lookup,
+                visual_component_section_lookup=visual_component_section_lookup,
             )
-            for batch in wave2:
-                if not isinstance(batch, list):
+            visual_sections[order.work_order_id] = related
+            for section_id in related:
+                visuals_by_section.setdefault(section_id, []).append(order)
+
+        question_sections = {order.section_id for order in bundle.question_orders}
+        section_done: set[str] = set()
+        question_done: set[str] = set(section_ids - question_sections)
+        visual_done: set[str] = {
+            section_id for section_id in section_ids if not visuals_by_section.get(section_id)
+        }
+        emitted_sections: set[str] = set()
+        scheduled_visual_orders: set[str] = set()
+        completed_visual_orders: set[str] = set()
+        task_meta: dict[asyncio.Task[list[Any]], tuple[str, str, Any]] = {}
+
+        def _schedule_task(kind: str, section_id: str, label: str, coro: Awaitable[list[Any]], order: Any) -> None:
+            task = asyncio.create_task(_guard(label, coro))
+            task_meta[task] = (kind, section_id, order)
+
+        def _schedule_visual(order: Any, *, label: str) -> None:
+            if order.work_order_id in scheduled_visual_orders:
+                return
+            scheduled_visual_orders.add(order.work_order_id)
+            task = asyncio.create_task(_run_visual_order(order, label=label))
+            task_meta[task] = ("visual", "", order)
+
+        def _mark_visual_sections_ready(order: Any) -> None:
+            for section_id in visual_sections.get(order.work_order_id, set()):
+                required = visuals_by_section.get(section_id, [])
+                if required and all(v.work_order_id in completed_visual_orders for v in required):
+                    visual_done.add(section_id)
+
+        async def _emit_ready_sections() -> None:
+            nonlocal partial_pack
+            ready_ids = section_done & question_done & visual_done
+            for section_plan in blueprint.sections:
+                section_id = section_plan.section_id
+                if section_id not in ready_ids or section_id in emitted_sections:
                     continue
-                for item in batch:
-                    if isinstance(item, GeneratedVisualBlock):
-                        result.visual_blocks.append(item)
+                single_blueprint = blueprint.model_copy(update={"sections": [section_plan]})
+
+                def _build_single_section():
+                    return assembler.build_sections(
+                        single_blueprint,
+                        result.component_blocks,
+                        result.question_blocks,
+                        result.visual_blocks,
+                        template_id=template_id,
+                    )
+
+                try:
+                    single_sections, single_warnings, single_diagnostics = await asyncio.to_thread(
+                        _build_single_section
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    result.warnings.append(f"assembly:{section_id}: {exc}")
+                    emitted_sections.add(section_id)
+                    continue
+                result.warnings.extend(single_warnings)
+                if not single_sections:
+                    emitted_sections.add(section_id)
+                    continue
+                current_pack = partial_pack["pack"]
+                current_pack["sections"] = _replace_by_section_id(
+                    list(current_pack.get("sections") or []),
+                    single_sections[0],
+                )
+                diagnostics = [d.model_dump(mode="json") for d in single_diagnostics]
+                for diagnostic in diagnostics:
+                    current_pack["section_diagnostics"] = _replace_by_section_id(
+                        list(current_pack.get("section_diagnostics") or []),
+                        diagnostic,
+                    )
+                current_pack["visual_blocks"] = [
+                    block.model_dump(mode="json", exclude_none=True)
+                    for block in result.visual_blocks
+                ]
+                current_pack["warnings"] = list(result.warnings)
+                emitted_sections.add(section_id)
+                await emit_event(
+                    events.SECTION_READY,
+                    {
+                        "generation_id": generation_id,
+                        "section_id": section_id,
+                        "booklet_status": "streaming_preview",
+                        "pack": current_pack,
+                    },
+                )
+
+        partial_pack: dict[str, Any] = {"pack": skeleton_pack}
+
+        for order in bundle.section_orders:
+            _schedule_task(
+                "section",
+                order.section.id,
+                f"section:{order.section.id}",
+                _timed_section(order),
+                order,
+            )
+        for order in bundle.question_orders:
+            _schedule_task(
+                "question",
+                order.section_id,
+                f"questions:{order.section_id}",
+                _timed_questions(order),
+                order,
+            )
+        for order in bundle.visual_orders:
+            if order.dependency == "blueprint_only":
+                _schedule_visual(order, label=f"visual:{order.visual.id}")
+
+        while task_meta:
+            done, _pending = await asyncio.wait(task_meta.keys(), return_when=asyncio.FIRST_COMPLETED)
+            for task in done:
+                kind, section_id, order = task_meta.pop(task)
+                batch = task.result()
+                if isinstance(batch, list):
+                    for item in batch:
+                        if isinstance(item, GeneratedComponentBlock):
+                            result.component_blocks.append(item)
+                        elif isinstance(item, GeneratedQuestionBlock):
+                            result.question_blocks.append(item)
+                        elif isinstance(item, GeneratedVisualBlock):
+                            result.visual_blocks.append(item)
+                if kind == "section":
+                    section_done.add(section_id)
+                elif kind == "question":
+                    question_done.add(section_id)
+                elif kind == "visual":
+                    completed_visual_orders.add(order.work_order_id)
+                    _mark_visual_sections_ready(order)
+
+            for order in bundle.visual_orders:
+                if order.dependency == "blueprint_only":
+                    continue
+                related = visual_sections.get(order.work_order_id, set())
+                if related and all(
+                    section_id in section_done and section_id in question_done
+                    for section_id in related
+                ):
+                    _schedule_visual(order, label=f"visual:{order.visual.id}:late")
+
+            for section_id, orders in visuals_by_section.items():
+                if not orders:
+                    visual_done.add(section_id)
+                    continue
+                if all(order.work_order_id in completed_visual_orders for order in orders):
+                    visual_done.add(section_id)
+
+            await _emit_ready_sections()
 
         try:
 
@@ -429,6 +596,38 @@ async def run_generation(
             booklet_status=initial_booklet_status,  # type: ignore[arg-type]
             section_diagnostics=section_diagnostics,
         )
+
+        for section in draft_pack.sections:
+            section_id = str(section.get("section_id") or "")
+            if not section_id or section_id in emitted_sections:
+                continue
+            current_pack = partial_pack["pack"]
+            current_pack["sections"] = _replace_by_section_id(
+                list(current_pack.get("sections") or []),
+                section,
+            )
+            for diagnostic in section_diagnostics:
+                if diagnostic.section_id != section_id:
+                    continue
+                current_pack["section_diagnostics"] = _replace_by_section_id(
+                    list(current_pack.get("section_diagnostics") or []),
+                    diagnostic.model_dump(mode="json"),
+                )
+            current_pack["visual_blocks"] = [
+                block.model_dump(mode="json", exclude_none=True)
+                for block in result.visual_blocks
+            ]
+            current_pack["warnings"] = list(result.warnings)
+            emitted_sections.add(section_id)
+            await emit_event(
+                events.SECTION_READY,
+                {
+                    "generation_id": generation_id,
+                    "section_id": section_id,
+                    "booklet_status": "streaming_preview",
+                    "pack": current_pack,
+                },
+            )
 
         await emit_event(
             events.DRAFT_PACK_READY,

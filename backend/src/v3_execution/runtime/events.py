@@ -7,6 +7,7 @@ GENERATION_STARTED = "generation_started"
 WORK_ORDERS_COMPILED = "work_orders_compiled"
 SKELETON_READY = "skeleton_ready"
 SECTION_WRITING_STARTED = "section_writing_started"
+SECTION_READY = "section_ready"
 SECTION_WRITER_FAILED = "section_writer_failed"
 COMPONENT_READY = "component_ready"
 QUESTIONS_STARTED = "questions_started"
@@ -57,6 +58,7 @@ __all__ = [
     "QUESTION_READY",
     "QUESTIONS_STARTED",
     "RESOURCE_FINALISED",
+    "SECTION_READY",
     "SECTION_WRITING_STARTED",
     "SECTION_WRITER_FAILED",
     "SKELETON_READY",

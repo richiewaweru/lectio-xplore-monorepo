@@ -87,22 +87,10 @@ describe('connectV3StudioGenerationStream', () => {
 		};
 	}
 
-	it('routes new pack events to dedicated handlers', () => {
-		const onSkeletonReady = vi.fn();
-		const onDraftPackReady = vi.fn();
-		const onFinalPackReady = vi.fn();
-		const onDraftStatusUpdated = vi.fn();
-		const onSectionWriterFailed = vi.fn();
-		const onVisualFailed = vi.fn();
+	it('pokes document polling for generation events', () => {
+		const onPoke = vi.fn();
 
-		connectV3StudioGenerationStream('gen-1', {
-			onSkeletonReady,
-			onDraftPackReady,
-			onFinalPackReady,
-			onDraftStatusUpdated,
-			onSectionWriterFailed,
-			onVisualFailed
-		});
+		connectV3StudioGenerationStream('gen-1', { onPoke });
 
 		const onmessage = capturedOptions.current?.onmessage as
 			| ((msg: { event?: string; data?: string }) => void)
@@ -110,24 +98,8 @@ describe('connectV3StudioGenerationStream', () => {
 		expect(onmessage).toBeTypeOf('function');
 
 		onmessage?.({ event: 'skeleton_ready', data: '{"pack":{"sections":[{"section_id":"s-1"}]}}' });
-		onmessage?.({ event: 'draft_pack_ready', data: '{"pack":{"sections":[]}}' });
-		onmessage?.({ event: 'final_pack_ready', data: '{"pack":{"sections":[]}}' });
-		onmessage?.({ event: 'draft_status_updated', data: '{"booklet_status":"draft_ready"}' });
-		onmessage?.({
-			event: 'section_writer_failed',
-			data: '{"section_id":"sec-1","errors":["boom"],"warnings":[]}'
-		});
-		onmessage?.({
-			event: 'visual_failed',
-			data: '{"visual_id":"vis-1","attaches_to":"sec-1","mode":"diagram","frame_count":1,"error_summary":"provider timeout"}'
-		});
 
-		expect(onSkeletonReady).toHaveBeenCalledTimes(1);
-		expect(onDraftPackReady).toHaveBeenCalledTimes(1);
-		expect(onFinalPackReady).toHaveBeenCalledTimes(1);
-		expect(onDraftStatusUpdated).toHaveBeenCalledTimes(1);
-		expect(onSectionWriterFailed).toHaveBeenCalledTimes(1);
-		expect(onVisualFailed).toHaveBeenCalledTimes(1);
+		expect(onPoke).toHaveBeenCalledTimes(1);
 	});
 
 	it('fetches persisted V3 document payload from API', async () => {
@@ -175,16 +147,10 @@ describe('connectV3StudioGenerationStream', () => {
 		expect(row.id).toBe('gen-1');
 	});
 
-	it('routes chunked stage events to handlers', () => {
-		const onPlanReady = vi.fn();
-		const onStage2SectionFailed = vi.fn();
-		const onGenerationStarting = vi.fn();
+	it('treats chunked events on the generation stream as poll pokes', () => {
+		const onPoke = vi.fn();
 
-		connectV3StudioGenerationStream('gen-1', {
-			onPlanReady,
-			onStage2SectionFailed,
-			onGenerationStarting
-		});
+		connectV3StudioGenerationStream('gen-1', { onPoke });
 
 		const onmessage = capturedOptions.current?.onmessage as
 			| ((msg: { event?: string; data?: string }) => void)
@@ -192,54 +158,44 @@ describe('connectV3StudioGenerationStream', () => {
 		expect(onmessage).toBeTypeOf('function');
 
 		onmessage?.({ event: 'plan_ready', data: '{"plan":{"sections":[]}}' });
-		onmessage?.({ event: 'stage2_section_failed', data: '{"section_id":"model","errors":["bad"]}' });
-		onmessage?.({ event: 'generation_starting', data: '{"generation_id":"gen-1"}' });
 
-		expect(onPlanReady).toHaveBeenCalledTimes(1);
-		expect(onStage2SectionFailed).toHaveBeenCalledTimes(1);
-		expect(onGenerationStarting).toHaveBeenCalledTimes(1);
+		expect(onPoke).toHaveBeenCalledTimes(1);
 	});
 
-	it('retries generation SSE failures with bounded backoff and resets after reopen', async () => {
-		connectV3StudioGenerationStream('gen-1', {});
+	it('closes generation SSE on error without retrying', async () => {
+		const onError = vi.fn();
+		connectV3StudioGenerationStream('gen-1', { onError });
 
 		const onerror = capturedOptions.current?.onerror as ((err: unknown) => number) | undefined;
 		const onopen = capturedOptions.current?.onopen as
 			| ((response: Response) => Promise<void>)
 			| undefined;
+		const signal = capturedOptions.current?.signal as AbortSignal | undefined;
 		expect(onerror).toBeTypeOf('function');
 		expect(onopen).toBeTypeOf('function');
-
-		expect(onerror?.(new Error('drop-1'))).toBe(2000);
-		expect(onerror?.(new Error('drop-2'))).toBe(4000);
-		expect(onerror?.(new Error('drop-3'))).toBe(8000);
-		expect(onerror?.(new Error('drop-4'))).toBe(15000);
-		expect(onerror?.(new Error('drop-5'))).toBe(15000);
-		expect(onerror?.(new Error('drop-6'))).toBe(15000);
-		expect(() => onerror?.(new Error('drop-7'))).toThrow('drop-7');
+		expect(signal).toBeDefined();
 
 		await onopen?.(new Response(null, { status: 200 }));
-		expect(onerror?.(new Error('drop-after-open'))).toBe(2000);
+		expect(() => onerror?.(new Error('drop-1'))).toThrow('drop-1');
+		expect(onError).toHaveBeenCalledTimes(1);
+		expect(signal?.aborted).toBe(true);
 	});
 
-	it('aborts generation SSE after terminal events and stops retrying', () => {
-		const onGenerationComplete = vi.fn();
-		connectV3StudioGenerationStream('gen-1', { onGenerationComplete });
+	it('pokes polling for terminal events without rendering payloads', () => {
+		const onPoke = vi.fn();
+		connectV3StudioGenerationStream('gen-1', { onPoke });
 
 		const onmessage = capturedOptions.current?.onmessage as
 			| ((msg: { event?: string; data?: string }) => void)
 			| undefined;
-		const onerror = capturedOptions.current?.onerror as ((err: unknown) => number) | undefined;
 		const signal = capturedOptions.current?.signal as AbortSignal | undefined;
 		expect(onmessage).toBeTypeOf('function');
-		expect(onerror).toBeTypeOf('function');
 		expect(signal).toBeDefined();
 
 		onmessage?.({ event: 'generation_complete', data: '{"generation_id":"gen-1"}' });
 
-		expect(onGenerationComplete).toHaveBeenCalledTimes(1);
-		expect(signal?.aborted).toBe(true);
-		expect(() => onerror?.(new Error('after-terminal'))).toThrow('after-terminal');
+		expect(onPoke).toHaveBeenCalledTimes(1);
+		expect(signal?.aborted).toBe(false);
 	});
 
 	it('connects chunked planning SSE and dispatches planning events', () => {

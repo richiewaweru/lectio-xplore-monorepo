@@ -300,6 +300,59 @@ class V3GenerationWriter:
             model.report_json = report
             await session.commit()
 
+    async def update_document_progress(
+        self,
+        generation_id: str,
+        progress: dict[str, Any],
+    ) -> None:
+        async with self._session_factory() as session:
+            model = await session.get(GenerationModel, generation_id)
+            if model is None or not isinstance(model.document_json, dict):
+                return
+            document = deepcopy(model.document_json)
+            document["progress"] = deepcopy(progress)
+            model.document_json = document
+            await session.commit()
+
+    async def update_document_progress_stage(
+        self,
+        generation_id: str,
+        *,
+        stage: str,
+    ) -> None:
+        async with self._session_factory() as session:
+            model = await session.get(GenerationModel, generation_id)
+            if model is None or not isinstance(model.document_json, dict):
+                return
+            document = deepcopy(model.document_json)
+            progress = document.get("progress")
+            if not isinstance(progress, dict):
+                progress = {}
+            section_statuses = progress.get("sections")
+            if not isinstance(section_statuses, dict):
+                section_statuses = {}
+            for section in _sections_from_document(document):
+                section_id = section.get("section_id")
+                if isinstance(section_id, str) and section_id:
+                    section_statuses.setdefault(section_id, "pending")
+            if stage == "completed":
+                section_statuses = {
+                    section_id: ("failed" if status == "failed" else "ready")
+                    for section_id, status in section_statuses.items()
+                }
+            elif stage == "failed":
+                section_statuses = {
+                    section_id: ("ready" if status == "ready" else "failed")
+                    for section_id, status in section_statuses.items()
+                }
+            document["progress"] = {
+                "stage": stage,
+                "sections": section_statuses,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            model.document_json = document
+            await session.commit()
+
     async def get_document_json(
         self,
         generation_id: str,

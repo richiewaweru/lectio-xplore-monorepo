@@ -30,27 +30,18 @@
 	import { v3PackToBuilderDocument } from '$lib/builder/adapters/from-generation';
 	import { saveDocument } from '$lib/builder/persistence/idb-store';
 	import {
-		applyComponentPatchedToCanvas,
-		applyComponentReadyToCanvas,
-		applySectionWriterFailedToCanvas,
-		applyVisualFailedToCanvas
-	} from '$lib/studio/v3-stream-state';
-	import {
 		buildCanvasSkeleton,
 		buildStructuralPlanCanvas,
-		mergeDiagramFrame,
-		mergePracticeProblem,
 		patchCanvasSection
 	} from '$lib/studio/v3-canvas';
 	import {
 		getBookletExportPolicy,
-		getBookletPrintReadiness,
-		isBookletStatus
+		getBookletPrintReadiness
 	} from '$lib/studio/v3-booklet';
 	import { coerceV3DocumentToPack } from '$lib/studio/v3-document';
 	import type { V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
 	import { mapPackSectionsToCanvas } from '$lib/studio/v3-print-canvas';
-	import type { BookletStatus, V3ChunkedPlanState, V3DraftPack, V3InputForm } from '$lib/types/v3';
+	import type { V3ChunkedPlanState, V3DraftPack, V3InputForm } from '$lib/types/v3';
 
 	let pdfLoading = $state(false);
 	let pdfError = $state<string | null>(null);
@@ -71,6 +62,10 @@
 		failed: string[];
 		active: string | null;
 	}>({ completed: [], failed: [], active: null });
+	let documentPollInterval: ReturnType<typeof setInterval> | null = null;
+	let documentPollInFlight = false;
+	let documentPollGenerationId: string | null = null;
+	let visibilityListenerActive = false;
 	let disconnectChunkedStream: (() => void) | null = null;
 
 	function disconnectActiveChunkedStream(): void {
@@ -154,11 +149,6 @@
 			pack.section_diagnostics,
 			v3Studio.chunkedState?.structural_plan?.sections ?? []
 		);
-	}
-
-	function paintSkeletonFromPack(pack: V3DraftPack): void {
-		if (v3Studio.canvas.length > 0) return;
-		paintCanvasFromPack(pack);
 	}
 
 	function clearRenderedBookletState(): void {
@@ -266,20 +256,62 @@
 		return 'Something went wrong. Try again.';
 	}
 
-	function parsePack(payload: unknown): V3DraftPack | null {
-		if (typeof payload !== 'object' || payload === null) return null;
-		const candidate = (payload as { pack?: unknown }).pack;
-		if (typeof candidate !== 'object' || candidate === null) return null;
-		return candidate as V3DraftPack;
+	function progressStageFromDocument(document: Record<string, unknown>): string | null {
+		const progress = document.progress;
+		if (typeof progress !== 'object' || progress === null) return null;
+		const stage = (progress as { stage?: unknown }).stage;
+		return typeof stage === 'string' ? stage : null;
 	}
 
-	function statusFromPayload(payload: Record<string, unknown>, fallback: BookletStatus): BookletStatus {
-		return isBookletStatus(payload.booklet_status) ? payload.booklet_status : fallback;
+	function isTerminalProgressStage(stage: string | null): boolean {
+		return stage === 'completed' || stage === 'failed';
+	}
+
+	function stopGenerationPolling(): void {
+		if (documentPollInterval) {
+			clearInterval(documentPollInterval);
+			documentPollInterval = null;
+		}
+		documentPollGenerationId = null;
+		if (browser && visibilityListenerActive) {
+			document.removeEventListener('visibilitychange', handleDocumentVisibilityChange);
+			visibilityListenerActive = false;
+		}
+	}
+
+	async function pollGenerationDocument(generationId: string): Promise<void> {
+		if (!browser || document.hidden || documentPollInFlight) return;
+		documentPollInFlight = true;
+		try {
+			await hydrateFromDocument(generationId);
+		} finally {
+			documentPollInFlight = false;
+		}
+	}
+
+	function handleDocumentVisibilityChange(): void {
+		if (!browser || document.hidden || !documentPollGenerationId) return;
+		void pollGenerationDocument(documentPollGenerationId);
+	}
+
+	function startGenerationPolling(generationId: string): void {
+		stopGenerationPolling();
+		documentPollGenerationId = generationId;
+		if (browser && !visibilityListenerActive) {
+			document.addEventListener('visibilitychange', handleDocumentVisibilityChange);
+			visibilityListenerActive = true;
+		}
+		void pollGenerationDocument(generationId);
+		documentPollInterval = setInterval(() => {
+			if (!documentPollGenerationId) return;
+			void pollGenerationDocument(documentPollGenerationId);
+		}, 4000);
 	}
 
 	async function hydrateFromDocument(generationId: string): Promise<boolean> {
 		try {
 			const document = await fetchV3Document(generationId);
+			const progressStage = progressStageFromDocument(document);
 			const pack = coerceV3DocumentToPack(generationId, document, {
 				templateId: v3Studio.blueprint?.template_id ?? 'guided-concept-path'
 			});
@@ -292,7 +324,24 @@
 			v3Studio.bookletStatus = pack.status;
 			v3Studio.bookletIssues = pack.booklet_issues;
 			paintCanvasFromPack(pack);
-			if (pack.status !== 'streaming_preview') {
+			if (progressStage === 'failed') {
+				v3Studio.coherenceHint = null;
+				v3Studio.error = 'Generation failed before the resource was finalised.';
+				stopGenerationPolling();
+				v3Studio.streamCancel?.();
+				v3Studio.streamCancel = null;
+				if (pack.sections.length > 0) {
+					v3Studio.stage = 'edit';
+				}
+			} else if (progressStage === 'completed') {
+				v3Studio.coherenceHint = null;
+				stopGenerationPolling();
+				v3Studio.streamCancel?.();
+				v3Studio.streamCancel = null;
+				v3Studio.stage = 'edit';
+			} else if (progressStage && !isTerminalProgressStage(progressStage)) {
+				v3Studio.stage = 'fill';
+			} else if (pack.status !== 'streaming_preview') {
 				v3Studio.coherenceHint = null;
 				v3Studio.stage = 'edit';
 			}
@@ -454,281 +503,23 @@
 	function connectGenerationStream(generationId: string) {
 		disconnectActiveChunkedStream();
 		v3Studio.streamCancel?.();
+		v3Studio.streamCancel = null;
+		v3Studio.error = null;
+		v3Studio.stage = 'fill';
+		startGenerationPolling(generationId);
 		v3Studio.streamCancel = connectV3StudioGenerationStream(generationId, {
-			onCoherenceReviewStarted: () => {
-				v3Studio.stage = 'fill';
-			},
-			onCoherenceReportReady: (data) => {
-				const blocking = typeof data.blocking_count === 'number' ? data.blocking_count : 0;
-				v3Studio.coherenceHint =
-					blocking > 0
-						? `Consistency review finished with ${blocking} blocking issue(s) flagged.`
-						: 'Consistency review finished.';
-			},
-			onSkeletonReady: (data) => {
-				const pack = parsePack(data);
-				if (!pack) return;
-				if (!v3Studio.draftPack) {
-					v3Studio.draftPack = pack;
-				}
-				if (!v3Studio.activePack) {
-					v3Studio.activePack = pack;
-				}
-				v3Studio.bookletStatus = 'streaming_preview';
-				v3Studio.bookletIssues = Array.isArray(pack.booklet_issues) ? pack.booklet_issues : [];
-				paintSkeletonFromPack(pack);
-				v3Studio.stage = 'fill';
-			},
-			onDraftPackReady: (data) => {
-				const pack = parsePack(data);
-				if (!pack) return;
-				const status = statusFromPayload(data, pack.status);
-				v3Studio.draftPack = pack;
-				v3Studio.activePack = pack;
-				v3Studio.bookletStatus = status;
-				v3Studio.bookletIssues = Array.isArray(pack.booklet_issues) ? pack.booklet_issues : [];
-				paintCanvasFromPack(pack);
-				v3Studio.stage = 'fill';
-			},
-			onFinalPackReady: (data) => {
-				const pack = parsePack(data);
-				if (!pack) return;
-				const status = statusFromPayload(data, pack.status);
-				v3Studio.finalPack = pack;
-				v3Studio.activePack = pack;
-				v3Studio.bookletStatus = status;
-				v3Studio.bookletIssues = Array.isArray(pack.booklet_issues) ? pack.booklet_issues : [];
-				paintCanvasFromPack(pack);
-			},
-			onDraftStatusUpdated: (data) => {
-				const status = statusFromPayload(data, v3Studio.bookletStatus);
-				const pack = parsePack(data);
-				if (pack) {
-					v3Studio.draftPack = pack;
-					v3Studio.activePack = pack;
-					v3Studio.bookletIssues = Array.isArray(pack.booklet_issues) ? pack.booklet_issues : [];
-					paintCanvasFromPack(pack);
-				}
-				v3Studio.bookletStatus = status;
-				v3Studio.stage = 'fill';
-			},
-			onResourceFinalised: () => {
-				const gid = v3Studio.generationId;
-				if (gid) {
-					void hydrateFromDocument(gid);
-				}
-				v3Studio.streamCancel?.();
-				v3Studio.streamCancel = null;
-				v3Studio.stage = 'edit';
-			},
-			onComponentReady: (data) => {
-				const next = applyComponentReadyToCanvas(v3Studio.canvas, data);
-				v3Studio.canvas = next.canvas;
-				if (next.warning) {
-					console.warn('component_ready warning', data);
-					v3Studio.error = next.warning;
-				}
-			},
-			onSectionWriterFailed: (data) => {
-				const next = applySectionWriterFailedToCanvas(v3Studio.canvas, data);
-				v3Studio.canvas = next.canvas;
-				if (next.warning) {
-					v3Studio.error = next.warning;
-				}
-			},
-			onVisualReady: (data) => {
-				const sid = String(data.attaches_to ?? '');
-				const url = typeof data.image_url === 'string' ? data.image_url : null;
-				const fi =
-					data.frame_index === undefined ? null : (data.frame_index as number | null);
-				const mode =
-					data.mode === 'diagram' ||
-					data.mode === 'diagram_series' ||
-					data.mode === 'diagram_compare' ||
-					data.mode === 'simulation'
-						? data.mode
-						: undefined;
-				const componentId =
-					typeof data.component_id === 'string' ? data.component_id : null;
-				const parentVisualId =
-					typeof data.parent_visual_id === 'string' ? data.parent_visual_id : null;
-				const status: 'ready' | 'failed' | 'omitted_quality' =
-					data.status === 'omitted_quality' || data.status === 'failed'
-						? data.status
-						: 'ready';
-				if (!sid) return;
-				v3Studio.canvas = v3Studio.canvas.map((s) => {
-					if (s.id !== sid) return s;
-					const mergedFields = mergeDiagramFrame(s.mergedFields, {
-						image_url: url,
-						frame_index: fi
-					});
-					const visual = s.visual
-						? {
-								...s.visual,
-								status,
-								mode: mode ?? s.visual.mode,
-								image_url: url ?? s.visual.image_url,
-								frame_index: fi ?? s.visual.frame_index,
-								component_id: componentId,
-								parent_visual_id: parentVisualId,
-								error_message: null
-							}
-						: null;
-					return { ...s, mergedFields, visual };
-				});
-			},
-			onVisualFailed: (data) => {
-				const next = applyVisualFailedToCanvas(v3Studio.canvas, data);
-				v3Studio.canvas = next.canvas;
-				if (next.warning) {
-					v3Studio.error = next.warning;
-				}
-			},
-			onQuestionReady: (data) => {
-				const sid = String(data.section_id ?? '');
-				const qid = String(data.question_id ?? '');
-				const diff = String(data.difficulty ?? 'warm');
-				const raw = data.data;
-				const pdata =
-					typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
-				if (!sid || !qid) return;
-				v3Studio.canvas = v3Studio.canvas.map((s) =>
-					s.id !== sid
-						? s
-						: {
-								...s,
-								mergedFields: mergePracticeProblem(s.mergedFields, qid, diff, pdata),
-								questions: s.questions.map((q) =>
-									q.id === qid ? { ...q, status: 'ready' as const, data: pdata } : q
-								)
-							}
-				);
-			},
-			onComponentPatched: (data) => {
-				const next = applyComponentPatchedToCanvas(v3Studio.canvas, data);
-				v3Studio.canvas = next.canvas;
-				if (next.warning) {
-					console.warn('component_patched warning', data);
-					v3Studio.error = next.warning;
-				}
-			},
-			onPlanReady: (data) => {
-				const plan = data.plan;
-				if (typeof plan !== 'object' || plan === null || !v3Studio.generationId) return;
-				v3Studio.chunkedState = {
-					generation_id: v3Studio.generationId,
-					stage: 'plan_ready',
-					structural_plan: plan as any,
-					section_briefs: {},
-					failed_sections: [],
-					blueprint_id: null,
-					execution_started: false,
-					next_action: 'approve_or_regenerate',
-					inferred_lesson_mode: null,
-					lesson_mode_confidence: null
-				};
-				v3Studio.stage = 'skeleton';
-			},
-			onStage2SectionStart: (data) => {
-				const sectionId = String(data.section_id ?? '');
-				if (!sectionId) return;
-				v3Studio.chunkedSectionStatus = {
-					...v3Studio.chunkedSectionStatus,
-					[sectionId]: 'running'
-				};
-			},
-			onStage2SectionRetry: (data) => {
-				const sectionId = String(data.section_id ?? '');
-				if (!sectionId) return;
-				v3Studio.chunkedSectionStatus = {
-					...v3Studio.chunkedSectionStatus,
-					[sectionId]: 'retrying'
-				};
-			},
-			onStage2SectionDone: (data) => {
-				const sectionId = String(data.section_id ?? '');
-				if (!sectionId) return;
-				v3Studio.chunkedSectionStatus = {
-					...v3Studio.chunkedSectionStatus,
-					[sectionId]: 'done'
-				};
-				v3Studio.chunkedSectionErrors = {
-					...v3Studio.chunkedSectionErrors,
-					[sectionId]: []
-				};
-			},
-			onStage2SectionFailed: (data) => {
-				const sectionId = String(data.section_id ?? '');
-				if (!sectionId) return;
-				const errors = Array.isArray(data.errors)
-					? data.errors.filter((item): item is string => typeof item === 'string')
-					: [];
-				v3Studio.chunkedSectionStatus = {
-					...v3Studio.chunkedSectionStatus,
-					[sectionId]: 'failed'
-				};
-				v3Studio.chunkedSectionErrors = {
-					...v3Studio.chunkedSectionErrors,
-					[sectionId]: errors
-				};
-			},
-			onStage2Complete: (data) => {
-				const failedSections = Array.isArray(data.failed_sections)
-					? data.failed_sections.filter((item): item is string => typeof item === 'string')
-					: [];
-				if (v3Studio.chunkedState) {
-					v3Studio.chunkedState = {
-						...v3Studio.chunkedState,
-						stage: 'stage2_complete',
-						failed_sections: failedSections
-					};
-				}
-			},
-			onGenerationStarting: () => {
-				const gid = v3Studio.generationId;
-				if (!gid) return;
-				v3Studio.stage = 'fill';
-				void (async () => {
-					try {
-						const preview = await getV3GenerationBlueprint(gid);
-						v3Studio.blueprint = preview;
-						if (v3Studio.canvas.length === 0) {
-							v3Studio.canvas = buildCanvasSkeleton(preview);
-						}
-					} catch {
-						// Stream will continue; preview can be recovered from status endpoints later.
-					}
-				})();
-			},
-			onGenerationWarning: (data) => {
-				v3Studio.error = friendly(data.message ?? 'Generation warning');
-				const gid = v3Studio.generationId;
-				if (gid) {
-					void refreshChunkedStatus(gid);
-				}
-			},
-			onGenerationComplete: () => {
-				const gid = v3Studio.generationId;
-				if (gid) {
-					void hydrateFromDocument(gid);
-				}
+			onPoke: () => {
+				void pollGenerationDocument(generationId);
 			},
 			onOpen: () => {
-				const gid = v3Studio.generationId;
-				if (gid) {
-					void hydrateFromDocument(gid);
-				}
+				void pollGenerationDocument(generationId);
 			},
-			onError: (err) => {
-				v3Studio.error = friendly(err);
-				const gid = v3Studio.generationId;
-				if (gid) {
-					void hydrateFromDocument(gid);
-				}
+			onError: () => {
+				void pollGenerationDocument(generationId);
 			}
 		});
 	}
+
 
 	async function handleChunkedApprove() {
 		const chunked = v3Studio.chunkedState;
@@ -816,6 +607,7 @@
 
 	onDestroy(() => {
 		disconnectActiveChunkedStream();
+		stopGenerationPolling();
 		v3Studio.streamCancel?.();
 	});
 

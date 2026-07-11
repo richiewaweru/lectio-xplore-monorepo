@@ -84,27 +84,29 @@ async def test_runner_emits_skeleton_ready_before_component_events(
     bp = _load_example("amara_compound_area.json")
 
     async def stub_section(order, emit, **_: object) -> list[GeneratedComponentBlock]:
-        component = order.section.components[0]
-        field = get_section_field_for_component(component.component_id) or "explanation"
-        block = GeneratedComponentBlock(
-            block_id=f"b-{component.component_id}",
-            section_id=order.section.id,
-            component_id=component.component_id,
-            section_field=field,
-            position=0,
-            data={"body": component.content_intent, "emphasis": []},
-            source_work_order_id=order.work_order_id,
-        )
-        await emit(
-            "component_ready",
-            {
-                "component_id": block.component_id,
-                "section_id": block.section_id,
-                "section_field": block.section_field,
-                "data": block.data,
-            },
-        )
-        return [block]
+        blocks: list[GeneratedComponentBlock] = []
+        for position, component in enumerate(order.section.components):
+            field = get_section_field_for_component(component.component_id) or "explanation"
+            block = GeneratedComponentBlock(
+                block_id=f"b-{component.component_id}",
+                section_id=order.section.id,
+                component_id=component.component_id,
+                section_field=field,
+                position=position,
+                data={"body": component.content_intent, "emphasis": []},
+                source_work_order_id=order.work_order_id,
+            )
+            await emit(
+                "component_ready",
+                {
+                    "component_id": block.component_id,
+                    "section_id": block.section_id,
+                    "section_field": block.section_field,
+                    "data": block.data,
+                },
+            )
+            blocks.append(block)
+        return blocks
 
     async def stub_questions(order, emit, **_: object) -> list[GeneratedQuestionBlock]:
         _ = order
