@@ -170,6 +170,9 @@ LECTIO COMPONENT CONTRACTS:
 STRICT RULES:
 - Generate only the components listed above. Do not add others.
 - Do not add diagrams, questions, or visuals. Those are handled separately.
+- If writing practice-like text without an attached diagram, never reference a visual:
+  no "this shape", "the figure", "shown below", or "look at"; state all dimensions and facts in words.
+- explanation.emphasis must contain at most 3 items; definition.related_terms must contain at most 3 items.
 - Do not change anchor facts, units, or fixed terms.
 - Do not change question difficulty or numbering.
 - Each section_field key in your output must exactly match the

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import logging
 
 from v3_blueprint.models import ProductionBlueprint, QuestionPlanItem
 from v3_blueprint.compiler import BlueprintCompiler
@@ -26,6 +27,8 @@ from v3_execution.models import (
 )
 from generation.v3_studio.signal_map import derive_support_adaptations
 
+logger = logging.getLogger(__name__)
+
 COMPONENT_TO_VISUAL_MODE: dict[str, str] = {
     "diagram-block": "diagram",
     "diagram-series": "diagram_series",
@@ -33,6 +36,44 @@ COMPONENT_TO_VISUAL_MODE: dict[str, str] = {
     "timeline-block": "diagram",
     "worked-example-card": "diagram",
 }
+
+
+def _norm_words(text: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", text.lower())
+
+
+def _has_long_caption_overlap(item: str, reference_texts: list[str]) -> bool:
+    item_words = _norm_words(item)
+    if len(item_words) < 6:
+        return False
+    item_norm = " ".join(item_words)
+    for reference in reference_texts:
+        ref_words = _norm_words(reference)
+        if len(ref_words) < 6:
+            continue
+        ref_norm = " ".join(ref_words)
+        if item_norm in ref_norm or ref_norm in item_norm:
+            return True
+    return False
+
+
+def _drop_caption_like_must_show(
+    items: list[str],
+    *,
+    reference_texts: list[str],
+    visual_id: str,
+) -> list[str]:
+    kept: list[str] = []
+    for item in items:
+        if _has_long_caption_overlap(item, reference_texts):
+            logger.warning(
+                "Dropped caption-like must_show item for visual_id=%s item=%r",
+                visual_id,
+                item[:160],
+            )
+            continue
+        kept.append(item)
+    return kept
 
 
 def _truth_from_blueprint(blueprint: ProductionBlueprint) -> list[SourceOfTruthEntry]:
@@ -259,6 +300,12 @@ def compile_execution_bundle(
             source_question_ids=vis.source_question_ids,
         )
         visual_id = f"vis-{vis.section_id}-{idx}"
+        caption_references = [vis.subject, vis.visual_job, vis.strategy]
+        must_show = _drop_caption_like_must_show(
+            vis.must_show,
+            reference_texts=caption_references,
+            visual_id=visual_id,
+        )
         plan = VisualPlanItem(
             id=visual_id,
             attaches_to=vis.section_id,
@@ -266,7 +313,7 @@ def compile_execution_bundle(
             mode=mode,
             visual_style=vis.visual_style,
             purpose=vis.subject,
-            must_show=vis.must_show,
+            must_show=must_show,
             must_not_show=vis.must_not_show,
             frames=frames,
         )

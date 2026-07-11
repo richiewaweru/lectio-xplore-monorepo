@@ -19,6 +19,7 @@ RepairExecutor = Literal[
 IssueCategory = Literal[
     "missing_planned_content",
     "extra_unplanned_content",
+    "repeated_content",
     "anchor_drift",
     "visual_mismatch",
     "visual_generation_failed",

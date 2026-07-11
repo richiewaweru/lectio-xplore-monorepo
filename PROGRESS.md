@@ -1,5 +1,70 @@
 # Lesson Builder Merge Progress
 
+## Addendum Completion Pass C0-C5 — 2026-07-11
+
+**Classification**: major
+**Root cause**: The post-Phase-11 addendum items were partially implemented; diagnostics, deterministic review, schema trim policy, visual prompt/QC hygiene, fixtures, and display-title approval still had gaps.
+
+### Progress
+- [x] Reproduced/verified the missing items from the handoff.
+- [x] Checked in production regression fixtures for generation `5aed3804-b11b-4209-9fd5-2357492d15f2`.
+- [x] Fixed visual-delivered component diagnostics so ready visuals do not appear as missing writer output.
+- [x] Made planned counters authoritative from planning artifact counts.
+- [x] Completed reviewer gaps: extra-question severity, duplicate-question detection, visual-reference detection, and main/recheck wiring.
+- [x] Added closed trim allowlist for `explanation.emphasis` and `definition.related_terms`; all semantic arrays remain render-as-is.
+- [x] Confirmed the schema warning banner string is absent from `frontend/src`.
+- [x] Added no-visual-reference prompt rules to question and section writer prompts.
+- [x] Added visual caption hygiene in visual prompt, stage-2 planner prompt, compiler defensive drop, and visual QC prompt.
+- [x] Added optional `display_title` through approval/state/planning/report/export and frontend title input.
+- [x] Ran targeted backend and frontend validation.
+
+### Verify-First Checklist
+
+- [x] C0 fixtures: built from production DB row; `gen_5aed3804_pack.json` and `gen_5aed3804_blueprint.json` present under `backend/tests/fixtures`.
+- [x] C1a false missing visual diagnostics: fixed in `V3SectionBuilder`; ready visual blocks satisfy external visual fields.
+- [x] C1b planned counters: fixed through planning artifact summary counts; regression asserts component/question/visual counts.
+- [x] C2a main-pass reviewer wiring: already present and retained.
+- [x] C2b extra-question severity: changed to `minor`.
+- [x] C2c duplicate questions: added `check_duplicate_questions`, `repeated_content`, main pass, recheck map, and tests.
+- [x] C3 trim allowlist: added `TRIM_ALLOWLIST` with the two allowed fields; trim warnings are not ReviewIssues.
+- [x] C3 UI banner: `Schema capacity warnings` has zero matches in `frontend/src`.
+- [x] C3 Lectio read-only slice audit: findings recorded below; no Lectio files changed.
+- [x] C4 visual-reference-without-visual: prompt rule and deterministic check added.
+- [x] C5a caption hygiene: prompt/planner/QC/defensive compiler drop added.
+- [x] C5b `display_title`: backend + frontend approval wiring added.
+
+### Validation Evidence
+
+- Backend targeted tests: `uv run pytest tests/fixtures/test_v3_addendum_fixtures.py tests/v3_execution/test_section_builder_tolerant.py tests/v3_execution/test_lectio_validation_trim_policy.py tests/v3_execution/test_visual_prompt_style.py tests/v3_execution/test_compile_orders_series_frames.py tests/v3_review/test_v3_review_deterministic.py tests/generation/test_planning_artifact.py tests/generation/test_v3_generation_writer.py tests/media/test_visual_qc_prompt.py -q` passed (`46 passed`, one existing Pydantic warning).
+- Backend touched-area tests: `uv run pytest tests/generation tests/v3_execution tests/v3_review tests/media -q` passed (`190 passed`, one existing Pydantic warning).
+- Backend lint: `uv run ruff check src ...` for touched backend tests passed.
+- Frontend targeted tests: `npm run test -- src/lib/api/v3.test.ts src/routes/studio/page.test.ts` passed (`30 passed`).
+- Frontend check: `npm run check` passed (`0 errors`, `0 warnings`).
+
+### Grep Checkpoint
+
+- Fixtures checked in: `gen_5aed3804_pack.json`, `gen_5aed3804_blueprint.json`.
+- Completeness fix: `rg "was not delivered" backend/src/v3_execution/assembly` finds the new visual delivery warning branches.
+- Duplicate check: `check_duplicate_questions` defined, in main pass, in `RECHECK_MAP`, and exported.
+- Visual-reference check: `check_visual_text_references` defined, in main pass, in `RECHECK_MAP`, and exported.
+- Trim allowlist: `TRIM_ALLOWLIST` exists in `backend/src/v3_execution/runtime/lectio_validation.py` with two entries.
+- Banner gone: `rg "Schema capacity warnings" frontend/src` returns zero matches.
+- Caption constraint: `rg "inside the image" backend/src/v3_execution/prompts` finds the visual prompt constraint.
+- `display_title`: present in backend approval/planning/report/title paths and frontend approval UI/API.
+- Extra-question severity: remaining `severity="major"` matches are unrelated checks; `check_no_extra_questions` now emits `minor`.
+
+### Lectio Read-Only Slice Audit
+
+- `C:\Projects\lectio\src\lib\components\lectio\DiagramCompare.svelte:239` uses `afterDetails.slice(0, visibleAfterCount)` for progressive reveal.
+- `C:\Projects\lectio\src\lib\components\lectio\PracticeStack.svelte:156` uses `problem.hints.slice(0, shown)` for hint reveal.
+- `C:\Projects\lectio\src\lib\components\lectio\ProcessSteps.svelte:24` uses `content.steps.slice(0, visibleSteps)` only in `step-reveal` mode.
+- `C:\Projects\lectio\src\lib\components\lectio\WorkedExampleCard.svelte:33` uses `content.steps.slice(0, revealed)` only in `step-reveal` mode.
+
+### Risks and Follow-Up
+
+- The saved production fixture did not contain an exact duplicate question string in the question-bearing fields after normalization, so duplicate-question behavior is covered by a minimal deterministic regression while the fixture replay asserts the extra-question and orphaned visual-reference defects actually present in the saved pack.
+- Manual real-provider rerun, PDF visual inspection, and Railway deploy verification remain operational validation steps outside this local code/test pass.
+
 Goal: Merge the Lesson Builder into the Textbook Agent as a polished, teacher-owned editing workspace.
 Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation-guide.md`
 

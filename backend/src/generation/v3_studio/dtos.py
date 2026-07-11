@@ -129,6 +129,12 @@ class V3ChunkedRegenerateRequest(BaseModel):
     note: str = ""
 
 
+class V3ChunkedApproveRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    display_title: str | None = Field(default=None, max_length=120)
+
+
 class V3ChunkedRetrySectionRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
@@ -146,6 +152,7 @@ class V3ChunkedPlanStateDTO(BaseModel):
     blueprint_id: str | None = None
     execution_started: bool = False
     next_action: str | None = None
+    display_title: str | None = None
     inferred_lesson_mode: LessonMode | None = None
     lesson_mode_confidence: Literal["low", "high"] | None = None
 
@@ -164,6 +171,7 @@ class V3GenerateStartRequest(BaseModel):
     blueprint_id: str
     template_id: str = "guided-concept-path"
     blueprint: dict[str, Any] | None = None
+    display_title: str | None = Field(default=None, max_length=120)
 
 
 class V3GenerateStartResponse(BaseModel):
@@ -228,6 +236,7 @@ class ProductionBlueprintEnvelope(BaseModel):
 __all__ = [
     "AdjustBlueprintRequest",
     "BlueprintPreviewDTO",
+    "V3ChunkedApproveRequest",
     "V3ChunkedPlanStartRequest",
     "V3ChunkedPlanStateDTO",
     "V3ChunkedRegenerateRequest",

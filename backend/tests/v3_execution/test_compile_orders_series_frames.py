@@ -117,6 +117,26 @@ def test_compile_orders_dependency_uses_source_question_ids() -> None:
     assert order.visual.must_show == ["clear compound outlines", "dimension labels where needed"]
 
 
+def test_compile_orders_drops_caption_like_must_show_item() -> None:
+    bp = _load_example("amara_compound_area.json")
+    visual = next(v for v in bp.visual_strategy.visuals if v.section_id == "practice")
+    visual.subject = "A full sentence caption explaining how to split the compound shape into rectangles"
+    visual.must_show = [
+        "A full sentence caption explaining how to split the compound shape into rectangles",
+        "dimension labels",
+    ]
+
+    bundle = compile_execution_bundle(
+        bp,
+        generation_id="g1",
+        blueprint_id="b1",
+        template_id="guided-concept-path",
+    )
+    order = next(o for o in bundle.visual_orders if o.visual.attaches_to == "practice")
+
+    assert order.visual.must_show == ["dimension labels"]
+
+
 def test_compile_orders_preserves_visual_style_and_defaults_unknown_to_none() -> None:
     bp = _load_example("amara_compound_area.json")
     visual = next(v for v in bp.visual_strategy.visuals if v.section_id == "practice")

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
+from contracts.lectio import _EXTERNAL_FIELDS, get_section_field_for_component
 from v3_blueprint.models import ProductionBlueprint
 from v3_execution.component_aliases import canonical_component_id
 from v3_execution.models import (
@@ -13,6 +14,19 @@ from v3_execution.models import (
     SectionAssemblyDiagnostic,
 )
 from v3_execution.runtime.lectio_validation import validate_section_content
+
+
+def _visual_has_payload(block: GeneratedVisualBlock) -> bool:
+    return bool(block.image_url or block.html_content)
+
+
+def _visual_status_for_section(
+    visual_blocks: list[GeneratedVisualBlock],
+) -> str | None:
+    for block in visual_blocks:
+        if block.status in {"failed", "omitted_quality"}:
+            return block.status
+    return None
 
 
 class V3SectionBuilder:
@@ -69,6 +83,7 @@ class V3SectionBuilder:
 
             for comp in planned_components:
                 planned_id = canonical_component_id(comp.component)
+                planned_field = get_section_field_for_component(planned_id)
                 block = next(
                     (
                         b
@@ -78,6 +93,21 @@ class V3SectionBuilder:
                     None,
                 )
                 if block is None:
+                    if planned_field in _EXTERNAL_FIELDS:
+                        visual_status = _visual_status_for_section(
+                            visuals_by_attachment.get(section_id, [])
+                        )
+                        if any(
+                            _visual_has_payload(v)
+                            for v in visuals_by_attachment.get(section_id, [])
+                        ):
+                            continue
+                        if visual_status:
+                            missing_visuals.append(planned_id)
+                            section_warnings.append(
+                                f"Planned visual for {planned_id}@{section_id} was not delivered (status: {visual_status})."
+                            )
+                            continue
                     missing_components.append(planned_id)
                     section_warnings.append(
                         f"Missing component output for {planned_id}@{section_id}; section rendered without it."
@@ -124,11 +154,20 @@ class V3SectionBuilder:
                 }
 
             visuals_for_section = visuals_by_attachment.get(section_id, [])
-            if section_plan.visual_required and not visuals_for_section:
+            ready_visuals_for_section = [
+                visual for visual in visuals_for_section if _visual_has_payload(visual)
+            ]
+            if section_plan.visual_required and not ready_visuals_for_section:
                 missing_visuals.append("required_visual")
-                section_warnings.append(
-                    f"Missing visuals for section {section_id}; section rendered without required visual."
-                )
+                failed_status = _visual_status_for_section(visuals_for_section)
+                if failed_status:
+                    section_warnings.append(
+                        f"Planned visual for required_visual@{section_id} was not delivered (status: {failed_status})."
+                    )
+                else:
+                    section_warnings.append(
+                        f"Missing visuals for section {section_id}; section rendered without required visual."
+                    )
 
             diagrams = [v for v in visuals_for_section if v.image_url]
 

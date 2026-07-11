@@ -78,7 +78,7 @@ async def export_generation_pdf(
     final_path = temp_dir / f"{generation.id}-{export_id}-final.pdf"
 
     try:
-        cover_title = clean_cover_title(document.subject or generation.subject)
+        cover_title = clean_cover_title(generation.subject or document.subject)
         cover_started = time.perf_counter()
         _log_stage("cover_generation", "started", generation.id, request_id)
         generate_cover_pdf(

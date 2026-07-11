@@ -64,10 +64,14 @@ export async function startChunkedPlan(payload: {
 	return res.json() as Promise<V3ChunkedPlanState>;
 }
 
-export async function approveChunkedPlan(generationId: string): Promise<V3ChunkedPlanState> {
+export async function approveChunkedPlan(
+	generationId: string,
+	payload: { display_title?: string } = {}
+): Promise<V3ChunkedPlanState> {
 	const res = await apiFetch(`/api/v1/v3/chunked/${encodeURIComponent(generationId)}/approve`, {
 		method: 'POST',
-		headers: bearerHeaders()
+		headers: bearerHeaders(),
+		body: JSON.stringify({ display_title: payload.display_title ?? null })
 	});
 	await ensureOk(res, 'Could not start section expansion.');
 	return res.json() as Promise<V3ChunkedPlanState>;

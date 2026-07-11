@@ -147,6 +147,63 @@ def test_missing_component_marks_section_incomplete() -> None:
     assert any(d.missing_components for d in diagnostics)
 
 
+def test_ready_visual_delivered_component_does_not_emit_missing_component_warning() -> None:
+    bp = _load_example("amara_compound_area.json")
+    builder = V3SectionBuilder()
+    components = [
+        block for block in _build_component_blocks(bp) if block.component_id != "diagram-block"
+    ]
+
+    _sections, warnings, diagnostics = builder.build_sections(
+        bp,
+        components,
+        _build_question_blocks(bp),
+        _build_visual_blocks(bp),
+        template_id="guided-concept-path",
+        answer_key=None,
+    )
+
+    assert not any("Missing component output for diagram-block" in warning for warning in warnings)
+    assert all("diagram-block" not in d.missing_components for d in diagnostics)
+
+
+def test_failed_visual_delivered_component_gets_visual_delivery_warning() -> None:
+    bp = _load_example("amara_compound_area.json")
+    builder = V3SectionBuilder()
+    failed_section = next(section.section_id for section in bp.sections if section.visual_required)
+    components = [
+        block for block in _build_component_blocks(bp) if block.component_id != "diagram-block"
+    ]
+    visuals = [
+        visual for visual in _build_visual_blocks(bp) if visual.attaches_to != failed_section
+    ]
+    visuals.append(
+        GeneratedVisualBlock(
+            visual_id="v-failed",
+            attaches_to=failed_section,
+            mode="diagram",
+            source_work_order_id="wo-v-failed",
+            status="failed",
+            error_message="provider timeout",
+            component_id="diagram-block",
+        )
+    )
+
+    _sections, warnings, diagnostics = builder.build_sections(
+        bp,
+        components,
+        _build_question_blocks(bp),
+        visuals,
+        template_id="guided-concept-path",
+        answer_key=None,
+    )
+
+    assert any("was not delivered (status: failed)" in warning for warning in warnings)
+    failed_diag = next(d for d in diagnostics if d.section_id == failed_section)
+    assert "diagram-block" not in failed_diag.missing_components
+    assert failed_diag.status == "incomplete"
+
+
 def test_one_section_can_fail_without_collapsing_whole_pack() -> None:
     bp = _load_example("amara_compound_area.json")
     builder = V3SectionBuilder()

@@ -57,6 +57,7 @@ def test_build_planning_artifact_contains_full_blueprint() -> None:
 
     derived = artifact["derived"]
     assert derived["title"] == blueprint.metadata.title
+    assert derived["display_title"] == blueprint.metadata.title
     assert derived["subject"] == blueprint.metadata.subject
     assert derived["resource_type"] == blueprint.lesson.resource_type
     assert derived["section_count"] == len(blueprint.sections)
@@ -67,6 +68,22 @@ def test_build_planning_artifact_contains_full_blueprint() -> None:
     assert derived["visual_required_count"] == sum(
         1 for section in blueprint.sections if section.visual_required
     )
+
+
+def test_build_planning_artifact_preserves_display_title() -> None:
+    blueprint = _example_bp("amara_compound_area.json")
+    artifact = build_planning_artifact(
+        generation_id="gen-1",
+        blueprint_id="bp-1",
+        template_id="guided-concept-path",
+        blueprint=blueprint,
+        form=None,
+        display_title="Teacher Edited Title",
+    )
+
+    assert artifact["display_title"] == "Teacher Edited Title"
+    assert artifact["derived"]["display_title"] == "Teacher Edited Title"
+    assert planning_summary_from_artifact(artifact)["display_title"] == "Teacher Edited Title"
 def test_planning_summary_from_artifact_is_lightweight() -> None:
     blueprint = _example_bp("amara_compound_area.json")
     artifact = build_planning_artifact(

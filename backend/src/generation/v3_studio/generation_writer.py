@@ -75,6 +75,38 @@ def _count_delivered_questions(sections: list[dict[str, Any]]) -> int:
     return delivered
 
 
+def _planning_counts_from_report(report: dict[str, Any]) -> dict[str, int]:
+    planning = report.get("planning")
+    if not isinstance(planning, dict):
+        return {}
+    counts: dict[str, int] = {}
+    mapping = {
+        "planned_components": "component_count",
+        "planned_visuals": "visual_required_count",
+        "planned_questions": "question_count",
+        "planned_sections": "section_count",
+    }
+    for summary_key, planning_key in mapping.items():
+        try:
+            value = int(planning.get(planning_key) or 0)
+        except (TypeError, ValueError):
+            value = 0
+        if value > 0:
+            counts[summary_key] = value
+    return counts
+
+
+def _apply_planning_counts(report: dict[str, Any], *, section_count: int) -> dict[str, Any]:
+    summary = report.get("summary")
+    if not isinstance(summary, dict):
+        summary = {}
+    for key, value in _planning_counts_from_report(report).items():
+        summary[key] = value
+    summary.setdefault("planned_sections", section_count)
+    report["summary"] = summary
+    return report
+
+
 class V3GenerationWriter:
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._session_factory = session_factory
@@ -214,6 +246,8 @@ class V3GenerationWriter:
             summary = report.get("summary", {})
             if not isinstance(summary, dict):
                 summary = {}
+            report = _apply_planning_counts(report, section_count=model.section_count or 0)
+            summary = report["summary"]
             planned_sections = int(summary.get("planned_sections") or model.section_count or 0)
             planned_visuals = int(summary.get("planned_visuals") or 0)
             planned_questions = int(summary.get("planned_questions") or 0)
@@ -423,6 +457,10 @@ class V3GenerationWriter:
                 section_count=model.section_count or 0,
             )
             report["planning"] = planning_summary_from_artifact(artifact)
+            display_title = report["planning"].get("display_title")
+            if isinstance(display_title, str) and display_title.strip():
+                report["title"] = display_title.strip()
+            report = _apply_planning_counts(report, section_count=model.section_count or 0)
             model.report_json = report
 
             await session.commit()
@@ -460,6 +498,8 @@ class V3GenerationWriter:
             summary = report.get("summary", {})
             if not isinstance(summary, dict):
                 summary = {}
+            report = _apply_planning_counts(report, section_count=model.section_count or 0)
+            summary = report["summary"]
             planned_sections = int(summary.get("planned_sections") or model.section_count or 0)
             planned_visuals = int(summary.get("planned_visuals") or 0)
             planned_questions = int(summary.get("planned_questions") or 0)
@@ -578,6 +618,9 @@ class V3GenerationWriter:
         summary.setdefault("delivered_visuals", 0)
         summary.setdefault("planned_questions", 0)
         summary.setdefault("delivered_questions", 0)
+        report["summary"] = summary
+        report = _apply_planning_counts(report, section_count=section_count)
+        summary = report["summary"]
         summary.setdefault("blocking_issues", 0)
         summary.setdefault("major_issues", 0)
         summary.setdefault("minor_issues", 0)

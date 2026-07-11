@@ -250,7 +250,11 @@ describe('studio chunked URL resume', () => {
 
 		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
 
-		await waitFor(() => expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-approve'));
+		await waitFor(() =>
+			expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-approve', {
+				display_title: 'Goal'
+			})
+		);
 		expect(v3Studio.stage).toBe('fill');
 		expect(v3Studio.canvas).toHaveLength(0);
 		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
@@ -321,7 +325,9 @@ describe('studio chunked URL resume', () => {
 		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
 
 		await waitFor(() =>
-			expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-approve-blocked')
+			expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-approve-blocked', {
+				display_title: 'Goal'
+			})
 		);
 		expect(v3Studio.stage).toBe('skeleton');
 		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();

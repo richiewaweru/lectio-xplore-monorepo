@@ -263,7 +263,8 @@ describe('connectV3StudioGenerationStream', () => {
 		await approveChunkedPlan('gen-1');
 		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/chunked/gen-1/approve', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' }
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ display_title: null })
 		});
 
 		await getChunkedPlanStatus('gen-1');

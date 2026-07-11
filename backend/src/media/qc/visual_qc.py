@@ -45,7 +45,9 @@ Return JSON with:
 - correction_hint: one concise prompt correction if rejected
 
 Accept if the image is usable even if imperfect. Reject only for garbled labels,
-missing required content, unsafe/inappropriate content, or clearly unusable output.
+missing required content, unsafe/inappropriate content, clearly unusable output,
+or full-sentence caption/title text inside the image. If rejecting for caption/title
+text, set correction_hint to "remove all sentence text from the image".
 
 Purpose: {order.visual.purpose}
 Mode: {order.visual.mode}

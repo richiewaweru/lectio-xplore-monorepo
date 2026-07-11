@@ -67,6 +67,11 @@ _SKIP_TEXT_KEYS = frozenset(
 _VISUAL_COMPONENT_IDS = frozenset(
     {"diagram-block", "diagram-series", "diagram-compare", "simulation-block"}
 )
+_VISUAL_REFERENCE_RE = re.compile(
+    r"\b(this|the)\s+(shape|figure|diagram|image|picture)\b|shown\s+(below|above)|look\s+at\b",
+    re.IGNORECASE,
+)
+_PUNCT_RE = re.compile(r"[^\w\s]", re.UNICODE)
 
 
 def _walk_student_strings(obj: Any, key: str | None = None) -> list[str]:
@@ -102,6 +107,43 @@ def collect_student_facing_text(draft_pack: DraftPack) -> str:
                     if isinstance(val, str):
                         parts.append(val)
     return "\n".join(parts)
+
+
+def _normalize_question_text(text: str) -> str:
+    return re.sub(r"\s+", " ", _PUNCT_RE.sub(" ", text.lower())).strip()
+
+
+def _question_strings(draft_pack: DraftPack) -> list[tuple[str, str, str, int | None, dict[str, Any]]]:
+    out: list[tuple[str, str, str, int | None, dict[str, Any]]] = []
+    for sec in draft_pack.sections:
+        if not isinstance(sec, dict):
+            continue
+        sid = str(sec.get("section_id") or "<unknown>")
+        practice = sec.get("practice")
+        if isinstance(practice, dict):
+            problems = practice.get("problems")
+            if isinstance(problems, list):
+                for idx, item in enumerate(problems):
+                    if isinstance(item, dict) and isinstance(item.get("question"), str):
+                        out.append(
+                            (
+                                sid,
+                                f"{sid}.practice.problems[{idx}].question",
+                                item["question"],
+                                idx,
+                                item,
+                            )
+                        )
+        short_answer = sec.get("short_answer")
+        if isinstance(short_answer, dict) and isinstance(short_answer.get("question"), str):
+            out.append((sid, f"{sid}.short_answer.question", short_answer["question"], None, short_answer))
+        quiz = sec.get("quiz")
+        if isinstance(quiz, dict) and isinstance(quiz.get("question"), str):
+            out.append((sid, f"{sid}.quiz.question", quiz["question"], None, quiz))
+        reflection = sec.get("reflection")
+        if isinstance(reflection, dict) and isinstance(reflection.get("prompt"), str):
+            out.append((sid, f"{sid}.reflection.prompt", reflection["prompt"], None, reflection))
+    return out
 
 
 def check_planned_sections_exist(
@@ -235,18 +277,17 @@ def check_no_extra_questions(
 ) -> list[ReviewIssue]:
     issues: list[ReviewIssue] = []
     want = _questions_per_section(blueprint)
-    by_section = {s["section_id"]: s for s in draft_pack.sections if isinstance(s, dict)}
-    for sid, bucket in by_section.items():
-        practice = bucket.get("practice") if isinstance(bucket, dict) else None
-        probs = practice.get("problems") if isinstance(practice, dict) else None
-        got = len(probs) if isinstance(probs, list) else 0
+    got_by_section: dict[str, int] = {}
+    for sid, _path, _text, _idx, _payload in _question_strings(draft_pack):
+        got_by_section[sid] = got_by_section.get(sid, 0) + 1
+    for sid, got in got_by_section.items():
         expected = want.get(sid, 0)
         if got > expected:
             issues.append(
                 _issue(
-                    severity="major",
+                    severity="minor",
                     category="extra_unplanned_content",
-                    message=f"Section '{sid}' has {got} practice items but blueprint plans {expected}.",
+                    message=f"Section '{sid}' has {got} question-bearing items but blueprint plans {expected}.",
                     blueprint_ref="question_plan",
                     generated_ref=f"{sid}.practice",
                     executor="question_writer",
@@ -326,6 +367,29 @@ def check_visuals_attach_to_valid_targets(
     return issues
 
 
+def check_duplicate_questions(draft_pack: DraftPack) -> list[ReviewIssue]:
+    issues: list[ReviewIssue] = []
+    seen: dict[str, str] = {}
+    for _sid, path, text, _idx, _payload in _question_strings(draft_pack):
+        normalized = _normalize_question_text(text)
+        if not normalized:
+            continue
+        first_path = seen.get(normalized)
+        if first_path:
+            issues.append(
+                _issue(
+                    severity="minor",
+                    category="repeated_content",
+                    message=f"Question appears twice: {first_path} and {path}.",
+                    generated_ref=path,
+                    executor="question_writer",
+                )
+            )
+        else:
+            seen[normalized] = path
+    return issues
+
+
 def check_visual_failures(
     draft_pack: DraftPack,
 ) -> list[ReviewIssue]:
@@ -354,6 +418,42 @@ def check_visual_failures(
                         "image omitted by quality gate: "
                         f"{block.error_message or 'quality criteria not met'}"
                     ),
+                )
+            )
+    return issues
+
+
+def check_visual_text_references(
+    blueprint: ProductionBlueprint,
+    draft_pack: DraftPack,
+) -> list[ReviewIssue]:
+    planned_by_section: dict[str, list[bool]] = {}
+    for item in blueprint.question_plan:
+        planned_by_section.setdefault(item.section_id, []).append(item.diagram_required)
+
+    issues: list[ReviewIssue] = []
+    for sid, path, text, index, payload in _question_strings(draft_pack):
+        if isinstance(payload, dict) and isinstance(payload.get("diagram"), dict):
+            continue
+        planned = planned_by_section.get(sid, [])
+        diagram_required = False
+        if index is not None and index < len(planned):
+            diagram_required = planned[index]
+        elif planned:
+            diagram_required = any(planned)
+        if diagram_required:
+            continue
+        match = _VISUAL_REFERENCE_RE.search(text)
+        if match:
+            issues.append(
+                _issue(
+                    severity="minor",
+                    category="visual_mismatch",
+                    message=f"Question references a visual without a planned diagram: '{match.group(0)}' at {path}.",
+                    blueprint_ref=f"question_plan:{sid}",
+                    generated_ref=path,
+                    executor="question_writer",
+                    repair_target_id=f"questions:{sid}",
                 )
             )
     return issues
@@ -507,6 +607,8 @@ def check_lectio_schema_validity(
             continue
         sid = sec.get("section_id", "<unknown>")
         for warn in sec.get("_schema_warnings", []):
+            if isinstance(warn, str) and warn.startswith("trimmed:"):
+                continue
             issues.append(
                 _issue(
                     severity="minor",
@@ -617,6 +719,8 @@ RECHECK_MAP: dict[str, list[CheckFn]] = {
     ],
     "question": [
         lambda bp, dp: check_planned_questions_exist(bp, dp),
+        lambda bp, dp: check_duplicate_questions(dp),
+        lambda bp, dp: check_visual_text_references(bp, dp),
         lambda bp, dp: check_expected_answers_preserved(bp, dp),
         lambda bp, dp: check_anchor_facts(bp, dp),
     ],
@@ -654,6 +758,7 @@ __all__ = [
     "check_anchor_facts",
     "check_answer_key_entries",
     "check_component_ids_in_lectio_contract",
+    "check_duplicate_questions",
     "check_expected_answers_preserved",
     "check_internal_artifact_leaks",
     "check_lectio_schema_validity",
@@ -665,6 +770,7 @@ __all__ = [
     "check_planned_sections_exist",
     "check_planned_visuals_exist",
     "check_visual_failures",
+    "check_visual_text_references",
     "check_visuals_attach_to_valid_targets",
     "collect_student_facing_text",
     "run_rechecks_for_target",

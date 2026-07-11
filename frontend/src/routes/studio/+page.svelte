@@ -52,6 +52,7 @@
 	let includeAnswers = $state(true);
 	let builderLoading = $state(false);
 	let builderError = $state<string | null>(null);
+	let displayTitle = $state('');
 	const currentExportPolicy = $derived(getBookletExportPolicy(v3Studio.bookletStatus));
 	const currentPrintReadiness = $derived(
 		getBookletPrintReadiness(v3Studio.bookletStatus, v3Studio.activePack)
@@ -95,6 +96,7 @@
 		builderError = null;
 		pdfOpen = false;
 		pdfError = null;
+		displayTitle = '';
 		resetV3Studio();
 	}
 
@@ -185,6 +187,7 @@
 		if (resolved.stage === 'plan_ready') {
 			disconnectActiveChunkedStream();
 			clearRenderedBookletState();
+			displayTitle = resolved.display_title ?? resolved.structural_plan?.lesson_intent.goal ?? '';
 			if (resolved.structural_plan) {
 				v3Studio.canvas = buildStructuralPlanCanvas(resolved.structural_plan);
 			}
@@ -194,6 +197,7 @@
 		if (resolved.stage === 'assembly_blocked') {
 			disconnectActiveChunkedStream();
 			clearRenderedBookletState();
+			displayTitle = resolved.display_title ?? displayTitle;
 			if (resolved.structural_plan) {
 				v3Studio.canvas = buildStructuralPlanCanvas(resolved.structural_plan);
 			}
@@ -534,7 +538,7 @@
 		}
 		stage2Progress = { completed: [], failed: [], active: null };
 		try {
-			const next = await approveChunkedPlan(generationId);
+			const next = await approveChunkedPlan(generationId, { display_title: displayTitle.trim() });
 			v3Studio.chunkedState = next;
 			hydrateChunkedSectionState(next);
 			syncStage2Progress(next);
@@ -775,6 +779,17 @@
 				</div>
 			{/if}
 			<V3PlanPreview plan={v3Studio.chunkedState.structural_plan} />
+			<div class="mx-auto max-w-3xl px-4 pb-2">
+				<label class="block text-sm font-medium text-foreground" for="v3-display-title">
+					Lesson title
+				</label>
+				<input
+					id="v3-display-title"
+					class="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+					bind:value={displayTitle}
+					maxlength="120"
+				/>
+			</div>
 			<V3PlanActions
 				failedSections={v3Studio.chunkedState.failed_sections}
 				isRunning={v3Studio.chunkedState.stage === 'stage2_running'}

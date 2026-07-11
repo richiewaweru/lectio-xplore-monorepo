@@ -209,6 +209,14 @@ async def test_v3_generation_writer_write_planning_artifact_persists_json_and_re
         assert planning["blueprint_id"] == "bp-planning"
         assert planning["has_full_planning_artifact"] is True
         assert "blueprint" not in planning
+        summary = model.report_json["summary"]
+        assert summary["planned_components"] == sum(
+            len(section.components) for section in blueprint.sections
+        )
+        assert summary["planned_questions"] == len(blueprint.question_plan)
+        assert summary["planned_visuals"] == sum(
+            1 for section in blueprint.sections if section.visual_required
+        )
 
         read_back = await writer.read_planning_artifact(generation_id, "writer-user")
         assert read_back is not None

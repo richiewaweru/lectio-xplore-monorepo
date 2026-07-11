@@ -3,6 +3,11 @@ from __future__ import annotations
 from v3_execution.prompts.formatting import format_source_of_truth
 from v3_execution.models import VisualGeneratorWorkOrder
 
+NO_CAPTION_TEXT_CONSTRAINT = (
+    "Do not render any caption, title, sentence, or explanatory text inside the image. "
+    "Short labels for dimensions or parts only. The caption is rendered by the document, never inside the image."
+)
+
 
 def format_anchor_for_visual(order: VisualGeneratorWorkOrder) -> str:
     if order.visual.uses_anchor_id:
@@ -80,6 +85,7 @@ VISUAL STYLE: {visual_style}
 
 STYLE REQUIREMENTS:
 {style_requirements}
+{NO_CAPTION_TEXT_CONSTRAINT}
 
 PURPOSE: {order.visual.purpose}
 
@@ -103,4 +109,4 @@ RESOURCE TYPE: {order.resource_type}
 """
 
 
-__all__ = ["build_visual_prompt", "format_anchor_for_visual"]
+__all__ = ["NO_CAPTION_TEXT_CONSTRAINT", "build_visual_prompt", "format_anchor_for_visual"]

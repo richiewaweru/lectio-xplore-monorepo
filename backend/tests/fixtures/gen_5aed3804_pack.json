@@ -1,0 +1,361 @@
+{
+  "answer_key": {
+    "answer_key_id": "5f09355c-e42b-47cb-83e0-06ed6311aea7",
+    "entries": [
+      {
+        "explanation": "",
+        "question_id": "q1",
+        "student_answer": "Area of first rectangle: 5 \u00d7 3 = 15 square units. Area of second rectangle: 3 \u00d7 2 = 6 square units. Total area: 15 + 6 = 21 square units."
+      },
+      {
+        "explanation": "",
+        "question_id": "q2",
+        "student_answer": "6 \u00d7 2 = 12 square units. 1 \u00d7 4 = 4 square units. 1 \u00d7 4 = 4 square units. Total area: 12 + 4 + 4 = 20 square units."
+      },
+      {
+        "explanation": "",
+        "question_id": "q3",
+        "student_answer": "You can find the area of each rectangle using the formula length \u00d7 width, and then add the areas together because the whole shape is made of those parts without overlap."
+      },
+      {
+        "explanation": "",
+        "question_id": "q4",
+        "student_answer": "30 square units"
+      }
+    ],
+    "source_work_order_id": "answer-key-main",
+    "style": "brief_explanations"
+  },
+  "blueprint_id": "0c966fd4-3094-4afc-85c3-1144e2517342",
+  "booklet_issues": [],
+  "generation_id": "5aed3804-b11b-4209-9fd5-2357492d15f2",
+  "kind": "v3_booklet_pack",
+  "section_diagnostics": [
+    {
+      "missing_components": [
+        "diagram-block"
+      ],
+      "missing_visuals": [],
+      "renderable": true,
+      "section_id": "orient",
+      "status": "incomplete",
+      "warnings": [
+        "Missing component output for diagram-block@orient; section rendered without it."
+      ]
+    },
+    {
+      "missing_components": [
+        "diagram-block"
+      ],
+      "missing_visuals": [],
+      "renderable": true,
+      "section_id": "build",
+      "status": "incomplete",
+      "warnings": [
+        "Missing component output for diagram-block@build; section rendered without it."
+      ]
+    },
+    {
+      "missing_components": [],
+      "missing_visuals": [],
+      "renderable": true,
+      "section_id": "model",
+      "status": "complete",
+      "warnings": []
+    },
+    {
+      "missing_components": [],
+      "missing_visuals": [],
+      "renderable": true,
+      "section_id": "practice",
+      "status": "complete",
+      "warnings": []
+    },
+    {
+      "missing_components": [],
+      "missing_visuals": [],
+      "renderable": true,
+      "section_id": "close",
+      "status": "complete",
+      "warnings": []
+    }
+  ],
+  "sections": [
+    {
+      "_component_order": [
+        "header",
+        "hook"
+      ],
+      "_component_positions": {
+        "header": 0,
+        "hook": 1
+      },
+      "diagram": {
+        "alt_text": "An L-shaped figure drawn on a grid, composed of two attached rectangles (4x3 and 2x2).",
+        "caption": "An L-shaped figure drawn on a grid, composed of two attached rectangles (4x3 and 2x2).",
+        "image_url": "https://storage.googleapis.com/lectio-bucket-1/5aed3804-b11b-4209-9fd5-2357492d15f2/orient/vis-orient-0.png"
+      },
+      "header": {
+        "grade_band": "primary",
+        "objectives": [
+          "You'll learn to break an irregular shape into rectangles and add their areas."
+        ],
+        "subject": "Mathematics",
+        "title": "What do we do with a shape that is not a rectangle?"
+      },
+      "hook": {
+        "anchor": "Finding area of an irregular shape.",
+        "body": "We know how to find the area of a rectangle, but what about this shape?",
+        "headline": "The L-Shape Puzzle.",
+        "question_options": [
+          "Multiply the length and width like a rectangle.",
+          "Break it into smaller rectangles and add their areas.",
+          "Count the squares inside the shape by guessing."
+        ],
+        "type": "question"
+      },
+      "section_id": "orient",
+      "template_id": "guided-concept-path"
+    },
+    {
+      "_component_order": [
+        "definition",
+        "key_fact",
+        "explanation"
+      ],
+      "_component_positions": {
+        "definition": 0,
+        "explanation": 2,
+        "key_fact": 1
+      },
+      "definition": {
+        "formal": "Separate a shape into non-overlapping rectangles whose areas can be computed.",
+        "plain": "Break a shape into smaller, simpler shapes.",
+        "related_terms": [
+          "rectangle",
+          "area"
+        ],
+        "term": "Decompose"
+      },
+      "diagram": {
+        "alt_text": "The L-shaped figure from the anchor decomposed into two rectangles on a grid.",
+        "caption": "The L-shaped figure from the anchor decomposed into two rectangles on a grid.",
+        "image_url": "https://storage.googleapis.com/lectio-bucket-1/5aed3804-b11b-4209-9fd5-2357492d15f2/build/vis-build-1.png"
+      },
+      "explanation": {
+        "body": "We can **decompose** our L-shape into two rectangles. One rectangle is 4 units by 3 units. The other is 2 units by 2 units. First, find the area of the larger rectangle using the formula: **Area of a rectangle = length \u00d7 width**. That gives $4 \\times 3 = 12$ square units. Next, do the same for the smaller rectangle: $2 \\times 2 = 4$ square units. Now add the parts: $12 + 4 = 16$ square units. The **total area** is the sum of the part areas. By breaking the shape into parts we already know, we can confidently find the area of more complex shapes.",
+        "emphasis": [
+          "decompose",
+          "rectangle",
+          "area of a rectangle",
+          "length \u00d7 width",
+          "total area",
+          "sum of the part areas",
+          "breaking the shape"
+        ]
+      },
+      "key_fact": {
+        "context": "You already know how to find the area of a rectangle. Now we will use this formula after breaking the shape apart.",
+        "fact": "Area of a rectangle = length \u00d7 width."
+      },
+      "section_id": "build",
+      "template_id": "guided-concept-path"
+    },
+    {
+      "_component_order": [
+        "worked_example",
+        "pitfall"
+      ],
+      "_component_positions": {
+        "pitfall": 1,
+        "worked_example": 0
+      },
+      "pitfall": {
+        "correction": "You must add all the part areas together to find the total area of the whole shape.",
+        "example": "In the worked example, we added $12 + 4$ to get $16$ square units, not just $12$ or $4$ alone.",
+        "misconception": "I found each rectangle's area, so I am done.",
+        "severity": "major",
+        "why": "Finding each rectangle's area gives you only the pieces, not the whole shape's area. Without adding, you have only parts of the answer."
+      },
+      "section_id": "model",
+      "template_id": "guided-concept-path",
+      "worked_example": {
+        "answer": "16 square units",
+        "conclusion": "You decomposed the shape into rectangles, used the area formula for each, and added the parts. Great job! The total area is **16 square units**.",
+        "setup": "Let's find the area of an L-shaped figure by breaking it into smaller, friendlier rectangles!",
+        "steps": [
+          {
+            "content": "Look at the L-shape. Imagine it made of two rectangles: a $4 \\times 3$ rectangle on top and a $2 \\times 2$ square on the bottom right.",
+            "label": "Split the shape"
+          },
+          {
+            "content": "Use the rectangle area formula, length $\\times$ width.\nTop: $4 \\times 3 = 12$.\nBottom: $2 \\times 2 = 4$.",
+            "formula": "4 \\times 3 = 12 \\qquad 2 \\times 2 = 4",
+            "label": "Find each rectangle's area"
+          },
+          {
+            "content": "Now combine them: $12 + 4 = 16$ square units. That's the total area of the whole L-shape.",
+            "formula": "12 + 4 = 16",
+            "label": "Add the areas together"
+          }
+        ],
+        "title": "Decomposing the L-Shape for Area"
+      }
+    },
+    {
+      "_component_order": [
+        "practice",
+        "short_answer",
+        "reflection"
+      ],
+      "_component_positions": {
+        "practice": 0,
+        "reflection": 2,
+        "short_answer": 1
+      },
+      "practice": {
+        "hints_visible_default": false,
+        "label": "Practice Questions",
+        "problems": [
+          {
+            "difficulty": "warm",
+            "hints": [],
+            "problem_type": "open",
+            "question": "A floor tile pattern is made up of two rectangles pushed together. One rectangle is 5 units long and 3 units wide. The other is 3 units long and 2 units wide. What is the total area of the pattern?"
+          },
+          {
+            "difficulty": "medium",
+            "hints": [],
+            "problem_type": "open",
+            "question": "Look at this shape! It's made of three rectangles: one is 6 units long and 2 units wide, and the other two are each 1 unit long and 4 units wide. What is the total area of the whole shape?"
+          },
+          {
+            "difficulty": "medium",
+            "hints": [],
+            "problem_type": "open",
+            "question": "How can you find the area of a shape that is made by joining different rectangles together? Explain your steps."
+          }
+        ],
+        "solutions_available": true
+      },
+      "reflection": {
+        "prompt": "What mistake should you watch out for when decomposing shapes? How can you avoid it?",
+        "space": 3.0,
+        "type": "open"
+      },
+      "section_id": "practice",
+      "short_answer": {
+        "lines": 3.0,
+        "mark_scheme": "Key points:\n- Rectangles have a known area formula (length \u00d7 width).\n- When a shape is split into non-overlapping rectangles, the sum of their areas gives the total area.",
+        "marks": 2.0,
+        "question": "Why does breaking a shape into rectangles help you find its area? Explain in your own words."
+      },
+      "template_id": "guided-concept-path"
+    },
+    {
+      "_component_order": [
+        "summary",
+        "quiz",
+        "what_next"
+      ],
+      "_component_positions": {
+        "quiz": 1,
+        "summary": 0,
+        "what_next": 2
+      },
+      "practice": {
+        "hints_visible_default": false,
+        "label": "Practice Questions",
+        "problems": [
+          {
+            "difficulty": "warm",
+            "hints": [],
+            "problem_type": "open",
+            "question": "A rectangle has a length of 10 units and a width of 3 units. What is its area?"
+          }
+        ],
+        "solutions_available": true
+      },
+      "quiz": {
+        "feedback_correct": "You remembered to add!",
+        "feedback_incorrect": "Don't forget to sum the parts.",
+        "options": [
+          {
+            "correct": true,
+            "explanation": "You added the areas: 6\u00d74 = 24 and 2\u00d73 = 6, total 30.",
+            "text": "30 sq units"
+          },
+          {
+            "correct": false,
+            "explanation": "That\u2019s only the larger rectangle. Remember to add both parts!",
+            "text": "24 sq units"
+          },
+          {
+            "correct": false,
+            "explanation": "That\u2019s only the smaller rectangle. Don\u2019t forget to add the larger one too.",
+            "text": "6 sq units"
+          },
+          {
+            "correct": false,
+            "explanation": "This doesn\u2019t match either part. Check your multiplication and addition.",
+            "text": "20 sq units"
+          }
+        ],
+        "question": "Find the total area of an L-shape made from a 6 by 4 rectangle and a 2 by 3 rectangle.",
+        "quiz_type": "multiple-choice"
+      },
+      "section_id": "close",
+      "summary": {
+        "closing": "You now have a superpower for measuring all kinds of shapes!",
+        "items": [
+          {
+            "text": "Decompose means breaking a shape into smaller rectangles."
+          },
+          {
+            "text": "Rectangle area = length \u00d7 width."
+          },
+          {
+            "text": "Total area is the sum of all part areas."
+          }
+        ]
+      },
+      "template_id": "guided-concept-path",
+      "what_next": {
+        "body": "Knowing how to add is just the start. Next, we'll subtract to find area of shapes with cutouts.",
+        "next": "Composite Shapes with Missing Sections",
+        "preview": "When a shape has a cutout, subtract!"
+      }
+    }
+  ],
+  "status": "final_ready",
+  "subject": "Mathematics",
+  "template_id": "guided-concept-path",
+  "visual_blocks": [
+    {
+      "alt_text": "An L-shaped figure drawn on a grid, composed of two attached rectangles (4x3 and 2x2).",
+      "attaches_to": "orient",
+      "caption": "An L-shaped figure drawn on a grid, composed of two attached rectangles (4x3 and 2x2).",
+      "component_id": "diagram-block",
+      "image_url": "https://storage.googleapis.com/lectio-bucket-1/5aed3804-b11b-4209-9fd5-2357492d15f2/orient/vis-orient-0.png",
+      "mode": "diagram",
+      "source_work_order_id": "vis-orient-0",
+      "status": "ready",
+      "visual_id": "vis-orient-0"
+    },
+    {
+      "alt_text": "The L-shaped figure from the anchor decomposed into two rectangles on a grid.",
+      "attaches_to": "build",
+      "caption": "The L-shaped figure from the anchor decomposed into two rectangles on a grid.",
+      "component_id": "diagram-block",
+      "image_url": "https://storage.googleapis.com/lectio-bucket-1/5aed3804-b11b-4209-9fd5-2357492d15f2/build/vis-build-1.png",
+      "mode": "diagram",
+      "source_work_order_id": "vis-build-1",
+      "status": "ready",
+      "visual_id": "vis-build-1"
+    }
+  ],
+  "warnings": [
+    "Missing component output for diagram-block@orient; section rendered without it.",
+    "Missing component output for diagram-block@build; section rendered without it."
+  ]
+}

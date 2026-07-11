@@ -179,6 +179,8 @@ HARD RULES:
 - visual_style is required when visual_strategy is populated: use diagram_precision
   for diagrams/charts/comparisons or any label-heavy image; use illustration
   only for ordinary explanatory artwork
+- must_show items are visual elements or short labels, never caption sentences;
+  captions belong in the component caption field
 - must_show and must_not_show each contain 2 to 5 short, concrete items
 - If the section's visual-capable component is diagram-series, frames must have at least 2 entries
 - If the component is not diagram-series, frames must be []

@@ -23,6 +23,7 @@ def test_visual_prompt_includes_diagram_precision_style_requirements() -> None:
     assert "VISUAL STYLE: diagram_precision" in prompt
     assert "clean vector-style raster diagram, not SVG" in prompt
     assert "large legible labels" in prompt
+    assert "Do not render any caption, title, sentence, or explanatory text inside the image" in prompt
     assert "- numerator label" in prompt
     assert "- photorealistic pizza" in prompt
 

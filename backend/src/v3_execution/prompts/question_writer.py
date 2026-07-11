@@ -13,6 +13,7 @@ def build_question_writer_prompt(order: QuestionWriterWorkOrder) -> str:
   Skill target: {q.skill_target}
   Scaffolding: {q.scaffolding}
   Purpose: {q.purpose}
+  Diagram required: {"yes" if q.diagram_required else "no"}
   Uses anchor: {q.uses_anchor_id or "no"}
   Expected answer: {q.expected_answer}
   Expected working: {q.expected_working or "not required"}
@@ -25,6 +26,8 @@ You are a question writer, not a lesson planner.
 Write exactly the questions specified below.
 Do not add questions. Do not remove questions.
 Do not change difficulty. Do not change expected answers.
+When Diagram required is no, never reference a visual: no "this shape",
+"the figure", "shown below", or "look at". State all dimensions and facts in words.
 
 QUESTIONS TO WRITE:
 {questions_spec}

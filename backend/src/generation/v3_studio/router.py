@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
@@ -57,6 +57,7 @@ from generation.pdf_export.service import PDFExportRequest, export_v3_studio_pdf
 from generation.v3_studio.dtos import (
     AdjustBlueprintRequest,
     BlueprintPreviewDTO,
+    V3ChunkedApproveRequest,
     V3ChunkedPlanStartRequest,
     V3ChunkedPlanStateDTO,
     V3ChunkedRegenerateRequest,
@@ -167,6 +168,12 @@ def _booklet_status(model: GenerationModel) -> str:
 
 
 def _generation_title(model: GenerationModel) -> str:
+    if isinstance(model.report_json, dict):
+        planning = model.report_json.get("planning")
+        if isinstance(planning, dict):
+            display_title = planning.get("display_title")
+            if isinstance(display_title, str) and display_title.strip():
+                return display_title.strip()
     if isinstance(model.context, str) and model.context.strip():
         return model.context.strip()
     if isinstance(model.report_json, dict):
@@ -193,6 +200,10 @@ def _normalize_chunked_state(generation_id: str, state: dict[str, Any]) -> V3Chu
     stage = str(state.get("stage") or "unknown")
     context = state.get("context")
     signals = context.get("signals") if isinstance(context, dict) else None
+    form = context.get("form") if isinstance(context, dict) else None
+    display_title = state.get("display_title")
+    if not isinstance(display_title, str) or not display_title.strip():
+        display_title = form.get("topic") if isinstance(form, dict) else None
     if stage == "plan_ready":
         next_action = "approve_or_regenerate"
     elif stage == "stage2_running":
@@ -225,6 +236,7 @@ def _normalize_chunked_state(generation_id: str, state: dict[str, Any]) -> V3Chu
         else None,
         execution_started=bool(state.get("execution_started") is True),
         next_action=next_action,
+        display_title=display_title.strip() if isinstance(display_title, str) else None,
         inferred_lesson_mode=signals.get("inferred_lesson_mode")
         if isinstance(signals, dict) and isinstance(signals.get("inferred_lesson_mode"), str)
         else None,
@@ -481,6 +493,7 @@ async def _start_generation_from_chunked_blueprint(
     blueprint_id: str,
     blueprint: ProductionBlueprint,
     form: V3InputForm | None,
+    display_title: str | None,
     user_id: str,
     queue: asyncio.Queue[str | None],
 ) -> None:
@@ -493,12 +506,13 @@ async def _start_generation_from_chunked_blueprint(
     )
     generation_writer = V3GenerationWriter(async_session_factory)
     template_id = "guided-concept-path"
+    effective_title = (display_title or blueprint.metadata.title).strip() or blueprint.metadata.title
     try:
         await trace_writer.start_run(
             user_id=user_id,
             blueprint_id=blueprint_id,
             template_id=template_id,
-            title=blueprint.metadata.title,
+            title=effective_title,
             subject=blueprint.metadata.subject,
         )
         component_count = sum(len(section.components) for section in blueprint.sections)
@@ -515,7 +529,7 @@ async def _start_generation_from_chunked_blueprint(
         await telemetry_monitor.initialise_v3_recorder(
             generation_id=generation_id,
             user_id=str(user_id),
-            blueprint_title=blueprint.metadata.title,
+            blueprint_title=effective_title,
             subject=blueprint.metadata.subject,
             template_id=template_id,
         )
@@ -523,7 +537,7 @@ async def _start_generation_from_chunked_blueprint(
             generation_id=generation_id,
             user_id=user_id,
             subject=blueprint.metadata.subject,
-            context=blueprint.metadata.title,
+            context=effective_title,
             template_id=template_id,
             section_count=len(blueprint.sections),
             planned_visuals=visual_required_count,
@@ -537,6 +551,7 @@ async def _start_generation_from_chunked_blueprint(
             blueprint=blueprint,
             form=form,
             source={"kind": "teacher_approved_blueprint"},
+            display_title=effective_title,
         )
         await generation_writer.write_planning_artifact(
             generation_id=generation_id,
@@ -642,6 +657,7 @@ async def _attempt_chunked_assembly(
     briefs: list[SectionBrief],
     form: V3InputForm,
     resource_spec: dict[str, Any],
+    display_title: str | None = None,
 ) -> None:
     failed_sections = [
         brief.section_id
@@ -658,7 +674,7 @@ async def _attempt_chunked_assembly(
             plan,
             briefs,
             subject=form.subject.strip() or "General",
-            title=form.topic.strip() or "Generated Lesson",
+            title=(display_title or form.topic).strip() or "Generated Lesson",
             resource_type=str(resource_spec.get("resource_type") or "lesson"),
         )
     except BlueprintAssemblyBlocked as exc:
@@ -701,7 +717,10 @@ async def _attempt_chunked_assembly(
         blueprint,
         "guided-concept-path",
         form=form,
-        planning_source={"kind": "teacher_approved_blueprint"},
+        planning_source={
+            "kind": "teacher_approved_blueprint",
+            "display_title": (display_title or form.topic).strip() or "Generated Lesson",
+        },
     )
     print(
         f"\n[EXECUTION QUEUE REGISTERING] generation_id={generation_id}",
@@ -737,6 +756,7 @@ async def _attempt_chunked_assembly(
             blueprint_id=blueprint_id,
             blueprint=blueprint,
             form=form,
+            display_title=(display_title or form.topic).strip() or "Generated Lesson",
             user_id=user_id,
             queue=queue,
         )
@@ -788,6 +808,9 @@ async def _run_chunked_stage2_pipeline(
 
         plan = StructuralPlan.model_validate(plan_raw)
         signals, form, resource_spec = _decode_chunked_context(state)
+        display_title = state.get("display_title")
+        if not isinstance(display_title, str) or not display_title.strip():
+            display_title = form.topic
 
         briefs = await resume_stage2(
             generation_id,
@@ -805,6 +828,7 @@ async def _run_chunked_stage2_pipeline(
             briefs=briefs,
             form=form,
             resource_spec=resource_spec,
+            display_title=display_title,
         )
         print(
             f"\n[STAGE2 PIPELINE ASSEMBLY CALLED] generation_id={generation_id}",
@@ -1000,6 +1024,7 @@ async def get_chunked_generation_events(
 @v3_studio_router.post("/chunked/{generation_id}/approve", response_model=V3ChunkedPlanStateDTO)
 async def post_chunked_plan_approve(
     generation_id: str,
+    body: V3ChunkedApproveRequest | None = Body(default=None),
     current_user: User = Depends(get_current_user),
 ) -> V3ChunkedPlanStateDTO:
     await _load_owned_generation(generation_id, current_user.id)
@@ -1018,13 +1043,13 @@ async def post_chunked_plan_approve(
         latest = await load_chunked_state(generation_id)
         return _normalize_chunked_state(generation_id, latest)
 
-    await persist_chunked_state(
-        generation_id,
-        {
-            "stage": "stage2_running",
-            "execution_started": False,
-        },
-    )
+    patch: dict[str, Any] = {
+        "stage": "stage2_running",
+        "execution_started": False,
+    }
+    if body is not None and body.display_title and body.display_title.strip():
+        patch["display_title"] = body.display_title.strip()
+    await persist_chunked_state(generation_id, patch)
     task = asyncio.create_task(
         _run_chunked_stage2_pipeline(
             generation_id=generation_id,
@@ -1474,11 +1499,12 @@ async def post_v3_generate_start(
     )
     generation_writer = V3GenerationWriter(async_session_factory)
     try:
+        effective_title = (body.display_title or blueprint.metadata.title).strip() or blueprint.metadata.title
         await trace_writer.start_run(
             user_id=current_user.id,
             blueprint_id=body.blueprint_id,
             template_id=template_id,
-            title=blueprint.metadata.title,
+            title=effective_title,
             subject=blueprint.metadata.subject,
         )
         component_count = sum(len(section.components) for section in blueprint.sections)
@@ -1495,7 +1521,7 @@ async def post_v3_generate_start(
         await telemetry_monitor.initialise_v3_recorder(
             generation_id=body.generation_id,
             user_id=str(current_user.id),
-            blueprint_title=blueprint.metadata.title,
+            blueprint_title=effective_title,
             subject=blueprint.metadata.subject,
             template_id=template_id,
         )
@@ -1503,7 +1529,7 @@ async def post_v3_generate_start(
             generation_id=body.generation_id,
             user_id=current_user.id,
             subject=blueprint.metadata.subject,
-            context=blueprint.metadata.title,
+            context=effective_title,
             template_id=template_id,
             section_count=len(blueprint.sections),
             planned_visuals=visual_required_count,
@@ -1517,6 +1543,7 @@ async def post_v3_generate_start(
             blueprint=blueprint,
             form=stored.form if stored is not None else None,
             source=stored.planning_source if stored is not None else None,
+            display_title=effective_title,
         )
         await generation_writer.write_planning_artifact(
             generation_id=body.generation_id,
@@ -1995,7 +2022,7 @@ async def post_v3_export_pdf(
         result = await export_v3_studio_pdf(
             generation_id=generation_id,
             user_id=current_user.id,
-            title=model.context or model.subject or "Lesson",
+            title=_generation_title(model),
             subject=model.subject or "",
             template_id=template_id,
             document_json=document_json,

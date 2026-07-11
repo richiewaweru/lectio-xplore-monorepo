@@ -10,6 +10,7 @@ from v3_review.deterministic_checks import (
     check_anchor_facts,
     check_answer_key_entries,
     check_component_ids_in_lectio_contract,
+    check_duplicate_questions,
     check_expected_answers_preserved,
     check_internal_artifact_leaks,
     check_lectio_schema_validity,
@@ -21,6 +22,7 @@ from v3_review.deterministic_checks import (
     check_planned_sections_exist,
     check_planned_visuals_exist,
     check_visual_failures,
+    check_visual_text_references,
     check_visuals_attach_to_valid_targets,
 )
 from v3_review.models import CoherenceReport, ReviewIssue, derive_coherence_status, refresh_issue_counts
@@ -49,6 +51,8 @@ async def run_coherence_review(
     det_issues += check_planned_components_exist(blueprint, draft_pack)
     det_issues += check_planned_questions_exist(blueprint, draft_pack)
     det_issues += check_no_extra_questions(blueprint, draft_pack)
+    det_issues += check_duplicate_questions(draft_pack)
+    det_issues += check_visual_text_references(blueprint, draft_pack)
     det_issues += check_planned_visuals_exist(blueprint, draft_pack)
     det_issues += check_visuals_attach_to_valid_targets(blueprint, draft_pack)
     det_issues += check_visual_failures(draft_pack)

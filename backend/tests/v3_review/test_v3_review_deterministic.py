@@ -10,6 +10,7 @@ from v3_execution.component_aliases import canonical_component_id
 from v3_execution.models import DraftPack, GeneratedAnswerKeyBlock, GeneratedVisualBlock
 from v3_review import coherence_report_to_generation_summary
 from v3_review.deterministic_checks import (
+    check_duplicate_questions,
     check_expected_answers_preserved,
     check_internal_artifact_leaks,
     check_manual_only_components,
@@ -18,6 +19,7 @@ from v3_review.deterministic_checks import (
     check_planned_sections_exist,
     check_visual_failures,
     check_planned_visuals_exist,
+    check_visual_text_references,
 )
 from v3_review.models import CoherenceReport
 
@@ -126,7 +128,7 @@ def test_manual_only_component_emits_major_issue() -> None:
     assert any("manual-only" in issue.message for issue in issues)
 
 
-def test_extra_questions_major() -> None:
+def test_extra_questions_minor() -> None:
     bp = _load_example("amara_compound_area.json")
     practice_section_id = next(q.section_id for q in bp.question_plan)
     problems = [
@@ -189,7 +191,115 @@ def test_extra_questions_major() -> None:
         ),
     )
     issues = check_no_extra_questions(bp, dp)
-    assert any(i.severity == "major" for i in issues)
+    assert any(i.severity == "minor" for i in issues)
+
+
+def test_duplicate_questions_emit_minor_repeated_content_issue() -> None:
+    dp = _minimal_draft_pack(
+        sections=[
+            {
+                "section_id": "practice",
+                "template_id": "guided-concept-path",
+                "practice": {
+                    "problems": [
+                        {"difficulty": "warm", "question": "Find the area of the shape.", "hints": []},
+                        {"difficulty": "warm", "question": "Find the area of the shape!", "hints": []},
+                    ]
+                },
+            }
+        ],
+        answer_key=None,
+    )
+
+    issues = check_duplicate_questions(dp)
+
+    assert len(issues) == 1
+    assert issues[0].severity == "minor"
+    assert issues[0].category == "repeated_content"
+    assert "practice.problems[0]" in issues[0].message
+    assert "practice.problems[1]" in issues[0].message
+
+
+def test_visual_text_reference_without_planned_diagram_is_minor() -> None:
+    bp = _load_example("amara_compound_area.json")
+    q0 = bp.question_plan[0]
+    q0.diagram_required = False
+    dp = _minimal_draft_pack(
+        sections=[
+            {
+                "section_id": q0.section_id,
+                "template_id": "guided-concept-path",
+                "practice": {
+                    "problems": [
+                        {
+                            "difficulty": "warm",
+                            "question": "Look at this shape and find its area.",
+                            "hints": [],
+                        }
+                    ]
+                },
+            }
+        ],
+        answer_key=None,
+    )
+
+    issues = check_visual_text_references(bp, dp)
+
+    assert len(issues) == 1
+    assert issues[0].severity == "minor"
+    assert issues[0].category == "visual_mismatch"
+
+
+def test_visual_text_reference_allowed_for_planned_diagram_question() -> None:
+    bp = _load_example("amara_compound_area.json")
+    q0 = bp.question_plan[0]
+    q0.diagram_required = True
+    dp = _minimal_draft_pack(
+        sections=[
+            {
+                "section_id": q0.section_id,
+                "template_id": "guided-concept-path",
+                "practice": {
+                    "problems": [
+                        {
+                            "difficulty": "warm",
+                            "question": "Look at this shape and find its area.",
+                            "hints": [],
+                        }
+                    ]
+                },
+            }
+        ],
+        answer_key=None,
+    )
+
+    assert check_visual_text_references(bp, dp) == []
+
+
+def test_visual_text_reference_ignores_shaped_mid_word() -> None:
+    bp = _load_example("amara_compound_area.json")
+    q0 = bp.question_plan[0]
+    q0.diagram_required = False
+    dp = _minimal_draft_pack(
+        sections=[
+            {
+                "section_id": q0.section_id,
+                "template_id": "guided-concept-path",
+                "practice": {
+                    "problems": [
+                        {
+                            "difficulty": "warm",
+                            "question": "A shaped garden has sides described in words.",
+                            "hints": [],
+                        }
+                    ]
+                },
+            }
+        ],
+        answer_key=None,
+    )
+
+    assert check_visual_text_references(bp, dp) == []
 
 
 def test_expected_answer_drift_in_answer_key() -> None:
@@ -286,4 +396,24 @@ def test_quality_omitted_visual_block_emits_minor_review_issue() -> None:
     assert issues[0].severity == "minor"
     assert issues[0].category == "visual_generation_failed"
     assert issues[0].message.startswith("image omitted by quality gate: ")
+
+
+def test_generation_5aed3804_replay_flags_known_nonblocking_drift() -> None:
+    fixture_dir = Path(__file__).resolve().parents[1] / "fixtures"
+    blueprint = ProductionBlueprint.model_validate_json(
+        (fixture_dir / "gen_5aed3804_blueprint.json").read_text(encoding="utf-8")
+    )
+    pack_payload = json.loads(
+        (fixture_dir / "gen_5aed3804_pack.json").read_text(encoding="utf-8")
+    )
+    pack_payload.pop("kind", None)
+    draft_pack = DraftPack.model_validate(pack_payload)
+
+    extra = check_no_extra_questions(blueprint, draft_pack)
+    visual_refs = check_visual_text_references(blueprint, draft_pack)
+
+    assert any(issue.category == "extra_unplanned_content" for issue in extra)
+    assert all(issue.severity == "minor" for issue in extra)
+    assert any("Look at" in issue.message for issue in visual_refs)
+    assert all(issue.severity == "minor" for issue in visual_refs)
 

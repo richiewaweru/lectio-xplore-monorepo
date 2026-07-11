@@ -83,6 +83,7 @@ export interface V3ChunkedPlanState {
 	blueprint_id: string | null;
 	execution_started: boolean;
 	next_action: string | null;
+	display_title?: string | null;
 	inferred_lesson_mode: V3SignalSummary['inferred_lesson_mode'] | null;
 	lesson_mode_confidence: V3SignalSummary['lesson_mode_confidence'] | null;
 }

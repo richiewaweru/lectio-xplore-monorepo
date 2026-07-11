@@ -22,6 +22,7 @@ def build_planning_artifact(
     blueprint: ProductionBlueprint,
     form: V3InputForm | None,
     source: dict[str, Any] | None = None,
+    display_title: str | None = None,
 ) -> dict[str, Any]:
     section_ids = [section.section_id for section in blueprint.sections]
     component_count = sum(len(section.components) for section in blueprint.sections)
@@ -36,6 +37,8 @@ def build_planning_artifact(
     if source:
         source_payload.update(source)
 
+    clean_display_title = (display_title or blueprint.metadata.title).strip() or blueprint.metadata.title
+
     return {
         "schema_version": SCHEMA_VERSION,
         "generation_id": generation_id,
@@ -44,9 +47,11 @@ def build_planning_artifact(
         "created_at": _utc_iso(),
         "source": source_payload,
         "form": form.model_dump(mode="json") if form is not None else None,
+        "display_title": clean_display_title,
         "blueprint": blueprint.model_dump(mode="json"),
         "derived": {
             "title": blueprint.metadata.title,
+            "display_title": clean_display_title,
             "subject": blueprint.metadata.subject,
             "resource_type": blueprint.lesson.resource_type,
             "section_count": len(blueprint.sections),
@@ -69,6 +74,7 @@ def planning_summary_from_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
         "template_id": artifact.get("template_id"),
         "resource_type": derived.get("resource_type"),
         "title": derived.get("title"),
+        "display_title": derived.get("display_title") or artifact.get("display_title"),
         "subject": derived.get("subject"),
         "section_count": derived.get("section_count", 0),
         "section_ids": derived.get("section_ids", []),
