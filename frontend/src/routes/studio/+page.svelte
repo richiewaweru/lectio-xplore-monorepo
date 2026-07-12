@@ -332,7 +332,19 @@
 			const pack = coerceV3DocumentToPack(generationId, document, {
 				templateId: v3Studio.blueprint?.template_id ?? 'guided-concept-path'
 			});
-			if (!pack) return false;
+			if (!pack) {
+				if (progressStage === 'failed' || progressStage === 'completed') {
+					stopGenerationPolling();
+					v3Studio.streamCancel?.();
+					v3Studio.streamCancel = null;
+					v3Studio.stage = 'skeleton';
+					v3Studio.error =
+						progressStage === 'completed'
+							? 'Generation completed, but its resource snapshot was not saved.'
+							: 'Generation failed before a resource snapshot was saved.';
+				}
+				return false;
+			}
 			v3Studio.draftPack = pack;
 			v3Studio.activePack = pack;
 			if (pack.status === 'final_ready' || pack.status === 'final_with_warnings') {

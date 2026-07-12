@@ -488,6 +488,7 @@ async def test_v3_document_endpoint_returns_pending_snapshot_when_document_has_n
         "generation_id": generation_id,
         "status": "streaming_preview",
         "sections": [],
+        "progress": {"stage": "writing", "sections": {}},
     }
 
 
@@ -512,7 +513,27 @@ async def test_v3_document_endpoint_returns_pending_snapshot_when_document_is_no
         "generation_id": generation_id,
         "status": "streaming_preview",
         "sections": [],
+        "progress": {"stage": "writing", "sections": {}},
     }
+
+
+@pytest.mark.asyncio
+async def test_v3_document_endpoint_exposes_terminal_progress_without_a_snapshot() -> None:
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+
+    generation_id = str(uuid.uuid4())
+    await _upsert_generation_row(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        document_json=None,
+        status="completed",
+    )
+
+    async with _client() as client:
+        resp = await client.get(f"/api/v1/v3/generations/{generation_id}/document")
+    assert resp.status_code == 200
+    assert resp.json()["progress"] == {"stage": "completed", "sections": {}}
 
 
 @pytest.mark.asyncio

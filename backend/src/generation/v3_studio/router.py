@@ -1806,11 +1806,11 @@ async def get_v3_generation_document(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     generation_writer = V3GenerationWriter(async_session_factory)
+    model = await generation_writer.get_generation_model(generation_id, current_user.id)
+    if model is None:
+        raise HTTPException(status_code=404, detail="Generation not found")
     document_json = await generation_writer.get_document_json(generation_id, current_user.id)
     if document_json is None:
-        model = await generation_writer.get_generation_model(generation_id, current_user.id)
-        if model is None:
-            raise HTTPException(status_code=404, detail="Generation not found")
         document_json = {
             "kind": "v3_booklet_pack",
             "generation_id": generation_id,
@@ -1819,11 +1819,20 @@ async def get_v3_generation_document(
         }
     sections = document_json.get("sections")
     if not isinstance(sections, list) or not sections:
+        process_status = str(model.status or "running")
+        progress_stage = (
+            "completed"
+            if process_status == "completed"
+            else "failed"
+            if process_status in {"failed", "partial"}
+            else "writing"
+        )
         document_json = {
             **document_json,
             "generation_id": generation_id,
             "status": str(document_json.get("status") or "streaming_preview"),
             "sections": [],
+            "progress": {"stage": progress_stage, "sections": {}},
         }
     response.headers["Cache-Control"] = "no-store"
     return document_json
