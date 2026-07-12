@@ -178,6 +178,8 @@ class V3ChunkedPlanStateDTO(BaseModel):
     execution_started: bool = False
     next_action: str | None = None
     display_title: str | None = None
+    error: str | None = None
+    error_type: str | None = None
     inferred_lesson_mode: LessonMode | None = None
     lesson_mode_confidence: Literal["low", "high"] | None = None
 

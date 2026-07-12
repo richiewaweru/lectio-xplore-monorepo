@@ -235,6 +235,8 @@ def _normalize_chunked_state(generation_id: str, state: dict[str, Any]) -> V3Chu
         next_action = "wait_for_stage2"
     elif stage == "assembly_blocked":
         next_action = "retry_failed_sections"
+    elif stage == "stage2_error":
+        next_action = "resume_stage2"
     elif stage == "blueprint_ready":
         next_action = "generation_running"
     elif stage == "complete":
@@ -262,6 +264,8 @@ def _normalize_chunked_state(generation_id: str, state: dict[str, Any]) -> V3Chu
         execution_started=bool(state.get("execution_started") is True),
         next_action=next_action,
         display_title=display_title.strip() if isinstance(display_title, str) else None,
+        error=state.get("error") if isinstance(state.get("error"), str) else None,
+        error_type=state.get("error_type") if isinstance(state.get("error_type"), str) else None,
         inferred_lesson_mode=signals.get("inferred_lesson_mode")
         if isinstance(signals, dict) and isinstance(signals.get("inferred_lesson_mode"), str)
         else None,
@@ -920,8 +924,10 @@ async def _run_chunked_stage2_pipeline(
         await persist_chunked_state(
             generation_id,
             {
-                "stage": "assembly_blocked",
+                "stage": "stage2_error",
                 "execution_started": False,
+                "error": str(exc)[:400],
+                "error_type": type(exc).__name__,
             },
         )
         await _chunked_emit_event(

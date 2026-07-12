@@ -557,12 +557,100 @@ async def test_chunked_status_reports_next_action_by_stage() -> None:
 
     await persist_chunked_state(
         generation_id,
+        {"stage": "stage2_error", "error": "executor failed", "error_type": "RuntimeError"},
+    )
+    async with _client() as client:
+        stage2_error = await client.get(f"/api/v1/v3/chunked/{generation_id}/status")
+    assert stage2_error.status_code == 200
+    assert stage2_error.json()["stage"] == "stage2_error"
+    assert stage2_error.json()["next_action"] == "resume_stage2"
+    assert stage2_error.json()["error_type"] == "RuntimeError"
+
+    await persist_chunked_state(
+        generation_id,
         {"stage": "blueprint_ready", "execution_started": True, "blueprint_id": "bp-123"},
     )
     async with _client() as client:
         ready = await client.get(f"/api/v1/v3/chunked/{generation_id}/status")
     assert ready.status_code == 200
     assert ready.json()["next_action"] == "generation_running"
+
+
+@pytest.mark.asyncio
+async def test_stage2_pipeline_exception_persists_resumeable_error_state() -> None:
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+    generation_id = str(uuid.uuid4())
+    signals, form = _seed_context_models()
+    sample_plan = _sample_structural_plan()
+
+    from generation.v3_studio.router import _ensure_chunked_generation_row, _run_chunked_stage2_pipeline
+
+    await _ensure_chunked_generation_row(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        subject="Math",
+        context="Equivalent fractions",
+    )
+    await persist_structural_plan(
+        generation_id,
+        sample_plan,
+        signals=signals,
+        form=form,
+        resource_spec={"resource_type": "lesson", "depth": "standard", "spec": {}, "rendered": "x"},
+    )
+
+    with (
+        patch(
+            "generation.v3_studio.router.resume_stage2",
+            new=AsyncMock(side_effect=RuntimeError("stage2 exploded")),
+        ),
+        patch("generation.v3_studio.router._chunked_emit_event", new=AsyncMock()),
+    ):
+        await _run_chunked_stage2_pipeline(generation_id=generation_id, user_id=TEST_USER_A.id)
+
+    async with _client() as client:
+        response = await client.get(f"/api/v1/v3/chunked/{generation_id}/status")
+
+    assert response.status_code == 200
+    assert response.json()["stage"] == "stage2_error"
+    assert response.json()["next_action"] == "resume_stage2"
+    assert response.json()["error_type"] == "RuntimeError"
+
+
+@pytest.mark.asyncio
+async def test_chunked_approve_resumes_stage2_error() -> None:
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+    generation_id = str(uuid.uuid4())
+    signals, form = _seed_context_models()
+
+    from generation.v3_studio.router import _ensure_chunked_generation_row
+
+    await _ensure_chunked_generation_row(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        subject="Math",
+        context="Equivalent fractions",
+    )
+    await persist_structural_plan(
+        generation_id,
+        _sample_structural_plan(),
+        signals=signals,
+        form=form,
+        resource_spec={"resource_type": "lesson", "depth": "standard", "spec": {}, "rendered": "x"},
+    )
+    await persist_chunked_state(generation_id, {"stage": "stage2_error", "error_type": "RuntimeError"})
+
+    pipeline = AsyncMock(return_value=None)
+    with patch("generation.v3_studio.router._run_chunked_stage2_pipeline", new=pipeline):
+        async with _client() as client:
+            response = await client.post(f"/api/v1/v3/chunked/{generation_id}/approve")
+        await asyncio.sleep(0)
+
+    assert response.status_code == 200
+    assert response.json()["stage"] == "stage2_running"
+    pipeline.assert_awaited_once_with(generation_id=generation_id, user_id=TEST_USER_A.id)
 
 
 @pytest.mark.asyncio
