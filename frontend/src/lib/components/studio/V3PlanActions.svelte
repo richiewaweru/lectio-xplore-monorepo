@@ -1,18 +1,18 @@
 <script lang="ts">
 	interface Props {
-		failedSections?: string[];
 		isRunning?: boolean;
+		recoveryAction?: 'retry_failed_sections' | 'resume_stage2' | null;
 		onApprove: () => void;
 		onRegenerate: (note: string) => void;
-		onRetrySection: (sectionId: string) => void;
+		onRecovery: () => void;
 	}
 
 	let {
-		failedSections = [],
 		isRunning = false,
+		recoveryAction = null,
 		onApprove,
 		onRegenerate,
-		onRetrySection
+		onRecovery
 	}: Props = $props();
 
 	let note = $state('');
@@ -33,6 +33,23 @@
 </script>
 
 <div class="mx-auto max-w-3xl space-y-4 px-4 pb-10">
+{#if recoveryAction}
+	<div class="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+		<p class="text-sm font-semibold text-destructive">
+			{recoveryAction === 'retry_failed_sections'
+				? "Some sections didn't complete. You can retry them."
+				: 'Generation was interrupted. You can resume from where it left off.'}
+		</p>
+		<button
+			type="button"
+			class="mt-3 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+			disabled={isRunning}
+			onclick={onRecovery}
+		>
+			{recoveryAction === 'retry_failed_sections' ? 'Retry failed sections' : 'Resume generation'}
+		</button>
+	</div>
+{:else}
 	<div class="flex flex-wrap gap-3">
 		<button
 			type="button"
@@ -86,23 +103,5 @@
 		</div>
 	{/if}
 
-	{#if failedSections.length}
-		<div class="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-			<p class="text-sm font-semibold text-destructive">Failed sections</p>
-			<p class="mt-1 text-xs text-muted-foreground">
-				Retry only the failed sections below, then assembly will run again automatically.
-			</p>
-			<div class="mt-3 flex flex-wrap gap-2">
-				{#each failedSections as sectionId}
-					<button
-						type="button"
-						class="rounded-md border border-input px-3 py-1.5 text-xs font-semibold"
-						onclick={() => onRetrySection(sectionId)}
-					>
-						Retry {sectionId}
-					</button>
-				{/each}
-			</div>
-		</div>
-	{/if}
+{/if}
 </div>

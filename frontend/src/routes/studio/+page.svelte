@@ -44,6 +44,7 @@
 	import type { V3ChunkedPlanState, V3DraftPack, V3InputForm } from '$lib/types/v3';
 
 	let pdfLoading = $state(false);
+	let recoveryBusy = $state(false);
 	let pdfError = $state<string | null>(null);
 	let pdfOpen = $state(false);
 	let schoolName = $state('');
@@ -65,6 +66,7 @@
 	}>({ completed: [], failed: [], active: null });
 	let documentPollInterval: ReturnType<typeof setInterval> | null = null;
 	let documentPollInFlight = false;
+	let chunkedStatusPollInFlight = false;
 	let documentPollGenerationId: string | null = null;
 	let visibilityListenerActive = false;
 	let disconnectChunkedStream: (() => void) | null = null;
@@ -197,7 +199,8 @@
 			v3Studio.stage = 'skeleton';
 			return;
 		}
-		if (resolved.stage === 'assembly_blocked') {
+		if (resolved.stage === 'assembly_blocked' || resolved.stage === 'stage2_error') {
+			stopGenerationPolling();
 			disconnectActiveChunkedStream();
 			clearRenderedBookletState();
 			displayTitle = resolved.display_title ?? displayTitle;
@@ -275,7 +278,12 @@
 	}
 
 	function shouldPollForChunkedState(state: V3ChunkedPlanState): boolean {
-		if (state.stage === 'plan_ready' || state.stage === 'assembly_blocked' || state.stage === 'complete') {
+		if (
+			state.stage === 'plan_ready' ||
+			state.stage === 'assembly_blocked' ||
+			state.stage === 'stage2_error' ||
+			state.stage === 'complete'
+		) {
 			return false;
 		}
 		if (state.next_action === 'done') return false;
@@ -303,6 +311,41 @@
 			await hydrateFromDocument(generationId);
 		} finally {
 			documentPollInFlight = false;
+		}
+		await pollChunkedStatusDuringStage2(generationId);
+	}
+
+	async function pollChunkedStatusDuringStage2(generationId: string): Promise<void> {
+		const current = v3Studio.chunkedState;
+		if (
+			chunkedStatusPollInFlight ||
+			!current ||
+			(current.stage !== 'stage2_running' && current.next_action !== 'wait_for_stage2')
+		) {
+			return;
+		}
+		chunkedStatusPollInFlight = true;
+		try {
+			const state = await getChunkedPlanStatus(generationId);
+			if (state.stage === 'assembly_blocked' || state.stage === 'stage2_error') {
+				await applyChunkedState(state);
+				return;
+			}
+			if (
+				state.stage !== 'stage2_running' &&
+				state.stage !== 'blueprint_ready' &&
+				state.stage !== 'complete' &&
+				state.next_action !== 'wait_for_stage2'
+			) {
+				return;
+			}
+			v3Studio.chunkedState = state;
+			hydrateChunkedSectionState(state);
+			syncStage2Progress(state);
+		} catch {
+			// Keep the current UI state if this polling supplement fails.
+		} finally {
+			chunkedStatusPollInFlight = false;
 		}
 	}
 
@@ -564,18 +607,38 @@
 		stage2Progress = { completed: [], failed: [], active: null };
 		try {
 			const next = await approveChunkedPlan(generationId, { display_title: displayTitle.trim() });
-			v3Studio.chunkedState = next;
-			hydrateChunkedSectionState(next);
-			syncStage2Progress(next);
-			if (next.stage === 'assembly_blocked') {
-				v3Studio.stage = 'skeleton';
-				return;
-			}
-			startGenerationPolling(generationId);
-			connectChunkedStage2Stream(generationId);
+			await continueChunkedStage2(next);
 		} catch (err) {
 			v3Studio.error = friendly(err);
 			v3Studio.stage = 'skeleton';
+		}
+	}
+
+	async function continueChunkedStage2(next: V3ChunkedPlanState): Promise<void> {
+		if (next.stage === 'assembly_blocked' || next.stage === 'stage2_error') {
+			await applyChunkedState(next);
+			return;
+		}
+		v3Studio.chunkedState = next;
+		v3Studio.generationId = next.generation_id;
+		hydrateChunkedSectionState(next);
+		syncStage2Progress(next);
+		startGenerationPolling(next.generation_id);
+		connectChunkedStage2Stream(next.generation_id);
+	}
+
+	async function handleChunkedResume() {
+		const chunked = v3Studio.chunkedState;
+		if (!chunked) return;
+		recoveryBusy = true;
+		v3Studio.error = null;
+		try {
+			const next = await approveChunkedPlan(chunked.generation_id, { display_title: displayTitle.trim() });
+			await continueChunkedStage2(next);
+		} catch (err) {
+			v3Studio.error = friendly(err);
+		} finally {
+			recoveryBusy = false;
 		}
 	}
 
@@ -632,6 +695,23 @@
 		} catch (err) {
 			v3Studio.error = friendly(err);
 			v3Studio.stage = 'skeleton';
+		}
+	}
+
+	async function handleRetryFailedSections() {
+		const chunked = v3Studio.chunkedState;
+		if (!chunked || chunked.failed_sections.length === 0) return;
+		recoveryBusy = true;
+		v3Studio.error = null;
+		try {
+			for (const sectionId of chunked.failed_sections) {
+				await retryChunkedSection({ generation_id: chunked.generation_id, section_id: sectionId });
+			}
+			await refreshChunkedStatus(chunked.generation_id);
+		} catch (err) {
+			v3Studio.error = friendly(err);
+		} finally {
+			recoveryBusy = false;
 		}
 	}
 
@@ -817,11 +897,18 @@
 				/>
 			</div>
 			<V3PlanActions
-				failedSections={v3Studio.chunkedState.failed_sections}
-				isRunning={v3Studio.chunkedState.stage === 'stage2_running'}
+				isRunning={recoveryBusy || v3Studio.chunkedState.stage === 'stage2_running'}
+				recoveryAction={v3Studio.chunkedState.stage === 'assembly_blocked' && v3Studio.chunkedState.failed_sections.length > 0
+					? 'retry_failed_sections'
+					: v3Studio.chunkedState.stage === 'stage2_error' ||
+							(v3Studio.chunkedState.stage === 'assembly_blocked' && v3Studio.chunkedState.failed_sections.length === 0)
+						? 'resume_stage2'
+						: null}
 				onApprove={handleChunkedApprove}
 				onRegenerate={handleChunkedRegenerate}
-				onRetrySection={handleChunkedRetrySection}
+				onRecovery={v3Studio.chunkedState.stage === 'assembly_blocked' && v3Studio.chunkedState.failed_sections.length > 0
+					? handleRetryFailedSections
+					: handleChunkedResume}
 			/>
 	{:else if v3Studio.stage === 'edit'}
 		{#if v3Studio.activePack}

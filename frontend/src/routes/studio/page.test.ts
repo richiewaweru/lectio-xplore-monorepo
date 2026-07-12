@@ -210,6 +210,73 @@ describe('studio chunked URL resume', () => {
 		expect(v3Studio.stage).toBe('fill');
 	});
 
+	it.each([
+		['assembly_blocked', ['intro'], 'Retry failed sections'],
+		['stage2_error', [], 'Resume generation']
+	])('surfaces %s from status polling when stage2 SSE is silent', async (stage, failedSections, actionName) => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-status-poll');
+		const running = {
+			generation_id: 'gen-status-poll',
+			stage: 'stage2_running',
+			structural_plan: {
+				lesson_mode: 'first_exposure',
+				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
+				sections: [{ id: 'intro', title: 'Intro', role: 'intro', visual_required: false, transition_note: null, components: [] }],
+				question_plan: []
+			},
+			section_briefs: {},
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: true,
+			next_action: 'wait_for_stage2'
+		};
+		mocks.getChunkedPlanStatus.mockResolvedValueOnce(running).mockResolvedValueOnce({
+			...running,
+			stage,
+			failed_sections: failedSections,
+			execution_started: false,
+			next_action: stage === 'stage2_error' ? 'resume_stage2' : 'retry_failed_sections'
+		});
+		mocks.approveChunkedPlan.mockResolvedValue(running);
+		mocks.fetchV3Document.mockRejectedValue(new Error('Document not ready'));
+
+		render(StudioPage);
+
+		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledTimes(2));
+		expect(v3Studio.stage).toBe('skeleton');
+		expect(screen.getByRole('button', { name: actionName })).toBeTruthy();
+	});
+
+	it('resumes a legacy empty blocked state through approve and document polling', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-legacy-blocked');
+		const legacyBlocked = {
+			generation_id: 'gen-legacy-blocked',
+			stage: 'assembly_blocked',
+			structural_plan: {
+				lesson_mode: 'first_exposure',
+				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
+				sections: [],
+				question_plan: []
+			},
+			section_briefs: {},
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: false,
+			next_action: 'retry_failed_sections'
+		};
+		mocks.getChunkedPlanStatus.mockResolvedValue(legacyBlocked);
+		mocks.approveChunkedPlan.mockResolvedValue({ ...legacyBlocked, stage: 'stage2_running', execution_started: true, next_action: 'wait_for_stage2' });
+		mocks.fetchV3Document.mockRejectedValue(new Error('Document not ready'));
+
+		render(StudioPage);
+		await fireEvent.click(await screen.findByRole('button', { name: 'Resume generation' }));
+
+		await waitFor(() => expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-legacy-blocked', { display_title: '' }));
+		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-legacy-blocked'));
+	});
+
 	it('keeps planning after approve while stage2 is still running', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-approve');
 		mocks.getChunkedPlanStatus.mockResolvedValue({
@@ -774,7 +841,7 @@ describe('studio chunked URL resume', () => {
 		expect(screen.getByRole('alert').textContent).toMatch(/could not resume/i);
 	});
 
-	it('keeps planning when blocked retry returns to stage2_running', async () => {
+	it('re-fetches persisted state after retrying blocked sections', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-blocked');
 		mocks.getChunkedPlanStatus.mockResolvedValue({
 			generation_id: 'gen-blocked',
@@ -831,15 +898,16 @@ describe('studio chunked URL resume', () => {
 		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-blocked'));
 		expect(v3Studio.stage).toBe('skeleton');
 
-		await fireEvent.click(await screen.findByRole('button', { name: /retry intro/i }));
+		await fireEvent.click(await screen.findByRole('button', { name: 'Retry failed sections' }));
 		await waitFor(() =>
 			expect(mocks.retryChunkedSection).toHaveBeenCalledWith({
 				generation_id: 'gen-blocked',
 				section_id: 'intro'
 			})
 		);
-		await waitFor(() => expect(v3Studio.stage).toBe('fill'));
-		await waitFor(() => expect(mocks.connectV3ChunkedStream).toHaveBeenCalledWith('gen-blocked', expect.any(Object)));
+		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledTimes(2));
+		expect(v3Studio.stage).toBe('skeleton');
+		expect(screen.getByRole('button', { name: 'Retry failed sections' })).toBeTruthy();
 	});
 
 	it('enters generating and recovers blueprint preview when chunked state is blueprint_ready', async () => {

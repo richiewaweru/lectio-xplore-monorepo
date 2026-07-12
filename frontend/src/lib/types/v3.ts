@@ -80,9 +80,21 @@ export interface V3StructuralPlan {
 	question_plan: V3StructuralPlanQuestion[];
 }
 
+export type V3ChunkedPlanStage =
+	| 'stage1_running'
+	| 'stage1_failed'
+	| 'plan_ready'
+	| 'stage2_running'
+	| 'stage2_complete'
+	| 'assembly_blocked'
+	| 'stage2_error'
+	| 'blueprint_ready'
+	| 'complete'
+	| 'unknown';
+
 export interface V3ChunkedPlanState {
 	generation_id: string;
-	stage: string;
+	stage: V3ChunkedPlanStage;
 	structural_plan: V3StructuralPlan | null;
 	section_briefs: Record<string, unknown>;
 	failed_sections: string[];
@@ -90,6 +102,8 @@ export interface V3ChunkedPlanState {
 	execution_started: boolean;
 	next_action: string | null;
 	display_title?: string | null;
+	error?: string | null;
+	error_type?: string | null;
 	inferred_lesson_mode: V3SignalSummary['inferred_lesson_mode'] | null;
 	lesson_mode_confidence: V3SignalSummary['lesson_mode_confidence'] | null;
 }
