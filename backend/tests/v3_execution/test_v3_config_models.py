@@ -8,6 +8,7 @@ from v3_execution.config.answer_key_node import effective_answer_key_node_name
 from v3_execution.config.models import (
     V3_ANSWER_KEY_GENERATOR,
     V3_ANSWER_KEY_GENERATOR_HEAVY,
+    V3_PROPOSE_INTENT,
     V3_VISUAL_QC,
     get_v3_model_settings,
     get_v3_slot,
@@ -22,6 +23,7 @@ def test_v3_slot_mapping() -> None:
     assert get_v3_slot("v3_section_writer") == ModelSlot.STANDARD
     assert get_v3_slot("v3_answer_key_generator") == ModelSlot.FAST
     assert get_v3_slot("v3_answer_key_generator_heavy") == ModelSlot.STANDARD
+    assert get_v3_slot(V3_PROPOSE_INTENT) == ModelSlot.STANDARD
 
 
 def test_get_v3_spec_env_override(monkeypatch: pytest.MonkeyPatch) -> None:

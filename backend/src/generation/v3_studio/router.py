@@ -68,8 +68,11 @@ from generation.v3_studio.dtos import (
     V3GenerateStartResponse,
     V3InputForm,
     V3PdfExportRequest,
+    V3ProposeIntentRequest,
+    V3ProposeIntentResponse,
     V3SignalSummary,
 )
+from generation.v3_studio.prompts import PROPOSE_INTENT_SYSTEM, build_propose_intent_user_prompt
 from resource_specs.loader import get_spec, list_spec_ids
 from resource_specs.renderer import render_spec_for_prompt
 from generation.v3_studio.preview_mapper import blueprint_to_preview_dto
@@ -380,6 +383,46 @@ async def post_v3_narrow(
             c.id = f"candidate-{i + 1}"
 
     return V3NarrowResponse(candidates=candidates[:5])
+
+
+@v3_studio_router.post("/propose-intent", response_model=V3ProposeIntentResponse)
+async def post_v3_propose_intent(
+    body: V3ProposeIntentRequest,
+    current_user: User = Depends(get_current_user),
+) -> V3ProposeIntentResponse:
+    node = "v3_propose_intent"
+    model = get_v3_model(node)
+    spec = get_v3_spec(node)
+    slot = get_v3_slot(node)
+    agent = Agent(
+        model=model,
+        output_type=structured_output_type_for_model(V3ProposeIntentResponse, spec=spec),
+        system_prompt=PROPOSE_INTENT_SYSTEM,
+    )
+    user_prompt = build_propose_intent_user_prompt(**body.model_dump())
+    trace_id = str(uuid.uuid4())
+    _register_pre_generation_trace(trace_id=trace_id, user_id=str(current_user.id))
+    try:
+        result = await run_llm(
+            trace_id=trace_id,
+            caller=_CALLER,
+            generation_id=None,
+            agent=agent,
+            user_prompt=user_prompt,
+            model=model,
+            slot=slot,
+            spec=spec,
+            section_id=None,
+            node=node,
+            model_settings=get_v3_model_settings(node),
+            retry_policy=RetryPolicy(call_timeout_seconds=float(V3_TIMEOUTS["propose_intent"])),
+        )
+        return V3ProposeIntentResponse.model_validate(result.output)
+    except Exception as exc:
+        logger.exception("v3 propose intent failed topic=%s user=%s", body.topic[:80], current_user.id)
+        raise HTTPException(status_code=502, detail="Could not draft the lesson intent.") from exc
+    finally:
+        _close_pre_generation_trace(trace_id=trace_id)
 
 
 async def _ensure_chunked_generation_row(

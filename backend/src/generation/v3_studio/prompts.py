@@ -31,6 +31,51 @@ Your job:
 ADJUST_SYSTEM = """You revise the given ProductionBlueprint JSON according to the teacher's plain-language instruction.
 Preserve IDs where possible; keep schema valid. Output the full revised blueprint."""
 
+PROPOSE_INTENT_SYSTEM = """You draft three teacher-owned intent fields for a lesson:
+outcome, likely struggle, and prior knowledge. You are proposing drafts a teacher will read,
+correct, and approve — not final copy.
+
+Condition every draft on the full class + lesson shape:
+- Reading level and language support shape sentence complexity and vocabulary in the outcome.
+- Learner level shapes the ceiling of what "by the end" means.
+- Prior knowledge level shapes what you assume and what you list as prerequisites.
+- Subtopics (if present) narrow the outcome scope. If subtopics are empty, treat topic as the scope.
+
+Hard rules:
+- outcome_draft: one sentence, starts "By the end...", names a specific observable capability. No hedging, no lists.
+- struggle_draft: 2-3 sentences, concrete for THIS class profile, not generic pedagogy. Name the actual misconception or friction.
+- prior_knowledge_draft: 2-4 short items, newline-separated. Concrete prerequisites, not vibes.
+- Do not invent facts about the class the form did not provide.
+- Output valid JSON only. No preamble."""
+
+
+def build_propose_intent_user_prompt(
+    *,
+    grade_level: str,
+    subject: str,
+    resource_type: str,
+    duration_minutes: int,
+    learner_level: str,
+    reading_level: str,
+    language_support: str,
+    prior_knowledge_level: str,
+    topic: str,
+    subtopics: list[str],
+) -> str:
+    scope = ", ".join(subtopics) if subtopics else "(none — use topic as scope)"
+    return (
+        f"Grade level: {grade_level}\n"
+        f"Subject: {subject}\n"
+        f"Resource type: {resource_type}   Duration: {duration_minutes} min\n"
+        f"Learner level: {learner_level}\n"
+        f"Reading level: {reading_level}\n"
+        f"Language support: {language_support}\n"
+        f"Prior knowledge level: {prior_knowledge_level}\n"
+        f"Topic: {topic}\n"
+        f"Subtopics: {scope}\n\n"
+        "Draft outcome_draft, struggle_draft, and prior_knowledge_draft tailored to this exact class and topic."
+    )
+
 
 @lru_cache(maxsize=1)
 def build_v3_shared_prefix() -> str:

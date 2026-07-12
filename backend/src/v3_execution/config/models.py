@@ -10,6 +10,7 @@ from core.llm import ModelFamily, ModelSlot, ModelSpec, build_model
 # Canonical v3 node names (must match call sites).
 V3_SIGNAL_EXTRACTOR = "v3_signal_extractor"
 V3_NARROW = "v3_narrow"
+V3_PROPOSE_INTENT = "v3_propose_intent"
 V3_STAGE1_PLANNER = "v3_stage1_planner"
 V3_STAGE2_EXPANDER = "v3_stage2_expander"
 V3_BLUEPRINT_ADJUST = "v3_blueprint_adjust"
@@ -25,6 +26,7 @@ V3_BLOCK_WRITER_STANDARD = "v3_block_writer_standard"
 V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V3_SIGNAL_EXTRACTOR: ModelSlot.FAST,
     V3_NARROW: ModelSlot.FAST,
+    V3_PROPOSE_INTENT: ModelSlot.STANDARD,
     V3_STAGE1_PLANNER: ModelSlot.STANDARD,
     V3_STAGE2_EXPANDER: ModelSlot.STANDARD,
     V3_BLUEPRINT_ADJUST: ModelSlot.STANDARD,
@@ -43,6 +45,7 @@ V3NodeReasoningPolicy = V3ReasoningLevel | bool
 V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     V3_SIGNAL_EXTRACTOR: False,
     V3_NARROW: "medium",
+    V3_PROPOSE_INTENT: "medium",
     V3_STAGE1_PLANNER: "high",
     V3_STAGE2_EXPANDER: "medium",
     V3_BLUEPRINT_ADJUST: "medium",
@@ -234,6 +237,7 @@ __all__ = [
     "V3_BLUEPRINT_ADJUST",
     "V3_DEFAULT_SPECS",
     "V3_NARROW",
+    "V3_PROPOSE_INTENT",
     "V3_NODE_REASONING",
     "V3_NODE_SLOTS",
     "V3_QUESTION_WRITER",

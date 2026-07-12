@@ -33,6 +33,31 @@ class V3InputForm(BaseModel):
     free_text: str = ""  # anything not captured above
 
 
+class V3ProposeIntentRequest(BaseModel):
+    """Signals needed to draft teacher-editable lesson intent."""
+
+    model_config = {"extra": "forbid"}
+
+    grade_level: str
+    subject: str
+    resource_type: ResourceType
+    duration_minutes: int = Field(ge=15, le=90)
+    learner_level: Literal["below_grade", "on_grade", "above_grade", "mixed"]
+    reading_level: Literal["below_grade", "on_grade", "above_grade", "mixed"]
+    language_support: Literal["none", "some_ell", "many_ell"]
+    prior_knowledge_level: Literal["new_topic", "some_background", "reviewing"]
+    topic: str
+    subtopics: list[str] = Field(default_factory=list)
+
+
+class V3ProposeIntentResponse(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    outcome_draft: str
+    struggle_draft: str
+    prior_knowledge_draft: str
+
+
 class V3SignalSummary(BaseModel):
     model_config = {"extra": "forbid"}
 
@@ -248,6 +273,8 @@ __all__ = [
     "V3GenerationDetailDTO",
     "V3GenerationHistoryItemDTO",
     "V3PdfExportRequest",
+    "V3ProposeIntentRequest",
+    "V3ProposeIntentResponse",
     "V3InputForm",
     "V3LearnerContextDTO",
     "V3QuestionPlanDTO",
