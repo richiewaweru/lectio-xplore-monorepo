@@ -158,3 +158,35 @@ async def test_narrow_uses_prompted_output_for_deepseek_models():
 
     assert response.status_code == 200
     assert isinstance(captured["output_type"], PromptedOutput)
+
+
+@pytest.mark.asyncio
+async def test_narrow_prompt_requires_self_contained_candidates():
+    captured: dict[str, object] = {}
+
+    class FakeAgent:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    async def fake_run_llm(**kwargs):  # type: ignore[no-untyped-def]
+        captured.update(kwargs)
+        return type("R", (), {"output": type("E", (), {"candidates": _mock_candidates()})()})()
+
+    with (
+        patch("generation.v3_studio.router.Agent", FakeAgent),
+        patch("generation.v3_studio.router.run_llm", new=fake_run_llm),
+    ):
+        async with _client() as client:
+            response = await client.post(
+                "/api/v1/v3/narrow",
+                json={
+                    "topic": "finding the area of irregular shapes",
+                    "grade_level": "Grade 6",
+                    "subject": "Mathematics",
+                },
+            )
+
+    assert response.status_code == 200
+    system_prompt = str(captured["system_prompt"])
+    assert "self-contained teachable slice" in system_prompt
+    assert "modifier or scope variant" in system_prompt

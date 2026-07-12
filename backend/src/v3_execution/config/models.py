@@ -42,7 +42,7 @@ V3NodeReasoningPolicy = V3ReasoningLevel | bool
 
 V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     V3_SIGNAL_EXTRACTOR: False,
-    V3_NARROW: False,
+    V3_NARROW: "medium",
     V3_STAGE1_PLANNER: "high",
     V3_STAGE2_EXPANDER: "medium",
     V3_BLUEPRINT_ADJUST: "medium",

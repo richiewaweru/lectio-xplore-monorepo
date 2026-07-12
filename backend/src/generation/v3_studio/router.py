@@ -314,7 +314,10 @@ async def post_v3_narrow(
         "You break broad lesson topics into focused subtopic candidates. "
         "Each candidate must be teachable in a single 45-60 minute lesson. "
         "Return 3-5 candidates. Each has: id (short slug, no spaces), "
-        "title (plain short name), description (one sentence). "
+        "title (3-6 words that name the method or approach), description (one sentence). "
+        "Each candidate must be a self-contained teachable slice, not a modifier or scope variant "
+        "of another candidate. Collapse candidates that differ only by scope into the broader one. "
+        "Write each description as: 'Students [verb] [what], using [method/tool].' "
         "Output valid JSON only. No preamble."
     )
 
