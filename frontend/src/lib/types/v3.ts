@@ -29,6 +29,12 @@ export interface V3InputForm {
 	free_text: string;
 }
 
+export interface V3IntentDrafts {
+	outcome_draft: string;
+	struggle_draft: string;
+	prior_knowledge_draft: string;
+}
+
 export interface V3SignalSummary {
 	topic: string;
 	subtopic: string | null;

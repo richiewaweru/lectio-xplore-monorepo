@@ -10,6 +10,7 @@ import type {
 	V3GenerationDetail,
 	V3GenerationHistoryItem,
 	V3InputForm,
+	V3IntentDrafts,
 	V3SignalSummary
 } from '$lib/types/v3';
 
@@ -49,6 +50,27 @@ export async function narrowTopic(payload: {
 	await ensureOk(res, 'Could not narrow this topic.');
 	const data = (await res.json()) as { candidates: V3SubtopicCandidate[] };
 	return data.candidates ?? [];
+}
+
+export async function proposeIntent(payload: {
+	grade_level: string;
+	subject: string;
+	resource_type: string;
+	duration_minutes: number;
+	learner_level: string;
+	reading_level: string;
+	language_support: string;
+	prior_knowledge_level: string;
+	topic: string;
+	subtopics: string[];
+}): Promise<V3IntentDrafts> {
+	const res = await apiFetch('/api/v1/v3/propose-intent', {
+		method: 'POST',
+		headers: bearerHeaders(),
+		body: JSON.stringify(payload)
+	});
+	await ensureOk(res, 'Could not draft the lesson intent.');
+	return res.json() as Promise<V3IntentDrafts>;
 }
 
 export async function startChunkedPlan(payload: {
