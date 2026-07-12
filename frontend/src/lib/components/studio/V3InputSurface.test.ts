@@ -1,140 +1,89 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { tick } from 'svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { narrowTopic } = vi.hoisted(() => ({
-	narrowTopic: vi.fn()
-}));
-
-vi.mock('$lib/api/v3', () => ({
-	narrowTopic
-}));
+const { narrowTopic, proposeIntent } = vi.hoisted(() => ({ narrowTopic: vi.fn(), proposeIntent: vi.fn() }));
+vi.mock('$lib/api/v3', () => ({ narrowTopic, proposeIntent }));
 
 import V3InputSurface from './V3InputSurface.svelte';
 
+const candidates = [
+	{ id: 'rectangles', title: 'Decompose into rectangles', description: 'Students split L-shapes into rectangles and add areas.' },
+	{ id: 'triangles', title: 'Split with triangles', description: 'Students split shapes using triangles and rectangles.' },
+	{ id: 'grid', title: 'Count grid squares', description: 'Students count square units using a grid.' },
+	{ id: 'missing', title: 'Find missing areas', description: 'Students find a missing rectangle area from known measures.' },
+	{ id: 'compare', title: 'Compare strategies', description: 'Students compare decomposition methods.' }
+];
+const drafts = {
+	outcome_draft: 'By the end, students can decompose irregular shapes into rectangles and add their areas.',
+	struggle_draft: 'Students may skip a region while splitting shapes. They need to label each part before adding.',
+	prior_knowledge_draft: 'Area of a rectangle\nAdd whole numbers'
+};
+
+async function fillClassAndTopic(): Promise<void> {
+	const grade = screen.getByLabelText('Grade level') as HTMLSelectElement;
+	grade.value = 'Grade 6'; await fireEvent.change(grade);
+	const subject = screen.getByLabelText('Subject') as HTMLSelectElement;
+	subject.value = 'Mathematics'; await fireEvent.change(subject);
+	const topic = screen.getByLabelText('Topic') as HTMLInputElement;
+	topic.value = 'Finding the area of irregular shapes'; await fireEvent.input(topic);
+}
+
+afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe('V3InputSurface', () => {
-	it('submits a comprehensive V3InputForm payload', async () => {
-		const onSubmit = vi.fn();
-		render(V3InputSurface, { props: { onSubmit } });
-
-		const gradeSelect = screen.getByLabelText('Grade level') as HTMLSelectElement;
-		gradeSelect.value = 'Grade 7';
-		await fireEvent.change(gradeSelect);
-		await tick();
-
-		const subjectSelect = screen.getByLabelText('Subject') as HTMLSelectElement;
-		subjectSelect.value = 'Mathematics';
-		await fireEvent.change(subjectSelect);
-		await tick();
-
-		const topicInput = screen.getByLabelText('Topic') as HTMLInputElement;
-		topicInput.value = 'Compound area';
-		await fireEvent.input(topicInput);
-		await tick();
-
-		const outcomeInput = screen.getByLabelText('Desired outcome') as HTMLTextAreaElement;
-		outcomeInput.value = 'Students can break compound shapes into rectangles and find the total area.';
-		await fireEvent.input(outcomeInput);
-		await tick();
-
-		const submit = screen.getByRole('button', { name: 'Build the skeleton' }) as HTMLButtonElement;
-		expect(submit.disabled).toBe(false);
-
-		await fireEvent.click(submit);
-		await tick();
-
-		expect(onSubmit).toHaveBeenCalledTimes(1);
-		const payload = onSubmit.mock.calls[0][0];
-		expect(payload.grade_level).toBe('Grade 7');
-		expect(payload.topic).toBe('Compound area');
-		expect(Array.isArray(payload.subtopics)).toBe(true);
-		expect(payload.resource_type).toBeDefined();
-		expect(payload.outcome).toContain('compound shapes');
-		expect(payload.learner_level).toBeDefined();
+	it('renders the five proposed cards in order', () => {
+		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+		const labels = screen.getAllByText(/Step [1-5] \//).map((element) => element.textContent);
+		expect(labels).toEqual(['Step 1 / Class shape', 'Step 2 / Lesson shape', 'Step 3 / Topic', 'Step 4 / Intent', 'Step 5 / Anything else']);
+		expect(screen.getByLabelText('Grade level')).toBeTruthy();
+		expect(screen.getByLabelText('Topic')).toBeTruthy();
 	});
 
-	it('calls narrowTopic with topic, grade_level, and subject when Narrow is clicked', async () => {
-		narrowTopic.mockResolvedValue([
-			{ id: 'seed-dispersal', title: 'Seed dispersal', description: 'How plants spread seeds.' },
-			{ id: 'pollination', title: 'Pollination', description: 'Role of insects.' }
-		]);
-
+	it('narrows a valid topic on blur after the debounce', async () => {
+		narrowTopic.mockResolvedValue(candidates);
 		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
-
-		const gradeSelect = screen.getByLabelText('Grade level') as HTMLSelectElement;
-		gradeSelect.value = 'Grade 6';
-		await fireEvent.change(gradeSelect);
-
-		const subjectSelect = screen.getByLabelText('Subject') as HTMLSelectElement;
-		subjectSelect.value = 'Biology';
-		await fireEvent.change(subjectSelect);
-
-		const topicInput = screen.getByLabelText('Topic') as HTMLInputElement;
-		topicInput.value = 'Reproduction in plants';
-		await fireEvent.input(topicInput);
-
-		await fireEvent.click(screen.getByRole('button', { name: /narrow/i }));
-
-		expect(narrowTopic).toHaveBeenCalledWith({
-			topic: 'Reproduction in plants',
-			grade_level: 'Grade 6',
-			subject: 'Biology'
-		});
+		await fillClassAndTopic();
+		await fireEvent.blur(screen.getByLabelText('Topic'));
+		await waitFor(() => expect(narrowTopic).toHaveBeenCalledWith({ topic: 'Finding the area of irregular shapes', grade_level: 'Grade 6', subject: 'Mathematics' }), { timeout: 1000 });
+		expect(screen.getByText('Decompose into rectangles')).toBeTruthy();
 	});
 
-	it('shows chips from narrowTopic response after Narrow is clicked', async () => {
-		narrowTopic.mockResolvedValue([
-			{ id: 'seed-dispersal', title: 'Seed dispersal', description: 'How plants spread seeds.' },
-			{ id: 'pollination', title: 'Pollination', description: 'Role of insects.' }
-		]);
-
+	it('shows inline chip descriptions and limits selection to four', async () => {
+		narrowTopic.mockResolvedValue(candidates);
 		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
-
-		const gradeSelect = screen.getByLabelText('Grade level') as HTMLSelectElement;
-		gradeSelect.value = 'Grade 6';
-		await fireEvent.change(gradeSelect);
-
-		const subjectSelect = screen.getByLabelText('Subject') as HTMLSelectElement;
-		subjectSelect.value = 'Biology';
-		await fireEvent.change(subjectSelect);
-
-		const topicInput = screen.getByLabelText('Topic') as HTMLInputElement;
-		topicInput.value = 'Reproduction in plants';
-		await fireEvent.input(topicInput);
-
-		await fireEvent.click(screen.getByRole('button', { name: /narrow/i }));
-
-		await waitFor(() => {
-			expect(screen.getByText('Seed dispersal')).toBeTruthy();
-			expect(screen.getByText('Pollination')).toBeTruthy();
-		});
+		await fillClassAndTopic(); await fireEvent.blur(screen.getByLabelText('Topic'));
+		await new Promise((resolve) => setTimeout(resolve, 650));
+		await waitFor(() => expect(screen.getByText(candidates[0].description)).toBeTruthy());
+		for (const candidate of candidates.slice(0, 4)) await fireEvent.click(screen.getByRole('button', { name: new RegExp(candidate.title) }));
+		expect((screen.getByRole('button', { name: /compare strategies/i }) as HTMLButtonElement).disabled).toBe(true);
 	});
 
-	it('runs local split fallback when narrowTopic rejects for "Seeds, Pollination"', async () => {
-		narrowTopic.mockRejectedValue(new Error('Network error'));
-
+	it('prefills the editable intent fields after a topic is settled', async () => {
+		narrowTopic.mockResolvedValue(candidates); proposeIntent.mockResolvedValue(drafts);
 		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+		await fillClassAndTopic(); await fireEvent.blur(screen.getByLabelText('Topic'));
+		await new Promise((resolve) => setTimeout(resolve, 650));
+		await fireEvent.click(screen.getByRole('button', { name: /continue with topic/i }));
+		await waitFor(() => expect(proposeIntent).toHaveBeenCalled());
+		expect((screen.getByLabelText('Desired outcome') as HTMLTextAreaElement).value).toBe(drafts.outcome_draft);
+		expect((screen.getByLabelText('What have they already covered?') as HTMLTextAreaElement).value).toBe(drafts.prior_knowledge_draft);
+	});
 
-		const gradeSelect = screen.getByLabelText('Grade level') as HTMLSelectElement;
-		gradeSelect.value = 'Grade 6';
-		await fireEvent.change(gradeSelect);
-
-		const subjectSelect = screen.getByLabelText('Subject') as HTMLSelectElement;
-		subjectSelect.value = 'Biology';
-		await fireEvent.change(subjectSelect);
-
-		const topicInput = screen.getByLabelText('Topic') as HTMLInputElement;
-		topicInput.value = 'Seeds, Pollination';
-		await fireEvent.input(topicInput);
-
-		await fireEvent.click(screen.getByRole('button', { name: /narrow/i }));
-
-		await waitFor(() => {
-			expect(screen.getByText('Seeds')).toBeTruthy();
-		});
-		expect(
-			screen.getByText(/topic narrowing could not reach the live service/i)
-		).toBeTruthy();
+	it('shows a stale refresh pill and confirms before overwriting edits', async () => {
+		narrowTopic.mockResolvedValue(candidates); proposeIntent.mockResolvedValue(drafts);
+		const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+		await fillClassAndTopic(); await fireEvent.blur(screen.getByLabelText('Topic'));
+		await new Promise((resolve) => setTimeout(resolve, 650));
+		await fireEvent.click(screen.getByRole('button', { name: /continue with topic/i }));
+		await waitFor(() => expect(screen.getByLabelText('Desired outcome')).toBeTruthy());
+		const outcome = screen.getByLabelText('Desired outcome') as HTMLTextAreaElement;
+		outcome.value = 'Teacher edit'; await fireEvent.input(outcome); await tick();
+		const reading = screen.getByDisplayValue('At grade reading level') as HTMLSelectElement;
+		reading.value = 'below_grade'; await fireEvent.change(reading);
+		await fireEvent.click(screen.getByRole('button', { name: /refresh drafts/i }));
+		expect(confirm).toHaveBeenCalled();
+		expect(proposeIntent).toHaveBeenCalledTimes(1);
 	});
 });
