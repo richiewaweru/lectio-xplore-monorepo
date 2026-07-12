@@ -468,7 +468,7 @@ async def test_v3_document_endpoint_forbidden_for_other_user() -> None:
 
 
 @pytest.mark.asyncio
-async def test_v3_document_endpoint_missing_when_document_has_no_sections() -> None:
+async def test_v3_document_endpoint_returns_pending_snapshot_when_document_has_no_sections() -> None:
     app.dependency_overrides[get_current_user] = _override_user_a
     await _ensure_user(TEST_USER_A)
 
@@ -481,7 +481,38 @@ async def test_v3_document_endpoint_missing_when_document_has_no_sections() -> N
 
     async with _client() as client:
         resp = await client.get(f"/api/v1/v3/generations/{generation_id}/document")
-    assert resp.status_code == 404
+    assert resp.status_code == 200
+    assert resp.headers["Cache-Control"] == "no-store"
+    assert resp.json() == {
+        "kind": "v3_booklet_pack",
+        "generation_id": generation_id,
+        "status": "streaming_preview",
+        "sections": [],
+    }
+
+
+@pytest.mark.asyncio
+async def test_v3_document_endpoint_returns_pending_snapshot_when_document_is_not_written_yet() -> None:
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+
+    generation_id = str(uuid.uuid4())
+    await _upsert_generation_row(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        document_json=None,
+    )
+
+    async with _client() as client:
+        resp = await client.get(f"/api/v1/v3/generations/{generation_id}/document")
+    assert resp.status_code == 200
+    assert resp.headers["Cache-Control"] == "no-store"
+    assert resp.json() == {
+        "kind": "v3_booklet_pack",
+        "generation_id": generation_id,
+        "status": "streaming_preview",
+        "sections": [],
+    }
 
 
 @pytest.mark.asyncio
