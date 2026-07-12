@@ -986,7 +986,13 @@ describe('studio chunked URL resume', () => {
 						warnings: ['Missing practice block']
 					}
 				],
-				sections: [{ section_id: 'build', header: { title: 'Build understanding' } }],
+				sections: [
+					{
+						section_id: 'build',
+						header: { title: 'Build understanding' },
+						explanation: { body: 'Partial body written mid-generation' }
+					}
+				],
 				warnings: [],
 				booklet_issues: []
 			})
@@ -1022,6 +1028,9 @@ describe('studio chunked URL resume', () => {
 		expect(v3Studio.canvas).toHaveLength(1);
 		expect(v3Studio.canvas[0]?.id).toBe('build');
 		expect(v3Studio.canvas[0]?.sectionStatus).toBe('incomplete');
+		expect(v3Studio.canvas[0]?.mergedFields.explanation).toEqual({
+			body: 'Partial body written mid-generation'
+		});
 
 		const handlers = latestGenerationHandlers() as {
 			onPoke?: () => void;
