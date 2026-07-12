@@ -79,8 +79,35 @@ in code:
 - `uv run pytest tests/generation` → 100 passed. `ruff` clean. Architecture
   guard clean. `npm run test` (studio) 54 passed, `npm run check` 0 errors.
 
-## Phase 3 — live verification
+## Phase 3 — live verification (2026-07-12, Railway deploy `1154756`)
 
-- Pending: in-browser run against the deployed app (canvas fills progressively,
-  polling stops at completion; redeploy mid-run lands `failed`, no infinite
-  poll). To be recorded here after deploy of this branch.
+Deployed service: `text-book-generator Copy Copy` on Railway (deploys `v3` via
+GitHub; deployment of `1154756` confirmed successful in the dashboard).
+Frontend: https://text-book-v3.vercel.app.
+
+- **Exit ticket run `a234d2cb` (Grade 6, adding like fractions):** executed
+  end-to-end. `GET /document` returned the section with populated component
+  bodies (`short_answer`, `fill_in_blank`, `student_textbox`) — the polled
+  snapshot carries real content, not an empty shell. The run landed on a
+  terminal `progress.stage` (`failed`, because the coherence review rejected
+  the draft → `draft_needs_review` / `failed_finalisation`); the studio stopped
+  polling, moved to the edit state, rendered the full draft on the canvas, and
+  offered "Download Draft PDF (Review Needed)". No infinite poll.
+- **Earlier lesson runs `d1461afd`, `b28b64dd`:** both reached terminal
+  `status=partial` on their own — no stuck-forever generations in the DB.
+- **Observed (pre-existing, planning-side, NOT fixed here):**
+  1. Stage-2 planning went `assembly_blocked` once with an empty
+     `failed_sections` list, and the frontend kept showing "Writing your
+     resource…" because only the stage-2 SSE stream carries that state —
+     the chunked-status poll path doesn't surface it. Same "silent death"
+     class of bug as H1 but in the planning stage.
+  2. On resume of an `assembly_blocked` generation, the plan renders read-only
+     with no retry/approve control (dead-end UI); re-POSTing `/chunked/{id}/approve`
+     un-blocks it.
+  3. Exit-ticket coherence review flags "expected 3 practice questions, found 0"
+     while the questions are clearly rendered as components — planned questions
+     are "not consumed" by assembly for this template, so small resources
+     terminate as `draft_needs_review` even when the content looks right.
+- **Kill-test (worker restart mid-run):** covered by the regression tests and
+  the startup sweep; live restart pending (requires restarting the production
+  Railway service mid-generation).
