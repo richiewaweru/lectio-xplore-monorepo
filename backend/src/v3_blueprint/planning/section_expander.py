@@ -110,13 +110,9 @@ component with a 40-word capacity.
 WHAT YOU CANNOT DO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  - Add a component not in the section plan
   - Remove a planned component
-  - Change a component's slug or position
-  - Write question prompt text for a question not assigned
-    to this section in the question_plan
-  - Add a visual_strategy to a section where
-    visual_required is false
+  - Replace a planned component's slug or position
+  - Omit a question assigned to this section in the question_plan
   - Change the temperature of any question
   - Introduce a concept the plan did not allocate to this section
 
@@ -124,8 +120,17 @@ WHAT YOU CANNOT DO
 OUTPUT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Output ONLY valid JSON matching this schema.
-Do not add any keys not shown.
+Return valid JSON containing all required documented fields.
+Prefer the documented schema and keys. Additional detail must not replace,
+rename, or omit required fields.
+
+Keep content_intent concise where possible. Preserve every instruction required
+by the downstream writer. Do not omit meaningful pedagogical information solely
+to satisfy a length preference.
+
+Every planned component must receive a brief. Do not replace planned component
+IDs with invented IDs. Every question assigned to this section must receive a
+question brief.
 
 {
   "section_id": "must match the section you were given",
@@ -133,8 +138,7 @@ Do not add any keys not shown.
   "components": [
     {
       "component_id": "slug from the section plan — unchanged",
-      "content_intent": "your writer brief — specific, actionable,
-                         within component capacity, max 300 chars"
+      "content_intent": "your writer brief — specific, actionable, and complete"
     }
   ],
 
@@ -152,7 +156,7 @@ Do not add any keys not shown.
 If visual_required is true for this section, replace null with:
 {
   "subject": "what the visual depicts — one sentence",
-  "visual_job": "what the visual is FOR - e.g. introduce anchor visually, summarize section explanation as labeled diagram, support question q-practice-2 with unlabeled figure - max 120 chars",
+  "visual_job": "what the visual is FOR - e.g. introduce anchor visually, summarize section explanation as labeled diagram, support question q-practice-2 with an unlabeled figure",
   "type_hint": "diagram | chart | illustration | comparison",
   "anchor_link": "how this visual connects to the anchor example",
   "visual_style": "diagram_precision | illustration",
@@ -173,7 +177,6 @@ If visual_required is true for this section, replace null with:
 
 HARD RULES:
 - question_briefs is an empty list [] if no questions are assigned to this section
-- visual_strategy is null if visual_required is false for this section
 - visual_strategy must be populated if visual_required is true
 - visual_job describes PURPOSE, not runtime timing
 - visual_style is required when visual_strategy is populated: use diagram_precision
@@ -183,14 +186,10 @@ HARD RULES:
   captions belong in the component caption field
 - must_show items are positive statements of what appears; any absence constraint
   ("no X", "without X", "never X", "avoid X") belongs in must_not_show
-- must_show and must_not_show each contain 2 to 5 short, concrete items
+- Prefer 2 to 5 short, concrete items in must_show and must_not_show
 - If the section's visual-capable component is diagram-series, frames must have at least 2 entries
-- If the component is not diagram-series, frames must be []
 - If the visual supports a specific question, add its ID to source_question_ids
-- visual_job max 120 characters
 - component_id values must exactly match slugs from the section plan
-- content_intent max 300 chars
-- Do not add JSON keys not shown above
 """
 
 

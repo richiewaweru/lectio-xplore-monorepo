@@ -174,7 +174,7 @@ class Stage1PlanFailure(Exception):
 class VisualFrameBrief(BaseModel):
     """Stage 2 description of one frame in a diagram-series."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     description: str = Field(
         description="What this frame shows. One sentence."
@@ -183,7 +183,7 @@ class VisualFrameBrief(BaseModel):
 
 
 class VisualStrategySpec(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     subject: str = Field(
         description="What the visual depicts. One sentence.",
@@ -194,9 +194,8 @@ class VisualStrategySpec(BaseModel):
             "E.g. 'introduce the anchor visually', "
             "'summarize the section explanation as a labeled diagram', "
             "'support practice question q-practice-2 with an unlabeled figure'. "
-            "Describes intent, not timing. Max 120 chars."
+            "Describes intent, not timing."
         ),
-        max_length=120,
     )
     type_hint: Literal["diagram", "chart", "illustration", "comparison"]
     anchor_link: str = Field(
@@ -230,7 +229,7 @@ class VisualStrategySpec(BaseModel):
         description=(
             "Frame descriptions for diagram-series components. "
             "Must have >= 2 entries when the section's visual-capable "
-            "component is diagram-series. Empty for all other components."
+            "component is diagram-series."
         ),
     )
 
@@ -245,21 +244,19 @@ class VisualStrategySpec(BaseModel):
 
 
 class ComponentBrief(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     component_id: str = Field(
-        description="Must match slug from StructuralPlan. "
-        "Cannot add or change slugs."
+        description="Planned component IDs must match StructuralPlan slugs."
     )
     content_intent: str = Field(
-        description="Precise writer brief. Specific, actionable, "
-        "within component capacity. Max 300 chars.",
-        max_length=300,
+        description="Precise, actionable writer brief. Prefer concise wording, "
+        "but preserve all instructions needed for correct downstream generation.",
     )
 
 
 class QuestionBrief(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     question_id: str = Field(
         description="Must match question_id from question_plan."
@@ -273,7 +270,7 @@ class QuestionBrief(BaseModel):
 
 
 class SectionBrief(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     section_id: str = Field(
         description="Must match the section assigned to this call."

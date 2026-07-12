@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import logging
+
 from contracts.lectio import get_component_card
 from v3_blueprint.planning.models import QPlanItem, SectionBrief, SectionPlan, StructuralPlan
+
+log = logging.getLogger(__name__)
 
 
 def _get_component_registry(slugs: set[str]) -> dict[str, dict]:
@@ -146,43 +150,43 @@ def validate_section_brief(
     planned_slugs = {c.slug for c in section_plan.components}
     returned_slugs = {c.component_id for c in brief.components}
 
-    # 1. Nothing dropped — every planned slug has a brief
-    dropped = planned_slugs - returned_slugs
-    if dropped:
+    missing_components = planned_slugs - returned_slugs
+    if missing_components:
         errors.append(
             f"Section '{section_plan.id}': missing briefs for "
-            f"planned components: {sorted(dropped)}"
+            f"planned components: {sorted(missing_components)}"
         )
 
-    # 2. Nothing added — no slugs outside section plan
-    added = returned_slugs - planned_slugs
-    if added:
-        errors.append(
-            f"Section '{section_plan.id}': unexpected components "
-            f"not in plan: {sorted(added)}"
+    additional_components = returned_slugs - planned_slugs
+    if additional_components:
+        log.info(
+            "Section '%s' returned additional component briefs that will not be consumed "
+            "during assembly: %s",
+            section_plan.id,
+            sorted(additional_components),
         )
 
-    # 3. No question briefs from other sections
-    this_section_qids = {
+    assigned_question_ids = {
         q.question_id for q in question_plan
         if q.section_id == section_plan.id
     }
-    returned_qids = {q.question_id for q in brief.question_briefs}
-    wrong_section = returned_qids - this_section_qids
-    if wrong_section:
+    returned_question_ids = {q.question_id for q in brief.question_briefs}
+    missing_questions = assigned_question_ids - returned_question_ids
+    if missing_questions:
         errors.append(
-            f"Section '{section_plan.id}': question briefs returned "
-            f"for questions not assigned here: {wrong_section}"
+            f"Section '{section_plan.id}': missing assigned question briefs: "
+            f"{sorted(missing_questions)}"
         )
 
-    # 4. visual_strategy present only when visual_required
-    if brief.visual_strategy and not section_plan.visual_required:
-        errors.append(
-            f"Section '{section_plan.id}': visual_strategy returned "
-            f"but visual_required is false."
+    additional_questions = returned_question_ids - assigned_question_ids
+    if additional_questions:
+        log.info(
+            "Section '%s' returned additional question briefs that will not be consumed "
+            "during assembly: %s",
+            section_plan.id,
+            sorted(additional_questions),
         )
 
-    # 5. visual_strategy present when visual_required
     if section_plan.visual_required and not brief.visual_strategy:
         errors.append(
             f"Section '{section_plan.id}': visual_required is true "
@@ -198,26 +202,19 @@ def validate_section_brief(
                     f"Section '{section_plan.id}': diagram-series component "
                     f"requires >= 2 frames in visual_strategy, got {len(vs.frames)}."
                 )
-        elif vs.frames:
+        if vs.source_question_ids:
+            bad_qids = set(vs.source_question_ids) - assigned_question_ids
+            if bad_qids:
+                errors.append(
+                    f"Section '{section_plan.id}': source_question_ids references "
+                    f"questions not in this section: {sorted(bad_qids)}"
+                )
+
+        if not vs.visual_job.strip():
             errors.append(
-                f"Section '{section_plan.id}': frames provided but "
-                f"component is not diagram-series. frames must be []."
+                f"Section '{section_plan.id}': visual_strategy.visual_job is empty."
             )
 
-    if brief.visual_strategy and brief.visual_strategy.source_question_ids:
-        bad_qids = set(brief.visual_strategy.source_question_ids) - this_section_qids
-        if bad_qids:
-            errors.append(
-                f"Section '{section_plan.id}': source_question_ids references "
-                f"questions not in this section: {sorted(bad_qids)}"
-            )
-
-    if brief.visual_strategy and not brief.visual_strategy.visual_job.strip():
-        errors.append(
-            f"Section '{section_plan.id}': visual_strategy.visual_job is empty."
-        )
-
-    # 6. section_id matches
     if brief.section_id != section_plan.id:
         errors.append(
             f"Returned section_id '{brief.section_id}' does not match "

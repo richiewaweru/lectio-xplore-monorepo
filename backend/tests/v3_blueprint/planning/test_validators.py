@@ -167,7 +167,7 @@ def test_validate_section_brief_catches_dropped_component() -> None:
     assert any("missing briefs for planned components" in error for error in errors)
 
 
-def test_validate_section_brief_catches_added_component() -> None:
+def test_validate_section_brief_allows_additional_component() -> None:
     slug_a, _slug_b = _first_two_distinct_slugs()
     section = SectionPlan(
         id="practice",
@@ -187,10 +187,10 @@ def test_validate_section_brief_catches_added_component() -> None:
         visual_strategy=None,
     )
     errors = validate_section_brief(brief, section, [])
-    assert any("unexpected components not in plan" in error for error in errors)
+    assert errors == []
 
 
-def test_validate_section_brief_catches_visual_strategy_on_non_visual_section() -> None:
+def test_validate_section_brief_allows_optional_visual_on_non_visual_section() -> None:
     slug_a, _slug_b = _first_two_distinct_slugs()
     section = SectionPlan(
         id="summary",
@@ -220,7 +220,141 @@ def test_validate_section_brief_catches_visual_strategy_on_non_visual_section() 
         ),
     )
     errors = validate_section_brief(brief, section, [])
-    assert any("visual_strategy returned but visual_required is false" in error for error in errors)
+    assert errors == []
+
+
+def test_stage2_models_preserve_long_content_and_ignore_unknown_fields() -> None:
+    incident_content = "x" * 304
+    long_content = "A complete, coherent writer instruction. " * 30
+    payload = {
+        "section_id": "practice",
+        "section_note": "ignored",
+        "components": [
+            {
+                "component_id": "practice-stack",
+                "content_intent": incident_content,
+                "difficulty_note": "ignored",
+            },
+            {
+                "component_id": "reflection-prompt",
+                "content_intent": long_content,
+            },
+        ],
+        "question_briefs": [
+            {
+                "question_id": "q1",
+                "prompt_text": "What changes?",
+                "expected_answer": "The representation changes.",
+                "answer_note": "ignored",
+            }
+        ],
+        "visual_strategy": {
+            "subject": "Fraction strips",
+            "visual_job": "Compare equivalent representations.",
+            "type_hint": "diagram",
+            "anchor_link": "same strip",
+            "visual_note": "ignored",
+            "frames": [
+                {
+                    "description": "One strip divided in halves.",
+                    "must_show": ["equal halves"],
+                    "frame_note": "ignored",
+                }
+            ],
+        },
+    }
+
+    brief = SectionBrief.model_validate(payload)
+
+    assert brief.components[0].content_intent == incident_content
+    assert brief.components[1].content_intent == long_content
+    assert "section_note" not in brief.model_dump()
+    assert "difficulty_note" not in brief.components[0].model_dump()
+    assert "answer_note" not in brief.question_briefs[0].model_dump()
+    assert brief.visual_strategy is not None
+    assert "visual_note" not in brief.visual_strategy.model_dump()
+    assert "frame_note" not in brief.visual_strategy.frames[0].model_dump()
+
+    section = SectionPlan(
+        id="practice",
+        title="Practice",
+        role="practice",
+        visual_required=False,
+        transition_note=None,
+        components=[
+            ComponentSlot(slug="practice-stack", purpose="practice"),
+            ComponentSlot(slug="reflection-prompt", purpose="reflect"),
+        ],
+    )
+    question_plan = [
+        QPlanItem(question_id="q1", section_id="practice", temperature="warm")
+    ]
+    assert validate_section_brief(brief, section, question_plan) == []
+
+
+def test_validate_section_brief_allows_additional_question() -> None:
+    section = SectionPlan(
+        id="practice",
+        title="Practice",
+        role="practice",
+        visual_required=False,
+        transition_note=None,
+        components=[ComponentSlot(slug="hook-hero", purpose="practice")],
+    )
+    brief = SectionBrief(
+        section_id="practice",
+        components=[ComponentBrief(component_id="hook-hero", content_intent="practice")],
+        question_briefs=[
+            QuestionBrief(question_id="q1", prompt_text="Required?", expected_answer="Yes."),
+            QuestionBrief(question_id="q-extra", prompt_text="Extra?", expected_answer="Also yes."),
+        ],
+    )
+    question_plan = [
+        QPlanItem(question_id="q1", section_id="practice", temperature="warm")
+    ]
+
+    assert validate_section_brief(brief, section, question_plan) == []
+
+
+def test_validate_section_brief_catches_missing_assigned_question() -> None:
+    section = SectionPlan(
+        id="practice",
+        title="Practice",
+        role="practice",
+        visual_required=False,
+        transition_note=None,
+        components=[ComponentSlot(slug="hook-hero", purpose="practice")],
+    )
+    brief = SectionBrief(
+        section_id="practice",
+        components=[ComponentBrief(component_id="hook-hero", content_intent="practice")],
+    )
+    question_plan = [
+        QPlanItem(question_id="q1", section_id="practice", temperature="warm")
+    ]
+
+    errors = validate_section_brief(brief, section, question_plan)
+
+    assert any("missing assigned question briefs" in error for error in errors)
+
+
+def test_validate_section_brief_catches_wrong_section_id() -> None:
+    section = SectionPlan(
+        id="practice",
+        title="Practice",
+        role="practice",
+        visual_required=False,
+        transition_note=None,
+        components=[ComponentSlot(slug="hook-hero", purpose="practice")],
+    )
+    brief = SectionBrief(
+        section_id="wrong-section",
+        components=[ComponentBrief(component_id="hook-hero", content_intent="practice")],
+    )
+
+    errors = validate_section_brief(brief, section, [])
+
+    assert any("does not match assigned section" in error for error in errors)
 
 
 def test_structural_plan_allows_more_than_two_visual_sections() -> None:
@@ -289,7 +423,7 @@ def test_validate_section_brief_rejects_series_with_too_few_frames() -> None:
     assert any("requires >= 2 frames" in error for error in errors)
 
 
-def test_validate_section_brief_rejects_frames_on_non_series_component() -> None:
+def test_validate_section_brief_allows_extra_frames_on_non_series_component() -> None:
     section = SectionPlan(
         id="model",
         title="Model",
@@ -317,7 +451,35 @@ def test_validate_section_brief_rejects_frames_on_non_series_component() -> None
     )
 
     errors = validate_section_brief(brief, section, [])
-    assert any("frames provided but component is not diagram-series" in error for error in errors)
+    assert errors == []
+
+
+def test_validate_section_brief_allows_extra_diagram_series_frames() -> None:
+    section = SectionPlan(
+        id="model",
+        title="Model",
+        role="model",
+        visual_required=True,
+        transition_note=None,
+        components=[ComponentSlot(slug="diagram-series", purpose="show progression")],
+    )
+    brief = SectionBrief(
+        section_id="model",
+        components=[ComponentBrief(component_id="diagram-series", content_intent="show progression")],
+        visual_strategy=VisualStrategySpec(
+            subject="A sequence",
+            visual_job="show a stepwise progression",
+            type_hint="diagram",
+            anchor_link="same anchor",
+            must_show=["step markers"] * 6,
+            frames=[
+                VisualFrameBrief(description=f"Frame {index}", must_show=["step"])
+                for index in range(3)
+            ],
+        ),
+    )
+
+    assert validate_section_brief(brief, section, []) == []
 
 
 def test_validate_section_brief_rejects_bad_source_question_ids_and_empty_visual_job() -> None:

@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from collections.abc import Awaitable, Callable
 
+from pydantic_ai.exceptions import UnexpectedModelBehavior
+
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 from core.llm.runner import TruncatedCompletionError
 from v3_blueprint.planning.models import (
@@ -22,6 +24,12 @@ from v3_blueprint.planning.validators import validate_section_brief, validate_st
 
 EmitFn = Callable[[str, dict], Awaitable[None]]
 log = logging.getLogger(__name__)
+
+
+def _is_structured_output_validation_failure(exc: UnexpectedModelBehavior) -> bool:
+    """Keep result-schema failures retryable without masking provider failures."""
+    message = exc.message.lower()
+    return "result validation" in message and "maximum retries" in message
 
 
 async def run_stage1_with_retry(
@@ -239,6 +247,21 @@ async def _run_section_with_retry(
                 trace_id=trace_id,
                 previous_errors=errors if attempt == 2 else None,
             )
+        except UnexpectedModelBehavior as exc:
+            import traceback
+
+            print(
+                f"\n[STAGE2 CALL EXCEPTION] generation_id={generation_id}"
+                f" section_id={section.id}"
+                f" attempt={attempt}"
+                f" type={type(exc).__name__}"
+                f"\nmessage={str(exc)}"
+                f"\n{traceback.format_exc()}",
+                flush=True,
+            )
+            if not _is_structured_output_validation_failure(exc):
+                raise
+            errors = [f"Stage 2 structured output could not be validated: {exc}"]
         except Exception as exc:
             import traceback
 
@@ -252,7 +275,8 @@ async def _run_section_with_retry(
                 flush=True,
             )
             raise
-        errors = validate_section_brief(brief, section, plan.question_plan)
+        else:
+            errors = validate_section_brief(brief, section, plan.question_plan)
 
         if not errors:
             print(

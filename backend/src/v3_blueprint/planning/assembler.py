@@ -17,7 +17,6 @@ from v3_blueprint.models import (
 )
 from v3_blueprint.planning.models import (
     BlueprintAssemblyBlocked,
-    QuestionBrief,
     SectionBrief,
     StructuralPlan,
 )
@@ -153,17 +152,20 @@ def _assemble_question_plan(
     briefs: list[SectionBrief],
     included_section_ids: set[str],
 ) -> list[QuestionPlanItem]:
-    q_briefs: dict[str, QuestionBrief] = {
-        question_brief.question_id: question_brief
-        for brief in briefs
-        for question_brief in brief.question_briefs
-    }
+    brief_by_section_id = {brief.section_id: brief for brief in briefs}
 
     assembled: list[QuestionPlanItem] = []
     for question in plan.question_plan:
         if question.section_id not in included_section_ids:
             continue
-        question_brief = q_briefs.get(question.question_id)
+        section_brief = brief_by_section_id.get(question.section_id)
+        if section_brief is None:
+            continue
+        question_briefs = {
+            question_brief.question_id: question_brief
+            for question_brief in section_brief.question_briefs
+        }
+        question_brief = question_briefs.get(question.question_id)
         if question_brief is None:
             continue
         assembled.append(QuestionPlanItem(
@@ -185,7 +187,10 @@ def _assemble_visual_strategy(
     visuals: list[VisualInstruction] = []
     brief_by_section_id = {brief.section_id: brief for brief in briefs}
     for section_plan in plan.sections:
-        if section_plan.id not in included_section_ids:
+        if (
+            section_plan.id not in included_section_ids
+            or not section_plan.visual_required
+        ):
             continue
         brief = brief_by_section_id.get(section_plan.id)
         if brief is None or brief.visual_strategy is None:
