@@ -32,7 +32,9 @@ from core.routes.auth import router as auth_router
 from core.routes.profile import router as profile_router
 from core.routes.shares import router as shares_router
 from builder.routes import router as builder_router
+from core.database.session import async_session_factory
 from generation.routes import router as generation_router
+from generation.v3_studio.generation_writer import V3GenerationWriter
 from learning.routes import router as learning_router
 from media.diagnostics.v3_image_pipeline_diagnostic import (
     ProbeResult,
@@ -213,6 +215,15 @@ async def lifespan(app: FastAPI):
             )
     if settings.run_migrations_on_startup:
         await asyncio.to_thread(upgrade_database)
+    try:
+        stale_generations = await V3GenerationWriter(async_session_factory).fail_stale_running()
+        if stale_generations:
+            logger.warning(
+                "Marked %d stale running v3 generation(s) as failed after restart",
+                stale_generations,
+            )
+    except Exception:  # noqa: BLE001
+        logger.exception("Stale v3 generation sweep failed at startup")
     initialize_resource_registry()
     await telemetry_monitor.start()
     pdf_temp_cleaned = cleanup_stale_pdf_exports(

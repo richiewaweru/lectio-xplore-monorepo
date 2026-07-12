@@ -75,6 +75,107 @@ def _count_delivered_questions(sections: list[dict[str, Any]]) -> int:
     return delivered
 
 
+def _merge_component_field(
+    section: dict[str, Any],
+    section_field: str,
+    data: Any,
+) -> None:
+    section[section_field] = data if isinstance(data, dict) else {"value": data}
+
+
+def _merge_diagram_frame(
+    section: dict[str, Any],
+    *,
+    image_url: str,
+    frame_index: int | None,
+) -> None:
+    if frame_index is None:
+        section["diagram"] = {"image_url": image_url, "caption": "", "alt_text": ""}
+        return
+    series = section.get("diagram_series")
+    if not isinstance(series, dict):
+        series = {"title": "", "diagrams": []}
+    diagrams = list(series.get("diagrams") or [])
+    while len(diagrams) <= frame_index:
+        diagrams.append(
+            {
+                "step_label": f"Frame {len(diagrams) + 1}",
+                "caption": "",
+                "image_url": "",
+            }
+        )
+    step = diagrams[frame_index] if isinstance(diagrams[frame_index], dict) else {}
+    diagrams[frame_index] = {
+        **step,
+        "image_url": image_url,
+        "caption": step.get("caption") or f"Frame {frame_index + 1}",
+    }
+    section["diagram_series"] = {**series, "diagrams": diagrams}
+
+
+def _merge_practice_problem(
+    section: dict[str, Any],
+    *,
+    question_id: str,
+    difficulty: str,
+    data: dict[str, Any],
+) -> None:
+    practice = section.get("practice")
+    if not isinstance(practice, dict):
+        practice = {}
+    problems = [
+        problem
+        for problem in (practice.get("problems") or [])
+        if isinstance(problem, dict)
+    ]
+    stem = data.get("question") if isinstance(data.get("question"), str) else None
+    if not stem:
+        stem = data.get("stem") if isinstance(data.get("stem"), str) else ""
+    row: dict[str, Any] = {
+        "_qid": question_id,
+        "difficulty": difficulty,
+        "question": stem or "",
+        "hints": data.get("hints") if isinstance(data.get("hints"), list) else [],
+        "problem_type": data.get("problem_type")
+        if isinstance(data.get("problem_type"), str)
+        else "open",
+    }
+    if isinstance(data.get("diagram"), dict):
+        row["diagram"] = data["diagram"]
+    for index, problem in enumerate(problems):
+        if problem.get("_qid") == question_id:
+            problems[index] = row
+            break
+    else:
+        problems.append(row)
+    section["practice"] = {
+        **practice,
+        "problems": problems,
+        "label": practice.get("label") or "Practice Questions",
+        "hints_visible_default": practice.get("hints_visible_default", False),
+        "solutions_available": practice.get("solutions_available", True),
+    }
+
+
+def _bump_document_progress(document: dict[str, Any], section_id: str) -> None:
+    progress = document.get("progress")
+    if not isinstance(progress, dict):
+        progress = {}
+    stage = str(progress.get("stage") or "writing")
+    if stage in {"completed", "failed"}:
+        return
+    sections = progress.get("sections")
+    if not isinstance(sections, dict):
+        sections = {}
+    if sections.get(section_id) not in {"ready", "failed"}:
+        sections[section_id] = "writing"
+    document["progress"] = {
+        "stage": stage,
+        "sections": sections,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 def _planning_counts_from_report(report: dict[str, Any]) -> dict[str, int]:
     planning = report.get("planning")
     if not isinstance(planning, dict):
@@ -386,6 +487,133 @@ class V3GenerationWriter:
             }
             model.document_json = document
             await session.commit()
+
+    async def merge_stream_event(
+        self,
+        generation_id: str,
+        event_type: str,
+        payload: dict[str, Any],
+    ) -> None:
+        """Merge an incremental content event into the persisted snapshot.
+
+        Mirrors the canvas merge semantics the frontend applies from live SSE
+        (mergeComponentField / mergeDiagramFrame / mergePracticeProblem) so the
+        polled document is truthful while sections are still being written.
+        """
+        if event_type == "visual_ready":
+            section_id = str(payload.get("attaches_to") or "")
+        else:
+            section_id = str(payload.get("section_id") or "")
+        if not section_id:
+            return
+
+        async with self._session_factory() as session:
+            model = await session.get(GenerationModel, generation_id)
+            if model is None or not isinstance(model.document_json, dict):
+                return
+            document = deepcopy(model.document_json)
+            sections = document.get("sections")
+            if not isinstance(sections, list):
+                return
+            section = next(
+                (
+                    item
+                    for item in sections
+                    if isinstance(item, dict) and item.get("section_id") == section_id
+                ),
+                None,
+            )
+            if section is None:
+                return
+
+            if event_type in {"component_ready", "component_patched"}:
+                section_field = str(payload.get("section_field") or "")
+                if not section_field:
+                    return
+                _merge_component_field(section, section_field, payload.get("data"))
+            elif event_type == "question_ready":
+                question_id = str(payload.get("question_id") or "")
+                data = payload.get("data")
+                if not question_id or not isinstance(data, dict):
+                    return
+                _merge_practice_problem(
+                    section,
+                    question_id=question_id,
+                    difficulty=str(payload.get("difficulty") or ""),
+                    data=data,
+                )
+            elif event_type == "visual_ready":
+                image_url = payload.get("image_url")
+                if str(payload.get("status") or "") == "failed":
+                    return
+                if not isinstance(image_url, str) or not image_url:
+                    return
+                frame_index = payload.get("frame_index")
+                _merge_diagram_frame(
+                    section,
+                    image_url=image_url,
+                    frame_index=frame_index if isinstance(frame_index, int) else None,
+                )
+            else:
+                return
+
+            _bump_document_progress(document, section_id)
+            model.document_json = document
+            await session.commit()
+
+    async def fail_stale_running(self) -> int:
+        """Mark v3 generations left 'running' by a dead process as failed.
+
+        Called on startup: with a single worker, any row still 'running' when
+        the process boots belongs to a run killed by a restart/redeploy, and
+        would otherwise keep the frontend polling forever.
+        """
+        async with self._session_factory() as session:
+            result = await session.execute(
+                select(GenerationModel).where(
+                    GenerationModel.status == "running",
+                    or_(
+                        GenerationModel.mode == "v3",
+                        GenerationModel.requested_preset_id == "v3-studio",
+                    ),
+                )
+            )
+            models = list(result.scalars().all())
+            for model in models:
+                model.status = "failed"
+                model.quality_passed = False
+                model.error = "Generation was interrupted by a server restart."
+                model.error_type = "server_restart"
+                model.error_code = "v3_interrupted_by_restart"
+                model.completed_at = _utc_now_naive()
+                report = self._coerce_report(
+                    model.report_json,
+                    section_count=model.section_count or 0,
+                )
+                report["process_status"] = "failed"
+                model.report_json = report
+                if isinstance(model.document_json, dict):
+                    document = deepcopy(model.document_json)
+                    progress = document.get("progress")
+                    section_statuses = (
+                        dict(progress.get("sections"))
+                        if isinstance(progress, dict)
+                        and isinstance(progress.get("sections"), dict)
+                        else {}
+                    )
+                    section_statuses = {
+                        section_id: ("ready" if status == "ready" else "failed")
+                        for section_id, status in section_statuses.items()
+                    }
+                    document["progress"] = {
+                        "stage": "failed",
+                        "sections": section_statuses,
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                    model.document_json = document
+            if models:
+                await session.commit()
+            return len(models)
 
     async def get_document_json(
         self,

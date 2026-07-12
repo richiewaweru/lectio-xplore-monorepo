@@ -94,6 +94,28 @@ v3_studio_router = APIRouter(prefix="/v3", tags=["v3-studio"])
 _chunked_stage2_tasks: dict[str, asyncio.Task[None]] = {}
 _visual_regenerate_locks: dict[str, asyncio.Lock] = {}
 _snapshot_write_locks: dict[str, asyncio.Lock] = {}
+# Fire-and-forget tasks must be retained or the event loop may GC them mid-run.
+_background_tasks: set[asyncio.Task[Any]] = set()
+
+
+def _retain_background_task(task: asyncio.Task[Any]) -> None:
+    _background_tasks.add(task)
+
+    def _on_done(done: asyncio.Task[Any]) -> None:
+        _background_tasks.discard(done)
+        if done.cancelled():
+            return
+        exc = done.exception()
+        if exc is not None:
+            logger.error("v3 background task failed", exc_info=exc)
+
+    task.add_done_callback(_on_done)
+
+
+def _spawn_background_task(coro: Any) -> asyncio.Task[Any]:
+    task = asyncio.create_task(coro)
+    _retain_background_task(task)
+    return task
 
 
 def _register_pre_generation_trace(*, trace_id: str, user_id: str) -> None:
@@ -609,7 +631,7 @@ async def _start_generation_from_chunked_blueprint(
             "generation_starting",
             {"generation_id": generation_id, "blueprint_id": blueprint_id},
         )
-        asyncio.create_task(
+        _spawn_background_task(
             _pump_sse_to_queue(
                 queue,
                 blueprint=blueprint,
@@ -1430,6 +1452,18 @@ async def _pump_sse_to_queue(
         lock = _snapshot_write_locks.setdefault(generation_id, asyncio.Lock())
         async with lock:
             payload = _payload_with_progress(event_type, payload)
+            if event_type in {
+                "component_ready",
+                "component_patched",
+                "question_ready",
+                "visual_ready",
+            }:
+                await generation_writer.merge_stream_event(
+                    generation_id,
+                    event_type,
+                    payload,
+                )
+                return
             if event_type in {"skeleton_ready", "section_ready"}:
                 await generation_writer.write_draft(generation_id, payload)
                 return
@@ -1483,6 +1517,28 @@ async def _pump_sse_to_queue(
                 message = str(payload.get("message") or "Generation warning")
                 await generation_writer.write_failure(generation_id, message=message)
 
+    async def _write_pump_failure(message: str) -> None:
+        if generation_writer is None:
+            return
+        try:
+            await generation_writer.update_document_progress_stage(
+                generation_id,
+                stage="failed",
+            )
+            await generation_writer.write_failure(
+                generation_id,
+                message=message,
+                error_type="generation_pump_failure",
+                error_code="v3_generation_pump_failure",
+            )
+        except Exception:  # noqa: BLE001
+            logger.exception(
+                "v3 pump failure snapshot write failed generation_id=%s",
+                generation_id,
+            )
+
+    terminal_event_seen = False
+    pump_failure: str | None = None
     try:
         async for chunk in sse_event_stream(
             blueprint=blueprint,
@@ -1494,6 +1550,8 @@ async def _pump_sse_to_queue(
         ):
             event_type, payload = _parse_sse_chunk(chunk)
             if event_type and payload is not None:
+                if event_type in {"resource_finalised", "generation_warning"}:
+                    terminal_event_seen = True
                 try:
                     await _write_generation_snapshot(event_type, payload)
                     await _maybe_mark_chunked_complete(
@@ -1508,12 +1566,25 @@ async def _pump_sse_to_queue(
                     )
             await queue.put(chunk)
     except asyncio.CancelledError:
+        pump_failure = "Generation stopped before it finished."
         raise
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as exc:  # noqa: BLE001
+        pump_failure = f"{type(exc).__name__}: {str(exc)[:400] or repr(exc)}"
+        logger.exception(
+            "v3 generation pump crashed generation_id=%s",
+            generation_id,
+        )
     finally:
+        if not terminal_event_seen and generation_writer is not None:
+            # Runs as its own retained task so a cancelled pump still lands the
+            # generation on a terminal snapshot and the frontend stops polling.
+            _spawn_background_task(
+                _write_pump_failure(
+                    pump_failure or "Generation ended without a terminal event."
+                )
+            )
         _snapshot_write_locks.pop(generation_id, None)
-        await queue.put(None)
+        queue.put_nowait(None)
 
 
 @v3_studio_router.post("/generate/start", response_model=V3GenerateStartResponse)
@@ -1613,7 +1684,7 @@ async def post_v3_generate_start(
         user_id=current_user.id,
         blueprint_id=body.blueprint_id,
     )
-    asyncio.create_task(
+    _spawn_background_task(
         _pump_sse_to_queue(
             queue,
             blueprint=blueprint,

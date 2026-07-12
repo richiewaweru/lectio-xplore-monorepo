@@ -270,3 +270,148 @@ async def test_v3_generation_writer_persists_full_coherence_report() -> None:
         assert model.report_json["summary"]["minor_issues"] == 0
     finally:
         await _cleanup_generation(generation_id)
+
+
+def _skeleton_document(generation_id: str) -> dict:
+    return {
+        "kind": "v3_booklet_pack",
+        "generation_id": generation_id,
+        "template_id": "guided-concept-path",
+        "status": "streaming_preview",
+        "sections": [
+            {
+                "section_id": "intro",
+                "template_id": "guided-concept-path",
+                "title": "Intro",
+                "components": [{"component_id": "explanation-card", "intent": "Explain"}],
+                "header": {"title": "Intro"},
+            }
+        ],
+        "progress": {"stage": "writing", "sections": {"intro": "pending"}},
+    }
+
+
+async def _seed_snapshot(writer: V3GenerationWriter, generation_id: str) -> None:
+    await writer.upsert_started(
+        generation_id=generation_id,
+        user_id="writer-user",
+        subject="Science",
+        context="Plants",
+        template_id="guided-concept-path",
+        section_count=1,
+    )
+    async with async_session_factory() as session:
+        result = await session.execute(
+            select(GenerationModel).where(GenerationModel.id == generation_id)
+        )
+        model = result.scalar_one()
+        model.document_json = _skeleton_document(generation_id)
+        await session.commit()
+
+
+async def test_merge_stream_event_component_ready_populates_section_body() -> None:
+    generation_id = "v3-writer-merge-component"
+    await _cleanup_generation(generation_id)
+    writer = V3GenerationWriter(async_session_factory)
+    try:
+        await _seed_snapshot(writer, generation_id)
+        await writer.merge_stream_event(
+            generation_id,
+            "component_ready",
+            {
+                "generation_id": generation_id,
+                "component_id": "explanation-card",
+                "section_id": "intro",
+                "position": 0,
+                "section_field": "explanation",
+                "data": {"body": "Photosynthesis turns light into food."},
+            },
+        )
+        model = await _load_generation(generation_id)
+        section = model.document_json["sections"][0]
+        assert section["explanation"] == {"body": "Photosynthesis turns light into food."}
+        progress = model.document_json["progress"]
+        assert progress["stage"] == "writing"
+        assert progress["sections"]["intro"] == "writing"
+    finally:
+        await _cleanup_generation(generation_id)
+
+
+async def test_merge_stream_event_question_and_visual_ready() -> None:
+    generation_id = "v3-writer-merge-qv"
+    await _cleanup_generation(generation_id)
+    writer = V3GenerationWriter(async_session_factory)
+    try:
+        await _seed_snapshot(writer, generation_id)
+        await writer.merge_stream_event(
+            generation_id,
+            "question_ready",
+            {
+                "generation_id": generation_id,
+                "question_id": "q-1",
+                "section_id": "intro",
+                "difficulty": "medium",
+                "data": {"question": "What does a leaf do?", "hints": ["Think light"]},
+            },
+        )
+        await writer.merge_stream_event(
+            generation_id,
+            "visual_ready",
+            {
+                "generation_id": generation_id,
+                "visual_id": "vis-1",
+                "attaches_to": "intro",
+                "frame_index": None,
+                "image_url": "https://cdn.example/leaf.png",
+                "status": "completed",
+            },
+        )
+        model = await _load_generation(generation_id)
+        section = model.document_json["sections"][0]
+        problems = section["practice"]["problems"]
+        assert problems[0]["_qid"] == "q-1"
+        assert problems[0]["question"] == "What does a leaf do?"
+        assert section["diagram"]["image_url"] == "https://cdn.example/leaf.png"
+    finally:
+        await _cleanup_generation(generation_id)
+
+
+async def test_merge_stream_event_ignores_unknown_section_and_failed_visual() -> None:
+    generation_id = "v3-writer-merge-noop"
+    await _cleanup_generation(generation_id)
+    writer = V3GenerationWriter(async_session_factory)
+    try:
+        await _seed_snapshot(writer, generation_id)
+        await writer.merge_stream_event(
+            generation_id,
+            "component_ready",
+            {"section_id": "missing", "section_field": "explanation", "data": {"body": "x"}},
+        )
+        await writer.merge_stream_event(
+            generation_id,
+            "visual_ready",
+            {"attaches_to": "intro", "image_url": "https://cdn.example/bad.png", "status": "failed"},
+        )
+        model = await _load_generation(generation_id)
+        section = model.document_json["sections"][0]
+        assert "explanation" not in section
+        assert "diagram" not in section
+    finally:
+        await _cleanup_generation(generation_id)
+
+
+async def test_fail_stale_running_marks_terminal_failure() -> None:
+    generation_id = "v3-writer-stale-running"
+    await _cleanup_generation(generation_id)
+    writer = V3GenerationWriter(async_session_factory)
+    try:
+        await _seed_snapshot(writer, generation_id)
+        swept = await writer.fail_stale_running()
+        assert swept >= 1
+        model = await _load_generation(generation_id)
+        assert model.status == "failed"
+        assert model.error_type == "server_restart"
+        assert model.document_json["progress"]["stage"] == "failed"
+        assert model.document_json["progress"]["sections"]["intro"] == "failed"
+    finally:
+        await _cleanup_generation(generation_id)
