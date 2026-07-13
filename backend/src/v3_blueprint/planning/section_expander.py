@@ -72,7 +72,7 @@ The anchor is a commitment the architect made — honour it.
 CONTINUITY RULE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-You have been given the briefs from all prior sections.
+You may have been given the brief from the lesson's opening (anchor) section.
 Read them before writing. Your briefs must:
   - Build on what prior sections established
   - Not repeat concepts or examples already covered

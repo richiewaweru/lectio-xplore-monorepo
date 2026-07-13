@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
@@ -13,7 +14,6 @@ from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 from v3_blueprint.planning.models import (
     SectionBrief,
     StructuralPlan,
-    stage2_brief_preview_payload,
 )
 
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
@@ -160,7 +160,12 @@ async def resume_stage2(
     session: AsyncSession | None = None,
     emit_event: EmitFn | None = None,
 ) -> list[SectionBrief]:
-    from v3_blueprint.planning.retry import _run_section_with_retry
+    from v3_blueprint.planning.retry import (
+        _complete_stage2,
+        _run_stage2_section,
+        _run_stage2_serial,
+        _stage2_parallel_enabled,
+    )
 
     async with _session_scope(session) as (db, _):
         state = await load_chunked_state(generation_id, db)
@@ -198,79 +203,74 @@ async def resume_stage2(
             flush=True,
         )
 
-        # Continue loop from next incomplete section
-        for section in remaining:
-            print(
-                f"\n[STAGE2 SECTION START] generation_id={generation_id}"
-                f" section_id={section.id}"
-                f" role={section.role}"
-                f" components={[c.slug for c in section.components]}",
-                flush=True,
-            )
-            if emit_event:
-                await emit_event("stage2_section_start", {
-                    "section_id": section.id,
-                    "generation_id": generation_id,
-                })
-            brief = await _run_section_with_retry(
-                plan=plan,
-                section=section,
-                prior_briefs=completed_briefs,
+        async def persist_brief(brief: SectionBrief) -> None:
+            await persist_section_brief(generation_id, brief, db)
+
+        if not _stage2_parallel_enabled() or len(remaining) <= 1:
+            completed_briefs = await _run_stage2_serial(
+                plan,
+                remaining,
                 signals=signals,
                 form=form,
                 resource_spec=resource_spec,
                 emit_event=emit_event,
                 generation_id=generation_id,
+                trace_id=None,
+                persist_brief=persist_brief,
+                initial_briefs=completed_briefs,
             )
-            completed_briefs.append(brief)
-            await persist_section_brief(generation_id, brief, db)
-            if getattr(brief, "_failed", False):
-                print(
-                    f"\n[STAGE2 SECTION FAILED] generation_id={generation_id}"
-                    f" section_id={section.id}"
-                    f" errors={getattr(brief, '_errors', [])}",
-                    flush=True,
-                )
-                if emit_event:
-                    await emit_event("stage2_section_failed", {
-                        "section_id": section.id,
-                        "generation_id": generation_id,
-                        "errors": getattr(brief, "_errors", []),
-                    })
-            else:
-                print(
-                    f"\n[STAGE2 SECTION DONE] generation_id={generation_id}"
-                    f" section_id={section.id}"
-                    f" components_briefed={len(brief.components)}"
-                    f" questions_briefed={len(brief.question_briefs)}"
-                    f" has_visual={'yes' if brief.visual_strategy else 'no'}",
-                    flush=True,
-                )
-                if emit_event:
-                    await emit_event("stage2_section_done", {
-                        "section_id": section.id,
-                        "generation_id": generation_id,
-                        "brief": stage2_brief_preview_payload(brief),
-                    })
+        else:
+            persistence_lock = asyncio.Lock()
+            briefs_by_id = {brief.section_id: brief for brief in completed_briefs}
+            anchor_section = plan.sections[0]
+            anchor = briefs_by_id.get(anchor_section.id)
 
-        failed_sections = [
-            brief.section_id
-            for brief in completed_briefs
-            if getattr(brief, "_failed", False)
+            async def run_section(section, prior_briefs):  # noqa: ANN001
+                return await _run_stage2_section(
+                    plan,
+                    section,
+                    prior_briefs,
+                    signals=signals,
+                    form=form,
+                    resource_spec=resource_spec,
+                    emit_event=emit_event,
+                    generation_id=generation_id,
+                    trace_id=None,
+                    persist_brief=persist_brief,
+                    persistence_lock=persistence_lock,
+                )
+
+            if anchor is None:
+                anchor = await run_section(anchor_section, [])
+                briefs_by_id[anchor.section_id] = anchor
+
+            prior_briefs = [] if getattr(anchor, "_failed", False) else [anchor]
+            fan_out_sections = [
+                section
+                for section in remaining
+                if section.id != anchor_section.id
+            ]
+            fan_out_briefs = await asyncio.gather(
+                *(run_section(section, prior_briefs) for section in fan_out_sections)
+            )
+            briefs_by_id.update({brief.section_id: brief for brief in fan_out_briefs})
+            completed_briefs = [
+                briefs_by_id[section.id]
+                for section in plan.sections
+                if section.id in briefs_by_id
+            ]
+
+        ordered_briefs = {brief.section_id: brief for brief in completed_briefs}
+        completed_briefs = [
+            ordered_briefs[section.id]
+            for section in plan.sections
+            if section.id in ordered_briefs
         ]
-        print(
-            f"\n[STAGE2 COMPLETE] generation_id={generation_id}"
-            f" total={len(completed_briefs)}"
-            f" failed={failed_sections}",
-            flush=True,
+        return await _complete_stage2(
+            completed_briefs,
+            emit_event=emit_event,
+            generation_id=generation_id,
         )
-        if emit_event:
-            await emit_event("stage2_complete", {
-                "generation_id": generation_id,
-                "failed_sections": failed_sections,
-            })
-
-        return completed_briefs
 
 
 __all__ = [
