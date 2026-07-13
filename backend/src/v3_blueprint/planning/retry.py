@@ -33,9 +33,11 @@ def _stage2_parallel_enabled() -> bool:
 
 
 def _is_structured_output_validation_failure(exc: UnexpectedModelBehavior) -> bool:
-    """Keep result-schema failures retryable without masking provider failures."""
+    """Keep output-schema failures retryable without masking provider failures."""
     message = exc.message.lower()
-    return "result validation" in message and "maximum retries" in message
+    return "maximum retries" in message and (
+        "result validation" in message or "output validation" in message
+    )
 
 
 async def run_stage1_with_retry(
@@ -73,6 +75,23 @@ async def run_stage1_with_retry(
                 log.warning("Stage 1 attempt 1 truncated: %s", exc)
                 continue
             raise Stage1PlanFailure(errors=[str(exc)]) from exc
+        except UnexpectedModelBehavior as exc:
+            import traceback
+
+            print(
+                f"\n[STAGE1 ATTEMPT {attempt} EXCEPTION]"
+                f" generation_id={generation_id}"
+                f" type={type(exc).__name__}"
+                f"\n{traceback.format_exc()}",
+                flush=True,
+            )
+            if not _is_structured_output_validation_failure(exc):
+                raise
+            errors = [f"Stage 1 structured output could not be validated: {exc}"]
+            if attempt == 1:
+                log.warning("Stage 1 attempt 1 output validation failed: %s", exc)
+                continue
+            raise Stage1PlanFailure(errors=errors) from exc
         except Exception as exc:
             import traceback
             print(

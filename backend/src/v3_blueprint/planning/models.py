@@ -47,8 +47,8 @@ class ComponentSlot(BaseModel):
     slug: str = Field(description="Component slug from registry. Must exist.")
     purpose: str = Field(
         description="One-line pedagogical purpose of this component "
-        "at this exact point in the lesson. Max 80 chars.",
-        max_length=80,
+        "at this exact point in the lesson. Aim for 80 chars or fewer, "
+        "but preserve a longer purpose when needed for clarity.",
     )
 
 

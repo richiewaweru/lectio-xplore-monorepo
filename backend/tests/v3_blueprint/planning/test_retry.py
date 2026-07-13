@@ -93,6 +93,52 @@ def _brief(section_id: str, component_id: str, content_intent: str) -> SectionBr
     )
 
 
+def test_component_purpose_length_is_guidance_not_schema_failure() -> None:
+    long_purpose = (
+        "List procedure: isolate the variable, flip the inequality when multiplying "
+        "or dividing by a negative value, then graph the solution."
+    )
+
+    component = ComponentSlot(slug="worked-example-card", purpose=long_purpose)
+
+    assert len(long_purpose) > 80
+    assert component.purpose == long_purpose
+    purpose_schema = ComponentSlot.model_json_schema()["properties"]["purpose"]
+    assert "maxLength" not in purpose_schema
+
+
+@pytest.mark.asyncio
+async def test_run_stage1_retries_current_output_validation_exhaustion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    plan = _plan()
+    call_stage1 = AsyncMock(
+        side_effect=[
+            UnexpectedModelBehavior("Exceeded maximum retries (1) for output validation"),
+            plan,
+        ]
+    )
+    persist_plan = AsyncMock()
+    monkeypatch.setattr(retry, "_call_stage1", call_stage1)
+    monkeypatch.setattr(retry, "persist_structural_plan", persist_plan)
+
+    result = await retry.run_stage1_with_retry(
+        _signals(),
+        _form(),
+        {},
+        generation_id="generation-1",
+    )
+
+    assert result is plan
+    assert call_stage1.await_count == 2
+    assert call_stage1.await_args_list[0].kwargs["previous_errors"] is None
+    assert call_stage1.await_args_list[1].kwargs["previous_errors"] == [
+        "Stage 1 structured output could not be validated: "
+        "Exceeded maximum retries (1) for output validation"
+    ]
+    persist_plan.assert_awaited_once()
+
+
 @pytest.mark.asyncio
 async def test_run_stage2_retries_only_failed_section_and_preserves_long_content(
     monkeypatch: pytest.MonkeyPatch,
@@ -138,8 +184,8 @@ async def test_structured_output_validation_exhaustion_returns_failed_placeholde
     section = plan.sections[0]
     call_stage2 = AsyncMock(
         side_effect=[
-            UnexpectedModelBehavior("Exceeded maximum retries (1) for result validation"),
-            UnexpectedModelBehavior("Exceeded maximum retries (1) for result validation"),
+            UnexpectedModelBehavior("Exceeded maximum retries (1) for output validation"),
+            UnexpectedModelBehavior("Exceeded maximum retries (1) for output validation"),
         ]
     )
     monkeypatch.setattr(retry, "_call_stage2_section", call_stage2)
@@ -160,7 +206,7 @@ async def test_structured_output_validation_exhaustion_returns_failed_placeholde
     assert brief._failed is True
     assert brief._errors == [
         "Stage 2 structured output could not be validated: "
-        "Exceeded maximum retries (1) for result validation"
+        "Exceeded maximum retries (1) for output validation"
     ]
 
 
