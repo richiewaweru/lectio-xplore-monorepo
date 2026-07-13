@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import logging
+import os
 from collections.abc import Awaitable, Callable
 
 from pydantic_ai.exceptions import UnexpectedModelBehavior
@@ -24,6 +26,10 @@ from v3_blueprint.planning.validators import validate_section_brief, validate_st
 
 EmitFn = Callable[[str, dict], Awaitable[None]]
 log = logging.getLogger(__name__)
+
+
+def _stage2_parallel_enabled() -> bool:
+    return os.getenv("V3_STAGE2_PARALLEL", "true").strip().lower() != "false"
 
 
 def _is_structured_output_validation_failure(exc: UnexpectedModelBehavior) -> bool:
@@ -118,16 +124,106 @@ async def run_stage2(
     generation_id: str | None = None,
     trace_id: str | None = None,
 ) -> list[SectionBrief]:
-
-    completed_briefs: list[SectionBrief] = []
-
     print(
         f"\n[STAGE2 START] generation_id={generation_id}"
         f" sections={[s.id for s in plan.sections]}",
         flush=True,
     )
 
-    for section in plan.sections:
+    async def persist_brief(brief: SectionBrief) -> None:
+        if generation_id:
+            await persist_section_brief(generation_id, brief)
+
+    if not _stage2_parallel_enabled() or len(plan.sections) <= 1:
+        completed_briefs = await _run_stage2_serial(
+            plan,
+            plan.sections,
+            signals=signals,
+            form=form,
+            resource_spec=resource_spec,
+            emit_event=emit_event,
+            generation_id=generation_id,
+            trace_id=trace_id,
+            persist_brief=persist_brief,
+        )
+    else:
+        persistence_lock = asyncio.Lock()
+
+        async def run_section(section: SectionPlan, prior_briefs: list[SectionBrief]) -> SectionBrief:
+            brief = await _run_stage2_section(
+                plan,
+                section,
+                prior_briefs,
+                signals=signals,
+                form=form,
+                resource_spec=resource_spec,
+                emit_event=emit_event,
+                generation_id=generation_id,
+                trace_id=trace_id,
+                persist_brief=persist_brief,
+                persistence_lock=persistence_lock,
+            )
+            return brief
+
+        anchor = await run_section(plan.sections[0], [])
+        prior_briefs = [] if getattr(anchor, "_failed", False) else [anchor]
+        remaining_briefs = await asyncio.gather(
+            *(run_section(section, prior_briefs) for section in plan.sections[1:])
+        )
+        completed_briefs = [anchor, *remaining_briefs]
+
+    return await _complete_stage2(
+        completed_briefs,
+        emit_event=emit_event,
+        generation_id=generation_id,
+    )
+
+
+async def _run_stage2_serial(
+    plan: StructuralPlan,
+    sections: list[SectionPlan],
+    *,
+    signals: V3SignalSummary,
+    form: V3InputForm,
+    resource_spec: dict,
+    emit_event: EmitFn | None,
+    generation_id: str | None,
+    trace_id: str | None,
+    persist_brief: Callable[[SectionBrief], Awaitable[None]],
+    initial_briefs: list[SectionBrief] | None = None,
+) -> list[SectionBrief]:
+    completed_briefs = list(initial_briefs or [])
+    for section in sections:
+        brief = await _run_stage2_section(
+            plan,
+            section,
+            completed_briefs,
+            signals=signals,
+            form=form,
+            resource_spec=resource_spec,
+            emit_event=emit_event,
+            generation_id=generation_id,
+            trace_id=trace_id,
+            persist_brief=persist_brief,
+        )
+        completed_briefs.append(brief)
+    return completed_briefs
+
+
+async def _run_stage2_section(
+    plan: StructuralPlan,
+    section: SectionPlan,
+    prior_briefs: list[SectionBrief],
+    *,
+    signals: V3SignalSummary,
+    form: V3InputForm,
+    resource_spec: dict,
+    emit_event: EmitFn | None,
+    generation_id: str | None,
+    trace_id: str | None,
+    persist_brief: Callable[[SectionBrief], Awaitable[None]],
+    persistence_lock: asyncio.Lock | None = None,
+) -> SectionBrief:
         print(
             f"\n[STAGE2 SECTION START] generation_id={generation_id}"
             f" section_id={section.id}"
@@ -144,7 +240,7 @@ async def run_stage2(
         brief = await _run_section_with_retry(
             plan=plan,
             section=section,
-            prior_briefs=completed_briefs,
+            prior_briefs=prior_briefs,
             signals=signals,
             form=form,
             resource_spec=resource_spec,
@@ -182,12 +278,23 @@ async def run_stage2(
                     "brief": stage2_brief_preview_payload(brief),
                 })
 
-        completed_briefs.append(brief)
+        # Persist immediately after each section. Parallel callers serialize this
+        # read-modify-write operation so completed briefs cannot overwrite peers.
+        if persistence_lock is None:
+            await persist_brief(brief)
+        else:
+            async with persistence_lock:
+                await persist_brief(brief)
 
-        # Persist immediately after each section
-        if generation_id:
-            await persist_section_brief(generation_id, brief)
+        return brief
 
+
+async def _complete_stage2(
+    completed_briefs: list[SectionBrief],
+    *,
+    emit_event: EmitFn | None,
+    generation_id: str | None,
+) -> list[SectionBrief]:
     failed = [b.section_id for b in completed_briefs if getattr(b, "_failed", False)]
     print(
         f"\n[STAGE2 COMPLETE] generation_id={generation_id}"
