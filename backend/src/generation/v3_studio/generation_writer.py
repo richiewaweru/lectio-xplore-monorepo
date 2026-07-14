@@ -331,6 +331,58 @@ class V3GenerationWriter:
                 model.report_json = self._merge_report(model.report_json, report_json)
             await session.commit()
 
+    async def claim_resume_attempt(self, generation_id: str, *, max_attempts: int = 3) -> bool:
+        """Atomically claim a teacher-initiated resume attempt."""
+        async with self._session_factory() as session:
+            model = await session.get(GenerationModel, generation_id, with_for_update=True)
+            if model is None:
+                return False
+            report = self._coerce_report(model.report_json, section_count=model.section_count or 0)
+            attempts = int(report.get("resume_attempts") or 0)
+            if attempts >= max_attempts:
+                model.status = "failed"
+                model.quality_passed = False
+                model.error = "Generation resume attempts were exhausted."
+                model.error_type = "resume_exhausted"
+                model.error_code = "v3_resume_exhausted"
+                model.completed_at = _utc_now_naive()
+                report["process_status"] = "failed"
+                model.report_json = report
+                document = (
+                    deepcopy(model.document_json) if isinstance(model.document_json, dict) else {}
+                )
+                progress = document.get("progress")
+                statuses = progress.get("sections") if isinstance(progress, dict) else {}
+                document["progress"] = {
+                    "stage": "failed",
+                    "sections": dict(statuses) if isinstance(statuses, dict) else {},
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+                model.document_json = document
+                from v3_blueprint.planning.persistence import persist_chunked_state
+
+                await persist_chunked_state(
+                    generation_id,
+                    {
+                        "stage": "failed",
+                        "execution_started": False,
+                        "error": model.error,
+                        "error_type": model.error_type,
+                    },
+                    session=session,
+                )
+                await session.commit()
+                return False
+            report["resume_attempts"] = attempts + 1
+            model.report_json = report
+            model.status = "running"
+            model.error = None
+            model.error_type = None
+            model.error_code = None
+            model.completed_at = None
+            await session.commit()
+            return True
+
     async def write_draft(self, generation_id: str, payload: dict[str, Any]) -> None:
         await self._write_pack_event(
             generation_id=generation_id,

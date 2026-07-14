@@ -501,3 +501,52 @@ async def test_fail_stale_running_marks_partial_generation_resumable() -> None:
         assert state["failed_sections"] == ["model"]
     finally:
         await _cleanup_generation(generation_id)
+
+
+async def test_claim_resume_attempt_terminalizes_after_cap() -> None:
+    generation_id = "v3-writer-resume-exhausted"
+    await _cleanup_generation(generation_id)
+    writer = V3GenerationWriter(async_session_factory)
+    try:
+        await _seed_snapshot(writer, generation_id)
+        async with async_session_factory() as session:
+            model = await session.get(GenerationModel, generation_id)
+            assert model is not None
+            report = dict(model.report_json)
+            report["resume_attempts"] = 3
+            model.report_json = report
+            await session.commit()
+        await persist_chunked_state(
+            generation_id,
+            {"stage": "stage2_error", "execution_started": False},
+        )
+
+        claimed = await writer.claim_resume_attempt(generation_id)
+
+        assert claimed is False
+        model = await _load_generation(generation_id)
+        assert model.status == "failed"
+        assert model.error_code == "v3_resume_exhausted"
+        assert model.document_json["progress"]["stage"] == "failed"
+        state = await load_chunked_state(generation_id)
+        assert state["stage"] == "failed"
+        assert state["execution_started"] is False
+    finally:
+        await _cleanup_generation(generation_id)
+
+
+async def test_claim_resume_attempt_increments_counter() -> None:
+    generation_id = "v3-writer-resume-claimed"
+    await _cleanup_generation(generation_id)
+    writer = V3GenerationWriter(async_session_factory)
+    try:
+        await _seed_snapshot(writer, generation_id)
+
+        claimed = await writer.claim_resume_attempt(generation_id)
+
+        assert claimed is True
+        model = await _load_generation(generation_id)
+        assert model.status == "running"
+        assert model.report_json["resume_attempts"] == 1
+    finally:
+        await _cleanup_generation(generation_id)

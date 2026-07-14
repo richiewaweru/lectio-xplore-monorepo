@@ -1124,6 +1124,11 @@ async def post_chunked_plan_approve(
     state = await load_chunked_state(generation_id)
     if not isinstance(state.get("structural_plan"), dict):
         raise HTTPException(status_code=409, detail="Structural plan is not ready yet")
+    if state.get("stage") in {"stage2_error", "assembly_blocked"}:
+        claimed = await V3GenerationWriter(async_session_factory).claim_resume_attempt(generation_id)
+        if not claimed:
+            latest = await load_chunked_state(generation_id)
+            return _normalize_chunked_state(generation_id, latest)
 
     await _ensure_chunked_stream(
         generation_id=generation_id,
@@ -1242,6 +1247,11 @@ async def post_chunked_retry_section(
     ]
     if body.section_id not in failed_sections:
         raise HTTPException(status_code=409, detail="Section is not marked as failed.")
+    if state.get("stage") == "assembly_blocked":
+        claimed = await V3GenerationWriter(async_session_factory).claim_resume_attempt(generation_id)
+        if not claimed:
+            latest = await load_chunked_state(generation_id)
+            return _normalize_chunked_state(generation_id, latest)
 
     running_task = _chunked_stage2_tasks.get(generation_id)
     if running_task is not None and not running_task.done():
