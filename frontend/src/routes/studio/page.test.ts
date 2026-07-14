@@ -205,9 +205,42 @@ describe('studio chunked URL resume', () => {
 		render(StudioPage);
 
 		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-live'));
-		await waitFor(() => expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-live'));
+		expect(mocks.approveChunkedPlan).not.toHaveBeenCalled();
 		await waitFor(() => expect(mocks.connectV3ChunkedStream).toHaveBeenCalledWith('gen-live', expect.any(Object)));
 		expect(v3Studio.stage).toBe('fill');
+	});
+
+	it('hydrates a completed document when chunked status is stale stage2_running', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-stale-complete');
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-stale-complete',
+			stage: 'stage2_running',
+			structural_plan: null,
+			section_briefs: {},
+			failed_sections: [],
+			blueprint_id: 'bp-stale',
+			execution_started: true,
+			next_action: 'wait_for_stage2'
+		});
+		mocks.fetchV3Document.mockResolvedValue({
+			kind: 'v3_booklet_pack',
+			generation_id: 'gen-stale-complete',
+			template_id: 'guided-concept-path',
+			subject: 'Science',
+			status: 'draft_needs_review',
+			progress: { stage: 'completed', sections: { intro: 'ready' } },
+			section_diagnostics: [],
+			sections: [{ section_id: 'intro', header: { title: 'Recovered section' } }],
+			warnings: [],
+			booklet_issues: []
+		});
+
+		render(StudioPage);
+
+		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-stale-complete'));
+		await waitFor(() => expect(v3Studio.stage).toBe('edit'));
+		expect(v3Studio.canvas[0]?.id).toBe('intro');
+		expect(mocks.approveChunkedPlan).not.toHaveBeenCalled();
 	});
 
 	it.each([
@@ -476,24 +509,25 @@ describe('studio chunked URL resume', () => {
 		await waitFor(() =>
 			expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-poll-approve')
 		);
+		mocks.fetchV3Document.mockClear();
 		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
 
-		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledTimes(1));
+		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalled());
 		await vi.advanceTimersByTimeAsync(4000);
-		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledTimes(2));
+		await waitFor(() => expect(mocks.fetchV3Document.mock.calls.length).toBeGreaterThanOrEqual(2));
 		await vi.advanceTimersByTimeAsync(4000);
-		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledTimes(3));
+		await waitFor(() => expect(v3Studio.canvas[0]?.id).toBe('build'));
 		expect(v3Studio.canvas[0]?.id).toBe('build');
 		await vi.advanceTimersByTimeAsync(4000);
-		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledTimes(4));
 		expect(v3Studio.stage).toBe('edit');
 
+		const terminalCallCount = mocks.fetchV3Document.mock.calls.length;
 		await vi.advanceTimersByTimeAsync(8000);
-		expect(mocks.fetchV3Document).toHaveBeenCalledTimes(4);
+		expect(mocks.fetchV3Document).toHaveBeenCalledTimes(terminalCallCount);
 		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
 	});
 
-	it('does not start document polling when approve returns assembly_blocked', async () => {
+	it('keeps document polling when approve returns assembly_blocked', async () => {
 		vi.useFakeTimers();
 		window.history.replaceState({}, '', '/studio?generation_id=gen-poll-blocked');
 		mocks.getChunkedPlanStatus.mockResolvedValue({
@@ -537,7 +571,7 @@ describe('studio chunked URL resume', () => {
 		await waitFor(() => expect(v3Studio.stage).toBe('skeleton'));
 
 		await vi.advanceTimersByTimeAsync(8000);
-		expect(mocks.fetchV3Document).not.toHaveBeenCalled();
+		expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-poll-blocked');
 	});
 
 	it('starts document polling when resuming a running generation without stream events', async () => {
@@ -580,8 +614,11 @@ describe('studio chunked URL resume', () => {
 		render(StudioPage);
 
 		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-resume-poll'));
+		const initialCalls = mocks.fetchV3Document.mock.calls.length;
 		await vi.advanceTimersByTimeAsync(4000);
-		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledTimes(2));
+		await waitFor(() =>
+			expect(mocks.fetchV3Document.mock.calls.length).toBeGreaterThan(initialCalls)
+		);
 		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
 	});
 
@@ -626,8 +663,11 @@ describe('studio chunked URL resume', () => {
 
 		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledTimes(1));
 		expect(v3Studio.error).toBeNull();
+		const initialCalls = mocks.fetchV3Document.mock.calls.length;
 		await vi.advanceTimersByTimeAsync(4000);
-		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledTimes(2));
+		await waitFor(() =>
+			expect(mocks.fetchV3Document.mock.calls.length).toBeGreaterThan(initialCalls)
+		);
 		expect(v3Studio.error).toBeNull();
 	});
 

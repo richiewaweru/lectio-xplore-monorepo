@@ -170,16 +170,9 @@
 
 	async function applyChunkedState(
 		state: V3ChunkedPlanState,
-		{ resume = false }: { resume?: boolean } = {}
+		{ resume: _resume = false }: { resume?: boolean } = {}
 	): Promise<void> {
-		let resolved = state;
-		if (resume && state.stage === 'stage2_running') {
-			try {
-				resolved = await approveChunkedPlan(state.generation_id);
-			} catch {
-				resolved = state;
-			}
-		}
+		const resolved = state;
 
 		v3Studio.chunkedState = resolved;
 		v3Studio.generationId = resolved.generation_id;
@@ -200,17 +193,23 @@
 			return;
 		}
 		if (resolved.stage === 'assembly_blocked' || resolved.stage === 'stage2_error') {
-			stopGenerationPolling();
 			disconnectActiveChunkedStream();
-			clearRenderedBookletState();
 			displayTitle = resolved.display_title ?? displayTitle;
-			if (resolved.structural_plan) {
+			if (!v3Studio.activePack) {
+				clearRenderedBookletState();
+			}
+			if (resolved.structural_plan && !v3Studio.activePack) {
 				v3Studio.canvas = buildStructuralPlanCanvas(resolved.structural_plan);
 			}
-			v3Studio.stage = 'skeleton';
+			v3Studio.stage = v3Studio.activePack ? 'edit' : 'skeleton';
 			return;
 		}
 		if (resolved.stage === 'stage2_running') {
+			if (v3Studio.activePack && v3Studio.activePack.status !== 'streaming_preview') {
+				disconnectActiveChunkedStream();
+				v3Studio.stage = 'edit';
+				return;
+			}
 			if (resolved.structural_plan && v3Studio.canvas.length === 0) {
 				v3Studio.canvas = buildStructuralPlanCanvas(resolved.structural_plan);
 			}
@@ -251,6 +250,7 @@
 		const generationId = new URL(window.location.href).searchParams.get('generation_id');
 		if (!generationId) return;
 		v3Studio.error = null;
+		startGenerationPolling(generationId);
 		try {
 			const state = await getChunkedPlanStatus(generationId);
 			await applyChunkedState(state, { resume: true });
@@ -912,6 +912,22 @@
 			/>
 	{:else if v3Studio.stage === 'edit'}
 		{#if v3Studio.activePack}
+			{#if v3Studio.chunkedState?.stage === 'assembly_blocked' || v3Studio.chunkedState?.stage === 'stage2_error'}
+				<div class="mx-auto max-w-4xl px-4 pt-4">
+					<button
+						type="button"
+						class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
+						disabled={recoveryBusy}
+						onclick={v3Studio.chunkedState.stage === 'assembly_blocked' && v3Studio.chunkedState.failed_sections.length > 0
+							? handleRetryFailedSections
+							: handleChunkedResume}
+					>
+						{v3Studio.chunkedState.stage === 'assembly_blocked' && v3Studio.chunkedState.failed_sections.length > 0
+							? 'Retry failed sections'
+							: 'Resume generation'}
+					</button>
+				</div>
+			{/if}
 			<div class="mx-auto max-w-4xl px-4 pt-4">
 				<div class="rounded-lg border border-border/60 bg-card px-4 py-3">
 					<p class="text-sm font-medium">{currentPrintReadiness.label}</p>
