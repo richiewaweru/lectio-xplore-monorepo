@@ -44,6 +44,11 @@ def _load_example(filename: str) -> ProductionBlueprint:
     return ProductionBlueprint.model_validate(json.loads(raw.read_text(encoding="utf-8")))
 
 
+def _load_v3_fixture(filename: str) -> dict:
+    raw = Path(__file__).resolve().parents[1] / "fixtures" / filename
+    return json.loads(raw.read_text(encoding="utf-8"))
+
+
 def test_compile_execution_bundle() -> None:
     bp = _load_example("amara_compound_area.json")
     bundle = compile_execution_bundle(
@@ -56,6 +61,52 @@ def test_compile_execution_bundle() -> None:
     assert bundle.question_orders
     assert bundle.visual_orders
     assert bundle.answer_key_order is not None
+
+
+@pytest.mark.asyncio
+async def test_runner_skips_all_ready_sections_and_preserves_them(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    blueprint = ProductionBlueprint.model_validate(_load_v3_fixture("gen_5aed3804_blueprint.json"))
+    pack = _load_v3_fixture("gen_5aed3804_pack.json")
+    preserved = pack["sections"]
+
+    async def forbidden(*_args: object, **_kwargs: object) -> list:
+        raise AssertionError("ready section executor must not run")
+
+    async def no_answer(*_args: object, **_kwargs: object) -> None:
+        return None
+
+    async def coherence(_blueprint, draft_pack, _emit, **_kwargs: object) -> CoherenceReport:
+        return CoherenceReport(
+            blueprint_id=draft_pack.blueprint_id,
+            generation_id=draft_pack.generation_id,
+            status="passed",
+            deterministic_passed=True,
+        )
+
+    monkeypatch.setattr("v3_execution.runtime.runner.execute_section", forbidden)
+    monkeypatch.setattr("v3_execution.runtime.runner.execute_questions", forbidden)
+    monkeypatch.setattr("v3_execution.runtime.runner.execute_visual", forbidden)
+    monkeypatch.setattr("v3_execution.runtime.runner.execute_answer_key", no_answer)
+    monkeypatch.setattr("v3_execution.runtime.runner.run_coherence_review", coherence)
+    captured: list[tuple[str, dict]] = []
+
+    async def emit(event_type: str, payload: dict) -> None:
+        captured.append((event_type, payload))
+
+    await run_generation(
+        blueprint=blueprint,
+        generation_id="resume-all-ready",
+        blueprint_id="resume-blueprint",
+        template_id="guided-concept-path",
+        emit_event=emit,
+        preserved_ready_sections=preserved,
+    )
+
+    draft = next(payload["pack"] for event, payload in captured if event == "draft_pack_ready")
+    assert draft["sections"] == preserved
+    assert any(event == "generation_complete" for event, _payload in captured)
 
 
 def test_visual_cache_key_is_stable_and_includes_constraints() -> None:

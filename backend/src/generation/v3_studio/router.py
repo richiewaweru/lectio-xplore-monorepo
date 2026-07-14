@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from copy import deepcopy
 import json
 import logging
 import uuid
@@ -579,6 +580,23 @@ async def _start_generation_from_chunked_blueprint(
     generation_writer = V3GenerationWriter(async_session_factory)
     template_id = "guided-concept-path"
     effective_title = (display_title or blueprint.metadata.title).strip() or blueprint.metadata.title
+    existing_document = await generation_writer.get_document_json(generation_id, user_id)
+    existing_progress = existing_document.get("progress") if isinstance(existing_document, dict) else None
+    existing_statuses = (
+        existing_progress.get("sections") if isinstance(existing_progress, dict) else None
+    )
+    ready_ids = {
+        section_id
+        for section_id, status in existing_statuses.items()
+        if isinstance(existing_statuses, dict) and status == "ready"
+    } if isinstance(existing_statuses, dict) else set()
+    preserved_ready_sections = [
+        deepcopy(section)
+        for section in existing_document.get("sections", [])
+        if isinstance(existing_document, dict)
+        and isinstance(section, dict)
+        and section.get("section_id") in ready_ids
+    ]
     try:
         await trace_writer.start_run(
             user_id=user_id,
@@ -644,6 +662,7 @@ async def _start_generation_from_chunked_blueprint(
                 template_id=template_id,
                 trace_writer=trace_writer,
                 generation_writer=generation_writer,
+                preserved_ready_sections=preserved_ready_sections,
             )
         )
     except Exception as exc:  # noqa: BLE001
@@ -1358,6 +1377,7 @@ async def _pump_sse_to_queue(
     template_id: str,
     trace_writer: V3TraceWriter | None = None,
     generation_writer: V3GenerationWriter | None = None,
+    preserved_ready_sections: list[dict[str, Any]] | None = None,
 ) -> None:
     def _utc_iso() -> str:
         return datetime.utcnow().isoformat() + "Z"
@@ -1553,6 +1573,7 @@ async def _pump_sse_to_queue(
             template_id=template_id,
             trace_id=trace_writer.trace_id if trace_writer is not None else generation_id,
             trace_writer=trace_writer,
+            preserved_ready_sections=preserved_ready_sections,
         ):
             event_type, payload = _parse_sse_chunk(chunk)
             if event_type and payload is not None:

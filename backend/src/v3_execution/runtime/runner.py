@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from copy import deepcopy
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
 
@@ -225,6 +226,7 @@ async def run_generation(
     trace_id: str | None = None,
     model_overrides: dict | None = None,
     trace_writer: V3TraceWriter | None = None,
+    preserved_ready_sections: list[dict[str, Any]] | None = None,
 ) -> ExecutionResult:
     def _booklet_issues_from_report(report: Any) -> list[dict[str, Any]]:
         return [
@@ -256,13 +258,23 @@ async def run_generation(
             blueprint_id=blueprint_id,
             template_id=template_id,
         )
+        preserved_sections = {
+            str(section.get("section_id")): deepcopy(section)
+            for section in preserved_ready_sections or []
+            if isinstance(section, dict) and isinstance(section.get("section_id"), str)
+        }
+        if preserved_sections:
+            skeleton_pack["sections"] = [
+                deepcopy(preserved_sections.get(str(section.get("section_id")), section))
+                for section in skeleton_pack["sections"]
+            ]
         await emit_event(
             events.SKELETON_READY,
             {
                 "generation_id": generation_id,
                 "section_count": len(skeleton_pack["sections"]),
                 "booklet_status": "streaming_preview",
-                "pack": skeleton_pack,
+                "pack": deepcopy(skeleton_pack),
             },
         )
         if trace_writer is not None:
@@ -377,12 +389,12 @@ async def run_generation(
                 visuals_by_section.setdefault(section_id, []).append(order)
 
         question_sections = {order.section_id for order in bundle.question_orders}
-        section_done: set[str] = set()
-        question_done: set[str] = set(section_ids - question_sections)
+        section_done: set[str] = set(preserved_sections)
+        question_done: set[str] = set(section_ids - question_sections) | set(preserved_sections)
         visual_done: set[str] = {
             section_id for section_id in section_ids if not visuals_by_section.get(section_id)
-        }
-        emitted_sections: set[str] = set()
+        } | set(preserved_sections)
+        emitted_sections: set[str] = set(preserved_sections)
         scheduled_visual_orders: set[str] = set()
         completed_visual_orders: set[str] = set()
         task_meta: dict[asyncio.Task[list[Any]], tuple[str, str, Any]] = {}
@@ -464,6 +476,8 @@ async def run_generation(
         partial_pack: dict[str, Any] = {"pack": skeleton_pack}
 
         for order in bundle.section_orders:
+            if order.section.id in preserved_sections:
+                continue
             _schedule_task(
                 "section",
                 order.section.id,
@@ -472,6 +486,8 @@ async def run_generation(
                 order,
             )
         for order in bundle.question_orders:
+            if order.section_id in preserved_sections:
+                continue
             _schedule_task(
                 "question",
                 order.section_id,
@@ -480,6 +496,12 @@ async def run_generation(
                 order,
             )
         for order in bundle.visual_orders:
+            related = visual_sections.get(order.work_order_id, set())
+            if related and related.issubset(preserved_sections):
+                scheduled_visual_orders.add(order.work_order_id)
+                completed_visual_orders.add(order.work_order_id)
+                _mark_visual_sections_ready(order)
+                continue
             if order.dependency == "blueprint_only":
                 _schedule_visual(order, label=f"visual:{order.visual.id}")
 
@@ -559,9 +581,19 @@ async def run_generation(
             )
 
         await emit_event(events.ASSEMBLY_STARTED, {"generation_id": generation_id})
+        remaining_blueprint = blueprint.model_copy(
+            update={
+                "sections": [
+                    section
+                    for section in blueprint.sections
+                    if section.section_id not in preserved_sections
+                ]
+            }
+        )
+
         def _build_sections():
             return assembler.build_sections(
-                blueprint,
+                remaining_blueprint,
                 result.component_blocks,
                 result.question_blocks,
                 result.visual_blocks,
@@ -579,6 +611,19 @@ async def run_generation(
             sections = []
             section_diagnostics = []
             result.warnings.append(f"assembly: {_format_exception(exc)}")
+
+        generated_sections = {
+            str(section.get("section_id")): section
+            for section in sections
+            if isinstance(section, dict) and isinstance(section.get("section_id"), str)
+        }
+        sections = [
+            deepcopy(preserved_sections.get(section.section_id))
+            if section.section_id in preserved_sections
+            else generated_sections[section.section_id]
+            for section in blueprint.sections
+            if section.section_id in preserved_sections or section.section_id in generated_sections
+        ]
 
         pack_builder = V3PackBuilder()
         initial_booklet_status = derive_booklet_status(
@@ -872,6 +917,7 @@ async def sse_event_stream(
     trace_id: str | None = None,
     model_overrides: dict | None = None,
     trace_writer: V3TraceWriter | None = None,
+    preserved_ready_sections: list[dict[str, Any]] | None = None,
 ) -> AsyncIterator[str]:
     queue: asyncio.Queue[str | None] = asyncio.Queue()
 
@@ -893,6 +939,7 @@ async def sse_event_stream(
                 trace_id=trace_id or generation_id,
                 model_overrides=model_overrides,
                 trace_writer=trace_writer,
+                preserved_ready_sections=preserved_ready_sections,
             )
         except Exception as exc:  # noqa: BLE001
             await emit(
