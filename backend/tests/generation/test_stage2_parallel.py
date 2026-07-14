@@ -15,6 +15,7 @@ from v3_blueprint.planning.models import (
     StructuralPlan,
     VoiceSpec,
 )
+from v3_blueprint.planning.persistence import resume_stage2
 from v3_blueprint.planning.retry import run_stage2
 
 
@@ -195,3 +196,125 @@ async def test_parallel_stage2_persists_each_brief_once() -> None:
 
     assert persist_brief.await_count == 3
     assert {call.args[1].section_id for call in persist_brief.await_args_list} == {"one", "two", "three"}
+
+
+@pytest.mark.asyncio
+async def test_parallel_stage2_isolates_fan_out_exception() -> None:
+    plan = _plan()
+    events: list[tuple[str, dict]] = []
+    persist_brief = AsyncMock()
+
+    async def fake_run(**kwargs):  # noqa: ANN003
+        section_id = kwargs["section"].id
+        if section_id == "two":
+            raise RuntimeError("boom")
+        return _brief(section_id)
+
+    async def emit_event(name: str, payload: dict) -> None:
+        events.append((name, payload))
+
+    with (
+        patch("v3_blueprint.planning.retry._run_section_with_retry", new=AsyncMock(side_effect=fake_run)),
+        patch("v3_blueprint.planning.retry.persist_section_brief", new=persist_brief),
+    ):
+        briefs = await run_stage2(
+            plan,
+            _signals(),
+            _form(),
+            {},
+            generation_id="generation-1",
+            emit_event=emit_event,
+        )
+
+    assert [brief.section_id for brief in briefs] == ["one", "two", "three"]
+    assert not getattr(briefs[0], "_failed", False)
+    assert briefs[1]._failed is True
+    assert "RuntimeError" in briefs[1]._errors[0]
+    assert not getattr(briefs[2], "_failed", False)
+    failed = next(payload for name, payload in events if name == "stage2_section_failed")
+    assert failed == {
+        "section_id": "two",
+        "generation_id": "generation-1",
+        "errors": ["RuntimeError: boom"],
+    }
+    complete = next(payload for name, payload in events if name == "stage2_complete")
+    assert complete["failed_sections"] == ["two"]
+    persisted_two = next(
+        call.args[1]
+        for call in persist_brief.await_args_list
+        if call.args[1].section_id == "two"
+    )
+    assert persisted_two._failed is True
+
+
+@pytest.mark.asyncio
+async def test_parallel_stage2_propagates_anchor_exception() -> None:
+    plan = _plan()
+
+    async def fake_run(**kwargs):  # noqa: ANN003
+        if kwargs["section"].id == "one":
+            raise RuntimeError("anchor boom")
+        return _brief(kwargs["section"].id)
+
+    with (
+        patch("v3_blueprint.planning.retry._run_section_with_retry", new=AsyncMock(side_effect=fake_run)),
+        patch("v3_blueprint.planning.retry.persist_section_brief", new=AsyncMock()),
+    ):
+        with pytest.raises(RuntimeError, match="anchor boom"):
+            await _run(plan)
+
+
+@pytest.mark.asyncio
+async def test_resume_stage2_isolates_fan_out_exception() -> None:
+    plan = _plan()
+    persisted_anchor = _brief("one")
+    state = {
+        "structural_plan": plan.model_dump(mode="json"),
+        "section_briefs": {
+            "one": persisted_anchor.model_dump(mode="json"),
+            "two": None,
+            "three": None,
+        },
+        "context": {
+            "signals": _signals().model_dump(mode="json"),
+            "form": _form().model_dump(mode="json"),
+            "resource_spec": {},
+        },
+    }
+    events: list[tuple[str, dict]] = []
+    persist_brief = AsyncMock()
+
+    async def fake_run(**kwargs):  # noqa: ANN003
+        section_id = kwargs["section"].id
+        if section_id == "two":
+            raise RuntimeError("boom")
+        return _brief(section_id)
+
+    async def emit_event(name: str, payload: dict) -> None:
+        events.append((name, payload))
+
+    with (
+        patch("v3_blueprint.planning.persistence.load_chunked_state", new=AsyncMock(return_value=state)),
+        patch("v3_blueprint.planning.persistence.persist_section_brief", new=persist_brief),
+        patch("v3_blueprint.planning.retry._run_section_with_retry", new=AsyncMock(side_effect=fake_run)),
+    ):
+        briefs = await resume_stage2(
+            "generation-1",
+            session=AsyncMock(),
+            emit_event=emit_event,
+        )
+
+    assert [brief.section_id for brief in briefs] == ["one", "two", "three"]
+    assert briefs[1]._failed is True
+    assert "RuntimeError" in briefs[1]._errors[0]
+    assert not getattr(briefs[2], "_failed", False)
+    failed = next(payload for name, payload in events if name == "stage2_section_failed")
+    assert failed["section_id"] == "two"
+    complete = next(payload for name, payload in events if name == "stage2_complete")
+    assert complete["failed_sections"] == ["two"]
+    persisted_two = next(
+        call.args[1]
+        for call in persist_brief.await_args_list
+        if call.args[1].section_id == "two"
+    )
+    assert persisted_two._failed is True
