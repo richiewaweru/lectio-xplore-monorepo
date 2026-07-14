@@ -162,6 +162,7 @@ async def resume_stage2(
 ) -> list[SectionBrief]:
     from v3_blueprint.planning.retry import (
         _complete_stage2,
+        _failed_placeholder,
         _run_stage2_section,
         _run_stage2_serial,
         _stage2_parallel_enabled,
@@ -250,9 +251,32 @@ async def resume_stage2(
                 for section in remaining
                 if section.id != anchor_section.id
             ]
-            fan_out_briefs = await asyncio.gather(
-                *(run_section(section, prior_briefs) for section in fan_out_sections)
+            fan_out_results = await asyncio.gather(
+                *(run_section(section, prior_briefs) for section in fan_out_sections),
+                return_exceptions=True,
             )
+            fan_out_briefs: list[SectionBrief] = []
+            for section, result in zip(fan_out_sections, fan_out_results, strict=True):
+                if isinstance(result, Exception):
+                    errors = [f"{type(result).__name__}: {str(result)[:400]}"]
+                    brief = _failed_placeholder(section.id, errors)
+                    print(
+                        f"\n[STAGE2 SECTION EXCEPTION-ISOLATED] generation_id={generation_id}"
+                        f" section_id={section.id}"
+                        f" type={type(result).__name__}",
+                        flush=True,
+                    )
+                    if emit_event:
+                        await emit_event("stage2_section_failed", {
+                            "section_id": section.id,
+                            "generation_id": generation_id,
+                            "errors": errors,
+                        })
+                    async with persistence_lock:
+                        await persist_brief(brief)
+                    fan_out_briefs.append(brief)
+                else:
+                    fan_out_briefs.append(result)
             briefs_by_id.update({brief.section_id: brief for brief in fan_out_briefs})
             completed_briefs = [
                 briefs_by_id[section.id]

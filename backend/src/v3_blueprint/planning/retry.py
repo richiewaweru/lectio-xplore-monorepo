@@ -32,6 +32,18 @@ def _stage2_parallel_enabled() -> bool:
     return os.getenv("V3_STAGE2_PARALLEL", "true").strip().lower() != "false"
 
 
+def _failed_placeholder(section_id: str, errors: list[str]) -> SectionBrief:
+    placeholder = SectionBrief(
+        section_id=section_id,
+        components=[],
+        question_briefs=[],
+        visual_strategy=None,
+    )
+    placeholder._failed = True
+    placeholder._errors = errors
+    return placeholder
+
+
 def _is_structured_output_validation_failure(exc: UnexpectedModelBehavior) -> bool:
     """Keep output-schema failures retryable without masking provider failures."""
     message = exc.message.lower()
@@ -186,9 +198,33 @@ async def run_stage2(
 
         anchor = await run_section(plan.sections[0], [])
         prior_briefs = [] if getattr(anchor, "_failed", False) else [anchor]
-        remaining_briefs = await asyncio.gather(
-            *(run_section(section, prior_briefs) for section in plan.sections[1:])
+        fan_out_sections = plan.sections[1:]
+        fan_out_results = await asyncio.gather(
+            *(run_section(section, prior_briefs) for section in fan_out_sections),
+            return_exceptions=True,
         )
+        remaining_briefs: list[SectionBrief] = []
+        for section, result in zip(fan_out_sections, fan_out_results, strict=True):
+            if isinstance(result, Exception):
+                errors = [f"{type(result).__name__}: {str(result)[:400]}"]
+                brief = _failed_placeholder(section.id, errors)
+                print(
+                    f"\n[STAGE2 SECTION EXCEPTION-ISOLATED] generation_id={generation_id}"
+                    f" section_id={section.id}"
+                    f" type={type(result).__name__}",
+                    flush=True,
+                )
+                if emit_event:
+                    await emit_event("stage2_section_failed", {
+                        "section_id": section.id,
+                        "generation_id": generation_id,
+                        "errors": errors,
+                    })
+                async with persistence_lock:
+                    await persist_brief(brief)
+                remaining_briefs.append(brief)
+            else:
+                remaining_briefs.append(result)
         completed_briefs = [anchor, *remaining_briefs]
 
     return await _complete_stage2(
@@ -435,15 +471,7 @@ async def _run_section_with_retry(
         f" final_errors={errors}",
         flush=True,
     )
-    placeholder = SectionBrief(
-        section_id=section.id,
-        components=[],
-        question_briefs=[],
-        visual_strategy=None,
-    )
-    placeholder._failed = True
-    placeholder._errors = errors
-    return placeholder
+    return _failed_placeholder(section.id, errors)
 
 
 async def retry_failed_section(
@@ -505,6 +533,7 @@ async def retry_failed_section(
 
 
 __all__ = [
+    "_failed_placeholder",
     "_run_section_with_retry",
     "retry_failed_section",
     "run_stage1_with_retry",
