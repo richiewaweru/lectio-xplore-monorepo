@@ -15,6 +15,7 @@ from generation.v3_studio.planning_artifact import (
     parse_planning_artifact,
 )
 from v3_blueprint.models import ProductionBlueprint
+from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state
 
 
 async def _cleanup_generation(generation_id: str) -> None:
@@ -413,5 +414,90 @@ async def test_fail_stale_running_marks_terminal_failure() -> None:
         assert model.error_type == "server_restart"
         assert model.document_json["progress"]["stage"] == "failed"
         assert model.document_json["progress"]["sections"]["intro"] == "failed"
+        assert (await load_chunked_state(generation_id))["stage"] == "stage2_error"
+    finally:
+        await _cleanup_generation(generation_id)
+
+
+async def test_fail_stale_running_reconciles_fully_written_generation() -> None:
+    generation_id = "v3-writer-stale-complete"
+    await _cleanup_generation(generation_id)
+    writer = V3GenerationWriter(async_session_factory)
+    try:
+        await _seed_snapshot(writer, generation_id)
+        async with async_session_factory() as session:
+            model = await session.get(GenerationModel, generation_id)
+            assert model is not None
+            model.document_json = {
+                "kind": "v3_booklet_pack",
+                "generation_id": generation_id,
+                "blueprint_id": "bp-complete",
+                "status": "draft_ready",
+                "sections": [{"section_id": "intro", "header": {"title": "Intro"}}],
+                "progress": {"stage": "writing", "sections": {"intro": "ready"}},
+            }
+            await session.commit()
+        await persist_chunked_state(
+            generation_id,
+            {
+                "stage": "stage2_running",
+                "blueprint_id": "bp-complete",
+                "structural_plan": {"sections": [{"id": "intro"}]},
+            },
+        )
+
+        await writer.fail_stale_running()
+
+        model = await _load_generation(generation_id)
+        assert model.status == "failed_finalisation"
+        assert model.error_type is None
+        assert model.document_json["status"] == "draft_ready"
+        assert model.document_json["progress"]["stage"] == "completed"
+        state = await load_chunked_state(generation_id)
+        assert state["stage"] == "complete"
+        assert state["execution_started"] is False
+    finally:
+        await _cleanup_generation(generation_id)
+
+
+async def test_fail_stale_running_marks_partial_generation_resumable() -> None:
+    generation_id = "v3-writer-stale-partial"
+    await _cleanup_generation(generation_id)
+    writer = V3GenerationWriter(async_session_factory)
+    try:
+        await _seed_snapshot(writer, generation_id)
+        async with async_session_factory() as session:
+            model = await session.get(GenerationModel, generation_id)
+            assert model is not None
+            model.document_json = {
+                "kind": "v3_booklet_pack",
+                "generation_id": generation_id,
+                "blueprint_id": "bp-partial",
+                "status": "streaming_preview",
+                "sections": [{"section_id": "intro", "header": {"title": "Intro"}}],
+                "progress": {
+                    "stage": "writing",
+                    "sections": {"intro": "ready", "model": "writing"},
+                },
+            }
+            await session.commit()
+        await persist_chunked_state(
+            generation_id,
+            {
+                "stage": "stage2_running",
+                "blueprint_id": "bp-partial",
+                "structural_plan": {"sections": [{"id": "intro"}, {"id": "model"}]},
+            },
+        )
+
+        await writer.fail_stale_running()
+
+        model = await _load_generation(generation_id)
+        assert model.status == "failed"
+        assert model.error_code == "v3_interrupted_by_restart"
+        assert model.document_json["progress"]["stage"] == "interrupted"
+        state = await load_chunked_state(generation_id)
+        assert state["stage"] == "assembly_blocked"
+        assert state["failed_sections"] == ["model"]
     finally:
         await _cleanup_generation(generation_id)

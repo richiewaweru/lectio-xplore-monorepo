@@ -13,6 +13,11 @@ from generation.v3_studio.planning_artifact import (
     parse_planning_artifact,
     planning_summary_from_artifact,
 )
+from v3_execution.booklet_status import (
+    collect_fatal_issue_categories,
+    derive_booklet_status,
+)
+from v3_review.models import CoherenceReport
 
 
 def _utc_now_naive() -> datetime:
@@ -43,6 +48,63 @@ def _sections_from_document(document_json: Any) -> list[dict[str, Any]]:
     if not isinstance(sections, list):
         return []
     return [section for section in sections if isinstance(section, dict)]
+
+
+def _terminal_process_status(*, resource_status: str, booklet_status: str) -> str:
+    if booklet_status == "final_ready":
+        return "completed"
+    if booklet_status == "final_with_warnings":
+        return "completed_with_warnings"
+    if booklet_status in {"draft_ready", "draft_with_warnings", "draft_needs_review"}:
+        return "failed_finalisation"
+    if resource_status == "failed":
+        return "failed"
+    return "failed_unusable"
+
+
+def _planned_section_ids(document: dict[str, Any], chunked_state: dict[str, Any]) -> list[str]:
+    progress = document.get("progress")
+    progress_sections = progress.get("sections") if isinstance(progress, dict) else None
+    ids = [str(section_id) for section_id in progress_sections] if isinstance(progress_sections, dict) else []
+    structural_plan = chunked_state.get("structural_plan")
+    plan_sections = structural_plan.get("sections") if isinstance(structural_plan, dict) else None
+    if isinstance(plan_sections, list):
+        for section in plan_sections:
+            if isinstance(section, dict) and isinstance(section.get("id"), str):
+                ids.append(section["id"])
+    return list(dict.fromkeys(ids))
+
+
+def _derive_persisted_booklet_status(
+    document: dict[str, Any],
+    report: dict[str, Any],
+) -> tuple[str, str]:
+    coherence_raw = report.get("coherence")
+    coherence: CoherenceReport | None = None
+    if isinstance(coherence_raw, dict):
+        try:
+            coherence = CoherenceReport.model_validate(coherence_raw)
+        except ValueError:
+            coherence = None
+    sections = _sections_from_document(document)
+    booklet_status = derive_booklet_status(
+        draft_section_count=len(sections),
+        render_valid=bool(sections),
+        review_done=coherence is not None,
+        finalised=coherence is not None
+        and coherence.status in {"passed", "passed_with_warnings"},
+        blocking_count=coherence.blocking_count if coherence is not None else 0,
+        major_count=coherence.major_count if coherence is not None else 0,
+        minor_count=coherence.minor_count if coherence is not None else 0,
+        fatal_issue_categories=collect_fatal_issue_categories(coherence.issues)
+        if coherence is not None
+        else set(),
+    )
+    resource_status = coherence.status if coherence is not None else "failed"
+    return booklet_status, _terminal_process_status(
+        resource_status=resource_status,
+        booklet_status=booklet_status,
+    )
 
 
 def _count_delivered_visuals(sections: list[dict[str, Any]]) -> int:
@@ -562,7 +624,7 @@ class V3GenerationWriter:
             await session.commit()
 
     async def fail_stale_running(self) -> int:
-        """Mark v3 generations left 'running' by a dead process as failed.
+        """Reconcile v3 generations left running by a dead process.
 
         Called on startup: with a single worker, any row still 'running' when
         the process boots belongs to a run killed by a restart/redeploy, and
@@ -580,37 +642,77 @@ class V3GenerationWriter:
             )
             models = list(result.scalars().all())
             for model in models:
-                model.status = "failed"
-                model.quality_passed = False
-                model.error = "Generation was interrupted by a server restart."
-                model.error_type = "server_restart"
-                model.error_code = "v3_interrupted_by_restart"
-                model.completed_at = _utc_now_naive()
                 report = self._coerce_report(
                     model.report_json,
                     section_count=model.section_count or 0,
                 )
-                report["process_status"] = "failed"
+                document = deepcopy(model.document_json) if isinstance(model.document_json, dict) else {}
+                chunked_state = (
+                    deepcopy(model.chunked_state_json)
+                    if isinstance(model.chunked_state_json, dict)
+                    else json.loads(model.chunked_state_json or "{}")
+                )
+                planned_ids = _planned_section_ids(document, chunked_state)
+                rendered_ids = {
+                    section.get("section_id")
+                    for section in _sections_from_document(document)
+                    if isinstance(section.get("section_id"), str)
+                }
+                progress = document.get("progress")
+                raw_statuses = progress.get("sections") if isinstance(progress, dict) else None
+                statuses = dict(raw_statuses) if isinstance(raw_statuses, dict) else {}
+                ready_ids = {
+                    section_id
+                    for section_id in planned_ids
+                    if statuses.get(section_id) == "ready" and section_id in rendered_ids
+                }
+                failed_ids = [section_id for section_id in planned_ids if section_id not in ready_ids]
+                fully_written = bool(planned_ids) and not failed_ids and bool(document.get("blueprint_id"))
+
+                model.completed_at = _utc_now_naive()
+                chunked_update: dict[str, Any]
+                if fully_written:
+                    booklet_status, process_status = _derive_persisted_booklet_status(document, report)
+                    model.status = process_status
+                    model.quality_passed = _QUALITY_MAP.get(booklet_status)
+                    model.error = None
+                    model.error_type = None
+                    model.error_code = None
+                    document["status"] = booklet_status
+                    report["booklet_status"] = booklet_status
+                    report["process_status"] = process_status
+                    progress_stage = "completed"
+                    chunked_update = {
+                        "stage": "complete",
+                        "failed_sections": [],
+                        "execution_started": False,
+                    }
+                else:
+                    model.status = "failed"
+                    model.quality_passed = False
+                    model.error = "Generation was interrupted by a server restart."
+                    model.error_type = "server_restart"
+                    model.error_code = "v3_interrupted_by_restart"
+                    report["process_status"] = "failed"
+                    progress_stage = "interrupted" if ready_ids else "failed"
+                    chunked_update = {
+                        "stage": "assembly_blocked" if ready_ids else "stage2_error",
+                        "failed_sections": failed_ids,
+                        "execution_started": False,
+                    }
+                document["progress"] = {
+                    "stage": progress_stage,
+                    "sections": {
+                        section_id: "ready" if section_id in ready_ids else "failed"
+                        for section_id in planned_ids
+                    },
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+                model.document_json = document
                 model.report_json = report
-                if isinstance(model.document_json, dict):
-                    document = deepcopy(model.document_json)
-                    progress = document.get("progress")
-                    section_statuses = (
-                        dict(progress.get("sections"))
-                        if isinstance(progress, dict)
-                        and isinstance(progress.get("sections"), dict)
-                        else {}
-                    )
-                    section_statuses = {
-                        section_id: ("ready" if status == "ready" else "failed")
-                        for section_id, status in section_statuses.items()
-                    }
-                    document["progress"] = {
-                        "stage": "failed",
-                        "sections": section_statuses,
-                        "updated_at": datetime.now(timezone.utc).isoformat(),
-                    }
-                    model.document_json = document
+                from v3_blueprint.planning.persistence import persist_chunked_state
+
+                await persist_chunked_state(model.id, chunked_update, session=session)
             if models:
                 await session.commit()
             return len(models)
