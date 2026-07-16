@@ -167,6 +167,42 @@ def test_ready_visual_delivered_component_does_not_emit_missing_component_warnin
     assert all("diagram-block" not in d.missing_components for d in diagnostics)
 
 
+def test_flagged_visual_is_placed_in_diagram_bucket() -> None:
+    bp = _load_example("amara_compound_area.json")
+    section_id = next(section.section_id for section in bp.sections if section.visual_required)
+    builder = V3SectionBuilder()
+    components = [
+        block for block in _build_component_blocks(bp) if block.component_id != "diagram-block"
+    ]
+    visuals = [visual for visual in _build_visual_blocks(bp) if visual.attaches_to != section_id]
+    visuals.append(
+        GeneratedVisualBlock(
+            visual_id="v-flagged",
+            attaches_to=section_id,
+            mode="diagram",
+            image_url="https://cdn.example/flagged.png",
+            source_work_order_id="wo-v-flagged",
+            status="flagged_quality",
+            qc_reasons=["label is faint"],
+            component_id="diagram-block",
+        )
+    )
+
+    sections, warnings, diagnostics = builder.build_sections(
+        bp,
+        components,
+        _build_question_blocks(bp),
+        visuals,
+        template_id="guided-concept-path",
+        answer_key=None,
+    )
+
+    bucket = next(section for section in sections if section["section_id"] == section_id)
+    assert bucket["diagram"]["image_url"] == "https://cdn.example/flagged.png"
+    assert not any("was not delivered" in warning for warning in warnings)
+    assert next(d for d in diagnostics if d.section_id == section_id).status == "complete"
+
+
 def test_failed_visual_delivered_component_gets_visual_delivery_warning() -> None:
     bp = _load_example("amara_compound_area.json")
     builder = V3SectionBuilder()

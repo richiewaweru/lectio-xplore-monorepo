@@ -273,6 +273,29 @@ def test_validate_visual_accepts_diagram_compare_mode() -> None:
     assert not v.validate_visual_block(block, order)
 
 
+def test_validate_visual_accepts_flagged_quality_with_image_url() -> None:
+    order = VisualGeneratorWorkOrder(
+        work_order_id="wo-flagged",
+        visual=VisualPlanItem(
+            id="vis-flagged",
+            attaches_to="practice",
+            mode="diagram",
+            purpose="support question",
+        ),
+    )
+    block = GeneratedVisualBlock(
+        visual_id="vis-flagged",
+        attaches_to="practice",
+        mode="diagram",
+        image_url="https://cdn.example/flagged.png",
+        source_work_order_id="wo-flagged",
+        status="flagged_quality",
+        qc_reasons=["label is faint"],
+    )
+
+    assert not v.validate_visual_block(block, order)
+
+
 @pytest.mark.asyncio
 async def test_execute_visual_series_sets_parent_visual_id(
     monkeypatch: pytest.MonkeyPatch,
@@ -644,13 +667,13 @@ async def test_execute_visual_cache_miss_uploads_generation_and_cache_objects(
 
 
 @pytest.mark.asyncio
-async def test_execute_visual_qc_reject_then_retry_accepts_corrected_image(
+async def test_execute_visual_qc_flag_uploads_original_with_metadata_without_retry(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     order = VisualGeneratorWorkOrder(
-        work_order_id="v-qc-retry",
+        work_order_id="v-qc-flag",
         visual=VisualPlanItem(
-            id="vis-qc-retry",
+            id="vis-qc-flag",
             attaches_to="practice",
             component_id="diagram-block",
             mode="diagram",
@@ -676,20 +699,23 @@ async def test_execute_visual_qc_reject_then_retry_accepts_corrected_image(
             return f"https://cdn.example/{image_bytes.decode()}-{kwargs['filename']}"
 
     client = StubClient()
-    verdicts = [
-        VisualQCVerdict(verdict="reject", reasons=["label garbled"], correction_hint="make label legible"),
-        VisualQCVerdict(verdict="accept"),
-    ]
+    qc_calls = 0
 
-    async def qc_sequence(**_kwargs):
-        return verdicts.pop(0)
+    async def flag_qc(**_kwargs):
+        nonlocal qc_calls
+        qc_calls += 1
+        return VisualQCVerdict(
+            verdict="flag",
+            reasons=["label garbled"],
+            correction_hint="make label legible",
+        )
 
     async def stub_run_with_retries(_label, attempt, max_retries):
         _ = max_retries
         return await attempt(False)
 
     monkeypatch.setattr("v3_execution.executors.visual_executor.visual_qc_enabled", lambda: True)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.evaluate_visual_quality", qc_sequence)
+    monkeypatch.setattr("v3_execution.executors.visual_executor.evaluate_visual_quality", flag_qc)
     monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: client)
     monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: StubStore())
     monkeypatch.setattr("v3_execution.executors.visual_executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
@@ -701,14 +727,16 @@ async def test_execute_visual_qc_reject_then_retry_accepts_corrected_image(
     blocks = await execute_visual(order, emit, trace_id="trace", generation_id="gen")
 
     assert len(blocks) == 1
-    assert blocks[0].status == "ready"
-    assert "image-2" in (blocks[0].image_url or "")
-    assert len(client.prompts) == 2
-    assert "Correction: make label legible" in client.prompts[1]
+    assert blocks[0].status == "flagged_quality"
+    assert "image-1" in (blocks[0].image_url or "")
+    assert blocks[0].qc_reasons == ["label garbled"]
+    assert blocks[0].qc_correction_hint == "make label legible"
+    assert len(client.prompts) == 1
+    assert qc_calls == 1
 
 
 @pytest.mark.asyncio
-async def test_execute_visual_qc_reject_twice_omits_without_upload(
+async def test_execute_visual_qc_reject_omits_without_retry_or_upload(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     order = VisualGeneratorWorkOrder(
@@ -732,20 +760,23 @@ async def test_execute_visual_qc_reject_twice_omits_without_upload(
         async def store_image(self, *_args, **_kwargs):
             raise AssertionError("quality-omitted images should not upload")
 
-    verdicts = [
-        VisualQCVerdict(verdict="reject", reasons=["bad labels"], correction_hint="fix labels"),
-        VisualQCVerdict(verdict="reject", reasons=["still bad"], correction_hint="omit"),
-    ]
+    qc_calls = 0
 
-    async def qc_sequence(**_kwargs):
-        return verdicts.pop(0)
+    async def reject_qc(**_kwargs):
+        nonlocal qc_calls
+        qc_calls += 1
+        return VisualQCVerdict(
+            verdict="reject",
+            reasons=["unsafe content"],
+            correction_hint="remove unsafe content",
+        )
 
     async def stub_run_with_retries(_label, attempt, max_retries):
         _ = max_retries
         return await attempt(False)
 
     monkeypatch.setattr("v3_execution.executors.visual_executor.visual_qc_enabled", lambda: True)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.evaluate_visual_quality", qc_sequence)
+    monkeypatch.setattr("v3_execution.executors.visual_executor.evaluate_visual_quality", reject_qc)
     monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: StubClient())
     monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: StubStore())
     monkeypatch.setattr("v3_execution.executors.visual_executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
@@ -759,7 +790,8 @@ async def test_execute_visual_qc_reject_twice_omits_without_upload(
     assert len(blocks) == 1
     assert blocks[0].status == "omitted_quality"
     assert blocks[0].image_url is None
-    assert blocks[0].error_message == "still bad"
+    assert blocks[0].error_message == "unsafe content"
+    assert qc_calls == 1
 
 
 @pytest.mark.asyncio

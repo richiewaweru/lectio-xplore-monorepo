@@ -14,7 +14,7 @@ from v3_execution.models import VisualGeneratorWorkOrder
 
 
 class VisualQCVerdict(BaseModel):
-    verdict: Literal["accept", "reject"]
+    verdict: Literal["accept", "flag", "reject"]
     reasons: list[str] = Field(default_factory=list)
     correction_hint: str = ""
 
@@ -35,21 +35,23 @@ def _criteria_prompt(order: VisualGeneratorWorkOrder) -> str:
     style_check = ""
     visual_style = getattr(order.visual, "visual_style", None)
     if visual_style == "diagram_precision" or order.visual.mode.startswith("diagram"):
-        style_check = "\nAlso reject if important labels are not legible in print."
+        style_check = "\nAlso flag if important labels are not legible in print."
 
     return f"""Review this generated raster image for classroom print use.
 
 Return JSON with:
-- verdict: "accept" or "reject"
+- verdict: "accept", "flag", or "reject"
 - reasons: short concrete reasons
-- correction_hint: one concise prompt correction if rejected
+- correction_hint: one concise prompt correction if flagged or rejected
 
-Accept if the image is usable even if imperfect. Reject only for garbled labels,
-missing required content, unsafe/inappropriate content, clearly unusable output,
-or full-sentence caption/title text inside the image. If rejecting for caption/title
-text, set correction_hint to "remove all sentence text from the image".
+Accept if the image is usable even if imperfect. Reject ONLY for unsafe or
+inappropriate content. Flag all ordinary quality or constraint problems, including
+garbled or illegible labels, missing required content, must_not_show violations,
+clearly low-quality output, or full-sentence caption/title text inside the image.
+If flagging caption/title text, set correction_hint to
+"remove all sentence text from the image".
 Items in must_show are REQUIRED. Their presence is never grounds for rejection.
-Only reject for must_not_show violations, illegibility, or caption/sentence text.
+Flag must_not_show violations, illegibility, or caption/sentence text.
 Dimension labels are allowed when required; area calculations or sums are not.
 
 Purpose: {order.visual.purpose}

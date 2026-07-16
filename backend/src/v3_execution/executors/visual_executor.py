@@ -7,7 +7,7 @@ import os
 import traceback
 import uuid
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, Literal
 
 from media.qc.visual_qc import evaluate_visual_quality, visual_qc_enabled
 from media.providers.registry import get_image_client, load_image_provider_spec
@@ -260,6 +260,9 @@ async def _render_frame(
         ),
     )
 
+    qc_status: Literal["ready", "flagged_quality"] = "ready"
+    qc_reasons: list[str] = []
+    qc_correction_hint: str | None = None
     if visual_qc_enabled() and order.visual.mode != "simulation":
         try:
             verdict = await evaluate_visual_quality(
@@ -285,59 +288,24 @@ async def _render_frame(
             )
         else:
             if verdict.verdict == "reject":
-                correction_hint = verdict.correction_hint or "; ".join(verdict.reasons)
-                corrected_prompt = f"{prompt}\n\nCorrection: {correction_hint}"
-                logger.info(
-                    "v3 visual qc rejected initial image; retrying once",
-                    extra=_visual_log_extra(
-                        order=order,
-                        generation_id=generation_id,
-                        visual_id=visual_id,
-                        frame_index=frame_index,
-                        component_id=component_id,
-                        parent_visual_id=parent_visual_id,
-                        qc_reasons=verdict.reasons,
-                    ),
+                return GeneratedVisualBlock(
+                    visual_id=visual_id,
+                    attaches_to=order.visual.attaches_to,
+                    frame_index=frame_index,
+                    mode=order.visual.mode,
+                    image_url=None,
+                    caption=order.visual.purpose,
+                    alt_text=order.visual.purpose,
+                    source_work_order_id=order.work_order_id,
+                    component_id=component_id,
+                    parent_visual_id=parent_visual_id,
+                    status="omitted_quality",
+                    error_message="; ".join(verdict.reasons),
                 )
-                try:
-                    image = await client.generate_image(prompt=corrected_prompt)
-                    retry_verdict = await evaluate_visual_quality(
-                        image_bytes=image.bytes,
-                        mime_type=image.mime_type,
-                        order=order,
-                        trace_id=trace_id,
-                        generation_id=generation_id,
-                    )
-                except Exception as exc:  # noqa: BLE001
-                    logger.warning(
-                        "v3 visual qc retry failed open",
-                        extra=_visual_log_extra(
-                            order=order,
-                            generation_id=generation_id,
-                            visual_id=visual_id,
-                            frame_index=frame_index,
-                            component_id=component_id,
-                            parent_visual_id=parent_visual_id,
-                            error_type=type(exc).__name__,
-                            error_message=str(exc),
-                        ),
-                    )
-                else:
-                    if retry_verdict.verdict == "reject":
-                        return GeneratedVisualBlock(
-                            visual_id=visual_id,
-                            attaches_to=order.visual.attaches_to,
-                            frame_index=frame_index,
-                            mode=order.visual.mode,
-                            image_url=None,
-                            caption=order.visual.purpose,
-                            alt_text=order.visual.purpose,
-                            source_work_order_id=order.work_order_id,
-                            component_id=component_id,
-                            parent_visual_id=parent_visual_id,
-                            status="omitted_quality",
-                            error_message="; ".join(retry_verdict.reasons),
-                        )
+            if verdict.verdict == "flag":
+                qc_status = "flagged_quality"
+                qc_reasons = verdict.reasons
+                qc_correction_hint = verdict.correction_hint or None
 
     try:
         url = await store.store_image(
@@ -398,7 +366,9 @@ async def _render_frame(
         source_work_order_id=order.work_order_id,
         component_id=component_id,
         parent_visual_id=parent_visual_id,
-        status="ready",
+        status=qc_status,
+        qc_reasons=qc_reasons,
+        qc_correction_hint=qc_correction_hint,
     )
     errs = validate_visual_block(block, order)
     if errs:

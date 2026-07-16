@@ -54,8 +54,10 @@ class GeneratedVisualBlock(BaseModel):
     source_work_order_id: str
     component_id: str | None = None
     parent_visual_id: str | None = None
-    status: Literal["ready", "failed", "omitted_quality"] = "ready"
+    status: Literal["ready", "failed", "omitted_quality", "flagged_quality"] = "ready"
     error_message: str | None = None
+    qc_reasons: list[str] = Field(default_factory=list)
+    qc_correction_hint: str | None = None
 
 
 AnswerKeyStyle = Literal["answers_only", "brief_explanations", "full_working"]
