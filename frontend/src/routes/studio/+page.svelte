@@ -423,6 +423,12 @@
 		}
 	}
 
+	async function handleVisualRegenerated(): Promise<void> {
+		if (v3Studio.generationId) {
+			await hydrateFromDocument(v3Studio.generationId);
+		}
+	}
+
 	async function refreshChunkedStatus(generationId: string): Promise<void> {
 		try {
 			const state = await getChunkedPlanStatus(generationId);
@@ -853,7 +859,7 @@
 			{/if}
 			{#if v3Studio.bookletIssues.length}
 				<div class="mx-auto max-w-4xl px-4">
-					<V3BookletIssuesPanel issues={v3Studio.bookletIssues} title="Review flags" />
+					<V3BookletIssuesPanel issues={v3Studio.bookletIssues} title="Review flags" generationId={v3Studio.generationId} pack={v3Studio.activePack} onRegenerated={handleVisualRegenerated} />
 				</div>
 			{/if}
 		</div>
@@ -1006,7 +1012,7 @@
 		{/if}
 		{#if v3Studio.bookletIssues.length}
 			<div class="mx-auto max-w-4xl px-4 pt-4">
-				<V3BookletIssuesPanel issues={v3Studio.bookletIssues} title="Review flags" />
+				<V3BookletIssuesPanel issues={v3Studio.bookletIssues} title="Review flags" generationId={v3Studio.generationId} pack={v3Studio.activePack} onRegenerated={handleVisualRegenerated} />
 			</div>
 		{/if}
 		{#if v3Studio.activePack}

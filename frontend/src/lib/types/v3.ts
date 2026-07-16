@@ -210,13 +210,15 @@ export interface CanvasComponent {
 
 export interface CanvasVisual {
 	id: string;
-	status: ComponentStatus | 'omitted_quality';
+	status: ComponentStatus | 'omitted_quality' | 'flagged_quality';
 	mode?: 'diagram' | 'diagram_series' | 'diagram_compare' | 'simulation';
 	image_url: string | null;
 	frame_index: number | null;
 	component_id?: string | null;
 	parent_visual_id?: string | null;
 	error_message?: string | null;
+	qc_reasons?: string[];
+	qc_correction_hint?: string | null;
 }
 
 export interface CanvasSection {
@@ -281,8 +283,10 @@ export interface V3DraftPack {
 		image_url?: string | null;
 		component_id?: string | null;
 		parent_visual_id?: string | null;
-		status?: 'ready' | 'failed' | 'omitted_quality';
+		status?: 'ready' | 'failed' | 'omitted_quality' | 'flagged_quality';
 		error_message?: string | null;
+		qc_reasons?: string[];
+		qc_correction_hint?: string | null;
 	}>;
 	answer_key?: Record<string, unknown> | null;
 	warnings: string[];

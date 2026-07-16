@@ -11,6 +11,7 @@ import type {
 	V3GenerationHistoryItem,
 	V3InputForm,
 	V3IntentDrafts,
+	V3DraftPack,
 	V3SignalSummary
 } from '$lib/types/v3';
 
@@ -138,6 +139,25 @@ export async function getChunkedPlanStatus(generationId: string): Promise<V3Chun
 	});
 	await ensureOk(res, 'Could not load chunked planning status.');
 	return res.json() as Promise<V3ChunkedPlanState>;
+}
+
+export type V3VisualBlock = NonNullable<V3DraftPack['visual_blocks']>[number];
+
+export async function regenerateV3Visual(payload: {
+	generation_id: string;
+	visual_id: string;
+	teacher_hint?: string;
+}): Promise<V3VisualBlock> {
+	const res = await apiFetch(
+		`/api/v1/v3/generations/${encodeURIComponent(payload.generation_id)}/visuals/${encodeURIComponent(payload.visual_id)}/regenerate`,
+		{
+			method: 'POST',
+			headers: bearerHeaders(),
+			body: JSON.stringify({ teacher_hint: payload.teacher_hint ?? '' })
+		}
+	);
+	await ensureOk(res, 'Could not regenerate this image.');
+	return res.json() as Promise<V3VisualBlock>;
 }
 
 export async function adjustBlueprint(payload: {
