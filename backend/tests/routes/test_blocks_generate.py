@@ -194,7 +194,74 @@ async def test_generate_block_accepts_owned_lesson_and_mode(db_session_factory) 
     forwarded_body = mocked.await_args.args[0]
     assert forwarded_body.lesson_id == "lesson-owned-by-user"
     assert forwarded_body.mode == "custom"
+    assert forwarded_body.generation_context is None
     assert mocked.await_args.kwargs["user_id"] == TEST_USER.id
+
+
+@pytest.mark.asyncio
+async def test_generate_block_injects_source_generation_plan_context(db_session_factory) -> None:
+    app.dependency_overrides[get_current_user] = _override_user
+    await _install_session_override(db_session_factory)
+    async with db_session_factory() as session:
+        session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
+        session.add(
+            EditableLessonModel(
+                id="lesson-from-generation",
+                user_id=TEST_USER.id,
+                source_generation_id="gen-plan-context",
+                source_type="v3_generation",
+                title="Generated lesson",
+                document_json={"version": 1, "id": "lesson-from-generation", "title": "Generated lesson", "subject": "science", "preset_id": "blue-classroom", "source": "generated", "sections": [], "blocks": {}, "media": {}},
+            )
+        )
+        await session.commit()
+
+    state = {
+        "structural_plan": {
+            "lesson_intent": {"goal": "Explain photosynthesis", "structure_rationale": "Concrete first"},
+            "sections": [{"id": "intro", "title": "Meet the leaf", "role": "anchor", "components": []}],
+        },
+        "section_briefs": {"intro": {"section_id": "intro", "content_intent": "Connect light to stored energy"}},
+    }
+    with (
+        patch("generation.block_generate_routes.load_chunked_state", new=AsyncMock(return_value=state)),
+        patch("generation.block_generate_routes.run_block_generation", new=AsyncMock(return_value={"headline": "ok"})) as mocked,
+    ):
+        async with _client() as client:
+            res = await client.post(
+                "/api/v1/blocks/generate",
+                json={"lesson_id": "lesson-from-generation", "section_id": "intro", "component_id": "hook-hero", "subject": "Biology", "focus": "Photosynthesis", "grade_band": "secondary"},
+            )
+
+    assert res.status_code == 200
+    forwarded = mocked.await_args.args[0]
+    assert "Explain photosynthesis" in forwarded.generation_context
+    assert "Meet the leaf" in forwarded.generation_context
+    assert "Connect light to stored energy" in forwarded.generation_context
+    assert len(forwarded.generation_context) <= 3000
+
+
+@pytest.mark.asyncio
+async def test_generate_block_context_load_failure_degrades_silently(db_session_factory) -> None:
+    app.dependency_overrides[get_current_user] = _override_user
+    await _install_session_override(db_session_factory)
+    async with db_session_factory() as session:
+        session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
+        session.add(EditableLessonModel(id="lesson-context-failure", user_id=TEST_USER.id, source_generation_id="missing-gen", source_type="v3_generation", title="Lesson", document_json={"version": 1, "id": "lesson-context-failure", "title": "Lesson", "subject": "science", "preset_id": "blue-classroom", "source": "generated", "sections": [], "blocks": {}, "media": {}}))
+        await session.commit()
+
+    with (
+        patch("generation.block_generate_routes.load_chunked_state", new=AsyncMock(side_effect=RuntimeError("missing"))),
+        patch("generation.block_generate_routes.run_block_generation", new=AsyncMock(return_value={"headline": "ok"})) as mocked,
+    ):
+        async with _client() as client:
+            res = await client.post(
+                "/api/v1/blocks/generate",
+                json={"lesson_id": "lesson-context-failure", "component_id": "hook-hero", "subject": "Biology", "focus": "Photosynthesis", "grade_band": "secondary"},
+            )
+
+    assert res.status_code == 200
+    assert mocked.await_args.args[0].generation_context is None
 
 
 @pytest.mark.asyncio

@@ -18,6 +18,7 @@
 	let {
 		block,
 		document,
+		sectionId,
 		store,
 		selected = false,
 		editing = false,
@@ -33,6 +34,7 @@
 	}: {
 		block: BlockInstance;
 		document: LessonDocument | null;
+		sectionId?: string;
 		store: DocumentStore;
 		selected?: boolean;
 		editing?: boolean;
@@ -160,6 +162,7 @@
 				<AiBlockAssist
 					{block}
 					lessonId={document?.id}
+					{sectionId}
 					subject={document?.subject ?? ''}
 					gradeBand={aiGradeBand}
 					contextBlocks={contextBlocksForAi}

@@ -1,5 +1,51 @@
 # Lesson Builder Merge Progress
 
+## Builder Convergence — Phase 3: Builder AI generation-plan context — 2026-07-16
+
+**Classification**: major
+**Root cause / Rationale**: Builder block assistance knew the local subject and neighboring blocks but not the structural intent or section role of generation-sourced lessons, allowing isolated suggestions to drift from the approved plan.
+
+### Scan Findings
+
+- `frontend/src/lib/builder/api/ai-client.ts` calls the existing `POST /api/v1/blocks/generate` endpoint and already sends `lesson_id`; it did not send a section ID.
+- `backend/src/generation/block_generate_routes.py` enforces lesson ownership through `EditableLessonModel` before calling `run_block_generation`.
+- `EditableLessonModel.source_generation_id` links generation-sourced Builder lessons without schema changes.
+- `v3_blueprint.planning.persistence.load_chunked_state` returns the persisted `structural_plan` and `section_briefs`; the relevant brief is keyed by structural section ID.
+- `generation.block_generate_prompts.build_block_user_prompt` is the existing prompt-context assembly point. No tool-choice behavior is used or changed.
+- No scan result contradicts the Phase 3 handoff.
+
+### Progress
+
+- [x] Confirmed endpoint/request shape, ownership lookup, source-generation link, and planning persistence.
+- [x] Added section ID additively through the existing Builder AI component/client request.
+- [x] Added capped plan-intent, section-role, and one-section-brief context injection.
+- [x] Added best-effort degradation and debug logging with generation ID/context character count.
+- [x] Added backend coverage for generation context, manual behavior, and context-load failure.
+- [x] Ran full backend and frontend Phase 3 gates.
+- [x] Self-reviewed; ready for the prescribed commit.
+
+### Verification Checklist
+
+- [x] Generation-sourced assist receives compact plan context and emits debug metadata.
+- [x] Manual lesson request remains unchanged (`generation_context is None`).
+- [x] Mocked context-load failure still returns a successful assist response.
+- [x] Backend pytest plus frontend check/build/test pass.
+
+### Validation Evidence
+
+- Backend focused route tests: 8 passed; one existing Pydantic warning.
+- Backend Ruff on touched files: passed.
+- Initial full backend run: 350 passed and 46 SQLite-backed tests failed from a shared `database is locked` condition; no Phase 3 test failed.
+- Immediate rerun of the three affected database test modules: 48 passed.
+- Clean full backend rerun: 396 passed, one existing Pydantic warning.
+- Frontend `npm run check`: 0 errors, 0 warnings.
+- Frontend `npm run build`: passed; existing non-fatal chunk-size warning only.
+- Frontend `npm run test`: 54 files, 210 tests passed.
+
+### Risks
+
+- Context is deliberately capped at 3000 characters and includes only lesson intent, the relevant section identity/role, and that section's brief.
+
 ## Builder Convergence — Phase 2: Builder polling + route-only skeletons + append-only merge — 2026-07-16
 
 **Classification**: major

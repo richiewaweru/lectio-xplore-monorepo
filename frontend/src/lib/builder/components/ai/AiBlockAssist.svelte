@@ -11,6 +11,7 @@
 	let {
 		block,
 		lessonId,
+		sectionId,
 		subject,
 		gradeBand,
 		contextBlocks,
@@ -21,6 +22,7 @@
 	}: {
 		block: BlockInstance;
 		lessonId?: string;
+		sectionId?: string;
 		subject: string;
 		gradeBand: GradeBand;
 		contextBlocks: BlockGenerateContextBlock[];
@@ -103,6 +105,7 @@
 			const res = await generateBlock(
 				{
 					lesson_id: lessonId,
+					section_id: sectionId,
 					component_id: block.component_id,
 					mode,
 					subject,

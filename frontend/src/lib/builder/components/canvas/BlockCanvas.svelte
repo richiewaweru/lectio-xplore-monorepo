@@ -120,6 +120,7 @@
 				{#each itemsBySection[section.id] ?? [] as item (item.id)}
 					<BlockCard
 						block={item}
+						sectionId={section.id}
 						document={store.document}
 						{store}
 						selected={store.selectedBlockId === item.id}

@@ -44,6 +44,7 @@ class ContextBlockIn(BaseModel):
 
 class BlockGenerateRequest(BaseModel):
     lesson_id: str | None = None
+    section_id: str | None = None
     component_id: str
     mode: Literal["fill", "improve", "custom"] = "fill"
     subject: str
@@ -53,6 +54,7 @@ class BlockGenerateRequest(BaseModel):
     teacher_note: str | None = None
     existing_content: dict[str, Any] | None = None
     model_tier: Literal["FAST", "STANDARD"] | None = None
+    generation_context: str | None = None
 
 
 class BlockGenerateResponse(BaseModel):
@@ -112,6 +114,7 @@ async def run_block_generation(
             ],
             teacher_note=body.teacher_note,
             existing_content=body.existing_content,
+            generation_context=body.generation_context,
         )
 
         agent = Agent(

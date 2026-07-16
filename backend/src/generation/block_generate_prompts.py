@@ -97,6 +97,7 @@ def build_block_user_prompt(
     context_blocks: list[dict[str, Any]] | None,
     teacher_note: str | None,
     existing_content: dict[str, Any] | None,
+    generation_context: str | None = None,
 ) -> str:
     parts = [
         f"Subject: {subject}",
@@ -105,6 +106,12 @@ def build_block_user_prompt(
     ]
     if teacher_note:
         parts.append(f"Teacher instruction: {teacher_note}")
+    if generation_context:
+        parts.append(
+            "This lesson was generated from the following plan. Stay consistent with the "
+            "lesson intent and this section's role:\n"
+            f"{generation_context}"
+        )
     if existing_content:
         parts.append(
             "Existing content to improve (revise in place; keep structure unless asked):\n"
