@@ -9,7 +9,7 @@
 	import { friendlyGenerationErrorMessage } from '$lib/generation/error-messages';
 	import { getProfile } from '$lib/api/profile';
 	import { v3PackToBuilderDocument } from '$lib/builder/adapters/from-generation';
-	import { createBuilderLesson } from '$lib/builder/api/lesson-crud';
+	import { createBuilderLesson, listBuilderLessons, type BuilderLessonSummary } from '$lib/builder/api/lesson-crud';
 	import { saveDocument } from '$lib/builder/persistence/idb-store';
 	import { getStreamIntoBuilder, setStreamIntoBuilder } from '$lib/settings/flags';
 	import { authUser, logout } from '$lib/stores/auth';
@@ -23,6 +23,7 @@
 	let profile = $state<TeacherProfile | null>(null);
 	let v3Generations = $state<V3GenerationHistoryItem[]>([]);
 	let recentPacks = $state<PackStatusResponse[]>([]);
+	let builderLessons = $state<BuilderLessonSummary[]>([]);
 	let loadingProfile = $state(true);
 	let profileErrorMessage = $state<string | null>(null);
 	let openingBuilderId = $state<string | null>(null);
@@ -51,9 +52,14 @@
 		}
 
 		try {
-			const [generations, packs] = await Promise.all([getV3Generations(), getPacks()]);
+			const [generations, packs, lessons] = await Promise.all([
+				getV3Generations(),
+				getPacks(),
+				streamIntoBuilder ? listBuilderLessons() : Promise.resolve([])
+			]);
 			v3Generations = generations;
 			recentPacks = packs;
+			builderLessons = lessons;
 		} catch (err) {
 			if (isApiError(err) && err.status === 401) {
 				logout();
@@ -65,6 +71,34 @@
 	function v3OpenRoute(generationId: string): string {
 		return `/studio/generations/${generationId}`;
 	}
+
+	function generationForLesson(lesson: BuilderLessonSummary): V3GenerationHistoryItem | undefined {
+		return lesson.source_generation_id
+			? v3Generations.find((generation) => generation.id === lesson.source_generation_id)
+			: undefined;
+	}
+
+	function lessonStatus(lesson: BuilderLessonSummary): { symbol: string; label: string; tone: string } {
+		const generation = generationForLesson(lesson);
+		if (generation && generation.status !== 'completed' && generation.status !== 'failed') {
+			return { symbol: '●', label: 'streaming', tone: 'running' };
+		}
+		if (generation?.status === 'completed') return { symbol: '✓', label: 'complete', tone: 'completed' };
+		return { symbol: '✎', label: 'draft', tone: 'pending' };
+	}
+
+	function builderLessonRoute(lesson: BuilderLessonSummary): string {
+		const generation = generationForLesson(lesson);
+		return generation && lessonStatus(lesson).label === 'streaming'
+			? `/builder/${lesson.id}?generation_id=${generation.id}`
+			: `/builder/${lesson.id}`;
+	}
+
+	const generationsWithoutBuilder = $derived(
+		v3Generations.filter(
+			(generation) => !builderLessons.some((lesson) => lesson.source_generation_id === generation.id)
+		)
+	);
 
 	async function openGenerationInBuilder(generationId: string, title: string): Promise<void> {
 		openingBuilderId = generationId;
@@ -246,7 +280,42 @@
 			</section>
 		{/if}
 
-		{#if v3Generations.length > 0}
+		{#if streamIntoBuilder && (builderLessons.length > 0 || generationsWithoutBuilder.length > 0)}
+			<section class="history-section">
+				<h2>Lessons</h2>
+				<ul class="history-list">
+					{#each builderLessons as lesson (lesson.id)}
+						{@const status = lessonStatus(lesson)}
+						<li class="history-item">
+							<div class="history-info">
+								<p class="history-subject">{lesson.title}</p>
+								<div class="history-meta">
+									<span class={`status status-${status.tone}`}>{status.symbol} {status.label}</span>
+									<span>{lesson.source_type === 'v3_generation' ? 'Generated lesson' : 'Builder draft'}</span>
+								</div>
+							</div>
+							<div class="history-actions"><a href={builderLessonRoute(lesson)} class="view-link">Open</a></div>
+						</li>
+					{/each}
+					{#each generationsWithoutBuilder as gen (gen.id)}
+						<li class="history-item">
+							<div class="history-info">
+								<p class="history-subject">{gen.title || gen.subject}</p>
+								<div class="history-meta"><span class={`status status-${gen.status}`}>{gen.status}</span><span>Pre-Builder generation</span></div>
+							</div>
+							<div class="history-actions">
+								<a href={v3OpenRoute(gen.id)} class="view-link">Open</a>
+								{#if gen.status === 'completed'}
+									<button type="button" class="view-link action-link" disabled={openingBuilderId === gen.id} onclick={() => openGenerationInBuilder(gen.id, gen.title || gen.subject)}>
+										{openingBuilderId === gen.id ? 'Opening...' : 'Edit in Builder'}
+									</button>
+								{/if}
+							</div>
+						</li>
+					{/each}
+				</ul>
+			</section>
+		{:else if !streamIntoBuilder && v3Generations.length > 0}
 			<section class="history-section">
 				<h2>Saved V3 Books</h2>
 				{#if builderOpenError}

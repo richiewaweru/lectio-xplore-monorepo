@@ -43,9 +43,10 @@ const { getProfile, getV3Generations, fetchV3Document, getPacks } = vi.hoisted((
 	getPacks: vi.fn()
 }));
 
-const { v3PackToBuilderDocument, createBuilderLesson, saveDocument } = vi.hoisted(() => ({
+const { v3PackToBuilderDocument, createBuilderLesson, listBuilderLessons, saveDocument } = vi.hoisted(() => ({
 	v3PackToBuilderDocument: vi.fn(),
 	createBuilderLesson: vi.fn(),
+	listBuilderLessons: vi.fn(),
 	saveDocument: vi.fn()
 }));
 
@@ -94,7 +95,8 @@ vi.mock('$lib/builder/adapters/from-generation', () => ({
 }));
 
 vi.mock('$lib/builder/api/lesson-crud', () => ({
-	createBuilderLesson
+	createBuilderLesson,
+	listBuilderLessons
 }));
 
 vi.mock('$lib/builder/persistence/idb-store', () => ({
@@ -134,6 +136,7 @@ describe('dashboard teacher profile summary', () => {
 		getV3Generations.mockResolvedValue([]);
 		fetchV3Document.mockResolvedValue({});
 		getPacks.mockResolvedValue([]);
+		listBuilderLessons.mockResolvedValue([]);
 		v3PackToBuilderDocument.mockReturnValue({
 			version: 1,
 			id: 'lesson-doc-1',
@@ -288,5 +291,28 @@ describe('dashboard teacher profile summary', () => {
 
 		await waitFor(() => expect(getV3Generations).toHaveBeenCalledTimes(1));
 		expect(screen.queryByRole('button', { name: 'Edit in Builder' })).toBeNull();
+	});
+
+	it('renders the unified flag-on lesson list with streaming and draft routes', async () => {
+		localStorage.setItem('lectio:stream-into-builder', 'true');
+		getV3Generations.mockResolvedValueOnce([
+			{ id: 'gen-stream', subject: 'Math', title: 'Streaming lesson', status: 'running', booklet_status: 'drafting', section_count: 3, document_section_count: 1, template_id: 'guided-concept-path', created_at: '', completed_at: null },
+			{ id: 'gen-old', subject: 'Science', title: 'Old generation', status: 'completed', booklet_status: 'final_ready', section_count: 2, document_section_count: 2, template_id: 'guided-concept-path', created_at: '', completed_at: '' }
+		]);
+		listBuilderLessons.mockResolvedValueOnce([
+			{ id: 'builder-stream', source_generation_id: 'gen-stream', source_type: 'v3_generation', title: 'Streaming lesson', created_at: '', updated_at: '' },
+			{ id: 'builder-draft', source_generation_id: null, source_type: 'manual', title: 'Manual draft', created_at: '', updated_at: '' }
+		]);
+
+		render(DashboardPage);
+
+		expect(await screen.findByRole('heading', { name: 'Lessons' })).toBeTruthy();
+		expect(screen.getByText('● streaming')).toBeTruthy();
+		expect(screen.getByText('✎ draft')).toBeTruthy();
+		const openLinks = screen.getAllByRole('link', { name: 'Open' });
+		expect(openLinks.map((link) => link.getAttribute('href'))).toContain('/builder/builder-stream?generation_id=gen-stream');
+		expect(openLinks.map((link) => link.getAttribute('href'))).toContain('/builder/builder-draft');
+		expect(screen.getByText('Pre-Builder generation')).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Edit in Builder' })).toBeTruthy();
 	});
 });

@@ -1,5 +1,69 @@
 # Lesson Builder Merge Progress
 
+## Builder Convergence — Phase 4: Flag-gated unified dashboard lessons — 2026-07-16
+
+## BLOCKED: Phase 4 — frontend validation processes do not exit
+
+The Phase 4 implementation and its focused assertions are complete, but the mandatory
+frontend gate has failed to terminate on three consecutive attempts. Per the goal's
+STOP condition 2, Phase 4 is not committed and later phases have not been started.
+
+- Attempt 1: `npm run build; npm run test` timed out after 124 seconds.
+- Attempt 2: isolated build plus `npx vitest run --pool=forks --reporter=verbose`
+  timed out after 124 seconds.
+- Attempt 3: isolated `npm run build` timed out after 125 seconds.
+- The focused dashboard run printed a successful result (`1` file, `6` tests passed,
+  duration `20.19s`) before its parent process remained alive and was terminated at
+  the command timeout.
+- `npm run check` previously completed with 0 errors and 0 warnings.
+
+The repeated behavior affects both Vite build and Vitest teardown, so there is not
+yet enough evidence to attribute it to the Phase 4 dashboard code. The next safe
+step is to diagnose the shared Node/Vite process-lifecycle issue, rerun the full
+gate cleanly, and only then commit Phase 4.
+
+**Authorized deviation — 2026-07-16**: The user explicitly authorized proceeding
+with later phases using the completed functional evidence. Phase 4 may be committed
+with the process-exit timeout retained as an unresolved validation risk; this does
+not reclassify the full build/test gate as passing.
+
+**Classification**: major
+**Root cause / Rationale**: The dashboard separately exposed Builder navigation and V3 generation history, so flag-enabled lessons lacked a single status-aware post-generation list.
+
+### Scan Findings
+
+- `frontend/src/routes/dashboard/+page.svelte` loads V3 history via `getV3Generations` and renders it as “Saved V3 Books”; Builder lessons were only linked through a separate workspace card.
+- `frontend/src/lib/builder/api/lesson-crud.ts` exposes `listBuilderLessons()` with `source_generation_id`, source type, title, and timestamps.
+- Generation history supplies the source status/booklet status needed to derive streaming/complete badges.
+- No scan result contradicts the Phase 4 handoff.
+
+### Progress
+
+- [x] Confirmed both data sources and the existing flag-OFF rendering branch.
+- [x] Added flag-ON Builder lesson loading only; flag OFF does not issue the extra request.
+- [x] Added unified lesson rows with streaming/complete/draft badges and status-aware links.
+- [x] Retained pre-toggle generations without Builder lessons and their existing Edit in Builder affordance.
+- [x] Added flag-ON dashboard coverage while existing flag-OFF tests remain unchanged and green.
+- [x] Self-review and commit under the authorized validation deviation.
+
+### Verification Checklist
+
+- [x] Flag OFF retains the existing Saved V3 Books rendering and tests.
+- [x] Flag ON renders unified lessons, streaming status, and correct query-string routes.
+- [ ] `npm run build` and the full `npm run test` process exit cleanly (authorized
+  temporary deviation; focused behavior passes and `npm run check` is clean).
+
+### Validation Evidence
+
+- Focused Dashboard Vitest: 6 tests passed.
+- `npm run check`: 0 errors, 0 warnings.
+- Full build/test processes: assertions/build did not report a code failure, but the
+  commands did not terminate before the recorded timeouts; final gate remains pending.
+
+### Risks
+
+- The unified view intentionally correlates lessons to the already-loaded generation history by `source_generation_id`; missing historical generations display as drafts rather than blocking the list.
+
 ## Builder Convergence — Phase 3: Builder AI generation-plan context — 2026-07-16
 
 **Classification**: major
