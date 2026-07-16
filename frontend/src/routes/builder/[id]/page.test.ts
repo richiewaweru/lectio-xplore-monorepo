@@ -4,14 +4,17 @@ import { cleanup, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '$lib/api/errors';
 
-const { pageState, goto, logout, loadBuilderLessonWithFallback } = vi.hoisted(() => ({
+const { pageState, goto, logout, loadBuilderLessonWithFallback, fetchV3Document, getChunkedPlanStatus, v3PackToBuilderDocument } = vi.hoisted(() => ({
 	pageState: {
 		params: { id: 'lesson-123' },
 		url: new URL('http://localhost/builder/lesson-123')
 	},
 	goto: vi.fn(),
 	logout: vi.fn(),
-	loadBuilderLessonWithFallback: vi.fn()
+	loadBuilderLessonWithFallback: vi.fn(),
+	fetchV3Document: vi.fn(),
+	getChunkedPlanStatus: vi.fn(),
+	v3PackToBuilderDocument: vi.fn()
 }));
 
 const mockStore = {
@@ -33,7 +36,8 @@ const mockStore = {
 	duplicateBlock: vi.fn(),
 	getSectionIdForBlock: vi.fn(() => null),
 	removeBlock: vi.fn(),
-	selectBlock: vi.fn()
+	selectBlock: vi.fn(),
+	insertSectionsFromGeneration: vi.fn()
 };
 
 vi.mock('$app/environment', () => ({
@@ -59,6 +63,10 @@ vi.mock('$lib/builder/persistence/server-sync', () => ({
 vi.mock('$lib/builder/stores/document.svelte', () => ({
 	createDocumentStore: () => mockStore
 }));
+
+vi.mock('$lib/api/v3', () => ({ fetchV3Document, getChunkedPlanStatus }));
+
+vi.mock('$lib/builder/adapters/from-generation', () => ({ v3PackToBuilderDocument }));
 
 vi.mock('$lib/builder/components/shell/AppShell.svelte', async () => ({
 	default: (await import('./__fixtures__/MockAppShell.svelte')).default
@@ -90,6 +98,11 @@ describe('builder lesson route', () => {
 		goto.mockReset();
 		logout.mockReset();
 		pageState.params.id = 'lesson-123';
+		pageState.url = new URL('http://localhost/builder/lesson-123');
+		fetchV3Document.mockReset();
+		getChunkedPlanStatus.mockReset();
+		v3PackToBuilderDocument.mockReset();
+		mockStore.insertSectionsFromGeneration.mockReset();
 	});
 
 	afterEach(() => {
@@ -126,5 +139,51 @@ describe('builder lesson route', () => {
 
 		await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
 		await waitFor(() => expect(goto).toHaveBeenCalledWith('/login', { replaceState: true }));
+	});
+
+	it('rehydrates pending plan, inserts a snapshot, and stops polling at terminal status', async () => {
+		const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval');
+		pageState.url = new URL('http://localhost/builder/lesson-123?generation_id=gen-1');
+		loadBuilderLessonWithFallback.mockResolvedValueOnce({ document: lesson(), source: 'server' });
+		getChunkedPlanStatus.mockResolvedValueOnce({
+			structural_plan: {
+				lesson_mode: 'first_exposure', lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'all' }, question_plan: [],
+				sections: [{ id: 's1', title: 'Introduction', role: 'intro', visual_required: false, transition_note: null, components: [] }]
+			}
+		});
+		fetchV3Document.mockResolvedValueOnce({ status: 'final_ready', sections: [] });
+		v3PackToBuilderDocument.mockReturnValueOnce(lesson());
+
+		render(BuilderLessonPage);
+
+		await waitFor(() => expect(fetchV3Document).toHaveBeenCalledWith('gen-1'));
+		expect(getChunkedPlanStatus).toHaveBeenCalledWith('gen-1');
+		expect(mockStore.insertSectionsFromGeneration).toHaveBeenCalledWith(
+			expect.any(Object),
+			[{ id: 's1', title: 'Introduction', position: 0 }]
+		);
+		await waitFor(() => expect(clearIntervalSpy).toHaveBeenCalled());
+		expect(await screen.findByTestId('mock-pending-s1')).toBeTruthy();
+		clearIntervalSpy.mockRestore();
+	});
+
+	it('shows route-only pending skeletons while the document snapshot is not ready', async () => {
+		pageState.url = new URL('http://localhost/builder/lesson-123?generation_id=gen-pending');
+		loadBuilderLessonWithFallback.mockResolvedValueOnce({ document: lesson(), source: 'server' });
+		getChunkedPlanStatus.mockResolvedValueOnce({
+			structural_plan: {
+				lesson_mode: 'first_exposure', lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'all' }, question_plan: [],
+				sections: [{ id: 's2', title: 'Practice', role: 'practice', visual_required: false, transition_note: null, components: [] }]
+			}
+		});
+		fetchV3Document.mockRejectedValueOnce(new Error('Document not ready'));
+
+		render(BuilderLessonPage);
+
+		expect(await screen.findByTestId('mock-pending-s2')).toBeTruthy();
+		expect(mockStore.document?.sections).toEqual([]);
+		expect(mockStore.insertSectionsFromGeneration).not.toHaveBeenCalled();
 	});
 });

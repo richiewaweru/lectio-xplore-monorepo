@@ -7,8 +7,18 @@
 	import AddSectionControl from './AddSectionControl.svelte';
 	import BlockCard from './BlockCard.svelte';
 	import SectionDivider from './SectionDivider.svelte';
+	import type { PendingPlanSection } from '$lib/builder/streaming/generation-stream';
 
-	let { store }: { store: DocumentStore } = $props();
+	let { store, pendingPlan = [] }: { store: DocumentStore; pendingPlan?: PendingPlanSection[] } = $props();
+
+	const canvasRows = $derived.by(() => {
+		const realIds = new Set(store.orderedSections.map((section) => section.id));
+		const rows = [
+			...store.orderedSections.map((section) => ({ kind: 'section' as const, id: section.id, position: section.position, section })),
+			...pendingPlan.filter((section) => !realIds.has(section.id)).map((section) => ({ kind: 'pending' as const, ...section }))
+		];
+		return rows.sort((left, right) => left.position - right.position);
+	});
 
 	let itemsBySection = $state<Record<string, BlockInstance[]>>({});
 	let pendingDndMerge: Record<string, BlockInstance[]> = {};
@@ -82,11 +92,20 @@
 
 <div class="canvas mx-auto w-full max-w-4xl pb-16">
 	<div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-lg shadow-slate-300/25 sm:px-6 sm:py-6">
-		{#each store.orderedSections as section, i (section.id)}
-			<AddSectionControl {store} insertIndex={i} />
-			<SectionDivider {section} {store} isFirstSection={i === 0} />
+		{#each canvasRows as row, i (row.id)}
+			{#if row.kind === 'pending'}
+				<section class="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4" data-testid={`pending-section-${row.id}`}>
+					<h2 class="text-base font-semibold text-slate-700">{row.title}</h2>
+					<div class="mt-3 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-5 text-sm text-slate-500">
+						Generating…
+					</div>
+				</section>
+			{:else}
+				{@const section = row.section}
+				<AddSectionControl {store} insertIndex={store.orderedSections.indexOf(section)} />
+				<SectionDivider {section} {store} isFirstSection={i === 0} />
 
-			<div
+				<div
 				class="min-h-[2rem]"
 				use:dragHandleZone={{
 					items: itemsBySection[section.id] ?? [],
@@ -141,7 +160,8 @@
 						}}
 					/>
 				{/each}
-			</div>
+				</div>
+			{/if}
 		{/each}
 		<AddSectionControl {store} insertIndex={store.orderedSections.length} />
 	</div>

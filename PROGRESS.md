@@ -1,5 +1,51 @@
 # Lesson Builder Merge Progress
 
+## Builder Convergence — Phase 2: Builder polling + route-only skeletons + append-only merge — 2026-07-16
+
+**Classification**: major
+**Root cause / Rationale**: The Builder route loaded a static saved lesson and had no generation snapshot polling. Under the authorized amendment, pending plan sections must remain route-only UI state while landed sections enter the document exactly once without overwriting teacher edits.
+
+### Scan Findings
+
+- `frontend/src/routes/builder/[id]/+page.svelte` loads through `loadBuilderLessonWithFallback` and previously had no poll lifecycle.
+- `frontend/src/lib/api/v3.ts` exposes `fetchV3Document`; Studio polls every 4000 ms with an in-flight guard and teardown.
+- `frontend/src/lib/builder/adapters/from-generation.ts` remains an additive wrapper over the unchanged pack adapter.
+- Installed Lectio `fromSectionContents` assigns Builder section IDs from pack `section_id`, confirming deterministic section identity. Its block IDs are generated per adaptation, so only blocks belonging to newly inserted sections are retained on the first landing.
+- `getChunkedPlanStatus` exposes the persisted structural plan needed to rehydrate route-only pending section IDs, titles, and order after reload.
+- The earlier skeleton/no-clobber contradiction was resolved by the user-authorized amendment recorded under Phase 1; no current scan contradiction remains.
+
+### Progress
+
+- [x] Confirmed load path, polling cadence, adapter identity, and planning snapshot source.
+- [x] Added route-level pending plan state with no document/store persistence.
+- [x] Added 4-second snapshot polling with in-flight guard and unmount/terminal cleanup.
+- [x] Added append-only whole-section merge through the existing document store persistence path.
+- [x] Added interleaved, non-editable pending skeleton cards.
+- [x] Added tests for absent/present merge, local-edit survival, terminal state, plan completion, reload startup, and out-of-order arrival.
+- [x] Ran full Phase 2 validation and self-review.
+- [ ] Commit with the prescribed message.
+
+### Verification Checklist
+
+- [x] Mid-generation snapshots resolve route-only skeletons without touching landed sections (merge and route-state integration coverage).
+- [x] Automated two-snapshot regression proves a local edit wins over changed upstream content.
+- [x] Route test proves polling restarts from `?generation_id` after the saved document loads and plan state rehydrates from the first planning snapshot.
+- [x] Terminal status clears the interval; all-planned-present logic is covered.
+- [x] Out-of-order arrival assigns plan positions so section 3 before section 2 yields correct final order.
+- [x] `npm run check`, `npm run build`, and `npm run test` pass.
+
+### Validation Evidence
+
+- Focused Vitest: 3 files, 11 tests passed (`generation-stream`, Builder route, existing document-store operations).
+- Final focused polling/merge rerun: 2 files, 9 tests passed, including pending-plan rendering before the document snapshot exists.
+- `npm run check`: 0 errors, 0 warnings.
+- `npm run build`: passed; existing non-fatal chunk-size warning only.
+- `npm run test`: 54 files, 210 tests passed.
+
+### Risks
+
+- Authenticated live visual streaming remains part of the final end-to-end browser gate; automated tests cover lifecycle and merge invariants locally.
+
 ## Builder Convergence — Phase 1: Toggle + create-at-approve + redirect — 2026-07-16
 
 **Classification**: major

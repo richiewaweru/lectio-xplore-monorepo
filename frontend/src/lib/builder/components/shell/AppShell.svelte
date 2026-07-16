@@ -13,8 +13,9 @@
 	import { Plus } from 'lucide-svelte';
 	import { saveVersionSnapshot } from '$lib/builder/persistence/idb-store';
 	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
+	import type { PendingPlanSection } from '$lib/builder/streaming/generation-stream';
 
-	let { document, store }: { document: LessonDocument; store: DocumentStore } = $props();
+	let { document, store, pendingPlan = [] }: { document: LessonDocument; store: DocumentStore; pendingPlan?: PendingPlanSection[] } = $props();
 
 	const preset = $derived(basePresetMap[document.preset_id] ?? null);
 
@@ -116,12 +117,12 @@
 			{#if preset}
 				<LectioThemeSurface {preset}>
 					{#snippet children()}
-						<BlockCanvas {store} />
+						<BlockCanvas {store} {pendingPlan} />
 					{/snippet}
 				</LectioThemeSurface>
 			{:else}
 				<p class="text-sm text-amber-800">Unknown preset "{document.preset_id}" - showing unstyled canvas.</p>
-				<BlockCanvas {store} />
+				<BlockCanvas {store} {pendingPlan} />
 			{/if}
 		</main>
 		<CanvasOutline {store} />

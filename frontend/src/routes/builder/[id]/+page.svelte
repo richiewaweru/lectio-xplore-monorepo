@@ -2,12 +2,21 @@
 	import { browser } from '$app/environment';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { isApiError } from '$lib/api/errors';
 	import AppShell from '$lib/builder/components/shell/AppShell.svelte';
 	import { createDocumentStore } from '$lib/builder/stores/document.svelte';
 	import { loadBuilderLessonWithFallback } from '$lib/builder/persistence/server-sync';
 	import { logout } from '$lib/stores/auth';
+	import { fetchV3Document, getChunkedPlanStatus } from '$lib/api/v3';
+	import { v3PackToBuilderDocument } from '$lib/builder/adapters/from-generation';
+	import type { V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
+	import {
+		allPlannedSectionsPresent,
+		isTerminalPackStatus,
+		pendingPlanFromStructuralPlan,
+		type PendingPlanSection
+	} from '$lib/builder/streaming/generation-stream';
 	import {
 		isDeleteOrBackspace,
 		isModifierD,
@@ -21,8 +30,53 @@
 	let ready = $state(false);
 	let loadWarning = $state<string | null>(null);
 	let loadError = $state<{ status: number; title: string; detail: string } | null>(null);
+	let pendingPlan = $state<PendingPlanSection[]>([]);
+	let pollInterval: ReturnType<typeof setInterval> | null = null;
+	let pollInFlight = false;
 
 	const id = $derived(page.params.id);
+	const generationId = $derived(page.url.searchParams.get('generation_id'));
+
+	function stopPolling(): void {
+		if (pollInterval !== null) clearInterval(pollInterval);
+		pollInterval = null;
+	}
+
+	async function pollGeneration(): Promise<void> {
+		if (!generationId || pollInFlight || !store.document) return;
+		pollInFlight = true;
+		try {
+			if (pendingPlan.length === 0) {
+				try {
+					const planState = await getChunkedPlanStatus(generationId);
+					pendingPlan = pendingPlanFromStructuralPlan(planState.structural_plan);
+				} catch {
+					// The document snapshot can still land even if planning state is temporarily unavailable.
+				}
+			}
+			const rawPack = await fetchV3Document(generationId);
+			const pack = rawPack as V3PackDocument;
+			const adapted = v3PackToBuilderDocument(pack, { routeGenerationId: generationId });
+			store.insertSectionsFromGeneration(adapted, pendingPlan);
+			if (
+				isTerminalPackStatus(pack.status) ||
+				(store.document && allPlannedSectionsPresent(store.document, pendingPlan))
+			) stopPolling();
+		} catch (error) {
+			loadWarning = error instanceof Error ? `Generation update delayed: ${error.message}` : 'Generation update delayed.';
+		} finally {
+			pollInFlight = false;
+		}
+	}
+
+	function startPolling(): void {
+		if (!generationId) return;
+		stopPolling();
+		void pollGeneration();
+		pollInterval = setInterval(() => void pollGeneration(), 4000);
+	}
+
+	onDestroy(stopPolling);
 
 	onMount(() => {
 		if (!id) {
@@ -49,6 +103,7 @@
 						? 'Loaded local cached copy. Server sync will resume when connectivity is restored.'
 						: null;
 				ready = true;
+				startPolling();
 			})
 			.catch(async (error) => {
 				if (isApiError(error) && error.status === 401) {
@@ -164,5 +219,5 @@
 			{loadWarning}
 		</p>
 	{/if}
-	<AppShell document={store.document} {store} />
+	<AppShell document={store.document} {store} {pendingPlan} />
 {/if}

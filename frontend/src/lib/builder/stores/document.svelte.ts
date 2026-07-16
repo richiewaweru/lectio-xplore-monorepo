@@ -7,6 +7,7 @@ import {
 	saveLessonToServer
 } from '$lib/builder/persistence/server-sync';
 import { createHistoryStore } from './history.svelte';
+import { appendAbsentGenerationSections, type PendingPlanSection } from '$lib/builder/streaming/generation-stream';
 
 const FIELD_HISTORY_IDLE_MS = 1000;
 const IDB_PERSIST_DEBOUNCE_MS = 300;
@@ -650,6 +651,16 @@ export function createDocumentStore() {
 		return blockIdsReferencingMedia(document, mediaId);
 	}
 
+	function insertSectionsFromGeneration(adapted: LessonDocument, plan: PendingPlanSection[]): boolean {
+		if (!document) return false;
+		const next = appendAbsentGenerationSections(document, adapted, plan);
+		if (next === document) return false;
+		document = next;
+		if (!selectedSectionId) defaultSelectedSection();
+		schedulePersist(next);
+		return true;
+	}
+
 	return {
 		get document() {
 			return document;
@@ -725,7 +736,8 @@ export function createDocumentStore() {
 		addMedia,
 		updateMedia,
 		removeMedia,
-		getMediaUsage
+		getMediaUsage,
+		insertSectionsFromGeneration
 	};
 }
 
