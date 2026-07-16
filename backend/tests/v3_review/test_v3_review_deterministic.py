@@ -398,6 +398,60 @@ def test_quality_omitted_visual_block_emits_minor_review_issue() -> None:
     assert issues[0].message.startswith("image omitted by quality gate: ")
 
 
+def test_quality_flagged_visual_emits_minor_review_issue_with_repair_target() -> None:
+    dp = _minimal_draft_pack(
+        sections=[],
+        answer_key=None,
+        visual_blocks=[
+            GeneratedVisualBlock(
+                visual_id="vis-flagged",
+                attaches_to="practice",
+                mode="diagram",
+                image_url="https://cdn.example/flagged.png",
+                source_work_order_id="wo-v",
+                status="flagged_quality",
+                qc_reasons=["labels were illegible", "required marker is missing"],
+            )
+        ],
+    )
+
+    issues = check_visual_failures(dp)
+
+    assert len(issues) == 1
+    assert issues[0].severity == "minor"
+    assert issues[0].category == "visual_quality_flagged"
+    assert issues[0].repair_target_id == "visual:vis-flagged"
+    assert "labels were illegible; required marker is missing" in issues[0].message
+
+
+def test_required_flagged_visual_satisfies_visual_requirement() -> None:
+    bp = _load_example("amara_compound_area.json")
+    section_id = next(section.section_id for section in bp.sections if section.visual_required)
+    dp = _minimal_draft_pack(
+        sections=[
+            {
+                "section_id": section_id,
+                "template_id": "guided-concept-path",
+                "diagram": {"image_url": "https://cdn.example/flagged.png"},
+            }
+        ],
+        answer_key=None,
+        visual_blocks=[
+            GeneratedVisualBlock(
+                visual_id="vis-flagged",
+                attaches_to=section_id,
+                mode="diagram",
+                image_url="https://cdn.example/flagged.png",
+                source_work_order_id="wo-flagged",
+                status="flagged_quality",
+            )
+        ],
+    )
+
+    issues = check_planned_visuals_exist(bp, dp)
+    assert all(issue.generated_ref != section_id for issue in issues)
+
+
 def test_required_visual_omitted_by_quality_is_major_not_blocking() -> None:
     bp = _load_example("amara_compound_area.json")
     section_id = next(section.section_id for section in bp.sections if section.visual_required)

@@ -23,6 +23,7 @@ IssueCategory = Literal[
     "anchor_drift",
     "visual_mismatch",
     "visual_generation_failed",
+    "visual_quality_flagged",
     "question_mismatch",
     "answer_key_mismatch",
     "register_mismatch",

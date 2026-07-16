@@ -429,6 +429,18 @@ def check_visual_failures(
     """Flag visual blocks that failed to generate after all retries."""
     issues: list[ReviewIssue] = []
     for block in getattr(draft_pack, "visual_blocks", []):
+        if getattr(block, "status", "ready") == "flagged_quality":
+            reasons = "; ".join(getattr(block, "qc_reasons", [])) or "quality criteria need review"
+            issues.append(
+                _issue(
+                    severity="minor",
+                    category="visual_quality_flagged",
+                    message=f"image flagged by quality review: {reasons}",
+                    generated_ref=block.attaches_to,
+                    executor="visual_executor",
+                    repair_target_id=f"visual:{block.visual_id}",
+                )
+            )
         if getattr(block, "status", "ready") == "failed":
             issues.append(
                 _issue(
