@@ -1,5 +1,109 @@
 # Lesson Builder Merge Progress
 
+## Builder Convergence — Final convergence status — 2026-07-16
+
+### Completed
+
+- [x] Phases 1–6 implemented and committed in the prescribed phase order (Phase 5 split backend/frontend).
+- [x] Phase 2 out-of-order arrival merge is covered and preserves insert-if-absent.
+- [x] Backend targeted route tests, policy tests, relevant suites, and architecture validation completed.
+- [x] Frontend direct Svelte type-check completed with 0 errors and 0 warnings.
+- [x] Authorized handoff contradictions and validation deviations are recorded below.
+
+### Pending environment / human verification
+
+- [ ] Frontend Vite production build and full Vitest process must exit cleanly. Direct
+  Vite currently emits no result before the 124-second desktop timeout; direct
+  Svelte checking succeeds.
+- [ ] Manual flag-OFF click-through in a deployed browser.
+- [ ] Manual flag-ON Studio → streaming Builder → mid-stream edit → issue fix →
+  teacher/student PDF → unified dashboard workflow.
+- [ ] Fixture visual regeneration with a real image provider proving a different URL.
+- [ ] Real deployed 40+ minute lesson run with Stage 2 timing evidence. This remains
+  explicitly pending human verification per the goal objective.
+
+### Final risks
+
+- Automated backend behavior is validated, but provider-backed image regeneration,
+  browser persistence/reload, and deployment PDF flows require live credentials and
+  a deployed environment.
+- The local Vite/Vitest process lifecycle remains unresolved; no failing frontend
+  assertion or Svelte diagnostic has been observed.
+
+## Builder Convergence — Phase 6: Retry relaxation compatibility controls — 2026-07-16
+
+**Classification**: major
+**Root cause / Rationale**: The actual pipeline was already hard-failure-only for
+executor retries, annotate-only for coherence, and tolerant of partial Stage 2
+failure, but lacked the requested explicit compatibility controls.
+
+### Progress
+
+- [x] Enumerated all retry call sites; no warning-triggered rerolls found.
+- [x] Confirmed review is report-only and issues flow to `booklet_issues`.
+- [x] Added exact `V3_COHERENCE_REPAIR_ENABLED=false` compatibility flag.
+- [x] Added exact `V3_SHIP_WITH_HOLES=true` flag and gated partial assembly.
+- [x] Preserved total-failure blocking and Stage 1/Stage 2 retry behavior.
+- [x] Added default, override, and partial-assembly tests.
+
+### Validation Evidence
+
+- Focused policy/assembly/lifecycle: 7 passed, 17 deselected.
+- Relevant backend suites: 257 passed; one unrelated heartbeat timing test failed
+  under load and passed immediately in isolation (1 passed).
+- Cached full-suite failures rerun: 5 passed.
+- Architecture validation: no violations found.
+- Timing comparison is not applicable: no coherence rewrite pass exists, so the
+  compatibility flag removes no executable work and has no meaningful repair timing.
+
+### Risks
+
+- `V3_COHERENCE_REPAIR_ENABLED=true` is intentionally a documented no-op until a
+  separately authorized repair executor exists.
+- The existing heartbeat test remains scheduler-sensitive at 10ms/30ms thresholds.
+
+### Verification Checklist
+
+- [x] Exact defaults and compatibility values are tested.
+- [x] Ship-with-holes false blocks partial Stage 2 failure.
+- [x] Default behavior retains partial assembly; total failure still blocks.
+- [x] Review issues remain annotate-only and reach the pack.
+- [x] Relevant pytest suites and architecture checks pass, with timing flake triaged.
+
+## BLOCKED: Phase 6 — requested coherence repair path does not exist — 2026-07-16
+
+The Phase 6 scan contradicts the handoff's assumed baseline:
+
+- `run_with_retries` has three production call sites only: section writer, question
+  writer, and visual executor. Their retries are driven by unsuccessful executor
+  outcomes (validation/provider/empty-output failures); no warning-triggered reroll
+  path was found.
+- `v3_review.run_coherence_review` performs deterministic/advisory review and returns
+  `ReviewIssue`s. No content rewrite or repair executor entry point exists in the
+  review package or `v3_execution.runtime.runner`.
+- The runtime already copies review issues into `draft_pack.booklet_issues` using
+  `_booklet_issues_from_report`; review is already annotate-only.
+- `assemble_blueprint` already skips failed Stage 2 briefs and assembles all successful
+  sections. It raises `BlueprintAssemblyBlocked` only when no sections remain, so
+  partial Stage 2 failure already ships with holes at the blueprint level.
+- Existing tests `test_attempt_chunked_assembly_proceeds_with_partial_failed_sections`
+  and the all-failed counterpart confirm that behavior.
+
+Because no prior coherence rewrite behavior exists, an environment setting
+`V3_COHERENCE_REPAIR_ENABLED=true` cannot “restore current behavior” as specified.
+Adding a brand-new repair implementation would violate the phase scope and explicit
+rule not to add automatic retries.
+
+**Proposed adjustment**: add the exact environment flags and defaults as compatibility
+controls; keep coherence review annotate-only for both values while documenting that
+the true setting is currently a no-op; gate partial-stage assembly so
+`V3_SHIP_WITH_HOLES=false` restores blocking on any failed brief, while the default
+`true` retains the current partial-assembly behavior. Add parametrized tests for the
+ship-with-holes flag and config defaults. Do not invent a repair/rewrite pass.
+
+**Authorized adjustment — 2026-07-16**: The user authorized this compatibility
+implementation without inventing a repair/rewrite pass.
+
 ## Builder Convergence — Phase 5: Targeted issue repair — 2026-07-16
 
 **Classification**: major

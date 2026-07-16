@@ -42,6 +42,7 @@ from v3_blueprint.planning.retry import (
 )
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.timeouts import V3_TIMEOUTS
+from v3_execution.config.policy import ship_with_holes_enabled
 from v3_execution.compile_orders import compile_execution_bundle
 from v3_execution.executors.visual_executor import execute_visual
 from v3_execution.executors.section_writer import execute_section
@@ -774,6 +775,7 @@ async def _attempt_chunked_assembly(
             subject=form.subject.strip() or "General",
             title=(display_title or form.topic).strip() or "Generated Lesson",
             resource_type=str(resource_spec.get("resource_type") or "lesson"),
+            ship_with_holes=ship_with_holes_enabled(),
         )
     except BlueprintAssemblyBlocked as exc:
         print(

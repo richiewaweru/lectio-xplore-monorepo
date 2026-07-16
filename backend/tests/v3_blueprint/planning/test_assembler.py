@@ -200,3 +200,15 @@ def test_assemble_blueprint_blocks_when_no_sections_are_renderable() -> None:
         assemble_blueprint(plan, [orient_failed, model_failed])
 
     assert exc.value.failed_sections == ["orient", "model"]
+
+
+def test_assemble_blueprint_blocks_partial_failure_when_ship_with_holes_disabled() -> None:
+    plan = _sample_plan()
+    orient = SectionBrief(section_id="orient", components=[], question_briefs=[], visual_strategy=None)
+    model_failed = SectionBrief(section_id="model", components=[], question_briefs=[], visual_strategy=None)
+    model_failed._failed = True
+
+    with pytest.raises(BlueprintAssemblyBlocked) as exc:
+        assemble_blueprint(plan, [orient, model_failed], ship_with_holes=False)
+
+    assert exc.value.failed_sections == ["model"]

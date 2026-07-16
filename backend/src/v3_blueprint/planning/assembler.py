@@ -45,10 +45,14 @@ def assemble_blueprint(
     subject: str = "General",
     title: str = "Generated Lesson",
     resource_type: str = "lesson",
+    ship_with_holes: bool = True,
 ) -> ProductionBlueprint:
     failed = [brief for brief in briefs if getattr(brief, "_failed", False)]
     brief_by_section_id = {brief.section_id: brief for brief in briefs}
     failed_section_ids = {brief.section_id for brief in failed}
+
+    if failed and not ship_with_holes:
+        raise BlueprintAssemblyBlocked(failed_sections=[section.id for section in plan.sections if section.id in failed_section_ids])
     print(
         f"\n[ASSEMBLER] briefs={len(briefs)}"
         f" failed={[brief.section_id for brief in failed]}",
