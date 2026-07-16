@@ -1,5 +1,72 @@
 # Lesson Builder Merge Progress
 
+## Builder Convergence — Phase 5: Targeted issue repair — 2026-07-16
+
+**Classification**: major
+**Root cause / Rationale**: Generation diagnostics were not actionable inside the
+Builder, and text components had no owner-scoped teacher-initiated patch route.
+
+### Progress
+
+- [x] Completed and recorded the critical scan and authorized adjustment.
+- [x] Verified the existing visual regeneration route and asserted cache bypass in pytest.
+- [x] Added owner-only component patching through one section executor invocation with `max_retries=0`.
+- [x] Patched the existing generation `document_json` without schema changes.
+- [ ] Map diagnostics and implement Builder issue/nudge/floating-toolbar UI.
+- [ ] Run full backend and frontend gates and complete manual fixture checks.
+
+### Validation Evidence
+
+- Focused backend route suite: 5 passed, 28 deselected.
+- Visual test asserts `bypass_cache_read=True` and persisted block/section mutation.
+- Component tests assert instruction injection, `max_retries=0`, persisted replacement,
+  404 for unknown reference, and 403 for non-owner.
+
+### Risks
+
+- Component references accept `component@section` and `section:component`; a bare
+  component id is accepted only when unique across the compiled bundle.
+- Full Phase 5 suites remain pending until the frontend half is complete.
+
+## BLOCKED: Phase 5 — visual work-order helper name contradicts handoff — 2026-07-16
+
+The required Phase 5 scan found that the handoff names an existing
+`_find_visual_work_order` helper, but `backend/src/generation/v3_studio/router.py`
+contains no function by that name. The live route instead calls
+`_work_order_for_visual` after `_find_visual_block`.
+
+Confirmed live wiring:
+
+- `POST /api/v1/v3/generations/{generation_id}/visuals/{visual_id}/regenerate`
+  accepts `V3VisualRegenerateRequest.teacher_hint` and uses `get_current_user`.
+- `V3GenerationWriter.get_document_json` and `read_planning_artifact` enforce the
+  current user's generation ownership; missing/non-owned generations return 404.
+- `_find_visual_block` locates the generated block and `_work_order_for_visual`
+  compiles the execution bundle and matches source work-order, visual, or parent id.
+- `_apply_teacher_hint` appends `Correction: {hint}` to the cloned visual purpose.
+- `execute_visual` is already called with `bypass_cache_read=True`.
+- `_replace_visual_blocks` and `_patch_section_visuals` mutate the copied document,
+  `_persist_regenerated_visual` saves it, and the route returns the regenerated block.
+- No equivalent component/text patch endpoint exists. The only component-patch
+  reference in the router is the existing `component_patched` event handling path.
+- Regression fixture `backend/tests/fixtures/gen_5aed3804_pack.json` has empty
+  `booklet_issues`; `section_diagnostics` entries use `section_id`, `status`,
+  `renderable`, `missing_components`, `missing_visuals`, and `warnings`. They do not
+  contain `kind` or `severity`, so the adapter must derive those fields deterministically.
+
+**Proposed adjustment**: Treat `_work_order_for_visual` as the actual equivalent of
+the handoff's `_find_visual_work_order`, retain it without a cosmetic rename, extend
+the existing route test to assert cache bypass and persisted mutation, then build the
+missing component endpoint against the current execution-bundle types. Derive issue
+`kind`/`severity` for section diagnostics while preserving any explicit booklet issue
+fields when present.
+
+No Phase 5 implementation was made after discovering this contradiction.
+
+**Authorized adjustment — 2026-07-16**: The user authorized continuing with
+`_work_order_for_visual` as the existing equivalent without renaming it, and with
+deterministic `kind`/`severity` derivation for diagnostics that omit those fields.
+
 ## Builder Convergence — Phase 4: Flag-gated unified dashboard lessons — 2026-07-16
 
 ## BLOCKED: Phase 4 — frontend validation processes do not exit

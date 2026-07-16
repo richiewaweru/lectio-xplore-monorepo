@@ -601,8 +601,9 @@ async def test_v3_visual_regenerate_replaces_visual_block_and_section_diagram() 
         ),
     )
 
-    async def fake_execute_visual(regenerated_order, emit, **_kwargs):
+    async def fake_execute_visual(regenerated_order, emit, **kwargs):
         await emit("visual_ready", {})
+        assert kwargs["bypass_cache_read"] is True
         assert regenerated_order.work_order_id == order.work_order_id
         assert "Correction: make it cleaner" in regenerated_order.visual.purpose
         return [
@@ -635,6 +636,77 @@ async def test_v3_visual_regenerate_replaces_visual_block_and_section_diagram() 
     assert persisted["visual_blocks"][0]["image_url"] == "https://cdn.example/new.png"
     assert persisted["sections"][0]["diagram"]["image_url"] == "https://cdn.example/new.png"
     assert persisted["sections"][0]["diagram"]["caption"] == "new caption"
+
+
+@pytest.mark.asyncio
+async def test_v3_component_patch_replaces_document_component_without_retry() -> None:
+    from v3_execution.compile_orders import compile_execution_bundle
+    from v3_execution.models import GeneratedComponentBlock
+
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+    generation_id = str(uuid.uuid4())
+    blueprint_id = str(uuid.uuid4())
+    bp = _example_bp("amara_compound_area.json")
+    bundle = compile_execution_bundle(bp, generation_id=generation_id, blueprint_id=blueprint_id, template_id="guided-concept-path")
+    order = bundle.section_orders[0]
+    component = order.section.components[0]
+    field_name = order.component_cards[component.component_id]["section_field"]
+    await _upsert_generation_row(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        document_json={"sections": [{"section_id": order.section.id, field_name: {"old": True}}]},
+    )
+    await _write_planning_artifact(generation_id, build_planning_artifact(
+        generation_id=generation_id, blueprint_id=blueprint_id,
+        template_id="guided-concept-path", blueprint=bp, form=None,
+    ))
+
+    async def fake_execute_section(patch_order, emit, **kwargs):
+        assert kwargs["max_retries"] == 0
+        assert len(patch_order.section.components) == 1
+        assert "Teacher correction: make this clearer" in patch_order.section.components[0].content_intent
+        return [GeneratedComponentBlock(
+            block_id="patched-block", section_id=order.section.id,
+            component_id=component.component_id, section_field=field_name,
+            position=0, data={"patched": True}, source_work_order_id=order.work_order_id,
+        )]
+
+    ref = f"{component.component_id}@{order.section.id}"
+    with patch("generation.v3_studio.router.execute_section", side_effect=fake_execute_section):
+        async with _client() as client:
+            resp = await client.post(
+                f"/api/v1/v3/generations/{generation_id}/components/{ref}/patch",
+                json={"teacher_instruction": "make this clearer"},
+            )
+    assert resp.status_code == 200
+    assert resp.json()["data"] == {"patched": True}
+    async with async_session_factory() as session:
+        persisted = (await session.get(GenerationModel, generation_id)).document_json
+    assert persisted["sections"][0][field_name] == {"patched": True}
+
+
+@pytest.mark.asyncio
+async def test_v3_component_patch_rejects_unknown_component_and_non_owner() -> None:
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+    await _ensure_user(TEST_USER_B)
+    generation_id = str(uuid.uuid4())
+    await _upsert_generation_row(generation_id=generation_id, user_id=TEST_USER_A.id, document_json={"sections": []})
+    async with _client() as client:
+        missing = await client.post(
+            f"/api/v1/v3/generations/{generation_id}/components/missing/patch",
+            json={"teacher_instruction": "fix"},
+        )
+    assert missing.status_code == 404
+
+    app.dependency_overrides[get_current_user] = _override_user_b
+    async with _client() as client:
+        forbidden = await client.post(
+            f"/api/v1/v3/generations/{generation_id}/components/anything/patch",
+            json={"teacher_instruction": "fix"},
+        )
+    assert forbidden.status_code == 403
 
 
 @pytest.mark.asyncio

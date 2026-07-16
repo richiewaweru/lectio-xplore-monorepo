@@ -44,7 +44,8 @@ from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot
 from v3_execution.config.timeouts import V3_TIMEOUTS
 from v3_execution.compile_orders import compile_execution_bundle
 from v3_execution.executors.visual_executor import execute_visual
-from v3_execution.models import GeneratedVisualBlock, VisualGeneratorWorkOrder
+from v3_execution.executors.section_writer import execute_section
+from v3_execution.models import GeneratedComponentBlock, GeneratedVisualBlock, SectionWriterWorkOrder, VisualGeneratorWorkOrder
 from v3_execution.runtime.runner import sse_event_stream
 
 from generation.v3_studio.agents import (
@@ -166,6 +167,12 @@ class V3VisualRegenerateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
     teacher_hint: str | None = Field(default=None, max_length=500)
+
+
+class V3ComponentPatchRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    teacher_instruction: str = Field(min_length=1, max_length=2000)
 
 
 def _iso(dt: datetime | None) -> str | None:
@@ -1986,6 +1993,52 @@ def _work_order_for_visual(
     raise HTTPException(status_code=404, detail="Visual work order not found")
 
 
+def _work_order_for_component(
+    *, artifact: dict[str, Any], component_ref: str, generation_id: str
+) -> tuple[SectionWriterWorkOrder, str]:
+    blueprint = ProductionBlueprint.model_validate(artifact["blueprint"])
+    bundle = compile_execution_bundle(
+        blueprint,
+        generation_id=generation_id,
+        blueprint_id=str(artifact.get("blueprint_id") or f"blueprint-{generation_id}"),
+        template_id=str(artifact.get("template_id") or "guided-concept-path"),
+    )
+    matches: list[tuple[SectionWriterWorkOrder, str]] = []
+    for order in bundle.section_orders:
+        for component in order.section.components:
+            refs = {
+                component.component_id,
+                f"{order.section.id}:{component.component_id}",
+                f"{component.component_id}@{order.section.id}",
+            }
+            if component_ref in refs:
+                matches.append((order, component.component_id))
+    if len(matches) != 1:
+        raise HTTPException(status_code=404, detail="Component work order not found")
+    return matches[0]
+
+
+def _single_component_order(
+    order: SectionWriterWorkOrder, component_id: str, teacher_instruction: str
+) -> SectionWriterWorkOrder:
+    cloned = order.model_copy(deep=True)
+    selected = next(component for component in cloned.section.components if component.component_id == component_id)
+    selected.content_intent = f"{selected.content_intent}\n\nTeacher correction: {teacher_instruction.strip()}"
+    cloned.section.components = [selected]
+    return cloned
+
+
+def _patch_section_component(document_json: dict[str, Any], block: GeneratedComponentBlock) -> None:
+    sections = document_json.get("sections")
+    if not isinstance(sections, list):
+        raise HTTPException(status_code=404, detail="Component section not found")
+    for section in sections:
+        if isinstance(section, dict) and section.get("section_id") == block.section_id:
+            section[block.section_field] = block.data
+            return
+    raise HTTPException(status_code=404, detail="Component section not found")
+
+
 def _apply_teacher_hint(order: VisualGeneratorWorkOrder, teacher_hint: str | None) -> VisualGeneratorWorkOrder:
     hint = (teacher_hint or "").strip()
     if not hint:
@@ -2087,6 +2140,52 @@ def _lock_for_visual_regenerate(generation_id: str) -> asyncio.Lock:
         lock = asyncio.Lock()
         _visual_regenerate_locks[generation_id] = lock
     return lock
+
+
+@v3_studio_router.post("/generations/{generation_id}/components/{component_ref}/patch")
+async def patch_v3_component(
+    generation_id: str,
+    component_ref: str,
+    body: V3ComponentPatchRequest,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    async with async_session_factory() as ownership_session:
+        owned_model = await ownership_session.get(GenerationModel, generation_id)
+        if owned_model is not None and owned_model.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Generation is owned by another user")
+    generation_writer = V3GenerationWriter(async_session_factory)
+    document_json = await generation_writer.get_document_json(generation_id, current_user.id)
+    if document_json is None:
+        raise HTTPException(status_code=404, detail="Generation not found")
+    artifact = await generation_writer.read_planning_artifact(generation_id, current_user.id)
+    if artifact is None:
+        raise HTTPException(status_code=404, detail="Planning artifact not found")
+
+    order, component_id = _work_order_for_component(
+        artifact=artifact, component_ref=component_ref, generation_id=generation_id
+    )
+    order = _single_component_order(order, component_id, body.teacher_instruction)
+
+    async def emit_noop(_event_type: str, _payload: dict[str, Any]) -> None:
+        return None
+
+    blocks = await execute_section(
+        order,
+        emit_noop,
+        trace_id=generation_id,
+        generation_id=generation_id,
+        max_retries=0,
+    )
+    if len(blocks) != 1:
+        raise HTTPException(status_code=500, detail="Component patch produced no component")
+    block = blocks[0]
+    _patch_section_component(document_json, block)
+    await _persist_regenerated_visual(
+        generation_id=generation_id,
+        user_id=current_user.id,
+        document_json=document_json,
+    )
+    return block.model_dump(mode="json", exclude_none=True)
 
 
 @v3_studio_router.post("/generations/{generation_id}/visuals/{visual_id}/regenerate")

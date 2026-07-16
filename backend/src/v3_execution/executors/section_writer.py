@@ -36,6 +36,7 @@ async def execute_section(
     trace_id: str | None,
     generation_id: str | None,
     model_overrides: dict | None = None,
+    max_retries: int | None = None,
 ) -> list[GeneratedComponentBlock]:
     await emit_event(
         "section_writing_started",
@@ -132,7 +133,7 @@ async def execute_section(
     outcome = await run_with_retries(
         f"section:{order.section.id}",
         _attempt,
-        max_retries=V3_MAX_RETRIES["section_writer"],
+        max_retries=V3_MAX_RETRIES["section_writer"] if max_retries is None else max_retries,
     )
     if not outcome.ok:
         await emit_event(
