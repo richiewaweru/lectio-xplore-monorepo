@@ -4,7 +4,7 @@
 	import { getComponentById, getEditSchema } from 'lectio';
 	import type { BlockInstance, LessonDocument } from 'lectio';
 	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
-	import { Copy, GripVertical, Pencil, Trash2 } from 'lucide-svelte';
+	import { ArrowDown, ArrowUp, Copy, GripVertical, Pencil, Trash2 } from 'lucide-svelte';
 	import type { BlockGenerateContextBlock } from '$lib/builder/api/ai-client';
 	import { apiBaseUrl } from '$lib/builder/api/public-env';
 	import AiBlockAssist from '$lib/builder/components/ai/AiBlockAssist.svelte';
@@ -28,6 +28,8 @@
 		onupdatefield,
 		onfieldblur,
 		onduplicate,
+		onmoveup,
+		onmovedown,
 		ondelete,
 		contextBlocksForAi = [],
 		onapplyaicontent
@@ -44,6 +46,8 @@
 		onupdatefield?: (field: string, value: unknown) => void;
 		onfieldblur?: () => void;
 		onduplicate?: () => void;
+		onmoveup?: () => void;
+		onmovedown?: () => void;
 		ondelete?: () => void;
 		contextBlocksForAi?: BlockGenerateContextBlock[];
 		onapplyaicontent?: (content: Record<string, unknown>) => void;
@@ -186,6 +190,12 @@
 					<Pencil size={16} />
 				</button>
 			{/if}
+			<button
+				type="button" class="rounded-md p-1.5 text-slate-600 hover:bg-slate-100" title="Move up" aria-label="Move up"
+				onclick={(e) => { e.stopPropagation(); onmoveup?.(); }}><ArrowUp size={16} /></button>
+			<button
+				type="button" class="rounded-md p-1.5 text-slate-600 hover:bg-slate-100" title="Move down" aria-label="Move down"
+				onclick={(e) => { e.stopPropagation(); onmovedown?.(); }}><ArrowDown size={16} /></button>
 			<button
 				type="button"
 				class="rounded-md p-1.5 text-slate-600 hover:bg-slate-100"

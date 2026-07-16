@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { DocumentSection } from 'lectio';
 	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
+	import { issuesForSection } from '$lib/builder/issues';
 
 	let {
 		section,
@@ -10,6 +11,7 @@
 
 	let editingTitle = $state(false);
 	let titleDraft = $state('');
+	const unresolvedCount = $derived(issuesForSection(section).filter((issue) => !issue.resolved).length);
 
 	$effect(() => {
 		titleDraft = section.title;
@@ -66,6 +68,7 @@
 			}}
 		>
 			Section {section.position + 1}: {section.title}
+			{#if unresolvedCount}<span class="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">⚠ {unresolvedCount}</span>{/if}
 		</button>
 	{/if}
 	<button

@@ -17,6 +17,7 @@
 		type BuilderPrintPreflightResult
 	} from '$lib/builder/utils/pdf-export';
 	import { CloudOff, Eye, EyeOff, History, Printer, Share2, UploadCloud } from 'lucide-svelte';
+	import { unresolvedIssues } from '$lib/builder/issues';
 
 	let {
 		document,
@@ -28,7 +29,8 @@
 		lessonId,
 		printPreviewActive = false,
 		onTogglePrintPreview,
-		onRetrySave
+		onRetrySave,
+		onNextIssue
 	}: {
 		document: LessonDocument;
 		saveStatus?: 'saved' | 'saving' | 'error';
@@ -40,6 +42,7 @@
 		printPreviewActive?: boolean;
 		onTogglePrintPreview?: () => void;
 		onRetrySave?: () => void;
+		onNextIssue?: () => void;
 	} = $props();
 
 	let storageAlmostFull = $state(false);
@@ -60,6 +63,7 @@
 	const warningLevel = $derived(pageWarningLevel(pageCount));
 	const pageWarning = $derived(pageWarningMessage(pageCount));
 	const printWarnings = $derived(printCheckResult?.warnings ?? []);
+	const unresolvedIssueCount = $derived(unresolvedIssues(document).length);
 
 	async function refreshStorageHint(): Promise<void> {
 		const est = await getStorageEstimate();
@@ -163,6 +167,11 @@
 		>
 			{printCheckResult && !printCheckStale ? '' : '~'}{pageCount} {pageCount === 1 ? 'page' : 'pages'}
 		</span>
+		{#if unresolvedIssueCount > 0}
+			<button type="button" class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900" data-testid="toolbar-issue-count" onclick={onNextIssue}>
+				⚠ {unresolvedIssueCount} {unresolvedIssueCount === 1 ? 'issue' : 'issues'}
+			</button>
+		{/if}
 		<button
 			type="button"
 			class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"

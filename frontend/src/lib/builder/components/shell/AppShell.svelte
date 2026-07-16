@@ -72,6 +72,10 @@
 		const el = globalThis.document.querySelector(`[data-block-id="${newId}"]`);
 		el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 	}
+
+	function scrollToNextIssue(): void {
+		globalThis.document.querySelector('[data-unresolved-issue]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+	}
 </script>
 
 <div
@@ -88,6 +92,7 @@
 		printPreviewActive={printPreviewActive}
 		onTogglePrintPreview={() => (printPreviewActive = !printPreviewActive)}
 		onRetrySave={() => void store.flushSave()}
+		onNextIssue={scrollToNextIssue}
 	/>
 	<div class="flex flex-1 overflow-hidden">
 		<main

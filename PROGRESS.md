@@ -12,7 +12,7 @@ Builder, and text components had no owner-scoped teacher-initiated patch route.
 - [x] Verified the existing visual regeneration route and asserted cache bypass in pytest.
 - [x] Added owner-only component patching through one section executor invocation with `max_retries=0`.
 - [x] Patched the existing generation `document_json` without schema changes.
-- [ ] Map diagnostics and implement Builder issue/nudge/floating-toolbar UI.
+- [x] Map diagnostics and implement Builder issue/nudge/floating-toolbar UI.
 - [ ] Run full backend and frontend gates and complete manual fixture checks.
 
 ### Validation Evidence
@@ -21,6 +21,9 @@ Builder, and text components had no owner-scoped teacher-initiated patch route.
 - Visual test asserts `bypass_cache_read=True` and persisted block/section mutation.
 - Component tests assert instruction injection, `max_retries=0`, persisted replacement,
   404 for unknown reference, and 403 for non-owner.
+- Direct `svelte-check`: 0 errors, 0 warnings.
+- Frontend Vitest process currently stalls before its run banner in this environment;
+  the user authorized continuing while the process-lifecycle limitation remains recorded.
 
 ### Risks
 

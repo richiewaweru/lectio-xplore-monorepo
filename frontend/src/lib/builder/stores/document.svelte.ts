@@ -8,6 +8,7 @@ import {
 } from '$lib/builder/persistence/server-sync';
 import { createHistoryStore } from './history.svelte';
 import { appendAbsentGenerationSections, type PendingPlanSection } from '$lib/builder/streaming/generation-stream';
+import { issuesForSection, type IssueSection } from '$lib/builder/issues';
 
 const FIELD_HISTORY_IDLE_MS = 1000;
 const IDB_PERSIST_DEBOUNCE_MS = 300;
@@ -524,6 +525,18 @@ export function createDocumentStore() {
 		schedulePersist(next);
 	}
 
+	function resolveIssue(sectionId: string, issueId: string): void {
+		if (!document) return;
+		const section = document.sections.find((item) => item.id === sectionId);
+		if (!section || !issuesForSection(section).some((issue) => issue.id === issueId && !issue.resolved)) return;
+		history.pushBeforeMutation(document);
+		const sections = document.sections.map((item) => item.id === sectionId
+			? ({ ...item, meta: { ...(item as IssueSection).meta, issues: issuesForSection(item).map((issue) => issue.id === issueId ? { ...issue, resolved: true } : issue) } } as IssueSection)
+			: item);
+		document = { ...document, sections, updated_at: new Date().toISOString() };
+		schedulePersist(document);
+	}
+
 	/**
 	 * Apply per-section DnD rows in one history step (cross-section moves + palette inserts).
 	 * Each section id in the map must exist; omitted sections keep current block_ids.
@@ -729,6 +742,7 @@ export function createDocumentStore() {
 		removeSection,
 		reorderSections,
 		updateSectionTitle,
+		resolveIssue,
 		syncSectionsFromDnd,
 		flushSave,
 		deselectBlock,

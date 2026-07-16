@@ -34,4 +34,16 @@ describe('v3PackToBuilderDocument', () => {
 		expect(lesson.sections.length).toBe(1);
 		expect(Object.keys(lesson.blocks).length).toBeGreaterThan(0);
 	});
+
+	it('maps incomplete diagnostics into unresolved section issues', () => {
+		const lesson = v3PackToBuilderDocument({
+			generation_id: 'gen-issues', subject: 'Math', sections: [{ section_id: 'orient', header: { title: 'Orient' } }],
+			section_diagnostics: [{ section_id: 'orient', status: 'incomplete', renderable: true, missing_components: ['hook-card'], missing_visuals: [], warnings: ['Hook output is missing.'] }],
+			booklet_issues: []
+		});
+		const section = lesson.sections[0] as typeof lesson.sections[0] & { meta?: { issues?: Array<Record<string, unknown>> } };
+		expect(section.meta?.issues).toEqual([
+			expect.objectContaining({ severity: 'major', kind: 'component_missing', message: 'Hook output is missing.', component_ref: 'hook-card@orient', resolved: false })
+		]);
+	});
 });
