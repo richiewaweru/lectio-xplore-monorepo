@@ -1,5 +1,55 @@
 # Lesson Builder Merge Progress
 
+## Builder Convergence — Phase 1: Toggle + create-at-approve + redirect — 2026-07-16
+
+**Classification**: major
+**Root cause / Rationale**: Studio currently remains on its streaming canvas after approval. The convergence flow needs an opt-in, SSR-safe local setting that creates a plan-shaped Builder lesson immediately and redirects there while preserving the existing flag-OFF path.
+
+### Authorized Amendment — 2026-07-16
+
+- The user authorized replacing persisted Phase 1 skeleton sections with a minimal valid Builder document whose `sections` array is empty.
+- Structural-plan skeletons are route-level UI state only in Phase 2, rehydrated from the generation planning snapshot on first poll and never persisted in the Builder document or any store.
+- The Phase 1 gate is amended to require pending skeletons sourced from plan state while the saved document contains zero pending/plan-derived sections.
+- Phase 2's merge remains strictly insert-if-absent; out-of-order arrivals must be sorted by plan position without modifying any existing section or block.
+
+### Scan Findings
+
+- `frontend/src/routes/studio/+page.svelte`: `handleChunkedApprove` calls `approveChunkedPlan` and then `continueChunkedStage2`; `handleOpenInBuilder` already reuses `v3PackToBuilderDocument`, `createBuilderLesson`, `saveDocument`, and `goto`.
+- `frontend/src/routes/dashboard/+page.svelte`: `openGenerationInBuilder` confirms the same conversion/create/save/navigation pattern and already includes `source_generation_id` in the create request.
+- `frontend/src/lib/types/v3.ts`: `V3StructuralPlan.sections` provides stable plan `id`, `title`, `role`, and ordered component declarations required for the skeleton.
+- No scan result contradicts the Phase 1 handoff. The existing Studio canvas and post-completion Builder action remain isolated from the new flag-ON branch.
+
+### Progress
+
+- [x] Understood requirements and identified scope.
+- [x] Read relevant source code and project rules.
+- [x] Added SSR-safe persisted stream-into-builder setting.
+- [x] Added Dashboard experimental toggle.
+- [x] Added Studio create-at-approve minimal empty-document flow and redirect.
+- [x] Added tests for flag persistence, flag-OFF behavior, and flag-ON request/navigation.
+- [x] Ran the Phase 1 validation gate.
+- [x] Self-reviewed; phase is ready for the prescribed commit.
+
+### Verification Checklist
+
+- [x] Flag OFF approval follows the existing Studio streaming flow (existing approval/polling tests remain green; flag defaults false).
+- [x] Flag ON approval creates and opens a Builder lesson whose saved document has zero plan-derived sections (automated route test).
+- [x] Create request contains `source_generation_id`.
+- [x] Toggle persists across reload/localStorage reads.
+- [x] `npm run check`, `npm run build`, and `npm run test` pass.
+
+### Validation Evidence
+
+- Focused Vitest: 4 files, 33 tests passed.
+- `npm run check`: 0 errors, 0 warnings.
+- `npm run build`: passed; existing non-fatal chunk-size warning only.
+- `npm run test`: 53 files, 204 tests passed.
+- Browser-authenticated click-through is not available in the local test environment; route behavior and flag isolation are covered by jsdom integration tests.
+
+### Risks
+
+- A deployed authenticated browser smoke test remains advisable; no backend or Lectio code changed.
+
 ## Bugfix: Generation Pipeline Calibration — Run 33633cbf — 2026-07-11
 
 **Classification**: major

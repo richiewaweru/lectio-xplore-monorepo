@@ -105,6 +105,7 @@ import DashboardPage from './+page.svelte';
 
 describe('dashboard teacher profile summary', () => {
 	beforeEach(() => {
+		localStorage.clear();
 		getProfile.mockResolvedValue({
 			id: 'profile-1',
 			user_id: 'user-1',
@@ -188,6 +189,15 @@ describe('dashboard teacher profile summary', () => {
 		expect(screen.getByText(/planning goals/i)).toBeTruthy();
 		expect(screen.queryByText(/learning style/i)).toBeNull();
 		expect(screen.queryByText(/learner description/i)).toBeNull();
+	});
+
+	it('persists the stream-into-builder toggle', async () => {
+		render(DashboardPage);
+		const toggle = await screen.findByRole('checkbox', {
+			name: 'Stream new lessons into Builder (experimental)'
+		});
+		await fireEvent.click(toggle);
+		expect(localStorage.getItem('lectio:stream-into-builder')).toBe('true');
 	});
 
 	it('loads V3 generation history and links open to the completed V3 viewer route', async () => {

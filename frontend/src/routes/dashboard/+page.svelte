@@ -11,6 +11,7 @@
 	import { v3PackToBuilderDocument } from '$lib/builder/adapters/from-generation';
 	import { createBuilderLesson } from '$lib/builder/api/lesson-crud';
 	import { saveDocument } from '$lib/builder/persistence/idb-store';
+	import { getStreamIntoBuilder, setStreamIntoBuilder } from '$lib/settings/flags';
 	import { authUser, logout } from '$lib/stores/auth';
 	import type { TeacherProfile } from '$lib/types';
 	import type { V3GenerationHistoryItem } from '$lib/types/v3';
@@ -26,8 +27,10 @@
 	let profileErrorMessage = $state<string | null>(null);
 	let openingBuilderId = $state<string | null>(null);
 	let builderOpenError = $state<string | null>(null);
+	let streamIntoBuilder = $state(false);
 
 	onMount(async () => {
+		streamIntoBuilder = getStreamIntoBuilder();
 		try {
 			profile = await getProfile();
 		} catch (err) {
@@ -107,6 +110,17 @@
 
 		<section class="profile-summary">
 			<h2>Teacher Setup</h2>
+			<label class="experimental-toggle">
+				<input
+					type="checkbox"
+					checked={streamIntoBuilder}
+					onchange={(event) => {
+						streamIntoBuilder = event.currentTarget.checked;
+						setStreamIntoBuilder(streamIntoBuilder);
+					}}
+				/>
+				<span>Stream new lessons into Builder (experimental)</span>
+			</label>
 			<div class="profile-grid">
 				<div class="profile-item">
 					<span class="label">Teacher Role</span>
@@ -319,6 +333,15 @@
 		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 		gap: 0.8rem;
 		margin: 1rem 0;
+	}
+
+	.experimental-toggle {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		margin: 0.8rem 0 1rem;
+		color: #3f4c55;
+		font-size: 0.9rem;
 	}
 
 	.profile-item {

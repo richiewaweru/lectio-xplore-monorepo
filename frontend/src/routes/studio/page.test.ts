@@ -101,6 +101,7 @@ function latestGenerationHandlers(): unknown {
 describe('studio chunked URL resume', () => {
 	beforeEach(() => {
 		resetV3Studio();
+		localStorage.clear();
 		navigationMocks.goto.mockReset();
 		mocks.approveChunkedPlan.mockReset();
 		mocks.connectV3ChunkedStream.mockReset();
@@ -381,6 +382,48 @@ describe('studio chunked URL resume', () => {
 		);
 		expect(v3Studio.stage).toBe('fill');
 		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-approve'));
+	});
+
+	it('creates an empty builder lesson and redirects when streaming into Builder is enabled', async () => {
+		localStorage.setItem('lectio:stream-into-builder', 'true');
+		window.history.replaceState({}, '', '/studio?generation_id=gen-builder-stream');
+		const structuralPlan = {
+			lesson_mode: 'first_exposure',
+			lesson_intent: { goal: 'Fraction lesson', structure_rationale: 'Build gradually' },
+			anchor: { example: 'Pizza', reuse_scope: 'all sections' },
+			sections: [
+				{ id: 'intro', title: 'Meet fractions', role: 'intro', visual_required: false, transition_note: null, components: [] }
+			],
+			question_plan: []
+		};
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-builder-stream', stage: 'plan_ready', structural_plan: structuralPlan,
+			section_briefs: {}, failed_sections: [], blueprint_id: null, execution_started: false,
+			next_action: 'approve_or_regenerate'
+		});
+		mocks.approveChunkedPlan.mockResolvedValue({
+			generation_id: 'gen-builder-stream', stage: 'stage2_running', structural_plan: structuralPlan,
+			section_briefs: {}, failed_sections: [], blueprint_id: null, execution_started: true,
+			next_action: 'wait_for_stage2'
+		});
+		builderMocks.createBuilderLesson.mockImplementation(async (request) => ({
+			id: 'builder-stream-1', source_generation_id: 'gen-builder-stream', source_type: 'v3_generation',
+			title: request.title, created_at: '', updated_at: '', document: request.document
+		}));
+		builderMocks.saveDocument.mockResolvedValue(undefined);
+
+		render(StudioPage);
+		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
+
+		await waitFor(() => expect(builderMocks.createBuilderLesson).toHaveBeenCalledWith(
+			expect.objectContaining({
+				source_type: 'v3_generation', source_generation_id: 'gen-builder-stream',
+				document: expect.objectContaining({ sections: [] })
+			})
+		));
+		expect(builderMocks.saveDocument).toHaveBeenCalled();
+		expect(navigationMocks.goto).toHaveBeenCalledWith('/builder/builder-stream-1?generation_id=gen-builder-stream');
+		expect(mocks.connectV3ChunkedStream).not.toHaveBeenCalled();
 	});
 
 	it('does not connect the stream when approve returns true assembly_blocked', async () => {
