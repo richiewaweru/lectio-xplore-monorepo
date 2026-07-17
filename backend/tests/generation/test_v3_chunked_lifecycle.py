@@ -758,6 +758,54 @@ async def test_chunked_retry_section_can_unblock_assembly() -> None:
 
 
 @pytest.mark.asyncio
+async def test_generation_8eca999f_starts_with_null_document() -> None:
+    generation_id = "8eca999f-d638-47cb-a613-5a923c575d53"
+    queue = asyncio.Queue()
+    blueprint = MagicMock()
+    blueprint.metadata.title = "Equivalent Fractions"
+    blueprint.metadata.subject = "Math"
+    blueprint.sections = [MagicMock(components=[], visual_required=False)]
+    blueprint.question_plan = []
+    generation_writer = MagicMock()
+    generation_writer.get_document_json = AsyncMock(return_value=None)
+    generation_writer.upsert_started = AsyncMock()
+    generation_writer.write_planning_artifact = AsyncMock()
+    trace_writer = MagicMock()
+    trace_writer.start_run = AsyncMock()
+    trace_writer.record_blueprint_snapshot = AsyncMock()
+    pump_result = object()
+    pump = MagicMock(return_value=pump_result)
+
+    with (
+        patch("generation.v3_studio.router.V3GenerationWriter", return_value=generation_writer),
+        patch("generation.v3_studio.router.get_v3_trace_repository", return_value=MagicMock()),
+        patch("generation.v3_studio.router.V3TraceWriter", return_value=trace_writer),
+        patch(
+            "generation.v3_studio.router.telemetry_monitor.initialise_v3_recorder",
+            new=AsyncMock(),
+        ),
+        patch("generation.v3_studio.router.build_planning_artifact", return_value={}),
+        patch("generation.v3_studio.router._chunked_emit_event", new=AsyncMock()),
+        patch("generation.v3_studio.router._pump_sse_to_queue", new=pump),
+        patch("generation.v3_studio.router._spawn_background_task") as spawn,
+    ):
+        from generation.v3_studio.router import _start_generation_from_chunked_blueprint
+
+        await _start_generation_from_chunked_blueprint(
+            generation_id=generation_id,
+            blueprint_id=f"bp-{generation_id}",
+            blueprint=blueprint,
+            form=None,
+            display_title=None,
+            user_id=TEST_USER_A.id,
+            queue=queue,
+        )
+
+    assert pump.call_args.kwargs["preserved_ready_sections"] == []
+    spawn.assert_called_once_with(pump_result)
+
+
+@pytest.mark.asyncio
 async def test_attempt_chunked_assembly_logs_execution_handoff_success() -> None:
     sample_plan = _sample_structural_plan()
     generation_id = str(uuid.uuid4())
