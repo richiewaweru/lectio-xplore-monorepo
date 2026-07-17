@@ -588,7 +588,7 @@ async def _start_generation_from_chunked_blueprint(
     generation_writer = V3GenerationWriter(async_session_factory)
     template_id = "guided-concept-path"
     effective_title = (display_title or blueprint.metadata.title).strip() or blueprint.metadata.title
-    existing_document = await generation_writer.get_document_json(generation_id, user_id)
+    existing_document = await generation_writer.get_document_json(generation_id, user_id) or {}
     existing_progress = existing_document.get("progress") if isinstance(existing_document, dict) else None
     existing_statuses = (
         existing_progress.get("sections") if isinstance(existing_progress, dict) else None
