@@ -9,6 +9,7 @@ from core.database.models import GenerationModel
 from core.database.session import async_session_factory
 from generation.v3_studio.dtos import V3InputForm
 from generation.v3_studio.generation_writer import V3GenerationWriter
+from generation.v3_studio.router import _persist_regenerated_visual
 from generation.v3_studio.planning_artifact import (
     SCHEMA_VERSION,
     build_planning_artifact,
@@ -83,6 +84,42 @@ async def test_v3_generation_writer_persists_flat_document_json_and_report_snaps
         assert model.report_json["summary"]["planned_visuals"] == 2
         assert model.report_json["summary"]["planned_questions"] == 4
         assert model.report_json["summary"]["assembled_sections"] == 1
+    finally:
+        await _cleanup_generation(generation_id)
+
+
+async def test_manual_document_write_bumps_progress_version() -> None:
+    generation_id = "v3-writer-manual-version"
+    await _cleanup_generation(generation_id)
+    writer = V3GenerationWriter(async_session_factory)
+    try:
+        await writer.upsert_started(
+            generation_id=generation_id,
+            user_id="writer-user",
+            subject="Science",
+            context="Plants",
+            template_id="guided-concept-path",
+            section_count=1,
+        )
+        document = {
+            "kind": "v3_booklet_pack",
+            "sections": [{"section_id": "intro"}],
+            "progress": {
+                "stage": "completed",
+                "sections": {"intro": "ready"},
+                "updated_at": "2026-07-17T09:00:00+00:00",
+            },
+        }
+
+        await _persist_regenerated_visual(
+            generation_id=generation_id,
+            user_id="writer-user",
+            document_json=document,
+        )
+
+        model = await _load_generation(generation_id)
+        assert model.document_json["progress"]["updated_at"] != "2026-07-17T09:00:00+00:00"
+        assert model.document_json["progress"]["stage"] == "completed"
     finally:
         await _cleanup_generation(generation_id)
 

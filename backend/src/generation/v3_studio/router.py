@@ -61,10 +61,12 @@ from generation.v3_studio.dtos import (
     AdjustBlueprintRequest,
     BlueprintPreviewDTO,
     V3ChunkedApproveRequest,
+    V3ChunkedPlanDTO,
     V3ChunkedPlanStartRequest,
     V3ChunkedPlanStateDTO,
     V3ChunkedRegenerateRequest,
     V3ChunkedRetrySectionRequest,
+    V3ChunkedStatusDTO,
     V3GenerationDetailDTO,
     V3GenerationHistoryItemDTO,
     V3GenerateStartRequest,
@@ -79,7 +81,7 @@ from generation.v3_studio.prompts import PROPOSE_INTENT_SYSTEM, build_propose_in
 from resource_specs.loader import get_spec, list_spec_ids
 from resource_specs.renderer import render_spec_for_prompt
 from generation.v3_studio.preview_mapper import blueprint_to_preview_dto
-from generation.v3_studio.generation_writer import V3GenerationWriter
+from generation.v3_studio.generation_writer import V3GenerationWriter, bump_document_version
 from generation.v3_studio.planning_artifact import build_planning_artifact
 from generation.v3_studio.session_store import v3_studio_store
 from telemetry.dependencies import get_v3_trace_repository
@@ -281,6 +283,27 @@ def _normalize_chunked_state(generation_id: str, state: dict[str, Any]) -> V3Chu
         lesson_mode_confidence=signals.get("lesson_mode_confidence")
         if isinstance(signals, dict) and isinstance(signals.get("lesson_mode_confidence"), str)
         else None,
+    )
+
+
+def _normalize_chunked_status(
+    generation_id: str,
+    state: dict[str, Any],
+    document_json: Any,
+) -> V3ChunkedStatusDTO:
+    full_state = _normalize_chunked_state(generation_id, state)
+    progress = document_json.get("progress") if isinstance(document_json, dict) else None
+    doc_version = progress.get("updated_at") if isinstance(progress, dict) else None
+    return V3ChunkedStatusDTO(
+        generation_id=generation_id,
+        stage=full_state.stage,
+        doc_version=doc_version if isinstance(doc_version, str) else None,
+        failed_sections=full_state.failed_sections,
+        blueprint_id=full_state.blueprint_id,
+        execution_started=full_state.execution_started,
+        next_action=full_state.next_action,
+        error=full_state.error,
+        error_type=full_state.error_type,
     )
 
 
@@ -1067,17 +1090,39 @@ async def post_chunked_plan_start(
     return _normalize_chunked_state(generation_id, state)
 
 
-@v3_studio_router.get("/chunked/{generation_id}/status", response_model=V3ChunkedPlanStateDTO)
-async def get_chunked_plan_status(
+@v3_studio_router.get("/chunked/{generation_id}/plan", response_model=V3ChunkedPlanDTO)
+async def get_chunked_plan(
     generation_id: str,
     current_user: User = Depends(get_current_user),
-) -> V3ChunkedPlanStateDTO:
+) -> V3ChunkedPlanDTO:
     await _load_owned_generation(generation_id, current_user.id)
     try:
         state = await load_chunked_state(generation_id)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=404, detail="Chunked state not found") from exc
-    return _normalize_chunked_state(generation_id, state)
+    full_state = _normalize_chunked_state(generation_id, state)
+    if full_state.structural_plan is None:
+        raise HTTPException(status_code=404, detail="Structural plan not found")
+    return V3ChunkedPlanDTO(
+        generation_id=generation_id,
+        structural_plan=full_state.structural_plan,
+        display_title=full_state.display_title,
+        inferred_lesson_mode=full_state.inferred_lesson_mode,
+        lesson_mode_confidence=full_state.lesson_mode_confidence,
+    )
+
+
+@v3_studio_router.get("/chunked/{generation_id}/status", response_model=V3ChunkedStatusDTO)
+async def get_chunked_plan_status(
+    generation_id: str,
+    current_user: User = Depends(get_current_user),
+) -> V3ChunkedStatusDTO:
+    model = await _load_owned_generation(generation_id, current_user.id)
+    try:
+        state = await load_chunked_state(generation_id)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=404, detail="Chunked state not found") from exc
+    return _normalize_chunked_status(generation_id, state, model.document_json)
 
 
 @v3_studio_router.get("/chunked/{generation_id}/events")
@@ -2132,6 +2177,7 @@ async def _persist_regenerated_visual(
         model = await session.get(GenerationModel, generation_id)
         if model is None or model.user_id != user_id:
             raise HTTPException(status_code=404, detail="Generation not found")
+        bump_document_version(document_json)
         model.document_json = document_json
         await session.commit()
 

@@ -184,6 +184,30 @@ class V3ChunkedPlanStateDTO(BaseModel):
     lesson_mode_confidence: Literal["low", "high"] | None = None
 
 
+class V3ChunkedPlanDTO(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    generation_id: str
+    structural_plan: dict[str, Any]
+    display_title: str | None = None
+    inferred_lesson_mode: LessonMode | None = None
+    lesson_mode_confidence: Literal["low", "high"] | None = None
+
+
+class V3ChunkedStatusDTO(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    generation_id: str
+    stage: str
+    doc_version: str | None = None
+    failed_sections: list[str] = Field(default_factory=list)
+    blueprint_id: str | None = None
+    execution_started: bool = False
+    next_action: str | None = None
+    error: str | None = None
+    error_type: str | None = None
+
+
 class AdjustBlueprintRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
@@ -264,8 +288,10 @@ __all__ = [
     "AdjustBlueprintRequest",
     "BlueprintPreviewDTO",
     "V3ChunkedApproveRequest",
+    "V3ChunkedPlanDTO",
     "V3ChunkedPlanStartRequest",
     "V3ChunkedPlanStateDTO",
+    "V3ChunkedStatusDTO",
     "V3ChunkedRegenerateRequest",
     "V3ChunkedRetrySectionRequest",
     "ProductionBlueprintEnvelope",

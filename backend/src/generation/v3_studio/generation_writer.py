@@ -219,6 +219,16 @@ def _merge_practice_problem(
     }
 
 
+def bump_document_version(document: dict[str, Any]) -> None:
+    progress = document.get("progress")
+    if not isinstance(progress, dict):
+        progress = {}
+    document["progress"] = {
+        **progress,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 def _bump_document_progress(document: dict[str, Any], section_id: str) -> None:
     progress = document.get("progress")
     if not isinstance(progress, dict):
@@ -234,8 +244,8 @@ def _bump_document_progress(document: dict[str, Any], section_id: str) -> None:
     document["progress"] = {
         "stage": stage,
         "sections": sections,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
+    bump_document_version(document)
 
 
 def _planning_counts_from_report(report: dict[str, Any]) -> dict[str, int]:

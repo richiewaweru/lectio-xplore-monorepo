@@ -10,7 +10,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app import app
 from core.auth.middleware import get_current_user
-from core.database.models import UserModel
+from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
 from core.entities.user import User
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
@@ -550,10 +550,22 @@ async def test_chunked_status_reports_next_action_by_stage() -> None:
     )
     await persist_chunked_state(generation_id, {"stage": "assembly_blocked", "failed_sections": ["model"]})
 
+    async with async_session_factory() as session:
+        model = await session.get(GenerationModel, generation_id)
+        assert model is not None
+        model.document_json = {
+            "progress": {"stage": "writing", "updated_at": "2026-07-17T10:00:00+00:00"}
+        }
+        await session.commit()
+
     async with _client() as client:
         blocked = await client.get(f"/api/v1/v3/chunked/{generation_id}/status")
     assert blocked.status_code == 200
-    assert blocked.json()["next_action"] == "retry_failed_sections"
+    blocked_payload = blocked.json()
+    assert blocked_payload["next_action"] == "retry_failed_sections"
+    assert blocked_payload["doc_version"] == "2026-07-17T10:00:00+00:00"
+    assert "structural_plan" not in blocked_payload
+    assert "section_briefs" not in blocked_payload
 
     await persist_chunked_state(
         generation_id,
@@ -574,6 +586,45 @@ async def test_chunked_status_reports_next_action_by_stage() -> None:
         ready = await client.get(f"/api/v1/v3/chunked/{generation_id}/status")
     assert ready.status_code == 200
     assert ready.json()["next_action"] == "generation_running"
+
+
+@pytest.mark.asyncio
+async def test_chunked_plan_endpoint_returns_immutable_plan_metadata() -> None:
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+    generation_id = str(uuid.uuid4())
+    signals, form = _seed_context_models()
+
+    from generation.v3_studio.router import _ensure_chunked_generation_row
+
+    await _ensure_chunked_generation_row(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        subject="Math",
+        context="Equivalent fractions",
+    )
+    await persist_structural_plan(
+        generation_id,
+        _sample_structural_plan(),
+        signals=signals,
+        form=form,
+        resource_spec={"resource_type": "lesson", "depth": "standard", "spec": {}, "rendered": "x"},
+    )
+
+    async with _client() as client:
+        response = await client.get(f"/api/v1/v3/chunked/{generation_id}/plan")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["generation_id"] == generation_id
+    assert payload["structural_plan"]["anchor"]["example"] == "splitting a pizza into 8 equal slices"
+    assert payload["display_title"] == form.topic
+    assert "section_briefs" not in payload
+
+    app.dependency_overrides[get_current_user] = _override_user_b
+    async with _client() as client:
+        forbidden = await client.get(f"/api/v1/v3/chunked/{generation_id}/plan")
+    assert forbidden.status_code == 404
 
 
 @pytest.mark.asyncio
