@@ -6,7 +6,9 @@ import { apiFetch, buildApiUrl } from '$lib/api/client';
 import { authToken } from '$lib/stores/auth';
 import type {
 	BlueprintPreviewDTO,
+	V3ChunkedPlan,
 	V3ChunkedPlanState,
+	V3ChunkedStatus,
 	V3GenerationDetail,
 	V3GenerationHistoryItem,
 	V3InputForm,
@@ -132,13 +134,22 @@ export async function retryChunkedSection(payload: {
 	return res.json() as Promise<V3ChunkedPlanState>;
 }
 
-export async function getChunkedPlanStatus(generationId: string): Promise<V3ChunkedPlanState> {
+export async function getChunkedPlan(generationId: string): Promise<V3ChunkedPlan> {
+	const res = await apiFetch(`/api/v1/v3/chunked/${encodeURIComponent(generationId)}/plan`, {
+		method: 'GET',
+		headers: bearerHeaders()
+	});
+	await ensureOk(res, 'Could not load the structural lesson plan.');
+	return res.json() as Promise<V3ChunkedPlan>;
+}
+
+export async function getChunkedPlanStatus(generationId: string): Promise<V3ChunkedStatus> {
 	const res = await apiFetch(`/api/v1/v3/chunked/${encodeURIComponent(generationId)}/status`, {
 		method: 'GET',
 		headers: bearerHeaders()
 	});
 	await ensureOk(res, 'Could not load chunked planning status.');
-	return res.json() as Promise<V3ChunkedPlanState>;
+	return res.json() as Promise<V3ChunkedStatus>;
 }
 
 export type V3VisualBlock = NonNullable<V3DraftPack['visual_blocks']>[number];

@@ -18,6 +18,7 @@
 		downloadV3GenerationPdf,
 		extractSignals,
 		fetchV3Document,
+		getChunkedPlan,
 		getChunkedPlanStatus,
 		getV3GenerationBlueprint,
 		regenerateChunkedPlan,
@@ -43,7 +44,13 @@
 	import { coerceV3DocumentToPack } from '$lib/studio/v3-document';
 	import type { V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
 	import { mapPackSectionsToCanvas } from '$lib/studio/v3-print-canvas';
-	import type { V3ChunkedPlanState, V3DraftPack, V3InputForm } from '$lib/types/v3';
+	import type {
+		V3ChunkedPlan,
+		V3ChunkedPlanState,
+		V3ChunkedStatus,
+		V3DraftPack,
+		V3InputForm
+	} from '$lib/types/v3';
 
 	let pdfLoading = $state(false);
 	let recoveryBusy = $state(false);
@@ -68,8 +75,9 @@
 	}>({ completed: [], failed: [], active: null });
 	let documentPollInterval: ReturnType<typeof setInterval> | null = null;
 	let documentPollInFlight = false;
-	let chunkedStatusPollInFlight = false;
 	let documentPollGenerationId: string | null = null;
+	let lastDocumentVersion: string | null = null;
+	let hydratedDocumentGenerationId: string | null = null;
 	let visibilityListenerActive = false;
 	let disconnectChunkedStream: (() => void) | null = null;
 
@@ -172,7 +180,11 @@
 
 	async function applyChunkedState(
 		state: V3ChunkedPlanState,
-		{ resume: _resume = false }: { resume?: boolean } = {}
+		{
+			resume: _resume = false,
+			hydrateComplete = true,
+			pollImmediately = true
+		}: { resume?: boolean; hydrateComplete?: boolean; pollImmediately?: boolean } = {}
 	): Promise<void> {
 		const resolved = state;
 
@@ -181,7 +193,7 @@
 		hydrateChunkedSectionState(resolved);
 		syncStage2Progress(resolved);
 		if (shouldPollForChunkedState(resolved)) {
-			startGenerationPolling(resolved.generation_id);
+			startGenerationPolling(resolved.generation_id, { immediate: pollImmediately });
 		}
 
 		if (resolved.stage === 'plan_ready') {
@@ -243,8 +255,51 @@
 			} catch {
 				// Ignore missing preview and continue with persisted document hydration.
 			}
-			await hydrateFromDocument(resolved.generation_id);
+			if (hydrateComplete) {
+				await hydrateFromDocument(resolved.generation_id);
+			}
 		}
+	}
+
+	function stateFromPlanAndStatus(
+		plan: V3ChunkedPlan,
+		status: V3ChunkedStatus
+	): V3ChunkedPlanState {
+		const legacyStatus = status as V3ChunkedStatus & {
+			structural_plan?: V3ChunkedPlan['structural_plan'];
+			section_briefs?: Record<string, unknown>;
+			display_title?: string | null;
+		};
+		return {
+			generation_id: status.generation_id,
+			stage: status.stage,
+			structural_plan: legacyStatus.structural_plan ?? plan.structural_plan,
+			section_briefs: legacyStatus.section_briefs ?? {},
+			failed_sections: status.failed_sections,
+			blueprint_id: status.blueprint_id,
+			execution_started: status.execution_started,
+			next_action: status.next_action,
+			display_title: legacyStatus.display_title ?? plan.display_title,
+			error: status.error,
+			error_type: status.error_type,
+			inferred_lesson_mode: plan.inferred_lesson_mode,
+			lesson_mode_confidence: plan.lesson_mode_confidence
+		};
+	}
+
+	function mergeChunkedStatus(status: V3ChunkedStatus): V3ChunkedPlanState | null {
+		const current = v3Studio.chunkedState;
+		if (!current || current.generation_id !== status.generation_id) return null;
+		return {
+			...current,
+			stage: status.stage,
+			failed_sections: status.failed_sections,
+			blueprint_id: status.blueprint_id,
+			execution_started: status.execution_started,
+			next_action: status.next_action,
+			error: status.error,
+			error_type: status.error_type
+		};
 	}
 
 	async function resumeChunkedFromQuery(): Promise<void> {
@@ -252,10 +307,24 @@
 		const generationId = new URL(window.location.href).searchParams.get('generation_id');
 		if (!generationId) return;
 		v3Studio.error = null;
-		startGenerationPolling(generationId);
 		try {
-			const state = await getChunkedPlanStatus(generationId);
-			await applyChunkedState(state, { resume: true });
+			const [plan, status] = await Promise.all([
+				getChunkedPlan(generationId),
+				getChunkedPlanStatus(generationId)
+			]);
+			const state = stateFromPlanAndStatus(plan, status);
+			v3Studio.chunkedState = state;
+			v3Studio.generationId = generationId;
+			const hydrated = await hydrateFromDocument(generationId);
+			if (hydrated) {
+				hydratedDocumentGenerationId = generationId;
+				lastDocumentVersion = status.doc_version;
+			}
+			await applyChunkedState(state, {
+				resume: true,
+				hydrateComplete: false,
+				pollImmediately: false
+			});
 		} catch {
 			resetV3Studio();
 			v3Studio.error = 'Could not resume that chunked session. Start a new lesson plan.';
@@ -300,73 +369,62 @@
 			documentPollInterval = null;
 		}
 		documentPollGenerationId = null;
+		lastDocumentVersion = null;
+		hydratedDocumentGenerationId = null;
 		if (browser && visibilityListenerActive) {
 			document.removeEventListener('visibilitychange', handleDocumentVisibilityChange);
 			visibilityListenerActive = false;
 		}
 	}
 
-	async function pollGenerationDocument(generationId: string): Promise<void> {
+	async function pollGenerationStatus(generationId: string): Promise<void> {
 		if (!browser || document.hidden || documentPollInFlight) return;
 		documentPollInFlight = true;
 		try {
-			await hydrateFromDocument(generationId);
+			const status = await getChunkedPlanStatus(generationId);
+			const merged = mergeChunkedStatus(status);
+			if (merged) {
+				await applyChunkedState(merged, { hydrateComplete: false });
+			}
+			const versionChanged =
+				typeof status.doc_version === 'string' && status.doc_version !== lastDocumentVersion;
+			if (hydratedDocumentGenerationId !== generationId || versionChanged) {
+				const hydrated = await hydrateFromDocument(generationId);
+				if (hydrated) {
+					hydratedDocumentGenerationId = generationId;
+					lastDocumentVersion = status.doc_version;
+				}
+			}
+			if (status.stage === 'complete' || status.next_action === 'done') {
+				stopGenerationPolling();
+			}
+		} catch {
+			// Keep the current UI state if status polling fails.
 		} finally {
 			documentPollInFlight = false;
-		}
-		await pollChunkedStatusDuringStage2(generationId);
-	}
-
-	async function pollChunkedStatusDuringStage2(generationId: string): Promise<void> {
-		const current = v3Studio.chunkedState;
-		if (
-			chunkedStatusPollInFlight ||
-			!current ||
-			(current.stage !== 'stage2_running' && current.next_action !== 'wait_for_stage2')
-		) {
-			return;
-		}
-		chunkedStatusPollInFlight = true;
-		try {
-			const state = await getChunkedPlanStatus(generationId);
-			if (state.stage === 'assembly_blocked' || state.stage === 'stage2_error') {
-				await applyChunkedState(state);
-				return;
-			}
-			if (
-				state.stage !== 'stage2_running' &&
-				state.stage !== 'blueprint_ready' &&
-				state.stage !== 'complete' &&
-				state.next_action !== 'wait_for_stage2'
-			) {
-				return;
-			}
-			v3Studio.chunkedState = state;
-			hydrateChunkedSectionState(state);
-			syncStage2Progress(state);
-		} catch {
-			// Keep the current UI state if this polling supplement fails.
-		} finally {
-			chunkedStatusPollInFlight = false;
 		}
 	}
 
 	function handleDocumentVisibilityChange(): void {
 		if (!browser || document.hidden || !documentPollGenerationId) return;
-		void pollGenerationDocument(documentPollGenerationId);
+		void pollGenerationStatus(documentPollGenerationId);
 	}
 
-	function startGenerationPolling(generationId: string): void {
+	function startGenerationPolling(
+		generationId: string,
+		{ immediate = true }: { immediate?: boolean } = {}
+	): void {
+		if (documentPollGenerationId === generationId && documentPollInterval) return;
 		stopGenerationPolling();
 		documentPollGenerationId = generationId;
 		if (browser && !visibilityListenerActive) {
 			document.addEventListener('visibilitychange', handleDocumentVisibilityChange);
 			visibilityListenerActive = true;
 		}
-		void pollGenerationDocument(generationId);
+		if (immediate) void pollGenerationStatus(generationId);
 		documentPollInterval = setInterval(() => {
 			if (!documentPollGenerationId) return;
-			void pollGenerationDocument(documentPollGenerationId);
+			void pollGenerationStatus(documentPollGenerationId);
 		}, 4000);
 	}
 
@@ -433,8 +491,9 @@
 
 	async function refreshChunkedStatus(generationId: string): Promise<void> {
 		try {
-			const state = await getChunkedPlanStatus(generationId);
-			await applyChunkedState(state);
+			const status = await getChunkedPlanStatus(generationId);
+			const state = mergeChunkedStatus(status);
+			if (state) await applyChunkedState(state, { hydrateComplete: false });
 		} catch {
 			// Keep current UI state if status refresh fails.
 		}
@@ -589,13 +648,13 @@
 		startGenerationPolling(generationId);
 		v3Studio.streamCancel = connectV3StudioGenerationStream(generationId, {
 			onPoke: () => {
-				void pollGenerationDocument(generationId);
+				void pollGenerationStatus(generationId);
 			},
 			onOpen: () => {
-				void pollGenerationDocument(generationId);
+				void pollGenerationStatus(generationId);
 			},
 			onError: () => {
-				void pollGenerationDocument(generationId);
+				void pollGenerationStatus(generationId);
 			}
 		});
 	}

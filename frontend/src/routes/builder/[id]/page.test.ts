@@ -4,7 +4,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '$lib/api/errors';
 
-const { pageState, goto, logout, loadBuilderLessonWithFallback, fetchV3Document, getChunkedPlanStatus, v3PackToBuilderDocument } = vi.hoisted(() => ({
+const { pageState, goto, logout, loadBuilderLessonWithFallback, fetchV3Document, getChunkedPlan, v3PackToBuilderDocument } = vi.hoisted(() => ({
 	pageState: {
 		params: { id: 'lesson-123' },
 		url: new URL('http://localhost/builder/lesson-123')
@@ -13,7 +13,7 @@ const { pageState, goto, logout, loadBuilderLessonWithFallback, fetchV3Document,
 	logout: vi.fn(),
 	loadBuilderLessonWithFallback: vi.fn(),
 	fetchV3Document: vi.fn(),
-	getChunkedPlanStatus: vi.fn(),
+	getChunkedPlan: vi.fn(),
 	v3PackToBuilderDocument: vi.fn()
 }));
 
@@ -64,7 +64,7 @@ vi.mock('$lib/builder/stores/document.svelte', () => ({
 	createDocumentStore: () => mockStore
 }));
 
-vi.mock('$lib/api/v3', () => ({ fetchV3Document, getChunkedPlanStatus }));
+vi.mock('$lib/api/v3', () => ({ fetchV3Document, getChunkedPlan }));
 
 vi.mock('$lib/builder/adapters/from-generation', () => ({ v3PackToBuilderDocument }));
 
@@ -100,7 +100,7 @@ describe('builder lesson route', () => {
 		pageState.params.id = 'lesson-123';
 		pageState.url = new URL('http://localhost/builder/lesson-123');
 		fetchV3Document.mockReset();
-		getChunkedPlanStatus.mockReset();
+		getChunkedPlan.mockReset();
 		v3PackToBuilderDocument.mockReset();
 		mockStore.insertSectionsFromGeneration.mockReset();
 	});
@@ -145,7 +145,7 @@ describe('builder lesson route', () => {
 		const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval');
 		pageState.url = new URL('http://localhost/builder/lesson-123?generation_id=gen-1');
 		loadBuilderLessonWithFallback.mockResolvedValueOnce({ document: lesson(), source: 'server' });
-		getChunkedPlanStatus.mockResolvedValueOnce({
+		getChunkedPlan.mockResolvedValueOnce({
 			structural_plan: {
 				lesson_mode: 'first_exposure', lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
 				anchor: { example: 'Anchor', reuse_scope: 'all' }, question_plan: [],
@@ -158,7 +158,7 @@ describe('builder lesson route', () => {
 		render(BuilderLessonPage);
 
 		await waitFor(() => expect(fetchV3Document).toHaveBeenCalledWith('gen-1'));
-		expect(getChunkedPlanStatus).toHaveBeenCalledWith('gen-1');
+		expect(getChunkedPlan).toHaveBeenCalledWith('gen-1');
 		expect(mockStore.insertSectionsFromGeneration).toHaveBeenCalledWith(
 			expect.any(Object),
 			[{ id: 's1', title: 'Introduction', position: 0 }]
@@ -171,7 +171,7 @@ describe('builder lesson route', () => {
 	it('shows route-only pending skeletons while the document snapshot is not ready', async () => {
 		pageState.url = new URL('http://localhost/builder/lesson-123?generation_id=gen-pending');
 		loadBuilderLessonWithFallback.mockResolvedValueOnce({ document: lesson(), source: 'server' });
-		getChunkedPlanStatus.mockResolvedValueOnce({
+		getChunkedPlan.mockResolvedValueOnce({
 			structural_plan: {
 				lesson_mode: 'first_exposure', lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
 				anchor: { example: 'Anchor', reuse_scope: 'all' }, question_plan: [],

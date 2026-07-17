@@ -108,6 +108,26 @@ export interface V3ChunkedPlanState {
 	lesson_mode_confidence: V3SignalSummary['lesson_mode_confidence'] | null;
 }
 
+export interface V3ChunkedPlan {
+	generation_id: string;
+	structural_plan: V3StructuralPlan;
+	display_title?: string | null;
+	inferred_lesson_mode: V3SignalSummary['inferred_lesson_mode'] | null;
+	lesson_mode_confidence: V3SignalSummary['lesson_mode_confidence'] | null;
+}
+
+export interface V3ChunkedStatus {
+	generation_id: string;
+	stage: V3ChunkedPlanStage;
+	doc_version: string | null;
+	failed_sections: string[];
+	blueprint_id: string | null;
+	execution_started: boolean;
+	next_action: string | null;
+	error?: string | null;
+	error_type?: string | null;
+}
+
 export interface V3SectionPlanItem {
 	id: string;
 	title: string;

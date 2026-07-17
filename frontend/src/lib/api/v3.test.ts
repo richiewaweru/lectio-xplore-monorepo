@@ -44,6 +44,7 @@ import {
 	connectV3ChunkedStream,
 	connectV3StudioGenerationStream,
 	fetchV3Document,
+	getChunkedPlan,
 	getChunkedPlanStatus,
 	getV3GenerationBlueprint,
 	getV3GenerationDetail,
@@ -269,6 +270,12 @@ describe('connectV3StudioGenerationStream', () => {
 
 		await getChunkedPlanStatus('gen-1');
 		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/chunked/gen-1/status', {
+			method: 'GET',
+			headers: { 'Content-Type': 'application/json' }
+		});
+
+		await getChunkedPlan('gen-1');
+		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/chunked/gen-1/plan', {
 			method: 'GET',
 			headers: { 'Content-Type': 'application/json' }
 		});

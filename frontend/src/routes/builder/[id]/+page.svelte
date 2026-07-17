@@ -8,7 +8,7 @@
 	import { createDocumentStore } from '$lib/builder/stores/document.svelte';
 	import { loadBuilderLessonWithFallback } from '$lib/builder/persistence/server-sync';
 	import { logout } from '$lib/stores/auth';
-	import { fetchV3Document, getChunkedPlanStatus } from '$lib/api/v3';
+	import { fetchV3Document, getChunkedPlan } from '$lib/api/v3';
 	import { v3PackToBuilderDocument } from '$lib/builder/adapters/from-generation';
 	import type { V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
 	import {
@@ -48,8 +48,8 @@
 		try {
 			if (pendingPlan.length === 0) {
 				try {
-					const planState = await getChunkedPlanStatus(generationId);
-					pendingPlan = pendingPlanFromStructuralPlan(planState.structural_plan);
+					const plan = await getChunkedPlan(generationId);
+					pendingPlan = pendingPlanFromStructuralPlan(plan.structural_plan);
 				} catch {
 					// The document snapshot can still land even if planning state is temporarily unavailable.
 				}
