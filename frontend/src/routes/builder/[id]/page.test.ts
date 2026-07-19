@@ -142,6 +142,7 @@ describe('builder lesson route', () => {
 	});
 
 	it('rehydrates pending plan, inserts a snapshot, and stops polling at terminal status', async () => {
+		const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
 		const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval');
 		pageState.url = new URL('http://localhost/builder/lesson-123?generation_id=gen-1');
 		loadBuilderLessonWithFallback.mockResolvedValueOnce({ document: lesson(), source: 'server' });
@@ -163,8 +164,12 @@ describe('builder lesson route', () => {
 			expect.any(Object),
 			[{ id: 's1', title: 'Introduction', position: 0 }]
 		);
-		await waitFor(() => expect(clearIntervalSpy).toHaveBeenCalled());
+		const pollTimerIndex = setIntervalSpy.mock.calls.findIndex(([, delay]) => delay === 4000);
+		const pollTimer = setIntervalSpy.mock.results[pollTimerIndex]?.value;
+		expect(pollTimerIndex).toBeGreaterThanOrEqual(0);
+		await waitFor(() => expect(clearIntervalSpy).toHaveBeenCalledWith(pollTimer));
 		expect(await screen.findByTestId('mock-pending-s1')).toBeTruthy();
+		setIntervalSpy.mockRestore();
 		clearIntervalSpy.mockRestore();
 	});
 
@@ -185,5 +190,34 @@ describe('builder lesson route', () => {
 		expect(await screen.findByTestId('mock-pending-s2')).toBeTruthy();
 		expect(mockStore.document?.sections).toEqual([]);
 		expect(mockStore.insertSectionsFromGeneration).not.toHaveBeenCalled();
+	});
+
+	it('keeps polling when a streaming snapshot already contains every planned section', async () => {
+		const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+		const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval');
+		pageState.url = new URL('http://localhost/builder/lesson-123?generation_id=gen-streaming');
+		loadBuilderLessonWithFallback.mockResolvedValueOnce({
+			document: { ...lesson(), sections: [{ id: 's1', title: 'Introduction', position: 0, block_ids: ['header-1'] }] },
+			source: 'server'
+		});
+		getChunkedPlan.mockResolvedValueOnce({
+			structural_plan: {
+				lesson_mode: 'first_exposure', lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'all' }, question_plan: [],
+				sections: [{ id: 's1', title: 'Introduction', role: 'intro', visual_required: false, transition_note: null, components: [] }]
+			}
+		});
+		fetchV3Document.mockResolvedValueOnce({ status: 'streaming_preview', sections: [] });
+		v3PackToBuilderDocument.mockReturnValueOnce(lesson());
+
+		render(BuilderLessonPage);
+
+		await waitFor(() => expect(fetchV3Document).toHaveBeenCalledWith('gen-streaming'));
+		const pollTimerIndex = setIntervalSpy.mock.calls.findIndex(([, delay]) => delay === 4000);
+		const pollTimer = setIntervalSpy.mock.results[pollTimerIndex]?.value;
+		expect(pollTimerIndex).toBeGreaterThanOrEqual(0);
+		expect(clearIntervalSpy).not.toHaveBeenCalledWith(pollTimer);
+		setIntervalSpy.mockRestore();
+		clearIntervalSpy.mockRestore();
 	});
 });

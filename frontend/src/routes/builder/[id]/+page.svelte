@@ -12,7 +12,6 @@
 	import { v3PackToBuilderDocument } from '$lib/builder/adapters/from-generation';
 	import type { V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
 	import {
-		allPlannedSectionsPresent,
 		isTerminalPackStatus,
 		pendingPlanFromStructuralPlan,
 		type PendingPlanSection
@@ -58,10 +57,7 @@
 			const pack = rawPack as V3PackDocument;
 			const adapted = v3PackToBuilderDocument(pack, { routeGenerationId: generationId });
 			store.insertSectionsFromGeneration(adapted, pendingPlan);
-			if (
-				isTerminalPackStatus(pack.status) ||
-				(store.document && allPlannedSectionsPresent(store.document, pendingPlan))
-			) stopPolling();
+			if (isTerminalPackStatus(pack.status)) stopPolling();
 		} catch (error) {
 			loadWarning = error instanceof Error ? `Generation update delayed: ${error.message}` : 'Generation update delayed.';
 		} finally {
