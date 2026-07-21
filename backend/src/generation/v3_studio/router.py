@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from copy import deepcopy
+import hashlib
 import json
 import logging
 import uuid
@@ -294,6 +295,9 @@ def _normalize_chunked_status(
     full_state = _normalize_chunked_state(generation_id, state)
     progress = document_json.get("progress") if isinstance(document_json, dict) else None
     doc_version = progress.get("updated_at") if isinstance(progress, dict) else None
+    if not isinstance(doc_version, str) and isinstance(document_json, dict):
+        canonical = json.dumps(document_json, sort_keys=True, separators=(",", ":"), default=str)
+        doc_version = f"sha256:{hashlib.sha256(canonical.encode('utf-8')).hexdigest()}"
     return V3ChunkedStatusDTO(
         generation_id=generation_id,
         stage=full_state.stage,

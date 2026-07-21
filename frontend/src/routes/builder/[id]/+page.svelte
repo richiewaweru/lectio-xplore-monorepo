@@ -8,7 +8,7 @@
 	import { createDocumentStore } from '$lib/builder/stores/document.svelte';
 	import { loadBuilderLessonWithFallback } from '$lib/builder/persistence/server-sync';
 	import { logout } from '$lib/stores/auth';
-	import { fetchV3Document, getChunkedPlan } from '$lib/api/v3';
+	import { fetchV3Document, getChunkedPlan, getChunkedPlanStatus } from '$lib/api/v3';
 	import { v3PackToBuilderDocument } from '$lib/builder/adapters/from-generation';
 	import type { V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
 	import {
@@ -32,6 +32,8 @@
 	let pendingPlan = $state<PendingPlanSection[]>([]);
 	let pollInterval: ReturnType<typeof setInterval> | null = null;
 	let pollInFlight = false;
+	let hasHydratedGeneration = false;
+	let lastDocVersion: string | null = null;
 
 	const id = $derived(page.params.id);
 	const generationId = $derived(page.url.searchParams.get('generation_id'));
@@ -53,11 +55,19 @@
 					// The document snapshot can still land even if planning state is temporarily unavailable.
 				}
 			}
-			const rawPack = await fetchV3Document(generationId);
-			const pack = rawPack as V3PackDocument;
-			const adapted = v3PackToBuilderDocument(pack, { routeGenerationId: generationId });
-			store.insertSectionsFromGeneration(adapted, pendingPlan);
-			if (isTerminalGenerationDocument(pack)) stopPolling();
+			const status = await getChunkedPlanStatus(generationId);
+			const versionChanged =
+				typeof status.doc_version === 'string' && status.doc_version !== lastDocVersion;
+			const chunkedTerminal = status.stage === 'complete' || status.next_action === 'done';
+			if (!hasHydratedGeneration || versionChanged || chunkedTerminal) {
+				const rawPack = await fetchV3Document(generationId);
+				const pack = rawPack as V3PackDocument;
+				const adapted = v3PackToBuilderDocument(pack, { routeGenerationId: generationId });
+				store.insertSectionsFromGeneration(adapted, pendingPlan);
+				hasHydratedGeneration = true;
+				if (typeof status.doc_version === 'string') lastDocVersion = status.doc_version;
+				if (isTerminalGenerationDocument(pack) || chunkedTerminal) stopPolling();
+			}
 		} catch (error) {
 			loadWarning = error instanceof Error ? `Generation update delayed: ${error.message}` : 'Generation update delayed.';
 		} finally {

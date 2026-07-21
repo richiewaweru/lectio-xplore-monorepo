@@ -124,6 +124,38 @@ async def test_manual_document_write_bumps_progress_version() -> None:
         await _cleanup_generation(generation_id)
 
 
+async def test_consecutive_snapshot_writes_produce_distinct_versions() -> None:
+    generation_id = "v3-writer-snapshot-versions"
+    await _cleanup_generation(generation_id)
+    writer = V3GenerationWriter(async_session_factory)
+    try:
+        await writer.upsert_started(
+            generation_id=generation_id,
+            user_id="writer-user",
+            subject="Science",
+            context="Plants",
+            template_id="guided-concept-path",
+            section_count=1,
+        )
+        payload = {
+            "pack": {
+                "generation_id": generation_id,
+                "status": "streaming_preview",
+                "sections": [{"section_id": "intro"}],
+                "progress": {"stage": "writing", "sections": {"intro": "ready"}},
+            }
+        }
+
+        await writer.write_draft(generation_id, payload)
+        first = (await _load_generation(generation_id)).document_json["progress"]["updated_at"]
+        await writer.write_draft(generation_id, payload)
+        second = (await _load_generation(generation_id)).document_json["progress"]["updated_at"]
+
+        assert first != second
+    finally:
+        await _cleanup_generation(generation_id)
+
+
 async def test_v3_generation_writer_handles_resource_finalised_and_pdf_status() -> None:
     generation_id = "v3-writer-final"
     await _cleanup_generation(generation_id)

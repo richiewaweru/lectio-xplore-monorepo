@@ -570,6 +570,7 @@ class V3GenerationWriter:
                 return
             document = deepcopy(model.document_json)
             document["progress"] = deepcopy(progress)
+            bump_document_version(document)
             model.document_json = document
             await session.commit()
 
@@ -607,8 +608,8 @@ class V3GenerationWriter:
             document["progress"] = {
                 "stage": stage,
                 "sections": section_statuses,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
             }
+            bump_document_version(document)
             model.document_json = document
             await session.commit()
 
@@ -885,6 +886,7 @@ class V3GenerationWriter:
                 return
             booklet_status = str(payload.get("booklet_status") or pack.get("status") or "streaming_preview")
             model.document_json = {"kind": "v3_booklet_pack", **pack}
+            bump_document_version(model.document_json)
 
             report = self._coerce_report(model.report_json, section_count=model.section_count or 0)
             summary = report.get("summary", {})

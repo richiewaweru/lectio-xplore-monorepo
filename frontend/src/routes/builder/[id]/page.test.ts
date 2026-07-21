@@ -4,7 +4,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '$lib/api/errors';
 
-const { pageState, goto, logout, loadBuilderLessonWithFallback, fetchV3Document, getChunkedPlan, v3PackToBuilderDocument } = vi.hoisted(() => ({
+const { pageState, goto, logout, loadBuilderLessonWithFallback, fetchV3Document, getChunkedPlan, getChunkedPlanStatus, v3PackToBuilderDocument } = vi.hoisted(() => ({
 	pageState: {
 		params: { id: 'lesson-123' },
 		url: new URL('http://localhost/builder/lesson-123')
@@ -14,6 +14,7 @@ const { pageState, goto, logout, loadBuilderLessonWithFallback, fetchV3Document,
 	loadBuilderLessonWithFallback: vi.fn(),
 	fetchV3Document: vi.fn(),
 	getChunkedPlan: vi.fn(),
+	getChunkedPlanStatus: vi.fn(),
 	v3PackToBuilderDocument: vi.fn()
 }));
 
@@ -64,7 +65,7 @@ vi.mock('$lib/builder/stores/document.svelte', () => ({
 	createDocumentStore: () => mockStore
 }));
 
-vi.mock('$lib/api/v3', () => ({ fetchV3Document, getChunkedPlan }));
+vi.mock('$lib/api/v3', () => ({ fetchV3Document, getChunkedPlan, getChunkedPlanStatus }));
 
 vi.mock('$lib/builder/adapters/from-generation', () => ({ v3PackToBuilderDocument }));
 
@@ -101,6 +102,11 @@ describe('builder lesson route', () => {
 		pageState.url = new URL('http://localhost/builder/lesson-123');
 		fetchV3Document.mockReset();
 		getChunkedPlan.mockReset();
+		getChunkedPlanStatus.mockReset();
+		getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'default-generation', stage: 'stage2_running', doc_version: 'snapshot-v1',
+			failed_sections: [], blueprint_id: null, execution_started: true, next_action: 'wait_for_stage2'
+		});
 		v3PackToBuilderDocument.mockReset();
 		mockStore.insertSectionsFromGeneration.mockReset();
 	});
@@ -219,5 +225,36 @@ describe('builder lesson route', () => {
 		expect(clearIntervalSpy).not.toHaveBeenCalledWith(pollTimer);
 		setIntervalSpy.mockRestore();
 		clearIntervalSpy.mockRestore();
+	});
+
+	it('fetches the document only when the snapshot version changes', async () => {
+		const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+		pageState.url = new URL('http://localhost/builder/lesson-123?generation_id=gen-versioned');
+		loadBuilderLessonWithFallback.mockResolvedValueOnce({ document: lesson(), source: 'server' });
+		getChunkedPlan.mockResolvedValue({ structural_plan: null });
+		getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-versioned', stage: 'stage2_running', doc_version: 'doc-v1',
+			failed_sections: [], blueprint_id: null, execution_started: true, next_action: 'wait_for_stage2'
+		});
+		fetchV3Document.mockResolvedValue({ status: 'streaming_preview', sections: [] });
+		v3PackToBuilderDocument.mockReturnValue(lesson());
+
+		render(BuilderLessonPage);
+		await waitFor(() => expect(fetchV3Document).toHaveBeenCalledTimes(1));
+		const pollCall = setIntervalSpy.mock.calls.find(([, delay]) => delay === 4000);
+		const pollTick = pollCall?.[0] as (() => void) | undefined;
+		expect(pollTick).toBeDefined();
+
+		pollTick?.();
+		await waitFor(() => expect(getChunkedPlanStatus).toHaveBeenCalledTimes(2));
+		expect(fetchV3Document).toHaveBeenCalledTimes(1);
+
+		getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-versioned', stage: 'stage2_running', doc_version: 'doc-v2',
+			failed_sections: [], blueprint_id: null, execution_started: true, next_action: 'wait_for_stage2'
+		});
+		pollTick?.();
+		await waitFor(() => expect(fetchV3Document).toHaveBeenCalledTimes(2));
+		setIntervalSpy.mockRestore();
 	});
 });

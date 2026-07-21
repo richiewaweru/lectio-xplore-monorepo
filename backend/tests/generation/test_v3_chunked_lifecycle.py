@@ -589,6 +589,37 @@ async def test_chunked_status_reports_next_action_by_stage() -> None:
 
 
 @pytest.mark.asyncio
+async def test_chunked_status_derives_version_for_legacy_document_without_progress() -> None:
+    app.dependency_overrides[get_current_user] = _override_user_a
+    await _ensure_user(TEST_USER_A)
+    generation_id = str(uuid.uuid4())
+
+    from generation.v3_studio.router import _ensure_chunked_generation_row
+
+    await _ensure_chunked_generation_row(
+        generation_id=generation_id,
+        user_id=TEST_USER_A.id,
+        subject="Math",
+        context="Legacy snapshot",
+    )
+    await persist_chunked_state(
+        generation_id,
+        {"stage": "stage2_running", "execution_started": True},
+    )
+    async with async_session_factory() as session:
+        model = await session.get(GenerationModel, generation_id)
+        assert model is not None
+        model.document_json = {"kind": "v3_booklet_pack", "sections": [{"section_id": "intro"}]}
+        await session.commit()
+
+    async with _client() as client:
+        response = await client.get(f"/api/v1/v3/chunked/{generation_id}/status")
+
+    assert response.status_code == 200
+    assert response.json()["doc_version"].startswith("sha256:")
+
+
+@pytest.mark.asyncio
 async def test_chunked_plan_endpoint_returns_immutable_plan_metadata() -> None:
     app.dependency_overrides[get_current_user] = _override_user_a
     await _ensure_user(TEST_USER_A)
