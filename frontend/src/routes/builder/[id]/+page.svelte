@@ -15,6 +15,7 @@
 	} from '$lib/builder/adapters/from-generation';
 	import type { BuilderIssue } from '$lib/builder/issues';
 	import type { V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
+	import { getBookletStatusSummary, isBookletStatus } from '$lib/studio/v3-booklet';
 	import {
 		isTerminalGenerationDocument,
 		pendingPlanFromStructuralPlan,
@@ -38,6 +39,8 @@
 	let generationTerminal = $state(false);
 	let documentLevelIssues = $state<BuilderIssue[]>([]);
 	let dismissedDocumentIssueIds = $state<string[]>([]);
+	let generationBlocker = $state<{ title: string; detail: string; failedSections: string[] } | null>(null);
+	let generationStatusLine = $state<string | null>(null);
 	let pollInterval: ReturnType<typeof setInterval> | null = null;
 	let pollInFlight = false;
 	let hasHydratedGeneration = false;
@@ -61,6 +64,12 @@
 		pollInterval = null;
 	}
 
+	function setGenerationWarning(error: unknown): void {
+		const next =
+			error instanceof Error ? `Generation update delayed: ${error.message}` : 'Generation update delayed.';
+		if (loadWarning !== next) loadWarning = next;
+	}
+
 	async function pollGeneration(): Promise<void> {
 		if (!generationId || pollInFlight || !store.document) return;
 		pollInFlight = true;
@@ -74,11 +83,38 @@
 				}
 			}
 			const status = await getChunkedPlanStatus(generationId);
+			if (status.stage === 'assembly_blocked' || status.stage === 'stage2_error') {
+				generationBlocker = {
+					title: status.stage === 'assembly_blocked' ? 'Generation needs recovery' : 'Generation stopped',
+					detail: status.error ?? 'Open Studio to retry or resume this generation.',
+					failedSections: status.failed_sections
+				};
+				generationTerminal = true;
+				stopPolling();
+				return;
+			}
+			if (status.stage === 'plan_ready' && !status.execution_started) {
+				generationBlocker = {
+					title: 'Generation has not started',
+					detail: 'This lesson plan still needs approval in Studio.',
+					failedSections: []
+				};
+				generationTerminal = true;
+				stopPolling();
+				return;
+			}
 			const versionChanged =
 				typeof status.doc_version === 'string' && status.doc_version !== lastDocVersion;
 			const chunkedTerminal = status.stage === 'complete' || status.next_action === 'done';
 			if (!hasHydratedGeneration || versionChanged || chunkedTerminal) {
-				const rawPack = await fetchV3Document(generationId);
+				let rawPack: Record<string, unknown>;
+				try {
+					rawPack = await fetchV3Document(generationId);
+				} catch (error) {
+					if (isApiError(error) && error.status === 404 && !chunkedTerminal) return;
+					setGenerationWarning(error);
+					return;
+				}
 				const pack = rawPack as V3PackDocument;
 				const adapted = v3PackToBuilderDocument(pack, { routeGenerationId: generationId });
 				store.insertSectionsFromGeneration(adapted, pendingPlan);
@@ -92,12 +128,16 @@
 				);
 				sectionProgress = { ...(pack.progress?.sections ?? {}) };
 				generationTerminal = isTerminalGenerationDocument(pack) || chunkedTerminal;
+				generationStatusLine = isBookletStatus(pack.status)
+					? getBookletStatusSummary(pack.status)
+					: null;
+				loadWarning = null;
 				hasHydratedGeneration = true;
 				if (typeof status.doc_version === 'string') lastDocVersion = status.doc_version;
 				if (generationTerminal) stopPolling();
 			}
 		} catch (error) {
-			loadWarning = error instanceof Error ? `Generation update delayed: ${error.message}` : 'Generation update delayed.';
+			setGenerationWarning(error);
 		} finally {
 			pollInFlight = false;
 		}
@@ -258,10 +298,23 @@
 		<p class="mt-4 text-sm text-slate-500">Loading lesson workspace...</p>
 	</section>
 {:else}
+	{#if generationBlocker && generationId}
+		<section class="builder-print-hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
+			<p class="font-semibold">{generationBlocker.title}</p>
+			<p class="mt-1">{generationBlocker.detail}</p>
+			{#if generationBlocker.failedSections.length > 0}
+				<p class="mt-1">Failed sections: {generationBlocker.failedSections.join(', ')}</p>
+			{/if}
+			<a class="mt-2 inline-flex rounded border border-red-300 bg-white px-3 py-1.5 font-medium" href={`/studio?generation_id=${encodeURIComponent(generationId)}`}>Open recovery in Studio</a>
+		</section>
+	{/if}
 	{#if loadWarning}
 		<p class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
 			{loadWarning}
 		</p>
+	{/if}
+	{#if generationTerminal && generationStatusLine}
+		<p class="builder-print-hidden mb-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700" role="status">{generationStatusLine}</p>
 	{/if}
 	<AppShell
 		document={store.document}

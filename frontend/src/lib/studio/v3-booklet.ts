@@ -28,17 +28,17 @@ export function isBookletStatus(value: unknown): value is BookletStatus {
 export function getBookletStatusSummary(status: BookletStatus): string {
 	switch (status) {
 		case 'streaming_preview':
-			return 'Writing lesson pieces...';
+			return 'Generation is still streaming preview content.';
 		case 'draft_ready':
-			return 'Draft booklet ready - checking consistency.';
+			return 'Draft assembled; consistency review pending.';
 		case 'draft_with_warnings':
-			return 'Draft booklet available with warnings.';
+			return 'Draft assembled with minor warnings.';
 		case 'draft_needs_review':
-			return 'Draft needs review before classroom use.';
+			return 'Draft rendered, but major issues remain after review/repair.';
 		case 'final_ready':
-			return 'Final booklet ready.';
+			return 'Final booklet passed review and is ready.';
 		case 'final_with_warnings':
-			return 'Final booklet ready with minor warnings.';
+			return 'Final booklet is ready with minor warnings.';
 		default:
 			return 'No usable booklet could be assembled.';
 	}

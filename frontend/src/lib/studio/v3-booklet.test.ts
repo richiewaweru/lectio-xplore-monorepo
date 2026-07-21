@@ -4,6 +4,7 @@ import {
 	countMissingVisuals,
 	getBookletExportPolicy,
 	getBookletPrintReadiness,
+	getBookletStatusSummary,
 	isBookletStatus
 } from './v3-booklet';
 
@@ -13,6 +14,14 @@ describe('isBookletStatus', () => {
 		expect(isBookletStatus('final_with_warnings')).toBe(true);
 		expect(isBookletStatus('unknown')).toBe(false);
 		expect(isBookletStatus(null)).toBe(false);
+	});
+});
+
+describe('getBookletStatusSummary', () => {
+	it('uses the runtime outcome copy for review-needed drafts', () => {
+		expect(getBookletStatusSummary('draft_needs_review')).toBe(
+			'Draft rendered, but major issues remain after review/repair.'
+		);
 	});
 });
 

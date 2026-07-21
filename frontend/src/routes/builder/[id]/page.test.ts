@@ -314,4 +314,52 @@ describe('builder lesson route', () => {
 		expect(localStorage.getItem('lectio:dismissed-doc-issues:lesson-123')).toBe('["anchor-1"]');
 		expect(screen.queryByText('Anchor drifted.')).toBeNull();
 	});
+
+	it('keeps polling quietly when a running generation has no document yet', async () => {
+		pageState.url = new URL('http://localhost/builder/lesson-123?generation_id=gen-no-doc');
+		loadBuilderLessonWithFallback.mockResolvedValueOnce({ document: lesson(), source: 'server' });
+		getChunkedPlan.mockResolvedValue({ structural_plan: null });
+		fetchV3Document.mockRejectedValue(new ApiError(404, 'Document not found'));
+
+		render(BuilderLessonPage);
+		await waitFor(() => expect(fetchV3Document).toHaveBeenCalledTimes(1));
+
+		expect(screen.queryByText(/generation update delayed/i)).toBeNull();
+	});
+
+	it('stops on blocked execution and links recovery to Studio', async () => {
+		pageState.url = new URL('http://localhost/builder/lesson-123?generation_id=gen-blocked');
+		loadBuilderLessonWithFallback.mockResolvedValueOnce({ document: lesson(), source: 'server' });
+		getChunkedPlan.mockResolvedValue({ structural_plan: null });
+		getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-blocked', stage: 'assembly_blocked', doc_version: null,
+			failed_sections: ['practice'], blueprint_id: null, execution_started: false,
+			next_action: 'retry_failed_sections', error: 'Practice section failed.'
+		});
+
+		render(BuilderLessonPage);
+
+		expect(await screen.findByText('Generation needs recovery')).toBeTruthy();
+		expect(screen.getByText('Failed sections: practice')).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'Open recovery in Studio' }).getAttribute('href')).toBe(
+			'/studio?generation_id=gen-blocked'
+		);
+		expect(fetchV3Document).not.toHaveBeenCalled();
+	});
+
+	it('shows the runtime outcome message for a terminal review-needed draft', async () => {
+		pageState.url = new URL('http://localhost/builder/lesson-123?generation_id=gen-review');
+		loadBuilderLessonWithFallback.mockResolvedValueOnce({ document: lesson(), source: 'server' });
+		getChunkedPlan.mockResolvedValue({ structural_plan: null });
+		fetchV3Document.mockResolvedValue({
+			status: 'draft_needs_review', sections: [], progress: { stage: 'failed', sections: {} }
+		});
+		v3PackToBuilderDocument.mockReturnValue(lesson());
+
+		render(BuilderLessonPage);
+
+		expect(
+			await screen.findByText('Draft rendered, but major issues remain after review/repair.')
+		).toBeTruthy();
+	});
 });
