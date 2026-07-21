@@ -40,7 +40,8 @@ const mockStore = {
 	removeBlock: vi.fn(),
 	selectBlock: vi.fn(),
 	insertSectionsFromGeneration: vi.fn(),
-	refreshGenerationIssues: vi.fn()
+	refreshGenerationIssues: vi.fn(),
+	refreshGeneratedVisualUrls: vi.fn()
 };
 
 vi.mock('$app/environment', () => ({
@@ -117,6 +118,7 @@ describe('builder lesson route', () => {
 		partitionGenerationIssues.mockReturnValue({ sectionIssues: {}, documentLevelIssues: [] });
 		mockStore.insertSectionsFromGeneration.mockReset();
 		mockStore.refreshGenerationIssues.mockReset();
+		mockStore.refreshGeneratedVisualUrls.mockReset();
 		localStorage.clear();
 	});
 

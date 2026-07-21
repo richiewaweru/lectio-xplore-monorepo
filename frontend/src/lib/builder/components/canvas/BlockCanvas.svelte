@@ -10,8 +10,8 @@
 	import type { PendingPlanSection } from '$lib/builder/streaming/generation-stream';
 	import { issuesForSection } from '$lib/builder/issues';
 	import type { BuilderIssue } from '$lib/builder/issues';
-	import { regenerateGenerationVisual } from '$lib/builder/api/generation-patch';
-	import { getToken } from '$lib/stores/auth';
+	import type { V3VisualBlock } from '$lib/api/v3';
+	import BuilderVisualIssueAction from './BuilderVisualIssueAction.svelte';
 
 	let {
 		store,
@@ -19,7 +19,10 @@
 		sectionProgress = {},
 		generationTerminal = false,
 		documentLevelIssues = [],
-		onDismissDocumentIssue = () => {}
+		onDismissDocumentIssue = () => {},
+		generationId = null,
+		visualBlocks = [],
+		onVisualRegenerated = async () => {}
 	}: {
 		store: DocumentStore;
 		pendingPlan?: PendingPlanSection[];
@@ -27,6 +30,9 @@
 		generationTerminal?: boolean;
 		documentLevelIssues?: BuilderIssue[];
 		onDismissDocumentIssue?: (issueId: string) => void;
+		generationId?: string | null;
+		visualBlocks?: V3VisualBlock[];
+		onVisualRegenerated?: () => void | Promise<void>;
 	} = $props();
 
 	const readySectionCount = $derived(
@@ -53,8 +59,6 @@
 	let itemsBySection = $state<Record<string, BlockInstance[]>>({});
 	let pendingDndMerge: Record<string, BlockInstance[]> = {};
 	let rafFlush = 0;
-	let teacherNotes = $state<Record<string, string>>({});
-	let issueErrors = $state<Record<string, string>>({});
 
 	function targetBlockId(sectionId: string, requested?: string): string | undefined {
 		if (requested && store.document?.blocks[requested]) return requested;
@@ -70,20 +74,6 @@
 		store.selectBlock(id);
 		store.startEditing(id);
 		queueMicrotask(() => globalThis.document.querySelector(`[data-block-id="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
-	}
-
-	async function regenerateIssueVisual(sectionId: string, issue: ReturnType<typeof issuesForSection>[number]): Promise<void> {
-		const generationId = store.document?.source_generation_id;
-		const token = getToken();
-		if (!generationId || !issue.visual_id || !token) return;
-		try {
-			const result = await regenerateGenerationVisual(generationId, issue.visual_id, teacherNotes[issue.id] ?? '', token);
-			const id = targetBlockId(sectionId, issue.target_block_id);
-			if (id && typeof result.image_url === 'string') store.updateBlockField(id, 'image_url', result.image_url);
-			store.resolveIssue(sectionId, issue.id);
-		} catch (error) {
-			issueErrors = { ...issueErrors, [issue.id]: error instanceof Error ? error.message : 'Regeneration failed' };
-		}
 	}
 
 	$effect(() => {
@@ -193,16 +183,17 @@
 						<div class="mt-2 flex flex-wrap gap-2">
 							{#if issue.kind.includes('visual')}
 								<button type="button" class="rounded border border-amber-400 bg-white px-2 py-1 text-xs" onclick={() => editIssueBlock(section.id, issue.target_block_id)}>Swap image</button>
-								{#if issue.visual_id}
-									<textarea class="w-full rounded border border-amber-300 bg-white p-2 text-xs" rows="2" placeholder="Optional correction note" value={teacherNotes[issue.id] ?? ''} oninput={(event) => teacherNotes = { ...teacherNotes, [issue.id]: event.currentTarget.value }}></textarea>
-									<button type="button" class="rounded border border-amber-400 bg-white px-2 py-1 text-xs" onclick={() => void regenerateIssueVisual(section.id, issue)}>Regenerate image</button>
-								{/if}
+								<BuilderVisualIssueAction
+									{issue}
+									{generationId}
+									visual={visualBlocks.find((visual) => visual.visual_id === issue.visual_id)}
+									onRegenerated={onVisualRegenerated}
+								/>
 							{:else}
 								<button type="button" class="rounded border border-amber-400 bg-white px-2 py-1 text-xs" onclick={() => editIssueBlock(section.id, issue.target_block_id)}>Fix with AI</button>
 							{/if}
 							<button type="button" class="rounded border border-amber-400 bg-white px-2 py-1 text-xs" onclick={() => store.resolveIssue(section.id, issue.id)}>Dismiss</button>
 						</div>
-						{#if issueErrors[issue.id]}<p class="mt-2 text-xs text-red-700" role="alert">{issueErrors[issue.id]}</p>{/if}
 					</div>
 				{/each}
 

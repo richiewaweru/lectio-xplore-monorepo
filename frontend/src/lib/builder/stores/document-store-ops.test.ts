@@ -126,4 +126,28 @@ describe('document store block operations', () => {
 		expect((store.document!.sections[0] as IssueSection).meta?.issues).toEqual([]);
 		expect(store.document!.blocks['block-a1']?.content.body).toBe('A fraction is part of a whole.');
 	});
+
+	it('refreshes only unchanged generated visual URLs', () => {
+		const generated = sampleDocument();
+		generated.sections[0]!.block_ids.push('diagram-a');
+		generated.blocks['diagram-a'] = {
+			id: 'diagram-a', component_id: 'diagram-block', position: 2,
+			content: { image_url: 'https://old.example/image.png', caption: 'Teacher caption' }
+		};
+		const store = createDocumentStore();
+		store.loadDocument(generated);
+
+		expect(store.refreshGeneratedVisualUrls([{
+			sectionId: 'section-a', oldUrl: 'https://old.example/image.png', newUrl: 'https://new.example/image.png'
+		}])).toBe(true);
+		expect(store.document!.blocks['diagram-a']?.content).toEqual({
+			image_url: 'https://new.example/image.png', caption: 'Teacher caption'
+		});
+
+		store.updateBlockField('diagram-a', 'image_url', 'https://teacher.example/custom.png');
+		expect(store.refreshGeneratedVisualUrls([{
+			sectionId: 'section-a', oldUrl: 'https://new.example/image.png', newUrl: 'https://another.example/image.png'
+		}])).toBe(false);
+		expect(store.document!.blocks['diagram-a']?.content.image_url).toBe('https://teacher.example/custom.png');
+	});
 });

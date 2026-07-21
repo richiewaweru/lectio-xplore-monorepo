@@ -19,6 +19,13 @@ export type DndRowItem =
 	| BlockInstance
 	| { id: string; isPalette: true; component_id: string };
 
+export type GeneratedVisualUrlSwap = {
+	sectionId: string;
+	oldUrl: string;
+	newUrl: string;
+	frameIndex?: number | null;
+};
+
 export function isPaletteDndItem(item: DndRowItem): item is { id: string; isPalette: true; component_id: string } {
 	return 'isPalette' in item && item.isPalette === true;
 }
@@ -699,6 +706,51 @@ export function createDocumentStore() {
 		return true;
 	}
 
+	function refreshGeneratedVisualUrls(swaps: GeneratedVisualUrlSwap[]): boolean {
+		if (!document || swaps.length === 0) return false;
+		let changed = false;
+		const blocks = { ...document.blocks };
+		for (const swap of swaps) {
+			const section = document.sections.find(
+				(candidate) =>
+					swap.sectionId === candidate.id ||
+					swap.sectionId.startsWith(`${candidate.id}.`) ||
+					swap.sectionId.replace(/\d+$/, '') === candidate.id
+			);
+			if (!section) continue;
+			for (const blockId of section.block_ids) {
+				const block = blocks[blockId];
+				if (!block || !['diagram-block', 'diagram-series'].includes(block.component_id)) continue;
+				if (block.component_id === 'diagram-block' && block.content.image_url === swap.oldUrl) {
+					blocks[blockId] = { ...block, content: { ...block.content, image_url: swap.newUrl } };
+					changed = true;
+					continue;
+				}
+				if (block.component_id === 'diagram-series' && Array.isArray(block.content.diagrams)) {
+					let diagramsChanged = false;
+					const diagrams = block.content.diagrams.map((value, index) => {
+						if (
+							typeof value !== 'object' ||
+							value === null ||
+							(swap.frameIndex != null && swap.frameIndex !== index) ||
+							(value as Record<string, unknown>).image_url !== swap.oldUrl
+						) return value;
+						diagramsChanged = true;
+						return { ...(value as Record<string, unknown>), image_url: swap.newUrl };
+					});
+					if (diagramsChanged) {
+						blocks[blockId] = { ...block, content: { ...block.content, diagrams } };
+						changed = true;
+					}
+				}
+			}
+		}
+		if (!changed) return false;
+		document = { ...document, blocks, updated_at: new Date().toISOString() };
+		schedulePersist(document);
+		return true;
+	}
+
 	return {
 		get document() {
 			return document;
@@ -777,7 +829,8 @@ export function createDocumentStore() {
 		removeMedia,
 		getMediaUsage,
 		insertSectionsFromGeneration,
-		refreshGenerationIssues
+		refreshGenerationIssues,
+		refreshGeneratedVisualUrls
 	};
 }
 

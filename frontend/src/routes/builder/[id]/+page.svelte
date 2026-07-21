@@ -9,6 +9,7 @@
 	import { loadBuilderLessonWithFallback } from '$lib/builder/persistence/server-sync';
 	import { logout } from '$lib/stores/auth';
 	import { fetchV3Document, getChunkedPlan, getChunkedPlanStatus } from '$lib/api/v3';
+	import type { V3VisualBlock } from '$lib/api/v3';
 	import {
 		partitionGenerationIssues,
 		v3PackToBuilderDocument
@@ -41,6 +42,7 @@
 	let dismissedDocumentIssueIds = $state<string[]>([]);
 	let generationBlocker = $state<{ title: string; detail: string; failedSections: string[] } | null>(null);
 	let generationStatusLine = $state<string | null>(null);
+	let visualBlocks = $state<V3VisualBlock[]>([]);
 	let pollInterval: ReturnType<typeof setInterval> | null = null;
 	let pollInFlight = false;
 	let hasHydratedGeneration = false;
@@ -68,6 +70,21 @@
 		const next =
 			error instanceof Error ? `Generation update delayed: ${error.message}` : 'Generation update delayed.';
 		if (loadWarning !== next) loadWarning = next;
+	}
+
+	function visualUrlSwaps(nextVisuals: V3VisualBlock[]) {
+		const previousById = new Map(visualBlocks.map((visual) => [visual.visual_id, visual]));
+		return nextVisuals.flatMap((visual) => {
+			const previous = previousById.get(visual.visual_id);
+			return previous?.image_url && visual.image_url && previous.image_url !== visual.image_url
+				? [{
+					sectionId: visual.attaches_to,
+					oldUrl: previous.image_url,
+					newUrl: visual.image_url,
+					frameIndex: visual.frame_index
+				}]
+				: [];
+		});
 	}
 
 	async function pollGeneration(): Promise<void> {
@@ -118,6 +135,14 @@
 				const pack = rawPack as V3PackDocument;
 				const adapted = v3PackToBuilderDocument(pack, { routeGenerationId: generationId });
 				store.insertSectionsFromGeneration(adapted, pendingPlan);
+				const nextVisualBlocks = (pack.visual_blocks ?? []) as V3VisualBlock[];
+				const visualSwaps = visualUrlSwaps(nextVisualBlocks);
+				let preservedEditedVisual = false;
+				if (visualSwaps.length > 0 && !store.refreshGeneratedVisualUrls(visualSwaps)) {
+					loadWarning = 'A regenerated image is ready, but Builder preserved your locally edited image.';
+					preservedEditedVisual = true;
+				}
+				visualBlocks = nextVisualBlocks;
 				store.refreshGenerationIssues(adapted);
 				const partitioned = partitionGenerationIssues(
 					pack,
@@ -131,7 +156,7 @@
 				generationStatusLine = isBookletStatus(pack.status)
 					? getBookletStatusSummary(pack.status)
 					: null;
-				loadWarning = null;
+				if (!preservedEditedVisual) loadWarning = null;
 				hasHydratedGeneration = true;
 				if (typeof status.doc_version === 'string') lastDocVersion = status.doc_version;
 				if (generationTerminal) stopPolling();
@@ -324,5 +349,8 @@
 		{generationTerminal}
 		{documentLevelIssues}
 		onDismissDocumentIssue={dismissDocumentIssue}
+		{generationId}
+		{visualBlocks}
+		onVisualRegenerated={pollGeneration}
 	/>
 {/if}
