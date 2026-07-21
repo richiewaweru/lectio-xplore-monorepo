@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
 	appendAbsentGenerationSections,
+	isTerminalGenerationDocument,
 	isTerminalPackStatus
 } from './generation-stream';
 
@@ -108,5 +109,20 @@ describe('generation polling completion', () => {
 	it('recognizes terminal pack states', () => {
 		expect(isTerminalPackStatus('final_with_warnings')).toBe(true);
 		expect(isTerminalPackStatus('streaming_preview')).toBe(false);
+	});
+
+	it('recognizes terminal document progress without stopping an active snapshot', () => {
+		expect(
+			isTerminalGenerationDocument({
+				status: 'draft_needs_review',
+				progress: { stage: 'failed' }
+			})
+		).toBe(true);
+		expect(
+			isTerminalGenerationDocument({
+				status: 'streaming_preview',
+				progress: { stage: 'executing' }
+			})
+		).toBe(false);
 	});
 });

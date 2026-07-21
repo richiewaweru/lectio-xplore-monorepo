@@ -86,3 +86,11 @@ export function appendAbsentGenerationSections(
 export function isTerminalPackStatus(status: unknown): boolean {
 	return status === 'final_ready' || status === 'final_with_warnings' || status === 'failed_unusable';
 }
+
+export function isTerminalGenerationDocument(pack: {
+	status?: unknown;
+	progress?: { stage?: unknown };
+}): boolean {
+	const stage = pack.progress?.stage;
+	return isTerminalPackStatus(pack.status) || stage === 'completed' || stage === 'failed';
+}

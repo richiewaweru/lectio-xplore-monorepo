@@ -13,6 +13,11 @@ export type V3PackDocument = {
 	warnings?: string[];
 	section_diagnostics?: unknown[];
 	booklet_issues?: unknown[];
+	progress?: {
+		stage?: unknown;
+		sections?: Record<string, string>;
+		updated_at?: string;
+	};
 };
 
 export type AdaptV3PackOptions = {
