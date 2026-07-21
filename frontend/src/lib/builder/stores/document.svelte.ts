@@ -674,6 +674,31 @@ export function createDocumentStore() {
 		return true;
 	}
 
+	function refreshGenerationIssues(adapted: LessonDocument): boolean {
+		if (!document) return false;
+		const incomingBySection = new Map(adapted.sections.map((section) => [section.id, issuesForSection(section)]));
+		let changed = false;
+		const sections = document.sections.map((section) => {
+			const resolvedIds = new Set(
+				issuesForSection(section).filter((issue) => issue.resolved).map((issue) => issue.id)
+			);
+			const nextIssues = (incomingBySection.get(section.id) ?? []).map((issue) => ({
+				...issue,
+				resolved: resolvedIds.has(issue.id)
+			}));
+			if (JSON.stringify(nextIssues) === JSON.stringify(issuesForSection(section))) return section;
+			changed = true;
+			return {
+				...section,
+				meta: { ...(section as IssueSection).meta, issues: nextIssues }
+			} as IssueSection;
+		});
+		if (!changed) return false;
+		document = { ...document, sections, updated_at: new Date().toISOString() };
+		schedulePersist(document);
+		return true;
+	}
+
 	return {
 		get document() {
 			return document;
@@ -751,7 +776,8 @@ export function createDocumentStore() {
 		updateMedia,
 		removeMedia,
 		getMediaUsage,
-		insertSectionsFromGeneration
+		insertSectionsFromGeneration,
+		refreshGenerationIssues
 	};
 }
 

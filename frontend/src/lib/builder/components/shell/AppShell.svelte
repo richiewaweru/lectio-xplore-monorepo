@@ -14,19 +14,24 @@
 	import { saveVersionSnapshot } from '$lib/builder/persistence/idb-store';
 	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
 	import type { PendingPlanSection } from '$lib/builder/streaming/generation-stream';
+	import type { BuilderIssue } from '$lib/builder/issues';
 
 	let {
 		document,
 		store,
 		pendingPlan = [],
 		sectionProgress = {},
-		generationTerminal = false
+		generationTerminal = false,
+		documentLevelIssues = [],
+		onDismissDocumentIssue = () => {}
 	}: {
 		document: LessonDocument;
 		store: DocumentStore;
 		pendingPlan?: PendingPlanSection[];
 		sectionProgress?: Record<string, string>;
 		generationTerminal?: boolean;
+		documentLevelIssues?: BuilderIssue[];
+		onDismissDocumentIssue?: (issueId: string) => void;
 	} = $props();
 
 	const preset = $derived(basePresetMap[document.preset_id] ?? null);
@@ -134,12 +139,12 @@
 			{#if preset}
 				<LectioThemeSurface {preset}>
 					{#snippet children()}
-						<BlockCanvas {store} {pendingPlan} {sectionProgress} {generationTerminal} />
+						<BlockCanvas {store} {pendingPlan} {sectionProgress} {generationTerminal} {documentLevelIssues} {onDismissDocumentIssue} />
 					{/snippet}
 				</LectioThemeSurface>
 			{:else}
 				<p class="text-sm text-amber-800">Unknown preset "{document.preset_id}" - showing unstyled canvas.</p>
-				<BlockCanvas {store} {pendingPlan} {sectionProgress} {generationTerminal} />
+				<BlockCanvas {store} {pendingPlan} {sectionProgress} {generationTerminal} {documentLevelIssues} {onDismissDocumentIssue} />
 			{/if}
 		</main>
 		<CanvasOutline {store} />

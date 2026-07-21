@@ -9,6 +9,7 @@
 	import SectionDivider from './SectionDivider.svelte';
 	import type { PendingPlanSection } from '$lib/builder/streaming/generation-stream';
 	import { issuesForSection } from '$lib/builder/issues';
+	import type { BuilderIssue } from '$lib/builder/issues';
 	import { regenerateGenerationVisual } from '$lib/builder/api/generation-patch';
 	import { getToken } from '$lib/stores/auth';
 
@@ -16,12 +17,16 @@
 		store,
 		pendingPlan = [],
 		sectionProgress = {},
-		generationTerminal = false
+		generationTerminal = false,
+		documentLevelIssues = [],
+		onDismissDocumentIssue = () => {}
 	}: {
 		store: DocumentStore;
 		pendingPlan?: PendingPlanSection[];
 		sectionProgress?: Record<string, string>;
 		generationTerminal?: boolean;
+		documentLevelIssues?: BuilderIssue[];
+		onDismissDocumentIssue?: (issueId: string) => void;
 	} = $props();
 
 	const readySectionCount = $derived(
@@ -148,6 +153,16 @@
 </script>
 
 <div class="canvas mx-auto w-full max-w-4xl pb-16">
+	{#if documentLevelIssues.length > 0}
+		<section class="builder-print-hidden mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" aria-label="Lesson review issues">
+			{#each documentLevelIssues as issue (issue.id)}
+				<div class="flex items-start justify-between gap-3" data-unresolved-issue={issue.id}>
+					<div><p class="font-semibold">{issue.kind}</p><p class="mt-1">{issue.message}</p></div>
+					<button type="button" class="rounded border border-amber-400 bg-white px-2 py-1 text-xs" onclick={() => onDismissDocumentIssue(issue.id)}>Dismiss</button>
+				</div>
+			{/each}
+		</section>
+	{/if}
 	{#if pendingPlan.length > 0 && !generationTerminal}
 		<p class="builder-print-hidden mb-3 text-sm font-medium text-slate-600" role="status">
 			{readySectionCount}/{pendingPlan.length} sections ready
@@ -172,7 +187,7 @@
 					</span>
 				{/if}
 				{#each issuesForSection(section).filter((issue) => !issue.resolved) as issue (issue.id)}
-					<div class="mb-3 scroll-mt-24 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" data-unresolved-issue={issue.id}>
+					<div class="builder-print-hidden mb-3 scroll-mt-24 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" data-unresolved-issue={issue.id}>
 						<p class="font-semibold">{issue.severity.toUpperCase()} · {issue.kind}</p>
 						<p class="mt-1">{issue.message}</p>
 						<div class="mt-2 flex flex-wrap gap-2">

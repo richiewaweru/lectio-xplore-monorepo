@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '$lib/api/errors';
 
-const { pageState, goto, logout, loadBuilderLessonWithFallback, fetchV3Document, getChunkedPlan, getChunkedPlanStatus, v3PackToBuilderDocument } = vi.hoisted(() => ({
+const { pageState, goto, logout, loadBuilderLessonWithFallback, fetchV3Document, getChunkedPlan, getChunkedPlanStatus, v3PackToBuilderDocument, partitionGenerationIssues } = vi.hoisted(() => ({
 	pageState: {
 		params: { id: 'lesson-123' },
 		url: new URL('http://localhost/builder/lesson-123')
@@ -15,7 +15,8 @@ const { pageState, goto, logout, loadBuilderLessonWithFallback, fetchV3Document,
 	fetchV3Document: vi.fn(),
 	getChunkedPlan: vi.fn(),
 	getChunkedPlanStatus: vi.fn(),
-	v3PackToBuilderDocument: vi.fn()
+	v3PackToBuilderDocument: vi.fn(),
+	partitionGenerationIssues: vi.fn()
 }));
 
 const mockStore = {
@@ -38,11 +39,12 @@ const mockStore = {
 	getSectionIdForBlock: vi.fn(() => null),
 	removeBlock: vi.fn(),
 	selectBlock: vi.fn(),
-	insertSectionsFromGeneration: vi.fn()
+	insertSectionsFromGeneration: vi.fn(),
+	refreshGenerationIssues: vi.fn()
 };
 
 vi.mock('$app/environment', () => ({
-	browser: false
+	browser: true
 }));
 
 vi.mock('$app/state', () => ({
@@ -67,7 +69,10 @@ vi.mock('$lib/builder/stores/document.svelte', () => ({
 
 vi.mock('$lib/api/v3', () => ({ fetchV3Document, getChunkedPlan, getChunkedPlanStatus }));
 
-vi.mock('$lib/builder/adapters/from-generation', () => ({ v3PackToBuilderDocument }));
+vi.mock('$lib/builder/adapters/from-generation', () => ({
+	v3PackToBuilderDocument,
+	partitionGenerationIssues
+}));
 
 vi.mock('$lib/builder/components/shell/AppShell.svelte', async () => ({
 	default: (await import('./__fixtures__/MockAppShell.svelte')).default
@@ -108,7 +113,11 @@ describe('builder lesson route', () => {
 			failed_sections: [], blueprint_id: null, execution_started: true, next_action: 'wait_for_stage2'
 		});
 		v3PackToBuilderDocument.mockReset();
+		partitionGenerationIssues.mockReset();
+		partitionGenerationIssues.mockReturnValue({ sectionIssues: {}, documentLevelIssues: [] });
 		mockStore.insertSectionsFromGeneration.mockReset();
+		mockStore.refreshGenerationIssues.mockReset();
+		localStorage.clear();
 	});
 
 	afterEach(() => {
@@ -284,5 +293,25 @@ describe('builder lesson route', () => {
 		pollTick?.();
 		await waitFor(() => expect(fetchV3Document).toHaveBeenCalledTimes(2));
 		setIntervalSpy.mockRestore();
+	});
+
+	it('persists dismissal of document-level generation issues per lesson', async () => {
+		pageState.url = new URL('http://localhost/builder/lesson-123?generation_id=gen-issues');
+		loadBuilderLessonWithFallback.mockResolvedValueOnce({ document: lesson(), source: 'server' });
+		getChunkedPlan.mockResolvedValue({ structural_plan: null });
+		fetchV3Document.mockResolvedValue({ status: 'streaming_preview', sections: [] });
+		v3PackToBuilderDocument.mockReturnValue(lesson());
+		partitionGenerationIssues.mockReturnValue({
+			sectionIssues: {},
+			documentLevelIssues: [
+				{ id: 'anchor-1', severity: 'major', message: 'Anchor drifted.', kind: 'anchor_drift', resolved: false }
+			]
+		});
+
+		render(BuilderLessonPage);
+		await fireEvent.click(await screen.findByRole('button', { name: 'Dismiss lesson issue' }));
+
+		expect(localStorage.getItem('lectio:dismissed-doc-issues:lesson-123')).toBe('["anchor-1"]');
+		expect(screen.queryByText('Anchor drifted.')).toBeNull();
 	});
 });

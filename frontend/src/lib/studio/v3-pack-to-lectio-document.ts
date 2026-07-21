@@ -13,6 +13,16 @@ export type V3PackDocument = {
 	warnings?: string[];
 	section_diagnostics?: unknown[];
 	booklet_issues?: unknown[];
+	visual_blocks?: Array<{
+		visual_id: string;
+		attaches_to: string;
+		frame_index?: number | null;
+		mode: 'diagram' | 'diagram_series' | 'diagram_compare' | 'image' | 'simulation';
+		image_url?: string | null;
+		status?: 'ready' | 'failed' | 'omitted_quality' | 'flagged_quality';
+		qc_reasons?: string[];
+		qc_correction_hint?: string | null;
+	}>;
 	progress?: {
 		stage?: unknown;
 		sections?: Record<string, string>;

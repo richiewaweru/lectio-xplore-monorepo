@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { LessonDocument } from 'lectio';
 
+vi.mock('lectio', () => ({
+	getEmptyContent: () => ({}),
+	getTemplateById: () => null
+}));
+
 import { createDocumentStore } from './document.svelte';
+import type { IssueSection } from '$lib/builder/issues';
 
 vi.mock('$lib/builder/persistence/server-sync', () => ({
 	ensureBuilderSyncAdapterRegistered: vi.fn(),
@@ -98,5 +104,26 @@ describe('document store block operations', () => {
 		store.moveBlock('section-a', 'section-b', 'block-a2', 1);
 		expect(store.document!.sections[0]!.block_ids).toEqual(['block-a1']);
 		expect(store.document!.sections[1]!.block_ids).toEqual(['block-b1', 'block-a2']);
+	});
+
+	it('refreshes generation issues while preserving local resolutions', () => {
+		const store = createDocumentStore();
+		store.loadDocument(sampleDocument());
+		const adapted = sampleDocument();
+		adapted.sections[0] = {
+			...adapted.sections[0]!,
+			meta: { issues: [{ id: 'issue-1', severity: 'major', message: 'Review this.', kind: 'clarity', resolved: false }] }
+		} as IssueSection;
+
+		expect(store.refreshGenerationIssues(adapted)).toBe(true);
+		expect(((store.document!.sections[0] as IssueSection).meta?.issues ?? [])[0]?.resolved).toBe(false);
+		store.resolveIssue('section-a', 'issue-1');
+		expect(store.refreshGenerationIssues(adapted)).toBe(false);
+		expect(((store.document!.sections[0] as IssueSection).meta?.issues ?? [])[0]?.resolved).toBe(true);
+
+		adapted.sections[0] = { ...adapted.sections[0]!, meta: { issues: [] } } as IssueSection;
+		expect(store.refreshGenerationIssues(adapted)).toBe(true);
+		expect((store.document!.sections[0] as IssueSection).meta?.issues).toEqual([]);
+		expect(store.document!.blocks['block-a1']?.content.body).toBe('A fraction is part of a whole.');
 	});
 });

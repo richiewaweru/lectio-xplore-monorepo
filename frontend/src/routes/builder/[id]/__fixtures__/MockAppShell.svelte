@@ -3,6 +3,8 @@
 	export let pendingPlan: Array<{ id: string; title: string }> = [];
 	export let sectionProgress: Record<string, string> = {};
 	export let generationTerminal = false;
+	export let documentLevelIssues: Array<{ id: string; message: string }> = [];
+	export let onDismissDocumentIssue: (issueId: string) => void = () => {};
 </script>
 
 <div data-testid="mock-app-shell">Builder shell: {document?.title ?? 'Untitled lesson'}</div>
@@ -12,3 +14,6 @@
 		<div data-testid={`mock-pending-${section.id}`}>{section.title} — Generating…</div>
 	{/each}
 {/if}
+{#each documentLevelIssues as issue (issue.id)}
+	<div>{issue.message}<button type="button" onclick={() => onDismissDocumentIssue(issue.id)}>Dismiss lesson issue</button></div>
+{/each}

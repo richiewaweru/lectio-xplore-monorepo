@@ -13,16 +13,56 @@ function record(value: unknown): Record<string, unknown> | null {
 		? (value as Record<string, unknown>) : null;
 }
 
-function diagnosticIssues(pack: V3PackDocument, sectionId: string): BuilderIssue[] {
-	const issues: BuilderIssue[] = [];
+export type GenerationIssuePartition = {
+	sectionIssues: Record<string, BuilderIssue[]>;
+	documentLevelIssues: BuilderIssue[];
+};
+
+function targetMatchesSection(target: string, sectionId: string): boolean {
+	return (
+		target === sectionId ||
+		target.startsWith(`${sectionId}.`) ||
+		target.replace(/\d+$/, '') === sectionId
+	);
+}
+
+function visualIdForIssue(item: Record<string, unknown>): string | undefined {
+	if (typeof item.visual_id === 'string' && item.visual_id) return item.visual_id;
+	const repairTarget = typeof item.repair_target_id === 'string' ? item.repair_target_id : '';
+	return repairTarget.startsWith('visual:') ? repairTarget.slice('visual:'.length) : undefined;
+}
+
+function bookletIssue(item: Record<string, unknown>, target: string): BuilderIssue {
+	const visualId = visualIdForIssue(item);
+	const category = String(item.category ?? item.kind ?? 'generation_issue');
+	const message = String(item.message ?? 'Generation issue requires review.');
+	return {
+		id: String(item.issue_id ?? `booklet-issue:${category}:${target || 'document'}:${message}`),
+		severity: String(item.severity ?? 'major'),
+		message,
+		kind: category,
+		target_block_id: typeof item.target_block_id === 'string' ? item.target_block_id : undefined,
+		component_ref: typeof item.component_ref === 'string' ? item.component_ref : undefined,
+		visual_id: visualId,
+		resolved: false
+	};
+}
+
+export function partitionGenerationIssues(
+	pack: V3PackDocument,
+	sectionIds: string[]
+): GenerationIssuePartition {
+	const sectionIssues = Object.fromEntries(sectionIds.map((sectionId) => [sectionId, [] as BuilderIssue[]]));
+	const documentLevelIssues: BuilderIssue[] = [];
 	for (const [index, value] of (pack.section_diagnostics ?? []).entries()) {
 		const item = record(value);
-		if (!item || item.section_id !== sectionId || item.status === 'complete') continue;
+		const sectionId = typeof item?.section_id === 'string' ? item.section_id : '';
+		if (!item || !sectionIssues[sectionId] || item.status === 'complete') continue;
 		const missingComponents = Array.isArray(item.missing_components) ? item.missing_components : [];
 		const missingVisuals = Array.isArray(item.missing_visuals) ? item.missing_visuals : [];
 		const warnings = Array.isArray(item.warnings) ? item.warnings.filter((v): v is string => typeof v === 'string') : [];
 		const kind = missingVisuals.length ? 'visual_missing' : 'component_missing';
-		issues.push({
+		sectionIssues[sectionId].push({
 			id: `section-diagnostic:${sectionId}:${index}`,
 			severity: item.renderable === false ? 'blocking' : 'major',
 			message: warnings.join(' ') || `Section ${sectionId} is incomplete.`,
@@ -36,19 +76,18 @@ function diagnosticIssues(pack: V3PackDocument, sectionId: string): BuilderIssue
 		const item = record(value);
 		if (!item) continue;
 		const target = String(item.section_id ?? item.generated_ref ?? '');
-		if (target !== sectionId) continue;
-		issues.push({
-			id: String(item.issue_id ?? `booklet-issue:${sectionId}:${index}`),
-			severity: String(item.severity ?? 'major'),
-			message: String(item.message ?? 'Generation issue requires review.'),
-			kind: String(item.kind ?? item.category ?? 'generation_issue'),
-			target_block_id: typeof item.target_block_id === 'string' ? item.target_block_id : undefined,
-			component_ref: typeof item.component_ref === 'string' ? item.component_ref : undefined,
-			visual_id: typeof item.visual_id === 'string' ? item.visual_id : undefined,
-			resolved: false
-		});
+		const visualId = visualIdForIssue(item);
+		const visualTarget = visualId
+			? pack.visual_blocks?.find((visual) => visual.visual_id === visualId)?.attaches_to ?? ''
+			: '';
+		const sectionId = sectionIds.find(
+			(id) => targetMatchesSection(target, id) || targetMatchesSection(visualTarget, id)
+		);
+		const issue = bookletIssue(item, target || visualTarget || `unkeyed-${index}`);
+		if (sectionId) sectionIssues[sectionId].push(issue);
+		else documentLevelIssues.push(issue);
 	}
-	return issues;
+	return { sectionIssues, documentLevelIssues };
 }
 
 export function v3PackToBuilderDocument(
@@ -57,10 +96,11 @@ export function v3PackToBuilderDocument(
 ): LessonDocument {
 	const generationDoc = adaptV3PackToLectioDocument(pack, options);
 	const lesson = exportToLessonDocument(generationDoc);
+	const { sectionIssues } = partitionGenerationIssues(pack, lesson.sections.map((section) => section.id));
 	return {
 		...lesson,
 		sections: lesson.sections.map((section) => {
-			const issues = diagnosticIssues(pack, section.id);
+			const issues = sectionIssues[section.id] ?? [];
 			return issues.length ? ({ ...section, meta: { issues } } as IssueSection) : section;
 		})
 	};

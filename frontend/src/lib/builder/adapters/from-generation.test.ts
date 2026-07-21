@@ -1,6 +1,25 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { v3PackToBuilderDocument } from './from-generation';
+vi.mock('lectio', () => ({
+	fromSectionContents: (
+		sections: Array<Record<string, unknown>>,
+		metadata: { title: string; subject: string; preset_id: string; source_generation_id?: string }
+	) => {
+		const blocks: Record<string, Record<string, unknown>> = {};
+		const documentSections = sections.map((section, index) => {
+			const blockId = `header-${index}`;
+			blocks[blockId] = { id: blockId, component_id: 'section-header', content: section.header ?? {}, position: 0 };
+			return { id: section.section_id, title: String(section.section_id), template_id: 'guided-concept-path', position: index, block_ids: [blockId] };
+		});
+		return {
+			version: 1, id: 'lesson', title: metadata.title, subject: metadata.subject,
+			preset_id: metadata.preset_id, source: 'generated', source_generation_id: metadata.source_generation_id,
+			sections: documentSections, blocks, media: {}, created_at: 'now', updated_at: 'now'
+		};
+	}
+}));
+
+import { partitionGenerationIssues, v3PackToBuilderDocument } from './from-generation';
 
 describe('v3PackToBuilderDocument', () => {
 	it('adapts a v3 pack into a builder lesson document', () => {
@@ -44,6 +63,41 @@ describe('v3PackToBuilderDocument', () => {
 		const section = lesson.sections[0] as typeof lesson.sections[0] & { meta?: { issues?: Array<Record<string, unknown>> } };
 		expect(section.meta?.issues).toEqual([
 			expect.objectContaining({ severity: 'major', kind: 'component_missing', message: 'Hook output is missing.', component_ref: 'hook-card@orient', resolved: false })
+		]);
+	});
+
+	it('matches dotted and numeric booklet issue targets to sections', () => {
+		const partitioned = partitionGenerationIssues(
+			{
+				booklet_issues: [
+					{ issue_id: 'close-issue', generated_ref: 'close.practice', category: 'clarity', message: 'Clarify practice.' },
+					{ issue_id: 'build-issue', section_id: 'build1', category: 'visual_quality_flagged', message: 'Improve image.' }
+				]
+			},
+			['close', 'build']
+		);
+
+		expect(partitioned.sectionIssues.close?.[0]?.id).toBe('close-issue');
+		expect(partitioned.sectionIssues.build?.[0]?.id).toBe('build-issue');
+	});
+
+	it('uses visual attachment targets and keeps unkeyed issues at document level', () => {
+		const partitioned = partitionGenerationIssues(
+			{
+				visual_blocks: [{ visual_id: 'vis-1', attaches_to: 'practice', mode: 'diagram' }],
+				booklet_issues: [
+					{ issue_id: 'visual-issue', repair_target_id: 'visual:vis-1', category: 'visual_quality_flagged', message: 'Improve image.' },
+					{ issue_id: 'anchor-issue', category: 'anchor_drift', message: 'Anchor drifted.' }
+				]
+			},
+			['practice']
+		);
+
+		expect(partitioned.sectionIssues.practice?.[0]).toEqual(
+			expect.objectContaining({ id: 'visual-issue', visual_id: 'vis-1' })
+		);
+		expect(partitioned.documentLevelIssues).toEqual([
+			expect.objectContaining({ id: 'anchor-issue', kind: 'anchor_drift' })
 		]);
 	});
 });

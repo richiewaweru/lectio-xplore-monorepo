@@ -9,7 +9,11 @@
 	import { loadBuilderLessonWithFallback } from '$lib/builder/persistence/server-sync';
 	import { logout } from '$lib/stores/auth';
 	import { fetchV3Document, getChunkedPlan, getChunkedPlanStatus } from '$lib/api/v3';
-	import { v3PackToBuilderDocument } from '$lib/builder/adapters/from-generation';
+	import {
+		partitionGenerationIssues,
+		v3PackToBuilderDocument
+	} from '$lib/builder/adapters/from-generation';
+	import type { BuilderIssue } from '$lib/builder/issues';
 	import type { V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
 	import {
 		isTerminalGenerationDocument,
@@ -32,6 +36,8 @@
 	let pendingPlan = $state<PendingPlanSection[]>([]);
 	let sectionProgress = $state<Record<string, string>>({});
 	let generationTerminal = $state(false);
+	let documentLevelIssues = $state<BuilderIssue[]>([]);
+	let dismissedDocumentIssueIds = $state<string[]>([]);
 	let pollInterval: ReturnType<typeof setInterval> | null = null;
 	let pollInFlight = false;
 	let hasHydratedGeneration = false;
@@ -39,6 +45,16 @@
 
 	const id = $derived(page.params.id);
 	const generationId = $derived(page.url.searchParams.get('generation_id'));
+	const dismissedIssuesKey = $derived(id ? `lectio:dismissed-doc-issues:${id}` : '');
+
+	function dismissDocumentIssue(issueId: string): void {
+		if (dismissedDocumentIssueIds.includes(issueId)) return;
+		dismissedDocumentIssueIds = [...dismissedDocumentIssueIds, issueId];
+		documentLevelIssues = documentLevelIssues.filter((issue) => issue.id !== issueId);
+		if (browser && dismissedIssuesKey) {
+			localStorage.setItem(dismissedIssuesKey, JSON.stringify(dismissedDocumentIssueIds));
+		}
+	}
 
 	function stopPolling(): void {
 		if (pollInterval !== null) clearInterval(pollInterval);
@@ -66,6 +82,14 @@
 				const pack = rawPack as V3PackDocument;
 				const adapted = v3PackToBuilderDocument(pack, { routeGenerationId: generationId });
 				store.insertSectionsFromGeneration(adapted, pendingPlan);
+				store.refreshGenerationIssues(adapted);
+				const partitioned = partitionGenerationIssues(
+					pack,
+					adapted.sections.map((section) => section.id)
+				);
+				documentLevelIssues = partitioned.documentLevelIssues.filter(
+					(issue) => !dismissedDocumentIssueIds.includes(issue.id)
+				);
 				sectionProgress = { ...(pack.progress?.sections ?? {}) };
 				generationTerminal = isTerminalGenerationDocument(pack) || chunkedTerminal;
 				hasHydratedGeneration = true;
@@ -96,6 +120,16 @@
 				detail: 'This lesson id is missing or invalid.'
 			};
 			return;
+		}
+		if (browser && dismissedIssuesKey) {
+			try {
+				const stored = JSON.parse(localStorage.getItem(dismissedIssuesKey) ?? '[]');
+				dismissedDocumentIssueIds = Array.isArray(stored)
+					? stored.filter((value): value is string => typeof value === 'string')
+					: [];
+			} catch {
+				dismissedDocumentIssueIds = [];
+			}
 		}
 		void loadBuilderLessonWithFallback(id)
 			.then(({ document: doc, source }) => {
@@ -229,5 +263,13 @@
 			{loadWarning}
 		</p>
 	{/if}
-	<AppShell document={store.document} {store} {pendingPlan} {sectionProgress} {generationTerminal} />
+	<AppShell
+		document={store.document}
+		{store}
+		{pendingPlan}
+		{sectionProgress}
+		{generationTerminal}
+		{documentLevelIssues}
+		onDismissDocumentIssue={dismissDocumentIssue}
+	/>
 {/if}
