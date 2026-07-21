@@ -30,6 +30,8 @@
 	let loadWarning = $state<string | null>(null);
 	let loadError = $state<{ status: number; title: string; detail: string } | null>(null);
 	let pendingPlan = $state<PendingPlanSection[]>([]);
+	let sectionProgress = $state<Record<string, string>>({});
+	let generationTerminal = $state(false);
 	let pollInterval: ReturnType<typeof setInterval> | null = null;
 	let pollInFlight = false;
 	let hasHydratedGeneration = false;
@@ -64,9 +66,11 @@
 				const pack = rawPack as V3PackDocument;
 				const adapted = v3PackToBuilderDocument(pack, { routeGenerationId: generationId });
 				store.insertSectionsFromGeneration(adapted, pendingPlan);
+				sectionProgress = { ...(pack.progress?.sections ?? {}) };
+				generationTerminal = isTerminalGenerationDocument(pack) || chunkedTerminal;
 				hasHydratedGeneration = true;
 				if (typeof status.doc_version === 'string') lastDocVersion = status.doc_version;
-				if (isTerminalGenerationDocument(pack) || chunkedTerminal) stopPolling();
+				if (generationTerminal) stopPolling();
 			}
 		} catch (error) {
 			loadWarning = error instanceof Error ? `Generation update delayed: ${error.message}` : 'Generation update delayed.';
@@ -225,5 +229,5 @@
 			{loadWarning}
 		</p>
 	{/if}
-	<AppShell document={store.document} {store} {pendingPlan} />
+	<AppShell document={store.document} {store} {pendingPlan} {sectionProgress} {generationTerminal} />
 {/if}

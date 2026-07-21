@@ -174,7 +174,7 @@ describe('builder lesson route', () => {
 		const pollTimer = setIntervalSpy.mock.results[pollTimerIndex]?.value;
 		expect(pollTimerIndex).toBeGreaterThanOrEqual(0);
 		await waitFor(() => expect(clearIntervalSpy).toHaveBeenCalledWith(pollTimer));
-		expect(await screen.findByTestId('mock-pending-s1')).toBeTruthy();
+		expect(screen.queryByTestId('mock-pending-s1')).toBeNull();
 		setIntervalSpy.mockRestore();
 		clearIntervalSpy.mockRestore();
 	});
@@ -196,6 +196,34 @@ describe('builder lesson route', () => {
 		expect(await screen.findByTestId('mock-pending-s2')).toBeTruthy();
 		expect(mockStore.document?.sections).toEqual([]);
 		expect(mockStore.insertSectionsFromGeneration).not.toHaveBeenCalled();
+	});
+
+	it('shows section progress and pending skeletons while generation is active', async () => {
+		pageState.url = new URL('http://localhost/builder/lesson-123?generation_id=gen-progress');
+		loadBuilderLessonWithFallback.mockResolvedValueOnce({
+			document: { ...lesson(), sections: [{ id: 's1', title: 'One', position: 0, block_ids: [] }] },
+			source: 'server'
+		});
+		getChunkedPlan.mockResolvedValueOnce({
+			structural_plan: {
+				lesson_mode: 'first_exposure', lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'all' }, question_plan: [],
+				sections: [
+					{ id: 's1', title: 'One' }, { id: 's2', title: 'Two' }, { id: 's3', title: 'Three' }
+				]
+			}
+		});
+		fetchV3Document.mockResolvedValueOnce({
+			status: 'streaming_preview', sections: [],
+			progress: { stage: 'writing', sections: { s1: 'ready', s2: 'writing', s3: 'pending' } }
+		});
+		v3PackToBuilderDocument.mockReturnValueOnce(lesson());
+
+		render(BuilderLessonPage);
+
+		expect(await screen.findByText('1/3 sections ready')).toBeTruthy();
+		expect(screen.getByTestId('mock-pending-s2')).toBeTruthy();
+		expect(screen.getByTestId('mock-pending-s3')).toBeTruthy();
 	});
 
 	it('keeps polling when a streaming snapshot already contains every planned section', async () => {

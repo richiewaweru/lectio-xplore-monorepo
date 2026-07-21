@@ -15,7 +15,19 @@
 	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
 	import type { PendingPlanSection } from '$lib/builder/streaming/generation-stream';
 
-	let { document, store, pendingPlan = [] }: { document: LessonDocument; store: DocumentStore; pendingPlan?: PendingPlanSection[] } = $props();
+	let {
+		document,
+		store,
+		pendingPlan = [],
+		sectionProgress = {},
+		generationTerminal = false
+	}: {
+		document: LessonDocument;
+		store: DocumentStore;
+		pendingPlan?: PendingPlanSection[];
+		sectionProgress?: Record<string, string>;
+		generationTerminal?: boolean;
+	} = $props();
 
 	const preset = $derived(basePresetMap[document.preset_id] ?? null);
 
@@ -122,12 +134,12 @@
 			{#if preset}
 				<LectioThemeSurface {preset}>
 					{#snippet children()}
-						<BlockCanvas {store} {pendingPlan} />
+						<BlockCanvas {store} {pendingPlan} {sectionProgress} {generationTerminal} />
 					{/snippet}
 				</LectioThemeSurface>
 			{:else}
 				<p class="text-sm text-amber-800">Unknown preset "{document.preset_id}" - showing unstyled canvas.</p>
-				<BlockCanvas {store} {pendingPlan} />
+				<BlockCanvas {store} {pendingPlan} {sectionProgress} {generationTerminal} />
 			{/if}
 		</main>
 		<CanvasOutline {store} />

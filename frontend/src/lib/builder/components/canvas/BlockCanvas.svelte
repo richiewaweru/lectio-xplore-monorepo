@@ -12,13 +12,35 @@
 	import { regenerateGenerationVisual } from '$lib/builder/api/generation-patch';
 	import { getToken } from '$lib/stores/auth';
 
-	let { store, pendingPlan = [] }: { store: DocumentStore; pendingPlan?: PendingPlanSection[] } = $props();
+	let {
+		store,
+		pendingPlan = [],
+		sectionProgress = {},
+		generationTerminal = false
+	}: {
+		store: DocumentStore;
+		pendingPlan?: PendingPlanSection[];
+		sectionProgress?: Record<string, string>;
+		generationTerminal?: boolean;
+	} = $props();
+
+	const readySectionCount = $derived(
+		pendingPlan.filter((section) => sectionProgress[section.id] === 'ready').length
+	);
+
+	function progressLabel(status: string | undefined): string {
+		if (status === 'ready') return 'ready';
+		if (status === 'failed') return 'failed';
+		return 'writing…';
+	}
 
 	const canvasRows = $derived.by(() => {
 		const realIds = new Set(store.orderedSections.map((section) => section.id));
 		const rows = [
 			...store.orderedSections.map((section) => ({ kind: 'section' as const, id: section.id, position: section.position, section })),
-			...pendingPlan.filter((section) => !realIds.has(section.id)).map((section) => ({ kind: 'pending' as const, ...section }))
+			...pendingPlan
+				.filter((section) => !generationTerminal && !realIds.has(section.id))
+				.map((section) => ({ kind: 'pending' as const, ...section }))
 		];
 		return rows.sort((left, right) => left.position - right.position);
 	});
@@ -126,10 +148,15 @@
 </script>
 
 <div class="canvas mx-auto w-full max-w-4xl pb-16">
+	{#if pendingPlan.length > 0 && !generationTerminal}
+		<p class="builder-print-hidden mb-3 text-sm font-medium text-slate-600" role="status">
+			{readySectionCount}/{pendingPlan.length} sections ready
+		</p>
+	{/if}
 	<div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-lg shadow-slate-300/25 sm:px-6 sm:py-6">
 		{#each canvasRows as row, i (row.id)}
 			{#if row.kind === 'pending'}
-				<section class="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4" data-testid={`pending-section-${row.id}`}>
+				<section class="builder-print-hidden mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4" data-testid={`pending-section-${row.id}`}>
 					<h2 class="text-base font-semibold text-slate-700">{row.title}</h2>
 					<div class="mt-3 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-5 text-sm text-slate-500">
 						Generating…
@@ -139,6 +166,11 @@
 				{@const section = row.section}
 				<AddSectionControl {store} insertIndex={store.orderedSections.indexOf(section)} />
 				<SectionDivider {section} {store} isFirstSection={i === 0} />
+				{#if pendingPlan.some((planned) => planned.id === section.id) && !generationTerminal}
+					<span class="builder-print-hidden mb-2 inline-flex rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-600" data-testid={`section-progress-${section.id}`}>
+						{progressLabel(sectionProgress[section.id])}
+					</span>
+				{/if}
 				{#each issuesForSection(section).filter((issue) => !issue.resolved) as issue (issue.id)}
 					<div class="mb-3 scroll-mt-24 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" data-unresolved-issue={issue.id}>
 						<p class="font-semibold">{issue.severity.toUpperCase()} · {issue.kind}</p>
