@@ -1405,7 +1405,9 @@ describe('studio chunked URL resume', () => {
 			section_diagnostics: [],
 			booklet_issues: []
 		};
-		builderMocks.v3PackToBuilderDocument.mockReturnValue({
+		builderMocks.v3PackToBuilderDocument.mockImplementation((pack) => {
+			structuredClone(pack);
+			return {
 			id: 'lesson-doc-1',
 			title: 'Quadratic review',
 			subject: 'Mathematics',
@@ -1417,6 +1419,7 @@ describe('studio chunked URL resume', () => {
 			source: 'generated',
 			created_at: '2026-06-22T00:00:00Z',
 			updated_at: '2026-06-22T00:00:00Z'
+			};
 		});
 		builderMocks.createBuilderLesson.mockResolvedValue({
 			id: 'builder-1',

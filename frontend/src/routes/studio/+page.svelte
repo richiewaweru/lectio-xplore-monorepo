@@ -854,7 +854,8 @@
 		builderLoading = true;
 		builderError = null;
 		try {
-			const lesson = v3PackToBuilderDocument(pack as V3PackDocument, {
+			const packSnapshot = $state.snapshot(pack) as V3PackDocument;
+			const lesson = v3PackToBuilderDocument(packSnapshot, {
 				routeGenerationId: generationId
 			});
 			const created = await createBuilderLesson({
