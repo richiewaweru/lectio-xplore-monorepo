@@ -1,5 +1,12 @@
 import { getEditSchema, getEmptyContent } from 'lectio';
 
+const MANUAL_ONLY_COMPONENT_IDS = new Set(['image-block', 'video-embed']);
+
+/** Mirrors the backend guard for media blocks that require teacher-provided assets. */
+export function isAiGeneratableComponent(componentId: string): boolean {
+	return !MANUAL_ONLY_COMPONENT_IDS.has(componentId) && getEditSchema(componentId) !== null;
+}
+
 /** True when block content is not the default empty shape (shows Improve in AI UI). */
 export function blockHasDistinctContent(
 	componentId: string,

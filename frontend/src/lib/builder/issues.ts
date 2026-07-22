@@ -8,7 +8,16 @@ export type BuilderIssue = {
 	target_block_id?: string;
 	component_ref?: string;
 	visual_id?: string;
+	repair_target_id?: string;
 	resolved: boolean;
+};
+
+export type BlockAiRepairRequest = {
+	requestKey: string;
+	issueId: string;
+	sectionId: string;
+	targetBlockId: string;
+	initialInstruction: string;
 };
 
 export type IssueSection = DocumentSection & { meta?: { issues?: BuilderIssue[] } };

@@ -6,11 +6,13 @@
 		issue,
 		generationId,
 		visual,
+		onResolved = () => {},
 		onRegenerated = async () => {}
 	}: {
 		issue: BuilderIssue;
 		generationId: string | null;
 		visual?: V3VisualBlock;
+		onResolved?: (issue: BuilderIssue) => void;
 		onRegenerated?: () => void | Promise<void>;
 	} = $props();
 
@@ -29,6 +31,7 @@
 				visual_id: visual.visual_id,
 				teacher_hint: hint
 			});
+			onResolved(issue);
 			await onRegenerated();
 		} catch (reason) {
 			error = reason instanceof Error ? reason.message : 'Could not regenerate this image.';

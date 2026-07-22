@@ -13,7 +13,7 @@ vi.mock('lectio', () => ({
 }));
 
 import { getEditSchema } from 'lectio';
-import { mergeAiContentWithEditableFields } from './ai-block-utils';
+import { isAiGeneratableComponent, mergeAiContentWithEditableFields } from './ai-block-utils';
 
 describe('mergeAiContentWithEditableFields', () => {
 	it('updates only non-hidden edit-schema fields', () => {
@@ -43,5 +43,11 @@ describe('mergeAiContentWithEditableFields', () => {
 		const current = { body: 'Current body', internal_note: 'Keep' };
 		const generated = { body: 'AI body' };
 		expect(mergeAiContentWithEditableFields('unknown-component', current, generated)).toEqual(current);
+	});
+
+	it('excludes teacher-provided media components from block AI', () => {
+		expect(isAiGeneratableComponent('image-block')).toBe(false);
+		expect(isAiGeneratableComponent('video-embed')).toBe(false);
+		expect(isAiGeneratableComponent('explanation-block')).toBe(true);
 	});
 });

@@ -563,6 +563,7 @@ async def test_v3_visual_regenerate_replaces_visual_block_and_section_diagram() 
         alt_text="old alt",
         source_work_order_id=order.work_order_id,
         component_id=order.visual.component_id,
+        qc_reasons=["labels are unreadable", "equation is incomplete"],
     )
     await _upsert_generation_row(
         generation_id=generation_id,
@@ -605,6 +606,10 @@ async def test_v3_visual_regenerate_replaces_visual_block_and_section_diagram() 
         await emit("visual_ready", {})
         assert kwargs["bypass_cache_read"] is True
         assert regenerated_order.work_order_id == order.work_order_id
+        assert order.visual.purpose in regenerated_order.visual.purpose
+        assert "Quality review reasons:" in regenerated_order.visual.purpose
+        assert "labels are unreadable" in regenerated_order.visual.purpose
+        assert "equation is incomplete" in regenerated_order.visual.purpose
         assert "Correction: make it cleaner" in regenerated_order.visual.purpose
         return [
             GeneratedVisualBlock(

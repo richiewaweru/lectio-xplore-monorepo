@@ -44,6 +44,8 @@ function bookletIssue(item: Record<string, unknown>, target: string): BuilderIss
 		target_block_id: typeof item.target_block_id === 'string' ? item.target_block_id : undefined,
 		component_ref: typeof item.component_ref === 'string' ? item.component_ref : undefined,
 		visual_id: visualId,
+		repair_target_id:
+			typeof item.repair_target_id === 'string' ? item.repair_target_id : undefined,
 		resolved: false
 	};
 }

@@ -2090,12 +2090,24 @@ def _patch_section_component(document_json: dict[str, Any], block: GeneratedComp
     raise HTTPException(status_code=404, detail="Component section not found")
 
 
-def _apply_teacher_hint(order: VisualGeneratorWorkOrder, teacher_hint: str | None) -> VisualGeneratorWorkOrder:
+def _apply_visual_repair_context(
+    order: VisualGeneratorWorkOrder,
+    target: GeneratedVisualBlock,
+    teacher_hint: str | None,
+) -> VisualGeneratorWorkOrder:
     hint = (teacher_hint or "").strip()
-    if not hint:
+    qc_reasons = [reason.strip() for reason in target.qc_reasons if reason.strip()]
+    if not hint and not qc_reasons:
         return order
     cloned = order.model_copy(deep=True)
-    cloned.visual.purpose = f"{cloned.visual.purpose}\n\nCorrection: {hint}"
+    additions: list[str] = []
+    if qc_reasons:
+        additions.append(
+            "Quality review reasons:\n" + "\n".join(f"- {reason}" for reason in qc_reasons)
+        )
+    if hint:
+        additions.append(f"Correction: {hint}")
+    cloned.visual.purpose = f"{cloned.visual.purpose}\n\n" + "\n\n".join(additions)
     return cloned
 
 
@@ -2266,7 +2278,11 @@ async def regenerate_v3_visual(
             target=target,
             generation_id=generation_id,
         )
-        order = _apply_teacher_hint(order, body.teacher_hint if body is not None else None)
+        order = _apply_visual_repair_context(
+            order,
+            target,
+            body.teacher_hint if body is not None else None,
+        )
 
         async def emit_noop(_event_type: str, _payload: dict[str, Any]) -> None:
             return None

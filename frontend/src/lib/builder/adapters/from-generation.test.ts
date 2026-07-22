@@ -96,8 +96,26 @@ describe('v3PackToBuilderDocument', () => {
 		expect(partitioned.sectionIssues.practice?.[0]).toEqual(
 			expect.objectContaining({ id: 'visual-issue', visual_id: 'vis-1' })
 		);
+		expect(partitioned.sectionIssues.practice?.[0]?.repair_target_id).toBe('visual:vis-1');
 		expect(partitioned.documentLevelIssues).toEqual([
 			expect.objectContaining({ id: 'anchor-issue', kind: 'anchor_drift' })
 		]);
+	});
+
+	it('preserves text repair targets from generation review issues', () => {
+		const partitioned = partitionGenerationIssues(
+			{
+				booklet_issues: [{
+					issue_id: 'practice-issue', section_id: 'practice',
+					category: 'missing_planned_content', message: 'Expected two questions.',
+					repair_target_id: 'questions:practice'
+				}]
+			},
+			['practice']
+		);
+
+		expect(partitioned.sectionIssues.practice?.[0]).toEqual(
+			expect.objectContaining({ repair_target_id: 'questions:practice' })
+		);
 	});
 });

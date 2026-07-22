@@ -1,5 +1,40 @@
 # Lesson Builder Merge Progress
 
+## Builder Block-Level AI — Generate & Repair — 2026-07-22
+
+**Classification**: major
+**Subsystems**: backend + frontend
+
+### Progress
+
+- [x] Requirements, project rules, and current implementation reviewed
+- [x] Repair mechanism locked to the existing Builder block writer
+- [x] Source generation link and server-side plan context verified
+- [x] Added deterministic text repair targeting and manual-only eligibility
+- [x] Wired issue-prefilled repair through the existing AI panel
+- [x] Added visual QC reasons to regeneration context
+- [x] Added regression fixture, automated coverage, and manual runbook
+- [x] Ran backend tests and lint
+- [ ] Ran frontend tests, check, and build (targeted tests/check pass; component runner/build stall before output)
+- [x] Ran architecture validation and self-review
+- [ ] Completed real-provider acceptance in `docs/project/runs/builder-block-ai.md`
+
+### Validation Evidence
+
+- Baseline architecture guard: passed before implementation.
+- Baseline block generation route tests: `8 passed`.
+- Backend touched suites: `41 passed`; touched-file Ruff check passed.
+- Frontend pure Builder regression suites: `18 passed`.
+- Frontend Svelte sync/type-check: `0 errors`, `0 warnings` across 4,187 files.
+- Frontend Svelte component runner and Vite build: stalled before output and were terminated; no assertion/compiler diagnostic was emitted.
+- Architecture guard after implementation: no violations.
+- Real-provider acceptance remains manual and requires configured provider credentials.
+
+### Risks and Follow-up
+
+- Frontend Vitest/type-check processes have previously timed out on Windows without diagnostics; record timeouts separately from assertion or compiler failures.
+- No production fixture loader, seed endpoint, automatic repair, or whole-section rewrite is introduced.
+
 ## Builder Convergence — Final convergence status — 2026-07-16
 
 ### Completed

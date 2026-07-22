@@ -6,6 +6,7 @@
 	import { tryBeginAiCall } from '$lib/builder/utils/ai-rate-limit';
 	import type { BlockInstance, GradeBand } from 'lectio';
 	import { connectivityStore } from '$lib/builder/stores/connectivity.svelte';
+	import type { BlockAiRepairRequest } from '$lib/builder/issues';
 	import { Sparkles } from 'lucide-svelte';
 
 	let {
@@ -18,7 +19,9 @@
 		token,
 		apiConfigured,
 		ongenerated,
-		onBeforeGenerate
+		onBeforeGenerate,
+		repairRequest = null,
+		onRepairApplied
 	}: {
 		block: BlockInstance;
 		lessonId?: string;
@@ -31,6 +34,8 @@
 		ongenerated: (content: Record<string, unknown>) => void;
 		/** Optional version snapshot (e.g. before AI); failures are ignored. */
 		onBeforeGenerate?: () => void | Promise<void>;
+		repairRequest?: BlockAiRepairRequest | null;
+		onRepairApplied?: (request: BlockAiRepairRequest) => void | Promise<void>;
 	} = $props();
 
 	let open = $state(false);
@@ -40,6 +45,8 @@
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 	let rateMessage = $state<string | null>(null);
+	let processedRepairKey = $state<string | null>(null);
+	let activeRepairKey = $state<string | null>(null);
 
 	const hasDistinctContent = $derived(blockHasDistinctContent(block.component_id, block.content));
 
@@ -47,9 +54,26 @@
 
 	function close(): void {
 		open = false;
+		activeRepairKey = null;
 		error = null;
 		rateMessage = null;
 	}
+
+	$effect(() => {
+		if (
+			!repairRequest ||
+			repairRequest.targetBlockId !== block.id ||
+			repairRequest.requestKey === processedRepairKey
+		) return;
+		processedRepairKey = repairRequest.requestKey;
+		activeRepairKey = repairRequest.requestKey;
+		mode = 'custom';
+		teacherNote = repairRequest.initialInstruction;
+		highQuality = false;
+		error = null;
+		rateMessage = null;
+		open = true;
+	});
 
 	$effect(() => {
 		if (!browser || !open) return;
@@ -91,6 +115,8 @@
 			return;
 		}
 
+		const activeRepair =
+			repairRequest?.requestKey === activeRepairKey ? repairRequest : null;
 		loading = true;
 		try {
 			try {
@@ -113,12 +139,13 @@
 					grade_band: gradeBand,
 					context_blocks: contextBlocks,
 					teacher_note: mode === 'custom' ? teacherNote.trim() || undefined : undefined,
-					existing_content: mode === 'improve' ? block.content : undefined,
+					existing_content: mode === 'improve' || activeRepair ? block.content : undefined,
 					model_tier: highQuality ? 'STANDARD' : 'FAST'
 				},
 				token
 			);
 			ongenerated(res.content);
+			if (activeRepair) await onRepairApplied?.(activeRepair);
 			close();
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Generation failed';
@@ -142,10 +169,14 @@
 					: 'AI assistance'}
 		disabled={needsNetwork || !apiConfigured || !token}
 		data-testid="ai-assist-trigger"
-		onclick={(e) => {
-			e.stopPropagation();
-			open = !open;
-		}}
+			onclick={(e) => {
+				e.stopPropagation();
+				if (open) close();
+				else {
+					activeRepairKey = null;
+					open = true;
+				}
+			}}
 	>
 		<Sparkles size={16} aria-hidden="true" />
 		<span class="sr-only">AI assistance</span>

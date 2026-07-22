@@ -8,6 +8,8 @@
 	import type { BlockGenerateContextBlock } from '$lib/builder/api/ai-client';
 	import { apiBaseUrl } from '$lib/builder/api/public-env';
 	import AiBlockAssist from '$lib/builder/components/ai/AiBlockAssist.svelte';
+	import { isAiGeneratableComponent } from '$lib/builder/components/ai/ai-block-utils';
+	import type { BlockAiRepairRequest } from '$lib/builder/issues';
 	import { getToken } from '$lib/stores/auth';
 	import { saveVersionSnapshot } from '$lib/builder/persistence/idb-store';
 	import { validationWarningsForBlock } from '$lib/builder/utils/section-validation';
@@ -32,7 +34,9 @@
 		onmovedown,
 		ondelete,
 		contextBlocksForAi = [],
-		onapplyaicontent
+		onapplyaicontent,
+		aiRepairRequest = null,
+		onairepairapplied
 	}: {
 		block: BlockInstance;
 		document: LessonDocument | null;
@@ -51,6 +55,8 @@
 		ondelete?: () => void;
 		contextBlocksForAi?: BlockGenerateContextBlock[];
 		onapplyaicontent?: (content: Record<string, unknown>) => void;
+		aiRepairRequest?: BlockAiRepairRequest | null;
+		onairepairapplied?: (request: BlockAiRepairRequest) => void | Promise<void>;
 	} = $props();
 
 	const apiConfigured = $derived(Boolean(apiBaseUrl()));
@@ -162,7 +168,7 @@
 
 	{#if selected && !editing}
 		<div class="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-lg border border-slate-200 bg-white/95 p-1 shadow">
-			{#if editSchema && onapplyaicontent}
+			{#if editSchema && onapplyaicontent && isAiGeneratableComponent(block.component_id)}
 				<AiBlockAssist
 					{block}
 					lessonId={document?.id}
@@ -174,6 +180,8 @@
 					{apiConfigured}
 					onBeforeGenerate={snapshotBeforeAi}
 					ongenerated={onapplyaicontent}
+					repairRequest={aiRepairRequest}
+					onRepairApplied={onairepairapplied}
 				/>
 			{/if}
 			{#if editSchema}

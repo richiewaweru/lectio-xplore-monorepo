@@ -12,6 +12,8 @@
 	import type { BuilderIssue } from '$lib/builder/issues';
 	import type { V3VisualBlock } from '$lib/api/v3';
 	import BuilderVisualIssueAction from './BuilderVisualIssueAction.svelte';
+	import { resolveTextIssueTarget, resolveVisualIssueTarget } from '$lib/builder/issue-targeting';
+	import type { BlockAiRepairRequest } from '$lib/builder/issues';
 
 	let {
 		store,
@@ -59,17 +61,27 @@
 	let itemsBySection = $state<Record<string, BlockInstance[]>>({});
 	let pendingDndMerge: Record<string, BlockInstance[]> = {};
 	let rafFlush = 0;
+	let aiRepairRequest = $state<BlockAiRepairRequest | null>(null);
 
-	function targetBlockId(sectionId: string, requested?: string): string | undefined {
-		if (requested && store.document?.blocks[requested]) return requested;
-		return store.document?.sections.find((section) => section.id === sectionId)?.block_ids.find((id) => {
-			const block = store.document?.blocks[id];
-			return block?.component_id.includes('diagram') || block?.component_id.includes('image');
-		});
+	function editIssueBlock(sectionId: string, issue: BuilderIssue): void {
+		if (!store.document) return;
+		const id = resolveTextIssueTarget(store.document, sectionId, issue);
+		if (!id) return;
+		store.stopEditing();
+		store.selectBlock(id);
+		aiRepairRequest = {
+			requestKey: `${issue.id}:${Date.now()}`,
+			issueId: issue.id,
+			sectionId,
+			targetBlockId: id,
+			initialInstruction: issue.message
+		};
+		queueMicrotask(() => globalThis.document.querySelector(`[data-block-id="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
 	}
 
-	function editIssueBlock(sectionId: string, requested?: string): void {
-		const id = targetBlockId(sectionId, requested);
+	function editVisualIssueBlock(sectionId: string, requested?: string): void {
+		if (!store.document) return;
+		const id = resolveVisualIssueTarget(store.document, sectionId, requested);
 		if (!id) return;
 		store.selectBlock(id);
 		store.startEditing(id);
@@ -177,20 +189,25 @@
 					</span>
 				{/if}
 				{#each issuesForSection(section).filter((issue) => !issue.resolved) as issue (issue.id)}
+					{@const textRepairTarget = store.document ? resolveTextIssueTarget(store.document, section.id, issue) : undefined}
+					{@const visualEditTarget = store.document ? resolveVisualIssueTarget(store.document, section.id, issue.target_block_id) : undefined}
 					<div class="builder-print-hidden mb-3 scroll-mt-24 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" data-unresolved-issue={issue.id}>
 						<p class="font-semibold">{issue.severity.toUpperCase()} · {issue.kind}</p>
 						<p class="mt-1">{issue.message}</p>
 						<div class="mt-2 flex flex-wrap gap-2">
 							{#if issue.kind.includes('visual')}
-								<button type="button" class="rounded border border-amber-400 bg-white px-2 py-1 text-xs" onclick={() => editIssueBlock(section.id, issue.target_block_id)}>Swap image</button>
+								{#if visualEditTarget}
+									<button type="button" class="rounded border border-amber-400 bg-white px-2 py-1 text-xs" onclick={() => editVisualIssueBlock(section.id, issue.target_block_id)}>Swap image</button>
+								{/if}
 								<BuilderVisualIssueAction
 									{issue}
 									{generationId}
 									visual={visualBlocks.find((visual) => visual.visual_id === issue.visual_id)}
+									onResolved={() => store.resolveIssue(section.id, issue.id)}
 									onRegenerated={onVisualRegenerated}
 								/>
-							{:else}
-								<button type="button" class="rounded border border-amber-400 bg-white px-2 py-1 text-xs" onclick={() => editIssueBlock(section.id, issue.target_block_id)}>Fix with AI</button>
+							{:else if textRepairTarget}
+								<button type="button" class="rounded border border-amber-400 bg-white px-2 py-1 text-xs" onclick={() => editIssueBlock(section.id, issue)}>Fix with AI</button>
 							{/if}
 							<button type="button" class="rounded border border-amber-400 bg-white px-2 py-1 text-xs" onclick={() => store.resolveIssue(section.id, issue.id)}>Dismiss</button>
 						</div>
@@ -223,6 +240,11 @@
 						onupdatefield={(field, value) => store.updateBlockField(item.id, field, value)}
 						onfieldblur={() => store.notifyFieldBlur()}
 						contextBlocksForAi={store.getContextBlocksForAi(item.id)}
+						{aiRepairRequest}
+						onairepairapplied={(request) => {
+							store.resolveIssue(request.sectionId, request.issueId);
+							aiRepairRequest = null;
+						}}
 						onapplyaicontent={(content) => {
 							const merged = mergeAiContentWithEditableFields(
 								item.component_id,
