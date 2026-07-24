@@ -3,6 +3,9 @@ import type { LessonDocument } from 'lectio';
 import { isAiGeneratableComponent } from '$lib/builder/components/ai/ai-block-utils';
 import type { BuilderIssue } from '$lib/builder/issues';
 
+const REPAIR_NOTE_PREFIX = 'Fix this issue in the block: ';
+const MAX_REPAIR_NOTE_CHARS = 300;
+
 const QUESTION_COMPONENT_IDS = [
 	'practice-stack',
 	'quiz-check',
@@ -37,6 +40,13 @@ function componentTarget(issue: BuilderIssue, sectionId: string): string | null 
 		return colonMatch[2] ?? null;
 	}
 	return null;
+}
+
+export function repairNoteForIssue(issue: BuilderIssue): string {
+	const message = issue.message.trim();
+	const available = MAX_REPAIR_NOTE_CHARS - REPAIR_NOTE_PREFIX.length;
+	if (message.length <= available) return `${REPAIR_NOTE_PREFIX}${message}`;
+	return `${REPAIR_NOTE_PREFIX}${message.slice(0, Math.max(0, available - 1)).trimEnd()}…`;
 }
 
 export function resolveTextIssueTarget(

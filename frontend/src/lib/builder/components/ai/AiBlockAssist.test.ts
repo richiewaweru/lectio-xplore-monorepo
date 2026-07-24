@@ -98,6 +98,7 @@ describe('AiBlockAssist', () => {
 
 		const instruction = await screen.findByLabelText('Instruction');
 		expect((instruction as HTMLTextAreaElement).value).toBe('Expected two questions.');
+		await waitFor(() => expect(document.activeElement).toBe(instruction));
 		await fireEvent.input(instruction, { target: { value: 'Add exactly two short questions.' } });
 		await fireEvent.click(screen.getByTestId('ai-assist-generate'));
 

@@ -12,7 +12,11 @@
 	import type { BuilderIssue } from '$lib/builder/issues';
 	import type { V3VisualBlock } from '$lib/api/v3';
 	import BuilderVisualIssueAction from './BuilderVisualIssueAction.svelte';
-	import { resolveTextIssueTarget, resolveVisualIssueTarget } from '$lib/builder/issue-targeting';
+	import {
+		repairNoteForIssue,
+		resolveTextIssueTarget,
+		resolveVisualIssueTarget
+	} from '$lib/builder/issue-targeting';
 	import type { BlockAiRepairRequest } from '$lib/builder/issues';
 
 	let {
@@ -74,7 +78,7 @@
 			issueId: issue.id,
 			sectionId,
 			targetBlockId: id,
-			initialInstruction: issue.message
+			initialInstruction: repairNoteForIssue(issue)
 		};
 		queueMicrotask(() => globalThis.document.querySelector(`[data-block-id="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
 	}

@@ -8,7 +8,11 @@ vi.mock('lectio', () => ({
 	getEmptyContent: () => ({})
 }));
 
-import { resolveTextIssueTarget, resolveVisualIssueTarget } from './issue-targeting';
+import {
+	repairNoteForIssue,
+	resolveTextIssueTarget,
+	resolveVisualIssueTarget
+} from './issue-targeting';
 
 const document = {
 	sections: [{ id: 'practice', block_ids: ['explain', 'practice-block', 'diagram', 'image'] }],
@@ -21,6 +25,21 @@ const document = {
 } as unknown as LessonDocument;
 
 describe('Builder issue targeting', () => {
+	it('builds a bounded actionable repair note from the issue message', () => {
+		const issue = {
+			id: 'repair-note',
+			severity: 'major',
+			message: `  Missing planned content: ${'detail '.repeat(80)}  `,
+			kind: 'missing_planned_content',
+			resolved: false
+		};
+		const note = repairNoteForIssue(issue);
+
+		expect(note).toMatch(/^Fix this issue in the block: Missing planned content:/);
+		expect(note.length).toBeLessThanOrEqual(300);
+		expect(note.endsWith('…')).toBe(true);
+	});
+
 	it('prefers a valid explicit AI-capable block target', () => {
 		expect(resolveTextIssueTarget(document, 'practice', {
 			id: 'i1', severity: 'major', message: 'Fix it', kind: 'clarity',

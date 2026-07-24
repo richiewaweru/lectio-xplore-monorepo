@@ -47,6 +47,7 @@
 	let rateMessage = $state<string | null>(null);
 	let processedRepairKey = $state<string | null>(null);
 	let activeRepairKey = $state<string | null>(null);
+	let instructionTextarea = $state<HTMLTextAreaElement | null>(null);
 
 	const hasDistinctContent = $derived(blockHasDistinctContent(block.component_id, block.content));
 
@@ -73,6 +74,7 @@
 		error = null;
 		rateMessage = null;
 		open = true;
+		queueMicrotask(() => instructionTextarea?.focus());
 	});
 
 	$effect(() => {
@@ -216,6 +218,7 @@
 					<span class="mb-1 block font-medium text-slate-700">Optional note</span>
 				{/if}
 				<textarea
+					bind:this={instructionTextarea}
 					bind:value={teacherNote}
 					rows="3"
 					class="mt-1 w-full rounded border border-slate-200 px-2 py-1 text-sm"
