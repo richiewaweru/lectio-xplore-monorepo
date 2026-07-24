@@ -15,7 +15,7 @@ vi.mock('lectio', () => ({
 }));
 
 import {
-	repairNoteForIssue,
+	qcReasonToInstruction,
 	resolveTextIssueTarget,
 	resolveVisualIssueTarget
 } from './issue-targeting';
@@ -31,19 +31,27 @@ const document = {
 } as unknown as LessonDocument;
 
 describe('Builder issue targeting', () => {
-	it('builds a bounded actionable repair note from the issue message', () => {
-		const issue = {
+	it('turns a question visual mismatch into a standalone rewrite instruction', () => {
+		expect(qcReasonToInstruction({
+			id: 'repair-note',
+			severity: 'minor',
+			message: 'Question references a visual.',
+			kind: 'visual_mismatch',
+			repair_target_id: 'questions:practice',
+			resolved: false
+		})).toBe(
+			'This question refers to a visual, but no diagram was planned for this section. Rewrite the question so it stands on its own without referring to a diagram.'
+		);
+	});
+
+	it('keeps other issue messages unchanged', () => {
+		expect(qcReasonToInstruction({
 			id: 'repair-note',
 			severity: 'major',
-			message: `  Missing planned content: ${'detail '.repeat(80)}  `,
+			message: 'Use the original review message.',
 			kind: 'missing_planned_content',
 			resolved: false
-		};
-		const note = repairNoteForIssue(issue);
-
-		expect(note).toMatch(/^Fix this issue in the block: Missing planned content:/);
-		expect(note.length).toBeLessThanOrEqual(300);
-		expect(note.endsWith('…')).toBe(true);
+		})).toBe('Use the original review message.');
 	});
 
 	it('prefers a valid explicit AI-capable block target', () => {

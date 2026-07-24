@@ -13,7 +13,7 @@
 	import type { V3VisualBlock } from '$lib/api/v3';
 	import BuilderVisualIssueAction from './BuilderVisualIssueAction.svelte';
 	import {
-		repairNoteForIssue,
+		qcReasonToInstruction,
 		resolveTextIssueTarget,
 		resolveVisualIssueTarget
 	} from '$lib/builder/issue-targeting';
@@ -78,9 +78,19 @@
 			issueId: issue.id,
 			sectionId,
 			targetBlockId: id,
-			initialInstruction: repairNoteForIssue(issue)
+			initialInstruction: qcReasonToInstruction(issue)
 		};
 		queueMicrotask(() => globalThis.document.querySelector(`[data-block-id="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+	}
+
+	function reviewIssueSection(sectionId: string): void {
+		store.selectSection(sectionId);
+		aiRepairRequest = null;
+		queueMicrotask(() =>
+			globalThis.document
+				.getElementById(`section-${sectionId}`)
+				?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+		);
 	}
 
 	function editVisualIssueBlock(sectionId: string, requested?: string): void {
@@ -195,11 +205,12 @@
 				{#each issuesForSection(section).filter((issue) => !issue.resolved) as issue (issue.id)}
 					{@const textRepairTarget = store.document ? resolveTextIssueTarget(store.document, section.id, issue) : undefined}
 					{@const visualEditTarget = store.document ? resolveVisualIssueTarget(store.document, section.id, issue.target_block_id) : undefined}
+					{@const isVisualIssue = Boolean(issue.visual_id || issue.repair_target_id?.startsWith('visual:'))}
 					<div class="builder-print-hidden mb-3 scroll-mt-24 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" data-unresolved-issue={issue.id}>
 						<p class="font-semibold">{issue.severity.toUpperCase()} · {issue.kind}</p>
 						<p class="mt-1">{issue.message}</p>
 						<div class="mt-2 flex flex-wrap gap-2">
-							{#if issue.kind.includes('visual')}
+							{#if isVisualIssue}
 								{#if visualEditTarget}
 									<button type="button" class="rounded border border-amber-400 bg-white px-2 py-1 text-xs" onclick={() => editVisualIssueBlock(section.id, issue.target_block_id)}>Swap image</button>
 								{/if}
@@ -212,6 +223,8 @@
 								/>
 							{:else if textRepairTarget}
 								<button type="button" class="rounded border border-amber-400 bg-white px-2 py-1 text-xs" onclick={() => editIssueBlock(section.id, issue)}>Fix with AI</button>
+							{:else}
+								<button type="button" class="rounded border border-amber-400 bg-white px-2 py-1 text-xs" onclick={() => reviewIssueSection(section.id)}>Review issue</button>
 							{/if}
 							<button type="button" class="rounded border border-amber-400 bg-white px-2 py-1 text-xs" onclick={() => store.resolveIssue(section.id, issue.id)}>Dismiss</button>
 						</div>

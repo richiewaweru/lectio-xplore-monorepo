@@ -60,7 +60,7 @@ describe('BlockCanvas AI repair integration', () => {
 		});
 	});
 
-	it('opens a fixture repair, sends edited current content, resolves it, and keeps advisory issues dismiss-only', async () => {
+	it('opens an exact fixture repair with the QC instruction and resolves it after success', async () => {
 		const store = createDocumentStore();
 		store.loadDocument(regressionDocument());
 		render(BlockCanvas, { props: { store } });
@@ -70,7 +70,7 @@ describe('BlockCanvas AI repair integration', () => {
 
 		const instruction = await screen.findByLabelText('Instruction');
 		expect((instruction as HTMLTextAreaElement).value).toBe(
-			'Fix this issue in the block: Expected 2 practice questions, found 0.'
+			'This question refers to a visual, but no diagram was planned for this section. Rewrite the question so it stands on its own without referring to a diagram.'
 		);
 		await waitFor(() => expect(document.activeElement).toBe(instruction));
 		await fireEvent.input(instruction, {
@@ -102,5 +102,20 @@ describe('BlockCanvas AI repair integration', () => {
 		expect(advisory?.resolved).toBe(false);
 		expect(screen.queryByText('The section anchor needs whole-section review.')).not.toBeNull();
 		expect(screen.queryAllByRole('button', { name: 'Fix with AI' })).toHaveLength(0);
+	});
+
+	it('reviews ambiguous and section-level issues without opening AI', async () => {
+		const store = createDocumentStore();
+		store.loadDocument(regressionDocument());
+		render(BlockCanvas, { props: { store } });
+
+		const reviewButtons = screen.getAllByRole('button', { name: 'Review issue' });
+		expect(reviewButtons).toHaveLength(2);
+		await fireEvent.click(reviewButtons[1]!);
+
+		expect(store.selectedSectionId).toBe('ambiguous');
+		expect(store.selectedBlockId).toBeNull();
+		expect(screen.queryByRole('dialog', { name: 'AI block assistance' })).toBeNull();
+		expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
 	});
 });
