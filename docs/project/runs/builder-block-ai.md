@@ -1,5 +1,65 @@
 # Builder Block-Level AI Runbook
 
+## AI assistance suite baseline — 2026-07-24
+
+Phase 0 was completed before implementation.
+
+### Reproduction environment
+
+- The repository frontend and backend were started on isolated local ports because
+  ports 5173, 8000, and 8001 belonged to another project.
+- The local browser session was signed out. A signed-in production Builder lesson
+  was therefore used for the live visual-quality baseline.
+- The sampled production generations did not contain a `visual_mismatch` issue with
+  `repair_target_id: "questions:..."`. The deterministic review fixture and the
+  checked-in Builder regression fixture were used for that path, as allowed by the
+  handoff.
+
+### Captured issue payloads
+
+Deterministic `visual_mismatch` payload:
+
+```json
+{
+  "issue_id": "7f2334ab-10cf-4515-8871-bd6af86fa44a",
+  "severity": "minor",
+  "category": "visual_mismatch",
+  "message": "Question references a visual without a planned diagram: 'Look at' at practice.practice.problems[0].question.",
+  "blueprint_ref": "question_plan:practice",
+  "generated_ref": "practice.practice.problems[0].question",
+  "suggested_repair_executor": "question_writer",
+  "repair_target_id": "questions:practice"
+}
+```
+
+Live-equivalent `visual_quality_flagged` payload:
+
+```json
+{
+  "issue_id": "d3b599ba-97f9-4456-a3b4-79595f2ba628",
+  "severity": "minor",
+  "category": "visual_quality_flagged",
+  "message": "image flagged by quality review: Labels are incomplete",
+  "blueprint_ref": null,
+  "generated_ref": "practice",
+  "suggested_repair_executor": "visual_executor",
+  "repair_target_id": "visual:vis-phase0"
+}
+```
+
+### Current UI behavior
+
+- A production `visual_quality_flagged` nudge was captured in section
+  “Chlorophyll: the light catcher.” The row showed `Swap image` and `Dismiss`.
+  Clicking `Swap image` selected the diagram and opened manual media editing; no
+  regeneration hint or AI action opened.
+- The current regression fixture routes `questions:{sid}` to the first
+  question-capable block. Clicking `Fix with AI` opens `AiBlockAssist` in custom
+  mode with `Fix this issue in the block: <issue.message>`. This is the guessing
+  behavior being replaced.
+- The production nudge row and the resulting manual diagram editor were captured
+  in the browser-run evidence for this task.
+
 ## Automated fixture
 
 The fixed regression state is `frontend/src/lib/builder/fixtures/block-ai-regression.json`.

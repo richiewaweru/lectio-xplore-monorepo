@@ -6,6 +6,7 @@ export type BuilderIssue = {
 	message: string;
 	kind: string;
 	target_block_id?: string;
+	generated_ref?: string;
 	component_ref?: string;
 	visual_id?: string;
 	repair_target_id?: string;

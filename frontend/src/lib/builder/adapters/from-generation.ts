@@ -42,6 +42,7 @@ function bookletIssue(item: Record<string, unknown>, target: string): BuilderIss
 		message,
 		kind: category,
 		target_block_id: typeof item.target_block_id === 'string' ? item.target_block_id : undefined,
+		generated_ref: typeof item.generated_ref === 'string' ? item.generated_ref : undefined,
 		component_ref: typeof item.component_ref === 'string' ? item.component_ref : undefined,
 		visual_id: visualId,
 		repair_target_id:

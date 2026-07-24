@@ -5,7 +5,13 @@ import { join } from 'node:path';
 
 vi.mock('lectio', () => ({
 	getEditSchema: (componentId: string) => componentId === 'unknown' ? null : { component_id: componentId, fields: [] },
-	getEmptyContent: () => ({})
+	getEmptyContent: () => ({}),
+	getFieldComponentMap: () => ({
+		practice: 'practice-stack',
+		quiz: 'quiz-check',
+		short_answer: 'short-answer',
+		reflection: 'reflection-prompt'
+	})
 }));
 
 import {
@@ -47,19 +53,47 @@ describe('Builder issue targeting', () => {
 		})).toBe('explain');
 	});
 
-	it('resolves component and question repair target contracts', () => {
+	it('resolves component and generated-reference targets', () => {
 		expect(resolveTextIssueTarget(document, 'practice', {
 			id: 'i2', severity: 'major', message: 'Fix it', kind: 'clarity',
 			repair_target_id: 'component:practice:explanation-block', resolved: false
 		})).toBe('explain');
 		expect(resolveTextIssueTarget(document, 'practice', {
 			id: 'i3', severity: 'major', message: 'Add questions', kind: 'missing_planned_content',
+			generated_ref: 'practice.practice.problems[0].question',
 			repair_target_id: 'questions:practice', resolved: false
 		})).toBe('practice-block');
 		expect(resolveTextIssueTarget(document, 'practice', {
 			id: 'i4', severity: 'major', message: 'Add questions', kind: 'missing_planned_content',
+			generated_ref: 'practice1.practice.problems[0].question',
 			repair_target_id: 'questions:practice1', resolved: false
 		})).toBe('practice-block');
+	});
+
+	it('does not guess when a generated reference has zero or multiple matching blocks', () => {
+		const ambiguous = structuredClone(document);
+		ambiguous.sections[0]!.block_ids.push('practice-block-2');
+		ambiguous.blocks['practice-block-2'] = {
+			id: 'practice-block-2',
+			component_id: 'practice-stack',
+			content: {},
+			position: 4
+		};
+		const issue = {
+			id: 'ambiguous',
+			severity: 'minor',
+			message: 'Rewrite the question.',
+			kind: 'visual_mismatch',
+			generated_ref: 'practice.practice.problems[0].question',
+			repair_target_id: 'questions:practice',
+			resolved: false
+		};
+
+		expect(resolveTextIssueTarget(ambiguous, 'practice', issue)).toBeUndefined();
+		expect(resolveTextIssueTarget(document, 'practice', {
+			...issue,
+			generated_ref: 'practice.unknown.question'
+		})).toBeUndefined();
 	});
 
 	it('leaves section-level, missing, and manual-only targets advisory', () => {
@@ -93,9 +127,20 @@ describe('Builder issue targeting', () => {
 		};
 		const repair = section.meta.issues.find((issue) => issue.id === 'repair-practice')!;
 		const advisory = section.meta.issues.find((issue) => issue.id === 'advisory-anchor')!;
+		const ambiguousSection = fixture.lesson.sections.find((item) => item.id === 'ambiguous') as
+			| (typeof fixture.lesson.sections[0] & {
+					meta: { issues: Array<Parameters<typeof resolveTextIssueTarget>[2]> }
+			  })
+			| undefined;
+		const ambiguous = ambiguousSection?.meta.issues.find(
+			(issue) => issue.id === 'ambiguous-practice'
+		);
 
 		expect(resolveTextIssueTarget(fixture.lesson, section.id, repair)).toBe('practice-questions');
 		expect(resolveTextIssueTarget(fixture.lesson, section.id, advisory)).toBeUndefined();
+		expect(ambiguousSection).toBeDefined();
+		expect(ambiguous).toBeDefined();
+		expect(resolveTextIssueTarget(fixture.lesson, ambiguousSection!.id, ambiguous!)).toBeUndefined();
 		expect(fixture.lesson.blocks['empty-explanation']?.content.body).toBe('');
 		expect(fixture.lesson.blocks['written-explanation']?.content.body).toBe(
 			'Plants turn light into stored chemical energy.'

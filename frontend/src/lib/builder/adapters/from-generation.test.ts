@@ -108,6 +108,7 @@ describe('v3PackToBuilderDocument', () => {
 				booklet_issues: [{
 					issue_id: 'practice-issue', section_id: 'practice',
 					category: 'missing_planned_content', message: 'Expected two questions.',
+					generated_ref: 'practice.practice.problems[0].question',
 					repair_target_id: 'questions:practice'
 				}]
 			},
@@ -115,7 +116,10 @@ describe('v3PackToBuilderDocument', () => {
 		);
 
 		expect(partitioned.sectionIssues.practice?.[0]).toEqual(
-			expect.objectContaining({ repair_target_id: 'questions:practice' })
+			expect.objectContaining({
+				generated_ref: 'practice.practice.problems[0].question',
+				repair_target_id: 'questions:practice'
+			})
 		);
 	});
 });

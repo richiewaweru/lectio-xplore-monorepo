@@ -19,9 +19,10 @@
           "issues": [
             {
               "id": "repair-practice",
-              "severity": "major",
-              "message": "Expected 2 practice questions, found 0.",
-              "kind": "missing_planned_content",
+              "severity": "minor",
+              "message": "Question references a visual without a planned diagram.",
+              "kind": "visual_mismatch",
+              "generated_ref": "build.practice.problems[0].question",
               "repair_target_id": "questions:build",
               "resolved": false
             },
@@ -40,6 +41,26 @@
               "kind": "visual_quality_flagged",
               "visual_id": "vis-build-0",
               "repair_target_id": "visual:vis-build-0",
+              "resolved": false
+            }
+          ]
+        }
+      },
+      {
+        "id": "ambiguous",
+        "template_id": "guided-concept-path",
+        "title": "Ambiguous questions",
+        "position": 1,
+        "block_ids": ["ambiguous-practice-a", "ambiguous-practice-b"],
+        "meta": {
+          "issues": [
+            {
+              "id": "ambiguous-practice",
+              "severity": "minor",
+              "message": "Question references a visual without a planned diagram.",
+              "kind": "visual_mismatch",
+              "generated_ref": "ambiguous.practice.problems[0].question",
+              "repair_target_id": "questions:ambiguous",
               "resolved": false
             }
           ]
@@ -80,6 +101,18 @@
           "width": "full"
         },
         "position": 3
+      },
+      "ambiguous-practice-a": {
+        "id": "ambiguous-practice-a",
+        "component_id": "practice-stack",
+        "content": { "title": "Practice A", "problems": [] },
+        "position": 0
+      },
+      "ambiguous-practice-b": {
+        "id": "ambiguous-practice-b",
+        "component_id": "practice-stack",
+        "content": { "title": "Practice B", "problems": [] },
+        "position": 1
       }
     },
     "media": {},

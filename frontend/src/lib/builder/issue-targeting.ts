@@ -1,18 +1,10 @@
-import type { LessonDocument } from 'lectio';
+import { getFieldComponentMap, type LessonDocument } from 'lectio';
 
 import { isAiGeneratableComponent } from '$lib/builder/components/ai/ai-block-utils';
 import type { BuilderIssue } from '$lib/builder/issues';
 
 const REPAIR_NOTE_PREFIX = 'Fix this issue in the block: ';
 const MAX_REPAIR_NOTE_CHARS = 300;
-
-const QUESTION_COMPONENT_IDS = [
-	'practice-stack',
-	'quiz-check',
-	'short-answer',
-	'fill-in-blank',
-	'student-textbox'
-];
 
 function sectionBlockIds(document: LessonDocument, sectionId: string): string[] {
 	return document.sections.find((section) => section.id === sectionId)?.block_ids ?? [];
@@ -42,6 +34,26 @@ function componentTarget(issue: BuilderIssue, sectionId: string): string | null 
 	return null;
 }
 
+function generatedComponentTarget(issue: BuilderIssue, sectionId: string): string | null {
+	if (!issue.generated_ref) return null;
+	const [generatedSection, field] = issue.generated_ref.split('.');
+	if (!generatedSection || !field || !sectionRefMatches(generatedSection, sectionId)) return null;
+	return getFieldComponentMap()[field] ?? null;
+}
+
+function uniqueAiBlockForComponent(
+	document: LessonDocument,
+	blockIds: string[],
+	componentId: string
+): string | undefined {
+	const matches = blockIds.filter(
+		(id) =>
+			document.blocks[id]?.component_id === componentId &&
+			isAiGeneratableComponent(componentId)
+	);
+	return matches.length === 1 ? matches[0] : undefined;
+}
+
 export function repairNoteForIssue(issue: BuilderIssue): string {
 	const message = issue.message.trim();
 	const available = MAX_REPAIR_NOTE_CHARS - REPAIR_NOTE_PREFIX.length;
@@ -63,20 +75,9 @@ export function resolveTextIssueTarget(
 		return issue.target_block_id;
 	}
 
-	const componentId = componentTarget(issue, sectionId);
+	const componentId = componentTarget(issue, sectionId) ?? generatedComponentTarget(issue, sectionId);
 	if (componentId) {
-		return blockIds.find(
-			(id) =>
-				document.blocks[id]?.component_id === componentId &&
-				isAiGeneratableComponent(componentId)
-		);
-	}
-
-	const questionMatch = issue.repair_target_id?.match(/^questions:(.+)$/);
-	if (questionMatch?.[1] && sectionRefMatches(questionMatch[1], sectionId)) {
-		return blockIds.find((id) =>
-			QUESTION_COMPONENT_IDS.includes(document.blocks[id]?.component_id ?? '')
-		);
+		return uniqueAiBlockForComponent(document, blockIds, componentId);
 	}
 	return undefined;
 }
