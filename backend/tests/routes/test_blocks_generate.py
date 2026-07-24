@@ -1,7 +1,8 @@
 ﻿from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+import json
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -12,6 +13,10 @@ from core.database.models import EditableLessonModel, UserModel
 from core.database.session import get_async_session
 from core.entities.user import User
 from generation.block_generate import BlockGenerateRequest, run_block_generation
+from generation.block_generate_routes import (
+    _MAX_GENERATION_CONTEXT_CHARS,
+    _compact_generation_context,
+)
 from v3_execution.config.models import V3_BLOCK_WRITER_FAST, V3_BLOCK_WRITER_STANDARD
 
 TEST_USER = User(
@@ -239,6 +244,156 @@ async def test_generate_block_injects_source_generation_plan_context(db_session_
     assert "Meet the leaf" in forwarded.generation_context
     assert "Connect light to stored energy" in forwarded.generation_context
     assert len(forwarded.generation_context) <= 3000
+
+
+def test_compact_generation_context_reports_resolution_states() -> None:
+    absent = _compact_generation_context({}, "intro")
+    assert absent.context is None
+    assert absent.status == "plan_absent"
+
+    empty = _compact_generation_context(
+        {"structural_plan": {"lesson_intent": {}, "sections": []}},
+        "intro",
+    )
+    assert empty.context is None
+    assert empty.status == "context_empty"
+
+    unmatched = _compact_generation_context(
+        {
+            "structural_plan": {
+                "lesson_intent": {"goal": "Explain photosynthesis"},
+                "sections": [{"id": "other", "title": "Other", "role": "anchor"}],
+            },
+            "section_briefs": {},
+        },
+        "intro",
+    )
+    assert unmatched.status == "section_not_matched"
+    assert json.loads(unmatched.context or "{}")["lesson_intent"]["goal"] == (
+        "Explain photosynthesis"
+    )
+
+    found = _compact_generation_context(
+        {
+            "structural_plan": {
+                "lesson_intent": {"goal": "Explain photosynthesis"},
+                "sections": [{"id": "intro", "title": "Intro", "role": "anchor"}],
+            },
+            "section_briefs": {"intro": {"section_id": "intro", "components": []}},
+        },
+        "intro",
+    )
+    assert found.status == "brief_found"
+
+    without_brief = _compact_generation_context(
+        {
+            "structural_plan": {
+                "lesson_intent": {"goal": "Explain photosynthesis"},
+                "sections": [{"id": "intro", "title": "Intro", "role": "anchor"}],
+            },
+            "section_briefs": {},
+        },
+        "intro",
+    )
+    assert without_brief.status == "section_matched_without_brief"
+
+
+def test_compact_generation_context_keeps_oversized_payload_valid_json() -> None:
+    oversized = _compact_generation_context(
+        {
+            "structural_plan": {
+                "lesson_intent": {
+                    "goal": "goal " * 1000,
+                    "structure_rationale": "rationale " * 1000,
+                },
+                "sections": [
+                    {"id": "intro", "title": "title " * 1000, "role": "anchor"}
+                ],
+            },
+            "section_briefs": {
+                "intro": {
+                    "section_id": "intro",
+                    "components": [
+                        {
+                            "component_id": f"component-{index}",
+                            "content_intent": "intent " * 1000,
+                        }
+                        for index in range(20)
+                    ],
+                }
+            },
+        },
+        "intro",
+    )
+
+    assert oversized.context is not None
+    assert len(oversized.context) <= _MAX_GENERATION_CONTEXT_CHARS
+    parsed = json.loads(oversized.context)
+    assert parsed["truncated"] is True
+
+
+@pytest.mark.asyncio
+async def test_generate_block_does_not_inject_empty_plan_context(
+    db_session_factory,
+) -> None:
+    app.dependency_overrides[get_current_user] = _override_user
+    await _install_session_override(db_session_factory)
+    async with db_session_factory() as session:
+        session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
+        session.add(
+            EditableLessonModel(
+                id="lesson-empty-plan-context",
+                user_id=TEST_USER.id,
+                source_generation_id="gen-empty-plan-context",
+                source_type="v3_generation",
+                title="Generated lesson",
+                document_json={
+                    "version": 1,
+                    "id": "lesson-empty-plan-context",
+                    "title": "Generated lesson",
+                    "subject": "science",
+                    "preset_id": "blue-classroom",
+                    "source": "generated",
+                    "sections": [],
+                    "blocks": {},
+                    "media": {},
+                },
+            )
+        )
+        await session.commit()
+
+    state = {
+        "structural_plan": {
+            "lesson_intent": None,
+            "sections": [],
+        },
+        "section_briefs": {},
+    }
+    with (
+        patch(
+            "generation.block_generate_routes.load_chunked_state",
+            new=AsyncMock(return_value=state),
+        ),
+        patch(
+            "generation.block_generate_routes.run_block_generation",
+            new=AsyncMock(return_value={"headline": "ok"}),
+        ) as mocked,
+    ):
+        async with _client() as client:
+            res = await client.post(
+                "/api/v1/blocks/generate",
+                json={
+                    "lesson_id": "lesson-empty-plan-context",
+                    "section_id": "intro",
+                    "component_id": "hook-hero",
+                    "subject": "Biology",
+                    "focus": "Photosynthesis",
+                    "grade_band": "secondary",
+                },
+            )
+
+    assert res.status_code == 200
+    assert mocked.await_args.args[0].generation_context is None
 
 
 @pytest.mark.asyncio
