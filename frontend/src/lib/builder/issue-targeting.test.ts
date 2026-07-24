@@ -84,7 +84,10 @@ describe('Builder issue targeting', () => {
 		const fixture = JSON.parse(readFileSync(
 			join(process.cwd(), 'src/lib/builder/fixtures/block-ai-regression.json'),
 			'utf8'
-		)) as { lesson: LessonDocument };
+		)) as {
+			lesson: LessonDocument;
+			visual_blocks: Array<{ visual_id: string; status: string; qc_reasons: string[] }>
+		};
 		const section = fixture.lesson.sections[0] as typeof fixture.lesson.sections[0] & {
 			meta: { issues: Array<Parameters<typeof resolveTextIssueTarget>[2]> }
 		};
@@ -93,5 +96,25 @@ describe('Builder issue targeting', () => {
 
 		expect(resolveTextIssueTarget(fixture.lesson, section.id, repair)).toBe('practice-questions');
 		expect(resolveTextIssueTarget(fixture.lesson, section.id, advisory)).toBeUndefined();
+		expect(fixture.lesson.blocks['empty-explanation']?.content.body).toBe('');
+		expect(fixture.lesson.blocks['written-explanation']?.content.body).toBe(
+			'Plants turn light into stored chemical energy.'
+		);
+		expect(fixture.visual_blocks).toEqual([
+			expect.objectContaining({
+				visual_id: 'vis-build-0',
+				status: 'flagged_quality',
+				qc_reasons: expect.arrayContaining(['Reaction labels are incomplete'])
+			})
+		]);
+		expect(section.meta.issues).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					id: 'repair-visual',
+					kind: 'visual_quality_flagged',
+					visual_id: 'vis-build-0'
+				})
+			])
+		);
 	});
 });

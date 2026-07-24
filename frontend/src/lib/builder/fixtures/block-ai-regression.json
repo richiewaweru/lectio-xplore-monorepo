@@ -50,13 +50,16 @@
       "empty-explanation": {
         "id": "empty-explanation",
         "component_id": "explanation-block",
-        "content": { "body": "" },
+        "content": { "body": "", "emphasis": [] },
         "position": 0
       },
       "written-explanation": {
         "id": "written-explanation",
         "component_id": "explanation-block",
-        "content": { "body": "Plants turn light into stored chemical energy." },
+        "content": {
+          "body": "Plants turn light into stored chemical energy.",
+          "emphasis": []
+        },
         "position": 1
       },
       "practice-questions": {
@@ -70,8 +73,11 @@
         "component_id": "diagram-block",
         "content": {
           "image_url": "https://example.invalid/photosynthesis-old.png",
+          "media_id": "",
+          "svg_content": "",
           "caption": "Photosynthesis",
-          "alt_text": "A flagged photosynthesis diagram"
+          "alt_text": "A flagged photosynthesis diagram",
+          "width": "full"
         },
         "position": 3
       }

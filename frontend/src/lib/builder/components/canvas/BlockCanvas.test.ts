@@ -39,13 +39,7 @@ function regressionDocument(): LessonDocument {
 			'utf8'
 		)
 	) as { lesson: LessonDocument };
-	const lesson = structuredClone(fixture.lesson);
-	for (const block of Object.values(lesson.blocks)) {
-		if (block.component_id === 'explanation-block' && !Array.isArray(block.content.emphasis)) {
-			block.content.emphasis = [];
-		}
-	}
-	return lesson;
+	return structuredClone(fixture.lesson);
 }
 
 describe('BlockCanvas AI repair integration', () => {

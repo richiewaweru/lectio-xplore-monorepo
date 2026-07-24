@@ -45,7 +45,12 @@ describe('AiBlockAssist', () => {
 		await fireEvent.click(screen.getByTestId('ai-assist-generate'));
 
 		await waitFor(() => expect(generateBlock).toHaveBeenCalledWith(
-			expect.objectContaining({ mode: 'fill', model_tier: 'FAST', existing_content: undefined }),
+			expect.objectContaining({
+				mode: 'fill',
+				model_tier: 'FAST',
+				existing_content: undefined,
+				teacher_note: undefined
+			}),
 			'token'
 		));
 	});
@@ -68,8 +73,10 @@ describe('AiBlockAssist', () => {
 	});
 
 	it('keeps ordinary custom requests stateless', async () => {
+		const onRepairApplied = vi.fn();
 		renderAssist({
-			block: { id: 'block-1', component_id: 'explanation-block', content: { body: 'Existing' }, position: 0 }
+			block: { id: 'block-1', component_id: 'explanation-block', content: { body: 'Existing' }, position: 0 },
+			onRepairApplied
 		});
 		await fireEvent.click(screen.getByTestId('ai-assist-trigger'));
 		await fireEvent.click(screen.getByRole('radio', { name: 'Custom' }));
@@ -82,6 +89,7 @@ describe('AiBlockAssist', () => {
 			}),
 			'token'
 		));
+		expect(onRepairApplied).not.toHaveBeenCalled();
 	});
 
 	it('opens a repair prefilled, editable, FAST, and sends existing content', async () => {

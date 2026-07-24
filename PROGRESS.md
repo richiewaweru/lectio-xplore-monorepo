@@ -15,7 +15,7 @@
 - [x] Added visual QC reasons to regeneration context
 - [x] Added regression fixture, automated coverage, and manual runbook
 - [x] Ran backend tests and lint
-- [ ] Ran frontend tests, check, and build (targeted tests/check pass; component runner/build stall before output)
+- [x] Ran frontend tests, check, and build
 - [x] Ran architecture validation and self-review
 - [ ] Completed real-provider acceptance in `docs/project/runs/builder-block-ai.md`
 
@@ -24,15 +24,32 @@
 - Baseline architecture guard: passed before implementation.
 - Baseline block generation route tests: `8 passed`.
 - Backend touched suites: `41 passed`; touched-file Ruff check passed.
-- Frontend pure Builder regression suites: `18 passed`.
+- Frontend Builder AI regression suites: `13 passed` across the payload, fixture,
+  canvas repair, and visual-regeneration tests.
 - Frontend Svelte sync/type-check: `0 errors`, `0 warnings` across 4,187 files.
-- Frontend Svelte component runner and Vite build: stalled before output and were terminated; no assertion/compiler diagnostic was emitted.
+- Frontend full Vitest suite: `59 files passed`, `243 tests passed`.
+- Frontend Vite production build: passed; existing Rollup pure-annotation and
+  large-chunk warnings remain non-blocking.
+- Backend full validation: Ruff passed; `409 tests passed` with the existing
+  Pydantic field-shadowing warning.
+- Project tooling validation: `8 tests passed`.
 - Architecture guard after implementation: no violations.
 - Real-provider acceptance remains manual and requires configured provider credentials.
 
+### Door Sign-off
+
+| Door | Automated evidence | Live provider evidence |
+| --- | --- | --- |
+| Fill | FAST payload omits current content and teacher note | Pending |
+| Improve | STANDARD payload includes current content | Pending |
+| Custom | Edited teacher note is sent without resolving an issue | Pending |
+| Repair | Fixture-driven canvas test opens, edits, generates, and resolves | Pending |
+| Image regenerate | Visual issue action sends the edited QC hint and refreshes | Pending |
+
 ### Risks and Follow-up
 
-- Frontend Vitest/type-check processes have previously timed out on Windows without diagnostics; record timeouts separately from assertion or compiler failures.
+- Frontend validation is slow on Windows but completed successfully when given
+  a sufficient timeout; continue recording genuine timeouts separately from failures.
 - No production fixture loader, seed endpoint, automatic repair, or whole-section rewrite is introduced.
 
 ## Builder Convergence — Final convergence status — 2026-07-16

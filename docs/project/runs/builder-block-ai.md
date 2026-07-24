@@ -7,6 +7,19 @@ It contains empty and populated text blocks, a repairable practice flag, an advi
 flag, and a flagged diagram. Backend planning/work-order tests continue to use the fixed
 `gen_5aed3804` fixtures.
 
+## Automated evidence — 2026-07-24
+
+- `npm run check`: passed with 0 errors and 0 warnings.
+- `npm run build`: passed; only the existing Rollup annotation and chunk-size warnings were emitted.
+- `npm test`: 59 test files passed, 243 tests passed.
+- Builder AI targeted coverage: 13 tests passed across payload, fixture,
+  canvas repair, and visual regeneration behavior.
+- Backend validation: Ruff passed and 409 tests passed.
+- Tooling validation: 8 tests passed.
+- Architecture guard: no violations found.
+- Real-provider acceptance was not performed in this workspace, so every live
+  checklist item below remains intentionally unchecked.
+
 ## Real-provider acceptance
 
 Prerequisites: configure the backend provider/model environment, `PUBLIC_API_URL`, image
