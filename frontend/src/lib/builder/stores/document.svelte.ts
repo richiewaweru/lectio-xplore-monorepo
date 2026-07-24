@@ -710,6 +710,7 @@ export function createDocumentStore() {
 		if (!document || swaps.length === 0) return false;
 		let changed = false;
 		const blocks = { ...document.blocks };
+		let media = document.media;
 		for (const swap of swaps) {
 			const section = document.sections.find(
 				(candidate) =>
@@ -720,10 +721,20 @@ export function createDocumentStore() {
 			if (!section) continue;
 			for (const blockId of section.block_ids) {
 				const block = blocks[blockId];
-				if (!block || !['diagram-block', 'diagram-series'].includes(block.component_id)) continue;
+				if (!block || !['diagram-block', 'diagram-series', 'image-block'].includes(block.component_id)) continue;
 				if (block.component_id === 'diagram-block' && block.content.image_url === swap.oldUrl) {
 					blocks[blockId] = { ...block, content: { ...block.content, image_url: swap.newUrl } };
 					changed = true;
+					continue;
+				}
+				if (block.component_id === 'image-block') {
+					const mediaId =
+						typeof block.content.media_id === 'string' ? block.content.media_id : '';
+					const reference = mediaId ? media[mediaId] : undefined;
+					if (reference?.type === 'image' && reference.url === swap.oldUrl) {
+						media = { ...media, [mediaId]: { ...reference, url: swap.newUrl } };
+						changed = true;
+					}
 					continue;
 				}
 				if (block.component_id === 'diagram-series' && Array.isArray(block.content.diagrams)) {
@@ -746,7 +757,7 @@ export function createDocumentStore() {
 			}
 		}
 		if (!changed) return false;
-		document = { ...document, blocks, updated_at: new Date().toISOString() };
+		document = { ...document, blocks, media, updated_at: new Date().toISOString() };
 		schedulePersist(document);
 		return true;
 	}

@@ -18,6 +18,7 @@
 		resolveVisualIssueTarget
 	} from '$lib/builder/issue-targeting';
 	import type { BlockAiRepairRequest } from '$lib/builder/issues';
+	import { resolveBlockVisual } from '$lib/builder/visual-regeneration';
 
 	let {
 		store,
@@ -262,6 +263,14 @@
 							store.resolveIssue(request.sectionId, request.issueId);
 							aiRepairRequest = null;
 						}}
+						{generationId}
+						matchedVisual={resolveBlockVisual(
+							item,
+							section.id,
+							visualBlocks,
+							store.document?.media ?? {}
+						)}
+						{onVisualRegenerated}
 						onapplyaicontent={(content) => {
 							const merged = mergeAiContentWithEditableFields(
 								item.component_id,

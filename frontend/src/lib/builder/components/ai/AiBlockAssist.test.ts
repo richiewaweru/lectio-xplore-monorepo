@@ -43,7 +43,7 @@ describe('AiBlockAssist', () => {
 
 	it('sends fill with FAST by default', async () => {
 		renderAssist();
-		expect(screen.getByTestId('ai-assist-trigger')).toHaveAttribute('title', 'Generate content');
+		expect(screen.getByTestId('ai-assist-trigger').getAttribute('title')).toBe('Generate content');
 		await fireEvent.click(screen.getByTestId('ai-assist-trigger'));
 		await fireEvent.click(screen.getByTestId('ai-assist-generate'));
 
@@ -80,9 +80,13 @@ describe('AiBlockAssist', () => {
 		renderAssist({
 			block: { id: 'block-1', component_id: 'explanation-block', content: { body: 'Existing' }, position: 0 }
 		});
-		expect(screen.getByTestId('ai-assist-trigger')).toHaveAttribute('title', 'Edit with AI');
+		expect(screen.getByTestId('ai-assist-trigger').getAttribute('title')).toBe('Edit with AI');
 		await fireEvent.click(screen.getByTestId('ai-assist-trigger'));
-		expect(screen.getByRole('checkbox', { name: 'Keep existing content as basis' })).toBeChecked();
+		expect(
+			(screen.getByRole('checkbox', {
+				name: 'Keep existing content as basis'
+			}) as HTMLInputElement).checked
+		).toBe(true);
 		await fireEvent.click(screen.getByRole('checkbox', { name: 'Higher quality (slower)' }));
 		await fireEvent.click(screen.getByTestId('ai-assist-generate'));
 
@@ -141,9 +145,9 @@ describe('AiBlockAssist', () => {
 		});
 		await fireEvent.click(screen.getByTestId('ai-assist-trigger'));
 
-		expect(screen.getByRole('radio', { name: 'Fill' })).toBeInTheDocument();
-		expect(screen.getByRole('radio', { name: 'Improve' })).toBeInTheDocument();
-		expect(screen.getByRole('radio', { name: 'Custom' })).toBeInTheDocument();
+		expect(screen.getByRole('radio', { name: 'Fill' })).not.toBeNull();
+		expect(screen.getByRole('radio', { name: 'Improve' })).not.toBeNull();
+		expect(screen.getByRole('radio', { name: 'Custom' })).not.toBeNull();
 		expect(screen.queryByRole('checkbox', { name: 'Keep existing content as basis' })).toBeNull();
 	});
 

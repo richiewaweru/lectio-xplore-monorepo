@@ -150,4 +150,35 @@ describe('document store block operations', () => {
 		}])).toBe(false);
 		expect(store.document!.blocks['diagram-a']?.content.image_url).toBe('https://teacher.example/custom.png');
 	});
+
+	it('refreshes the media URL used by an unchanged generated image block', () => {
+		const generated = sampleDocument();
+		generated.sections[0]!.block_ids.push('image-a');
+		generated.blocks['image-a'] = {
+			id: 'image-a',
+			component_id: 'image-block',
+			position: 2,
+			content: { media_id: 'generated-image', alt_text: 'Generated image' }
+		};
+		generated.media['generated-image'] = {
+			id: 'generated-image',
+			type: 'image',
+			url: 'https://old.example/photo.png'
+		};
+		const store = createDocumentStore();
+		store.loadDocument(generated);
+
+		expect(
+			store.refreshGeneratedVisualUrls([
+				{
+					sectionId: 'section-a',
+					oldUrl: 'https://old.example/photo.png',
+					newUrl: 'https://new.example/photo.png'
+				}
+			])
+		).toBe(true);
+		expect(store.document!.media['generated-image']?.url).toBe(
+			'https://new.example/photo.png'
+		);
+	});
 });
