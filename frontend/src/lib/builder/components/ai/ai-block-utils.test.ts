@@ -13,7 +13,23 @@ vi.mock('lectio', () => ({
 }));
 
 import { getEditSchema } from 'lectio';
-import { isAiGeneratableComponent, mergeAiContentWithEditableFields } from './ai-block-utils';
+import {
+	isAiGeneratableComponent,
+	mergeAiContentWithEditableFields,
+	resolveBackendMode
+} from './ai-block-utils';
+
+describe('resolveBackendMode', () => {
+	it.each([
+		[{ hasContent: false, hasNote: false, keepAsBasis: true }, 'fill'],
+		[{ hasContent: false, hasNote: true, keepAsBasis: true }, 'custom'],
+		[{ hasContent: true, hasNote: false, keepAsBasis: true }, 'improve'],
+		[{ hasContent: true, hasNote: true, keepAsBasis: true }, 'improve'],
+		[{ hasContent: true, hasNote: false, keepAsBasis: false }, 'custom']
+	] as const)('maps %o to %s', (input, expected) => {
+		expect(resolveBackendMode(input)).toBe(expected);
+	});
+});
 
 describe('mergeAiContentWithEditableFields', () => {
 	it('updates only non-hidden edit-schema fields', () => {

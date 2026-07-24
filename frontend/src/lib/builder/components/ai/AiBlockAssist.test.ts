@@ -15,6 +15,7 @@ vi.mock('lectio', () => ({
 }));
 
 import AiBlockAssist from './AiBlockAssist.svelte';
+import { NEW_AI_BLOCK_ASSIST_KEY } from '$lib/settings/flags';
 
 function renderAssist(overrides: Record<string, unknown> = {}) {
 	return render(AiBlockAssist, {
@@ -35,12 +36,14 @@ function renderAssist(overrides: Record<string, unknown> = {}) {
 
 describe('AiBlockAssist', () => {
 	beforeEach(() => {
+		localStorage.clear();
 		generateBlock.mockReset();
 		generateBlock.mockResolvedValue({ content: { body: 'Generated' } });
 	});
 
 	it('sends fill with FAST by default', async () => {
 		renderAssist();
+		expect(screen.getByTestId('ai-assist-trigger')).toHaveAttribute('title', 'Generate content');
 		await fireEvent.click(screen.getByTestId('ai-assist-trigger'));
 		await fireEvent.click(screen.getByTestId('ai-assist-generate'));
 
@@ -55,12 +58,31 @@ describe('AiBlockAssist', () => {
 		));
 	});
 
+	it('sends an empty block with an instruction as custom without existing content', async () => {
+		renderAssist();
+		await fireEvent.click(screen.getByTestId('ai-assist-trigger'));
+		await fireEvent.input(screen.getByLabelText('Instruction'), {
+			target: { value: 'Add a concise explanation.' }
+		});
+		await fireEvent.click(screen.getByTestId('ai-assist-generate'));
+
+		await waitFor(() => expect(generateBlock).toHaveBeenCalledWith(
+			expect.objectContaining({
+				mode: 'custom',
+				teacher_note: 'Add a concise explanation.',
+				existing_content: undefined
+			}),
+			'token'
+		));
+	});
+
 	it('sends populated improve requests with current content and STANDARD tier', async () => {
 		renderAssist({
 			block: { id: 'block-1', component_id: 'explanation-block', content: { body: 'Existing' }, position: 0 }
 		});
+		expect(screen.getByTestId('ai-assist-trigger')).toHaveAttribute('title', 'Edit with AI');
 		await fireEvent.click(screen.getByTestId('ai-assist-trigger'));
-		await fireEvent.click(screen.getByRole('radio', { name: 'Improve' }));
+		expect(screen.getByRole('checkbox', { name: 'Keep existing content as basis' })).toBeChecked();
 		await fireEvent.click(screen.getByRole('checkbox', { name: 'Higher quality (slower)' }));
 		await fireEvent.click(screen.getByTestId('ai-assist-generate'));
 
@@ -72,14 +94,34 @@ describe('AiBlockAssist', () => {
 		));
 	});
 
-	it('keeps ordinary custom requests stateless', async () => {
+	it('keeps a populated block as improve when an optional instruction is supplied', async () => {
+		renderAssist({
+			block: { id: 'block-1', component_id: 'explanation-block', content: { body: 'Existing' }, position: 0 }
+		});
+		await fireEvent.click(screen.getByTestId('ai-assist-trigger'));
+		await fireEvent.input(screen.getByLabelText('Instruction'), {
+			target: { value: 'Use shorter sentences.' }
+		});
+		await fireEvent.click(screen.getByTestId('ai-assist-generate'));
+
+		await waitFor(() => expect(generateBlock).toHaveBeenCalledWith(
+			expect.objectContaining({
+				mode: 'improve',
+				teacher_note: 'Use shorter sentences.',
+				existing_content: { body: 'Existing' }
+			}),
+			'token'
+		));
+	});
+
+	it('rewrites a populated block statelessly when the basis toggle is off', async () => {
 		const onRepairApplied = vi.fn();
 		renderAssist({
 			block: { id: 'block-1', component_id: 'explanation-block', content: { body: 'Existing' }, position: 0 },
 			onRepairApplied
 		});
 		await fireEvent.click(screen.getByTestId('ai-assist-trigger'));
-		await fireEvent.click(screen.getByRole('radio', { name: 'Custom' }));
+		await fireEvent.click(screen.getByRole('checkbox', { name: 'Keep existing content as basis' }));
 		await fireEvent.input(screen.getByLabelText('Instruction'), { target: { value: 'Make it clearer.' } });
 		await fireEvent.click(screen.getByTestId('ai-assist-generate'));
 
@@ -92,7 +134,20 @@ describe('AiBlockAssist', () => {
 		expect(onRepairApplied).not.toHaveBeenCalled();
 	});
 
-	it('opens a repair prefilled, editable, FAST, and sends existing content', async () => {
+	it('retains the legacy radio UI when the feature flag is false', async () => {
+		localStorage.setItem(NEW_AI_BLOCK_ASSIST_KEY, 'false');
+		renderAssist({
+			block: { id: 'block-1', component_id: 'explanation-block', content: { body: 'Existing' }, position: 0 }
+		});
+		await fireEvent.click(screen.getByTestId('ai-assist-trigger'));
+
+		expect(screen.getByRole('radio', { name: 'Fill' })).toBeInTheDocument();
+		expect(screen.getByRole('radio', { name: 'Improve' })).toBeInTheDocument();
+		expect(screen.getByRole('radio', { name: 'Custom' })).toBeInTheDocument();
+		expect(screen.queryByRole('checkbox', { name: 'Keep existing content as basis' })).toBeNull();
+	});
+
+	it('opens a repair prefilled, editable, FAST, and sends no existing content', async () => {
 		const onRepairApplied = vi.fn();
 		const request = {
 			requestKey: 'repair-1', issueId: 'issue-1', sectionId: 'section-1',
@@ -114,7 +169,7 @@ describe('AiBlockAssist', () => {
 			expect.objectContaining({
 				mode: 'custom', model_tier: 'FAST',
 				teacher_note: 'Add exactly two short questions.',
-				existing_content: { body: 'Existing' }
+				existing_content: undefined
 			}),
 			'token'
 		));

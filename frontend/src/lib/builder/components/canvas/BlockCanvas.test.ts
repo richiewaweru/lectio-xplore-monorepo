@@ -83,10 +83,7 @@ describe('BlockCanvas AI repair integration', () => {
 				expect.objectContaining({
 					mode: 'custom',
 					teacher_note: 'Add two short photosynthesis questions.',
-					existing_content: {
-						title: 'Check your understanding',
-						problems: []
-					}
+					existing_content: undefined
 				}),
 				'token'
 			)

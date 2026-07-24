@@ -2,6 +2,21 @@ import { getEditSchema, getEmptyContent } from 'lectio';
 
 const MANUAL_ONLY_COMPONENT_IDS = new Set(['image-block', 'video-embed']);
 
+export type BackendBlockMode = 'fill' | 'improve' | 'custom';
+
+export function resolveBackendMode({
+	hasContent,
+	hasNote,
+	keepAsBasis
+}: {
+	hasContent: boolean;
+	hasNote: boolean;
+	keepAsBasis: boolean;
+}): BackendBlockMode {
+	if (!hasContent) return hasNote ? 'custom' : 'fill';
+	return keepAsBasis ? 'improve' : 'custom';
+}
+
 /** Mirrors the backend guard for media blocks that require teacher-provided assets. */
 export function isAiGeneratableComponent(componentId: string): boolean {
 	return !MANUAL_ONLY_COMPONENT_IDS.has(componentId) && getEditSchema(componentId) !== null;
