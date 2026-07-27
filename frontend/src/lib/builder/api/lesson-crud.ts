@@ -9,6 +9,7 @@ export interface BuilderLessonSummary {
 	source_generation_id: string | null;
 	source_type: BuilderLessonSourceType;
 	title: string;
+	class_label: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -19,6 +20,7 @@ export interface BuilderLessonRecord extends BuilderLessonSummary {
 
 export interface CreateBuilderLessonRequest {
 	title?: string;
+	class_label?: string | null;
 	source_generation_id?: string;
 	source_type?: BuilderLessonSourceType;
 	document: LessonDocument;
@@ -26,6 +28,7 @@ export interface CreateBuilderLessonRequest {
 
 export interface UpdateBuilderLessonRequest {
 	title?: string;
+	class_label?: string | null;
 	document: LessonDocument;
 }
 
@@ -72,4 +75,3 @@ export async function deleteBuilderLesson(id: string): Promise<void> {
 	});
 	await ensureOk(response, 'Failed to delete builder lesson.');
 }
-

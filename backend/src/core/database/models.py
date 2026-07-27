@@ -189,6 +189,7 @@ class EditableLessonModel(Base):
     source_generation_id = Column(String, nullable=True)
     source_type = Column(String, nullable=False, default="manual", server_default="manual")
     title = Column(String, nullable=False, default="Untitled lesson", server_default="Untitled lesson")
+    class_label = Column(String, nullable=True)
     document_json = Column(JSON_DOCUMENT_TYPE, nullable=False)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)

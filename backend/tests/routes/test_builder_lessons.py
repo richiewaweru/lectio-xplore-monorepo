@@ -237,6 +237,7 @@ class TestBuilderLessonRoutes:
         create_body = {
             "source_type": "manual",
             "title": "Fractions draft",
+            "class_label": "  Year 7 Mathematics  ",
             "document": _minimal_lesson(),
         }
 
@@ -247,6 +248,7 @@ class TestBuilderLessonRoutes:
             lesson_id = created["id"]
             assert created["source_type"] == "manual"
             assert created["title"] == "Fractions draft"
+            assert created["class_label"] == "Year 7 Mathematics"
             assert created["document"]["id"] == lesson_id
             assert created["document"]["title"] == "Fractions draft"
 
@@ -255,6 +257,7 @@ class TestBuilderLessonRoutes:
             listed = list_response.json()
             assert len(listed) == 1
             assert listed[0]["id"] == lesson_id
+            assert listed[0]["class_label"] == "Year 7 Mathematics"
 
             load_response = await client.get(f"/api/v1/builder/lessons/{lesson_id}")
             assert load_response.status_code == 200
@@ -269,6 +272,7 @@ class TestBuilderLessonRoutes:
             assert update_response.status_code == 200
             updated = update_response.json()
             assert updated["title"] == "Fractions final"
+            assert updated["class_label"] == "Year 7 Mathematics"
             assert updated["document"]["id"] == lesson_id
             assert updated["document"]["blocks"][block_id]["content"]["body"] == "Updated explanation"
 
@@ -276,6 +280,27 @@ class TestBuilderLessonRoutes:
             assert delete_response.status_code == 204
             after_delete = await client.get(f"/api/v1/builder/lessons/{lesson_id}")
             assert after_delete.status_code == 404
+
+    async def test_class_label_is_optional_and_can_be_cleared(self):
+        async with await _client() as client:
+            created = await client.post(
+                "/api/v1/builder/lessons",
+                json={"source_type": "manual", "document": _minimal_lesson()},
+            )
+            assert created.status_code == 201
+            lesson_id = created.json()["id"]
+            assert created.json()["class_label"] is None
+
+            cleared = await client.put(
+                f"/api/v1/builder/lessons/{lesson_id}",
+                json={
+                    "class_label": "   ",
+                    "document": created.json()["document"],
+                },
+            )
+
+        assert cleared.status_code == 200
+        assert cleared.json()["class_label"] is None
 
     async def test_owner_checks_block_cross_user_access(self, _install_dependency_overrides):
         async with await _client() as client:

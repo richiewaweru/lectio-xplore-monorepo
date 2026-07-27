@@ -62,6 +62,7 @@
 	let includeAnswers = $state(true);
 	let builderLoading = $state(false);
 	let builderError = $state<string | null>(null);
+	let classLabel = $state<string | null>(null);
 	let displayTitle = $state('');
 	const currentExportPolicy = $derived(getBookletExportPolicy(v3Studio.bookletStatus));
 	const currentPrintReadiness = $derived(
@@ -499,9 +500,10 @@
 		}
 	}
 
-	async function handleInputSubmit(form: V3InputForm) {
+	async function handleInputSubmit(form: V3InputForm, submittedClassLabel: string | null) {
 		v3Studio.error = null;
 		builderError = null;
+		classLabel = submittedClassLabel;
 		v3Studio.form = form;
 		v3Studio.stage = 'fill';
 		try {
@@ -683,6 +685,7 @@
 					source_type: 'v3_generation',
 					source_generation_id: generationId,
 					title: lesson.title,
+					class_label: classLabel,
 					document: lesson
 				});
 				await saveDocument(created.document);
@@ -862,6 +865,7 @@
 				source_type: 'v3_generation',
 				source_generation_id: generationId,
 				title: lesson.title,
+				class_label: classLabel,
 				document: lesson
 			});
 			await saveDocument(created.document);

@@ -1,15 +1,18 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { getProfile } from '$lib/api/profile';
 	import { narrowTopic, proposeIntent } from '$lib/api/v3';
 	import type { V3InputForm } from '$lib/types/v3';
 
 	interface Props {
-		onSubmit: (form: V3InputForm) => void;
+		onSubmit: (form: V3InputForm, classLabel: string | null) => void;
 	}
 
 	let { onSubmit }: Props = $props();
 
 	let grade_level = $state('');
 	let subject = $state('');
+	let class_label = $state('');
 	let learner_level = $state<V3InputForm['learner_level']>('on_grade');
 	let reading_level = $state<V3InputForm['reading_level']>('on_grade');
 	let language_support = $state<V3InputForm['language_support']>('none');
@@ -143,10 +146,23 @@
 
 	const canSubmit = $derived(grade_level !== '' && subject !== '' && topic.trim().length > 2 && outcome.trim().length > 2);
 
+	onMount(async () => {
+		try {
+			const profile = await getProfile();
+			const candidate = profile.default_audience_description?.trim() ?? '';
+			if (candidate.length > 0 && candidate.length < 40) class_label = candidate;
+		} catch {
+			// Class is optional; profile-loading failures must not block Studio.
+		}
+	});
+
 	function handleSubmit(event: Event): void {
 		event.preventDefault();
 		if (!canSubmit) return;
-		onSubmit({ grade_level, subject, duration_minutes: Number(duration_minutes), resource_type, topic: topic.trim(), subtopics, prior_knowledge: prior_knowledge.trim(), outcome: outcome.trim(), struggle: struggle.trim(), learner_level, reading_level, language_support, prior_knowledge_level, free_text: free_text.trim() });
+		onSubmit(
+			{ grade_level, subject, duration_minutes: Number(duration_minutes), resource_type, topic: topic.trim(), subtopics, prior_knowledge: prior_knowledge.trim(), outcome: outcome.trim(), struggle: struggle.trim(), learner_level, reading_level, language_support, prior_knowledge_level, free_text: free_text.trim() },
+			class_label.trim() || null
+		);
 	}
 </script>
 
@@ -163,6 +179,7 @@
 			<div class="grid gap-3 sm:grid-cols-2">
 				<label class="grid gap-1 text-sm font-medium"><span>Grade level</span><select class="rounded-xl border border-input bg-background px-3 py-2" bind:value={grade_level} aria-label="Grade level" onchange={markDraftsStale}><option value="">Choose...</option>{#each GRADE_LEVELS as grade}<option value={grade}>{grade}</option>{/each}</select></label>
 				<label class="grid gap-1 text-sm font-medium"><span>Subject</span><select class="rounded-xl border border-input bg-background px-3 py-2" bind:value={subject} aria-label="Subject" onchange={markDraftsStale}><option value="">Choose...</option>{#each SUBJECTS as item}<option value={item}>{item}</option>{/each}</select></label>
+				<label class="grid gap-1 text-sm font-medium sm:col-span-2"><span>Class <span class="font-normal text-muted-foreground">(optional)</span></span><input class="rounded-xl border border-input bg-background px-3 py-2" bind:value={class_label} aria-label="Class" placeholder="Year 7 Science" /></label>
 				<label class="grid gap-1 text-sm font-medium"><span>Overall level</span><select bind:value={learner_level} class="rounded-xl border border-input bg-background px-3 py-2" onchange={markDraftsStale}>{#each LEVELS as option}<option value={option.value}>{option.label}</option>{/each}</select></label>
 				<label class="grid gap-1 text-sm font-medium"><span>Reading level</span><select bind:value={reading_level} class="rounded-xl border border-input bg-background px-3 py-2" onchange={markDraftsStale}>{#each READING_LEVELS as option}<option value={option.value}>{option.label}</option>{/each}</select></label>
 				<label class="grid gap-1 text-sm font-medium sm:col-span-2"><span>Language support</span><select bind:value={language_support} class="rounded-xl border border-input bg-background px-3 py-2" onchange={markDraftsStale}>{#each LANGUAGE_OPTIONS as option}<option value={option.value}>{option.label}</option>{/each}</select></label>

@@ -2,7 +2,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { narrowTopic, proposeIntent } = vi.hoisted(() => ({ narrowTopic: vi.fn(), proposeIntent: vi.fn() }));
+const { getProfile, narrowTopic, proposeIntent } = vi.hoisted(() => ({
+	getProfile: vi.fn(),
+	narrowTopic: vi.fn(),
+	proposeIntent: vi.fn()
+}));
+vi.mock('$lib/api/profile', () => ({ getProfile }));
 vi.mock('$lib/api/v3', () => ({ narrowTopic, proposeIntent }));
 
 import V3InputSurface from './V3InputSurface.svelte';
@@ -29,15 +34,53 @@ async function fillClassAndTopic(): Promise<void> {
 	topic.value = 'Finding the area of irregular shapes'; await fireEvent.input(topic);
 }
 
-afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
+afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); getProfile.mockReset(); });
 
 describe('V3InputSurface', () => {
 	it('renders the five proposed cards in order', () => {
+		getProfile.mockRejectedValue(new Error('not available'));
 		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
 		const labels = screen.getAllByText(/Step [1-5] \//).map((element) => element.textContent);
 		expect(labels).toEqual(['Step 1 / Class shape', 'Step 2 / Lesson shape', 'Step 3 / Topic', 'Step 4 / Intent', 'Step 5 / Anything else']);
 		expect(screen.getByLabelText('Grade level')).toBeTruthy();
 		expect(screen.getByLabelText('Topic')).toBeTruthy();
+	});
+
+	it('prefills a short class label from the profile and leaves long descriptions blank', async () => {
+		getProfile.mockResolvedValueOnce({ default_audience_description: '  Year 7 Science  ' });
+		const { unmount } = render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+		await waitFor(() => expect((screen.getByLabelText('Class') as HTMLInputElement).value).toBe('Year 7 Science'));
+		unmount();
+
+		getProfile.mockResolvedValueOnce({ default_audience_description: 'A mixed class with a detailed description that is too long' });
+		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+		await waitFor(() => expect(getProfile).toHaveBeenCalledTimes(2));
+		expect((screen.getByLabelText('Class') as HTMLInputElement).value).toBe('');
+	});
+
+	it('submits the optional class label separately from the planning form', async () => {
+		getProfile.mockRejectedValue(new Error('not available'));
+		const onSubmit = vi.fn();
+		render(V3InputSurface, { props: { onSubmit } });
+		await fillClassAndTopic();
+		const classInput = screen.getByLabelText('Class') as HTMLInputElement;
+		classInput.value = '  Year 6 Mathematics  ';
+		await fireEvent.input(classInput);
+		const outcome = screen.getByLabelText('Desired outcome') as HTMLTextAreaElement;
+		outcome.value = 'Students calculate irregular areas.';
+		await fireEvent.input(outcome);
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Build the skeleton' }));
+
+		expect(onSubmit).toHaveBeenCalledWith(
+			expect.objectContaining({
+				grade_level: 'Grade 6',
+				subject: 'Mathematics',
+				topic: 'Finding the area of irregular shapes'
+			}),
+			'Year 6 Mathematics'
+		);
+		expect(onSubmit.mock.calls[0][0]).not.toHaveProperty('class_label');
 	});
 
 	it('narrows a valid topic on blur after the debounce', async () => {

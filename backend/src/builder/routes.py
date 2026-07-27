@@ -141,6 +141,7 @@ def _normalize_document_for_storage(
 
 class BuilderLessonCreateRequest(BaseModel):
     title: str | None = None
+    class_label: str | None = None
     source_generation_id: str | None = None
     source_type: Literal["manual", "v3_generation", "template"] = "manual"
     document: dict[str, Any] = Field(..., description="LessonDocument JSON payload")
@@ -148,6 +149,7 @@ class BuilderLessonCreateRequest(BaseModel):
 
 class BuilderLessonUpdateRequest(BaseModel):
     title: str | None = None
+    class_label: str | None = None
     document: dict[str, Any] = Field(..., description="LessonDocument JSON payload")
 
 
@@ -156,6 +158,7 @@ class BuilderLessonListItem(BaseModel):
     source_generation_id: str | None
     source_type: str
     title: str
+    class_label: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -201,6 +204,7 @@ def _to_list_item(model: EditableLessonModel) -> BuilderLessonListItem:
         source_generation_id=model.source_generation_id,
         source_type=model.source_type,
         title=model.title,
+        class_label=model.class_label,
         created_at=model.created_at,
         updated_at=model.updated_at,
     )
@@ -221,6 +225,13 @@ def _resolved_title(explicit: str | None, document: dict[str, Any], default: str
     if isinstance(candidate, str) and candidate.strip():
         return candidate.strip()
     return default
+
+
+def _normalized_class_label(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    return normalized or None
 
 
 async def _owned_lesson_or_404(
@@ -487,6 +498,7 @@ async def create_builder_lesson(
         source_generation_id=body.source_generation_id,
         source_type=body.source_type,
         title=title,
+        class_label=_normalized_class_label(body.class_label),
         document_json=document_json,
         created_at=now,
         updated_at=now,
@@ -567,6 +579,8 @@ async def update_builder_lesson(
     )
 
     model.title = title
+    if "class_label" in body.model_fields_set:
+        model.class_label = _normalized_class_label(body.class_label)
     model.document_json = document_json
     model.updated_at = now
     await session.commit()

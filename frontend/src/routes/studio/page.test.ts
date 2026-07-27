@@ -449,6 +449,7 @@ describe('studio chunked URL resume', () => {
 		await waitFor(() => expect(builderMocks.createBuilderLesson).toHaveBeenCalledWith(
 			expect.objectContaining({
 				source_type: 'v3_generation', source_generation_id: 'gen-builder-stream',
+				class_label: null,
 				document: expect.objectContaining({ sections: [] })
 			})
 		));
