@@ -1,0 +1,99 @@
+{
+  "lessons": [
+    {
+      "id": "lesson-writing",
+      "source_generation_id": "gen-writing",
+      "source_type": "v3_generation",
+      "title": "Photosynthesis",
+      "class_label": "Year 7 Science",
+      "created_at": "2026-07-27T08:00:00Z",
+      "updated_at": "2026-07-27T10:00:00Z"
+    },
+    {
+      "id": "lesson-attention",
+      "source_generation_id": "gen-attention",
+      "source_type": "v3_generation",
+      "title": "Stomata",
+      "class_label": "Year 8 Science",
+      "created_at": "2026-07-27T07:00:00Z",
+      "updated_at": "2026-07-27T09:00:00Z"
+    },
+    {
+      "id": "lesson-ready",
+      "source_generation_id": "gen-ready",
+      "source_type": "v3_generation",
+      "title": "Irregular shapes",
+      "class_label": null,
+      "created_at": "2026-07-26T07:00:00Z",
+      "updated_at": "2026-07-26T09:00:00Z"
+    },
+    {
+      "id": "lesson-draft",
+      "source_generation_id": null,
+      "source_type": "manual",
+      "title": "Untitled lesson",
+      "class_label": null,
+      "created_at": "2026-07-25T07:00:00Z",
+      "updated_at": "2026-07-25T09:00:00Z"
+    },
+    {
+      "id": "lesson-failed",
+      "source_generation_id": "gen-failed",
+      "source_type": "v3_generation",
+      "title": "Failed lesson",
+      "class_label": null,
+      "created_at": "2026-07-24T07:00:00Z",
+      "updated_at": "2026-07-24T09:00:00Z"
+    }
+  ],
+  "generations": [
+    {
+      "id": "gen-writing",
+      "subject": "Science",
+      "title": "Photosynthesis",
+      "status": "running",
+      "booklet_status": "streaming_preview",
+      "section_count": 4,
+      "document_section_count": 2,
+      "template_id": "guided-concept-path",
+      "created_at": "2026-07-27T08:00:00Z",
+      "completed_at": null
+    },
+    {
+      "id": "gen-attention",
+      "subject": "Science",
+      "title": "Stomata",
+      "status": "completed_with_warnings",
+      "booklet_status": "final_with_warnings",
+      "section_count": 2,
+      "document_section_count": 2,
+      "template_id": "guided-concept-path",
+      "created_at": "2026-07-27T07:00:00Z",
+      "completed_at": "2026-07-27T08:30:00Z"
+    },
+    {
+      "id": "gen-ready",
+      "subject": "Mathematics",
+      "title": "Irregular shapes",
+      "status": "completed",
+      "booklet_status": "final_ready",
+      "section_count": 3,
+      "document_section_count": 3,
+      "template_id": "guided-concept-path",
+      "created_at": "2026-07-26T07:00:00Z",
+      "completed_at": "2026-07-26T08:30:00Z"
+    },
+    {
+      "id": "gen-failed",
+      "subject": "Science",
+      "title": "Failed lesson",
+      "status": "failed_finalisation",
+      "booklet_status": "draft_needs_review",
+      "section_count": 3,
+      "document_section_count": 1,
+      "template_id": "guided-concept-path",
+      "created_at": "2026-07-24T07:00:00Z",
+      "completed_at": "2026-07-24T08:30:00Z"
+    }
+  ]
+}

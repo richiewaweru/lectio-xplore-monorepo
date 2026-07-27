@@ -29,7 +29,7 @@ The browser-control surface exposed rendered DOM and console logs but not authen
 
 - [x] Reproduced current dashboard, Builder list, active-generation labels, and unresolved review state
 - [x] Phase 1 — optional class label
-- [ ] Phase 2 — pure lesson state
+- [x] Phase 2 — pure lesson state
 - [ ] Phase 3 — flag-gated lessons surface
 - [ ] Phase 4 — live progress and review counts
 - [ ] Phase 5 — settings and deletion
@@ -41,6 +41,8 @@ The browser-control surface exposed rendered DOM and console logs but not authen
 - Phase 1 Studio/component tests: 33 passed
 - Phase 1 frontend type check: 0 errors, 0 warnings
 - Phase 1 Ruff: passed
+- Phase 2 lesson-state and generation-adapter tests: 8 passed
+- Phase 2 frontend type check: 0 errors, 0 warnings
 
 ## Risks and Follow-up
 
