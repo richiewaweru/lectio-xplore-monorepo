@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
 	goto: vi.fn(),
-	getStreamIntoBuilder: vi.fn(),
 	listBuilderLessons: vi.fn(),
 	getBuilderLesson: vi.fn(),
 	deleteBuilderLesson: vi.fn(),
@@ -16,7 +15,6 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
-vi.mock('$lib/settings/flags', () => ({ getStreamIntoBuilder: mocks.getStreamIntoBuilder }));
 vi.mock('$lib/builder/api/lesson-crud', () => ({
 	listBuilderLessons: mocks.listBuilderLessons,
 	getBuilderLesson: mocks.getBuilderLesson,
@@ -154,7 +152,6 @@ describe('/lessons', () => {
 	beforeEach(() => {
 		Object.values(mocks).forEach((mock) => mock.mockReset());
 		mocks.goto.mockReset();
-		mocks.getStreamIntoBuilder.mockReturnValue(true);
 		mocks.listBuilderLessons.mockResolvedValue(lessons);
 		mocks.getV3Generations.mockResolvedValue(generations);
 		mocks.getBuilderLesson.mockImplementation(async (id: string) => ({
@@ -175,15 +172,6 @@ describe('/lessons', () => {
 	});
 
 	afterEach(cleanup);
-
-	it('redirects to the unchanged dashboard when the flag is off', async () => {
-		mocks.getStreamIntoBuilder.mockReturnValue(false);
-		render(LessonsPage);
-		await waitFor(() =>
-			expect(mocks.goto).toHaveBeenCalledWith('/dashboard', { replaceState: true })
-		);
-		expect(mocks.listBuilderLessons).not.toHaveBeenCalled();
-	});
 
 	it('renders all four groups, class labels, and row actions', async () => {
 		render(LessonsPage);
@@ -213,6 +201,29 @@ describe('/lessons', () => {
 		expect(await screen.findByText(/No lessons yet/)).toBeTruthy();
 		expect(screen.queryByText('Writing now')).toBeNull();
 		expect(screen.getAllByRole('link', { name: '+ New lesson' })).toHaveLength(1);
+	});
+
+	it('offers Studio as the primary creation path and blank Builder from the accessible menu', async () => {
+		mocks.listBuilderLessons.mockResolvedValue([]);
+		mocks.getV3Generations.mockResolvedValue([]);
+		render(LessonsPage);
+		await screen.findByText(/No lessons yet/);
+		const primary = screen.getByRole('link', { name: '+ New lesson' });
+		expect(primary.getAttribute('href')).toBe('/studio');
+		const trigger = screen.getByRole('button', { name: 'More new lesson options' });
+		expect(trigger.getAttribute('aria-expanded')).toBe('false');
+		await fireEvent.click(trigger);
+		await waitFor(() => expect(trigger.getAttribute('aria-expanded')).toBe('true'));
+		expect(screen.getByRole('menuitem', { name: 'Start from blank' }).getAttribute('href')).toBe(
+			'/builder/new'
+		);
+		await fireEvent.keyDown(document, { key: 'Escape' });
+		expect(screen.queryByRole('menuitem', { name: 'Start from blank' })).toBeNull();
+		expect(document.activeElement).toBe(trigger);
+		await fireEvent.click(trigger);
+		expect(screen.getByRole('menuitem', { name: 'Start from blank' })).toBeTruthy();
+		await fireEvent.pointerDown(document.body);
+		expect(screen.queryByRole('menuitem', { name: 'Start from blank' })).toBeNull();
 	});
 
 	it('moves a writing row to ready when the shared poller observes a terminal snapshot', async () => {

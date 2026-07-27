@@ -4,23 +4,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
 	getNewAiBlockAssist,
-	getStreamIntoBuilder,
 	NEW_AI_BLOCK_ASSIST_KEY,
-	setNewAiBlockAssist,
-	setStreamIntoBuilder,
-	STREAM_INTO_BUILDER_KEY
+	setNewAiBlockAssist
 } from './flags';
-
-describe('stream-into-builder setting', () => {
-	beforeEach(() => localStorage.clear());
-
-	it('defaults to false and persists changes', () => {
-		expect(getStreamIntoBuilder()).toBe(false);
-		setStreamIntoBuilder(true);
-		expect(localStorage.getItem(STREAM_INTO_BUILDER_KEY)).toBe('true');
-		expect(getStreamIntoBuilder()).toBe(true);
-	});
-});
 
 describe('new AI block assistance setting', () => {
 	beforeEach(() => localStorage.clear());

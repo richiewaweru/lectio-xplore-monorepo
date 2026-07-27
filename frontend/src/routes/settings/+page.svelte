@@ -4,15 +4,12 @@
 	import { getProfile } from '$lib/api/profile';
 	import { getOnboardingRoute } from '$lib/auth/routing';
 	import ProfileSummary from '$lib/components/workspace/ProfileSummary.svelte';
-	import { getStreamIntoBuilder, setStreamIntoBuilder } from '$lib/settings/flags';
 	import type { TeacherProfile } from '$lib/types';
 
 	let profile = $state<TeacherProfile | null>(null);
-	let streamIntoBuilder = $state(false);
 	let errorMessage = $state<string | null>(null);
 
 	onMount(async () => {
-		streamIntoBuilder = getStreamIntoBuilder();
 		try {
 			profile = await getProfile();
 		} catch (error) {
@@ -31,15 +28,7 @@
 	{#if errorMessage}
 		<p class="error" role="alert">{errorMessage}</p>
 	{:else if profile}
-		<ProfileSummary
-			{profile}
-			{streamIntoBuilder}
-			onStreamIntoBuilderChange={(enabled) => {
-				streamIntoBuilder = enabled;
-				setStreamIntoBuilder(enabled);
-			}}
-			onEdit={() => goto(getOnboardingRoute({ edit: true }))}
-		/>
+		<ProfileSummary {profile} onEdit={() => goto(getOnboardingRoute({ edit: true }))} />
 	{:else}
 		<p role="status">Loading your profile…</p>
 	{/if}

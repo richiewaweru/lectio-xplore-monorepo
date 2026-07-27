@@ -32,7 +32,6 @@
 	import { v3PackToBuilderDocument } from '$lib/builder/adapters/from-generation';
 	import { v3StructuralPlanToBuilderDocument } from '$lib/builder/adapters/from-structural-plan';
 	import { saveDocument } from '$lib/builder/persistence/idb-store';
-	import { getStreamIntoBuilder } from '$lib/settings/flags';
 	import {
 		buildCanvasSkeleton,
 		buildStructuralPlanCanvas,
@@ -658,23 +657,23 @@
 		stage2Progress = { completed: [], failed: [], active: null };
 		try {
 			const next = await approveChunkedPlan(generationId, { display_title: displayTitle.trim() });
-			if (getStreamIntoBuilder() && next.structural_plan) {
-				const lesson = v3StructuralPlanToBuilderDocument(next.structural_plan, {
-					generationId,
-					title: displayTitle
-				});
-				const created = await createBuilderLesson({
-					source_type: 'v3_generation',
-					source_generation_id: generationId,
-					title: lesson.title,
-					class_label: classLabel,
-					document: lesson
-				});
-				await saveDocument(created.document);
-				await goto(`/builder/${created.id}?generation_id=${generationId}`);
-				return;
+			const structuralPlan = next.structural_plan ?? chunked.structural_plan;
+			if (!structuralPlan) {
+				throw new Error('The approved lesson plan is missing its structural plan.');
 			}
-			await continueChunkedStage2(next);
+			const lesson = v3StructuralPlanToBuilderDocument(structuralPlan, {
+				generationId,
+				title: displayTitle
+			});
+			const created = await createBuilderLesson({
+				source_type: 'v3_generation',
+				source_generation_id: generationId,
+				title: lesson.title,
+				class_label: classLabel,
+				document: lesson
+			});
+			await saveDocument(created.document);
+			await goto(`/builder/${created.id}?generation_id=${generationId}`);
 		} catch (err) {
 			v3Studio.error = friendly(err);
 			v3Studio.stage = 'skeleton';

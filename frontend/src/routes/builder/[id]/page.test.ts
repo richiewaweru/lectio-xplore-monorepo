@@ -144,8 +144,8 @@ describe('builder lesson route', () => {
 		render(BuilderLessonPage);
 
 		expect(await screen.findByText('Lesson not found')).toBeTruthy();
-		expect(screen.getByRole('link', { name: /back to builder lessons/i }).getAttribute('href')).toBe(
-			'/builder'
+		expect(screen.getByRole('link', { name: /back to lessons/i }).getAttribute('href')).toBe(
+			'/lessons'
 		);
 	});
 

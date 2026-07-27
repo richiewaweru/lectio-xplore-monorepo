@@ -7,7 +7,7 @@
 
 The authenticated production application was inspected in the Codex in-app browser before code changes.
 
-- `/dashboard` rendered the profile, Studio and Builder cards, Recent Packs, Builder lessons, and pre-Builder generations on one canvas.
+- The legacy dashboard rendered the profile, Studio and Builder cards, pack history, Builder lessons, and pre-Builder generations on one canvas.
 - The dashboard's current `lessonStatus()` labelled every matched non-`completed`/non-`failed` history item as `streaming`.
 - Several generated `photosynthesis` lessons therefore rendered as indistinguishable streaming rows.
 - `/builder` additionally exposed exact `updated_at` values and whether each lesson came from a template or generation.
@@ -33,6 +33,7 @@ The browser-control surface exposed rendered DOM and console logs but not authen
 - [x] Phase 3 — flag-gated lessons surface
 - [x] Phase 4 — live progress and review counts
 - [x] Phase 5 — settings and deletion
+- [x] Phase 6 — permanent workspace cutover and legacy retirement
 - [x] Repository validation and self-review recorded
 
 ## Validation Evidence
@@ -54,8 +55,16 @@ The browser-control surface exposed rendered DOM and console logs but not authen
 - Final `git diff --check`: passed; worktree clean
 - Full frontend Vitest run: inconclusive after reaching the 10-minute execution cap without emitting a failing test
 - Full repository validation script: inconclusive after reaching the 5-minute execution cap
+- Phase 6 affected frontend routes and helpers: 53 passed
+- Phase 6 backend Builder regression suite: 14 passed
+- Phase 6 frontend type check: 0 errors, 0 warnings
+- Phase 6 production frontend build: passed
+- Phase 6 repository architecture check: no violations
+- Phase 6 required source and repository grep checkpoints: zero hits
+- Phase 6 full repository validation script: inconclusive after reaching the 10-minute execution cap without emitting a failing check
+- Browser verification before push: the deployed Phase 5 `/lessons` remained authenticated and visually responsive at 375px with no visible horizontal overflow; Phase 6 routing, split-button, shell, and Studio handoff require post-deployment verification
 
 ## Risks and Follow-up
 
-- Phase 6 is explicitly excluded until separately approved.
+- Run the authenticated Phase 6 end-to-end browser flow after this commit is pushed and the deployment completes.
 - Capture the two authenticated JSON response bodies and network waterfall manually before production rollout.

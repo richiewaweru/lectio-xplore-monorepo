@@ -103,7 +103,7 @@
 				}
 			}
 
-			goto('/dashboard', { replaceState: true });
+			goto('/lessons', { replaceState: true });
 		} catch (err) {
 			if (isApiError(err) && err.status === 401) {
 				logout();

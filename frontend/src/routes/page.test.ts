@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, waitFor } from '@testing-library/svelte';
+import { cleanup, render, screen, waitFor } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -105,7 +105,11 @@ describe('root route session resume', () => {
 		});
 
 		await waitFor(() =>
-			expect(goto).toHaveBeenCalledWith('/dashboard', { replaceState: true })
+			expect(goto).toHaveBeenCalledWith('/lessons', { replaceState: true })
 		);
+		expect(screen.getByRole('link', { name: 'Lectio' }).getAttribute('href')).toBe('/lessons');
+		expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('/settings');
+		expect(screen.queryByRole('link', { name: 'Dashboard' })).toBeNull();
+		expect(screen.queryByRole('link', { name: 'Builder' })).toBeNull();
 	});
 });

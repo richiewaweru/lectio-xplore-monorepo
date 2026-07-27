@@ -11,15 +11,14 @@
 		type BuilderLessonRecord,
 		type BuilderLessonSummary
 	} from '$lib/builder/api/lesson-crud';
+	import NewLessonSplitButton from '$lib/components/workspace/NewLessonSplitButton.svelte';
 	import { createGenerationPoller } from '$lib/generation/generation-poller';
-	import { getStreamIntoBuilder } from '$lib/settings/flags';
 	import { authUser, logout } from '$lib/stores/auth';
 	import type { V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
 	import type { V3GenerationHistoryItem } from '$lib/types/v3';
 	import { deriveLessonRows, type LessonRow, type LessonState } from '$lib/workspace/lesson-state';
 	import type { LessonDocument } from 'lectio';
 
-	let enabled = $state(false);
 	let loading = $state(true);
 	let errorMessage = $state<string | null>(null);
 	let rows = $state<LessonRow[]>([]);
@@ -229,11 +228,6 @@
 	}
 
 	onMount(() => {
-		if (!getStreamIntoBuilder()) {
-			void goto('/dashboard', { replaceState: true });
-			return;
-		}
-		enabled = true;
 		void loadWorkspace();
 	});
 
@@ -250,8 +244,7 @@
 	<title>Lessons · Lectio</title>
 </svelte:head>
 
-{#if enabled}
-	<div class="workspace-page">
+<div class="workspace-page">
 		<header class="page-head">
 			<div>
 				<p class="date-line">
@@ -260,7 +253,7 @@
 				<h1>{greeting}{firstName ? `, ${firstName}` : ''}</h1>
 			</div>
 			{#if loading || errorMessage || rows.length > 0}
-				<a class="primary" href="/studio">+ New lesson</a>
+				<NewLessonSplitButton />
 			{/if}
 		</header>
 
@@ -271,7 +264,7 @@
 		{:else if rows.length === 0}
 			<section class="empty">
 				<p>No lessons yet. Start with the class and topic you want to teach.</p>
-				<a class="primary" href="/studio">+ New lesson</a>
+				<NewLessonSplitButton />
 			</section>
 		{:else}
 			{#if deleteError}<p class="error-copy delete-error" role="alert">{deleteError}</p>{/if}
@@ -385,8 +378,7 @@
 				</section>
 			{/if}
 		{/if}
-	</div>
-{/if}
+</div>
 
 <style>
 	:global(body:has(.workspace-page)) {
@@ -447,29 +439,6 @@
 		margin: 0;
 		font: 500 36px/1.1 Fraunces, Georgia, serif;
 		letter-spacing: -0.03em;
-	}
-
-	.primary {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		border: 0;
-		border-radius: 8px;
-		background: var(--accent);
-		box-shadow: 0 1px 2px rgba(28, 93, 69, 0.3);
-		color: #fff;
-		font: 600 14px Inter, sans-serif;
-		padding: 10px 18px;
-		text-decoration: none;
-		transition:
-			transform 0.12s,
-			background 0.12s;
-		white-space: nowrap;
-	}
-
-	.primary:hover {
-		background: #17503b;
-		transform: translateY(-1px);
 	}
 
 	.group {
@@ -616,7 +585,6 @@
 
 	.title:focus-visible,
 	.action:focus-visible,
-	.primary:focus-visible,
 	summary:focus-visible {
 		outline: 2px solid var(--accent);
 		outline-offset: 3px;
@@ -774,10 +742,6 @@
 
 		h1 {
 			font-size: 32px;
-		}
-
-		.primary {
-			width: 100%;
 		}
 
 		.lesson-row {

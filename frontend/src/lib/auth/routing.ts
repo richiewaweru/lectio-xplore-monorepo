@@ -1,12 +1,12 @@
 import { isApiError } from '$lib/api/errors';
 import type { User } from '$lib/types';
 
-export function resolveLandingRoute(user: User | null): '/login' | '/onboarding' | '/dashboard' {
+export function resolveLandingRoute(user: User | null): '/login' | '/onboarding' | '/lessons' {
 	if (!user) {
 		return '/login';
 	}
 
-	return user.has_profile ? '/dashboard' : '/onboarding';
+	return user.has_profile ? '/lessons' : '/onboarding';
 }
 
 export function getOnboardingRoute(options: { edit?: boolean } = {}): string {
@@ -23,7 +23,7 @@ export function resolveOnboardingGuard(user: User | null, editMode: boolean): st
 	}
 
 	if (user.has_profile && !editMode) {
-		return '/dashboard';
+		return '/lessons';
 	}
 
 	return null;
@@ -34,7 +34,7 @@ export function shouldRedirectToOnboarding(user: User | null, path: string): boo
 		return false;
 	}
 
-	const safePaths = ['/login', '/onboarding', '/dashboard', '/studio'];
+	const safePaths = ['/login', '/onboarding', '/studio'];
 	if (path.startsWith('/studio/print/')) {
 		return false;
 	}

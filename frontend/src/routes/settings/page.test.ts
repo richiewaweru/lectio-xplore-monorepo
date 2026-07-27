@@ -1,22 +1,15 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
 	getProfile: vi.fn(),
-	getStreamIntoBuilder: vi.fn(),
-	setStreamIntoBuilder: vi.fn(),
 	goto: vi.fn()
 }));
 
 vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
 vi.mock('$lib/api/profile', () => ({ getProfile: mocks.getProfile }));
-vi.mock('$lib/settings/flags', () => ({
-	getStreamIntoBuilder: mocks.getStreamIntoBuilder,
-	setStreamIntoBuilder: mocks.setStreamIntoBuilder
-}));
-
 import SettingsPage from './+page.svelte';
 
 const profile = {
@@ -49,7 +42,6 @@ describe('/settings', () => {
 	beforeEach(() => {
 		Object.values(mocks).forEach((mock) => mock.mockReset());
 		mocks.getProfile.mockResolvedValue(profile);
-		mocks.getStreamIntoBuilder.mockReturnValue(true);
 	});
 
 	afterEach(cleanup);
@@ -62,13 +54,9 @@ describe('/settings', () => {
 		expect(mocks.goto).toHaveBeenCalledWith('/onboarding?mode=edit');
 	});
 
-	it('persists the experimental Builder preference', async () => {
+	it('does not expose the retired experimental Builder preference', async () => {
 		render(SettingsPage);
-		const toggle = await screen.findByRole('checkbox', {
-			name: 'Stream new lessons into Builder (experimental)'
-		});
-		expect((toggle as HTMLInputElement).checked).toBe(true);
-		await fireEvent.click(toggle);
-		await waitFor(() => expect(mocks.setStreamIntoBuilder).toHaveBeenCalledWith(false));
+		await screen.findByRole('heading', { name: 'Teacher Setup' });
+		expect(screen.queryByRole('checkbox')).toBeNull();
 	});
 });

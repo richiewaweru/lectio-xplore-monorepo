@@ -3,24 +3,14 @@
 
 	interface Props {
 		profile: TeacherProfile;
-		streamIntoBuilder: boolean;
-		onStreamIntoBuilderChange: (enabled: boolean) => void;
 		onEdit: () => void;
 	}
 
-	let { profile, streamIntoBuilder, onStreamIntoBuilderChange, onEdit }: Props = $props();
+	let { profile, onEdit }: Props = $props();
 </script>
 
 <section class="profile-summary">
 	<h2>Teacher Setup</h2>
-	<label class="experimental-toggle">
-		<input
-			type="checkbox"
-			checked={streamIntoBuilder}
-			onchange={(event) => onStreamIntoBuilderChange(event.currentTarget.checked)}
-		/>
-		<span>Stream new lessons into Builder (experimental)</span>
-	</label>
 	<div class="profile-grid">
 		<div class="profile-item">
 			<span class="label">Teacher Role</span>
@@ -90,15 +80,6 @@
 		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 		gap: 0.8rem;
 		margin: 1rem 0;
-	}
-
-	.experimental-toggle {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		margin: 0.8rem 0 1rem;
-		color: #3f4c55;
-		font-size: 0.9rem;
 	}
 
 	.profile-item {

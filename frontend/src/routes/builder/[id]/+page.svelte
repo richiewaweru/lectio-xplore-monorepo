@@ -303,10 +303,10 @@
 			<p class="mt-2 text-sm">{loadError.detail}</p>
 			<div class="mt-4">
 				<a
-					href="/builder"
+					href="/lessons"
 					class="inline-flex rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-700 hover:bg-red-100/40"
 				>
-					Back to Builder lessons
+					Back to lessons
 				</a>
 			</div>
 		</div>

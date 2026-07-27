@@ -405,7 +405,7 @@ not reclassify the full build/test gate as passing.
 
 - [x] Understood requirements and identified scope.
 - [x] Read relevant source code and project rules.
-- [x] Added SSR-safe persisted stream-into-builder setting.
+- [x] Added the SSR-safe persisted workspace rollout setting used before the permanent cutover.
 - [x] Added Dashboard experimental toggle.
 - [x] Added Studio create-at-approve minimal empty-document flow and redirect.
 - [x] Added tests for flag persistence, flag-OFF behavior, and flag-ON request/navigation.

@@ -5,17 +5,18 @@
 	import { fromStore } from 'svelte/store';
 	import { resolveShellRedirect } from '$lib/auth/routing';
 	import { fetchCurrentUser } from '$lib/api/auth';
-	import { authInitialized, authIsAuthenticated, authUser, bootstrapAuth, logout } from '$lib/stores/auth';
+	import { authInitialized, authIsAuthenticated, authUser, bootstrapAuth } from '$lib/stores/auth';
 
 	let { children } = $props();
 	const initialized = fromStore(authInitialized);
 	const user = fromStore(authUser);
 	const authed = fromStore(authIsAuthenticated);
-	
-	const isPrintStudioRoute = $derived(
+
+	const isStudioPrintRoute = $derived(
 		page.url.pathname.startsWith('/studio/print/') && page.url.searchParams.get('print') === 'true'
 	);
-	const isPrintShellRoute = $derived(isPrintStudioRoute);
+	const isBuilderPrintRoute = $derived(page.url.pathname.startsWith('/builder/print/'));
+	const isPrintShellRoute = $derived(isStudioPrintRoute || isBuilderPrintRoute);
 	const isLessonsRoute = $derived(page.url.pathname.startsWith('/lessons'));
 
 	onMount(() => {
@@ -23,32 +24,23 @@
 	});
 
 	$effect(() => {
-		if (!initialized.current) return;
+		if (!initialized.current || isPrintShellRoute) return;
 		const path = page.url.pathname;
-		if (isPrintShellRoute) {
-			return;
-		}
-
 		const redirectTo = resolveShellRedirect(user.current, path);
 		if (redirectTo && redirectTo !== path) {
 			goto(redirectTo, { replaceState: true });
 		}
 	});
-
-	function handleLogout() {
-		logout();
-		goto('/login', { replaceState: true });
-	}
 </script>
 
 <svelte:head>
-	<title>Textbook Agent</title>
+	<title>Lectio</title>
 </svelte:head>
 
-{#if !isPrintShellRoute && isLessonsRoute}
+{#if !isPrintShellRoute}
 	<header class="workspace-header">
 		<nav class="workspace-nav">
-			<a href="/lessons" class="workspace-brand">Lect<span>i</span>o</a>
+			<a href={authed.current ? '/lessons' : '/'} class="workspace-brand">Lect<span>i</span>o</a>
 			{#if authed.current && user.current}
 				<div class="workspace-nav-end">
 					<span class="workspace-kbd" aria-hidden="true">⌘K</span>
@@ -61,31 +53,6 @@
 							</span>
 						{/if}
 					</a>
-				</div>
-			{/if}
-		</nav>
-	</header>
-{:else if !isPrintShellRoute}
-	<header>
-		<nav>
-			<div class="nav-left">
-				<a href={authed.current ? '/dashboard' : '/'} class="brand">Textbook Agent</a>
-				{#if authed.current && user.current}
-					<div class="nav-links">
-						<a href="/dashboard" class="nav-link">Dashboard</a>
-						<a href="/studio" class="nav-link">Studio</a>
-						<a href="/builder" class="nav-link">Builder</a>
-						<a href="/builder/new" class="nav-link">New Lesson</a>
-					</div>
-				{/if}
-			</div>
-			{#if authed.current && user.current}
-				<div class="nav-right">
-					{#if user.current.picture_url}
-						<img src={user.current.picture_url} alt={user.current.name ?? ''} class="avatar" />
-					{/if}
-					<span class="user-name">{user.current.name ?? user.current.email}</span>
-					<button onclick={handleLogout} class="logout-btn">Sign out</button>
 				</div>
 			{/if}
 		</nav>
@@ -111,74 +78,6 @@
 		color: #1e1b16;
 	}
 
-	header {
-		border-bottom: 1px solid rgba(61, 47, 26, 0.15);
-		padding: 0.75rem 1.5rem;
-		backdrop-filter: blur(12px);
-		background: rgba(250, 245, 235, 0.82);
-	}
-
-	nav {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		max-width: 1200px;
-		margin: 0 auto;
-	}
-
-	.nav-left,
-	.nav-links,
-	.nav-right {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-	}
-
-	.brand {
-		font-weight: 700;
-		font-size: 1.1rem;
-		color: #1f2b34;
-		text-decoration: none;
-	}
-
-	.nav-link {
-		color: #5f574d;
-		text-decoration: none;
-		font-size: 0.92rem;
-	}
-
-	.avatar {
-		width: 28px;
-		height: 28px;
-		border-radius: 50%;
-	}
-
-	.user-name {
-		font-size: 0.9rem;
-		color: #5f574d;
-	}
-
-	.logout-btn {
-		background: rgba(31, 43, 52, 0.05);
-		border: 1px solid rgba(31, 43, 52, 0.15);
-		color: #24343f;
-		padding: 0.25rem 0.75rem;
-		border-radius: 999px;
-		cursor: pointer;
-		font-size: 0.8rem;
-	}
-
-	.logout-btn:hover {
-		border-color: rgba(31, 43, 52, 0.35);
-		color: #111;
-	}
-
-	main {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 1.5rem;
-	}
-
 	.workspace-header {
 		position: sticky;
 		top: 0;
@@ -192,8 +91,11 @@
 	}
 
 	.workspace-nav {
+		display: flex;
 		height: 100%;
-		max-width: none;
+		align-items: center;
+		justify-content: space-between;
+		margin: 0 auto;
 	}
 
 	.workspace-brand {
@@ -249,18 +151,21 @@
 		font: 600 11px Inter, sans-serif;
 	}
 
+	main {
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 1.5rem;
+	}
+
 	main.workspace-main {
 		max-width: none;
 		margin: 0;
 		padding: 0;
 	}
 
-	@media (max-width: 720px) {
-		nav,
-		.nav-left,
-		.nav-links,
-		.nav-right {
-			flex-wrap: wrap;
+	@media (max-width: 640px) {
+		.workspace-header {
+			padding: 0 18px;
 		}
 	}
 </style>

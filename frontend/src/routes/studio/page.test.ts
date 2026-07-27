@@ -333,90 +333,7 @@ describe('studio chunked URL resume', () => {
 		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-legacy-blocked'));
 	});
 
-	it('keeps planning after approve while stage2 is still running', async () => {
-		window.history.replaceState({}, '', '/studio?generation_id=gen-approve');
-		mocks.getChunkedPlanStatus.mockResolvedValue({
-			generation_id: 'gen-approve',
-			stage: 'plan_ready',
-			structural_plan: {
-				lesson_mode: 'first_exposure',
-				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
-				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
-				sections: [],
-				question_plan: []
-			},
-			section_briefs: {},
-			failed_sections: [],
-			blueprint_id: null,
-			execution_started: false,
-			next_action: 'approve_or_regenerate'
-		});
-		const approval = deferred<{
-			generation_id: string;
-			stage: 'stage2_running';
-			structural_plan: {
-				lesson_mode: string;
-				lesson_intent: { goal: string; structure_rationale: string };
-				anchor: { example: string; reuse_scope: string };
-				sections: never[];
-				question_plan: never[];
-			};
-			section_briefs: Record<string, never>;
-			failed_sections: never[];
-			blueprint_id: null;
-			execution_started: true;
-			next_action: 'wait_for_stage2';
-		}>();
-		mocks.approveChunkedPlan.mockReturnValue(approval.promise);
-
-		render(StudioPage);
-		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-approve'));
-		mocks.getChunkedPlanStatus.mockResolvedValue({
-			generation_id: 'gen-approve',
-			stage: 'stage2_running',
-			doc_version: 'approve-v1',
-			failed_sections: [],
-			blueprint_id: null,
-			execution_started: true,
-			next_action: 'wait_for_stage2'
-		});
-
-		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
-
-		await waitFor(() =>
-			expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-approve', {
-				display_title: 'Goal'
-			})
-		);
-		expect(v3Studio.stage).toBe('fill');
-		expect(v3Studio.canvas).toHaveLength(0);
-		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
-
-		approval.resolve({
-			generation_id: 'gen-approve',
-			stage: 'stage2_running',
-			structural_plan: {
-				lesson_mode: 'first_exposure',
-				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
-				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
-				sections: [],
-				question_plan: []
-			},
-			section_briefs: {},
-			failed_sections: [],
-			blueprint_id: null,
-			execution_started: true,
-			next_action: 'wait_for_stage2'
-		});
-		await waitFor(() =>
-			expect(mocks.connectV3ChunkedStream).toHaveBeenCalledWith('gen-approve', expect.any(Object))
-		);
-		expect(v3Studio.stage).toBe('fill');
-		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-approve'));
-	});
-
-	it('creates an empty builder lesson and redirects when streaming into Builder is enabled', async () => {
-		localStorage.setItem('lectio:stream-into-builder', 'true');
+	it('always creates an empty builder lesson and redirects after plan approval', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-builder-stream');
 		const structuralPlan = {
 			lesson_mode: 'first_exposure',
@@ -458,7 +375,7 @@ describe('studio chunked URL resume', () => {
 		expect(mocks.connectV3ChunkedStream).not.toHaveBeenCalled();
 	});
 
-	it('does not connect the stream when approve returns true assembly_blocked', async () => {
+	it('still hands an approved structural plan to Builder when generation is blocked', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-approve-blocked');
 		mocks.getChunkedPlanStatus.mockResolvedValue({
 			generation_id: 'gen-approve-blocked',
@@ -492,6 +409,16 @@ describe('studio chunked URL resume', () => {
 			execution_started: false,
 			next_action: 'retry_failed_sections'
 		});
+		builderMocks.createBuilderLesson.mockImplementation(async (request) => ({
+			id: 'builder-blocked-1',
+			source_generation_id: 'gen-approve-blocked',
+			source_type: 'v3_generation',
+			title: request.title,
+			created_at: '',
+			updated_at: '',
+			document: request.document
+		}));
+		builderMocks.saveDocument.mockResolvedValue(undefined);
 
 		render(StudioPage);
 		await waitFor(() =>
@@ -505,163 +432,13 @@ describe('studio chunked URL resume', () => {
 				display_title: 'Goal'
 			})
 		);
-		expect(v3Studio.stage).toBe('skeleton');
-		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
-	});
-
-	it('starts document polling at approve even when streams deliver no events', async () => {
-		vi.useFakeTimers();
-		window.history.replaceState({}, '', '/studio?generation_id=gen-poll-approve');
-		mocks.getChunkedPlanStatus.mockResolvedValue({
-			generation_id: 'gen-poll-approve',
-			stage: 'plan_ready',
-			structural_plan: {
-				lesson_mode: 'first_exposure',
-				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
-				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
-				sections: [],
-				question_plan: []
-			},
-			section_briefs: {},
-			failed_sections: [],
-			blueprint_id: null,
-			execution_started: false,
-			next_action: 'approve_or_regenerate'
-		});
-		mocks.approveChunkedPlan.mockResolvedValue({
-			generation_id: 'gen-poll-approve',
-			stage: 'stage2_running',
-			structural_plan: {
-				lesson_mode: 'first_exposure',
-				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
-				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
-				sections: [],
-				question_plan: []
-			},
-			section_briefs: {},
-			failed_sections: [],
-			blueprint_id: null,
-			execution_started: true,
-			next_action: 'wait_for_stage2'
-		});
-		mocks.fetchV3Document
-			.mockRejectedValueOnce(Object.assign(new Error('Document not found'), { status: 404 }))
-			.mockRejectedValueOnce(Object.assign(new Error('Document not found'), { status: 404 }))
-			.mockResolvedValueOnce({
-				kind: 'v3_booklet_pack',
-				generation_id: 'gen-poll-approve',
-				template_id: 'guided-concept-path',
-				subject: 'Mathematics',
-				status: 'streaming_preview',
-				progress: {
-					stage: 'writing',
-					sections: { build: 'ready' },
-					updated_at: '2026-07-11T00:00:08Z'
-				},
-				section_diagnostics: [],
-				sections: [{ section_id: 'build', header: { title: 'Build understanding' } }],
-				warnings: [],
-				booklet_issues: []
-			})
-			.mockResolvedValueOnce({
-				kind: 'v3_booklet_pack',
-				generation_id: 'gen-poll-approve',
-				template_id: 'guided-concept-path',
-				subject: 'Mathematics',
-				status: 'final_ready',
-				progress: {
-					stage: 'completed',
-					sections: { build: 'ready' },
-					updated_at: '2026-07-11T00:00:12Z'
-				},
-				section_diagnostics: [],
-				sections: [{ section_id: 'build', header: { title: 'Build understanding' } }],
-				warnings: [],
-				booklet_issues: []
-			});
-
-		render(StudioPage);
-		await vi.advanceTimersByTimeAsync(0);
 		await waitFor(() =>
-			expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-poll-approve')
+			expect(navigationMocks.goto).toHaveBeenCalledWith(
+				'/builder/builder-blocked-1?generation_id=gen-approve-blocked'
+			)
 		);
-		mocks.fetchV3Document.mockClear();
-		mocks.getChunkedPlanStatus
-			.mockResolvedValueOnce({
-				generation_id: 'gen-poll-approve', stage: 'stage2_running', doc_version: 'poll-v1',
-				failed_sections: [], blueprint_id: null, execution_started: true, next_action: 'wait_for_stage2'
-			})
-			.mockResolvedValueOnce({
-				generation_id: 'gen-poll-approve', stage: 'stage2_running', doc_version: 'poll-v2',
-				failed_sections: [], blueprint_id: null, execution_started: true, next_action: 'wait_for_stage2'
-			})
-			.mockResolvedValue({
-				generation_id: 'gen-poll-approve', stage: 'complete', doc_version: 'poll-v3',
-				failed_sections: [], blueprint_id: null, execution_started: false, next_action: 'done'
-			});
-		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
-		await vi.advanceTimersByTimeAsync(0);
-
-		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalled());
-		await vi.advanceTimersByTimeAsync(4000);
-		await waitFor(() => expect(mocks.fetchV3Document.mock.calls.length).toBeGreaterThanOrEqual(2));
-		await vi.advanceTimersByTimeAsync(4000);
-		await waitFor(() => expect(v3Studio.canvas[0]?.id).toBe('build'));
-		expect(v3Studio.canvas[0]?.id).toBe('build');
-		await vi.advanceTimersByTimeAsync(4000);
-		expect(v3Studio.stage).toBe('edit');
-
-		const terminalCallCount = mocks.fetchV3Document.mock.calls.length;
-		await vi.advanceTimersByTimeAsync(8000);
-		expect(mocks.fetchV3Document).toHaveBeenCalledTimes(terminalCallCount);
 		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
-	});
-
-	it('keeps document polling when approve returns assembly_blocked', async () => {
-		vi.useFakeTimers();
-		window.history.replaceState({}, '', '/studio?generation_id=gen-poll-blocked');
-		mocks.getChunkedPlanStatus.mockResolvedValue({
-			generation_id: 'gen-poll-blocked',
-			stage: 'plan_ready',
-			structural_plan: {
-				lesson_mode: 'first_exposure',
-				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
-				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
-				sections: [],
-				question_plan: []
-			},
-			section_briefs: {},
-			failed_sections: [],
-			blueprint_id: null,
-			execution_started: false,
-			next_action: 'approve_or_regenerate'
-		});
-		mocks.approveChunkedPlan.mockResolvedValue({
-			generation_id: 'gen-poll-blocked',
-			stage: 'assembly_blocked',
-			structural_plan: {
-				lesson_mode: 'first_exposure',
-				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
-				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
-				sections: [],
-				question_plan: []
-			},
-			section_briefs: {},
-			failed_sections: ['intro'],
-			blueprint_id: null,
-			execution_started: false,
-			next_action: 'retry_failed_sections'
-		});
-
-		render(StudioPage);
-		await waitFor(() =>
-			expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-poll-blocked')
-		);
-		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
-		await waitFor(() => expect(v3Studio.stage).toBe('skeleton'));
-
-		await vi.advanceTimersByTimeAsync(8000);
-		expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-poll-blocked');
+		expect(mocks.connectV3ChunkedStream).not.toHaveBeenCalled();
 	});
 
 	it('starts document polling when resuming a running generation without stream events', async () => {
@@ -759,123 +536,6 @@ describe('studio chunked URL resume', () => {
 			expect(mocks.fetchV3Document.mock.calls.length).toBeGreaterThan(initialCalls)
 		);
 		expect(v3Studio.error).toBeNull();
-	});
-
-	it('switches from chunked SSE to generation SSE after stage2 completes', async () => {
-		window.history.replaceState({}, '', '/studio?generation_id=gen-switch');
-		mocks.getChunkedPlanStatus.mockResolvedValue({
-			generation_id: 'gen-switch',
-			stage: 'plan_ready',
-			structural_plan: {
-				lesson_mode: 'first_exposure',
-				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
-				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
-				sections: [{ id: 'intro', title: 'Intro', role: 'intro', visual_required: false, transition_note: null, components: [] }],
-				question_plan: []
-			},
-			section_briefs: {},
-			failed_sections: [],
-			blueprint_id: null,
-			execution_started: false,
-			next_action: 'approve_or_regenerate'
-		});
-		mocks.approveChunkedPlan.mockResolvedValue({
-			generation_id: 'gen-switch',
-			stage: 'stage2_running',
-			structural_plan: {
-				lesson_mode: 'first_exposure',
-				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
-				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
-				sections: [{ id: 'intro', title: 'Intro', role: 'intro', visual_required: false, transition_note: null, components: [] }],
-				question_plan: []
-			},
-			section_briefs: {},
-			failed_sections: [],
-			blueprint_id: null,
-			execution_started: true,
-			next_action: 'wait_for_stage2'
-		});
-		const disconnectChunked = vi.fn();
-		mocks.connectV3ChunkedStream.mockReturnValue(disconnectChunked);
-
-		render(StudioPage);
-		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-switch'));
-		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
-		await waitFor(() => expect(mocks.connectV3ChunkedStream).toHaveBeenCalledWith('gen-switch', expect.any(Object)));
-
-		const handlers = latestChunkedHandlers() as {
-			onStage2Complete?: (failedSections: string[]) => void;
-		};
-		handlers.onStage2Complete?.([]);
-
-		await waitFor(() =>
-			expect(mocks.connectV3StudioGenerationStream).toHaveBeenCalledWith(
-				'gen-switch',
-				expect.any(Object)
-			)
-		);
-		expect(disconnectChunked).toHaveBeenCalled();
-	});
-
-	it('keeps generation SSE alive when chunked stage2 completes with partial failures', async () => {
-		window.history.replaceState({}, '', '/studio?generation_id=gen-failed');
-		mocks.getChunkedPlanStatus.mockResolvedValue({
-			generation_id: 'gen-failed',
-			stage: 'plan_ready',
-			structural_plan: {
-				lesson_mode: 'first_exposure',
-				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
-				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
-				sections: [{ id: 'intro', title: 'Intro', role: 'intro', visual_required: false, transition_note: null, components: [] }],
-				question_plan: []
-			},
-			section_briefs: {},
-			failed_sections: [],
-			blueprint_id: null,
-			execution_started: false,
-			next_action: 'approve_or_regenerate'
-		});
-		mocks.approveChunkedPlan.mockResolvedValue({
-			generation_id: 'gen-failed',
-			stage: 'stage2_running',
-			structural_plan: {
-				lesson_mode: 'first_exposure',
-				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
-				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
-				sections: [{ id: 'intro', title: 'Intro', role: 'intro', visual_required: false, transition_note: null, components: [] }],
-				question_plan: []
-			},
-			section_briefs: {},
-			failed_sections: [],
-			blueprint_id: null,
-			execution_started: true,
-			next_action: 'wait_for_stage2'
-		});
-		const disconnectChunked = vi.fn();
-		mocks.connectV3ChunkedStream.mockReturnValue(disconnectChunked);
-
-		render(StudioPage);
-		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-failed'));
-		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
-		await waitFor(() => expect(mocks.connectV3ChunkedStream).toHaveBeenCalled());
-
-		const handlers = latestChunkedHandlers() as {
-			onStage2Complete?: (failedSections: string[]) => void;
-			onAssemblyBlocked?: (failedSections: string[]) => void;
-		};
-		handlers.onStage2Complete?.(['intro']);
-		expect(v3Studio.stage).toBe('fill');
-		expect(disconnectChunked).toHaveBeenCalled();
-		await waitFor(() =>
-			expect(mocks.connectV3StudioGenerationStream).toHaveBeenCalledWith(
-				'gen-failed',
-				expect.any(Object)
-			)
-		);
-		expect(v3Studio.chunkedState?.failed_sections).toEqual(['intro']);
-
-		handlers.onAssemblyBlocked?.(['intro']);
-		expect(v3Studio.stage).toBe('skeleton');
 	});
 
 	it('shows stage2 section pills updating from chunked SSE events', async () => {
