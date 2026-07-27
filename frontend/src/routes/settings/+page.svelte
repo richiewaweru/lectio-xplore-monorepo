@@ -21,6 +21,7 @@
 <svelte:head><title>Settings · Lectio</title></svelte:head>
 
 <div class="settings-page">
+	<a class="back-link" href="/lessons">← Lessons</a>
 	<header>
 		<p class="eyebrow">Settings</p>
 		<h1>Teacher profile</h1>
@@ -40,11 +41,30 @@
 		gap: 1.5rem;
 		max-width: 860px;
 		margin: 0 auto;
+		color: var(--ink);
+	}
+
+	.back-link {
+		justify-self: start;
+		color: var(--ink-2);
+		font-size: 0.9rem;
+		text-decoration: none;
+	}
+
+	.back-link:hover {
+		color: var(--accent);
+		text-decoration: underline;
+		text-underline-offset: 0.2em;
+	}
+
+	.back-link:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 3px;
 	}
 
 	.eyebrow {
 		margin: 0 0 0.3rem;
-		color: #6b7c88;
+		color: var(--ink-3);
 		font-size: 0.78rem;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
@@ -52,9 +72,10 @@
 
 	h1 {
 		margin: 0;
+		color: var(--ink);
 	}
 
 	.error {
-		color: #864635;
+		color: var(--amber);
 	}
 </style>

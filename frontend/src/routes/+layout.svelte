@@ -34,6 +34,12 @@
 </script>
 
 <svelte:head>
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+	<link
+		href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600&display=swap"
+		rel="stylesheet"
+	/>
 	<title>Lectio</title>
 </svelte:head>
 
@@ -43,7 +49,6 @@
 			<a href={authed.current ? '/lessons' : '/'} class="workspace-brand">Lect<span>i</span>o</a>
 			{#if authed.current && user.current}
 				<div class="workspace-nav-end">
-					<span class="workspace-kbd" aria-hidden="true">⌘K</span>
 					<a class="workspace-avatar-link" href="/settings" aria-label="Settings">
 						{#if user.current.picture_url}
 							<img src={user.current.picture_url} alt="" class="workspace-avatar" />
@@ -68,14 +73,24 @@
 </main>
 
 <style>
+	:global(:root) {
+		--paper: #f7f8f6;
+		--surface: #ffffff;
+		--rule: #e3e6e1;
+		--ink: #16211c;
+		--ink-2: #5c6b63;
+		--ink-3: #8b978f;
+		--accent: #1c5d45;
+		--accent-soft: #e7f0ea;
+		--amber: #9a6b12;
+		--amber-soft: #fbf0da;
+	}
+
 	:global(body) {
 		margin: 0;
-		font-family:
-			'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
-		background:
-			radial-gradient(circle at top, rgba(214, 196, 160, 0.22), transparent 32%),
-			linear-gradient(180deg, #f4efe4 0%, #ece3d1 52%, #e4d7c0 100%);
-		color: #1e1b16;
+		background: var(--paper);
+		color: var(--ink);
+		font-family: Inter, sans-serif;
 	}
 
 	.workspace-header {
@@ -84,9 +99,9 @@
 		z-index: 20;
 		height: 58px;
 		box-sizing: border-box;
-		border-bottom: 1px solid #e3e6e1;
+		border-bottom: 1px solid var(--rule);
 		padding: 0 28px;
-		background: rgba(247, 248, 246, 0.94);
+		background: color-mix(in srgb, var(--paper) 94%, transparent);
 		backdrop-filter: blur(10px);
 	}
 
@@ -99,7 +114,7 @@
 	}
 
 	.workspace-brand {
-		color: #16211c;
+		color: var(--ink);
 		font-family: Fraunces, Georgia, serif;
 		font-size: 20px;
 		font-weight: 600;
@@ -108,22 +123,13 @@
 	}
 
 	.workspace-brand span {
-		color: #1c5d45;
+		color: var(--accent);
 	}
 
 	.workspace-nav-end {
 		display: flex;
 		align-items: center;
 		gap: 14px;
-	}
-
-	.workspace-kbd {
-		border: 1px solid #e3e6e1;
-		border-radius: 5px;
-		background: #fff;
-		color: #8b978f;
-		font: 500 11px 'IBM Plex Mono', monospace;
-		padding: 3px 7px;
 	}
 
 	.workspace-avatar {
@@ -139,15 +145,15 @@
 	}
 
 	.workspace-avatar-link:focus-visible {
-		outline: 2px solid #1c5d45;
+		outline: 2px solid var(--accent);
 		outline-offset: 3px;
 	}
 
 	.workspace-initials {
 		display: grid;
 		place-items: center;
-		background: #1c5d45;
-		color: #fff;
+		background: var(--accent);
+		color: var(--surface);
 		font: 600 11px Inter, sans-serif;
 	}
 

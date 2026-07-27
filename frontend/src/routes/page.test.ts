@@ -111,5 +111,6 @@ describe('root route session resume', () => {
 		expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('/settings');
 		expect(screen.queryByRole('link', { name: 'Dashboard' })).toBeNull();
 		expect(screen.queryByRole('link', { name: 'Builder' })).toBeNull();
+		expect(screen.queryByText('⌘K')).toBeNull();
 	});
 });

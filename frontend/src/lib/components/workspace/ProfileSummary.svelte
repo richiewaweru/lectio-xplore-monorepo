@@ -64,10 +64,10 @@
 
 <style>
 	.profile-summary {
-		border: 1px solid rgba(36, 52, 63, 0.12);
+		border: 1px solid var(--rule);
 		border-radius: 26px;
-		background: rgba(255, 251, 244, 0.84);
-		box-shadow: 0 18px 50px rgba(72, 52, 23, 0.08);
+		background: var(--surface);
+		box-shadow: 0 18px 50px color-mix(in srgb, var(--ink) 8%, transparent);
 		padding: 1.35rem;
 	}
 
@@ -93,23 +93,32 @@
 	}
 
 	.label {
-		color: #6f6b63;
+		color: var(--ink-3);
 		font-size: 0.78rem;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
 	}
 
 	.value {
-		color: #1f1c18;
+		color: var(--ink);
 		text-transform: capitalize;
 	}
 
 	.edit-profile-btn {
-		border: 1px solid rgba(36, 52, 63, 0.18);
+		border: 1px solid var(--rule);
 		border-radius: 999px;
-		background: rgba(36, 52, 63, 0.05);
-		color: #24343f;
+		background: var(--accent-soft);
+		color: var(--accent);
 		cursor: pointer;
 		padding: 0.45rem 0.85rem;
+	}
+
+	.edit-profile-btn:hover {
+		border-color: var(--accent);
+	}
+
+	.edit-profile-btn:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 3px;
 	}
 </style>

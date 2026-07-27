@@ -235,12 +235,6 @@
 </script>
 
 <svelte:head>
-	<link rel="preconnect" href="https://fonts.googleapis.com" />
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-	<link
-		href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;500;600&display=swap"
-		rel="stylesheet"
-	/>
 	<title>Lessons · Lectio</title>
 </svelte:head>
 
@@ -381,23 +375,7 @@
 </div>
 
 <style>
-	:global(body:has(.workspace-page)) {
-		background: #f7f8f6;
-		color: #16211c;
-		font-family: Inter, sans-serif;
-	}
-
 	.workspace-page {
-		--paper: #f7f8f6;
-		--surface: #ffffff;
-		--rule: #e3e6e1;
-		--ink: #16211c;
-		--ink-2: #5c6b63;
-		--ink-3: #8b978f;
-		--accent: #1c5d45;
-		--accent-soft: #e7f0ea;
-		--amber: #9a6b12;
-		--amber-soft: #fbf0da;
 		box-sizing: border-box;
 		min-height: calc(100vh - 58px);
 		background: var(--paper);
