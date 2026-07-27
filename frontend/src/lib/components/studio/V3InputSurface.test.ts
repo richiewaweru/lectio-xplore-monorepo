@@ -73,9 +73,14 @@ describe('V3InputSurface', () => {
 
 	it('submits the optional class label separately from the planning form', async () => {
 		getProfile.mockRejectedValue(new Error('not available'));
+		narrowTopic.mockResolvedValue(candidates);
+		proposeIntent.mockResolvedValue(drafts);
 		const onSubmit = vi.fn();
 		render(V3InputSurface, { props: { onSubmit } });
 		await fillClassAndTopic();
+		await debounce();
+		await fireEvent.click(screen.getByRole('button', { name: /use this topic/i }));
+		await waitFor(() => expect((screen.getByLabelText('Desired outcome') as HTMLTextAreaElement).disabled).toBe(false));
 		const classInput = screen.getByLabelText('Class') as HTMLInputElement;
 		classInput.value = '  Year 6 Mathematics  ';
 		await fireEvent.input(classInput);
@@ -94,6 +99,25 @@ describe('V3InputSurface', () => {
 			'Year 6 Mathematics'
 		);
 		expect(onSubmit.mock.calls[0][0]).not.toHaveProperty('class_label');
+	});
+
+	it('soft-gates intent, context, and submit until the topic is confirmed', async () => {
+		narrowTopic.mockResolvedValue(candidates);
+		proposeIntent.mockResolvedValue(drafts);
+		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+
+		expect((screen.getByLabelText('Desired outcome') as HTMLTextAreaElement).disabled).toBe(true);
+		expect((screen.getByLabelText('Likely struggle') as HTMLTextAreaElement).disabled).toBe(true);
+		expect((screen.getByLabelText('What have they already covered?') as HTMLTextAreaElement).disabled).toBe(true);
+		expect((screen.getByLabelText('Anything else to keep in mind?') as HTMLTextAreaElement).disabled).toBe(true);
+		expect((screen.getByRole('button', { name: 'Build the skeleton' }) as HTMLButtonElement).disabled).toBe(true);
+		expect(screen.getByText('Confirm your topic above to draft the lesson intent.')).toBeTruthy();
+		expect(screen.getByText('Available after the topic is confirmed.')).toBeTruthy();
+
+		await fillClassAndTopic(); await debounce();
+		await fireEvent.click(screen.getByRole('button', { name: /use this topic/i }));
+		await waitFor(() => expect((screen.getByLabelText('Desired outcome') as HTMLTextAreaElement).disabled).toBe(false));
+		expect((screen.getByLabelText('Anything else to keep in mind?') as HTMLTextAreaElement).disabled).toBe(false);
 	});
 
 	it('narrows a valid topic from input after the debounce', async () => {
