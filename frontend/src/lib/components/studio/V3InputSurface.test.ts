@@ -194,6 +194,116 @@ describe('V3InputSurface', () => {
 		expect(proposeIntent.mock.calls[1][0].subtopics).toEqual([]);
 	});
 
+	it('gates and preserves drafts when a confirmed topic changes, then restores the original chips without calls', async () => {
+		narrowTopic.mockResolvedValue(candidates);
+		proposeIntent.mockResolvedValue(drafts);
+		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+		await fillClassAndTopic(); await debounce();
+		await fireEvent.click(screen.getByRole('button', { name: /decompose into rectangles/i }));
+		await fireEvent.click(screen.getByRole('button', { name: /use this topic/i }));
+		await waitFor(() => expect((screen.getByLabelText('Desired outcome') as HTMLTextAreaElement).value).toBe(drafts.outcome_draft));
+		expect((screen.getByRole('button', { name: /decompose into rectangles/i }) as HTMLButtonElement).disabled).toBe(true);
+
+		const topic = screen.getByLabelText('Topic') as HTMLInputElement;
+		topic.value = 'Multiplying fractions with visual models'; await fireEvent.input(topic);
+		expect(screen.queryByText('Decompose into rectangles')).toBeNull();
+		expect(screen.getByText('Topic changed — reconfirm your topic above.')).toBeTruthy();
+		expect((screen.getByLabelText('Desired outcome') as HTMLTextAreaElement).value).toBe(drafts.outcome_draft);
+		expect((screen.getByLabelText('Desired outcome') as HTMLTextAreaElement).disabled).toBe(true);
+
+		topic.value = '  Finding the area of irregular shapes  '; await fireEvent.input(topic);
+		expect(screen.getByText('Decompose into rectangles')).toBeTruthy();
+		expect((screen.getByLabelText('Desired outcome') as HTMLTextAreaElement).disabled).toBe(false);
+		expect(screen.queryByText('Topic changed — reconfirm your topic above.')).toBeNull();
+		expect(narrowTopic).toHaveBeenCalledTimes(1);
+		expect(proposeIntent).toHaveBeenCalledTimes(1);
+	});
+
+	it('preserves edited drafts and offers guarded refresh after reconfirming a new topic', async () => {
+		const newCandidates = [{ id: 'fractions', title: 'Model fraction products', description: 'Use area models to multiply fractions.' }];
+		narrowTopic.mockResolvedValueOnce(candidates).mockResolvedValueOnce(newCandidates);
+		proposeIntent.mockResolvedValue(drafts);
+		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+		await fillClassAndTopic(); await debounce();
+		await fireEvent.click(screen.getByRole('button', { name: /use this topic/i }));
+		await waitFor(() => expect((screen.getByLabelText('Desired outcome') as HTMLTextAreaElement).value).toBe(drafts.outcome_draft));
+		const outcome = screen.getByLabelText('Desired outcome') as HTMLTextAreaElement;
+		outcome.value = 'Teacher-authored outcome'; await fireEvent.input(outcome);
+
+		const topic = screen.getByLabelText('Topic') as HTMLInputElement;
+		topic.value = 'Multiplying fractions with visual models'; await fireEvent.input(topic);
+		await debounce();
+		await fireEvent.click(screen.getByRole('button', { name: /use this topic/i }));
+
+		expect((screen.getByLabelText('Desired outcome') as HTMLTextAreaElement).value).toBe('Teacher-authored outcome');
+		expect(screen.getByRole('button', { name: /refresh drafts/i })).toBeTruthy();
+		expect(proposeIntent).toHaveBeenCalledTimes(1);
+	});
+
+	it('silently regenerates untouched drafts after reconfirming a new topic', async () => {
+		const newCandidates = [{ id: 'fractions', title: 'Model fraction products', description: 'Use area models to multiply fractions.' }];
+		const refreshedDrafts = {
+			outcome_draft: 'Students can multiply fractions with area models.',
+			struggle_draft: 'Students may confuse the overlapping region.',
+			prior_knowledge_draft: 'Equivalent fractions'
+		};
+		narrowTopic.mockResolvedValueOnce(candidates).mockResolvedValueOnce(newCandidates);
+		proposeIntent.mockResolvedValueOnce(drafts).mockResolvedValueOnce(refreshedDrafts);
+		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+		await fillClassAndTopic(); await debounce();
+		await fireEvent.click(screen.getByRole('button', { name: /use this topic/i }));
+		await waitFor(() => expect((screen.getByLabelText('Desired outcome') as HTMLTextAreaElement).value).toBe(drafts.outcome_draft));
+
+		const topic = screen.getByLabelText('Topic') as HTMLInputElement;
+		topic.value = 'Multiplying fractions with visual models'; await fireEvent.input(topic);
+		await debounce();
+		await fireEvent.click(screen.getByRole('button', { name: /use this topic/i }));
+
+		await waitFor(() => expect(proposeIntent).toHaveBeenCalledTimes(2));
+		expect(proposeIntent.mock.calls[1][0].topic).toBe('Multiplying fractions with visual models');
+		expect((screen.getByLabelText('Desired outcome') as HTMLTextAreaElement).value).toBe(refreshedDrafts.outcome_draft);
+		expect(screen.queryByText('Topic changed — reconfirm your topic above.')).toBeNull();
+	});
+
+	it('treats manual drafts without a generated baseline as teacher edits', async () => {
+		const newCandidates = [{ id: 'fractions', title: 'Model fraction products', description: 'Use area models to multiply fractions.' }];
+		narrowTopic.mockResolvedValueOnce(candidates).mockResolvedValueOnce(newCandidates);
+		proposeIntent.mockRejectedValue(new Error('not available'));
+		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+		await fillClassAndTopic(); await debounce();
+		await fireEvent.click(screen.getByRole('button', { name: /use this topic/i }));
+		await waitFor(() => expect(screen.queryByLabelText('Drafting lesson intent')).toBeNull());
+		const outcome = screen.getByLabelText('Desired outcome') as HTMLTextAreaElement;
+		outcome.value = 'Manual teacher draft'; await fireEvent.input(outcome);
+
+		const topic = screen.getByLabelText('Topic') as HTMLInputElement;
+		topic.value = 'Multiplying fractions with visual models'; await fireEvent.input(topic);
+		await debounce();
+		await fireEvent.click(screen.getByRole('button', { name: /use this topic/i }));
+
+		expect((screen.getByLabelText('Desired outcome') as HTMLTextAreaElement).value).toBe('Manual teacher draft');
+		expect(screen.getByRole('button', { name: /refresh drafts/i })).toBeTruthy();
+		expect(proposeIntent).toHaveBeenCalledTimes(1);
+	});
+
+	it('discards an in-flight intent response when the confirmed topic changes', async () => {
+		const pendingDrafts = deferred<typeof drafts>();
+		narrowTopic.mockResolvedValue(candidates);
+		proposeIntent.mockImplementationOnce(() => pendingDrafts.promise);
+		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+		await fillClassAndTopic(); await debounce();
+		await fireEvent.click(screen.getByRole('button', { name: /use this topic/i }));
+		await waitFor(() => expect(proposeIntent).toHaveBeenCalledTimes(1));
+
+		const topic = screen.getByLabelText('Topic') as HTMLInputElement;
+		topic.value = 'Multiplying fractions with visual models'; await fireEvent.input(topic);
+		pendingDrafts.resolve(drafts);
+		await tick();
+
+		expect((screen.getByLabelText('Desired outcome') as HTMLTextAreaElement).value).toBe('');
+		expect((screen.getByLabelText('Desired outcome') as HTMLTextAreaElement).disabled).toBe(true);
+	});
+
 	it('shows a stale refresh pill and confirms before overwriting edits', async () => {
 		narrowTopic.mockResolvedValue(candidates); proposeIntent.mockResolvedValue(drafts);
 		const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);

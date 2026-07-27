@@ -24,6 +24,8 @@
 	let subtopic_candidates = $state<Array<{ id: string; title: string; description: string }>>([]);
 	let topic_state = $state<'editing' | 'narrowing' | 'candidates' | 'confirmed'>('editing');
 	let confirmedTopic = $state<string | null>(null);
+	let confirmedCandidates = $state<Array<{ id: string; title: string; description: string }>>([]);
+	let confirmedSubtopics = $state<string[]>([]);
 	let outcome = $state('');
 	let struggle = $state('');
 	let prior_knowledge = $state('');
@@ -37,6 +39,7 @@
 	let activeProposeRequest = 0;
 	let narrowTimer: ReturnType<typeof setTimeout> | null = null;
 	const resolving_topic = $derived(topic_state === 'narrowing');
+	const topic_changed = $derived(confirmedTopic !== null && topic.trim() !== confirmedTopic);
 
 	const GRADE_LEVELS = ['Kindergarten', ...Array.from({ length: 12 }, (_, index) => `Grade ${index + 1}`)];
 	const SUBJECTS = ['Mathematics', 'English Language Arts', 'Science', 'Biology', 'Chemistry', 'Physics', 'History', 'Geography', 'Economics', 'Computer Science', 'Art', 'Music', 'Physical Education', 'Other'];
@@ -68,7 +71,8 @@
 	}
 
 	function hasEditedDrafts(): boolean {
-		return generatedDrafts !== null && (outcome !== generatedDrafts.outcome || struggle !== generatedDrafts.struggle || prior_knowledge !== generatedDrafts.prior_knowledge);
+		if (generatedDrafts === null) return outcome.trim().length > 0 || struggle.trim().length > 0 || prior_knowledge.trim().length > 0;
+		return outcome !== generatedDrafts.outcome || struggle !== generatedDrafts.struggle || prior_knowledge !== generatedDrafts.prior_knowledge;
 	}
 
 	async function resolveTopic(): Promise<void> {
@@ -95,12 +99,18 @@
 	}
 
 	function scheduleTopicNarrow(): void {
-		markDraftsStale();
 		if (narrowTimer) clearTimeout(narrowTimer);
 		narrowTimer = null;
 
 		const cleaned = topic.trim();
-		if (cleaned === confirmedTopic) return;
+		if (cleaned === confirmedTopic) {
+			if (topic_state === 'narrowing') ++activeNarrowRequest;
+			topic_state = 'confirmed';
+			subtopic_candidates = [...confirmedCandidates];
+			subtopics = [...confirmedSubtopics];
+			narrowNotice = null;
+			return;
+		}
 
 		if (topic_state === 'narrowing') ++activeNarrowRequest;
 		if (proposing_intent) {
@@ -149,8 +159,21 @@
 	function confirmTopic(useSuggestions = true): void {
 		if (!grade_level || !subject || topic.trim().length <= 2) return;
 		if (!useSuggestions) subtopics = [];
-		confirmedTopic = topic.trim();
+		const cleaned = topic.trim();
+		const isReconfirmation = confirmedTopic !== null && cleaned !== confirmedTopic;
+		confirmedTopic = cleaned;
+		confirmedCandidates = [...subtopic_candidates];
+		confirmedSubtopics = [...subtopics];
 		topic_state = 'confirmed';
+		narrowNotice = null;
+		if (isReconfirmation) {
+			if (hasEditedDrafts()) {
+				drafts_stale = true;
+				return;
+			}
+			void draftIntent(true);
+			return;
+		}
 		void draftIntent();
 	}
 
@@ -219,11 +242,12 @@
 			<label class="grid gap-1 text-sm font-medium"><span>Topic</span><input class="rounded-xl border border-input bg-background px-3 py-2" bind:value={topic} oninput={scheduleTopicNarrow} aria-label="Topic" placeholder="e.g. Equivalent fractions" /></label>
 			{#if resolving_topic}<p class="text-sm text-muted-foreground" role="status">Finding focused options…</p>{/if}
 			{#if narrowNotice}<p class="text-sm text-muted-foreground" role="status">{narrowNotice}</p>{/if}
-			{#if topic_state === 'candidates'}<div class="space-y-3">{#if subtopic_candidates.length > 0}<p class="text-sm text-muted-foreground">Pick up to 4 focus areas</p><div class="grid gap-2 sm:grid-cols-2">{#each subtopic_candidates as candidate}{@const selected = subtopics.includes(candidate.title)}<button type="button" disabled={!selected && subtopics.length >= 4} class={`rounded-2xl border px-3 py-3 text-left text-sm disabled:cursor-not-allowed disabled:opacity-45 ${selected ? 'border-primary bg-primary/10' : 'border-input bg-background'}`} onclick={() => toggleSubtopic(candidate.title)}><p class="font-semibold">{candidate.title}</p><p class="mt-1 text-muted-foreground">{candidate.description}</p></button>{/each}</div>{/if}<div class="flex flex-wrap items-center gap-3"><button type="button" class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" onclick={() => confirmTopic(true)}>Use this topic →</button><button type="button" class="text-sm font-medium text-primary underline-offset-4 hover:underline" onclick={() => confirmTopic(false)}>Skip suggestions — use my topic as-is</button></div></div>{/if}
+			{#if topic_state === 'candidates' || topic_state === 'confirmed'}<div class="space-y-3">{#if subtopic_candidates.length > 0}<p class="text-sm text-muted-foreground">Pick up to 4 focus areas</p><div class="grid gap-2 sm:grid-cols-2">{#each subtopic_candidates as candidate}{@const selected = subtopics.includes(candidate.title)}<button type="button" disabled={topic_state === 'confirmed' || (!selected && subtopics.length >= 4)} class={`rounded-2xl border px-3 py-3 text-left text-sm disabled:cursor-not-allowed disabled:opacity-45 ${selected ? 'border-primary bg-primary/10' : 'border-input bg-background'}`} onclick={() => toggleSubtopic(candidate.title)}><p class="font-semibold">{candidate.title}</p><p class="mt-1 text-muted-foreground">{candidate.description}</p></button>{/each}</div>{/if}{#if topic_state === 'candidates'}<div class="flex flex-wrap items-center gap-3"><button type="button" class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" onclick={() => confirmTopic(true)}>Use this topic →</button><button type="button" class="text-sm font-medium text-primary underline-offset-4 hover:underline" onclick={() => confirmTopic(false)}>Skip suggestions — use my topic as-is</button></div>{/if}</div>{/if}
 		</section>
 
 		<section class={`space-y-4 rounded-3xl border border-border/60 bg-card p-5 shadow-sm transition-opacity ${topic_state === 'confirmed' ? '' : 'opacity-60'}`}>
-			<div class="flex items-start justify-between gap-4"><div class="space-y-1"><p class="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">Step 4 / Intent</p><h2 class="text-xl font-semibold tracking-tight">Review the lesson intent</h2></div>{#if drafts_stale}<button type="button" class="rounded-full border border-amber-500/50 bg-amber-100 px-3 py-1 text-sm font-medium text-amber-950" onclick={refreshDrafts}>Class changed — refresh drafts?</button>{/if}</div>
+			<div class="flex items-start justify-between gap-4"><div class="space-y-1"><p class="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">Step 4 / Intent</p><h2 class="text-xl font-semibold tracking-tight">Review the lesson intent</h2></div>{#if drafts_stale && topic_state === 'confirmed'}<button type="button" class="rounded-full border border-amber-500/50 bg-amber-100 px-3 py-1 text-sm font-medium text-amber-950" onclick={refreshDrafts}>Class changed — refresh drafts?</button>{/if}</div>
+			{#if topic_changed}<p class="rounded-xl border border-amber-500/50 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950">Topic changed — reconfirm your topic above.</p>{/if}
 			{#if topic_state !== 'confirmed'}<p class="text-sm text-muted-foreground">Confirm your topic above to draft the lesson intent.</p>{/if}
 			{#if proposing_intent}<div class="grid gap-3 sm:grid-cols-2" aria-label="Drafting lesson intent"><div class="h-28 animate-pulse rounded-xl bg-muted"></div><div class="h-28 animate-pulse rounded-xl bg-muted"></div><div class="h-24 animate-pulse rounded-xl bg-muted sm:col-span-2"></div></div>{:else}<div class="grid gap-3 sm:grid-cols-2"><label class="grid gap-1 text-sm font-medium"><span>Desired outcome</span><textarea disabled={topic_state !== 'confirmed'} class="min-h-[110px] rounded-xl border border-input bg-background px-3 py-2 text-sm" bind:value={outcome} aria-label="Desired outcome" placeholder="By the end, students should be able to..."></textarea></label><label class="grid gap-1 text-sm font-medium"><span>Likely struggle</span><textarea disabled={topic_state !== 'confirmed'} class="min-h-[110px] rounded-xl border border-input bg-background px-3 py-2 text-sm" bind:value={struggle} aria-label="Likely struggle" placeholder="Where are they most likely to get stuck?"></textarea></label><label class="grid gap-1 text-sm font-medium sm:col-span-2"><span>What have they already covered? <span class="font-normal text-muted-foreground">(optional)</span></span><textarea disabled={topic_state !== 'confirmed'} class="min-h-[90px] rounded-xl border border-input bg-background px-3 py-2 text-sm" bind:value={prior_knowledge} aria-label="What have they already covered?" placeholder="e.g. Unit fractions, equal sharing"></textarea></label></div>{/if}
 		</section>
