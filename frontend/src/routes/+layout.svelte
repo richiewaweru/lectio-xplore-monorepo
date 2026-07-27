@@ -16,6 +16,7 @@
 		page.url.pathname.startsWith('/studio/print/') && page.url.searchParams.get('print') === 'true'
 	);
 	const isPrintShellRoute = $derived(isPrintStudioRoute);
+	const isLessonsRoute = $derived(page.url.pathname.startsWith('/lessons'));
 
 	onMount(() => {
 		void bootstrapAuth(fetchCurrentUser);
@@ -44,7 +45,25 @@
 	<title>Textbook Agent</title>
 </svelte:head>
 
-{#if !isPrintShellRoute}
+{#if !isPrintShellRoute && isLessonsRoute}
+	<header class="workspace-header">
+		<nav class="workspace-nav">
+			<a href="/lessons" class="workspace-brand">Lect<span>i</span>o</a>
+			{#if authed.current && user.current}
+				<div class="workspace-nav-end">
+					<span class="workspace-kbd" aria-hidden="true">⌘K</span>
+					{#if user.current.picture_url}
+						<img src={user.current.picture_url} alt={user.current.name ?? ''} class="workspace-avatar" />
+					{:else}
+						<span class="workspace-avatar workspace-initials" title={user.current.name ?? user.current.email}>
+							{(user.current.name ?? user.current.email).slice(0, 2).toUpperCase()}
+						</span>
+					{/if}
+				</div>
+			{/if}
+		</nav>
+	</header>
+{:else if !isPrintShellRoute}
 	<header>
 		<nav>
 			<div class="nav-left">
@@ -71,7 +90,7 @@
 	</header>
 {/if}
 
-<main>
+<main class:workspace-main={isLessonsRoute}>
 	{#if initialized.current || isPrintShellRoute}
 		{@render children()}
 	{:else}
@@ -156,6 +175,72 @@
 		max-width: 1200px;
 		margin: 0 auto;
 		padding: 1.5rem;
+	}
+
+	.workspace-header {
+		position: sticky;
+		top: 0;
+		z-index: 20;
+		height: 58px;
+		box-sizing: border-box;
+		border-bottom: 1px solid #e3e6e1;
+		padding: 0 28px;
+		background: rgba(247, 248, 246, 0.94);
+		backdrop-filter: blur(10px);
+	}
+
+	.workspace-nav {
+		height: 100%;
+		max-width: none;
+	}
+
+	.workspace-brand {
+		color: #16211c;
+		font-family: Fraunces, Georgia, serif;
+		font-size: 20px;
+		font-weight: 600;
+		letter-spacing: -0.03em;
+		text-decoration: none;
+	}
+
+	.workspace-brand span {
+		color: #1c5d45;
+	}
+
+	.workspace-nav-end {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+	}
+
+	.workspace-kbd {
+		border: 1px solid #e3e6e1;
+		border-radius: 5px;
+		background: #fff;
+		color: #8b978f;
+		font: 500 11px 'IBM Plex Mono', monospace;
+		padding: 3px 7px;
+	}
+
+	.workspace-avatar {
+		width: 30px;
+		height: 30px;
+		border-radius: 50%;
+		object-fit: cover;
+	}
+
+	.workspace-initials {
+		display: grid;
+		place-items: center;
+		background: #1c5d45;
+		color: #fff;
+		font: 600 11px Inter, sans-serif;
+	}
+
+	main.workspace-main {
+		max-width: none;
+		margin: 0;
+		padding: 0;
 	}
 
 	@media (max-width: 720px) {
