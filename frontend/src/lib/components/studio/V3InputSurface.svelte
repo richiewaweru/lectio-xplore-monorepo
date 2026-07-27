@@ -22,11 +22,12 @@
 	let topic = $state('');
 	let subtopics = $state<string[]>([]);
 	let subtopic_candidates = $state<Array<{ id: string; title: string; description: string }>>([]);
+	let topic_state = $state<'editing' | 'narrowing' | 'candidates' | 'confirmed'>('editing');
+	let confirmedTopic = $state<string | null>(null);
 	let outcome = $state('');
 	let struggle = $state('');
 	let prior_knowledge = $state('');
 	let free_text = $state('');
-	let resolving_topic = $state(false);
 	let proposing_intent = $state(false);
 	let narrowNotice = $state<string | null>(null);
 	let drafts_stale = $state(false);
@@ -35,6 +36,7 @@
 	let activeNarrowRequest = 0;
 	let activeProposeRequest = 0;
 	let narrowTimer: ReturnType<typeof setTimeout> | null = null;
+	const resolving_topic = $derived(topic_state === 'narrowing');
 
 	const GRADE_LEVELS = ['Kindergarten', ...Array.from({ length: 12 }, (_, index) => `Grade ${index + 1}`)];
 	const SUBJECTS = ['Mathematics', 'English Language Arts', 'Science', 'Biology', 'Chemistry', 'Physics', 'History', 'Geography', 'Economics', 'Computer Science', 'Art', 'Music', 'Physical Education', 'Other'];
@@ -71,39 +73,60 @@
 
 	async function resolveTopic(): Promise<void> {
 		const cleaned = topic.trim();
-		if (!cleaned || cleaned.length <= 2 || !grade_level || !subject || resolving_topic) return;
+		if (!cleaned || cleaned.length <= 2 || !grade_level || !subject) return;
 		const requestId = ++activeNarrowRequest;
-		resolving_topic = true;
+		topic_state = 'narrowing';
 		narrowNotice = null;
 		try {
 			const candidates = await narrowTopic({ topic: cleaned, grade_level, subject });
 			if (requestId !== activeNarrowRequest) return;
 			subtopic_candidates = candidates;
 			subtopics = [];
+			topic_state = 'candidates';
 			if (candidates.length === 0) narrowNotice = 'No narrower suggestions came back. You can continue with the topic as entered.';
 		} catch {
 			if (requestId !== activeNarrowRequest) return;
 			const parts = cleaned.split(/[,;:()/-]+/).map((part) => part.trim()).filter((part) => part.length > 2).slice(0, 4);
 			subtopic_candidates = (parts.length > 0 ? parts : [cleaned]).map((title, index) => ({ id: `local-${index + 1}`, title, description: 'Students focus on this teachable slice, using the generated resource.' }));
 			subtopics = [];
+			topic_state = 'candidates';
 			narrowNotice = 'Topic narrowing could not reach the live service, so local fallback suggestions are shown instead.';
-		} finally {
-			if (requestId === activeNarrowRequest) resolving_topic = false;
 		}
 	}
 
 	function scheduleTopicNarrow(): void {
 		markDraftsStale();
 		if (narrowTimer) clearTimeout(narrowTimer);
+		narrowTimer = null;
+
+		const cleaned = topic.trim();
+		if (cleaned === confirmedTopic) return;
+
+		if (topic_state === 'narrowing') ++activeNarrowRequest;
+		if (proposing_intent) {
+			++activeProposeRequest;
+			proposing_intent = false;
+		}
+		topic_state = 'editing';
+		subtopic_candidates = [];
+		subtopics = [];
+		narrowNotice = null;
+
+		if (cleaned.length <= 2) return;
+		if (!grade_level || !subject) {
+			narrowNotice = 'Pick a grade and subject first.';
+			return;
+		}
 		narrowTimer = setTimeout(() => { void resolveTopic(); }, 600);
 	}
 
 	async function draftIntent(force = false): Promise<void> {
-		if (!grade_level || !subject || topic.trim().length <= 2 || (!force && drafts_rendered)) return;
+		const confirmed = confirmedTopic ?? topic.trim();
+		if (!grade_level || !subject || confirmed.length <= 2 || (!force && drafts_rendered)) return;
 		const requestId = ++activeProposeRequest;
 		proposing_intent = true;
 		try {
-			const drafts = await proposeIntent({ grade_level, subject, resource_type, duration_minutes: Number(duration_minutes), learner_level, reading_level, language_support, prior_knowledge_level, topic: topic.trim(), subtopics });
+			const drafts = await proposeIntent({ grade_level, subject, resource_type, duration_minutes: Number(duration_minutes), learner_level, reading_level, language_support, prior_knowledge_level, topic: confirmed, subtopics });
 			if (requestId !== activeProposeRequest) return;
 			outcome = drafts.outcome_draft;
 			struggle = drafts.struggle_draft;
@@ -123,11 +146,11 @@
 		}
 	}
 
-	function settleTopic(): void {
-		if (drafts_rendered) {
-			markDraftsStale();
-			return;
-		}
+	function confirmTopic(useSuggestions = true): void {
+		if (!grade_level || !subject || topic.trim().length <= 2) return;
+		if (!useSuggestions) subtopics = [];
+		confirmedTopic = topic.trim();
+		topic_state = 'confirmed';
 		void draftIntent();
 	}
 
@@ -136,7 +159,6 @@
 		if (already) subtopics = subtopics.filter((item) => item !== title);
 		else if (subtopics.length < 4) subtopics = [...subtopics, title];
 		else return;
-		settleTopic();
 	}
 
 	function refreshDrafts(): void {
@@ -194,10 +216,10 @@
 
 		<section class="space-y-4 rounded-3xl border border-border/60 bg-card p-5 shadow-sm">
 			<div class="space-y-1"><p class="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">Step 3 / Topic</p><h2 class="text-xl font-semibold tracking-tight">Choose a teachable focus</h2></div>
-			<label class="grid gap-1 text-sm font-medium"><span>Topic</span><input class="rounded-xl border border-input bg-background px-3 py-2" bind:value={topic} onblur={scheduleTopicNarrow} aria-label="Topic" placeholder="e.g. Equivalent fractions" /></label>
+			<label class="grid gap-1 text-sm font-medium"><span>Topic</span><input class="rounded-xl border border-input bg-background px-3 py-2" bind:value={topic} oninput={scheduleTopicNarrow} aria-label="Topic" placeholder="e.g. Equivalent fractions" /></label>
 			{#if resolving_topic}<p class="text-sm text-muted-foreground" role="status">Finding focused options…</p>{/if}
 			{#if narrowNotice}<p class="text-sm text-muted-foreground" role="status">{narrowNotice}</p>{/if}
-			{#if subtopic_candidates.length > 0}<div class="space-y-3"><p class="text-sm text-muted-foreground">Pick up to 4 focus areas</p><div class="grid gap-2 sm:grid-cols-2">{#each subtopic_candidates as candidate}{@const selected = subtopics.includes(candidate.title)}<button type="button" disabled={!selected && subtopics.length >= 4} class={`rounded-2xl border px-3 py-3 text-left text-sm disabled:cursor-not-allowed disabled:opacity-45 ${selected ? 'border-primary bg-primary/10' : 'border-input bg-background'}`} onclick={() => toggleSubtopic(candidate.title)}><p class="font-semibold">{candidate.title}</p><p class="mt-1 text-muted-foreground">{candidate.description}</p></button>{/each}</div><button type="button" class="text-sm font-medium text-primary underline-offset-4 hover:underline" onclick={settleTopic}>Continue with topic</button></div>{/if}
+			{#if topic_state === 'candidates'}<div class="space-y-3">{#if subtopic_candidates.length > 0}<p class="text-sm text-muted-foreground">Pick up to 4 focus areas</p><div class="grid gap-2 sm:grid-cols-2">{#each subtopic_candidates as candidate}{@const selected = subtopics.includes(candidate.title)}<button type="button" disabled={!selected && subtopics.length >= 4} class={`rounded-2xl border px-3 py-3 text-left text-sm disabled:cursor-not-allowed disabled:opacity-45 ${selected ? 'border-primary bg-primary/10' : 'border-input bg-background'}`} onclick={() => toggleSubtopic(candidate.title)}><p class="font-semibold">{candidate.title}</p><p class="mt-1 text-muted-foreground">{candidate.description}</p></button>{/each}</div>{/if}<div class="flex flex-wrap items-center gap-3"><button type="button" class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" onclick={() => confirmTopic(true)}>Use this topic →</button><button type="button" class="text-sm font-medium text-primary underline-offset-4 hover:underline" onclick={() => confirmTopic(false)}>Skip suggestions — use my topic as-is</button></div></div>{/if}
 		</section>
 
 		<section class="space-y-4 rounded-3xl border border-border/60 bg-card p-5 shadow-sm">

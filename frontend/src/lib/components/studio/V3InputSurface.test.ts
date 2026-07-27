@@ -24,6 +24,13 @@ const drafts = {
 	struggle_draft: 'Students may skip a region while splitting shapes. They need to label each part before adding.',
 	prior_knowledge_draft: 'Area of a rectangle\nAdd whole numbers'
 };
+const debounce = () => new Promise((resolve) => setTimeout(resolve, 650));
+
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+	let resolve!: (value: T) => void;
+	const promise = new Promise<T>((done) => { resolve = done; });
+	return { promise, resolve };
+}
 
 async function fillClassAndTopic(): Promise<void> {
 	const grade = screen.getByLabelText('Grade level') as HTMLSelectElement;
@@ -34,7 +41,13 @@ async function fillClassAndTopic(): Promise<void> {
 	topic.value = 'Finding the area of irregular shapes'; await fireEvent.input(topic);
 }
 
-afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); getProfile.mockReset(); });
+afterEach(() => {
+	vi.useRealTimers();
+	vi.restoreAllMocks();
+	getProfile.mockReset();
+	narrowTopic.mockReset();
+	proposeIntent.mockReset();
+});
 
 describe('V3InputSurface', () => {
 	it('renders the five proposed cards in order', () => {
@@ -83,43 +96,86 @@ describe('V3InputSurface', () => {
 		expect(onSubmit.mock.calls[0][0]).not.toHaveProperty('class_label');
 	});
 
-	it('narrows a valid topic on blur after the debounce', async () => {
+	it('narrows a valid topic from input after the debounce', async () => {
 		narrowTopic.mockResolvedValue(candidates);
 		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
 		await fillClassAndTopic();
-		await fireEvent.blur(screen.getByLabelText('Topic'));
 		await waitFor(() => expect(narrowTopic).toHaveBeenCalledWith({ topic: 'Finding the area of irregular shapes', grade_level: 'Grade 6', subject: 'Mathematics' }), { timeout: 1000 });
-		expect(screen.getByText('Decompose into rectangles')).toBeTruthy();
+		expect(await screen.findByText('Decompose into rectangles')).toBeTruthy();
+	});
+
+	it('shows a prerequisite hint instead of narrowing without grade and subject', async () => {
+		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+		const topic = screen.getByLabelText('Topic') as HTMLInputElement;
+		topic.value = 'Equivalent fractions'; await fireEvent.input(topic);
+		expect(screen.getByText('Pick a grade and subject first.')).toBeTruthy();
+		expect(narrowTopic).not.toHaveBeenCalled();
+	});
+
+	it('discards an in-flight narrowing result when the topic changes', async () => {
+		const first = deferred<typeof candidates>();
+		const currentCandidates = [{ id: 'coordinates', title: 'Coordinate grid area', description: 'Use coordinates to calculate area.' }];
+		narrowTopic.mockImplementationOnce(() => first.promise).mockResolvedValueOnce(currentCandidates);
+		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+		await fillClassAndTopic();
+		await waitFor(() => expect(narrowTopic).toHaveBeenCalledTimes(1), { timeout: 1000 });
+
+		const topic = screen.getByLabelText('Topic') as HTMLInputElement;
+		topic.value = 'Finding area on coordinate grids'; await fireEvent.input(topic);
+		first.resolve(candidates);
+		await tick();
+		expect(screen.queryByText('Decompose into rectangles')).toBeNull();
+		await waitFor(() => expect(narrowTopic).toHaveBeenCalledTimes(2), { timeout: 1000 });
+		expect(await screen.findByText('Coordinate grid area')).toBeTruthy();
 	});
 
 	it('shows inline chip descriptions and limits selection to four', async () => {
 		narrowTopic.mockResolvedValue(candidates);
 		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
-		await fillClassAndTopic(); await fireEvent.blur(screen.getByLabelText('Topic'));
-		await new Promise((resolve) => setTimeout(resolve, 650));
+		await fillClassAndTopic(); await debounce();
 		await waitFor(() => expect(screen.getByText(candidates[0].description)).toBeTruthy());
 		for (const candidate of candidates.slice(0, 4)) await fireEvent.click(screen.getByRole('button', { name: new RegExp(candidate.title) }));
 		expect((screen.getByRole('button', { name: /compare strategies/i }) as HTMLButtonElement).disabled).toBe(true);
+		expect(proposeIntent).not.toHaveBeenCalled();
 	});
 
-	it('prefills the editable intent fields after a topic is settled', async () => {
+	it('prefills the editable intent fields only after explicit topic confirmation', async () => {
 		narrowTopic.mockResolvedValue(candidates); proposeIntent.mockResolvedValue(drafts);
 		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
-		await fillClassAndTopic(); await fireEvent.blur(screen.getByLabelText('Topic'));
-		await new Promise((resolve) => setTimeout(resolve, 650));
-		await fireEvent.click(screen.getByRole('button', { name: /continue with topic/i }));
+		await fillClassAndTopic(); await debounce();
+		await fireEvent.click(screen.getByRole('button', { name: /decompose into rectangles/i }));
+		expect(proposeIntent).not.toHaveBeenCalled();
+		await fireEvent.click(screen.getByRole('button', { name: /use this topic/i }));
 		await waitFor(() => expect(proposeIntent).toHaveBeenCalled());
+		expect(proposeIntent).toHaveBeenCalledTimes(1);
+		expect(proposeIntent).toHaveBeenCalledWith(expect.objectContaining({ subtopics: ['Decompose into rectangles'] }));
 		expect((screen.getByLabelText('Desired outcome') as HTMLTextAreaElement).value).toBe(drafts.outcome_draft);
 		expect((screen.getByLabelText('What have they already covered?') as HTMLTextAreaElement).value).toBe(drafts.prior_knowledge_draft);
+	});
+
+	it('can confirm an empty candidate result and skip selected suggestions', async () => {
+		narrowTopic.mockResolvedValueOnce([]).mockResolvedValueOnce(candidates);
+		proposeIntent.mockResolvedValue(drafts);
+		const { unmount } = render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+		await fillClassAndTopic(); await debounce();
+		await fireEvent.click(screen.getByRole('button', { name: /use this topic/i }));
+		await waitFor(() => expect(proposeIntent).toHaveBeenCalledTimes(1));
+		unmount();
+
+		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
+		await fillClassAndTopic(); await debounce();
+		await fireEvent.click(screen.getByRole('button', { name: /decompose into rectangles/i }));
+		await fireEvent.click(screen.getByRole('button', { name: /skip suggestions/i }));
+		await waitFor(() => expect(proposeIntent).toHaveBeenCalledTimes(2));
+		expect(proposeIntent.mock.calls[1][0].subtopics).toEqual([]);
 	});
 
 	it('shows a stale refresh pill and confirms before overwriting edits', async () => {
 		narrowTopic.mockResolvedValue(candidates); proposeIntent.mockResolvedValue(drafts);
 		const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
 		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
-		await fillClassAndTopic(); await fireEvent.blur(screen.getByLabelText('Topic'));
-		await new Promise((resolve) => setTimeout(resolve, 650));
-		await fireEvent.click(screen.getByRole('button', { name: /continue with topic/i }));
+		await fillClassAndTopic(); await debounce();
+		await fireEvent.click(screen.getByRole('button', { name: /use this topic/i }));
 		await waitFor(() => expect(screen.getByLabelText('Desired outcome')).toBeTruthy());
 		const outcome = screen.getByLabelText('Desired outcome') as HTMLTextAreaElement;
 		outcome.value = 'Teacher edit'; await fireEvent.input(outcome); await tick();
