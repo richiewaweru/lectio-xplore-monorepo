@@ -31,7 +31,7 @@ The browser-control surface exposed rendered DOM and console logs but not authen
 - [x] Phase 1 — optional class label
 - [x] Phase 2 — pure lesson state
 - [x] Phase 3 — flag-gated lessons surface
-- [ ] Phase 4 — live progress and review counts
+- [x] Phase 4 — live progress and review counts
 - [ ] Phase 5 — settings and deletion
 - [ ] Repository validation and self-review
 
@@ -45,6 +45,8 @@ The browser-control surface exposed rendered DOM and console logs but not authen
 - Phase 2 frontend type check: 0 errors, 0 warnings
 - Phase 3 lessons and landing-route tests: 4 passed
 - Phase 3 frontend type check: 0 errors, 0 warnings
+- Phase 4 poller, lessons transition, and Studio regression tests: 32 passed
+- Phase 4 frontend type check: 0 errors, 0 warnings
 
 ## Risks and Follow-up
 

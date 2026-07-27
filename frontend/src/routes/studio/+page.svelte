@@ -26,6 +26,7 @@
 		startChunkedPlan
 	} from '$lib/api/v3';
 	import { isApiError } from '$lib/api/errors';
+	import { createGenerationPoller } from '$lib/generation/generation-poller';
 	import { resetV3Studio, v3Studio } from '$lib/stores/v3-studio.svelte';
 	import { createBuilderLesson } from '$lib/builder/api/lesson-crud';
 	import { v3PackToBuilderDocument } from '$lib/builder/adapters/from-generation';
@@ -74,13 +75,14 @@
 		failed: string[];
 		active: string | null;
 	}>({ completed: [], failed: [], active: null });
-	let documentPollInterval: ReturnType<typeof setInterval> | null = null;
 	let documentPollInFlight = false;
 	let documentPollGenerationId: string | null = null;
 	let lastDocumentVersion: string | null = null;
 	let hydratedDocumentGenerationId: string | null = null;
-	let visibilityListenerActive = false;
 	let disconnectChunkedStream: (() => void) | null = null;
+	const generationPoller = createGenerationPoller(async () => {
+		if (documentPollGenerationId) await pollGenerationStatus(documentPollGenerationId);
+	});
 
 	function disconnectActiveChunkedStream(): void {
 		disconnectChunkedStream?.();
@@ -365,21 +367,14 @@
 	}
 
 	function stopGenerationPolling(): void {
-		if (documentPollInterval) {
-			clearInterval(documentPollInterval);
-			documentPollInterval = null;
-		}
+		generationPoller.stop();
 		documentPollGenerationId = null;
 		lastDocumentVersion = null;
 		hydratedDocumentGenerationId = null;
-		if (browser && visibilityListenerActive) {
-			document.removeEventListener('visibilitychange', handleDocumentVisibilityChange);
-			visibilityListenerActive = false;
-		}
 	}
 
 	async function pollGenerationStatus(generationId: string): Promise<void> {
-		if (!browser || document.hidden || documentPollInFlight) return;
+		if (!browser || documentPollInFlight) return;
 		documentPollInFlight = true;
 		try {
 			const status = await getChunkedPlanStatus(generationId);
@@ -406,27 +401,14 @@
 		}
 	}
 
-	function handleDocumentVisibilityChange(): void {
-		if (!browser || document.hidden || !documentPollGenerationId) return;
-		void pollGenerationStatus(documentPollGenerationId);
-	}
-
 	function startGenerationPolling(
 		generationId: string,
 		{ immediate = true }: { immediate?: boolean } = {}
 	): void {
-		if (documentPollGenerationId === generationId && documentPollInterval) return;
+		if (documentPollGenerationId === generationId && generationPoller.isRunning()) return;
 		stopGenerationPolling();
 		documentPollGenerationId = generationId;
-		if (browser && !visibilityListenerActive) {
-			document.addEventListener('visibilitychange', handleDocumentVisibilityChange);
-			visibilityListenerActive = true;
-		}
-		if (immediate) void pollGenerationStatus(generationId);
-		documentPollInterval = setInterval(() => {
-			if (!documentPollGenerationId) return;
-			void pollGenerationStatus(documentPollGenerationId);
-		}, 4000);
+		generationPoller.start({ immediate });
 	}
 
 	async function hydrateFromDocument(generationId: string): Promise<boolean> {

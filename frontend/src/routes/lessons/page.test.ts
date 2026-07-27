@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
 	getBuilderLesson: vi.fn(),
 	getV3Generations: vi.fn(),
 	fetchV3Document: vi.fn(),
+	getChunkedPlanStatus: vi.fn(),
 	logout: vi.fn()
 }));
 
@@ -21,7 +22,8 @@ vi.mock('$lib/builder/api/lesson-crud', () => ({
 }));
 vi.mock('$lib/api/v3', () => ({
 	getV3Generations: mocks.getV3Generations,
-	fetchV3Document: mocks.fetchV3Document
+	fetchV3Document: mocks.fetchV3Document,
+	getChunkedPlanStatus: mocks.getChunkedPlanStatus
 }));
 vi.mock('$lib/stores/auth', () => ({
 	authUser: {
@@ -148,6 +150,7 @@ function packFor(id: string) {
 
 describe('/lessons', () => {
 	beforeEach(() => {
+		Object.values(mocks).forEach((mock) => mock.mockReset());
 		mocks.goto.mockReset();
 		mocks.getStreamIntoBuilder.mockReturnValue(true);
 		mocks.listBuilderLessons.mockResolvedValue(lessons);
@@ -157,6 +160,15 @@ describe('/lessons', () => {
 			document: { version: 1, id, title: id, subject: 'Science', sections: [], blocks: {}, media: {} }
 		}));
 		mocks.fetchV3Document.mockImplementation(async (id: string) => packFor(id));
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-writing',
+			stage: 'stage2_running',
+			doc_version: null,
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: true,
+			next_action: 'generation_running'
+		});
 	});
 
 	afterEach(cleanup);
@@ -198,5 +210,55 @@ describe('/lessons', () => {
 		expect(await screen.findByText(/No lessons yet/)).toBeTruthy();
 		expect(screen.queryByText('Writing now')).toBeNull();
 		expect(screen.getAllByRole('link', { name: '+ New lesson' })).toHaveLength(1);
+	});
+
+	it('moves a writing row to ready when the shared poller observes a terminal snapshot', async () => {
+		let resolveStatus!: (value: Record<string, unknown>) => void;
+		mocks.getChunkedPlanStatus.mockReturnValue(
+			new Promise((resolve) => {
+				resolveStatus = resolve;
+			})
+		);
+		let writingFetches = 0;
+		mocks.fetchV3Document.mockImplementation(async (id: string) => {
+			if (id !== 'gen-writing') return packFor(id);
+			writingFetches += 1;
+			return writingFetches === 1
+				? packFor(id)
+				: {
+						status: 'final_ready',
+						progress: {
+							stage: 'completed',
+							sections: { intro: 'ready', explain: 'ready', practice: 'ready', close: 'ready' }
+						},
+						sections: [
+							{ section_id: 'intro' },
+							{ section_id: 'explain' },
+							{ section_id: 'practice' },
+							{ section_id: 'close' }
+						],
+						section_diagnostics: [],
+						booklet_issues: []
+					};
+		});
+
+		render(LessonsPage);
+		expect(await screen.findByText('Writing now')).toBeTruthy();
+		resolveStatus({
+			generation_id: 'gen-writing',
+			stage: 'complete',
+			doc_version: 'doc-v2',
+			failed_sections: [],
+			blueprint_id: 'blueprint-1',
+			execution_started: true,
+			next_action: 'done'
+		});
+
+		await waitFor(() => expect(screen.queryByText('Writing now')).toBeNull());
+		expect(screen.getByRole('link', { name: 'Photosynthesis · Year 7 Science' }).getAttribute('href')).toBe(
+			'/builder/writing'
+		);
+		expect(mocks.getChunkedPlanStatus).toHaveBeenCalledTimes(1);
+		expect(writingFetches).toBe(2);
 	});
 });
