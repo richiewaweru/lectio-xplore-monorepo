@@ -1,0 +1,74 @@
+// @vitest-environment jsdom
+
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => ({
+	getProfile: vi.fn(),
+	getStreamIntoBuilder: vi.fn(),
+	setStreamIntoBuilder: vi.fn(),
+	goto: vi.fn()
+}));
+
+vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
+vi.mock('$lib/api/profile', () => ({ getProfile: mocks.getProfile }));
+vi.mock('$lib/settings/flags', () => ({
+	getStreamIntoBuilder: mocks.getStreamIntoBuilder,
+	setStreamIntoBuilder: mocks.setStreamIntoBuilder
+}));
+
+import SettingsPage from './+page.svelte';
+
+const profile = {
+	id: 'profile-1',
+	user_id: 'user-1',
+	teacher_role: 'teacher',
+	subjects: ['mathematics', 'physics'],
+	default_grade_band: 'high_school',
+	default_audience_description: 'Year 10 mixed-ability maths',
+	curriculum_framework: 'GCSE AQA',
+	classroom_context: 'Limited devices, mixed prior knowledge.',
+	planning_goals: 'Better first drafts and more scaffolded practice.',
+	school_or_org_name: 'Riverside High',
+	delivery_preferences: {
+		tone: 'supportive',
+		reading_level: 'simple',
+		explanation_style: 'concrete-first',
+		example_style: 'everyday',
+		brevity: 'tight',
+		use_visuals: true,
+		print_first: true,
+		more_practice: true,
+		keep_short: false
+	},
+	created_at: '2026-04-06T00:00:00Z',
+	updated_at: '2026-04-06T00:00:00Z'
+};
+
+describe('/settings', () => {
+	beforeEach(() => {
+		Object.values(mocks).forEach((mock) => mock.mockReset());
+		mocks.getProfile.mockResolvedValue(profile);
+		mocks.getStreamIntoBuilder.mockReturnValue(true);
+	});
+
+	afterEach(cleanup);
+
+	it('renders the existing profile summary and edit entry point', async () => {
+		render(SettingsPage);
+		expect(await screen.findByRole('heading', { name: 'Teacher Setup' })).toBeTruthy();
+		expect(screen.getByText('Year 10 mixed-ability maths')).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: 'Edit Profile' }));
+		expect(mocks.goto).toHaveBeenCalledWith('/onboarding?mode=edit');
+	});
+
+	it('persists the experimental Builder preference', async () => {
+		render(SettingsPage);
+		const toggle = await screen.findByRole('checkbox', {
+			name: 'Stream new lessons into Builder (experimental)'
+		});
+		expect((toggle as HTMLInputElement).checked).toBe(true);
+		await fireEvent.click(toggle);
+		await waitFor(() => expect(mocks.setStreamIntoBuilder).toHaveBeenCalledWith(false));
+	});
+});

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
 	getStreamIntoBuilder: vi.fn(),
 	listBuilderLessons: vi.fn(),
 	getBuilderLesson: vi.fn(),
+	deleteBuilderLesson: vi.fn(),
 	getV3Generations: vi.fn(),
 	fetchV3Document: vi.fn(),
 	getChunkedPlanStatus: vi.fn(),
@@ -18,7 +19,8 @@ vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
 vi.mock('$lib/settings/flags', () => ({ getStreamIntoBuilder: mocks.getStreamIntoBuilder }));
 vi.mock('$lib/builder/api/lesson-crud', () => ({
 	listBuilderLessons: mocks.listBuilderLessons,
-	getBuilderLesson: mocks.getBuilderLesson
+	getBuilderLesson: mocks.getBuilderLesson,
+	deleteBuilderLesson: mocks.deleteBuilderLesson
 }));
 vi.mock('$lib/api/v3', () => ({
 	getV3Generations: mocks.getV3Generations,
@@ -159,6 +161,7 @@ describe('/lessons', () => {
 			...lessons.find((lesson) => lesson.id === id),
 			document: { version: 1, id, title: id, subject: 'Science', sections: [], blocks: {}, media: {} }
 		}));
+		mocks.deleteBuilderLesson.mockResolvedValue(undefined);
 		mocks.fetchV3Document.mockImplementation(async (id: string) => packFor(id));
 		mocks.getChunkedPlanStatus.mockResolvedValue({
 			generation_id: 'gen-writing',
@@ -260,5 +263,29 @@ describe('/lessons', () => {
 		);
 		expect(mocks.getChunkedPlanStatus).toHaveBeenCalledTimes(1);
 		expect(writingFetches).toBe(2);
+	});
+
+	it('confirms a draft deletion and removes the row only after success', async () => {
+		const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+		render(LessonsPage);
+		await screen.findByText('Drafts');
+		await fireEvent.click(screen.getByText('Drafts'));
+		await fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+		expect(confirm).toHaveBeenCalledWith('Delete “Untitled lesson”? This cannot be undone.');
+		await waitFor(() => expect(mocks.deleteBuilderLesson).toHaveBeenCalledWith('draft'));
+		expect(screen.queryByRole('link', { name: 'Untitled lesson' })).toBeNull();
+	});
+
+	it('keeps a lesson visible when deletion fails', async () => {
+		vi.spyOn(window, 'confirm').mockReturnValue(true);
+		mocks.deleteBuilderLesson.mockRejectedValue(new Error('Delete failed'));
+		render(LessonsPage);
+		await screen.findByText('Drafts');
+		await fireEvent.click(screen.getByText('Drafts'));
+		await fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+		expect((await screen.findByRole('alert')).textContent).toContain('Delete failed');
+		expect(screen.getByRole('link', { name: 'Untitled lesson' })).toBeTruthy();
 	});
 });

@@ -13,6 +13,7 @@
 	import { saveDocument } from '$lib/builder/persistence/idb-store';
 	import { getStreamIntoBuilder, setStreamIntoBuilder } from '$lib/settings/flags';
 	import { authUser, logout } from '$lib/stores/auth';
+	import ProfileSummary from '$lib/components/workspace/ProfileSummary.svelte';
 	import type { TeacherProfile } from '$lib/types';
 	import type { V3GenerationHistoryItem } from '$lib/types/v3';
 	import type { PackStatusResponse } from '$lib/types/learning-pack';
@@ -142,71 +143,15 @@
 			</div>
 		</section>
 
-		<section class="profile-summary">
-			<h2>Teacher Setup</h2>
-			<label class="experimental-toggle">
-				<input
-					type="checkbox"
-					checked={streamIntoBuilder}
-					onchange={(event) => {
-						streamIntoBuilder = event.currentTarget.checked;
-						setStreamIntoBuilder(streamIntoBuilder);
-					}}
-				/>
-				<span>Stream new lessons into Builder (experimental)</span>
-			</label>
-			<div class="profile-grid">
-				<div class="profile-item">
-					<span class="label">Teacher Role</span>
-					<span class="value">{profile.teacher_role.replace('_', ' ')}</span>
-				</div>
-				<div class="profile-item">
-					<span class="label">Default Grade Band</span>
-					<span class="value">{profile.default_grade_band.replace('_', ' ')}</span>
-				</div>
-				<div class="profile-item">
-					<span class="label">Tone</span>
-					<span class="value">{profile.delivery_preferences.tone.replace('_', ' ')}</span>
-				</div>
-				<div class="profile-item">
-					<span class="label">Brevity</span>
-					<span class="value">{profile.delivery_preferences.brevity.replace('_', ' ')}</span>
-				</div>
-				{#if profile.subjects.length > 0}
-					<div class="profile-item wide">
-						<span class="label">Subjects</span>
-						<span class="value">{profile.subjects.join(', ')}</span>
-					</div>
-				{/if}
-				{#if profile.default_audience_description}
-					<div class="profile-item wide">
-						<span class="label">Default Audience</span>
-						<span class="value">{profile.default_audience_description}</span>
-					</div>
-				{/if}
-				{#if profile.curriculum_framework}
-					<div class="profile-item wide">
-						<span class="label">Curriculum</span>
-						<span class="value">{profile.curriculum_framework}</span>
-					</div>
-				{/if}
-				{#if profile.classroom_context}
-					<div class="profile-item wide">
-						<span class="label">Classroom Context</span>
-						<span class="value">{profile.classroom_context}</span>
-					</div>
-				{/if}
-				{#if profile.planning_goals}
-					<div class="profile-item wide">
-						<span class="label">Planning Goals</span>
-						<span class="value">{profile.planning_goals}</span>
-					</div>
-				{/if}
-			</div>
-			<button class="edit-profile-btn" onclick={() => goto(getOnboardingRoute({ edit: true }))}>
-				Edit Profile
-			</button>
-		</section>
+		<ProfileSummary
+			{profile}
+			{streamIntoBuilder}
+			onStreamIntoBuilderChange={(enabled) => {
+				streamIntoBuilder = enabled;
+				setStreamIntoBuilder(enabled);
+			}}
+			onEdit={() => goto(getOnboardingRoute({ edit: true }))}
+		/>
 
 		<section class="generate-section">
 			<h2>Teacher Studio</h2>
@@ -366,7 +311,6 @@
 	}
 
 	.welcome-section,
-	.profile-summary,
 	.generate-section,
 	.history-section {
 		border: 1px solid rgba(36, 52, 63, 0.12);
@@ -385,7 +329,6 @@
 	}
 
 	.welcome-section h1,
-	.profile-summary h2,
 	.generate-section h2,
 	.history-section h2 {
 		margin: 0;
@@ -397,45 +340,6 @@
 		max-width: 60ch;
 	}
 
-	.profile-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-		gap: 0.8rem;
-		margin: 1rem 0;
-	}
-
-	.experimental-toggle {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-		margin: 0.8rem 0 1rem;
-		color: #3f4c55;
-		font-size: 0.9rem;
-	}
-
-	.profile-item {
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-	}
-
-	.profile-item.wide {
-		grid-column: 1 / -1;
-	}
-
-	.label {
-		font-size: 0.78rem;
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-		color: #6f6b63;
-	}
-
-	.value {
-		color: #1f1c18;
-		text-transform: capitalize;
-	}
-
-	.edit-profile-btn,
 	.studio-link,
 	.ghost-link {
 		border-radius: 999px;

@@ -52,13 +52,15 @@
 			{#if authed.current && user.current}
 				<div class="workspace-nav-end">
 					<span class="workspace-kbd" aria-hidden="true">⌘K</span>
-					{#if user.current.picture_url}
-						<img src={user.current.picture_url} alt={user.current.name ?? ''} class="workspace-avatar" />
-					{:else}
-						<span class="workspace-avatar workspace-initials" title={user.current.name ?? user.current.email}>
-							{(user.current.name ?? user.current.email).slice(0, 2).toUpperCase()}
-						</span>
-					{/if}
+					<a class="workspace-avatar-link" href="/settings" aria-label="Settings">
+						{#if user.current.picture_url}
+							<img src={user.current.picture_url} alt="" class="workspace-avatar" />
+						{:else}
+							<span class="workspace-avatar workspace-initials" title={user.current.name ?? user.current.email}>
+								{(user.current.name ?? user.current.email).slice(0, 2).toUpperCase()}
+							</span>
+						{/if}
+					</a>
 				</div>
 			{/if}
 		</nav>
@@ -227,6 +229,16 @@
 		height: 30px;
 		border-radius: 50%;
 		object-fit: cover;
+	}
+
+	.workspace-avatar-link {
+		display: inline-flex;
+		border-radius: 50%;
+	}
+
+	.workspace-avatar-link:focus-visible {
+		outline: 2px solid #1c5d45;
+		outline-offset: 3px;
 	}
 
 	.workspace-initials {

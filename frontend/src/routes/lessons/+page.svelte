@@ -5,6 +5,7 @@
 	import { isApiError } from '$lib/api/errors';
 	import { fetchV3Document, getChunkedPlanStatus, getV3Generations } from '$lib/api/v3';
 	import {
+		deleteBuilderLesson,
 		getBuilderLesson,
 		listBuilderLessons,
 		type BuilderLessonRecord,
@@ -27,6 +28,8 @@
 	let generationDocumentsById = $state<Record<string, V3PackDocument | undefined>>({});
 	let lessonDocumentsById = $state<Record<string, LessonDocument | undefined>>({});
 	let documentVersionsByGenerationId = $state<Record<string, string | null | undefined>>({});
+	let deletingLessonId = $state<string | null>(null);
+	let deleteError = $state<string | null>(null);
 	const user = fromStore(authUser);
 
 	const writing = $derived(rows.filter((row) => row.state === 'writing'));
@@ -153,6 +156,23 @@
 		return 'Drafts';
 	}
 
+	async function deleteLesson(row: LessonRow): Promise<void> {
+		if (!confirm(`Delete “${row.title}”? This cannot be undone.`)) return;
+		deletingLessonId = row.id;
+		deleteError = null;
+		try {
+			await deleteBuilderLesson(row.id);
+			lessons = lessons.filter((lesson) => lesson.id !== row.id);
+			const { [row.id]: _removedDocument, ...remainingDocuments } = lessonDocumentsById;
+			lessonDocumentsById = remainingDocuments;
+			rebuildRows();
+		} catch (error) {
+			deleteError = error instanceof Error ? error.message : 'Failed to delete lesson.';
+		} finally {
+			deletingLessonId = null;
+		}
+	}
+
 	async function loadWorkspace(): Promise<void> {
 		try {
 			const [loadedLessons, loadedGenerations] = await Promise.all([
@@ -254,6 +274,7 @@
 				<a class="primary" href="/studio">+ New lesson</a>
 			</section>
 		{:else}
+			{#if deleteError}<p class="error-copy delete-error" role="alert">{deleteError}</p>{/if}
 			{#each [
 				{ state: 'writing' as const, rows: writing },
 				{ state: 'attention' as const, rows: attention },
@@ -303,6 +324,18 @@
 												<a class="action" href={row.href}>Edit</a>
 												<a class="action solid" href={`/builder/print/${row.id}`}>Print</a>
 											{/if}
+											<details class="row-menu">
+												<summary class="action" aria-label={`More actions for ${row.title}`}>•••</summary>
+												<div class="menu-popover">
+													<button
+														type="button"
+														disabled={deletingLessonId === row.id}
+														onclick={() => deleteLesson(row)}
+													>
+														{deletingLessonId === row.id ? 'Deleting…' : 'Delete lesson'}
+													</button>
+												</div>
+											</details>
 										</div>
 									{/if}
 								</article>
@@ -334,7 +367,17 @@
 											<span>{rowMeta(row)}</span><span class="dot">·</span><span>{relativeTime(row.updatedAt)}</span>
 										</p>
 									</div>
-									<div class="actions"><a class="action solid" href={row.href}>Continue</a></div>
+									<div class="actions">
+										<button
+											class="action danger"
+											type="button"
+											disabled={deletingLessonId === row.id}
+											onclick={() => deleteLesson(row)}
+										>
+											{deletingLessonId === row.id ? 'Deleting…' : 'Delete'}
+										</button>
+										<a class="action solid" href={row.href}>Continue</a>
+									</div>
 								</article>
 							{/each}
 						</div>
@@ -542,6 +585,23 @@
 		text-decoration: none;
 	}
 
+	button.action {
+		background: transparent;
+		cursor: pointer;
+		font-family: inherit;
+	}
+
+	button.action:disabled {
+		cursor: progress;
+		opacity: 0.6;
+	}
+
+	.action.danger:hover,
+	.action.danger:focus-visible {
+		background: #f8e9e5;
+		color: #873f30;
+	}
+
 	.action:hover,
 	.action:focus-visible {
 		background: var(--accent-soft);
@@ -605,6 +665,54 @@
 		color: var(--amber);
 		font: 500 12px Inter, sans-serif;
 		padding: 3px 9px;
+	}
+
+	.row-menu {
+		position: relative;
+	}
+
+	.row-menu summary {
+		cursor: pointer;
+		list-style: none;
+	}
+
+	.row-menu summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.menu-popover {
+		position: absolute;
+		top: calc(100% + 6px);
+		right: 0;
+		z-index: 5;
+		min-width: 132px;
+		border: 1px solid var(--rule);
+		border-radius: 8px;
+		background: var(--surface);
+		box-shadow: 0 8px 24px rgba(22, 33, 28, 0.12);
+		padding: 5px;
+	}
+
+	.menu-popover button {
+		width: 100%;
+		border: 0;
+		border-radius: 5px;
+		background: transparent;
+		color: #873f30;
+		cursor: pointer;
+		font: 500 13px Inter, sans-serif;
+		padding: 8px;
+		text-align: left;
+	}
+
+	.menu-popover button:hover,
+	.menu-popover button:focus-visible {
+		background: #f8e9e5;
+		outline: none;
+	}
+
+	.delete-error {
+		margin-bottom: 20px;
 	}
 
 	.drafts summary {

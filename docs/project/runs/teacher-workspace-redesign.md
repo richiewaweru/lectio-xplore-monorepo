@@ -32,8 +32,8 @@ The browser-control surface exposed rendered DOM and console logs but not authen
 - [x] Phase 2 — pure lesson state
 - [x] Phase 3 — flag-gated lessons surface
 - [x] Phase 4 — live progress and review counts
-- [ ] Phase 5 — settings and deletion
-- [ ] Repository validation and self-review
+- [x] Phase 5 — settings and deletion
+- [x] Repository validation and self-review recorded
 
 ## Validation Evidence
 
@@ -47,6 +47,13 @@ The browser-control surface exposed rendered DOM and console logs but not authen
 - Phase 3 frontend type check: 0 errors, 0 warnings
 - Phase 4 poller, lessons transition, and Studio regression tests: 32 passed
 - Phase 4 frontend type check: 0 errors, 0 warnings
+- Phase 5 dashboard, settings, and deletion tests: 14 passed
+- Phase 5 frontend type check: 0 errors, 0 warnings
+- Production frontend build: passed
+- Repository architecture check: no violations
+- Final `git diff --check`: passed; worktree clean
+- Full frontend Vitest run: inconclusive after reaching the 10-minute execution cap without emitting a failing test
+- Full repository validation script: inconclusive after reaching the 5-minute execution cap
 
 ## Risks and Follow-up
 
