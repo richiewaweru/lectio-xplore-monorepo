@@ -112,8 +112,6 @@ WHAT YOU CANNOT DO
 
   - Remove a planned component
   - Replace a planned component's slug or position
-  - Omit a question assigned to this section in the question_plan
-  - Change the temperature of any question
   - Introduce a concept the plan did not allocate to this section
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -129,8 +127,7 @@ by the downstream writer. Do not omit meaningful pedagogical information solely
 to satisfy a length preference.
 
 Every planned component must receive a brief. Do not replace planned component
-IDs with invented IDs. Every question assigned to this section must receive a
-question brief.
+IDs with invented IDs.
 
 {
   "section_id": "must match the section you were given",
@@ -139,14 +136,6 @@ question brief.
     {
       "component_id": "slug from the section plan — unchanged",
       "content_intent": "your writer brief — specific, actionable, and complete"
-    }
-  ],
-
-  "question_briefs": [
-    {
-      "question_id": "from question_plan — only questions assigned to this section",
-      "prompt_text": "the exact question the student sees",
-      "expected_answer": "concise correct answer for answer key"
     }
   ],
 
@@ -176,7 +165,6 @@ If visual_required is true for this section, replace null with:
 }
 
 HARD RULES:
-- question_briefs is an empty list [] if no questions are assigned to this section
 - visual_strategy must be populated if visual_required is true
 - visual_job describes PURPOSE, not runtime timing
 - visual_style is required when visual_strategy is populated: use diagram_precision
@@ -223,12 +211,6 @@ def build_stage2_user_message(
                         f"    {comp.component_id}:\n"
                         f"      {comp.content_intent}\n"
                     )
-                if brief.question_briefs:
-                    prior_block += "    Questions:\n"
-                    for qb in brief.question_briefs:
-                        prior_block += (
-                            f"      {qb.question_id}: {qb.prompt_text}\n"
-                        )
 
     # Format full section sequence — so Stage 2 knows where this section sits
     sequence_lines = []
@@ -238,22 +220,6 @@ def build_stage2_user_message(
             f"  {marker} [{s.role.upper()}] {s.id}: {s.title}"
         )
     sequence_block = "\n".join(sequence_lines)
-
-    # Format question plan — filtered to this section
-    my_questions = [
-        q for q in plan.question_plan
-        if q.section_id == current_section.id
-    ]
-    q_block = ""
-    if my_questions:
-        q_block = "QUESTIONS ASSIGNED TO THIS SECTION:\n"
-        for q in my_questions:
-            q_block += (
-                f"  {q.question_id}: temperature={q.temperature}, "
-                f"diagram_required={q.diagram_required}\n"
-            )
-    else:
-        q_block = "QUESTIONS ASSIGNED TO THIS SECTION: none\n"
 
     # Format approved card misconceptions relevant to this section.
     pitfall_block = ""
@@ -283,7 +249,6 @@ Signal supports:    {", ".join(summarise_form_supports(form)) or "none"}
 FULL SECTION SEQUENCE (your section is marked →):
 {sequence_block}
 
-{q_block}
 {pitfall_block}
 ———————————————————————————————————————————————
 {prior_block}

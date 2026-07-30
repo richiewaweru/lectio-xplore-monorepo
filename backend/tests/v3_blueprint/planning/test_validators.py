@@ -7,7 +7,6 @@ from v3_blueprint.planning.models import (
     ComponentSlot,
     LessonIntent,
     QPlanItem,
-    QuestionBrief,
     SectionBrief,
     SectionPlan,
     StructuralPlan,
@@ -203,13 +202,6 @@ def test_validate_section_brief_allows_optional_visual_on_non_visual_section() -
     brief = SectionBrief(
         section_id="summary",
         components=[ComponentBrief(component_id=slug_a, content_intent="brief")],
-        question_briefs=[
-            QuestionBrief(
-                question_id="q1",
-                prompt_text="What is 1/2?",
-                expected_answer="Half",
-            )
-        ],
         visual_strategy=VisualStrategySpec(
             subject="fraction circles",
             visual_job="introduce the concept visually",
@@ -270,7 +262,7 @@ def test_stage2_models_preserve_long_content_and_ignore_unknown_fields() -> None
     assert brief.components[1].content_intent == long_content
     assert "section_note" not in brief.model_dump()
     assert "difficulty_note" not in brief.components[0].model_dump()
-    assert "answer_note" not in brief.question_briefs[0].model_dump()
+    assert "question_briefs" not in brief.model_dump()
     assert brief.visual_strategy is not None
     assert "visual_note" not in brief.visual_strategy.model_dump()
     assert "frame_note" not in brief.visual_strategy.frames[0].model_dump()
@@ -292,7 +284,7 @@ def test_stage2_models_preserve_long_content_and_ignore_unknown_fields() -> None
     assert validate_section_brief(brief, section, question_plan) == []
 
 
-def test_validate_section_brief_allows_additional_question() -> None:
+def test_validate_section_brief_ignores_legacy_question_fields() -> None:
     section = SectionPlan(
         id="practice",
         title="Practice",
@@ -304,10 +296,7 @@ def test_validate_section_brief_allows_additional_question() -> None:
     brief = SectionBrief(
         section_id="practice",
         components=[ComponentBrief(component_id="hook-hero", content_intent="practice")],
-        question_briefs=[
-            QuestionBrief(question_id="q1", prompt_text="Required?", expected_answer="Yes."),
-            QuestionBrief(question_id="q-extra", prompt_text="Extra?", expected_answer="Also yes."),
-        ],
+        question_briefs=[{"question_id": "legacy"}],
     )
     question_plan = [
         QPlanItem(question_id="q1", section_id="practice", temperature="warm")
@@ -316,7 +305,7 @@ def test_validate_section_brief_allows_additional_question() -> None:
     assert validate_section_brief(brief, section, question_plan) == []
 
 
-def test_validate_section_brief_catches_missing_assigned_question() -> None:
+def test_validate_section_brief_does_not_require_assigned_questions() -> None:
     section = SectionPlan(
         id="practice",
         title="Practice",
@@ -333,9 +322,7 @@ def test_validate_section_brief_catches_missing_assigned_question() -> None:
         QPlanItem(question_id="q1", section_id="practice", temperature="warm")
     ]
 
-    errors = validate_section_brief(brief, section, question_plan)
-
-    assert any("missing assigned question briefs" in error for error in errors)
+    assert validate_section_brief(brief, section, question_plan) == []
 
 
 def test_validate_section_brief_catches_wrong_section_id() -> None:

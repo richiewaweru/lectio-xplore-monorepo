@@ -156,31 +156,9 @@ def _assemble_question_plan(
     briefs: list[SectionBrief],
     included_section_ids: set[str],
 ) -> list[QuestionPlanItem]:
-    brief_by_section_id = {brief.section_id: brief for brief in briefs}
-
-    assembled: list[QuestionPlanItem] = []
-    for question in plan.question_plan:
-        if question.section_id not in included_section_ids:
-            continue
-        section_brief = brief_by_section_id.get(question.section_id)
-        if section_brief is None:
-            continue
-        question_briefs = {
-            question_brief.question_id: question_brief
-            for question_brief in section_brief.question_briefs
-        }
-        question_brief = question_briefs.get(question.question_id)
-        if question_brief is None:
-            continue
-        assembled.append(QuestionPlanItem(
-            question_id=question.question_id,
-            section_id=question.section_id,
-            temperature=question.temperature,
-            diagram_required=question.diagram_required,
-            prompt=question_brief.prompt_text,
-            expected_answer=question_brief.expected_answer,
-        ))
-    return assembled
+    # Diagnostic items are generated once per approved card behind the wall.
+    # Stage 2 is intentionally unable to author or inspect them.
+    return []
 
 
 def _assemble_visual_strategy(

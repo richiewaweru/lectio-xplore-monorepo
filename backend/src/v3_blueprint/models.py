@@ -145,7 +145,7 @@ class ProductionBlueprint(BaseModel):
     voice: VoicePlan
     anchor: AnchorPlan
     sections: list[SectionPlan] = Field(default_factory=list, min_length=1)
-    question_plan: list[QuestionPlanItem] = Field(default_factory=list, min_length=1)
+    question_plan: list[QuestionPlanItem] = Field(default_factory=list)
     visual_strategy: VisualStrategyPlan = Field(default_factory=VisualStrategyPlan)
     answer_key: AnswerKeyPlan
     teacher_materials: list[str] = Field(default_factory=list)

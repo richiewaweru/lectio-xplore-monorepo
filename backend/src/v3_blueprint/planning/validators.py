@@ -205,25 +205,10 @@ def validate_section_brief(
         )
 
     assigned_question_ids = {
-        q.question_id for q in question_plan
-        if q.section_id == section_plan.id
+        item.question_id
+        for item in question_plan
+        if item.section_id == section_plan.id
     }
-    returned_question_ids = {q.question_id for q in brief.question_briefs}
-    missing_questions = assigned_question_ids - returned_question_ids
-    if missing_questions:
-        errors.append(
-            f"Section '{section_plan.id}': missing assigned question briefs: "
-            f"{sorted(missing_questions)}"
-        )
-
-    additional_questions = returned_question_ids - assigned_question_ids
-    if additional_questions:
-        log.info(
-            "Section '%s' returned additional question briefs that will not be consumed "
-            "during assembly: %s",
-            section_plan.id,
-            sorted(additional_questions),
-        )
 
     if section_plan.visual_required and not brief.visual_strategy:
         errors.append(

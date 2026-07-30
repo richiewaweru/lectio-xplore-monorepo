@@ -124,6 +124,28 @@ class ConceptCard(BaseModel):
         default="",
         description="Specific continuity instruction for how this card opens.",
     )
+    _item_subject: str = PrivateAttr(default="")
+    _item_level: str = PrivateAttr(default="")
+    _item_notation: str | None = PrivateAttr(default=None)
+
+    def with_item_context(
+        self,
+        *,
+        subject: str,
+        level: str,
+        notation: str | None,
+    ) -> ConceptCard:
+        """Return an isolated card carrying only scalar item-writing context."""
+        card = self.model_copy(deep=True)
+        card._item_subject = subject
+        card._item_level = level
+        card._item_notation = notation
+        return card
+
+    def item_context(self) -> tuple[str, str, str | None]:
+        if not self._item_subject.strip() or not self._item_level.strip():
+            raise ValueError("Item generation requires subject and level on the approved card")
+        return self._item_subject, self._item_level, self._item_notation
 
 
 class VariantSpec(BaseModel):
@@ -281,20 +303,6 @@ class ComponentBrief(BaseModel):
     )
 
 
-class QuestionBrief(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    question_id: str = Field(
-        description="Must match question_id from question_plan."
-    )
-    prompt_text: str = Field(
-        description="The exact question the student sees."
-    )
-    expected_answer: str = Field(
-        description="Concise correct answer for the answer key."
-    )
-
-
 class SectionBrief(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -302,7 +310,6 @@ class SectionBrief(BaseModel):
         description="Must match the section assigned to this call."
     )
     components: list[ComponentBrief]
-    question_briefs: list[QuestionBrief] = Field(default_factory=list)
     visual_strategy: VisualStrategySpec | None = None
 
     # Internal flags — not emitted by LLM, set by retry logic on failure
@@ -319,7 +326,6 @@ def stage2_brief_preview_payload(brief: SectionBrief) -> dict[str, object]:
             }
             for component in brief.components
         ],
-        "question_prompts": [question.prompt_text for question in brief.question_briefs],
         "visual_subject": brief.visual_strategy.subject if brief.visual_strategy else None,
     }
 

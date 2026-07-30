@@ -851,6 +851,7 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - [x] P3 — made stage 1 emit and persist concept cards
 - [x] P4 — halt durably at awaiting review and resume only on explicit approval
 - [x] P5 — review and edit concept cards in Builder, then approve once per pack
+- [x] P6 — generate and persist one diagnostic item set per approved card behind the context wall
 
 ### P1 validation
 
@@ -899,5 +900,16 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - Frontend: 0 check errors, 0 warnings, and production build passed
 - Affected frontend suites: 3 files, 36 tests passed
 - Architecture guard and Builder-only card markup grep: passed
+
+### P6 validation
+
+- Stage 2 no longer emits question briefs; diagnostic items use a separate prompt and call
+- Item executor accepts one approved ConceptCard and has no component/brief/generated-section input
+- Validator rejects unknown misconception IDs and invalid correct-option counts
+- Coverage and unmapped-option counts are recomputed rather than trusted from model output
+- Real DeepSeek premium gate: 5 items, all three misconceptions covered, one correct option per item
+- Backend: 416 tests passed
+- Focused execution/planning suite: 38 tests passed
+- Ruff and architecture checks: passed
 
 ---

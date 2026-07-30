@@ -36,7 +36,6 @@ def _failed_placeholder(section_id: str, errors: list[str]) -> SectionBrief:
     placeholder = SectionBrief(
         section_id=section_id,
         components=[],
-        question_briefs=[],
         visual_strategy=None,
     )
     placeholder._failed = True
@@ -322,7 +321,6 @@ async def _run_stage2_section(
                 f"\n[STAGE2 SECTION DONE] generation_id={generation_id}"
                 f" section_id={section.id}"
                 f" components_briefed={len(brief.components)}"
-                f" questions_briefed={len(brief.question_briefs)}"
                 f" has_visual={'yes' if brief.visual_strategy else 'no'}",
                 flush=True,
             )

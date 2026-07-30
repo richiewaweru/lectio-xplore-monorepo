@@ -28,7 +28,7 @@
 - [x] P3: planner emits and persists cards
 - [x] P4: durable review halt and explicit resume
 - [x] P5: card review endpoints and Builder UI
-- [ ] P6: item generation behind the context wall
+- [x] P6: item generation behind the context wall
 - [ ] P7: diagnostic distractor mappings
 - [ ] P8: pack-level item review
 - [ ] P9: parallel variant fan-out and pack hub
@@ -88,6 +88,19 @@
   3 affected route/state files and 36 tests passed.
 - P5 architecture guard: no violations. Card-review markup is confined to Builder;
   `V3Canvas.svelte` contains none.
+- P6 wall gates: `SectionBrief` no longer has `question_briefs`; the item executor
+  accepts exactly one `ConceptCard`; it imports no component, section-brief, or
+  generated-section types; and its prompt contains no generated-content channel.
+- P6 execution: approval generates one five-item diagnostic set per approved card,
+  persists it under the pack, recomputes misconception coverage and unmapped-option
+  counts, and preserves existing item rows rather than overwriting them.
+- P6 real-provider gate: the unchanged premium slot resolved to
+  `openai_compatible/deepseek-v4-pro`; one photosynthesis card produced 5 items with
+  exactly one correct option each, coverage `M1=1, M2=2, M3=1`, and no missing
+  misconception coverage.
+- P6 backend: 416 tests passed with one existing Pydantic field-shadow warning.
+- P6 focused execution/planning suite: 38 tests passed; Ruff passed.
+- P6 architecture guard: no violations.
 
 ## Risks and follow-up
 

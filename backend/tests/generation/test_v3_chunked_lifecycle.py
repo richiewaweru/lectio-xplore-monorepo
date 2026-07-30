@@ -21,7 +21,6 @@ from v3_blueprint.planning.models import (
     ComponentSlot,
     LessonIntent,
     QPlanItem,
-    QuestionBrief,
     SectionBrief,
     SectionPlan,
     Stage1PlanFailure,
@@ -841,7 +840,6 @@ async def test_chunked_retry_section_can_unblock_assembly() -> None:
                     "content_intent": "recovered brief",
                 }
             ],
-            "question_prompts": [],
             "visual_subject": None,
         },
     }
@@ -977,13 +975,6 @@ async def test_attempt_chunked_assembly_proceeds_with_partial_failed_sections() 
             ComponentBrief(
                 component_id="hook-hero",
                 content_intent="Use a fraction strip hook.",
-            )
-        ],
-        question_briefs=[
-            QuestionBrief(
-                question_id="q1",
-                prompt_text="Which fraction strips show the same amount?",
-                expected_answer="The strips that cover the same length are equivalent.",
             )
         ],
         visual_strategy=None,

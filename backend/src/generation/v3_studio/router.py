@@ -32,6 +32,8 @@ from v3_blueprint.models import ProductionBlueprint
 from v3_blueprint.planning.assembler import assemble_blueprint
 from v3_blueprint.planning.models import (
     BlueprintAssemblyBlocked,
+    ConceptCard,
+    Misconception,
     SectionBrief,
     Stage1PlanFailure,
     StructuralPlan,
@@ -51,6 +53,7 @@ from v3_execution.config.timeouts import V3_TIMEOUTS
 from v3_execution.config.policy import ship_with_holes_enabled
 from v3_execution.compile_orders import compile_execution_bundle
 from v3_execution.executors.visual_executor import execute_visual
+from v3_execution.executors.item_executor import ItemGenerationResult, execute_items
 from v3_execution.executors.section_writer import execute_section
 from v3_execution.models import GeneratedComponentBlock, GeneratedVisualBlock, SectionWriterWorkOrder, VisualGeneratorWorkOrder
 from v3_execution.runtime.runner import sse_event_stream
@@ -615,7 +618,6 @@ def _section_briefs_from_state(plan: StructuralPlan, state: dict[str, Any]) -> l
         placeholder = SectionBrief(
             section_id=section.id,
             components=[],
-            question_briefs=[],
             visual_strategy=None,
         )
         if section.id in failed_sections:
@@ -955,6 +957,103 @@ async def _attempt_chunked_assembly(
         raise
 
 
+async def _generate_shared_pack_items(
+    *,
+    generation_id: str,
+    form: V3InputForm,
+    plan: StructuralPlan,
+) -> dict[str, Any]:
+    """Generate the pack's single diagnostic set from approved cards alone."""
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, generation_id)
+        if generation is None:
+            raise ValueError(f"Generation '{generation_id}' not found")
+        pack_id = generation.pack_id or generation.id
+        rows = await session.execute(
+            select(ConceptCardModel)
+            .where(ConceptCardModel.pack_id == pack_id)
+            .order_by(ConceptCardModel.created_at, ConceptCardModel.id)
+        )
+        cards = list(rows.scalars())
+
+        existing_rows = await session.execute(
+            select(PackItemModel.card_id).where(
+                PackItemModel.pack_id == pack_id,
+                PackItemModel.stale.is_(False),
+            )
+        )
+        ready_card_ids = set(existing_rows.scalars())
+
+    notation = plan.voice.notation
+    results: list[ItemGenerationResult] = []
+    for row in cards:
+        if row.id in ready_card_ids:
+            continue
+        misconceptions = [
+            Misconception.model_validate(item)
+            for item in (row.misconceptions or [])
+            if isinstance(item, dict)
+        ]
+        approved_card = ConceptCard(
+            id=row.id,
+            title=row.title,
+            objective=row.objective,
+            prereqs=list(row.prereqs or []),
+            misconceptions=misconceptions,
+        ).with_item_context(
+            subject=form.subject,
+            level=form.grade_level,
+            notation=notation,
+        )
+        results.append(await execute_items(approved_card))
+
+    if results:
+        async with async_session_factory() as session:
+            for result in results:
+                for item in result.items:
+                    correct = next(option for option in item.options if option.correct)
+                    db_id = f"{pack_id}:{item.question_id}"
+                    existing = await session.get(PackItemModel, db_id)
+                    if existing is not None:
+                        # Existing rows may include teacher edits. They are never overwritten.
+                        continue
+                    session.add(
+                        PackItemModel(
+                            id=db_id,
+                            pack_id=pack_id,
+                            card_id=result.card_id,
+                            stem=item.prompt_text,
+                            options=[
+                                option.model_dump(mode="json")
+                                for option in item.options
+                            ],
+                            correct_key=correct.key,
+                            diagnoses={
+                                option.key: option.diagnoses
+                                for option in item.options
+                            },
+                            stale=False,
+                        )
+                    )
+            await session.commit()
+
+    review_cards = [
+        {
+            "card_id": result.card_id,
+            "missing_misconceptions": list(result.missing_misconceptions),
+            "unmapped_options": result.unmapped_options,
+        }
+        for result in results
+        if result.needs_review or result.unmapped_options
+    ]
+    return {
+        "pack_id": pack_id,
+        "generated_card_count": len(results),
+        "generated_item_count": sum(len(result.items) for result in results),
+        "review_cards": review_cards,
+    }
+
+
 async def _run_chunked_stage2_pipeline(
     *,
     generation_id: str,
@@ -989,6 +1088,23 @@ async def _run_chunked_stage2_pipeline(
         display_title = state.get("display_title")
         if not isinstance(display_title, str) or not display_title.strip():
             display_title = form.topic
+
+        item_summary = await _generate_shared_pack_items(
+            generation_id=generation_id,
+            form=form,
+            plan=plan,
+        )
+        await persist_chunked_state(
+            generation_id,
+            {"item_generation": item_summary},
+        )
+        await emit_event(
+            "pack_items_ready",
+            {
+                "generation_id": generation_id,
+                **item_summary,
+            },
+        )
 
         briefs = await resume_stage2(
             generation_id,

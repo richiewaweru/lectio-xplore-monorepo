@@ -10,7 +10,6 @@ from v3_blueprint.planning.models import (
     ComponentSlot,
     LessonIntent,
     QPlanItem,
-    QuestionBrief,
     SectionBrief,
     SectionPlan,
     StructuralPlan,
@@ -83,13 +82,6 @@ def test_assemble_blueprint_keeps_renderable_sections_in_plan_order() -> None:
                 content_intent="Introduce the anchor example.",
             )
         ],
-        question_briefs=[
-            QuestionBrief(
-                question_id="q-orient",
-                prompt_text="What stays the same when the strip is folded differently?",
-                expected_answer="The whole stays the same size.",
-            )
-        ],
         visual_strategy=VisualStrategySpec(
             subject="A paper strip split into equal parts",
             visual_job="introduce the anchor visually",
@@ -118,29 +110,17 @@ def test_assemble_blueprint_keeps_renderable_sections_in_plan_order() -> None:
     )
 
     assert [section.section_id for section in blueprint.sections] == ["orient"]
-    assert [question.question_id for question in blueprint.question_plan] == ["q-orient"]
+    assert blueprint.question_plan == []
     assert blueprint.visual_strategy.visuals == []
 
 
-def test_assemble_blueprint_ignores_extra_briefs_and_scopes_questions_to_sections() -> None:
+def test_assemble_blueprint_ignores_extra_briefs_and_leaves_items_to_pack() -> None:
     plan = _sample_plan()
     orient_brief = SectionBrief(
         section_id="orient",
         components=[
             ComponentBrief(component_id="hook-hero", content_intent="Planned orient brief."),
             ComponentBrief(component_id="invented-component", content_intent="Ignore this."),
-        ],
-        question_briefs=[
-            QuestionBrief(
-                question_id="q-orient",
-                prompt_text="Planned orient question?",
-                expected_answer="Planned orient answer.",
-            ),
-            QuestionBrief(
-                question_id="q-extra",
-                prompt_text="Extra question?",
-                expected_answer="Ignore this.",
-            ),
         ],
     )
     model_brief = SectionBrief(
@@ -150,18 +130,6 @@ def test_assemble_blueprint_ignores_extra_briefs_and_scopes_questions_to_section
                 component_id="worked-example-card",
                 content_intent="Planned model brief.",
             )
-        ],
-        question_briefs=[
-            QuestionBrief(
-                question_id="q-model",
-                prompt_text="Planned model question?",
-                expected_answer="Planned model answer.",
-            ),
-            QuestionBrief(
-                question_id="q-orient",
-                prompt_text="Contaminating extra question?",
-                expected_answer="Must not override orient.",
-            ),
         ],
         visual_strategy=VisualStrategySpec(
             subject="A paper strip comparison",
@@ -174,8 +142,7 @@ def test_assemble_blueprint_ignores_extra_briefs_and_scopes_questions_to_section
     blueprint = assemble_blueprint(plan, [orient_brief, model_brief])
 
     assert [component.component for component in blueprint.sections[0].components] == ["hook-hero"]
-    assert [question.question_id for question in blueprint.question_plan] == ["q-orient", "q-model"]
-    assert blueprint.question_plan[0].prompt == "Planned orient question?"
+    assert blueprint.question_plan == []
     assert [visual.section_id for visual in blueprint.visual_strategy.visuals] == ["model"]
 
 
