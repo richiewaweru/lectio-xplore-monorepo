@@ -25,7 +25,7 @@
 - [x] Publish and verify `lectio@0.6.0`
 - [x] P1: contracts, dependency, and migration
 - [x] P2: ConceptCard, Misconception, and VariantSpec models
-- [ ] P3: planner emits and persists cards
+- [x] P3: planner emits and persists cards
 - [ ] P4: durable review halt and explicit resume
 - [ ] P5: card review endpoints and Builder UI
 - [ ] P6: item generation behind the context wall
@@ -54,6 +54,16 @@
 - P1 architecture guard: no violations.
 - P2 planning suite: 36 tests passed; focused Ruff check passed.
 - P2 backend: 410 tests passed with one existing Pydantic field-shadow warning.
+- P3 real-provider gate: DeepSeek produced a 5-section Form 2 photosynthesis plan with
+  3 plain sections and 2 card-backed sections. Both returned cards were persisted to
+  PostgreSQL with observable objectives and 3 belief-level misconceptions each.
+- P3 retry behavior: the first provider response exceeded the existing
+  `transition_note` length contract; the existing structured-output retry corrected it
+  without changing provider, model, temperature, tier, timeout, or retry settings.
+- P3 planning suite: 36 tests passed; focused Ruff check passed.
+- P3 backend: 410 tests passed with one existing Pydantic field-shadow warning.
+- P3 architecture guard: no violations; no `known_pitfalls` references remain in
+  `backend/src`.
 
 ## Risks and follow-up
 

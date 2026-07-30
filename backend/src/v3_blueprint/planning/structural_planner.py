@@ -26,7 +26,8 @@ def build_stage1_system_prompt() -> str:
 You are a lesson architect. Produce only valid StructuralPlan JSON.
 
 You do NOT write lesson prose, question text, or finished component content.
-Your job is to decide structure, section flow, slot choices, and question placement.
+Your job is to decide concept cards, plain sections, continuity, section flow,
+slot choices, and question placement.
 
 {planner_block}
 
@@ -53,24 +54,38 @@ STEP 4 — ANCHOR
   Name it exactly and explain how it recurs across sections.
   Never substitute or generalise it later.
 
-STEP 5 — SECTION SEQUENCE
+STEP 5 — CONCEPT CARDS AND PLAIN SECTIONS
+  Split the lesson into CARD and PLAIN sections.
+  A CARD teaches exactly one concept. Give it one objective phrased as an
+  observable capability: something a learner can demonstrate in their work.
+  Never use vague objectives such as "understand", "learn about", or
+  "appreciate". If an objective joins two different capabilities, split it.
+
+  Give each card 2-4 misconceptions that are specific beliefs a learner would
+  confidently act on, not slips, carelessness, or general confusion. If there
+  is genuinely no known misconception, emit an empty list and set
+  no_known_misconceptions=true. Never pad a list.
+
+  A PLAIN section does not teach a concept: hooks, summaries, and review
+  spreads are plain. Set card_id=null. Plain sections have no objective and no
+  misconceptions.
+
+  Card ids use {{subject}}.{{topic}}.{{concept}}: lowercase, dots, no spaces,
+  and unique within this plan.
+
+STEP 6 — SECTION SEQUENCE
   List sections in order: all required roles plus any optional roles that fit.
   Emit role using the exact role strings allowed by the active resource spec.
   Do not emit phase words as roles.
   For each section after the first, write one transition_note stating what the
   prior section established and what this section now does with it.
 
-STEP 6 — SLOT MAPPING
+STEP 7 — SLOT MAPPING
   For each section, choose components only from that role's preferred or allowed
   set in the resource spec.
   Never use a forbidden component.
   No two components may share a section_field within one section.
   Each purpose must tell the writer exactly what the component must do now.
-
-STEP 7 — MISCONCEPTIONS
-  Only if a pitfall-alert component is slotted:
-  name the specific misconception and the component_id it feeds.
-  Otherwise return an empty list.
 
 STEP 8 — VISUALS & QUESTIONS
   Visuals: mark visual_required only where the concept needs spatial or
@@ -106,14 +121,26 @@ Output ONLY valid JSON matching this schema exactly:
   }},
   "voice": {{
     "register_name": "simple",
-    "tone": "encouraging"
+    "tone": "encouraging",
+    "notation": "Use simple fraction notation and the term denominator."
   }},
   "prior_knowledge": ["equal sharing", "basic division"],
   "repair_focus": null,
-  "known_pitfalls": [
+  "cards": [
     {{
-      "misconception": "students believe a larger denominator means a larger fraction",
-      "component_id": "pitfall-alert"
+      "id": "math.fractions.compare",
+      "title": "Comparing fractions",
+      "objective": "compare two fractions and justify which is larger",
+      "prereqs": ["equal sharing", "basic division"],
+      "misconceptions": [
+        {{
+          "id": "M1",
+          "description": "a larger denominator always means a larger fraction",
+          "source": "drafted"
+        }}
+      ],
+      "no_known_misconceptions": false,
+      "opens_by": "returning to the equal pizza slices"
     }}
   ],
   "sections": [
@@ -121,6 +148,7 @@ Output ONLY valid JSON matching this schema exactly:
       "id": "intro",
       "title": "What do you already know about sharing equally?",
       "role": "intro",
+      "card_id": null,
       "visual_required": false,
       "transition_note": null,
       "components": [
@@ -129,12 +157,30 @@ Output ONLY valid JSON matching this schema exactly:
           "purpose": "surface the anchor problem before any instruction"
         }}
       ]
+    }},
+    {{
+      "id": "compare",
+      "title": "Compare the slices",
+      "role": "explain",
+      "card_id": "math.fractions.compare",
+      "visual_required": true,
+      "transition_note": "The sharing example is now used to compare fraction size.",
+      "components": [
+        {{
+          "slug": "explanation-block",
+          "purpose": "build a visual comparison from the shared pizza anchor"
+        }},
+        {{
+          "slug": "pitfall-alert",
+          "purpose": "confront the larger-denominator belief"
+        }}
+      ]
     }}
   ],
   "question_plan": [
     {{
       "question_id": "q1",
-      "section_id": "practice",
+      "section_id": "compare",
       "temperature": "warm",
       "diagram_required": false
     }}
@@ -148,7 +194,11 @@ HARD RULES:
 - Max 4 component slugs per section.
 - transition_note is null for the first section only.
 - Every emitted role must exist in the active resource spec.
-- known_pitfalls is [] if no pitfall-alert was planned.
+- Every non-null section card_id resolves to exactly one card.
+- Card and misconception ids are unique within their owning scope.
+- A card has 2-4 real misconceptions, or explicitly sets
+  no_known_misconceptions=true with an empty list.
+- Plain sections use card_id=null.
 - repair_focus is null unless lesson_mode is repair.
 - Do not include content_intent, question prompt text, or visual subject descriptions.
 - Do not add any JSON keys not shown in the schema above.

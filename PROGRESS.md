@@ -848,7 +848,7 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - [x] P1 — synchronized `lectio@0.6.0` contracts, added concept-card/pack-item storage, and added
   generation variant metadata
 - [x] P2 — added ConceptCard, Misconception, and VariantSpec planning models and validators
-- [ ] P3 — make stage 1 emit and persist concept cards
+- [x] P3 — made stage 1 emit and persist concept cards
 
 ### P1 validation
 
@@ -863,5 +863,15 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - Planning suite: 36 tests passed
 - Backend: 410 tests passed
 - Focused Ruff check: passed
+
+### P3 validation
+
+- Real DeepSeek planner gate: 5 sections (3 plain, 2 card-backed)
+- PostgreSQL persistence: 2 returned cards and 2 matching persisted rows
+- Both cards use observable objectives and contain 3 explicit misconceptions
+- Existing structured-output retry corrected one overlong transition note
+- Planning suite: 36 tests passed
+- Backend: 410 tests passed
+- Focused Ruff and architecture checks: passed
 
 ---

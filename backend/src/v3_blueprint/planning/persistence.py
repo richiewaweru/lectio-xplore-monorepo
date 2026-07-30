@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.database.models import ConceptCardModel, GenerationModel
 from core.database.session import async_session_factory
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 from v3_blueprint.planning.models import (
@@ -97,17 +98,56 @@ async def persist_structural_plan(
     form: V3InputForm | None = None,
     resource_spec: dict | None = None,
 ) -> None:
-    await persist_chunked_state(generation_id, {
-        "stage": "plan_ready",
-        "structural_plan": plan.model_dump(mode="json"),
-        "section_briefs": {s.id: None for s in plan.sections},
-        "failed_sections": [],
-        "context": {
-            "signals": signals.model_dump(mode="json") if signals is not None else None,
-            "form": form.model_dump(mode="json") if form is not None else None,
-            "resource_spec": resource_spec,
-        },
-    }, session=session)
+    async with _session_scope(session) as (db, should_commit):
+        await persist_chunked_state(
+            generation_id,
+            {
+                "stage": "plan_ready",
+                "structural_plan": plan.model_dump(mode="json"),
+                "section_briefs": {s.id: None for s in plan.sections},
+                "failed_sections": [],
+                "context": {
+                    "signals": (
+                        signals.model_dump(mode="json")
+                        if signals is not None
+                        else None
+                    ),
+                    "form": form.model_dump(mode="json") if form is not None else None,
+                    "resource_spec": resource_spec,
+                },
+            },
+            session=db,
+        )
+
+        generation = await db.get(GenerationModel, generation_id)
+        if generation is None:
+            raise ValueError(f"Generation '{generation_id}' not found")
+        pack_id = generation.pack_id or generation_id
+
+        for card in plan.cards:
+            existing = await db.get(ConceptCardModel, card.id)
+            if existing is not None and existing.teacher_edited:
+                continue
+
+            payload = {
+                "pack_id": pack_id,
+                "slug": card.id,
+                "title": card.title,
+                "objective": card.objective,
+                "prereqs": list(card.prereqs),
+                "misconceptions": [
+                    misconception.model_dump(mode="json")
+                    for misconception in card.misconceptions
+                ],
+            }
+            if existing is None:
+                db.add(ConceptCardModel(id=card.id, **payload))
+            else:
+                for field, value in payload.items():
+                    setattr(existing, field, value)
+
+        if should_commit:
+            await db.commit()
 
 
 async def persist_section_brief(

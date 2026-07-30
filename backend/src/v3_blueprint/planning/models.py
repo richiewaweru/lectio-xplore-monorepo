@@ -92,24 +92,15 @@ class QPlanItem(BaseModel):
     diagram_required: bool = False
 
 
-class KnownPitfall(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    misconception: str = Field(
-        description="Specific named misconception the student holds. "
-        "Not vague. Max 80 chars.",
-        max_length=80,
-    )
-    component_id: str = Field(
-        description="Slug of the pitfall-alert component this feeds."
-    )
-
-
 class VoiceSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     register_name: Literal["simple", "balanced", "formal"]
     tone: Literal["encouraging", "neutral", "direct"]
+    notation: str | None = Field(
+        default=None,
+        description="Notation and terminology constraint shared by all sections.",
+    )
 
 
 class Misconception(BaseModel):
@@ -129,6 +120,10 @@ class ConceptCard(BaseModel):
     prereqs: list[str] = Field(default_factory=list)
     misconceptions: list[Misconception] = Field(default_factory=list)
     no_known_misconceptions: bool = False
+    opens_by: str = Field(
+        default="",
+        description="Specific continuity instruction for how this card opens.",
+    )
 
 
 class VariantSpec(BaseModel):
@@ -161,7 +156,6 @@ class StructuralPlan(BaseModel):
     voice: VoiceSpec
     prior_knowledge: list[str]
     repair_focus: RepairFocus | None = None
-    known_pitfalls: list[KnownPitfall] = Field(default_factory=list)
     cards: list[ConceptCard] = Field(default_factory=list)
     sections: list[SectionPlan] = Field(
         description="Ordered section plans. Max 6.",

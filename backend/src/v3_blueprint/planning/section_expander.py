@@ -255,17 +255,19 @@ def build_stage2_user_message(
     else:
         q_block = "QUESTIONS ASSIGNED TO THIS SECTION: none\n"
 
-    # Format pitfalls relevant to this section
+    # Format approved card misconceptions relevant to this section.
     pitfall_block = ""
     section_slugs = {c.slug for c in current_section.components}
-    relevant_pitfalls = [
-        p for p in plan.known_pitfalls
-        if p.component_id in section_slugs
-    ]
-    if relevant_pitfalls:
+    current_card = next(
+        (card for card in plan.cards if card.id == current_section.card_id),
+        None,
+    )
+    if current_card is not None and "pitfall-alert" in section_slugs:
         pitfall_block = "KNOWN PITFALLS TO ADDRESS IN THIS SECTION:\n"
-        for p in relevant_pitfalls:
-            pitfall_block += f"  {p.component_id}: {p.misconception}\n"
+        for misconception in current_card.misconceptions:
+            pitfall_block += (
+                f"  {misconception.id}: {misconception.description}\n"
+            )
 
     return f"""LESSON PLAN
 ———————————————————————————————————————————————
