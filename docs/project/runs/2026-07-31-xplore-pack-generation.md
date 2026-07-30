@@ -24,7 +24,7 @@
 - [x] Read the mission, worked example, repository handoff, UI specification, and project rules
 - [x] Publish and verify `lectio@0.6.0`
 - [x] P1: contracts, dependency, and migration
-- [ ] P2: ConceptCard, Misconception, and VariantSpec models
+- [x] P2: ConceptCard, Misconception, and VariantSpec models
 - [ ] P3: planner emits and persists cards
 - [ ] P4: durable review halt and explicit resume
 - [ ] P5: card review endpoints and Builder UI
@@ -52,6 +52,8 @@
 - P1 backend: 410 tests passed with one existing Pydantic field-shadow warning.
 - P1 frontend: `svelte-check` found 0 errors and 0 warnings.
 - P1 architecture guard: no violations.
+- P2 planning suite: 36 tests passed; focused Ruff check passed.
+- P2 backend: 410 tests passed with one existing Pydantic field-shadow warning.
 
 ## Risks and follow-up
 

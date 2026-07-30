@@ -847,7 +847,8 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 
 - [x] P1 — synchronized `lectio@0.6.0` contracts, added concept-card/pack-item storage, and added
   generation variant metadata
-- [ ] P2 — add ConceptCard, Misconception, and VariantSpec planning models and validators
+- [x] P2 — added ConceptCard, Misconception, and VariantSpec planning models and validators
+- [ ] P3 — make stage 1 emit and persist concept cards
 
 ### P1 validation
 
@@ -856,5 +857,11 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - Backend: 410 tests passed
 - Frontend: 0 check errors and 0 warnings
 - Architecture guard: no violations
+
+### P2 validation
+
+- Planning suite: 36 tests passed
+- Backend: 410 tests passed
+- Focused Ruff check: passed
 
 ---

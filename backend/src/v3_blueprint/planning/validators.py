@@ -115,13 +115,51 @@ def validate_structural_plan(
                 f"section_id '{q.section_id}' which does not exist."
             )
 
-    # 5. repair_focus present when lesson_mode=repair
+    # 5. concept-card ids and misconception ids are unique
+    card_ids = [card.id for card in plan.cards]
+    duplicate_card_ids = sorted(
+        card_id for card_id in set(card_ids) if card_ids.count(card_id) > 1
+    )
+    for card_id in duplicate_card_ids:
+        errors.append(f"Concept card id '{card_id}' is duplicated within the plan.")
+
+    known_card_ids = set(card_ids)
+    for card in plan.cards:
+        misconception_ids = [item.id for item in card.misconceptions]
+        duplicate_misconception_ids = sorted(
+            item_id
+            for item_id in set(misconception_ids)
+            if misconception_ids.count(item_id) > 1
+        )
+        for misconception_id in duplicate_misconception_ids:
+            errors.append(
+                f"Concept card '{card.id}' has duplicate misconception id "
+                f"'{misconception_id}'."
+            )
+        if not card.misconceptions and not card.no_known_misconceptions:
+            errors.append(
+                f"Concept card '{card.id}' must contain a misconception or set "
+                "no_known_misconceptions=true."
+            )
+        if card.misconceptions and card.no_known_misconceptions:
+            errors.append(
+                f"Concept card '{card.id}' cannot set no_known_misconceptions=true "
+                "while misconceptions are present."
+            )
+
+    for section in plan.sections:
+        if section.card_id is not None and section.card_id not in known_card_ids:
+            errors.append(
+                f"Section '{section.id}' references unknown card_id '{section.card_id}'."
+            )
+
+    # 6. repair_focus present when lesson_mode=repair
     if plan.lesson_mode == "repair" and plan.repair_focus is None:
         errors.append(
             "lesson_mode=repair requires repair_focus to be populated."
         )
 
-    # 6. first section has transition_note=null
+    # 7. first section has transition_note=null
     if plan.sections and plan.sections[0].transition_note is not None:
         errors.append(
             f"First section '{plan.sections[0].id}' must have "

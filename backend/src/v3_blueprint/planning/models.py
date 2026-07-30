@@ -58,6 +58,10 @@ class SectionPlan(BaseModel):
     id: str = Field(description="Unique section identifier slug e.g. 'orient', 'model'")
     title: str = Field(description="Section title. Max 80 chars.", max_length=80)
     role: str = Field(description="Spec-vocabulary role string for this section.")
+    card_id: str | None = Field(
+        default=None,
+        description="Stable concept-card id for teaching sections; null for plain sections.",
+    )
     visual_required: bool
     transition_note: str | None = Field(
         default=None,
@@ -108,6 +112,33 @@ class VoiceSpec(BaseModel):
     tone: Literal["encouraging", "neutral", "direct"]
 
 
+class Misconception(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="Misconception id unique within this card, e.g. M1.")
+    description: str
+    source: Literal["drafted", "teacher"] = "drafted"
+
+
+class ConceptCard(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="Stable lowercase dotted concept slug.")
+    title: str
+    objective: str = Field(description="One observable learner capability.")
+    prereqs: list[str] = Field(default_factory=list)
+    misconceptions: list[Misconception] = Field(default_factory=list)
+    no_known_misconceptions: bool = False
+
+
+class VariantSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: str
+    voice: VoiceSpec
+    group_description: str
+
+
 class RepairFocus(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -131,6 +162,7 @@ class StructuralPlan(BaseModel):
     prior_knowledge: list[str]
     repair_focus: RepairFocus | None = None
     known_pitfalls: list[KnownPitfall] = Field(default_factory=list)
+    cards: list[ConceptCard] = Field(default_factory=list)
     sections: list[SectionPlan] = Field(
         description="Ordered section plans. Max 6.",
     )
