@@ -303,6 +303,37 @@ class ComponentBrief(BaseModel):
     )
 
 
+class ItemOption(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    key: str = Field(min_length=1)
+    text: str = Field(min_length=1)
+    correct: bool
+    diagnoses: str | None = None
+
+
+class QuestionBrief(BaseModel):
+    """Pack-level diagnostic item; never a field on SectionBrief."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    question_id: str = Field(min_length=1)
+    prompt_text: str = Field(min_length=1)
+    options: list[ItemOption] = Field(min_length=2)
+    expected_answer: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def exactly_one_correct(self) -> QuestionBrief:
+        if sum(option.correct for option in self.options) != 1:
+            raise ValueError("Each item must have exactly one correct option")
+        if any(option.correct and option.diagnoses is not None for option in self.options):
+            raise ValueError("A correct option cannot diagnose a misconception")
+        keys = [option.key for option in self.options]
+        if len(keys) != len(set(keys)):
+            raise ValueError("Option keys must be unique within an item")
+        return self
+
+
 class SectionBrief(BaseModel):
     model_config = ConfigDict(extra="ignore")
 

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from collections import Counter
 
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 from pydantic_ai import Agent
 
 from core.llm.runner import run_llm
-from v3_blueprint.planning.models import ConceptCard
+from v3_blueprint.planning.models import ConceptCard, QuestionBrief
 from v3_execution.config import (
     get_v3_model,
     get_v3_model_settings,
@@ -19,40 +19,11 @@ from v3_execution.prompts.item_prompt import ITEM_SYSTEM_PROMPT, build_item_mess
 ITEM_NODE = "v3_item_executor"
 
 
-class DiagnosticOption(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    key: str = Field(min_length=1)
-    text: str = Field(min_length=1)
-    correct: bool
-    diagnoses: str | None = None
-
-
-class DiagnosticItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    question_id: str = Field(min_length=1)
-    prompt_text: str = Field(min_length=1)
-    options: list[DiagnosticOption] = Field(min_length=2)
-    expected_answer: str = Field(min_length=1)
-
-    @model_validator(mode="after")
-    def exactly_one_correct(self) -> DiagnosticItem:
-        if sum(option.correct for option in self.options) != 1:
-            raise ValueError("Each item must have exactly one correct option")
-        if any(option.correct and option.diagnoses is not None for option in self.options):
-            raise ValueError("A correct option cannot diagnose a misconception")
-        keys = [option.key for option in self.options]
-        if len(keys) != len(set(keys)):
-            raise ValueError("Option keys must be unique within an item")
-        return self
-
-
 class ItemGenerationResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     card_id: str
-    items: list[DiagnosticItem] = Field(min_length=5, max_length=5)
+    items: list[QuestionBrief] = Field(min_length=5, max_length=5)
     coverage: dict[str, int] = Field(default_factory=dict)
     unmapped_options: int = Field(ge=0, default=0)
     _missing_misconceptions: tuple[str, ...] = PrivateAttr(default=())
@@ -140,8 +111,6 @@ async def execute_items(card: ConceptCard) -> ItemGenerationResult:
 
 
 __all__ = [
-    "DiagnosticItem",
-    "DiagnosticOption",
     "ITEM_NODE",
     "ItemGenerationResult",
     "execute_items",

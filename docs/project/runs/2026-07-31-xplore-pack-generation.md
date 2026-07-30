@@ -29,7 +29,7 @@
 - [x] P4: durable review halt and explicit resume
 - [x] P5: card review endpoints and Builder UI
 - [x] P6: item generation behind the context wall
-- [ ] P7: diagnostic distractor mappings
+- [x] P7: diagnostic distractor mappings
 - [ ] P8: pack-level item review
 - [ ] P9: parallel variant fan-out and pack hub
 - [ ] P10: card-scoped QC rubric
@@ -101,6 +101,16 @@
 - P6 backend: 416 tests passed with one existing Pydantic field-shadow warning.
 - P6 focused execution/planning suite: 38 tests passed; Ruff passed.
 - P6 architecture guard: no violations.
+- P7 contracts: `ItemOption.diagnoses` and the pack-level `QuestionBrief` item
+  shape now live in planning models; `SectionBrief` remains unable to carry items.
+- P7 real database gate: the photosynthesis pack persisted 10 items, five for each
+  approved card, all under the same pack id. Every non-null diagnosis resolved to
+  a real misconception on its card; 27 unmapped distractors remained `null`.
+- P7 review signaling: both real card batches reported their unmapped-option counts
+  and neither silently missed required misconception coverage.
+- P7 backend: 416 tests passed with one existing Pydantic field-shadow warning.
+- P7 item/lifecycle suite: 27 tests passed after isolating one transient full-suite
+  harness hang; the clean full rerun passed.
 
 ## Risks and follow-up
 

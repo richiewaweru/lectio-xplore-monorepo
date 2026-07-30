@@ -852,6 +852,7 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - [x] P4 — halt durably at awaiting review and resume only on explicit approval
 - [x] P5 — review and edit concept cards in Builder, then approve once per pack
 - [x] P6 — generate and persist one diagnostic item set per approved card behind the context wall
+- [x] P7 — map distractors to real misconception IDs and preserve unmapped options as null
 
 ### P1 validation
 
@@ -911,5 +912,14 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - Backend: 416 tests passed
 - Focused execution/planning suite: 38 tests passed
 - Ruff and architecture checks: passed
+
+### P7 validation
+
+- ItemOption and pack-level QuestionBrief contracts carry explicit diagnoses
+- Real pack: 10 persisted items, 5 per card, all sharing one pack id
+- Database check: zero invalid diagnosis IDs; 27 unmapped options preserved as null
+- Both real cards covered every approved misconception at least once
+- Item/lifecycle suites: 27 tests passed
+- Backend: 416 tests passed
 
 ---

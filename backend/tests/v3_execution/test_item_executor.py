@@ -4,10 +4,13 @@ import inspect
 
 import pytest
 
-from v3_blueprint.planning.models import ConceptCard, Misconception
+from v3_blueprint.planning.models import (
+    ConceptCard,
+    ItemOption,
+    Misconception,
+    QuestionBrief,
+)
 from v3_execution.executors.item_executor import (
-    DiagnosticItem,
-    DiagnosticOption,
     ItemGenerationResult,
     execute_items,
     validate_item_result,
@@ -37,20 +40,20 @@ def _card() -> ConceptCard:
     )
 
 
-def _item(index: int, diagnosis: str | None) -> DiagnosticItem:
-    return DiagnosticItem(
+def _item(index: int, diagnosis: str | None) -> QuestionBrief:
+    return QuestionBrief(
         question_id=f"biology.photosynthesis.inputs.i{index}",
         prompt_text=f"Fresh transfer scenario {index}",
         options=[
-            DiagnosticOption(key="a", text="Correct response", correct=True),
-            DiagnosticOption(
+            ItemOption(key="a", text="Correct response", correct=True),
+            ItemOption(
                 key="b",
                 text="Diagnostic response",
                 correct=False,
                 diagnoses=diagnosis,
             ),
-            DiagnosticOption(key="c", text="Other response", correct=False),
-            DiagnosticOption(key="d", text="Another response", correct=False),
+            ItemOption(key="c", text="Other response", correct=False),
+            ItemOption(key="d", text="Another response", correct=False),
         ],
         expected_answer="Correct response, because the objective applies.",
     )
@@ -123,12 +126,12 @@ def test_item_validator_flags_missing_coverage_for_review() -> None:
 
 def test_item_requires_exactly_one_correct_option() -> None:
     with pytest.raises(ValueError, match="exactly one correct"):
-        DiagnosticItem(
+        QuestionBrief(
             question_id="q1",
             prompt_text="Question",
             options=[
-                DiagnosticOption(key="a", text="One", correct=True),
-                DiagnosticOption(key="b", text="Two", correct=True),
+                ItemOption(key="a", text="One", correct=True),
+                ItemOption(key="b", text="Two", correct=True),
             ],
             expected_answer="One",
         )
