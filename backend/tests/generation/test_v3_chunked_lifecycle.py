@@ -222,7 +222,7 @@ def _reset_overrides():
 
 
 @pytest.mark.asyncio
-async def test_chunked_plan_start_returns_plan_ready_state() -> None:
+async def test_chunked_plan_start_returns_awaiting_review_state() -> None:
     app.dependency_overrides[get_current_user] = _override_user_a
     await _ensure_user(TEST_USER_A)
     sample_plan = _sample_structural_plan()
@@ -249,7 +249,8 @@ async def test_chunked_plan_start_returns_plan_ready_state() -> None:
 
     assert resp.status_code == 200
     payload = resp.json()
-    assert payload["stage"] == "plan_ready"
+    assert payload["stage"] == "awaiting_review"
+    assert payload["next_action"] == "approve_or_regenerate"
     assert payload["generation_id"]
     assert payload["structural_plan"]["anchor"]["example"] == "splitting a pizza into 8 equal slices"
     queue = await v3_studio_store.get_chunked_queue(payload["generation_id"])
@@ -257,6 +258,13 @@ async def test_chunked_plan_start_returns_plan_ready_state() -> None:
     chunk = await asyncio.wait_for(queue.get(), timeout=3)
     assert isinstance(chunk, str)
     assert _parse_sse_event_name(chunk) == "plan_ready"
+
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, payload["generation_id"])
+        assert generation is not None
+        assert generation.status == "awaiting_review"
+        assert generation.document_json["progress"]["stage"] == "awaiting_review"
+        assert generation.document_json["progress"]["updated_at"]
 
 
 @pytest.mark.asyncio

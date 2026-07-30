@@ -849,6 +849,7 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
   generation variant metadata
 - [x] P2 — added ConceptCard, Misconception, and VariantSpec planning models and validators
 - [x] P3 — made stage 1 emit and persist concept cards
+- [x] P4 — halt durably at awaiting review and resume only on explicit approval
 
 ### P1 validation
 
@@ -873,5 +874,20 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - Planning suite: 36 tests passed
 - Backend: 410 tests passed
 - Focused Ruff and architecture checks: passed
+
+### P4 validation
+
+- Awaiting-review halt persisted in generation status, chunked state, and document progress
+- Document version bumped on entry to `awaiting_review`
+- Fresh-process restart gate began with an empty in-memory store, reloaded PostgreSQL state,
+  and rebuilt the queue/owner only after an explicit approval call
+- Focused lifecycle: 21 tests passed
+- Frontend: 0 check errors and 0 warnings
+- Focused Ruff and no-auto-approve grep: passed
+- Backend: 410 tests passed
+- Affected frontend suites: 3 files, 35 tests passed
+- Architecture guard: no violations
+- Full frontend test command exceeded the five-minute harness ceiling without a reported
+  failure; all P4-affected frontend suites passed independently
 
 ---

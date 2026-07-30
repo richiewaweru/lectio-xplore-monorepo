@@ -341,6 +341,35 @@ class V3GenerationWriter:
                 model.report_json = self._merge_report(model.report_json, report_json)
             await session.commit()
 
+    async def mark_awaiting_review(self, generation_id: str) -> None:
+        """Persist the explicit teacher-review halt and a poll-visible version."""
+        async with self._session_factory() as session:
+            model = await session.get(GenerationModel, generation_id)
+            if model is None:
+                raise ValueError(f"Generation '{generation_id}' not found")
+
+            document = (
+                deepcopy(model.document_json)
+                if isinstance(model.document_json, dict)
+                else {}
+            )
+            progress = document.get("progress")
+            if not isinstance(progress, dict):
+                progress = {}
+            sections = progress.get("sections")
+            if not isinstance(sections, dict):
+                sections = {}
+            document["progress"] = {
+                **progress,
+                "stage": "awaiting_review",
+                "sections": sections,
+            }
+            bump_document_version(document)
+
+            model.status = "awaiting_review"
+            model.document_json = document
+            await session.commit()
+
     async def claim_resume_attempt(self, generation_id: str, *, max_attempts: int = 3) -> bool:
         """Atomically claim a teacher-initiated resume attempt."""
         async with self._session_factory() as session:

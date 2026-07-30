@@ -26,7 +26,7 @@
 - [x] P1: contracts, dependency, and migration
 - [x] P2: ConceptCard, Misconception, and VariantSpec models
 - [x] P3: planner emits and persists cards
-- [ ] P4: durable review halt and explicit resume
+- [x] P4: durable review halt and explicit resume
 - [ ] P5: card review endpoints and Builder UI
 - [ ] P6: item generation behind the context wall
 - [ ] P7: diagnostic distractor mappings
@@ -64,6 +64,21 @@
 - P3 backend: 410 tests passed with one existing Pydantic field-shadow warning.
 - P3 architecture guard: no violations; no `known_pitfalls` references remain in
   `backend/src`.
+- P4 halt gate: the generation row, chunked state, and document progress all persisted
+  `awaiting_review`; entering the halt produced a new document `updated_at` version.
+- P4 restart gate: a second Python process began with no in-memory generation owner or
+  queue, loaded the persisted plan and context, and changed state to `stage2_running`
+  only through the explicit approval endpoint. The endpoint rebuilt both transient
+  values. The gate task was cancelled immediately and the fixture restored to
+  `awaiting_review`.
+- P4 focused lifecycle: 21 tests passed; frontend `svelte-check` found 0 errors and
+  0 warnings; focused Ruff passed; no auto-approval patterns were found.
+- P4 backend: 410 tests passed with one existing Pydantic field-shadow warning.
+- P4 affected frontend suites: 3 files and 35 tests passed.
+- P4 architecture guard: no violations.
+- The all-frontend `npm test` command exceeded its five-minute harness ceiling without
+  reporting a test failure; the Studio, V3 API, and V3 store suites touched by P4
+  completed independently and passed.
 
 ## Risks and follow-up
 

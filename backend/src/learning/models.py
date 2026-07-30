@@ -6,7 +6,15 @@ from pydantic import BaseModel, Field
 
 
 PackStatus = Literal["pending", "running", "complete", "failed"]
-ResourcePhase = Literal["pending", "planning", "queued", "generating", "done", "failed"]
+ResourcePhase = Literal[
+    "pending",
+    "planning",
+    "awaiting_review",
+    "queued",
+    "generating",
+    "done",
+    "failed",
+]
 
 
 class ResourceStatus(BaseModel):

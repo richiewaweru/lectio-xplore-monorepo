@@ -83,6 +83,7 @@ export interface V3StructuralPlan {
 export type V3ChunkedPlanStage =
 	| 'stage1_running'
 	| 'stage1_failed'
+	| 'awaiting_review'
 	| 'plan_ready'
 	| 'stage2_running'
 	| 'stage2_complete'

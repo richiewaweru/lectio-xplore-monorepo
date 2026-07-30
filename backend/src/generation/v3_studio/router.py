@@ -241,7 +241,7 @@ def _normalize_chunked_state(generation_id: str, state: dict[str, Any]) -> V3Chu
     display_title = state.get("display_title")
     if not isinstance(display_title, str) or not display_title.strip():
         display_title = form.get("topic") if isinstance(form, dict) else None
-    if stage == "plan_ready":
+    if stage in {"awaiting_review", "plan_ready"}:
         next_action = "approve_or_regenerate"
     elif stage == "stage2_running":
         next_action = "wait_for_stage2"
@@ -1045,6 +1045,16 @@ async def post_chunked_plan_start(
             generation_id=generation_id,
             trace_id=str(uuid.uuid4()),
         )
+        await V3GenerationWriter(async_session_factory).mark_awaiting_review(
+            generation_id
+        )
+        await persist_chunked_state(
+            generation_id,
+            {
+                "stage": "awaiting_review",
+                "execution_started": False,
+            },
+        )
     except Stage1PlanFailure as exc:
         await persist_chunked_state(
             generation_id,
@@ -1182,7 +1192,20 @@ async def post_chunked_plan_approve(
     state = await load_chunked_state(generation_id)
     if not isinstance(state.get("structural_plan"), dict):
         raise HTTPException(status_code=409, detail="Structural plan is not ready yet")
-    if state.get("stage") in {"stage2_error", "assembly_blocked"}:
+    stage = str(state.get("stage") or "")
+    if stage not in {
+        "awaiting_review",
+        "plan_ready",
+        "stage2_error",
+        "assembly_blocked",
+    }:
+        if stage in {"stage2_running", "blueprint_ready", "complete"}:
+            return _normalize_chunked_state(generation_id, state)
+        raise HTTPException(
+            status_code=409,
+            detail="Generation is not awaiting explicit approval",
+        )
+    if stage in {"stage2_error", "assembly_blocked"}:
         claimed = await V3GenerationWriter(async_session_factory).claim_resume_attempt(generation_id)
         if not claimed:
             latest = await load_chunked_state(generation_id)
@@ -1266,6 +1289,16 @@ async def post_chunked_plan_regenerate(
             emit_event=emit_event,
             generation_id=generation_id,
             trace_id=str(uuid.uuid4()),
+        )
+        await V3GenerationWriter(async_session_factory).mark_awaiting_review(
+            generation_id
+        )
+        await persist_chunked_state(
+            generation_id,
+            {
+                "stage": "awaiting_review",
+                "execution_started": False,
+            },
         )
     except Stage1PlanFailure as exc:
         await persist_chunked_state(

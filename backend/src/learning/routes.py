@@ -75,6 +75,8 @@ def _pack_to_status(pack: LearningPackModel, generations: list) -> PackStatusRes
             if gen.status in {"completed", "partial"}
             else "failed"
             if gen.status == "failed"
+            else "awaiting_review"
+            if gen.status == "awaiting_review"
             else "generating"
         )
         resources.append(

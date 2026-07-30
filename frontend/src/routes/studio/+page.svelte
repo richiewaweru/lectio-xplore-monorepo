@@ -198,7 +198,7 @@
 			startGenerationPolling(resolved.generation_id, { immediate: pollImmediately });
 		}
 
-		if (resolved.stage === 'plan_ready') {
+		if (resolved.stage === 'awaiting_review' || resolved.stage === 'plan_ready') {
 			disconnectActiveChunkedStream();
 			clearRenderedBookletState();
 			displayTitle = resolved.display_title ?? resolved.structural_plan?.lesson_intent.goal ?? '';
@@ -352,6 +352,7 @@
 
 	function shouldPollForChunkedState(state: V3ChunkedPlanState): boolean {
 		if (
+			state.stage === 'awaiting_review' ||
 			state.stage === 'plan_ready' ||
 			state.stage === 'assembly_blocked' ||
 			state.stage === 'stage2_error' ||
