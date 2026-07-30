@@ -18,6 +18,7 @@ export interface LessonRow {
 	sectionsDone: number | null;
 	sectionsTotal: number | null;
 	flagCount: number;
+	awaitingReview: boolean;
 	updatedAt: string;
 	href: string;
 }
@@ -122,10 +123,13 @@ export function deriveLessonRows({
 				dismissedIssueIdsByLessonId[lesson.id] ?? []
 			);
 			const failed = generation ? isFailedGeneration(generation) : false;
+			const awaitingReview = generation?.status === 'awaiting_review';
 			const terminal = generation ? isTerminalGeneration(generation, pack) : false;
 			const sectionCount = pack?.sections?.length ?? generation?.document_section_count ?? 0;
 			const state: LessonState = !generation
 				? 'draft'
+				: awaitingReview
+					? 'attention'
 				: !terminal
 					? 'writing'
 					: failed || flags > 0
@@ -143,9 +147,10 @@ export function deriveLessonRows({
 				sectionsDone: generation ? progress.done : null,
 				sectionsTotal: generation ? progress.total : null,
 				flagCount: flags,
+				awaitingReview,
 				updatedAt: lesson.updated_at,
 				href:
-					state === 'writing' && generation
+					(state === 'writing' || awaitingReview) && generation
 						? `/builder/${lesson.id}?generation_id=${generation.id}`
 						: `/builder/${lesson.id}`
 			};

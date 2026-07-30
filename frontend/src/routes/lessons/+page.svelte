@@ -136,6 +136,7 @@
 	}
 
 	function rowMeta(row: LessonRow): string {
+		if (row.awaitingReview) return 'Concepts ready for review';
 		if (row.state === 'writing') {
 			return row.sectionsDone !== null && row.sectionsTotal
 				? `Writing section ${Math.min(row.sectionsDone + 1, row.sectionsTotal)} of ${row.sectionsTotal}`
@@ -306,7 +307,7 @@
 									{:else}
 										<div class="actions">
 											{#if row.state === 'attention'}
-												<a class="action solid" href={row.href}>Review</a>
+												<a class="action solid" href={row.href}>{row.awaitingReview ? 'Review concepts' : 'Review'}</a>
 											{:else}
 												<a class="action" href={row.href}>Edit</a>
 												<a class="action solid" href={`/builder/print/${row.id}`}>Print</a>

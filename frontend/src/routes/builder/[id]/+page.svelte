@@ -5,6 +5,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { isApiError } from '$lib/api/errors';
 	import AppShell from '$lib/builder/components/shell/AppShell.svelte';
+	import ConceptCardReview from '$lib/builder/components/ConceptCardReview.svelte';
 	import { createDocumentStore } from '$lib/builder/stores/document.svelte';
 	import { loadBuilderLessonWithFallback } from '$lib/builder/persistence/server-sync';
 	import { logout } from '$lib/stores/auth';
@@ -47,6 +48,7 @@
 	let pollInFlight = false;
 	let hasHydratedGeneration = false;
 	let lastDocVersion: string | null = null;
+	let awaitingCardReview = $state(false);
 
 	const id = $derived(page.params.id);
 	const generationId = $derived(page.url.searchParams.get('generation_id'));
@@ -110,16 +112,17 @@
 				stopPolling();
 				return;
 			}
-			if (status.stage === 'plan_ready' && !status.execution_started) {
-				generationBlocker = {
-					title: 'Generation has not started',
-					detail: 'This lesson plan still needs approval in Studio.',
-					failedSections: []
-				};
-				generationTerminal = true;
+			if (
+				(status.stage === 'awaiting_review' || status.stage === 'plan_ready') &&
+				!status.execution_started
+			) {
+				awaitingCardReview = true;
+				generationBlocker = null;
+				generationTerminal = false;
 				stopPolling();
 				return;
 			}
+			awaitingCardReview = false;
 			const versionChanged =
 				typeof status.doc_version === 'string' && status.doc_version !== lastDocVersion;
 			const chunkedTerminal = status.stage === 'complete' || status.next_action === 'done';
@@ -173,6 +176,12 @@
 		stopPolling();
 		void pollGeneration();
 		pollInterval = setInterval(() => void pollGeneration(), 4000);
+	}
+
+	function handleCardsApproved(): void {
+		awaitingCardReview = false;
+		generationTerminal = false;
+		startPolling();
 	}
 
 	onDestroy(stopPolling);
@@ -322,6 +331,12 @@
 		</div>
 		<p class="mt-4 text-sm text-slate-500">Loading lesson workspace...</p>
 	</section>
+{:else if awaitingCardReview && generationId}
+	<ConceptCardReview
+		packId={generationId}
+		title={store.document.title}
+		onApproved={handleCardsApproved}
+	/>
 {:else}
 	{#if generationBlocker && generationId}
 		<section class="builder-print-hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">

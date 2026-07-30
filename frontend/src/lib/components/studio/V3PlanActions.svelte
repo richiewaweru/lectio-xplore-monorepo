@@ -57,7 +57,7 @@
 			disabled={isRunning}
 			onclick={onApprove}
 		>
-			Approve
+			Review concepts
 		</button>
 		<button
 			type="button"

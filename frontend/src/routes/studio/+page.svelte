@@ -28,7 +28,7 @@
 	import { isApiError } from '$lib/api/errors';
 	import { createGenerationPoller } from '$lib/generation/generation-poller';
 	import { resetV3Studio, v3Studio } from '$lib/stores/v3-studio.svelte';
-	import { createBuilderLesson } from '$lib/builder/api/lesson-crud';
+	import { createBuilderLesson, listBuilderLessons } from '$lib/builder/api/lesson-crud';
 	import { v3PackToBuilderDocument } from '$lib/builder/adapters/from-generation';
 	import { v3StructuralPlanToBuilderDocument } from '$lib/builder/adapters/from-structural-plan';
 	import { saveDocument } from '$lib/builder/persistence/idb-store';
@@ -651,16 +651,17 @@
 		v3Studio.generationId = generationId;
 		v3Studio.error = null;
 		builderError = null;
-		v3Studio.stage = 'fill';
-		if (chunked.structural_plan) {
-			v3Studio.canvas = buildStructuralPlanCanvas(chunked.structural_plan);
-		}
-		stage2Progress = { completed: [], failed: [], active: null };
 		try {
-			const next = await approveChunkedPlan(generationId, { display_title: displayTitle.trim() });
-			const structuralPlan = next.structural_plan ?? chunked.structural_plan;
+			const structuralPlan = chunked.structural_plan;
 			if (!structuralPlan) {
-				throw new Error('The approved lesson plan is missing its structural plan.');
+				throw new Error('The lesson plan is missing its structural plan.');
+			}
+			const existing = (await listBuilderLessons()).find(
+				(lesson) => lesson.source_generation_id === generationId
+			);
+			if (existing) {
+				await goto(`/builder/${existing.id}?generation_id=${generationId}`);
+				return;
 			}
 			const lesson = v3StructuralPlanToBuilderDocument(structuralPlan, {
 				generationId,

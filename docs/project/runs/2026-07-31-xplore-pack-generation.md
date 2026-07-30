@@ -27,7 +27,7 @@
 - [x] P2: ConceptCard, Misconception, and VariantSpec models
 - [x] P3: planner emits and persists cards
 - [x] P4: durable review halt and explicit resume
-- [ ] P5: card review endpoints and Builder UI
+- [x] P5: card review endpoints and Builder UI
 - [ ] P6: item generation behind the context wall
 - [ ] P7: diagnostic distractor mappings
 - [ ] P8: pack-level item review
@@ -79,6 +79,15 @@
 - The all-frontend `npm test` command exceeded its five-minute harness ceiling without
   reporting a test failure; the Studio, V3 API, and V3 store suites touched by P4
   completed independently and passed.
+- P5 real API gate: loaded 2 persisted photosynthesis cards, added a fourth
+  misconception to one card, persisted it with `source: "teacher"` and
+  `teacher_edited=true`, and resumed to `stage2_running` only through pack-level
+  approval.
+- P5 backend: 410 tests passed with one existing Pydantic field-shadow warning.
+- P5 frontend: `svelte-check` found 0 errors and 0 warnings; production build passed;
+  3 affected route/state files and 36 tests passed.
+- P5 architecture guard: no violations. Card-review markup is confined to Builder;
+  `V3Canvas.svelte` contains none.
 
 ## Risks and follow-up
 

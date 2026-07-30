@@ -13,12 +13,17 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
-from sqlalchemy import select
+from sqlalchemy import select, update
 from starlette.background import BackgroundTask
 
 from core.auth.jwt_handler import JWTHandler
 from core.auth.middleware import get_current_user
-from core.database.models import GenerationModel
+from core.database.models import (
+    ConceptCardModel,
+    GenerationModel,
+    LearningPackModel,
+    PackItemModel,
+)
 from core.database.session import async_session_factory
 from core.dependencies import get_jwt_handler, get_settings
 from core.entities.user import User
@@ -68,6 +73,8 @@ from generation.v3_studio.dtos import (
     V3ChunkedRegenerateRequest,
     V3ChunkedRetrySectionRequest,
     V3ChunkedStatusDTO,
+    V3ConceptCardDTO,
+    V3ConceptCardPatchRequest,
     V3GenerationDetailDTO,
     V3GenerationHistoryItemDTO,
     V3GenerateStartRequest,
@@ -544,6 +551,50 @@ async def _load_owned_generation(
         if model is None or model.user_id != user_id:
             raise HTTPException(status_code=404, detail="Generation not found")
         return model
+
+
+async def _resolve_owned_card_scope(
+    scope_id: str,
+    user_id: str,
+) -> tuple[str, str]:
+    """Return (card pack id, generation id) for a generation or pack scope."""
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, scope_id)
+        if generation is not None and generation.user_id == user_id:
+            return generation.pack_id or generation.id, generation.id
+
+        pack = await session.get(LearningPackModel, scope_id)
+        if pack is None or pack.user_id != user_id:
+            raise HTTPException(status_code=404, detail="Pack not found")
+        result = await session.execute(
+            select(GenerationModel)
+            .where(
+                GenerationModel.pack_id == pack.id,
+                GenerationModel.user_id == user_id,
+            )
+            .order_by(GenerationModel.created_at, GenerationModel.id)
+            .limit(1)
+        )
+        generation = result.scalar_one_or_none()
+        if generation is None:
+            raise HTTPException(status_code=409, detail="Pack has no generation to approve")
+        return pack.id, generation.id
+
+
+def _card_dto(card: ConceptCardModel) -> V3ConceptCardDTO:
+    misconceptions = (
+        card.misconceptions if isinstance(card.misconceptions, list) else []
+    )
+    return V3ConceptCardDTO(
+        id=card.id,
+        pack_id=card.pack_id,
+        title=card.title,
+        objective=card.objective,
+        prereqs=list(card.prereqs) if isinstance(card.prereqs, list) else [],
+        misconceptions=misconceptions,
+        no_known_misconceptions=len(misconceptions) == 0,
+        teacher_edited=bool(card.teacher_edited),
+    )
 
 
 def _section_briefs_from_state(plan: StructuralPlan, state: dict[str, Any]) -> list[SectionBrief]:
@@ -1179,6 +1230,116 @@ async def get_chunked_generation_events(
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         },
+    )
+
+
+@v3_studio_router.get(
+    "/packs/{pack_id}/cards",
+    response_model=list[V3ConceptCardDTO],
+)
+async def get_pack_concept_cards(
+    pack_id: str,
+    current_user: User = Depends(get_current_user),
+) -> list[V3ConceptCardDTO]:
+    card_pack_id, _ = await _resolve_owned_card_scope(pack_id, current_user.id)
+    async with async_session_factory() as session:
+        result = await session.execute(
+            select(ConceptCardModel)
+            .where(ConceptCardModel.pack_id == card_pack_id)
+            .order_by(ConceptCardModel.created_at, ConceptCardModel.id)
+        )
+        return [_card_dto(card) for card in result.scalars()]
+
+
+@v3_studio_router.patch(
+    "/packs/{pack_id}/cards/{card_id}",
+    response_model=V3ConceptCardDTO,
+)
+async def patch_pack_concept_card(
+    pack_id: str,
+    card_id: str,
+    body: V3ConceptCardPatchRequest,
+    current_user: User = Depends(get_current_user),
+) -> V3ConceptCardDTO:
+    card_pack_id, _ = await _resolve_owned_card_scope(pack_id, current_user.id)
+    async with async_session_factory() as session:
+        result = await session.execute(
+            select(ConceptCardModel).where(
+                ConceptCardModel.id == card_id,
+                ConceptCardModel.pack_id == card_pack_id,
+            )
+        )
+        card = result.scalar_one_or_none()
+        if card is None:
+            raise HTTPException(status_code=404, detail="Concept card not found")
+
+        previous_rows = (
+            card.misconceptions
+            if isinstance(card.misconceptions, list)
+            else []
+        )
+        previous = {
+            str(item.get("id")): item
+            for item in previous_rows
+            if isinstance(item, dict)
+        }
+        misconceptions: list[dict[str, str]] = []
+        for item in body.misconceptions:
+            old = previous.get(item.id)
+            unchanged = (
+                isinstance(old, dict)
+                and old.get("description") == item.description
+            )
+            misconceptions.append(
+                {
+                    "id": item.id,
+                    "description": item.description,
+                    "source": (
+                        str(old.get("source") or "drafted")
+                        if unchanged
+                        else "teacher"
+                    ),
+                }
+            )
+
+        card.title = body.title
+        card.objective = body.objective
+        card.misconceptions = misconceptions
+        card.teacher_edited = True
+        await session.execute(
+            update(PackItemModel)
+            .where(PackItemModel.card_id == card.id)
+            .values(stale=True)
+        )
+        await session.commit()
+        await session.refresh(card)
+        return _card_dto(card)
+
+
+@v3_studio_router.post(
+    "/packs/{pack_id}/cards/approve",
+    response_model=V3ChunkedPlanStateDTO,
+)
+async def post_pack_concept_cards_approve(
+    pack_id: str,
+    current_user: User = Depends(get_current_user),
+) -> V3ChunkedPlanStateDTO:
+    card_pack_id, generation_id = await _resolve_owned_card_scope(
+        pack_id,
+        current_user.id,
+    )
+    async with async_session_factory() as session:
+        result = await session.execute(
+            select(ConceptCardModel.id).where(
+                ConceptCardModel.pack_id == card_pack_id
+            )
+        )
+        if result.first() is None:
+            raise HTTPException(status_code=409, detail="Pack has no concept cards")
+    return await post_chunked_plan_approve(
+        generation_id,
+        body=None,
+        current_user=current_user,
     )
 
 

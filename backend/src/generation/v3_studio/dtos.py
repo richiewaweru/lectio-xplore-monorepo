@@ -208,6 +208,35 @@ class V3ChunkedStatusDTO(BaseModel):
     error_type: str | None = None
 
 
+class V3CardMisconceptionDTO(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    id: str = Field(min_length=1, max_length=80)
+    description: str = Field(min_length=1, max_length=500)
+    source: Literal["drafted", "teacher"]
+
+
+class V3ConceptCardDTO(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    id: str
+    pack_id: str
+    title: str
+    objective: str
+    prereqs: list[str] = Field(default_factory=list)
+    misconceptions: list[V3CardMisconceptionDTO] = Field(default_factory=list)
+    no_known_misconceptions: bool = False
+    teacher_edited: bool = False
+
+
+class V3ConceptCardPatchRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    title: str = Field(min_length=1, max_length=200)
+    objective: str = Field(min_length=1, max_length=1000)
+    misconceptions: list[V3CardMisconceptionDTO] = Field(default_factory=list)
+
+
 class AdjustBlueprintRequest(BaseModel):
     model_config = {"extra": "forbid"}
 

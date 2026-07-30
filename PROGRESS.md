@@ -850,6 +850,7 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - [x] P2 — added ConceptCard, Misconception, and VariantSpec planning models and validators
 - [x] P3 — made stage 1 emit and persist concept cards
 - [x] P4 — halt durably at awaiting review and resume only on explicit approval
+- [x] P5 — review and edit concept cards in Builder, then approve once per pack
 
 ### P1 validation
 
@@ -889,5 +890,14 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - Architecture guard: no violations
 - Full frontend test command exceeded the five-minute harness ceiling without a reported
   failure; all P4-affected frontend suites passed independently
+
+### P5 validation
+
+- Real API gate loaded 2 cards and persisted an added misconception as teacher-authored
+- Pack-level approval resumed the generation to `stage2_running`
+- Backend: 410 tests passed
+- Frontend: 0 check errors, 0 warnings, and production build passed
+- Affected frontend suites: 3 files, 36 tests passed
+- Architecture guard and Builder-only card markup grep: passed
 
 ---

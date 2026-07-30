@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
 
 const builderMocks = vi.hoisted(() => ({
 	createBuilderLesson: vi.fn(),
+	listBuilderLessons: vi.fn(),
 	saveDocument: vi.fn(),
 	v3PackToBuilderDocument: vi.fn()
 }));
@@ -50,7 +51,8 @@ vi.mock('$lib/api/v3', () => ({
 }));
 
 vi.mock('$lib/builder/api/lesson-crud', () => ({
-	createBuilderLesson: builderMocks.createBuilderLesson
+	createBuilderLesson: builderMocks.createBuilderLesson,
+	listBuilderLessons: builderMocks.listBuilderLessons
 }));
 
 vi.mock('$lib/builder/persistence/idb-store', () => ({
@@ -128,6 +130,8 @@ describe('studio chunked URL resume', () => {
 		mocks.fetchV3Document.mockReset();
 		mocks.getV3GenerationBlueprint.mockReset();
 		builderMocks.createBuilderLesson.mockReset();
+		builderMocks.listBuilderLessons.mockReset();
+		builderMocks.listBuilderLessons.mockResolvedValue([]);
 		builderMocks.saveDocument.mockReset();
 		builderMocks.v3PackToBuilderDocument.mockReset();
 		window.history.replaceState({}, '', '/studio');
@@ -333,7 +337,7 @@ describe('studio chunked URL resume', () => {
 		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-legacy-blocked'));
 	});
 
-	it('always creates an empty builder lesson and redirects after plan approval', async () => {
+	it('creates an empty builder lesson and redirects to concept review before approval', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-builder-stream');
 		const structuralPlan = {
 			lesson_mode: 'first_exposure',
@@ -361,7 +365,7 @@ describe('studio chunked URL resume', () => {
 		builderMocks.saveDocument.mockResolvedValue(undefined);
 
 		render(StudioPage);
-		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
+		await fireEvent.click(await screen.findByRole('button', { name: 'Review concepts' }));
 
 		await waitFor(() => expect(builderMocks.createBuilderLesson).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -372,10 +376,11 @@ describe('studio chunked URL resume', () => {
 		));
 		expect(builderMocks.saveDocument).toHaveBeenCalled();
 		expect(navigationMocks.goto).toHaveBeenCalledWith('/builder/builder-stream-1?generation_id=gen-builder-stream');
+		expect(mocks.approveChunkedPlan).not.toHaveBeenCalled();
 		expect(mocks.connectV3ChunkedStream).not.toHaveBeenCalled();
 	});
 
-	it('still hands an approved structural plan to Builder when generation is blocked', async () => {
+	it('hands an awaiting-review structural plan to Builder without starting generation', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-approve-blocked');
 		mocks.getChunkedPlanStatus.mockResolvedValue({
 			generation_id: 'gen-approve-blocked',
@@ -425,13 +430,9 @@ describe('studio chunked URL resume', () => {
 			expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-approve-blocked')
 		);
 
-		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
+		await fireEvent.click(await screen.findByRole('button', { name: 'Review concepts' }));
 
-		await waitFor(() =>
-			expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-approve-blocked', {
-				display_title: 'Goal'
-			})
-		);
+		expect(mocks.approveChunkedPlan).not.toHaveBeenCalled();
 		await waitFor(() =>
 			expect(navigationMocks.goto).toHaveBeenCalledWith(
 				'/builder/builder-blocked-1?generation_id=gen-approve-blocked'
@@ -737,7 +738,7 @@ describe('studio chunked URL resume', () => {
 		expect(v3Studio.stage).toBe('fill');
 	});
 
-	it('paints the structural plan into the canvas immediately on approve', async () => {
+	it('opens Builder concept review without painting generation output', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-canvas');
 		mocks.getChunkedPlanStatus.mockResolvedValue({
 			generation_id: 'gen-canvas',
@@ -764,33 +765,27 @@ describe('studio chunked URL resume', () => {
 			execution_started: false,
 			next_action: 'approve_or_regenerate'
 		});
-		const approval = deferred<{
-			generation_id: string;
-			stage: 'stage2_running';
-			structural_plan: {
-				lesson_mode: string;
-				lesson_intent: { goal: string; structure_rationale: string };
-				anchor: { example: string; reuse_scope: string };
-				sections: Array<Record<string, unknown>>;
-				question_plan: Array<Record<string, unknown>>;
-			};
-			section_briefs: Record<string, never>;
-			failed_sections: never[];
-			blueprint_id: null;
-			execution_started: true;
-			next_action: 'wait_for_stage2';
-		}>();
-		mocks.approveChunkedPlan.mockReturnValue(approval.promise);
+		builderMocks.createBuilderLesson.mockImplementation(async (request) => ({
+			id: 'builder-canvas',
+			source_generation_id: 'gen-canvas',
+			source_type: 'v3_generation',
+			title: request.title,
+			created_at: '',
+			updated_at: '',
+			document: request.document
+		}));
+		builderMocks.saveDocument.mockResolvedValue(undefined);
 
 		render(StudioPage);
 		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-canvas'));
-		await fireEvent.click(await screen.findByRole('button', { name: 'Approve' }));
+		await fireEvent.click(await screen.findByRole('button', { name: 'Review concepts' }));
 
-		expect(v3Studio.stage).toBe('fill');
-		expect(v3Studio.canvas).toHaveLength(1);
-		expect(v3Studio.canvas[0]?.id).toBe('orient');
-		expect(v3Studio.canvas[0]?.components[0]?.id).toBe('hook-hero');
-		expect(v3Studio.canvas[0]?.visual?.status).toBe('pending');
+		await waitFor(() =>
+			expect(navigationMocks.goto).toHaveBeenCalledWith(
+				'/builder/builder-canvas?generation_id=gen-canvas'
+			)
+		);
+		expect(mocks.approveChunkedPlan).not.toHaveBeenCalled();
 	});
 
 	it('repaints the canvas from polled draft snapshots during generation', async () => {
