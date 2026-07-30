@@ -83,6 +83,8 @@ class DiagramContent(BaseModel):
     alt_text: str
     callouts: Optional[list[DiagramCallout]] = None
     figure_number: Optional[float] = None
+    figure_ref: Optional[str] = None
+    description: Optional[str] = None
     width: Optional[Literal["full", "half", "third"]] = None
 class DiagramCallout(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -239,6 +241,7 @@ class PitfallContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     misconception: str
     correction: str
+    label: Optional[str] = None
     example: Optional[str] = None
     severity: Optional[Literal["minor", "major"]] = None
     examples: Optional[list[str]] = None
@@ -256,6 +259,25 @@ class QuizOption(BaseModel):
     text: str
     correct: bool
     explanation: str
+    diagnoses: Optional[str] = None
+class AnswerKeyContent(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    label: Optional[str] = None
+    note: Optional[str] = None
+    entries: list[AnswerKeyEntry]
+class AnswerKeyEntry(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    question_number: float
+    question: str
+    correct_answer: str
+    correct_key: Optional[str] = None
+    diagnostics: Optional[list[AnswerKeyDiagnostic]] = None
+class AnswerKeyDiagnostic(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    option_key: Optional[str] = None
+    option_text: str
+    misconception_id: str
+    misconception_label: str
 class ReflectionContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     prompt: str
@@ -346,6 +368,7 @@ class SectionDividerContent(BaseModel):
 class KeyFactContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     fact: str
+    formula: Optional[str] = None
     context: Optional[str] = None
     source: Optional[str] = None
 class HookHeroContentDataPoint(BaseModel):
@@ -363,6 +386,8 @@ class SectionContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     section_id: str
     template_id: str
+    card_id: Optional[str] = None
+    varies_on: Optional[str] = None
     header: Optional[SectionHeaderContent] = None
     hook: Optional[HookHeroContent] = None
     explanation: Optional[ExplanationContent] = None
@@ -385,6 +410,7 @@ class SectionContent(BaseModel):
     pitfall: Optional[PitfallContent] = None
     pitfalls: Optional[list[PitfallContent]] = None
     quiz: Optional[QuizContent] = None
+    answer_key: Optional[AnswerKeyContent] = None
     reflection: Optional[ReflectionContent] = None
     glossary: Optional[GlossaryContent] = None
     simulation: Optional[SimulationContent] = None
@@ -441,6 +467,9 @@ InsightCell.model_rebuild()
 PitfallContent.model_rebuild()
 QuizContent.model_rebuild()
 QuizOption.model_rebuild()
+AnswerKeyContent.model_rebuild()
+AnswerKeyEntry.model_rebuild()
+AnswerKeyDiagnostic.model_rebuild()
 ReflectionContent.model_rebuild()
 GlossaryContent.model_rebuild()
 GlossaryTerm.model_rebuild()

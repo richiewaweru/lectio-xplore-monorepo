@@ -166,7 +166,11 @@ def _write_legacy_compat_contracts(target_dir: Path) -> list[Path]:
     written: list[Path] = []
     for filename, payload in outputs.items():
         out = target_dir / filename
-        out.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        out.write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+            newline="\n",
+        )
         written.append(out)
     return written
 

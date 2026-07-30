@@ -128,12 +128,46 @@ class GenerationModel(Base):
     pack_id = Column(String, ForeignKey("learning_packs.id"), nullable=True, index=True)
     pack_resource_id = Column(String, nullable=True, index=True)
     pack_resource_label = Column(String, nullable=True)
+    variant_label = Column(String, nullable=True)
+    variant_spec = Column(JSON_DOCUMENT_TYPE, nullable=True)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
     completed_at = Column(DateTime, nullable=True)
     last_heartbeat = Column(DateTime, nullable=True, index=True)
 
     user = relationship("UserModel", back_populates="generations")
     pack = relationship("LearningPackModel", back_populates="generations")
+
+
+class ConceptCardModel(Base):
+    __tablename__ = "concept_cards"
+
+    id = Column(String, primary_key=True)
+    pack_id = Column(String, nullable=False, index=True)
+    slug = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    objective = Column(Text, nullable=False)
+    prereqs = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    misconceptions = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    teacher_edited = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    items = relationship("PackItemModel", back_populates="card")
+
+
+class PackItemModel(Base):
+    __tablename__ = "pack_items"
+
+    id = Column(String, primary_key=True)
+    pack_id = Column(String, nullable=False, index=True)
+    card_id = Column(String, ForeignKey("concept_cards.id"), nullable=False, index=True)
+    stem = Column(Text, nullable=False)
+    options = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    correct_key = Column(String, nullable=False)
+    diagnoses = Column(JSON_DOCUMENT_TYPE, nullable=False, default=dict)
+    stale = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    card = relationship("ConceptCardModel", back_populates="items")
 
 
 class LLMCallModel(Base):

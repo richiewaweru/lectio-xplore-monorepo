@@ -163,6 +163,12 @@
           "section_field": "fill_in_blank",
           "role": "Cloze passage with student-completed blanks ΓÇö tests recall not recognition",
           "cognitive_job": "Retrieve and complete"
+        },
+        {
+          "id": "answer-key",
+          "section_field": "answer_key",
+          "role": "Provides correct answers with misconception evidence for each diagnostic distractor",
+          "cognitive_job": "Support diagnostic marking"
         }
       ]
     },

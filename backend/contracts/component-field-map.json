@@ -27,5 +27,6 @@
   "diagram-compare": "diagram_compare",
   "diagram-series": "diagram_series",
   "timeline-block": "timeline",
-  "simulation-block": "simulation"
+  "simulation-block": "simulation",
+  "answer-key": "answer_key"
 }

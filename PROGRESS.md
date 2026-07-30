@@ -843,3 +843,18 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 ## Next Phase Needs
 
 - Phase 2: Backend persistence for editable lessons (`/api/v1/builder/lessons*`) and server-sync integration in builder store.
+## Xplore pack generation
+
+- [x] P1 — synchronized `lectio@0.6.0` contracts, added concept-card/pack-item storage, and added
+  generation variant metadata
+- [ ] P2 — add ConceptCard, Misconception, and VariantSpec planning models and validators
+
+### P1 validation
+
+- Published registry package and synchronized unified contract both report version `0.6.0`
+- PostgreSQL migration upgrade/downgrade/upgrade passed
+- Backend: 410 tests passed
+- Frontend: 0 check errors and 0 warnings
+- Architecture guard: no violations
+
+---

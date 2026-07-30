@@ -336,5 +336,16 @@
     "capacity": {
       "countGuidance": "template-defined"
     }
+  },
+  "answer-key": {
+    "id": "answer-key",
+    "sectionField": "answer_key",
+    "role": "Provides correct answers with misconception evidence for each diagnostic distractor",
+    "cognitive_job": "Support diagnostic marking",
+    "generation_hint": "Support diagnostic marking",
+    "capacity": {
+      "entriesMin": 0,
+      "entriesMax": 50
+    }
   }
 }

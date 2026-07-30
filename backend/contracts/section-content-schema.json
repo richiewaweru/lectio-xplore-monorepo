@@ -11,6 +11,12 @@
         "template_id": {
           "type": "string"
         },
+        "card_id": {
+          "type": "string"
+        },
+        "varies_on": {
+          "type": "string"
+        },
         "header": {
           "$ref": "#/definitions/SectionHeaderContent"
         },
@@ -82,6 +88,9 @@
         },
         "quiz": {
           "$ref": "#/definitions/QuizContent"
+        },
+        "answer_key": {
+          "$ref": "#/definitions/AnswerKeyContent"
         },
         "reflection": {
           "$ref": "#/definitions/ReflectionContent"
@@ -471,6 +480,12 @@
         },
         "figure_number": {
           "type": "number"
+        },
+        "figure_ref": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
         },
         "width": {
           "type": "string",
@@ -1129,6 +1144,9 @@
         "correction": {
           "type": "string"
         },
+        "label": {
+          "type": "string"
+        },
         "example": {
           "type": "string"
         },
@@ -1203,12 +1221,88 @@
         },
         "explanation": {
           "type": "string"
+        },
+        "diagnoses": {
+          "type": "string"
         }
       },
       "required": [
         "text",
         "correct",
         "explanation"
+      ],
+      "additionalProperties": false
+    },
+    "AnswerKeyContent": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AnswerKeyEntry"
+          }
+        }
+      },
+      "required": [
+        "entries"
+      ],
+      "additionalProperties": false
+    },
+    "AnswerKeyEntry": {
+      "type": "object",
+      "properties": {
+        "question_number": {
+          "type": "number"
+        },
+        "question": {
+          "type": "string"
+        },
+        "correct_answer": {
+          "type": "string"
+        },
+        "correct_key": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AnswerKeyDiagnostic"
+          }
+        }
+      },
+      "required": [
+        "question_number",
+        "question",
+        "correct_answer"
+      ],
+      "additionalProperties": false
+    },
+    "AnswerKeyDiagnostic": {
+      "type": "object",
+      "properties": {
+        "option_key": {
+          "type": "string"
+        },
+        "option_text": {
+          "type": "string"
+        },
+        "misconception_id": {
+          "type": "string"
+        },
+        "misconception_label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "option_text",
+        "misconception_id",
+        "misconception_label"
       ],
       "additionalProperties": false
     },
@@ -1608,6 +1702,9 @@
       "type": "object",
       "properties": {
         "fact": {
+          "type": "string"
+        },
+        "formula": {
           "type": "string"
         },
         "context": {
