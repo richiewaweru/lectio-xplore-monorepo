@@ -6,12 +6,12 @@
 **Branch**: `v2-platform`
 **Base branch**: `xplore`
 **Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
-**Current phase**: Phase 1 — fail-first regression capture next
+**Current phase**: Phase 2 — irreversible additive foundations next
 
 ### Phase checklist
 
 - [x] Phase 0 — baseline captured and reproducible
-- [ ] Phase 1 — four silent defects fixed with fail-first regression evidence
+- [x] Phase 1 — four silent defects fixed with fail-first regression evidence
 - [ ] Phase 2 — concepts, objective ownership, and provenance added with generation unchanged
 - [ ] Phase 3 — skeleton loading, classifier, and preview added with existing output unchanged
 - [ ] Phase 4 — shadow logging proven on at least three real generations; review/export surface exists
@@ -157,8 +157,8 @@ handoff, runbook, progress ledger, and copied comparison fixture differ from `xp
 - [x] Defect 3 fail-first regression: unknown StructuralPlan fields are rejected.
 - [x] Defect 3 committed as `79fa042` (`P1: fix(planning): reject unknown structural plan fields`).
 - [x] Defect 4 fail-first regression: new path lesson prompt uses 0–3 belief-tested misconceptions.
-- [x] Defect 4 path-only implementation and invariant checks pass; logical commit pending SHA entry.
-- [ ] Phase 1 full gate: regressions, legacy fixtures, nine invariants, lint, architecture.
+- [x] Defect 4 committed as `fedf0d7` (`P1: fix(planning): allow zero path misconceptions`).
+- [x] Phase 1 full gate: regressions, legacy fixtures, nine invariants, lint, architecture.
 
 ### Phase 1 defect 1 evidence — dead role validation
 
@@ -194,6 +194,41 @@ $ cd backend && uv run pytest tests/v3_execution/test_item_executor.py tests/gen
 $ python tools/agent/check_architecture.py --format text
 No architecture violations found.
 ```
+
+### Phase 1 gate result
+
+```text
+$ cd backend && uv run pytest -q
+........................................................................ [ 16%]
+........................................................................ [ 33%]
+........................................................................ [ 49%]
+........................................................................ [ 66%]
+........................................................................ [ 83%]
+........................................................................ [ 99%]
+.                                                                        [100%]
+433 passed, 1 warning in 76.05s (0:01:16)
+$ uv run ruff check src tests
+All checks passed!
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+**Gate: PASS.** All legacy tests load, all nine invariants remain covered by the complete
+backend suite, and the Phase 0 comparison fixture is unchanged. The known frontend baseline
+dependency failure remains outside the Phase 1 backend-only diff and is still recorded as open.
+
+### Phase 2 tracking
+
+- [ ] Read the concept, path, provenance, and migration handoff details against live models.
+- [ ] Add the canonical concepts table and reversible migration.
+- [ ] Add nullable canonical concept references for path lessons and cards.
+- [ ] Add immutable path-objective hash ownership and post-generation comparison.
+- [ ] Add nullable provenance fields without changing current generation output.
+- [ ] Prove migration upgrade/downgrade/upgrade.
+- [ ] Re-run the saved Phase 0 generation comparison byte-for-byte.
+- [ ] Run the complete Phase 2 gate and invariant check.
 
 ### Phase 1 defect 4 evidence — path-only misconception quota
 
