@@ -6,13 +6,13 @@
 **Branch**: `v2-platform`
 **Base branch**: `xplore`
 **Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
-**Current phase**: Phase 2 — irreversible additive foundations next
+**Current phase**: Phase 3 — skeleton data and preview next
 
 ### Phase checklist
 
 - [x] Phase 0 — baseline captured and reproducible
 - [x] Phase 1 — four silent defects fixed with fail-first regression evidence
-- [ ] Phase 2 — concepts, objective ownership, and provenance added with generation unchanged
+- [x] Phase 2 — concepts, objective ownership, and provenance added with generation unchanged
 - [ ] Phase 3 — skeleton loading, classifier, and preview added with existing output unchanged
 - [ ] Phase 4 — shadow logging proven on at least three real generations; review/export surface exists
 - [ ] Phase 5 — units and path backend validate all three fixtures; unreachable approval is blocked
@@ -228,7 +228,7 @@ dependency failure remains outside the Phase 1 backend-only diff and is still re
 - [x] Add nullable provenance fields without changing current generation output.
 - [x] Prove migration `0019` upgrade/downgrade/upgrade.
 - [x] Re-run the saved Phase 0 generation comparison byte-for-byte.
-- [ ] Run the complete Phase 2 gate and invariant check.
+- [x] Run the complete Phase 2 gate and invariant check.
 
 ### Phase 2 foundation evidence
 
@@ -271,6 +271,46 @@ The `ConceptModel` follows `concept.schema.json` and adds the domain lifecycle f
 cards reference it with a nullable FK. `LessonProvenanceModel` carries nullable concept, path,
 objective-hash, skeleton, classifier-source, toggle, and deviation fields. Path tables and their
 FK are deliberately deferred to Migration 3 / Phase 5, matching `13_DATABASE_AND_MIGRATIONS.md`.
+
+Phase 2 commits:
+
+- `23835fd` — `P2: feat(data): add concepts and lesson provenance`
+- `83deff9` — `P2: feat(planning): lock path objective ownership`
+
+### Phase 2 gate result
+
+```text
+$ cd backend && uv run pytest -q
+........................................................................ [ 16%]
+........................................................................ [ 32%]
+........................................................................ [ 49%]
+........................................................................ [ 65%]
+........................................................................ [ 82%]
+........................................................................ [ 98%]
+......                                                                   [100%]
+438 passed, 1 warning in 95.45s (0:01:35)
+$ uv run ruff check src tests
+All checks passed!
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+**Gate: PASS.** Migration `0019` is reversible, all nine invariants pass in the complete suite,
+and the saved generation is byte-for-byte identical to Phase 0.
+
+### Phase 3 tracking
+
+- [ ] Install the versioned draft as runtime `skeletons.yaml`.
+- [ ] Validate skeletons on startup: slot limits, locked check, registry components, and toggles.
+- [ ] Expand and preview all 11 skeletons with zero model calls.
+- [ ] Add the verbatim knowledge-type classifier prompt and strict result enum.
+- [ ] Add deviation request schema.
+- [ ] Wire `POST /skeletons:preview` without changing existing generation paths.
+- [ ] Validate classifier outputs against all three path fixtures.
+- [ ] Prove existing output and Phase 0 fixture remain unchanged.
+- [ ] Run the complete Phase 3 gate and invariant check.
 
 ### Phase 1 defect 4 evidence — path-only misconception quota
 
