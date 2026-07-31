@@ -35,8 +35,8 @@
 - [x] P10: card-scoped QC rubric
 - [x] P11: diagnostic answer-key print
 - [x] P12: searchable card reuse
-- [ ] P13: regression and integration tests
-- [ ] Commit the photosynthesis fixture set
+- [x] P13: regression and integration tests
+- [x] Commit the photosynthesis fixture set
 - [ ] Run repository validation and architecture checks
 - [ ] Run the end-to-end local walkthrough on port 5173
 - [ ] Self-review and publish the branch
@@ -166,6 +166,15 @@
   structural-plan snapshot is synchronized before variant generation.
 - P12 migration: PostgreSQL revision `20260731_0018` passed upgrade → downgrade →
   upgrade. Focused Ruff/compile and frontend checks passed with 0 errors/warnings.
+- P13 contracts: automated tests prove sibling variant failure isolation, one shared
+  pack-owned item set across variants, restart-safe `awaiting_review`, preservation
+  of teacher-edited misconceptions during plan regeneration, and rejection of any
+  generated-content channel at the item-executor wall.
+- P13 QC: complete card/variant rubrics pass, while omitted misconception checks and
+  mismatched repair verdicts fail deterministically.
+- P13 fixture: the committed Form 2 photosynthesis pack is pinned to Lectio contract
+  `0.6.0`, two concept cards, valid diagnostic mappings, and two labelled variants.
+  The P13 focused suite passed 15 tests; Ruff passed.
 
 ## Risks and follow-up
 

@@ -63,6 +63,14 @@ def test_item_executor_public_signature_accepts_only_card() -> None:
     assert list(inspect.signature(execute_items).parameters) == ["card"]
 
 
+def test_item_executor_rejects_generated_content_channel() -> None:
+    with pytest.raises(TypeError, match="unexpected keyword argument"):
+        execute_items(  # type: ignore[call-arg]
+            _card(),
+            generated_content={"sections": ["contaminating prose"]},
+        )
+
+
 def test_item_prompt_contains_only_approved_card_fields() -> None:
     message = build_item_messages(_card())[0]
 

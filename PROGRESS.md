@@ -1,5 +1,27 @@
 # Lesson Builder Merge Progress
 
+## Xplore Pack Generation — Phase 13 contracts — 2026-07-31
+
+**Classification**: major
+**Subsystems**: backend planning/execution/review, fixtures
+
+### Progress
+
+- [x] Proved one variant failure does not block a sibling
+- [x] Proved every variant derives the same pack-owned diagnostic set
+- [x] Proved the explicit review halt survives process-memory loss
+- [x] Preserved teacher-edited misconceptions in regenerated durable plans
+- [x] Locked the item executor against generated-content contamination
+- [x] Added strict card/variant QC result tests
+- [x] Committed the Lectio 0.6.0 photosynthesis fixture contract
+- [x] Ran the 15-test focused P13 suite and Ruff
+
+### Remaining release gates
+
+- [ ] Full repository validation and architecture check
+- [ ] Browser walkthrough on port 5173
+- [ ] Self-review and branch push
+
 ## Builder Block-Level AI — Generate & Repair — 2026-07-22
 
 **Classification**: major

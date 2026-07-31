@@ -13,6 +13,8 @@ from core.database.models import ConceptCardModel, GenerationModel
 from core.database.session import async_session_factory
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 from v3_blueprint.planning.models import (
+    ConceptCard,
+    Misconception,
     SectionBrief,
     StructuralPlan,
     VariantSpec,
@@ -100,12 +102,56 @@ async def persist_structural_plan(
     resource_spec: dict | None = None,
 ) -> None:
     async with _session_scope(session) as (db, should_commit):
+        generation = await db.get(GenerationModel, generation_id)
+        if generation is None:
+            raise ValueError(f"Generation '{generation_id}' not found")
+        pack_id = generation.pack_id or generation_id
+        effective_cards: list[ConceptCard] = []
+        existing_by_slug: dict[str, ConceptCardModel | None] = {}
+        for planned_card in plan.cards:
+            existing_result = await db.execute(
+                select(ConceptCardModel).where(
+                    ConceptCardModel.pack_id == pack_id,
+                    ConceptCardModel.slug == planned_card.id,
+                )
+            )
+            existing = existing_result.scalar_one_or_none()
+            existing_by_slug[planned_card.id] = existing
+            if existing is None or not existing.teacher_edited:
+                effective_cards.append(planned_card)
+                continue
+            effective_cards.append(
+                planned_card.model_copy(
+                    update={
+                        "title": existing.title,
+                        "objective": existing.objective,
+                        "prereqs": list(existing.prereqs or []),
+                        "misconceptions": [
+                            Misconception.model_validate(row)
+                            for row in (
+                                existing.misconceptions
+                                if isinstance(existing.misconceptions, list)
+                                else []
+                            )
+                            if isinstance(row, dict)
+                        ],
+                        "no_known_misconceptions": not bool(
+                            existing.misconceptions
+                        ),
+                    },
+                    deep=True,
+                )
+            )
+        effective_plan = plan.model_copy(
+            update={"cards": effective_cards},
+            deep=True,
+        )
         await persist_chunked_state(
             generation_id,
             {
                 "stage": "plan_ready",
-                "structural_plan": plan.model_dump(mode="json"),
-                "section_briefs": {s.id: None for s in plan.sections},
+                "structural_plan": effective_plan.model_dump(mode="json"),
+                "section_briefs": {s.id: None for s in effective_plan.sections},
                 "failed_sections": [],
                 "context": {
                     "signals": (
@@ -120,19 +166,8 @@ async def persist_structural_plan(
             session=db,
         )
 
-        generation = await db.get(GenerationModel, generation_id)
-        if generation is None:
-            raise ValueError(f"Generation '{generation_id}' not found")
-        pack_id = generation.pack_id or generation_id
-
-        for card in plan.cards:
-            existing_result = await db.execute(
-                select(ConceptCardModel).where(
-                    ConceptCardModel.pack_id == pack_id,
-                    ConceptCardModel.slug == card.id,
-                )
-            )
-            existing = existing_result.scalar_one_or_none()
+        for card in effective_plan.cards:
+            existing = existing_by_slug.get(card.id)
             if existing is not None and existing.teacher_edited:
                 continue
 
