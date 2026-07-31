@@ -3,10 +3,10 @@
 ## Xplore Learning Platform V2 — 2026-07-31
 
 **Classification**: major
-**Branch**: `v2-platform`
+**Branch**: `codex/v2-complete-build`
 **Base branch**: `xplore`
 **Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
-**Current phase**: HALT — Phase 5 gate passed; human decision required before Phase 6
+**Current phase**: Phase 6 authorized — complete build before post-build human evaluation
 
 ### Phase checklist
 
@@ -17,6 +17,28 @@
 - [x] Phase 4 — shadow logging proven on at least three real generations; review/export surface exists
 - [x] Phase 5 — units and path backend validate all three fixtures; unreachable approval is blocked
 - [x] Halt at the human decision gate and write the final handoff report
+- [x] Human owner decision recorded: build Phases 6–13 before the 30-lesson comparative study
+- [ ] Phase 6 — production-complete path-to-Xplore bridge
+- [ ] Phase 7 — visible end-to-end unit slice
+- [ ] Phase 8 — full path workspace
+- [ ] Phase 9 — teaching schedule and unit groups
+- [ ] Phase 10 — controlled differentiated shapes
+- [ ] Phase 11 — resource projections
+- [ ] Phase 12 — actuals, marks, and misconception summaries
+- [ ] Phase 13 — convergence and production beta
+- [ ] Post-build 30-lesson human evaluation and tuning
+
+### Post-Phase-5 human decision — 2026-07-31
+
+The human product owner explicitly waived the approximately 30-review study as a prerequisite to
+building the remaining product. Phases 6 through 13 are authorized. The study will instead run
+after the complete unit/path workflow is available, because the architecture and product surface
+will be built regardless and can be tuned through versioned skeleton, classifier, prompt, toggle,
+and UI changes.
+
+This is a timing change, not permission to skip automated validation or weaken machine guards.
+Legacy Studio remains operational, while skeleton authority is scoped to the new unit/path flow.
+The execution plan and per-phase gates are recorded in `handoff/PHASE6_13_BUILD_PLAN.md`.
 
 ### Phase 0 tracking
 
