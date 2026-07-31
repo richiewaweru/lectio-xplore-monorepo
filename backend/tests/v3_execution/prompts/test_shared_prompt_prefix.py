@@ -39,6 +39,17 @@ def test_stage1_component_selector_context_labels_cognitive_job_and_section_fiel
     ) in planner_block
 
 
+def test_path_prepared_stage1_uses_zero_to_three_belief_tested_misconceptions() -> None:
+    legacy_prompt = build_stage1_system_prompt()
+    path_prompt = build_stage1_system_prompt(path_prepared=True)
+
+    assert "2-4 misconceptions" in legacy_prompt
+    assert "2-4 misconceptions" not in path_prompt
+    assert "ZERO to THREE misconceptions" in path_prompt
+    assert "confidently choose a corresponding wrong answer" in path_prompt
+    assert "A card has 0-3 real misconceptions" in path_prompt
+
+
 def test_writer_prompts_share_stable_prefix() -> None:
     prefix = build_v3_shared_prefix()
     section_order = SectionWriterWorkOrder(

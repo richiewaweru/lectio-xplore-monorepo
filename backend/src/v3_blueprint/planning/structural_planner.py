@@ -18,11 +18,11 @@ _CALLER = "v3_chunked_architect"
 STAGE1_NODE = "v3_stage1_planner"
 
 
-def build_stage1_system_prompt() -> str:
+def build_stage1_system_prompt(*, path_prepared: bool = False) -> str:
     shared_prefix = build_v3_shared_prefix()
     planner_block = _planner_index_block()
 
-    return f"""{shared_prefix}
+    prompt = f"""{shared_prefix}
 You are a lesson architect. Produce only valid StructuralPlan JSON.
 
 You do NOT write lesson prose, question text, or finished component content.
@@ -198,6 +198,25 @@ HARD RULES:
 - Do not include content_intent, question prompt text, or visual subject descriptions.
 - Do not add any JSON keys not shown in the schema above.
 """
+    if not path_prepared:
+        return prompt
+
+    return prompt.replace(
+        """  Give each card 2-4 misconceptions that are specific beliefs a learner would
+  confidently act on, not slips, carelessness, or general confusion. If there
+  is genuinely no known misconception, emit an empty list and set
+  no_known_misconceptions=true. Never pad a list.""",
+        """  Give each card ZERO to THREE misconceptions. Apply this test to every
+  candidate: could a learner holding this belief confidently choose a corresponding wrong answer?
+  If not, it is a knowledge gap, not a
+  misconception. If there is genuinely no known misconception, emit an empty
+  list and set no_known_misconceptions=true. Never pad a list.""",
+    ).replace(
+        """- A card has 2-4 real misconceptions, or explicitly sets
+  no_known_misconceptions=true with an empty list.""",
+        """- A card has 0-3 real misconceptions, or explicitly sets
+  no_known_misconceptions=true with an empty list.""",
+    )
 
 
 def build_stage1_user_message(
@@ -239,6 +258,7 @@ async def _call_stage1(
     generation_id: str | None = None,
     previous_errors: list[str] | None = None,
     skeleton_catalog: dict | None = None,
+    path_prepared: bool = False,
 ) -> StructuralPlan:
     import traceback
     try:
@@ -250,7 +270,7 @@ async def _call_stage1(
         agent = Agent(
             model=model,
             output_type=structured_output_type_for_model(StructuralPlan, spec=spec),
-            system_prompt=build_stage1_system_prompt(),
+            system_prompt=build_stage1_system_prompt(path_prepared=path_prepared),
         )
         result = await run_llm(
             trace_id=tid,

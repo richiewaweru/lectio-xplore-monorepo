@@ -155,9 +155,9 @@ handoff, runbook, progress ledger, and copied comparison fixture differ from `xp
 - [x] Defect 2 fail-first regression: selector entries label cognitive jobs and section fields.
 - [x] Defect 2 committed as `39f1744` (`P1: fix(planning): label component selection context`).
 - [x] Defect 3 fail-first regression: unknown StructuralPlan fields are rejected.
-- [x] Defect 3 explicit logged legacy adapter and invariant checks pass; logical commit pending SHA entry.
-- [ ] Defect 4 fail-first regression: new path lesson prompt uses 0–3 belief-tested misconceptions.
-- [ ] Defect 4 path-only implementation and logical commit.
+- [x] Defect 3 committed as `79fa042` (`P1: fix(planning): reject unknown structural plan fields`).
+- [x] Defect 4 fail-first regression: new path lesson prompt uses 0–3 belief-tested misconceptions.
+- [x] Defect 4 path-only implementation and invariant checks pass; logical commit pending SHA entry.
 - [ ] Phase 1 full gate: regressions, legacy fixtures, nine invariants, lint, architecture.
 
 ### Phase 1 defect 1 evidence — dead role validation
@@ -191,6 +191,42 @@ Pre-commit invariant evidence:
 $ cd backend && uv run pytest tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/v3_blueprint/planning/test_validators.py -q
 ...............................                                          [100%]
 31 passed, 1 warning in 16.31s
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+```
+
+### Phase 1 defect 4 evidence — path-only misconception quota
+
+Failing regression before the fix:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/prompts/test_shared_prompt_prefix.py::test_path_prepared_stage1_uses_zero_to_three_belief_tested_misconceptions -q
+F                                                                        [100%]
+E       TypeError: build_stage1_system_prompt() got an unexpected keyword argument 'path_prepared'
+1 failed, 1 warning in 12.51s
+```
+
+Passing validation after the fix:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/prompts/test_shared_prompt_prefix.py tests/v3_blueprint/planning/test_stage1_error_logging.py tests/v3_blueprint/planning/test_retry.py -q
+...............                                                          [100%]
+15 passed, 1 warning in 10.54s
+$ uv run ruff check src/v3_blueprint/planning/structural_planner.py tests/v3_execution/prompts/test_shared_prompt_prefix.py
+All checks passed!
+```
+
+The default Stage 1 prompt remains the legacy 2–4 path. Only the explicit
+`path_prepared=True` mode changes to zero through three and applies the exact
+confident-wrong-answer test. The Phase 5 bridge will be the only production caller authorized
+to select this mode.
+
+Pre-commit invariant evidence:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/v3_blueprint/planning/test_validators.py tests/generation/test_v3_chunked_lifecycle.py tests/v3_execution/prompts/test_shared_prompt_prefix.py -q
+..........................................................               [100%]
+58 passed, 1 warning in 19.12s
 $ python tools/agent/check_architecture.py --format text
 No architecture violations found.
 ```
