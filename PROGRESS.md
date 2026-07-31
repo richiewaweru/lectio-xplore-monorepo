@@ -6,7 +6,7 @@
 **Branch**: `v2-platform`
 **Base branch**: `xplore`
 **Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
-**Current phase**: Phase 4 — shadow logging machinery next
+**Current phase**: Phase 5 — units and path backend
 
 ### Phase checklist
 
@@ -14,7 +14,7 @@
 - [x] Phase 1 — four silent defects fixed with fail-first regression evidence
 - [x] Phase 2 — concepts, objective ownership, and provenance added with generation unchanged
 - [x] Phase 3 — skeleton loading, classifier, and preview added with existing output unchanged
-- [ ] Phase 4 — shadow logging proven on at least three real generations; review/export surface exists
+- [x] Phase 4 — shadow logging proven on at least three real generations; review/export surface exists
 - [ ] Phase 5 — units and path backend validate all three fixtures; unreachable approval is blocked
 - [ ] Halt at the human decision gate and write the final handoff report
 
@@ -385,9 +385,9 @@ preview is live with zero model calls, and existing generation bytes remain unch
 - [x] Compute classifier and skeleton shadow alongside every completed structural plan.
 - [x] Keep classifier judgement independently reviewable from skeleton fit.
 - [x] Add authenticated CSV review export.
-- [ ] Prove full shadow records on at least three real generations without synthetic substitution.
-- [ ] Record that 30 human-reviewed lessons remain required before any authority promotion.
-- [ ] Prove no generated output change and run the complete Phase 4 gate.
+- [x] Prove full shadow records on at least three real generations without synthetic substitution.
+- [x] Record that 30 human-reviewed lessons remain required before any authority promotion.
+- [x] Prove no generated output change and run the complete Phase 4 gate.
 
 ### Phase 4 machinery evidence
 
@@ -431,6 +431,153 @@ The repository root `.env` contains provider credentials but points `DATABASE_UR
 Railway host. Real shadow proof will load the provider credentials while overriding persistence
 to an isolated local SQLite database. No migration, generation row, or shadow record will be
 written to the remote database without separate deployment authority.
+
+### Phase 4 real-generation evidence
+
+The isolated gate ran three real Stage 1 provider generations and three separate live classifier
+calls. It wrote one durable shadow record per generation. The first structural-plan call returned
+a `structure_rationale` longer than the 300-character contract; the existing retry corrected it,
+and all three generations completed. The gate database and exported evidence contain no synthetic
+records. Full records:
+
+```json
+[
+  {
+    "generation_id": "v2-shadow-real-001",
+    "subject": "Biology",
+    "grade": "Grade 4",
+    "objective": "By the end of this lesson the student can explain that light provides energy for plants to turn water and carbon dioxide into food (sugar) and oxygen.",
+    "current_roles": [
+      "orient",
+      "explain",
+      "model",
+      "guided",
+      "check",
+      "close"
+    ],
+    "classifier_type": "factual",
+    "classifier_confidence": "high",
+    "classifier_success_test": "The learner accurately restates the relationship: light provides energy for plants to convert water and carbon dioxide into sugar and oxygen.",
+    "classifier_note": "The objective asks students to recount a bounded scientific relationship; no novel cases are judged, so it is factual rather than conceptual.",
+    "skeleton_id": "factual.first_exposure",
+    "skeleton_version": 1,
+    "expanded_slots": [
+      "orient",
+      "organise",
+      "guided",
+      "independent",
+      "check"
+    ],
+    "toggles_applied": [],
+    "expansion_warnings": [],
+    "structural_match_score": 0.5,
+    "reviewer_preference": null,
+    "wrong_classification": null,
+    "deviation_required": null,
+    "severity": null,
+    "notes": null
+  },
+  {
+    "generation_id": "v2-shadow-real-002",
+    "subject": "Mathematics",
+    "grade": "Grade 8",
+    "objective": "By the end of this lesson the student can calculate the percentage change from an original value to a new value, using the original as denominator, and interpret the result as increase or decrease.",
+    "current_roles": [
+      "orient",
+      "explain",
+      "model",
+      "guided",
+      "check",
+      "close"
+    ],
+    "classifier_type": "procedural",
+    "classifier_confidence": "high",
+    "classifier_success_test": "Correctly computes percentage change using (new - original)/original × 100 for given pairs of values, and states increase or decrease based on the sign of the result.",
+    "classifier_note": null,
+    "skeleton_id": "procedural.first_exposure",
+    "skeleton_version": 1,
+    "expanded_slots": [
+      "orient",
+      "recall",
+      "model",
+      "guided",
+      "check"
+    ],
+    "toggles_applied": [],
+    "expansion_warnings": [],
+    "structural_match_score": 0.6667,
+    "reviewer_preference": null,
+    "wrong_classification": null,
+    "deviation_required": null,
+    "severity": null,
+    "notes": null
+  },
+  {
+    "generation_id": "v2-shadow-real-003",
+    "subject": "Geography",
+    "grade": "Grade 11",
+    "objective": "By the end of this lesson the student can assess which of two proposed wind-farm sites is more suitable and defend the choice against stated criteria.",
+    "current_roles": [
+      "orient",
+      "explain",
+      "model",
+      "guided",
+      "apply",
+      "close"
+    ],
+    "classifier_type": "evaluative",
+    "classifier_confidence": "high",
+    "classifier_success_test": "The learner chooses one of the two wind-farm sites and defends that choice by weighing the site against the stated criteria, with a justification that could withstand reasoned disagreement.",
+    "classifier_note": null,
+    "skeleton_id": "evaluative.first_exposure",
+    "skeleton_version": 1,
+    "expanded_slots": [
+      "orient",
+      "criteria",
+      "contrast",
+      "apply",
+      "check"
+    ],
+    "toggles_applied": [],
+    "expansion_warnings": [],
+    "structural_match_score": 0.3333,
+    "reviewer_preference": null,
+    "wrong_classification": null,
+    "deviation_required": null,
+    "severity": null,
+    "notes": null
+  }
+]
+```
+
+The three-record Phase 4 machinery gate is satisfied, but this is not skeleton-authority
+approval. Approximately 30 real lessons must be human-reviewed before Phase 6 or any promotion
+of skeletons to authority. The review fields above intentionally remain null until humans review
+the records; this implementation does not advance or simulate that study.
+
+### Phase 4 gate result
+
+```text
+$ cd backend && uv run pytest -q
+........................................................................ [ 15%]
+........................................................................ [ 31%]
+........................................................................ [ 47%]
+........................................................................ [ 63%]
+........................................................................ [ 79%]
+........................................................................ [ 95%]
+...................                                                      [100%]
+451 passed, 1 warning in 102.39s (0:01:42)
+$ uv run ruff check src tests scripts/run_v2_shadow_gate.py
+All checks passed!
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+**Gate: PASS.** Three real provider-backed generations produced complete, durable shadow
+records; CSV review export exists; classifier judgements remain independent from skeleton-fit
+review; generation bytes are unchanged. The separate human-review authority gate remains closed.
 
 ### Phase 1 defect 4 evidence — path-only misconception quota
 

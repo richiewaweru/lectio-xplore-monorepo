@@ -1,0 +1,107 @@
+[
+  {
+    "generation_id": "v2-shadow-real-001",
+    "subject": "Biology",
+    "grade": "Grade 4",
+    "objective": "By the end of this lesson the student can explain that light provides energy for plants to turn water and carbon dioxide into food (sugar) and oxygen.",
+    "current_roles": [
+      "orient",
+      "explain",
+      "model",
+      "guided",
+      "check",
+      "close"
+    ],
+    "classifier_type": "factual",
+    "classifier_confidence": "high",
+    "classifier_success_test": "The learner accurately restates the relationship: light provides energy for plants to convert water and carbon dioxide into sugar and oxygen.",
+    "classifier_note": "The objective asks students to recount a bounded scientific relationship; no novel cases are judged, so it is factual rather than conceptual.",
+    "skeleton_id": "factual.first_exposure",
+    "skeleton_version": 1,
+    "expanded_slots": [
+      "orient",
+      "organise",
+      "guided",
+      "independent",
+      "check"
+    ],
+    "toggles_applied": [],
+    "expansion_warnings": [],
+    "structural_match_score": 0.5,
+    "reviewer_preference": null,
+    "wrong_classification": null,
+    "deviation_required": null,
+    "severity": null,
+    "notes": null
+  },
+  {
+    "generation_id": "v2-shadow-real-002",
+    "subject": "Mathematics",
+    "grade": "Grade 8",
+    "objective": "By the end of this lesson the student can calculate the percentage change from an original value to a new value, using the original as denominator, and interpret the result as increase or decrease.",
+    "current_roles": [
+      "orient",
+      "explain",
+      "model",
+      "guided",
+      "check",
+      "close"
+    ],
+    "classifier_type": "procedural",
+    "classifier_confidence": "high",
+    "classifier_success_test": "Correctly computes percentage change using (new - original)/original \u00d7 100 for given pairs of values, and states increase or decrease based on the sign of the result.",
+    "classifier_note": null,
+    "skeleton_id": "procedural.first_exposure",
+    "skeleton_version": 1,
+    "expanded_slots": [
+      "orient",
+      "recall",
+      "model",
+      "guided",
+      "check"
+    ],
+    "toggles_applied": [],
+    "expansion_warnings": [],
+    "structural_match_score": 0.6667,
+    "reviewer_preference": null,
+    "wrong_classification": null,
+    "deviation_required": null,
+    "severity": null,
+    "notes": null
+  },
+  {
+    "generation_id": "v2-shadow-real-003",
+    "subject": "Geography",
+    "grade": "Grade 11",
+    "objective": "By the end of this lesson the student can assess which of two proposed wind-farm sites is more suitable and defend the choice against stated criteria.",
+    "current_roles": [
+      "orient",
+      "explain",
+      "model",
+      "guided",
+      "apply",
+      "close"
+    ],
+    "classifier_type": "evaluative",
+    "classifier_confidence": "high",
+    "classifier_success_test": "The learner chooses one of the two wind-farm sites and defends that choice by weighing the site against the stated criteria, with a justification that could withstand reasoned disagreement.",
+    "classifier_note": null,
+    "skeleton_id": "evaluative.first_exposure",
+    "skeleton_version": 1,
+    "expanded_slots": [
+      "orient",
+      "criteria",
+      "contrast",
+      "apply",
+      "check"
+    ],
+    "toggles_applied": [],
+    "expansion_warnings": [],
+    "structural_match_score": 0.3333,
+    "reviewer_preference": null,
+    "wrong_classification": null,
+    "deviation_required": null,
+    "severity": null,
+    "notes": null
+  }
+]
