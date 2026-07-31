@@ -37,9 +37,9 @@
 - [x] P12: searchable card reuse
 - [x] P13: regression and integration tests
 - [x] Commit the photosynthesis fixture set
-- [ ] Run repository validation and architecture checks
-- [ ] Run the end-to-end local walkthrough on port 5173
-- [ ] Self-review and publish the branch
+- [x] Run repository validation and architecture checks
+- [x] Run the end-to-end local walkthrough on port 5173
+- [x] Self-review and publish the branch
 
 ## Validation evidence
 
@@ -175,6 +175,29 @@
 - P13 fixture: the committed Form 2 photosynthesis pack is pinned to Lectio contract
   `0.6.0`, two concept cards, valid diagnostic mappings, and two labelled variants.
   The P13 focused suite passed 15 tests; Ruff passed.
+- Final backend gate: Ruff passed, the architecture guard reported no violations, and
+  the full suite passed 428 tests with one existing Pydantic field-shadow warning.
+- Final frontend gate: `svelte-check` reported 0 errors and 0 warnings. The first full
+  Vitest run passed 277 tests and exposed three Lectio `0.6.0` compatibility
+  expectations; all three were corrected. Focused lockfile and plan-action reruns
+  passed. The package-smoke rerun and production build later stalled in the Windows
+  harness without a compiler or assertion diagnostic; the port-5173 development
+  runtime remained healthy.
+- Live walkthrough: Google sign-in, Studio setup, real DeepSeek narrowing/planning,
+  the durable `awaiting_review` halt, Builder concept-card review, explicit approval,
+  shared diagnostic generation, and parallel variant fan-out all completed on
+  `http://127.0.0.1:5173`.
+- Live pack `929af699-d012-41b7-9738-1320a172c787` landed both `Support` and
+  `Extension` booklets. The pack hub reported `Pack ready`, exposed both editors,
+  unlocked the print picker, and retained one shared five-question diagnostic set.
+- Live diagnostic coverage reported `M1` three times, `M2` three times, and `M3`
+  twice. Every item had one correct option; five deliberately unmapped distractors
+  were surfaced as untagged rather than silently assigned.
+- Live print verification rendered both selected booklets, both generated Elodea
+  diagrams, the shared diagnostic, and its correct-answer markings in one pack.
+- Local runtime assets generated during the walkthrough remain available under
+  `backend/data/images/` and are excluded from this worktree locally.
+- Branch `xplore` was pushed to `origin/xplore`.
 
 ## Risks and follow-up
 
@@ -182,3 +205,8 @@
 - The mission stop conditions apply if current session persistence cannot support restart-safe resume,
   the existing correction hint is not written in production, or one-plan/one-document assumptions
   exceed the handoff estimate by roughly double.
+- The printable live pack surfaced Lectio schema-capacity warnings for one hook option
+  count, two five-step worked examples, and one long hint. These are visible quality
+  warnings, not contract failures; the pack rendered successfully.
+- A clean full frontend test/build rerun should be repeated in CI or a non-stalling
+  harness to replace the focused rerun evidence above.

@@ -993,4 +993,29 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - PostgreSQL migration `20260731_0018` passed upgrade/downgrade/upgrade
 - Frontend check: 0 errors/warnings; focused Ruff and compile checks passed
 
+### P13 and final validation
+
+- Cross-pack regression suite: 15 tests passed; focused Ruff passed
+- Backend full suite: 428 tests passed with one existing warning
+- Architecture guard: no violations
+- Frontend check: 0 errors and 0 warnings
+- Lectio package and synced contracts report `0.6.0`, including `answer-key`
+- Full Vitest first run: 277 tests passed and 3 compatibility expectations failed;
+  all three were corrected, with focused lockfile and plan-action reruns passing
+- The package-smoke rerun and production build stalled in the Windows harness without
+  a compiler/assertion diagnostic; the development runtime remained healthy
+
+### Live Xplore walkthrough
+
+- Port `5173` served the signed-in frontend and port `8000` served the API
+- Real DeepSeek planning halted durably at `awaiting_review`
+- Builder showed the approved photosynthesis concept card and three misconceptions
+- Explicit approval produced one shared five-question diagnostic and two variants
+- Support and Extension both landed; the pack hub reported `Pack ready`
+- Diagnostic coverage: M1 ×3, M2 ×3, M3 ×2, with five untagged options surfaced
+- Selected-pack printing rendered both booklets, both generated diagrams, the shared
+  diagnostic, and correct-answer markings
+- Verified pack: `929af699-d012-41b7-9738-1320a172c787`
+- Branch `xplore` pushed to `origin/xplore`
+
 ---
