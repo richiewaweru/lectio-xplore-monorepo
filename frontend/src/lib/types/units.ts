@@ -66,14 +66,52 @@ export interface UnitPath {
 	id: string;
 	unit_id: string;
 	version: number;
+	revision: number;
 	status: string;
 	generated_by: string;
 	merge_critic_results: Record<string, unknown>[];
 	prerequisite_risks: Record<string, unknown>[];
 	forward_verified: boolean;
 	reaches_destination: boolean;
+	completeness_note: string | null;
 	approved_at: string | null;
+	created_at: string;
 	lessons: PathLesson[];
+}
+
+export interface PathVersionSummary {
+	id: string;
+	version: number;
+	revision: number;
+	status: 'draft' | 'approved' | 'superseded' | string;
+	generated_by: string;
+	forward_verified: boolean;
+	reaches_destination: boolean;
+	risk_count: number;
+	approved_at: string | null;
+	created_at: string;
+}
+
+export type PathLessonState =
+	| 'unprepared'
+	| 'awaiting_review'
+	| 'generating'
+	| 'ready'
+	| 'warning'
+	| 'failed'
+	| 'skipped'
+	| 'stale';
+
+export interface PathStatusAggregate {
+	path_version_id: string;
+	path_revision: number;
+	counts: Record<PathLessonState, number>;
+	lessons: Array<{
+		path_lesson_id: string;
+		state: PathLessonState;
+		generation_id: string | null;
+		warnings: string[];
+	}>;
 }
 
 export interface PreparedLesson {

@@ -17,26 +17,36 @@ from core.entities.user import User
 from planning.agents import run_adjacent_merge_critics, run_path_planner
 from planning.bridge import PathPreparationBlocked, prepare_path_lesson
 from planning.models import (
-    MergePathLessonsRequest,
-    PathLessonPatch,
+    GuardedMergePathLessonsRequest,
+    GuardedPrepareLessonRequest,
+    GuardedPathLessonPatch,
+    GuardedReorderPathLessonsRequest,
+    GuardedSplitPathLessonRequest,
+    PathLessonMutationRequest,
     PathPlannerRequest,
+    PathReplanRequest,
+    PathVersionMutationRequest,
     PrepareLessonRequest,
     PreparedLessonStatusResponse,
     RegenerateLessonRequest,
-    ReorderPathLessonsRequest,
-    SplitPathLessonRequest,
+    RestorePathVersionRequest,
     UnitCreate,
     UnitUpdate,
 )
 from planning.service import (
     ConceptResolutionError,
     PathNotFoundError,
+    StalePathMutationError,
     approve_path,
+    assert_lesson_mutation_fresh,
+    assert_path_mutation_fresh,
+    clone_path_version,
     create_unit,
     get_owned_unit,
     get_path_lesson,
     get_path_version,
     invalidate_path_approval,
+    list_path_versions,
     merge_lessons,
     patch_lesson,
     persist_path_plan,
@@ -67,7 +77,18 @@ def _unit_payload(unit: UnitModel) -> dict[str, object]:
     }
 
 
+async def _active_version(session: AsyncSession, unit: UnitModel):
+    if not unit.active_path_version_id:
+        raise PathNotFoundError("Active path version not found")
+    return await get_path_version(
+        session,
+        unit_id=unit.id,
+        version_id=unit.active_path_version_id,
+    )
+
+
 async def _path_payload(session: AsyncSession, version) -> dict[str, object]:
+    unit = await session.get(UnitModel, version.unit_id)
     lessons = list(
         await session.scalars(
             select(PathLessonModel)
@@ -89,13 +110,20 @@ async def _path_payload(session: AsyncSession, version) -> dict[str, object]:
         "id": version.id,
         "unit_id": version.unit_id,
         "version": version.version,
-        "status": version.status,
+        "revision": version.revision,
+        "status": (
+            version.status
+            if unit is not None and unit.active_path_version_id == version.id
+            else "superseded"
+        ),
         "generated_by": version.generated_by,
         "merge_critic_results": version.merge_critic_results,
         "prerequisite_risks": version.prerequisite_risks,
         "forward_verified": version.forward_verified,
         "reaches_destination": version.reaches_destination,
+        "completeness_note": (version.source_plan_json.get("completeness") or {}).get("note"),
         "approved_at": version.approved_at,
+        "created_at": version.created_at,
         "lessons": [
             {
                 "id": lesson.id,
@@ -127,7 +155,7 @@ async def _path_payload(session: AsyncSession, version) -> dict[str, object]:
 def _raise_http(exc: Exception) -> None:
     if isinstance(exc, PathNotFoundError):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    if isinstance(exc, (PathApprovalBlocked, PathPreparationBlocked)):
+    if isinstance(exc, (PathApprovalBlocked, PathPreparationBlocked, StalePathMutationError)):
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if isinstance(exc, (PathValidationError, ConceptResolutionError, ValueError)):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -195,21 +223,31 @@ def _planner_request_for_unit(unit: UnitModel, request: PathPlannerRequest) -> P
         or request.starting_knowledge != unit.starting_knowledge
     ):
         raise ValueError("Planner-owned unit fields must exactly match the persisted unit")
-    return request
+    return PathPlannerRequest.model_validate(
+        request.model_dump(exclude={"path_version_id", "path_revision"})
+    )
 
 
 async def _plan_or_replan(
     *,
     unit_id: str,
-    request: PathPlannerRequest,
+    request: PathPlannerRequest | PathReplanRequest,
     current_user: User,
     session: AsyncSession,
     replan: bool,
 ) -> dict[str, object]:
     try:
         unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        if replan:
+            assert isinstance(request, PathReplanRequest)
+            active = await _active_version(session, unit)
+            assert_path_mutation_fresh(
+                active,
+                path_version_id=request.path_version_id,
+                path_revision=request.path_revision,
+            )
         planner_request = _planner_request_for_unit(unit, request)
-        prior = await get_path_version(session, unit_id=unit.id) if replan else None
+        prior = await _active_version(session, unit) if replan else None
         plan = await run_path_planner(planner_request, trace_id=f"unit:{unit.id}")
         merge_results = await run_adjacent_merge_critics(
             plan,
@@ -249,7 +287,7 @@ async def post_path_plan(
 @router.post("/{unit_id}/path:replan", status_code=status.HTTP_201_CREATED)
 async def post_path_replan(
     unit_id: str,
-    request: PathPlannerRequest,
+    request: PathReplanRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
@@ -270,7 +308,7 @@ async def _owned_version_and_lesson(
     owner_id: str,
 ):
     unit = await get_owned_unit(session, unit_id=unit_id, owner_id=owner_id)
-    version = await get_path_version(session, unit_id=unit.id)
+    version = await _active_version(session, unit)
     lesson = await get_path_lesson(session, version_id=version.id, lesson_id=lesson_id)
     return unit, version, lesson
 
@@ -278,12 +316,18 @@ async def _owned_version_and_lesson(
 @router.post("/{unit_id}/path:approve")
 async def post_path_approve(
     unit_id: str,
+    request: PathVersionMutationRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
     try:
         unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
-        version = await get_path_version(session, unit_id=unit.id)
+        version = await _active_version(session, unit)
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
+        )
         await approve_path(session, version)
         await session.commit()
         return await _path_payload(session, version)
@@ -300,8 +344,196 @@ async def get_active_path(
 ) -> dict[str, object]:
     try:
         unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
-        version = await get_path_version(session, unit_id=unit.id)
+        version = await _active_version(session, unit)
         return await _path_payload(session, version)
+    except Exception as exc:
+        _raise_http(exc)
+
+
+@router.get("/{unit_id}/path/versions")
+async def get_path_history(
+    unit_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[dict[str, object]]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        versions = await list_path_versions(session, unit_id=unit.id)
+        return [
+            {
+                "id": version.id,
+                "version": version.version,
+                "revision": version.revision,
+                "status": (
+                    version.status if unit.active_path_version_id == version.id else "superseded"
+                ),
+                "generated_by": version.generated_by,
+                "forward_verified": version.forward_verified,
+                "reaches_destination": version.reaches_destination,
+                "risk_count": len(version.prerequisite_risks or []),
+                "approved_at": version.approved_at,
+                "created_at": version.created_at,
+            }
+            for version in versions
+        ]
+    except Exception as exc:
+        _raise_http(exc)
+
+
+@router.get("/{unit_id}/path/versions/{version_id}")
+async def get_historical_path(
+    unit_id: str,
+    version_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        version = await get_path_version(session, unit_id=unit.id, version_id=version_id)
+        return await _path_payload(session, version)
+    except Exception as exc:
+        _raise_http(exc)
+
+
+@router.post("/{unit_id}/path/versions/{version_id}:restore")
+async def post_path_version_restore(
+    unit_id: str,
+    version_id: str,
+    request: RestorePathVersionRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        active = await _active_version(session, unit)
+        assert_path_mutation_fresh(
+            active,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
+        )
+        if version_id == active.id:
+            raise ValueError("The active path version is already selected")
+        source = await get_path_version(session, unit_id=unit.id, version_id=version_id)
+        restored, _mapping = await clone_path_version(
+            session,
+            unit=unit,
+            source=source,
+            supersede_active=active,
+            generated_by=f"path_restore:{request.reason.strip()}",
+        )
+        await session.commit()
+        return await _path_payload(session, restored)
+    except Exception as exc:
+        await session.rollback()
+        _raise_http(exc)
+
+
+@router.get("/{unit_id}/path/status")
+async def get_path_status(
+    unit_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        version = await _active_version(session, unit)
+        lessons = list(
+            await session.scalars(
+                select(PathLessonModel)
+                .where(PathLessonModel.path_version_id == version.id)
+                .order_by(PathLessonModel.position)
+            )
+        )
+        pack_ids = [lesson.pack_id for lesson in lessons if lesson.pack_id]
+        generations = {
+            row.id: row
+            for row in (
+                list(
+                    await session.scalars(
+                        select(GenerationModel).where(GenerationModel.id.in_(pack_ids))
+                    )
+                )
+                if pack_ids
+                else []
+            )
+        }
+        provenance = {
+            row.pack_id: row
+            for row in (
+                list(
+                    await session.scalars(
+                        select(LessonProvenanceModel).where(
+                            LessonProvenanceModel.pack_id.in_(pack_ids)
+                        )
+                    )
+                )
+                if pack_ids
+                else []
+            )
+        }
+        statuses = {
+            name: 0
+            for name in (
+                "unprepared",
+                "awaiting_review",
+                "generating",
+                "ready",
+                "warning",
+                "failed",
+                "skipped",
+                "stale",
+            )
+        }
+        lesson_states: list[dict[str, object]] = []
+        for lesson in lessons:
+            warnings: list[str] = []
+            if lesson.skipped:
+                state = "skipped"
+            elif not lesson.pack_id:
+                state = "warning" if lesson.merge_warning else "unprepared"
+                if lesson.merge_warning:
+                    warnings.append("Adjacent merge review requires attention")
+            else:
+                generation = generations.get(lesson.pack_id)
+                record = provenance.get(lesson.pack_id)
+                if generation is None or record is None:
+                    state = "warning"
+                    warnings.append("Preparation linkage is incomplete")
+                elif (
+                    record.path_lesson_id != lesson.id
+                    or record.objective_hash != lesson.objective_hash
+                    or record.path_lesson_revision not in {None, lesson.revision}
+                    or record.invalidated_at is not None
+                ):
+                    state = "stale"
+                else:
+                    raw = str(generation.status or "unknown").casefold()
+                    if raw in {"awaiting_review", "review"}:
+                        state = "awaiting_review"
+                    elif raw in {"queued", "planning", "running", "generating", "writing"}:
+                        state = "generating"
+                    elif raw in {"completed", "complete", "ready", "landed", "succeeded"}:
+                        state = "ready"
+                    elif raw in {"failed", "error", "cancelled"}:
+                        state = "failed"
+                    else:
+                        state = "warning"
+                        warnings.append(f"Unrecognized generation state: {raw}")
+            statuses[state] += 1
+            lesson_states.append(
+                {
+                    "path_lesson_id": lesson.id,
+                    "state": state,
+                    "generation_id": lesson.pack_id,
+                    "warnings": warnings,
+                }
+            )
+        return {
+            "path_version_id": version.id,
+            "path_revision": version.revision,
+            "counts": statuses,
+            "lessons": lesson_states,
+        }
     except Exception as exc:
         _raise_http(exc)
 
@@ -310,7 +542,7 @@ async def get_active_path(
 async def patch_path_lesson(
     unit_id: str,
     lesson_id: str,
-    request: PathLessonPatch,
+    request: GuardedPathLessonPatch,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
@@ -318,10 +550,22 @@ async def patch_path_lesson(
         _unit, version, lesson = await _owned_version_and_lesson(
             session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
         )
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
+        )
+        assert_lesson_mutation_fresh(lesson, lesson_revision=request.lesson_revision)
         await patch_lesson(session, lesson=lesson, request=request)
         await invalidate_path_approval(session, version)
         await session.commit()
-        return {"id": lesson.id, "objective": lesson.objective, "revision": lesson.revision}
+        return {
+            "id": lesson.id,
+            "objective": lesson.objective,
+            "revision": lesson.revision,
+            "path_version_id": version.id,
+            "path_revision": version.revision,
+        }
     except Exception as exc:
         await session.rollback()
         _raise_http(exc)
@@ -331,17 +575,32 @@ async def patch_path_lesson(
 async def post_path_lesson_skip(
     unit_id: str,
     lesson_id: str,
+    request: PathLessonMutationRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
     try:
-        _unit, version, lesson = await _owned_version_and_lesson(
+        unit, version, lesson = await _owned_version_and_lesson(
             session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
         )
-        await skip_lesson(session, lesson)
-        await invalidate_path_approval(session, version)
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
+        )
+        assert_lesson_mutation_fresh(lesson, lesson_revision=request.lesson_revision)
+        cloned, mapping = await clone_path_version(
+            session,
+            unit=unit,
+            source=version,
+            supersede_active=version,
+            generated_by="teacher_skip",
+        )
+        copied = mapping[lesson.id]
+        await skip_lesson(session, copied)
+        await invalidate_path_approval(session, cloned)
         await session.commit()
-        return {"id": lesson.id, "skipped": lesson.skipped, "revision": lesson.revision}
+        return await _path_payload(session, cloned)
     except Exception as exc:
         await session.rollback()
         _raise_http(exc)
@@ -351,7 +610,7 @@ async def post_path_lesson_skip(
 async def post_path_lesson_split(
     unit_id: str,
     lesson_id: str,
-    request: SplitPathLessonRequest,
+    request: GuardedSplitPathLessonRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
@@ -359,12 +618,30 @@ async def post_path_lesson_split(
         unit, version, lesson = await _owned_version_and_lesson(
             session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
         )
-        parts = await split_lesson(
-            session, unit=unit, version=version, lesson=lesson, request=request
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
         )
-        await invalidate_path_approval(session, version)
+        assert_lesson_mutation_fresh(lesson, lesson_revision=request.lesson_revision)
+        cloned, mapping = await clone_path_version(
+            session,
+            unit=unit,
+            source=version,
+            supersede_active=version,
+            generated_by="teacher_split",
+        )
+        copied = mapping[lesson.id]
+        parts = await split_lesson(
+            session, unit=unit, version=cloned, lesson=copied, request=request
+        )
+        await invalidate_path_approval(session, cloned)
         await session.commit()
-        return {"source_lesson_id": lesson.id, "part_ids": [part.id for part in parts]}
+        return {
+            "path": await _path_payload(session, cloned),
+            "source_lesson_id": copied.id,
+            "part_ids": [part.id for part in parts],
+        }
     except Exception as exc:
         await session.rollback()
         _raise_http(exc)
@@ -373,19 +650,47 @@ async def post_path_lesson_split(
 @router.post("/{unit_id}/path/lessons:merge")
 async def post_path_lessons_merge(
     unit_id: str,
-    request: MergePathLessonsRequest,
+    request: GuardedMergePathLessonsRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
     try:
         unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
-        version = await get_path_version(session, unit_id=unit.id)
-        merged = await merge_lessons(
-            session, unit=unit, version=version, request=request
+        version = await _active_version(session, unit)
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
         )
-        await invalidate_path_approval(session, version)
+        source_lessons = [
+            await get_path_lesson(session, version_id=version.id, lesson_id=lesson_id)
+            for lesson_id in request.lesson_ids
+        ]
+        for lesson in source_lessons:
+            expected = request.lesson_revisions.get(lesson.id)
+            if expected is None:
+                raise ValueError("Every merged lesson requires an expected revision")
+            assert_lesson_mutation_fresh(lesson, lesson_revision=expected)
+        cloned, mapping = await clone_path_version(
+            session,
+            unit=unit,
+            source=version,
+            supersede_active=version,
+            generated_by="teacher_merge",
+        )
+        cloned_request = request.model_copy(
+            update={"lesson_ids": [mapping[lesson.id].id for lesson in source_lessons]}
+        )
+        merged = await merge_lessons(
+            session, unit=unit, version=cloned, request=cloned_request
+        )
+        await invalidate_path_approval(session, cloned)
         await session.commit()
-        return {"merged_lesson_id": merged.id, "source": merged.source}
+        return {
+            "path": await _path_payload(session, cloned),
+            "merged_lesson_id": merged.id,
+            "source": merged.source,
+        }
     except Exception as exc:
         await session.rollback()
         _raise_http(exc)
@@ -394,17 +699,37 @@ async def post_path_lessons_merge(
 @router.post("/{unit_id}/path/lessons:reorder")
 async def post_path_lessons_reorder(
     unit_id: str,
-    request: ReorderPathLessonsRequest,
+    request: GuardedReorderPathLessonsRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
     try:
         unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
-        version = await get_path_version(session, unit_id=unit.id)
-        lessons = await reorder_lessons(session, version_id=version.id, request=request)
-        await invalidate_path_approval(session, version)
+        version = await _active_version(session, unit)
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
+        )
+        cloned, mapping = await clone_path_version(
+            session,
+            unit=unit,
+            source=version,
+            supersede_active=version,
+            generated_by="teacher_reorder",
+        )
+        cloned_request = request.model_copy(
+            update={"lesson_ids": [mapping[lesson_id].id for lesson_id in request.lesson_ids]}
+        )
+        lessons = await reorder_lessons(
+            session, version_id=cloned.id, request=cloned_request
+        )
+        await invalidate_path_approval(session, cloned)
         await session.commit()
-        return {"lesson_ids": [lesson.id for lesson in lessons]}
+        return {
+            "path": await _path_payload(session, cloned),
+            "lesson_ids": [lesson.id for lesson in lessons],
+        }
     except Exception as exc:
         await session.rollback()
         _raise_http(exc)
@@ -414,7 +739,7 @@ async def post_path_lessons_reorder(
 async def post_path_lesson_prepare(
     unit_id: str,
     lesson_id: str,
-    request: PrepareLessonRequest,
+    request: GuardedPrepareLessonRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
@@ -422,8 +747,21 @@ async def post_path_lesson_prepare(
         unit, version, lesson = await _owned_version_and_lesson(
             session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
         )
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
+        )
+        assert_lesson_mutation_fresh(lesson, lesson_revision=request.lesson_revision)
         response, _plan = await prepare_path_lesson(
-            session, unit=unit, version=version, lesson=lesson, request=request
+            session,
+            unit=unit,
+            version=version,
+            lesson=lesson,
+            request=PrepareLessonRequest(
+                group_ids=request.group_ids,
+                lesson_mode=request.lesson_mode,
+            ),
         )
         await session.commit()
         return response.model_dump(mode="json")
@@ -444,6 +782,12 @@ async def post_path_lesson_regenerate(
         unit, version, lesson = await _owned_version_and_lesson(
             session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
         )
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
+        )
+        assert_lesson_mutation_fresh(lesson, lesson_revision=request.lesson_revision)
         response, _plan = await prepare_path_lesson(
             session,
             unit=unit,
@@ -491,7 +835,8 @@ async def get_path_lesson_status(
         if generation is None or provenance is None:
             raise PathPreparationBlocked("Prepared lesson linkage is incomplete")
         stale = (
-            provenance.objective_hash != lesson.objective_hash
+            provenance.path_lesson_id != lesson.id
+            or provenance.objective_hash != lesson.objective_hash
             or provenance.path_lesson_revision not in {None, lesson.revision}
             or provenance.invalidated_at is not None
         )

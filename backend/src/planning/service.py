@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import (
@@ -32,6 +32,10 @@ class PathNotFoundError(LookupError):
 
 
 class ConceptResolutionError(ValueError):
+    pass
+
+
+class StalePathMutationError(RuntimeError):
     pass
 
 
@@ -120,6 +124,8 @@ async def persist_path_plan(
             select(PathLessonModel).where(PathLessonModel.path_version_id == prior_version.id)
         )
         prior_by_slug = {lesson.concept_slug: lesson for lesson in rows}
+        prior_version.status = "superseded"
+        prior_version.revision += 1
 
     version = PathVersionModel(
         unit_id=unit.id,
@@ -186,13 +192,126 @@ async def persist_path_plan(
     return version
 
 
+def assert_path_mutation_fresh(
+    version: PathVersionModel,
+    *,
+    path_version_id: str,
+    path_revision: int,
+) -> None:
+    if version.id != path_version_id or version.revision != path_revision:
+        raise StalePathMutationError(
+            "This path changed in another session. Refresh before applying your edit."
+        )
+
+
+def assert_lesson_mutation_fresh(
+    lesson: PathLessonModel,
+    *,
+    lesson_revision: int,
+) -> None:
+    if lesson.revision != lesson_revision:
+        raise StalePathMutationError(
+            "This lesson changed in another session. Refresh before applying your edit."
+        )
+
+
+async def clone_path_version(
+    session: AsyncSession,
+    *,
+    unit: UnitModel,
+    source: PathVersionModel,
+    supersede_active: PathVersionModel,
+    generated_by: str,
+) -> tuple[PathVersionModel, dict[str, PathLessonModel]]:
+    """Create a recoverable draft copy before a structural mutation or restore."""
+    source_lessons = list(
+        await session.scalars(
+            select(PathLessonModel)
+            .where(PathLessonModel.path_version_id == source.id)
+            .order_by(PathLessonModel.position)
+        )
+    )
+    clone = PathVersionModel(
+        unit_id=unit.id,
+        version=await _next_version(session, unit.id),
+        revision=1,
+        status="draft",
+        generated_by=generated_by,
+        source_plan_json=source.source_plan_json,
+        merge_critic_results=source.merge_critic_results,
+        prerequisite_risks=source.prerequisite_risks,
+        forward_verified=source.forward_verified,
+        reaches_destination=source.reaches_destination,
+    )
+    session.add(clone)
+    await session.flush()
+
+    lesson_by_source_id: dict[str, PathLessonModel] = {}
+    for lesson in source_lessons:
+        copied = PathLessonModel(
+            path_version_id=clone.id,
+            concept_id=lesson.concept_id,
+            concept_slug=lesson.concept_slug,
+            title=lesson.title,
+            objective=lesson.objective,
+            objective_hash=lesson.objective_hash,
+            external_prerequisites=lesson.external_prerequisites,
+            opens_from=lesson.opens_from,
+            must_establish=lesson.must_establish,
+            exclusions=lesson.exclusions,
+            primary_knowledge_type=lesson.primary_knowledge_type,
+            secondary_demand=lesson.secondary_demand,
+            knowledge_type_source=lesson.knowledge_type_source,
+            merge_warning=lesson.merge_warning,
+            position=lesson.position,
+            source=generated_by,
+            teacher_edited=lesson.teacher_edited,
+            skipped=lesson.skipped,
+            revision=lesson.revision,
+            pack_id=None,
+        )
+        session.add(copied)
+        lesson_by_source_id[lesson.id] = copied
+    await session.flush()
+
+    if source_lessons:
+        source_ids = [lesson.id for lesson in source_lessons]
+        links = list(
+            await session.scalars(
+                select(PathLessonPrerequisiteModel).where(
+                    PathLessonPrerequisiteModel.path_lesson_id.in_(source_ids)
+                )
+            )
+        )
+        for link in links:
+            prerequisite = lesson_by_source_id.get(link.prerequisite_lesson_id)
+            dependent = lesson_by_source_id.get(link.path_lesson_id)
+            if prerequisite is not None and dependent is not None:
+                session.add(
+                    PathLessonPrerequisiteModel(
+                        path_lesson_id=dependent.id,
+                        prerequisite_lesson_id=prerequisite.id,
+                    )
+                )
+
+    supersede_active.status = "superseded"
+    supersede_active.revision += 1
+    unit.active_path_version_id = clone.id
+    unit.status = "draft"
+    await session.flush()
+    return clone, lesson_by_source_id
+
+
 async def patch_lesson(
     session: AsyncSession,
     *,
     lesson: PathLessonModel,
     request: PathLessonPatch,
 ) -> PathLessonModel:
-    changes = request.model_dump(exclude_unset=True)
+    changes = request.model_dump(
+        exclude_unset=True,
+        exclude={"path_version_id", "path_revision", "lesson_revision"},
+    )
     for field, value in changes.items():
         setattr(lesson, field, value)
     if "objective" in changes:
@@ -216,10 +335,10 @@ async def invalidate_path_approval(
     session: AsyncSession,
     version: PathVersionModel,
 ) -> None:
-    if version.status != "approved":
-        return
-    version.status = "draft"
-    version.approved_at = None
+    version.revision += 1
+    if version.status == "approved":
+        version.status = "draft"
+        version.approved_at = None
     unit = await session.get(UnitModel, version.unit_id)
     if unit is not None:
         unit.status = "draft"
@@ -312,35 +431,58 @@ async def split_lesson(
     lesson: PathLessonModel,
     request: SplitPathLessonRequest,
 ) -> list[PathLessonModel]:
-    inherited_prerequisites = list(
+    all_lessons = list(
+        await session.scalars(
+            select(PathLessonModel)
+            .where(PathLessonModel.path_version_id == version.id)
+            .order_by(PathLessonModel.position)
+        )
+    )
+    links = list(
         await session.scalars(
             select(PathLessonPrerequisiteModel).where(
-                PathLessonPrerequisiteModel.path_lesson_id == lesson.id
+                or_(
+                    PathLessonPrerequisiteModel.path_lesson_id == lesson.id,
+                    PathLessonPrerequisiteModel.prerequisite_lesson_id == lesson.id,
+                )
             )
         )
     )
-    lesson.skipped = True
-    lesson.teacher_edited = True
-    max_position = await session.scalar(
-        select(func.max(PathLessonModel.position)).where(PathLessonModel.path_version_id == version.id)
-    )
+    incoming_ids = {
+        link.prerequisite_lesson_id
+        for link in links
+        if link.path_lesson_id == lesson.id
+    }
+    outgoing_ids = {
+        link.path_lesson_id
+        for link in links
+        if link.prerequisite_lesson_id == lesson.id
+    }
+    for link in links:
+        await session.delete(link)
+    for offset, existing in enumerate(all_lessons, start=1):
+        existing.position = -offset
+    await session.flush()
+
+    source_position = lesson.position * -1 - 1
     parts: list[PathLessonModel] = []
-    for offset, part in enumerate(request.parts, start=1):
+    for offset, part in enumerate(request.parts):
         parts.append(
             await _lesson_from_part(
                 session,
                 version=version,
                 unit=unit,
                 part=part,
-                position=int(max_position or 0) + offset,
+                position=source_position + offset,
                 source="teacher_split",
             )
         )
-    for inherited in inherited_prerequisites:
+    parts[0].external_prerequisites = list(lesson.external_prerequisites or [])
+    for prerequisite_id in incoming_ids:
         session.add(
             PathLessonPrerequisiteModel(
                 path_lesson_id=parts[0].id,
-                prerequisite_lesson_id=inherited.prerequisite_lesson_id,
+                prerequisite_lesson_id=prerequisite_id,
             )
         )
     for prior, current in zip(parts, parts[1:], strict=False):
@@ -350,6 +492,18 @@ async def split_lesson(
                 prerequisite_lesson_id=prior.id,
             )
         )
+    for dependent_id in outgoing_ids:
+        session.add(
+            PathLessonPrerequisiteModel(
+                path_lesson_id=dependent_id,
+                prerequisite_lesson_id=parts[-1].id,
+            )
+        )
+    await session.delete(lesson)
+    remaining = [existing for existing in all_lessons if existing.id != lesson.id]
+    ordered = remaining[:source_position] + parts + remaining[source_position:]
+    for position, current in enumerate(ordered):
+        current.position = position
     await session.flush()
     return parts
 
@@ -371,40 +525,79 @@ async def merge_lessons(
     )
     if len(lessons) != len(request.lesson_ids):
         raise PathNotFoundError("One or more merge lessons were not found")
-    positions = sorted(lesson.position for lesson in lessons)
+    lessons.sort(key=lambda lesson: lesson.position)
+    positions = [lesson.position for lesson in lessons]
     if positions != list(range(positions[0], positions[0] + len(positions))):
         raise ValueError("Only adjacent lessons can be merged")
     source_ids = {lesson.id for lesson in lessons}
-    inherited_prerequisite_ids = {
-        link.prerequisite_lesson_id
-        for link in await session.scalars(
+    all_lessons = list(
+        await session.scalars(
+            select(PathLessonModel)
+            .where(PathLessonModel.path_version_id == version.id)
+            .order_by(PathLessonModel.position)
+        )
+    )
+    links = list(
+        await session.scalars(
             select(PathLessonPrerequisiteModel).where(
-                PathLessonPrerequisiteModel.path_lesson_id.in_(source_ids)
+                or_(
+                    PathLessonPrerequisiteModel.path_lesson_id.in_(source_ids),
+                    PathLessonPrerequisiteModel.prerequisite_lesson_id.in_(source_ids),
+                )
             )
         )
-        if link.prerequisite_lesson_id not in source_ids
-    }
-    for lesson in lessons:
-        lesson.skipped = True
-        lesson.teacher_edited = True
-    max_position = await session.scalar(
-        select(func.max(PathLessonModel.position)).where(PathLessonModel.path_version_id == version.id)
     )
+    incoming_ids = {
+        link.prerequisite_lesson_id
+        for link in links
+        if link.path_lesson_id in source_ids and link.prerequisite_lesson_id not in source_ids
+    }
+    outgoing_ids = {
+        link.path_lesson_id
+        for link in links
+        if link.path_lesson_id not in source_ids and link.prerequisite_lesson_id in source_ids
+    }
+    for link in links:
+        await session.delete(link)
+    for offset, existing in enumerate(all_lessons, start=1):
+        existing.position = -offset
+    await session.flush()
+
     merged = await _lesson_from_part(
         session,
         version=version,
         unit=unit,
         part=request.merged,
-        position=int(max_position or 0) + 1,
+        position=positions[0],
         source="teacher_merge",
     )
-    for prerequisite_id in inherited_prerequisite_ids:
+    merged.external_prerequisites = list(
+        dict.fromkeys(
+            prerequisite
+            for source in lessons
+            for prerequisite in (source.external_prerequisites or [])
+        )
+    )
+    for prerequisite_id in incoming_ids:
         session.add(
             PathLessonPrerequisiteModel(
                 path_lesson_id=merged.id,
                 prerequisite_lesson_id=prerequisite_id,
             )
         )
+    for dependent_id in outgoing_ids:
+        session.add(
+            PathLessonPrerequisiteModel(
+                path_lesson_id=dependent_id,
+                prerequisite_lesson_id=merged.id,
+            )
+        )
+    for source in lessons:
+        await session.delete(source)
+    remaining = [existing for existing in all_lessons if existing.id not in source_ids]
+    ordered = remaining[: positions[0]] + [merged] + remaining[positions[0] :]
+    for position, current in enumerate(ordered):
+        current.position = position
     await session.flush()
     return merged
 
@@ -471,6 +664,7 @@ async def approve_path(session: AsyncSession, version: PathVersionModel) -> Path
             raise PathApprovalBlocked("Path approval blocked: must-not-introduce violation")
     version.status = "approved"
     version.approved_at = _utcnow()
+    version.revision += 1
     unit.status = "approved"
     unit.active_path_version_id = version.id
     await session.flush()
@@ -492,6 +686,20 @@ async def get_path_version(
     if version is None:
         raise PathNotFoundError("Path version not found")
     return version
+
+
+async def list_path_versions(
+    session: AsyncSession,
+    *,
+    unit_id: str,
+) -> list[PathVersionModel]:
+    return list(
+        await session.scalars(
+            select(PathVersionModel)
+            .where(PathVersionModel.unit_id == unit_id)
+            .order_by(PathVersionModel.version.desc())
+        )
+    )
 
 
 async def get_path_lesson(

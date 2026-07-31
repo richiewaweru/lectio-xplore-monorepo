@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
 	getUnit: vi.fn(), getUnitPath: vi.fn(), previewSkeleton: vi.fn(),
+	getPathHistory: vi.fn(), getPathStatus: vi.fn(), getHistoricalPath: vi.fn(), restorePathVersion: vi.fn(),
 	getPreparedLessonStatus: vi.fn(), approveUnitPath: vi.fn(), planUnitPath: vi.fn(),
 	patchPathLesson: vi.fn(), skipPathLesson: vi.fn(), reorderPathLessons: vi.fn(),
 	splitPathLesson: vi.fn(), mergePathLessons: vi.fn(), preparePathLesson: vi.fn(),
@@ -36,9 +37,18 @@ describe('/units/[id]', () => {
 		Object.values(mocks).forEach((mock) => mock.mockReset());
 		mocks.getUnit.mockResolvedValue(unit);
 		mocks.getUnitPath.mockResolvedValue({
-			id: 'path-1', unit_id: 'unit-1', version: 1, status: 'approved', generated_by: 'path_planner',
+			id: 'path-1', unit_id: 'unit-1', version: 1, revision: 2, status: 'approved', generated_by: 'path_planner',
 			merge_critic_results: [], prerequisite_risks: [], forward_verified: true,
-			reaches_destination: true, approved_at: '2026-07-31T00:00:00Z', lessons: [lesson]
+			reaches_destination: true, completeness_note: null, approved_at: '2026-07-31T00:00:00Z',
+			created_at: '2026-07-31T00:00:00Z', lessons: [lesson]
+		});
+		mocks.getPathHistory.mockResolvedValue([
+			{ id: 'path-1', version: 1, revision: 2, status: 'approved', generated_by: 'path_planner', forward_verified: true, reaches_destination: true, risk_count: 0, approved_at: '2026-07-31T00:00:00Z', created_at: '2026-07-31T00:00:00Z' }
+		]);
+		mocks.getPathStatus.mockResolvedValue({
+			path_version_id: 'path-1', path_revision: 2,
+			counts: { unprepared: 0, awaiting_review: 1, generating: 0, ready: 0, warning: 0, failed: 0, skipped: 0, stale: 0 },
+			lessons: [{ path_lesson_id: lesson.id, state: 'awaiting_review', generation_id: 'generation-1', warnings: [] }]
 		});
 		mocks.previewSkeleton.mockResolvedValue({
 			objective: lesson.objective, knowledge_type: 'factual', knowledge_type_source: 'provided',
@@ -59,6 +69,8 @@ describe('/units/[id]', () => {
 		expect(screen.getByText('Path v1 · approved')).toBeTruthy();
 		expect(await screen.findByText('factual-core')).toBeTruthy();
 		expect(screen.getByText('awaiting_review')).toBeTruthy();
+		expect(screen.getByRole('heading', { name: 'Recoverable versions' })).toBeTruthy();
+		expect(screen.getByText('Route verified')).toBeTruthy();
 		expect(screen.getByRole('link', { name: 'Open review' }).getAttribute('href')).toBe(
 			'/studio?generation_id=generation-1'
 		);
@@ -74,5 +86,23 @@ describe('/units/[id]', () => {
 		expect(await screen.findByRole('button', { name: 'Regenerate preparation' })).toBeTruthy();
 		expect(screen.queryByRole('link', { name: 'Open review' })).toBeNull();
 		expect(screen.getByLabelText('Regeneration reason')).toBeTruthy();
+	});
+
+	it('confirms a recoverable history restore before creating a new draft', async () => {
+		mocks.getPathHistory.mockResolvedValue([
+			{ id: 'path-1', version: 2, revision: 2, status: 'approved', generated_by: 'path_planner', forward_verified: true, reaches_destination: true, risk_count: 0, approved_at: '2026-07-31T00:00:00Z', created_at: '2026-07-31T00:00:00Z' },
+			{ id: 'path-old', version: 1, revision: 3, status: 'superseded', generated_by: 'path_planner', forward_verified: true, reaches_destination: true, risk_count: 0, approved_at: null, created_at: '2026-07-30T00:00:00Z' }
+		]);
+		mocks.restorePathVersion.mockResolvedValue({});
+		render(UnitPage);
+		const restore = await screen.findByRole('button', { name: 'Restore' });
+		await fireEvent.click(restore);
+		expect(screen.getByRole('dialog', { name: 'Restore path v1' })).toBeTruthy();
+		expect(screen.getByText('A new editable draft will be created. Nothing in history is deleted.')).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+		expect(mocks.restorePathVersion).toHaveBeenCalledWith(
+			'unit-1', 'path-old', expect.objectContaining({ id: 'path-1', revision: 2 }),
+			'Restore this version as a new editable draft.'
+		);
 	});
 });

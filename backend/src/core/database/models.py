@@ -300,6 +300,7 @@ class PathVersionModel(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     unit_id = Column(String, ForeignKey("units.id"), nullable=False, index=True)
     version = Column(Integer, nullable=False)
+    revision = Column(Integer, nullable=False, default=1, server_default="1")
     status = Column(String, nullable=False, default="draft", server_default="draft")
     generated_by = Column(String, nullable=False, default="path_planner")
     source_plan_json = Column(JSON_DOCUMENT_TYPE, nullable=False)

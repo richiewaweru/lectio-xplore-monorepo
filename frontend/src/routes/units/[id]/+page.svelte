@@ -4,6 +4,9 @@
 	import {
 		approveUnitPath,
 		getPreparedLessonStatus,
+		getHistoricalPath,
+		getPathHistory,
+		getPathStatus,
 		getUnit,
 		getUnitPath,
 		mergePathLessons,
@@ -13,6 +16,7 @@
 		previewSkeleton,
 		regeneratePathLesson,
 		reorderPathLessons,
+		restorePathVersion,
 		skipPathLesson,
 		splitPathLesson
 	} from '$lib/api/units';
@@ -20,6 +24,8 @@
 		KnowledgeType,
 		LessonMode,
 		PathLesson,
+		PathStatusAggregate,
+		PathVersionSummary,
 		PreparedLessonStatus,
 		SkeletonPreview,
 		Unit,
@@ -36,6 +42,11 @@
 	let lessonMode = $state<LessonMode>('first_exposure');
 	let shape = $state<SkeletonPreview | null>(null);
 	let preparation = $state<PreparedLessonStatus | null>(null);
+	let history = $state<PathVersionSummary[]>([]);
+	let aggregate = $state<PathStatusAggregate | null>(null);
+	let viewedVersion = $state<UnitPath | null>(null);
+	let restoreReason = $state('Restore this version as a new editable draft.');
+	let pendingAction = $state<{ label: string; description: string; run: () => Promise<void> } | null>(null);
 	let regenerationReason = $state('The path lesson changed after preparation.');
 	let editTitle = $state('');
 	let editObjective = $state('');
@@ -114,7 +125,13 @@
 		error = null;
 		try {
 			unit = await getUnit(unitId);
-			path = unit.active_path_version_id ? await getUnitPath(unitId) : null;
+			if (unit.active_path_version_id) {
+				[path, history, aggregate] = await Promise.all([
+					getUnitPath(unitId), getPathHistory(unitId), getPathStatus(unitId)
+				]);
+			} else {
+				path = null; history = []; aggregate = null;
+			}
 			if (path?.lessons.length) {
 				const target = options.preserveSelection
 					? path.lessons.find((lesson) => lesson.id === selectedId) ?? path.lessons[0]
@@ -144,7 +161,7 @@
 	async function planOrReplan(replan: boolean): Promise<void> {
 		if (!unit) return;
 		await act(replan ? 'replan' : 'plan', async () => {
-			path = await planUnitPath(unitId, plannerInput(unit as Unit), replan);
+			path = await planUnitPath(unitId, plannerInput(unit as Unit), replan, path ?? undefined);
 			unit = await getUnit(unitId);
 			if (path.lessons.length) await selectLesson(path.lessons[0]);
 		}, false);
@@ -153,26 +170,30 @@
 	async function saveLesson(event: SubmitEvent): Promise<void> {
 		event.preventDefault();
 		if (!selected) return;
-		await act('save', () => patchPathLesson(unitId, selected.id, {
+		await act('save', () => patchPathLesson(unitId, path as UnitPath, selected, {
 			title: editTitle.trim(), objective: editObjective.trim(),
 			must_establish: lines(editMustEstablish), exclusions: lines(editExclusions),
 			primary_knowledge_type: editType
 		}));
 	}
 
-	async function move(offset: number): Promise<void> {
+	function move(offset: number): void {
 		if (!path || selectedIndex < 0) return;
 		const target = selectedIndex + offset;
 		if (target < 0 || target >= path.lessons.length) return;
 		const ids = path.lessons.map((lesson) => lesson.id);
 		[ids[selectedIndex], ids[target]] = [ids[target], ids[selectedIndex]];
-		await act('reorder', () => reorderPathLessons(unitId, ids));
+		pendingAction = {
+			label: `Move ${selected?.title ?? 'lesson'}`,
+			description: 'This creates a new draft path version. The current version stays in history for recovery.',
+			run: () => act('reorder', () => reorderPathLessons(unitId, path as UnitPath, ids))
+		};
 	}
 
 	async function splitSelected(event: SubmitEvent): Promise<void> {
 		event.preventDefault();
 		if (!selected) return;
-		await act('split', () => splitPathLesson(unitId, selected.id, [
+		await act('split', () => splitPathLesson(unitId, path as UnitPath, selected, [
 			{ concept_candidate: { slug: slug(splitATitle), title: splitATitle.trim() }, objective: splitAObjective.trim(), must_establish: [splitAObjective.trim()], exclusions: selected.exclusions, primary_knowledge_type: selected.primary_knowledge_type, secondary_demand: selected.secondary_demand },
 			{ concept_candidate: { slug: slug(splitBTitle), title: splitBTitle.trim() }, objective: splitBObjective.trim(), must_establish: [splitBObjective.trim()], exclusions: selected.exclusions, primary_knowledge_type: selected.primary_knowledge_type, secondary_demand: selected.secondary_demand }
 		]));
@@ -182,7 +203,7 @@
 	async function mergeSelected(event: SubmitEvent): Promise<void> {
 		event.preventDefault();
 		if (!selected || !nextLesson) return;
-		await act('merge', () => mergePathLessons(unitId, [selected.id, nextLesson.id], {
+		await act('merge', () => mergePathLessons(unitId, path as UnitPath, [selected, nextLesson], [selected.id, nextLesson.id], {
 			concept_candidate: { slug: slug(mergeTitle), title: mergeTitle.trim() },
 			objective: mergeObjective.trim(),
 			must_establish: [...selected.must_establish, ...nextLesson.must_establish],
@@ -196,7 +217,7 @@
 	async function prepare(): Promise<void> {
 		if (!selected) return;
 		await act('prepare', async () => {
-			const prepared = await preparePathLesson(unitId, selected.id, lessonMode);
+			const prepared = await preparePathLesson(unitId, path as UnitPath, selected, lessonMode);
 			window.location.href = `/studio?generation_id=${encodeURIComponent(prepared.generation_id)}`;
 		}, false);
 	}
@@ -206,12 +227,34 @@
 		await act('regenerate', async () => {
 			const prepared = await regeneratePathLesson(
 				unitId,
-				selected.id,
+				path as UnitPath,
+				selected,
 				lessonMode,
 				regenerationReason.trim()
 			);
 			window.location.href = `/studio?generation_id=${encodeURIComponent(prepared.generation_id)}`;
 		}, false);
+	}
+
+	async function viewVersion(version: PathVersionSummary): Promise<void> {
+		error = null;
+		try { viewedVersion = await getHistoricalPath(unitId, version.id); }
+		catch (err) { error = err instanceof Error ? err.message : 'Could not load path history.'; }
+	}
+
+	function confirmRestore(version: PathVersionSummary): void {
+		if (!path || version.id === path.id) return;
+		pendingAction = {
+			label: `Restore path v${version.version}`,
+			description: 'A new editable draft will be created. Nothing in history is deleted.',
+			run: () => act('restore', () => restorePathVersion(unitId, version.id, path as UnitPath, restoreReason))
+		};
+	}
+
+	async function runPendingAction(): Promise<void> {
+		const action = pendingAction;
+		pendingAction = null;
+		if (action) await action.run();
 	}
 
 	onMount(() => void load());
@@ -238,7 +281,27 @@
 		{:else}
 			<section class="path-summary">
 				<div><strong>{path.lessons.length}</strong><span>capabilities</span></div><div><strong>{path.forward_verified ? 'Yes' : 'No'}</strong><span>forward verified</span></div><div><strong>{path.reaches_destination ? 'Yes' : 'No'}</strong><span>destination reached</span></div><div><strong>{path.prerequisite_risks.length}</strong><span>prerequisite risks</span></div>
-				{#if path.status !== 'approved'}<button class="primary" type="button" disabled={busy !== null || !path.reaches_destination || path.prerequisite_risks.length > 0} onclick={() => act('approve', async () => { path = await approveUnitPath(unitId); unit = await getUnit(unitId); }, false)}>{busy === 'approve' ? 'Approving…' : 'Approve path'}</button>{/if}
+				{#if path.status !== 'approved'}<button class="primary" type="button" disabled={busy !== null || !path.reaches_destination || path.prerequisite_risks.length > 0} onclick={() => act('approve', async () => { path = await approveUnitPath(unitId, path as UnitPath); unit = await getUnit(unitId); await load({ preserveSelection: true }); }, false)}>{busy === 'approve' ? 'Approving…' : 'Approve path'}</button>{/if}
+			</section>
+
+			{#if aggregate}
+				<section class="status-board" aria-label="Lesson preparation status">
+					{#each Object.entries(aggregate.counts) as [state, count]}
+						<div class:attention={state === 'failed' || state === 'stale' || state === 'warning'}><strong>{count}</strong><span>{state.replace('_', ' ')}</span></div>
+					{/each}
+				</section>
+			{/if}
+
+			<section class="path-health">
+				<div><p class="eyebrow">Completeness</p><h3>{path.forward_verified && path.reaches_destination ? 'Route verified' : 'Needs attention'}</h3><p>{path.completeness_note ?? 'Every prerequisite must resolve before the destination can be approved.'}</p></div>
+				<div><p class="eyebrow">Prerequisite risks</p><h3>{path.prerequisite_risks.length}</h3>{#if path.prerequisite_risks.length}<ul>{#each path.prerequisite_risks as risk}<li>{String(risk.note ?? risk.missing ?? 'Unresolved prerequisite')}</li>{/each}</ul>{:else}<p>No unresolved prerequisite risks.</p>{/if}</div>
+				<div><p class="eyebrow">Merge critic</p><h3>{path.merge_critic_results.length} reviews</h3>{#if path.merge_critic_results.length}<ul>{#each path.merge_critic_results as review}<li>{String(review.reason ?? review.verdict ?? 'Adjacent lessons reviewed')}</li>{/each}</ul>{:else}<p>No adjacent merge concerns.</p>{/if}</div>
+			</section>
+
+			<section class="history-panel">
+				<div class="section-head"><div><p class="eyebrow">Path history</p><h2>Recoverable versions</h2></div><p>Structural edits create a new draft. Older routes remain available.</p></div>
+				<div class="history-list">{#each history as version}<article class:current={version.id === path.id}><div><strong>v{version.version}</strong><span>{version.status}</span><small>{version.generated_by}</small></div><div class="history-actions"><button type="button" class="text-button" onclick={() => viewVersion(version)}>Inspect</button>{#if version.id !== path.id}<button type="button" class="text-button" onclick={() => confirmRestore(version)}>Restore</button>{/if}</div></article>{/each}</div>
+				{#if viewedVersion}<div class="history-preview"><div><strong>Path v{viewedVersion.version}</strong><span>{viewedVersion.status} · {viewedVersion.lessons.length} capabilities</span></div><ol>{#each viewedVersion.lessons as lesson}<li>{lesson.title}</li>{/each}</ol><button type="button" class="text-button" onclick={() => (viewedVersion = null)}>Close preview</button></div>{/if}
 			</section>
 
 			<div class="workspace">
@@ -249,7 +312,7 @@
 
 				{#if selected}
 					<main class="inspector">
-						<div class="inspector-head"><div><p class="eyebrow">Capability {selected.position + 1}</p><h2>{selected.title}</h2></div><div class="compact-actions"><button type="button" aria-label="Move lesson up" disabled={selectedIndex <= 0 || busy !== null} onclick={() => move(-1)}>↑</button><button type="button" aria-label="Move lesson down" disabled={selectedIndex >= path.lessons.length - 1 || busy !== null} onclick={() => move(1)}>↓</button><button type="button" disabled={selected.skipped || busy !== null} onclick={() => act('skip', () => skipPathLesson(unitId, selected.id))}>Skip</button></div></div>
+						<div class="inspector-head"><div><p class="eyebrow">Capability {selected.position + 1}</p><h2>{selected.title}</h2></div><div class="compact-actions"><button type="button" aria-label="Move lesson up" disabled={selectedIndex <= 0 || busy !== null} onclick={() => move(-1)}>↑</button><button type="button" aria-label="Move lesson down" disabled={selectedIndex >= path.lessons.length - 1 || busy !== null} onclick={() => move(1)}>↓</button><button type="button" disabled={selected.skipped || busy !== null} onclick={() => (pendingAction = { label: `Skip ${selected.title}`, description: 'This creates a new draft path version and keeps the current route available for undo.', run: () => act('skip', () => skipPathLesson(unitId, path as UnitPath, selected)) })}>Skip</button></div></div>
 
 						<form class="editor" onsubmit={saveLesson}>
 							<label><span>Title</span><input bind:value={editTitle} required /></label>
@@ -258,6 +321,8 @@
 							<label><span>Knowledge type</span><select bind:value={editType}><option value="factual">Factual</option><option value="conceptual">Conceptual</option><option value="procedural">Procedural</option><option value="evaluative">Evaluative</option></select></label>
 							<button class="secondary" type="submit" disabled={busy !== null}>{busy === 'save' ? 'Saving…' : 'Save lesson changes'}</button>
 						</form>
+
+						<section class="dependencies"><div><p class="eyebrow">Prerequisites</p><h3>What this capability depends on</h3></div><div class="dependency-grid"><div><strong>Earlier path capabilities</strong>{#if selected.prerequisites.length}<ul>{#each selected.prerequisites as prerequisiteId}<li>{path.lessons.find((lesson) => lesson.id === prerequisiteId)?.title ?? prerequisiteId}</li>{/each}</ul>{:else}<p>None inside this path.</p>{/if}</div><div><strong>External starting knowledge</strong>{#if selected.external_prerequisites.length}<ul>{#each selected.external_prerequisites as prerequisite}<li>{prerequisite}</li>{/each}</ul>{:else}<p>None declared.</p>{/if}</div></div></section>
 
 						<div class="structure-actions"><button type="button" class="text-button" onclick={() => (showSplit = !showSplit)}>Split lesson</button><button type="button" class="text-button" disabled={!nextLesson} onclick={() => (showMerge = !showMerge)}>Merge with next</button></div>
 						{#if showSplit}<form class="operation-form" onsubmit={splitSelected}><h3>Split into two capabilities</h3><label><span>First title</span><input bind:value={splitATitle} required /></label><label><span>First objective</span><textarea bind:value={splitAObjective} required></textarea></label><label><span>Second title</span><input bind:value={splitBTitle} required /></label><label><span>Second objective</span><textarea bind:value={splitBObjective} required></textarea></label><button class="secondary" type="submit" disabled={busy !== null}>{busy === 'split' ? 'Splitting…' : 'Confirm split'}</button></form>{/if}
@@ -281,9 +346,19 @@
 	{/if}
 </div>
 
+{#if pendingAction}
+	<div class="confirm-backdrop" role="presentation">
+		<div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+			<p class="eyebrow">Confirm structural change</p><h2 id="confirm-title">{pendingAction.label}</h2><p>{pendingAction.description}</p>
+			{#if pendingAction.label.startsWith('Restore')}<label><span>Recovery reason</span><input bind:value={restoreReason} minlength="3" required /></label>{/if}
+			<div><button type="button" class="secondary" onclick={() => (pendingAction = null)}>Cancel</button><button type="button" class="primary" disabled={busy !== null || (pendingAction.label.startsWith('Restore') && restoreReason.trim().length < 3)} onclick={runPendingAction}>Confirm</button></div>
+		</div>
+	</div>
+{/if}
+
 <style>
 	.unit-page { min-height: calc(100vh - 58px); padding: 38px 28px 80px; }
-	.unit-head, .path-summary, .workspace, .empty, .error, .loading { max-width: 1180px; margin-inline: auto; }
+	.unit-head, .path-summary, .status-board, .path-health, .history-panel, .workspace, .empty, .error, .loading { max-width: 1180px; margin-inline: auto; }
 	.unit-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
 	.back { display: inline-block; margin-bottom: 18px; color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; }
 	.eyebrow { margin: 0 0 6px; color: var(--ink-3); font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .1em; text-transform: uppercase; }
@@ -303,6 +378,30 @@
 	.path-summary div { display: grid; gap: 2px; }
 	.path-summary strong { font: 500 20px Fraunces, Georgia, serif; }
 	.path-summary span { color: var(--ink-3); font-size: 11px; }
+	.status-board { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; margin-bottom: 14px; }
+	.status-board div { display: grid; gap: 2px; border: 1px solid var(--rule); border-radius: 7px; background: var(--surface); padding: 9px 10px; }
+	.status-board div.attention { border-color: #dfb294; background: #fff7ed; }
+	.status-board strong { font: 500 18px Fraunces, Georgia, serif; }
+	.status-board span { color: var(--ink-3); font-size: 9px; text-transform: uppercase; }
+	.path-health { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+	.path-health > div { border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); padding: 15px; }
+	.path-health h3 { margin: 0; font-size: 15px; }
+	.path-health p:last-child, .path-health li { color: var(--ink-2); font-size: 11px; line-height: 1.5; }
+	.path-health ul { margin: 8px 0 0; padding-left: 17px; }
+	.history-panel { border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); margin-bottom: 22px; padding: 18px; }
+	.history-panel .section-head > p { max-width: 430px; margin: 0; color: var(--ink-3); font-size: 11px; text-align: right; }
+	.history-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
+	.history-list article { display: flex; align-items: center; gap: 14px; border: 1px solid var(--rule); border-radius: 7px; padding: 8px 10px; }
+	.history-list article.current { border-color: var(--accent); background: var(--accent-soft); }
+	.history-list article > div:first-child { display: grid; grid-template-columns: auto auto; column-gap: 6px; align-items: baseline; }
+	.history-list article span, .history-list article small { color: var(--ink-3); font-size: 9px; text-transform: uppercase; }
+	.history-list article small { grid-column: 1 / -1; margin-top: 2px; text-transform: none; }
+	.history-actions { display: flex; gap: 4px; }
+	.history-preview { display: grid; gap: 10px; border-top: 1px solid var(--rule); margin-top: 15px; padding-top: 15px; }
+	.history-preview > div { display: flex; gap: 8px; align-items: baseline; }
+	.history-preview span { color: var(--ink-3); font-size: 11px; }
+	.history-preview ol { display: flex; flex-wrap: wrap; gap: 5px 20px; margin: 0; padding-left: 20px; color: var(--ink-2); font-size: 11px; }
+	.history-preview button { justify-self: start; }
 	.workspace { display: grid; grid-template-columns: 300px minmax(0, 1fr); align-items: start; gap: 22px; }
 	.path-list { position: sticky; top: 80px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); padding: 15px; }
 	.path-list ol { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
@@ -327,6 +426,12 @@
 	.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 	.editor > button { justify-self: start; }
 	.structure-actions { display: flex; gap: 8px; margin-top: 14px; }
+	.dependencies { border-top: 1px solid var(--rule); margin-top: 24px; padding-top: 20px; }
+	.dependency-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+	.dependency-grid > div { border: 1px solid var(--rule); border-radius: 7px; background: var(--paper); padding: 12px; }
+	.dependency-grid strong { font-size: 11px; }
+	.dependency-grid p, .dependency-grid li { color: var(--ink-2); font-size: 11px; }
+	.dependency-grid ul { margin: 8px 0 0; padding-left: 17px; }
 	.operation-form { border: 1px solid var(--rule); border-radius: 8px; background: var(--paper); padding: 16px; }
 	.operation-form > button { justify-self: start; }
 	.shape, .prepare { border-top: 1px solid var(--rule); margin-top: 26px; padding-top: 22px; }
@@ -346,6 +451,12 @@
 	.empty h2 { margin: 0; font: 500 28px Fraunces, Georgia, serif; }
 	.empty > p:last-of-type { max-width: 590px; margin: 12px auto 20px; color: var(--ink-2); font-size: 14px; line-height: 1.6; }
 	.error { border: 1px solid #e2b9ae; border-radius: 7px; background: #f8e9e5; color: #873f30; margin-bottom: 18px; padding: 10px 12px; font-size: 13px; }
+	.confirm-backdrop { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; background: rgb(18 23 21 / .48); padding: 18px; }
+	.confirm-dialog { width: min(100%, 470px); border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); box-shadow: 0 20px 60px rgb(0 0 0 / .18); padding: 22px; }
+	.confirm-dialog h2 { margin: 0; font: 500 25px Fraunces, Georgia, serif; }
+	.confirm-dialog > p:not(.eyebrow) { color: var(--ink-2); font-size: 13px; line-height: 1.5; }
+	.confirm-dialog > div { display: flex; justify-content: end; gap: 8px; margin-top: 18px; }
+	@media (max-width: 980px) { .status-board { grid-template-columns: repeat(4, 1fr); } .path-health { grid-template-columns: 1fr; } }
 	@media (max-width: 840px) { .workspace { grid-template-columns: 1fr; } .path-list { position: static; } .path-list ol { grid-template-columns: repeat(2, 1fr); } .path-summary { grid-template-columns: repeat(2, 1fr); } .variants { grid-template-columns: 1fr; } }
-	@media (max-width: 640px) { .unit-page { padding: 28px 16px 60px; } .unit-head, .head-actions, .inspector-head, .section-head, .prepare { align-items: stretch; flex-direction: column; } .path-list ol, .two { grid-template-columns: 1fr; } .inspector { padding: 18px; } }
+	@media (max-width: 640px) { .unit-page { padding: 28px 16px 60px; } .unit-head, .head-actions, .inspector-head, .section-head, .prepare { align-items: stretch; flex-direction: column; } .history-panel .section-head > p { text-align: left; } .path-list ol, .two, .dependency-grid { grid-template-columns: 1fr; } .status-board { grid-template-columns: repeat(2, 1fr); } .inspector { padding: 18px; } }
 </style>

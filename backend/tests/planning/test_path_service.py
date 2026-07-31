@@ -9,6 +9,7 @@ from core.database.models import (
     ConceptModel,
     PathLessonModel,
     PathLessonPrerequisiteModel,
+    PathVersionModel,
     UserModel,
 )
 from planning.models import (
@@ -23,6 +24,7 @@ from planning.models import (
 )
 from planning.service import (
     approve_path,
+    clone_path_version,
     create_unit,
     merge_lessons,
     patch_lesson,
@@ -177,8 +179,8 @@ async def test_skip_reorder_split_and_merge_are_explicit_state(db_session, owner
             ]
         ),
     )
-    assert lessons[1].skipped is True
     assert [part.source for part in parts] == ["teacher_split", "teacher_split"]
+    assert await db_session.get(PathLessonModel, lessons[1].id) is None
 
     merged = await merge_lessons(
         db_session,
@@ -194,9 +196,12 @@ async def test_skip_reorder_split_and_merge_are_explicit_state(db_session, owner
             ),
         ),
     )
-    assert all(part.skipped for part in parts)
+    assert [await db_session.get(PathLessonModel, part.id) for part in parts] == [None, None]
     assert merged.source == "teacher_merge"
-    assert await db_session.scalar(select(func.count()).select_from(PathLessonModel)) == 8
+    assert await db_session.scalar(select(func.count()).select_from(PathLessonModel)) == 5
+    skipped.skipped = False
+    await approve_path(db_session, version)
+    assert version.status == "approved"
 
 
 async def test_unreachable_path_cannot_be_approved(db_session, owner) -> None:
@@ -212,3 +217,55 @@ async def test_unreachable_path_cannot_be_approved(db_session, owner) -> None:
         await approve_path(db_session, version)
 
     assert version.status == "draft"
+
+
+async def test_structural_checkpoint_preserves_identity_and_prerequisites(db_session, owner) -> None:
+    plan = _plan("grade4-photosynthesis-path.json")
+    unit = await _unit(
+        db_session,
+        owner_id=owner.id,
+        fixture_name="grade4-photosynthesis-path.json",
+    )
+    first = await persist_path_plan(db_session, unit=unit, plan=plan)
+    source_lessons = list(
+        await db_session.scalars(
+            select(PathLessonModel)
+            .where(PathLessonModel.path_version_id == first.id)
+            .order_by(PathLessonModel.position)
+        )
+    )
+    source_lessons[0].pack_id = "prepared-pack"
+
+    second, mapping = await clone_path_version(
+        db_session,
+        unit=unit,
+        source=first,
+        supersede_active=first,
+        generated_by="teacher_reorder",
+    )
+
+    cloned = list(
+        await db_session.scalars(
+            select(PathLessonModel)
+            .where(PathLessonModel.path_version_id == second.id)
+            .order_by(PathLessonModel.position)
+        )
+    )
+    links = list(
+        await db_session.scalars(
+            select(PathLessonPrerequisiteModel).where(
+                PathLessonPrerequisiteModel.path_lesson_id.in_([lesson.id for lesson in cloned])
+            )
+        )
+    )
+    positions = {lesson.id: lesson.position for lesson in cloned}
+
+    assert first.status == "superseded"
+    assert second.status == "draft"
+    assert unit.active_path_version_id == second.id
+    assert [lesson.concept_id for lesson in cloned] == [lesson.concept_id for lesson in source_lessons]
+    assert [lesson.objective for lesson in cloned] == [lesson.objective for lesson in source_lessons]
+    assert all(lesson.pack_id is None for lesson in cloned)
+    assert set(mapping) == {lesson.id for lesson in source_lessons}
+    assert all(positions[link.prerequisite_lesson_id] < positions[link.path_lesson_id] for link in links)
+    assert await db_session.scalar(select(func.count()).select_from(PathVersionModel)) == 2

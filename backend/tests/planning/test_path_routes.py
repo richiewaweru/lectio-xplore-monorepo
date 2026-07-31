@@ -57,6 +57,10 @@ def test_phase5_unit_and_path_routes_are_registered() -> None:
         ("/api/v1/units/{unit_id}/path:replan", "POST"),
         ("/api/v1/units/{unit_id}/path:approve", "POST"),
         ("/api/v1/units/{unit_id}/path", "GET"),
+        ("/api/v1/units/{unit_id}/path/versions", "GET"),
+        ("/api/v1/units/{unit_id}/path/versions/{version_id}", "GET"),
+        ("/api/v1/units/{unit_id}/path/versions/{version_id}:restore", "POST"),
+        ("/api/v1/units/{unit_id}/path/status", "GET"),
         ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}", "PATCH"),
         ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}:skip", "POST"),
         ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}:split", "POST"),
@@ -96,14 +100,19 @@ async def test_negative_fixture_approval_is_blocked_over_http(db_session_factory
                 starting_knowledge=plan.starting_knowledge,
             ),
         )
-        await persist_path_plan(session, unit=unit, plan=plan)
+        version = await persist_path_plan(session, unit=unit, plan=plan)
         unit_id = unit.id
+        version_id = version.id
+        path_revision = version.revision
         await session.commit()
 
     app.dependency_overrides[get_current_user] = _override_user
     await _install_session(db_session_factory)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.post(f"/api/v1/units/{unit_id}/path:approve")
+        response = await client.post(
+            f"/api/v1/units/{unit_id}/path:approve",
+            json={"path_version_id": version_id, "path_revision": path_revision},
+        )
 
     assert response.status_code == 409
     assert "prerequisite" in response.json()["detail"].lower()
@@ -189,6 +198,9 @@ async def test_path_edit_revokes_approval_before_preparation(db_session_factory)
         assert lesson is not None
         unit_id = unit.id
         lesson_id = lesson.id
+        version_id = version.id
+        path_revision = version.revision
+        lesson_revision = lesson.revision
         await session.commit()
 
     app.dependency_overrides[get_current_user] = _override_user
@@ -196,13 +208,91 @@ async def test_path_edit_revokes_approval_before_preparation(db_session_factory)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         patched = await client.patch(
             f"/api/v1/units/{unit_id}/path/lessons/{lesson_id}",
-            json={"objective": "Identify what plants need before making food."},
+            json={
+                "path_version_id": version_id,
+                "path_revision": path_revision,
+                "lesson_revision": lesson_revision,
+                "objective": "Identify what plants need before making food.",
+            },
         )
         blocked = await client.post(
             f"/api/v1/units/{unit_id}/path/lessons/{lesson_id}:prepare",
-            json={"lesson_mode": "first_exposure", "group_ids": []},
+            json={
+                "path_version_id": patched.json()["path_version_id"],
+                "path_revision": patched.json()["path_revision"],
+                "lesson_revision": patched.json()["revision"],
+                "lesson_mode": "first_exposure",
+                "group_ids": [],
+            },
         )
 
     assert patched.status_code == 200
     assert blocked.status_code == 409
     assert "approved" in blocked.json()["detail"].lower()
+
+
+async def test_history_restore_status_and_stale_edit_are_explicit(db_session_factory) -> None:
+    plan = PathPlan.model_validate_json(
+        (FIXTURES / "grade4-photosynthesis-path.json").read_text(encoding="utf-8")
+    )
+    async with db_session_factory() as session:
+        session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
+        unit = await create_unit(
+            session,
+            owner_id=TEST_USER.id,
+            request=UnitCreate(
+                title=plan.unit or "Photosynthesis",
+                topic=plan.unit or "Photosynthesis",
+                subject=plan.subject or "Science",
+                grade_level=plan.grade_level or "Grade 4",
+                destination_objective=plan.destination_objective or "Destination",
+                starting_knowledge=plan.starting_knowledge,
+            ),
+        )
+        first = await persist_path_plan(session, unit=unit, plan=plan)
+        second = await persist_path_plan(session, unit=unit, plan=plan, prior_version=first)
+        lesson = await session.scalar(
+            select(PathLessonModel)
+            .where(PathLessonModel.path_version_id == second.id)
+            .order_by(PathLessonModel.position)
+        )
+        assert lesson is not None
+        unit_id = unit.id
+        await session.commit()
+
+    app.dependency_overrides[get_current_user] = _override_user
+    await _install_session(db_session_factory)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        history = await client.get(f"/api/v1/units/{unit_id}/path/versions")
+        aggregate = await client.get(f"/api/v1/units/{unit_id}/path/status")
+        stale = await client.patch(
+            f"/api/v1/units/{unit_id}/path/lessons/{lesson.id}",
+            json={
+                "path_version_id": second.id,
+                "path_revision": second.revision + 1,
+                "lesson_revision": lesson.revision,
+                "title": "Stale overwrite",
+            },
+        )
+        restored = await client.post(
+            f"/api/v1/units/{unit_id}/path/versions/{first.id}:restore",
+            json={
+                "path_version_id": second.id,
+                "path_revision": second.revision,
+                "reason": "Undo the replan",
+            },
+        )
+
+    assert history.status_code == 200
+    assert [item["status"] for item in history.json()] == ["draft", "superseded"]
+    assert aggregate.status_code == 200
+    assert (
+        aggregate.json()["counts"]["unprepared"]
+        + aggregate.json()["counts"]["warning"]
+        == len(plan.lessons)
+    )
+    assert stale.status_code == 409
+    assert "refresh" in stale.json()["detail"].lower()
+    assert restored.status_code == 200
+    assert restored.json()["version"] == 3
+    assert restored.json()["status"] == "draft"

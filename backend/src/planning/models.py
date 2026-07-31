@@ -97,6 +97,11 @@ class PathPlannerRequest(StrictModel):
     known_difficulties: list[str] = Field(default_factory=list)
 
 
+class PathReplanRequest(PathPlannerRequest):
+    path_version_id: str
+    path_revision: int = Field(ge=1)
+
+
 class UnitCreate(StrictModel):
     title: str
     topic: str
@@ -123,6 +128,12 @@ class PathLessonPatch(StrictModel):
     secondary_demand: KnowledgeType | None = None
 
 
+class GuardedPathLessonPatch(PathLessonPatch):
+    path_version_id: str
+    path_revision: int = Field(ge=1)
+    lesson_revision: int = Field(ge=1)
+
+
 class LessonPart(StrictModel):
     concept_candidate: ConceptCandidate
     objective: str = Field(min_length=3)
@@ -136,13 +147,43 @@ class SplitPathLessonRequest(StrictModel):
     parts: list[LessonPart] = Field(min_length=2)
 
 
+class GuardedSplitPathLessonRequest(SplitPathLessonRequest):
+    path_version_id: str
+    path_revision: int = Field(ge=1)
+    lesson_revision: int = Field(ge=1)
+
+
 class MergePathLessonsRequest(StrictModel):
     lesson_ids: list[str] = Field(min_length=2)
     merged: LessonPart
 
 
+class GuardedMergePathLessonsRequest(MergePathLessonsRequest):
+    path_version_id: str
+    path_revision: int = Field(ge=1)
+    lesson_revisions: dict[str, int] = Field(min_length=2)
+
+
 class ReorderPathLessonsRequest(StrictModel):
     lesson_ids: list[str] = Field(min_length=1)
+
+
+class GuardedReorderPathLessonsRequest(ReorderPathLessonsRequest):
+    path_version_id: str
+    path_revision: int = Field(ge=1)
+
+
+class PathVersionMutationRequest(StrictModel):
+    path_version_id: str
+    path_revision: int = Field(ge=1)
+
+
+class PathLessonMutationRequest(PathVersionMutationRequest):
+    lesson_revision: int = Field(ge=1)
+
+
+class RestorePathVersionRequest(PathVersionMutationRequest):
+    reason: str = Field(min_length=3, max_length=500)
 
 
 class PrepareLessonRequest(StrictModel):
@@ -150,7 +191,13 @@ class PrepareLessonRequest(StrictModel):
     lesson_mode: Literal["first_exposure", "consolidation", "repair", "retrieval", "transfer"]
 
 
-class RegenerateLessonRequest(PrepareLessonRequest):
+class GuardedPrepareLessonRequest(PrepareLessonRequest):
+    path_version_id: str
+    path_revision: int = Field(ge=1)
+    lesson_revision: int = Field(ge=1)
+
+
+class RegenerateLessonRequest(GuardedPrepareLessonRequest):
     reason: str = Field(min_length=3, max_length=500)
 
 
