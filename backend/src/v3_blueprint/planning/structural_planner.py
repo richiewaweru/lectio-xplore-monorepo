@@ -46,7 +46,7 @@ STEP 2 — GOAL
 
 STEP 3 — SPEC GATE
   Read the resource spec in your context.
-  State required roles and forbidden components.
+  State the supplied skeleton slot ids and forbidden components.
   Remove anything the spec forbids before continuing. This is a gate.
 
 STEP 4 — ANCHOR
@@ -74,8 +74,8 @@ STEP 5 — CONCEPT CARDS AND PLAIN SECTIONS
   and unique within this plan.
 
 STEP 6 — SECTION SEQUENCE
-  List sections in order: all required roles plus any optional roles that fit.
-  Emit role using the exact role strings allowed by the active resource spec.
+  List sections in order using only the supplied skeleton slot ids as roles.
+  Emit role using those exact slot ids.
   Do not emit phase words as roles.
   For each section after the first, write one transition_note stating what the
   prior section established and what this section now does with it.
@@ -101,7 +101,7 @@ STEP 8 — VISUALS & QUESTIONS
 STEP 9 — SELF CHECK
   Verify:
   - every section has components that can carry its role
-  - every emitted role exists in the active resource spec
+  - every emitted role exists in the supplied skeleton slot catalog
   - the anchor appears by exact name where the concept is taught
   - question temperatures match lesson_mode
   - no two components in any section share a section_field
@@ -188,7 +188,7 @@ HARD RULES:
 - Max 6 sections.
 - Max 4 component slugs per section.
 - transition_note is null for the first section only.
-- Every emitted role must exist in the active resource spec.
+- Every emitted role must exist in the supplied skeleton slot catalog.
 - Every non-null section card_id resolves to exactly one card.
 - Card and misconception ids are unique within their owning scope.
 - A card has 2-4 real misconceptions, or explicitly sets
@@ -224,6 +224,7 @@ def build_stage1_user_message(
     signals: V3SignalSummary,
     form: V3InputForm,
     resource_spec: dict,
+    skeleton_catalog: dict | None = None,
     previous_errors: list[str] | None = None,
 ) -> str:
     payload = (
@@ -231,6 +232,11 @@ def build_stage1_user_message(
         f"Form JSON:\n{form.model_dump_json(indent=2)}\n\n"
         f"RESOURCE SPEC JSON:\n{json.dumps(resource_spec, indent=2, sort_keys=True)}"
     )
+    slots = skeleton_catalog.get("slots") if isinstance(skeleton_catalog, dict) else None
+    if isinstance(slots, dict) and slots:
+        payload += "\n\nSKELETON SLOT IDS (the only valid section roles):\n" + ", ".join(
+            sorted(str(slot_id) for slot_id in slots)
+        )
     if previous_errors:
         payload += (
             "\n\nVALIDATION ERRORS FROM PREVIOUS ATTEMPT "
@@ -281,6 +287,7 @@ async def _call_stage1(
                 signals=signals,
                 form=form,
                 resource_spec=resource_spec,
+                skeleton_catalog=skeleton_catalog,
                 previous_errors=previous_errors,
             ),
             model=model,

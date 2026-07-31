@@ -65,7 +65,7 @@ def _plan() -> StructuralPlan:
             SectionPlan(
                 id="intro",
                 title="Intro",
-                role="intro",
+                role="orient",
                 visual_required=False,
                 transition_note=None,
                 components=[ComponentSlot(slug="hook-hero", purpose="introduce")],
@@ -73,7 +73,7 @@ def _plan() -> StructuralPlan:
             SectionPlan(
                 id="practice",
                 title="Practice",
-                role="practice",
+                role="guided",
                 visual_required=False,
                 transition_note="Build from the hook.",
                 components=[ComponentSlot(slug="practice-stack", purpose="practice")],

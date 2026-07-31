@@ -23,6 +23,7 @@ from v3_blueprint.planning.section_expander import (
 )
 from v3_blueprint.planning.structural_planner import _call_stage1
 from v3_blueprint.planning.validators import validate_section_brief, validate_structural_plan
+from v3_blueprint.skeletons import load_skeleton_catalog
 
 EmitFn = Callable[[str, dict], Awaitable[None]]
 log = logging.getLogger(__name__)
@@ -61,6 +62,7 @@ async def run_stage1_with_retry(
     trace_id: str | None = None,
 ) -> StructuralPlan:
 
+    skeleton_catalog = load_skeleton_catalog().data
     errors: list[str] = []
     for attempt in range(1, 3):  # max 2 attempts
         try:
@@ -71,6 +73,7 @@ async def run_stage1_with_retry(
                 generation_id=generation_id,
                 trace_id=trace_id,
                 previous_errors=errors if attempt == 2 else None,
+                skeleton_catalog=skeleton_catalog,
             )
         except TruncatedCompletionError as exc:
             import traceback
@@ -113,7 +116,11 @@ async def run_stage1_with_retry(
                 flush=True,
             )
             raise
-        errors = validate_structural_plan(plan, resource_spec)
+        errors = validate_structural_plan(
+            plan,
+            resource_spec,
+            skeleton_catalog=skeleton_catalog,
+        )
 
         if not errors:
             if generation_id:

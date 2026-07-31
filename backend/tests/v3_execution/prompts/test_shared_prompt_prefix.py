@@ -50,6 +50,13 @@ def test_path_prepared_stage1_uses_zero_to_three_belief_tested_misconceptions() 
     assert "A card has 0-3 real misconceptions" in path_prompt
 
 
+def test_stage1_role_instructions_name_skeleton_slots_as_authority() -> None:
+    prompt = build_stage1_system_prompt()
+
+    assert "supplied skeleton slot catalog" in prompt
+    assert "active resource spec roles" not in prompt
+
+
 def test_writer_prompts_share_stable_prefix() -> None:
     prefix = build_v3_shared_prefix()
     section_order = SectionWriterWorkOrder(

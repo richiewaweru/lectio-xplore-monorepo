@@ -302,15 +302,56 @@ and the saved generation is byte-for-byte identical to Phase 0.
 
 ### Phase 3 tracking
 
-- [ ] Install the versioned draft as runtime `skeletons.yaml`.
-- [ ] Validate skeletons on startup: slot limits, locked check, registry components, and toggles.
-- [ ] Expand and preview all 11 skeletons with zero model calls.
-- [ ] Add the verbatim knowledge-type classifier prompt and strict result enum.
-- [ ] Add deviation request schema.
-- [ ] Wire `POST /skeletons:preview` without changing existing generation paths.
-- [ ] Validate classifier outputs against all three path fixtures.
-- [ ] Prove existing output and Phase 0 fixture remain unchanged.
+- [x] Install the versioned draft as runtime `skeletons.yaml`.
+- [x] Validate skeletons on startup: slot limits, locked check, registry components, and toggles.
+- [x] Expand and preview all 11 skeletons with zero model calls.
+- [x] Add the verbatim knowledge-type classifier prompt and strict result enum.
+- [x] Add deviation request schema.
+- [x] Wire `POST /skeletons:preview` without changing generated lesson structure.
+- [x] Validate classifier outputs against all three path fixtures.
+- [x] Prove existing output and Phase 0 fixture remain unchanged.
 - [ ] Run the complete Phase 3 gate and invariant check.
+
+### Phase 3 implementation evidence
+
+```text
+$ cd backend && uv run pytest tests/v3_blueprint/test_skeletons.py tests/v3_execution/prompts/test_shared_prompt_prefix.py tests/v3_blueprint/planning/test_retry.py tests/v3_blueprint/planning/test_stage1_error_logging.py tests/v3_blueprint/planning/test_validators.py -q
+............................................                             [100%]
+44 passed, 1 warning in 21.10s
+$ uv run ruff check <Phase 3 files>
+All checks passed!
+```
+
+The catalog test previews each of the 11 skeleton IDs, enforces at most six expanded slots,
+and confirms exactly one locked `check`. Unknown registry components fail startup validation.
+Overflow is retained as an explicit `variant_slot_overflow` warning rather than truncated.
+The HTTP test calls `POST /api/v1/skeletons:preview` and receives expanded slot objects.
+
+The classifier prompt resource is compared byte-for-byte (ignoring outer whitespace) against
+section 2 of `20_PROMPT_PACK.md`. Its live LLM service returns strict enums and marks low
+confidence for teacher review. All objectives in the Grade 4, Grade 12, and unreachable Grade 8
+fixtures pass the enum contract.
+
+### Phase 3 decision not specified by the handoff
+
+`20_PROMPT_PACK.md` names `POST /skeletons:preview` as a classifier call site, while the
+controlling goal requires the preview endpoint to make zero model calls. The endpoint therefore
+uses a deterministic, explicitly labelled `knowledge_type_source=deterministic_preview` helper;
+the authoritative classifier remains a separate live LLM service using the verbatim prompt.
+This keeps preview deterministic and prevents a heuristic result from masquerading as model or
+teacher classification.
+
+Pre-commit invariant evidence:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/generation/test_v3_chunked_lifecycle.py tests/v3_blueprint/test_skeletons.py tests/v3_blueprint/planning/test_retry.py -q
+.................................................                        [100%]
+49 passed, 1 warning in 34.78s
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
 
 ### Phase 1 defect 4 evidence — path-only misconception quota
 

@@ -22,6 +22,7 @@ V3_ANSWER_KEY_GENERATOR = "v3_answer_key_generator"
 V3_ANSWER_KEY_GENERATOR_HEAVY = "v3_answer_key_generator_heavy"
 V3_VISUAL_QC = "v3_visual_qc"
 V3_CARD_QC = "v3_card_qc"
+V3_KNOWLEDGE_TYPE_CLASSIFIER = "v3_knowledge_type_classifier"
 V3_BLOCK_WRITER_FAST = "v3_block_writer_fast"
 V3_BLOCK_WRITER_STANDARD = "v3_block_writer_standard"
 
@@ -39,6 +40,7 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V3_ANSWER_KEY_GENERATOR_HEAVY: ModelSlot.STANDARD,
     V3_VISUAL_QC: ModelSlot.FAST,
     V3_CARD_QC: ModelSlot.FAST,
+    V3_KNOWLEDGE_TYPE_CLASSIFIER: ModelSlot.FAST,
     V3_BLOCK_WRITER_FAST: ModelSlot.FAST,
     V3_BLOCK_WRITER_STANDARD: ModelSlot.STANDARD,
 }
@@ -60,6 +62,7 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     V3_ANSWER_KEY_GENERATOR_HEAVY: "low",
     V3_VISUAL_QC: False,
     V3_CARD_QC: False,
+    V3_KNOWLEDGE_TYPE_CLASSIFIER: False,
     V3_BLOCK_WRITER_FAST: False,
     V3_BLOCK_WRITER_STANDARD: "low",
 }
@@ -252,6 +255,7 @@ __all__ = [
     "V3_STAGE1_PLANNER",
     "V3_STAGE2_EXPANDER",
     "V3_ITEM_EXECUTOR",
+    "V3_KNOWLEDGE_TYPE_CLASSIFIER",
     "V3_VISUAL_QC",
     "get_v3_model",
     "get_v3_model_settings",
