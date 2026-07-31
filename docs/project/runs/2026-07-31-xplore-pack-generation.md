@@ -30,7 +30,7 @@
 - [x] P5: card review endpoints and Builder UI
 - [x] P6: item generation behind the context wall
 - [x] P7: diagnostic distractor mappings
-- [ ] P8: pack-level item review
+- [x] P8: pack-level item review
 - [ ] P9: parallel variant fan-out and pack hub
 - [ ] P10: card-scoped QC rubric
 - [ ] P11: diagnostic answer-key print
@@ -111,6 +111,19 @@
 - P7 backend: 416 tests passed with one existing Pydantic field-shadow warning.
 - P7 item/lifecycle suite: 27 tests passed after isolating one transient full-suite
   harness hang; the clean full rerun passed.
+- P8 API: pack-scoped item review, teacher item patching, and one-card regeneration
+  endpoints are ownership-scoped. Coverage, missing misconceptions, unmapped options,
+  stale state, and teacher-edited state are explicit response fields.
+- P8 preservation gate: regeneration refreshes unedited rows but retains a
+  teacher-edited item and marks it stale so the difference remains visible.
+- P8 real API gate: the photosynthesis pack returned 2 cards and 10 items under one
+  pack, surfaced 17 unmapped distractors, and reported no missing coverage.
+- P8 frontend: pack-level `/packs/[pack_id]/items` review supports card switching,
+  item text/tag editing, coverage badges, untagged warnings, stale warnings, and
+  scoped regeneration. Builder links out to the pack surface.
+- P8 backend: 419 tests passed with one existing Pydantic field-shadow warning.
+- P8 frontend: `svelte-check` found 0 errors and 0 warnings; focused API suite passed
+  3 tests; production build passed with existing Rollup/chunk warnings.
 
 ## Risks and follow-up
 

@@ -53,6 +53,10 @@
 				</article>
 			{/each}
 		</div>
+
+		<a class="quiz-link" href={`/packs/${encodeURIComponent(packId)}/items`}>
+			Review shared quiz
+		</a>
 	{:else}
 		<p>Loading pack...</p>
 	{/if}
@@ -108,6 +112,14 @@
 		color: #24436a;
 		font-weight: 700;
 		text-decoration: none;
+	}
+
+	.quiz-link {
+		justify-self: start;
+		border: 1px solid rgba(36, 67, 106, 0.25);
+		border-radius: 10px;
+		background: white;
+		padding: 0.65rem 0.9rem;
 	}
 
 	.error {

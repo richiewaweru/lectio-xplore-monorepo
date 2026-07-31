@@ -338,6 +338,14 @@
 		onApproved={handleCardsApproved}
 	/>
 {:else}
+	{#if generationId}
+		<a
+			class="builder-print-hidden mb-3 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-800"
+			href={`/packs/${encodeURIComponent(generationId)}/items`}
+		>
+			Review shared quiz · edit in pack
+		</a>
+	{/if}
 	{#if generationBlocker && generationId}
 		<section class="builder-print-hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
 			<p class="font-semibold">{generationBlocker.title}</p>

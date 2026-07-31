@@ -237,6 +237,47 @@ class V3ConceptCardPatchRequest(BaseModel):
     misconceptions: list[V3CardMisconceptionDTO] = Field(default_factory=list)
 
 
+class V3PackItemOptionDTO(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    key: str
+    text: str
+    correct: bool
+    diagnoses: str | None = None
+    teacher_edited: bool = False
+
+
+class V3PackItemDTO(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    id: str
+    question_id: str
+    prompt_text: str
+    options: list[V3PackItemOptionDTO]
+    stale: bool = False
+    teacher_edited: bool = False
+
+
+class V3CardItemReviewDTO(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    card_id: str
+    card_title: str
+    misconceptions: list[V3CardMisconceptionDTO] = Field(default_factory=list)
+    items: list[V3PackItemDTO] = Field(default_factory=list)
+    coverage: dict[str, int] = Field(default_factory=dict)
+    missing_misconceptions: list[str] = Field(default_factory=list)
+    unmapped_options: int = 0
+    stale: bool = False
+
+
+class V3PackItemPatchRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    prompt_text: str = Field(min_length=1, max_length=1000)
+    options: list[V3PackItemOptionDTO] = Field(min_length=2)
+
+
 class AdjustBlueprintRequest(BaseModel):
     model_config = {"extra": "forbid"}
 

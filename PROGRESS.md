@@ -853,6 +853,7 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - [x] P5 — review and edit concept cards in Builder, then approve once per pack
 - [x] P6 — generate and persist one diagnostic item set per approved card behind the context wall
 - [x] P7 — map distractors to real misconception IDs and preserve unmapped options as null
+- [x] P8 — review, edit, and regenerate pack-level items per card
 
 ### P1 validation
 
@@ -921,5 +922,13 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - Both real cards covered every approved misconception at least once
 - Item/lifecycle suites: 27 tests passed
 - Backend: 416 tests passed
+
+### P8 validation
+
+- Pack-level item API returns coverage, missing misconceptions, untagged counts, and stale state
+- Item edits are teacher-marked; one-card regeneration preserves edited rows and flags them stale
+- Real API: 2 cards, 10 shared items, 17 untagged options, zero missing coverage
+- Backend: 419 tests passed
+- Frontend: 0 check errors/warnings, 3 focused tests passed, production build passed
 
 ---

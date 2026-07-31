@@ -33,7 +33,9 @@ from v3_blueprint.planning.assembler import assemble_blueprint
 from v3_blueprint.planning.models import (
     BlueprintAssemblyBlocked,
     ConceptCard,
+    ItemOption,
     Misconception,
+    QuestionBrief,
     SectionBrief,
     Stage1PlanFailure,
     StructuralPlan,
@@ -76,10 +78,14 @@ from generation.v3_studio.dtos import (
     V3ChunkedRegenerateRequest,
     V3ChunkedRetrySectionRequest,
     V3ChunkedStatusDTO,
+    V3CardItemReviewDTO,
     V3ConceptCardDTO,
     V3ConceptCardPatchRequest,
     V3GenerationDetailDTO,
     V3GenerationHistoryItemDTO,
+    V3PackItemDTO,
+    V3PackItemOptionDTO,
+    V3PackItemPatchRequest,
     V3GenerateStartRequest,
     V3GenerateStartResponse,
     V3InputForm,
@@ -977,30 +983,29 @@ async def _generate_shared_pack_items(
         cards = list(rows.scalars())
 
         existing_rows = await session.execute(
-            select(PackItemModel.card_id).where(
-                PackItemModel.pack_id == pack_id,
-                PackItemModel.stale.is_(False),
-            )
+            select(PackItemModel).where(PackItemModel.pack_id == pack_id)
         )
-        ready_card_ids = set(existing_rows.scalars())
+        item_rows = list(existing_rows.scalars())
+        ready_card_ids = {
+            card.id
+            for card in cards
+            if len(
+                [
+                    item
+                    for item in item_rows
+                    if item.card_id == card.id and not item.stale
+                ]
+            )
+            == 5
+        }
 
     notation = plan.voice.notation
     results: list[ItemGenerationResult] = []
     for row in cards:
         if row.id in ready_card_ids:
             continue
-        misconceptions = [
-            Misconception.model_validate(item)
-            for item in (row.misconceptions or [])
-            if isinstance(item, dict)
-        ]
-        approved_card = ConceptCard(
-            id=row.id,
-            title=row.title,
-            objective=row.objective,
-            prereqs=list(row.prereqs or []),
-            misconceptions=misconceptions,
-        ).with_item_context(
+        approved_card = _approved_card_for_items(
+            row,
             subject=form.subject,
             level=form.grade_level,
             notation=notation,
@@ -1008,34 +1013,7 @@ async def _generate_shared_pack_items(
         results.append(await execute_items(approved_card))
 
     if results:
-        async with async_session_factory() as session:
-            for result in results:
-                for item in result.items:
-                    correct = next(option for option in item.options if option.correct)
-                    db_id = f"{pack_id}:{item.question_id}"
-                    existing = await session.get(PackItemModel, db_id)
-                    if existing is not None:
-                        # Existing rows may include teacher edits. They are never overwritten.
-                        continue
-                    session.add(
-                        PackItemModel(
-                            id=db_id,
-                            pack_id=pack_id,
-                            card_id=result.card_id,
-                            stem=item.prompt_text,
-                            options=[
-                                option.model_dump(mode="json")
-                                for option in item.options
-                            ],
-                            correct_key=correct.key,
-                            diagnoses={
-                                option.key: option.diagnoses
-                                for option in item.options
-                            },
-                            stale=False,
-                        )
-                    )
-            await session.commit()
+        await _persist_item_results(pack_id, results)
 
     review_cards = [
         {
@@ -1052,6 +1030,99 @@ async def _generate_shared_pack_items(
         "generated_item_count": sum(len(result.items) for result in results),
         "review_cards": review_cards,
     }
+
+
+def _approved_card_for_items(
+    row: ConceptCardModel,
+    *,
+    subject: str,
+    level: str,
+    notation: str | None,
+) -> ConceptCard:
+    misconceptions = [
+        Misconception.model_validate(item)
+        for item in (row.misconceptions or [])
+        if isinstance(item, dict)
+    ]
+    return ConceptCard(
+        id=row.id,
+        title=row.title,
+        objective=row.objective,
+        prereqs=list(row.prereqs or []),
+        misconceptions=misconceptions,
+    ).with_item_context(
+        subject=subject,
+        level=level,
+        notation=notation,
+    )
+
+
+def _item_row_teacher_edited(row: PackItemModel) -> bool:
+    return any(
+        isinstance(option, dict) and option.get("teacher_edited") is True
+        for option in (row.options or [])
+    )
+
+
+async def _persist_item_results(
+    pack_id: str,
+    results: list[ItemGenerationResult],
+) -> None:
+    async with async_session_factory() as session:
+        for result in results:
+            stored = await session.execute(
+                select(PackItemModel).where(
+                    PackItemModel.pack_id == pack_id,
+                    PackItemModel.card_id == result.card_id,
+                )
+            )
+            existing_rows = {row.id: row for row in stored.scalars()}
+            generated_ids: set[str] = set()
+            for item in result.items:
+                correct = next(option for option in item.options if option.correct)
+                db_id = f"{pack_id}:{item.question_id}"
+                generated_ids.add(db_id)
+                existing = existing_rows.get(db_id)
+                if existing is not None and _item_row_teacher_edited(existing):
+                    existing.stale = True
+                    continue
+                payload = {
+                    "stem": item.prompt_text,
+                    "options": [
+                        {
+                            **option.model_dump(mode="json"),
+                            "teacher_edited": False,
+                        }
+                        for option in item.options
+                    ],
+                    "correct_key": correct.key,
+                    "diagnoses": {
+                        option.key: option.diagnoses
+                        for option in item.options
+                    },
+                    "stale": False,
+                }
+                if existing is None:
+                    session.add(
+                        PackItemModel(
+                            id=db_id,
+                            pack_id=pack_id,
+                            card_id=result.card_id,
+                            **payload,
+                        )
+                    )
+                else:
+                    for field, value in payload.items():
+                        setattr(existing, field, value)
+
+            for db_id, existing in existing_rows.items():
+                if db_id in generated_ids:
+                    continue
+                if _item_row_teacher_edited(existing):
+                    existing.stale = True
+                else:
+                    await session.delete(existing)
+        await session.commit()
 
 
 async def _run_chunked_stage2_pipeline(
@@ -1430,6 +1501,208 @@ async def patch_pack_concept_card(
         await session.commit()
         await session.refresh(card)
         return _card_dto(card)
+
+
+async def _load_item_reviews(
+    pack_id: str,
+    *,
+    card_id: str | None = None,
+) -> list[V3CardItemReviewDTO]:
+    async with async_session_factory() as session:
+        card_query = select(ConceptCardModel).where(
+            ConceptCardModel.pack_id == pack_id
+        )
+        if card_id is not None:
+            card_query = card_query.where(ConceptCardModel.id == card_id)
+        card_rows = await session.execute(
+            card_query.order_by(ConceptCardModel.created_at, ConceptCardModel.id)
+        )
+        cards = list(card_rows.scalars())
+        item_query = select(PackItemModel).where(PackItemModel.pack_id == pack_id)
+        if card_id is not None:
+            item_query = item_query.where(PackItemModel.card_id == card_id)
+        item_rows = await session.execute(
+            item_query.order_by(PackItemModel.card_id, PackItemModel.created_at, PackItemModel.id)
+        )
+        items_by_card: dict[str, list[PackItemModel]] = {}
+        for row in item_rows.scalars():
+            items_by_card.setdefault(row.card_id, []).append(row)
+
+        reviews: list[V3CardItemReviewDTO] = []
+        for card in cards:
+            misconceptions = _card_dto(card).misconceptions
+            known_ids = {item.id for item in misconceptions}
+            coverage = {item_id: 0 for item_id in sorted(known_ids)}
+            unmapped = 0
+            item_dtos: list[V3PackItemDTO] = []
+            card_items = items_by_card.get(card.id, [])
+            for row in card_items:
+                option_dtos: list[V3PackItemOptionDTO] = []
+                for raw in row.options or []:
+                    if not isinstance(raw, dict):
+                        continue
+                    option = V3PackItemOptionDTO.model_validate(raw)
+                    option_dtos.append(option)
+                    if option.correct:
+                        continue
+                    if option.diagnoses is None:
+                        unmapped += 1
+                    elif option.diagnoses in coverage:
+                        coverage[option.diagnoses] += 1
+                prefix = f"{pack_id}:"
+                question_id = row.id[len(prefix):] if row.id.startswith(prefix) else row.id
+                item_dtos.append(
+                    V3PackItemDTO(
+                        id=row.id,
+                        question_id=question_id,
+                        prompt_text=row.stem,
+                        options=option_dtos,
+                        stale=bool(row.stale),
+                        teacher_edited=_item_row_teacher_edited(row),
+                    )
+                )
+
+            reviews.append(
+                V3CardItemReviewDTO(
+                    card_id=card.id,
+                    card_title=card.title,
+                    misconceptions=misconceptions,
+                    items=item_dtos,
+                    coverage=coverage,
+                    missing_misconceptions=[
+                        item_id
+                        for item_id, count in coverage.items()
+                        if count == 0
+                    ],
+                    unmapped_options=unmapped,
+                    stale=any(bool(row.stale) for row in card_items),
+                )
+            )
+        return reviews
+
+
+@v3_studio_router.get(
+    "/packs/{pack_id}/items",
+    response_model=list[V3CardItemReviewDTO],
+)
+async def get_pack_items(
+    pack_id: str,
+    current_user: User = Depends(get_current_user),
+) -> list[V3CardItemReviewDTO]:
+    card_pack_id, _ = await _resolve_owned_card_scope(pack_id, current_user.id)
+    return await _load_item_reviews(card_pack_id)
+
+
+@v3_studio_router.patch(
+    "/packs/{pack_id}/items/{item_id}",
+    response_model=V3CardItemReviewDTO,
+)
+async def patch_pack_item(
+    pack_id: str,
+    item_id: str,
+    body: V3PackItemPatchRequest,
+    current_user: User = Depends(get_current_user),
+) -> V3CardItemReviewDTO:
+    card_pack_id, _ = await _resolve_owned_card_scope(pack_id, current_user.id)
+    async with async_session_factory() as session:
+        row = await session.get(PackItemModel, item_id)
+        if row is None or row.pack_id != card_pack_id:
+            raise HTTPException(status_code=404, detail="Pack item not found")
+        card = await session.get(ConceptCardModel, row.card_id)
+        if card is None:
+            raise HTTPException(status_code=404, detail="Concept card not found")
+        known_ids = {
+            str(item.get("id"))
+            for item in (card.misconceptions or [])
+            if isinstance(item, dict)
+        }
+        options = [
+            ItemOption(
+                key=option.key,
+                text=option.text,
+                correct=option.correct,
+                diagnoses=option.diagnoses,
+            )
+            for option in body.options
+        ]
+        for option in options:
+            if option.diagnoses is not None and option.diagnoses not in known_ids:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Unknown misconception id '{option.diagnoses}'",
+                )
+        correct = next((option for option in options if option.correct), None)
+        if correct is None:
+            raise HTTPException(status_code=422, detail="Exactly one option must be correct")
+        try:
+            QuestionBrief(
+                question_id=row.id,
+                prompt_text=body.prompt_text,
+                options=options,
+                expected_answer=correct.text,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        row.stem = body.prompt_text
+        row.options = [
+            {
+                **option.model_dump(mode="json"),
+                "teacher_edited": True,
+            }
+            for option in options
+        ]
+        row.correct_key = correct.key
+        row.diagnoses = {
+            option.key: option.diagnoses
+            for option in options
+        }
+        row.stale = False
+        card_id = row.card_id
+        await session.commit()
+
+    reviews = await _load_item_reviews(card_pack_id, card_id=card_id)
+    return reviews[0]
+
+
+@v3_studio_router.post(
+    "/packs/{pack_id}/cards/{card_id}/items/regenerate",
+    response_model=V3CardItemReviewDTO,
+)
+async def regenerate_pack_card_items(
+    pack_id: str,
+    card_id: str,
+    current_user: User = Depends(get_current_user),
+) -> V3CardItemReviewDTO:
+    card_pack_id, generation_id = await _resolve_owned_card_scope(
+        pack_id,
+        current_user.id,
+    )
+    state = await load_chunked_state(generation_id)
+    plan_raw = state.get("structural_plan")
+    if not isinstance(plan_raw, dict):
+        raise HTTPException(status_code=409, detail="Structural plan is not available")
+    plan = StructuralPlan.model_validate(plan_raw)
+    _signals, form, _resource_spec = _decode_chunked_context(state)
+    async with async_session_factory() as session:
+        result = await session.execute(
+            select(ConceptCardModel).where(
+                ConceptCardModel.id == card_id,
+                ConceptCardModel.pack_id == card_pack_id,
+            )
+        )
+        card = result.scalar_one_or_none()
+        if card is None:
+            raise HTTPException(status_code=404, detail="Concept card not found")
+        approved_card = _approved_card_for_items(
+            card,
+            subject=form.subject,
+            level=form.grade_level,
+            notation=plan.voice.notation,
+        )
+    generated = await execute_items(approved_card)
+    await _persist_item_results(card_pack_id, [generated])
+    reviews = await _load_item_reviews(card_pack_id, card_id=card_id)
+    return reviews[0]
 
 
 @v3_studio_router.post(
