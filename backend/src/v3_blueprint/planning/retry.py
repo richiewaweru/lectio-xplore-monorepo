@@ -8,6 +8,7 @@ from collections.abc import Awaitable, Callable
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
+from core.config import settings
 from core.llm.runner import TruncatedCompletionError
 from v3_blueprint.planning.models import (
     SectionBrief,
@@ -24,6 +25,7 @@ from v3_blueprint.planning.section_expander import (
 from v3_blueprint.planning.structural_planner import _call_stage1
 from v3_blueprint.planning.validators import validate_section_brief, validate_structural_plan
 from v3_blueprint.skeletons import load_skeleton_catalog
+from v3_blueprint.shadow import record_skeleton_shadow
 
 EmitFn = Callable[[str, dict], Awaitable[None]]
 log = logging.getLogger(__name__)
@@ -131,6 +133,18 @@ async def run_stage1_with_retry(
                     form=form,
                     resource_spec=resource_spec,
                 )
+                if settings.v2_skeleton_shadow_enabled:
+                    try:
+                        await record_skeleton_shadow(
+                            generation_id=generation_id,
+                            plan=plan,
+                            form=form,
+                        )
+                    except Exception:  # noqa: BLE001
+                        log.exception(
+                            "Skeleton shadow recording failed; generation continues; generation_id=%s",
+                            generation_id,
+                        )
             if emit_event:
                 await emit_event("plan_ready", {
                     "generation_id": generation_id,

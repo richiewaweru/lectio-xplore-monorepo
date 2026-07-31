@@ -201,6 +201,33 @@ class LessonProvenanceModel(Base):
     concept = relationship("ConceptModel", back_populates="lesson_provenance")
 
 
+class SkeletonShadowRecordModel(Base):
+    __tablename__ = "skeleton_shadow_records"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    generation_id = Column(String, nullable=False, unique=True, index=True)
+    subject = Column(String, nullable=False, index=True)
+    grade = Column(String, nullable=False, index=True)
+    objective = Column(Text, nullable=False)
+    current_roles = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    classifier_type = Column(String, nullable=False, index=True)
+    classifier_confidence = Column(String, nullable=False, index=True)
+    classifier_success_test = Column(Text, nullable=False)
+    classifier_note = Column(Text, nullable=True)
+    skeleton_id = Column(String, nullable=False, index=True)
+    skeleton_version = Column(Integer, nullable=False)
+    expanded_slots = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    toggles_applied = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    expansion_warnings = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    structural_match_score = Column(Float, nullable=False)
+    reviewer_preference = Column(String, nullable=True)
+    wrong_classification = Column(Boolean, nullable=True)
+    deviation_required = Column(Boolean, nullable=True)
+    severity = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
 class PackItemModel(Base):
     __tablename__ = "pack_items"
 

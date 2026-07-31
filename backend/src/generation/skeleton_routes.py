@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
+
+from core.auth.middleware import get_current_user
+from core.entities.user import User
 
 from v3_blueprint.skeletons import (
     SkeletonCatalogError,
@@ -8,6 +11,7 @@ from v3_blueprint.skeletons import (
     SkeletonPreviewResponse,
     load_skeleton_catalog,
 )
+from v3_blueprint.shadow import shadow_review_csv
 
 router = APIRouter(prefix="/api/v1", tags=["skeletons"])
 
@@ -20,6 +24,18 @@ def list_skeletons() -> dict[str, object]:
         "max_slots": catalog.max_slots,
         "skeletons": [catalog.skeletons[skeleton_id] for skeleton_id in catalog.skeleton_ids()],
     }
+
+
+@router.get("/skeletons/shadow-report")
+async def get_shadow_report(
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    csv_body = await shadow_review_csv(user_id=current_user.id)
+    return Response(
+        content=csv_body,
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="skeleton-shadow-review.csv"'},
+    )
 
 
 @router.get("/skeletons/{skeleton_id}")

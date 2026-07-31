@@ -380,14 +380,57 @@ preview is live with zero model calls, and existing generation bytes remain unch
 
 ### Phase 4 tracking
 
-- [ ] Read shadow-record, review-surface, and experiment contracts against persistence/runtime.
-- [ ] Add reversible skeleton-shadow persistence.
-- [ ] Compute classifier and skeleton shadow alongside every completed structural plan.
-- [ ] Keep classifier judgement independently reviewable from skeleton fit.
-- [ ] Add reviewer surface or CSV export.
+- [x] Read shadow-record, review-surface, and experiment contracts against persistence/runtime.
+- [x] Add reversible skeleton-shadow persistence.
+- [x] Compute classifier and skeleton shadow alongside every completed structural plan.
+- [x] Keep classifier judgement independently reviewable from skeleton fit.
+- [x] Add authenticated CSV review export.
 - [ ] Prove full shadow records on at least three real generations without synthetic substitution.
 - [ ] Record that 30 human-reviewed lessons remain required before any authority promotion.
 - [ ] Prove no generated output change and run the complete Phase 4 gate.
+
+### Phase 4 machinery evidence
+
+```text
+$ cd backend && uv run pytest tests/v3_blueprint/test_shadow.py tests/v3_blueprint/planning/test_retry.py -q
+........                                                                 [100%]
+8 passed, 1 warning in 13.78s
+$ uv run ruff check <Phase 4 files>
+All checks passed!
+```
+
+The persistence test stores classifier type, confidence, success test, and note separately from
+skeleton ID, expanded slots, toggles, warnings, and ordered structural-match score. CSV export
+contains both independent review columns (`wrong_classification` and skeleton-fit judgement).
+A forced classifier/provider failure is logged and generation still returns the original plan.
+
+Migration `0020` evidence:
+
+```text
+$ uv run alembic upgrade head
+INFO  [alembic.runtime.migration] Running upgrade 20260731_0019 -> 20260731_0020, add skeleton shadow records
+$ uv run alembic downgrade -1
+INFO  [alembic.runtime.migration] Running downgrade 20260731_0020 -> 20260731_0019, add skeleton shadow records
+$ uv run alembic upgrade head
+INFO  [alembic.runtime.migration] Running upgrade 20260731_0019 -> 20260731_0020, add skeleton shadow records
+```
+
+Pre-commit invariant evidence:
+
+```text
+$ cd backend && uv run pytest tests/v3_blueprint/test_shadow.py tests/v3_blueprint/test_skeletons.py tests/v3_blueprint/planning/test_retry.py tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/generation/test_v3_chunked_lifecycle.py -q
+....................................................                     [100%]
+52 passed, 1 warning in 25.30s
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+```
+
+### Phase 4 real-generation environment decision
+
+The repository root `.env` contains provider credentials but points `DATABASE_URL` at a remote
+Railway host. Real shadow proof will load the provider credentials while overriding persistence
+to an isolated local SQLite database. No migration, generation row, or shadow record will be
+written to the remote database without separate deployment authority.
 
 ### Phase 1 defect 4 evidence — path-only misconception quota
 

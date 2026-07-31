@@ -138,6 +138,32 @@ async def test_run_stage1_retries_current_output_validation_exhaustion(
 
 
 @pytest.mark.asyncio
+async def test_shadow_failure_never_blocks_generation(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog,
+) -> None:
+    plan = _plan()
+    monkeypatch.setattr(retry, "_call_stage1", AsyncMock(return_value=plan))
+    monkeypatch.setattr(retry, "persist_structural_plan", AsyncMock())
+    monkeypatch.setattr(
+        retry,
+        "record_skeleton_shadow",
+        AsyncMock(side_effect=RuntimeError("shadow provider unavailable")),
+    )
+    monkeypatch.setattr(retry.settings, "v2_skeleton_shadow_enabled", True)
+
+    result = await retry.run_stage1_with_retry(
+        _signals(),
+        _form(),
+        {},
+        generation_id="generation-shadow-failure",
+    )
+
+    assert result == plan
+    assert "Skeleton shadow recording failed; generation continues" in caplog.text
+
+
+@pytest.mark.asyncio
 async def test_run_stage2_retries_only_failed_section_and_preserves_long_content(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

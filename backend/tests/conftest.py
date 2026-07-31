@@ -25,6 +25,7 @@ os.environ.setdefault("JWT_SECRET_KEY", secrets.token_hex(32))
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-anthropic-key")
 os.environ.setdefault("V3_VISUAL_QC_ENABLED", "false")
 os.environ.setdefault("V3_IMAGE_CACHE_ENABLED", "false")
+os.environ.setdefault("V2_SKELETON_SHADOW_ENABLED", "false")
 
 from core.database.models import Base  # noqa: E402
 from core.database.session import engine as runtime_engine  # noqa: E402
