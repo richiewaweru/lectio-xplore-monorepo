@@ -6,7 +6,7 @@
 **Branch**: `codex/v2-complete-build`
 **Base branch**: `xplore`
 **Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
-**Current phase**: Phase 7 in progress — visible end-to-end unit slice
+**Current phase**: Phase 8 in progress — full path workspace
 
 ### Phase checklist
 
@@ -19,7 +19,7 @@
 - [x] Halt at the human decision gate and write the final handoff report
 - [x] Human owner decision recorded: build Phases 6–13 before the 30-lesson comparative study
 - [x] Phase 6 — production-complete path-to-Xplore bridge
-- [ ] Phase 7 — visible end-to-end unit slice
+- [x] Phase 7 — visible end-to-end unit slice
 - [ ] Phase 8 — full path workspace
 - [ ] Phase 9 — teaching schedule and unit groups
 - [ ] Phase 10 — controlled differentiated shapes
@@ -117,6 +117,67 @@ objective and slot authority, and can be regenerated only through a traceable ex
 The negative path remains blocked by the complete suite. Legacy generation behavior remains green.
 
 Phase 6 implementation commit: `efa4f55` (`P6: feat(path): complete resumable lesson preparation`).
+
+### Phase 7 tracking
+
+- [x] Add authenticated Units navigation while preserving the existing Lessons and Legacy Studio routes.
+- [x] Add a destination-led unit list/create surface with no lesson-count or duration input.
+- [x] Expose the active unit path through a read endpoint and typed frontend client.
+- [x] Add path planning, replanning, approval, editing, reordering, skipping, splitting, and merging controls.
+- [x] Add support/core/extension skeleton previews and lesson-mode selection.
+- [x] Bridge approved path lessons into durable Studio review with status and resume links.
+- [x] Replace stale review links with explicit, reasoned regeneration recovery.
+- [x] Run focused, full, browser, type, build, architecture, and immutable-fixture gates.
+
+### Phase 7 gate result
+
+Focused frontend contract and route tests after stale-recovery completion:
+
+```text
+$ cd frontend && pnpm exec vitest run src/lib/api/units.test.ts src/routes/units/[id]/page.test.ts --pool=threads --maxWorkers=1
+Test Files  2 passed (2)
+Tests       5 passed (5)
+$ cd frontend && pnpm exec svelte-check --tsconfig ./tsconfig.json
+svelte-check found 0 errors and 0 warnings
+```
+
+Complete regression gates:
+
+```text
+$ cd backend && uv run ruff check src tests
+All checks passed!
+$ cd backend && uv run pytest -q
+478 passed, 1 warning in 144.09s (0:02:24)
+$ cd frontend && pnpm exec vitest run --pool=threads --maxWorkers=1
+Test Files  69 passed (69)
+Tests       287 passed (287)
+$ cd frontend && pnpm exec vite build
+✓ built in 3m 48s
+✔ done
+```
+
+Browser acceptance used the authenticated local app without submitting a unit to the connected
+database. It verified the Units navigation, clean empty state, destination form, and absence of
+lesson-count/duration controls. The first local restart failed because `LECTIO_CONTRACTS_DIR`
+pointed to deployment-only `C:\app\backend\contracts`; overriding it with the repository contracts
+directory made the current backend start and the Units endpoint load cleanly. This was local
+runtime configuration, not an endpoint or schema defect.
+
+Architecture and immutable fixture:
+
+```text
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+**Gate: PASS.** The new path-first product is now visibly testable without relying on the old
+class-shape Studio entry screen. Teachers can create a unit destination, generate and curate a
+concept route, approve it, inspect deterministic lesson shapes, and enter the durable review flow.
+The legacy flow remains available as an explicitly labeled compatibility route.
+
+Phase 7 implementation commit: `e87b503` (`P7: feat(units): ship path-first workspace`).
 
 ### Phase 0 tracking
 
