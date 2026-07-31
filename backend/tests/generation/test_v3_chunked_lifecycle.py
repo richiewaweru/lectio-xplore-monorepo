@@ -25,7 +25,6 @@ from v3_blueprint.planning.models import (
     SectionPlan,
     Stage1PlanFailure,
     StructuralPlan,
-    VoiceSpec,
 )
 from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state, persist_structural_plan
 
@@ -126,7 +125,6 @@ def _sample_structural_plan() -> StructuralPlan:
             example="splitting a pizza into 8 equal slices",
             reuse_scope="intro then explain then practice",
         ),
-        voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[
             SectionPlan(
@@ -161,7 +159,6 @@ def _two_section_structural_plan() -> StructuralPlan:
             example="splitting fraction strips",
             reuse_scope="intro then model then practice",
         ),
-        voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[
             SectionPlan(

@@ -15,7 +15,6 @@ from v3_blueprint.planning.models import (
     SectionBrief,
     SectionPlan,
     StructuralPlan,
-    VoiceSpec,
 )
 
 
@@ -61,13 +60,12 @@ def _plan() -> StructuralPlan:
             example="pizza slices",
             reuse_scope="reused in each section",
         ),
-        voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[
             SectionPlan(
                 id="intro",
                 title="Intro",
-                role="intro",
+                role="orient",
                 visual_required=False,
                 transition_note=None,
                 components=[ComponentSlot(slug="hook-hero", purpose="introduce")],
@@ -75,7 +73,7 @@ def _plan() -> StructuralPlan:
             SectionPlan(
                 id="practice",
                 title="Practice",
-                role="practice",
+                role="guided",
                 visual_required=False,
                 transition_note="Build from the hook.",
                 components=[ComponentSlot(slug="practice-stack", purpose="practice")],
@@ -137,6 +135,32 @@ async def test_run_stage1_retries_current_output_validation_exhaustion(
         "Exceeded maximum retries (1) for output validation"
     ]
     persist_plan.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_shadow_failure_never_blocks_generation(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog,
+) -> None:
+    plan = _plan()
+    monkeypatch.setattr(retry, "_call_stage1", AsyncMock(return_value=plan))
+    monkeypatch.setattr(retry, "persist_structural_plan", AsyncMock())
+    monkeypatch.setattr(
+        retry,
+        "record_skeleton_shadow",
+        AsyncMock(side_effect=RuntimeError("shadow provider unavailable")),
+    )
+    monkeypatch.setattr(retry.settings, "v2_skeleton_shadow_enabled", True)
+
+    result = await retry.run_stage1_with_retry(
+        _signals(),
+        _form(),
+        {},
+        generation_id="generation-shadow-failure",
+    )
+
+    assert result == plan
+    assert "Skeleton shadow recording failed; generation continues" in caplog.text
 
 
 @pytest.mark.asyncio

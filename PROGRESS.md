@@ -1,5 +1,805 @@
 # Lesson Builder Merge Progress
 
+## Xplore Learning Platform V2 — 2026-07-31
+
+**Classification**: major
+**Branch**: `v2-platform`
+**Base branch**: `xplore`
+**Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
+**Current phase**: HALT — Phase 5 gate passed; human decision required before Phase 6
+
+### Phase checklist
+
+- [x] Phase 0 — baseline captured and reproducible
+- [x] Phase 1 — four silent defects fixed with fail-first regression evidence
+- [x] Phase 2 — concepts, objective ownership, and provenance added with generation unchanged
+- [x] Phase 3 — skeleton loading, classifier, and preview added with existing output unchanged
+- [x] Phase 4 — shadow logging proven on at least three real generations; review/export surface exists
+- [x] Phase 5 — units and path backend validate all three fixtures; unreachable approval is blocked
+- [x] Halt at the human decision gate and write the final handoff report
+
+### Phase 0 tracking
+
+- [x] Read the goal objective before touching code.
+- [x] Read `agents/ENTRY.md`, project config, applicable workflows, and all standards.
+- [x] Re-read this `PROGRESS.md` at session start.
+- [x] Read the seven required V2 handoff/patch sources in the mandated order.
+- [x] Preserved the supplied complete handoff under `handoff/` and patch under `patch/`.
+- [x] Captured `xplore` HEAD and created `v2-platform` without rewriting history.
+- [x] Verified the four Phase 1 defect claims against live code with `rg`.
+- [x] Run the backend baseline suite.
+- [x] Run the architecture baseline gate.
+- [x] Run the frontend production build and record the baseline failure exactly.
+- [x] Save one current end-to-end generation output as a comparison fixture.
+- [x] Re-run Phase 0 from `RUNBOOK.md` and record exact output.
+
+### Phase 0 evidence
+
+Baseline commit:
+
+```text
+$ git rev-parse HEAD
+73c70a9863157a04eb675dc29a23f7ee19151e8b
+```
+
+Backend test suite:
+
+```text
+$ cd backend && uv run pytest -q
+........................................................................ [ 16%]
+........................................................................ [ 33%]
+........................................................................ [ 50%]
+........................................................................ [ 67%]
+........................................................................ [ 84%]
+....................................................................     [100%]
+428 passed, 1 warning in 128.82s (0:02:08)
+```
+
+The warning is the pre-existing Pydantic `GenerationFieldContract.schema` field-shadowing warning.
+
+Architecture gate:
+
+```text
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+```
+
+Frontend production build:
+
+```text
+$ cd frontend && npm run build
+> frontend@0.0.1 build
+> vite build
+
+vite v7.3.1 building ssr environment for production...
+transforming...
+✓ 138 modules transformed.
+✗ Build failed in 6.57s
+error during build:
+[vite]: Rollup failed to resolve import "isomorphic-dompurify" from
+".../node_modules/lectio/dist/utils/markdown.js".
+```
+
+This is a reproducible dependency-resolution failure in the installed frontend baseline, not
+the previously recorded Windows process-lifecycle stall. It is recorded without a Phase 0 fix.
+
+Saved comparison fixture:
+
+```text
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+The fixture is a byte-for-byte snapshot of the current committed Xplore photosynthesis pack
+contract fixture at the baseline commit. It gives Phase 2 and Phase 3 an immutable output
+comparison target without making a provider call.
+
+Reproducibility check:
+
+```text
+$ git diff --quiet xplore -- backend/src backend/tests frontend/src frontend/package.json frontend/pnpm-lock.yaml
+source_tree_matches_xplore=True
+```
+
+The Phase 0 commands above were run after branching and before any source change; only the
+handoff, runbook, progress ledger, and copied comparison fixture differ from `xplore`.
+
+### Phase 0 gate result
+
+- **PASS** — the baseline commit, backend result, architecture result, frontend failure, and
+  immutable fixture hash are reproducible from `RUNBOOK.md`.
+- The frontend dependency failure is baseline evidence, not a V2 regression and not silently
+  reclassified as a passing build.
+- Phase 0 commit SHA: `d6688c2` (`P0: docs(xplore-v2): capture baseline and handoff`).
+
+### Nine-invariant check before Phase 0 commit
+
+1. Item generation still accepts one `ConceptCard` plus scalar private attrs; the context-wall
+   tests are included in the `428 passed` backend suite.
+2. Pack-owned shared items remain covered by `test_all_variants_derive_one_shared_pack_item_set`.
+3. QC verdict recomputation remains covered by the card-review and item-validator suites.
+4. Null distractor diagnosis remains covered by item validation and the Xplore fixture contract.
+5. Sibling isolation remains covered by `test_variant_failure_is_isolated_from_siblings`.
+6. Teacher edits survive regeneration in the existing card/item regression tests.
+7. Durable `awaiting_review` restart behavior remains covered by
+   `test_awaiting_review_halt_survives_process_restart`.
+8. No Builder, Lectio, PDF, or generation source changed in Phase 0. The existing frontend
+   baseline build is blocked earlier by unresolved `isomorphic-dompurify`.
+9. `StructuralPlan.max_six_sections` remains present and the full backend suite passes.
+
+### Verified handoff/code findings
+
+- `backend/contracts/guided-concept-path.json` has no role declarations, while
+  `_allowed_roles_from_resource_spec()` returns an empty set and both validators skip role checks.
+- `backend/contracts/component-registry.json` contains `cognitive_job`, but the Stage 1
+  component-selection context currently receives only the active resource spec and planner index.
+- `StructuralPlan` uses `ConfigDict(extra="ignore")` specifically for the legacy top-level
+  `voice` field; arbitrary unknown fields are therefore silently accepted as well.
+- The Stage 1 prompt still requires `2-4` misconceptions, despite permitting an explicit
+  no-known-misconceptions escape.
+- The repository architecture guide names `planning/` and `pipeline/`, while the live Xplore
+  implementation is under `v3_blueprint/` and `v3_execution/`. Live code is authoritative.
+- `handoff/14_IMPLEMENTATION_PHASES.md` places the path-to-Xplore bridge in Phase 6, while the
+  controlling goal explicitly includes the `:prepare` bridge in Phase 5 and requires a halt
+  immediately afterward. The controlling goal is being followed; no Phase 6 authority is inferred.
+
+### Open questions / stop conditions
+
+- None for Phase 0.
+
+### Phase 1 tracking
+
+- [x] Defect 1 fail-first evidence captured: missing skeleton role authority was silent.
+- [x] Defect 1 implementation uses skeleton slot IDs and emits a warning when the catalog is absent.
+- [x] Defect 1 committed as `5b1682a` (`P1: fix(planning): make skeleton roles authoritative`).
+- [x] Defect 2 fail-first regression: selector entries label cognitive jobs and section fields.
+- [x] Defect 2 committed as `39f1744` (`P1: fix(planning): label component selection context`).
+- [x] Defect 3 fail-first regression: unknown StructuralPlan fields are rejected.
+- [x] Defect 3 committed as `79fa042` (`P1: fix(planning): reject unknown structural plan fields`).
+- [x] Defect 4 fail-first regression: new path lesson prompt uses 0–3 belief-tested misconceptions.
+- [x] Defect 4 committed as `fedf0d7` (`P1: fix(planning): allow zero path misconceptions`).
+- [x] Phase 1 full gate: regressions, legacy fixtures, nine invariants, lint, architecture.
+
+### Phase 1 defect 1 evidence — dead role validation
+
+Failing regression before the fix:
+
+```text
+$ cd backend && uv run pytest tests/v3_blueprint/planning/test_validators.py::test_validate_structural_plan_warns_when_skeleton_roles_are_unavailable -q
+F                                                                        [100%]
+E       AssertionError: assert 'skeleton role validation unavailable' in ''
+1 failed, 1 warning in 0.85s
+```
+
+Passing validation after the fix:
+
+```text
+$ cd backend && uv run pytest tests/v3_blueprint/planning/test_validators.py tests/v3_blueprint/planning/test_stage1_error_logging.py -q
+.......................                                                  [100%]
+23 passed, 1 warning in 12.03s
+$ uv run ruff check src/v3_blueprint/planning/validators.py src/v3_blueprint/planning/structural_planner.py tests/v3_blueprint/planning/test_validators.py tests/v3_blueprint/planning/test_stage1_error_logging.py
+All checks passed!
+```
+
+The active resource spec is no longer treated as role authority. When a skeleton catalog is
+provided, roles are checked against `slots` keys. Until Phase 3 supplies the startup-loaded
+catalog, validation logs the explicit `skeleton role validation unavailable` warning.
+
+Pre-commit invariant evidence:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/v3_blueprint/planning/test_validators.py -q
+...............................                                          [100%]
+31 passed, 1 warning in 16.31s
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+```
+
+### Phase 1 gate result
+
+```text
+$ cd backend && uv run pytest -q
+........................................................................ [ 16%]
+........................................................................ [ 33%]
+........................................................................ [ 49%]
+........................................................................ [ 66%]
+........................................................................ [ 83%]
+........................................................................ [ 99%]
+.                                                                        [100%]
+433 passed, 1 warning in 76.05s (0:01:16)
+$ uv run ruff check src tests
+All checks passed!
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+**Gate: PASS.** All legacy tests load, all nine invariants remain covered by the complete
+backend suite, and the Phase 0 comparison fixture is unchanged. The known frontend baseline
+dependency failure remains outside the Phase 1 backend-only diff and is still recorded as open.
+
+### Phase 2 tracking
+
+- [x] Read the concept, path, provenance, and migration handoff details against live models.
+- [x] Add the canonical concepts table and reversible migration.
+- [x] Add a nullable canonical concept reference to current cards; path-lesson FK follows its Phase 5 table.
+- [x] Add exact immutable path-objective hash ownership and comparison foundation.
+- [x] Add nullable provenance fields without changing current generation output.
+- [x] Prove migration `0019` upgrade/downgrade/upgrade.
+- [x] Re-run the saved Phase 0 generation comparison byte-for-byte.
+- [x] Run the complete Phase 2 gate and invariant check.
+
+### Phase 2 foundation evidence
+
+Focused model, ownership, legacy-generation, and Xplore tests:
+
+```text
+$ cd backend && uv run pytest tests/core/database/test_concepts.py tests/v3_blueprint/planning/test_objective_ownership.py tests/generation/test_xplore_fixture.py tests/generation/test_xplore_contracts.py -q
+..........                                                               [100%]
+10 passed, 1 warning in 23.60s
+$ uv run ruff check <Phase 2 foundation files>
+All checks passed!
+```
+
+Migration `0019` from a database at revision `0018`:
+
+```text
+$ uv run alembic upgrade head
+INFO  [alembic.runtime.migration] Running upgrade 20260731_0018 -> 20260731_0019, add canonical concepts and lesson provenance
+$ uv run alembic downgrade -1
+INFO  [alembic.runtime.migration] Running downgrade 20260731_0019 -> 20260731_0018, add canonical concepts and lesson provenance
+$ uv run alembic upgrade head
+INFO  [alembic.runtime.migration] Running upgrade 20260731_0018 -> 20260731_0019, add canonical concepts and lesson provenance
+```
+
+The disposable SQLite database was removed after the gate. A fresh SQLite migration chain still
+hits the pre-existing `20260501_0010` inline-FK ALTER limitation on its first pass; that baseline
+contradiction is outside migration `0019` and is recorded rather than silently attributed to V2.
+
+Pre-commit invariant evidence:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/generation/test_v3_chunked_lifecycle.py tests/core/database/test_concepts.py -q
+.....................................                                    [100%]
+37 passed, 1 warning in 24.02s
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+```
+
+The `ConceptModel` follows `concept.schema.json` and adds the domain lifecycle fields. Current
+cards reference it with a nullable FK. `LessonProvenanceModel` carries nullable concept, path,
+objective-hash, skeleton, classifier-source, toggle, and deviation fields. Path tables and their
+FK are deliberately deferred to Migration 3 / Phase 5, matching `13_DATABASE_AND_MIGRATIONS.md`.
+
+Phase 2 commits:
+
+- `23835fd` — `P2: feat(data): add concepts and lesson provenance`
+- `83deff9` — `P2: feat(planning): lock path objective ownership`
+
+### Phase 2 gate result
+
+```text
+$ cd backend && uv run pytest -q
+........................................................................ [ 16%]
+........................................................................ [ 32%]
+........................................................................ [ 49%]
+........................................................................ [ 65%]
+........................................................................ [ 82%]
+........................................................................ [ 98%]
+......                                                                   [100%]
+438 passed, 1 warning in 95.45s (0:01:35)
+$ uv run ruff check src tests
+All checks passed!
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+**Gate: PASS.** Migration `0019` is reversible, all nine invariants pass in the complete suite,
+and the saved generation is byte-for-byte identical to Phase 0.
+
+### Phase 3 tracking
+
+- [x] Install the versioned draft as runtime `skeletons.yaml`.
+- [x] Validate skeletons on startup: slot limits, locked check, registry components, and toggles.
+- [x] Expand and preview all 11 skeletons with zero model calls.
+- [x] Add the verbatim knowledge-type classifier prompt and strict result enum.
+- [x] Add deviation request schema.
+- [x] Wire `POST /skeletons:preview` without changing generated lesson structure.
+- [x] Validate classifier outputs against all three path fixtures.
+- [x] Prove existing output and Phase 0 fixture remain unchanged.
+- [x] Run the complete Phase 3 gate and invariant check.
+
+### Phase 3 implementation evidence
+
+```text
+$ cd backend && uv run pytest tests/v3_blueprint/test_skeletons.py tests/v3_execution/prompts/test_shared_prompt_prefix.py tests/v3_blueprint/planning/test_retry.py tests/v3_blueprint/planning/test_stage1_error_logging.py tests/v3_blueprint/planning/test_validators.py -q
+............................................                             [100%]
+44 passed, 1 warning in 21.10s
+$ uv run ruff check <Phase 3 files>
+All checks passed!
+```
+
+The catalog test previews each of the 11 skeleton IDs, enforces at most six expanded slots,
+and confirms exactly one locked `check`. Unknown registry components fail startup validation.
+Overflow is retained as an explicit `variant_slot_overflow` warning rather than truncated.
+The HTTP test calls `POST /api/v1/skeletons:preview` and receives expanded slot objects.
+
+The classifier prompt resource is compared byte-for-byte (ignoring outer whitespace) against
+section 2 of `20_PROMPT_PACK.md`. Its live LLM service returns strict enums and marks low
+confidence for teacher review. All objectives in the Grade 4, Grade 12, and unreachable Grade 8
+fixtures pass the enum contract.
+
+### Phase 3 decision not specified by the handoff
+
+`20_PROMPT_PACK.md` names `POST /skeletons:preview` as a classifier call site, while the
+controlling goal requires the preview endpoint to make zero model calls. The endpoint therefore
+uses a deterministic, explicitly labelled `knowledge_type_source=deterministic_preview` helper;
+the authoritative classifier remains a separate live LLM service using the verbatim prompt.
+This keeps preview deterministic and prevents a heuristic result from masquerading as model or
+teacher classification.
+
+Pre-commit invariant evidence:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/generation/test_v3_chunked_lifecycle.py tests/v3_blueprint/test_skeletons.py tests/v3_blueprint/planning/test_retry.py -q
+.................................................                        [100%]
+49 passed, 1 warning in 34.78s
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+Phase 3 commit: `d0cc920` (`P3: feat(skeletons): add validated preview engine`).
+
+### Phase 3 gate result
+
+```text
+$ cd backend && uv run pytest -q
+........................................................................ [ 16%]
+........................................................................ [ 32%]
+........................................................................ [ 48%]
+........................................................................ [ 64%]
+........................................................................ [ 80%]
+........................................................................ [ 96%]
+................                                                         [100%]
+448 passed, 1 warning in 108.52s (0:01:48)
+$ uv run ruff check src tests
+All checks passed!
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+**Gate: PASS.** All 11 skeletons expand under the six-slot limit, the classifier is strict,
+preview is live with zero model calls, and existing generation bytes remain unchanged.
+
+### Phase 4 tracking
+
+- [x] Read shadow-record, review-surface, and experiment contracts against persistence/runtime.
+- [x] Add reversible skeleton-shadow persistence.
+- [x] Compute classifier and skeleton shadow alongside every completed structural plan.
+- [x] Keep classifier judgement independently reviewable from skeleton fit.
+- [x] Add authenticated CSV review export.
+- [x] Prove full shadow records on at least three real generations without synthetic substitution.
+- [x] Record that 30 human-reviewed lessons remain required before any authority promotion.
+- [x] Prove no generated output change and run the complete Phase 4 gate.
+
+### Phase 4 machinery evidence
+
+```text
+$ cd backend && uv run pytest tests/v3_blueprint/test_shadow.py tests/v3_blueprint/planning/test_retry.py -q
+........                                                                 [100%]
+8 passed, 1 warning in 13.78s
+$ uv run ruff check <Phase 4 files>
+All checks passed!
+```
+
+The persistence test stores classifier type, confidence, success test, and note separately from
+skeleton ID, expanded slots, toggles, warnings, and ordered structural-match score. CSV export
+contains both independent review columns (`wrong_classification` and skeleton-fit judgement).
+A forced classifier/provider failure is logged and generation still returns the original plan.
+
+Migration `0020` evidence:
+
+```text
+$ uv run alembic upgrade head
+INFO  [alembic.runtime.migration] Running upgrade 20260731_0019 -> 20260731_0020, add skeleton shadow records
+$ uv run alembic downgrade -1
+INFO  [alembic.runtime.migration] Running downgrade 20260731_0020 -> 20260731_0019, add skeleton shadow records
+$ uv run alembic upgrade head
+INFO  [alembic.runtime.migration] Running upgrade 20260731_0019 -> 20260731_0020, add skeleton shadow records
+```
+
+Pre-commit invariant evidence:
+
+```text
+$ cd backend && uv run pytest tests/v3_blueprint/test_shadow.py tests/v3_blueprint/test_skeletons.py tests/v3_blueprint/planning/test_retry.py tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/generation/test_v3_chunked_lifecycle.py -q
+....................................................                     [100%]
+52 passed, 1 warning in 25.30s
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+```
+
+### Phase 4 real-generation environment decision
+
+The repository root `.env` contains provider credentials but points `DATABASE_URL` at a remote
+Railway host. Real shadow proof will load the provider credentials while overriding persistence
+to an isolated local SQLite database. No migration, generation row, or shadow record will be
+written to the remote database without separate deployment authority.
+
+### Phase 4 real-generation evidence
+
+The isolated gate ran three real Stage 1 provider generations and three separate live classifier
+calls. It wrote one durable shadow record per generation. The first structural-plan call returned
+a `structure_rationale` longer than the 300-character contract; the existing retry corrected it,
+and all three generations completed. The gate database and exported evidence contain no synthetic
+records. Full records:
+
+```json
+[
+  {
+    "generation_id": "v2-shadow-real-001",
+    "subject": "Biology",
+    "grade": "Grade 4",
+    "objective": "By the end of this lesson the student can explain that light provides energy for plants to turn water and carbon dioxide into food (sugar) and oxygen.",
+    "current_roles": [
+      "orient",
+      "explain",
+      "model",
+      "guided",
+      "check",
+      "close"
+    ],
+    "classifier_type": "factual",
+    "classifier_confidence": "high",
+    "classifier_success_test": "The learner accurately restates the relationship: light provides energy for plants to convert water and carbon dioxide into sugar and oxygen.",
+    "classifier_note": "The objective asks students to recount a bounded scientific relationship; no novel cases are judged, so it is factual rather than conceptual.",
+    "skeleton_id": "factual.first_exposure",
+    "skeleton_version": 1,
+    "expanded_slots": [
+      "orient",
+      "organise",
+      "guided",
+      "independent",
+      "check"
+    ],
+    "toggles_applied": [],
+    "expansion_warnings": [],
+    "structural_match_score": 0.5,
+    "reviewer_preference": null,
+    "wrong_classification": null,
+    "deviation_required": null,
+    "severity": null,
+    "notes": null
+  },
+  {
+    "generation_id": "v2-shadow-real-002",
+    "subject": "Mathematics",
+    "grade": "Grade 8",
+    "objective": "By the end of this lesson the student can calculate the percentage change from an original value to a new value, using the original as denominator, and interpret the result as increase or decrease.",
+    "current_roles": [
+      "orient",
+      "explain",
+      "model",
+      "guided",
+      "check",
+      "close"
+    ],
+    "classifier_type": "procedural",
+    "classifier_confidence": "high",
+    "classifier_success_test": "Correctly computes percentage change using (new - original)/original × 100 for given pairs of values, and states increase or decrease based on the sign of the result.",
+    "classifier_note": null,
+    "skeleton_id": "procedural.first_exposure",
+    "skeleton_version": 1,
+    "expanded_slots": [
+      "orient",
+      "recall",
+      "model",
+      "guided",
+      "check"
+    ],
+    "toggles_applied": [],
+    "expansion_warnings": [],
+    "structural_match_score": 0.6667,
+    "reviewer_preference": null,
+    "wrong_classification": null,
+    "deviation_required": null,
+    "severity": null,
+    "notes": null
+  },
+  {
+    "generation_id": "v2-shadow-real-003",
+    "subject": "Geography",
+    "grade": "Grade 11",
+    "objective": "By the end of this lesson the student can assess which of two proposed wind-farm sites is more suitable and defend the choice against stated criteria.",
+    "current_roles": [
+      "orient",
+      "explain",
+      "model",
+      "guided",
+      "apply",
+      "close"
+    ],
+    "classifier_type": "evaluative",
+    "classifier_confidence": "high",
+    "classifier_success_test": "The learner chooses one of the two wind-farm sites and defends that choice by weighing the site against the stated criteria, with a justification that could withstand reasoned disagreement.",
+    "classifier_note": null,
+    "skeleton_id": "evaluative.first_exposure",
+    "skeleton_version": 1,
+    "expanded_slots": [
+      "orient",
+      "criteria",
+      "contrast",
+      "apply",
+      "check"
+    ],
+    "toggles_applied": [],
+    "expansion_warnings": [],
+    "structural_match_score": 0.3333,
+    "reviewer_preference": null,
+    "wrong_classification": null,
+    "deviation_required": null,
+    "severity": null,
+    "notes": null
+  }
+]
+```
+
+The three-record Phase 4 machinery gate is satisfied, but this is not skeleton-authority
+approval. Approximately 30 real lessons must be human-reviewed before Phase 6 or any promotion
+of skeletons to authority. The review fields above intentionally remain null until humans review
+the records; this implementation does not advance or simulate that study.
+
+### Phase 4 gate result
+
+```text
+$ cd backend && uv run pytest -q
+........................................................................ [ 15%]
+........................................................................ [ 31%]
+........................................................................ [ 47%]
+........................................................................ [ 63%]
+........................................................................ [ 79%]
+........................................................................ [ 95%]
+...................                                                      [100%]
+451 passed, 1 warning in 102.39s (0:01:42)
+$ uv run ruff check src tests scripts/run_v2_shadow_gate.py
+All checks passed!
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+**Gate: PASS.** Three real provider-backed generations produced complete, durable shadow
+records; CSV review export exists; classifier judgements remain independent from skeleton-fit
+review; generation bytes are unchanged. The separate human-review authority gate remains closed.
+
+### Phase 5 tracking
+
+- [x] Re-read the unit, scope, path, concept-resolution, API, migration, test, and stop-rule contracts.
+- [x] Re-read the three supplied path fixtures and pre-resolution JSON schema.
+- [x] Add reversible unit/scope/path persistence and prove upgrade/downgrade/upgrade.
+- [x] Install the four Phase 5 prompts verbatim and keep count/duration outside planner input.
+- [x] Implement pre-resolution path validation and canonical concept resolution.
+- [x] Implement split, merge, skip-as-state, reorder, selective replan, and guarded approval.
+- [x] Implement the path-lesson prepare bridge without changing legacy Studio generation.
+- [x] Validate Grade 4 and Grade 12 fixtures, including disjoint concept slugs.
+- [x] Validate Grade 8 unreachable fixture and prove approval is blocked.
+- [x] Run the complete backend, lint, architecture, migration, and generation-byte gates.
+- [x] Halt before Phase 6 and write the handoff report.
+
+### Phase 5 sequencing contradiction
+
+`handoff/14_IMPLEMENTATION_PHASES.md` places the path-to-Xplore bridge in Phase 6, while the
+controlling goal explicitly requires `POST /units/{id}/path/lessons/{lid}:prepare` in Phase 5
+and then requires an immediate halt. The controlling goal wins. Phase 5 will include only the
+narrow backend preparation bridge needed to prove objective/slot ownership; it will not promote
+skeleton authority, build path UI, or begin any other Phase 6 work.
+
+### Phase 5 prompt-contract contradiction and resolution
+
+The verbatim §1 system prompt says a lesson's `prerequisites` may contain an
+`assumed_prerequisites` entry, while the patched `path-plan.schema.json` and controlling machine
+checks require `prerequisites` to contain only earlier in-path slugs and put assumed capabilities
+in `external_prerequisites`. The system prompt remains byte-for-byte unchanged. The structured
+output model and a user-payload machine-contract block expose the patched split, and strict
+validation rejects any assumed capability emitted into the internal graph. This is a safe adapter:
+it does not paraphrase the reviewed prompt or silently rewrite model output.
+
+### Phase 5 fail-first evidence
+
+The path-contract test was created before the planning package. After correcting a syntax error
+in the test itself, the valid fail-first run was:
+
+```text
+$ cd backend && uv run pytest tests/planning/test_path_contracts.py -q
+E   ModuleNotFoundError: No module named 'planning'
+1 error in 1.10s
+```
+
+### Phase 5 fixture and behavior evidence
+
+All three supplied JSON documents validate against the patched Draft 2020-12 schema and the
+runtime `PathPlan` model. Machine validation proves unique slugs, backward-only internal
+prerequisites, declared external prerequisites, exclusion enforcement, and the completeness-risk
+implication.
+
+- Grade 4: 5 ordered capabilities; all checks pass; `reaches_destination=true`.
+- Grade 12: 7 ordered capabilities; all checks pass; `reaches_destination=true`.
+- Grade 4 and Grade 12 share zero concept slugs, proving materially different scope.
+- Grade 8 negative: 2 explicit prerequisite risks; `reaches_destination=false`; service approval
+  raises `PathApprovalBlocked`; authenticated HTTP approval returns `409` with a prerequisite
+  explanation.
+
+The persistence tests additionally prove candidate-slug to canonical UUID resolution, UUID
+prerequisite links, exact SHA-256 objective ownership, concept-ID retention and teacher-edit
+retention across replan, skipped lessons retained as state, invalid reorder rejection, split/merge
+prerequisite carry-forward, and all-adjacent merge-critic calls. The prepare bridge proves exactly
+one canonical concept card, exact skeleton slot/section-role sequence, selector-owned components,
+objective-hash equality after persisted generation preparation, and idempotent reuse.
+
+Focused result:
+
+```text
+$ cd backend && uv run pytest tests/planning -q
+25 tests collected and covered by the complete Phase 5 gate
+```
+
+Migration `0021` final evidence on an isolated local SQLite database stamped at `0020`:
+
+```text
+$ uv run alembic upgrade head
+INFO  [alembic.runtime.migration] Running upgrade 20260731_0020 -> 20260731_0021, add units and path backend
+$ uv run alembic downgrade -1
+INFO  [alembic.runtime.migration] Running downgrade 20260731_0021 -> 20260731_0020, add units and path backend
+$ uv run alembic upgrade head
+INFO  [alembic.runtime.migration] Running upgrade 20260731_0020 -> 20260731_0021, add units and path backend
+revision 20260731_0021
+```
+
+### Phase 5 gate result
+
+```text
+$ cd backend && uv run pytest -q
+........................................................................ [ 15%]
+........................................................................ [ 30%]
+........................................................................ [ 45%]
+........................................................................ [ 60%]
+........................................................................ [ 75%]
+........................................................................ [ 90%]
+............................................                             [100%]
+476 passed, 1 warning in 110.71s (0:01:50)
+$ uv run ruff check src tests scripts/run_v2_shadow_gate.py
+All checks passed!
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+Phase 5 implementation commit: `9ca80a2` (`P5: feat(path): add guarded unit path backend`).
+
+**Gate: PASS; HALT.** Phases 0–5 are complete. Phase 6 was not started. Skeleton authority
+remains disabled pending the explicitly required human review of approximately 30 real shadow
+lessons and a human go/no-go decision.
+
+### Phase 1 defect 4 evidence — path-only misconception quota
+
+Failing regression before the fix:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/prompts/test_shared_prompt_prefix.py::test_path_prepared_stage1_uses_zero_to_three_belief_tested_misconceptions -q
+F                                                                        [100%]
+E       TypeError: build_stage1_system_prompt() got an unexpected keyword argument 'path_prepared'
+1 failed, 1 warning in 12.51s
+```
+
+Passing validation after the fix:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/prompts/test_shared_prompt_prefix.py tests/v3_blueprint/planning/test_stage1_error_logging.py tests/v3_blueprint/planning/test_retry.py -q
+...............                                                          [100%]
+15 passed, 1 warning in 10.54s
+$ uv run ruff check src/v3_blueprint/planning/structural_planner.py tests/v3_execution/prompts/test_shared_prompt_prefix.py
+All checks passed!
+```
+
+The default Stage 1 prompt remains the legacy 2–4 path. Only the explicit
+`path_prepared=True` mode changes to zero through three and applies the exact
+confident-wrong-answer test. The Phase 5 bridge will be the only production caller authorized
+to select this mode.
+
+Pre-commit invariant evidence:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/v3_blueprint/planning/test_validators.py tests/generation/test_v3_chunked_lifecycle.py tests/v3_execution/prompts/test_shared_prompt_prefix.py -q
+..........................................................               [100%]
+58 passed, 1 warning in 19.12s
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+```
+
+### Phase 1 defect 3 evidence — strict StructuralPlan with legacy adapter
+
+Failing regression before the fix:
+
+```text
+$ cd backend && uv run pytest tests/v3_blueprint/planning/test_validators.py::test_structural_plan_rejects_arbitrary_unknown_fields -q
+F                                                                        [100%]
+E       Failed: DID NOT RAISE <class 'pydantic_core._pydantic_core.ValidationError'>
+1 failed, 1 warning in 0.93s
+```
+
+Passing validation after the fix:
+
+```text
+$ cd backend && uv run pytest tests/v3_blueprint/planning/test_validators.py tests/v3_blueprint/planning/test_stage1_error_logging.py tests/v3_blueprint/planning/test_section_expander.py tests/v3_blueprint/planning/test_retry.py tests/v3_blueprint/planning/test_assembler.py tests/generation/test_v3_chunked_lifecycle.py tests/generation/test_stage2_parallel.py -q
+...................................................................      [100%]
+67 passed, 1 warning in 29.85s
+$ uv run ruff check <touched Phase 1 defect 3 files>
+All checks passed!
+```
+
+`StructuralPlan` now uses `extra="forbid"`. Persisted-plan reads use
+`adapt_legacy_structural_plan()`, which removes only the named top-level `voice`, validates it,
+maps it into a `VariantSpec`, and logs the source. Unknown fields still reach strict validation.
+Planner output does not use the adapter, so a model cannot smuggle unknown keys through the
+legacy compatibility path.
+
+Pre-commit invariant evidence:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/v3_blueprint/planning/test_validators.py tests/generation/test_v3_chunked_lifecycle.py -q
+......................................................                   [100%]
+54 passed, 1 warning in 19.43s
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+```
+
+### Phase 1 defect 2 evidence — component cognitive jobs
+
+The handoff's claim that cognitive jobs never reach the planner contradicts the live code:
+`_planner_index_block()` already appended the cognitive-job value to every available component
+since commit `5ff0769b`. The value was an unlabeled `role - job` suffix, however, so the exact
+registry-entry contract was not explicit or mechanically distinguishable. Live code is truth;
+the scoped fix labels `section_field`, `cognitive_job`, and `role` in every selector entry.
+
+Failing regression before the scoped fix:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/prompts/test_shared_prompt_prefix.py::test_stage1_component_selector_context_labels_cognitive_job_and_section_field -q
+F                                                                        [100%]
+E       AssertionError: assert 'worked-example-card | section_field=worked_example | cognitive_job=Watch reasoning in action' in planner_block
+1 failed, 1 warning in 16.55s
+```
+
+Passing validation after the fix:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/prompts/test_shared_prompt_prefix.py tests/v3_blueprint/planning/test_stage1_error_logging.py -q
+.........                                                                [100%]
+9 passed, 1 warning in 12.52s
+$ uv run ruff check src/generation/v3_studio/prompts.py tests/v3_execution/prompts/test_shared_prompt_prefix.py
+All checks passed!
+```
+
+Pre-commit invariant evidence:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/v3_blueprint/planning/test_validators.py tests/v3_execution/prompts/test_shared_prompt_prefix.py -q
+..................................                                       [100%]
+34 passed, 1 warning in 20.85s
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+```
+
+---
+
 ## Xplore Pack Generation — Phase 13 contracts — 2026-07-31
 
 **Classification**: major

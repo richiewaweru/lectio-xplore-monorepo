@@ -1,0 +1,366 @@
+from __future__ import annotations
+
+from copy import deepcopy
+from functools import lru_cache
+from pathlib import Path
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+import yaml
+
+from contracts.lectio import get_component_card
+
+KnowledgeType = Literal["procedural", "conceptual", "factual", "evaluative"]
+LessonMode = Literal[
+    "first_exposure", "consolidation", "repair", "retrieval", "transfer"
+]
+GroupProfile = Literal["support", "core", "extension"]
+
+_PROFILE_SUPPORT_LEVEL = {"support": "high", "core": "medium", "extension": "low"}
+
+
+class SkeletonCatalogError(ValueError):
+    pass
+
+
+class SkeletonPreviewRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    objective: str = Field(min_length=1)
+    lesson_mode: LessonMode
+    misconception_count: int = Field(ge=0, le=3)
+    group_profiles: list[GroupProfile]
+
+
+class SkeletonSlotPreview(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    slot_id: str
+    role: str
+    purpose: str
+    allowed_components: list[str]
+    locked: bool = False
+    visual_required: bool = False
+
+
+class SkeletonVariantPreview(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    group_profile: GroupProfile
+    support_level: str
+    slots: list[SkeletonSlotPreview]
+    toggles_applied: list[str]
+    warnings: list[str]
+
+
+class SkeletonPreviewResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    objective: str
+    knowledge_type: KnowledgeType
+    knowledge_type_source: Literal["deterministic_preview", "provided"]
+    skeleton_id: str
+    skeleton_version: int
+    variants: list[SkeletonVariantPreview]
+
+
+class DeviationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    skeleton_id: str
+    operation: Literal["insert", "remove", "replace", "reorder"]
+    target_slot: str
+    replacement_slot: str | None = None
+    reason: str = Field(min_length=1)
+    requested_by: Literal["model", "teacher"]
+    status: Literal["pending_teacher", "approved", "rejected"] = "pending_teacher"
+
+    @model_validator(mode="after")
+    def preserve_locked_check(self) -> DeviationRequest:
+        if self.operation == "remove" and self.target_slot == "check":
+            raise ValueError("The locked check slot cannot be removed")
+        return self
+
+
+class SkeletonCatalog:
+    def __init__(self, data: dict) -> None:
+        self.data = deepcopy(data)
+        self.version = self._require_positive_int("version")
+        self.max_slots = self._require_positive_int("max_slots")
+        self.slots = self._require_mapping("slots")
+        raw_skeletons = self.data.get("skeletons")
+        if not isinstance(raw_skeletons, list) or not raw_skeletons:
+            raise SkeletonCatalogError("skeletons must be a non-empty list")
+        self.skeletons = {
+            str(item.get("id")): item
+            for item in raw_skeletons
+            if isinstance(item, dict) and item.get("id")
+        }
+        if len(self.skeletons) != len(raw_skeletons):
+            raise SkeletonCatalogError("skeleton ids must be present and unique")
+        self._validate()
+
+    def _require_positive_int(self, key: str) -> int:
+        value = self.data.get(key)
+        if not isinstance(value, int) or value < 1:
+            raise SkeletonCatalogError(f"{key} must be a positive integer")
+        return value
+
+    def _require_mapping(self, key: str) -> dict:
+        value = self.data.get(key)
+        if not isinstance(value, dict) or not value:
+            raise SkeletonCatalogError(f"{key} must be a non-empty mapping")
+        return value
+
+    def _validate(self) -> None:
+        if self.max_slots != 6:
+            raise SkeletonCatalogError("max_slots must preserve StructuralPlan's six-slot limit")
+        check = self.slots.get("check")
+        if not isinstance(check, dict) or check.get("locked") is not True:
+            raise SkeletonCatalogError("the check slot must exist and be locked")
+
+        for slot_id, slot in self.slots.items():
+            if not isinstance(slot, dict):
+                raise SkeletonCatalogError(f"slot '{slot_id}' must be a mapping")
+            allowed = slot.get("allowed")
+            if not isinstance(allowed, list) or not allowed:
+                raise SkeletonCatalogError(f"slot '{slot_id}' must declare allowed components")
+            for component_id in allowed:
+                if get_component_card(str(component_id)) is None:
+                    raise SkeletonCatalogError(
+                        f"slot '{slot_id}' references unknown component '{component_id}'"
+                    )
+            preferred = slot.get("preferred", [])
+            if not set(preferred).issubset(set(allowed)):
+                raise SkeletonCatalogError(
+                    f"slot '{slot_id}' preferred components must also be allowed"
+                )
+
+        for skeleton_id, skeleton in self.skeletons.items():
+            slot_ids = skeleton.get("slots")
+            if not isinstance(slot_ids, list):
+                raise SkeletonCatalogError(f"skeleton '{skeleton_id}' slots must be a list")
+            if len(slot_ids) > 5:
+                raise SkeletonCatalogError(
+                    f"skeleton '{skeleton_id}' exceeds the five-slot base limit"
+                )
+            if "check" not in slot_ids:
+                raise SkeletonCatalogError(f"skeleton '{skeleton_id}' is missing locked check")
+            unknown = [slot_id for slot_id in slot_ids if slot_id not in self.slots]
+            if unknown:
+                raise SkeletonCatalogError(
+                    f"skeleton '{skeleton_id}' references unknown slots: {unknown}"
+                )
+            for profile in _PROFILE_SUPPORT_LEVEL:
+                for misconception_count in range(4):
+                    expanded, _toggles, _warnings = self._expand_slots(
+                        skeleton,
+                        profile=profile,
+                        misconception_count=misconception_count,
+                    )
+                    if len(expanded) > self.max_slots:
+                        raise SkeletonCatalogError(
+                            f"skeleton '{skeleton_id}' expands beyond {self.max_slots} slots"
+                        )
+                    if "check" not in expanded:
+                        raise SkeletonCatalogError(
+                            f"skeleton '{skeleton_id}' expansion removed locked check"
+                        )
+
+    def skeleton_ids(self) -> list[str]:
+        return sorted(self.skeletons)
+
+    def skeleton_for(self, knowledge_type: KnowledgeType, lesson_mode: LessonMode) -> dict:
+        exact = f"{knowledge_type}.{lesson_mode}"
+        fallback = f"any.{lesson_mode}"
+        skeleton = self.skeletons.get(exact) or self.skeletons.get(fallback)
+        if skeleton is None:
+            raise SkeletonCatalogError(
+                f"no skeleton for knowledge_type={knowledge_type}, lesson_mode={lesson_mode}"
+            )
+        return skeleton
+
+    def preview(
+        self,
+        request: SkeletonPreviewRequest,
+        *,
+        knowledge_type: KnowledgeType | None = None,
+    ) -> SkeletonPreviewResponse:
+        resolved_type = knowledge_type or classify_for_preview(request.objective)
+        skeleton = self.skeleton_for(resolved_type, request.lesson_mode)
+        variants = [
+            self._preview_variant(
+                skeleton,
+                profile=profile,
+                misconception_count=request.misconception_count,
+            )
+            for profile in request.group_profiles
+        ]
+        return SkeletonPreviewResponse(
+            objective=request.objective,
+            knowledge_type=resolved_type,
+            knowledge_type_source=("provided" if knowledge_type else "deterministic_preview"),
+            skeleton_id=str(skeleton["id"]),
+            skeleton_version=self.version,
+            variants=variants,
+        )
+
+    def preview_skeleton_by_id(
+        self,
+        skeleton_id: str,
+        *,
+        profile: GroupProfile = "core",
+        misconception_count: int = 1,
+    ) -> SkeletonVariantPreview:
+        skeleton = self.skeletons.get(skeleton_id)
+        if skeleton is None:
+            raise SkeletonCatalogError(f"unknown skeleton '{skeleton_id}'")
+        return self._preview_variant(
+            skeleton,
+            profile=profile,
+            misconception_count=misconception_count,
+        )
+
+    def _preview_variant(
+        self,
+        skeleton: dict,
+        *,
+        profile: GroupProfile,
+        misconception_count: int,
+    ) -> SkeletonVariantPreview:
+        expanded, toggles, warnings = self._expand_slots(
+            skeleton,
+            profile=profile,
+            misconception_count=misconception_count,
+        )
+        slots = [
+            SkeletonSlotPreview(
+                slot_id=slot_id,
+                role=str(self.slots[slot_id].get("role") or slot_id),
+                purpose=str(self.slots[slot_id].get("purpose") or ""),
+                allowed_components=[str(item) for item in self.slots[slot_id]["allowed"]],
+                locked=self.slots[slot_id].get("locked") is True,
+                visual_required=False,
+            )
+            for slot_id in expanded
+        ]
+        return SkeletonVariantPreview(
+            group_profile=profile,
+            support_level=_PROFILE_SUPPORT_LEVEL[profile],
+            slots=slots,
+            toggles_applied=toggles,
+            warnings=warnings,
+        )
+
+    def _expand_slots(
+        self,
+        skeleton: dict,
+        *,
+        profile: GroupProfile,
+        misconception_count: int,
+    ) -> tuple[list[str], list[str], list[str]]:
+        slots = [str(slot_id) for slot_id in skeleton["slots"]]
+        applied: list[str] = []
+        warnings: list[str] = []
+        knowledge_type = str(skeleton.get("knowledge_type"))
+        support_level = _PROFILE_SUPPORT_LEVEL[profile]
+
+        if "confront" in slots:
+            first = slots.index("confront")
+            slots = [slot for slot in slots if slot != "confront"]
+            desired = min(misconception_count, 2)
+            for offset in range(desired):
+                slots.insert(first + offset, "confront")
+            applied.append("misconception.confront_per_belief")
+
+        if support_level == "high" and knowledge_type == "procedural":
+            slots = ["model" if slot == "independent" else slot for slot in slots]
+            applied.append("support.high.extra_modelling")
+
+        if support_level == "high" and "independent" in slots and "guided" in slots:
+            slots.remove("independent")
+            applied.append("support.high.drop_independent")
+
+        if support_level == "high" and knowledge_type == "conceptual":
+            self._insert_with_limit(
+                slots,
+                "contrast",
+                anchor="explain",
+                after=True,
+                toggle_id="support.high.extra_contrast",
+                applied=applied,
+                warnings=warnings,
+            )
+
+        if support_level == "low":
+            self._insert_with_limit(
+                slots,
+                "apply",
+                anchor="check",
+                after=False,
+                toggle_id="support.low.add_transfer",
+                applied=applied,
+                warnings=warnings,
+            )
+            if len(slots) >= self.max_slots and "orient" in slots:
+                slots.remove("orient")
+                applied.append("support.low.drop_orient")
+
+        return slots, applied, warnings
+
+    def _insert_with_limit(
+        self,
+        slots: list[str],
+        slot_id: str,
+        *,
+        anchor: str,
+        after: bool,
+        toggle_id: str,
+        applied: list[str],
+        warnings: list[str],
+    ) -> None:
+        if len(slots) >= self.max_slots:
+            warnings.append(
+                f"variant_slot_overflow: skipped toggle '{toggle_id}' at {self.max_slots} slots"
+            )
+            return
+        if anchor not in slots:
+            warnings.append(
+                f"skeleton_conflict: toggle '{toggle_id}' anchor '{anchor}' is absent"
+            )
+            return
+        index = slots.index(anchor) + (1 if after else 0)
+        slots.insert(index, slot_id)
+        applied.append(toggle_id)
+
+
+def classify_for_preview(objective: str) -> KnowledgeType:
+    """Zero-model preview classification; authoritative classification remains the LLM call."""
+    normalized = objective.casefold()
+    if any(token in normalized for token in ("assess ", "critique ", "recommend ", "defend ")):
+        return "evaluative"
+    if any(
+        token in normalized
+        for token in ("calculate ", "solve ", "construct ", "derive ", "balance ", "plot ")
+    ):
+        return "procedural"
+    if any(token in normalized for token in ("identify ", "name ", "list ", "state ", "label ")):
+        return "factual"
+    return "conceptual"
+
+
+def _default_skeleton_path() -> Path:
+    return Path(__file__).resolve().parents[2] / "resources" / "skeletons.yaml"
+
+
+@lru_cache(maxsize=1)
+def load_skeleton_catalog(path: str | Path | None = None) -> SkeletonCatalog:
+    source = Path(path) if path is not None else _default_skeleton_path()
+    raw = yaml.safe_load(source.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise SkeletonCatalogError("skeletons.yaml root must be a mapping")
+    return SkeletonCatalog(raw)
+
+
+def initialize_skeleton_catalog() -> SkeletonCatalog:
+    return load_skeleton_catalog()

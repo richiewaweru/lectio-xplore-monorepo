@@ -13,7 +13,6 @@ from v3_blueprint.planning.models import (
     SectionBrief,
     SectionPlan,
     StructuralPlan,
-    VoiceSpec,
 )
 from v3_blueprint.planning.persistence import resume_stage2
 from v3_blueprint.planning.retry import run_stage2
@@ -24,7 +23,6 @@ def _plan() -> StructuralPlan:
         lesson_mode="first_exposure",
         lesson_intent=LessonIntent(goal="Learn fractions.", structure_rationale="Concrete first."),
         anchor=AnchorSpec(example="fraction strips", reuse_scope="all sections"),
-        voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=[],
         sections=[
             SectionPlan(

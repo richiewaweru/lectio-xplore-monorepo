@@ -1,0 +1,447 @@
+# =============================================================================
+# LESSON SKELETONS  v1  (DRAFT — argue with this)
+# =============================================================================
+# Data, not code. Edited without a deploy. Versioned so old lessons stay
+# explicable.
+#
+# Pipeline:
+#   1. LLM classifies the objective    -> knowledge_type   (1 of 4)
+#   2. This file expands it            -> ordered slots    (deterministic)
+#   3. LLM fills each slot             -> prose + components
+#   4. LLM may request a deviation     -> reason + teacher approval + log
+#
+# HARD CONSTRAINT: StructuralPlan.max_six_sections. Every expanded skeleton
+# must be <= 6 slots AFTER toggles. Base skeletons are 5 so one toggle fits.
+# The expander applies toggles in priority order and stops at 6.
+# =============================================================================
+
+version: 1
+max_slots: 6
+
+
+# -----------------------------------------------------------------------------
+# 1. KNOWLEDGE TYPES
+# -----------------------------------------------------------------------------
+# Classified from the objective verb. The objective is written by the path
+# planner and approved by the teacher, so this is a classification of something
+# already reviewed, not a new input.
+#
+# teacher_label is what appears in the UI. The internal name is never shown.
+# -----------------------------------------------------------------------------
+
+knowledge_types:
+
+  procedural:
+    teacher_label: "Teaches a method"
+    definition: >
+      The learner must carry out a sequence of steps to reach a result.
+      Success is a correct output produced by a repeatable process.
+    verb_signals: [calculate, solve, construct, derive, balance, plot, convert,
+                   measure, draw, compute, apply-formula]
+    demands:
+      - the method must be modelled before it is practised
+      - practice must fade support: worked -> guided -> independent
+      - errors are usually step-slips, not belief errors
+    contraindicated:
+      - non-examples          # "here is a wrong one" teaches little about a method
+      - extended contrast     # comparison does not build fluency
+
+  conceptual:
+    teacher_label: "Builds understanding"
+    definition: >
+      The learner must hold a correct idea and use it to reason about cases
+      they have not seen. Success is correct judgement about new instances.
+    verb_signals: [explain, relate, distinguish, predict, justify-why, account-for,
+                   describe-how, interpret, classify, infer]
+    demands:
+      - needs contrast: examples AND non-examples
+      - this is where misconception confrontation actually lives
+      - needs a prediction the learner commits to before being told
+    contraindicated:
+      - worked examples       # there is no procedure to model
+      - drill practice        # repetition does not shift a belief
+
+  factual:
+    teacher_label: "Organises facts"
+    definition: >
+      The learner must recall and organise a bounded set of items, names,
+      or properties. Success is accurate retrieval.
+    verb_signals: [identify, name, list, state, label, recall, locate, match]
+    demands:
+      - needs an organising structure, not just a list
+      - needs retrieval practice inside the same lesson
+    contraindicated:
+      - worked examples
+      - extended explanation  # explanation is not the bottleneck; retrieval is
+    warning: >
+      A purely factual lesson is usually too thin to stand alone. If the path
+      planner produces one, that is a signal the lesson should be merged into
+      its neighbour. Flag it at path review rather than generating it.
+
+  evaluative:
+    teacher_label: "Develops judgement"
+    definition: >
+      The learner must weigh options or evidence against criteria and defend
+      a choice. Success is a defensible position, not a single right answer.
+    verb_signals: [assess, evaluate, compare-and-decide, critique, argue,
+                   recommend, weigh, judge, select-best]
+    demands:
+      - criteria must be established BEFORE cases are examined
+      - needs at least two genuinely competing cases
+      - the answer key must accept a range of defensible positions
+    contraindicated:
+      - single-answer quiz items on the core judgement itself
+      - worked examples
+
+
+# -----------------------------------------------------------------------------
+# 2. SLOT LIBRARY
+# -----------------------------------------------------------------------------
+# A slot is a pedagogical function. A component is a Lectio renderer.
+# The table fixes SLOTS. The LLM picks components WITHIN a slot, from the
+# allowed list only.
+#
+# carries_card: true  -> this slot teaches a concept, gets card_id, QC applies
+# carries_card: false -> plain section, card_id = null
+# -----------------------------------------------------------------------------
+
+slots:
+
+  orient:
+    role: orient
+    carries_card: false
+    purpose: "Give the learner a reason to care and a concrete situation to hold."
+    preferred: [hook-hero]
+    allowed:   [hook-hero, interview-anchor, insight-strip, timeline-block]
+
+  recall:
+    role: recall
+    carries_card: false
+    purpose: "Reactivate the specific prior knowledge this lesson depends on. Nothing else."
+    preferred: [prerequisite-strip]
+    allowed:   [prerequisite-strip, key-fact, definition-card, short-answer]
+    fill_from: "PathLesson.prerequisites and the preceding lessons' must_establish"
+
+  model:
+    role: model
+    carries_card: true
+    purpose: "Show the method being carried out, with each step's reasoning visible."
+    preferred: [worked-example-card, process-steps]
+    allowed:   [worked-example-card, process-steps, diagram-series, explanation-block]
+
+  explain:
+    role: explain
+    carries_card: true
+    purpose: "Build the idea itself. State it, ground it, make it usable."
+    preferred: [explanation-block, definition-card]
+    allowed:   [explanation-block, definition-card, definition-family, key-fact,
+                diagram-block, insight-strip, callout-block]
+
+  contrast:
+    role: contrast
+    carries_card: true
+    purpose: >
+      Put a case and a near-miss side by side. The learner must see the
+      boundary of the idea, not just the idea.
+    preferred: [comparison-grid, diagram-compare]
+    allowed:   [comparison-grid, diagram-compare, definition-family, key-fact]
+
+  confront:
+    role: confront
+    carries_card: true
+    purpose: >
+      Name the wrong belief, show why it feels right, then show it failing on
+      a case. Correct exposition alone does not count.
+    preferred: [pitfall-alert]
+    allowed:   [pitfall-alert, comparison-grid, callout-block, diagram-compare]
+    emitted_per: misconception     # one slot per REAL misconception on the card
+    max_instances: 2               # beyond 2, the card is doing too much
+
+  organise:
+    role: organise
+    carries_card: true
+    purpose: "Impose a structure on the facts so they are retrievable, not just listed."
+    preferred: [comparison-grid, definition-family]
+    allowed:   [comparison-grid, definition-family, glossary-rail, diagram-block,
+                timeline-block, key-fact]
+
+  criteria:
+    role: criteria
+    carries_card: true
+    purpose: "Establish what a good answer is judged against, before any case is seen."
+    preferred: [key-fact, comparison-grid]
+    allowed:   [key-fact, comparison-grid, explanation-block, callout-block]
+
+  guided:
+    role: guided
+    carries_card: true
+    purpose: "Practice with scaffolding still present. Learner does the thinking, support stays."
+    preferred: [practice-stack]
+    allowed:   [practice-stack, fill-in-blank, short-answer, student-textbox]
+
+  independent:
+    role: independent
+    carries_card: true
+    purpose: "Practice with scaffolding removed."
+    preferred: [practice-stack]
+    allowed:   [practice-stack, short-answer, student-textbox]
+
+  apply:
+    role: apply
+    carries_card: true
+    purpose: "Use the idea on a context not seen in this lesson."
+    preferred: [short-answer, student-textbox]
+    allowed:   [short-answer, student-textbox, practice-stack, simulation-block,
+                reflection-prompt]
+
+  check:
+    role: check
+    carries_card: false
+    purpose: >
+      The shared diagnostic. Identical across every variant. Written from the
+      card only, never from the prose above it.
+    preferred: [quiz-check]
+    allowed:   [quiz-check]
+    locked: true      # never toggled, never removed, never varied by group
+
+  close:
+    role: close
+    carries_card: false
+    purpose: "Consolidate what was established and name what comes next."
+    preferred: [summary-block, what-next-bridge]
+    allowed:   [summary-block, what-next-bridge, reflection-prompt]
+    fill_from: "the next PathLesson's title and opens_from"
+
+
+# -----------------------------------------------------------------------------
+# 3. SKELETONS
+# -----------------------------------------------------------------------------
+# Keyed knowledge_type x lesson_mode. Cells that collapse across knowledge
+# types use knowledge_type: any.
+#
+# question_arc is unchanged from the existing STEP 8 rules; it is repeated
+# here only so one file describes the whole shape.
+# -----------------------------------------------------------------------------
+
+skeletons:
+
+  # --- PROCEDURAL ------------------------------------------------------------
+
+  - id: procedural.first_exposure
+    knowledge_type: procedural
+    lesson_mode: first_exposure
+    rationale: >
+      A method cannot be discovered efficiently. Model it, then fade support.
+      The single most-attested sequence in the whole table.
+    slots: [orient, recall, model, guided, check]
+    question_arc: [warm, medium]
+
+  - id: procedural.consolidation
+    knowledge_type: procedural
+    lesson_mode: consolidation
+    rationale: >
+      The method is known. Time goes to fluency and to cases that break a
+      naive application of it.
+    slots: [recall, guided, independent, apply, check]
+    question_arc: [medium, cold, transfer]
+
+  # --- CONCEPTUAL ------------------------------------------------------------
+
+  - id: conceptual.first_exposure
+    knowledge_type: conceptual
+    lesson_mode: first_exposure
+    rationale: >
+      An idea is defined as much by what it excludes as by what it includes.
+      Contrast is load-bearing, not decoration. Confront sits after explain so
+      the learner has something to hold the wrong belief against.
+    slots: [orient, explain, contrast, confront, check]
+    question_arc: [warm, medium]
+
+  - id: conceptual.consolidation
+    knowledge_type: conceptual
+    lesson_mode: consolidation
+    rationale: >
+      The idea is present but fragile. Push it against new cases rather than
+      re-explaining it.
+    slots: [recall, contrast, apply, confront, check]
+    question_arc: [medium, cold, transfer]
+
+  # --- FACTUAL ---------------------------------------------------------------
+
+  - id: factual.first_exposure
+    knowledge_type: factual
+    lesson_mode: first_exposure
+    rationale: >
+      Retrieval is the bottleneck, not comprehension. Structure the set, then
+      retrieve it twice inside the same lesson.
+    slots: [orient, organise, guided, independent, check]
+    question_arc: [warm, medium]
+    flag_at_path_review: >
+      Factual lessons are often too thin to stand alone. Suggest merging with
+      an adjacent lesson before generating.
+
+  # --- EVALUATIVE ------------------------------------------------------------
+
+  - id: evaluative.first_exposure
+    knowledge_type: evaluative
+    lesson_mode: first_exposure
+    rationale: >
+      Judgement without declared criteria is opinion. Criteria first, then two
+      competing cases, then the learner commits to a position.
+    slots: [orient, criteria, contrast, apply, check]
+    question_arc: [warm, medium]
+    answer_key_style_override: brief_explanations   # never answers_only
+
+  - id: evaluative.consolidation
+    knowledge_type: evaluative
+    lesson_mode: consolidation
+    rationale: "Criteria are known. Time goes to harder, more balanced cases."
+    slots: [recall, contrast, apply, apply, check]
+    question_arc: [cold, transfer]
+    answer_key_style_override: brief_explanations
+
+  # --- MODE-DOMINANT (collapse across knowledge types) -----------------------
+
+  - id: any.retrieval
+    knowledge_type: any
+    lesson_mode: retrieval
+    rationale: >
+      Review nodes look the same regardless of knowledge type: retrieve, mix,
+      check. No new teaching, no cards, no misconception drafting.
+    slots: [recall, independent, check]
+    question_arc: [cold, transfer]
+    carries_cards: false            # review nodes generate no concept cards
+
+  - id: any.transfer
+    knowledge_type: any
+    lesson_mode: transfer
+    rationale: "Everything is known. The only job is application in unfamiliar territory."
+    slots: [recall, apply, apply, check]
+    question_arc: [transfer, cold]
+
+  - id: procedural.repair
+    knowledge_type: procedural
+    lesson_mode: repair
+    rationale: >
+      Something specific broke. Locate the step that fails, re-model only that
+      step, then rebuild confidence with warm practice only.
+    slots: [recall, confront, model, guided, check]
+    question_arc: [warm]
+    requires: repair_focus
+
+  - id: conceptual.repair
+    knowledge_type: conceptual
+    lesson_mode: repair
+    rationale: >
+      The belief is the target, not the content. Confront first, re-explain
+      second — the reverse of first_exposure.
+    slots: [recall, confront, explain, contrast, check]
+    question_arc: [warm]
+    requires: repair_focus
+
+
+# -----------------------------------------------------------------------------
+# 4. TOGGLES
+# -----------------------------------------------------------------------------
+# This is where differentiation stops being a claim about prose and becomes a
+# diff of two lists.
+#
+# Applied in priority order. The expander stops when max_slots (6) is reached.
+# 'swap' operations do not consume budget; 'insert' operations do.
+# 'check' is locked and never affected.
+# -----------------------------------------------------------------------------
+
+toggles:
+
+  - id: support.high.extra_modelling
+    priority: 10
+    when: {variant.support_level: high, skeleton.knowledge_type: procedural}
+    op: swap
+    replace: independent
+    with: model
+    rationale: "Low-support learners need the method shown twice before working alone."
+
+  - id: support.high.drop_independent
+    priority: 20
+    when: {variant.support_level: high}
+    op: remove
+    slot: independent
+    guard: "only if a guided slot remains"
+
+  - id: support.high.extra_contrast
+    priority: 30
+    when: {variant.support_level: high, skeleton.knowledge_type: conceptual}
+    op: insert
+    slot: contrast
+    after: explain
+
+  - id: support.low.add_transfer
+    priority: 40
+    when: {variant.support_level: low}
+    op: insert
+    slot: apply
+    before: check
+    rationale: "Extension groups need somewhere to go beyond the objective's floor."
+
+  - id: support.low.drop_orient
+    priority: 50
+    when: {variant.support_level: low, slot_count: ">=6"}
+    op: remove
+    slot: orient
+    rationale: "Budget relief. Extension groups need less motivating."
+
+  - id: misconception.confront_per_belief
+    priority: 5
+    when: {card.misconceptions: ">=1"}
+    op: ensure_present
+    slot: confront
+    instances: "min(count(card.misconceptions), 2)"
+    rationale: >
+      Driven by the card, not the variant. A card with zero real
+      misconceptions gets no confront slot and that is correct.
+
+  - id: visual.spatial_objective
+    priority: 60
+    when: {card.objective_is_spatial_or_process: true}
+    op: set_flag
+    flag: visual_required
+    on_slots: [explain, model, organise]
+
+
+# -----------------------------------------------------------------------------
+# 5. DEVIATION CHANNEL
+# -----------------------------------------------------------------------------
+# The table WILL be wrong sometimes. This is how it finds out, instead of
+# ossifying.
+# -----------------------------------------------------------------------------
+
+deviation:
+  allowed_ops: [insert, remove, reorder, swap]
+  forbidden:
+    - removing the check slot
+    - changing question_arc
+    - altering the objective or card set
+  requires:
+    reason: "one sentence naming what about THIS objective the table missed"
+    teacher_approval: true
+  logged_fields: [skeleton_id, skeleton_version, requested_op, reason,
+                  teacher_decision, path_lesson_id]
+  review_trigger: >
+    If one skeleton_id accumulates deviations on more than ~20% of its
+    lessons, the skeleton is wrong. Fix the table, bump version.
+
+
+# -----------------------------------------------------------------------------
+# 6. PROVENANCE  (store on every generated lesson)
+# -----------------------------------------------------------------------------
+# Costs nothing now. Without it, "did skeleton A outperform skeleton B" is
+# permanently unanswerable once you have quiz responses.
+# -----------------------------------------------------------------------------
+
+provenance_fields:
+  - skeleton_id
+  - skeleton_version
+  - knowledge_type
+  - knowledge_type_source      # classified | teacher_corrected
+  - toggles_applied            # list of toggle ids
+  - deviations_applied         # list of deviation ids

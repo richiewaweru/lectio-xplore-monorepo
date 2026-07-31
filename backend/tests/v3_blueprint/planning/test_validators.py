@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pytest
+from pydantic import ValidationError
+
 from contracts.lectio import get_component_card, get_planner_index
 from v3_blueprint.planning.models import (
     AnchorSpec,
@@ -12,7 +15,7 @@ from v3_blueprint.planning.models import (
     StructuralPlan,
     VisualFrameBrief,
     VisualStrategySpec,
-    VoiceSpec,
+    adapt_legacy_structural_plan,
 )
 from v3_blueprint.planning.validators import validate_section_brief, validate_structural_plan
 
@@ -57,7 +60,6 @@ def _base_plan_with_components(*, components: list[ComponentSlot]) -> Structural
             example="splitting a pizza into 8 equal slices",
             reuse_scope="used in intro and explain",
         ),
-        voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[
             SectionPlan(
@@ -112,35 +114,45 @@ def test_validate_structural_plan_catches_duplicate_section_field(monkeypatch) -
     )
 
 
-def test_validate_structural_plan_catches_role_outside_resource_spec() -> None:
+def test_validate_structural_plan_catches_role_outside_skeleton_slots() -> None:
     plan = _base_plan_with_components(
         components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")]
     )
     plan.sections[0].role = "invalid_role"
     errors = validate_structural_plan(
         plan,
-        {
-            "spec": {
-                "required_roles": ["intro", "practice"],
-                "optional_roles": ["summary"],
-            }
+        skeleton_catalog={
+            "slots": {"intro": {"role": "intro"}, "practice": {"role": "practice"}}
         },
     )
-    assert any("which is not in the active resource spec roles" in error for error in errors)
+    assert any("which is not a skeleton slot id" in error for error in errors)
 
 
-def test_validate_structural_plan_catches_role_outside_real_spec_dump_shape() -> None:
-    from resource_specs.loader import get_spec
-
+def test_validate_structural_plan_accepts_a_role_declared_by_skeleton_slot_id() -> None:
     plan = _base_plan_with_components(
         components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")]
     )
     plan.sections[0].role = "model"
     errors = validate_structural_plan(
         plan,
-        {"spec": get_spec("worksheet").model_dump(mode="json")},
+        skeleton_catalog={"slots": {"model": {"role": "model"}}},
     )
-    assert any("which is not in the active resource spec roles" in error for error in errors)
+    assert not any("role" in error for error in errors)
+
+
+def test_validate_structural_plan_warns_when_skeleton_roles_are_unavailable(caplog) -> None:
+    plan = _base_plan_with_components(
+        components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")]
+    )
+    plan.sections[0].role = "invented_role"
+
+    errors = validate_structural_plan(
+        plan,
+        {"resource_type": "lesson", "spec": {"available_components": ["hook-hero"]}},
+    )
+
+    assert not any("role" in error for error in errors)
+    assert "skeleton role validation unavailable" in caplog.text
 
 
 def test_validate_section_brief_catches_dropped_component() -> None:
@@ -355,7 +367,6 @@ def test_structural_plan_allows_more_than_two_visual_sections() -> None:
             example="splitting a pizza into 8 equal slices",
             reuse_scope="used across the lesson",
         ),
-        voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[
             SectionPlan(
@@ -380,6 +391,36 @@ def test_structural_plan_allows_more_than_two_visual_sections() -> None:
     )
 
     assert len(plan.sections) == 4
+
+
+def test_structural_plan_rejects_arbitrary_unknown_fields() -> None:
+    plan = _base_plan_with_components(
+        components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")]
+    )
+    payload = plan.model_dump()
+    payload["silently_ignored_typo"] = "must be rejected"
+
+    with pytest.raises(ValidationError, match="silently_ignored_typo"):
+        StructuralPlan.model_validate(payload)
+
+
+def test_legacy_structural_plan_adapter_maps_voice_and_logs(caplog) -> None:
+    plan = _base_plan_with_components(
+        components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")]
+    )
+    payload = plan.model_dump()
+    payload["voice"] = {
+        "register_name": "simple",
+        "tone": "encouraging",
+        "notation": "Use fraction bars.",
+    }
+
+    adapted = adapt_legacy_structural_plan(payload, source="fixture:legacy-plan")
+
+    assert adapted.variant_spec().voice.register_name == "simple"
+    assert adapted.variant_spec().voice.notation == "Use fraction bars."
+    assert "adapted legacy StructuralPlan top-level voice" in caplog.text
+    assert "source=fixture:legacy-plan" in caplog.text
 
 
 def test_validate_section_brief_rejects_series_with_too_few_frames() -> None:

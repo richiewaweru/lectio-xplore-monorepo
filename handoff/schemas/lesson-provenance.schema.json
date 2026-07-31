@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LessonProvenance",
+  "type": "object",
+  "required": [
+    "concept_id",
+    "path_version_id",
+    "path_lesson_id",
+    "objective_hash",
+    "skeleton_id",
+    "skeleton_version",
+    "knowledge_type",
+    "knowledge_type_source",
+    "toggles_applied",
+    "deviations_applied"
+  ],
+  "properties": {
+    "concept_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "path_version_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "path_lesson_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "objective_hash": {
+      "type": "string"
+    },
+    "skeleton_id": {
+      "type": "string"
+    },
+    "skeleton_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "knowledge_type": {
+      "enum": [
+        "procedural",
+        "conceptual",
+        "factual",
+        "evaluative"
+      ]
+    },
+    "knowledge_type_source": {
+      "enum": [
+        "model",
+        "teacher"
+      ]
+    },
+    "secondary_demand": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "toggles_applied": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "deviations_applied": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "additionalProperties": false
+}

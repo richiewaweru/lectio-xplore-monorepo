@@ -34,6 +34,7 @@ from core.routes.shares import router as shares_router
 from builder.routes import router as builder_router
 from core.database.session import async_session_factory
 from generation.routes import router as generation_router
+from generation.skeleton_routes import router as skeleton_router
 from generation.v3_studio.generation_writer import V3GenerationWriter
 from learning.routes import router as learning_router
 from media.diagnostics.v3_image_pipeline_diagnostic import (
@@ -41,10 +42,12 @@ from media.diagnostics.v3_image_pipeline_diagnostic import (
     run_gcs_probe,
     run_grok_probe,
 )
+from planning.routes import router as planning_router
 from resource_specs.loader import initialize_registry as initialize_resource_registry
 from telemetry import telemetry_router
 from telemetry.dependencies import get_llm_call_repository
 from telemetry.service import telemetry_monitor
+from v3_blueprint.skeletons import initialize_skeleton_catalog
 
 logger = logging.getLogger("uvicorn.error")
 __version__ = "0.1.0"
@@ -225,6 +228,7 @@ async def lifespan(app: FastAPI):
     except Exception:  # noqa: BLE001
         logger.exception("Stale v3 generation sweep failed at startup")
     initialize_resource_registry()
+    initialize_skeleton_catalog()
     await telemetry_monitor.start()
     pdf_temp_cleaned = cleanup_stale_pdf_exports(
         path_value=settings.pdf_temp_dir,
@@ -287,6 +291,8 @@ def create_app() -> FastAPI:
     app.include_router(profile_router)
     app.include_router(learning_router)
     app.include_router(generation_router)
+    app.include_router(skeleton_router)
+    app.include_router(planning_router)
     app.include_router(telemetry_router)
 
     return app

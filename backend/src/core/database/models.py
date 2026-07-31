@@ -2,7 +2,18 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    JSON,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, relationship
 
@@ -33,6 +44,8 @@ class UserModel(Base):
     packs = relationship("LearningPackModel", back_populates="user")
     llm_calls = relationship("LLMCallModel", back_populates="user")
     editable_lessons = relationship("EditableLessonModel", back_populates="user")
+    concepts = relationship("ConceptModel", back_populates="created_by_user")
+    units = relationship("UnitModel", back_populates="owner")
 
 
 class StudentProfileModel(Base):
@@ -138,6 +151,25 @@ class GenerationModel(Base):
     pack = relationship("LearningPackModel", back_populates="generations")
 
 
+class ConceptModel(Base):
+    __tablename__ = "concepts"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    canonical_slug = Column(String, unique=True, nullable=False, index=True)
+    subject = Column(String, nullable=False, index=True)
+    title = Column(String, nullable=False)
+    canonical_description = Column(Text, nullable=True)
+    status = Column(String, nullable=False, default="draft", server_default="draft")
+    created_by = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    created_by_user = relationship("UserModel", back_populates="concepts")
+    cards = relationship("ConceptCardModel", back_populates="canonical_concept")
+    lesson_provenance = relationship("LessonProvenanceModel", back_populates="concept")
+    path_lessons = relationship("PathLessonModel", back_populates="concept")
+
+
 class ConceptCardModel(Base):
     __tablename__ = "concept_cards"
 
@@ -151,9 +183,187 @@ class ConceptCardModel(Base):
     teacher_edited = Column(Boolean, nullable=False, default=False)
     source_card_id = Column(String, nullable=True, index=True)
     source_pack_id = Column(String, nullable=True, index=True)
+    canonical_concept_id = Column(
+        String,
+        ForeignKey("concepts.id"),
+        nullable=True,
+        index=True,
+    )
     created_at = Column(DateTime, default=_utcnow, nullable=False)
 
     items = relationship("PackItemModel", back_populates="card")
+    canonical_concept = relationship("ConceptModel", back_populates="cards")
+
+
+class LessonProvenanceModel(Base):
+    __tablename__ = "lesson_provenance"
+
+    pack_id = Column(String, primary_key=True)
+    concept_id = Column(String, ForeignKey("concepts.id"), nullable=True, index=True)
+    path_version_id = Column(String, nullable=True, index=True)
+    path_lesson_id = Column(String, nullable=True, index=True)
+    objective_hash = Column(String, nullable=True)
+    skeleton_id = Column(String, nullable=True)
+    skeleton_version = Column(Integer, nullable=True)
+    knowledge_type = Column(String, nullable=True)
+    knowledge_type_source = Column(String, nullable=True)
+    toggles_applied = Column(JSON_DOCUMENT_TYPE, nullable=True)
+    deviations_applied = Column(JSON_DOCUMENT_TYPE, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    concept = relationship("ConceptModel", back_populates="lesson_provenance")
+
+
+class SkeletonShadowRecordModel(Base):
+    __tablename__ = "skeleton_shadow_records"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    generation_id = Column(String, nullable=False, unique=True, index=True)
+    subject = Column(String, nullable=False, index=True)
+    grade = Column(String, nullable=False, index=True)
+    objective = Column(Text, nullable=False)
+    current_roles = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    classifier_type = Column(String, nullable=False, index=True)
+    classifier_confidence = Column(String, nullable=False, index=True)
+    classifier_success_test = Column(Text, nullable=False)
+    classifier_note = Column(Text, nullable=True)
+    skeleton_id = Column(String, nullable=False, index=True)
+    skeleton_version = Column(Integer, nullable=False)
+    expanded_slots = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    toggles_applied = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    expansion_warnings = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    structural_match_score = Column(Float, nullable=False)
+    reviewer_preference = Column(String, nullable=True)
+    wrong_classification = Column(Boolean, nullable=True)
+    deviation_required = Column(Boolean, nullable=True)
+    severity = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+class UnitModel(Base):
+    __tablename__ = "units"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    topic = Column(String, nullable=False)
+    subject = Column(String, nullable=False, index=True)
+    grade_level = Column(String, nullable=False, index=True)
+    curriculum_context = Column(Text, nullable=True)
+    destination_objective = Column(Text, nullable=False)
+    starting_knowledge = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    status = Column(String, nullable=False, default="draft", server_default="draft")
+    active_path_version_id = Column(String, nullable=True, index=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    owner = relationship("UserModel", back_populates="units")
+    scope_contract = relationship(
+        "UnitScopeContractModel",
+        back_populates="unit",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    path_versions = relationship(
+        "PathVersionModel",
+        back_populates="unit",
+        cascade="all, delete-orphan",
+    )
+
+
+class UnitScopeContractModel(Base):
+    __tablename__ = "unit_scope_contracts"
+
+    unit_id = Column(String, ForeignKey("units.id"), primary_key=True)
+    must_establish = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    may_include = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    must_not_introduce = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    assumed_prerequisites = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    terminology = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    notation = Column(Text, nullable=True)
+
+    unit = relationship("UnitModel", back_populates="scope_contract")
+
+
+class PathVersionModel(Base):
+    __tablename__ = "path_versions"
+    __table_args__ = (UniqueConstraint("unit_id", "version", name="uq_path_version_unit_version"),)
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    unit_id = Column(String, ForeignKey("units.id"), nullable=False, index=True)
+    version = Column(Integer, nullable=False)
+    status = Column(String, nullable=False, default="draft", server_default="draft")
+    generated_by = Column(String, nullable=False, default="path_planner")
+    source_plan_json = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    merge_critic_results = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    prerequisite_risks = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    forward_verified = Column(Boolean, nullable=False, default=False)
+    reaches_destination = Column(Boolean, nullable=False, default=False)
+    approved_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    unit = relationship("UnitModel", back_populates="path_versions")
+    lessons = relationship(
+        "PathLessonModel",
+        back_populates="path_version",
+        cascade="all, delete-orphan",
+        order_by="PathLessonModel.position",
+    )
+
+
+class PathLessonModel(Base):
+    __tablename__ = "path_lessons"
+    __table_args__ = (
+        UniqueConstraint("path_version_id", "position", name="uq_path_lesson_version_position"),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    path_version_id = Column(String, ForeignKey("path_versions.id"), nullable=False, index=True)
+    concept_id = Column(String, ForeignKey("concepts.id"), nullable=False, index=True)
+    concept_slug = Column(String, nullable=False, index=True)
+    title = Column(String, nullable=False)
+    objective = Column(Text, nullable=False)
+    objective_hash = Column(String, nullable=False)
+    external_prerequisites = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    opens_from = Column(Text, nullable=True)
+    must_establish = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    exclusions = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    primary_knowledge_type = Column(String, nullable=False)
+    secondary_demand = Column(String, nullable=True)
+    knowledge_type_source = Column(String, nullable=False, default="path_planner")
+    merge_warning = Column(Boolean, nullable=False, default=False)
+    position = Column(Integer, nullable=False)
+    source = Column(String, nullable=False, default="path_planner")
+    teacher_edited = Column(Boolean, nullable=False, default=False)
+    skipped = Column(Boolean, nullable=False, default=False)
+    revision = Column(Integer, nullable=False, default=1)
+    pack_id = Column(String, nullable=True, index=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    path_version = relationship("PathVersionModel", back_populates="lessons")
+    concept = relationship("ConceptModel", back_populates="path_lessons")
+    prerequisite_links = relationship(
+        "PathLessonPrerequisiteModel",
+        foreign_keys="PathLessonPrerequisiteModel.path_lesson_id",
+        cascade="all, delete-orphan",
+    )
+
+
+class PathLessonPrerequisiteModel(Base):
+    __tablename__ = "path_lesson_prerequisites"
+
+    path_lesson_id = Column(
+        String,
+        ForeignKey("path_lessons.id"),
+        primary_key=True,
+    )
+    prerequisite_lesson_id = Column(
+        String,
+        ForeignKey("path_lessons.id"),
+        primary_key=True,
+    )
 
 
 class PackItemModel(Base):

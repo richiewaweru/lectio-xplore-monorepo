@@ -10,7 +10,7 @@ from core.llm.runner import RetryPolicy, run_llm
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 from generation.v3_studio.prompts import _planner_index_block, build_v3_shared_prefix
 from v3_blueprint.planning.models import StructuralPlan
-from v3_blueprint.planning.validators import _allowed_roles_from_resource_spec
+from v3_blueprint.planning.validators import validate_structural_plan_roles
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.llm_helpers import structured_output_type_for_model
 
@@ -18,11 +18,11 @@ _CALLER = "v3_chunked_architect"
 STAGE1_NODE = "v3_stage1_planner"
 
 
-def build_stage1_system_prompt() -> str:
+def build_stage1_system_prompt(*, path_prepared: bool = False) -> str:
     shared_prefix = build_v3_shared_prefix()
     planner_block = _planner_index_block()
 
-    return f"""{shared_prefix}
+    prompt = f"""{shared_prefix}
 You are a lesson architect. Produce only valid StructuralPlan JSON.
 
 You do NOT write lesson prose, question text, or finished component content.
@@ -46,7 +46,7 @@ STEP 2 — GOAL
 
 STEP 3 — SPEC GATE
   Read the resource spec in your context.
-  State required roles and forbidden components.
+  State the supplied skeleton slot ids and forbidden components.
   Remove anything the spec forbids before continuing. This is a gate.
 
 STEP 4 — ANCHOR
@@ -74,8 +74,8 @@ STEP 5 — CONCEPT CARDS AND PLAIN SECTIONS
   and unique within this plan.
 
 STEP 6 — SECTION SEQUENCE
-  List sections in order: all required roles plus any optional roles that fit.
-  Emit role using the exact role strings allowed by the active resource spec.
+  List sections in order using only the supplied skeleton slot ids as roles.
+  Emit role using those exact slot ids.
   Do not emit phase words as roles.
   For each section after the first, write one transition_note stating what the
   prior section established and what this section now does with it.
@@ -101,7 +101,7 @@ STEP 8 — VISUALS & QUESTIONS
 STEP 9 — SELF CHECK
   Verify:
   - every section has components that can carry its role
-  - every emitted role exists in the active resource spec
+  - every emitted role exists in the supplied skeleton slot catalog
   - the anchor appears by exact name where the concept is taught
   - question temperatures match lesson_mode
   - no two components in any section share a section_field
@@ -188,7 +188,7 @@ HARD RULES:
 - Max 6 sections.
 - Max 4 component slugs per section.
 - transition_note is null for the first section only.
-- Every emitted role must exist in the active resource spec.
+- Every emitted role must exist in the supplied skeleton slot catalog.
 - Every non-null section card_id resolves to exactly one card.
 - Card and misconception ids are unique within their owning scope.
 - A card has 2-4 real misconceptions, or explicitly sets
@@ -198,6 +198,25 @@ HARD RULES:
 - Do not include content_intent, question prompt text, or visual subject descriptions.
 - Do not add any JSON keys not shown in the schema above.
 """
+    if not path_prepared:
+        return prompt
+
+    return prompt.replace(
+        """  Give each card 2-4 misconceptions that are specific beliefs a learner would
+  confidently act on, not slips, carelessness, or general confusion. If there
+  is genuinely no known misconception, emit an empty list and set
+  no_known_misconceptions=true. Never pad a list.""",
+        """  Give each card ZERO to THREE misconceptions. Apply this test to every
+  candidate: could a learner holding this belief confidently choose a corresponding wrong answer?
+  If not, it is a knowledge gap, not a
+  misconception. If there is genuinely no known misconception, emit an empty
+  list and set no_known_misconceptions=true. Never pad a list.""",
+    ).replace(
+        """- A card has 2-4 real misconceptions, or explicitly sets
+  no_known_misconceptions=true with an empty list.""",
+        """- A card has 0-3 real misconceptions, or explicitly sets
+  no_known_misconceptions=true with an empty list.""",
+    )
 
 
 def build_stage1_user_message(
@@ -205,6 +224,7 @@ def build_stage1_user_message(
     signals: V3SignalSummary,
     form: V3InputForm,
     resource_spec: dict,
+    skeleton_catalog: dict | None = None,
     previous_errors: list[str] | None = None,
 ) -> str:
     payload = (
@@ -212,6 +232,11 @@ def build_stage1_user_message(
         f"Form JSON:\n{form.model_dump_json(indent=2)}\n\n"
         f"RESOURCE SPEC JSON:\n{json.dumps(resource_spec, indent=2, sort_keys=True)}"
     )
+    slots = skeleton_catalog.get("slots") if isinstance(skeleton_catalog, dict) else None
+    if isinstance(slots, dict) and slots:
+        payload += "\n\nSKELETON SLOT IDS (the only valid section roles):\n" + ", ".join(
+            sorted(str(slot_id) for slot_id in slots)
+        )
     if previous_errors:
         payload += (
             "\n\nVALIDATION ERRORS FROM PREVIOUS ATTEMPT "
@@ -221,16 +246,13 @@ def build_stage1_user_message(
     return payload
 
 
-def _validate_stage1_roles(plan: StructuralPlan, resource_spec: dict) -> None:
-    allowed_roles = _allowed_roles_from_resource_spec(resource_spec)
-    if not allowed_roles:
-        return
-    for section in plan.sections:
-        if section.role not in allowed_roles:
-            raise ValueError(
-                f"Section '{section.id}' emitted role '{section.role}' "
-                f"which is not in the active resource spec roles: {sorted(allowed_roles)}."
-            )
+def _validate_stage1_roles(
+    plan: StructuralPlan,
+    skeleton_catalog: dict | None,
+) -> None:
+    errors = validate_structural_plan_roles(plan, skeleton_catalog)
+    if errors:
+        raise ValueError(errors[0])
 
 
 async def _call_stage1(
@@ -241,6 +263,8 @@ async def _call_stage1(
     trace_id: str | None = None,
     generation_id: str | None = None,
     previous_errors: list[str] | None = None,
+    skeleton_catalog: dict | None = None,
+    path_prepared: bool = False,
 ) -> StructuralPlan:
     import traceback
     try:
@@ -252,7 +276,7 @@ async def _call_stage1(
         agent = Agent(
             model=model,
             output_type=structured_output_type_for_model(StructuralPlan, spec=spec),
-            system_prompt=build_stage1_system_prompt(),
+            system_prompt=build_stage1_system_prompt(path_prepared=path_prepared),
         )
         result = await run_llm(
             trace_id=tid,
@@ -263,6 +287,7 @@ async def _call_stage1(
                 signals=signals,
                 form=form,
                 resource_spec=resource_spec,
+                skeleton_catalog=skeleton_catalog,
                 previous_errors=previous_errors,
             ),
             model=model,
@@ -283,7 +308,7 @@ async def _call_stage1(
             plan = StructuralPlan.model_validate(raw.model_dump())
         else:
             plan = StructuralPlan.model_validate(raw)
-        _validate_stage1_roles(plan, resource_spec)
+        _validate_stage1_roles(plan, skeleton_catalog)
         return plan
     except Exception as exc:
         tb = traceback.format_exc()
