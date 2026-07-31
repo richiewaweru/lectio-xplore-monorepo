@@ -179,6 +179,72 @@ The legacy flow remains available as an explicitly labeled compatibility route.
 
 Phase 7 implementation commit: `e87b503` (`P7: feat(units): ship path-first workspace`).
 
+### Phase 8 tracking
+
+- [x] Add optimistic path and lesson revision guards to every mutating route.
+- [x] Preserve structural edits as new immutable path versions instead of rewriting history.
+- [x] Add version history, historical inspection, reasoned restoration, and active-version semantics.
+- [x] Add aggregate lifecycle status for unprepared, review, generation, ready, warning, failure,
+  skipped, and stale lessons.
+- [x] Surface completeness, prerequisite risk, merge-critic, prerequisite, and external-prerequisite
+  evidence in the unit workspace.
+- [x] Require accessible confirmation for destructive structural edits and version restoration.
+- [x] Run focused, complete, migration, type, build, architecture, and immutable-fixture gates.
+- [ ] Run authenticated browser acceptance against an isolated local Phase 8 database.
+
+### Phase 8 automated gate result
+
+Focused planning and frontend contracts:
+
+```text
+$ cd backend && uv run pytest tests/planning -q
+29 passed, 1 warning
+$ cd frontend && pnpm exec vitest run src/lib/api/units.test.ts src/routes/units/[id]/page.test.ts --pool=threads --maxWorkers=1
+Test Files  2 passed (2)
+Tests       6 passed (6)
+```
+
+Complete regression gates:
+
+```text
+$ cd backend && uv run ruff check src tests
+All checks passed!
+$ cd backend && uv run pytest -q
+480 passed, 1 warning in 161.93s
+$ cd frontend && pnpm exec vitest run --pool=threads --maxWorkers=1
+Test Files  69 passed (69)
+Tests       289 passed (289)
+$ cd frontend && pnpm exec svelte-check --tsconfig ./tsconfig.json
+svelte-check found 0 errors and 0 warnings
+$ cd frontend && pnpm exec vite build
+8423 SSR modules and 8533 client modules transformed
+built in 3m 25s; adapter completed
+```
+
+Migration `0023` on a disposable SQLite database:
+
+```text
+$ cd backend && uv run python tools/validate_path_revision_migration.py
+upgrade_columns=id,unit_id,version,status,revision
+downgrade_columns=id,unit_id,version,status
+revision=20260801_0023
+```
+
+Architecture and immutable fixture:
+
+```text
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+**Automated gate: PASS; browser gate: PENDING.** Phase 8 now has guarded concurrent edits,
+recoverable structural history, explicit restoration, full-path health evidence, and aggregate lesson
+lifecycle status. The phase remains open until the workspace is exercised in a fresh authenticated
+browser against an isolated local database; no production migration or data mutation is authorized
+for that acceptance check.
+
 ### Phase 0 tracking
 
 - [x] Read the goal objective before touching code.
