@@ -1,5 +1,154 @@
 # Lesson Builder Merge Progress
 
+## Xplore Learning Platform V2 — 2026-07-31
+
+**Classification**: major
+**Branch**: `v2-platform`
+**Base branch**: `xplore`
+**Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
+**Current phase**: Phase 1 — fail-first regression capture next
+
+### Phase checklist
+
+- [x] Phase 0 — baseline captured and reproducible
+- [ ] Phase 1 — four silent defects fixed with fail-first regression evidence
+- [ ] Phase 2 — concepts, objective ownership, and provenance added with generation unchanged
+- [ ] Phase 3 — skeleton loading, classifier, and preview added with existing output unchanged
+- [ ] Phase 4 — shadow logging proven on at least three real generations; review/export surface exists
+- [ ] Phase 5 — units and path backend validate all three fixtures; unreachable approval is blocked
+- [ ] Halt at the human decision gate and write the final handoff report
+
+### Phase 0 tracking
+
+- [x] Read the goal objective before touching code.
+- [x] Read `agents/ENTRY.md`, project config, applicable workflows, and all standards.
+- [x] Re-read this `PROGRESS.md` at session start.
+- [x] Read the seven required V2 handoff/patch sources in the mandated order.
+- [x] Preserved the supplied complete handoff under `handoff/` and patch under `patch/`.
+- [x] Captured `xplore` HEAD and created `v2-platform` without rewriting history.
+- [x] Verified the four Phase 1 defect claims against live code with `rg`.
+- [x] Run the backend baseline suite.
+- [x] Run the architecture baseline gate.
+- [x] Run the frontend production build and record the baseline failure exactly.
+- [x] Save one current end-to-end generation output as a comparison fixture.
+- [x] Re-run Phase 0 from `RUNBOOK.md` and record exact output.
+
+### Phase 0 evidence
+
+Baseline commit:
+
+```text
+$ git rev-parse HEAD
+73c70a9863157a04eb675dc29a23f7ee19151e8b
+```
+
+Backend test suite:
+
+```text
+$ cd backend && uv run pytest -q
+........................................................................ [ 16%]
+........................................................................ [ 33%]
+........................................................................ [ 50%]
+........................................................................ [ 67%]
+........................................................................ [ 84%]
+....................................................................     [100%]
+428 passed, 1 warning in 128.82s (0:02:08)
+```
+
+The warning is the pre-existing Pydantic `GenerationFieldContract.schema` field-shadowing warning.
+
+Architecture gate:
+
+```text
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+```
+
+Frontend production build:
+
+```text
+$ cd frontend && npm run build
+> frontend@0.0.1 build
+> vite build
+
+vite v7.3.1 building ssr environment for production...
+transforming...
+✓ 138 modules transformed.
+✗ Build failed in 6.57s
+error during build:
+[vite]: Rollup failed to resolve import "isomorphic-dompurify" from
+".../node_modules/lectio/dist/utils/markdown.js".
+```
+
+This is a reproducible dependency-resolution failure in the installed frontend baseline, not
+the previously recorded Windows process-lifecycle stall. It is recorded without a Phase 0 fix.
+
+Saved comparison fixture:
+
+```text
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+The fixture is a byte-for-byte snapshot of the current committed Xplore photosynthesis pack
+contract fixture at the baseline commit. It gives Phase 2 and Phase 3 an immutable output
+comparison target without making a provider call.
+
+Reproducibility check:
+
+```text
+$ git diff --quiet xplore -- backend/src backend/tests frontend/src frontend/package.json frontend/pnpm-lock.yaml
+source_tree_matches_xplore=True
+```
+
+The Phase 0 commands above were run after branching and before any source change; only the
+handoff, runbook, progress ledger, and copied comparison fixture differ from `xplore`.
+
+### Phase 0 gate result
+
+- **PASS** — the baseline commit, backend result, architecture result, frontend failure, and
+  immutable fixture hash are reproducible from `RUNBOOK.md`.
+- The frontend dependency failure is baseline evidence, not a V2 regression and not silently
+  reclassified as a passing build.
+- Phase 0 commit SHA: pending.
+
+### Nine-invariant check before Phase 0 commit
+
+1. Item generation still accepts one `ConceptCard` plus scalar private attrs; the context-wall
+   tests are included in the `428 passed` backend suite.
+2. Pack-owned shared items remain covered by `test_all_variants_derive_one_shared_pack_item_set`.
+3. QC verdict recomputation remains covered by the card-review and item-validator suites.
+4. Null distractor diagnosis remains covered by item validation and the Xplore fixture contract.
+5. Sibling isolation remains covered by `test_variant_failure_is_isolated_from_siblings`.
+6. Teacher edits survive regeneration in the existing card/item regression tests.
+7. Durable `awaiting_review` restart behavior remains covered by
+   `test_awaiting_review_halt_survives_process_restart`.
+8. No Builder, Lectio, PDF, or generation source changed in Phase 0. The existing frontend
+   baseline build is blocked earlier by unresolved `isomorphic-dompurify`.
+9. `StructuralPlan.max_six_sections` remains present and the full backend suite passes.
+
+### Verified handoff/code findings
+
+- `backend/contracts/guided-concept-path.json` has no role declarations, while
+  `_allowed_roles_from_resource_spec()` returns an empty set and both validators skip role checks.
+- `backend/contracts/component-registry.json` contains `cognitive_job`, but the Stage 1
+  component-selection context currently receives only the active resource spec and planner index.
+- `StructuralPlan` uses `ConfigDict(extra="ignore")` specifically for the legacy top-level
+  `voice` field; arbitrary unknown fields are therefore silently accepted as well.
+- The Stage 1 prompt still requires `2-4` misconceptions, despite permitting an explicit
+  no-known-misconceptions escape.
+- The repository architecture guide names `planning/` and `pipeline/`, while the live Xplore
+  implementation is under `v3_blueprint/` and `v3_execution/`. Live code is authoritative.
+- `handoff/14_IMPLEMENTATION_PHASES.md` places the path-to-Xplore bridge in Phase 6, while the
+  controlling goal explicitly includes the `:prepare` bridge in Phase 5 and requires a halt
+  immediately afterward. The controlling goal is being followed; no Phase 6 authority is inferred.
+
+### Open questions / stop conditions
+
+- None for Phase 0.
+
+---
+
 ## Xplore Pack Generation — Phase 13 contracts — 2026-07-31
 
 **Classification**: major

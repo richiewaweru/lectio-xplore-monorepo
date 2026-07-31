@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SkeletonPreviewRequest",
+  "type": "object",
+  "required": [
+    "objective",
+    "lesson_mode",
+    "misconception_count",
+    "group_profiles"
+  ],
+  "properties": {
+    "objective": {
+      "type": "string"
+    },
+    "lesson_mode": {
+      "enum": [
+        "first_exposure",
+        "consolidation",
+        "repair",
+        "retrieval",
+        "transfer"
+      ]
+    },
+    "misconception_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3
+    },
+    "group_profiles": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "support",
+          "core",
+          "extension"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}

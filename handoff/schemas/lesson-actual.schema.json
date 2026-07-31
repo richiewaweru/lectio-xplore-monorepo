@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LessonActual",
+  "type": "object",
+  "required": [
+    "status",
+    "established_concepts",
+    "unresolved_misconceptions"
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "established",
+        "partial",
+        "recovery_needed",
+        "not_taught"
+      ]
+    },
+    "established_concepts": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "unresolved_misconceptions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "anchor_used": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "teacher_note": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false
+}
