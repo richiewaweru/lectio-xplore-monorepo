@@ -42,6 +42,7 @@ from media.diagnostics.v3_image_pipeline_diagnostic import (
     run_gcs_probe,
     run_grok_probe,
 )
+from planning.routes import router as planning_router
 from resource_specs.loader import initialize_registry as initialize_resource_registry
 from telemetry import telemetry_router
 from telemetry.dependencies import get_llm_call_repository
@@ -291,6 +292,7 @@ def create_app() -> FastAPI:
     app.include_router(learning_router)
     app.include_router(generation_router)
     app.include_router(skeleton_router)
+    app.include_router(planning_router)
     app.include_router(telemetry_router)
 
     return app

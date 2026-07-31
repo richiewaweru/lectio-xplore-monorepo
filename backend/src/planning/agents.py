@@ -1,0 +1,180 @@
+from __future__ import annotations
+
+import json
+import uuid
+import asyncio
+from typing import Any, TypeVar
+
+from pydantic import BaseModel
+from pydantic_ai import Agent
+
+from core.config import settings
+from core.llm.runner import RetryPolicy, run_llm
+from planning.models import (
+    ComponentSelection,
+    MergeCriticResult,
+    PathPlan,
+    PathPlannerRequest,
+    PathStructuralPlan,
+    PlannedLesson,
+)
+from planning.prompts import (
+    component_selector_prompt,
+    merge_critic_prompt,
+    path_planner_prompt,
+    path_structural_planner_prompt,
+)
+from planning.validation import validate_path_plan
+from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
+from v3_execution.config.models import (
+    V2_COMPONENT_SELECTOR,
+    V2_MERGE_CRITIC,
+    V2_PATH_PLANNER,
+    V2_PATH_STRUCTURAL_PLANNER,
+)
+from v3_execution.llm_helpers import structured_output_type_for_model
+
+
+OutputT = TypeVar("OutputT", bound=BaseModel)
+
+
+async def _run_structured(
+    *,
+    node: str,
+    caller: str,
+    output_type: type[OutputT],
+    system_prompt: str,
+    user_payload: dict[str, Any],
+    trace_id: str | None,
+) -> OutputT:
+    model = get_v3_model(node)
+    spec = get_v3_spec(node)
+    slot = get_v3_slot(node)
+    agent = Agent(
+        model=model,
+        output_type=structured_output_type_for_model(output_type, spec=spec),
+        system_prompt=system_prompt,
+    )
+    result = await run_llm(
+        trace_id=trace_id or str(uuid.uuid4()),
+        caller=caller,
+        generation_id=None,
+        agent=agent,
+        user_prompt=json.dumps(user_payload, indent=2, sort_keys=True),
+        model=model,
+        slot=slot,
+        spec=spec,
+        node=node,
+        model_settings=get_v3_model_settings(node),
+        retry_policy=RetryPolicy(
+            max_attempts=1,
+            call_timeout_seconds=float(settings.v3_timeout_stage1_seconds),
+        ),
+    )
+    raw = result.output
+    if isinstance(raw, output_type):
+        return raw
+    if hasattr(raw, "model_dump"):
+        return output_type.model_validate(raw.model_dump())
+    return output_type.model_validate(raw)
+
+
+async def run_path_planner(
+    request: PathPlannerRequest,
+    *,
+    trace_id: str | None = None,
+) -> PathPlan:
+    plan = await _run_structured(
+        node=V2_PATH_PLANNER,
+        caller="v2_path_planner",
+        output_type=PathPlan,
+        system_prompt=path_planner_prompt(),
+        user_payload={
+            **request.model_dump(mode="json"),
+            "planner_output_contract": {
+                "prerequisites": "slugs of earlier lessons in this path only",
+                "external_prerequisites": (
+                    "assumed capabilities; each must match starting_knowledge or "
+                    "scope_contract.assumed_prerequisites"
+                ),
+            },
+        },
+        trace_id=trace_id,
+    )
+    validate_path_plan(plan)
+    return plan
+
+
+async def run_merge_critic(
+    lesson_a: PlannedLesson,
+    lesson_b: PlannedLesson,
+    *,
+    trace_id: str | None = None,
+) -> MergeCriticResult:
+    return await _run_structured(
+        node=V2_MERGE_CRITIC,
+        caller="v2_merge_critic",
+        output_type=MergeCriticResult,
+        system_prompt=merge_critic_prompt(),
+        user_payload={
+            "lesson_a": lesson_a.model_dump(mode="json"),
+            "lesson_b": lesson_b.model_dump(mode="json"),
+        },
+        trace_id=trace_id,
+    )
+
+
+async def run_adjacent_merge_critics(
+    plan: PathPlan,
+    *,
+    trace_id: str | None = None,
+) -> list[dict[str, object]]:
+    pairs = list(zip(plan.lessons, plan.lessons[1:], strict=False))
+    results = await asyncio.gather(
+        *[
+            run_merge_critic(
+                lesson_a,
+                lesson_b,
+                trace_id=f"{trace_id or 'path'}:merge:{index}",
+            )
+            for index, (lesson_a, lesson_b) in enumerate(pairs)
+        ]
+    )
+    return [
+        {
+            "lesson_a": lesson_a.concept_candidate.slug,
+            "lesson_b": lesson_b.concept_candidate.slug,
+            **result.model_dump(mode="json"),
+        }
+        for (lesson_a, lesson_b), result in zip(pairs, results, strict=True)
+    ]
+
+
+async def run_component_selector(
+    context: dict[str, Any],
+    *,
+    trace_id: str | None = None,
+) -> ComponentSelection:
+    return await _run_structured(
+        node=V2_COMPONENT_SELECTOR,
+        caller="v2_component_selector",
+        output_type=ComponentSelection,
+        system_prompt=component_selector_prompt(),
+        user_payload=context,
+        trace_id=trace_id,
+    )
+
+
+async def run_path_structural_planner(
+    fixed_context: dict[str, Any],
+    *,
+    trace_id: str | None = None,
+) -> PathStructuralPlan:
+    return await _run_structured(
+        node=V2_PATH_STRUCTURAL_PLANNER,
+        caller="v2_path_structural_planner",
+        output_type=PathStructuralPlan,
+        system_prompt=path_structural_planner_prompt(),
+        user_payload=fixed_context,
+        trace_id=trace_id,
+    )
