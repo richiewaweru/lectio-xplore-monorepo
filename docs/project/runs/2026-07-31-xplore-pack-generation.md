@@ -199,6 +199,26 @@
   `backend/data/images/` and are excluded from this worktree locally.
 - Branch `xplore` was pushed to `origin/xplore`.
 
+## Deployment environment handoff
+
+- No new Xplore-only runtime secret was added.
+- `LECTIO_TOKEN` belongs in GitHub repository secrets for the Lectio publish workflow
+  only. The Textbook deployment consumes the published `lectio@0.6.0` package and
+  baked-in `0.6.0` contracts; it does not need that token.
+- Backend production must set `LECTIO_CONTRACTS_DIR=/app/backend/contracts` and
+  `RUN_MIGRATIONS_ON_STARTUP=true`.
+- The validated provider posture uses `DEEPSEEK_API_KEY` with the `V3_FAST_*`,
+  `V3_STANDARD_*`, and `V3_PREMIUM_*` DeepSeek values documented in
+  `backend/.env.example`, plus `V3_STAGE2_PARALLEL=true`.
+- `ANTHROPIC_API_KEY` remains required while the configured visual-QC slot uses
+  Anthropic. Generated images also need the selected provider key and production
+  `GCS_*` storage values.
+- Production frontend deployment needs `PUBLIC_API_URL` and
+  `PUBLIC_GOOGLE_CLIENT_ID`. Railway needs the same Google client ID as
+  `GOOGLE_CLIENT_ID`, plus the exact frontend URL in `FRONTEND_ORIGIN`,
+  `LESSON_BUILDER_PUBLIC_URL`, and `PDF_RENDER_BASE_URL`.
+- The canonical deployment matrix is in `docs/project/SETUP.md`.
+
 ## Risks and follow-up
 
 - P4, P6, and P9 are isolated high-risk phases and must remain independently reversible.

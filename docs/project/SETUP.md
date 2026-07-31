@@ -56,6 +56,60 @@ Key ownership rules:
 - If PDF export is enabled in production, `PDF_RENDER_BASE_URL` must also be a real public frontend URL.
 - After each deploy, run `python scripts/smoke_test.py https://your-app.up.railway.app`.
 
+### Xplore production variables
+
+Xplore does not introduce a new runtime secret. `LECTIO_TOKEN` is a GitHub repository
+secret used only by the Lectio release workflow; do not set it on the Textbook backend
+or frontend.
+
+Set these backend service variables for the provider configuration used by the
+validated Xplore walkthrough:
+
+| Variable | Production value or source |
+| --- | --- |
+| `APP_ENV` | `production` |
+| `DATABASE_URL` | Railway Postgres URL using `postgresql+asyncpg://` |
+| `JWT_SECRET_KEY` | a generated production secret |
+| `GOOGLE_CLIENT_ID` | Google OAuth web client ID |
+| `DEEPSEEK_API_KEY` | deployment secret |
+| `ANTHROPIC_API_KEY` | deployment secret; used by the configured visual-QC slot |
+| `V3_FAST_PROVIDER` | `openai_compatible` |
+| `V3_FAST_MODEL_NAME` | `deepseek-v4-flash` |
+| `V3_FAST_BASE_URL` | `https://api.deepseek.com` |
+| `V3_FAST_API_KEY_ENV` | `DEEPSEEK_API_KEY` |
+| `V3_STANDARD_PROVIDER` | `openai_compatible` |
+| `V3_STANDARD_MODEL_NAME` | `deepseek-v4-pro` |
+| `V3_STANDARD_BASE_URL` | `https://api.deepseek.com` |
+| `V3_STANDARD_API_KEY_ENV` | `DEEPSEEK_API_KEY` |
+| `V3_PREMIUM_PROVIDER` | `openai_compatible` |
+| `V3_PREMIUM_MODEL_NAME` | `deepseek-v4-pro` |
+| `V3_PREMIUM_BASE_URL` | `https://api.deepseek.com` |
+| `V3_PREMIUM_API_KEY_ENV` | `DEEPSEEK_API_KEY` |
+| `V3_STAGE2_PARALLEL` | `true` |
+| `LECTIO_CONTRACTS_DIR` | `/app/backend/contracts` |
+| `RUN_MIGRATIONS_ON_STARTUP` | `true` |
+| `FRONTEND_ORIGIN` | exact deployed frontend `https://` origin |
+| `LESSON_BUILDER_PUBLIC_URL` | exact deployed frontend `https://` origin |
+| `PDF_RENDER_BASE_URL` | exact deployed frontend `https://` origin |
+| `JSON_LOGS` | `true` |
+| `LOG_LEVEL` | `INFO` |
+
+Keep the remaining `V3_*` timeout, retry, concurrency, visual-QC, and image-provider
+values aligned with [backend/.env.example](../../backend/.env.example).
+For generated images, also configure the selected provider key and the `GCS_*` storage
+variables listed in that example.
+
+Set these on the production frontend:
+
+| Variable | Production value |
+| --- | --- |
+| `PUBLIC_API_URL` | deployed Railway backend URL |
+| `PUBLIC_GOOGLE_CLIENT_ID` | the same Google OAuth web client ID |
+
+Add the deployed frontend origin to the Google client's Authorized JavaScript origins.
+The production server chooses its own port; the `5173` requirement applies only to the
+local Google OAuth test origin.
+
 ## PDF Export
 
 - Native backend development should use `PDF_RENDER_BASE_URL=http://localhost:5173`.
