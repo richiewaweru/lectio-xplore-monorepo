@@ -111,6 +111,7 @@ from telemetry.v3_trace.repository import V3TraceRepository
 from telemetry.v3_trace.writer import V3TraceWriter
 from core.events import TraceClosedEvent, TraceRegisteredEvent, event_bus
 from v3_execution.llm_helpers import structured_output_type_for_model
+from v3_review.card_reviewer import review_card_content
 
 logger = logging.getLogger(__name__)
 
@@ -197,6 +198,12 @@ class V3ComponentPatchRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
     teacher_instruction: str = Field(min_length=1, max_length=2000)
+
+
+class V3CardRepairRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    correction_hint: str | None = Field(default=None, max_length=2000)
 
 
 def _iso(dt: datetime | None) -> str | None:
@@ -3180,6 +3187,43 @@ def _single_component_order(
     return cloned
 
 
+def _card_section_orders(
+    *,
+    artifact: dict[str, Any],
+    card_id: str,
+    generation_id: str,
+    correction_hint: str,
+) -> list[SectionWriterWorkOrder]:
+    blueprint = ProductionBlueprint.model_validate(artifact["blueprint"])
+    section_ids = {
+        section.section_id
+        for section in blueprint.sections
+        if section.card_id == card_id
+    }
+    if not section_ids:
+        raise HTTPException(status_code=404, detail="Card repair target not found")
+    bundle = compile_execution_bundle(
+        blueprint,
+        generation_id=generation_id,
+        blueprint_id=str(artifact.get("blueprint_id") or f"blueprint-{generation_id}"),
+        template_id=str(artifact.get("template_id") or "guided-concept-path"),
+    )
+    orders: list[SectionWriterWorkOrder] = []
+    for order in bundle.section_orders:
+        if order.section.id not in section_ids:
+            continue
+        cloned = order.model_copy(deep=True)
+        for component in cloned.section.components:
+            component.content_intent = (
+                f"{component.content_intent}\n\n"
+                f"Quality correction for card {card_id}: {correction_hint}"
+            )
+        orders.append(cloned)
+    if not orders:
+        raise HTTPException(status_code=404, detail="Card work orders not found")
+    return orders
+
+
 def _patch_section_component(document_json: dict[str, Any], block: GeneratedComponentBlock) -> None:
     sections = document_json.get("sections")
     if not isinstance(sections, list):
@@ -3351,6 +3395,144 @@ async def patch_v3_component(
         document_json=document_json,
     )
     return block.model_dump(mode="json", exclude_none=True)
+
+
+@v3_studio_router.post("/generations/{generation_id}/cards/{card_id}/repair")
+async def repair_v3_card(
+    generation_id: str,
+    card_id: str,
+    body: V3CardRepairRequest | None = None,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    generation_writer = V3GenerationWriter(async_session_factory)
+    document_json = await generation_writer.get_document_json(generation_id, current_user.id)
+    if document_json is None:
+        raise HTTPException(status_code=404, detail="Generation not found")
+    artifact = await generation_writer.read_planning_artifact(
+        generation_id,
+        current_user.id,
+    )
+    if artifact is None:
+        raise HTTPException(status_code=404, detail="Planning artifact not found")
+
+    issue_hints = [
+        str(issue.get("qc_correction_hint") or issue.get("message") or "").strip()
+        for issue in document_json.get("booklet_issues", [])
+        if isinstance(issue, dict)
+        and issue.get("repair_target_id") == card_id
+    ]
+    supplied_hint = body.correction_hint.strip() if body and body.correction_hint else ""
+    correction_hint = supplied_hint or "\n".join(hint for hint in issue_hints if hint)
+    if not correction_hint:
+        raise HTTPException(
+            status_code=409,
+            detail="Card repair requires a failed QC correction hint",
+        )
+    orders = _card_section_orders(
+        artifact=artifact,
+        card_id=card_id,
+        generation_id=generation_id,
+        correction_hint=correction_hint,
+    )
+
+    async def emit_noop(_event_type: str, _payload: dict[str, Any]) -> None:
+        return None
+
+    blocks: list[GeneratedComponentBlock] = []
+    for order in orders:
+        blocks.extend(
+            await execute_section(
+                order,
+                emit_noop,
+                trace_id=generation_id,
+                generation_id=generation_id,
+                max_retries=0,
+            )
+        )
+    for block in blocks:
+        _patch_section_component(document_json, block)
+    prior_issues = [
+        issue
+        for issue in document_json.get("booklet_issues", [])
+        if (
+            isinstance(issue, dict)
+            and issue.get("repair_target_id") == card_id
+        )
+    ]
+    retained_issues = [
+        issue
+        for issue in document_json.get("booklet_issues", [])
+        if not (
+            isinstance(issue, dict)
+            and issue.get("repair_target_id") == card_id
+        )
+    ]
+    blueprint = ProductionBlueprint.model_validate(artifact["blueprint"])
+    rubric = next(
+        (card for card in blueprint.card_rubrics if card.card_id == card_id),
+        None,
+    )
+    verdict = "unavailable"
+    if rubric is not None:
+        generated_sections = [
+            section
+            for section in document_json.get("sections", [])
+            if isinstance(section, dict) and section.get("card_id") == card_id
+        ]
+        try:
+            qc = await review_card_content(
+                card=rubric,
+                variant_label=blueprint.voice.variant_label,
+                notation=blueprint.voice.notation,
+                avoid=(
+                    list(blueprint.repair_focus.what_not_to_teach)
+                    if blueprint.repair_focus is not None
+                    else []
+                ),
+                generated_sections=generated_sections,
+                generation_id=generation_id,
+            )
+        except Exception:  # noqa: BLE001
+            retained_issues.extend(prior_issues)
+        else:
+            verdict = qc.verdict
+            retained_issues.extend(
+                {
+                    "issue_id": str(uuid.uuid4()),
+                    "severity": "major",
+                    "category": (
+                        "card_objective_unmet"
+                        if check.check == "objective"
+                        else "card_scope_breach"
+                        if check.check == "scope"
+                        else "card_notation_breach"
+                        if check.check == "notation"
+                        else "card_misconception_unconfronted"
+                    ),
+                    "message": (
+                        f"Card '{card_id}' failed {check.check}: {check.reason}"
+                    ),
+                    "section_id": f"{blueprint.voice.variant_label}:{card_id}",
+                    "repair_target_id": card_id,
+                    "qc_correction_hint": check.correction_hint or check.reason,
+                }
+                for check in qc.checks
+                if check.result == "FAIL"
+            )
+    else:
+        retained_issues.extend(prior_issues)
+    document_json["booklet_issues"] = retained_issues
+    await _persist_regenerated_visual(
+        generation_id=generation_id,
+        user_id=current_user.id,
+        document_json=document_json,
+    )
+    return {
+        "card_id": card_id,
+        "repaired_sections": sorted({block.section_id for block in blocks}),
+        "component_count": len(blocks),
+        "verdict": verdict,
+    }
 
 
 @v3_studio_router.post("/generations/{generation_id}/visuals/{visual_id}/regenerate")

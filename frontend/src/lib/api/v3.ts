@@ -207,6 +207,28 @@ export async function regenerateV3Visual(payload: {
 	return res.json() as Promise<V3VisualBlock>;
 }
 
+export async function repairV3Card(payload: {
+	generation_id: string;
+	card_id: string;
+	correction_hint?: string;
+}): Promise<{
+	card_id: string;
+	repaired_sections: string[];
+	component_count: number;
+	verdict: 'pass' | 'repair' | 'unavailable';
+}> {
+	const res = await apiFetch(
+		`/api/v1/v3/generations/${encodeURIComponent(payload.generation_id)}/cards/${encodeURIComponent(payload.card_id)}/repair`,
+		{
+			method: 'POST',
+			headers: bearerHeaders(),
+			body: JSON.stringify({ correction_hint: payload.correction_hint ?? null })
+		}
+	);
+	await ensureOk(res, 'Could not repair this concept card.');
+	return res.json();
+}
+
 export async function adjustBlueprint(payload: {
 	blueprint_id: string;
 	adjustment: string;

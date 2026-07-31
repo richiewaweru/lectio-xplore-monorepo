@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { regenerateV3Visual } from '$lib/api/v3';
+	import { regenerateV3Visual, repairV3Card } from '$lib/api/v3';
 	import type { V3DraftPack } from '$lib/types/v3';
 
 	interface Props {
@@ -58,6 +58,17 @@
 		return hints[visual.visual_id] ?? visual.qc_correction_hint ?? '';
 	}
 
+	function cardId(issue: Record<string, unknown>): string {
+		return asText(issue.category).startsWith('card_')
+			? asText(issue.repair_target_id)
+			: '';
+	}
+
+	function cardHint(issue: Record<string, unknown>): string {
+		const id = cardId(issue);
+		return hints[id] ?? asText(issue.qc_correction_hint) ?? asText(issue.message);
+	}
+
 	async function regenerate(issue: Record<string, unknown>): Promise<void> {
 		const visual = visualFor(issue);
 		if (!generationId || !visual || pending[visual.visual_id]) return;
@@ -76,6 +87,25 @@
 			pending[visual.visual_id] = false;
 		}
 	}
+
+	async function repairCard(issue: Record<string, unknown>): Promise<void> {
+		const id = cardId(issue);
+		if (!generationId || !id || pending[id]) return;
+		pending[id] = true;
+		errors[id] = '';
+		try {
+			await repairV3Card({
+				generation_id: generationId,
+				card_id: id,
+				correction_hint: cardHint(issue)
+			});
+			await onRegenerated?.();
+		} catch (error) {
+			errors[id] = error instanceof Error ? error.message : 'Could not repair this concept card.';
+		} finally {
+			pending[id] = false;
+		}
+	}
 </script>
 
 {#if issues.length}
@@ -84,6 +114,7 @@
 		<ul class="mt-3 space-y-2">
 			{#each issues as issue}
 				{@const visual = visualFor(issue)}
+				{@const targetCardId = cardId(issue)}
 				<li class="rounded-md border border-border/40 bg-background/60 px-3 py-2">
 					<div class="flex gap-3">
 						{#if asText(issue.category) === 'visual_quality_flagged' && visual?.image_url}
@@ -112,6 +143,22 @@
 								{#if errors[visual.visual_id]}
 									<p class="mt-2 text-xs text-destructive" role="alert">{errors[visual.visual_id]}</p>
 								{/if}
+							{/if}
+							{#if targetCardId && generationId}
+								<label class="mt-2 block text-xs font-medium" for={`card-hint-${targetCardId}`}>Card correction</label>
+								<textarea
+									id={`card-hint-${targetCardId}`}
+									class="mt-1 min-h-20 w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+									value={cardHint(issue)}
+									oninput={(event) => (hints[targetCardId] = event.currentTarget.value)}
+								></textarea>
+								<button
+									type="button"
+									class="mt-2 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-60"
+									disabled={pending[targetCardId]}
+									onclick={() => repairCard(issue)}
+								>{pending[targetCardId] ? 'Repairing…' : 'Repair this card'}</button>
+								{#if errors[targetCardId]}<p class="mt-2 text-xs text-destructive" role="alert">{errors[targetCardId]}</p>{/if}
 							{/if}
 						</div>
 					</div>

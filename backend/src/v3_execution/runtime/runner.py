@@ -236,6 +236,8 @@ async def run_generation(
                 "category": issue.category,
                 "message": issue.message,
                 "section_id": issue.generated_ref,
+                "repair_target_id": issue.repair_target_id,
+                "qc_correction_hint": issue.qc_correction_hint,
             }
             for issue in report.issues
         ]

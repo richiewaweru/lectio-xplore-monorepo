@@ -31,6 +31,11 @@ IssueCategory = Literal[
     "internal_artifact_leak",
     "schema_violation",
     "print_risk",
+    "card_objective_unmet",
+    "card_misconception_unconfronted",
+    "card_scope_breach",
+    "card_notation_breach",
+    "card_qc_unavailable",
 ]
 
 CoherenceStatus = Literal[
@@ -51,6 +56,7 @@ class ReviewIssue(BaseModel):
     generated_ref: str | None = None
     suggested_repair_executor: RepairExecutor
     repair_target_id: str | None = None
+    qc_correction_hint: str | None = None
 
 
 class CoherenceReport(BaseModel):

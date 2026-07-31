@@ -4,6 +4,8 @@ from v3_blueprint.models import (
     AnchorPlan,
     AnswerKeyPlan,
     BlueprintMetadata,
+    CardMisconceptionPlan,
+    CardRubricPlan,
     ComponentPlan,
     LessonModePlan,
     ProductionBlueprint,
@@ -85,6 +87,7 @@ def assemble_blueprint(
             title=section_plan.title,
             role=section_plan.role,
             visual_required=section_plan.visual_required,
+            card_id=section_plan.card_id,
             components=components,
         ))
         included_section_ids.add(section_plan.id)
@@ -126,6 +129,8 @@ def assemble_blueprint(
         voice=VoicePlan.model_validate({
             "register": plan.variant_spec().voice.register_name,
             "tone": plan.variant_spec().voice.tone,
+            "notation": plan.variant_spec().voice.notation,
+            "variant_label": plan.variant_spec().label,
         }),
         anchor=AnchorPlan(reuse_scope=plan.anchor.reuse_scope),
         prior_knowledge=list(plan.prior_knowledge),
@@ -138,6 +143,21 @@ def assemble_blueprint(
             else None
         ),
         sections=sections,
+        card_rubrics=[
+            CardRubricPlan(
+                card_id=card.id,
+                objective=card.objective,
+                misconceptions=[
+                    CardMisconceptionPlan(
+                        id=misconception.id,
+                        description=misconception.description,
+                    )
+                    for misconception in card.misconceptions
+                ],
+            )
+            for card in plan.cards
+            if any(section.card_id == card.id for section in plan.sections)
+        ],
         question_plan=question_plan,
         visual_strategy=visual_strategy,
         answer_key=AnswerKeyPlan(style=plan.answer_key_style),

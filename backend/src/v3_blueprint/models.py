@@ -52,6 +52,8 @@ class VoicePlan(BaseModel):
 
     register_name: str = Field(alias="register", serialization_alias="register")
     tone: str | None = None
+    notation: str | None = None
+    variant_label: str = "Core"
 
 
 class ComponentPlan(BaseModel):
@@ -68,7 +70,23 @@ class SectionPlan(BaseModel):
     title: str
     role: str
     visual_required: bool = False
+    card_id: str | None = None
     components: list[ComponentPlan] = Field(default_factory=list, min_length=1)
+
+
+class CardMisconceptionPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    description: str
+
+
+class CardRubricPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    card_id: str
+    objective: str
+    misconceptions: list[CardMisconceptionPlan] = Field(default_factory=list)
 
 
 class VisualFrameInstruction(BaseModel):
@@ -145,6 +163,7 @@ class ProductionBlueprint(BaseModel):
     voice: VoicePlan
     anchor: AnchorPlan
     sections: list[SectionPlan] = Field(default_factory=list, min_length=1)
+    card_rubrics: list[CardRubricPlan] = Field(default_factory=list)
     question_plan: list[QuestionPlanItem] = Field(default_factory=list)
     visual_strategy: VisualStrategyPlan = Field(default_factory=VisualStrategyPlan)
     answer_key: AnswerKeyPlan

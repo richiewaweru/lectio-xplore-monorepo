@@ -855,6 +855,7 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - [x] P7 — map distractors to real misconception IDs and preserve unmapped options as null
 - [x] P8 — review, edit, and regenerate pack-level items per card
 - [x] P9 — fan one approved plan into parallel learner-group variants under a pack hub
+- [x] P10 — review and repair generated content against each approved concept card
 
 ### P1 validation
 
@@ -942,5 +943,14 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - Backend focused planning/lifecycle: 30 tests passed; isolated item review: 3 tests passed
 - Frontend: 0 check errors/warnings and 50 focused tests passed
 - Ruff, compile, cardinality grep, diff, and architecture checks passed
+
+### P10 validation
+
+- Fast-tier QC runs once per card and variant across objective, misconception, scope, and notation checks
+- Failed checks persist the card ID and a production-written correction hint
+- Card repair filters existing section-writer work orders by card, regenerates only those sections,
+  patches the document, and rechecks the repaired content
+- Review/assembly/execution suites: 43 tests passed
+- Frontend: 0 check errors and 0 warnings; Ruff and compile checks passed
 
 ---

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -26,8 +27,88 @@ from v3_review.deterministic_checks import (
     check_visuals_attach_to_valid_targets,
 )
 from v3_review.models import CoherenceReport, ReviewIssue, derive_coherence_status, refresh_issue_counts
+from v3_review.card_reviewer import CardQCResult, review_card_content
 
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
+
+
+def _card_qc_issues(result: CardQCResult) -> list[ReviewIssue]:
+    issues: list[ReviewIssue] = []
+    for check in result.checks:
+        if check.result == "PASS":
+            continue
+        if check.check == "objective":
+            category = "card_objective_unmet"
+        elif check.check == "scope":
+            category = "card_scope_breach"
+        elif check.check == "notation":
+            category = "card_notation_breach"
+        else:
+            category = "card_misconception_unconfronted"
+        hint = check.correction_hint or check.reason
+        issues.append(
+            ReviewIssue(
+                severity="major",
+                category=category,
+                message=(
+                    f"Card '{result.card_id}' failed {check.check}: {check.reason}"
+                ),
+                blueprint_ref=f"card_rubrics[{result.card_id}].{check.check}",
+                generated_ref=f"{result.variant_label}:{result.card_id}",
+                suggested_repair_executor="section_writer",
+                repair_target_id=result.card_id,
+                qc_correction_hint=hint,
+            )
+        )
+    return issues
+
+
+async def _run_card_rubrics(
+    blueprint: ProductionBlueprint,
+    draft_pack: DraftPack,
+) -> list[ReviewIssue]:
+    async def review(card):
+        sections = [
+            section
+            for section in draft_pack.sections
+            if isinstance(section, dict) and section.get("card_id") == card.card_id
+        ]
+        if not sections:
+            return []
+        try:
+            result = await review_card_content(
+                card=card,
+                variant_label=blueprint.voice.variant_label,
+                notation=blueprint.voice.notation,
+                avoid=(
+                    list(blueprint.repair_focus.what_not_to_teach)
+                    if blueprint.repair_focus is not None
+                    else []
+                ),
+                generated_sections=sections,
+                generation_id=draft_pack.generation_id,
+            )
+        except Exception as exc:  # noqa: BLE001
+            return [
+                ReviewIssue(
+                    severity="minor",
+                    category="card_qc_unavailable",
+                    message=(
+                        f"Card '{card.card_id}' QC could not complete: "
+                        f"{type(exc).__name__}: {str(exc)[:240]}"
+                    ),
+                    blueprint_ref=f"card_rubrics[{card.card_id}]",
+                    generated_ref=f"{blueprint.voice.variant_label}:{card.card_id}",
+                    suggested_repair_executor="section_writer",
+                    repair_target_id=card.card_id,
+                )
+            ]
+        return _card_qc_issues(result)
+
+    batches = await asyncio.gather(
+        *(review(card) for card in blueprint.card_rubrics)
+    )
+    return [issue for batch in batches for issue in batch]
 
 
 async def run_coherence_review(
@@ -63,6 +144,7 @@ async def run_coherence_review(
     det_issues += check_lectio_schema_validity(draft_pack)
     det_issues += check_component_ids_in_lectio_contract(blueprint, draft_pack)
     det_issues += check_manual_only_components(blueprint, draft_pack)
+    det_issues += await _run_card_rubrics(blueprint, draft_pack)
 
     await emit_event(
         v3_events.DETERMINISTIC_REVIEW_COMPLETE,

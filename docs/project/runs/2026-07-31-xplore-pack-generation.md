@@ -32,7 +32,7 @@
 - [x] P7: diagnostic distractor mappings
 - [x] P8: pack-level item review
 - [x] P9: parallel variant fan-out and pack hub
-- [ ] P10: card-scoped QC rubric
+- [x] P10: card-scoped QC rubric
 - [ ] P11: diagnostic answer-key print
 - [ ] P12: searchable card reuse
 - [ ] P13: regression and integration tests
@@ -138,6 +138,15 @@
   review suite passed 3 tests in isolation after the combined SQLite harness hit its
   known lock. Frontend `svelte-check` found 0 errors and 0 warnings; 50 focused tests
   passed. Ruff, compile, diff, cardinality grep, and architecture checks passed.
+- P10 QC: every generated card/variant is checked on the existing fast tier for its
+  objective, each approved misconception, scope/avoid list, and notation. Failures
+  name the card and failed criterion, persist `repair_target_id` plus
+  `qc_correction_hint`, and appear in the variant-scoped issues surface.
+- P10 repair: the existing section-writer work orders are filtered by the failed
+  card ID, regenerated with the QC hint, patched into the document, and rechecked.
+  The production visual-QC path was also confirmed to write its correction hint.
+- P10 validation: 43 focused review, assembly, and execution tests passed; Ruff and
+  compile checks passed; frontend `svelte-check` found 0 errors and 0 warnings.
 
 ## Risks and follow-up
 

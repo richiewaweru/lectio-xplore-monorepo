@@ -75,6 +75,9 @@ class V3SectionBuilder:
                 "section_id": section_id,
                 "template_id": template_id,
             }
+            if section_plan.card_id is not None:
+                bucket["card_id"] = section_plan.card_id
+                bucket["varies_on"] = blueprint.voice.variant_label
             section_warnings: list[str] = []
             missing_components: list[str] = []
             missing_visuals: list[str] = []
