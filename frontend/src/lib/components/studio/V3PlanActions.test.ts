@@ -17,11 +17,10 @@ describe('V3PlanActions', () => {
 			}
 		});
 
-		await fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Review concepts' }));
 		expect(onApprove).toHaveBeenCalledTimes(1);
 
-
-		await fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Review concepts' }));
 		expect(onApprove).toHaveBeenCalledTimes(2);
 	});
 

@@ -356,7 +356,7 @@ describe('LectioDocumentView package smoke', () => {
 		expect(container.querySelector('[data-print-mode="true"]')).toBeTruthy();
 		expect(screen.getByText('Practice check: estimate the probability of two heads in two flips.')).toBeTruthy();
 		expect(screen.getByText('Short answer prompt: explain why long-run frequency stabilizes.')).toBeTruthy();
-		expect(screen.getByText('Worked example: two-coin outcomes')).toBeTruthy();
+		expect(screen.getAllByText('Worked example: two-coin outcomes')).toHaveLength(2);
 		expect(screen.getByText('Timeline of probability thinking')).toBeTruthy();
 		expect(screen.getByText('Pascal and Fermat correspondence')).toBeTruthy();
 		expect(screen.getByText('Static print fallback for all six component checks.')).toBeTruthy();
