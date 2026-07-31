@@ -292,6 +292,20 @@ async def post_path_approve(
         _raise_http(exc)
 
 
+@router.get("/{unit_id}/path")
+async def get_active_path(
+    unit_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        version = await get_path_version(session, unit_id=unit.id)
+        return await _path_payload(session, version)
+    except Exception as exc:
+        _raise_http(exc)
+
+
 @router.patch("/{unit_id}/path/lessons/{lesson_id}")
 async def patch_path_lesson(
     unit_id: str,

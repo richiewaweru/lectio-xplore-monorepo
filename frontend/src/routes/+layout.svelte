@@ -18,6 +18,8 @@
 	const isBuilderPrintRoute = $derived(page.url.pathname.startsWith('/builder/print/'));
 	const isPrintShellRoute = $derived(isStudioPrintRoute || isBuilderPrintRoute);
 	const isLessonsRoute = $derived(page.url.pathname.startsWith('/lessons'));
+	const isUnitsRoute = $derived(page.url.pathname.startsWith('/units'));
+	const isWorkspaceRoute = $derived(isLessonsRoute || isUnitsRoute);
 
 	onMount(() => {
 		void bootstrapAuth(fetchCurrentUser);
@@ -48,6 +50,11 @@
 		<nav class="workspace-nav">
 			<a href={authed.current ? '/lessons' : '/'} class="workspace-brand">Lect<span>i</span>o</a>
 			{#if authed.current && user.current}
+				<div class="workspace-links" aria-label="Workspace">
+					<a href="/lessons" aria-current={isLessonsRoute ? 'page' : undefined}>Lessons</a>
+					<a href="/units" aria-current={isUnitsRoute ? 'page' : undefined}>Units</a>
+					<a href="/studio">Legacy Studio</a>
+				</div>
 				<div class="workspace-nav-end">
 					<a class="workspace-avatar-link" href="/settings" aria-label="Settings">
 						{#if user.current.picture_url}
@@ -64,7 +71,7 @@
 	</header>
 {/if}
 
-<main class:workspace-main={isLessonsRoute}>
+<main class:workspace-main={isWorkspaceRoute}>
 	{#if initialized.current || isPrintShellRoute}
 		{@render children()}
 	{:else}
@@ -132,6 +139,33 @@
 		gap: 14px;
 	}
 
+	.workspace-links {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+
+	.workspace-links a {
+		border-radius: 6px;
+		color: var(--ink-2);
+		font-size: 13px;
+		font-weight: 500;
+		padding: 7px 10px;
+		text-decoration: none;
+	}
+
+	.workspace-links a:hover,
+	.workspace-links a:focus-visible,
+	.workspace-links a[aria-current='page'] {
+		background: var(--accent-soft);
+		color: var(--accent);
+	}
+
+	.workspace-links a:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
 	.workspace-avatar {
 		width: 30px;
 		height: 30px;
@@ -172,6 +206,14 @@
 	@media (max-width: 640px) {
 		.workspace-header {
 			padding: 0 18px;
+		}
+
+		.workspace-links a {
+			padding: 7px;
+		}
+
+		.workspace-links a:last-child {
+			display: none;
 		}
 	}
 </style>

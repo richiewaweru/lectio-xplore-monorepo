@@ -56,6 +56,7 @@ def test_phase5_unit_and_path_routes_are_registered() -> None:
         ("/api/v1/units/{unit_id}/path:plan", "POST"),
         ("/api/v1/units/{unit_id}/path:replan", "POST"),
         ("/api/v1/units/{unit_id}/path:approve", "POST"),
+        ("/api/v1/units/{unit_id}/path", "GET"),
         ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}", "PATCH"),
         ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}:skip", "POST"),
         ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}:split", "POST"),
