@@ -11,6 +11,65 @@ from reportlab.pdfgen import canvas
 _WRAP_WIDTH = 95
 
 
+def build_diagnostic_answer_key_content(
+    *,
+    items: list[dict[str, Any]],
+    misconception_labels: dict[tuple[str, str], str],
+) -> dict[str, Any]:
+    """Build Lectio's `answer-key` component payload for one shared pack quiz."""
+    entries: list[dict[str, Any]] = []
+    for index, item in enumerate(items, start=1):
+        options = [
+            option for option in item.get("options", [])
+            if isinstance(option, dict)
+        ]
+        correct_key = _safe_str(item.get("correct_key"))
+        correct = next(
+            (option for option in options if _safe_str(option.get("key")) == correct_key),
+            None,
+        )
+        if correct is None:
+            continue
+        card_id = _safe_str(item.get("card_id"))
+        diagnostics: list[dict[str, Any]] = []
+        for option in options:
+            misconception_id = _safe_str(option.get("diagnoses"))
+            if not misconception_id:
+                continue
+            option_text = _safe_str(option.get("text"))
+            misconception = misconception_labels.get(
+                (card_id, misconception_id),
+                misconception_id,
+            )
+            diagnostics.append(
+                {
+                    "option_key": _safe_str(option.get("key")) or None,
+                    "option_text": option_text,
+                    "misconception_id": misconception_id,
+                    "misconception_label": (
+                        f'Chose "{option_text}" → consistent with: {misconception}'
+                    ),
+                }
+            )
+        entries.append(
+            {
+                "question_number": float(index),
+                "question": _safe_str(item.get("stem")),
+                "correct_answer": _safe_str(correct.get("text")),
+                "correct_key": correct_key or None,
+                "diagnostics": diagnostics or None,
+            }
+        )
+    return {
+        "label": "Shared diagnostic answer key",
+        "note": (
+            "Diagnostic tags are hypotheses about what an option may indicate; "
+            "confirm them against learner reasoning."
+        ),
+        "entries": entries,
+    }
+
+
 def _safe_str(value: Any) -> str:
     if value is None:
         return ""
@@ -47,14 +106,28 @@ def generate_v3_answer_key_pdf(
     for raw in entries:
         if not isinstance(raw, dict):
             continue
-        qid = _safe_str(raw.get("question_id")) or "question"
-        answer = _safe_str(raw.get("student_answer")) or _safe_str(raw.get("answer"))
+        qid = (
+            _safe_str(raw.get("question_id"))
+            or _safe_str(raw.get("question_number"))
+            or "question"
+        )
+        answer = (
+            _safe_str(raw.get("student_answer"))
+            or _safe_str(raw.get("answer"))
+            or _safe_str(raw.get("correct_answer"))
+        )
         if not answer:
             continue
         working = _safe_str(raw.get("working"))
         notes = _safe_str(raw.get("notes"))
         explanation = _safe_str(raw.get("explanation"))
-        extra_parts = [p for p in (working, notes, explanation) if p]
+        diagnostic_copy = "; ".join(
+            _safe_str(diagnostic.get("misconception_label"))
+            for diagnostic in raw.get("diagnostics", [])
+            if isinstance(diagnostic, dict)
+            and _safe_str(diagnostic.get("misconception_label"))
+        )
+        extra_parts = [p for p in (working, notes, explanation, diagnostic_copy) if p]
         detail = " — ".join(extra_parts) if extra_parts else ""
         rows.append((qid, answer, detail))
 
@@ -105,3 +178,9 @@ def generate_v3_answer_key_pdf(
 
     pdf.save()
     return output_path
+
+
+__all__ = [
+    "build_diagnostic_answer_key_content",
+    "generate_v3_answer_key_pdf",
+]

@@ -68,14 +68,9 @@
 			: [...printSelection, label];
 	}
 
-	function openPrintSelection(): void {
-		if (!pack?.editor_ready) return;
-		for (const variant of landed) {
-			if (printSelection.includes(variant.label) && variant.generation_id) {
-				window.open(`/studio/generations/${encodeURIComponent(variant.generation_id)}`, '_blank');
-			}
-		}
-	}
+	const printHref = $derived(
+		`/packs/${encodeURIComponent(packId)}/print?variants=${encodeURIComponent(printSelection.join(','))}`
+	);
 
 	onMount(() => {
 		void refresh();
@@ -164,7 +159,12 @@
 						<label class="flex items-center gap-2 rounded-xl border border-input px-3 py-2 text-sm font-medium"><input type="checkbox" checked={printSelection.includes(variant.label)} onchange={() => togglePrint(variant.label)} />{variant.label}</label>
 					{/each}
 				</div>
-				<button type="button" disabled={printSelection.length === 0} class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50" onclick={openPrintSelection}>Open selected print views</button>
+				{#if printSelection.length > 0}
+					<a class="inline-block rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" href={printHref}>Open selected print pack</a>
+				{:else}
+					<button type="button" disabled class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground opacity-50">Open selected print pack</button>
+				{/if}
+				<a class="ml-2 text-sm font-semibold text-primary underline-offset-4 hover:underline" href={`/packs/${encodeURIComponent(packId)}/print?keyOnly=true`}>Key only</a>
 			{:else}
 				<p class="text-sm text-muted-foreground">Print selection unlocks with the editors after all variants finish.</p>
 			{/if}

@@ -33,7 +33,7 @@
 - [x] P8: pack-level item review
 - [x] P9: parallel variant fan-out and pack hub
 - [x] P10: card-scoped QC rubric
-- [ ] P11: diagnostic answer-key print
+- [x] P11: diagnostic answer-key print
 - [ ] P12: searchable card reuse
 - [ ] P13: regression and integration tests
 - [ ] Commit the photosynthesis fixture set
@@ -147,6 +147,17 @@
   The production visual-QC path was also confirmed to write its correction hint.
 - P10 validation: 43 focused review, assembly, and execution tests passed; Ruff and
   compile checks passed; frontend `svelte-check` found 0 errors and 0 warnings.
+- P11 print: generation documents are augmented at read/export time with the same
+  non-stale pack item rows, so every variant receives byte-equivalent shared quiz
+  content without copying item ownership into a variant.
+- P11 key: pack items and card misconceptions map into Lectio's `answer-key`
+  contract. Diagnostic copy uses `Chose "{option}" → consistent with:
+  {misconception}` and explicitly labels tags as hypotheses.
+- P11 pack route: `/packs/{pack_id}/print` prints selected landed booklets together
+  and appends exactly one shared diagnostic key; it also supports key-only output.
+- P11 validation: 15 PDF/item tests passed after retaining the established individual
+  print-route contract; the Lectio adapter suite passed 8 tests. Ruff and frontend
+  type checks passed with no errors or warnings.
 
 ## Risks and follow-up
 

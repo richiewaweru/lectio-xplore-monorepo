@@ -70,6 +70,9 @@ from generation.v3_studio.agents import (
 from generation.pdf_export.cleanup import cleanup_files
 from generation.pdf_export.rendering.playwright import PDFRenderError
 from generation.pdf_export.service import PDFExportRequest, export_v3_studio_pdf
+from generation.pdf_export.components.answers_v3 import (
+    build_diagnostic_answer_key_content,
+)
 from generation.v3_studio.dtos import (
     AdjustBlueprintRequest,
     BlueprintPreviewDTO,
@@ -3091,6 +3094,7 @@ async def get_v3_generation_document(
             "status": "streaming_preview",
             "sections": [],
         }
+    document_json = await _with_shared_pack_assessment(model, document_json)
     sections = document_json.get("sections")
     if not isinstance(sections, list) or not sections:
         process_status = str(model.status or "running")
@@ -3110,6 +3114,111 @@ async def get_v3_generation_document(
         }
     response.headers["Cache-Control"] = "no-store"
     return document_json
+
+
+async def _with_shared_pack_assessment(
+    model: GenerationModel,
+    document_json: dict[str, Any],
+) -> dict[str, Any]:
+    if not model.pack_id:
+        return document_json
+    async with async_session_factory() as session:
+        item_result = await session.execute(
+            select(PackItemModel)
+            .where(PackItemModel.pack_id == model.pack_id)
+            .order_by(PackItemModel.card_id, PackItemModel.id)
+        )
+        items = list(item_result.scalars())
+        if not items:
+            return document_json
+        card_result = await session.execute(
+            select(ConceptCardModel).where(
+                ConceptCardModel.pack_id == model.pack_id
+            )
+        )
+        cards = list(card_result.scalars())
+
+    misconception_labels = {
+        (card.id, str(misconception.get("id"))): str(
+            misconception.get("description") or misconception.get("id")
+        )
+        for card in cards
+        for misconception in (
+            card.misconceptions
+            if isinstance(card.misconceptions, list)
+            else []
+        )
+        if isinstance(misconception, dict) and misconception.get("id")
+    }
+    item_payloads = [
+        {
+            "id": item.id,
+            "card_id": item.card_id,
+            "stem": item.stem,
+            "options": item.options if isinstance(item.options, list) else [],
+            "correct_key": item.correct_key,
+        }
+        for item in items
+        if not item.stale
+    ]
+    quiz_sections = []
+    for index, item in enumerate(item_payloads, start=1):
+        options = [
+            option for option in item["options"]
+            if isinstance(option, dict)
+        ]
+        quiz_sections.append(
+            {
+                "section_id": f"shared-diagnostic-{index:02d}",
+                "template_id": "guided-concept-path",
+                "card_id": item["card_id"],
+                "header": {
+                    "title": (
+                        "Shared diagnostic"
+                        if index == 1
+                        else f"Shared diagnostic · {index}"
+                    ),
+                    "subject": model.subject,
+                    "grade_band": "secondary",
+                },
+                "quiz": {
+                    "question": item["stem"],
+                    "quiz_type": "multiple-choice",
+                    "options": [
+                        {
+                            "text": str(option.get("text") or ""),
+                            "correct": bool(option.get("correct")),
+                            "explanation": (
+                                "Correct."
+                                if option.get("correct")
+                                else "Review this idea with your teacher."
+                            ),
+                            "diagnoses": option.get("diagnoses"),
+                        }
+                        for option in options
+                    ],
+                    "feedback_correct": "Correct.",
+                    "feedback_incorrect": "Check the concept and try again.",
+                    "show_explanations": False,
+                },
+            }
+        )
+    next_document = deepcopy(document_json)
+    base_sections = [
+        section
+        for section in next_document.get("sections", [])
+        if isinstance(section, dict)
+        and not str(section.get("section_id") or "").startswith(
+            "shared-diagnostic-"
+        )
+    ]
+    next_document["sections"] = [*base_sections, *quiz_sections]
+    next_document["answer_key"] = build_diagnostic_answer_key_content(
+        items=item_payloads,
+        misconception_labels=misconception_labels,
+    )
+    next_document["shared_quiz_pack_id"] = model.pack_id
+    return next_document
 
 
 def _find_visual_block(
@@ -3627,6 +3736,7 @@ async def post_v3_export_pdf(
     document_json = await generation_writer.get_document_json(generation_id, current_user.id)
     if document_json is None:
         raise HTTPException(status_code=404, detail="Document not found")
+    document_json = await _with_shared_pack_assessment(model, document_json)
     sections = document_json.get("sections")
     if not isinstance(sections, list) or not sections:
         raise HTTPException(status_code=404, detail="Document not found")

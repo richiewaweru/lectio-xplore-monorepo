@@ -33,6 +33,8 @@ export type V3PackDocument = {
 export type AdaptV3PackOptions = {
 	/** When the pack omits `generation_id`, use the route param so consumers stay stable. */
 	routeGenerationId?: string;
+	/** Pack printing renders this once after all selected variants. */
+	includeAnswerKey?: boolean;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -150,6 +152,29 @@ export function adaptV3PackToLectioDocument(
 ): GenerationDocument {
 	const rawSections = Array.isArray(pack.sections) ? pack.sections.filter(isRecord) : [];
 	const sections = rawSections.map((section, index) => normalizeSection(section, index, pack));
+	if (
+		options.includeAnswerKey !== false &&
+		isRecord(pack.answer_key) &&
+		Array.isArray(pack.answer_key.entries) &&
+		pack.answer_key.entries.length > 0
+	) {
+		sections.push(
+			normalizeSection(
+				{
+					section_id: 'shared-diagnostic-answer-key',
+					template_id: safeText(pack.template_id) || 'guided-concept-path',
+					header: {
+						title: 'Shared diagnostic answer key',
+						subject: safeText(pack.subject) || 'Lesson',
+						grade_band: 'secondary'
+					},
+					answer_key: pack.answer_key
+				},
+				sections.length,
+				pack
+			)
+		);
+	}
 	return buildGenerationDocument(pack, sections, options);
 }
 

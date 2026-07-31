@@ -21,6 +21,7 @@
 	const generationId = $derived(page.params.id);
 	const token = $derived(page.url.searchParams.get('token'));
 	const debugPrint = $derived(page.url.searchParams.get('debugPrint') === 'true');
+	const includePackKey = $derived(page.url.searchParams.get('includePackKey') === 'true');
 	const showPrintDiagnostics = $derived(debugPrint);
 
 	providePrintMode(() => page.url.searchParams.get('print') === 'true');
@@ -87,7 +88,10 @@
 					lectioDocument = r.document;
 					adapterDiagnostic = r.diagnostic;
 				} else {
-					lectioDocument = adaptV3PackToLectioDocument(data, { routeGenerationId: generationId });
+					lectioDocument = adaptV3PackToLectioDocument(data, {
+						routeGenerationId: generationId,
+						includeAnswerKey: includePackKey
+					});
 					adapterDiagnostic = null;
 				}
 			} catch (err) {

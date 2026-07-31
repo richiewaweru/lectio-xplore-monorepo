@@ -856,6 +856,7 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - [x] P8 — review, edit, and regenerate pack-level items per card
 - [x] P9 — fan one approved plan into parallel learner-group variants under a pack hub
 - [x] P10 — review and repair generated content against each approved concept card
+- [x] P11 — print identical shared quizzes with one Lectio diagnostic key per pack
 
 ### P1 validation
 
@@ -952,5 +953,13 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
   patches the document, and rechecks the repaired content
 - Review/assembly/execution suites: 43 tests passed
 - Frontend: 0 check errors and 0 warnings; Ruff and compile checks passed
+
+### P11 validation
+
+- Each variant document derives the same quiz sections from the pack's non-stale item rows
+- Diagnostic entries use Lectio's answer-key contract and hypothesis-safe wording
+- Selected landed variants print together at the pack route with one key, or key-only
+- PDF/item suites: 15 tests passed; Lectio adapter: 8 tests passed
+- Frontend check and focused Ruff passed
 
 ---
