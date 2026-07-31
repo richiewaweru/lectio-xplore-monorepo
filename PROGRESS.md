@@ -6,7 +6,7 @@
 **Branch**: `codex/v2-complete-build`
 **Base branch**: `xplore`
 **Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
-**Current phase**: Phase 8 in progress — full path workspace
+**Current phase**: Phase 9 in progress — teaching schedule and unit groups
 
 ### Phase checklist
 
@@ -20,7 +20,7 @@
 - [x] Human owner decision recorded: build Phases 6–13 before the 30-lesson comparative study
 - [x] Phase 6 — production-complete path-to-Xplore bridge
 - [x] Phase 7 — visible end-to-end unit slice
-- [ ] Phase 8 — full path workspace
+- [x] Phase 8 — full path workspace
 - [ ] Phase 9 — teaching schedule and unit groups
 - [ ] Phase 10 — controlled differentiated shapes
 - [ ] Phase 11 — resource projections
@@ -190,7 +190,7 @@ Phase 7 implementation commit: `e87b503` (`P7: feat(units): ship path-first work
   evidence in the unit workspace.
 - [x] Require accessible confirmation for destructive structural edits and version restoration.
 - [x] Run focused, complete, migration, type, build, architecture, and immutable-fixture gates.
-- [ ] Run authenticated browser acceptance against an isolated local Phase 8 database.
+- [x] Run authenticated browser acceptance against an isolated local Phase 8 database.
 
 ### Phase 8 automated gate result
 
@@ -239,11 +239,22 @@ $ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorith
 91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
 ```
 
-**Automated gate: PASS; browser gate: PENDING.** Phase 8 now has guarded concurrent edits,
+Authenticated browser acceptance used a disposable local SQLite database seeded from the committed
+Grade 4 fixture and a disposable local-only user. It verified the Units list and the full path
+workspace: all eight lesson lifecycle counters; completeness, prerequisite-risk, and merge-critic
+health; active and superseded versions; historical version inspection; in-path and external
+prerequisite evidence; and support/core/extension shapes. Restore and skip both opened accessible
+confirmation dialogs explaining that a new recoverable draft would be created. Neither confirmation
+was submitted. The temporary authentication route, seeder, databases, logs, and isolated backend
+were removed after the check; production was never contacted or mutated.
+
+**Gate: PASS.** Phase 8 now has guarded concurrent edits,
 recoverable structural history, explicit restoration, full-path health evidence, and aggregate lesson
-lifecycle status. The phase remains open until the workspace is exercised in a fresh authenticated
-browser against an isolated local database; no production migration or data mutation is authorized
-for that acceptance check.
+lifecycle status. The workspace was exercised end to end against isolated local data and the
+browser surface matches the versioned backend contracts.
+
+Phase 8 commits: `f13f78c` (`P8: feat(path): add recoverable versioned workspace`) and `847cc2b`
+(`P8: docs(xplore-v2): record automated gate evidence`).
 
 ### Phase 0 tracking
 
