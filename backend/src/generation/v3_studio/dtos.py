@@ -252,6 +252,8 @@ class V3ConceptCardDTO(BaseModel):
     misconceptions: list[V3CardMisconceptionDTO] = Field(default_factory=list)
     no_known_misconceptions: bool = False
     teacher_edited: bool = False
+    source_card_id: str | None = None
+    source_pack_id: str | None = None
 
 
 class V3ConceptCardPatchRequest(BaseModel):
@@ -260,6 +262,26 @@ class V3ConceptCardPatchRequest(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     objective: str = Field(min_length=1, max_length=1000)
     misconceptions: list[V3CardMisconceptionDTO] = Field(default_factory=list)
+
+
+class V3CardLibraryItemDTO(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    card_id: str
+    pack_id: str
+    slug: str
+    title: str
+    objective: str
+    prereqs: list[str] = Field(default_factory=list)
+    misconceptions: list[V3CardMisconceptionDTO] = Field(default_factory=list)
+    created_at: str | None = None
+
+
+class V3ReuseConceptCardRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    source_card_id: str
+    target_card_id: str
 
 
 class V3PackItemOptionDTO(BaseModel):

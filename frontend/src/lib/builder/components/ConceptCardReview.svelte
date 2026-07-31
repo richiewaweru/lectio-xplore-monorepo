@@ -3,7 +3,10 @@
 	import {
 		approveConceptCards,
 		getConceptCards,
+		reuseConceptCard,
+		searchConceptCards,
 		updateConceptCard,
+		type CardLibraryItem,
 		type ConceptCard
 	} from '$lib/builder/api/concept-cards';
 
@@ -25,6 +28,11 @@
 	let error = $state<string | null>(null);
 	let saveLabel = $state('All changes saved');
 	let activeSave: Promise<boolean> | null = null;
+	let libraryOpen = $state(false);
+	let librarySearch = $state('');
+	let libraryCards = $state<CardLibraryItem[]>([]);
+	let libraryLoading = $state(false);
+	let reuseBusy = $state<string | null>(null);
 
 	const card = $derived(cards[index] ?? null);
 
@@ -95,6 +103,39 @@
 		saveLabel = 'Unsaved changes';
 	}
 
+	async function searchLibrary(): Promise<void> {
+		libraryLoading = true;
+		error = null;
+		try {
+			libraryCards = await searchConceptCards(librarySearch);
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : 'Could not search your card library.';
+		} finally {
+			libraryLoading = false;
+		}
+	}
+
+	async function openLibrary(): Promise<void> {
+		libraryOpen = true;
+		await searchLibrary();
+	}
+
+	async function reuse(source: CardLibraryItem): Promise<void> {
+		if (!card || reuseBusy) return;
+		reuseBusy = source.card_id;
+		error = null;
+		try {
+			const reused = await reuseConceptCard(packId, source.card_id, card.id);
+			replaceCurrent(reused);
+			saveLabel = `Reused from ${source.title}`;
+			libraryOpen = false;
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : 'Could not reuse this card.';
+		} finally {
+			reuseBusy = null;
+		}
+	}
+
 	async function approve(): Promise<void> {
 		if (!(await saveCurrent())) return;
 		approving = true;
@@ -149,7 +190,10 @@
 					oninput={() => (saveLabel = 'Unsaved changes')}
 					onblur={() => void saveCurrent()}
 				/>
-				<p class="mt-1 text-xs text-slate-500">{card.id}</p>
+				<div class="mt-1 flex flex-wrap items-center justify-between gap-2">
+					<p class="text-xs text-slate-500">{card.id}{card.source_card_id ? ' · reused from your library' : ''}</p>
+					<button type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700" onclick={() => void openLibrary()}>Reuse from library</button>
+				</div>
 
 				<label class="mt-6 block text-sm font-semibold text-slate-800" for="card-objective">By the end, learners can</label>
 				<textarea
@@ -242,3 +286,36 @@
 		{/if}
 	</section>
 </main>
+
+{#if libraryOpen}
+	<div class="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 p-4" role="presentation">
+		<div class="max-h-[85vh] w-full max-w-2xl overflow-auto rounded-2xl bg-white p-5 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="card-library-title">
+			<div class="flex items-start justify-between gap-3">
+				<div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Your library</p><h2 id="card-library-title" class="mt-1 text-xl font-bold">Reuse a concept card</h2></div>
+				<button type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold" onclick={() => (libraryOpen = false)}>Close</button>
+			</div>
+			<form class="mt-4 flex gap-2" onsubmit={(event) => { event.preventDefault(); void searchLibrary(); }}>
+				<input class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm" bind:value={librarySearch} aria-label="Search concept cards" placeholder="Search title, objective, or slug" />
+				<button type="submit" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">Search</button>
+			</form>
+			{#if libraryLoading}
+				<p class="mt-4 text-sm text-slate-600">Searching…</p>
+			{:else if libraryCards.length === 0}
+				<p class="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">No matching cards yet.</p>
+			{:else}
+				<div class="mt-4 grid gap-3">
+					{#each libraryCards as libraryCard}
+						<article class="rounded-xl border border-slate-200 p-4">
+							<div class="flex items-start justify-between gap-3">
+								<div><h3 class="font-semibold text-slate-950">{libraryCard.title}</h3><p class="mt-1 text-xs text-slate-500">{libraryCard.slug}</p></div>
+								<button type="button" disabled={reuseBusy !== null || libraryCard.card_id === card?.source_card_id} class="rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50" onclick={() => void reuse(libraryCard)}>{reuseBusy === libraryCard.card_id ? 'Reusing…' : 'Use this card'}</button>
+							</div>
+							<p class="mt-3 text-sm text-slate-700">{libraryCard.objective}</p>
+							<p class="mt-2 text-xs text-slate-500">{libraryCard.misconceptions.length} misconception {libraryCard.misconceptions.length === 1 ? 'belief' : 'beliefs'}</p>
+						</article>
+					{/each}
+				</div>
+			{/if}
+		</div>
+	</div>
+{/if}

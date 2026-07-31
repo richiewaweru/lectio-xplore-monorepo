@@ -17,6 +17,19 @@ export type ConceptCard = {
 	misconceptions: ConceptCardMisconception[];
 	no_known_misconceptions: boolean;
 	teacher_edited: boolean;
+	source_card_id?: string | null;
+	source_pack_id?: string | null;
+};
+
+export type CardLibraryItem = {
+	card_id: string;
+	pack_id: string;
+	slug: string;
+	title: string;
+	objective: string;
+	prereqs: string[];
+	misconceptions: ConceptCardMisconception[];
+	created_at: string | null;
 };
 
 export async function getConceptCards(packId: string): Promise<ConceptCard[]> {
@@ -52,4 +65,32 @@ export async function approveConceptCards(packId: string): Promise<V3ChunkedPlan
 	);
 	await ensureOk(response, 'Could not approve concept cards.');
 	return response.json() as Promise<V3ChunkedPlanState>;
+}
+
+export async function searchConceptCards(search = ''): Promise<CardLibraryItem[]> {
+	const response = await apiFetch(
+		`/api/v1/v3/cards?search=${encodeURIComponent(search)}&limit=40`
+	);
+	await ensureOk(response, 'Could not search your concept-card library.');
+	return response.json() as Promise<CardLibraryItem[]>;
+}
+
+export async function reuseConceptCard(
+	packId: string,
+	sourceCardId: string,
+	targetCardId: string
+): Promise<ConceptCard> {
+	const response = await apiFetch(
+		`/api/v1/v3/packs/${encodeURIComponent(packId)}/cards/reuse`,
+		{
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				source_card_id: sourceCardId,
+				target_card_id: targetCardId
+			})
+		}
+	);
+	await ensureOk(response, 'Could not reuse this concept card.');
+	return response.json() as Promise<ConceptCard>;
 }

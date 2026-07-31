@@ -857,6 +857,7 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - [x] P9 — fan one approved plan into parallel learner-group variants under a pack hub
 - [x] P10 — review and repair generated content against each approved concept card
 - [x] P11 — print identical shared quizzes with one Lectio diagnostic key per pack
+- [x] P12 — search and reuse owned concept cards with copy provenance
 
 ### P1 validation
 
@@ -961,5 +962,13 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - Selected landed variants print together at the pack route with one key, or key-only
 - PDF/item suites: 15 tests passed; Lectio adapter: 8 tests passed
 - Frontend check and focused Ruff passed
+
+### P12 validation
+
+- Teacher-owned cards are searchable by slug, title, and objective with latest-slug collapsing
+- Reuse copies the card contract, links source card/pack provenance, and stales dependent items
+- Card edits and reuse synchronize the durable structural-plan snapshot before fan-out
+- PostgreSQL migration `20260731_0018` passed upgrade/downgrade/upgrade
+- Frontend check: 0 errors/warnings; focused Ruff and compile checks passed
 
 ---

@@ -149,6 +149,8 @@ class ConceptCardModel(Base):
     prereqs = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
     misconceptions = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
     teacher_edited = Column(Boolean, nullable=False, default=False)
+    source_card_id = Column(String, nullable=True, index=True)
+    source_pack_id = Column(String, nullable=True, index=True)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
 
     items = relationship("PackItemModel", back_populates="card")

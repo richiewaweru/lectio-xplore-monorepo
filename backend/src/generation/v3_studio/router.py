@@ -84,8 +84,10 @@ from generation.v3_studio.dtos import (
     V3ChunkedRetrySectionRequest,
     V3ChunkedStatusDTO,
     V3CardItemReviewDTO,
+    V3CardLibraryItemDTO,
     V3ConceptCardDTO,
     V3ConceptCardPatchRequest,
+    V3ReuseConceptCardRequest,
     V3GenerationDetailDTO,
     V3GenerationHistoryItemDTO,
     V3PackItemDTO,
@@ -644,6 +646,8 @@ def _card_dto(card: ConceptCardModel) -> V3ConceptCardDTO:
         misconceptions=misconceptions,
         no_known_misconceptions=len(misconceptions) == 0,
         teacher_edited=bool(card.teacher_edited),
+        source_card_id=card.source_card_id,
+        source_pack_id=card.source_pack_id,
     )
 
 
@@ -1665,6 +1669,188 @@ async def get_chunked_generation_events(
 
 
 @v3_studio_router.get(
+    "/cards",
+    response_model=list[V3CardLibraryItemDTO],
+)
+async def get_card_library(
+    search: str = "",
+    limit: int = 40,
+    current_user: User = Depends(get_current_user),
+) -> list[V3CardLibraryItemDTO]:
+    async with async_session_factory() as session:
+        pack_rows = await session.execute(
+            select(LearningPackModel.id).where(
+                LearningPackModel.user_id == current_user.id
+            )
+        )
+        generation_rows = await session.execute(
+            select(GenerationModel.id, GenerationModel.pack_id).where(
+                GenerationModel.user_id == current_user.id
+            )
+        )
+        owned_pack_ids = set(pack_rows.scalars())
+        for generation_id, pack_id in generation_rows:
+            owned_pack_ids.add(pack_id or generation_id)
+        rows = await session.execute(
+            select(ConceptCardModel).order_by(
+                ConceptCardModel.created_at.desc(),
+                ConceptCardModel.id.desc(),
+            )
+        )
+        cards = [
+            card for card in rows.scalars()
+            if card.pack_id in owned_pack_ids
+        ]
+
+    needle = search.strip().casefold()
+    if needle:
+        cards = [
+            card for card in cards
+            if needle in " ".join(
+                [card.slug, card.title, card.objective]
+            ).casefold()
+        ]
+    unique: list[ConceptCardModel] = []
+    seen: set[str] = set()
+    for card in cards:
+        if card.slug in seen:
+            continue
+        seen.add(card.slug)
+        unique.append(card)
+        if len(unique) >= max(1, min(limit, 100)):
+            break
+    return [
+        V3CardLibraryItemDTO(
+            card_id=card.id,
+            pack_id=card.pack_id,
+            slug=card.slug,
+            title=card.title,
+            objective=card.objective,
+            prereqs=list(card.prereqs or []),
+            misconceptions=(
+                card.misconceptions
+                if isinstance(card.misconceptions, list)
+                else []
+            ),
+            created_at=_iso(card.created_at),
+        )
+        for card in unique
+    ]
+
+
+async def _sync_persisted_plan_card(
+    *,
+    generation_id: str,
+    slug: str,
+    title: str,
+    objective: str,
+    prereqs: list[str],
+    misconceptions: list[dict[str, Any]],
+) -> None:
+    state = await load_chunked_state(generation_id)
+    plan = state.get("structural_plan")
+    if not isinstance(plan, dict):
+        return
+    cards = plan.get("cards")
+    if not isinstance(cards, list):
+        return
+    updated = False
+    next_cards: list[Any] = []
+    for raw in cards:
+        if not isinstance(raw, dict) or raw.get("id") != slug:
+            next_cards.append(raw)
+            continue
+        next_cards.append(
+            {
+                **raw,
+                "title": title,
+                "objective": objective,
+                "prereqs": prereqs,
+                "misconceptions": misconceptions,
+                "no_known_misconceptions": len(misconceptions) == 0,
+            }
+        )
+        updated = True
+    if updated:
+        next_plan = {**plan, "cards": next_cards}
+        await persist_chunked_state(
+            generation_id,
+            {"structural_plan": next_plan},
+        )
+
+
+@v3_studio_router.post(
+    "/packs/{pack_id}/cards/reuse",
+    response_model=V3ConceptCardDTO,
+)
+async def reuse_concept_card(
+    pack_id: str,
+    body: V3ReuseConceptCardRequest,
+    current_user: User = Depends(get_current_user),
+) -> V3ConceptCardDTO:
+    card_pack_id, generation_id = await _resolve_owned_card_scope(
+        pack_id,
+        current_user.id,
+    )
+    async with async_session_factory() as session:
+        source = await session.get(ConceptCardModel, body.source_card_id)
+        if source is None:
+            raise HTTPException(status_code=404, detail="Source concept card not found")
+        source_scope = await session.get(LearningPackModel, source.pack_id)
+        source_generation = await session.get(GenerationModel, source.pack_id)
+        source_owned = (
+            source_scope is not None and source_scope.user_id == current_user.id
+        ) or (
+            source_generation is not None
+            and source_generation.user_id == current_user.id
+        )
+        if not source_owned:
+            source_pack_generation = await session.execute(
+                select(GenerationModel.id).where(
+                    GenerationModel.pack_id == source.pack_id,
+                    GenerationModel.user_id == current_user.id,
+                ).limit(1)
+            )
+            source_owned = source_pack_generation.first() is not None
+        if not source_owned:
+            raise HTTPException(status_code=404, detail="Source concept card not found")
+
+        target_result = await session.execute(
+            select(ConceptCardModel).where(
+                ConceptCardModel.pack_id == card_pack_id,
+                ConceptCardModel.slug == body.target_card_id,
+            )
+        )
+        target = target_result.scalar_one_or_none()
+        if target is None:
+            raise HTTPException(status_code=404, detail="Target concept card not found")
+        target.title = source.title
+        target.objective = source.objective
+        target.prereqs = deepcopy(source.prereqs or [])
+        target.misconceptions = deepcopy(source.misconceptions or [])
+        target.teacher_edited = False
+        target.source_card_id = source.id
+        target.source_pack_id = source.pack_id
+        await session.execute(
+            update(PackItemModel)
+            .where(PackItemModel.card_id == target.id)
+            .values(stale=True)
+        )
+        await session.commit()
+        await session.refresh(target)
+        dto = _card_dto(target)
+    await _sync_persisted_plan_card(
+        generation_id=generation_id,
+        slug=target.slug,
+        title=target.title,
+        objective=target.objective,
+        prereqs=list(target.prereqs or []),
+        misconceptions=deepcopy(target.misconceptions or []),
+    )
+    return dto
+
+
+@v3_studio_router.get(
     "/packs/{pack_id}/cards",
     response_model=list[V3ConceptCardDTO],
 )
@@ -1692,7 +1878,10 @@ async def patch_pack_concept_card(
     body: V3ConceptCardPatchRequest,
     current_user: User = Depends(get_current_user),
 ) -> V3ConceptCardDTO:
-    card_pack_id, _ = await _resolve_owned_card_scope(pack_id, current_user.id)
+    card_pack_id, generation_id = await _resolve_owned_card_scope(
+        pack_id,
+        current_user.id,
+    )
     async with async_session_factory() as session:
         result = await session.execute(
             select(ConceptCardModel).where(
@@ -1744,7 +1933,16 @@ async def patch_pack_concept_card(
         )
         await session.commit()
         await session.refresh(card)
-        return _card_dto(card)
+        dto = _card_dto(card)
+    await _sync_persisted_plan_card(
+        generation_id=generation_id,
+        slug=card.slug,
+        title=card.title,
+        objective=card.objective,
+        prereqs=list(card.prereqs or []),
+        misconceptions=deepcopy(card.misconceptions or []),
+    )
+    return dto
 
 
 async def _load_item_reviews(

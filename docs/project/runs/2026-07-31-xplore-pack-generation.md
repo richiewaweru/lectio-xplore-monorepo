@@ -34,7 +34,7 @@
 - [x] P9: parallel variant fan-out and pack hub
 - [x] P10: card-scoped QC rubric
 - [x] P11: diagnostic answer-key print
-- [ ] P12: searchable card reuse
+- [x] P12: searchable card reuse
 - [ ] P13: regression and integration tests
 - [ ] Commit the photosynthesis fixture set
 - [ ] Run repository validation and architecture checks
@@ -158,6 +158,14 @@
 - P11 validation: 15 PDF/item tests passed after retaining the established individual
   print-route contract; the Lectio adapter suite passed 8 tests. Ruff and frontend
   type checks passed with no errors or warnings.
+- P12 library: `GET /v3/cards` searches the current teacher's cards by slug, title,
+  or objective and collapses repeated slugs to the latest owned copy.
+- P12 reuse: pack card review can replace a target card from the library. Objective,
+  title, prerequisites, and misconception beliefs are copied; source card and pack
+  IDs are persisted as provenance, dependent items become stale, and the durable
+  structural-plan snapshot is synchronized before variant generation.
+- P12 migration: PostgreSQL revision `20260731_0018` passed upgrade → downgrade →
+  upgrade. Focused Ruff/compile and frontend checks passed with 0 errors/warnings.
 
 ## Risks and follow-up
 
