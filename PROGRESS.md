@@ -6,7 +6,7 @@
 **Branch**: `v2-platform`
 **Base branch**: `xplore`
 **Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
-**Current phase**: Phase 5 — units and path backend
+**Current phase**: HALT — Phase 5 gate passed; human decision required before Phase 6
 
 ### Phase checklist
 
@@ -15,8 +15,8 @@
 - [x] Phase 2 — concepts, objective ownership, and provenance added with generation unchanged
 - [x] Phase 3 — skeleton loading, classifier, and preview added with existing output unchanged
 - [x] Phase 4 — shadow logging proven on at least three real generations; review/export surface exists
-- [ ] Phase 5 — units and path backend validate all three fixtures; unreachable approval is blocked
-- [ ] Halt at the human decision gate and write the final handoff report
+- [x] Phase 5 — units and path backend validate all three fixtures; unreachable approval is blocked
+- [x] Halt at the human decision gate and write the final handoff report
 
 ### Phase 0 tracking
 
@@ -578,6 +578,115 @@ $ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorith
 **Gate: PASS.** Three real provider-backed generations produced complete, durable shadow
 records; CSV review export exists; classifier judgements remain independent from skeleton-fit
 review; generation bytes are unchanged. The separate human-review authority gate remains closed.
+
+### Phase 5 tracking
+
+- [x] Re-read the unit, scope, path, concept-resolution, API, migration, test, and stop-rule contracts.
+- [x] Re-read the three supplied path fixtures and pre-resolution JSON schema.
+- [x] Add reversible unit/scope/path persistence and prove upgrade/downgrade/upgrade.
+- [x] Install the four Phase 5 prompts verbatim and keep count/duration outside planner input.
+- [x] Implement pre-resolution path validation and canonical concept resolution.
+- [x] Implement split, merge, skip-as-state, reorder, selective replan, and guarded approval.
+- [x] Implement the path-lesson prepare bridge without changing legacy Studio generation.
+- [x] Validate Grade 4 and Grade 12 fixtures, including disjoint concept slugs.
+- [x] Validate Grade 8 unreachable fixture and prove approval is blocked.
+- [x] Run the complete backend, lint, architecture, migration, and generation-byte gates.
+- [x] Halt before Phase 6 and write the handoff report.
+
+### Phase 5 sequencing contradiction
+
+`handoff/14_IMPLEMENTATION_PHASES.md` places the path-to-Xplore bridge in Phase 6, while the
+controlling goal explicitly requires `POST /units/{id}/path/lessons/{lid}:prepare` in Phase 5
+and then requires an immediate halt. The controlling goal wins. Phase 5 will include only the
+narrow backend preparation bridge needed to prove objective/slot ownership; it will not promote
+skeleton authority, build path UI, or begin any other Phase 6 work.
+
+### Phase 5 prompt-contract contradiction and resolution
+
+The verbatim §1 system prompt says a lesson's `prerequisites` may contain an
+`assumed_prerequisites` entry, while the patched `path-plan.schema.json` and controlling machine
+checks require `prerequisites` to contain only earlier in-path slugs and put assumed capabilities
+in `external_prerequisites`. The system prompt remains byte-for-byte unchanged. The structured
+output model and a user-payload machine-contract block expose the patched split, and strict
+validation rejects any assumed capability emitted into the internal graph. This is a safe adapter:
+it does not paraphrase the reviewed prompt or silently rewrite model output.
+
+### Phase 5 fail-first evidence
+
+The path-contract test was created before the planning package. After correcting a syntax error
+in the test itself, the valid fail-first run was:
+
+```text
+$ cd backend && uv run pytest tests/planning/test_path_contracts.py -q
+E   ModuleNotFoundError: No module named 'planning'
+1 error in 1.10s
+```
+
+### Phase 5 fixture and behavior evidence
+
+All three supplied JSON documents validate against the patched Draft 2020-12 schema and the
+runtime `PathPlan` model. Machine validation proves unique slugs, backward-only internal
+prerequisites, declared external prerequisites, exclusion enforcement, and the completeness-risk
+implication.
+
+- Grade 4: 5 ordered capabilities; all checks pass; `reaches_destination=true`.
+- Grade 12: 7 ordered capabilities; all checks pass; `reaches_destination=true`.
+- Grade 4 and Grade 12 share zero concept slugs, proving materially different scope.
+- Grade 8 negative: 2 explicit prerequisite risks; `reaches_destination=false`; service approval
+  raises `PathApprovalBlocked`; authenticated HTTP approval returns `409` with a prerequisite
+  explanation.
+
+The persistence tests additionally prove candidate-slug to canonical UUID resolution, UUID
+prerequisite links, exact SHA-256 objective ownership, concept-ID retention and teacher-edit
+retention across replan, skipped lessons retained as state, invalid reorder rejection, split/merge
+prerequisite carry-forward, and all-adjacent merge-critic calls. The prepare bridge proves exactly
+one canonical concept card, exact skeleton slot/section-role sequence, selector-owned components,
+objective-hash equality after persisted generation preparation, and idempotent reuse.
+
+Focused result:
+
+```text
+$ cd backend && uv run pytest tests/planning -q
+25 tests collected and covered by the complete Phase 5 gate
+```
+
+Migration `0021` final evidence on an isolated local SQLite database stamped at `0020`:
+
+```text
+$ uv run alembic upgrade head
+INFO  [alembic.runtime.migration] Running upgrade 20260731_0020 -> 20260731_0021, add units and path backend
+$ uv run alembic downgrade -1
+INFO  [alembic.runtime.migration] Running downgrade 20260731_0021 -> 20260731_0020, add units and path backend
+$ uv run alembic upgrade head
+INFO  [alembic.runtime.migration] Running upgrade 20260731_0020 -> 20260731_0021, add units and path backend
+revision 20260731_0021
+```
+
+### Phase 5 gate result
+
+```text
+$ cd backend && uv run pytest -q
+........................................................................ [ 15%]
+........................................................................ [ 30%]
+........................................................................ [ 45%]
+........................................................................ [ 60%]
+........................................................................ [ 75%]
+........................................................................ [ 90%]
+............................................                             [100%]
+476 passed, 1 warning in 110.71s (0:01:50)
+$ uv run ruff check src tests scripts/run_v2_shadow_gate.py
+All checks passed!
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+Phase 5 implementation commit: `9ca80a2` (`P5: feat(path): add guarded unit path backend`).
+
+**Gate: PASS; HALT.** Phases 0–5 are complete. Phase 6 was not started. Skeleton authority
+remains disabled pending the explicitly required human review of approximately 30 real shadow
+lessons and a human go/no-go decision.
 
 ### Phase 1 defect 4 evidence — path-only misconception quota
 
