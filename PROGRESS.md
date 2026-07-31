@@ -6,14 +6,14 @@
 **Branch**: `v2-platform`
 **Base branch**: `xplore`
 **Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
-**Current phase**: Phase 3 — skeleton data and preview next
+**Current phase**: Phase 4 — shadow logging machinery next
 
 ### Phase checklist
 
 - [x] Phase 0 — baseline captured and reproducible
 - [x] Phase 1 — four silent defects fixed with fail-first regression evidence
 - [x] Phase 2 — concepts, objective ownership, and provenance added with generation unchanged
-- [ ] Phase 3 — skeleton loading, classifier, and preview added with existing output unchanged
+- [x] Phase 3 — skeleton loading, classifier, and preview added with existing output unchanged
 - [ ] Phase 4 — shadow logging proven on at least three real generations; review/export surface exists
 - [ ] Phase 5 — units and path backend validate all three fixtures; unreachable approval is blocked
 - [ ] Halt at the human decision gate and write the final handoff report
@@ -310,7 +310,7 @@ and the saved generation is byte-for-byte identical to Phase 0.
 - [x] Wire `POST /skeletons:preview` without changing generated lesson structure.
 - [x] Validate classifier outputs against all three path fixtures.
 - [x] Prove existing output and Phase 0 fixture remain unchanged.
-- [ ] Run the complete Phase 3 gate and invariant check.
+- [x] Run the complete Phase 3 gate and invariant check.
 
 ### Phase 3 implementation evidence
 
@@ -352,6 +352,42 @@ No architecture violations found.
 $ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
 91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
 ```
+
+Phase 3 commit: `d0cc920` (`P3: feat(skeletons): add validated preview engine`).
+
+### Phase 3 gate result
+
+```text
+$ cd backend && uv run pytest -q
+........................................................................ [ 16%]
+........................................................................ [ 32%]
+........................................................................ [ 48%]
+........................................................................ [ 64%]
+........................................................................ [ 80%]
+........................................................................ [ 96%]
+................                                                         [100%]
+448 passed, 1 warning in 108.52s (0:01:48)
+$ uv run ruff check src tests
+All checks passed!
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+**Gate: PASS.** All 11 skeletons expand under the six-slot limit, the classifier is strict,
+preview is live with zero model calls, and existing generation bytes remain unchanged.
+
+### Phase 4 tracking
+
+- [ ] Read shadow-record, review-surface, and experiment contracts against persistence/runtime.
+- [ ] Add reversible skeleton-shadow persistence.
+- [ ] Compute classifier and skeleton shadow alongside every completed structural plan.
+- [ ] Keep classifier judgement independently reviewable from skeleton fit.
+- [ ] Add reviewer surface or CSV export.
+- [ ] Prove full shadow records on at least three real generations without synthetic substitution.
+- [ ] Record that 30 human-reviewed lessons remain required before any authority promotion.
+- [ ] Prove no generated output change and run the complete Phase 4 gate.
 
 ### Phase 1 defect 4 evidence — path-only misconception quota
 
