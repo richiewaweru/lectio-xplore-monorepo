@@ -13,7 +13,6 @@ from v3_blueprint.planning.models import (
     QPlanItem,
     SectionPlan,
     StructuralPlan,
-    VoiceSpec,
 )
 
 
@@ -94,7 +93,6 @@ async def test_call_stage1_uses_shared_model_settings_helper() -> None:
             example="splitting a pizza into 8 equal slices",
             reuse_scope="used in intro and practice",
         ),
-        voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[
             SectionPlan(
@@ -160,7 +158,6 @@ async def test_run_stage1_with_retry_retries_truncation_and_returns_second_attem
             example="splitting a pizza into 8 equal slices",
             reuse_scope="used in intro and practice",
         ),
-        voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[
             SectionPlan(
@@ -250,7 +247,6 @@ async def test_call_stage1_rejects_role_outside_active_resource_spec() -> None:
             example="splitting a pizza into 8 equal slices",
             reuse_scope="used in intro and practice",
         ),
-        voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[
             SectionPlan(

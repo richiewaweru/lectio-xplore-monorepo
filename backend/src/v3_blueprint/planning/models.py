@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Literal
+import logging
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
+
+log = logging.getLogger(__name__)
 
 
 # ── Stage 1 output models ─────────────────────────────────────────────────
@@ -176,8 +179,7 @@ class RepairFocus(BaseModel):
 
 
 class StructuralPlan(BaseModel):
-    # Ignore the legacy top-level voice field while old persisted plans are read.
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
     lesson_mode: Literal[
         "first_exposure", "consolidation", "repair", "retrieval", "transfer"
@@ -222,6 +224,38 @@ class StructuralPlan(BaseModel):
         if self.lesson_mode == "repair" and self.repair_focus is None:
             raise ValueError("lesson_mode=repair requires repair_focus")
         return self
+
+
+def adapt_legacy_structural_plan(
+    payload: StructuralPlan | dict[str, Any] | BaseModel,
+    *,
+    source: str,
+) -> StructuralPlan:
+    """Load a persisted plan, adapting only the named legacy top-level voice field."""
+    if isinstance(payload, StructuralPlan):
+        return payload
+    if isinstance(payload, BaseModel):
+        raw = payload.model_dump()
+    else:
+        raw = dict(payload)
+
+    legacy_voice = raw.pop("voice", None)
+    plan = StructuralPlan.model_validate(raw)
+    if legacy_voice is None:
+        return plan
+
+    voice = VoiceSpec.model_validate(legacy_voice)
+    log.warning(
+        "adapted legacy StructuralPlan top-level voice into variant ownership; source=%s",
+        source,
+    )
+    return plan.with_variant(
+        VariantSpec(
+            label="Legacy",
+            voice=voice,
+            group_description="Voice adapted from a persisted legacy StructuralPlan.",
+        )
+    )
 
 
 # ── Stage 1 error types ───────────────────────────────────────────────────

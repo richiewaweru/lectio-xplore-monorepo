@@ -15,7 +15,6 @@ from v3_blueprint.planning.models import (
     SectionBrief,
     SectionPlan,
     StructuralPlan,
-    VoiceSpec,
 )
 
 
@@ -61,7 +60,6 @@ def _plan() -> StructuralPlan:
             example="pizza slices",
             reuse_scope="reused in each section",
         ),
-        voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[
             SectionPlan(

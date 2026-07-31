@@ -40,6 +40,7 @@ from v3_blueprint.planning.models import (
     Stage1PlanFailure,
     StructuralPlan,
     VariantSpec,
+    adapt_legacy_structural_plan,
     core_variant_spec,
     stage2_brief_preview_payload,
 )
@@ -1199,7 +1200,10 @@ async def _run_chunked_stage2_pipeline(
             )
             return
 
-        plan = StructuralPlan.model_validate(plan_raw)
+        plan = adapt_legacy_structural_plan(
+            plan_raw,
+            source=f"generation:{generation_id}",
+        )
         variant_raw = state.get("variant_spec")
         if isinstance(variant_raw, dict):
             plan = plan.with_variant(VariantSpec.model_validate(variant_raw))
@@ -1379,7 +1383,10 @@ async def _run_pack_variant_pipeline(
         plan_raw = state.get("structural_plan")
         if not isinstance(plan_raw, dict):
             raise ValueError("Coordinator structural plan is missing")
-        plan = StructuralPlan.model_validate(plan_raw)
+        plan = adapt_legacy_structural_plan(
+            plan_raw,
+            source=f"coordinator:{coordinator_id}",
+        )
         variants = [
             VariantSpec.model_validate(raw)
             for raw in state.get("variants", [])
@@ -2125,7 +2132,10 @@ async def regenerate_pack_card_items(
     plan_raw = state.get("structural_plan")
     if not isinstance(plan_raw, dict):
         raise HTTPException(status_code=409, detail="Structural plan is not available")
-    plan = StructuralPlan.model_validate(plan_raw)
+    plan = adapt_legacy_structural_plan(
+        plan_raw,
+        source=f"generation:{generation_id}",
+    )
     variant_raw = state.get("variant_spec")
     if isinstance(variant_raw, dict):
         plan = plan.with_variant(VariantSpec.model_validate(variant_raw))
@@ -2624,7 +2634,10 @@ async def post_chunked_retry_section(
     if running_task is not None and not running_task.done():
         raise HTTPException(status_code=409, detail="Stage 2 is already running for this generation.")
 
-    plan = StructuralPlan.model_validate(plan_raw)
+    plan = adapt_legacy_structural_plan(
+        plan_raw,
+        source=f"generation:{generation_id}",
+    )
     signals, form, resource_spec = _decode_chunked_context(state)
     stored_briefs = _section_briefs_from_state(plan, state)
 

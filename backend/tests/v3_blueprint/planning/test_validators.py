@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pytest
+from pydantic import ValidationError
+
 from contracts.lectio import get_component_card, get_planner_index
 from v3_blueprint.planning.models import (
     AnchorSpec,
@@ -12,7 +15,7 @@ from v3_blueprint.planning.models import (
     StructuralPlan,
     VisualFrameBrief,
     VisualStrategySpec,
-    VoiceSpec,
+    adapt_legacy_structural_plan,
 )
 from v3_blueprint.planning.validators import validate_section_brief, validate_structural_plan
 
@@ -57,7 +60,6 @@ def _base_plan_with_components(*, components: list[ComponentSlot]) -> Structural
             example="splitting a pizza into 8 equal slices",
             reuse_scope="used in intro and explain",
         ),
-        voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[
             SectionPlan(
@@ -365,7 +367,6 @@ def test_structural_plan_allows_more_than_two_visual_sections() -> None:
             example="splitting a pizza into 8 equal slices",
             reuse_scope="used across the lesson",
         ),
-        voice=VoiceSpec(register_name="simple", tone="encouraging"),
         prior_knowledge=["equal sharing"],
         sections=[
             SectionPlan(
@@ -390,6 +391,36 @@ def test_structural_plan_allows_more_than_two_visual_sections() -> None:
     )
 
     assert len(plan.sections) == 4
+
+
+def test_structural_plan_rejects_arbitrary_unknown_fields() -> None:
+    plan = _base_plan_with_components(
+        components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")]
+    )
+    payload = plan.model_dump()
+    payload["silently_ignored_typo"] = "must be rejected"
+
+    with pytest.raises(ValidationError, match="silently_ignored_typo"):
+        StructuralPlan.model_validate(payload)
+
+
+def test_legacy_structural_plan_adapter_maps_voice_and_logs(caplog) -> None:
+    plan = _base_plan_with_components(
+        components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")]
+    )
+    payload = plan.model_dump()
+    payload["voice"] = {
+        "register_name": "simple",
+        "tone": "encouraging",
+        "notation": "Use fraction bars.",
+    }
+
+    adapted = adapt_legacy_structural_plan(payload, source="fixture:legacy-plan")
+
+    assert adapted.variant_spec().voice.register_name == "simple"
+    assert adapted.variant_spec().voice.notation == "Use fraction bars."
+    assert "adapted legacy StructuralPlan top-level voice" in caplog.text
+    assert "source=fixture:legacy-plan" in caplog.text
 
 
 def test_validate_section_brief_rejects_series_with_too_few_frames() -> None:

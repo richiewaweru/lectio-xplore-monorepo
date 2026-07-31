@@ -153,9 +153,9 @@ handoff, runbook, progress ledger, and copied comparison fixture differ from `xp
 - [x] Defect 1 implementation uses skeleton slot IDs and emits a warning when the catalog is absent.
 - [x] Defect 1 committed as `5b1682a` (`P1: fix(planning): make skeleton roles authoritative`).
 - [x] Defect 2 fail-first regression: selector entries label cognitive jobs and section fields.
-- [x] Defect 2 implementation and invariant checks pass; logical commit pending SHA entry.
-- [ ] Defect 3 fail-first regression: unknown StructuralPlan fields are rejected.
-- [ ] Defect 3 explicit logged legacy adapter and logical commit.
+- [x] Defect 2 committed as `39f1744` (`P1: fix(planning): label component selection context`).
+- [x] Defect 3 fail-first regression: unknown StructuralPlan fields are rejected.
+- [x] Defect 3 explicit logged legacy adapter and invariant checks pass; logical commit pending SHA entry.
 - [ ] Defect 4 fail-first regression: new path lesson prompt uses 0–3 belief-tested misconceptions.
 - [ ] Defect 4 path-only implementation and logical commit.
 - [ ] Phase 1 full gate: regressions, legacy fixtures, nine invariants, lint, architecture.
@@ -191,6 +191,43 @@ Pre-commit invariant evidence:
 $ cd backend && uv run pytest tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/v3_blueprint/planning/test_validators.py -q
 ...............................                                          [100%]
 31 passed, 1 warning in 16.31s
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+```
+
+### Phase 1 defect 3 evidence — strict StructuralPlan with legacy adapter
+
+Failing regression before the fix:
+
+```text
+$ cd backend && uv run pytest tests/v3_blueprint/planning/test_validators.py::test_structural_plan_rejects_arbitrary_unknown_fields -q
+F                                                                        [100%]
+E       Failed: DID NOT RAISE <class 'pydantic_core._pydantic_core.ValidationError'>
+1 failed, 1 warning in 0.93s
+```
+
+Passing validation after the fix:
+
+```text
+$ cd backend && uv run pytest tests/v3_blueprint/planning/test_validators.py tests/v3_blueprint/planning/test_stage1_error_logging.py tests/v3_blueprint/planning/test_section_expander.py tests/v3_blueprint/planning/test_retry.py tests/v3_blueprint/planning/test_assembler.py tests/generation/test_v3_chunked_lifecycle.py tests/generation/test_stage2_parallel.py -q
+...................................................................      [100%]
+67 passed, 1 warning in 29.85s
+$ uv run ruff check <touched Phase 1 defect 3 files>
+All checks passed!
+```
+
+`StructuralPlan` now uses `extra="forbid"`. Persisted-plan reads use
+`adapt_legacy_structural_plan()`, which removes only the named top-level `voice`, validates it,
+maps it into a `VariantSpec`, and logs the source. Unknown fields still reach strict validation.
+Planner output does not use the adapter, so a model cannot smuggle unknown keys through the
+legacy compatibility path.
+
+Pre-commit invariant evidence:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/v3_blueprint/planning/test_validators.py tests/generation/test_v3_chunked_lifecycle.py -q
+......................................................                   [100%]
+54 passed, 1 warning in 19.43s
 $ python tools/agent/check_architecture.py --format text
 No architecture violations found.
 ```
