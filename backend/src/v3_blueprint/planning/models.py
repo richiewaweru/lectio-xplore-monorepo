@@ -156,6 +156,14 @@ class VariantSpec(BaseModel):
     group_description: str
 
 
+def core_variant_spec() -> VariantSpec:
+    return VariantSpec(
+        label="Core",
+        voice=VoiceSpec(register_name="balanced", tone="neutral"),
+        group_description="The main class group.",
+    )
+
+
 class RepairFocus(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -168,14 +176,14 @@ class RepairFocus(BaseModel):
 
 
 class StructuralPlan(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    # Ignore the legacy top-level voice field while old persisted plans are read.
+    model_config = ConfigDict(extra="ignore")
 
     lesson_mode: Literal[
         "first_exposure", "consolidation", "repair", "retrieval", "transfer"
     ]
     lesson_intent: LessonIntent
     anchor: AnchorSpec
-    voice: VoiceSpec
     prior_knowledge: list[str]
     repair_focus: RepairFocus | None = None
     cards: list[ConceptCard] = Field(default_factory=list)
@@ -186,6 +194,15 @@ class StructuralPlan(BaseModel):
     answer_key_style: Literal[
         "brief_explanations", "full_working", "answers_only"
     ]
+    _variant: VariantSpec = PrivateAttr(default_factory=core_variant_spec)
+
+    def with_variant(self, variant: VariantSpec) -> StructuralPlan:
+        plan = self.model_copy(deep=True)
+        plan._variant = variant
+        return plan
+
+    def variant_spec(self) -> VariantSpec:
+        return self._variant
 
     @field_validator("sections")
     @classmethod

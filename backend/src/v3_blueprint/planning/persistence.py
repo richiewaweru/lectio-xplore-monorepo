@@ -6,7 +6,7 @@ from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import ConceptCardModel, GenerationModel
@@ -15,6 +15,7 @@ from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 from v3_blueprint.planning.models import (
     SectionBrief,
     StructuralPlan,
+    VariantSpec,
 )
 
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
@@ -125,7 +126,13 @@ async def persist_structural_plan(
         pack_id = generation.pack_id or generation_id
 
         for card in plan.cards:
-            existing = await db.get(ConceptCardModel, card.id)
+            existing_result = await db.execute(
+                select(ConceptCardModel).where(
+                    ConceptCardModel.pack_id == pack_id,
+                    ConceptCardModel.slug == card.id,
+                )
+            )
+            existing = existing_result.scalar_one_or_none()
             if existing is not None and existing.teacher_edited:
                 continue
 
@@ -141,7 +148,7 @@ async def persist_structural_plan(
                 ],
             }
             if existing is None:
-                db.add(ConceptCardModel(id=card.id, **payload))
+                db.add(ConceptCardModel(id=f"{pack_id}:{card.id}", **payload))
             else:
                 for field, value in payload.items():
                     setattr(existing, field, value)
@@ -211,6 +218,9 @@ async def resume_stage2(
     async with _session_scope(session) as (db, _):
         state = await load_chunked_state(generation_id, db)
         plan = StructuralPlan(**state["structural_plan"])
+        variant_raw = state.get("variant_spec")
+        if isinstance(variant_raw, dict):
+            plan = plan.with_variant(VariantSpec.model_validate(variant_raw))
 
         # Rebuild completed briefs from persisted state
         completed_briefs: list[SectionBrief] = []

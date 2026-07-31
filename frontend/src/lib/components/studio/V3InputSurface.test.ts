@@ -88,7 +88,10 @@ describe('V3InputSurface', () => {
 		outcome.value = 'Students calculate irregular areas.';
 		await fireEvent.input(outcome);
 
-		await fireEvent.click(screen.getByRole('button', { name: 'Build the skeleton' }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Review generation' }));
+		expect(onSubmit).not.toHaveBeenCalled();
+		expect(screen.getByRole('dialog', { name: 'Finding the area of irregular shapes' })).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: 'Generate concept plan' }));
 
 		expect(onSubmit).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -96,7 +99,13 @@ describe('V3InputSurface', () => {
 				subject: 'Mathematics',
 				topic: 'Finding the area of irregular shapes'
 			}),
-			'Year 6 Mathematics'
+			'Year 6 Mathematics',
+			[
+				expect.objectContaining({
+					label: 'Core',
+					group_description: expect.any(String)
+				})
+			]
 		);
 		expect(onSubmit.mock.calls[0][0]).not.toHaveProperty('class_label');
 	});
@@ -110,7 +119,7 @@ describe('V3InputSurface', () => {
 		expect((screen.getByLabelText('Likely struggle') as HTMLTextAreaElement).disabled).toBe(true);
 		expect((screen.getByLabelText('What have they already covered?') as HTMLTextAreaElement).disabled).toBe(true);
 		expect((screen.getByLabelText('Anything else to keep in mind?') as HTMLTextAreaElement).disabled).toBe(true);
-		expect((screen.getByRole('button', { name: 'Build the skeleton' }) as HTMLButtonElement).disabled).toBe(true);
+		expect((screen.getByRole('button', { name: 'Review generation' }) as HTMLButtonElement).disabled).toBe(true);
 		expect(screen.getByText('Confirm your topic above to draft the lesson intent.')).toBeTruthy();
 		expect(screen.getByText('Available after the topic is confirmed.')).toBeTruthy();
 

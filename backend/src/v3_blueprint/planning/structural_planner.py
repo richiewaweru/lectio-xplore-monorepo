@@ -119,11 +119,6 @@ Output ONLY valid JSON matching this schema exactly:
     "example": "splitting a pizza into 8 equal slices",
     "reuse_scope": "introduced in intro; reused in explain; varied in practice; returned in summary"
   }},
-  "voice": {{
-    "register_name": "simple",
-    "tone": "encouraging",
-    "notation": "Use simple fraction notation and the term denominator."
-  }},
   "prior_knowledge": ["equal sharing", "basic division"],
   "repair_focus": null,
   "cards": [

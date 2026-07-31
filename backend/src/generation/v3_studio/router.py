@@ -39,6 +39,8 @@ from v3_blueprint.planning.models import (
     SectionBrief,
     Stage1PlanFailure,
     StructuralPlan,
+    VariantSpec,
+    core_variant_spec,
     stage2_brief_preview_payload,
 )
 from v3_blueprint.planning.persistence import (
@@ -86,6 +88,8 @@ from generation.v3_studio.dtos import (
     V3PackItemDTO,
     V3PackItemOptionDTO,
     V3PackItemPatchRequest,
+    V3PackVariantDTO,
+    V3XplorePackDTO,
     V3GenerateStartRequest,
     V3GenerateStartResponse,
     V3InputForm,
@@ -261,6 +265,8 @@ def _normalize_chunked_state(generation_id: str, state: dict[str, Any]) -> V3Chu
         next_action = "approve_or_regenerate"
     elif stage == "stage2_running":
         next_action = "wait_for_stage2"
+    elif stage == "variants_running":
+        next_action = "wait_for_variants"
     elif stage == "assembly_blocked":
         next_action = "retry_failed_sections"
     elif stage == "stage2_error":
@@ -272,6 +278,7 @@ def _normalize_chunked_state(generation_id: str, state: dict[str, Any]) -> V3Chu
 
     return V3ChunkedPlanStateDTO(
         generation_id=generation_id,
+        pack_id=state.get("pack_id") if isinstance(state.get("pack_id"), str) else None,
         stage=stage,
         structural_plan=state.get("structural_plan")
         if isinstance(state.get("structural_plan"), dict)
@@ -300,6 +307,10 @@ def _normalize_chunked_state(generation_id: str, state: dict[str, Any]) -> V3Chu
         lesson_mode_confidence=signals.get("lesson_mode_confidence")
         if isinstance(signals, dict) and isinstance(signals.get("lesson_mode_confidence"), str)
         else None,
+        variants=state.get("variants") if isinstance(state.get("variants"), list) else [],
+        variant_generation_ids=state.get("variant_generation_ids")
+        if isinstance(state.get("variant_generation_ids"), dict)
+        else {},
     )
 
 
@@ -316,6 +327,7 @@ def _normalize_chunked_status(
         doc_version = f"sha256:{hashlib.sha256(canonical.encode('utf-8')).hexdigest()}"
     return V3ChunkedStatusDTO(
         generation_id=generation_id,
+        pack_id=full_state.pack_id,
         stage=full_state.stage,
         doc_version=doc_version if isinstance(doc_version, str) else None,
         failed_sections=full_state.failed_sections,
@@ -324,6 +336,7 @@ def _normalize_chunked_status(
         next_action=full_state.next_action,
         error=full_state.error,
         error_type=full_state.error_type,
+        variant_generation_ids=full_state.variant_generation_ids,
     )
 
 
@@ -510,6 +523,10 @@ async def _ensure_chunked_generation_row(
     subject: str,
     context: str,
     section_count: int | None = None,
+    pack_id: str | None = None,
+    pack_resource_id: str | None = None,
+    pack_resource_label: str | None = None,
+    variant: VariantSpec | None = None,
 ) -> None:
     async with async_session_factory() as session:
         model = await session.get(GenerationModel, generation_id)
@@ -527,6 +544,11 @@ async def _ensure_chunked_generation_row(
                     requested_preset_id="v3-studio",
                     resolved_preset_id="v3-studio",
                     section_count=section_count,
+                    pack_id=pack_id,
+                    pack_resource_id=pack_resource_id,
+                    pack_resource_label=pack_resource_label,
+                    variant_label=variant.label if variant is not None else None,
+                    variant_spec=variant.model_dump(mode="json") if variant is not None else None,
                 )
             )
         else:
@@ -541,6 +563,15 @@ async def _ensure_chunked_generation_row(
             model.resolved_preset_id = "v3-studio"
             if section_count is not None:
                 model.section_count = section_count
+            if pack_id is not None:
+                model.pack_id = pack_id
+            if pack_resource_id is not None:
+                model.pack_resource_id = pack_resource_id
+            if pack_resource_label is not None:
+                model.pack_resource_label = pack_resource_label
+            if variant is not None:
+                model.variant_label = variant.label
+                model.variant_spec = variant.model_dump(mode="json")
         await session.commit()
 
 
@@ -595,7 +626,7 @@ def _card_dto(card: ConceptCardModel) -> V3ConceptCardDTO:
         card.misconceptions if isinstance(card.misconceptions, list) else []
     )
     return V3ConceptCardDTO(
-        id=card.id,
+        id=card.slug,
         pack_id=card.pack_id,
         title=card.title,
         objective=card.objective,
@@ -999,7 +1030,7 @@ async def _generate_shared_pack_items(
             == 5
         }
 
-    notation = plan.voice.notation
+    notation = plan.variant_spec().voice.notation
     results: list[ItemGenerationResult] = []
     for row in cards:
         if row.id in ready_card_ids:
@@ -1155,27 +1186,31 @@ async def _run_chunked_stage2_pipeline(
             return
 
         plan = StructuralPlan.model_validate(plan_raw)
+        variant_raw = state.get("variant_spec")
+        if isinstance(variant_raw, dict):
+            plan = plan.with_variant(VariantSpec.model_validate(variant_raw))
         signals, form, resource_spec = _decode_chunked_context(state)
         display_title = state.get("display_title")
         if not isinstance(display_title, str) or not display_title.strip():
             display_title = form.topic
 
-        item_summary = await _generate_shared_pack_items(
-            generation_id=generation_id,
-            form=form,
-            plan=plan,
-        )
-        await persist_chunked_state(
-            generation_id,
-            {"item_generation": item_summary},
-        )
-        await emit_event(
-            "pack_items_ready",
-            {
-                "generation_id": generation_id,
-                **item_summary,
-            },
-        )
+        if not state.get("skip_item_generation"):
+            item_summary = await _generate_shared_pack_items(
+                generation_id=generation_id,
+                form=form,
+                plan=plan,
+            )
+            await persist_chunked_state(
+                generation_id,
+                {"item_generation": item_summary},
+            )
+            await emit_event(
+                "pack_items_ready",
+                {
+                    "generation_id": generation_id,
+                    **item_summary,
+                },
+            )
 
         briefs = await resume_stage2(
             generation_id,
@@ -1239,23 +1274,214 @@ async def _run_chunked_stage2_pipeline(
         )
 
 
+async def _prepare_variant_generations(
+    *,
+    coordinator_id: str,
+    user_id: str,
+    state: dict[str, Any],
+) -> dict[str, str]:
+    pack_id = state.get("pack_id")
+    variants_raw = state.get("variants")
+    if not isinstance(pack_id, str) or not isinstance(variants_raw, list):
+        return {}
+    variants = [
+        VariantSpec.model_validate(raw)
+        for raw in variants_raw
+        if isinstance(raw, dict)
+    ]
+    existing_map = state.get("variant_generation_ids")
+    generation_ids = (
+        {
+            str(label): str(generation_id)
+            for label, generation_id in existing_map.items()
+        }
+        if isinstance(existing_map, dict)
+        else {}
+    )
+    context = state.get("context")
+    form_raw = context.get("form") if isinstance(context, dict) else None
+    form = V3InputForm.model_validate(form_raw) if isinstance(form_raw, dict) else None
+    if form is None:
+        raise ValueError("Variant fan-out requires persisted form context")
+
+    for index, variant in enumerate(variants):
+        generation_id = generation_ids.get(variant.label) or str(uuid.uuid4())
+        generation_ids[variant.label] = generation_id
+        resource_id = f"variant-{index + 1}"
+        await _ensure_chunked_generation_row(
+            generation_id=generation_id,
+            user_id=user_id,
+            subject=form.subject,
+            context=f"{form.topic} — {variant.label}",
+            section_count=len(
+                state.get("structural_plan", {}).get("sections", [])
+                if isinstance(state.get("structural_plan"), dict)
+                else []
+            ),
+            pack_id=pack_id,
+            pack_resource_id=resource_id,
+            pack_resource_label=variant.label,
+            variant=variant,
+        )
+        await persist_chunked_state(
+            generation_id,
+            {
+                "stage": "stage2_running",
+                "pack_id": pack_id,
+                "coordinator_generation_id": coordinator_id,
+                "variant_spec": variant.model_dump(mode="json"),
+                "structural_plan": deepcopy(state.get("structural_plan")),
+                "section_briefs": {
+                    section_id: None
+                    for section_id in (
+                        state.get("section_briefs", {}).keys()
+                        if isinstance(state.get("section_briefs"), dict)
+                        else []
+                    )
+                },
+                "failed_sections": [],
+                "context": deepcopy(state.get("context")),
+                "display_title": f"{form.topic} — {variant.label}",
+                "execution_started": False,
+                "skip_item_generation": True,
+            },
+        )
+        await _ensure_chunked_stream(
+            generation_id=generation_id,
+            user_id=user_id,
+            blueprint_id=f"chunked-plan-{generation_id}",
+        )
+    return generation_ids
+
+
+async def _run_pack_variant_pipeline(
+    *,
+    coordinator_id: str,
+    user_id: str,
+    generation_ids: dict[str, str],
+) -> None:
+    try:
+        state = await load_chunked_state(coordinator_id)
+        plan_raw = state.get("structural_plan")
+        if not isinstance(plan_raw, dict):
+            raise ValueError("Coordinator structural plan is missing")
+        plan = StructuralPlan.model_validate(plan_raw)
+        variants = [
+            VariantSpec.model_validate(raw)
+            for raw in state.get("variants", [])
+            if isinstance(raw, dict)
+        ]
+        if variants:
+            plan = plan.with_variant(variants[0])
+        _signals, form, _resource_spec = _decode_chunked_context(state)
+        item_summary = await _generate_shared_pack_items(
+            generation_id=coordinator_id,
+            form=form,
+            plan=plan,
+        )
+        await persist_chunked_state(
+            coordinator_id,
+            {"item_generation": item_summary},
+        )
+
+        async def run_variant(generation_id: str) -> None:
+            await _run_chunked_stage2_pipeline(
+                generation_id=generation_id,
+                user_id=user_id,
+            )
+
+        tasks = {
+            generation_id: asyncio.create_task(run_variant(generation_id))
+            for generation_id in generation_ids.values()
+        }
+        _chunked_stage2_tasks.update(tasks)
+        results = await asyncio.gather(*tasks.values(), return_exceptions=True)
+        failures = {
+            generation_id: str(result)[:400]
+            for generation_id, result in zip(tasks, results, strict=True)
+            if isinstance(result, Exception)
+        }
+        await persist_chunked_state(
+            coordinator_id,
+            {
+                "stage": "variants_running" if len(failures) < len(tasks) else "stage2_error",
+                "variant_failures": failures,
+                "execution_started": bool(tasks),
+            },
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.exception(
+            "pack variant fan-out failed coordinator_id=%s",
+            coordinator_id,
+        )
+        await persist_chunked_state(
+            coordinator_id,
+            {
+                "stage": "stage2_error",
+                "error": str(exc)[:400],
+                "error_type": type(exc).__name__,
+                "execution_started": False,
+            },
+        )
+    finally:
+        _chunked_stage2_tasks.pop(coordinator_id, None)
+
+
 @v3_studio_router.post("/chunked/plan/start", response_model=V3ChunkedPlanStateDTO)
 async def post_chunked_plan_start(
     body: V3ChunkedPlanStartRequest,
     current_user: User = Depends(get_current_user),
 ) -> V3ChunkedPlanStateDTO:
     generation_id = str(uuid.uuid4())
+    pack_id = str(uuid.uuid4())
     form = body.form
+    variants = [
+        VariantSpec.model_validate(variant.model_dump(mode="json"))
+        for variant in body.variants
+    ] or [core_variant_spec()]
+    labels = [variant.label.casefold() for variant in variants]
+    if len(labels) != len(set(labels)):
+        raise HTTPException(status_code=422, detail="Variant labels must be unique")
     resource_spec = _build_chunked_resource_spec(
         resource_type=form.resource_type,
         duration_minutes=form.duration_minutes,
     )
+
+    resources = [
+        {
+            "id": f"variant-{index + 1}",
+            "label": variant.label,
+            "resource_type": form.resource_type,
+            "enabled": True,
+            "variant_spec": variant.model_dump(mode="json"),
+        }
+        for index, variant in enumerate(variants)
+    ]
+    async with async_session_factory() as session:
+        session.add(
+            LearningPackModel(
+                id=pack_id,
+                user_id=current_user.id,
+                learning_job_type="xplore_variants",
+                subject=form.subject.strip() or "General",
+                topic=form.topic.strip() or "Generated lesson",
+                pack_plan_json=json.dumps({
+                    "resources": resources,
+                    "shared_quiz": True,
+                }),
+                status="pending",
+                resource_count=len(resources),
+                completed_count=0,
+            )
+        )
+        await session.commit()
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
         user_id=current_user.id,
         subject=form.subject.strip() or "General",
         context=form.topic.strip() or "Chunked plan",
+        pack_id=pack_id,
     )
     await _ensure_chunked_stream(
         generation_id=generation_id,
@@ -1266,6 +1492,11 @@ async def post_chunked_plan_start(
         generation_id,
         {
             "stage": "stage1_running",
+            "pack_id": pack_id,
+            "variants": [
+                variant.model_dump(mode="json")
+                for variant in variants
+            ],
             "execution_started": False,
             "failed_sections": [],
         },
@@ -1357,10 +1588,13 @@ async def get_chunked_plan(
         raise HTTPException(status_code=404, detail="Structural plan not found")
     return V3ChunkedPlanDTO(
         generation_id=generation_id,
+        pack_id=full_state.pack_id,
         structural_plan=full_state.structural_plan,
         display_title=full_state.display_title,
         inferred_lesson_mode=full_state.inferred_lesson_mode,
         lesson_mode_confidence=full_state.lesson_mode_confidence,
+        variants=full_state.variants,
+        variant_generation_ids=full_state.variant_generation_ids,
     )
 
 
@@ -1452,7 +1686,7 @@ async def patch_pack_concept_card(
     async with async_session_factory() as session:
         result = await session.execute(
             select(ConceptCardModel).where(
-                ConceptCardModel.id == card_id,
+                ConceptCardModel.slug == card_id,
                 ConceptCardModel.pack_id == card_pack_id,
             )
         )
@@ -1513,14 +1747,16 @@ async def _load_item_reviews(
             ConceptCardModel.pack_id == pack_id
         )
         if card_id is not None:
-            card_query = card_query.where(ConceptCardModel.id == card_id)
+            card_query = card_query.where(ConceptCardModel.slug == card_id)
         card_rows = await session.execute(
             card_query.order_by(ConceptCardModel.created_at, ConceptCardModel.id)
         )
         cards = list(card_rows.scalars())
         item_query = select(PackItemModel).where(PackItemModel.pack_id == pack_id)
         if card_id is not None:
-            item_query = item_query.where(PackItemModel.card_id == card_id)
+            item_query = item_query.where(
+                PackItemModel.card_id.in_([card.id for card in cards])
+            )
         item_rows = await session.execute(
             item_query.order_by(PackItemModel.card_id, PackItemModel.created_at, PackItemModel.id)
         )
@@ -1564,7 +1800,7 @@ async def _load_item_reviews(
 
             reviews.append(
                 V3CardItemReviewDTO(
-                    card_id=card.id,
+                    card_id=card.slug,
                     card_title=card.title,
                     misconceptions=misconceptions,
                     items=item_dtos,
@@ -1682,11 +1918,14 @@ async def regenerate_pack_card_items(
     if not isinstance(plan_raw, dict):
         raise HTTPException(status_code=409, detail="Structural plan is not available")
     plan = StructuralPlan.model_validate(plan_raw)
+    variant_raw = state.get("variant_spec")
+    if isinstance(variant_raw, dict):
+        plan = plan.with_variant(VariantSpec.model_validate(variant_raw))
     _signals, form, _resource_spec = _decode_chunked_context(state)
     async with async_session_factory() as session:
         result = await session.execute(
             select(ConceptCardModel).where(
-                ConceptCardModel.id == card_id,
+                ConceptCardModel.slug == card_id,
                 ConceptCardModel.pack_id == card_pack_id,
             )
         )
@@ -1697,7 +1936,7 @@ async def regenerate_pack_card_items(
             card,
             subject=form.subject,
             level=form.grade_level,
-            notation=plan.voice.notation,
+            notation=plan.variant_spec().voice.notation,
         )
     generated = await execute_items(approved_card)
     await _persist_item_results(card_pack_id, [generated])
@@ -1730,6 +1969,265 @@ async def post_pack_concept_cards_approve(
         body=None,
         current_user=current_user,
     )
+
+
+async def _load_xplore_pack(
+    pack_id: str,
+    user_id: str,
+) -> tuple[V3XplorePackDTO, LearningPackModel, GenerationModel]:
+    async with async_session_factory() as session:
+        pack = await session.get(LearningPackModel, pack_id)
+        if (
+            pack is None
+            or pack.user_id != user_id
+            or pack.learning_job_type != "xplore_variants"
+        ):
+            raise HTTPException(status_code=404, detail="Xplore pack not found")
+        rows = await session.execute(
+            select(GenerationModel)
+            .where(GenerationModel.pack_id == pack_id)
+            .order_by(GenerationModel.created_at, GenerationModel.id)
+        )
+        generations = list(rows.scalars())
+        coordinator = next(
+            (
+                generation
+                for generation in generations
+                if generation.pack_resource_id is None
+            ),
+            None,
+        )
+        if coordinator is None:
+            raise HTTPException(status_code=409, detail="Pack coordinator is missing")
+        item_rows = await session.execute(
+            select(PackItemModel.id).where(PackItemModel.pack_id == pack_id)
+        )
+        shared_item_count = len(list(item_rows.scalars()))
+
+    coordinator_state = (
+        coordinator.chunked_state_json
+        if isinstance(coordinator.chunked_state_json, dict)
+        else {}
+    )
+    variant_specs = [
+        VariantSpec.model_validate(raw)
+        for raw in coordinator_state.get("variants", [])
+        if isinstance(raw, dict)
+    ]
+    ids_raw = coordinator_state.get("variant_generation_ids")
+    generation_ids = ids_raw if isinstance(ids_raw, dict) else {}
+    generations_by_id = {generation.id: generation for generation in generations}
+    variants: list[V3PackVariantDTO] = []
+    for spec in variant_specs:
+        generation_id = generation_ids.get(spec.label)
+        generation = (
+            generations_by_id.get(str(generation_id))
+            if generation_id is not None
+            else None
+        )
+        state = (
+            generation.chunked_state_json
+            if generation is not None
+            and isinstance(generation.chunked_state_json, dict)
+            else {}
+        )
+        stage = str(state.get("stage") or "pending")
+        failed_sections = [
+            section_id
+            for section_id in state.get("failed_sections", [])
+            if isinstance(section_id, str)
+        ]
+        issues = []
+        if isinstance(state.get("error"), str) and state["error"].strip():
+            issues.append(state["error"].strip())
+        issues.extend(
+            f"Section failed: {section_id}"
+            for section_id in failed_sections
+        )
+        if generation is None:
+            status = "pending"
+        elif generation.status == "deleted":
+            status = "deleted"
+        elif stage == "complete" or generation.status in {"completed", "partial"}:
+            status = "landed"
+        elif stage in {"stage2_error", "assembly_blocked"} or generation.status == "failed":
+            status = "failed"
+        else:
+            status = "running"
+        variants.append(
+            V3PackVariantDTO(
+                label=spec.label,
+                group_description=spec.group_description,
+                generation_id=generation.id if generation is not None else None,
+                status=status,
+                stage=stage,
+                document_path=generation.document_path if generation is not None else None,
+                failed_sections=failed_sections,
+                issues=issues,
+                can_retry=status == "failed",
+            )
+        )
+
+    live_variants = [variant for variant in variants if variant.status != "deleted"]
+    editor_ready = bool(live_variants) and all(
+        variant.status in {"landed", "failed"}
+        for variant in live_variants
+    )
+    landed_count = sum(variant.status == "landed" for variant in live_variants)
+    if editor_ready and landed_count:
+        status = "ready"
+    elif editor_ready:
+        status = "failed"
+    else:
+        status = "generating"
+    dto = V3XplorePackDTO(
+        pack_id=pack.id,
+        coordinator_generation_id=coordinator.id,
+        subject=pack.subject,
+        topic=pack.topic,
+        status=status,
+        shared_item_count=shared_item_count,
+        variants=variants,
+        editor_ready=editor_ready,
+    )
+    return dto, pack, coordinator
+
+
+@v3_studio_router.get("/packs/{pack_id}", response_model=V3XplorePackDTO)
+async def get_xplore_pack(
+    pack_id: str,
+    current_user: User = Depends(get_current_user),
+) -> V3XplorePackDTO:
+    dto, _pack, _coordinator = await _load_xplore_pack(pack_id, current_user.id)
+    return dto
+
+
+@v3_studio_router.post(
+    "/packs/{pack_id}/variants/{variant_label}/retry",
+    response_model=V3XplorePackDTO,
+)
+async def post_xplore_variant_retry(
+    pack_id: str,
+    variant_label: str,
+    current_user: User = Depends(get_current_user),
+) -> V3XplorePackDTO:
+    dto, _pack, coordinator = await _load_xplore_pack(pack_id, current_user.id)
+    variant = next(
+        (item for item in dto.variants if item.label == variant_label),
+        None,
+    )
+    if variant is None or variant.generation_id is None:
+        raise HTTPException(status_code=404, detail="Variant not found")
+    if not variant.can_retry:
+        raise HTTPException(status_code=409, detail="Only failed variants can be retried")
+    running = _chunked_stage2_tasks.get(variant.generation_id)
+    if running is not None and not running.done():
+        raise HTTPException(status_code=409, detail="Variant retry is already running")
+
+    state = await load_chunked_state(variant.generation_id)
+    plan_raw = state.get("structural_plan")
+    section_ids = [
+        str(section.get("id"))
+        for section in plan_raw.get("sections", [])
+        if isinstance(plan_raw, dict)
+        and isinstance(section, dict)
+        and section.get("id")
+    ] if isinstance(plan_raw, dict) else []
+    await persist_chunked_state(
+        variant.generation_id,
+        {
+            "stage": "stage2_running",
+            "section_briefs": {section_id: None for section_id in section_ids},
+            "failed_sections": [],
+            "execution_started": False,
+            "error": None,
+            "error_type": None,
+            "skip_item_generation": True,
+        },
+    )
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, variant.generation_id)
+        if generation is not None:
+            generation.status = "pending"
+            generation.error = None
+            generation.error_type = None
+        await session.commit()
+    task = asyncio.create_task(
+        _run_chunked_stage2_pipeline(
+            generation_id=variant.generation_id,
+            user_id=current_user.id,
+        )
+    )
+    _chunked_stage2_tasks[variant.generation_id] = task
+    await persist_chunked_state(
+        coordinator.id,
+        {"stage": "variants_running"},
+    )
+    refreshed, _pack, _coordinator = await _load_xplore_pack(pack_id, current_user.id)
+    return refreshed
+
+
+@v3_studio_router.delete(
+    "/packs/{pack_id}/variants/{variant_label}",
+    response_model=V3XplorePackDTO,
+)
+async def delete_xplore_variant(
+    pack_id: str,
+    variant_label: str,
+    current_user: User = Depends(get_current_user),
+) -> V3XplorePackDTO:
+    dto, pack, coordinator = await _load_xplore_pack(pack_id, current_user.id)
+    variant = next(
+        (item for item in dto.variants if item.label == variant_label),
+        None,
+    )
+    if variant is None:
+        raise HTTPException(status_code=404, detail="Variant not found")
+    if len([item for item in dto.variants if item.status != "deleted"]) <= 1:
+        raise HTTPException(status_code=409, detail="A pack must keep at least one variant")
+    if variant.generation_id is not None:
+        running = _chunked_stage2_tasks.pop(variant.generation_id, None)
+        if running is not None and not running.done():
+            running.cancel()
+
+    coordinator_state = await load_chunked_state(coordinator.id)
+    variants = [
+        raw for raw in coordinator_state.get("variants", [])
+        if isinstance(raw, dict) and raw.get("label") != variant_label
+    ]
+    generation_ids = {
+        label: generation_id
+        for label, generation_id in coordinator_state.get(
+            "variant_generation_ids",
+            {},
+        ).items()
+        if label != variant_label
+    }
+    await persist_chunked_state(
+        coordinator.id,
+        {
+            "variants": variants,
+            "variant_generation_ids": generation_ids,
+        },
+    )
+    async with async_session_factory() as session:
+        stored_pack = await session.get(LearningPackModel, pack.id)
+        if stored_pack is not None:
+            plan = json.loads(stored_pack.pack_plan_json)
+            plan["resources"] = [
+                resource
+                for resource in plan.get("resources", [])
+                if resource.get("label") != variant_label
+            ]
+            stored_pack.pack_plan_json = json.dumps(plan)
+            stored_pack.resource_count = len(plan["resources"])
+        if variant.generation_id is not None:
+            generation = await session.get(GenerationModel, variant.generation_id)
+            if generation is not None:
+                generation.status = "deleted"
+        await session.commit()
+    refreshed, _pack, _coordinator = await _load_xplore_pack(pack_id, current_user.id)
+    return refreshed
 
 
 @v3_studio_router.post("/chunked/{generation_id}/approve", response_model=V3ChunkedPlanStateDTO)
@@ -1772,19 +2270,39 @@ async def post_chunked_plan_approve(
         latest = await load_chunked_state(generation_id)
         return _normalize_chunked_state(generation_id, latest)
 
+    variants = [
+        raw for raw in state.get("variants", [])
+        if isinstance(raw, dict)
+    ]
     patch: dict[str, Any] = {
-        "stage": "stage2_running",
+        "stage": "variants_running" if variants else "stage2_running",
         "execution_started": False,
     }
     if body is not None and body.display_title and body.display_title.strip():
         patch["display_title"] = body.display_title.strip()
-    await persist_chunked_state(generation_id, patch)
-    task = asyncio.create_task(
-        _run_chunked_stage2_pipeline(
-            generation_id=generation_id,
+    if variants:
+        generation_ids = await _prepare_variant_generations(
+            coordinator_id=generation_id,
             user_id=current_user.id,
+            state={**state, **patch},
         )
-    )
+        patch["variant_generation_ids"] = generation_ids
+        await persist_chunked_state(generation_id, patch)
+        task = asyncio.create_task(
+            _run_pack_variant_pipeline(
+                coordinator_id=generation_id,
+                user_id=current_user.id,
+                generation_ids=generation_ids,
+            )
+        )
+    else:
+        await persist_chunked_state(generation_id, patch)
+        task = asyncio.create_task(
+            _run_chunked_stage2_pipeline(
+                generation_id=generation_id,
+                user_id=current_user.id,
+            )
+        )
     _chunked_stage2_tasks[generation_id] = task
     latest = await load_chunked_state(generation_id)
     return _normalize_chunked_state(generation_id, latest)

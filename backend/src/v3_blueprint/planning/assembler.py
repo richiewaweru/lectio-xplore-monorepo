@@ -123,9 +123,10 @@ def assemble_blueprint(
             lesson_mode=plan.lesson_mode,
             resource_type=resource_type if resource_type else "lesson",
         ),
-        voice=VoicePlan.model_validate(
-            {"register": plan.voice.register_name, "tone": plan.voice.tone}
-        ),
+        voice=VoicePlan.model_validate({
+            "register": plan.variant_spec().voice.register_name,
+            "tone": plan.variant_spec().voice.tone,
+        }),
         anchor=AnchorPlan(reuse_scope=plan.anchor.reuse_scope),
         prior_knowledge=list(plan.prior_knowledge),
         repair_focus=(

@@ -49,7 +49,8 @@
 		V3ChunkedPlanState,
 		V3ChunkedStatus,
 		V3DraftPack,
-		V3InputForm
+		V3InputForm,
+		V3VariantSpec
 	} from '$lib/types/v3';
 
 	let pdfLoading = $state(false);
@@ -220,6 +221,11 @@
 			v3Studio.stage = v3Studio.activePack ? 'edit' : 'skeleton';
 			return;
 		}
+		if (resolved.stage === 'variants_running' && resolved.pack_id) {
+			disconnectActiveChunkedStream();
+			await goto(`/packs/${encodeURIComponent(resolved.pack_id)}`);
+			return;
+		}
 		if (resolved.stage === 'stage2_running') {
 			if (v3Studio.activePack && v3Studio.activePack.status !== 'streaming_preview') {
 				disconnectActiveChunkedStream();
@@ -274,6 +280,7 @@
 		};
 		return {
 			generation_id: status.generation_id,
+			pack_id: status.pack_id ?? plan.pack_id,
 			stage: status.stage,
 			structural_plan: legacyStatus.structural_plan ?? plan.structural_plan,
 			section_briefs: legacyStatus.section_briefs ?? {},
@@ -285,7 +292,9 @@
 			error: status.error,
 			error_type: status.error_type,
 			inferred_lesson_mode: plan.inferred_lesson_mode,
-			lesson_mode_confidence: plan.lesson_mode_confidence
+			lesson_mode_confidence: plan.lesson_mode_confidence,
+			variants: plan.variants,
+			variant_generation_ids: status.variant_generation_ids ?? plan.variant_generation_ids
 		};
 	}
 
@@ -294,6 +303,7 @@
 		if (!current || current.generation_id !== status.generation_id) return null;
 		return {
 			...current,
+			pack_id: status.pack_id ?? current.pack_id,
 			stage: status.stage,
 			failed_sections: status.failed_sections,
 			blueprint_id: status.blueprint_id,
@@ -482,7 +492,11 @@
 		}
 	}
 
-	async function handleInputSubmit(form: V3InputForm, submittedClassLabel: string | null) {
+	async function handleInputSubmit(
+		form: V3InputForm,
+		submittedClassLabel: string | null,
+		variants: V3VariantSpec[]
+	) {
 		v3Studio.error = null;
 		builderError = null;
 		classLabel = submittedClassLabel;
@@ -492,7 +506,8 @@
 			v3Studio.signals = await extractSignals(form);
 			const chunkedState = await startChunkedPlan({
 				signals: v3Studio.signals,
-				form
+				form,
+				variants
 			});
 			await applyChunkedState(chunkedState);
 		} catch (err) {
@@ -685,6 +700,12 @@
 	async function continueChunkedStage2(next: V3ChunkedPlanState): Promise<void> {
 		if (next.stage === 'assembly_blocked' || next.stage === 'stage2_error') {
 			await applyChunkedState(next);
+			return;
+		}
+		if (next.stage === 'variants_running' && next.pack_id) {
+			v3Studio.chunkedState = next;
+			v3Studio.generationId = next.generation_id;
+			await goto(`/packs/${encodeURIComponent(next.pack_id)}`);
 			return;
 		}
 		v3Studio.chunkedState = next;

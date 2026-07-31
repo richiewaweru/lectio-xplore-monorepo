@@ -70,6 +70,22 @@ class V3SignalSummary(BaseModel):
     lesson_mode_confidence: Literal["low", "high"]
 
 
+class V3VariantVoiceDTO(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    register_name: Literal["simple", "balanced", "formal"]
+    tone: Literal["encouraging", "neutral", "direct"]
+    notation: str | None = None
+
+
+class V3VariantSpecDTO(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    label: str = Field(min_length=1, max_length=80)
+    group_description: str = Field(min_length=1, max_length=500)
+    voice: V3VariantVoiceDTO
+
+
 class V3ComponentPlanDTO(BaseModel):
     model_config = {"extra": "forbid"}
 
@@ -146,6 +162,7 @@ class V3ChunkedPlanStartRequest(BaseModel):
 
     signals: V3SignalSummary
     form: V3InputForm
+    variants: list[V3VariantSpecDTO] = Field(default_factory=list, min_length=0, max_length=3)
 
 
 class V3ChunkedRegenerateRequest(BaseModel):
@@ -170,6 +187,7 @@ class V3ChunkedPlanStateDTO(BaseModel):
     model_config = {"extra": "forbid"}
 
     generation_id: str
+    pack_id: str | None = None
     stage: str
     structural_plan: dict[str, Any] | None = None
     section_briefs: dict[str, Any] = Field(default_factory=dict)
@@ -182,22 +200,28 @@ class V3ChunkedPlanStateDTO(BaseModel):
     error_type: str | None = None
     inferred_lesson_mode: LessonMode | None = None
     lesson_mode_confidence: Literal["low", "high"] | None = None
+    variants: list[V3VariantSpecDTO] = Field(default_factory=list)
+    variant_generation_ids: dict[str, str] = Field(default_factory=dict)
 
 
 class V3ChunkedPlanDTO(BaseModel):
     model_config = {"extra": "forbid"}
 
     generation_id: str
+    pack_id: str | None = None
     structural_plan: dict[str, Any]
     display_title: str | None = None
     inferred_lesson_mode: LessonMode | None = None
     lesson_mode_confidence: Literal["low", "high"] | None = None
+    variants: list[V3VariantSpecDTO] = Field(default_factory=list)
+    variant_generation_ids: dict[str, str] = Field(default_factory=dict)
 
 
 class V3ChunkedStatusDTO(BaseModel):
     model_config = {"extra": "forbid"}
 
     generation_id: str
+    pack_id: str | None = None
     stage: str
     doc_version: str | None = None
     failed_sections: list[str] = Field(default_factory=list)
@@ -206,6 +230,7 @@ class V3ChunkedStatusDTO(BaseModel):
     next_action: str | None = None
     error: str | None = None
     error_type: str | None = None
+    variant_generation_ids: dict[str, str] = Field(default_factory=dict)
 
 
 class V3CardMisconceptionDTO(BaseModel):
@@ -276,6 +301,33 @@ class V3PackItemPatchRequest(BaseModel):
 
     prompt_text: str = Field(min_length=1, max_length=1000)
     options: list[V3PackItemOptionDTO] = Field(min_length=2)
+
+
+class V3PackVariantDTO(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    label: str
+    group_description: str
+    generation_id: str | None = None
+    status: str
+    stage: str
+    document_path: str | None = None
+    failed_sections: list[str] = Field(default_factory=list)
+    issues: list[str] = Field(default_factory=list)
+    can_retry: bool = False
+
+
+class V3XplorePackDTO(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    pack_id: str
+    coordinator_generation_id: str
+    subject: str
+    topic: str
+    status: str
+    shared_item_count: int = 0
+    variants: list[V3PackVariantDTO] = Field(default_factory=list)
+    editor_ready: bool = False
 
 
 class AdjustBlueprintRequest(BaseModel):

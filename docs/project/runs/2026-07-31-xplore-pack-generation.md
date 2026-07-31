@@ -31,7 +31,7 @@
 - [x] P6: item generation behind the context wall
 - [x] P7: diagnostic distractor mappings
 - [x] P8: pack-level item review
-- [ ] P9: parallel variant fan-out and pack hub
+- [x] P9: parallel variant fan-out and pack hub
 - [ ] P10: card-scoped QC rubric
 - [ ] P11: diagnostic answer-key print
 - [ ] P12: searchable card reuse
@@ -124,6 +124,20 @@
 - P8 backend: 419 tests passed with one existing Pydantic field-shadow warning.
 - P8 frontend: `svelte-check` found 0 errors and 0 warnings; focused API suite passed
   3 tests; production build passed with existing Rollup/chunk warnings.
+- P9 model cardinality: `VoiceSpec` now belongs to `VariantSpec`; a coordinator plan
+  creates one generation row per teacher-labelled learner group while retaining one
+  pack-scoped item set.
+- P9 execution: approval generates the shared items once and fans variant expansion
+  out concurrently. Child runs explicitly skip item generation, persist independent
+  state/documents, and expose retry-one and variant removal without blocking siblings.
+- P9 UI: the wizard captures up to three labelled learner groups and shows a no-write
+  confirmation with booklet count and rough duration. The pack hub shows per-variant
+  progress/issues, gates editors until every live variant has landed or failed, links
+  the shared quiz, and supplies a landed-variant print picker.
+- P9 validation: focused backend planning/lifecycle suites passed 30 tests; the item
+  review suite passed 3 tests in isolation after the combined SQLite harness hit its
+  known lock. Frontend `svelte-check` found 0 errors and 0 warnings; 50 focused tests
+  passed. Ruff, compile, diff, cardinality grep, and architecture checks passed.
 
 ## Risks and follow-up
 

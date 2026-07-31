@@ -854,6 +854,7 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - [x] P6 — generate and persist one diagnostic item set per approved card behind the context wall
 - [x] P7 — map distractors to real misconception IDs and preserve unmapped options as null
 - [x] P8 — review, edit, and regenerate pack-level items per card
+- [x] P9 — fan one approved plan into parallel learner-group variants under a pack hub
 
 ### P1 validation
 
@@ -930,5 +931,16 @@ Source of truth: `C:\Users\richi\Downloads\lesson-builder-unified-implementation
 - Real API: 2 cards, 10 shared items, 17 untagged options, zero missing coverage
 - Backend: 419 tests passed
 - Frontend: 0 check errors/warnings, 3 focused tests passed, production build passed
+
+### P9 validation
+
+- Voice and register now live on each VariantSpec rather than the shared StructuralPlan
+- One coordinator creates N independent variant generations and one shared pack item set
+- Per-variant failure, retry-one, removal, progress, and issue states are isolated
+- Wizard captures teacher labels/descriptions and confirms booklet count/time before generation
+- Pack hub gates editors until every live variant lands or fails and includes a print picker
+- Backend focused planning/lifecycle: 30 tests passed; isolated item review: 3 tests passed
+- Frontend: 0 check errors/warnings and 50 focused tests passed
+- Ruff, compile, cardinality grep, diff, and architecture checks passed
 
 ---

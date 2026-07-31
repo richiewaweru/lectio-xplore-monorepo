@@ -2,10 +2,14 @@
 	import { onMount } from 'svelte';
 	import { getProfile } from '$lib/api/profile';
 	import { narrowTopic, proposeIntent } from '$lib/api/v3';
-	import type { V3InputForm } from '$lib/types/v3';
+	import type { V3InputForm, V3VariantSpec } from '$lib/types/v3';
 
 	interface Props {
-		onSubmit: (form: V3InputForm, classLabel: string | null) => void;
+		onSubmit: (
+			form: V3InputForm,
+			classLabel: string | null,
+			variants: V3VariantSpec[]
+		) => void;
 	}
 
 	let { onSubmit }: Props = $props();
@@ -30,6 +34,15 @@
 	let struggle = $state('');
 	let prior_knowledge = $state('');
 	let free_text = $state('');
+	let variants = $state<V3VariantSpec[]>([
+		{
+			label: 'Core',
+			group_description: 'The main class group, using balanced language and pacing.',
+			voice: { register_name: 'balanced', tone: 'encouraging', notation: null }
+		}
+	]);
+	let confirmationOpen = $state(false);
+	let pendingForm = $state<V3InputForm | null>(null);
 	let proposing_intent = $state(false);
 	let narrowNotice = $state<string | null>(null);
 	let drafts_stale = $state(false);
@@ -189,7 +202,15 @@
 		void draftIntent(true);
 	}
 
-	const canSubmit = $derived(topic_state === 'confirmed' && grade_level !== '' && subject !== '' && topic.trim().length > 2 && outcome.trim().length > 2);
+	const variantsValid = $derived(
+		variants.length > 0 &&
+			variants.every(
+				(variant) => variant.label.trim().length > 0 && variant.group_description.trim().length > 0
+			) &&
+			new Set(variants.map((variant) => variant.label.trim().toLocaleLowerCase())).size ===
+				variants.length
+	);
+	const canSubmit = $derived(topic_state === 'confirmed' && grade_level !== '' && subject !== '' && topic.trim().length > 2 && outcome.trim().length > 2 && variantsValid);
 
 	onMount(async () => {
 		try {
@@ -204,10 +225,41 @@
 	function handleSubmit(event: Event): void {
 		event.preventDefault();
 		if (!canSubmit) return;
-		onSubmit(
-			{ grade_level, subject, duration_minutes: Number(duration_minutes), resource_type, topic: topic.trim(), subtopics, prior_knowledge: prior_knowledge.trim(), outcome: outcome.trim(), struggle: struggle.trim(), learner_level, reading_level, language_support, prior_knowledge_level, free_text: free_text.trim() },
-			class_label.trim() || null
-		);
+		pendingForm = { grade_level, subject, duration_minutes: Number(duration_minutes), resource_type, topic: topic.trim(), subtopics, prior_knowledge: prior_knowledge.trim(), outcome: outcome.trim(), struggle: struggle.trim(), learner_level, reading_level, language_support, prior_knowledge_level, free_text: free_text.trim() };
+		confirmationOpen = true;
+	}
+
+	function addVariant(): void {
+		if (variants.length >= 3) return;
+		const number = variants.length + 1;
+		variants = [
+			...variants,
+			{
+				label: `Group ${number}`,
+				group_description: '',
+				voice: { register_name: 'balanced', tone: 'encouraging', notation: null }
+			}
+		];
+	}
+
+	function removeVariant(index: number): void {
+		if (variants.length <= 1) return;
+		variants = variants.filter((_, itemIndex) => itemIndex !== index);
+	}
+
+	function confirmGeneration(): void {
+		if (!pendingForm || !variantsValid) return;
+		const cleanVariants = variants.map((variant) => ({
+			...variant,
+			label: variant.label.trim(),
+			group_description: variant.group_description.trim(),
+			voice: {
+				...variant.voice,
+				notation: variant.voice.notation?.trim() || null
+			}
+		}));
+		confirmationOpen = false;
+		onSubmit(pendingForm, class_label.trim() || null, cleanVariants);
 	}
 </script>
 
@@ -229,6 +281,35 @@
 				<label class="grid gap-1 text-sm font-medium"><span>Reading level</span><select bind:value={reading_level} class="rounded-xl border border-input bg-background px-3 py-2" onchange={markDraftsStale}>{#each READING_LEVELS as option}<option value={option.value}>{option.label}</option>{/each}</select></label>
 				<label class="grid gap-1 text-sm font-medium sm:col-span-2"><span>Language support</span><select bind:value={language_support} class="rounded-xl border border-input bg-background px-3 py-2" onchange={markDraftsStale}>{#each LANGUAGE_OPTIONS as option}<option value={option.value}>{option.label}</option>{/each}</select></label>
 			</div>
+		</section>
+
+		<section class="space-y-4 rounded-3xl border border-border/60 bg-card p-5 shadow-sm">
+			<div class="flex items-start justify-between gap-3">
+				<div class="space-y-1">
+					<p class="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">Learner groups</p>
+					<h2 class="text-xl font-semibold tracking-tight">Which booklet versions do you need?</h2>
+					<p class="text-sm text-muted-foreground">Each group gets its own wording and support, while every group shares one diagnostic quiz.</p>
+				</div>
+				<button type="button" disabled={variants.length >= 3} class="rounded-xl border border-input px-3 py-2 text-sm font-semibold disabled:opacity-45" onclick={addVariant}>Add group</button>
+			</div>
+			<div class="grid gap-3">
+				{#each variants as variant, index}
+					<article class="grid gap-3 rounded-2xl border border-border/60 bg-background p-4">
+						<div class="flex items-center justify-between gap-3">
+							<strong>Booklet {index + 1}</strong>
+							{#if variants.length > 1}<button type="button" class="text-sm font-semibold text-destructive" onclick={() => removeVariant(index)}>Remove</button>{/if}
+						</div>
+						<div class="grid gap-3 sm:grid-cols-2">
+							<label class="grid gap-1 text-sm font-medium"><span>Group label</span><input class="rounded-xl border border-input bg-background px-3 py-2" bind:value={variant.label} aria-label={`Group ${index + 1} label`} placeholder="Core" /></label>
+							<label class="grid gap-1 text-sm font-medium"><span>Language register</span><select class="rounded-xl border border-input bg-background px-3 py-2" bind:value={variant.voice.register_name} aria-label={`Group ${index + 1} language register`}><option value="simple">Simple</option><option value="balanced">Balanced</option><option value="formal">Formal</option></select></label>
+							<label class="grid gap-1 text-sm font-medium sm:col-span-2"><span>Who is this group?</span><textarea class="min-h-[76px] rounded-xl border border-input bg-background px-3 py-2" bind:value={variant.group_description} aria-label={`Group ${index + 1} description`} placeholder="Describe their confidence, reading support, or pace."></textarea></label>
+							<label class="grid gap-1 text-sm font-medium"><span>Tone</span><select class="rounded-xl border border-input bg-background px-3 py-2" bind:value={variant.voice.tone}><option value="encouraging">Encouraging</option><option value="neutral">Neutral</option><option value="direct">Direct</option></select></label>
+							<label class="grid gap-1 text-sm font-medium"><span>Notation <span class="font-normal text-muted-foreground">(optional)</span></span><input class="rounded-xl border border-input bg-background px-3 py-2" bind:value={variant.voice.notation} placeholder="e.g. use ×, not *" /></label>
+						</div>
+					</article>
+				{/each}
+			</div>
+			{#if !variantsValid}<p class="text-sm font-medium text-destructive">Every group needs a unique label and a description.</p>{/if}
 		</section>
 
 		<section class="space-y-4 rounded-3xl border border-border/60 bg-card p-5 shadow-sm">
@@ -254,6 +335,30 @@
 
 		<section class={`space-y-4 rounded-3xl border border-border/60 bg-card p-5 shadow-sm transition-opacity ${topic_state === 'confirmed' ? '' : 'opacity-60'}`}><div class="space-y-1"><p class="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">Step 5 / Anything else</p><h2 class="text-xl font-semibold tracking-tight">Add any final context</h2></div>{#if topic_state !== 'confirmed'}<p class="text-sm text-muted-foreground">Available after the topic is confirmed.</p>{/if}<label class="grid gap-1 text-sm font-medium"><span>Anything else to keep in mind? <span class="font-normal text-muted-foreground">(optional)</span></span><textarea disabled={topic_state !== 'confirmed'} class="min-h-[90px] rounded-xl border border-input bg-background px-3 py-2 text-sm" bind:value={free_text} aria-label="Anything else to keep in mind?" placeholder="Specific examples, constraints, tone, or anything else worth knowing..."></textarea></label></section>
 
-		<button type="submit" disabled={!canSubmit} class="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50">Build the skeleton</button>
+		<button type="submit" disabled={!canSubmit} class="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50">Review generation</button>
 	</form>
 </div>
+
+{#if confirmationOpen && pendingForm}
+	<div class="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" role="presentation">
+		<div class="w-full max-w-lg space-y-5 rounded-3xl bg-card p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="generation-confirmation-title">
+			<div class="space-y-2">
+				<p class="text-sm font-semibold uppercase tracking-[0.22em] text-muted-foreground">Ready to generate</p>
+				<h2 id="generation-confirmation-title" class="text-2xl font-semibold">{pendingForm.topic}</h2>
+				<p class="text-sm leading-6 text-muted-foreground">We will create {variants.length} {variants.length === 1 ? 'booklet' : 'booklets'} from one approved concept plan, plus one shared diagnostic set.</p>
+			</div>
+			<div class="grid grid-cols-2 gap-3">
+				<div class="rounded-2xl bg-muted p-4"><p class="text-2xl font-semibold">{variants.length}</p><p class="text-sm text-muted-foreground">booklet {variants.length === 1 ? 'version' : 'versions'}</p></div>
+				<div class="rounded-2xl bg-muted p-4"><p class="text-2xl font-semibold">~{variants.length * 2}–{variants.length * 4} min</p><p class="text-sm text-muted-foreground">rough generation time</p></div>
+			</div>
+			<ul class="space-y-2 text-sm">
+				{#each variants as variant}<li><strong>{variant.label}</strong> — {variant.group_description}</li>{/each}
+			</ul>
+			<p class="rounded-xl border border-amber-500/40 bg-amber-50 px-3 py-2 text-sm text-amber-950">Nothing has been generated yet. You will review and approve the concept cards before booklet writing begins.</p>
+			<div class="flex justify-end gap-3">
+				<button type="button" class="rounded-xl border border-input px-4 py-2 text-sm font-semibold" onclick={() => { confirmationOpen = false; }}>Go back</button>
+				<button type="button" class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground" onclick={confirmGeneration}>Generate concept plan</button>
+			</div>
+		</div>
+	</div>
+{/if}

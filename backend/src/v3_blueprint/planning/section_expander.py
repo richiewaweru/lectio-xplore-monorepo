@@ -242,7 +242,9 @@ Structure rationale:{plan.lesson_intent.structure_rationale}
 Lesson mode:        {plan.lesson_mode}
 Anchor:             {plan.anchor.example}
 Anchor reuse:       {plan.anchor.reuse_scope}
-Voice:              {plan.voice.register_name}, {plan.voice.tone}
+Variant:            {plan.variant_spec().label}
+Learner group:      {plan.variant_spec().group_description}
+Voice:              {plan.variant_spec().voice.register_name}, {plan.variant_spec().voice.tone}
 Prior knowledge:    {", ".join(plan.prior_knowledge)}
 Signal supports:    {", ".join(summarise_form_supports(form)) or "none"}
 

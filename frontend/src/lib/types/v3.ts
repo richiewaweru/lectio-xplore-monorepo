@@ -45,6 +45,16 @@ export interface V3SignalSummary {
 	lesson_mode_confidence: 'low' | 'high';
 }
 
+export interface V3VariantSpec {
+	label: string;
+	group_description: string;
+	voice: {
+		register_name: 'simple' | 'balanced' | 'formal';
+		tone: 'encouraging' | 'neutral' | 'direct';
+		notation: string | null;
+	};
+}
+
 export interface V3StructuralPlanComponent {
 	slug: string;
 	purpose: string;
@@ -86,6 +96,7 @@ export type V3ChunkedPlanStage =
 	| 'awaiting_review'
 	| 'plan_ready'
 	| 'stage2_running'
+	| 'variants_running'
 	| 'stage2_complete'
 	| 'assembly_blocked'
 	| 'stage2_error'
@@ -95,6 +106,7 @@ export type V3ChunkedPlanStage =
 
 export interface V3ChunkedPlanState {
 	generation_id: string;
+	pack_id?: string | null;
 	stage: V3ChunkedPlanStage;
 	structural_plan: V3StructuralPlan | null;
 	section_briefs: Record<string, unknown>;
@@ -107,18 +119,24 @@ export interface V3ChunkedPlanState {
 	error_type?: string | null;
 	inferred_lesson_mode: V3SignalSummary['inferred_lesson_mode'] | null;
 	lesson_mode_confidence: V3SignalSummary['lesson_mode_confidence'] | null;
+	variants?: V3VariantSpec[];
+	variant_generation_ids?: Record<string, string>;
 }
 
 export interface V3ChunkedPlan {
 	generation_id: string;
+	pack_id?: string | null;
 	structural_plan: V3StructuralPlan;
 	display_title?: string | null;
 	inferred_lesson_mode: V3SignalSummary['inferred_lesson_mode'] | null;
 	lesson_mode_confidence: V3SignalSummary['lesson_mode_confidence'] | null;
+	variants?: V3VariantSpec[];
+	variant_generation_ids?: Record<string, string>;
 }
 
 export interface V3ChunkedStatus {
 	generation_id: string;
+	pack_id?: string | null;
 	stage: V3ChunkedPlanStage;
 	doc_version: string | null;
 	failed_sections: string[];
@@ -127,6 +145,30 @@ export interface V3ChunkedStatus {
 	next_action: string | null;
 	error?: string | null;
 	error_type?: string | null;
+	variant_generation_ids?: Record<string, string>;
+}
+
+export interface V3PackVariant {
+	label: string;
+	group_description: string;
+	generation_id: string | null;
+	status: 'pending' | 'running' | 'landed' | 'failed' | 'deleted';
+	stage: string;
+	document_path: string | null;
+	failed_sections: string[];
+	issues: string[];
+	can_retry: boolean;
+}
+
+export interface V3XplorePack {
+	pack_id: string;
+	coordinator_generation_id: string;
+	subject: string;
+	topic: string;
+	status: 'generating' | 'ready' | 'failed';
+	shared_item_count: number;
+	variants: V3PackVariant[];
+	editor_ready: boolean;
 }
 
 export interface V3SectionPlanItem {

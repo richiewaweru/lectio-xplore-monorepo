@@ -14,7 +14,9 @@ import type {
 	V3InputForm,
 	V3IntentDrafts,
 	V3DraftPack,
-	V3SignalSummary
+	V3SignalSummary,
+	V3VariantSpec,
+	V3XplorePack
 } from '$lib/types/v3';
 
 export interface V3SubtopicCandidate {
@@ -79,6 +81,7 @@ export async function proposeIntent(payload: {
 export async function startChunkedPlan(payload: {
 	signals: V3SignalSummary;
 	form: V3InputForm;
+	variants?: V3VariantSpec[];
 }): Promise<V3ChunkedPlanState> {
 	const res = await apiFetch('/api/v1/v3/chunked/plan/start', {
 		method: 'POST',
@@ -87,6 +90,39 @@ export async function startChunkedPlan(payload: {
 	});
 	await ensureOk(res, 'Could not build the structural lesson plan.');
 	return res.json() as Promise<V3ChunkedPlanState>;
+}
+
+export async function getXplorePack(packId: string): Promise<V3XplorePack> {
+	const res = await apiFetch(`/api/v1/v3/packs/${encodeURIComponent(packId)}`, {
+		method: 'GET',
+		headers: bearerHeaders()
+	});
+	await ensureOk(res, 'Could not load this Xplore pack.');
+	return res.json() as Promise<V3XplorePack>;
+}
+
+export async function retryXploreVariant(
+	packId: string,
+	variantLabel: string
+): Promise<V3XplorePack> {
+	const res = await apiFetch(
+		`/api/v1/v3/packs/${encodeURIComponent(packId)}/variants/${encodeURIComponent(variantLabel)}/retry`,
+		{ method: 'POST', headers: bearerHeaders() }
+	);
+	await ensureOk(res, 'Could not retry this booklet.');
+	return res.json() as Promise<V3XplorePack>;
+}
+
+export async function deleteXploreVariant(
+	packId: string,
+	variantLabel: string
+): Promise<V3XplorePack> {
+	const res = await apiFetch(
+		`/api/v1/v3/packs/${encodeURIComponent(packId)}/variants/${encodeURIComponent(variantLabel)}`,
+		{ method: 'DELETE', headers: bearerHeaders() }
+	);
+	await ensureOk(res, 'Could not remove this booklet.');
+	return res.json() as Promise<V3XplorePack>;
 }
 
 export async function approveChunkedPlan(
