@@ -5,7 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth.middleware import get_current_user
-from core.database.models import PathLessonModel, PathLessonPrerequisiteModel, UnitModel
+from core.database.models import (
+    GenerationModel,
+    LessonProvenanceModel,
+    PathLessonModel,
+    PathLessonPrerequisiteModel,
+    UnitModel,
+)
 from core.dependencies import get_async_session
 from core.entities.user import User
 from planning.agents import run_adjacent_merge_critics, run_path_planner
@@ -15,6 +21,8 @@ from planning.models import (
     PathLessonPatch,
     PathPlannerRequest,
     PrepareLessonRequest,
+    PreparedLessonStatusResponse,
+    RegenerateLessonRequest,
     ReorderPathLessonsRequest,
     SplitPathLessonRequest,
     UnitCreate,
@@ -28,6 +36,7 @@ from planning.service import (
     get_owned_unit,
     get_path_lesson,
     get_path_version,
+    invalidate_path_approval,
     merge_lessons,
     patch_lesson,
     persist_path_plan,
@@ -37,6 +46,7 @@ from planning.service import (
     update_unit,
 )
 from planning.validation import PathApprovalBlocked, PathValidationError
+from v3_blueprint.planning.persistence import load_chunked_state
 
 
 router = APIRouter(prefix="/api/v1/units", tags=["units", "paths"])
@@ -291,10 +301,11 @@ async def patch_path_lesson(
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
     try:
-        _unit, _version, lesson = await _owned_version_and_lesson(
+        _unit, version, lesson = await _owned_version_and_lesson(
             session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
         )
         await patch_lesson(session, lesson=lesson, request=request)
+        await invalidate_path_approval(session, version)
         await session.commit()
         return {"id": lesson.id, "objective": lesson.objective, "revision": lesson.revision}
     except Exception as exc:
@@ -310,10 +321,11 @@ async def post_path_lesson_skip(
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
     try:
-        _unit, _version, lesson = await _owned_version_and_lesson(
+        _unit, version, lesson = await _owned_version_and_lesson(
             session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
         )
         await skip_lesson(session, lesson)
+        await invalidate_path_approval(session, version)
         await session.commit()
         return {"id": lesson.id, "skipped": lesson.skipped, "revision": lesson.revision}
     except Exception as exc:
@@ -336,6 +348,7 @@ async def post_path_lesson_split(
         parts = await split_lesson(
             session, unit=unit, version=version, lesson=lesson, request=request
         )
+        await invalidate_path_approval(session, version)
         await session.commit()
         return {"source_lesson_id": lesson.id, "part_ids": [part.id for part in parts]}
     except Exception as exc:
@@ -356,6 +369,7 @@ async def post_path_lessons_merge(
         merged = await merge_lessons(
             session, unit=unit, version=version, request=request
         )
+        await invalidate_path_approval(session, version)
         await session.commit()
         return {"merged_lesson_id": merged.id, "source": merged.source}
     except Exception as exc:
@@ -374,6 +388,7 @@ async def post_path_lessons_reorder(
         unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
         version = await get_path_version(session, unit_id=unit.id)
         lessons = await reorder_lessons(session, version_id=version.id, request=request)
+        await invalidate_path_approval(session, version)
         await session.commit()
         return {"lesson_ids": [lesson.id for lesson in lessons]}
     except Exception as exc:
@@ -400,4 +415,87 @@ async def post_path_lesson_prepare(
         return response.model_dump(mode="json")
     except Exception as exc:
         await session.rollback()
+        _raise_http(exc)
+
+
+@router.post("/{unit_id}/path/lessons/{lesson_id}:regenerate")
+async def post_path_lesson_regenerate(
+    unit_id: str,
+    lesson_id: str,
+    request: RegenerateLessonRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit, version, lesson = await _owned_version_and_lesson(
+            session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
+        )
+        response, _plan = await prepare_path_lesson(
+            session,
+            unit=unit,
+            version=version,
+            lesson=lesson,
+            request=PrepareLessonRequest(
+                group_ids=request.group_ids,
+                lesson_mode=request.lesson_mode,
+            ),
+            regenerate=True,
+            regeneration_reason=request.reason,
+        )
+        await session.commit()
+        return {**response.model_dump(mode="json"), "regeneration_reason": request.reason}
+    except Exception as exc:
+        await session.rollback()
+        _raise_http(exc)
+
+
+@router.get("/{unit_id}/path/lessons/{lesson_id}/status")
+async def get_path_lesson_status(
+    unit_id: str,
+    lesson_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        _unit, version, lesson = await _owned_version_and_lesson(
+            session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
+        )
+        if not lesson.pack_id:
+            return PreparedLessonStatusResponse(
+                path_lesson_id=lesson.id,
+                lesson_revision=lesson.revision,
+                generation_id=None,
+                generation_status="unprepared",
+                workflow_stage="unprepared",
+                objective_hash=lesson.objective_hash,
+                stale=False,
+                can_prepare=version.status == "approved" and not lesson.skipped,
+                can_regenerate=False,
+            ).model_dump(mode="json")
+        generation = await session.get(GenerationModel, lesson.pack_id)
+        provenance = await session.get(LessonProvenanceModel, lesson.pack_id)
+        if generation is None or provenance is None:
+            raise PathPreparationBlocked("Prepared lesson linkage is incomplete")
+        stale = (
+            provenance.objective_hash != lesson.objective_hash
+            or provenance.path_lesson_revision not in {None, lesson.revision}
+            or provenance.invalidated_at is not None
+        )
+        try:
+            chunked = await load_chunked_state(generation.id, session)
+            workflow_stage = str(chunked.get("stage") or generation.status or "unknown")
+        except ValueError:
+            workflow_stage = str(generation.status or "unknown")
+        return PreparedLessonStatusResponse(
+            path_lesson_id=lesson.id,
+            lesson_revision=lesson.revision,
+            generation_id=generation.id,
+            generation_status=str(generation.status or "unknown"),
+            workflow_stage="stale" if stale else workflow_stage,
+            objective_hash=lesson.objective_hash,
+            stale=stale,
+            can_prepare=False,
+            can_regenerate=version.status == "approved" and not lesson.skipped,
+        ).model_dump(mode="json")
+    except Exception as exc:
         _raise_http(exc)

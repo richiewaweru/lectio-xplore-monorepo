@@ -212,6 +212,20 @@ async def skip_lesson(session: AsyncSession, lesson: PathLessonModel) -> PathLes
     return lesson
 
 
+async def invalidate_path_approval(
+    session: AsyncSession,
+    version: PathVersionModel,
+) -> None:
+    if version.status != "approved":
+        return
+    version.status = "draft"
+    version.approved_at = None
+    unit = await session.get(UnitModel, version.unit_id)
+    if unit is not None:
+        unit.status = "draft"
+    await session.flush()
+
+
 async def reorder_lessons(
     session: AsyncSession,
     *,

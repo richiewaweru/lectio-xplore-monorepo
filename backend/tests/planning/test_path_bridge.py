@@ -5,7 +5,14 @@ from pathlib import Path
 import pytest
 from sqlalchemy import select
 
-from core.database.models import LessonProvenanceModel, PathLessonModel, UserModel
+from core.database.models import (
+    ConceptCardModel,
+    GenerationModel,
+    LessonProvenanceModel,
+    PathLessonModel,
+    UserModel,
+)
+from generation.path_preparation import enforce_path_owned_card_objective
 from planning.bridge import PathPreparationBlocked, prepare_path_lesson
 from planning.models import (
     ComponentSelection,
@@ -18,6 +25,7 @@ from planning.models import (
 )
 from planning.service import approve_path, create_unit, persist_path_plan
 from v3_blueprint.planning.objective_ownership import hash_path_objective
+from v3_blueprint.planning.persistence import load_chunked_state
 
 
 FIXTURE = (
@@ -124,6 +132,34 @@ async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None
     assert provenance is not None
     assert provenance.path_lesson_id == lesson.id
     assert provenance.objective_hash == response.objective_hash
+    assert provenance.path_lesson_revision == lesson.revision
+    assert provenance.lesson_mode == "first_exposure"
+    assert len(provenance.preparation_key or "") == 64
+    generation = await db_session.get(GenerationModel, response.generation_id)
+    assert generation is not None
+    assert generation.mode == "v3"
+    assert generation.status == "awaiting_review"
+    state = await load_chunked_state(response.generation_id, db_session)
+    assert state["stage"] == "awaiting_review"
+    assert state["path_prepared"] is True
+    assert state["structural_plan"]["cards"][0]["objective"] == lesson.objective
+    card = await db_session.get(
+        ConceptCardModel,
+        f"{response.generation_id}:{lesson.concept_id}",
+    )
+    assert card is not None
+    assert card.canonical_concept_id == lesson.concept_id
+    await enforce_path_owned_card_objective(
+        db_session,
+        pack_id=response.generation_id,
+        objective=lesson.objective,
+    )
+    with pytest.raises(ValueError, match="cannot rewrite"):
+        await enforce_path_owned_card_objective(
+            db_session,
+            pack_id=response.generation_id,
+            objective="A rewritten objective",
+        )
 
     reused, reused_plan = await prepare_path_lesson(
         db_session,
@@ -137,6 +173,40 @@ async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None
     assert reused.reused is True
     assert reused.generation_id == response.generation_id
     assert reused_plan.cards[0].objective == lesson.objective
+    with pytest.raises(PathPreparationBlocked, match="Unit groups must be persisted"):
+        await prepare_path_lesson(
+            db_session,
+            unit=unit,
+            version=version,
+            lesson=lesson,
+            request=PrepareLessonRequest(
+                lesson_mode="first_exposure",
+                group_ids=["support"],
+            ),
+            structural_planner=_fake_structural_planner,
+            component_selector=_fake_component_selector,
+        )
+
+    regenerated, _ = await prepare_path_lesson(
+        db_session,
+        unit=unit,
+        version=version,
+        lesson=lesson,
+        request=PrepareLessonRequest(lesson_mode="first_exposure"),
+        structural_planner=_fake_structural_planner,
+        component_selector=_fake_component_selector,
+        regenerate=True,
+        regeneration_reason="Teacher requested a fresh preparation.",
+    )
+    assert regenerated.generation_id != response.generation_id
+    assert regenerated.reused is False
+    replacement = await db_session.get(LessonProvenanceModel, regenerated.generation_id)
+    assert replacement is not None
+    assert replacement.supersedes_pack_id == response.generation_id
+    assert replacement.regeneration_reason == "Teacher requested a fresh preparation."
+    await db_session.refresh(provenance)
+    assert provenance.invalidated_at is not None
+    assert lesson.pack_id == regenerated.generation_id
 
 
 async def test_prepare_bridge_rejects_objective_rewrite(db_session) -> None:

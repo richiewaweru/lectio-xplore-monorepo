@@ -209,6 +209,13 @@ class LessonProvenanceModel(Base):
     knowledge_type_source = Column(String, nullable=True)
     toggles_applied = Column(JSON_DOCUMENT_TYPE, nullable=True)
     deviations_applied = Column(JSON_DOCUMENT_TYPE, nullable=True)
+    path_lesson_revision = Column(Integer, nullable=True)
+    lesson_mode = Column(String, nullable=True)
+    group_ids = Column(JSON_DOCUMENT_TYPE, nullable=True)
+    preparation_key = Column(String, nullable=True, index=True)
+    supersedes_pack_id = Column(String, nullable=True, index=True)
+    regeneration_reason = Column(Text, nullable=True)
+    invalidated_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
 
     concept = relationship("ConceptModel", back_populates="lesson_provenance")

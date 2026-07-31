@@ -1,19 +1,26 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import uuid
 from collections.abc import Awaitable, Callable
+from datetime import datetime, timezone
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import (
     GenerationModel,
     LessonProvenanceModel,
     PathLessonModel,
+    PathLessonPrerequisiteModel,
     PathVersionModel,
+    UnitScopeContractModel,
     UnitModel,
 )
 from contracts.lectio import get_component_card
+from generation.path_preparation import initialise_path_generation
 from planning.agents import run_component_selector, run_path_structural_planner
 from planning.models import (
     ComponentSelection,
@@ -30,6 +37,7 @@ from v3_blueprint.planning.models import (
     StructuralPlan,
 )
 from v3_blueprint.planning.objective_ownership import ObjectiveOwnership, ObjectiveOwnershipError
+from v3_blueprint.planning.persistence import load_chunked_state
 from v3_blueprint.skeletons import SkeletonPreviewRequest, load_skeleton_catalog
 
 
@@ -41,12 +49,75 @@ StructuralPlanner = Callable[[dict[str, Any]], Awaitable[PathStructuralPlan]]
 ComponentSelector = Callable[[dict[str, Any]], Awaitable[ComponentSelection]]
 
 
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _preparation_key(*, version_id: str, lesson_id: str, revision: int) -> str:
+    raw = json.dumps(
+        {"path_version_id": version_id, "path_lesson_id": lesson_id, "revision": revision},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+async def _preparation_context(
+    session: AsyncSession,
+    *,
+    unit: UnitModel,
+    version: PathVersionModel,
+    lesson: PathLessonModel,
+) -> tuple[dict[str, Any], list[str], list[dict[str, str]]]:
+    scope = await session.get(UnitScopeContractModel, unit.id)
+    scope_contract = {
+        "must_establish": list(scope.must_establish or []) if scope else [],
+        "may_include": list(scope.may_include or []) if scope else [],
+        "must_not_introduce": list(scope.must_not_introduce or []) if scope else [],
+        "assumed_prerequisites": list(scope.assumed_prerequisites or []) if scope else [],
+        "terminology": list(scope.terminology or []) if scope else [],
+        "notation": scope.notation if scope else None,
+    }
+    earlier = list(
+        await session.scalars(
+            select(PathLessonModel)
+            .where(
+                PathLessonModel.path_version_id == version.id,
+                PathLessonModel.position < lesson.position,
+            )
+            .order_by(PathLessonModel.position)
+        )
+    )
+    prior_established = list(dict.fromkeys([
+        *list(unit.starting_knowledge or []),
+        *(capability for prior in earlier if not prior.skipped for capability in (prior.must_establish or [])),
+    ]))
+    prerequisite_ids = list(
+        await session.scalars(
+            select(PathLessonPrerequisiteModel.prerequisite_lesson_id).where(
+                PathLessonPrerequisiteModel.path_lesson_id == lesson.id
+            )
+        )
+    )
+    prerequisite_by_id = {prior.id: prior for prior in earlier}
+    prerequisites = [
+        {
+            "path_lesson_id": prerequisite_id,
+            "concept_id": prerequisite_by_id[prerequisite_id].concept_id,
+            "objective": prerequisite_by_id[prerequisite_id].objective,
+        }
+        for prerequisite_id in prerequisite_ids
+        if prerequisite_id in prerequisite_by_id
+    ]
+    return scope_contract, prior_established, prerequisites
+
+
 def _build_structural_plan(
     *,
     generated: PathStructuralPlan,
     lesson: PathLessonModel,
-    unit: UnitModel,
     lesson_mode: str,
+    prior_knowledge: list[str],
     slots: list[str],
     selected_components: dict[str, list[str]],
 ) -> StructuralPlan:
@@ -91,7 +162,7 @@ def _build_structural_plan(
             example=generated.anchor.description,
             reuse_scope="Reuse this anchor across the fixed path lesson slots.",
         ),
-        prior_knowledge=list(unit.starting_knowledge or []),
+        prior_knowledge=prior_knowledge,
         cards=[card],
         sections=sections,
         question_plan=[
@@ -119,18 +190,47 @@ async def prepare_path_lesson(
     request: PrepareLessonRequest,
     structural_planner: StructuralPlanner = run_path_structural_planner,
     component_selector: ComponentSelector = run_component_selector,
+    regenerate: bool = False,
+    regeneration_reason: str | None = None,
 ) -> tuple[PreparedLessonResponse, StructuralPlan]:
     if version.status != "approved":
         raise PathPreparationBlocked("Path must be approved before lesson preparation")
     if lesson.skipped:
         raise PathPreparationBlocked("Skipped path lessons cannot be prepared")
-    if lesson.pack_id:
+    if request.group_ids:
+        raise PathPreparationBlocked(
+            "Unit groups must be persisted before differentiated preparation"
+        )
+    previous_pack_id = lesson.pack_id
+    if regenerate and not previous_pack_id:
+        raise PathPreparationBlocked("No existing preparation is available to regenerate")
+    if regenerate and not (regeneration_reason or "").strip():
+        raise PathPreparationBlocked("Regeneration requires a recorded reason")
+    if previous_pack_id and not regenerate:
         generation = await session.get(GenerationModel, lesson.pack_id)
         provenance = await session.get(LessonProvenanceModel, lesson.pack_id)
         if generation is not None and provenance is not None:
             if provenance.objective_hash != lesson.objective_hash:
-                raise PathPreparationBlocked("Existing prepared pack has a stale objective hash")
-            plan = StructuralPlan.model_validate_json(generation.planning_spec_json or "{}")
+                raise PathPreparationBlocked(
+                    "Existing preparation is stale; use explicit regeneration"
+                )
+            if provenance.path_lesson_revision not in {None, lesson.revision}:
+                raise PathPreparationBlocked(
+                    "Existing preparation is for an earlier lesson revision; use explicit regeneration"
+                )
+            if provenance.lesson_mode not in {None, request.lesson_mode} or sorted(
+                provenance.group_ids or []
+            ) != sorted(request.group_ids):
+                raise PathPreparationBlocked(
+                    "Preparation settings changed; use explicit regeneration"
+                )
+            try:
+                state = await load_chunked_state(generation.id, session)
+            except ValueError as exc:
+                raise PathPreparationBlocked(
+                    "Existing preparation predates the resumable workflow; regenerate it explicitly"
+                ) from exc
+            plan = StructuralPlan.model_validate(state.get("structural_plan"))
             slots = [section.role for section in plan.sections]
             return (
                 PreparedLessonResponse(
@@ -142,12 +242,18 @@ async def prepare_path_lesson(
                     skeleton_version=provenance.skeleton_version or 0,
                     slots=slots,
                     section_roles=slots,
-                    status="planning_review",
+                    status="awaiting_review",
                     reused=True,
                 ),
                 plan,
             )
 
+    scope_contract, prior_established, prerequisites = await _preparation_context(
+        session,
+        unit=unit,
+        version=version,
+        lesson=lesson,
+    )
     catalog = load_skeleton_catalog()
     preview = catalog.preview(
         SkeletonPreviewRequest(
@@ -195,17 +301,20 @@ async def prepare_path_lesson(
             slot_id: selection.model_dump(mode="json")
             for slot_id, selection in component_selections.items()
         },
-        "scope_contract": version.source_plan_json.get("scope_contract", {}),
-        "prior_established": list(unit.starting_knowledge or []),
+        "scope_contract": scope_contract,
+        "prior_established": prior_established,
+        "prerequisites": prerequisites,
         "external_prerequisites": list(lesson.external_prerequisites or []),
+        "must_establish": list(lesson.must_establish or []),
+        "exclusions": list(lesson.exclusions or []),
         "group_ids": request.group_ids,
     }
     generated = await structural_planner(fixed_context)
     plan = _build_structural_plan(
         generated=generated,
         lesson=lesson,
-        unit=unit,
         lesson_mode=request.lesson_mode,
+        prior_knowledge=prior_established,
         slots=slots,
         selected_components={
             slot_id: [component.slug for component in selection.components]
@@ -219,18 +328,17 @@ async def prepare_path_lesson(
         user_id=unit.owner_id,
         subject=unit.subject,
         context=f"Prepared from path lesson {lesson.id}",
-        mode="balanced",
-        status="planning_review",
+        mode="v3",
+        status="awaiting_review",
         requested_template_id="guided-concept-path",
         resolved_template_id="guided-concept-path",
-        requested_preset_id="default",
-        resolved_preset_id="default",
+        requested_preset_id="v3-studio",
+        resolved_preset_id="v3-studio",
         section_count=len(plan.sections),
         planning_spec_json=plan.model_dump_json(),
     )
     session.add(generation)
-    session.add(
-        LessonProvenanceModel(
+    provenance = LessonProvenanceModel(
             pack_id=generation_id,
             concept_id=lesson.concept_id,
             path_version_id=version.id,
@@ -242,7 +350,34 @@ async def prepare_path_lesson(
             knowledge_type_source=lesson.knowledge_type_source,
             toggles_applied=preview.variants[0].toggles_applied,
             deviations_applied=[],
+            path_lesson_revision=lesson.revision,
+            lesson_mode=request.lesson_mode,
+            group_ids=sorted(request.group_ids),
+            preparation_key=_preparation_key(
+                version_id=version.id,
+                lesson_id=lesson.id,
+                revision=lesson.revision,
+            ),
+            supersedes_pack_id=previous_pack_id if regenerate else None,
+            regeneration_reason=regeneration_reason if regenerate else None,
         )
+    session.add(provenance)
+    if regenerate and previous_pack_id:
+        previous = await session.get(LessonProvenanceModel, previous_pack_id)
+        if previous is not None:
+            previous.invalidated_at = _utcnow()
+    await session.flush()
+    await initialise_path_generation(
+        session,
+        generation=generation,
+        plan=plan,
+        concept_id=lesson.concept_id,
+        topic=lesson.title,
+        grade_level=unit.grade_level,
+        subject=unit.subject,
+        lesson_mode=request.lesson_mode,
+        prior_established=prior_established,
+        scope_contract=scope_contract,
     )
     lesson.pack_id = generation_id
     await session.flush()
@@ -257,7 +392,7 @@ async def prepare_path_lesson(
             skeleton_version=preview.skeleton_version,
             slots=slots,
             section_roles=roles,
-            status="planning_review",
+            status="awaiting_review",
             reused=False,
         ),
         plan,

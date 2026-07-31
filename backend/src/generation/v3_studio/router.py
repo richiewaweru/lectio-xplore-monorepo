@@ -105,6 +105,7 @@ from generation.v3_studio.dtos import (
     V3SignalSummary,
 )
 from generation.v3_studio.prompts import PROPOSE_INTENT_SYSTEM, build_propose_intent_user_prompt
+from generation.path_preparation import enforce_path_owned_card_objective
 from resource_specs.loader import get_spec, list_spec_ids
 from resource_specs.renderer import render_spec_for_prompt
 from generation.v3_studio.preview_mapper import blueprint_to_preview_dto
@@ -1831,6 +1832,14 @@ async def reuse_concept_card(
         target = target_result.scalar_one_or_none()
         if target is None:
             raise HTTPException(status_code=404, detail="Target concept card not found")
+        try:
+            await enforce_path_owned_card_objective(
+                session,
+                pack_id=card_pack_id,
+                objective=source.objective,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
         target.title = source.title
         target.objective = source.objective
         target.prereqs = deepcopy(source.prereqs or [])
@@ -1899,6 +1908,14 @@ async def patch_pack_concept_card(
         card = result.scalar_one_or_none()
         if card is None:
             raise HTTPException(status_code=404, detail="Concept card not found")
+        try:
+            await enforce_path_owned_card_objective(
+                session,
+                pack_id=card_pack_id,
+                objective=body.objective,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
         previous_rows = (
             card.misconceptions
@@ -2176,12 +2193,22 @@ async def post_pack_concept_cards_approve(
     )
     async with async_session_factory() as session:
         result = await session.execute(
-            select(ConceptCardModel.id).where(
+            select(ConceptCardModel).where(
                 ConceptCardModel.pack_id == card_pack_id
             )
         )
-        if result.first() is None:
+        cards = list(result.scalars())
+        if not cards:
             raise HTTPException(status_code=409, detail="Pack has no concept cards")
+        for card in cards:
+            try:
+                await enforce_path_owned_card_objective(
+                    session,
+                    pack_id=card_pack_id,
+                    objective=card.objective,
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=409, detail=str(exc)) from exc
     return await post_chunked_plan_approve(
         generation_id,
         body=None,

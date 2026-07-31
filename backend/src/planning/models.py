@@ -150,6 +150,10 @@ class PrepareLessonRequest(StrictModel):
     lesson_mode: Literal["first_exposure", "consolidation", "repair", "retrieval", "transfer"]
 
 
+class RegenerateLessonRequest(PrepareLessonRequest):
+    reason: str = Field(min_length=3, max_length=500)
+
+
 class PreparedLessonResponse(StrictModel):
     generation_id: str
     path_lesson_id: str
@@ -159,8 +163,20 @@ class PreparedLessonResponse(StrictModel):
     skeleton_version: int
     slots: list[str]
     section_roles: list[str]
-    status: Literal["planning_review"]
+    status: Literal["awaiting_review"]
     reused: bool
+
+
+class PreparedLessonStatusResponse(StrictModel):
+    path_lesson_id: str
+    lesson_revision: int
+    generation_id: str | None
+    generation_status: str
+    workflow_stage: str
+    objective_hash: str
+    stale: bool
+    can_prepare: bool
+    can_regenerate: bool
 
 
 class MergeCriticResult(StrictModel):
