@@ -33,6 +33,7 @@ class UserModel(Base):
     packs = relationship("LearningPackModel", back_populates="user")
     llm_calls = relationship("LLMCallModel", back_populates="user")
     editable_lessons = relationship("EditableLessonModel", back_populates="user")
+    concepts = relationship("ConceptModel", back_populates="created_by_user")
 
 
 class StudentProfileModel(Base):
@@ -138,6 +139,24 @@ class GenerationModel(Base):
     pack = relationship("LearningPackModel", back_populates="generations")
 
 
+class ConceptModel(Base):
+    __tablename__ = "concepts"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    canonical_slug = Column(String, unique=True, nullable=False, index=True)
+    subject = Column(String, nullable=False, index=True)
+    title = Column(String, nullable=False)
+    canonical_description = Column(Text, nullable=True)
+    status = Column(String, nullable=False, default="draft", server_default="draft")
+    created_by = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    created_by_user = relationship("UserModel", back_populates="concepts")
+    cards = relationship("ConceptCardModel", back_populates="canonical_concept")
+    lesson_provenance = relationship("LessonProvenanceModel", back_populates="concept")
+
+
 class ConceptCardModel(Base):
     __tablename__ = "concept_cards"
 
@@ -151,9 +170,35 @@ class ConceptCardModel(Base):
     teacher_edited = Column(Boolean, nullable=False, default=False)
     source_card_id = Column(String, nullable=True, index=True)
     source_pack_id = Column(String, nullable=True, index=True)
+    canonical_concept_id = Column(
+        String,
+        ForeignKey("concepts.id"),
+        nullable=True,
+        index=True,
+    )
     created_at = Column(DateTime, default=_utcnow, nullable=False)
 
     items = relationship("PackItemModel", back_populates="card")
+    canonical_concept = relationship("ConceptModel", back_populates="cards")
+
+
+class LessonProvenanceModel(Base):
+    __tablename__ = "lesson_provenance"
+
+    pack_id = Column(String, primary_key=True)
+    concept_id = Column(String, ForeignKey("concepts.id"), nullable=True, index=True)
+    path_version_id = Column(String, nullable=True, index=True)
+    path_lesson_id = Column(String, nullable=True, index=True)
+    objective_hash = Column(String, nullable=True)
+    skeleton_id = Column(String, nullable=True)
+    skeleton_version = Column(Integer, nullable=True)
+    knowledge_type = Column(String, nullable=True)
+    knowledge_type_source = Column(String, nullable=True)
+    toggles_applied = Column(JSON_DOCUMENT_TYPE, nullable=True)
+    deviations_applied = Column(JSON_DOCUMENT_TYPE, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    concept = relationship("ConceptModel", back_populates="lesson_provenance")
 
 
 class PackItemModel(Base):

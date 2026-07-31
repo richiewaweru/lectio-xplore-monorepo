@@ -221,14 +221,56 @@ dependency failure remains outside the Phase 1 backend-only diff and is still re
 
 ### Phase 2 tracking
 
-- [ ] Read the concept, path, provenance, and migration handoff details against live models.
-- [ ] Add the canonical concepts table and reversible migration.
-- [ ] Add nullable canonical concept references for path lessons and cards.
-- [ ] Add immutable path-objective hash ownership and post-generation comparison.
-- [ ] Add nullable provenance fields without changing current generation output.
-- [ ] Prove migration upgrade/downgrade/upgrade.
-- [ ] Re-run the saved Phase 0 generation comparison byte-for-byte.
+- [x] Read the concept, path, provenance, and migration handoff details against live models.
+- [x] Add the canonical concepts table and reversible migration.
+- [x] Add a nullable canonical concept reference to current cards; path-lesson FK follows its Phase 5 table.
+- [x] Add exact immutable path-objective hash ownership and comparison foundation.
+- [x] Add nullable provenance fields without changing current generation output.
+- [x] Prove migration `0019` upgrade/downgrade/upgrade.
+- [x] Re-run the saved Phase 0 generation comparison byte-for-byte.
 - [ ] Run the complete Phase 2 gate and invariant check.
+
+### Phase 2 foundation evidence
+
+Focused model, ownership, legacy-generation, and Xplore tests:
+
+```text
+$ cd backend && uv run pytest tests/core/database/test_concepts.py tests/v3_blueprint/planning/test_objective_ownership.py tests/generation/test_xplore_fixture.py tests/generation/test_xplore_contracts.py -q
+..........                                                               [100%]
+10 passed, 1 warning in 23.60s
+$ uv run ruff check <Phase 2 foundation files>
+All checks passed!
+```
+
+Migration `0019` from a database at revision `0018`:
+
+```text
+$ uv run alembic upgrade head
+INFO  [alembic.runtime.migration] Running upgrade 20260731_0018 -> 20260731_0019, add canonical concepts and lesson provenance
+$ uv run alembic downgrade -1
+INFO  [alembic.runtime.migration] Running downgrade 20260731_0019 -> 20260731_0018, add canonical concepts and lesson provenance
+$ uv run alembic upgrade head
+INFO  [alembic.runtime.migration] Running upgrade 20260731_0018 -> 20260731_0019, add canonical concepts and lesson provenance
+```
+
+The disposable SQLite database was removed after the gate. A fresh SQLite migration chain still
+hits the pre-existing `20260501_0010` inline-FK ALTER limitation on its first pass; that baseline
+contradiction is outside migration `0019` and is recorded rather than silently attributed to V2.
+
+Pre-commit invariant evidence:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/generation/test_v3_chunked_lifecycle.py tests/core/database/test_concepts.py -q
+.....................................                                    [100%]
+37 passed, 1 warning in 24.02s
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+```
+
+The `ConceptModel` follows `concept.schema.json` and adds the domain lifecycle fields. Current
+cards reference it with a nullable FK. `LessonProvenanceModel` carries nullable concept, path,
+objective-hash, skeleton, classifier-source, toggle, and deviation fields. Path tables and their
+FK are deliberately deferred to Migration 3 / Phase 5, matching `13_DATABASE_AND_MIGRATIONS.md`.
 
 ### Phase 1 defect 4 evidence — path-only misconception quota
 
