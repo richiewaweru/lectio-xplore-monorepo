@@ -120,8 +120,11 @@ def _planner_index_block() -> str:
             field = card.get("section_field", "-")
             role = card.get("role", "")
             job = card.get("cognitive_job", "")
-            req = " [REQUIRED]" if cid in always_present else ""
-            lines.append(f"  {cid} [{field}]{req}: {role} - {job}")
+            req = " | required=true" if cid in always_present else ""
+            lines.append(
+                f"  {cid} | section_field={field} | cognitive_job={job} "
+                f"| role={role}{req}"
+            )
 
     if component_budget:
         lines.append("\nCOMPONENT BUDGETS (max across entire lesson):")

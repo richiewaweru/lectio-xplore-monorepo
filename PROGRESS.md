@@ -151,9 +151,9 @@ handoff, runbook, progress ledger, and copied comparison fixture differ from `xp
 
 - [x] Defect 1 fail-first evidence captured: missing skeleton role authority was silent.
 - [x] Defect 1 implementation uses skeleton slot IDs and emits a warning when the catalog is absent.
-- [x] Defect 1 invariant and architecture checks pass; logical commit pending SHA entry.
-- [ ] Defect 2 fail-first regression: component-selection context receives cognitive jobs.
-- [ ] Defect 2 implementation and logical commit.
+- [x] Defect 1 committed as `5b1682a` (`P1: fix(planning): make skeleton roles authoritative`).
+- [x] Defect 2 fail-first regression: selector entries label cognitive jobs and section fields.
+- [x] Defect 2 implementation and invariant checks pass; logical commit pending SHA entry.
 - [ ] Defect 3 fail-first regression: unknown StructuralPlan fields are rejected.
 - [ ] Defect 3 explicit logged legacy adapter and logical commit.
 - [ ] Defect 4 fail-first regression: new path lesson prompt uses 0–3 belief-tested misconceptions.
@@ -191,6 +191,43 @@ Pre-commit invariant evidence:
 $ cd backend && uv run pytest tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/v3_blueprint/planning/test_validators.py -q
 ...............................                                          [100%]
 31 passed, 1 warning in 16.31s
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+```
+
+### Phase 1 defect 2 evidence — component cognitive jobs
+
+The handoff's claim that cognitive jobs never reach the planner contradicts the live code:
+`_planner_index_block()` already appended the cognitive-job value to every available component
+since commit `5ff0769b`. The value was an unlabeled `role - job` suffix, however, so the exact
+registry-entry contract was not explicit or mechanically distinguishable. Live code is truth;
+the scoped fix labels `section_field`, `cognitive_job`, and `role` in every selector entry.
+
+Failing regression before the scoped fix:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/prompts/test_shared_prompt_prefix.py::test_stage1_component_selector_context_labels_cognitive_job_and_section_field -q
+F                                                                        [100%]
+E       AssertionError: assert 'worked-example-card | section_field=worked_example | cognitive_job=Watch reasoning in action' in planner_block
+1 failed, 1 warning in 16.55s
+```
+
+Passing validation after the fix:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/prompts/test_shared_prompt_prefix.py tests/v3_blueprint/planning/test_stage1_error_logging.py -q
+.........                                                                [100%]
+9 passed, 1 warning in 12.52s
+$ uv run ruff check src/generation/v3_studio/prompts.py tests/v3_execution/prompts/test_shared_prompt_prefix.py
+All checks passed!
+```
+
+Pre-commit invariant evidence:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/v3_blueprint/planning/test_validators.py tests/v3_execution/prompts/test_shared_prompt_prefix.py -q
+..................................                                       [100%]
+34 passed, 1 warning in 20.85s
 $ python tools/agent/check_architecture.py --format text
 No architecture violations found.
 ```
