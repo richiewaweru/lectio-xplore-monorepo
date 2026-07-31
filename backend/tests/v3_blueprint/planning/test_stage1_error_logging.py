@@ -278,7 +278,7 @@ async def test_call_stage1_rejects_role_outside_active_resource_spec() -> None:
         "run_llm",
         new=AsyncMock(return_value=type("Result", (), {"output": invalid_plan})()),
     ), patch.object(structural_planner, "build_stage1_system_prompt", return_value="prompt"):
-        with pytest.raises(ValueError, match="which is not in the active resource spec roles"):
+        with pytest.raises(ValueError, match="which is not a skeleton slot id"):
             await structural_planner._call_stage1(
                 signals,
                 form,
@@ -290,4 +290,11 @@ async def test_call_stage1_rejects_role_outside_active_resource_spec() -> None:
                     },
                 },
                 generation_id="gen-role-guard",
+                skeleton_catalog={
+                    "slots": {
+                        "intro": {"role": "intro"},
+                        "practice": {"role": "practice"},
+                        "summary": {"role": "summary"},
+                    }
+                },
             )

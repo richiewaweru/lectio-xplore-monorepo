@@ -112,35 +112,45 @@ def test_validate_structural_plan_catches_duplicate_section_field(monkeypatch) -
     )
 
 
-def test_validate_structural_plan_catches_role_outside_resource_spec() -> None:
+def test_validate_structural_plan_catches_role_outside_skeleton_slots() -> None:
     plan = _base_plan_with_components(
         components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")]
     )
     plan.sections[0].role = "invalid_role"
     errors = validate_structural_plan(
         plan,
-        {
-            "spec": {
-                "required_roles": ["intro", "practice"],
-                "optional_roles": ["summary"],
-            }
+        skeleton_catalog={
+            "slots": {"intro": {"role": "intro"}, "practice": {"role": "practice"}}
         },
     )
-    assert any("which is not in the active resource spec roles" in error for error in errors)
+    assert any("which is not a skeleton slot id" in error for error in errors)
 
 
-def test_validate_structural_plan_catches_role_outside_real_spec_dump_shape() -> None:
-    from resource_specs.loader import get_spec
-
+def test_validate_structural_plan_accepts_a_role_declared_by_skeleton_slot_id() -> None:
     plan = _base_plan_with_components(
         components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")]
     )
     plan.sections[0].role = "model"
     errors = validate_structural_plan(
         plan,
-        {"spec": get_spec("worksheet").model_dump(mode="json")},
+        skeleton_catalog={"slots": {"model": {"role": "model"}}},
     )
-    assert any("which is not in the active resource spec roles" in error for error in errors)
+    assert not any("role" in error for error in errors)
+
+
+def test_validate_structural_plan_warns_when_skeleton_roles_are_unavailable(caplog) -> None:
+    plan = _base_plan_with_components(
+        components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")]
+    )
+    plan.sections[0].role = "invented_role"
+
+    errors = validate_structural_plan(
+        plan,
+        {"resource_type": "lesson", "spec": {"available_components": ["hook-hero"]}},
+    )
+
+    assert not any("role" in error for error in errors)
+    assert "skeleton role validation unavailable" in caplog.text
 
 
 def test_validate_section_brief_catches_dropped_component() -> None:

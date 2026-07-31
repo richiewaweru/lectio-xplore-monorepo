@@ -17,37 +17,47 @@ def _get_component_registry(slugs: set[str]) -> dict[str, dict]:
     return registry
 
 
-def _allowed_roles_from_resource_spec(resource_spec: dict | None) -> set[str]:
-    if not isinstance(resource_spec, dict):
+def _allowed_roles_from_skeletons(skeleton_catalog: dict | None) -> set[str]:
+    if not isinstance(skeleton_catalog, dict):
         return set()
-    spec = resource_spec.get("spec")
-    if not isinstance(spec, dict):
+    slots = skeleton_catalog.get("slots")
+    if not isinstance(slots, dict):
         return set()
 
-    roles: set[str] = set()
-    for key in ("required_roles", "optional_roles"):
-        raw_roles = spec.get(key)
-        if isinstance(raw_roles, list):
-            roles.update(role for role in raw_roles if isinstance(role, str) and role)
+    return {
+        slot_id
+        for slot_id in slots
+        if isinstance(slot_id, str) and slot_id
+    }
 
-    sections = spec.get("sections")
-    if isinstance(sections, dict):
-        for key in ("required", "optional"):
-            raw_sections = sections.get(key)
-            if not isinstance(raw_sections, list):
-                continue
-            for section in raw_sections:
-                if not isinstance(section, dict):
-                    continue
-                role = section.get("role")
-                if isinstance(role, str) and role:
-                    roles.add(role)
-    return roles
+
+def validate_structural_plan_roles(
+    plan: StructuralPlan,
+    skeleton_catalog: dict | None,
+) -> list[str]:
+    allowed_roles = _allowed_roles_from_skeletons(skeleton_catalog)
+    if not allowed_roles:
+        log.warning(
+            "skeleton role validation unavailable; StructuralPlan roles were not "
+            "validated because no loaded skeleton slot catalog was supplied"
+        )
+        return []
+
+    return [
+        (
+            f"Section '{section.id}' emitted role '{section.role}' "
+            f"which is not a skeleton slot id: {sorted(allowed_roles)}."
+        )
+        for section in plan.sections
+        if section.role not in allowed_roles
+    ]
 
 
 def validate_structural_plan(
     plan: StructuralPlan,
     resource_spec: dict | None = None,
+    *,
+    skeleton_catalog: dict | None = None,
 ) -> list[str]:
     errors: list[str] = []
     all_slugs = {
@@ -166,14 +176,7 @@ def validate_structural_plan(
             f"transition_note=null."
         )
 
-    allowed_roles = _allowed_roles_from_resource_spec(resource_spec)
-    if allowed_roles:
-        for section in plan.sections:
-            if section.role not in allowed_roles:
-                errors.append(
-                    f"Section '{section.id}' emitted role '{section.role}' "
-                    f"which is not in the active resource spec roles: {sorted(allowed_roles)}."
-                )
+    errors.extend(validate_structural_plan_roles(plan, skeleton_catalog))
 
     return errors
 

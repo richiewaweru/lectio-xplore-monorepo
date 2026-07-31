@@ -10,7 +10,7 @@ from core.llm.runner import RetryPolicy, run_llm
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 from generation.v3_studio.prompts import _planner_index_block, build_v3_shared_prefix
 from v3_blueprint.planning.models import StructuralPlan
-from v3_blueprint.planning.validators import _allowed_roles_from_resource_spec
+from v3_blueprint.planning.validators import validate_structural_plan_roles
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.llm_helpers import structured_output_type_for_model
 
@@ -221,16 +221,13 @@ def build_stage1_user_message(
     return payload
 
 
-def _validate_stage1_roles(plan: StructuralPlan, resource_spec: dict) -> None:
-    allowed_roles = _allowed_roles_from_resource_spec(resource_spec)
-    if not allowed_roles:
-        return
-    for section in plan.sections:
-        if section.role not in allowed_roles:
-            raise ValueError(
-                f"Section '{section.id}' emitted role '{section.role}' "
-                f"which is not in the active resource spec roles: {sorted(allowed_roles)}."
-            )
+def _validate_stage1_roles(
+    plan: StructuralPlan,
+    skeleton_catalog: dict | None,
+) -> None:
+    errors = validate_structural_plan_roles(plan, skeleton_catalog)
+    if errors:
+        raise ValueError(errors[0])
 
 
 async def _call_stage1(
@@ -241,6 +238,7 @@ async def _call_stage1(
     trace_id: str | None = None,
     generation_id: str | None = None,
     previous_errors: list[str] | None = None,
+    skeleton_catalog: dict | None = None,
 ) -> StructuralPlan:
     import traceback
     try:
@@ -283,7 +281,7 @@ async def _call_stage1(
             plan = StructuralPlan.model_validate(raw.model_dump())
         else:
             plan = StructuralPlan.model_validate(raw)
-        _validate_stage1_roles(plan, resource_spec)
+        _validate_stage1_roles(plan, skeleton_catalog)
         return plan
     except Exception as exc:
         tb = traceback.format_exc()

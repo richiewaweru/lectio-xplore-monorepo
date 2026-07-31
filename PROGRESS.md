@@ -110,7 +110,7 @@ handoff, runbook, progress ledger, and copied comparison fixture differ from `xp
   immutable fixture hash are reproducible from `RUNBOOK.md`.
 - The frontend dependency failure is baseline evidence, not a V2 regression and not silently
   reclassified as a passing build.
-- Phase 0 commit SHA: pending.
+- Phase 0 commit SHA: `d6688c2` (`P0: docs(xplore-v2): capture baseline and handoff`).
 
 ### Nine-invariant check before Phase 0 commit
 
@@ -146,6 +146,54 @@ handoff, runbook, progress ledger, and copied comparison fixture differ from `xp
 ### Open questions / stop conditions
 
 - None for Phase 0.
+
+### Phase 1 tracking
+
+- [x] Defect 1 fail-first evidence captured: missing skeleton role authority was silent.
+- [x] Defect 1 implementation uses skeleton slot IDs and emits a warning when the catalog is absent.
+- [x] Defect 1 invariant and architecture checks pass; logical commit pending SHA entry.
+- [ ] Defect 2 fail-first regression: component-selection context receives cognitive jobs.
+- [ ] Defect 2 implementation and logical commit.
+- [ ] Defect 3 fail-first regression: unknown StructuralPlan fields are rejected.
+- [ ] Defect 3 explicit logged legacy adapter and logical commit.
+- [ ] Defect 4 fail-first regression: new path lesson prompt uses 0–3 belief-tested misconceptions.
+- [ ] Defect 4 path-only implementation and logical commit.
+- [ ] Phase 1 full gate: regressions, legacy fixtures, nine invariants, lint, architecture.
+
+### Phase 1 defect 1 evidence — dead role validation
+
+Failing regression before the fix:
+
+```text
+$ cd backend && uv run pytest tests/v3_blueprint/planning/test_validators.py::test_validate_structural_plan_warns_when_skeleton_roles_are_unavailable -q
+F                                                                        [100%]
+E       AssertionError: assert 'skeleton role validation unavailable' in ''
+1 failed, 1 warning in 0.85s
+```
+
+Passing validation after the fix:
+
+```text
+$ cd backend && uv run pytest tests/v3_blueprint/planning/test_validators.py tests/v3_blueprint/planning/test_stage1_error_logging.py -q
+.......................                                                  [100%]
+23 passed, 1 warning in 12.03s
+$ uv run ruff check src/v3_blueprint/planning/validators.py src/v3_blueprint/planning/structural_planner.py tests/v3_blueprint/planning/test_validators.py tests/v3_blueprint/planning/test_stage1_error_logging.py
+All checks passed!
+```
+
+The active resource spec is no longer treated as role authority. When a skeleton catalog is
+provided, roles are checked against `slots` keys. Until Phase 3 supplies the startup-loaded
+catalog, validation logs the explicit `skeleton role validation unavailable` warning.
+
+Pre-commit invariant evidence:
+
+```text
+$ cd backend && uv run pytest tests/v3_execution/test_item_executor.py tests/generation/test_xplore_contracts.py tests/v3_review/test_card_reviewer.py tests/v3_blueprint/planning/test_validators.py -q
+...............................                                          [100%]
+31 passed, 1 warning in 16.31s
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+```
 
 ---
 
