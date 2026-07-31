@@ -6,7 +6,7 @@
 **Branch**: `codex/v2-complete-build`
 **Base branch**: `xplore`
 **Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
-**Current phase**: Phase 6 authorized — complete build before post-build human evaluation
+**Current phase**: Phase 7 in progress — visible end-to-end unit slice
 
 ### Phase checklist
 
@@ -18,7 +18,7 @@
 - [x] Phase 5 — units and path backend validate all three fixtures; unreachable approval is blocked
 - [x] Halt at the human decision gate and write the final handoff report
 - [x] Human owner decision recorded: build Phases 6–13 before the 30-lesson comparative study
-- [ ] Phase 6 — production-complete path-to-Xplore bridge
+- [x] Phase 6 — production-complete path-to-Xplore bridge
 - [ ] Phase 7 — visible end-to-end unit slice
 - [ ] Phase 8 — full path workspace
 - [ ] Phase 9 — teaching schedule and unit groups
@@ -39,6 +39,84 @@ and UI changes.
 This is a timing change, not permission to skip automated validation or weaken machine guards.
 Legacy Studio remains operational, while skeleton authority is scoped to the new unit/path flow.
 The execution plan and per-phase gates are recorded in `handoff/PHASE6_13_BUILD_PLAN.md`.
+
+### Phase 6 tracking
+
+- [x] Persist prepared lessons into the durable chunked review/generation workflow.
+- [x] Carry unit scope, terminology, prior establishment, prerequisites, canonical concept ID,
+  skeleton slots, and immutable objective ownership into preparation.
+- [x] Add explicit preparation status and traceable regeneration contracts.
+- [x] Persist lesson revision, preparation key, mode, groups, supersession, regeneration reason,
+  and invalidation provenance in reversible migration `0022`.
+- [x] Make repeated preparation idempotent and reject incompatible implicit reuse.
+- [x] Protect path-owned objectives at card patch, card reuse, and approval boundaries.
+- [x] Revoke path approval after structural edits so preparation requires a fresh approval.
+- [x] Keep non-persisted differentiation loud until Phase 9 adds real unit groups.
+- [x] Run focused, full, migration, frontend compatibility, architecture, and fixture gates.
+
+### Phase 6 gate result
+
+Focused path/generation lifecycle gate:
+
+```text
+$ cd backend && uv run pytest tests/planning tests/generation/test_xplore_contracts.py tests/generation/test_v3_chunked_lifecycle.py -q
+....................................................                     [100%]
+52 passed, 1 warning in 41.81s
+```
+
+Complete backend gate after the final approval-invalidation change:
+
+```text
+$ cd backend && uv run ruff check src tests
+All checks passed!
+$ cd backend && uv run pytest -q
+........................................................................ [ 15%]
+........................................................................ [ 30%]
+........................................................................ [ 45%]
+........................................................................ [ 60%]
+........................................................................ [ 75%]
+........................................................................ [ 90%]
+..............................................                           [100%]
+478 passed, 1 warning in 133.28s (0:02:13)
+```
+
+Migration `0022` on a disposable database initialized at `0021`:
+
+```text
+$ alembic upgrade head && alembic downgrade -1 && alembic upgrade head
+Running upgrade 20260731_0021 -> 20260731_0022, add path preparation lifecycle
+Running downgrade 20260731_0022 -> 20260731_0021, add path preparation lifecycle
+Running upgrade 20260731_0021 -> 20260731_0022, add path preparation lifecycle
+revision=20260731_0022
+columns=pack_id,path_lesson_revision,lesson_mode,group_ids,preparation_key,
+        supersedes_pack_id,regeneration_reason,invalidated_at
+```
+
+Frontend compatibility:
+
+```text
+$ cd frontend && pnpm exec svelte-check --tsconfig ./tsconfig.json
+svelte-check found 0 errors and 0 warnings
+$ cd frontend && pnpm exec vite build
+✓ built in 3m 2s
+✔ done
+```
+
+Architecture and immutable fixture:
+
+```text
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+**Gate: PASS.** A path preparation now lands in the same durable `awaiting_review` machinery as
+the existing Studio, is resumable by the existing approval/generation routes, retains exact
+objective and slot authority, and can be regenerated only through a traceable explicit revision.
+The negative path remains blocked by the complete suite. Legacy generation behavior remains green.
+
+Phase 6 implementation commit: `efa4f55` (`P6: feat(path): complete resumable lesson preparation`).
 
 ### Phase 0 tracking
 
