@@ -19,6 +19,7 @@
 		"clsx": "^2.1.1",
 		"dompurify": "^3.3.3",
 		"idb": "^8.0.3",
+		"isomorphic-dompurify": "2.26.0",
 		"katex": "^0.16.22",
 		"lectio": "0.6.0",
 		"lucide-svelte": "^0.542.0",
