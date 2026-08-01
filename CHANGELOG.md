@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format follows Keep a Changelog conventions with SemVer release tags.
 
+## [1.0.0-beta.1] - 2026-08-01
+
+### Features
+- Added the destination-first Units workspace with versioned paths, explicit approval, recoverable structural edits, and durable lesson preparation.
+- Added teaching schedules, learner groups, controlled lesson shapes, deterministic resource projections, and unit-scoped Results.
+- Added append-only lesson actuals and aggregate diagnostic marks with advisory misconception summaries.
+- Added read-only compatibility wrappers that expose existing packs as one-lesson legacy units without migrating or rewriting data.
+- Added server-controlled global and account-scoped V2 capability flags, persistent mutation audit events, and limits on expensive planning and composition routes.
+
+### Bug Fixes
+- Preserved path-owned objectives, canonical concept identity, provenance, and approved structure across preparation, regeneration, projections, and outcomes.
+- Kept Legacy Studio, Builder, Lectio rendering, pack printing, and PDF paths available alongside the V2 beta.
+- Updated vulnerable frontend and backend dependencies to patched releases and replaced `python-jose` with PyJWT to remove its vulnerable ECDSA dependency.
+
+### Breaking Changes
+- None for existing Legacy Studio or pack data. Xplore V2 is additive and can be hidden with `XPLORE_V2_ENABLED=false`.
+
+### Other
+- Added reversible migrations through `20260801_0028` and a production rollback procedure that disables V2 without deleting its data.
+- Deferred the 30-lesson comparative human study until after the complete beta is deployed; the user owns that broader tuning review after the one-lesson release smoke passes.
+
 ## [0.1.0] - 2026-03-11
 
 ### Added

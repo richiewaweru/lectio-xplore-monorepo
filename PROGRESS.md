@@ -40,6 +40,75 @@ This is a timing change, not permission to skip automated validation or weaken m
 Legacy Studio remains operational, while skeleton authority is scoped to the new unit/path flow.
 The execution plan and per-phase gates are recorded in `handoff/PHASE6_13_BUILD_PLAN.md`.
 
+### Phase 13 tracking
+
+- [x] Add server-controlled global and account-scoped V2 capability flags.
+- [x] Hide and reject V2 when disabled while preserving Legacy Studio and pack routes.
+- [x] Expose existing owned packs as computed one-lesson compatibility units without migration.
+- [x] Persist unit-mutation audit events with actor, request ID, status, path, and timestamp.
+- [x] Rate limit expensive planning, preparation, regeneration, and composition actions.
+- [x] Keep navigation limited to implemented product surfaces; do not add empty Classes or global
+  Results pages.
+- [x] Pass focused, full backend, full frontend, migration, architecture, and fixture gates.
+- [x] Pass authenticated browser acceptance for capability on/off, compatibility, unit workflow,
+  Builder, Lectio, and PDF.
+- [ ] Merge the validated release into `xplore` and deploy backend/frontend from the same commit.
+- [ ] Pass production health, migration, queue, Builder, Lectio, PDF, audit, and rollback smoke tests.
+- [ ] Tag and publish `v1.0.0-beta.1`, then close the final handoff.
+
+### Phase 13 automated gate result
+
+```text
+$ cd backend && uv run ruff check src tests
+All checks passed!
+$ cd backend && uv run pytest -q
+512 passed, 1 warning in 243.16s
+$ cd backend && uv run pytest tests/planning -q
+54 passed, 1 warning in 77.96s
+$ cd backend && uv run python tools/validate_v2_audit_migration.py
+upgrade=v2_audit_events,persistent_mutation_metadata
+downgrade=clean
+revision=20260801_0028
+$ cd frontend && pnpm test
+76 files passed; 307 tests passed
+$ cd frontend && pnpm run check
+svelte-check found 0 errors and 0 warnings
+$ cd frontend && pnpm run build
+8445 server modules and 8555 client modules transformed; production build passed
+$ cd frontend && pnpm audit --audit-level high
+No known vulnerabilities found
+$ cd frontend && npm audit --audit-level=high
+found 0 vulnerabilities
+$ cd backend && uv run --with pip-audit pip-audit
+No known vulnerabilities found
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+Implementation commit: `c45f547 P13: feat(beta): add controlled V2 convergence`.
+
+Authenticated browser acceptance used a disposable local database and isolated production preview.
+With V2 enabled, the signed-in navigation exposed Units, opened a real path workspace, rendered a
+read-only legacy compatibility unit, followed its resource to the durable Studio generation, and
+rendered the complete Plant cells lesson through Lectio. The PDF endpoint returned a valid two-page
+PDF (38,718 bytes), and a unit mutation persisted an audit event with actor, request ID, route, and
+201 status. With V2 disabled, the capability endpoint returned false, the Units API returned 404,
+`/units` redirected to `/lessons`, Units disappeared from navigation, and Legacy Studio remained
+usable. Temporary browser routes, processes, databases, and tabs were removed after acceptance.
+
+The release security refresh moved vulnerable frontend and backend dependencies to patched
+same-major releases where possible. Python JWT handling moved from `python-jose` to PyJWT so the
+last vulnerable transitive ECDSA package could be removed. The full regression suites, production
+build, architecture guard, migration round-trip, and immutable fixture all remained green.
+
+The first combined frontend check/build command exceeded the five-minute harness limit and ended
+with a broken output pipe. Each command was rerun separately: diagnostics completed in 19 seconds
+and the production build completed successfully in 149.4 seconds. The first complete backend run
+also exceeded a five-minute wrapper after the preceding commands consumed the shared allowance;
+the isolated full-suite rerun completed successfully in 243.16 seconds.
+
 ### Phase 6 tracking
 
 - [x] Persist prepared lessons into the durable chunked review/generation workflow.
