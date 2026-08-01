@@ -97,9 +97,26 @@ function normalizeSection(
 	const rawHeader = isRecord(raw.header) ? raw.header : {};
 	const title = safeText(rawHeader.title) || titleFromSectionId(sectionId);
 	const subject = safeText(rawHeader.subject) || safeText(pack.subject) || 'Lesson';
+	const rawQuiz = isRecord(raw.quiz) ? raw.quiz : null;
+	const normalizedQuiz = rawQuiz
+		? {
+				...rawQuiz,
+				question: safeText(rawQuiz.question) || 'Check your understanding.',
+				feedback_correct: safeText(rawQuiz.feedback_correct) || 'Correct.',
+				feedback_incorrect: safeText(rawQuiz.feedback_incorrect) || 'Review the idea and try again.',
+				options: Array.isArray(rawQuiz.options)
+					? rawQuiz.options.filter(isRecord).map((option) => ({
+							...option,
+							text: safeText(option.text) || 'Option',
+							explanation: safeText(option.explanation) || 'Review this option.'
+						}))
+					: []
+			}
+		: null;
 
 	return {
 		...raw,
+		...(normalizedQuiz ? { quiz: normalizedQuiz } : {}),
 		section_id: sectionId,
 		template_id: templateId,
 		header: {
