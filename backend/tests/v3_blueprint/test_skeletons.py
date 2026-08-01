@@ -64,6 +64,48 @@ def test_variant_overflow_is_reported_without_exceeding_six_slots() -> None:
 
     assert len(preview.slots) <= 6
     assert any("variant_slot_overflow" in warning for warning in preview.warnings)
+    assert preview.blocking_issues[0].code == "variant_slot_overflow"
+
+
+def test_structural_diff_explains_declared_profile_changes() -> None:
+    preview = load_skeleton_catalog().preview_skeleton_by_id(
+        "conceptual.first_exposure",
+        profile="support",
+        misconception_count=1,
+    )
+
+    extra = next(
+        item
+        for item in preview.structural_diff
+        if item.toggle_id == "support.high.extra_contrast"
+    )
+    assert extra.operation == "repeat"
+    assert extra.slot_id == "contrast"
+    assert "confusion" in extra.explanation
+
+
+def test_approved_deviation_is_explicit_and_preserves_locked_check() -> None:
+    deviation = DeviationRequest(
+        id="deviation-1",
+        skeleton_id="conceptual.first_exposure",
+        operation="remove",
+        target_slot="orient",
+        reason="The class already completed the orientation activity.",
+        requested_by="teacher",
+        status="approved",
+    )
+    preview = load_skeleton_catalog().preview_skeleton_by_id(
+        "conceptual.first_exposure",
+        profile="extension",
+        misconception_count=2,
+        approved_deviations=[deviation],
+    )
+
+    assert not preview.blocking_issues
+    assert [slot.slot_id for slot in preview.slots].count("check") == 1
+    applied = next(item for item in preview.structural_diff if item.toggle_id == "deviation:deviation-1")
+    assert applied.operation == "remove"
+    assert "Teacher-approved deviation" in applied.explanation
 
 
 def test_preview_endpoint_performs_zero_model_calls(monkeypatch) -> None:

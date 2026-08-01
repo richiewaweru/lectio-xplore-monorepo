@@ -8,6 +8,7 @@
 		getPathHistory,
 		getPathStatus,
 		getTeachingSchedule,
+		getLessonShape,
 		getUnit,
 		getUnitGroups,
 		getUnitPath,
@@ -15,7 +16,6 @@
 		patchPathLesson,
 		planUnitPath,
 		preparePathLesson,
-		previewSkeleton,
 		regeneratePathLesson,
 		reorderPathLessons,
 		restorePathVersion,
@@ -24,6 +24,7 @@
 	} from '$lib/api/units';
 	import TeachingSchedulePanel from '$lib/components/units/TeachingSchedulePanel.svelte';
 	import UnitGroupsPanel from '$lib/components/units/UnitGroupsPanel.svelte';
+	import LessonShapePanel from '$lib/components/units/LessonShapePanel.svelte';
 	import type {
 		KnowledgeType,
 		LessonMode,
@@ -31,7 +32,7 @@
 		PathStatusAggregate,
 		PathVersionSummary,
 		PreparedLessonStatus,
-		SkeletonPreview,
+		LessonShapePreview,
 		TeachingSchedule,
 		Unit,
 		UnitGroups,
@@ -46,7 +47,8 @@
 	let busy = $state<string | null>(null);
 	let error = $state<string | null>(null);
 	let lessonMode = $state<LessonMode>('first_exposure');
-	let shape = $state<SkeletonPreview | null>(null);
+	let shape = $state<LessonShapePreview | null>(null);
+	let misconceptionCount = $state(1);
 	let preparation = $state<PreparedLessonStatus | null>(null);
 	let history = $state<PathVersionSummary[]>([]);
 	let aggregate = $state<PathStatusAggregate | null>(null);
@@ -122,12 +124,30 @@
 		preparation = null;
 		try {
 			[shape, preparation] = await Promise.all([
-				previewSkeleton(lesson.objective, lessonMode),
+				getLessonShape(unitId, lesson.id, lessonMode, misconceptionCount),
 				getPreparedLessonStatus(unitId, lesson.id)
 			]);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Could not load lesson details.';
 		}
+	}
+
+	async function updateShapeSettings(mode: LessonMode, count: number): Promise<void> {
+		if (!selected) return;
+		lessonMode = mode;
+		misconceptionCount = count;
+		shape = null;
+		try {
+			shape = await getLessonShape(unitId, selected.id, lessonMode, misconceptionCount);
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Could not load the controlled lesson shape.';
+		}
+	}
+
+	async function updateShapeRevision(revision: number): Promise<void> {
+		if (!selected) return;
+		selected.revision = revision;
+		preparation = await getPreparedLessonStatus(unitId, selected.id);
 	}
 
 	async function load(options: { preserveSelection?: boolean } = {}): Promise<void> {
@@ -348,7 +368,21 @@
 						{#if showSplit}<form class="operation-form" onsubmit={splitSelected}><h3>Split into two capabilities</h3><label><span>First title</span><input bind:value={splitATitle} required /></label><label><span>First objective</span><textarea bind:value={splitAObjective} required></textarea></label><label><span>Second title</span><input bind:value={splitBTitle} required /></label><label><span>Second objective</span><textarea bind:value={splitBObjective} required></textarea></label><button class="secondary" type="submit" disabled={busy !== null}>{busy === 'split' ? 'Splitting…' : 'Confirm split'}</button></form>{/if}
 						{#if showMerge && nextLesson}<form class="operation-form" onsubmit={mergeSelected}><h3>Merge with {nextLesson.title}</h3><label><span>Merged title</span><input bind:value={mergeTitle} required /></label><label><span>Merged objective</span><textarea bind:value={mergeObjective} required></textarea></label><button class="secondary" type="submit" disabled={busy !== null}>{busy === 'merge' ? 'Merging…' : 'Confirm merge'}</button></form>{/if}
 
-						<section class="shape"><div class="section-head"><div><p class="eyebrow">Lesson shape</p><h3>{shape?.skeleton_id ?? 'Loading preview…'}</h3></div><label><span>Mode</span><select bind:value={lessonMode} onchange={() => selectLesson(selected)}><option value="first_exposure">First exposure</option><option value="consolidation">Consolidation</option><option value="repair">Repair</option><option value="retrieval">Retrieval</option><option value="transfer">Transfer</option></select></label></div>{#if shape}<div class="variants">{#each shape.variants as variant}<div><strong>{variant.group_profile}</strong><ol>{#each variant.slots as slot}<li class:locked={slot.locked}>{slot.role}</li>{/each}</ol>{#if variant.warnings.length}<small>{variant.warnings.join(' · ')}</small>{/if}</div>{/each}</div>{/if}</section>
+						{#if shape}
+							<LessonShapePanel
+								{unitId}
+								{path}
+								lesson={selected}
+								{shape}
+								{lessonMode}
+								{misconceptionCount}
+								onsettings={updateShapeSettings}
+								onshape={(value) => (shape = value)}
+								onrevision={updateShapeRevision}
+							/>
+						{:else}
+							<section class="shape"><p>Loading controlled lesson shape…</p></section>
+						{/if}
 
 						<section class="prepare">
 							<div><p class="eyebrow">Preparation</p><h3>{preparation?.workflow_stage ?? 'Checking status…'}</h3><p>{preparation?.stale ? 'The existing preparation is stale and must be regenerated.' : 'Preparation enters the durable concept-card review before lesson writing.'}</p></div>
@@ -358,9 +392,9 @@
 							{#if preparation?.stale && preparation.can_regenerate}
 								<form class="regenerate" onsubmit={(event) => { event.preventDefault(); void regenerate(); }}>
 									<label><span>Regeneration reason</span><input bind:value={regenerationReason} minlength="3" maxlength="500" required /></label>
-									<button class="primary" type="submit" disabled={busy !== null || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Regenerating…' : 'Regenerate preparation'}</button>
+									<button class="primary" type="submit" disabled={busy !== null || !shape?.can_prepare || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Regenerating…' : 'Regenerate preparation'}</button>
 								</form>
-							{:else if preparation?.generation_id}<a class="primary link" href={`/studio?generation_id=${encodeURIComponent(preparation.generation_id)}`}>Open review</a>{:else}<button class="primary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={prepare}>{busy === 'prepare' ? 'Preparing…' : 'Prepare lesson'}</button>{/if}
+							{:else if preparation?.generation_id}<a class="primary link" href={`/studio?generation_id=${encodeURIComponent(preparation.generation_id)}`}>Open review</a>{:else}<button class="primary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null || !shape?.can_prepare} onclick={prepare}>{busy === 'prepare' ? 'Preparing…' : 'Prepare lesson'}</button>{/if}
 						</section>
 					</main>
 				{/if}
@@ -467,14 +501,6 @@
 	.operation-form { border: 1px solid var(--rule); border-radius: 8px; background: var(--paper); padding: 16px; }
 	.operation-form > button { justify-self: start; }
 	.shape, .prepare { border-top: 1px solid var(--rule); margin-top: 26px; padding-top: 22px; }
-	.section-head label { min-width: 170px; }
-	.variants { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
-	.variants > div { border: 1px solid var(--rule); border-radius: 7px; padding: 12px; }
-	.variants strong { font-size: 12px; text-transform: capitalize; }
-	.variants ol { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 0; padding: 0; list-style: none; }
-	.variants li { border-radius: 999px; background: var(--paper); color: var(--ink-2); font-size: 10px; padding: 4px 7px; }
-	.variants li.locked { background: var(--accent-soft); color: var(--accent); }
-	.variants small { display: block; margin-top: 8px; color: var(--amber); font-size: 10px; }
 	.prepare { align-items: center; }
 	.regenerate { display: grid; min-width: min(100%, 360px); gap: 8px; }
 	.regenerate button { justify-self: end; }
@@ -495,6 +521,6 @@
 	.confirm-dialog > p:not(.eyebrow) { color: var(--ink-2); font-size: 13px; line-height: 1.5; }
 	.confirm-dialog > div { display: flex; justify-content: end; gap: 8px; margin-top: 18px; }
 	@media (max-width: 980px) { .status-board { grid-template-columns: repeat(4, 1fr); } .path-health { grid-template-columns: 1fr; } }
-	@media (max-width: 840px) { .workspace { grid-template-columns: 1fr; } .path-list { position: static; } .path-list ol { grid-template-columns: repeat(2, 1fr); } .path-summary { grid-template-columns: repeat(2, 1fr); } .variants { grid-template-columns: 1fr; } }
+	@media (max-width: 840px) { .workspace { grid-template-columns: 1fr; } .path-list { position: static; } .path-list ol { grid-template-columns: repeat(2, 1fr); } .path-summary { grid-template-columns: repeat(2, 1fr); } }
 	@media (max-width: 640px) { .unit-page { padding: 28px 16px 60px; } .unit-head, .head-actions, .inspector-head, .section-head, .prepare { align-items: stretch; flex-direction: column; } .history-panel .section-head > p { text-align: left; } .path-list ol, .two, .dependency-grid { grid-template-columns: 1fr; } .status-board { grid-template-columns: repeat(2, 1fr); } .inspector { padding: 18px; } }
 </style>

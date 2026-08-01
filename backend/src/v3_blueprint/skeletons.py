@@ -23,6 +23,29 @@ class SkeletonCatalogError(ValueError):
     pass
 
 
+class DeviationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str | None = None
+    skeleton_id: str
+    operation: Literal["insert", "remove", "replace", "reorder"]
+    target_slot: str
+    replacement_slot: str | None = None
+    reason: str = Field(min_length=1)
+    requested_by: Literal["model", "teacher"]
+    status: Literal["pending_teacher", "approved", "rejected"] = "pending_teacher"
+
+    @model_validator(mode="after")
+    def validate_operation(self) -> DeviationRequest:
+        if self.operation in {"remove", "replace", "reorder"} and self.target_slot == "check":
+            raise ValueError("The locked check slot cannot be removed, replaced, or reordered")
+        if self.operation in {"insert", "replace", "reorder"} and not self.replacement_slot:
+            raise ValueError(f"operation={self.operation} requires replacement_slot")
+        if self.operation in {"insert", "replace"} and self.replacement_slot == "check":
+            raise ValueError("The locked check slot cannot be inserted or duplicated")
+        return self
+
+
 class SkeletonPreviewRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -30,6 +53,7 @@ class SkeletonPreviewRequest(BaseModel):
     lesson_mode: LessonMode
     misconception_count: int = Field(ge=0, le=3)
     group_profiles: list[GroupProfile]
+    approved_deviations: list[DeviationRequest] = Field(default_factory=list)
 
 
 class SkeletonSlotPreview(BaseModel):
@@ -43,6 +67,24 @@ class SkeletonSlotPreview(BaseModel):
     visual_required: bool = False
 
 
+class SkeletonDiffEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    operation: Literal["add", "remove", "replace", "repeat", "reorder"]
+    slot_id: str
+    replacement_slot: str | None = None
+    toggle_id: str
+    explanation: str
+
+
+class SkeletonBlockingIssue(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    code: Literal["variant_slot_overflow", "skeleton_conflict"]
+    message: str
+    toggle_id: str
+
+
 class SkeletonVariantPreview(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -51,6 +93,8 @@ class SkeletonVariantPreview(BaseModel):
     slots: list[SkeletonSlotPreview]
     toggles_applied: list[str]
     warnings: list[str]
+    structural_diff: list[SkeletonDiffEntry] = Field(default_factory=list)
+    blocking_issues: list[SkeletonBlockingIssue] = Field(default_factory=list)
 
 
 class SkeletonPreviewResponse(BaseModel):
@@ -62,24 +106,6 @@ class SkeletonPreviewResponse(BaseModel):
     skeleton_id: str
     skeleton_version: int
     variants: list[SkeletonVariantPreview]
-
-
-class DeviationRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    skeleton_id: str
-    operation: Literal["insert", "remove", "replace", "reorder"]
-    target_slot: str
-    replacement_slot: str | None = None
-    reason: str = Field(min_length=1)
-    requested_by: Literal["model", "teacher"]
-    status: Literal["pending_teacher", "approved", "rejected"] = "pending_teacher"
-
-    @model_validator(mode="after")
-    def preserve_locked_check(self) -> DeviationRequest:
-        if self.operation == "remove" and self.target_slot == "check":
-            raise ValueError("The locked check slot cannot be removed")
-        return self
 
 
 class SkeletonCatalog:
@@ -153,10 +179,11 @@ class SkeletonCatalog:
                 )
             for profile in _PROFILE_SUPPORT_LEVEL:
                 for misconception_count in range(4):
-                    expanded, _toggles, _warnings = self._expand_slots(
+                    expanded, _toggles, _warnings, _diff, _issues = self._expand_slots(
                         skeleton,
                         profile=profile,
                         misconception_count=misconception_count,
+                        approved_deviations=[],
                     )
                     if len(expanded) > self.max_slots:
                         raise SkeletonCatalogError(
@@ -193,6 +220,7 @@ class SkeletonCatalog:
                 skeleton,
                 profile=profile,
                 misconception_count=request.misconception_count,
+                approved_deviations=request.approved_deviations,
             )
             for profile in request.group_profiles
         ]
@@ -211,6 +239,7 @@ class SkeletonCatalog:
         *,
         profile: GroupProfile = "core",
         misconception_count: int = 1,
+        approved_deviations: list[DeviationRequest] | None = None,
     ) -> SkeletonVariantPreview:
         skeleton = self.skeletons.get(skeleton_id)
         if skeleton is None:
@@ -219,6 +248,7 @@ class SkeletonCatalog:
             skeleton,
             profile=profile,
             misconception_count=misconception_count,
+            approved_deviations=approved_deviations or [],
         )
 
     def _preview_variant(
@@ -227,11 +257,13 @@ class SkeletonCatalog:
         *,
         profile: GroupProfile,
         misconception_count: int,
+        approved_deviations: list[DeviationRequest],
     ) -> SkeletonVariantPreview:
-        expanded, toggles, warnings = self._expand_slots(
+        expanded, toggles, warnings, structural_diff, blocking_issues = self._expand_slots(
             skeleton,
             profile=profile,
             misconception_count=misconception_count,
+            approved_deviations=approved_deviations,
         )
         slots = [
             SkeletonSlotPreview(
@@ -250,6 +282,8 @@ class SkeletonCatalog:
             slots=slots,
             toggles_applied=toggles,
             warnings=warnings,
+            structural_diff=structural_diff,
+            blocking_issues=blocking_issues,
         )
 
     def _expand_slots(
@@ -258,28 +292,99 @@ class SkeletonCatalog:
         *,
         profile: GroupProfile,
         misconception_count: int,
-    ) -> tuple[list[str], list[str], list[str]]:
+        approved_deviations: list[DeviationRequest],
+    ) -> tuple[
+        list[str],
+        list[str],
+        list[str],
+        list[SkeletonDiffEntry],
+        list[SkeletonBlockingIssue],
+    ]:
         slots = [str(slot_id) for slot_id in skeleton["slots"]]
         applied: list[str] = []
         warnings: list[str] = []
+        structural_diff: list[SkeletonDiffEntry] = []
+        blocking_issues: list[SkeletonBlockingIssue] = []
         knowledge_type = str(skeleton.get("knowledge_type"))
         support_level = _PROFILE_SUPPORT_LEVEL[profile]
 
+        for index, deviation in enumerate(approved_deviations, start=1):
+            if deviation.status != "approved":
+                continue
+            if deviation.skeleton_id != str(skeleton["id"]):
+                self._record_issue(
+                    warnings,
+                    blocking_issues,
+                    code="skeleton_conflict",
+                    toggle_id=f"deviation:{deviation.id or index}",
+                    message=(
+                        f"approved deviation targets skeleton '{deviation.skeleton_id}', "
+                        f"not '{skeleton['id']}'"
+                    ),
+                )
+                continue
+            self._apply_deviation(
+                slots,
+                deviation,
+                index=index,
+                applied=applied,
+                structural_diff=structural_diff,
+                warnings=warnings,
+                blocking_issues=blocking_issues,
+            )
+
         if "confront" in slots:
             first = slots.index("confront")
+            previous_count = slots.count("confront")
             slots = [slot for slot in slots if slot != "confront"]
             desired = min(misconception_count, 2)
             for offset in range(desired):
                 slots.insert(first + offset, "confront")
             applied.append("misconception.confront_per_belief")
+            for _ in range(max(0, previous_count - desired)):
+                structural_diff.append(
+                    SkeletonDiffEntry(
+                        operation="remove",
+                        slot_id="confront",
+                        toggle_id="misconception.confront_per_belief",
+                        explanation="No unaddressed approved misconception needs this confrontation slot.",
+                    )
+                )
+            for _ in range(max(0, desired - previous_count)):
+                structural_diff.append(
+                    SkeletonDiffEntry(
+                        operation="repeat",
+                        slot_id="confront",
+                        toggle_id="misconception.confront_per_belief",
+                        explanation="Repeat confrontation once per approved misconception, up to two slots.",
+                    )
+                )
 
         if support_level == "high" and knowledge_type == "procedural":
-            slots = ["model" if slot == "independent" else slot for slot in slots]
-            applied.append("support.high.extra_modelling")
+            if "independent" in slots:
+                slots = ["model" if slot == "independent" else slot for slot in slots]
+                applied.append("support.high.extra_modelling")
+                structural_diff.append(
+                    SkeletonDiffEntry(
+                        operation="replace",
+                        slot_id="independent",
+                        replacement_slot="model",
+                        toggle_id="support.high.extra_modelling",
+                        explanation="Replace premature independent work with an additional worked model.",
+                    )
+                )
 
         if support_level == "high" and "independent" in slots and "guided" in slots:
             slots.remove("independent")
             applied.append("support.high.drop_independent")
+            structural_diff.append(
+                SkeletonDiffEntry(
+                    operation="remove",
+                    slot_id="independent",
+                    toggle_id="support.high.drop_independent",
+                    explanation="Keep practice guided until the group is ready for independent work.",
+                )
+            )
 
         if support_level == "high" and knowledge_type == "conceptual":
             self._insert_with_limit(
@@ -290,6 +395,9 @@ class SkeletonCatalog:
                 toggle_id="support.high.extra_contrast",
                 applied=applied,
                 warnings=warnings,
+                structural_diff=structural_diff,
+                blocking_issues=blocking_issues,
+                explanation="Repeat contrast to separate the target idea from a likely confusion.",
             )
 
         if support_level == "low":
@@ -301,12 +409,23 @@ class SkeletonCatalog:
                 toggle_id="support.low.add_transfer",
                 applied=applied,
                 warnings=warnings,
+                structural_diff=structural_diff,
+                blocking_issues=blocking_issues,
+                explanation="Add transfer so the group applies the capability in a less familiar case.",
             )
             if len(slots) >= self.max_slots and "orient" in slots:
                 slots.remove("orient")
                 applied.append("support.low.drop_orient")
+                structural_diff.append(
+                    SkeletonDiffEntry(
+                        operation="remove",
+                        slot_id="orient",
+                        toggle_id="support.low.drop_orient",
+                        explanation="Remove orientation when space is needed for extension transfer.",
+                    )
+                )
 
-        return slots, applied, warnings
+        return slots, applied, warnings, structural_diff, blocking_issues
 
     def _insert_with_limit(
         self,
@@ -318,20 +437,121 @@ class SkeletonCatalog:
         toggle_id: str,
         applied: list[str],
         warnings: list[str],
+        structural_diff: list[SkeletonDiffEntry],
+        blocking_issues: list[SkeletonBlockingIssue],
+        explanation: str,
     ) -> None:
         if len(slots) >= self.max_slots:
-            warnings.append(
-                f"variant_slot_overflow: skipped toggle '{toggle_id}' at {self.max_slots} slots"
+            self._record_issue(
+                warnings,
+                blocking_issues,
+                code="variant_slot_overflow",
+                toggle_id=toggle_id,
+                message=f"skipped toggle '{toggle_id}' at {self.max_slots} slots",
             )
             return
         if anchor not in slots:
-            warnings.append(
-                f"skeleton_conflict: toggle '{toggle_id}' anchor '{anchor}' is absent"
+            self._record_issue(
+                warnings,
+                blocking_issues,
+                code="skeleton_conflict",
+                toggle_id=toggle_id,
+                message=f"toggle '{toggle_id}' anchor '{anchor}' is absent",
             )
             return
         index = slots.index(anchor) + (1 if after else 0)
+        operation = "repeat" if slot_id in slots else "add"
         slots.insert(index, slot_id)
         applied.append(toggle_id)
+        structural_diff.append(
+            SkeletonDiffEntry(
+                operation=operation,
+                slot_id=slot_id,
+                toggle_id=toggle_id,
+                explanation=explanation,
+            )
+        )
+
+    @staticmethod
+    def _record_issue(
+        warnings: list[str],
+        blocking_issues: list[SkeletonBlockingIssue],
+        *,
+        code: Literal["variant_slot_overflow", "skeleton_conflict"],
+        toggle_id: str,
+        message: str,
+    ) -> None:
+        warnings.append(f"{code}: {message}")
+        blocking_issues.append(
+            SkeletonBlockingIssue(code=code, message=message, toggle_id=toggle_id)
+        )
+
+    def _apply_deviation(
+        self,
+        slots: list[str],
+        deviation: DeviationRequest,
+        *,
+        index: int,
+        applied: list[str],
+        structural_diff: list[SkeletonDiffEntry],
+        warnings: list[str],
+        blocking_issues: list[SkeletonBlockingIssue],
+    ) -> None:
+        toggle_id = f"deviation:{deviation.id or index}"
+        replacement = deviation.replacement_slot
+        if deviation.target_slot not in slots:
+            self._record_issue(
+                warnings,
+                blocking_issues,
+                code="skeleton_conflict",
+                toggle_id=toggle_id,
+                message=f"deviation target '{deviation.target_slot}' is absent",
+            )
+            return
+        if replacement is not None and replacement not in self.slots:
+            self._record_issue(
+                warnings,
+                blocking_issues,
+                code="skeleton_conflict",
+                toggle_id=toggle_id,
+                message=f"deviation replacement '{replacement}' is not a declared slot",
+            )
+            return
+        if deviation.operation == "insert":
+            if len(slots) >= self.max_slots:
+                self._record_issue(
+                    warnings,
+                    blocking_issues,
+                    code="variant_slot_overflow",
+                    toggle_id=toggle_id,
+                    message=f"approved insertion exceeds the {self.max_slots}-slot limit",
+                )
+                return
+            repeated = replacement in slots
+            slots.insert(slots.index(deviation.target_slot), str(replacement))
+            operation: Literal["add", "remove", "replace", "repeat", "reorder"] = (
+                "repeat" if repeated else "add"
+            )
+        elif deviation.operation == "remove":
+            slots.remove(deviation.target_slot)
+            operation = "remove"
+        elif deviation.operation == "replace":
+            slots[slots.index(deviation.target_slot)] = str(replacement)
+            operation = "replace"
+        else:
+            moved = slots.pop(slots.index(deviation.target_slot))
+            slots.insert(slots.index(str(replacement)), moved)
+            operation = "reorder"
+        applied.append(toggle_id)
+        structural_diff.append(
+            SkeletonDiffEntry(
+                operation=operation,
+                slot_id=deviation.target_slot,
+                replacement_slot=replacement,
+                toggle_id=toggle_id,
+                explanation=f"Teacher-approved deviation: {deviation.reason}",
+            )
+        )
 
 
 def classify_for_preview(objective: str) -> KnowledgeType:

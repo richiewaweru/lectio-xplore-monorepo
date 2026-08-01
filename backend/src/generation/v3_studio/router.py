@@ -1293,6 +1293,27 @@ async def _run_chunked_stage2_pipeline(
         )
 
 
+def _variant_plan_for_fanout(
+    state: dict[str, Any],
+    variant_label: str,
+) -> dict[str, Any] | None:
+    """Select the declared variant structure while retaining approved shared cards."""
+    variant_plans = state.get("variant_structural_plans")
+    selected_plan = (
+        deepcopy(variant_plans.get(variant_label))
+        if isinstance(variant_plans, dict)
+        and isinstance(variant_plans.get(variant_label), dict)
+        else deepcopy(state.get("structural_plan"))
+    )
+    canonical_plan = state.get("structural_plan")
+    if isinstance(selected_plan, dict) and isinstance(canonical_plan, dict):
+        selected_plan["cards"] = deepcopy(canonical_plan.get("cards", []))
+        if "lesson_intent" in canonical_plan:
+            selected_plan["lesson_intent"] = deepcopy(canonical_plan["lesson_intent"])
+        return selected_plan
+    return None
+
+
 async def _prepare_variant_generations(
     *,
     coordinator_id: str,
@@ -1327,16 +1348,16 @@ async def _prepare_variant_generations(
         generation_id = generation_ids.get(variant.label) or str(uuid.uuid4())
         generation_ids[variant.label] = generation_id
         resource_id = f"variant-{index + 1}"
+        selected_plan = _variant_plan_for_fanout(state, variant.label)
+        selected_sections = (
+            selected_plan.get("sections", []) if isinstance(selected_plan, dict) else []
+        )
         await _ensure_chunked_generation_row(
             generation_id=generation_id,
             user_id=user_id,
             subject=form.subject,
             context=f"{form.topic} — {variant.label}",
-            section_count=len(
-                state.get("structural_plan", {}).get("sections", [])
-                if isinstance(state.get("structural_plan"), dict)
-                else []
-            ),
+            section_count=len(selected_sections),
             pack_id=pack_id,
             pack_resource_id=resource_id,
             pack_resource_label=variant.label,
@@ -1349,14 +1370,11 @@ async def _prepare_variant_generations(
                 "pack_id": pack_id,
                 "coordinator_generation_id": coordinator_id,
                 "variant_spec": variant.model_dump(mode="json"),
-                "structural_plan": deepcopy(state.get("structural_plan")),
+                "structural_plan": selected_plan,
                 "section_briefs": {
-                    section_id: None
-                    for section_id in (
-                        state.get("section_briefs", {}).keys()
-                        if isinstance(state.get("section_briefs"), dict)
-                        else []
-                    )
+                    str(section["id"]): None
+                    for section in selected_sections
+                    if isinstance(section, dict) and section.get("id")
                 },
                 "failed_sections": [],
                 "context": deepcopy(state.get("context")),

@@ -5,9 +5,12 @@ vi.mock('./errors', () => ({ ensureOk: vi.fn().mockResolvedValue(undefined) }));
 
 import { apiFetch } from './client';
 import {
+	decideShapeDeviation,
+	getLessonShape,
 	planUnitPath,
 	preparePathLesson,
 	previewSkeleton,
+	requestShapeDeviation,
 	saveTeachingSchedule,
 	saveUnitGroups,
 	suggestTeachingSchedule
@@ -73,7 +76,7 @@ describe('unit API helpers', () => {
 	});
 
 	it('previews all three declared group shapes without a generation call', async () => {
-		vi.mocked(apiFetch).mockResolvedValue(ok({ variants: [] }));
+		vi.mocked(apiFetch).mockImplementation(async () => ok({ variants: [] }));
 		await previewSkeleton('Explain photosynthesis.', 'first_exposure');
 
 		const [, init] = vi.mocked(apiFetch).mock.calls[0];
@@ -82,6 +85,32 @@ describe('unit API helpers', () => {
 			'core',
 			'extension'
 		]);
+	});
+
+	it('loads and explicitly approves path-owned shape deviations', async () => {
+		vi.mocked(apiFetch).mockImplementation(async () => ok({ variants: [] }));
+		await getLessonShape('unit-1', 'lesson-1', 'repair', 2);
+		expect(vi.mocked(apiFetch).mock.calls[0][0]).toBe(
+			'/api/v1/units/unit-1/path/lessons/lesson-1/shape?lesson_mode=repair&misconception_count=2'
+		);
+
+		await requestShapeDeviation('unit-1', activePath, activeLesson, {
+			lesson_mode: 'repair', operation: 'replace', target_slot: 'explain',
+			replacement_slot: 'model', reason: 'A worked scientific model is required.'
+		});
+		let [, init] = vi.mocked(apiFetch).mock.calls[1];
+		expect(JSON.parse(String((init as RequestInit).body))).toEqual({
+			path_version_id: 'path-1', path_revision: 4, lesson_revision: 2,
+			lesson_mode: 'repair', operation: 'replace', target_slot: 'explain',
+			replacement_slot: 'model', reason: 'A worked scientific model is required.'
+		});
+
+		await decideShapeDeviation('unit-1', activePath, activeLesson, 'dev 1', 'approve');
+		[, init] = vi.mocked(apiFetch).mock.calls[2];
+		expect(vi.mocked(apiFetch).mock.calls[2][0]).toContain('/dev%201:approve');
+		expect(JSON.parse(String((init as RequestInit).body))).toEqual({
+			path_version_id: 'path-1', path_revision: 4, lesson_revision: 2
+		});
 	});
 
 	it('uses time only in schedule suggestion and guards schedule persistence', async () => {

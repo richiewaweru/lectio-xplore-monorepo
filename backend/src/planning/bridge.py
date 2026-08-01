@@ -32,6 +32,7 @@ from planning.models import (
 from planning.schedule import selected_unit_groups
 from v3_blueprint.planning.models import (
     AnchorSpec,
+    ComponentSlot,
     ConceptCard,
     LessonIntent,
     QPlanItem,
@@ -41,7 +42,16 @@ from v3_blueprint.planning.models import (
 )
 from v3_blueprint.planning.objective_ownership import ObjectiveOwnership, ObjectiveOwnershipError
 from v3_blueprint.planning.persistence import load_chunked_state
-from v3_blueprint.skeletons import SkeletonPreviewRequest, load_skeleton_catalog
+from v3_blueprint.skeletons import (
+    SkeletonPreviewRequest,
+    SkeletonVariantPreview,
+    load_skeleton_catalog,
+)
+from planning.shapes import (
+    approved_deviation_contracts,
+    deviation_payload,
+    lesson_deviations,
+)
 
 
 class PathPreparationBlocked(ValueError):
@@ -184,6 +194,74 @@ def _build_structural_plan(
     return plan
 
 
+def _blocking_shape_message(variants: list[SkeletonVariantPreview]) -> str | None:
+    issues = [
+        f"{variant.group_profile}: {issue.code} — {issue.message}"
+        for variant in variants
+        for issue in variant.blocking_issues
+    ]
+    if not issues:
+        return None
+    return "Shape preparation is blocked: " + "; ".join(issues)
+
+
+def _materialize_variant_plan(
+    *,
+    base_plan: StructuralPlan,
+    preview: SkeletonVariantPreview,
+    component_selections: dict[str, ComponentSelection],
+) -> StructuralPlan:
+    base_by_role: dict[str, list[SectionPlan]] = {}
+    for section in base_plan.sections:
+        base_by_role.setdefault(section.role, []).append(section)
+    occurrence: dict[str, int] = {}
+    sections: list[SectionPlan] = []
+    for position, slot in enumerate(preview.slots):
+        occurrence[slot.slot_id] = occurrence.get(slot.slot_id, 0) + 1
+        slot_occurrence = occurrence[slot.slot_id]
+        existing = base_by_role.get(slot.slot_id, [])
+        if slot_occurrence <= len(existing):
+            section = existing[slot_occurrence - 1].model_copy(deep=True)
+        else:
+            selection = component_selections[slot.slot_id]
+            section = SectionPlan(
+                id=(slot.slot_id if slot_occurrence == 1 else f"{slot.slot_id}-{slot_occurrence}"),
+                title=(slot.purpose.strip() or slot.role.replace("_", " ").title())[:80],
+                role=slot.slot_id,
+                card_id=base_plan.cards[0].id,
+                visual_required=slot.visual_required,
+                transition_note=None,
+                components=[
+                    ComponentSlot(slug=component.slug, purpose=component.purpose)
+                    for component in selection.components
+                ],
+            )
+        section.id = slot.slot_id if slot_occurrence == 1 else f"{slot.slot_id}-{slot_occurrence}"
+        section.role = slot.slot_id
+        section.transition_note = (
+            None
+            if position == 0
+            else f"Builds from the prior slot to {slot.purpose.strip() or slot.role}."[:120]
+        )
+        sections.append(section)
+    check_sections = [section for section in sections if section.role == "check"]
+    if len(check_sections) != 1:
+        raise PathPreparationBlocked("Every differentiated shape must retain one shared check slot")
+    return base_plan.model_copy(
+        deep=True,
+        update={
+            "sections": sections,
+            "question_plan": [
+                QPlanItem(
+                    question_id="q-check-1",
+                    section_id=check_sections[0].id,
+                    temperature="cold",
+                )
+            ],
+        },
+    )
+
+
 async def prepare_path_lesson(
     session: AsyncSession,
     *,
@@ -205,6 +283,7 @@ async def prepare_path_lesson(
         unit_id=unit.id,
         group_ids=request.group_ids,
     )
+    deviations = await lesson_deviations(session, lesson_id=lesson.id)
     previous_pack_id = lesson.pack_id
     if regenerate and not previous_pack_id:
         raise PathPreparationBlocked("No existing preparation is available to regenerate")
@@ -259,27 +338,62 @@ async def prepare_path_lesson(
         lesson=lesson,
     )
     catalog = load_skeleton_catalog()
+    skeleton = catalog.skeleton_for(lesson.primary_knowledge_type, request.lesson_mode)
+    skeleton_id = str(skeleton["id"])
+    relevant_deviations = [
+        item
+        for item in deviations
+        if item.lesson_mode == request.lesson_mode and item.skeleton_id == skeleton_id
+    ]
+    pending_deviations = [
+        item for item in relevant_deviations if item.status == "pending_teacher"
+    ]
+    if pending_deviations:
+        raise PathPreparationBlocked(
+            "Shape preparation has a pending deviation; approve or reject it first"
+        )
+    approved_deviations = approved_deviation_contracts(
+        relevant_deviations,
+        lesson_mode=request.lesson_mode,
+        skeleton_id=skeleton_id,
+    )
     preview = catalog.preview(
         SkeletonPreviewRequest(
             objective=lesson.objective,
             lesson_mode=request.lesson_mode,
             misconception_count=0,
             group_profiles=["core"],
+            approved_deviations=approved_deviations,
         ),
         knowledge_type=lesson.primary_knowledge_type,
     )
-    group_preview = catalog.preview(
-        SkeletonPreviewRequest(
-            objective=lesson.objective,
-            lesson_mode=request.lesson_mode,
-            misconception_count=0,
-            group_profiles=[group.profile for group in groups] or ["core"],
-        ),
-        knowledge_type=lesson.primary_knowledge_type,
-    )
+    blocking = _blocking_shape_message(preview.variants)
+    if blocking:
+        raise PathPreparationBlocked(blocking)
     slots = [slot.slot_id for slot in preview.variants[0].slots]
+    possible_previews = [
+        catalog.preview(
+            SkeletonPreviewRequest(
+                objective=lesson.objective,
+                lesson_mode=request.lesson_mode,
+                misconception_count=count,
+                group_profiles=[group.profile for group in groups] or ["core"],
+                approved_deviations=approved_deviations,
+            ),
+            knowledge_type=lesson.primary_knowledge_type,
+        )
+        for count in (0, 1, 2)
+    ]
+    preparation_group_preview = possible_previews[0]
+    slots_by_id = {
+        slot.slot_id: slot
+        for possible in possible_previews
+        for variant in possible.variants
+        for slot in variant.slots
+    }
+    slots_by_id.update({slot.slot_id: slot for slot in preview.variants[0].slots})
     component_selections: dict[str, ComponentSelection] = {}
-    for slot in preview.variants[0].slots:
+    for slot in slots_by_id.values():
         registry_cards = [
             card
             for component_id in slot.allowed_components
@@ -333,7 +447,8 @@ async def prepare_path_lesson(
             for group in groups
         ],
         "variant_previews": [
-            variant.model_dump(mode="json") for variant in group_preview.variants
+            variant.model_dump(mode="json")
+            for variant in preparation_group_preview.variants
         ],
     }
     generated = await structural_planner(fixed_context)
@@ -348,6 +463,22 @@ async def prepare_path_lesson(
             for slot_id, selection in component_selections.items()
         },
     )
+    misconception_count = min(len(plan.cards[0].misconceptions), 3)
+    group_preview = catalog.preview(
+        SkeletonPreviewRequest(
+            objective=lesson.objective,
+            lesson_mode=request.lesson_mode,
+            misconception_count=misconception_count,
+            group_profiles=[group.profile for group in groups] or ["core"],
+            approved_deviations=approved_deviations,
+        ),
+        knowledge_type=lesson.primary_knowledge_type,
+    )
+    blocking = _blocking_shape_message(group_preview.variants)
+    if blocking:
+        raise PathPreparationBlocked(
+            f"{blocking}. Resolve the structural conflict or narrow approved misconceptions."
+        )
 
     generation_id = str(uuid.uuid4())
     variants = [
@@ -360,6 +491,18 @@ async def prepare_path_lesson(
         )
         for group in groups
     ]
+    variant_plans = (
+        {
+            group.label: _materialize_variant_plan(
+                base_plan=plan,
+                preview=variant_preview,
+                component_selections=component_selections,
+            )
+            for group, variant_preview in zip(groups, group_preview.variants, strict=True)
+        }
+        if groups
+        else {}
+    )
     learning_pack_id = str(uuid.uuid4()) if variants else None
     if learning_pack_id is not None:
         resources = [
@@ -421,7 +564,13 @@ async def prepare_path_lesson(
                     for toggle in variant.toggles_applied
                 )
             ),
-            deviations_applied=[],
+            deviations_requested=[deviation_payload(item) for item in relevant_deviations],
+            deviations_approved=[
+                deviation_payload(item)
+                for item in relevant_deviations
+                if item.status == "approved"
+            ],
+            deviations_applied=[deviation.model_dump(mode="json") for deviation in approved_deviations],
             path_lesson_revision=lesson.revision,
             lesson_mode=request.lesson_mode,
             group_ids=sorted(request.group_ids),
@@ -451,6 +600,7 @@ async def prepare_path_lesson(
         prior_established=prior_established,
         scope_contract=scope_contract,
         variants=variants,
+        variant_plans=variant_plans,
     )
     lesson.pack_id = generation_id
     await session.flush()

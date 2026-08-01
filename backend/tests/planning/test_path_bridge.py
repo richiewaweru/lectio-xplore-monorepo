@@ -24,12 +24,14 @@ from planning.models import (
     PathStructuralPlan,
     PrepareLessonRequest,
     SelectedComponent,
+    ShapeDeviationCreateRequest,
     UnitCreate,
     UnitGroupInput,
     UnitGroupsWriteRequest,
 )
 from planning.schedule import write_groups
 from planning.service import approve_path, create_unit, persist_path_plan
+from planning.shapes import decide_shape_deviation, request_shape_deviation
 from v3_blueprint.planning.objective_ownership import hash_path_objective
 from v3_blueprint.planning.persistence import load_chunked_state
 
@@ -215,6 +217,85 @@ async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None
     assert lesson.pack_id == regenerated.generation_id
 
 
+async def test_approved_shape_deviation_survives_safe_regeneration(db_session) -> None:
+    user = UserModel(id="bridge-shape", email="bridge-shape@example.invalid", name="Shape")
+    db_session.add(user)
+    plan = PathPlan.model_validate_json(FIXTURE.read_text(encoding="utf-8"))
+    unit = await create_unit(
+        db_session,
+        owner_id=user.id,
+        request=UnitCreate(
+            title="Photosynthesis",
+            topic="Photosynthesis",
+            subject="Science",
+            grade_level="Grade 4",
+            destination_objective=plan.destination_objective or "Destination",
+            starting_knowledge=plan.starting_knowledge,
+        ),
+    )
+    version = await persist_path_plan(db_session, unit=unit, plan=plan)
+    await approve_path(db_session, version)
+    lesson = await db_session.scalar(
+        select(PathLessonModel)
+        .where(
+            PathLessonModel.path_version_id == version.id,
+            PathLessonModel.primary_knowledge_type == "conceptual",
+        )
+        .order_by(PathLessonModel.position)
+    )
+    assert lesson is not None
+    deviation = await request_shape_deviation(
+        db_session,
+        lesson=lesson,
+        request=ShapeDeviationCreateRequest(
+            path_version_id=version.id,
+            path_revision=version.revision,
+            lesson_revision=lesson.revision,
+            lesson_mode="first_exposure",
+            operation="remove",
+            target_slot="orient",
+            reason="Make room for misconception repair without scope drift.",
+        ),
+    )
+    await decide_shape_deviation(
+        db_session,
+        lesson=lesson,
+        deviation_id=deviation.id,
+        approved=True,
+        decided_by=user.id,
+    )
+
+    first, first_plan = await prepare_path_lesson(
+        db_session,
+        unit=unit,
+        version=version,
+        lesson=lesson,
+        request=PrepareLessonRequest(lesson_mode="first_exposure"),
+        structural_planner=_fake_structural_planner,
+        component_selector=_fake_component_selector,
+    )
+    regenerated, regenerated_plan = await prepare_path_lesson(
+        db_session,
+        unit=unit,
+        version=version,
+        lesson=lesson,
+        request=PrepareLessonRequest(lesson_mode="first_exposure"),
+        structural_planner=_fake_structural_planner,
+        component_selector=_fake_component_selector,
+        regenerate=True,
+        regeneration_reason="Refresh after teacher review.",
+    )
+
+    assert "orient" not in [section.role for section in first_plan.sections]
+    assert "orient" not in [section.role for section in regenerated_plan.sections]
+    first_provenance = await db_session.get(LessonProvenanceModel, first.generation_id)
+    replacement = await db_session.get(LessonProvenanceModel, regenerated.generation_id)
+    assert first_provenance is not None and replacement is not None
+    assert replacement.deviations_approved == first_provenance.deviations_approved
+    assert replacement.deviations_applied == first_provenance.deviations_applied
+    assert replacement.deviations_applied[0]["target_slot"] == "orient"
+
+
 async def test_prepare_bridge_uses_persisted_groups_and_one_shared_pack(db_session) -> None:
     user = UserModel(id="bridge-groups", email="bridge-groups@example.invalid", name="Groups")
     db_session.add(user)
@@ -302,6 +383,17 @@ async def test_prepare_bridge_uses_persisted_groups_and_one_shared_pack(db_sessi
         "Core",
         "Extension",
     ]
+    variant_plans = state["variant_structural_plans"]
+    support_roles = [section["role"] for section in variant_plans["Support"]["sections"]]
+    core_roles = [section["role"] for section in variant_plans["Core"]["sections"]]
+    extension_roles = [section["role"] for section in variant_plans["Extension"]["sections"]]
+    assert support_roles != core_roles
+    assert extension_roles != core_roles
+    assert all(roles.count("check") == 1 for roles in (support_roles, core_roles, extension_roles))
+    assert {
+        variant_plans[label]["lesson_intent"]["goal"]
+        for label in ("Support", "Core", "Extension")
+    } == {lesson.objective}
     card = await db_session.get(
         ConceptCardModel,
         f"{pack.id}:{lesson.concept_id}",

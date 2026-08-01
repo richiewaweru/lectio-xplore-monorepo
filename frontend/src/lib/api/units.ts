@@ -2,6 +2,8 @@ import { apiFetch } from '$lib/api/client';
 import { ensureOk } from '$lib/api/errors';
 import type {
 	KnowledgeType,
+	LessonShapeDeviation,
+	LessonShapePreview,
 	LessonMode,
 	PathLesson,
 	PathPlannerInput,
@@ -277,4 +279,65 @@ export function previewSkeleton(objective: string, lessonMode: LessonMode): Prom
 			group_profiles: ['support', 'core', 'extension']
 		})
 	});
+}
+
+export function getLessonShape(
+	unitId: string,
+	lessonId: string,
+	lessonMode: LessonMode,
+	misconceptionCount: number
+): Promise<LessonShapePreview> {
+	const query = new URLSearchParams({
+		lesson_mode: lessonMode,
+		misconception_count: String(misconceptionCount)
+	});
+	return jsonRequest(
+		`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons/${encodeURIComponent(lessonId)}/shape?${query}`,
+		'Could not load the controlled lesson shape.'
+	);
+}
+
+export function requestShapeDeviation(
+	unitId: string,
+	path: UnitPath,
+	lesson: PathLesson,
+	input: {
+		lesson_mode: LessonMode;
+		operation: 'insert' | 'remove' | 'replace' | 'reorder';
+		target_slot: string;
+		replacement_slot: string | null;
+		reason: string;
+	}
+): Promise<LessonShapeDeviation> {
+	return jsonRequest(
+		`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons/${encodeURIComponent(lesson.id)}/shape/deviations`,
+		'Could not request the shape deviation.',
+		{
+			method: 'POST', headers: jsonHeaders,
+			body: JSON.stringify({
+				path_version_id: path.id, path_revision: path.revision,
+				lesson_revision: lesson.revision, ...input
+			})
+		}
+	);
+}
+
+export function decideShapeDeviation(
+	unitId: string,
+	path: UnitPath,
+	lesson: PathLesson,
+	deviationId: string,
+	decision: 'approve' | 'reject'
+): Promise<LessonShapeDeviation & { lesson_revision: number }> {
+	return jsonRequest(
+		`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons/${encodeURIComponent(lesson.id)}/shape/deviations/${encodeURIComponent(deviationId)}:${decision}`,
+		`Could not ${decision} the shape deviation.`,
+		{
+			method: 'POST', headers: jsonHeaders,
+			body: JSON.stringify({
+				path_version_id: path.id, path_revision: path.revision,
+				lesson_revision: lesson.revision
+			})
+		}
+	);
 }

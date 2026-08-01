@@ -224,6 +224,20 @@ class ScheduleSuggestRequest(PathVersionMutationRequest):
     minutes_per_period: int = Field(ge=10, le=240)
 
 
+class ShapeDeviationCreateRequest(PathLessonMutationRequest):
+    lesson_mode: Literal[
+        "first_exposure", "consolidation", "repair", "retrieval", "transfer"
+    ]
+    operation: Literal["insert", "remove", "replace", "reorder"]
+    target_slot: str = Field(min_length=1, max_length=80)
+    replacement_slot: str | None = Field(default=None, max_length=80)
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class ShapeDeviationDecisionRequest(PathLessonMutationRequest):
+    pass
+
+
 class PrepareLessonRequest(StrictModel):
     group_ids: list[str] = Field(default_factory=list)
     lesson_mode: Literal["first_exposure", "consolidation", "repair", "retrieval", "transfer"]

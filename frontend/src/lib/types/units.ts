@@ -150,19 +150,72 @@ export interface SkeletonSlotPreview {
 	visual_required: boolean;
 }
 
+export interface SkeletonDiffEntry {
+	operation: 'add' | 'remove' | 'replace' | 'repeat' | 'reorder';
+	slot_id: string;
+	replacement_slot: string | null;
+	toggle_id: string;
+	explanation: string;
+}
+
+export interface SkeletonBlockingIssue {
+	code: 'variant_slot_overflow' | 'skeleton_conflict';
+	message: string;
+	toggle_id: string;
+}
+
+export interface SkeletonVariantShape {
+	group_profile: 'support' | 'core' | 'extension';
+	support_level: string;
+	slots: SkeletonSlotPreview[];
+	toggles_applied: string[];
+	warnings: string[];
+	structural_diff: SkeletonDiffEntry[];
+	blocking_issues: SkeletonBlockingIssue[];
+}
+
 export interface SkeletonPreview {
 	objective: string;
 	knowledge_type: KnowledgeType;
 	knowledge_type_source: 'deterministic_preview' | 'provided';
 	skeleton_id: string;
 	skeleton_version: number;
-	variants: {
-		group_profile: 'support' | 'core' | 'extension';
-		support_level: string;
-		slots: SkeletonSlotPreview[];
-		toggles_applied: string[];
-		warnings: string[];
-	}[];
+	variants: SkeletonVariantShape[];
+}
+
+export interface LessonShapeDeviation {
+	id: string;
+	skeleton_id: string;
+	skeleton_version: number;
+	lesson_mode: LessonMode;
+	operation: 'insert' | 'remove' | 'replace' | 'reorder';
+	target_slot: string;
+	replacement_slot: string | null;
+	reason: string;
+	requested_by: 'model' | 'teacher';
+	status: 'pending_teacher' | 'approved' | 'rejected';
+	requested_at: string;
+	decided_at: string | null;
+	decided_by: string | null;
+}
+
+export interface LessonShapePreview {
+	path_lesson_id: string;
+	lesson_revision: number;
+	objective: string;
+	objective_hash: string;
+	concept_id: string;
+	scope_exclusions: string[];
+	lesson_mode: LessonMode;
+	misconception_count: number;
+	skeleton_id: string;
+	skeleton_version: number;
+	canonical: SkeletonVariantShape;
+	variants: SkeletonVariantShape[];
+	deviations: LessonShapeDeviation[];
+	available_slots: string[];
+	blocking_issues: Array<SkeletonBlockingIssue & { group_profile: 'support' | 'core' | 'extension' }>;
+	can_prepare: boolean;
 }
 
 export type ScheduleFeasibilityStatus = 'unplanned' | 'comfortable' | 'tight' | 'overloaded';

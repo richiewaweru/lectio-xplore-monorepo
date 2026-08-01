@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-	getUnit: vi.fn(), getUnitPath: vi.fn(), previewSkeleton: vi.fn(),
+	getUnit: vi.fn(), getUnitPath: vi.fn(), getLessonShape: vi.fn(),
 	getTeachingSchedule: vi.fn(), getUnitGroups: vi.fn(), saveTeachingSchedule: vi.fn(),
 	suggestTeachingSchedule: vi.fn(), saveUnitGroups: vi.fn(),
 	getPathHistory: vi.fn(), getPathStatus: vi.fn(), getHistoricalPath: vi.fn(), restorePathVersion: vi.fn(),
@@ -65,10 +65,18 @@ describe('/units/[id]', () => {
 			unit_id: 'unit-1', groups_revision: 2,
 			groups: [{ id: 'group-core', label: 'Core', profile: 'core', description: 'Main route.', toggle_profile: { support_level: 'medium', declared_toggles: [] }, voice: { register_name: 'balanced', tone: 'neutral', notation: null }, position: 1, revision: 1 }]
 		});
-		mocks.previewSkeleton.mockResolvedValue({
-			objective: lesson.objective, knowledge_type: 'factual', knowledge_type_source: 'provided',
-			skeleton_id: 'factual-core', skeleton_version: 1,
-			variants: [{ group_profile: 'core', support_level: 'medium', slots: [{ slot_id: 'check', role: 'check', purpose: 'Check', allowed_components: ['mcq'], locked: true, visual_required: false }], toggles_applied: [], warnings: [] }]
+		const canonical = {
+			group_profile: 'core', support_level: 'medium',
+			slots: [{ slot_id: 'check', role: 'check', purpose: 'Check', allowed_components: ['mcq'], locked: true, visual_required: false }],
+			toggles_applied: [], warnings: [], structural_diff: [], blocking_issues: []
+		};
+		mocks.getLessonShape.mockResolvedValue({
+			path_lesson_id: lesson.id, lesson_revision: 1, objective: lesson.objective,
+			objective_hash: lesson.objective_hash, concept_id: lesson.concept_id, scope_exclusions: [],
+			lesson_mode: 'first_exposure', misconception_count: 1,
+			skeleton_id: 'factual-core', skeleton_version: 1, canonical,
+			variants: [canonical], deviations: [], available_slots: ['orient', 'check'],
+			blocking_issues: [], can_prepare: true
 		});
 		mocks.getPreparedLessonStatus.mockResolvedValue({
 			path_lesson_id: lesson.id, lesson_revision: 1, generation_id: 'generation-1',

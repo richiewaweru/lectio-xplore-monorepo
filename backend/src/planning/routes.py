@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Literal
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,6 +34,8 @@ from planning.models import (
     RestorePathVersionRequest,
     ScheduleSuggestRequest,
     ScheduleWriteRequest,
+    ShapeDeviationCreateRequest,
+    ShapeDeviationDecisionRequest,
     UnitCreate,
     UnitGroupsWriteRequest,
     UnitUpdate,
@@ -42,6 +46,12 @@ from planning.schedule import (
     suggest_schedule,
     write_groups,
     write_schedule,
+)
+from planning.shapes import (
+    decide_shape_deviation,
+    deviation_payload,
+    lesson_shape_payload,
+    request_shape_deviation,
 )
 from planning.service import (
     ConceptResolutionError,
@@ -956,3 +966,131 @@ async def get_path_lesson_status(
         ).model_dump(mode="json")
     except Exception as exc:
         _raise_http(exc)
+
+
+@router.get("/{unit_id}/path/lessons/{lesson_id}/shape")
+async def get_path_lesson_shape(
+    unit_id: str,
+    lesson_id: str,
+    lesson_mode: Literal[
+        "first_exposure", "consolidation", "repair", "retrieval", "transfer"
+    ] = Query(default="first_exposure"),
+    misconception_count: int = Query(default=1, ge=0, le=3),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        _unit, _version, lesson = await _owned_version_and_lesson(
+            session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
+        )
+        return await lesson_shape_payload(
+            session,
+            lesson=lesson,
+            lesson_mode=lesson_mode,
+            misconception_count=misconception_count,
+        )
+    except Exception as exc:
+        _raise_http(exc)
+
+
+@router.post("/{unit_id}/path/lessons/{lesson_id}/shape/deviations")
+async def post_path_lesson_shape_deviation(
+    unit_id: str,
+    lesson_id: str,
+    request: ShapeDeviationCreateRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        _unit, version, lesson = await _owned_version_and_lesson(
+            session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
+        )
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
+        )
+        assert_lesson_mutation_fresh(lesson, lesson_revision=request.lesson_revision)
+        deviation = await request_shape_deviation(session, lesson=lesson, request=request)
+        await session.commit()
+        return deviation_payload(deviation)
+    except Exception as exc:
+        await session.rollback()
+        _raise_http(exc)
+
+
+async def _decide_path_lesson_shape_deviation(
+    *,
+    unit_id: str,
+    lesson_id: str,
+    deviation_id: str,
+    request: ShapeDeviationDecisionRequest,
+    current_user: User,
+    session: AsyncSession,
+    approved: bool,
+) -> dict[str, object]:
+    try:
+        _unit, version, lesson = await _owned_version_and_lesson(
+            session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
+        )
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
+        )
+        assert_lesson_mutation_fresh(lesson, lesson_revision=request.lesson_revision)
+        deviation = await decide_shape_deviation(
+            session,
+            lesson=lesson,
+            deviation_id=deviation_id,
+            approved=approved,
+            decided_by=current_user.id,
+        )
+        await session.commit()
+        return {
+            **deviation_payload(deviation),
+            "lesson_revision": lesson.revision,
+        }
+    except Exception as exc:
+        await session.rollback()
+        _raise_http(exc)
+
+
+@router.post("/{unit_id}/path/lessons/{lesson_id}/shape/deviations/{deviation_id}:approve")
+async def approve_path_lesson_shape_deviation(
+    unit_id: str,
+    lesson_id: str,
+    deviation_id: str,
+    request: ShapeDeviationDecisionRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    return await _decide_path_lesson_shape_deviation(
+        unit_id=unit_id,
+        lesson_id=lesson_id,
+        deviation_id=deviation_id,
+        request=request,
+        current_user=current_user,
+        session=session,
+        approved=True,
+    )
+
+
+@router.post("/{unit_id}/path/lessons/{lesson_id}/shape/deviations/{deviation_id}:reject")
+async def reject_path_lesson_shape_deviation(
+    unit_id: str,
+    lesson_id: str,
+    deviation_id: str,
+    request: ShapeDeviationDecisionRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    return await _decide_path_lesson_shape_deviation(
+        unit_id=unit_id,
+        lesson_id=lesson_id,
+        deviation_id=deviation_id,
+        request=request,
+        current_user=current_user,
+        session=session,
+        approved=False,
+    )

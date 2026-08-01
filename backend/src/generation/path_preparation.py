@@ -56,6 +56,7 @@ async def initialise_path_generation(
     prior_established: list[str],
     scope_contract: dict[str, Any],
     variants: list[VariantSpec] | None = None,
+    variant_plans: dict[str, StructuralPlan] | None = None,
 ) -> None:
     signals = V3SignalSummary(
         topic=topic,
@@ -96,6 +97,10 @@ async def initialise_path_generation(
             {
                 "pack_id": generation.pack_id,
                 "variants": [variant.model_dump(mode="json") for variant in variants],
+                "variant_structural_plans": {
+                    label: variant_plan.model_dump(mode="json")
+                    for label, variant_plan in (variant_plans or {}).items()
+                },
             }
         )
     await persist_chunked_state(

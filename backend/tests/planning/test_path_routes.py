@@ -74,6 +74,16 @@ def test_phase5_unit_and_path_routes_are_registered() -> None:
         ("/api/v1/units/{unit_id}/schedule:suggest", "POST"),
         ("/api/v1/units/{unit_id}/groups", "GET"),
         ("/api/v1/units/{unit_id}/groups", "PUT"),
+        ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}/shape", "GET"),
+        ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}/shape/deviations", "POST"),
+        (
+            "/api/v1/units/{unit_id}/path/lessons/{lesson_id}/shape/deviations/{deviation_id}:approve",
+            "POST",
+        ),
+        (
+            "/api/v1/units/{unit_id}/path/lessons/{lesson_id}/shape/deviations/{deviation_id}:reject",
+            "POST",
+        ),
     }
     assert expected <= routes
 
@@ -333,9 +343,96 @@ async def test_schedule_and_groups_reject_cross_user_access(db_session_factory) 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         schedule = await client.get(f"/api/v1/units/{unit_id}/schedule")
         groups = await client.get(f"/api/v1/units/{unit_id}/groups")
+        shape = await client.get(f"/api/v1/units/{unit_id}/path/lessons/not-owned/shape")
 
     assert schedule.status_code == 404
     assert groups.status_code == 404
+    assert shape.status_code == 404
+
+
+async def test_shape_deviation_requires_explicit_approval_over_http(db_session_factory) -> None:
+    plan = PathPlan.model_validate_json(
+        (FIXTURES / "grade4-photosynthesis-path.json").read_text(encoding="utf-8")
+    )
+    async with db_session_factory() as session:
+        session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
+        unit = await create_unit(
+            session,
+            owner_id=TEST_USER.id,
+            request=UnitCreate(
+                title=plan.unit or "Photosynthesis",
+                topic=plan.unit or "Photosynthesis",
+                subject=plan.subject or "Science",
+                grade_level=plan.grade_level or "Grade 4",
+                destination_objective=plan.destination_objective or "Destination",
+                starting_knowledge=plan.starting_knowledge,
+            ),
+        )
+        version = await persist_path_plan(session, unit=unit, plan=plan)
+        await approve_path(session, version)
+        lesson = await session.scalar(
+            select(PathLessonModel)
+            .where(
+                PathLessonModel.path_version_id == version.id,
+                PathLessonModel.primary_knowledge_type == "conceptual",
+            )
+            .order_by(PathLessonModel.position)
+        )
+        assert lesson is not None
+        unit_id = unit.id
+        version_id = version.id
+        path_revision = version.revision
+        lesson_id = lesson.id
+        lesson_revision = lesson.revision
+        await session.commit()
+
+    app.dependency_overrides[get_current_user] = _override_user
+    await _install_session(db_session_factory)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        conflict = await client.get(
+            f"/api/v1/units/{unit_id}/path/lessons/{lesson_id}/shape",
+            params={"lesson_mode": "first_exposure", "misconception_count": 2},
+        )
+        requested = await client.post(
+            f"/api/v1/units/{unit_id}/path/lessons/{lesson_id}/shape/deviations",
+            json={
+                "path_version_id": version_id,
+                "path_revision": path_revision,
+                "lesson_revision": lesson_revision,
+                "lesson_mode": "first_exposure",
+                "operation": "remove",
+                "target_slot": "orient",
+                "replacement_slot": None,
+                "reason": "The class already completed this orientation activity.",
+            },
+        )
+        deviation_id = requested.json()["id"]
+        pending = await client.get(
+            f"/api/v1/units/{unit_id}/path/lessons/{lesson_id}/shape",
+            params={"lesson_mode": "first_exposure", "misconception_count": 2},
+        )
+        approved = await client.post(
+            f"/api/v1/units/{unit_id}/path/lessons/{lesson_id}/shape/deviations/{deviation_id}:approve",
+            json={
+                "path_version_id": version_id,
+                "path_revision": path_revision,
+                "lesson_revision": lesson_revision,
+            },
+        )
+        resolved = await client.get(
+            f"/api/v1/units/{unit_id}/path/lessons/{lesson_id}/shape",
+            params={"lesson_mode": "first_exposure", "misconception_count": 2},
+        )
+
+    assert conflict.status_code == 200
+    assert conflict.json()["can_prepare"] is False
+    assert requested.status_code == 200
+    assert requested.json()["status"] == "pending_teacher"
+    assert pending.json()["can_prepare"] is False
+    assert approved.status_code == 200
+    assert approved.json()["status"] == "approved"
+    assert approved.json()["lesson_revision"] == lesson_revision + 1
+    assert resolved.json()["can_prepare"] is True
 
 
 async def test_schedule_and_groups_round_trip_over_http(db_session_factory) -> None:

@@ -209,6 +209,8 @@ class LessonProvenanceModel(Base):
     knowledge_type_source = Column(String, nullable=True)
     toggles_applied = Column(JSON_DOCUMENT_TYPE, nullable=True)
     deviations_applied = Column(JSON_DOCUMENT_TYPE, nullable=True)
+    deviations_requested = Column(JSON_DOCUMENT_TYPE, nullable=True)
+    deviations_approved = Column(JSON_DOCUMENT_TYPE, nullable=True)
     path_lesson_revision = Column(Integer, nullable=True)
     lesson_mode = Column(String, nullable=True)
     group_ids = Column(JSON_DOCUMENT_TYPE, nullable=True)
@@ -371,6 +373,12 @@ class PathLessonModel(Base):
         foreign_keys="PathLessonPrerequisiteModel.path_lesson_id",
         cascade="all, delete-orphan",
     )
+    shape_deviations = relationship(
+        "PathLessonDeviationModel",
+        back_populates="path_lesson",
+        cascade="all, delete-orphan",
+        order_by="PathLessonDeviationModel.requested_at",
+    )
 
 
 class PathLessonPrerequisiteModel(Base):
@@ -386,6 +394,32 @@ class PathLessonPrerequisiteModel(Base):
         ForeignKey("path_lessons.id"),
         primary_key=True,
     )
+
+
+class PathLessonDeviationModel(Base):
+    __tablename__ = "path_lesson_deviations"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    path_lesson_id = Column(
+        String,
+        ForeignKey("path_lessons.id"),
+        nullable=False,
+        index=True,
+    )
+    skeleton_id = Column(String, nullable=False)
+    skeleton_version = Column(Integer, nullable=False)
+    lesson_mode = Column(String, nullable=False)
+    operation = Column(String, nullable=False)
+    target_slot = Column(String, nullable=False)
+    replacement_slot = Column(String, nullable=True)
+    reason = Column(Text, nullable=False)
+    requested_by = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="pending_teacher", server_default="pending_teacher")
+    requested_at = Column(DateTime, default=_utcnow, nullable=False)
+    decided_at = Column(DateTime, nullable=True)
+    decided_by = Column(String, ForeignKey("users.id"), nullable=True)
+
+    path_lesson = relationship("PathLessonModel", back_populates="shape_deviations")
 
 
 class TeachingPeriodModel(Base):
