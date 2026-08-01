@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth.middleware import get_current_user
+from core.capabilities import require_xplore_v2
 from core.database.models import (
     GenerationModel,
     LessonProvenanceModel,
@@ -18,6 +19,7 @@ from core.database.models import (
 )
 from core.dependencies import get_async_session
 from core.entities.user import User
+from core.rate_limit import limiter
 from planning.agents import run_adjacent_merge_critics, run_path_planner
 from planning.bridge import PathPreparationBlocked, prepare_path_lesson
 from planning.models import (
@@ -98,7 +100,11 @@ from planning.validation import PathApprovalBlocked, PathValidationError
 from v3_blueprint.planning.persistence import load_chunked_state
 
 
-router = APIRouter(prefix="/api/v1/units", tags=["units", "paths"])
+router = APIRouter(
+    prefix="/api/v1/units",
+    tags=["units", "paths"],
+    dependencies=[Depends(require_xplore_v2)],
+)
 
 
 def _unit_payload(unit: UnitModel) -> dict[str, object]:
@@ -320,15 +326,17 @@ async def _plan_or_replan(
 
 
 @router.post("/{unit_id}/path:plan", status_code=status.HTTP_201_CREATED)
+@limiter.limit("6/minute")
 async def post_path_plan(
+    request: Request,
     unit_id: str,
-    request: PathPlannerRequest,
+    body: PathPlannerRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
     return await _plan_or_replan(
         unit_id=unit_id,
-        request=request,
+        request=body,
         current_user=current_user,
         session=session,
         replan=False,
@@ -336,15 +344,17 @@ async def post_path_plan(
 
 
 @router.post("/{unit_id}/path:replan", status_code=status.HTTP_201_CREATED)
+@limiter.limit("6/minute")
 async def post_path_replan(
+    request: Request,
     unit_id: str,
-    request: PathReplanRequest,
+    body: PathReplanRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
     return await _plan_or_replan(
         unit_id=unit_id,
-        request=request,
+        request=body,
         current_user=current_user,
         session=session,
         replan=True,
@@ -874,10 +884,12 @@ async def post_path_lessons_reorder(
 
 
 @router.post("/{unit_id}/path/lessons/{lesson_id}:prepare")
+@limiter.limit("12/minute")
 async def post_path_lesson_prepare(
+    request: Request,
     unit_id: str,
     lesson_id: str,
-    request: GuardedPrepareLessonRequest,
+    body: GuardedPrepareLessonRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
@@ -887,18 +899,18 @@ async def post_path_lesson_prepare(
         )
         assert_path_mutation_fresh(
             version,
-            path_version_id=request.path_version_id,
-            path_revision=request.path_revision,
+            path_version_id=body.path_version_id,
+            path_revision=body.path_revision,
         )
-        assert_lesson_mutation_fresh(lesson, lesson_revision=request.lesson_revision)
+        assert_lesson_mutation_fresh(lesson, lesson_revision=body.lesson_revision)
         response, _plan = await prepare_path_lesson(
             session,
             unit=unit,
             version=version,
             lesson=lesson,
             request=PrepareLessonRequest(
-                group_ids=request.group_ids,
-                lesson_mode=request.lesson_mode,
+                group_ids=body.group_ids,
+                lesson_mode=body.lesson_mode,
             ),
         )
         await session.commit()
@@ -909,10 +921,12 @@ async def post_path_lesson_prepare(
 
 
 @router.post("/{unit_id}/path/lessons/{lesson_id}:regenerate")
+@limiter.limit("6/minute")
 async def post_path_lesson_regenerate(
+    request: Request,
     unit_id: str,
     lesson_id: str,
-    request: RegenerateLessonRequest,
+    body: RegenerateLessonRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
@@ -922,24 +936,24 @@ async def post_path_lesson_regenerate(
         )
         assert_path_mutation_fresh(
             version,
-            path_version_id=request.path_version_id,
-            path_revision=request.path_revision,
+            path_version_id=body.path_version_id,
+            path_revision=body.path_revision,
         )
-        assert_lesson_mutation_fresh(lesson, lesson_revision=request.lesson_revision)
+        assert_lesson_mutation_fresh(lesson, lesson_revision=body.lesson_revision)
         response, _plan = await prepare_path_lesson(
             session,
             unit=unit,
             version=version,
             lesson=lesson,
             request=PrepareLessonRequest(
-                group_ids=request.group_ids,
-                lesson_mode=request.lesson_mode,
+                group_ids=body.group_ids,
+                lesson_mode=body.lesson_mode,
             ),
             regenerate=True,
-            regeneration_reason=request.reason,
+            regeneration_reason=body.reason,
         )
         await session.commit()
-        return {**response.model_dump(mode="json"), "regeneration_reason": request.reason}
+        return {**response.model_dump(mode="json"), "regeneration_reason": body.reason}
     except Exception as exc:
         await session.rollback()
         _raise_http(exc)
@@ -1231,9 +1245,11 @@ async def reject_path_lesson_shape_deviation(
 
 
 @router.post("/{unit_id}/compose:preview")
+@limiter.limit("60/minute")
 async def preview_unit_resource(
+    request: Request,
     unit_id: str,
-    request: ResourceComposeRequest,
+    body: ResourceComposeRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
@@ -1244,7 +1260,7 @@ async def preview_unit_resource(
             session,
             unit=unit,
             version=version,
-            request=request,
+            request=body,
             persist=False,
         )
     except Exception as exc:
@@ -1252,9 +1268,11 @@ async def preview_unit_resource(
 
 
 @router.post("/{unit_id}/compose", status_code=status.HTTP_201_CREATED)
+@limiter.limit("30/minute")
 async def compose_unit_resource(
+    request: Request,
     unit_id: str,
-    request: ResourceComposeRequest,
+    body: ResourceComposeRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
@@ -1265,7 +1283,7 @@ async def compose_unit_resource(
             session,
             unit=unit,
             version=version,
-            request=request,
+            request=body,
             persist=True,
         )
         await session.commit()

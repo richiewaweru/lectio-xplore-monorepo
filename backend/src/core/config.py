@@ -119,6 +119,8 @@ class Settings(BaseSettings):
     v3_timeout_stage2_section_seconds: int = Field(default=240, ge=1)
     v3_max_tokens_safety: int = Field(default=120000, ge=1)
     v2_skeleton_shadow_enabled: bool = True
+    xplore_v2_enabled: bool = True
+    xplore_v2_beta_users: str = ""
 
     # Output
     report_output_dir: str = "outputs/reports"

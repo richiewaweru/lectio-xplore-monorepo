@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from core.dependencies import get_jwt_handler, get_user_repository
@@ -8,6 +8,7 @@ bearer_scheme = HTTPBearer()
 
 
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     jwt_handler=Depends(get_jwt_handler),
     user_repo=Depends(get_user_repository),
@@ -36,4 +37,5 @@ async def get_current_user(
             detail="User not found",
         )
 
+    request.state.actor_id = user.id
     return user

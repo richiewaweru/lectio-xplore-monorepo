@@ -25,6 +25,22 @@ export interface UnitCreateInput {
 	curriculum_context?: string | null;
 }
 
+export interface LegacyUnitWrapper {
+	id: string;
+	kind: 'legacy_unit';
+	legacy_pack_id: string;
+	title: string;
+	subject: string;
+	destination_objective: string;
+	status: string;
+	resource_count: number;
+	completed_count: number;
+	created_at: string;
+	lesson: { title: string; pack_id: string; generation_ids: string[]; open_href: string };
+	computed: true;
+	migration_required: false;
+}
+
 export interface PathPlannerInput {
 	topic: string;
 	subject: string;
