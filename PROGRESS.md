@@ -6,7 +6,7 @@
 **Branch**: `codex/v2-complete-build`
 **Base branch**: `xplore`
 **Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
-**Current phase**: Phase 9 in progress — teaching schedule and unit groups
+**Current phase**: Phase 10 in progress — controlled differentiated shapes
 
 ### Phase checklist
 
@@ -21,7 +21,7 @@
 - [x] Phase 6 — production-complete path-to-Xplore bridge
 - [x] Phase 7 — visible end-to-end unit slice
 - [x] Phase 8 — full path workspace
-- [ ] Phase 9 — teaching schedule and unit groups
+- [x] Phase 9 — teaching schedule and unit groups
 - [ ] Phase 10 — controlled differentiated shapes
 - [ ] Phase 11 — resource projections
 - [ ] Phase 12 — actuals, marks, and misconception summaries
@@ -267,7 +267,7 @@ Phase 8 commits: `f13f78c` (`P8: feat(path): add recoverable versioned workspace
 - [x] Connect selected groups to the existing isolated variant pipeline with one pack-owned
   shared diagnostic item set.
 - [x] Run focused, complete, migration, type, build, architecture, and immutable-fixture gates.
-- [ ] Run authenticated browser acceptance against an isolated local Phase 9 database.
+- [x] Run authenticated browser acceptance against an isolated local Phase 9 database.
 
 ### Phase 9 automated gate result
 
@@ -330,7 +330,18 @@ the reverse of that additive commit plus migration `0024` downgrade; legacy Stud
 path versions require no data rewrite. Remaining phase risk is limited to browser-level interaction
 and responsive presentation, which is the explicitly open Phase 9 acceptance gate.
 
-**Automated gate: PASS; phase remains open for browser acceptance.**
+Authenticated browser acceptance used a disposable local SQLite database seeded with the committed
+Grade 4 path, three teaching periods, and support/core/extension groups. It verified the Schedule
+and Groups workspace tabs, server-derived toggle descriptions, the maximum of three booklet
+profiles, live feasibility changes after an accessible boundary move and a time edit, deterministic
+four-period suggestion, schedule and group persistence after reload, and group selection in lesson
+preparation with the shared-diagnostic notice. After schedule and group mutations, all five path
+capabilities remained present and in canonical order. The 652-pixel-wide browser surface rendered
+the schedule controls as a readable single-column layout. The temporary sign-in route, runner,
+database, and logs were removed, and the isolated backend was stopped with port 8000 free.
+
+**Gate: PASS.** Phase 9 provides a version-scoped scheduling layer and persisted structural group
+profiles without turning time into a decomposition constraint or creating variant-owned quizzes.
 
 ### Phase 0 tracking
 
