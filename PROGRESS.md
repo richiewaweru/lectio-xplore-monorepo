@@ -6,7 +6,7 @@
 **Branch**: `codex/v2-complete-build`
 **Base branch**: `xplore`
 **Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
-**Current phase**: Phase 11 in progress — resource projections
+**Current phase**: Phase 12 in progress — actuals, marks, and misconception summaries
 
 ### Phase checklist
 
@@ -23,7 +23,7 @@
 - [x] Phase 8 — full path workspace
 - [x] Phase 9 — teaching schedule and unit groups
 - [x] Phase 10 — controlled differentiated shapes
-- [ ] Phase 11 — resource projections
+- [x] Phase 11 — resource projections
 - [ ] Phase 12 — actuals, marks, and misconception summaries
 - [ ] Phase 13 — convergence and production beta
 - [ ] Post-build 30-lesson human evaluation and tuning
@@ -446,7 +446,7 @@ used by preparation.
   Lectio print/render UI to the unit workspace.
 - [x] Prove projected documents still satisfy the existing PDF, Lectio, and Builder contracts.
 - [x] Run focused, complete, migration, type, build, architecture, and immutable-fixture gates.
-- [ ] Run authenticated browser acceptance against an isolated local Phase 11 database.
+- [x] Run authenticated browser acceptance against an isolated local Phase 11 database.
 
 ### Phase 11 automated gate result
 
@@ -505,7 +505,32 @@ $ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorith
 
 Implementation commit: `6962ace` (`P11: feat(units): add deterministic resource projections`).
 Rollback is the reverse of this additive commit plus migration `0026` downgrade. The automated
-gate is green; Phase 11 remains open until its browser acceptance is recorded.
+gate was green before browser acceptance.
+
+Authenticated browser acceptance used a disposable SQLite database, local-only teacher identity,
+and seeded approved path sources. The unit Resources tab exposed all seven projection types and
+made the intentionally absent Extension source explicit as `Projection unavailable`; Create stayed
+disabled until that group was removed. A period-only, Core-group unit exam preview exposed its
+component and item provenance, created successfully, changed the saved-resource count from zero to
+one, and survived a full reload with its template version, two components, and one item intact.
+The persisted composition retained its source document hash and the isolated database recorded
+zero LLM calls.
+
+The browser gate found a real saved-resource rendering defect: partial or legacy quiz documents
+without feedback strings reached Lectio validation and produced an internal error. A route-level
+regression now covers that shape, and the shared adapter supplies safe normalized quiz defaults.
+The repeated browser check rendered the question and shared diagnostic answer key. Its
+`?print=true` route declared the Lectio renderer, omitted the interactive toolbar, and rendered the
+answer explanation. Focused adapter tests passed (`8 passed`), the missing-feedback route regression
+passed (`1 passed`), `pnpm check` found zero errors and warnings, and the production build completed
+successfully. Temporary authentication and seed files were deleted, isolated services were stopped,
+and ports 8000 and 5174 were released without touching the existing port-5173 development server.
+
+Browser-fix commit: `c548644` (`P11: fix(units): harden projected quiz rendering`).
+
+**Gate: PASS.** Phase 11 deterministically composes, persists, reloads, exports, and prints only
+traceable approved sources, with unavailable projections kept explicit and no projection-time LLM
+work.
 
 ### Phase 0 tracking
 
