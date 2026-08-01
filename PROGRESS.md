@@ -432,6 +432,81 @@ Browser-fix commit: `3e9425c` (`P10: fix(units): align canonical approved shape`
 exceptions visible before generation, and the rendered canonical column matches the shape actually
 used by preparation.
 
+### Phase 11 tracking
+
+- [x] Add all seven deterministic projections: full lesson, homework, revision sheet, flashcards,
+  quiz, answer key, and unit exam.
+- [x] Select sources by approved path lesson, teaching period, group, component, and shared item.
+- [x] Persist exact source generation/document hashes, path lesson revisions, objective hashes,
+  selected component/item identifiers, and the projection template version.
+- [x] Reject stale, missing, cross-source, or incomplete selections with explicit
+  `projection_unavailable` state; never persist a plausible partial resource.
+- [x] Prove projection performs zero LLM calls and does not rewrite approved source packs.
+- [x] Add resource preview, selective composition, saved-resource list, JSON export, and dedicated
+  Lectio print/render UI to the unit workspace.
+- [x] Prove projected documents still satisfy the existing PDF, Lectio, and Builder contracts.
+- [x] Run focused, complete, migration, type, build, architecture, and immutable-fixture gates.
+- [ ] Run authenticated browser acceptance against an isolated local Phase 11 database.
+
+### Phase 11 automated gate result
+
+Focused projection, route, API, UI, PDF, and Builder contracts:
+
+```text
+$ cd backend && uv run pytest tests/planning/test_projections.py tests/planning/test_path_routes.py -q
+19 passed, 1 warning in 25.42s
+$ cd frontend && pnpm exec vitest run src/lib/api/units.test.ts src/lib/components/units/ResourceComposerPanel.test.ts src/routes/units/[id]/page.test.ts
+Test Files  3 passed (3)
+Tests       14 passed (14)
+$ cd frontend && pnpm exec vitest run src/lib/builder/adapters/from-generation.test.ts src/lib/components/units/ResourceComposerPanel.test.ts
+Test Files  2 passed (2)
+Tests       8 passed (8)
+$ cd frontend && pnpm check
+svelte-check found 0 errors and 0 warnings
+```
+
+The projection matrix covers all seven types from one approved source set, checks exact revision
+and objective provenance, verifies a stale preparation becomes `projection_unavailable`, and
+asserts the LLM call count remains unchanged. A test discovered that null legacy lesson revisions
+were incorrectly accepted as current; Phase 11 now requires an exact path lesson revision match.
+
+Complete regression gates:
+
+```text
+$ cd backend && uv run ruff check src tests
+All checks passed!
+$ cd backend && uv run pytest -q
+503 passed, 1 warning in 161.94s
+$ cd frontend && pnpm exec vitest run --pool=threads --maxWorkers=1
+Test Files  72 passed (72)
+Tests       300 passed (300)
+$ cd frontend && pnpm build
+8433 SSR modules and 8544 client modules transformed
+built in 54.38s; adapter completed
+```
+
+Migration `0026` on a disposable SQLite database:
+
+```text
+$ cd backend && uv run python tools/validate_resource_compositions_migration.py
+upgrade=resource_compositions,source_provenance
+downgrade=clean
+revision=20260801_0026
+```
+
+Architecture and immutable fixture:
+
+```text
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+Implementation commit: `6962ace` (`P11: feat(units): add deterministic resource projections`).
+Rollback is the reverse of this additive commit plus migration `0026` downgrade. The automated
+gate is green; Phase 11 remains open until its browser acceptance is recorded.
+
 ### Phase 0 tracking
 
 - [x] Read the goal objective before touching code.
