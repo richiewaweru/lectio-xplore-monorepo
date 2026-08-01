@@ -12,6 +12,7 @@ from core.database.models import (
     LessonProvenanceModel,
     PathLessonModel,
     PathLessonPrerequisiteModel,
+    ResourceCompositionModel,
     UnitModel,
 )
 from core.dependencies import get_async_session
@@ -31,6 +32,7 @@ from planning.models import (
     PrepareLessonRequest,
     PreparedLessonStatusResponse,
     RegenerateLessonRequest,
+    ResourceComposeRequest,
     RestorePathVersionRequest,
     ScheduleSuggestRequest,
     ScheduleWriteRequest,
@@ -46,6 +48,11 @@ from planning.schedule import (
     suggest_schedule,
     write_groups,
     write_schedule,
+)
+from planning.projections import (
+    ProjectionUnavailable,
+    build_composition_payload,
+    composition_payload,
 )
 from planning.shapes import (
     decide_shape_deviation,
@@ -178,6 +185,11 @@ def _raise_http(exc: Exception) -> None:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     if isinstance(exc, (PathApprovalBlocked, PathPreparationBlocked, StalePathMutationError)):
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if isinstance(exc, ProjectionUnavailable):
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "projection_unavailable", "message": str(exc)},
+        ) from exc
     if isinstance(exc, (PathValidationError, ConceptResolutionError, ValueError)):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     raise exc
@@ -1094,3 +1106,83 @@ async def reject_path_lesson_shape_deviation(
         session=session,
         approved=False,
     )
+
+
+@router.post("/{unit_id}/compose:preview")
+async def preview_unit_resource(
+    unit_id: str,
+    request: ResourceComposeRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        version = await _active_version(session, unit)
+        return await build_composition_payload(
+            session,
+            unit=unit,
+            version=version,
+            request=request,
+            persist=False,
+        )
+    except Exception as exc:
+        _raise_http(exc)
+
+
+@router.post("/{unit_id}/compose", status_code=status.HTTP_201_CREATED)
+async def compose_unit_resource(
+    unit_id: str,
+    request: ResourceComposeRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        version = await _active_version(session, unit)
+        payload = await build_composition_payload(
+            session,
+            unit=unit,
+            version=version,
+            request=request,
+            persist=True,
+        )
+        await session.commit()
+        return payload
+    except Exception as exc:
+        await session.rollback()
+        _raise_http(exc)
+
+
+@router.get("/{unit_id}/compositions")
+async def list_unit_compositions(
+    unit_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[dict[str, object]]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        rows = await session.scalars(
+            select(ResourceCompositionModel)
+            .where(ResourceCompositionModel.unit_id == unit.id)
+            .order_by(ResourceCompositionModel.created_at.desc())
+        )
+        return [composition_payload(row) for row in rows]
+    except Exception as exc:
+        _raise_http(exc)
+
+
+@router.get("/{unit_id}/compositions/{composition_id}")
+async def get_unit_composition(
+    unit_id: str,
+    composition_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        row = await session.get(ResourceCompositionModel, composition_id)
+        if row is None or row.unit_id != unit.id or row.owner_id != current_user.id:
+            raise PathNotFoundError("Resource composition not found")
+        return composition_payload(row)
+    except Exception as exc:
+        _raise_http(exc)

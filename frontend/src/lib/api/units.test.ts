@@ -7,6 +7,8 @@ import { apiFetch } from './client';
 import {
 	decideShapeDeviation,
 	getLessonShape,
+	createUnitResource,
+	previewUnitResource,
 	planUnitPath,
 	preparePathLesson,
 	previewSkeleton,
@@ -148,5 +150,27 @@ describe('unit API helpers', () => {
 		expect(body.groups_revision).toBe(3);
 		expect(body.groups[0].profile).toBe('support');
 		expect(body.groups[0].toggle_profile).toBeUndefined();
+	});
+
+	it('previews and creates deterministic projections with path guards', async () => {
+		vi.mocked(apiFetch).mockImplementation(async () => ok({ projection: 'revision_sheet' }));
+		const input = {
+			projection: 'revision_sheet' as const,
+			path_lesson_ids: ['lesson-1'], period_ids: [], group_ids: ['group-core'],
+			component_refs: ['generation-1:intro'], item_ids: [],
+			include_keys: false, include_support_notes: false
+		};
+		await previewUnitResource('unit-1', activePath, input);
+		await createUnitResource('unit-1', activePath, input);
+
+		expect(vi.mocked(apiFetch).mock.calls.map(([url]) => url)).toEqual([
+			'/api/v1/units/unit-1/compose:preview', '/api/v1/units/unit-1/compose'
+		]);
+		for (const [, init] of vi.mocked(apiFetch).mock.calls) {
+			expect(JSON.parse(String((init as RequestInit).body))).toEqual(expect.objectContaining({
+				path_version_id: 'path-1', path_revision: 4, projection: 'revision_sheet',
+				component_refs: ['generation-1:intro']
+			}));
+		}
 	});
 });

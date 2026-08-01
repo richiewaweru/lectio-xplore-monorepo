@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
 	getUnit: vi.fn(), getUnitPath: vi.fn(), getLessonShape: vi.fn(),
 	getTeachingSchedule: vi.fn(), getUnitGroups: vi.fn(), saveTeachingSchedule: vi.fn(),
+	listUnitResources: vi.fn(), previewUnitResource: vi.fn(), createUnitResource: vi.fn(),
 	suggestTeachingSchedule: vi.fn(), saveUnitGroups: vi.fn(),
 	getPathHistory: vi.fn(), getPathStatus: vi.fn(), getHistoricalPath: vi.fn(), restorePathVersion: vi.fn(),
 	getPreparedLessonStatus: vi.fn(), approveUnitPath: vi.fn(), planUnitPath: vi.fn(),
@@ -65,6 +66,7 @@ describe('/units/[id]', () => {
 			unit_id: 'unit-1', groups_revision: 2,
 			groups: [{ id: 'group-core', label: 'Core', profile: 'core', description: 'Main route.', toggle_profile: { support_level: 'medium', declared_toggles: [] }, voice: { register_name: 'balanced', tone: 'neutral', notation: null }, position: 1, revision: 1 }]
 		});
+		mocks.listUnitResources.mockResolvedValue([]);
 		const canonical = {
 			group_profile: 'core', support_level: 'medium',
 			slots: [{ slot_id: 'check', role: 'check', purpose: 'Check', allowed_components: ['mcq'], locked: true, visual_required: false }],
@@ -137,5 +139,8 @@ describe('/units/[id]', () => {
 		await fireEvent.click(screen.getByRole('button', { name: 'Groups 1' }));
 		expect(screen.getByRole('heading', { name: 'Declared structural variants' })).toBeTruthy();
 		expect(screen.getByText(/one shared diagnostic item set/)).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: 'Resources 0' }));
+		expect(screen.getByRole('heading', { name: 'Create classroom resources' })).toBeTruthy();
+		expect(screen.getByRole('radio', { name: 'Unit exam' })).toBeTruthy();
 	});
 });

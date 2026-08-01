@@ -238,6 +238,28 @@ class ShapeDeviationDecisionRequest(PathLessonMutationRequest):
     pass
 
 
+ProjectionType = Literal[
+    "full_lesson",
+    "homework",
+    "revision_sheet",
+    "flashcards",
+    "quiz",
+    "answer_key",
+    "unit_exam",
+]
+
+
+class ResourceComposeRequest(PathVersionMutationRequest):
+    projection: ProjectionType
+    path_lesson_ids: list[str] = Field(default_factory=list)
+    period_ids: list[str] = Field(default_factory=list)
+    group_ids: list[str] = Field(default_factory=list)
+    component_refs: list[str] = Field(default_factory=list)
+    item_ids: list[str] = Field(default_factory=list)
+    include_keys: bool = False
+    include_support_notes: bool = False
+
+
 class PrepareLessonRequest(StrictModel):
     group_ids: list[str] = Field(default_factory=list)
     lesson_mode: Literal["first_exposure", "consolidation", "repair", "retrieval", "transfer"]

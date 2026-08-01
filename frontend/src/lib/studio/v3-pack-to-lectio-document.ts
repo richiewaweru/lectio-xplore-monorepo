@@ -3,11 +3,15 @@ import type { GenerationDocument } from '$lib/types';
 import { normalizeDocument } from '$lib/generation/viewer-state';
 
 export type V3PackDocument = {
+	kind?: string;
 	generation_id?: string;
 	blueprint_id?: string;
 	template_id?: string;
 	subject?: string;
+	title?: string;
 	status?: string;
+	projection?: string;
+	projection_template_version?: string;
 	sections?: Record<string, unknown>[];
 	answer_key?: unknown;
 	warnings?: string[];

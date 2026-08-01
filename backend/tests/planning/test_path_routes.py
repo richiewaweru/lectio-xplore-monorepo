@@ -84,6 +84,10 @@ def test_phase5_unit_and_path_routes_are_registered() -> None:
             "/api/v1/units/{unit_id}/path/lessons/{lesson_id}/shape/deviations/{deviation_id}:reject",
             "POST",
         ),
+        ("/api/v1/units/{unit_id}/compose:preview", "POST"),
+        ("/api/v1/units/{unit_id}/compose", "POST"),
+        ("/api/v1/units/{unit_id}/compositions", "GET"),
+        ("/api/v1/units/{unit_id}/compositions/{composition_id}", "GET"),
     }
     assert expected <= routes
 

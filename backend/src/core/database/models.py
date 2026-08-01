@@ -286,6 +286,12 @@ class UnitModel(Base):
         cascade="all, delete-orphan",
         order_by="UnitGroupModel.position",
     )
+    compositions = relationship(
+        "ResourceCompositionModel",
+        back_populates="unit",
+        cascade="all, delete-orphan",
+        order_by="ResourceCompositionModel.created_at",
+    )
 
 
 class UnitScopeContractModel(Base):
@@ -503,6 +509,31 @@ class UnitGroupModel(Base):
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
     unit = relationship("UnitModel", back_populates="groups")
+
+
+class ResourceCompositionModel(Base):
+    __tablename__ = "resource_compositions"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    unit_id = Column(String, ForeignKey("units.id"), nullable=False, index=True)
+    owner_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    path_version_id = Column(String, ForeignKey("path_versions.id"), nullable=False, index=True)
+    path_version = Column(Integer, nullable=False)
+    path_revision = Column(Integer, nullable=False)
+    projection = Column(String, nullable=False, index=True)
+    status = Column(String, nullable=False, default="ready", server_default="ready")
+    lesson_ids = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    period_ids = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    group_ids = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    selected_component_refs = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    selected_item_ids = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    include_keys = Column(Boolean, nullable=False, default=False, server_default="false")
+    template_version = Column(String, nullable=False)
+    source_snapshots = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    document_json = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    unit = relationship("UnitModel", back_populates="compositions")
 
 
 class PackItemModel(Base):

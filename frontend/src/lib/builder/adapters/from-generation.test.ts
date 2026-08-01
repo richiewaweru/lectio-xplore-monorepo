@@ -54,6 +54,28 @@ describe('v3PackToBuilderDocument', () => {
 		expect(Object.keys(lesson.blocks).length).toBeGreaterThan(0);
 	});
 
+	it('keeps deterministic resource projections compatible with the builder contract', () => {
+		const lesson = v3PackToBuilderDocument({
+			generation_id: 'composition-1',
+			kind: 'resource_projection',
+			projection: 'revision_sheet',
+			projection_template_version: 'resource-projection.v1',
+			template_id: 'guided-concept-path',
+			subject: 'Science',
+			status: 'final_ready',
+			sections: [{
+				section_id: 'projected-revision-1', template_id: 'guided-concept-path',
+				header: { title: 'Plant revision', subject: 'Science', grade_band: 'primary' },
+				summary: { items: [{ text: 'Leaves make food.' }] },
+				_projection_source: { source_generation_id: 'source-1', path_lesson_revision: 3 }
+			}]
+		});
+
+		expect(lesson.source_generation_id).toBe('composition-1');
+		expect(lesson.sections).toHaveLength(1);
+		expect(Object.keys(lesson.blocks)).toContain('header-0');
+	});
+
 	it('maps incomplete diagnostics into unresolved section issues', () => {
 		const lesson = v3PackToBuilderDocument({
 			generation_id: 'gen-issues', subject: 'Math', sections: [{ section_id: 'orient', header: { title: 'Orient' } }],

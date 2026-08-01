@@ -11,6 +11,8 @@ import type {
 	PathVersionSummary,
 	PreparedLesson,
 	PreparedLessonStatus,
+	ResourceComposeInput,
+	ResourceComposition,
 	SkeletonPreview,
 	TeachingSchedule,
 	Unit,
@@ -340,4 +342,36 @@ export function decideShapeDeviation(
 			})
 		}
 	);
+}
+
+function guardedCompositionInput(path: UnitPath, input: ResourceComposeInput) {
+	return { path_version_id: path.id, path_revision: path.revision, ...input };
+}
+
+export function previewUnitResource(
+	unitId: string,
+	path: UnitPath,
+	input: ResourceComposeInput
+): Promise<ResourceComposition> {
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/compose:preview`, 'Could not preview the resource projection.', {
+		method: 'POST', headers: jsonHeaders, body: JSON.stringify(guardedCompositionInput(path, input))
+	});
+}
+
+export function createUnitResource(
+	unitId: string,
+	path: UnitPath,
+	input: ResourceComposeInput
+): Promise<ResourceComposition> {
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/compose`, 'Could not create the resource projection.', {
+		method: 'POST', headers: jsonHeaders, body: JSON.stringify(guardedCompositionInput(path, input))
+	});
+}
+
+export function listUnitResources(unitId: string): Promise<ResourceComposition[]> {
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/compositions`, 'Could not load resource projections.');
+}
+
+export function getUnitResource(unitId: string, compositionId: string): Promise<ResourceComposition> {
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/compositions/${encodeURIComponent(compositionId)}`, 'Could not load this resource projection.');
 }

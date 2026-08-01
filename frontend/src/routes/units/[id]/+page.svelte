@@ -12,6 +12,7 @@
 		getUnit,
 		getUnitGroups,
 		getUnitPath,
+		listUnitResources,
 		mergePathLessons,
 		patchPathLesson,
 		planUnitPath,
@@ -25,6 +26,7 @@
 	import TeachingSchedulePanel from '$lib/components/units/TeachingSchedulePanel.svelte';
 	import UnitGroupsPanel from '$lib/components/units/UnitGroupsPanel.svelte';
 	import LessonShapePanel from '$lib/components/units/LessonShapePanel.svelte';
+	import ResourceComposerPanel from '$lib/components/units/ResourceComposerPanel.svelte';
 	import type {
 		KnowledgeType,
 		LessonMode,
@@ -32,6 +34,7 @@
 		PathStatusAggregate,
 		PathVersionSummary,
 		PreparedLessonStatus,
+		ResourceComposition,
 		LessonShapePreview,
 		TeachingSchedule,
 		Unit,
@@ -55,8 +58,9 @@
 	let viewedVersion = $state<UnitPath | null>(null);
 	let schedule = $state<TeachingSchedule | null>(null);
 	let groups = $state<UnitGroups | null>(null);
+	let compositions = $state<ResourceComposition[]>([]);
 	let selectedGroupIds = $state<string[]>([]);
-	let activeView = $state<'path' | 'schedule' | 'groups'>('path');
+	let activeView = $state<'path' | 'schedule' | 'groups' | 'resources'>('path');
 	let restoreReason = $state('Restore this version as a new editable draft.');
 	let pendingAction = $state<{ label: string; description: string; run: () => Promise<void> } | null>(null);
 	let regenerationReason = $state('The path lesson changed after preparation.');
@@ -158,12 +162,12 @@
 			groups = await getUnitGroups(unitId);
 			selectedGroupIds = groups.groups.map((group) => group.id);
 			if (unit.active_path_version_id) {
-				[path, history, aggregate, schedule] = await Promise.all([
+				[path, history, aggregate, schedule, compositions] = await Promise.all([
 					getUnitPath(unitId), getPathHistory(unitId), getPathStatus(unitId),
-					getTeachingSchedule(unitId)
+					getTeachingSchedule(unitId), listUnitResources(unitId)
 				]);
 			} else {
-				path = null; history = []; aggregate = null; schedule = null;
+				path = null; history = []; aggregate = null; schedule = null; compositions = [];
 			}
 			if (path?.lessons.length) {
 				const target = options.preserveSelection
@@ -317,6 +321,7 @@
 				<button type="button" class:active={activeView === 'path'} aria-current={activeView === 'path' ? 'page' : undefined} onclick={() => (activeView = 'path')}>Concept path</button>
 				<button type="button" class:active={activeView === 'schedule'} aria-current={activeView === 'schedule' ? 'page' : undefined} onclick={() => (activeView = 'schedule')}>Schedule <span>{schedule?.periods.length ?? 0}</span></button>
 				<button type="button" class:active={activeView === 'groups'} aria-current={activeView === 'groups' ? 'page' : undefined} onclick={() => (activeView = 'groups')}>Groups <span>{groups?.groups.length ?? 0}</span></button>
+				<button type="button" class:active={activeView === 'resources'} aria-current={activeView === 'resources' ? 'page' : undefined} onclick={() => (activeView = 'resources')}>Resources <span>{compositions.length}</span></button>
 			</nav>
 			{#if activeView === 'path'}
 			<section class="path-summary">
@@ -403,6 +408,8 @@
 				<TeachingSchedulePanel {unitId} {path} {schedule} onsaved={(saved) => (schedule = saved)} />
 			{:else if activeView === 'groups' && groups}
 				<UnitGroupsPanel {unitId} {groups} onsaved={(saved) => { groups = saved; selectedGroupIds = saved.groups.map((group) => group.id); }} />
+			{:else if activeView === 'resources'}
+				<ResourceComposerPanel {unitId} {path} lessons={path.lessons} {groups} {schedule} {compositions} oncreated={(created) => (compositions = [created, ...compositions])} />
 			{/if}
 		{/if}
 	{/if}

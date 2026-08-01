@@ -287,3 +287,61 @@ export interface UnitGroups {
 	groups_revision: number;
 	groups: UnitGroup[];
 }
+
+export type ResourceProjectionType =
+	| 'full_lesson'
+	| 'homework'
+	| 'revision_sheet'
+	| 'flashcards'
+	| 'quiz'
+	| 'answer_key'
+	| 'unit_exam';
+
+export interface ResourceComposeInput {
+	projection: ResourceProjectionType;
+	path_lesson_ids: string[];
+	period_ids: string[];
+	group_ids: string[];
+	component_refs: string[];
+	item_ids: string[];
+	include_keys: boolean;
+	include_support_notes: boolean;
+}
+
+export interface ResourceComponentChoice {
+	ref: string;
+	path_lesson_id: string;
+	lesson_title: string;
+	group_id: string | null;
+	group_label: string;
+	section_id: string;
+	role: string;
+	title: string;
+}
+
+export interface ResourceComposition {
+	id: string | null;
+	unit_id: string;
+	path_version_id: string;
+	path_version: number;
+	path_revision: number;
+	projection: ResourceProjectionType;
+	status: 'ready' | 'projection_unavailable';
+	can_create?: boolean;
+	unavailable_reasons?: string[];
+	lesson_ids: string[];
+	period_ids: string[];
+	group_ids: string[];
+	selected_component_refs: string[];
+	selected_item_ids: string[];
+	include_keys?: boolean;
+	template_version: string;
+	source_snapshots: Array<Record<string, unknown>>;
+	available_lessons?: Array<{ id: string; title: string; position: number }>;
+	available_periods?: Array<{ id: string; title: string; position: number }>;
+	available_groups?: Array<{ id: string; label: string; profile: UnitGroupProfile }>;
+	available_components?: ResourceComponentChoice[];
+	available_items?: Array<{ id: string; card_id: string; stem: string }>;
+	document: Record<string, unknown> & { sections?: Array<Record<string, unknown>> };
+	created_at?: string;
+}
