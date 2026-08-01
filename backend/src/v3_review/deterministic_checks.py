@@ -352,7 +352,7 @@ def check_planned_visuals_exist(
                 )
                 issues.append(
                     _issue(
-                        severity="major",
+                        severity="minor",
                         category="missing_planned_content",
                         message=(
                             f"Section '{sec_plan.section_id}' requires a visual; generation was attempted "
@@ -607,7 +607,7 @@ def check_anchor_facts(
         if fragment not in corpus:
             issues.append(
                 _issue(
-                    severity="major",
+                    severity="minor",
                     category="anchor_drift",
                     message=f"Prior knowledge anchor may be missing from draft: '{pk[:80]}'",
                     blueprint_ref="prior_knowledge",

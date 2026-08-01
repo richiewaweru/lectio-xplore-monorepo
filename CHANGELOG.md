@@ -15,6 +15,8 @@ The format follows Keep a Changelog conventions with SemVer release tags.
 
 ### Bug Fixes
 - Preserved path-owned objectives, canonical concept identity, provenance, and approved structure across preparation, regeneration, projections, and outcomes.
+- Corrected starting-knowledge prerequisite projection and excluded stale non-V3 compatibility generations from V2 wrappers.
+- Normalized advisory planner output variations and downgraded non-blocking review recommendations so usable production lessons are not reported as failed.
 - Kept Legacy Studio, Builder, Lectio rendering, pack printing, and PDF paths available alongside the V2 beta.
 - Updated vulnerable frontend and backend dependencies to patched releases and replaced `python-jose` with PyJWT to remove its vulnerable ECDSA dependency.
 

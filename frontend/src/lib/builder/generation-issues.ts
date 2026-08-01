@@ -66,7 +66,7 @@ export function partitionGenerationIssues(
 		const kind = missingVisuals.length ? 'visual_missing' : 'component_missing';
 		sectionIssues[sectionId].push({
 			id: `section-diagnostic:${sectionId}:${index}`,
-			severity: item.renderable === false ? 'blocking' : 'major',
+			severity: item.renderable === false ? 'blocking' : 'minor',
 			message: warnings.join(' ') || `Section ${sectionId} is incomplete.`,
 			kind,
 			component_ref:

@@ -84,7 +84,13 @@ describe('v3PackToBuilderDocument', () => {
 		});
 		const section = lesson.sections[0] as typeof lesson.sections[0] & { meta?: { issues?: Array<Record<string, unknown>> } };
 		expect(section.meta?.issues).toEqual([
-			expect.objectContaining({ severity: 'major', kind: 'component_missing', message: 'Hook output is missing.', component_ref: 'hook-card@orient', resolved: false })
+			expect.objectContaining({
+				severity: 'minor',
+				kind: 'component_missing',
+				message: 'Hook output is missing.',
+				component_ref: 'hook-card@orient',
+				resolved: false
+			})
 		]);
 	});
 

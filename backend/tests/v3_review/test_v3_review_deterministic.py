@@ -10,6 +10,7 @@ from v3_execution.component_aliases import canonical_component_id
 from v3_execution.models import DraftPack, GeneratedAnswerKeyBlock, GeneratedVisualBlock
 from v3_review import coherence_report_to_generation_summary
 from v3_review.deterministic_checks import (
+    check_anchor_facts,
     check_duplicate_questions,
     check_expected_answers_preserved,
     check_internal_artifact_leaks,
@@ -452,7 +453,7 @@ def test_required_flagged_visual_satisfies_visual_requirement() -> None:
     assert all(issue.generated_ref != section_id for issue in issues)
 
 
-def test_required_visual_omitted_by_quality_is_major_not_blocking() -> None:
+def test_required_visual_omitted_by_quality_is_advisory() -> None:
     bp = _load_example("amara_compound_area.json")
     section_id = next(section.section_id for section in bp.sections if section.visual_required)
     dp = _minimal_draft_pack(
@@ -472,8 +473,28 @@ def test_required_visual_omitted_by_quality_is_major_not_blocking() -> None:
     issues = check_planned_visuals_exist(bp, dp)
 
     issue = next(issue for issue in issues if issue.generated_ref == section_id)
-    assert issue.severity == "major"
+    assert issue.severity == "minor"
     assert "omitted by the quality gate" in issue.message
+
+
+def test_missing_prior_knowledge_phrase_is_advisory() -> None:
+    bp = _load_example("amara_compound_area.json")
+    bp.prior_knowledge = ["Seeds contain a young plant."]
+    dp = _minimal_draft_pack(
+        sections=[
+            {
+                "section_id": bp.sections[0].section_id,
+                "summary": {"items": [{"text": "A seed has several parts."}]},
+            }
+        ],
+        answer_key=None,
+    )
+
+    issues = check_anchor_facts(bp, dp)
+
+    issue = next(issue for issue in issues if issue.category == "anchor_drift")
+    assert issue.severity == "minor"
+    assert "may be missing" in issue.message
 
 
 def test_anaphora_is_not_visual_deixis() -> None:

@@ -32,14 +32,28 @@ from `/units` to the existing `/lessons` workspace.
 
 Local authenticated browser acceptance passed capability on/off, compatibility ownership, unit
 workflow, Lectio rendering, a two-page PDF export, persistent audit evidence, and rollback behavior.
-Production-infrastructure evidence is recorded in `PROGRESS.md` after each gate runs.
+Production-infrastructure evidence is recorded in `PROGRESS.md`.
+
+## Production smoke evidence
+
+- Railway service `text-book-generator Copy` and Vercel project `text-book-generator-s1l3`
+  activated the same `xplore` release commit. V3 deployments were left untouched.
+- Production generation `8e3d6391-f11d-4d5d-8db3-6f2ef221ade2` completed preparation, concept
+  review, approval, and a four-section lesson in Builder.
+- Builder lesson `9c0bcaab-d18a-4e30-9d6f-18acb9811488` exported a 258,079-byte Teacher PDF.
+  Its five pages were rendered and visually checked with no clipping, overlap, broken glyphs, or
+  unreadable tables.
+- Output-shape recommendations no longer fail a usable production lesson. Harmless omitted fields,
+  display-text length variation, missing exact prior-knowledge phrasing, and incomplete optional
+  components on an otherwise renderable section are normalized or shown as minor recommendations.
+  Objective ownership, canonical concept identity, prerequisites, approved slots/order, component
+  contracts, shared checks, access control, and unusable output remain strict failures.
 
 ## Known limitations and next work
 
 - Classes and global Results are not shown as empty navigation destinations. Results remain
   available where real unit/lesson data exists.
 - V2 remains beta and Legacy remains available during evaluation.
-- The release owner will verify one complete generated lesson and PDF during the production smoke.
 - The user owns the deferred 30-lesson study after deployment. It may change
   versioned prompts, skeletons, classifier behavior, toggles, and defaults; it must not weaken
   objective ownership, prerequisite, provenance, revision, or access-control guards.

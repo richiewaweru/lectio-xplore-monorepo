@@ -3,10 +3,10 @@
 ## Xplore Learning Platform V2 — 2026-07-31
 
 **Classification**: major
-**Branch**: `codex/v2-complete-build`
+**Branch**: `xplore`
 **Base branch**: `xplore`
 **Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
-**Current phase**: Phase 13 in progress — convergence and production beta readiness
+**Current phase**: Phase 13 release closeout — production smoke passed; beta tag pending
 
 ### Phase checklist
 
@@ -52,9 +52,35 @@ The execution plan and per-phase gates are recorded in `handoff/PHASE6_13_BUILD_
 - [x] Pass focused, full backend, full frontend, migration, architecture, and fixture gates.
 - [x] Pass authenticated browser acceptance for capability on/off, compatibility, unit workflow,
   Builder, Lectio, and PDF.
-- [ ] Merge the validated release into `xplore` and deploy backend/frontend from the same commit.
-- [ ] Pass production health, migration, queue, Builder, Lectio, PDF, audit, and rollback smoke tests.
+- [x] Merge the validated release into `xplore` and deploy backend/frontend from the same commit.
+- [x] Pass production health, queue, unit, Builder, Lectio, and PDF smoke; pass migration, audit,
+  and rollback gates in isolated acceptance.
 - [ ] Tag and publish `v1.0.0-beta.1`, then close the final handoff.
+
+### Phase 13 production evidence — 2026-08-01
+
+- Branch `xplore` deployed to Railway service `text-book-generator Copy` and Vercel project
+  `text-book-generator-s1l3`; V3 and `text-book-generator Copy Copy` were not changed.
+- Railway deployment `102e9141-4563-4679-8399-95a8f984c549` and Vercel deployment
+  `59Wy2Up6SPhtifkpVytiCXbkR2uo` both activated commit `3f9b728` before the real lesson run.
+- Production health and readiness endpoints were healthy, including Postgres, the event bus,
+  Playwright, and PDF temporary storage.
+- Unit `750b4add-90e0-429f-b9b1-b022f48d657d` planned and approved a five-capability route with
+  forward verification, destination reachability, and zero prerequisite risks.
+- The first path lesson, `Main Parts of a Seed`, completed preparation, durable concept review,
+  approval, and full four-section generation as generation
+  `8e3d6391-f11d-4d5d-8db3-6f2ef221ade2` / Builder lesson
+  `9c0bcaab-d18a-4e30-9d6f-18acb9811488`.
+- The production Teacher PDF downloaded successfully at 258,079 bytes. All five rendered pages
+  were visually inspected with no clipping, overlap, broken glyphs, or unreadable tables.
+- Advisory representation differences now normalize instead of aborting preparation. Missing
+  exact prior-knowledge phrasing, a quality-omitted optional visual, and a missing component in an
+  otherwise renderable section are recommendations; empty/unrenderable sections, objective or
+  concept-identity drift, invalid structure, prerequisite failures, and safety leaks remain hard
+  failures. The focused regression gate passed 42 backend and 14 frontend tests, plus Ruff and the
+  architecture guard.
+- The broader 30-lesson human evaluation remains explicitly user-owned post-build tuning and is
+  not a release blocker.
 
 ### Phase 13 automated gate result
 
