@@ -72,7 +72,13 @@ async def _fake_structural_planner(context: dict) -> PathStructuralPlan:
             }
         )
     return PathStructuralPlan(
-        anchor=PathAnchor(description="A leaf kept in light and a leaf kept in darkness", source="new"),
+        anchor=PathAnchor(
+            description=(
+                "A leaf kept in bright light beside another leaf kept in darkness, with both "
+                "leaves observed closely before and after the investigation as one shared anchor"
+            ),
+            source="new",
+        ),
         cards=[
             {
                 "id": context["concept_id"],
@@ -149,6 +155,7 @@ async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None
         for section in structural_plan.sections
     )
     assert all(len(section.title) <= 80 for section in structural_plan.sections)
+    assert len(structural_plan.anchor.example) <= 100
     assert response.objective_hash == hash_path_objective(lesson.objective)
     provenance = await db_session.get(LessonProvenanceModel, response.generation_id)
     assert provenance is not None

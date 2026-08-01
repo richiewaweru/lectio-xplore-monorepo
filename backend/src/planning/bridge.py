@@ -213,7 +213,7 @@ def _build_structural_plan(
             structure_rationale="Path objective and skeleton slots are fixed; content awaits teacher review.",
         ),
         anchor=AnchorSpec(
-            example=generated.anchor.description,
+            example=_clip_advisory_text(generated.anchor.description, limit=100),
             reuse_scope="Reuse this anchor across the fixed path lesson slots.",
         ),
         prior_knowledge=prior_knowledge,
