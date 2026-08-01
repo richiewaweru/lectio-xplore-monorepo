@@ -102,7 +102,7 @@ async def test_legacy_packs_are_computed_as_one_lesson_units_without_writes(
         "title": "Cells",
         "pack_id": "legacy-pack",
         "generation_ids": ["legacy-generation"],
-        "open_href": "/packs/legacy-pack",
+        "open_href": "/units/legacy/legacy-pack",
     }
     assert detail.json()["computed"] is True
     assert detail.json()["migration_required"] is False
@@ -111,4 +111,3 @@ async def test_legacy_packs_are_computed_as_one_lesson_units_without_writes(
     async with db_session_factory() as session:
         assert await session.scalar(select(func.count()).select_from(LearningPackModel)) == 2
         assert await session.scalar(select(func.count()).select_from(GenerationModel)) == 1
-

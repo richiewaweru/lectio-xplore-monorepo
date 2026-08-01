@@ -31,12 +31,12 @@ describe('/units', () => {
 			title: 'Cells', subject: 'Science', destination_objective: 'Explain cells.',
 			status: 'ready', resource_count: 2, completed_count: 2,
 			created_at: '2026-08-01T00:00:00Z', computed: true, migration_required: false,
-			lesson: { title: 'Cells', pack_id: 'pack-1', generation_ids: [], open_href: '/packs/pack-1' }
+			lesson: { title: 'Cells', pack_id: 'pack-1', generation_ids: [], open_href: '/units/legacy/pack-1' }
 		}]);
 
 		render(UnitsPage);
 		expect(await screen.findByRole('heading', { name: 'Legacy one-lesson units' })).toBeTruthy();
-		expect(screen.getByRole('link', { name: /Cells/ }).getAttribute('href')).toBe('/packs/pack-1');
+		expect(screen.getByRole('link', { name: /Cells/ }).getAttribute('href')).toBe('/units/legacy/pack-1');
 		expect(screen.getByText('Computed views of existing packs. No data was migrated or rewritten.')).toBeTruthy();
 	});
 	afterEach(cleanup);

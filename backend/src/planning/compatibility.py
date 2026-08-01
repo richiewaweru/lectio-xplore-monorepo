@@ -52,7 +52,7 @@ def _payload(pack: LearningPackModel, generations: list[GenerationModel]) -> dic
             "title": pack.topic,
             "pack_id": pack.id,
             "generation_ids": [generation.id for generation in generations],
-            "open_href": f"/packs/{pack.id}",
+            "open_href": f"/units/legacy/{pack.id}",
         },
         "computed": True,
         "migration_required": False,
