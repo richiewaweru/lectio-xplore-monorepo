@@ -4,7 +4,6 @@ import asyncio
 import logging
 import os
 from datetime import datetime, timedelta, timezone
-from importlib.metadata import PackageNotFoundError, version
 from time import perf_counter
 from typing import Awaitable, Callable, Literal, Sequence
 
@@ -22,14 +21,12 @@ from core.pdf_export_runtime import (
     ensure_pdf_temp_dir,
     pdf_export_telemetry,
 )
+from core.version import VERSION
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["health"])
 
-try:
-    __version__ = version("textbook-agent")
-except PackageNotFoundError:
-    __version__ = "0.1.0"
+__version__ = VERSION
 
 
 class LivenessResponse(BaseModel):

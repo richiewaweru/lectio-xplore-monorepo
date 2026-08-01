@@ -1,7 +1,7 @@
 {
 	"name": "frontend",
 	"private": true,
-	"version": "0.0.1",
+	"version": "1.0.0-beta.1",
 	"packageManager": "pnpm@9.15.9",
 	"type": "module",
 	"scripts": {
@@ -17,7 +17,7 @@
 		"@microsoft/fetch-event-source": "^2.0.1",
 		"bits-ui": "^2.11.0",
 		"clsx": "^2.1.1",
-		"dompurify": "^3.3.3",
+		"dompurify": "^3.4.12",
 		"idb": "^8.0.3",
 		"isomorphic-dompurify": "2.26.0",
 		"katex": "^0.16.22",
@@ -32,8 +32,8 @@
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-static": "^3.0.10",
-		"@sveltejs/adapter-vercel": "^6.3.3",
-		"@sveltejs/kit": "^2.57.1",
+		"@sveltejs/adapter-vercel": "^6.3.4",
+		"@sveltejs/kit": "^2.70.2",
 		"@sveltejs/vite-plugin-svelte": "^6.2.4",
 		"@tailwindcss/vite": "^4.1.13",
 		"@testing-library/svelte": "^5.3.1",
@@ -41,11 +41,33 @@
 		"@types/katex": "^0.16.7",
 		"@types/node": "^24.12.2",
 		"jsdom": "^29.0.2",
-		"svelte": "^5.55.4",
+		"svelte": "^5.56.8",
 		"svelte-check": "^4.4.2",
 		"tailwindcss": "^4.1.13",
 		"typescript": "^5.9.3",
-		"vite": "^7.3.1",
-		"vitest": "^3.2.4"
+		"vite": "^7.3.6",
+		"vitest": "^3.2.7"
+	},
+	"overrides": {
+		"brace-expansion": "5.0.9",
+		"cookie": "0.7.2",
+		"devalue": "5.9.0",
+		"esbuild": "0.28.1",
+		"picomatch": "4.0.5",
+		"postcss": "8.5.25",
+		"tar": "7.5.22",
+		"undici": "7.29.0"
+	},
+	"pnpm": {
+		"overrides": {
+			"brace-expansion": "5.0.9",
+			"cookie": "0.7.2",
+			"devalue": "5.9.0",
+			"esbuild": "0.28.1",
+			"picomatch": "4.0.5",
+			"postcss": "8.5.25",
+			"tar": "7.5.22",
+			"undici": "7.29.0"
+		}
 	}
 }

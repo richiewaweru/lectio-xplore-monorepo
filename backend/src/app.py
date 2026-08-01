@@ -33,6 +33,7 @@ from core.routes.auth import router as auth_router
 from core.routes.capabilities import router as capabilities_router
 from core.routes.profile import router as profile_router
 from core.routes.shares import router as shares_router
+from core.version import VERSION
 from builder.routes import router as builder_router
 from core.database.session import async_session_factory
 from generation.routes import router as generation_router
@@ -53,7 +54,7 @@ from telemetry.service import telemetry_monitor
 from v3_blueprint.skeletons import initialize_skeleton_catalog
 
 logger = logging.getLogger("uvicorn.error")
-__version__ = "0.1.0"
+__version__ = VERSION
 _PRODUCTION_LIKE_ENVS = {"production", "staging"}
 _IMAGES_DIR = Path("data/images")
 _IMAGE_PROBE_CACHE_TTL_SECONDS = 600

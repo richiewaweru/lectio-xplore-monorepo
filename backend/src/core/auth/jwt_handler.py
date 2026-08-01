@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
-from jose import JWTError, jwt
+import jwt
+from jwt import PyJWTError
 
 
 class JWTHandler:
@@ -19,8 +20,8 @@ class JWTHandler:
         return jwt.encode(payload, self._secret, algorithm=self._algorithm)
 
     def decode_token(self, token: str) -> dict:
-        """Decode and verify a JWT. Raises JWTError on failure."""
+        """Decode and verify a JWT. Raises PyJWTError on failure."""
         try:
             return jwt.decode(token, self._secret, algorithms=[self._algorithm])
-        except JWTError:
+        except PyJWTError:
             raise

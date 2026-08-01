@@ -46,7 +46,11 @@ async def _install_session(db_session_factory) -> None:
 
 def test_phase5_unit_and_path_routes_are_registered() -> None:
     app = create_app()
-    routes = {(route.path, method) for route in app.routes for method in getattr(route, "methods", set())}
+    routes = {
+        (path, method.upper())
+        for path, operations in app.openapi()["paths"].items()
+        for method in operations
+    }
 
     expected = {
         ("/api/v1/units", "POST"),
