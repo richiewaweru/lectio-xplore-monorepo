@@ -6,7 +6,7 @@
 **Branch**: `codex/v2-complete-build`
 **Base branch**: `xplore`
 **Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
-**Current phase**: Phase 10 in progress — controlled differentiated shapes
+**Current phase**: Phase 11 in progress — resource projections
 
 ### Phase checklist
 
@@ -22,7 +22,7 @@
 - [x] Phase 7 — visible end-to-end unit slice
 - [x] Phase 8 — full path workspace
 - [x] Phase 9 — teaching schedule and unit groups
-- [ ] Phase 10 — controlled differentiated shapes
+- [x] Phase 10 — controlled differentiated shapes
 - [ ] Phase 11 — resource projections
 - [ ] Phase 12 — actuals, marks, and misconception summaries
 - [ ] Phase 13 — convergence and production beta
@@ -359,7 +359,7 @@ profiles without turning time into a decomposition constraint or creating varian
 - [x] Add the controlled-shape workspace with canonical/support/core/extension comparison,
   stress-test controls, exact diff explanations, blocking notices, and approval controls.
 - [x] Run focused, complete, migration, type, build, architecture, and immutable-fixture gates.
-- [ ] Run authenticated browser acceptance against an isolated local Phase 10 database.
+- [x] Run authenticated browser acceptance against an isolated local Phase 10 database.
 
 ### Phase 10 automated gate result
 
@@ -410,8 +410,27 @@ $ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorith
 
 Implementation commit: `630d74e` (`P10: feat(units): add controlled differentiated shapes`).
 Rollback is the reverse of this additive commit plus migration `0025` downgrade. The automated
-gate is green; Phase 10 remains open only for authenticated browser acceptance of the visible
-conflict, request/approve, persistence, and prepare-blocking flow.
+gate was green before browser acceptance.
+
+Authenticated browser acceptance used a disposable local SQLite database seeded with the committed
+Grade 4 path and support/core/extension groups. It verified all four comparison columns, exact
+toggle explanations, one locked shared check per shape, and a two-misconception stress case that
+surfaced typed support and extension overflow issues and disabled preparation. A teacher removal
+request remained pending until the separate approval action; approval incremented the lesson
+revision, removed the conflict, enabled preparation, and persisted across a backend restart and page
+reload. The gate found and fixed one display defect where the canonical comparison retained its
+pre-approval shape even though generation used the approved deviation. Focused planning tests
+passed after the fix (`15 passed, 1 warning`), and the repeated browser check proved that canonical,
+support, core, and extension all showed the approved removal while preserving the exact objective
+and shared check. The temporary authentication route was deleted, the isolated backend stopped with
+port 8000 free, and the disposable runner/database/logs were moved out of the repository to the
+system temporary directory.
+
+Browser-fix commit: `3e9425c` (`P10: fix(units): align canonical approved shape`).
+
+**Gate: PASS.** Phase 10 now makes declared structural differences, conflicts, and teacher-approved
+exceptions visible before generation, and the rendered canonical column matches the shape actually
+used by preparation.
 
 ### Phase 0 tracking
 
