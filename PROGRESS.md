@@ -256,6 +256,82 @@ browser surface matches the versioned backend contracts.
 Phase 8 commits: `f13f78c` (`P8: feat(path): add recoverable versioned workspace`) and `847cc2b`
 (`P8: docs(xplore-v2): record automated gate evidence`).
 
+### Phase 9 tracking
+
+- [x] Add reversible teaching-period, period-lesson, and unit-group persistence.
+- [x] Add version-scoped schedule read, write, deterministic suggestion, feasibility, and
+  optimistic-revision contracts.
+- [x] Keep scheduling time outside path decomposition and preserve exact active path order.
+- [x] Add drag-and-drop boundary grouping with equivalent accessible previous/next controls.
+- [x] Add support/core/extension group management with server-declared structural toggles.
+- [x] Connect selected groups to the existing isolated variant pipeline with one pack-owned
+  shared diagnostic item set.
+- [x] Run focused, complete, migration, type, build, architecture, and immutable-fixture gates.
+- [ ] Run authenticated browser acceptance against an isolated local Phase 9 database.
+
+### Phase 9 automated gate result
+
+Focused scheduling, path bridge, route, and final UI feedback gates:
+
+```text
+$ cd backend && uv run pytest tests/planning -q
+34 passed, 1 warning in 54.48s
+$ cd frontend && pnpm exec vitest run src/lib/components/units/TeachingSchedulePanel.test.ts
+Test Files  1 passed (1)
+Tests       2 passed (2)
+$ cd frontend && pnpm exec svelte-check --tsconfig ./tsconfig.json
+svelte-check found 0 errors and 0 warnings
+```
+
+Complete regression gates (the final feasibility-only UI polish was then covered by the focused
+two-test component rerun above):
+
+```text
+$ cd backend && uv run ruff check src tests
+All checks passed!
+$ cd backend && uv run pytest -q
+485 passed, 2 warnings in 133.19s
+$ cd frontend && pnpm exec vitest run --pool=threads --maxWorkers=1
+Test Files  70 passed (70)
+Tests       293 passed (293)
+$ cd frontend && pnpm exec vite build
+8427 SSR modules and 8537 client modules transformed
+built in 58.17s; adapter completed
+```
+
+Migration `0024` on a disposable SQLite database:
+
+```text
+$ cd backend && uv run python tools/validate_schedule_groups_migration.py
+upgrade_tables=teaching_period_lessons,teaching_periods,unit_groups
+downgrade=clean
+revision=20260801_0024
+```
+
+Architecture and immutable fixture:
+
+```text
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+The nine controlling invariants remain intact: the item-generation wall and one-card input,
+pack-owned shared items, recomputed QC, nullable distractor diagnosis, sibling isolation,
+teacher-edit preservation, durable review halt, Lectio/Builder/PDF compatibility, and the six-section
+StructuralPlan limit are all covered by the green complete suites. Phase 9 adds time only to the
+schedule service; save validation requires every active non-skipped lesson exactly once and in
+canonical path order. Group toggles are derived server-side, retained in provenance, and feed the
+existing variant coordinator rather than creating group-owned quizzes.
+
+Implementation commit: `0cb56de` (`P9: feat(units): add teaching schedule and groups`). Rollback is
+the reverse of that additive commit plus migration `0024` downgrade; legacy Studio and existing
+path versions require no data rewrite. Remaining phase risk is limited to browser-level interaction
+and responsive presentation, which is the explicitly open Phase 9 acceptance gate.
+
+**Automated gate: PASS; phase remains open for browser acceptance.**
+
 ### Phase 0 tracking
 
 - [x] Read the goal objective before touching code.
