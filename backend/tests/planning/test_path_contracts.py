@@ -12,7 +12,13 @@ from pydantic import ValidationError
 from planning.agents import run_adjacent_merge_critics
 from planning.models import MergeCriticResult, PathPlan, PathPlannerRequest
 from planning.prompts import prompt_text
-from planning.validation import PathApprovalBlocked, PathValidationError, assert_approvable, validate_path_plan
+from planning.validation import (
+    PathApprovalBlocked,
+    PathValidationError,
+    assert_approvable,
+    normalize_declared_external_prerequisites,
+    validate_path_plan,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -112,6 +118,30 @@ def test_unreachable_fixture_blocks_approval() -> None:
 
     with pytest.raises(PathApprovalBlocked, match="prerequisite"):
         assert_approvable(plan)
+
+
+def test_declared_starting_knowledge_is_reclassified_as_external() -> None:
+    payload = copy.deepcopy(_fixture("grade4-photosynthesis-path.json"))
+    declared = payload["starting_knowledge"][0]
+    first_lesson = payload["modules"][0]["lessons"][0]
+    first_lesson["prerequisites"] = [declared]
+    first_lesson["external_prerequisites"] = []
+
+    normalized = normalize_declared_external_prerequisites(PathPlan.model_validate(payload))
+
+    assert normalized.lessons[0].prerequisites == []
+    assert normalized.lessons[0].external_prerequisites == [declared]
+    validate_path_plan(normalized)
+
+
+def test_undeclared_prerequisite_is_not_normalized_away() -> None:
+    payload = copy.deepcopy(_fixture("grade4-photosynthesis-path.json"))
+    payload["modules"][0]["lessons"][0]["prerequisites"] = ["unknown.capability"]
+
+    normalized = normalize_declared_external_prerequisites(PathPlan.model_validate(payload))
+
+    with pytest.raises(PathValidationError, match="does not resolve"):
+        validate_path_plan(normalized)
 
 
 def test_planner_request_forbids_count_and_duration() -> None:

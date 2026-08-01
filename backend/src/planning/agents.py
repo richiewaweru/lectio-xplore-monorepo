@@ -24,7 +24,7 @@ from planning.prompts import (
     path_planner_prompt,
     path_structural_planner_prompt,
 )
-from planning.validation import validate_path_plan
+from planning.validation import normalize_declared_external_prerequisites, validate_path_plan
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.models import (
     V2_COMPONENT_SELECTOR,
@@ -101,6 +101,7 @@ async def run_path_planner(
         },
         trace_id=trace_id,
     )
+    plan = normalize_declared_external_prerequisites(plan)
     validate_path_plan(plan)
     return plan
 

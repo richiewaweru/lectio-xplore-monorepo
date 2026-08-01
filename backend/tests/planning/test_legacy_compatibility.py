@@ -71,6 +71,25 @@ async def test_legacy_packs_are_computed_as_one_lesson_units_without_writes(
                 requested_preset_id="v3-studio",
                 resolved_preset_id="v3-studio",
                 pack_id="legacy-pack",
+                document_json={
+                    "kind": "v3_booklet_pack",
+                    "generation_id": "legacy-generation",
+                    "status": "completed",
+                    "sections": [{"section_id": "intro", "blocks": []}],
+                },
+            )
+        )
+        session.add(
+            GenerationModel(
+                id="legacy-stale-generation",
+                user_id=OWNER.id,
+                subject="Science",
+                context="Cells",
+                mode="balanced",
+                status="completed",
+                requested_template_id="guided-concept-path",
+                requested_preset_id="balanced",
+                pack_id="legacy-pack",
             )
         )
         await session.commit()
@@ -106,8 +125,10 @@ async def test_legacy_packs_are_computed_as_one_lesson_units_without_writes(
     }
     assert detail.json()["computed"] is True
     assert detail.json()["migration_required"] is False
+    assert detail.json()["resource_count"] == 1
+    assert detail.json()["completed_count"] == 1
     assert forbidden.status_code == 404
 
     async with db_session_factory() as session:
         assert await session.scalar(select(func.count()).select_from(LearningPackModel)) == 2
-        assert await session.scalar(select(func.count()).select_from(GenerationModel)) == 1
+        assert await session.scalar(select(func.count()).select_from(GenerationModel)) == 2

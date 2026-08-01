@@ -4,7 +4,7 @@ import json
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.capabilities import require_xplore_v2
@@ -37,6 +37,7 @@ def _objective(pack: LearningPackModel) -> str:
 
 
 def _payload(pack: LearningPackModel, generations: list[GenerationModel]) -> dict[str, Any]:
+    completed_count = sum(generation.status == "completed" for generation in generations)
     return {
         "id": f"legacy:{pack.id}",
         "kind": "legacy_unit",
@@ -45,8 +46,10 @@ def _payload(pack: LearningPackModel, generations: list[GenerationModel]) -> dic
         "subject": pack.subject,
         "destination_objective": _objective(pack),
         "status": pack.status,
-        "resource_count": pack.resource_count,
-        "completed_count": pack.completed_count,
+        # Only advertise resources that the linked V3 Studio route can render.
+        # Older pack counters may include generations from retired viewers.
+        "resource_count": len(generations),
+        "completed_count": completed_count,
         "created_at": pack.created_at,
         "lesson": {
             "title": pack.topic,
@@ -80,7 +83,14 @@ async def list_legacy_units(
     generations = list(
         await session.scalars(
             select(GenerationModel)
-            .where(GenerationModel.pack_id.in_([pack.id for pack in packs]))
+            .where(
+                GenerationModel.pack_id.in_([pack.id for pack in packs]),
+                or_(
+                    GenerationModel.mode == "v3",
+                    GenerationModel.requested_preset_id == "v3-studio",
+                ),
+                GenerationModel.document_json.is_not(None),
+            )
             .order_by(GenerationModel.created_at, GenerationModel.id)
         )
     )
@@ -107,7 +117,14 @@ async def get_legacy_unit(
     generations = list(
         await session.scalars(
             select(GenerationModel)
-            .where(GenerationModel.pack_id == pack.id)
+            .where(
+                GenerationModel.pack_id == pack.id,
+                or_(
+                    GenerationModel.mode == "v3",
+                    GenerationModel.requested_preset_id == "v3-studio",
+                ),
+                GenerationModel.document_json.is_not(None),
+            )
             .order_by(GenerationModel.created_at, GenerationModel.id)
         )
     )

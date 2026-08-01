@@ -17,6 +17,39 @@ def _raise(code: str, message: str) -> None:
     raise PathValidationError(code, message)
 
 
+def normalize_declared_external_prerequisites(plan: PathPlan) -> PathPlan:
+    """Repair the planner's unambiguous internal/external field mix-up.
+
+    The model occasionally copies an explicitly declared starting capability into
+    ``prerequisites`` even though that field only accepts earlier lesson slugs.
+    Moving exact, case-insensitive matches is deterministic and preserves strict
+    validation for every undeclared or forward reference.
+    """
+    normalized = plan.model_copy(deep=True)
+    declared = {
+        value.casefold(): value
+        for value in [
+            *normalized.scope_contract.assumed_prerequisites,
+            *normalized.starting_knowledge,
+        ]
+    }
+    for lesson in normalized.lessons:
+        internal: list[str] = []
+        external = list(lesson.external_prerequisites)
+        external_folded = {value.casefold() for value in external}
+        for prerequisite in lesson.prerequisites:
+            canonical = declared.get(prerequisite.casefold())
+            if canonical is None:
+                internal.append(prerequisite)
+                continue
+            if canonical.casefold() not in external_folded:
+                external.append(canonical)
+                external_folded.add(canonical.casefold())
+        lesson.prerequisites = internal
+        lesson.external_prerequisites = external
+    return normalized
+
+
 def validate_path_plan(plan: PathPlan) -> None:
     seen: set[str] = set()
     allowed_external = {
