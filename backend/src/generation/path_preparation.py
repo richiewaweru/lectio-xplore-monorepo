@@ -9,7 +9,7 @@ from core.database.models import ConceptCardModel, GenerationModel, LessonProven
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 from resource_specs.loader import get_spec
 from resource_specs.renderer import render_spec_for_prompt
-from v3_blueprint.planning.models import StructuralPlan
+from v3_blueprint.planning.models import StructuralPlan, VariantSpec
 from v3_blueprint.planning.objective_ownership import hash_path_objective
 from v3_blueprint.planning.persistence import persist_chunked_state, persist_structural_plan
 
@@ -55,6 +55,7 @@ async def initialise_path_generation(
     lesson_mode: str,
     prior_established: list[str],
     scope_contract: dict[str, Any],
+    variants: list[VariantSpec] | None = None,
 ) -> None:
     signals = V3SignalSummary(
         topic=topic,
@@ -84,20 +85,28 @@ async def initialise_path_generation(
         form=form,
         resource_spec=_path_resource_spec(),
     )
+    state: dict[str, Any] = {
+        "stage": "awaiting_review",
+        "display_title": plan.cards[0].title,
+        "execution_started": False,
+        "path_prepared": True,
+    }
+    if variants:
+        state.update(
+            {
+                "pack_id": generation.pack_id,
+                "variants": [variant.model_dump(mode="json") for variant in variants],
+            }
+        )
     await persist_chunked_state(
         generation.id,
-        {
-            "stage": "awaiting_review",
-            "display_title": plan.cards[0].title,
-            "execution_started": False,
-            "path_prepared": True,
-        },
+        state,
         session,
     )
     generation.status = "awaiting_review"
     card = await session.scalar(
         select(ConceptCardModel).where(
-            ConceptCardModel.pack_id == generation.id,
+            ConceptCardModel.pack_id == (generation.pack_id or generation.id),
             ConceptCardModel.slug == concept_id,
         )
     )

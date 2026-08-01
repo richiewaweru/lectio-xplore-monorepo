@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
 	getUnit: vi.fn(), getUnitPath: vi.fn(), previewSkeleton: vi.fn(),
+	getTeachingSchedule: vi.fn(), getUnitGroups: vi.fn(), saveTeachingSchedule: vi.fn(),
+	suggestTeachingSchedule: vi.fn(), saveUnitGroups: vi.fn(),
 	getPathHistory: vi.fn(), getPathStatus: vi.fn(), getHistoricalPath: vi.fn(), restorePathVersion: vi.fn(),
 	getPreparedLessonStatus: vi.fn(), approveUnitPath: vi.fn(), planUnitPath: vi.fn(),
 	patchPathLesson: vi.fn(), skipPathLesson: vi.fn(), reorderPathLessons: vi.fn(),
@@ -21,7 +23,7 @@ const unit = {
 	id: 'unit-1', title: 'Photosynthesis', topic: 'Plant food', subject: 'Science',
 	grade_level: 'Grade 7', curriculum_context: null,
 	destination_objective: 'Explain how plants make food.', starting_knowledge: ['Plants are living.'],
-	status: 'approved', active_path_version_id: 'path-1'
+	status: 'approved', active_path_version_id: 'path-1', groups_revision: 1
 };
 const lesson = {
 	id: 'lesson-1', concept_id: 'concept-1', concept_slug: 'plant.food', title: 'Plant inputs',
@@ -50,6 +52,19 @@ describe('/units/[id]', () => {
 			counts: { unprepared: 0, awaiting_review: 1, generating: 0, ready: 0, warning: 0, failed: 0, skipped: 0, stale: 0 },
 			lessons: [{ path_lesson_id: lesson.id, state: 'awaiting_review', generation_id: 'generation-1', warnings: [] }]
 		});
+		mocks.getTeachingSchedule.mockResolvedValue({
+			path_version_id: 'path-1', path_revision: 2, schedule_revision: 1,
+			feasibility: { estimated_minutes: 25, planned_minutes: 50, delta_minutes: 25, status: 'comfortable' },
+			periods: [{
+				id: 'period-1', title: 'Foundations', position: 1, planned_minutes: 50, teacher_note: null,
+				lesson_ids: [lesson.id], lessons: [{ id: lesson.id, title: lesson.title, concept_id: lesson.concept_id, objective: lesson.objective, path_position: 0, estimated_minutes: 25 }],
+				feasibility: { estimated_minutes: 25, planned_minutes: 50, delta_minutes: 25, status: 'comfortable' }
+			}]
+		});
+		mocks.getUnitGroups.mockResolvedValue({
+			unit_id: 'unit-1', groups_revision: 2,
+			groups: [{ id: 'group-core', label: 'Core', profile: 'core', description: 'Main route.', toggle_profile: { support_level: 'medium', declared_toggles: [] }, voice: { register_name: 'balanced', tone: 'neutral', notation: null }, position: 1, revision: 1 }]
+		});
 		mocks.previewSkeleton.mockResolvedValue({
 			objective: lesson.objective, knowledge_type: 'factual', knowledge_type_source: 'provided',
 			skeleton_id: 'factual-core', skeleton_version: 1,
@@ -66,7 +81,7 @@ describe('/units/[id]', () => {
 	it('shows the approved path, lesson shape, and durable review link', async () => {
 		render(UnitPage);
 		expect(await screen.findByRole('heading', { name: 'Photosynthesis' })).toBeTruthy();
-		expect(screen.getByText('Path v1 · approved')).toBeTruthy();
+		expect(await screen.findByText('Path v1 · approved')).toBeTruthy();
 		expect(await screen.findByText('factual-core')).toBeTruthy();
 		expect(screen.getByText('awaiting_review')).toBeTruthy();
 		expect(screen.getByRole('heading', { name: 'Recoverable versions' })).toBeTruthy();
@@ -104,5 +119,15 @@ describe('/units/[id]', () => {
 			'unit-1', 'path-old', expect.objectContaining({ id: 'path-1', revision: 2 }),
 			'Restore this version as a new editable draft.'
 		);
+	});
+
+	it('shows schedule and group management as visible unit workspace views', async () => {
+		render(UnitPage);
+		await fireEvent.click(await screen.findByRole('button', { name: 'Schedule 1' }));
+		expect(screen.getByRole('heading', { name: 'Group the route into periods' })).toBeTruthy();
+		expect(screen.getByDisplayValue('Foundations')).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: 'Groups 1' }));
+		expect(screen.getByRole('heading', { name: 'Declared structural variants' })).toBeTruthy();
+		expect(screen.getByText(/one shared diagnostic item set/)).toBeTruthy();
 	});
 });

@@ -262,6 +262,7 @@ class UnitModel(Base):
     starting_knowledge = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
     status = Column(String, nullable=False, default="draft", server_default="draft")
     active_path_version_id = Column(String, nullable=True, index=True)
+    groups_revision = Column(Integer, nullable=False, default=1, server_default="1")
     created_at = Column(DateTime, default=_utcnow, nullable=False)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
@@ -276,6 +277,12 @@ class UnitModel(Base):
         "PathVersionModel",
         back_populates="unit",
         cascade="all, delete-orphan",
+    )
+    groups = relationship(
+        "UnitGroupModel",
+        back_populates="unit",
+        cascade="all, delete-orphan",
+        order_by="UnitGroupModel.position",
     )
 
 
@@ -301,6 +308,7 @@ class PathVersionModel(Base):
     unit_id = Column(String, ForeignKey("units.id"), nullable=False, index=True)
     version = Column(Integer, nullable=False)
     revision = Column(Integer, nullable=False, default=1, server_default="1")
+    schedule_revision = Column(Integer, nullable=False, default=1, server_default="1")
     status = Column(String, nullable=False, default="draft", server_default="draft")
     generated_by = Column(String, nullable=False, default="path_planner")
     source_plan_json = Column(JSON_DOCUMENT_TYPE, nullable=False)
@@ -317,6 +325,12 @@ class PathVersionModel(Base):
         back_populates="path_version",
         cascade="all, delete-orphan",
         order_by="PathLessonModel.position",
+    )
+    teaching_periods = relationship(
+        "TeachingPeriodModel",
+        back_populates="path_version",
+        cascade="all, delete-orphan",
+        order_by="TeachingPeriodModel.position",
     )
 
 
@@ -372,6 +386,89 @@ class PathLessonPrerequisiteModel(Base):
         ForeignKey("path_lessons.id"),
         primary_key=True,
     )
+
+
+class TeachingPeriodModel(Base):
+    __tablename__ = "teaching_periods"
+    __table_args__ = (
+        UniqueConstraint(
+            "path_version_id",
+            "position",
+            name="uq_teaching_period_path_position",
+        ),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    path_version_id = Column(
+        String,
+        ForeignKey("path_versions.id"),
+        nullable=False,
+        index=True,
+    )
+    title = Column(String, nullable=False)
+    position = Column(Integer, nullable=False)
+    planned_minutes = Column(Integer, nullable=True)
+    teacher_note = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    path_version = relationship("PathVersionModel", back_populates="teaching_periods")
+    lesson_links = relationship(
+        "TeachingPeriodLessonModel",
+        back_populates="teaching_period",
+        cascade="all, delete-orphan",
+        order_by="TeachingPeriodLessonModel.position",
+    )
+
+
+class TeachingPeriodLessonModel(Base):
+    __tablename__ = "teaching_period_lessons"
+    __table_args__ = (
+        UniqueConstraint(
+            "teaching_period_id",
+            "position",
+            name="uq_teaching_period_lesson_position",
+        ),
+        UniqueConstraint("path_lesson_id", name="uq_teaching_period_path_lesson"),
+    )
+
+    teaching_period_id = Column(
+        String,
+        ForeignKey("teaching_periods.id"),
+        primary_key=True,
+    )
+    path_lesson_id = Column(
+        String,
+        ForeignKey("path_lessons.id"),
+        primary_key=True,
+        index=True,
+    )
+    position = Column(Integer, nullable=False)
+
+    teaching_period = relationship("TeachingPeriodModel", back_populates="lesson_links")
+    path_lesson = relationship("PathLessonModel")
+
+
+class UnitGroupModel(Base):
+    __tablename__ = "unit_groups"
+    __table_args__ = (
+        UniqueConstraint("unit_id", "profile", name="uq_unit_group_profile"),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    unit_id = Column(String, ForeignKey("units.id"), nullable=False, index=True)
+    label = Column(String, nullable=False)
+    profile = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    toggle_profile = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    voice = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    position = Column(Integer, nullable=False)
+    active = Column(Boolean, nullable=False, default=True, server_default="true")
+    revision = Column(Integer, nullable=False, default=1, server_default="1")
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    unit = relationship("UnitModel", back_populates="groups")
 
 
 class PackItemModel(Base):

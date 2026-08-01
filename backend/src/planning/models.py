@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 KnowledgeType = Literal["procedural", "conceptual", "factual", "evaluative"]
+GroupProfile = Literal["support", "core", "extension"]
 
 
 class StrictModel(BaseModel):
@@ -184,6 +185,43 @@ class PathLessonMutationRequest(PathVersionMutationRequest):
 
 class RestorePathVersionRequest(PathVersionMutationRequest):
     reason: str = Field(min_length=3, max_length=500)
+
+
+class GroupVoice(StrictModel):
+    register_name: Literal["simple", "balanced", "formal"]
+    tone: Literal["encouraging", "neutral", "direct"]
+    notation: str | None = Field(default=None, max_length=120)
+
+
+class UnitGroupInput(StrictModel):
+    id: str | None = None
+    label: str = Field(min_length=1, max_length=80)
+    profile: GroupProfile
+    description: str = Field(min_length=3, max_length=500)
+    voice: GroupVoice
+
+
+class UnitGroupsWriteRequest(StrictModel):
+    groups_revision: int = Field(ge=1)
+    groups: list[UnitGroupInput] = Field(max_length=3)
+
+
+class TeachingPeriodInput(StrictModel):
+    id: str | None = None
+    title: str = Field(min_length=1, max_length=120)
+    lesson_ids: list[str] = Field(min_length=1)
+    planned_minutes: int | None = Field(default=None, ge=10, le=240)
+    teacher_note: str | None = Field(default=None, max_length=1000)
+
+
+class ScheduleWriteRequest(PathVersionMutationRequest):
+    schedule_revision: int = Field(ge=1)
+    periods: list[TeachingPeriodInput] = Field(min_length=1, max_length=40)
+
+
+class ScheduleSuggestRequest(PathVersionMutationRequest):
+    period_count: int = Field(ge=1, le=40)
+    minutes_per_period: int = Field(ge=10, le=240)
 
 
 class PrepareLessonRequest(StrictModel):

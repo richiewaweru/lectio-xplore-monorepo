@@ -12,6 +12,7 @@ export interface Unit {
 	starting_knowledge: string[];
 	status: string;
 	active_path_version_id: string | null;
+	groups_revision: number;
 }
 
 export interface UnitCreateInput {
@@ -162,4 +163,74 @@ export interface SkeletonPreview {
 		toggles_applied: string[];
 		warnings: string[];
 	}[];
+}
+
+export type ScheduleFeasibilityStatus = 'unplanned' | 'comfortable' | 'tight' | 'overloaded';
+
+export interface ScheduleFeasibility {
+	estimated_minutes: number;
+	planned_minutes: number | null;
+	delta_minutes: number | null;
+	status: ScheduleFeasibilityStatus;
+}
+
+export interface TeachingPeriodLesson {
+	id: string;
+	title: string;
+	concept_id: string;
+	objective: string;
+	path_position: number;
+	estimated_minutes: number;
+}
+
+export interface TeachingPeriod {
+	id: string | null;
+	title: string;
+	position: number;
+	planned_minutes: number | null;
+	teacher_note: string | null;
+	lesson_ids: string[];
+	lessons: TeachingPeriodLesson[];
+	feasibility: ScheduleFeasibility;
+}
+
+export interface TeachingSchedule {
+	path_version_id: string;
+	path_revision: number;
+	schedule_revision: number;
+	periods: TeachingPeriod[];
+	feasibility: ScheduleFeasibility;
+	suggestion?: {
+		period_count: number;
+		minutes_per_period: number;
+		method: string;
+	};
+}
+
+export type UnitGroupProfile = 'support' | 'core' | 'extension';
+
+export interface UnitGroupVoice {
+	register_name: 'simple' | 'balanced' | 'formal';
+	tone: 'encouraging' | 'neutral' | 'direct';
+	notation: string | null;
+}
+
+export interface UnitGroup {
+	id: string;
+	label: string;
+	profile: UnitGroupProfile;
+	description: string;
+	toggle_profile: {
+		support_level: 'high' | 'medium' | 'low';
+		declared_toggles: string[];
+	};
+	voice: UnitGroupVoice;
+	position: number;
+	revision: number;
+}
+
+export interface UnitGroups {
+	unit_id: string;
+	groups_revision: number;
+	groups: UnitGroup[];
 }

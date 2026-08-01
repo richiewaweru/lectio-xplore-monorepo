@@ -30,8 +30,18 @@ from planning.models import (
     PreparedLessonStatusResponse,
     RegenerateLessonRequest,
     RestorePathVersionRequest,
+    ScheduleSuggestRequest,
+    ScheduleWriteRequest,
     UnitCreate,
+    UnitGroupsWriteRequest,
     UnitUpdate,
+)
+from planning.schedule import (
+    groups_payload,
+    schedule_payload,
+    suggest_schedule,
+    write_groups,
+    write_schedule,
 )
 from planning.service import (
     ConceptResolutionError,
@@ -74,6 +84,7 @@ def _unit_payload(unit: UnitModel) -> dict[str, object]:
         "starting_knowledge": unit.starting_knowledge,
         "status": unit.status,
         "active_path_version_id": unit.active_path_version_id,
+        "groups_revision": unit.groups_revision,
     }
 
 
@@ -535,6 +546,93 @@ async def get_path_status(
             "lessons": lesson_states,
         }
     except Exception as exc:
+        _raise_http(exc)
+
+
+@router.get("/{unit_id}/schedule")
+async def get_teaching_schedule(
+    unit_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        version = await _active_version(session, unit)
+        return await schedule_payload(session, version=version)
+    except Exception as exc:
+        _raise_http(exc)
+
+
+@router.put("/{unit_id}/schedule")
+async def put_teaching_schedule(
+    unit_id: str,
+    request: ScheduleWriteRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        version = await _active_version(session, unit)
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
+        )
+        payload = await write_schedule(session, version=version, request=request)
+        await session.commit()
+        return payload
+    except Exception as exc:
+        await session.rollback()
+        _raise_http(exc)
+
+
+@router.post("/{unit_id}/schedule:suggest")
+async def post_teaching_schedule_suggestion(
+    unit_id: str,
+    request: ScheduleSuggestRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        version = await _active_version(session, unit)
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
+        )
+        return await suggest_schedule(session, version=version, request=request)
+    except Exception as exc:
+        _raise_http(exc)
+
+
+@router.get("/{unit_id}/groups")
+async def get_unit_groups(
+    unit_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        return await groups_payload(session, unit=unit)
+    except Exception as exc:
+        _raise_http(exc)
+
+
+@router.put("/{unit_id}/groups")
+async def put_unit_groups(
+    unit_id: str,
+    request: UnitGroupsWriteRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        payload = await write_groups(session, unit=unit, request=request)
+        await session.commit()
+        return payload
+    except Exception as exc:
+        await session.rollback()
         _raise_http(exc)
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -8,6 +9,7 @@ from sqlalchemy import select
 from core.database.models import (
     ConceptCardModel,
     GenerationModel,
+    LearningPackModel,
     LessonProvenanceModel,
     PathLessonModel,
     UserModel,
@@ -16,13 +18,17 @@ from generation.path_preparation import enforce_path_owned_card_objective
 from planning.bridge import PathPreparationBlocked, prepare_path_lesson
 from planning.models import (
     ComponentSelection,
+    GroupVoice,
     PathAnchor,
     PathPlan,
     PathStructuralPlan,
     PrepareLessonRequest,
     SelectedComponent,
     UnitCreate,
+    UnitGroupInput,
+    UnitGroupsWriteRequest,
 )
+from planning.schedule import write_groups
 from planning.service import approve_path, create_unit, persist_path_plan
 from v3_blueprint.planning.objective_ownership import hash_path_objective
 from v3_blueprint.planning.persistence import load_chunked_state
@@ -173,7 +179,7 @@ async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None
     assert reused.reused is True
     assert reused.generation_id == response.generation_id
     assert reused_plan.cards[0].objective == lesson.objective
-    with pytest.raises(PathPreparationBlocked, match="Unit groups must be persisted"):
+    with pytest.raises(ValueError, match="active and owned"):
         await prepare_path_lesson(
             db_session,
             unit=unit,
@@ -181,7 +187,7 @@ async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None
             lesson=lesson,
             request=PrepareLessonRequest(
                 lesson_mode="first_exposure",
-                group_ids=["support"],
+                group_ids=["not-a-persisted-group"],
             ),
             structural_planner=_fake_structural_planner,
             component_selector=_fake_component_selector,
@@ -207,6 +213,106 @@ async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None
     await db_session.refresh(provenance)
     assert provenance.invalidated_at is not None
     assert lesson.pack_id == regenerated.generation_id
+
+
+async def test_prepare_bridge_uses_persisted_groups_and_one_shared_pack(db_session) -> None:
+    user = UserModel(id="bridge-groups", email="bridge-groups@example.invalid", name="Groups")
+    db_session.add(user)
+    plan = PathPlan.model_validate_json(FIXTURE.read_text(encoding="utf-8"))
+    unit = await create_unit(
+        db_session,
+        owner_id=user.id,
+        request=UnitCreate(
+            title=plan.unit or "Photosynthesis",
+            topic=plan.unit or "Photosynthesis",
+            subject=plan.subject or "Science",
+            grade_level=plan.grade_level or "Grade 4",
+            destination_objective=plan.destination_objective or "Destination",
+            starting_knowledge=plan.starting_knowledge,
+        ),
+    )
+    version = await persist_path_plan(db_session, unit=unit, plan=plan)
+    await approve_path(db_session, version)
+    groups = await write_groups(
+        db_session,
+        unit=unit,
+        request=UnitGroupsWriteRequest(
+            groups_revision=unit.groups_revision,
+            groups=[
+                UnitGroupInput(
+                    label="Support",
+                    profile="support",
+                    description="More modelling and guided practice.",
+                    voice=GroupVoice(register_name="simple", tone="encouraging"),
+                ),
+                UnitGroupInput(
+                    label="Core",
+                    profile="core",
+                    description="The main class route.",
+                    voice=GroupVoice(register_name="balanced", tone="neutral"),
+                ),
+                UnitGroupInput(
+                    label="Extension",
+                    profile="extension",
+                    description="Independent transfer and application.",
+                    voice=GroupVoice(register_name="formal", tone="direct"),
+                ),
+            ],
+        ),
+    )
+    lesson = await db_session.scalar(
+        select(PathLessonModel)
+        .where(PathLessonModel.path_version_id == version.id)
+        .order_by(PathLessonModel.position)
+    )
+    assert lesson is not None
+
+    group_ids = [group["id"] for group in groups["groups"]]
+    response, _plan = await prepare_path_lesson(
+        db_session,
+        unit=unit,
+        version=version,
+        lesson=lesson,
+        request=PrepareLessonRequest(
+            lesson_mode="first_exposure",
+            group_ids=group_ids,
+        ),
+        structural_planner=_fake_structural_planner,
+        component_selector=_fake_component_selector,
+    )
+
+    generation = await db_session.get(GenerationModel, response.generation_id)
+    assert generation is not None
+    assert generation.pack_id is not None
+    pack = await db_session.get(LearningPackModel, generation.pack_id)
+    assert pack is not None
+    assert pack.learning_job_type == "xplore_variants"
+    assert pack.resource_count == 3
+    pack_plan = json.loads(pack.pack_plan_json)
+    assert pack_plan["shared_quiz"] is True
+    assert [resource["label"] for resource in pack_plan["resources"]] == [
+        "Support",
+        "Core",
+        "Extension",
+    ]
+    state = await load_chunked_state(response.generation_id, db_session)
+    assert state["pack_id"] == pack.id
+    assert [variant["label"] for variant in state["variants"]] == [
+        "Support",
+        "Core",
+        "Extension",
+    ]
+    card = await db_session.get(
+        ConceptCardModel,
+        f"{pack.id}:{lesson.concept_id}",
+    )
+    assert card is not None
+    assert card.pack_id == pack.id
+    provenance = await db_session.get(LessonProvenanceModel, response.generation_id)
+    assert provenance is not None
+    assert provenance.group_ids == sorted(group_ids)
+    assert "support.high.drop_independent" in provenance.toggles_applied
+    assert "support.low.add_transfer" in provenance.toggles_applied
 
 
 async def test_prepare_bridge_rejects_objective_rewrite(db_session) -> None:

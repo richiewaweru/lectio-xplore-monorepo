@@ -4,7 +4,14 @@ vi.mock('./client', () => ({ apiFetch: vi.fn() }));
 vi.mock('./errors', () => ({ ensureOk: vi.fn().mockResolvedValue(undefined) }));
 
 import { apiFetch } from './client';
-import { planUnitPath, preparePathLesson, previewSkeleton } from './units';
+import {
+	planUnitPath,
+	preparePathLesson,
+	previewSkeleton,
+	saveTeachingSchedule,
+	saveUnitGroups,
+	suggestTeachingSchedule
+} from './units';
 import type { PathLesson, UnitPath } from '$lib/types/units';
 
 const activePath = { id: 'path-1', revision: 4 } as UnitPath;
@@ -75,5 +82,42 @@ describe('unit API helpers', () => {
 			'core',
 			'extension'
 		]);
+	});
+
+	it('uses time only in schedule suggestion and guards schedule persistence', async () => {
+		vi.mocked(apiFetch).mockImplementation(async () => ok({ periods: [] }));
+		await suggestTeachingSchedule('unit-1', activePath, 3, 50);
+		let [, init] = vi.mocked(apiFetch).mock.calls[0];
+		expect(JSON.parse(String((init as RequestInit).body))).toEqual({
+			path_version_id: 'path-1', path_revision: 4, period_count: 3, minutes_per_period: 50
+		});
+
+		await saveTeachingSchedule('unit-1', activePath, {
+			path_version_id: 'path-1', path_revision: 4, schedule_revision: 7,
+			feasibility: { estimated_minutes: 40, planned_minutes: 50, delta_minutes: 10, status: 'tight' },
+			periods: [{
+				id: null, title: 'Foundations', position: 1, planned_minutes: 50, teacher_note: null,
+				lesson_ids: ['lesson-1'], lessons: [],
+				feasibility: { estimated_minutes: 40, planned_minutes: 50, delta_minutes: 10, status: 'tight' }
+			}]
+		});
+		[, init] = vi.mocked(apiFetch).mock.calls[1];
+		expect(JSON.parse(String((init as RequestInit).body))).toEqual({
+			path_version_id: 'path-1', path_revision: 4, schedule_revision: 7,
+			periods: [{ id: null, title: 'Foundations', lesson_ids: ['lesson-1'], planned_minutes: 50, teacher_note: null }]
+		});
+	});
+
+	it('persists only group declarations, leaving structural toggles server-owned', async () => {
+		vi.mocked(apiFetch).mockResolvedValue(ok({ groups: [] }));
+		await saveUnitGroups('unit-1', { unit_id: 'unit-1', groups_revision: 3, groups: [] }, [{
+			label: 'Support', profile: 'support', description: 'More modelling.',
+			voice: { register_name: 'simple', tone: 'encouraging', notation: null }
+		}]);
+		const [, init] = vi.mocked(apiFetch).mock.calls[0];
+		const body = JSON.parse(String((init as RequestInit).body));
+		expect(body.groups_revision).toBe(3);
+		expect(body.groups[0].profile).toBe('support');
+		expect(body.groups[0].toggle_profile).toBeUndefined();
 	});
 });

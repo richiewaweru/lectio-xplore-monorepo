@@ -69,6 +69,11 @@ def test_phase5_unit_and_path_routes_are_registered() -> None:
         ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}:prepare", "POST"),
         ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}:regenerate", "POST"),
         ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}/status", "GET"),
+        ("/api/v1/units/{unit_id}/schedule", "GET"),
+        ("/api/v1/units/{unit_id}/schedule", "PUT"),
+        ("/api/v1/units/{unit_id}/schedule:suggest", "POST"),
+        ("/api/v1/units/{unit_id}/groups", "GET"),
+        ("/api/v1/units/{unit_id}/groups", "PUT"),
     }
     assert expected <= routes
 
@@ -296,3 +301,137 @@ async def test_history_restore_status_and_stale_edit_are_explicit(db_session_fac
     assert restored.status_code == 200
     assert restored.json()["version"] == 3
     assert restored.json()["status"] == "draft"
+
+
+async def test_schedule_and_groups_reject_cross_user_access(db_session_factory) -> None:
+    async with db_session_factory() as session:
+        session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
+        session.add(
+            UserModel(
+                id="path-route-other",
+                email="path-route-other@example.invalid",
+                name="Other",
+            )
+        )
+        unit = await create_unit(
+            session,
+            owner_id="path-route-other",
+            request=UnitCreate(
+                title="Other unit",
+                topic="Other topic",
+                subject="Science",
+                grade_level="Grade 4",
+                destination_objective="Explain an outcome owned by another user.",
+                starting_knowledge=[],
+            ),
+        )
+        unit_id = unit.id
+        await session.commit()
+
+    app.dependency_overrides[get_current_user] = _override_user
+    await _install_session(db_session_factory)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        schedule = await client.get(f"/api/v1/units/{unit_id}/schedule")
+        groups = await client.get(f"/api/v1/units/{unit_id}/groups")
+
+    assert schedule.status_code == 404
+    assert groups.status_code == 404
+
+
+async def test_schedule_and_groups_round_trip_over_http(db_session_factory) -> None:
+    plan = PathPlan.model_validate_json(
+        (FIXTURES / "grade4-photosynthesis-path.json").read_text(encoding="utf-8")
+    )
+    async with db_session_factory() as session:
+        session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
+        unit = await create_unit(
+            session,
+            owner_id=TEST_USER.id,
+            request=UnitCreate(
+                title=plan.unit or "Photosynthesis",
+                topic=plan.unit or "Photosynthesis",
+                subject=plan.subject or "Science",
+                grade_level=plan.grade_level or "Grade 4",
+                destination_objective=plan.destination_objective or "Destination",
+                starting_knowledge=plan.starting_knowledge,
+            ),
+        )
+        version = await persist_path_plan(session, unit=unit, plan=plan)
+        await approve_path(session, version)
+        unit_id = unit.id
+        version_id = version.id
+        path_revision = version.revision
+        await session.commit()
+
+    app.dependency_overrides[get_current_user] = _override_user
+    await _install_session(db_session_factory)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        suggested = await client.post(
+            f"/api/v1/units/{unit_id}/schedule:suggest",
+            json={
+                "path_version_id": version_id,
+                "path_revision": path_revision,
+                "period_count": 2,
+                "minutes_per_period": 60,
+            },
+        )
+        assert suggested.status_code == 200
+        saved = await client.put(
+            f"/api/v1/units/{unit_id}/schedule",
+            json={
+                "path_version_id": version_id,
+                "path_revision": path_revision,
+                "schedule_revision": suggested.json()["schedule_revision"],
+                "periods": [
+                    {
+                        "title": period["title"],
+                        "lesson_ids": period["lesson_ids"],
+                        "planned_minutes": period["planned_minutes"],
+                        "teacher_note": period["teacher_note"],
+                    }
+                    for period in suggested.json()["periods"]
+                ],
+            },
+        )
+        loaded = await client.get(f"/api/v1/units/{unit_id}/schedule")
+        groups = await client.put(
+            f"/api/v1/units/{unit_id}/groups",
+            json={
+                "groups_revision": 1,
+                "groups": [
+                    {
+                        "label": "Support",
+                        "profile": "support",
+                        "description": "More modelling and guided practice.",
+                        "voice": {
+                            "register_name": "simple",
+                            "tone": "encouraging",
+                            "notation": None,
+                        },
+                    },
+                    {
+                        "label": "Core",
+                        "profile": "core",
+                        "description": "The main class route.",
+                        "voice": {
+                            "register_name": "balanced",
+                            "tone": "neutral",
+                            "notation": None,
+                        },
+                    },
+                ],
+            },
+        )
+        stale_groups = await client.put(
+            f"/api/v1/units/{unit_id}/groups",
+            json={"groups_revision": 1, "groups": []},
+        )
+
+    assert saved.status_code == 200
+    assert saved.json()["schedule_revision"] == 2
+    assert loaded.json() == saved.json()
+    assert groups.status_code == 200
+    assert [group["profile"] for group in groups.json()["groups"]] == ["support", "core"]
+    assert groups.json()["groups"][0]["toggle_profile"]["support_level"] == "high"
+    assert stale_groups.status_code == 409
+    assert "refresh" in stale_groups.json()["detail"].lower()

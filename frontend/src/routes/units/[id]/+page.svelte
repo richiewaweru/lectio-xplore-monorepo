@@ -7,7 +7,9 @@
 		getHistoricalPath,
 		getPathHistory,
 		getPathStatus,
+		getTeachingSchedule,
 		getUnit,
+		getUnitGroups,
 		getUnitPath,
 		mergePathLessons,
 		patchPathLesson,
@@ -20,6 +22,8 @@
 		skipPathLesson,
 		splitPathLesson
 	} from '$lib/api/units';
+	import TeachingSchedulePanel from '$lib/components/units/TeachingSchedulePanel.svelte';
+	import UnitGroupsPanel from '$lib/components/units/UnitGroupsPanel.svelte';
 	import type {
 		KnowledgeType,
 		LessonMode,
@@ -28,7 +32,9 @@
 		PathVersionSummary,
 		PreparedLessonStatus,
 		SkeletonPreview,
+		TeachingSchedule,
 		Unit,
+		UnitGroups,
 		UnitPath
 	} from '$lib/types/units';
 
@@ -45,6 +51,10 @@
 	let history = $state<PathVersionSummary[]>([]);
 	let aggregate = $state<PathStatusAggregate | null>(null);
 	let viewedVersion = $state<UnitPath | null>(null);
+	let schedule = $state<TeachingSchedule | null>(null);
+	let groups = $state<UnitGroups | null>(null);
+	let selectedGroupIds = $state<string[]>([]);
+	let activeView = $state<'path' | 'schedule' | 'groups'>('path');
 	let restoreReason = $state('Restore this version as a new editable draft.');
 	let pendingAction = $state<{ label: string; description: string; run: () => Promise<void> } | null>(null);
 	let regenerationReason = $state('The path lesson changed after preparation.');
@@ -125,12 +135,15 @@
 		error = null;
 		try {
 			unit = await getUnit(unitId);
+			groups = await getUnitGroups(unitId);
+			selectedGroupIds = groups.groups.map((group) => group.id);
 			if (unit.active_path_version_id) {
-				[path, history, aggregate] = await Promise.all([
-					getUnitPath(unitId), getPathHistory(unitId), getPathStatus(unitId)
+				[path, history, aggregate, schedule] = await Promise.all([
+					getUnitPath(unitId), getPathHistory(unitId), getPathStatus(unitId),
+					getTeachingSchedule(unitId)
 				]);
 			} else {
-				path = null; history = []; aggregate = null;
+				path = null; history = []; aggregate = null; schedule = null;
 			}
 			if (path?.lessons.length) {
 				const target = options.preserveSelection
@@ -217,7 +230,7 @@
 	async function prepare(): Promise<void> {
 		if (!selected) return;
 		await act('prepare', async () => {
-			const prepared = await preparePathLesson(unitId, path as UnitPath, selected, lessonMode);
+			const prepared = await preparePathLesson(unitId, path as UnitPath, selected, lessonMode, selectedGroupIds);
 			window.location.href = `/studio?generation_id=${encodeURIComponent(prepared.generation_id)}`;
 		}, false);
 	}
@@ -230,7 +243,8 @@
 				path as UnitPath,
 				selected,
 				lessonMode,
-				regenerationReason.trim()
+				regenerationReason.trim(),
+				selectedGroupIds
 			);
 			window.location.href = `/studio?generation_id=${encodeURIComponent(prepared.generation_id)}`;
 		}, false);
@@ -279,6 +293,12 @@
 		{#if !path}
 			<section class="empty"><p class="eyebrow">Destination saved</p><h2>Build the concept route</h2><p>The planner works backward from the destination and verifies every prerequisite forward. It receives no lesson-count or duration target.</p><button class="primary" type="button" disabled={busy !== null} onclick={() => planOrReplan(false)}>{busy === 'plan' ? 'Planning the route…' : 'Plan concept path'}</button></section>
 		{:else}
+			<nav class="view-tabs" aria-label="Unit workspace views">
+				<button type="button" class:active={activeView === 'path'} aria-current={activeView === 'path' ? 'page' : undefined} onclick={() => (activeView = 'path')}>Concept path</button>
+				<button type="button" class:active={activeView === 'schedule'} aria-current={activeView === 'schedule' ? 'page' : undefined} onclick={() => (activeView = 'schedule')}>Schedule <span>{schedule?.periods.length ?? 0}</span></button>
+				<button type="button" class:active={activeView === 'groups'} aria-current={activeView === 'groups' ? 'page' : undefined} onclick={() => (activeView = 'groups')}>Groups <span>{groups?.groups.length ?? 0}</span></button>
+			</nav>
+			{#if activeView === 'path'}
 			<section class="path-summary">
 				<div><strong>{path.lessons.length}</strong><span>capabilities</span></div><div><strong>{path.forward_verified ? 'Yes' : 'No'}</strong><span>forward verified</span></div><div><strong>{path.reaches_destination ? 'Yes' : 'No'}</strong><span>destination reached</span></div><div><strong>{path.prerequisite_risks.length}</strong><span>prerequisite risks</span></div>
 				{#if path.status !== 'approved'}<button class="primary" type="button" disabled={busy !== null || !path.reaches_destination || path.prerequisite_risks.length > 0} onclick={() => act('approve', async () => { path = await approveUnitPath(unitId, path as UnitPath); unit = await getUnit(unitId); await load({ preserveSelection: true }); }, false)}>{busy === 'approve' ? 'Approving…' : 'Approve path'}</button>{/if}
@@ -332,6 +352,9 @@
 
 						<section class="prepare">
 							<div><p class="eyebrow">Preparation</p><h3>{preparation?.workflow_stage ?? 'Checking status…'}</h3><p>{preparation?.stale ? 'The existing preparation is stale and must be regenerated.' : 'Preparation enters the durable concept-card review before lesson writing.'}</p></div>
+							{#if groups?.groups.length}
+								<fieldset class="prepare-groups"><legend>Booklet groups</legend>{#each groups.groups as group}<label><input type="checkbox" value={group.id} bind:group={selectedGroupIds} /><span>{group.label} <small>{group.profile}</small></span></label>{/each}<p>All selected booklets use one shared diagnostic item set.</p></fieldset>
+							{/if}
 							{#if preparation?.stale && preparation.can_regenerate}
 								<form class="regenerate" onsubmit={(event) => { event.preventDefault(); void regenerate(); }}>
 									<label><span>Regeneration reason</span><input bind:value={regenerationReason} minlength="3" maxlength="500" required /></label>
@@ -342,6 +365,11 @@
 					</main>
 				{/if}
 			</div>
+			{:else if activeView === 'schedule' && schedule}
+				<TeachingSchedulePanel {unitId} {path} {schedule} onsaved={(saved) => (schedule = saved)} />
+			{:else if activeView === 'groups' && groups}
+				<UnitGroupsPanel {unitId} {groups} onsaved={(saved) => { groups = saved; selectedGroupIds = saved.groups.map((group) => group.id); }} />
+			{/if}
 		{/if}
 	{/if}
 </div>
@@ -358,7 +386,7 @@
 
 <style>
 	.unit-page { min-height: calc(100vh - 58px); padding: 38px 28px 80px; }
-	.unit-head, .path-summary, .status-board, .path-health, .history-panel, .workspace, .empty, .error, .loading { max-width: 1180px; margin-inline: auto; }
+	.unit-head, .view-tabs, .path-summary, .status-board, .path-health, .history-panel, .workspace, .empty, .error, .loading { max-width: 1180px; margin-inline: auto; }
 	.unit-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
 	.back { display: inline-block; margin-bottom: 18px; color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; }
 	.eyebrow { margin: 0 0 6px; color: var(--ink-3); font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .1em; text-transform: uppercase; }
@@ -374,6 +402,10 @@
 	.primary.link { display: inline-block; text-decoration: none; }
 	.secondary { border: 1px solid var(--rule); background: var(--surface); color: var(--ink); }
 	button:disabled { cursor: not-allowed; opacity: .45; }
+	.view-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); margin-bottom: 22px; }
+	.view-tabs button { border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ink-3); cursor: pointer; padding: 10px 13px; font-size: 12px; font-weight: 600; }
+	.view-tabs button.active { border-bottom-color: var(--accent); color: var(--accent); }
+	.view-tabs span { display: inline-grid; place-items: center; min-width: 17px; height: 17px; border-radius: 999px; background: var(--paper); margin-left: 4px; font-size: 9px; }
 	.path-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; align-items: center; gap: 16px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); margin-bottom: 22px; padding: 16px 18px; }
 	.path-summary div { display: grid; gap: 2px; }
 	.path-summary strong { font: 500 20px Fraunces, Georgia, serif; }
@@ -447,6 +479,12 @@
 	.regenerate { display: grid; min-width: min(100%, 360px); gap: 8px; }
 	.regenerate button { justify-self: end; }
 	.prepare p:last-child { margin: 6px 0 0; color: var(--ink-2); font-size: 12px; }
+	.prepare-groups { min-width: 210px; border: 1px solid var(--rule); border-radius: 7px; margin: 0; padding: 10px; }
+	.prepare-groups legend { color: var(--ink-3); font-size: 10px; font-weight: 600; }
+	.prepare-groups label { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
+	.prepare-groups input { width: auto; }
+	.prepare-groups small { color: var(--ink-3); text-transform: capitalize; }
+	.prepare-groups p:last-child { font-size: 9px; }
 	.empty { border: 1px dashed var(--rule); border-radius: 10px; padding: 54px 28px; text-align: center; }
 	.empty h2 { margin: 0; font: 500 28px Fraunces, Georgia, serif; }
 	.empty > p:last-of-type { max-width: 590px; margin: 12px auto 20px; color: var(--ink-2); font-size: 14px; line-height: 1.6; }

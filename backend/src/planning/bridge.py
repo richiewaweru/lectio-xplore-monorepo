@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import (
     GenerationModel,
+    LearningPackModel,
     LessonProvenanceModel,
     PathLessonModel,
     PathLessonPrerequisiteModel,
@@ -28,6 +29,7 @@ from planning.models import (
     PrepareLessonRequest,
     PreparedLessonResponse,
 )
+from planning.schedule import selected_unit_groups
 from v3_blueprint.planning.models import (
     AnchorSpec,
     ConceptCard,
@@ -35,6 +37,7 @@ from v3_blueprint.planning.models import (
     QPlanItem,
     SectionPlan,
     StructuralPlan,
+    VariantSpec,
 )
 from v3_blueprint.planning.objective_ownership import ObjectiveOwnership, ObjectiveOwnershipError
 from v3_blueprint.planning.persistence import load_chunked_state
@@ -197,10 +200,11 @@ async def prepare_path_lesson(
         raise PathPreparationBlocked("Path must be approved before lesson preparation")
     if lesson.skipped:
         raise PathPreparationBlocked("Skipped path lessons cannot be prepared")
-    if request.group_ids:
-        raise PathPreparationBlocked(
-            "Unit groups must be persisted before differentiated preparation"
-        )
+    groups = await selected_unit_groups(
+        session,
+        unit_id=unit.id,
+        group_ids=request.group_ids,
+    )
     previous_pack_id = lesson.pack_id
     if regenerate and not previous_pack_id:
         raise PathPreparationBlocked("No existing preparation is available to regenerate")
@@ -264,6 +268,15 @@ async def prepare_path_lesson(
         ),
         knowledge_type=lesson.primary_knowledge_type,
     )
+    group_preview = catalog.preview(
+        SkeletonPreviewRequest(
+            objective=lesson.objective,
+            lesson_mode=request.lesson_mode,
+            misconception_count=0,
+            group_profiles=[group.profile for group in groups] or ["core"],
+        ),
+        knowledge_type=lesson.primary_knowledge_type,
+    )
     slots = [slot.slot_id for slot in preview.variants[0].slots]
     component_selections: dict[str, ComponentSelection] = {}
     for slot in preview.variants[0].slots:
@@ -308,6 +321,20 @@ async def prepare_path_lesson(
         "must_establish": list(lesson.must_establish or []),
         "exclusions": list(lesson.exclusions or []),
         "group_ids": request.group_ids,
+        "groups": [
+            {
+                "id": group.id,
+                "label": group.label,
+                "profile": group.profile,
+                "description": group.description,
+                "toggle_profile": group.toggle_profile,
+                "voice": group.voice,
+            }
+            for group in groups
+        ],
+        "variant_previews": [
+            variant.model_dump(mode="json") for variant in group_preview.variants
+        ],
     }
     generated = await structural_planner(fixed_context)
     plan = _build_structural_plan(
@@ -323,6 +350,44 @@ async def prepare_path_lesson(
     )
 
     generation_id = str(uuid.uuid4())
+    variants = [
+        VariantSpec.model_validate(
+            {
+                "label": group.label,
+                "group_description": group.description,
+                "voice": group.voice,
+            }
+        )
+        for group in groups
+    ]
+    learning_pack_id = str(uuid.uuid4()) if variants else None
+    if learning_pack_id is not None:
+        resources = [
+            {
+                "id": f"variant-{index}",
+                "label": variant.label,
+                "resource_type": "lesson",
+                "enabled": True,
+                "variant_spec": variant.model_dump(mode="json"),
+            }
+            for index, variant in enumerate(variants, start=1)
+        ]
+        session.add(
+            LearningPackModel(
+                id=learning_pack_id,
+                user_id=unit.owner_id,
+                learning_job_type="xplore_variants",
+                subject=unit.subject,
+                topic=lesson.title,
+                pack_plan_json=json.dumps(
+                    {"resources": resources, "shared_quiz": True},
+                    sort_keys=True,
+                ),
+                status="pending",
+                resource_count=len(resources),
+                completed_count=0,
+            )
+        )
     generation = GenerationModel(
         id=generation_id,
         user_id=unit.owner_id,
@@ -336,6 +401,7 @@ async def prepare_path_lesson(
         resolved_preset_id="v3-studio",
         section_count=len(plan.sections),
         planning_spec_json=plan.model_dump_json(),
+        pack_id=learning_pack_id,
     )
     session.add(generation)
     provenance = LessonProvenanceModel(
@@ -348,7 +414,13 @@ async def prepare_path_lesson(
             skeleton_version=preview.skeleton_version,
             knowledge_type=lesson.primary_knowledge_type,
             knowledge_type_source=lesson.knowledge_type_source,
-            toggles_applied=preview.variants[0].toggles_applied,
+            toggles_applied=list(
+                dict.fromkeys(
+                    toggle
+                    for variant in group_preview.variants
+                    for toggle in variant.toggles_applied
+                )
+            ),
             deviations_applied=[],
             path_lesson_revision=lesson.revision,
             lesson_mode=request.lesson_mode,
@@ -378,6 +450,7 @@ async def prepare_path_lesson(
         lesson_mode=request.lesson_mode,
         prior_established=prior_established,
         scope_contract=scope_contract,
+        variants=variants,
     )
     lesson.pack_id = generation_id
     await session.flush()

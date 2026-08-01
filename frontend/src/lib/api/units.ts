@@ -10,8 +10,11 @@ import type {
 	PreparedLesson,
 	PreparedLessonStatus,
 	SkeletonPreview,
+	TeachingSchedule,
 	Unit,
 	UnitCreateInput,
+	UnitGroup,
+	UnitGroups,
 	UnitPath
 } from '$lib/types/units';
 
@@ -56,6 +59,56 @@ export function getHistoricalPath(unitId: string, versionId: string): Promise<Un
 
 export function getPathStatus(unitId: string): Promise<PathStatusAggregate> {
 	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/path/status`, 'Could not load path status.');
+}
+
+export function getTeachingSchedule(unitId: string): Promise<TeachingSchedule> {
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/schedule`, 'Could not load the teaching schedule.');
+}
+
+export function suggestTeachingSchedule(
+	unitId: string,
+	path: UnitPath,
+	periodCount: number,
+	minutesPerPeriod: number
+): Promise<TeachingSchedule> {
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/schedule:suggest`, 'Could not suggest a teaching schedule.', {
+		method: 'POST', headers: jsonHeaders,
+		body: JSON.stringify({
+			path_version_id: path.id, path_revision: path.revision,
+			period_count: periodCount, minutes_per_period: minutesPerPeriod
+		})
+	});
+}
+
+export function saveTeachingSchedule(unitId: string, path: UnitPath, schedule: TeachingSchedule): Promise<TeachingSchedule> {
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/schedule`, 'Could not save the teaching schedule.', {
+		method: 'PUT', headers: jsonHeaders,
+		body: JSON.stringify({
+			path_version_id: path.id, path_revision: path.revision,
+			schedule_revision: schedule.schedule_revision,
+			periods: schedule.periods.map((period) => ({
+				id: period.id, title: period.title, lesson_ids: period.lesson_ids,
+				planned_minutes: period.planned_minutes, teacher_note: period.teacher_note
+			}))
+		})
+	});
+}
+
+export function getUnitGroups(unitId: string): Promise<UnitGroups> {
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/groups`, 'Could not load unit groups.');
+}
+
+export function saveUnitGroups(unitId: string, current: UnitGroups, groups: Array<{
+	id?: string;
+	label: string;
+	profile: UnitGroup['profile'];
+	description: string;
+	voice: UnitGroup['voice'];
+}>): Promise<UnitGroups> {
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/groups`, 'Could not save unit groups.', {
+		method: 'PUT', headers: jsonHeaders,
+		body: JSON.stringify({ groups_revision: current.groups_revision, groups })
+	});
 }
 
 export function restorePathVersion(unitId: string, sourceVersionId: string, active: UnitPath, reason: string): Promise<UnitPath> {
@@ -176,13 +229,13 @@ export function mergePathLessons(
 	});
 }
 
-export function preparePathLesson(unitId: string, path: UnitPath, lesson: PathLesson, lessonMode: LessonMode): Promise<PreparedLesson> {
+export function preparePathLesson(unitId: string, path: UnitPath, lesson: PathLesson, lessonMode: LessonMode, groupIds: string[] = []): Promise<PreparedLesson> {
 	return jsonRequest(
 		`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons/${encodeURIComponent(lesson.id)}:prepare`,
 		'Could not prepare the lesson.',
 		{
 			method: 'POST', headers: jsonHeaders,
-			body: JSON.stringify({ path_version_id: path.id, path_revision: path.revision, lesson_revision: lesson.revision, group_ids: [], lesson_mode: lessonMode })
+			body: JSON.stringify({ path_version_id: path.id, path_revision: path.revision, lesson_revision: lesson.revision, group_ids: groupIds, lesson_mode: lessonMode })
 		}
 	);
 }
@@ -192,7 +245,8 @@ export function regeneratePathLesson(
 	path: UnitPath,
 	lesson: PathLesson,
 	lessonMode: LessonMode,
-	reason: string
+	reason: string,
+	groupIds: string[] = []
 ): Promise<PreparedLesson & { regeneration_reason: string }> {
 	return jsonRequest(
 		`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons/${encodeURIComponent(lesson.id)}:regenerate`,
@@ -200,7 +254,7 @@ export function regeneratePathLesson(
 		{
 			method: 'POST',
 			headers: jsonHeaders,
-			body: JSON.stringify({ path_version_id: path.id, path_revision: path.revision, lesson_revision: lesson.revision, group_ids: [], lesson_mode: lessonMode, reason })
+			body: JSON.stringify({ path_version_id: path.id, path_revision: path.revision, lesson_revision: lesson.revision, group_ids: groupIds, lesson_mode: lessonMode, reason })
 		}
 	);
 }
