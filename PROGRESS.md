@@ -343,6 +343,76 @@ database, and logs were removed, and the isolated backend was stopped with port 
 **Gate: PASS.** Phase 9 provides a version-scoped scheduling layer and persisted structural group
 profiles without turning time into a decomposition constraint or creating variant-owned quizzes.
 
+### Phase 10 tracking
+
+- [x] Materialize genuinely different support, core, and extension structural plans while keeping
+  one exact path objective, canonical concept, scope exclusions, and shared diagnostic check.
+- [x] Explain every structural add, remove, replacement, repeat, and reorder with its declared
+  toggle identifier.
+- [x] Detect skeleton conflicts and the six-slot limit before preparation and block with typed,
+  actionable issues instead of silently dropping content.
+- [x] Add persisted teacher deviation requests with separate approve/reject decisions and lesson
+  revision invalidation.
+- [x] Retain requested, approved, and applied deviation provenance through safe regeneration.
+- [x] Fan each selected group into its own structural plan while retaining the latest approved
+  shared card and exact lesson intent; keep sibling generation failures isolated.
+- [x] Add the controlled-shape workspace with canonical/support/core/extension comparison,
+  stress-test controls, exact diff explanations, blocking notices, and approval controls.
+- [x] Run focused, complete, migration, type, build, architecture, and immutable-fixture gates.
+- [ ] Run authenticated browser acceptance against an isolated local Phase 10 database.
+
+### Phase 10 automated gate result
+
+Focused shape, bridge, route, fan-out, and UI contracts:
+
+```text
+$ cd backend && uv run pytest tests/planning/test_shapes.py tests/planning/test_path_bridge.py tests/planning/test_path_routes.py tests/v3_blueprint/test_skeletons.py tests/generation/test_variant_shape_fanout.py -q
+28 passed, 1 warning in 43.43s
+$ cd frontend && pnpm exec vitest run src/lib/components/units/LessonShapePanel.test.ts src/routes/units/[id]/page.test.ts src/lib/api/units.test.ts
+Test Files  3 passed (3)
+Tests       13 passed (13)
+$ cd frontend && pnpm exec svelte-check --tsconfig ./tsconfig.json
+svelte-check found 0 errors and 0 warnings
+```
+
+Complete regression gates:
+
+```text
+$ cd backend && uv run ruff check src tests
+All checks passed!
+$ cd backend && uv run pytest -q
+493 passed, 1 warning in 165.49s
+$ cd frontend && pnpm exec vitest run --pool=threads --maxWorkers=1
+Test Files  71 passed (71)
+Tests       297 passed (297)
+$ cd frontend && pnpm exec vite build
+8429 SSR modules and 8539 client modules transformed
+built in 3m 2s; adapter completed
+```
+
+Migration `0025` on a disposable SQLite database:
+
+```text
+$ cd backend && uv run python tools/validate_shape_deviations_migration.py
+upgrade=path_lesson_deviations,provenance_snapshots
+downgrade=clean
+revision=20260801_0025
+```
+
+Architecture and immutable fixture:
+
+```text
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+Implementation commit: `630d74e` (`P10: feat(units): add controlled differentiated shapes`).
+Rollback is the reverse of this additive commit plus migration `0025` downgrade. The automated
+gate is green; Phase 10 remains open only for authenticated browser acceptance of the visible
+conflict, request/approve, persistence, and prepare-blocking flow.
+
 ### Phase 0 tracking
 
 - [x] Read the goal objective before touching code.
