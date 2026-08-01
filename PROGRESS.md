@@ -6,7 +6,7 @@
 **Branch**: `codex/v2-complete-build`
 **Base branch**: `xplore`
 **Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
-**Current phase**: Phase 12 in progress — actuals, marks, and misconception summaries
+**Current phase**: Phase 13 in progress — convergence and production beta readiness
 
 ### Phase checklist
 
@@ -24,7 +24,7 @@
 - [x] Phase 9 — teaching schedule and unit groups
 - [x] Phase 10 — controlled differentiated shapes
 - [x] Phase 11 — resource projections
-- [ ] Phase 12 — actuals, marks, and misconception summaries
+- [x] Phase 12 — actuals, marks, and misconception summaries
 - [ ] Phase 13 — convergence and production beta
 - [ ] Post-build 30-lesson human evaluation and tuning
 
@@ -546,7 +546,7 @@ work.
   the path or previously published artifacts.
 - [x] Add a Results workspace for lesson actuals, group/whole-class counts, and summaries.
 - [x] Run focused, complete, migration, type, build, architecture, and immutable-fixture gates.
-- [ ] Run authenticated browser acceptance against an isolated local Phase 12 database.
+- [x] Run authenticated browser acceptance against an isolated local Phase 12 database.
 
 ### Phase 12 automated gate result
 
@@ -606,7 +606,25 @@ $ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorith
 
 Implementation commit: `79259ff` (`P12: feat(units): add audited lesson outcomes`). Rollback is
 the reverse of this additive commit plus migration `0027` downgrade. The automated gate is green;
-Phase 12 remains open until its authenticated browser acceptance is recorded.
+Phase 12 browser acceptance then used a disposable current-schema SQLite database and a local-only
+teacher identity. The full unit workspace exposed Results beside Concept path, Schedule, Groups,
+and Resources. Results contained lesson/group selectors, actual outcome and pace controls, and
+aggregate option counts only; it explicitly stated that Xplore creates neither learner accounts nor
+individual diagnoses.
+
+The browser recorded a `partial`/`slower` actual with capability, misconception, anchor, and teacher
+note, then saved a 9/2/1 option-count distribution. The surface showed 12 saved responses, mapped
+the nine tagged distractors to the pack-owned soil-food misconception, retained the one untagged
+distractor as unclaimed, and repeated the aggregate/no-individual-diagnosis advisory. A second
+actual edit produced `Revision 2 · audited`; full reload preserved revision 2 and marks revision 1.
+Direct database evidence showed two append-only actual rows linked through `supersedes_actual_id`,
+three option rows, zero LLM calls, and unchanged approved path/generation state. Temporary auth and
+seed files were deleted, the isolated backend was stopped, and port 8000 was released while the
+existing port-5173 development server remained untouched.
+
+**Gate: PASS.** Phase 12 records reversible teaching outcomes and complete class-level answer
+counts, derives advisory misconception follow-up without learner claims, and carries actuals forward
+as explicit context without silently mutating approved plans or artifacts.
 
 ### Phase 0 tracking
 
