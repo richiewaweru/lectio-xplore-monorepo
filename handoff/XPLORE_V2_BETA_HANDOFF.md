@@ -1,6 +1,6 @@
 # Xplore V2 Production Beta Handoff
 
-Release candidate: `1.0.0-beta.1`
+Release: `v1.0.0-beta.1` (`20a0231`)
 
 ## Delivered
 

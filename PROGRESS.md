@@ -6,7 +6,7 @@
 **Branch**: `xplore`
 **Base branch**: `xplore`
 **Baseline commit**: `73c70a9863157a04eb675dc29a23f7ee19151e8b`
-**Current phase**: Phase 13 release closeout — production smoke passed; beta tag pending
+**Current phase**: Phase 13 complete — production beta published
 
 ### Phase checklist
 
@@ -25,7 +25,7 @@
 - [x] Phase 10 — controlled differentiated shapes
 - [x] Phase 11 — resource projections
 - [x] Phase 12 — actuals, marks, and misconception summaries
-- [ ] Phase 13 — convergence and production beta
+- [x] Phase 13 — convergence and production beta
 - [ ] Post-build 30-lesson human evaluation and tuning
 
 ### Post-Phase-5 human decision — 2026-07-31
@@ -55,7 +55,7 @@ The execution plan and per-phase gates are recorded in `handoff/PHASE6_13_BUILD_
 - [x] Merge the validated release into `xplore` and deploy backend/frontend from the same commit.
 - [x] Pass production health, queue, unit, Builder, Lectio, and PDF smoke; pass migration, audit,
   and rollback gates in isolated acceptance.
-- [ ] Tag and publish `v1.0.0-beta.1`, then close the final handoff.
+- [x] Tag and publish `v1.0.0-beta.1`, then close the final handoff.
 
 ### Phase 13 production evidence — 2026-08-01
 
@@ -81,6 +81,7 @@ The execution plan and per-phase gates are recorded in `handoff/PHASE6_13_BUILD_
   architecture guard.
 - The broader 30-lesson human evaluation remains explicitly user-owned post-build tuning and is
   not a release blocker.
+- Annotated tag `v1.0.0-beta.1` was published from release commit `20a0231`.
 
 ### Phase 13 automated gate result
 
