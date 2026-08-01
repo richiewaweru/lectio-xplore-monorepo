@@ -115,6 +115,7 @@ async def test_deviation_requires_decision_and_persists_in_shape(db_session) -> 
     assert approved["can_prepare"] is True
     assert approved["deviations"][0]["status"] == "approved"
     assert lesson.revision == original_revision + 1
+    assert approved["canonical"]["slots"][0]["slot_id"] != "orient"
     assert all(
         variant["slots"][0]["slot_id"] != "orient"
         for variant in approved["variants"]

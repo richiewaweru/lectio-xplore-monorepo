@@ -86,6 +86,7 @@ async def lesson_shape_payload(
             lesson_mode=lesson_mode,
             misconception_count=misconception_count,
             group_profiles=["core"],
+            approved_deviations=approved,
         ),
         knowledge_type=lesson.primary_knowledge_type,
     )
