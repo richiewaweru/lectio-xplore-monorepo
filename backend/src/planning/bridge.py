@@ -76,6 +76,13 @@ def _preparation_key(*, version_id: str, lesson_id: str, revision: int) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+def _clip_advisory_text(value: str, *, limit: int) -> str:
+    normalized = " ".join(value.split())
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: limit - 1].rstrip() + "…"
+
+
 async def _preparation_context(
     session: AsyncSession,
     *,
@@ -161,8 +168,19 @@ def _build_structural_plan(
         raise PathPreparationBlocked("Prepared card must retain the canonical concept ID")
 
     section_payloads: list[dict[str, Any]] = []
-    for generated_section in generated.sections:
+    for index, generated_section in enumerate(generated.sections):
         section_payload = dict(generated_section)
+        title = section_payload.get("title")
+        if isinstance(title, str):
+            section_payload["title"] = _clip_advisory_text(title, limit=80)
+        transition_note = section_payload.get("transition_note")
+        if index == 0:
+            section_payload["transition_note"] = None
+        elif isinstance(transition_note, str):
+            section_payload["transition_note"] = _clip_advisory_text(
+                transition_note,
+                limit=120,
+            )
         components = section_payload.get("components")
         if isinstance(components, list):
             section_payload["components"] = [

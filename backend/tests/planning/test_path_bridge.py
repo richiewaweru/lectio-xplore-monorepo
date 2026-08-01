@@ -53,11 +53,15 @@ async def _fake_structural_planner(context: dict) -> PathStructuralPlan:
         sections.append(
             {
                 "id": slot["slot_id"],
-                "title": slot["purpose"][:80],
+                "title": f"{slot['purpose']} — an advisory explanation that may exceed the display limit",
                 "role": slot["slot_id"],
                 "card_id": None if slot["slot_id"] in {"orient", "close"} else context["concept_id"],
                 "visual_required": slot["visual_required"],
-                "transition_note": None if index == 0 else "Build on the preceding fixed slot.",
+                "transition_note": (
+                    "The model may provide a useful but overly detailed transition note that "
+                    "explains how the prior section establishes knowledge for the next cognitive "
+                    "move without changing the lesson structure or objective."
+                ),
                 "components": [
                     {
                         "slug": component,
@@ -139,6 +143,12 @@ async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None
     assert [section.role for section in structural_plan.sections] == response.slots
     assert structural_plan.cards[0].objective == lesson.objective
     assert structural_plan.cards[0].opens_by == ""
+    assert structural_plan.sections[0].transition_note is None
+    assert all(
+        section.transition_note is None or len(section.transition_note) <= 120
+        for section in structural_plan.sections
+    )
+    assert all(len(section.title) <= 80 for section in structural_plan.sections)
     assert response.objective_hash == hash_path_objective(lesson.objective)
     provenance = await db_session.get(LessonProvenanceModel, response.generation_id)
     assert provenance is not None
