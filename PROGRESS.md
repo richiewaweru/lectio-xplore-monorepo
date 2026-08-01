@@ -532,6 +532,82 @@ Browser-fix commit: `c548644` (`P11: fix(units): harden projected quiz rendering
 traceable approved sources, with unavailable projections kept explicit and no projection-time LLM
 work.
 
+### Phase 12 tracking
+
+- [x] Add reversible, append-only lesson-actual and aggregate marks persistence.
+- [x] Record taught/not-taught status, pace, established capabilities, unresolved misconceptions,
+  anchor use, teacher note, exact lesson revision, and objective hash.
+- [x] Guard actual and marks edits with independent optimistic revisions and retain prior revisions.
+- [x] Accept only complete aggregate option counts for current pack-owned shared items and
+  unit-owned groups; expose no learner identity fields.
+- [x] Preserve null misconception tags as explicitly unclaimed distractor counts.
+- [x] Label summaries advisory and prohibit learner-level diagnostic claims in the contract and UI.
+- [x] Feed earlier lesson actuals to later preparation as explicit advisory context without mutating
+  the path or previously published artifacts.
+- [x] Add a Results workspace for lesson actuals, group/whole-class counts, and summaries.
+- [x] Run focused, complete, migration, type, build, architecture, and immutable-fixture gates.
+- [ ] Run authenticated browser acceptance against an isolated local Phase 12 database.
+
+### Phase 12 automated gate result
+
+Focused outcome, HTTP, API, and UI contracts:
+
+```text
+$ cd backend && uv run pytest tests/planning/test_outcomes.py tests/planning/test_path_routes.py -q
+13 passed, 1 warning in 23.96s
+$ cd backend && uv run pytest tests/planning/test_path_bridge.py::test_later_preparation_receives_actuals_as_explicit_advisory_context -q
+1 passed, 1 warning in 6.70s
+$ cd frontend && pnpm exec vitest run src/lib/components/units/LessonResultsPanel.test.ts src/lib/api/units.test.ts src/routes/units/[id]/page.test.ts
+Test Files  3 passed (3)
+Tests       13 passed (13)
+$ cd frontend && pnpm check
+svelte-check found 0 errors and 0 warnings
+```
+
+The service tests prove actual edits append superseding revisions, marks edits append complete
+option-count snapshots, cross-pack items are rejected, tagged distractors aggregate by misconception,
+and untagged distractors remain unclaimed. The preparation test proves the latest earlier actual is
+sent in the structural planner's explicit `lesson_actuals` context while the later path objective
+remains path-owned. The UI test proves the Results surface submits only aggregate counts and renders
+the no-individual-diagnosis advisory.
+
+Complete regression gates:
+
+```text
+$ cd backend && uv run ruff check src tests tools/validate_outcomes_migration.py
+All checks passed!
+$ cd backend && uv run pytest -q
+508 passed, 1 warning in 139.38s
+$ cd frontend && pnpm exec vitest run --pool=threads --maxWorkers=1
+Test Files  74 passed (74)
+Tests       304 passed (304)
+$ cd frontend && pnpm build
+8435 SSR modules and 8546 client modules transformed
+built in 1m 8s; adapter completed
+```
+
+Migration `0027` on a disposable SQLite database:
+
+```text
+$ cd backend && uv run python tools/validate_outcomes_migration.py
+upgrade=lesson_actuals,marks_entries,audit_provenance
+downgrade=clean
+revision=20260801_0027
+```
+
+Architecture and immutable fixture:
+
+```text
+$ python tools/agent/check_architecture.py --format text
+No architecture violations found.
+$ Get-FileHash backend/tests/fixtures/xplore_v2_phase0_generation.json -Algorithm SHA256
+91E0BCB220BF9E2532B13AEF9FE7447AD822AB109D9D226DC032D5ADB4540FD2
+```
+
+Implementation commit: `79259ff` (`P12: feat(units): add audited lesson outcomes`). Rollback is
+the reverse of this additive commit plus migration `0027` downgrade. The automated gate is green;
+Phase 12 remains open until its authenticated browser acceptance is recorded.
+
 ### Phase 0 tracking
 
 - [x] Read the goal objective before touching code.
