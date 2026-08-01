@@ -62,6 +62,7 @@ async def _fake_structural_planner(context: dict) -> PathStructuralPlan:
                     {
                         "slug": component,
                         "purpose": f"Perform the {slot['slot_id']} cognitive job.",
+                        "reason": "The selector's advisory rationale is not persisted.",
                     }
                 ],
             }

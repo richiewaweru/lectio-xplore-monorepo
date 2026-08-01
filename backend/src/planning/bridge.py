@@ -160,7 +160,19 @@ def _build_structural_plan(
     if card.id != lesson.concept_id:
         raise PathPreparationBlocked("Prepared card must retain the canonical concept ID")
 
-    sections = [SectionPlan.model_validate(section) for section in generated.sections]
+    section_payloads: list[dict[str, Any]] = []
+    for generated_section in generated.sections:
+        section_payload = dict(generated_section)
+        components = section_payload.get("components")
+        if isinstance(components, list):
+            section_payload["components"] = [
+                {key: value for key, value in component.items() if key != "reason"}
+                if isinstance(component, dict)
+                else component
+                for component in components
+            ]
+        section_payloads.append(section_payload)
+    sections = [SectionPlan.model_validate(section) for section in section_payloads]
     roles = [section.role for section in sections]
     if roles != slots:
         raise PathPreparationBlocked(
