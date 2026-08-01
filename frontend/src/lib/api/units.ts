@@ -2,9 +2,13 @@ import { apiFetch } from '$lib/api/client';
 import { ensureOk } from '$lib/api/errors';
 import type {
 	KnowledgeType,
+	LessonActual,
+	LessonActualStatus,
 	LessonShapeDeviation,
 	LessonShapePreview,
 	LessonMode,
+	LessonPace,
+	MarksSummary,
 	PathLesson,
 	PathPlannerInput,
 	PathStatusAggregate,
@@ -374,4 +378,45 @@ export function listUnitResources(unitId: string): Promise<ResourceComposition[]
 
 export function getUnitResource(unitId: string, compositionId: string): Promise<ResourceComposition> {
 	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/compositions/${encodeURIComponent(compositionId)}`, 'Could not load this resource projection.');
+}
+
+export function getLessonActual(unitId: string, lessonId: string): Promise<LessonActual | null> {
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons/${encodeURIComponent(lessonId)}/actual`, 'Could not load the lesson actual.');
+}
+
+export function saveLessonActual(
+	unitId: string,
+	path: UnitPath,
+	lesson: PathLesson,
+	input: {
+		actual_revision: number;
+		status: LessonActualStatus;
+		pace: LessonPace;
+		established_concepts: string[];
+		unresolved_misconceptions: string[];
+		anchor_used: string | null;
+		teacher_note: string | null;
+	}
+): Promise<LessonActual> {
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons/${encodeURIComponent(lesson.id)}/actual`, 'Could not save the lesson actual.', {
+		method: 'POST', headers: jsonHeaders,
+		body: JSON.stringify({ path_version_id: path.id, path_revision: path.revision, lesson_revision: lesson.revision, ...input })
+	});
+}
+
+export function getMarksSummary(unitId: string, lessonId: string, groupId: string | null): Promise<MarksSummary> {
+	const query = groupId ? `?group_id=${encodeURIComponent(groupId)}` : '';
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons/${encodeURIComponent(lessonId)}/marks-summary${query}`, 'Could not load aggregate marks.');
+}
+
+export function saveMarks(
+	unitId: string,
+	path: UnitPath,
+	lesson: PathLesson,
+	input: { marks_revision: number; group_id: string | null; items: Array<{ item_id: string; option_counts: Record<string, number> }> }
+): Promise<MarksSummary> {
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons/${encodeURIComponent(lesson.id)}/marks`, 'Could not save aggregate marks.', {
+		method: 'POST', headers: jsonHeaders,
+		body: JSON.stringify({ path_version_id: path.id, path_revision: path.revision, lesson_revision: lesson.revision, ...input })
+	});
 }

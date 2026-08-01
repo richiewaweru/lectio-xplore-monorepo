@@ -75,6 +75,10 @@ def test_phase5_unit_and_path_routes_are_registered() -> None:
         ("/api/v1/units/{unit_id}/groups", "GET"),
         ("/api/v1/units/{unit_id}/groups", "PUT"),
         ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}/shape", "GET"),
+        ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}/actual", "GET"),
+        ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}/actual", "POST"),
+        ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}/marks", "POST"),
+        ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}/marks-summary", "GET"),
         ("/api/v1/units/{unit_id}/path/lessons/{lesson_id}/shape/deviations", "POST"),
         (
             "/api/v1/units/{unit_id}/path/lessons/{lesson_id}/shape/deviations/{deviation_id}:approve",
@@ -536,3 +540,57 @@ async def test_schedule_and_groups_round_trip_over_http(db_session_factory) -> N
     assert groups.json()["groups"][0]["toggle_profile"]["support_level"] == "high"
     assert stale_groups.status_code == 409
     assert "refresh" in stale_groups.json()["detail"].lower()
+
+
+async def test_lesson_actual_round_trip_is_revision_guarded_over_http(db_session_factory) -> None:
+    plan = PathPlan.model_validate_json(
+        (FIXTURES / "grade4-photosynthesis-path.json").read_text(encoding="utf-8")
+    )
+    async with db_session_factory() as session:
+        session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
+        unit = await create_unit(
+            session,
+            owner_id=TEST_USER.id,
+            request=UnitCreate(
+                title=plan.unit or "Photosynthesis", topic=plan.unit or "Photosynthesis",
+                subject=plan.subject or "Science", grade_level=plan.grade_level or "Grade 4",
+                destination_objective=plan.destination_objective or "Destination",
+                starting_knowledge=plan.starting_knowledge,
+            ),
+        )
+        version = await persist_path_plan(session, unit=unit, plan=plan)
+        await approve_path(session, version)
+        lesson = await session.scalar(
+            select(PathLessonModel)
+            .where(PathLessonModel.path_version_id == version.id)
+            .order_by(PathLessonModel.position)
+        )
+        assert lesson is not None
+        ids = (unit.id, version.id, version.revision, lesson.id, lesson.revision)
+        await session.commit()
+
+    unit_id, version_id, path_revision, lesson_id, lesson_revision = ids
+    app.dependency_overrides[get_current_user] = _override_user
+    await _install_session(db_session_factory)
+    payload = {
+        "path_version_id": version_id, "path_revision": path_revision,
+        "lesson_revision": lesson_revision, "actual_revision": 0,
+        "status": "partial", "pace": "slower",
+        "established_concepts": ["Leaves use light."],
+        "unresolved_misconceptions": ["soil-food"],
+        "anchor_used": "Leaf sample", "teacher_note": "Revisit next lesson.",
+    }
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        saved = await client.post(
+            f"/api/v1/units/{unit_id}/path/lessons/{lesson_id}/actual", json=payload
+        )
+        loaded = await client.get(f"/api/v1/units/{unit_id}/path/lessons/{lesson_id}/actual")
+        stale = await client.post(
+            f"/api/v1/units/{unit_id}/path/lessons/{lesson_id}/actual", json=payload
+        )
+
+    assert saved.status_code == 200
+    assert saved.json()["revision"] == 1
+    assert loaded.json() == saved.json()
+    assert stale.status_code == 409
+    assert "expected 1" in stale.json()["detail"]

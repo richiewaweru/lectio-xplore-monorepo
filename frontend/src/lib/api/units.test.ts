@@ -7,12 +7,15 @@ import { apiFetch } from './client';
 import {
 	decideShapeDeviation,
 	getLessonShape,
+	getMarksSummary,
 	createUnitResource,
 	previewUnitResource,
 	planUnitPath,
 	preparePathLesson,
 	previewSkeleton,
 	requestShapeDeviation,
+	saveLessonActual,
+	saveMarks,
 	saveTeachingSchedule,
 	saveUnitGroups,
 	suggestTeachingSchedule
@@ -172,5 +175,32 @@ describe('unit API helpers', () => {
 				component_refs: ['generation-1:intro']
 			}));
 		}
+	});
+
+	it('saves guarded actual revisions and aggregate option counts', async () => {
+		vi.mocked(apiFetch).mockImplementation(async () => ok({ revision: 1 }));
+		await saveLessonActual('unit-1', activePath, activeLesson, {
+			actual_revision: 0, status: 'partial', pace: 'slower',
+			established_concepts: ['Leaves make food.'],
+			unresolved_misconceptions: ['soil-food'], anchor_used: null, teacher_note: 'Revisit.'
+		});
+		await getMarksSummary('unit-1', 'lesson-1', 'group core');
+		await saveMarks('unit-1', activePath, activeLesson, {
+			marks_revision: 0, group_id: 'group core',
+			items: [{ item_id: 'item-1', option_counts: { A: 9, B: 2 } }]
+		});
+
+		let [, init] = vi.mocked(apiFetch).mock.calls[0];
+		expect(JSON.parse(String((init as RequestInit).body))).toEqual(expect.objectContaining({
+			path_version_id: 'path-1', path_revision: 4, lesson_revision: 2,
+			actual_revision: 0, status: 'partial'
+		}));
+		expect(vi.mocked(apiFetch).mock.calls[1][0]).toContain('group_id=group%20core');
+		[, init] = vi.mocked(apiFetch).mock.calls[2];
+		expect(JSON.parse(String((init as RequestInit).body))).toEqual({
+			path_version_id: 'path-1', path_revision: 4, lesson_revision: 2,
+			marks_revision: 0, group_id: 'group core',
+			items: [{ item_id: 'item-1', option_counts: { A: 9, B: 2 } }]
+		});
 	});
 });

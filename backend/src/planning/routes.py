@@ -13,6 +13,7 @@ from core.database.models import (
     PathLessonModel,
     PathLessonPrerequisiteModel,
     ResourceCompositionModel,
+    UnitGroupModel,
     UnitModel,
 )
 from core.dependencies import get_async_session
@@ -25,6 +26,8 @@ from planning.models import (
     GuardedPathLessonPatch,
     GuardedReorderPathLessonsRequest,
     GuardedSplitPathLessonRequest,
+    LessonActualWriteRequest,
+    MarksWriteRequest,
     PathLessonMutationRequest,
     PathPlannerRequest,
     PathReplanRequest,
@@ -41,6 +44,15 @@ from planning.models import (
     UnitCreate,
     UnitGroupsWriteRequest,
     UnitUpdate,
+)
+from planning.outcomes import (
+    OutcomeValidationError,
+    StaleOutcomeError,
+    actual_payload,
+    latest_actual,
+    marks_summary,
+    record_lesson_actual,
+    record_marks,
 )
 from planning.schedule import (
     groups_payload,
@@ -183,14 +195,20 @@ async def _path_payload(session: AsyncSession, version) -> dict[str, object]:
 def _raise_http(exc: Exception) -> None:
     if isinstance(exc, PathNotFoundError):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    if isinstance(exc, (PathApprovalBlocked, PathPreparationBlocked, StalePathMutationError)):
+    if isinstance(
+        exc,
+        (PathApprovalBlocked, PathPreparationBlocked, StalePathMutationError, StaleOutcomeError),
+    ):
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if isinstance(exc, ProjectionUnavailable):
         raise HTTPException(
             status_code=409,
             detail={"code": "projection_unavailable", "message": str(exc)},
         ) from exc
-    if isinstance(exc, (PathValidationError, ConceptResolutionError, ValueError)):
+    if isinstance(
+        exc,
+        (PathValidationError, ConceptResolutionError, OutcomeValidationError, ValueError),
+    ):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     raise exc
 
@@ -1001,6 +1019,110 @@ async def get_path_lesson_shape(
             lesson_mode=lesson_mode,
             misconception_count=misconception_count,
         )
+    except Exception as exc:
+        _raise_http(exc)
+
+
+@router.get("/{unit_id}/path/lessons/{lesson_id}/actual")
+async def get_path_lesson_actual(
+    unit_id: str,
+    lesson_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object] | None:
+    try:
+        _unit, _version, lesson = await _owned_version_and_lesson(
+            session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
+        )
+        actual = await latest_actual(session, path_lesson_id=lesson.id)
+        return actual_payload(actual) if actual else None
+    except Exception as exc:
+        _raise_http(exc)
+
+
+@router.post("/{unit_id}/path/lessons/{lesson_id}/actual")
+async def post_path_lesson_actual(
+    unit_id: str,
+    lesson_id: str,
+    request: LessonActualWriteRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit, version, lesson = await _owned_version_and_lesson(
+            session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
+        )
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
+        )
+        assert_lesson_mutation_fresh(lesson, lesson_revision=request.lesson_revision)
+        actual = await record_lesson_actual(
+            session,
+            unit=unit,
+            version=version,
+            lesson=lesson,
+            request=request,
+            user_id=current_user.id,
+        )
+        await session.commit()
+        return actual_payload(actual)
+    except Exception as exc:
+        await session.rollback()
+        _raise_http(exc)
+
+
+@router.post("/{unit_id}/path/lessons/{lesson_id}/marks")
+async def post_path_lesson_marks(
+    unit_id: str,
+    lesson_id: str,
+    request: MarksWriteRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit, version, lesson = await _owned_version_and_lesson(
+            session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
+        )
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
+        )
+        assert_lesson_mutation_fresh(lesson, lesson_revision=request.lesson_revision)
+        payload = await record_marks(
+            session,
+            unit=unit,
+            version=version,
+            lesson=lesson,
+            request=request,
+            user_id=current_user.id,
+        )
+        await session.commit()
+        return payload
+    except Exception as exc:
+        await session.rollback()
+        _raise_http(exc)
+
+
+@router.get("/{unit_id}/path/lessons/{lesson_id}/marks-summary")
+async def get_path_lesson_marks_summary(
+    unit_id: str,
+    lesson_id: str,
+    group_id: str | None = Query(default=None),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit, _version, lesson = await _owned_version_and_lesson(
+            session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
+        )
+        if group_id is not None:
+            group = await session.get(UnitGroupModel, group_id)
+            if group is None or group.unit_id != unit.id:
+                raise OutcomeValidationError("Marks group is not owned by this unit")
+        return await marks_summary(session, lesson=lesson, group_id=group_id)
     except Exception as exc:
         _raise_http(exc)
 

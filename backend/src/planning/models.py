@@ -260,6 +260,27 @@ class ResourceComposeRequest(PathVersionMutationRequest):
     include_support_notes: bool = False
 
 
+class LessonActualWriteRequest(PathLessonMutationRequest):
+    actual_revision: int = Field(default=0, ge=0)
+    status: Literal["established", "partial", "recovery_needed", "not_taught"]
+    pace: Literal["faster", "as_planned", "slower", "not_recorded"] = "not_recorded"
+    established_concepts: list[str] = Field(default_factory=list, max_length=100)
+    unresolved_misconceptions: list[str] = Field(default_factory=list, max_length=100)
+    anchor_used: str | None = Field(default=None, max_length=500)
+    teacher_note: str | None = Field(default=None, max_length=2000)
+
+
+class MarksItemCount(StrictModel):
+    item_id: str = Field(min_length=1)
+    option_counts: dict[str, int] = Field(min_length=1)
+
+
+class MarksWriteRequest(PathLessonMutationRequest):
+    marks_revision: int = Field(default=0, ge=0)
+    group_id: str | None = None
+    items: list[MarksItemCount] = Field(min_length=1, max_length=100)
+
+
 class PrepareLessonRequest(StrictModel):
     group_ids: list[str] = Field(default_factory=list)
     lesson_mode: Literal["first_exposure", "consolidation", "repair", "retrieval", "transfer"]

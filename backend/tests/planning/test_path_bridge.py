@@ -19,6 +19,7 @@ from planning.bridge import PathPreparationBlocked, prepare_path_lesson
 from planning.models import (
     ComponentSelection,
     GroupVoice,
+    LessonActualWriteRequest,
     PathAnchor,
     PathPlan,
     PathStructuralPlan,
@@ -29,6 +30,7 @@ from planning.models import (
     UnitGroupInput,
     UnitGroupsWriteRequest,
 )
+from planning.outcomes import record_lesson_actual
 from planning.schedule import write_groups
 from planning.service import approve_path, create_unit, persist_path_plan
 from planning.shapes import decide_shape_deviation, request_shape_deviation
@@ -215,6 +217,77 @@ async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None
     await db_session.refresh(provenance)
     assert provenance.invalidated_at is not None
     assert lesson.pack_id == regenerated.generation_id
+
+
+async def test_later_preparation_receives_actuals_as_explicit_advisory_context(db_session) -> None:
+    user = UserModel(id="bridge-actual", email="bridge-actual@example.invalid", name="Actual")
+    db_session.add(user)
+    plan = PathPlan.model_validate_json(FIXTURE.read_text(encoding="utf-8"))
+    unit = await create_unit(
+        db_session,
+        owner_id=user.id,
+        request=UnitCreate(
+            title="Photosynthesis", topic="Photosynthesis", subject="Science",
+            grade_level="Grade 4", destination_objective=plan.destination_objective or "Destination",
+            starting_knowledge=plan.starting_knowledge,
+        ),
+    )
+    version = await persist_path_plan(db_session, unit=unit, plan=plan)
+    await approve_path(db_session, version)
+    lessons = list(
+        await db_session.scalars(
+            select(PathLessonModel)
+            .where(PathLessonModel.path_version_id == version.id)
+            .order_by(PathLessonModel.position)
+        )
+    )
+    assert len(lessons) >= 2
+    first, second = lessons[:2]
+    await record_lesson_actual(
+        db_session,
+        unit=unit,
+        version=version,
+        lesson=first,
+        user_id=user.id,
+        request=LessonActualWriteRequest(
+            path_version_id=version.id, path_revision=version.revision,
+            lesson_revision=first.revision, actual_revision=0, status="partial",
+            pace="slower", established_concepts=[first.must_establish[0]],
+            unresolved_misconceptions=["soil-food"],
+            teacher_note="Use a recovery prompt before new material.",
+        ),
+    )
+    captured: dict = {}
+
+    async def capture(context: dict) -> PathStructuralPlan:
+        captured.update(context)
+        return await _fake_structural_planner(context)
+
+    await prepare_path_lesson(
+        db_session,
+        unit=unit,
+        version=version,
+        lesson=second,
+        request=PrepareLessonRequest(lesson_mode="first_exposure"),
+        structural_planner=capture,
+        component_selector=_fake_component_selector,
+    )
+
+    assert captured["lesson_actuals"] == [
+        {
+            "path_lesson_id": first.id,
+            "status": "partial",
+            "taught": True,
+            "pace": "slower",
+            "established_concepts": [first.must_establish[0]],
+            "unresolved_misconceptions": ["soil-food"],
+            "anchor_used": None,
+            "teacher_note": "Use a recovery prompt before new material.",
+            "recorded_at": captured["lesson_actuals"][0]["recorded_at"],
+            "advisory": True,
+        }
+    ]
+    assert second.objective == lessons[1].objective
 
 
 async def test_approved_shape_deviation_survives_safe_regeneration(db_session) -> None:

@@ -29,6 +29,7 @@ from planning.models import (
     PrepareLessonRequest,
     PreparedLessonResponse,
 )
+from planning.outcomes import actual_context_for_lessons
 from planning.schedule import selected_unit_groups
 from v3_blueprint.planning.models import (
     AnchorSpec,
@@ -81,7 +82,7 @@ async def _preparation_context(
     unit: UnitModel,
     version: PathVersionModel,
     lesson: PathLessonModel,
-) -> tuple[dict[str, Any], list[str], list[dict[str, str]]]:
+) -> tuple[dict[str, Any], list[str], list[dict[str, str]], list[dict[str, Any]]]:
     scope = await session.get(UnitScopeContractModel, unit.id)
     scope_contract = {
         "must_establish": list(scope.must_establish or []) if scope else [],
@@ -122,7 +123,10 @@ async def _preparation_context(
         for prerequisite_id in prerequisite_ids
         if prerequisite_id in prerequisite_by_id
     ]
-    return scope_contract, prior_established, prerequisites
+    actuals = await actual_context_for_lessons(
+        session, path_lesson_ids=[prior.id for prior in earlier]
+    )
+    return scope_contract, prior_established, prerequisites, actuals
 
 
 def _build_structural_plan(
@@ -331,7 +335,7 @@ async def prepare_path_lesson(
                 plan,
             )
 
-    scope_contract, prior_established, prerequisites = await _preparation_context(
+    scope_contract, prior_established, prerequisites, lesson_actuals = await _preparation_context(
         session,
         unit=unit,
         version=version,
@@ -431,6 +435,7 @@ async def prepare_path_lesson(
         "scope_contract": scope_contract,
         "prior_established": prior_established,
         "prerequisites": prerequisites,
+        "lesson_actuals": lesson_actuals,
         "external_prerequisites": list(lesson.external_prerequisites or []),
         "must_establish": list(lesson.must_establish or []),
         "exclusions": list(lesson.exclusions or []),

@@ -345,3 +345,52 @@ export interface ResourceComposition {
 	document: Record<string, unknown> & { sections?: Array<Record<string, unknown>> };
 	created_at?: string;
 }
+
+export type LessonActualStatus = 'established' | 'partial' | 'recovery_needed' | 'not_taught';
+export type LessonPace = 'faster' | 'as_planned' | 'slower' | 'not_recorded';
+
+export interface LessonActual {
+	id: string;
+	unit_id: string;
+	path_version_id: string;
+	path_lesson_id: string;
+	revision: number;
+	lesson_revision: number;
+	objective_hash: string;
+	status: LessonActualStatus;
+	taught: boolean;
+	pace: LessonPace;
+	established_concepts: string[];
+	unresolved_misconceptions: string[];
+	anchor_used: string | null;
+	teacher_note: string | null;
+	supersedes_actual_id: string | null;
+	recorded_by: string;
+	recorded_at: string;
+}
+
+export interface MarksOptionCount {
+	option_id: string;
+	text: string;
+	count: number;
+	correct: boolean;
+	misconception_id: string | null;
+}
+
+export interface MarksItemSummary {
+	item_id: string;
+	stem: string;
+	total_count: number;
+	option_counts: MarksOptionCount[];
+}
+
+export interface MarksSummary {
+	path_lesson_id: string;
+	group_id: string | null;
+	revision: number;
+	items: MarksItemSummary[];
+	misconceptions: Array<{ misconception_id: string; label: string; count: number }>;
+	unclaimed_distractor_count: number;
+	advisory: true;
+	advisory_note: string;
+}

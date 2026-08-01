@@ -536,6 +536,59 @@ class ResourceCompositionModel(Base):
     unit = relationship("UnitModel", back_populates="compositions")
 
 
+class LessonActualModel(Base):
+    __tablename__ = "lesson_actuals"
+    __table_args__ = (
+        UniqueConstraint("path_lesson_id", "revision", name="uq_lesson_actual_revision"),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    unit_id = Column(String, ForeignKey("units.id"), nullable=False, index=True)
+    path_version_id = Column(String, ForeignKey("path_versions.id"), nullable=False, index=True)
+    path_lesson_id = Column(String, ForeignKey("path_lessons.id"), nullable=False, index=True)
+    owner_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    revision = Column(Integer, nullable=False)
+    lesson_revision = Column(Integer, nullable=False)
+    objective_hash = Column(String, nullable=False)
+    status = Column(String, nullable=False)
+    taught = Column(Boolean, nullable=False)
+    pace = Column(String, nullable=False)
+    established_concepts = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    unresolved_misconceptions = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
+    anchor_used = Column(Text, nullable=True)
+    teacher_note = Column(Text, nullable=True)
+    supersedes_actual_id = Column(String, ForeignKey("lesson_actuals.id"), nullable=True)
+    recorded_by = Column(String, ForeignKey("users.id"), nullable=False)
+    recorded_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
+class MarksEntryModel(Base):
+    __tablename__ = "marks_entries"
+    __table_args__ = (
+        UniqueConstraint(
+            "submission_id", "item_id", "option_id", name="uq_marks_submission_item_option"
+        ),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    submission_id = Column(String, nullable=False, index=True)
+    unit_id = Column(String, ForeignKey("units.id"), nullable=False, index=True)
+    path_version_id = Column(String, ForeignKey("path_versions.id"), nullable=False, index=True)
+    path_lesson_id = Column(String, ForeignKey("path_lessons.id"), nullable=False, index=True)
+    owner_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    revision = Column(Integer, nullable=False)
+    lesson_revision = Column(Integer, nullable=False)
+    objective_hash = Column(String, nullable=False)
+    pack_id = Column(String, nullable=False, index=True)
+    group_id = Column(String, ForeignKey("unit_groups.id"), nullable=True, index=True)
+    item_id = Column(String, ForeignKey("pack_items.id"), nullable=False, index=True)
+    option_id = Column(String, nullable=False)
+    count = Column(Integer, nullable=False)
+    misconception_id = Column(String, nullable=True)
+    recorded_by = Column(String, ForeignKey("users.id"), nullable=False)
+    recorded_at = Column(DateTime, default=_utcnow, nullable=False)
+
+
 class PackItemModel(Base):
     __tablename__ = "pack_items"
 
