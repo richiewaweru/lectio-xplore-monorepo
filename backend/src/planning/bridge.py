@@ -144,7 +144,14 @@ def _build_structural_plan(
         raise PathPreparationBlocked(f"Structural planner objective concern: {generated.objective_concern}")
     if len(generated.cards) != 1:
         raise PathPreparationBlocked("Path preparation must produce exactly one concept card")
-    card = ConceptCard.model_validate(generated.cards[0])
+    card_payload = dict(generated.cards[0])
+    # Structured model responses occasionally encode an omitted continuity
+    # instruction as JSON null. The contract already treats an omitted value
+    # as an empty instruction, so normalize only that equivalent representation
+    # before strict validation.
+    if card_payload.get("opens_by") is None:
+        card_payload["opens_by"] = ""
+    card = ConceptCard.model_validate(card_payload)
     ownership = ObjectiveOwnership.from_path_objective(lesson.objective)
     try:
         ownership.verify_generated_objective(card.objective)

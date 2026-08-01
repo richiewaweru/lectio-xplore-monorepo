@@ -76,7 +76,7 @@ async def _fake_structural_planner(context: dict) -> PathStructuralPlan:
                 "prereqs": [],
                 "misconceptions": [],
                 "no_known_misconceptions": True,
-                "opens_by": "Connect to the unit starting knowledge.",
+                "opens_by": None,
             }
         ],
         sections=sections,
@@ -137,6 +137,7 @@ async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None
     assert response.slots == response.section_roles
     assert [section.role for section in structural_plan.sections] == response.slots
     assert structural_plan.cards[0].objective == lesson.objective
+    assert structural_plan.cards[0].opens_by == ""
     assert response.objective_hash == hash_path_objective(lesson.objective)
     provenance = await db_session.get(LessonProvenanceModel, response.generation_id)
     assert provenance is not None
