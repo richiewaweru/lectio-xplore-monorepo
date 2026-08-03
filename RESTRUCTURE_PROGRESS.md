@@ -59,7 +59,7 @@ Source of truth: [`handoff/RESTRUCTURE_HANDOFF.md`](handoff/RESTRUCTURE_HANDOFF.
 4. Critic call count = nominations — tests green.
 5. Overlay edit/reset/locked reject + hashes — loader/API tests green; stage2 stamps `prompt_hashes`.
 6. Free-text create → readback → lock path — frontend + constructor routes/tests green.
-7. Full suites — targeted suites green; full-suite run may need clean SQLite (Windows lock flakiness noted).
+7. Full suites — targeted suites green (68 restructure-related backend tests in one batch; units FE 5+9). Full-suite run may need clean SQLite (Windows lock flakiness noted).
 8. Wall unchanged — grep evidence recorded above.
 
 ## Summary
