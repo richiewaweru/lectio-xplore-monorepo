@@ -1047,17 +1047,22 @@ async def _generate_shared_pack_items(
         }
 
     notation = plan.variant_spec().voice.notation
-    results: list[ItemGenerationResult] = []
-    for row in cards:
-        if row.id in ready_card_ids:
-            continue
-        approved_card = _approved_card_for_items(
-            row,
-            subject=form.subject,
-            level=form.grade_level,
-            notation=notation,
+    pending_cards = [row for row in cards if row.id not in ready_card_ids]
+    results: list[ItemGenerationResult] = list(
+        await asyncio.gather(
+            *(
+                execute_items(
+                    _approved_card_for_items(
+                        row,
+                        subject=form.subject,
+                        level=form.grade_level,
+                        notation=notation,
+                    )
+                )
+                for row in pending_cards
+            )
         )
-        results.append(await execute_items(approved_card))
+    ) if pending_cards else []
 
     if results:
         await _persist_item_results(pack_id, results)
