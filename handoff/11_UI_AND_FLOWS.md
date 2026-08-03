@@ -1,5 +1,7 @@
 # UI and Flows
 
+> **Superseded (UI portions):** Teacher-facing create-unit → readback → lessons → lesson-card halt → versions flows are redefined in [`RESTRUCTURE_HANDOFF.md`](RESTRUCTURE_HANDOFF.md) §7. Keep this file for historical phase context; do not implement UI from the screens below when they conflict with the restructure handoff.
+
 ## Top navigation
 
 ```text

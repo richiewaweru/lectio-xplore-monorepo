@@ -1,5 +1,7 @@
 # Implementation Phases
 
+> **Superseded for restructure work:** Stage-2 speed, nominated merge critic, prompt packaging, and constructor/readback UI are owned by [`RESTRUCTURE_HANDOFF.md`](RESTRUCTURE_HANDOFF.md). Prefer that document over the phase checklist below for those items.
+
 ## Phase 0 — Baseline
 
 - capture `xplore` commit;

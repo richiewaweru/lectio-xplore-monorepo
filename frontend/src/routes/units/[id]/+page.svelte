@@ -411,21 +411,23 @@
 
 						<section class="dependencies"><div><p class="eyebrow">Before this lesson</p><h3>What it needs first</h3></div>{#if dependencySentences(selected).length}<ul>{#each dependencySentences(selected) as sentence}<li>{sentence}</li>{/each}</ul>{:else}<p>Nothing — this can be the starting point.</p>{/if}</section>
 
-						{#if shape}
-							<LessonShapePanel
-								{unitId}
-								{path}
-								lesson={selected}
-								{shape}
-								{lessonMode}
-								{misconceptionCount}
-								{debugMode}
-								onsettings={updateShapeSettings}
-								onshape={(value) => (shape = value)}
-								onrevision={updateShapeRevision}
-							/>
-						{:else}
-							<section class="shape"><p>Loading this lesson's shape…</p></section>
+						{#if debugMode}
+							{#if shape}
+								<LessonShapePanel
+									{unitId}
+									{path}
+									lesson={selected}
+									{shape}
+									{lessonMode}
+									{misconceptionCount}
+									{debugMode}
+									onsettings={updateShapeSettings}
+									onshape={(value) => (shape = value)}
+									onrevision={updateShapeRevision}
+								/>
+							{:else}
+								<section class="shape"><p>Loading this lesson's shape…</p></section>
+							{/if}
 						{/if}
 
 						<section class="prepare">

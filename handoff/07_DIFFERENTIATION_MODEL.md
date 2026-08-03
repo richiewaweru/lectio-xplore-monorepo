@@ -1,5 +1,7 @@
 # Differentiation Model
 
+> **Superseded (UI portions only):** Teacher-facing variant/group configuration and jargon are redefined in [`RESTRUCTURE_HANDOFF.md`](RESTRUCTURE_HANDOFF.md) §7 (Screen 5 versions panel; remove LessonShapePanel mode controls from teacher view). The underlying differentiation model (shared quiz / wall) is unchanged.
+
 ## Principle
 
 A variant is an inspectable structural transformation of one canonical lesson.
