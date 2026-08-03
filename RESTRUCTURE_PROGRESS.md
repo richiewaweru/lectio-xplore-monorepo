@@ -19,6 +19,7 @@ Source of truth: [`handoff/RESHAPE_HANDOFF.md`](handoff/RESHAPE_HANDOFF.md) (sup
 - `7.1: teacher corrections as typed Correction list` — `Correction` model; router patch/repair append typed list; writer prompt dedicated section; patch test updated (3 passed).
 - `7.2: keep intents and visual constraints structured at seams` — `learning_intents` list on preview DTO; assembler strategy no longer joins must_show; compile_orders stops joining intents; preview_mapper/assembler tests 8 passed.
 - `7.3: plain groups-tab teacher copy` — UnitGroupsPanel / ResourceComposerPanel wording.
+- `0b.1: fair skip-writer constraints + anchor.example plumbing` — AnchorPlan.example; WriterSection misconceptions/exclusions/anchor fields; STRUCTURED CONSTRAINTS list in skip writer path; tests 10 passed.
 
 ## AWAITING DECISION: expander
 
@@ -48,6 +49,38 @@ Phase 0 A/B complete. Artifacts: [`experiments/expander/`](experiments/expander/
 - **Expander lives** → remove `V3_SKIP_EXPANDER` branch; keep briefs; lanes are 3-step (`brief`, `prose`, `questions`); skip Phase 1.
 
 Phase 4 (§7.1–7.3) already landed while this decision was pending. **Phases 1–3 and acceptance are halted** until you answer.
+
+## AWAITING DECISION: expander (round 2)
+
+Fair retest per [`handoff/PHASE_0B_HANDOFF.md`](handoff/PHASE_0B_HANDOFF.md). Artifacts: `with_expander/` (r1), `with_expander_v2/`, `skip_expander_v2/`, [`factual_compare_v2.json`](experiments/expander/factual_compare_v2.json), [`summary_v2.json`](experiments/expander/summary_v2.json). Identical plan: [`shared_plan.json`](experiments/expander/shared_plan.json).
+
+**What changed vs round 1:** skip writer now receives structured ANCHOR / MISCONCEPTIONS / EXCLUSIONS / ROLE / TRANSITION / purpose+registry bullets; `anchor.example` plumbed through blueprint → work order (was previously dropped).
+
+### Three-arm table
+
+| Arm | Anchor hits | apply M1 (soil) | apply M2 (breath/opposite) | Stage2 | Writers | Total |
+| --- | ---: | --- | --- | ---: | ---: | ---: |
+| with_expander (r1) | **5 / 5** | yes | no | 27.23s | 177.48s | 204.71s |
+| with_expander_v2 | **5 / 5** | yes | no | 27.43s | 131.48s | 158.91s |
+| skip_expander_v2 | **5 / 5** | yes | no | 0.00s | 207.59s | 207.59s |
+
+Round-1 skip (for contrast, not in v2 table): anchor **2 / 5**, apply M1 **no**.
+
+Role order preserved on all three arms; `failed_briefs=[]`. Exclusions declared on plan: **none** (`repair_focus` null) — no exclusion-violation checks apply.
+
+### Factual reading of §1 explanations
+
+- **Primary signal (anchor):** skip_expander_v2 reaches **5 / 5**, matching both expander arms. Round-1 skip shortfall (2 / 5) is consistent with explanation **(b)** — the writer was not asked — not with irreversible consolidation by the expander.
+- **Secondary signal (apply misconception):** skip_expander_v2 apply mentions soil (M1), matching expander arms. Round-1 skip apply lacked M1.
+- Timings are not decisive (handoff §1): Stage2 expander cost ~27s; writer times vary across runs (skip writers were slower this round).
+
+**Factual recommendation from §4 rule:** numbers support explanation **(b)** → expander as middleman; handoff says **it dies**. Prose quality remains the user's read (`skip_expander_v2/prose.json` vs `with_expander_v2/prose.json`).
+
+**Still halted:** do not start Phase 1–3 until the user records the decision.
+
+## KNOWN DEFECTS
+
+- **Stage 1 emits non-skeleton role `build`.** Round-1 live Stage 1 failed validation: section role `build` is not in `skeletons.yaml` slot ids (`apply`, `check`, `close`, `confront`, `contrast`, `criteria`, `explain`, `guided`, `independent`, `model`, `organise`, `orient`, `recall`). That forced substitution of the fixed plan in [`experiments/expander/shared_plan.json`](experiments/expander/shared_plan.json). This is the failure class reshape §8.1 (derive role sequence from `skeletons.yaml` by lookup) makes structurally impossible. **Not fixed in Phase 0B** — touches stage 1 schema; belongs with §8.1.
 
 ## Baseline
 

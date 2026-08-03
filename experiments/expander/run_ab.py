@@ -315,55 +315,55 @@ async def _run_arm(
 
 
 async def main() -> int:
+    from v3_blueprint.planning.models import StructuralPlan
+
+    shared_path = OUT_DIR / "shared_plan.json"
+    if not shared_path.exists():
+        raise FileNotFoundError(
+            f"Missing {shared_path}; round 1 shared plan is required for comparable arms."
+        )
+    shared = json.loads(shared_path.read_text(encoding="utf-8"))
+    plan = StructuralPlan.model_validate(shared["plan"])
+    # Restore variant voice if dumped without private attrs (defaults to Core).
     signals, form, resource_spec = _lesson_inputs()
-    plan = _photosynthesis_plan()
     roles = [s.role for s in plan.sections]
-    print(f"[AB] Using fixed structural plan roles={roles}", flush=True)
-    _write_json(
-        OUT_DIR / "shared_plan.json",
-        {
-            "plan_source": "fixed_structural_plan",
-            "note": (
-                "Stage 1 live call failed skeleton role validation (emitted 'build'). "
-                "Expander A/B uses a fixed plan with apply+check and no visual_required."
-            ),
-            "roles": roles,
-            "section_ids": [s.id for s in plan.sections],
-            "visual_required": [s.id for s in plan.sections if s.visual_required],
-            "plan": plan.model_dump(mode="json"),
-        },
+    print(
+        f"[AB v2] Loaded shared_plan.json roles={roles} "
+        f"section_ids={[s.id for s in plan.sections]}",
+        flush=True,
     )
 
-    print("[AB] Arm A: expander ON (V3_SKIP_EXPANDER=false)", flush=True)
+    print("[AB v2] Arm A: expander ON -> with_expander_v2/", flush=True)
     timings_a = await _run_arm(
-        label="with_expander",
+        label="with_expander_v2",
         skip=False,
         plan=plan,
         signals=signals,
         form=form,
         resource_spec=resource_spec,
     )
-    print(f"[AB] Arm A timings={timings_a}", flush=True)
+    print(f"[AB v2] Arm A timings={timings_a}", flush=True)
 
-    print("[AB] Arm B: expander OFF (V3_SKIP_EXPANDER=true)", flush=True)
+    print("[AB v2] Arm B: expander OFF -> skip_expander_v2/", flush=True)
     timings_b = await _run_arm(
-        label="skip_expander",
+        label="skip_expander_v2",
         skip=True,
         plan=plan,
         signals=signals,
         form=form,
         resource_spec=resource_spec,
     )
-    print(f"[AB] Arm B timings={timings_b}", flush=True)
+    print(f"[AB v2] Arm B timings={timings_b}", flush=True)
 
     summary = {
+        "round": 2,
         "topic": "Photosynthesis",
-        "plan_source": "fixed_structural_plan",
+        "plan_source": "shared_plan.json",
         "roles": roles,
         "has_practice_role": "apply" in roles,
         "has_check_like_role": "check" in roles,
-        "with_expander": timings_a,
-        "skip_expander": timings_b,
+        "with_expander_v2": timings_a,
+        "skip_expander_v2": timings_b,
         "stage2_delta_seconds": round(
             timings_a["stage2_seconds"] - timings_b["stage2_seconds"], 2
         ),
@@ -371,7 +371,7 @@ async def main() -> int:
             timings_a["total_seconds"] - timings_b["total_seconds"], 2
         ),
     }
-    _write_json(OUT_DIR / "summary.json", summary)
+    _write_json(OUT_DIR / "summary_v2.json", summary)
     print(json.dumps(summary, indent=2), flush=True)
     return 0
 

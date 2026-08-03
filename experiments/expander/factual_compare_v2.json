@@ -1,0 +1,468 @@
+{
+  "round": 2,
+  "plan_source": "shared_plan.json",
+  "exclusions_declared": [],
+  "note": "Exclusions list empty on this fixed plan (repair_focus null). No exclusion-violation checks apply.",
+  "summary_v2": {
+    "round": 2,
+    "topic": "Photosynthesis",
+    "plan_source": "shared_plan.json",
+    "roles": [
+      "orient",
+      "explain",
+      "model",
+      "apply",
+      "check"
+    ],
+    "has_practice_role": true,
+    "has_check_like_role": true,
+    "with_expander_v2": {
+      "label": "with_expander_v2",
+      "skip_expander": false,
+      "stage2_seconds": 27.43,
+      "writers_seconds": 131.48,
+      "section_writer_seconds": {
+        "orient": 26.64,
+        "explain": 23.34,
+        "model": 25.53,
+        "apply": 30.85,
+        "check": 25.12
+      },
+      "total_seconds": 158.91,
+      "section_count": 5,
+      "failed_briefs": []
+    },
+    "skip_expander_v2": {
+      "label": "skip_expander_v2",
+      "skip_expander": true,
+      "stage2_seconds": 0.0,
+      "writers_seconds": 207.59,
+      "section_writer_seconds": {
+        "orient": 47.56,
+        "explain": 30.56,
+        "model": 42.62,
+        "apply": 53.82,
+        "check": 33.03
+      },
+      "total_seconds": 207.59,
+      "section_count": 5,
+      "failed_briefs": []
+    },
+    "stage2_delta_seconds": 27.43,
+    "total_delta_seconds": -48.68
+  },
+  "arms": {
+    "with_expander": {
+      "briefs": [
+        {
+          "section_id": "orient",
+          "intents": [
+            {
+              "component_id": "hook-hero",
+              "content_intent": "Use a question hook that places students at a sunny windowsill plant and asks where it gets energy to grow. Provide 3-4 multiple-choice options, and make sure one option is 'from the soil' to surface the soil-food misconception without resolving it. The body should set a brief scene (≤80 words). The headline should be short and engaging (≤12 words). The anchor should tie to the idea of a plant's energy source. No diagrams or data points needed."
+            }
+          ]
+        },
+        {
+          "section_id": "explain",
+          "intents": [
+            {
+              "component_id": "callout-block",
+              "content_intent": "Make the core conversion explicit. Use the windowsill plant anchor to state that photosynthesis turns light energy into chemical energy stored in glucose. Explicitly rule out the soil-food misconception: plants do not eat soil. This callout sits right after the orient hook and answers the question 'Where does the energy come from?' Keep the callout body short and bold; use variant 'info' or 'key idea'."
+            },
+            {
+              "component_id": "definition-card",
+              "content_intent": "Define photosynthesis with term 'Photosynthesis'. Formal definition: precise scientific description with inputs (light energy, water, carbon dioxide) and outputs (glucose and oxygen). Plain definition: student-friendly, connecting to the windowsill plant. Include related terms 'glucose' and 'chlorophyll'. Do not mention soil as a source. This definition primes the worked example in the next section."
+            }
+          ]
+        },
+        {
+          "section_id": "model",
+          "intents": [
+            {
+              "component_id": "worked-example-card",
+              "content_intent": "Create a worked example using the windowsill plant anchor. Show the step-by-step conversion: sunlight energy strikes leaves, chlorophyll captures light energy, plant uses water and CO₂ to produce glucose (stored chemical energy) and oxygen. In each step, explicitly contrast with the soil-food misconception: soil provides minerals but not energy; glucose is the plant's own food made from light. Keep reasoning tight, each step one clear move. Conclude that the windowsill plant converts light into chemical energy in glucose."
+            }
+          ]
+        },
+        {
+          "section_id": "apply",
+          "intents": [
+            {
+              "component_id": "practice-stack",
+              "content_intent": "Two problems: warm and medium. Warm: revisit the sunny windowsill plant; ask students to explain how light energy becomes chemical energy in glucose, using the anchor example. Medium: describe a shaded plant of the same kind; ask students to predict how energy conversion will differ. All prompts must avoid soil-as-food language; hints should guide students to contrast light availability. No new science; reinforce the light-to-glucose conversion. Provide solutions that correct the soil-food misconception."
+            }
+          ]
+        },
+        {
+          "section_id": "check",
+          "intents": [
+            {
+              "component_id": "quiz-check",
+              "content_intent": "Write a single 4‑option multiple‑choice question that targets both misconceptions from the lesson. The stem should ask where the windowsill plant's energy or mass comes from, without using the word 'glucose' in the stem. Option A must represent the soil‑food misconception (M1). Option B must represent the breathing‑opposite misconception (M2, e.g. photosynthesis just swaps oxygen and CO₂). Option C must give the correct idea: light energy is converted to chemical energy in glucose. Provide a short explanation per option that clarifies why it is right or wrong. Keep the stem under 60 words and each option under 20 words."
+            }
+          ]
+        }
+      ],
+      "sections": {
+        "orient": {
+          "role": "orient",
+          "title": "Where does a plant's energy come from?",
+          "transition_note": null,
+          "anchor_hit": true,
+          "misconception_M1_soil": true,
+          "misconception_M2_breath_or_opposite": false,
+          "exclusion_violations": [],
+          "text_chars": 609
+        },
+        "explain": {
+          "role": "explain",
+          "title": "Light to chemical energy",
+          "transition_note": "After the hook, name the conversion: light energy becomes chemical energy in glucose.",
+          "anchor_hit": true,
+          "misconception_M1_soil": true,
+          "misconception_M2_breath_or_opposite": false,
+          "exclusion_violations": [],
+          "text_chars": 1036
+        },
+        "model": {
+          "role": "model",
+          "title": "Trace the windowsill example",
+          "transition_note": "Apply the definition to the same windowsill plant step by step.",
+          "anchor_hit": true,
+          "misconception_M1_soil": true,
+          "misconception_M2_breath_or_opposite": true,
+          "exclusion_violations": [],
+          "text_chars": 2505
+        },
+        "apply": {
+          "role": "apply",
+          "title": "Practice the conversion story",
+          "transition_note": "Learners try the conversion story on a new plant context after the model.",
+          "anchor_hit": true,
+          "misconception_M1_soil": true,
+          "misconception_M2_breath_or_opposite": false,
+          "exclusion_violations": [],
+          "text_chars": 3477
+        },
+        "check": {
+          "role": "check",
+          "title": "Check understanding",
+          "transition_note": "Close with a check that targets M1 soil-food and M2 breathing-opposite ideas.",
+          "anchor_hit": true,
+          "misconception_M1_soil": true,
+          "misconception_M2_breath_or_opposite": false,
+          "exclusion_violations": [],
+          "text_chars": 1591
+        }
+      },
+      "timings": {
+        "label": "with_expander",
+        "skip_expander": false,
+        "stage2_seconds": 27.23,
+        "writers_seconds": 177.48,
+        "section_writer_seconds": {
+          "orient": 19.11,
+          "explain": 11.08,
+          "model": 51.17,
+          "apply": 55.38,
+          "check": 40.74
+        },
+        "total_seconds": 204.71,
+        "section_count": 5,
+        "failed_briefs": []
+      },
+      "anchor_hit_count": 5,
+      "role_order": [
+        "orient",
+        "explain",
+        "model",
+        "apply",
+        "check"
+      ],
+      "failed_briefs": [],
+      "roles_match_plan": true
+    },
+    "with_expander_v2": {
+      "briefs": [
+        {
+          "section_id": "orient",
+          "intents": [
+            {
+              "component_id": "hook-hero",
+              "content_intent": "Open with the sunny windowsill plant anchor. Use a question hook that asks, 'Where does the plant get the energy to grow?' to surface the soil-food misconception (M1) without correcting it. Headline: a short, thought-provoking question. Body: briefly describe the plant thriving on the windowsill, then present two possible answers—soil nutrients vs. something else—to create felt need. Keep voice balanced and grade-level appropriate. Do not explain photosynthesis yet; simply raise the tension. Anchor: 'Plant energy mystery'."
+            }
+          ]
+        },
+        {
+          "section_id": "explain",
+          "intents": [
+            {
+              "component_id": "callout-block",
+              "content_intent": "Use variant 'info'. Short heading (max 6 words) that flags the main idea. Body (max 60 words) must state that photosynthesis converts light energy into chemical energy stored in glucose, using the windowsill-plant anchor. Explicitly reject the soil-as-food misconception: plants do not eat soil; they make their own food from light. Connect to the hook from the orient section, but pivot to the correct energy story. Tone balanced."
+            },
+            {
+              "component_id": "definition-card",
+              "content_intent": "Define the term 'Photosynthesis'. Formal definition (≤80 words): precise process with light energy, water, and CO₂ as inputs, glucose and oxygen as outputs. Plain definition (≤60 words): student-friendly version that links to the windowsill plant and says plants make their own food (glucose) without mentioning soil. Include related terms: chlorophyll, glucose. No soil reference anywhere. The formal definition must not use the word 'food' to avoid reinforcing misconception."
+            }
+          ]
+        },
+        {
+          "section_id": "model",
+          "intents": [
+            {
+              "component_id": "worked-example-card",
+              "content_intent": "Walk the windowsill plant through photosynthesis step by step, using the definition from the explain section. Use 4 steps: (1) light energy absorbed by chlorophyll, (2) water and CO2 enter via roots and leaves, (3) light energy converts into chemical energy in glucose, (4) oxygen released as byproduct. At each step, explicitly note that soil provides minerals, not energy. Title: 'Tracing energy in the windowsill plant'. Setup: brief definition recap. Conclusion: reinforce glucose is made from light, not soil. No breathing-opposite mention."
+            }
+          ]
+        },
+        {
+          "section_id": "apply",
+          "intents": [
+            {
+              "component_id": "practice-stack",
+              "content_intent": "Build two practice problems. First, a warm recall: student identifies the energy source for the windowsill plant (light). Second, a medium application: given a plant in shade, student explains why it makes less glucose, using energy conversion language and avoiding the soil-food misconception. Each problem should include one to two progressive hints. Do not introduce new scientific terms beyond those defined in the explain section."
+            }
+          ]
+        },
+        {
+          "section_id": "check",
+          "intents": [
+            {
+              "component_id": "quiz-check",
+              "content_intent": "Design one multiple‑choice question that forces students to select where a plant gets its energy for growth. The correct option must state that plants convert light into glucose (using the windowsill plant as context). Include one distracter targeting M1 (plants absorb food from soil) and one distracter targeting M2 (photosynthesis is just gas exchange, the opposite of breathing). Each option must have a brief explanation that diagnoses the misconception it reveals. Keep the stem under 60 words and each option under 20 words."
+            }
+          ]
+        }
+      ],
+      "sections": {
+        "orient": {
+          "role": "orient",
+          "title": "Where does a plant's energy come from?",
+          "transition_note": null,
+          "anchor_hit": true,
+          "misconception_M1_soil": true,
+          "misconception_M2_breath_or_opposite": false,
+          "exclusion_violations": [],
+          "text_chars": 852
+        },
+        "explain": {
+          "role": "explain",
+          "title": "Light to chemical energy",
+          "transition_note": "After the hook, name the conversion: light energy becomes chemical energy in glucose.",
+          "anchor_hit": true,
+          "misconception_M1_soil": true,
+          "misconception_M2_breath_or_opposite": false,
+          "exclusion_violations": [],
+          "text_chars": 1143
+        },
+        "model": {
+          "role": "model",
+          "title": "Trace the windowsill example",
+          "transition_note": "Apply the definition to the same windowsill plant step by step.",
+          "anchor_hit": true,
+          "misconception_M1_soil": true,
+          "misconception_M2_breath_or_opposite": false,
+          "exclusion_violations": [],
+          "text_chars": 1777
+        },
+        "apply": {
+          "role": "apply",
+          "title": "Practice the conversion story",
+          "transition_note": "Learners try the conversion story on a new plant context after the model.",
+          "anchor_hit": true,
+          "misconception_M1_soil": true,
+          "misconception_M2_breath_or_opposite": false,
+          "exclusion_violations": [],
+          "text_chars": 2252
+        },
+        "check": {
+          "role": "check",
+          "title": "Check understanding",
+          "transition_note": "Close with a check that targets M1 soil-food and M2 breathing-opposite ideas.",
+          "anchor_hit": true,
+          "misconception_M1_soil": true,
+          "misconception_M2_breath_or_opposite": false,
+          "exclusion_violations": [],
+          "text_chars": 1094
+        }
+      },
+      "timings": {
+        "label": "with_expander_v2",
+        "skip_expander": false,
+        "stage2_seconds": 27.43,
+        "writers_seconds": 131.48,
+        "section_writer_seconds": {
+          "orient": 26.64,
+          "explain": 23.34,
+          "model": 25.53,
+          "apply": 30.85,
+          "check": 25.12
+        },
+        "total_seconds": 158.91,
+        "section_count": 5,
+        "failed_briefs": []
+      },
+      "anchor_hit_count": 5,
+      "role_order": [
+        "orient",
+        "explain",
+        "model",
+        "apply",
+        "check"
+      ],
+      "failed_briefs": [],
+      "roles_match_plan": true
+    },
+    "skip_expander_v2": {
+      "briefs": [
+        {
+          "section_id": "orient",
+          "intents": [
+            {
+              "component_id": "hook-hero",
+              "content_intent": "Open with the windowsill plant and surface the soil-food idea without resolving it yet."
+            }
+          ]
+        },
+        {
+          "section_id": "explain",
+          "intents": [
+            {
+              "component_id": "callout-block",
+              "content_intent": "State that photosynthesis converts light energy into chemical energy stored in glucose; exclude soil-as-food."
+            },
+            {
+              "component_id": "definition-card",
+              "content_intent": "Define photosynthesis with inputs (light, water, CO2) and output (glucose + oxygen)."
+            }
+          ]
+        },
+        {
+          "section_id": "model",
+          "intents": [
+            {
+              "component_id": "worked-example-card",
+              "content_intent": "Walk the windowsill plant through light → chlorophyll → glucose, contrasting soil nutrients vs food energy."
+            }
+          ]
+        },
+        {
+          "section_id": "apply",
+          "intents": [
+            {
+              "component_id": "practice-stack",
+              "content_intent": "Prompt learners to explain energy conversion for a shaded vs sunny plant without inventing new science."
+            }
+          ]
+        },
+        {
+          "section_id": "check",
+          "intents": [
+            {
+              "component_id": "quiz-check",
+              "content_intent": "Ask one check that forces a choice between soil-food and light-to-glucose conversion."
+            }
+          ]
+        }
+      ],
+      "sections": {
+        "orient": {
+          "role": "orient",
+          "title": "Where does a plant's energy come from?",
+          "transition_note": null,
+          "anchor_hit": true,
+          "misconception_M1_soil": true,
+          "misconception_M2_breath_or_opposite": true,
+          "exclusion_violations": [],
+          "text_chars": 1130
+        },
+        "explain": {
+          "role": "explain",
+          "title": "Light to chemical energy",
+          "transition_note": "After the hook, name the conversion: light energy becomes chemical energy in glucose.",
+          "anchor_hit": true,
+          "misconception_M1_soil": true,
+          "misconception_M2_breath_or_opposite": false,
+          "exclusion_violations": [],
+          "text_chars": 1426
+        },
+        "model": {
+          "role": "model",
+          "title": "Trace the windowsill example",
+          "transition_note": "Apply the definition to the same windowsill plant step by step.",
+          "anchor_hit": true,
+          "misconception_M1_soil": true,
+          "misconception_M2_breath_or_opposite": true,
+          "exclusion_violations": [],
+          "text_chars": 2043
+        },
+        "apply": {
+          "role": "apply",
+          "title": "Practice the conversion story",
+          "transition_note": "Learners try the conversion story on a new plant context after the model.",
+          "anchor_hit": true,
+          "misconception_M1_soil": true,
+          "misconception_M2_breath_or_opposite": false,
+          "exclusion_violations": [],
+          "text_chars": 3734
+        },
+        "check": {
+          "role": "check",
+          "title": "Check understanding",
+          "transition_note": "Close with a check that targets M1 soil-food and M2 breathing-opposite ideas.",
+          "anchor_hit": true,
+          "misconception_M1_soil": true,
+          "misconception_M2_breath_or_opposite": false,
+          "exclusion_violations": [],
+          "text_chars": 1309
+        }
+      },
+      "timings": {
+        "label": "skip_expander_v2",
+        "skip_expander": true,
+        "stage2_seconds": 0.0,
+        "writers_seconds": 207.59,
+        "section_writer_seconds": {
+          "orient": 47.56,
+          "explain": 30.56,
+          "model": 42.62,
+          "apply": 53.82,
+          "check": 33.03
+        },
+        "total_seconds": 207.59,
+        "section_count": 5,
+        "failed_briefs": []
+      },
+      "anchor_hit_count": 5,
+      "role_order": [
+        "orient",
+        "explain",
+        "model",
+        "apply",
+        "check"
+      ],
+      "failed_briefs": [],
+      "roles_match_plan": true
+    }
+  },
+  "anchor_counts": {
+    "with_expander": 5,
+    "with_expander_v2": 5,
+    "skip_expander_v2": 5
+  },
+  "apply_misconception": {
+    "with_expander": {
+      "M1_soil": true,
+      "M2_breath_or_opposite": false
+    },
+    "with_expander_v2": {
+      "M1_soil": true,
+      "M2_breath_or_opposite": false
+    },
+    "skip_expander_v2": {
+      "M1_soil": true,
+      "M2_breath_or_opposite": false
+    }
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "metadata": {
+    "version": "3.0",
+    "title": "Photosynthesis",
+    "subject": "Science"
+  },
+  "lesson": {
+    "lesson_mode": "first_exposure",
+    "resource_type": "lesson"
+  },
+  "voice": {
+    "register_name": "balanced",
+    "tone": "neutral",
+    "notation": null,
+    "variant_label": "Core"
+  },
+  "anchor": {
+    "example": "A sunny windowsill plant making glucose from light, water, and CO2.",
+    "reuse_scope": "all sections"
+  },
+  "sections": [
+    {
+      "section_id": "orient",
+      "title": "Where does a plant's energy come from?",
+      "role": "orient",
+      "visual_required": false,
+      "card_id": "photosynthesis.energy_conversion",
+      "transition_note": null,
+      "components": [
+        {
+          "component": "hook-hero",
+          "content_intent": "Open with the sunny windowsill plant anchor. Use a question hook that asks, 'Where does the plant get the energy to grow?' to surface the soil-food misconception (M1) without correcting it. Headline: a short, thought-provoking question. Body: briefly describe the plant thriving on the windowsill, then present two possible answers—soil nutrients vs. something else—to create felt need. Keep voice balanced and grade-level appropriate. Do not explain photosynthesis yet; simply raise the tension. Anchor: 'Plant energy mystery'."
+        }
+      ]
+    },
+    {
+      "section_id": "explain",
+      "title": "Light to chemical energy",
+      "role": "explain",
+      "visual_required": false,
+      "card_id": "photosynthesis.energy_conversion",
+      "transition_note": "After the hook, name the conversion: light energy becomes chemical energy in glucose.",
+      "components": [
+        {
+          "component": "callout-block",
+          "content_intent": "Use variant 'info'. Short heading (max 6 words) that flags the main idea. Body (max 60 words) must state that photosynthesis converts light energy into chemical energy stored in glucose, using the windowsill-plant anchor. Explicitly reject the soil-as-food misconception: plants do not eat soil; they make their own food from light. Connect to the hook from the orient section, but pivot to the correct energy story. Tone balanced."
+        },
+        {
+          "component": "definition-card",
+          "content_intent": "Define the term 'Photosynthesis'. Formal definition (≤80 words): precise process with light energy, water, and CO₂ as inputs, glucose and oxygen as outputs. Plain definition (≤60 words): student-friendly version that links to the windowsill plant and says plants make their own food (glucose) without mentioning soil. Include related terms: chlorophyll, glucose. No soil reference anywhere. The formal definition must not use the word 'food' to avoid reinforcing misconception."
+        }
+      ]
+    },
+    {
+      "section_id": "model",
+      "title": "Trace the windowsill example",
+      "role": "model",
+      "visual_required": false,
+      "card_id": "photosynthesis.energy_conversion",
+      "transition_note": "Apply the definition to the same windowsill plant step by step.",
+      "components": [
+        {
+          "component": "worked-example-card",
+          "content_intent": "Walk the windowsill plant through photosynthesis step by step, using the definition from the explain section. Use 4 steps: (1) light energy absorbed by chlorophyll, (2) water and CO2 enter via roots and leaves, (3) light energy converts into chemical energy in glucose, (4) oxygen released as byproduct. At each step, explicitly note that soil provides minerals, not energy. Title: 'Tracing energy in the windowsill plant'. Setup: brief definition recap. Conclusion: reinforce glucose is made from light, not soil. No breathing-opposite mention."
+        }
+      ]
+    },
+    {
+      "section_id": "apply",
+      "title": "Practice the conversion story",
+      "role": "apply",
+      "visual_required": false,
+      "card_id": "photosynthesis.energy_conversion",
+      "transition_note": "Learners try the conversion story on a new plant context after the model.",
+      "components": [
+        {
+          "component": "practice-stack",
+          "content_intent": "Build two practice problems. First, a warm recall: student identifies the energy source for the windowsill plant (light). Second, a medium application: given a plant in shade, student explains why it makes less glucose, using energy conversion language and avoiding the soil-food misconception. Each problem should include one to two progressive hints. Do not introduce new scientific terms beyond those defined in the explain section."
+        }
+      ]
+    },
+    {
+      "section_id": "check",
+      "title": "Check understanding",
+      "role": "check",
+      "visual_required": false,
+      "card_id": "photosynthesis.energy_conversion",
+      "transition_note": "Close with a check that targets M1 soil-food and M2 breathing-opposite ideas.",
+      "components": [
+        {
+          "component": "quiz-check",
+          "content_intent": "Design one multiple‑choice question that forces students to select where a plant gets its energy for growth. The correct option must state that plants convert light into glucose (using the windowsill plant as context). Include one distracter targeting M1 (plants absorb food from soil) and one distracter targeting M2 (photosynthesis is just gas exchange, the opposite of breathing). Each option must have a brief explanation that diagnoses the misconception it reveals. Keep the stem under 60 words and each option under 20 words."
+        }
+      ]
+    }
+  ],
+  "card_rubrics": [
+    {
+      "card_id": "photosynthesis.energy_conversion",
+      "objective": "Explain that plants convert light energy into chemical energy stored in glucose.",
+      "misconceptions": [
+        {
+          "id": "M1",
+          "description": "Plants get their food by absorbing nutrients from soil."
+        },
+        {
+          "id": "M2",
+          "description": "Photosynthesis is just the opposite of breathing / animals breathe out what plants breathe in."
+        }
+      ]
+    }
+  ],
+  "question_plan": [],
+  "visual_strategy": {
+    "visuals": []
+  },
+  "answer_key": {
+    "style": "brief_explanations"
+  },
+  "teacher_materials": [],
+  "prior_knowledge": [
+    "plants need sunlight",
+    "plants need water"
+  ],
+  "repair_focus": null
+}
