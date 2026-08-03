@@ -216,11 +216,14 @@ def validate_section_brief(
     for component in brief.components:
         words = _word_count(component.content_intent)
         if words > CONTENT_INTENT_MAX_WORDS:
-            errors.append(
-                f"Section '{section_plan.id}': component '{component.component_id}' "
-                f"content_intent has {words} words (max {CONTENT_INTENT_MAX_WORDS}). "
-                f"Rewrite as direction only — no finished problem, hint, option, "
-                f"or solution text."
+            # Advisory only — over-long intents must not fail Stage 2 or retry.
+            log.info(
+                "Section '%s': component '%s' content_intent has %s words "
+                "(advisory max %s); accepting brief.",
+                section_plan.id,
+                component.component_id,
+                words,
+                CONTENT_INTENT_MAX_WORDS,
             )
 
     assigned_question_ids = {

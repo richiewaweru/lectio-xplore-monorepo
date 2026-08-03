@@ -178,7 +178,7 @@ def test_validate_section_brief_catches_dropped_component() -> None:
     assert any("missing briefs for planned components" in error for error in errors)
 
 
-def test_validate_section_brief_rejects_overlong_content_intent() -> None:
+def test_validate_section_brief_allows_overlong_content_intent(caplog) -> None:
     slug_a, _slug_b = _first_two_distinct_slugs()
     section = SectionPlan(
         id="model",
@@ -195,9 +195,10 @@ def test_validate_section_brief_rejects_overlong_content_intent() -> None:
         question_briefs=[],
         visual_strategy=None,
     )
-    errors = validate_section_brief(brief, section, [])
-    assert any("content_intent has 81 words" in error for error in errors)
-    assert any(slug_a in error for error in errors)
+    with caplog.at_level("INFO"):
+        errors = validate_section_brief(brief, section, [])
+    assert errors == []
+    assert any("advisory max" in record.message for record in caplog.records)
 
 
 def test_validate_section_brief_allows_additional_component() -> None:
@@ -315,10 +316,7 @@ def test_stage2_models_preserve_long_content_and_ignore_unknown_fields() -> None
     question_plan = [
         QPlanItem(question_id="q1", section_id="practice", temperature="warm")
     ]
-    errors = validate_section_brief(brief, section, question_plan)
-    assert any("reflection-prompt" in error and "words" in error for error in errors)
-    # Single-token incident strings remain under the word cap.
-    assert not any("practice-stack" in error and "words" in error for error in errors)
+    assert validate_section_brief(brief, section, question_plan) == []
 
 
 def test_validate_section_brief_ignores_legacy_question_fields() -> None:

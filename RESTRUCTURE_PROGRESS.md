@@ -17,7 +17,7 @@ Source of truth: [`handoff/RESTRUCTURE_HANDOFF.md`](handoff/RESTRUCTURE_HANDOFF.
 - Env: `.env.example` + code defaults → Stage2 100s, concurrency 5/5/4; startup/generation logs print resolved limits.
 - **A1:** one-wave Stage2 fan-out; plan-derived continuity; resume mirrored; exception isolation for all sections. Tests rewritten (`test_stage2_parallel.py` 13 passed with retry tests).
 - **A4:** pack `execute_items` via `asyncio.gather` preserving card order.
-- **A2+A3:** expander reasoning `low`; ~80-word `content_intent` cap in prompt + `validate_section_brief`; fixture tests updated.
+- **A2+A3:** expander reasoning `low`; ~80-word `content_intent` guidance is **advisory only** (prompt + non-blocking log). Over-long intents no longer fail Stage 2 or trigger retries.
 - **6.1:** question writer → FAST/low; blueprint adjust → FAST/medium (landed with 6.1a commit; expander stays STANDARD/low).
 - **B:** merge critic nominated pairs + `merge_warning` neighbors; UI merge-critic panel removed; critic tests updated.
 - **C:** `backend/resources/prompts/` + manifest; loader/overlays/`prompt_overrides` migration; hash stamping helper + stage2 stamp; `/settings/prompts` UI; 36 related tests passed.
@@ -32,7 +32,7 @@ Source of truth: [`handoff/RESTRUCTURE_HANDOFF.md`](handoff/RESTRUCTURE_HANDOFF.
 - [x] `retry.py` anchor-serial removal + `persistence.py` resume mirror
 - [x] `test_stage2_parallel.py` rewritten per A1
 - [x] `run_adjacent_merge_critics` nominated-only + tests
-- [x] `validate_section_brief` word cap + fixture test
+- [x] `validate_section_brief` word-length advisory (log only; does not fail briefs)
 - [x] `router.py` item-gather
 - [x] Prompt extraction + hashes
 - [x] `prompt_overrides` table migration; overlay resolution; locked-prompt bypass
