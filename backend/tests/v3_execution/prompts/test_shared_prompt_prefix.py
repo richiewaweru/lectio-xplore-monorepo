@@ -100,6 +100,8 @@ def test_writer_prompts_share_stable_prefix() -> None:
 
 
 def test_skip_expander_writer_prompt_uses_plan_structure(monkeypatch) -> None:  # noqa: ANN001
+    from v3_execution.models import WriterMisconception
+
     monkeypatch.setenv("V3_SKIP_EXPANDER", "true")
     section_order = SectionWriterWorkOrder(
         work_order_id="wo-1",
@@ -107,9 +109,22 @@ def test_skip_expander_writer_prompt_uses_plan_structure(monkeypatch) -> None:  
             id="practice",
             title="Practice",
             learning_intent="unused under skip",
-            role="practice",
+            role="apply",
             transition_note="Apply the model from explain.",
             card_id="fractions.equivalent",
+            anchor_example="A sunny windowsill plant making glucose from light, water, and CO2.",
+            anchor_reuse_scope="all sections",
+            misconceptions=[
+                WriterMisconception(
+                    id="M1",
+                    description="Plants get their food by absorbing nutrients from soil.",
+                ),
+                WriterMisconception(
+                    id="M2",
+                    description="Photosynthesis is just the opposite of breathing.",
+                ),
+            ],
+            exclusions=[],
             components=[
                 WriterSectionComponent(
                     component_id="hook-hero",
@@ -136,10 +151,17 @@ def test_skip_expander_writer_prompt_uses_plan_structure(monkeypatch) -> None:  
     with patch("contracts.lectio.get_formatting_policy", return_value={}):
         prompt = build_section_writer_prompt(section_order)
 
-    assert "PLAN CONSTRAINTS" in prompt
-    assert "ROLE: practice" in prompt
-    assert "TRANSITION_NOTE: Apply the model from explain." in prompt
+    assert "STRUCTURED CONSTRAINTS" in prompt
+    assert "ANCHOR: A sunny windowsill plant making glucose from light, water, and CO2." in prompt
+    assert "ANCHOR_INSTRUCTION:" in prompt
+    assert "- M1: Plants get their food by absorbing nutrients from soil." in prompt
+    assert "- M2: Photosynthesis is just the opposite of breathing." in prompt
+    assert "EXCLUSIONS" in prompt and "(none declared)" in prompt
+    assert "- ROLE: apply" in prompt
+    assert "- TRANSITION_NOTE: Apply the model from explain." in prompt
     assert "purpose (from plan slot): Have learners compare two fraction strips." in prompt
     assert "capacity: max_words=80" in prompt
     assert "LEARNING INTENT:" not in prompt
     assert "LECTIO COMPONENT CONTRACTS:" not in prompt
+    # Must stay a list of bullets, not a concatenated brief paragraph.
+    assert "PLAN CONSTRAINTS" not in prompt

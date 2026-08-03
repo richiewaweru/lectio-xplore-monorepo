@@ -44,6 +44,7 @@ class LessonModePlan(BaseModel):
 class AnchorPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    example: str = ""
     reuse_scope: str
 
 

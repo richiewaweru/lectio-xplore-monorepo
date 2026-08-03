@@ -137,6 +137,15 @@ class Correction(BaseModel):
     applied_in_generation: str | None = None
 
 
+class WriterMisconception(BaseModel):
+    """Named misconception from the section's concept card — structured, not prose."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    description: str
+
+
 class WriterSectionComponent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -156,6 +165,10 @@ class WriterSection(BaseModel):
     role: str = ""
     transition_note: str | None = None
     card_id: str | None = None
+    anchor_example: str = ""
+    anchor_reuse_scope: str = ""
+    misconceptions: list[WriterMisconception] = Field(default_factory=list)
+    exclusions: list[str] = Field(default_factory=list)
     constraints: list[str] = Field(default_factory=list)
     register_notes: list[str] = Field(default_factory=list)
     components: list[WriterSectionComponent] = Field(default_factory=list)
@@ -352,6 +365,7 @@ __all__ = [
     "BookletStatus",
     "CompiledWorkOrders",
     "Correction",
+    "WriterMisconception",
     "DraftPack",
     "SectionAssemblyDiagnostic",
     "SectionAssemblyStatus",

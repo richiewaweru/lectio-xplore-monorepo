@@ -133,7 +133,10 @@ def assemble_blueprint(
             "notation": plan.variant_spec().voice.notation,
             "variant_label": plan.variant_spec().label,
         }),
-        anchor=AnchorPlan(reuse_scope=plan.anchor.reuse_scope),
+        anchor=AnchorPlan(
+            example=plan.anchor.example,
+            reuse_scope=plan.anchor.reuse_scope,
+        ),
         prior_knowledge=list(plan.prior_knowledge),
         repair_focus=(
             RepairFocus(

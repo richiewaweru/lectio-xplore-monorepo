@@ -196,17 +196,39 @@ def _build_skip_expander_order_context(order: SectionWriterWorkOrder) -> str:
     )
     corrections_block = _format_corrections_block(order)
     corrections_section = f"\n\n{corrections_block}\n" if corrections_block else "\n"
+
+    misconception_lines = (
+        "\n".join(
+            f"- {m.id}: {m.description}"
+            for m in order.section.misconceptions
+        )
+        if order.section.misconceptions
+        else "- (none declared)"
+    )
+    exclusion_lines = (
+        "\n".join(f"- {item}" for item in order.section.exclusions)
+        if order.section.exclusions
+        else "- (none declared)"
+    )
+    anchor_example = order.section.anchor_example.strip() or "(none declared)"
+    reuse_scope = order.section.anchor_reuse_scope.strip() or "(unset)"
+
     return f"""SECTION: {order.section.title}
 SECTION_ID: {order.section.id}
-ROLE: {order.section.role or "(unset)"}
 CARD_ID: {order.section.card_id or "(none)"}
-TRANSITION_NOTE: {order.section.transition_note or "first section — no prior"}
 
-PLAN CONSTRAINTS (structured — honour each item):
+STRUCTURED CONSTRAINTS (honour each bullet; do not invent a separate brief):
+- ANCHOR: {anchor_example}
+- ANCHOR_INSTRUCTION: Use the anchor in this section unless a component purpose explicitly calls for a fresh context. Reuse scope: {reuse_scope}.
+- MISCONCEPTIONS (target here when purpose or role surfaces or corrects them):
+{misconception_lines}
+- EXCLUSIONS (do not teach or introduce as true):
+{exclusion_lines}
+- ROLE: {order.section.role or "(unset)"}
+- TRANSITION_NOTE: {order.section.transition_note or "first section — no prior"}
 - Write only the components listed below.
-- Use each component's plan purpose and registry contract; do not invent a separate brief.
-- Honour ANCHOR FACTS and CONSISTENCY RULES below.
-- Honour SUPPORT ADAPTATIONS and register guidance.
+- Use each component's plan purpose and registry contract.
+- Honour REGISTER, LEARNER PROFILE, SUPPORT ADAPTATIONS, ANCHOR FACTS, and CONSISTENCY RULES below.
 {corrections_section}COMPONENTS TO WRITE:
 {component_blocks}
 

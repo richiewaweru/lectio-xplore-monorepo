@@ -110,6 +110,8 @@ def test_assemble_blueprint_keeps_renderable_sections_in_plan_order() -> None:
     assert [section.section_id for section in blueprint.sections] == ["orient"]
     assert blueprint.question_plan == []
     assert blueprint.visual_strategy.visuals == []
+    assert blueprint.anchor.example == "folding a paper strip into equal parts"
+    assert blueprint.anchor.reuse_scope == "reused across model and practice"
 
 
 def test_assemble_blueprint_ignores_extra_briefs_and_leaves_items_to_pack() -> None:

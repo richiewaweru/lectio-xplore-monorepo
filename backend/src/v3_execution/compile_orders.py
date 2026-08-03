@@ -21,6 +21,7 @@ from v3_execution.models import (
     VisualFrameSpec,
     VisualGeneratorWorkOrder,
     VisualPlanItem,
+    WriterMisconception,
     WriterQuestion,
     WriterSection,
     WriterSectionComponent,
@@ -103,6 +104,10 @@ def _sanitize_visual_constraints(
 
 def _truth_from_blueprint(blueprint: ProductionBlueprint) -> list[SourceOfTruthEntry]:
     entries: list[SourceOfTruthEntry] = []
+    if blueprint.anchor.example.strip():
+        entries.append(
+            SourceOfTruthEntry(key="anchor", text=blueprint.anchor.example.strip())
+        )
     for line in blueprint.prior_knowledge:
         entries.append(SourceOfTruthEntry(key=f"prior:{line}", text=line))
     if blueprint.repair_focus is not None:
@@ -115,6 +120,27 @@ def _truth_from_blueprint(blueprint: ProductionBlueprint) -> list[SourceOfTruthE
         for w in blueprint.repair_focus.what_not_to_teach:
             entries.append(SourceOfTruthEntry(key=f"avoid:{w}", text=w))
     return entries
+
+
+def _misconceptions_for_section(
+    blueprint: ProductionBlueprint,
+    card_id: str | None,
+) -> list[WriterMisconception]:
+    if not card_id:
+        return []
+    for rubric in blueprint.card_rubrics:
+        if rubric.card_id == card_id:
+            return [
+                WriterMisconception(id=m.id, description=m.description)
+                for m in rubric.misconceptions
+            ]
+    return []
+
+
+def _exclusions_from_blueprint(blueprint: ProductionBlueprint) -> list[str]:
+    if blueprint.repair_focus is None:
+        return []
+    return list(blueprint.repair_focus.what_not_to_teach)
 
 
 def _register_from_blueprint(blueprint: ProductionBlueprint) -> RegisterSpec:
@@ -232,6 +258,7 @@ def compile_execution_bundle(
     BlueprintCompiler().compile_all(blueprint)  # validate blueprint shape early
     register = _register_from_blueprint(blueprint)
     truth = _truth_from_blueprint(blueprint)
+    exclusions = _exclusions_from_blueprint(blueprint)
     consistency_rules = [
         "Do not change anchor facts or fixed units.",
         "Do not add or remove planned components or questions.",
@@ -267,6 +294,10 @@ def compile_execution_bundle(
                 role=sec.role,
                 transition_note=sec.transition_note,
                 card_id=sec.card_id,
+                anchor_example=blueprint.anchor.example,
+                anchor_reuse_scope=blueprint.anchor.reuse_scope,
+                misconceptions=_misconceptions_for_section(blueprint, sec.card_id),
+                exclusions=list(exclusions),
                 constraints=[f"role:{sec.role}"],
                 register_notes=[],
                 components=writer_comps,
