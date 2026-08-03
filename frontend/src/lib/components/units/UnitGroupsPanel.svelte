@@ -80,7 +80,7 @@
 </script>
 
 <section class="panel" aria-labelledby="groups-title">
-	<div class="panel-head"><div><p class="eyebrow">Unit groups</p><h2 id="groups-title">Declared structural variants</h2><p>Groups change support structure and voice, never the concept, objective, or shared diagnostic questions.</p></div><button class="secondary" type="button" disabled={draft.length >= 3 || busy} onclick={addGroup}>Add group</button></div>
+	<div class="panel-head"><div><p class="eyebrow">Unit groups</p><h2 id="groups-title">Groups</h2><p>Groups change how the lesson is supported and spoken, never the concept, objective, or shared diagnostic questions.</p></div><button class="secondary" type="button" disabled={draft.length >= 3 || busy} onclick={addGroup}>Add group</button></div>
 	{#if error}<p class="error" role="alert">{error}</p>{/if}
 	{#if draft.length}
 		<div class="groups">
@@ -97,12 +97,12 @@
 						<label><span>Tone</span><select bind:value={group.voice.tone}><option value="encouraging">Encouraging</option><option value="neutral">Neutral</option><option value="direct">Direct</option></select></label>
 					</div>
 					<label><span>Notation override <small>optional</small></span><input bind:value={group.voice.notation} maxlength="120" placeholder="e.g. use ×, not *" /></label>
-					<div class="toggles"><span>{declared[group.profile].support_level} support</span>{#if declared[group.profile].declared_toggles.length}<ul>{#each declared[group.profile].declared_toggles as toggle}<li>{toggle}</li>{/each}</ul>{:else}<p>Canonical structure; no support toggles.</p>{/if}</div>
+					<div class="toggles"><span>Everyone</span>{#if declared[group.profile].declared_toggles.length}<ul>{#each declared[group.profile].declared_toggles as toggle}<li>{toggle}</li>{/each}</ul>{:else}<p>Same structure for everyone — no extra adjustments.</p>{/if}</div>
 				</article>
 			{/each}
 		</div>
-	{:else}<div class="empty"><h3>No differentiated groups</h3><p>Lessons will use the canonical core shape until groups are defined.</p></div>{/if}
-	<div class="actions"><p>{draft.length} of 3 booklet variants · one shared diagnostic item set</p><button class="primary" type="button" disabled={busy} onclick={save}>{busy ? 'Saving…' : 'Save groups'}</button></div>
+	{:else}<div class="empty"><h3>No groups yet — describe your class and I'll set them up.</h3><p>Until then, the lesson uses one shared structure for the whole class.</p></div>{/if}
+	<div class="actions"><p>{draft.length} of 3 groups · one shared diagnostic item set</p><button class="primary" type="button" disabled={busy} onclick={save}>{busy ? 'Saving…' : 'Save groups'}</button></div>
 </section>
 
 <style>

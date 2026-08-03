@@ -76,7 +76,7 @@
 		<fieldset><legend>Type</legend>{#each projectionOptions as option}<label><input type="radio" bind:group={projection} value={option.value} onchange={() => (preview = null)} /> {option.label}</label>{/each}</fieldset>
 		<fieldset><legend>Concepts</legend>{#each lessons as lesson}<label><input type="checkbox" bind:group={lessonIds} value={lesson.id} disabled={!lesson.pack_id} /> {lesson.title}{#if !lesson.pack_id}<small>not prepared</small>{/if}</label>{/each}</fieldset>
 		<fieldset><legend>Periods</legend>{#if schedule?.periods.length}{#each schedule.periods as period}<label><input type="checkbox" bind:group={periodIds} value={period.id} /> {period.title}</label>{/each}{:else}<p>No teaching periods saved.</p>{/if}</fieldset>
-		<fieldset><legend>Groups</legend>{#if groups?.groups.length}{#each groups.groups as group}<label><input type="checkbox" bind:group={groupIds} value={group.id} /> {group.label}</label>{/each}{:else}<p>Canonical source only.</p>{/if}</fieldset>
+		<fieldset><legend>Groups</legend>{#if groups?.groups.length}{#each groups.groups as group}<label><input type="checkbox" bind:group={groupIds} value={group.id} /> {group.label}</label>{/each}{:else}<p>Everyone — one shared lesson for the whole class.</p>{/if}</fieldset>
 	</div>
 	<div class="projection-options">
 		<label><input type="checkbox" bind:checked={includeKeys} /> Include answer key</label>
