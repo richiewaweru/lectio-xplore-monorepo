@@ -1,8 +1,20 @@
 # RESTRUCTURE_PROGRESS
 
-Branch: `xplore`. Started: 2026-08-03. Finished implementation wave: 2026-08-03.
+Branch: `xplore`. Restructure wave finished: 2026-08-03. **Reshape wave started: 2026-08-03.**
 
-Source of truth: [`handoff/RESTRUCTURE_HANDOFF.md`](handoff/RESTRUCTURE_HANDOFF.md). Unattended instructions: [`CURSOR_GOAL.md`](CURSOR_GOAL.md).
+Source of truth: [`handoff/RESHAPE_HANDOFF.md`](handoff/RESHAPE_HANDOFF.md) (supersedes `LANES_HANDOFF.md`). Prior wave: [`handoff/RESTRUCTURE_HANDOFF.md`](handoff/RESTRUCTURE_HANDOFF.md). Instructions: [`CURSOR_GOAL.md`](CURSOR_GOAL.md).
+
+## Reshape baseline
+
+- Docs landed: `handoff/RESHAPE_HANDOFF.md`, `CURSOR_GOAL.md` (reshape), `handoff/LANES_HANDOFF.md` superseded stub.
+- Live API keys present in root `.env` — Phase 0 A/B can run locally.
+- Migration head before reshape: `20260803_0030_add_unit_class_notes`.
+- Forced order: Phase 0 → (Phase 4 while waiting) → Phase 1 only if expander dies → Phase 2 → Phase 3 → acceptance.
+- Migration choice (Phase 2, locked): **backfill** `generation_steps` from `chunked_state_json` when rows absent.
+
+## Reshape commits
+
+- `docs: reshape handoff + superseded lanes pointer` — this baseline.
 
 ## Baseline
 

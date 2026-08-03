@@ -1,95 +1,59 @@
-# CURSOR_GOAL.md — Restructure implementation, end to end
+# CURSOR_GOAL.md — The reshape
 
-You are running a long, unattended implementation session on the `xplore` branch of `text-book-generator`. Your single source of truth is [`handoff/RESTRUCTURE_HANDOFF.md`](handoff/RESTRUCTURE_HANDOFF.md). Read it fully before writing any code. Where this file and the handoff conflict, the handoff wins. Where the handoff and existing code conflict, the handoff wins — that is the point of the restructure.
+You are running a long implementation session on the `xplore` branch of `text-book-generator`. Your source of truth is `handoff/RESHAPE_HANDOFF.md`. Read it fully before writing any code. It **supersedes `LANES_HANDOFF.md`** — ignore that file entirely; its writer-queue design was abandoned. Where the handoff and existing code disagree, the handoff wins; that is the point of the reshape.
 
-The user will not be watching. Do not stop to ask questions unless you hit a **stop condition** (§7). Work carefully rather than fast: every workstream ends with verification before the next begins.
-
-Keep [`RESTRUCTURE_PROGRESS.md`](RESTRUCTURE_PROGRESS.md) updated after every commit.
+The user is not watching continuously. Work carefully rather than quickly. There is exactly one place where you must stop and wait for a human (Phase 0.3) — respect it absolutely.
 
 ---
 
-## 1. Ground rules
+## 1. The one hard stop
 
-- **Never touch:** the stage 1 structural planner (prompt content, reasoning level, slot, schema), item generation logic reading anything beyond concept-card fields (the wall), any auto-approval shortcut (the halt), path planner prompt content, pack immutability. If a change you're making seems to require touching these, stop and record it as a stop condition instead.
-- **Prompt extraction is verbatim.** When moving prompt text from Python f-strings to `.md` files, the static text must be byte-identical after accounting for interpolation seams. Diff the assembled prompt before/after extraction to prove it.
-- **Every commit is one coherent change** with a message referencing the handoff section (e.g. `A1: fan out all expander sections in one wave`). No mixed commits.
-- **Tests are updated in the same commit as the behavior change**, per the breakage checklist in handoff §8. Never delete a failing test to make the suite green; rewrite it to assert the new intended behavior.
-- Keep a running `RESTRUCTURE_PROGRESS.md` at repo root: one line per completed item — what changed, files, test evidence, anything deferred. Update it after every commit. This is the user's window into the session.
-- Do not refactor, rename, or "clean up" anything outside the handoff's scope, however tempting.
+**Phase 0 gates everything.** The expander experiment decides whether a lane has two steps or three, which decides what the storage table stores, which the lanes are built on. Building Phases 1–3 before the user has answered means rework of storage, resume, and lane code.
 
-## 2. Order of work
+So: run Phase 0.1 and 0.2, write the report per 0.3 into `RESTRUCTURE_PROGRESS.md` under `## AWAITING DECISION: expander`, commit, and **stop that track**. Do not decide the quality question yourself — you may state factual observations (anchor present/absent, exclusions honoured/violated, timings) but the judgement is the user's.
 
-Follow handoff §9 exactly:
+While waiting, do **Phase 4** (§7 of the handoff: corrections as typed data, type-at-the-seam, groups-tab copy). That work is independent and useful under either branch.
 
-1. **Baseline.** Before any change, run one full lesson generation locally (or against the dev stack) and save the `[STAGE2 ...]` / `elapsed=` log lines to `RESTRUCTURE_PROGRESS.md`. If you cannot run a generation locally, record why and use test-level timing instead — but say so explicitly.
-2. Workstream A (speed): A1, A4 first (pure structure), then A2 + A3 together (reasoning drop + brief cap), then §6.1 slot changes **one node per commit**.
-3. Workstream B (nominated-pairs critic).
-4. Workstream C (prompt packaging: files, manifest, loader, overlay table + migration, hash stamping, settings page).
-5. Workstream D (constructor node, readback screen, chat plan editing, screens 1–5 language rebuild).
-6. Final sweep: handoff §8 checklist item by item, checking each box in `RESTRUCTURE_PROGRESS.md`.
+If the user's answer is "expander lives": skip Phase 1, remove the `V3_SKIP_EXPANDER` branch, make lanes 3-step, and continue with Phases 2–5 unchanged.
 
-## 3. Environment variables — verify, don't assume
+## 2. Fidelity rules
 
-The user has already set the new values **on Railway**:
+- **Never touch** the wall, the halt, one-lesson-one-concept, frozen packs, or the shared quiz set. The single permitted stage 1 change is the additive `VisualStrategySpec` field in §4.1 — nothing else in stage 1, including its prompt philosophy, slot, or reasoning level.
+- **Do not improvise scope.** If a change seems to require something not in the handoff, stop and record it (§5) rather than deciding.
+- **No refactors, renames, or cleanups outside the handoff**, however tempting.
+- **Storage key names are load-bearing:** `part_id`, `variant_id`, `step`, `kind`. Never `section_id`. The payload column stays opaque JSON with no lesson-specific schema. This is what makes the storage survive a spec change; a reviewer will check it.
+- **One coherent change per commit**, message referencing the handoff section (e.g. `5.1: add generation_steps table`). Tests updated in the same commit as the behavior they cover. Never delete a failing test to go green — rewrite it to assert the new intended behavior.
+- Maintain `RESTRUCTURE_PROGRESS.md`: one entry per commit (what changed, files, test evidence, anything deferred). This is the user's only window into the session.
 
-```
-V3_STAGE2_PARALLEL=true
-V3_TIMEOUT_STAGE2_SECTION_SECONDS=100
-V3_CONCURRENCY_SECTION_MAX=5
-V3_CONCURRENCY_QUESTION_MAX=5
-```
+## 3. Order of work
 
-Your jobs regarding these:
+Handoff §3 → §7 (while blocked) → §4 → §5 → §6 → acceptance sweep (§9). Within Phase 3, ship §6.1 (items overlap) standalone first — it is two lines and proves lane independence on a live run before anything is built on the assumption.
 
-1. Update `backend/.env.example` (and any local `.env` template / docker-compose defaults) to match, so local dev mirrors production — this is a standing project rule.
-2. Grep the codebase to confirm each variable is actually read where the handoff says (`config/timeouts.py`, `config/concurrency.py`, `retry.py`) and that no other code path hardcodes the old values (search for `240`, `Semaphore(3` near these modules).
-3. **Prove they take effect at runtime:** add (or use) log lines that print the resolved timeout and semaphore sizes at generation start, run a generation, and confirm the logs show 100 / 5 / 5. An env var that is set but never read is the classic silent failure here — do not mark this done on grep evidence alone.
-4. Remember reasoning levels and slot assignments have **no env vars** — those are your code changes in `models.py`. Do not "implement" them by inventing new env vars unless the handoff's structure makes one natural; if you do add one, document it in `.env.example` and `RESTRUCTURE_PROGRESS.md`.
+Two ordering traps called out in the handoff, both easy to get wrong:
 
-## 4. Verification per workstream (mandatory before moving on)
+- **§7.1 (corrections) must land before §4.4 (expander deletion)** — both rewrite `block_generate_routes.py`, and doing it in the other order means touching that path twice.
+- **§4.1 (rehome VisualStrategySpec) must land before any other Phase 1 deletion** — the visual strategy exists only inside `SectionBrief` today (`assembler.py:199-205`); delete the brief first and diagrams break silently. Verify a visual-bearing lesson renders before continuing.
 
-**A (speed):**
+## 4. Verification per phase (mandatory before moving on)
 
-- New/updated `test_stage2_parallel.py` green: one-wave dispatch, exception isolation, plan-derived continuity in user messages.
-- Word-cap validator test green with an over-long fixture.
-- Run the **same lesson as the baseline**; save new `elapsed=` lines next to the old ones. Target: total under 5 minutes. If not met, profile which phase still dominates and record it — do not silently proceed.
-- For A2 specifically: save the expander briefs from baseline and post-change runs side by side in `RESTRUCTURE_PROGRESS.md` (or a `briefs_compare/` folder) so the user can judge quality. You may note obvious regressions (missing misconception coverage, lost anchor references) but the quality call is the user's.
+- **Phase 1:** a visual-bearing lesson renders its diagram; no `SectionBrief` reference remains anywhere; single-block regeneration still works end to end.
+- **Phase 2:** two rows written in the same instant both survive (this is the race the old design needed a queue for — prove it's gone); resume rebuilds only missing steps; migration does not orphan in-flight generations (drain or backfill — state which you chose and why).
+- **Phase 3:** deliberately failed lane → lesson ships with one marked gap, siblings intact; stalled lane parks at the budget while siblings finish; `SECTION_READY` precedes `visual_ready`; coherence and answer key overlap in logs.
+- **Every phase:** full backend and frontend suites, not just touched files. Record counts in the progress file. A green targeted test with a red suite means stop and fix.
+- **Always last:** wall re-audit — grep that item generation reads only concept-card fields; record the command and its output.
 
-**B (critic):**
+Timing acceptance (≤3 min total, first section ≤90s) requires a live run. If you cannot reach a live environment, say so plainly in the progress file rather than inferring the numbers; leave those checks unticked for the user.
 
-- Tests: critic called exactly once per nominated pair; zero calls when nominations empty.
-- Run the path planner on a real topic and log actual call count vs nominations.
+## 5. Stop conditions — record and halt, never improvise
 
-**C (prompts):**
+- A change appears to require touching the wall, the halt, or stage 1 beyond §4.1.
+- The visual strategy cannot be cleanly rehomed onto `SectionPlan`.
+- The storage migration would orphan or corrupt existing generations and neither draining nor backfilling is safe.
+- Removing the expander breaks single-block regeneration in a way §4.3 doesn't cover.
+- Anything that would require a lesson-specific schema in the `payload` column or a lesson-specific storage key.
 
-- Assembled-prompt diff proves extraction is verbatim (empty diff for static text).
-- Overlay round-trip test: save override → generation uses it → reset → default restored. Locked prompts reject edits at the API (test the 4xx).
-- A generated lesson's record contains prompt hashes; changing a prompt changes the hash on the next generation.
-- Settings page renders `.md` as formatted markdown, not raw text; modified badge appears after an edit.
+For any stop: write the situation, the options you see, and your recommendation into `RESTRUCTURE_PROGRESS.md` under `## BLOCKED`, commit, halt that track, and continue with an independent one if any remains.
 
-**D (constructor/screens):**
+## 6. Done
 
-- Route test: create unit with only subject + grade + free text succeeds; old three fields absent from the form; backend still accepts them if posted (transition tolerance).
-- Constructor returns at most one clarifying question (prompt rule + a test with an ambiguous fixture).
-- Banned-words check: grep built frontend user-visible strings for `concept path|variant|canonical|skeleton|delta|support level|merge critic|forward verified|prerequisite risk|lesson_mode|knowledge type|structural plan` — zero hits in rendered copy (TypeScript type names are exempt).
-- Chat plan edit → `validate_path_plan` still runs → approval lock conditions unchanged (test that an unresolvable plan cannot be locked).
-
-**Wall check (last, always):** re-run a grep audit that item-generation prompts consume only card fields; record the command and output.
-
-## 5. Full-suite discipline
-
-Run the entire backend and frontend test suites at the end of each workstream, not just the touched files. A green targeted test with a red suite means stop and fix before continuing. Record suite results (counts) in `RESTRUCTURE_PROGRESS.md` per workstream.
-
-## 6. Definition of done
-
-All eight acceptance checks in handoff §9 pass, each with recorded evidence in `RESTRUCTURE_PROGRESS.md`; the §8 checklist is fully ticked; both test suites green; `.env.example` matches Railway; superseded handoff docs (`11`, `07` UI portions, `14`) carry a pointer note to `RESTRUCTURE_HANDOFF.md`. Finish with a summary section in `RESTRUCTURE_PROGRESS.md`: what shipped, what was deferred and why, and the before/after timing numbers.
-
-## 7. Stop conditions — pause and leave a clear note instead of guessing
-
-- A change appears to require modifying stage 1, the wall, or the halt.
-- Removing anchor-serial breaks resume (`persistence.py`) in a way the handoff's mirror-fix doesn't cover.
-- Expander output at low reasoning is drastically degraded (not subtly — e.g. empty or off-card briefs) even after the brief cap.
-- A migration would destroy existing data (path versions, generations).
-- The verbatim-extraction diff cannot be made empty for a prompt.
-
-For any stop: write the situation, the options you see, and your recommendation into `RESTRUCTURE_PROGRESS.md` under a `## BLOCKED` heading, commit, and halt that workstream — continue with an independent one if any remains.
+All eleven acceptance checks in handoff §9 evidenced in `RESTRUCTURE_PROGRESS.md`; both suites green; `.env.example` updated with the new lane variables and the retired ones removed; `LANES_HANDOFF.md` marked superseded with a pointer to `RESHAPE_HANDOFF.md`. Finish with a summary: what shipped, what was deferred and why, the expander decision and its evidence, and before/after timing numbers.
