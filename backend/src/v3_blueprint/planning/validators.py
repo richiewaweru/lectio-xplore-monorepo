@@ -7,6 +7,12 @@ from v3_blueprint.planning.models import QPlanItem, SectionBrief, SectionPlan, S
 
 log = logging.getLogger(__name__)
 
+CONTENT_INTENT_MAX_WORDS = 80
+
+
+def _word_count(text: str) -> int:
+    return len(text.split())
+
 
 def _get_component_registry(slugs: set[str]) -> dict[str, dict]:
     registry: dict[str, dict] = {}
@@ -206,6 +212,16 @@ def validate_section_brief(
             section_plan.id,
             sorted(additional_components),
         )
+
+    for component in brief.components:
+        words = _word_count(component.content_intent)
+        if words > CONTENT_INTENT_MAX_WORDS:
+            errors.append(
+                f"Section '{section_plan.id}': component '{component.component_id}' "
+                f"content_intent has {words} words (max {CONTENT_INTENT_MAX_WORDS}). "
+                f"Rewrite as direction only — no finished problem, hint, option, "
+                f"or solution text."
+            )
 
     assigned_question_ids = {
         item.question_id

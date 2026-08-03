@@ -178,6 +178,28 @@ def test_validate_section_brief_catches_dropped_component() -> None:
     assert any("missing briefs for planned components" in error for error in errors)
 
 
+def test_validate_section_brief_rejects_overlong_content_intent() -> None:
+    slug_a, _slug_b = _first_two_distinct_slugs()
+    section = SectionPlan(
+        id="model",
+        title="Model",
+        role="model",
+        visual_required=False,
+        transition_note=None,
+        components=[ComponentSlot(slug=slug_a, purpose="a")],
+    )
+    overlong = " ".join(["direction"] * 81)
+    brief = SectionBrief(
+        section_id="model",
+        components=[ComponentBrief(component_id=slug_a, content_intent=overlong)],
+        question_briefs=[],
+        visual_strategy=None,
+    )
+    errors = validate_section_brief(brief, section, [])
+    assert any("content_intent has 81 words" in error for error in errors)
+    assert any(slug_a in error for error in errors)
+
+
 def test_validate_section_brief_allows_additional_component() -> None:
     slug_a, _slug_b = _first_two_distinct_slugs()
     section = SectionPlan(

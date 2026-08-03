@@ -61,7 +61,7 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     V3_NARROW: "medium",
     V3_PROPOSE_INTENT: "medium",
     V3_STAGE1_PLANNER: "high",
-    V3_STAGE2_EXPANDER: "medium",
+    V3_STAGE2_EXPANDER: "low",
     V3_ITEM_EXECUTOR: "medium",
     V3_BLUEPRINT_ADJUST: "medium",
     V3_SECTION_WRITER: "low",

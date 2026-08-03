@@ -48,6 +48,10 @@ A content_intent is a writer brief. It tells the writer:
   - What this component must not do (repeat, introduce too early)
   - What cognitive move the learner makes reading this component
 
+Each content_intent is DIRECTION, not CONTENT. Cap every intent at
+about 80 words. Never write finished problem text, hint text, option
+text, or worked solutions — those belong to the writers.
+
 Bad:  "explain equivalent fractions using an example"
 Good: "use the pizza anchor to show that 2/4 and 1/2 describe the
        same area; name numerator and denominator explicitly for the
@@ -126,9 +130,9 @@ Return valid JSON containing all required documented fields.
 Prefer the documented schema and keys. Additional detail must not replace,
 rename, or omit required fields.
 
-Keep content_intent concise where possible. Preserve every instruction required
-by the downstream writer. Do not omit meaningful pedagogical information solely
-to satisfy a length preference.
+Keep each content_intent under ~80 words. Prefer concise direction over
+finished wording. Preserve every instruction the writer needs, but do not
+write problem text, hints, options, or worked solutions.
 
 Every planned component must receive a brief. Do not replace planned component
 IDs with invented IDs.
