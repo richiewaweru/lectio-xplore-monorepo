@@ -285,7 +285,10 @@ async def resume_stage2(
 
         print(
             f"\n[STAGE2 START] generation_id={generation_id}"
-            f" sections={[s.id for s in plan.sections]}",
+            f" sections={[s.id for s in plan.sections]}"
+            f" parallel={_stage2_parallel_enabled()}"
+            f" resume=true"
+            f" remaining={[s.id for s in remaining]}",
             flush=True,
         )
 
@@ -308,14 +311,13 @@ async def resume_stage2(
         else:
             persistence_lock = asyncio.Lock()
             briefs_by_id = {brief.section_id: brief for brief in completed_briefs}
-            anchor_section = plan.sections[0]
-            anchor = briefs_by_id.get(anchor_section.id)
 
-            async def run_section(section, prior_briefs):  # noqa: ANN001
+            async def run_section(section):  # noqa: ANN001
+                # Parallel resume: plan-derived continuity only.
                 return await _run_stage2_section(
                     plan,
                     section,
-                    prior_briefs,
+                    [],
                     signals=signals,
                     form=form,
                     resource_spec=resource_spec,
@@ -326,22 +328,11 @@ async def resume_stage2(
                     persistence_lock=persistence_lock,
                 )
 
-            if anchor is None:
-                anchor = await run_section(anchor_section, [])
-                briefs_by_id[anchor.section_id] = anchor
-
-            prior_briefs = [] if getattr(anchor, "_failed", False) else [anchor]
-            fan_out_sections = [
-                section
-                for section in remaining
-                if section.id != anchor_section.id
-            ]
             fan_out_results = await asyncio.gather(
-                *(run_section(section, prior_briefs) for section in fan_out_sections),
+                *(run_section(section) for section in remaining),
                 return_exceptions=True,
             )
-            fan_out_briefs: list[SectionBrief] = []
-            for section, result in zip(fan_out_sections, fan_out_results, strict=True):
+            for section, result in zip(remaining, fan_out_results, strict=True):
                 if isinstance(result, Exception):
                     errors = [f"{type(result).__name__}: {str(result)[:400]}"]
                     brief = _failed_placeholder(section.id, errors)
@@ -359,10 +350,9 @@ async def resume_stage2(
                         })
                     async with persistence_lock:
                         await persist_brief(brief)
-                    fan_out_briefs.append(brief)
+                    briefs_by_id[section.id] = brief
                 else:
-                    fan_out_briefs.append(result)
-            briefs_by_id.update({brief.section_id: brief for brief in fan_out_briefs})
+                    briefs_by_id[section.id] = result
             completed_briefs = [
                 briefs_by_id[section.id]
                 for section in plan.sections

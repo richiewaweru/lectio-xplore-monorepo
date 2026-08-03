@@ -197,7 +197,7 @@ async def test_run_stage2_retries_only_failed_section_and_preserves_long_content
     assert briefs[0].components[0].content_intent == "Introduce the pizza anchor."
     assert briefs[1].components[0].content_intent == long_content
     assert len(briefs[1].components[0].content_intent) > 1_000
-    assert prior_brief_snapshots == [[], ["intro"], ["intro"]]
+    assert prior_brief_snapshots == [[], [], []]
 
 
 @pytest.mark.asyncio

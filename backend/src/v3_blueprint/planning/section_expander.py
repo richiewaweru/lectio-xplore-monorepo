@@ -72,15 +72,19 @@ The anchor is a commitment the architect made — honour it.
 CONTINUITY RULE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-You may have been given the brief from the lesson's opening (anchor) section.
-Read them before writing. Your briefs must:
-  - Build on what prior sections established
-  - Not repeat concepts or examples already covered
+Continuity comes from the structural plan itself — the named
+anchor example and each section's transition_note — not from
+other sections' content briefs.
+
+Your briefs must:
+  - Honour the anchor by its exact name
+  - Use your section's transition_note as the entry point
+  - Respect what earlier sections in the sequence are for
+    (see FULL SECTION SEQUENCE) without repeating their job
   - Prime what the next section needs without doing its job
 
 The transition_note on your section tells you exactly what
 the prior section established and what your section does with it.
-That note is your entry point into this section.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 VOICE RULE
@@ -189,7 +193,8 @@ def build_stage2_user_message(
     form: V3InputForm,
 ) -> str:
 
-    # Format prior briefs — full content, not summarised
+    # Format prior briefs — full content, not summarised (serial mode only).
+    # Parallel mode always passes prior_briefs=[] and uses plan-derived continuity.
     prior_block = ""
     if prior_briefs:
         prior_block = (
@@ -211,6 +216,18 @@ def build_stage2_user_message(
                         f"    {comp.component_id}:\n"
                         f"      {comp.content_intent}\n"
                     )
+    else:
+        continuity_lines = [
+            "PLAN CONTINUITY (from the structural plan — no prior briefs)",
+            f"  Anchor example: {plan.anchor.example}",
+            f"  Anchor reuse:   {plan.anchor.reuse_scope}",
+            "  Section transitions:",
+        ]
+        for s in plan.sections:
+            note = s.transition_note or "first section — no prior"
+            marker = "→" if s.id == current_section.id else " "
+            continuity_lines.append(f"  {marker} [{s.id}] {note}")
+        prior_block = "\n".join(continuity_lines) + "\n"
 
     # Format full section sequence — so Stage 2 knows where this section sits
     sequence_lines = []
