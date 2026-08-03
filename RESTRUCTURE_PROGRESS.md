@@ -21,6 +21,7 @@ User recorded decision 2026-08-03 after three rounds (quality equal in round 2; 
 - `1.0: remove V3_SKIP_EXPANDER keep expander` — deleted skip flag/branch; STRUCTURED CONSTRAINTS + anchor fields retained on brief writer path; tests 14 passed (`test_stage2_parallel` + `test_shared_prompt_prefix`).
 - `4.1-4.4: generation_steps append-only storage` — table + model (`part_id`/`variant_id`/`step`/`kind`); `insert_step`/`fold`/`load_chunked_state` overlay; briefs insert rows not blob RMW; migration backfills briefs from `chunked_state_json`; resume skips completed brief steps; tests 4 passed (`test_generation_steps`).
 - `5.1: overlap pack items with stage2` — `gather(items_job, resume_stage2)` in `_run_chunked_stage2_pipeline`.
+- `5.2-5.7: lanes prose→questions + early SECTION_READY` — `lanes.py`; lane budget 240s; `V3_CONCURRENCY_LANE_MAX`; SECTION_READY without visuals; visual step rows; `gather(answer_key, coherence)`; `V3_STAGE2_PARALLEL=false` → lane concurrency 1; tests 4+97 v3_execution passed.
 - `docs: reshape handoff + superseded lanes pointer` — v1 baseline (superseded).
 - `0.1: V3_SKIP_EXPANDER writer branch` — flag (default false); Stage2 synthesizes briefs from plan purposes when on; writer prompt renders plan+registry structured constraints; `transition_note`/`role`/`card_id` on writer section; tests 15 passed (`test_stage2_parallel` + `test_shared_prompt_prefix`).
 - `7.1: teacher corrections as typed Correction list` — `Correction` model; router patch/repair append typed list; writer prompt dedicated section; patch test updated (3 passed).

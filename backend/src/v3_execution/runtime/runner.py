@@ -33,6 +33,8 @@ from v3_execution.models import (
 )
 
 from v3_execution.runtime import events
+from v3_execution.runtime.lanes import resolved_lane_limits, run_lane
+from v3_blueprint.planning.persistence import insert_step
 from v3_review import coherence_report_to_generation_summary, run_coherence_review
 
 
@@ -297,10 +299,11 @@ async def run_generation(
         assembler = V3SectionBuilder()
         sem = make_semaphores()
         concurrency_limits = resolved_concurrency_limits()
+        lane_limits = resolved_lane_limits()
         print(
             f"\n[V3 GENERATION START] generation_id={generation_id}"
-            f" concurrency_section={concurrency_limits['section']}"
-            f" concurrency_question={concurrency_limits['question']}"
+            f" concurrency_lane={lane_limits['lane']}"
+            f" lane_budget_seconds={lane_limits['budget_seconds']}"
             f" concurrency_visual={concurrency_limits['visual']}"
             f" timeout_section={V3_TIMEOUTS['section_writer']}s"
             f" timeout_question={V3_TIMEOUTS['question_writer']}s",
@@ -431,7 +434,8 @@ async def run_generation(
 
         async def _emit_ready_sections() -> None:
             nonlocal partial_pack
-            ready_ids = section_done & question_done & visual_done
+            # SECTION_READY does not wait for visuals — visuals patch in later (5.5).
+            ready_ids = section_done & question_done
             for section_plan in blueprint.sections:
                 section_id = section_plan.section_id
                 if section_id not in ready_ids or section_id in emitted_sections:
@@ -488,26 +492,60 @@ async def run_generation(
 
         partial_pack: dict[str, Any] = {"pack": skeleton_pack}
 
-        for order in bundle.section_orders:
-            if order.section.id in preserved_sections:
-                continue
-            _schedule_task(
-                "section",
-                order.section.id,
-                f"section:{order.section.id}",
-                _timed_section(order),
-                order,
-            )
-        for order in bundle.question_orders:
-            if order.section_id in preserved_sections:
-                continue
-            _schedule_task(
-                "question",
-                order.section_id,
-                f"questions:{order.section_id}",
-                _timed_questions(order),
-                order,
-            )
+        question_order_by_section = {
+            order.section_id: order for order in bundle.question_orders
+        }
+
+        def _lane_factory_for(section_order: Any) -> Callable[[], Awaitable[Any]]:
+            part_id = section_order.section.id
+            q_order = question_order_by_section.get(part_id)
+
+            async def _factory() -> Any:
+                async def _prose() -> list[Any]:
+                    return await _guard(
+                        f"section:{part_id}",
+                        _timed_section(section_order),
+                    )
+
+                async def _questions() -> list[Any]:
+                    assert q_order is not None
+                    return await _guard(
+                        f"questions:{part_id}",
+                        _timed_questions(q_order),
+                    )
+
+                try:
+                    async with asyncio.timeout(float(lane_limits["budget_seconds"])):
+                        return await run_lane(
+                            generation_id=generation_id,
+                            part_id=part_id,
+                            variant_id="everyone",
+                            prose_coro_factory=_prose,
+                            questions_coro_factory=(
+                                _questions if q_order is not None else None
+                            ),
+                            emit_event=emit_event,
+                        )
+                except TimeoutError:
+                    from v3_execution.runtime.lanes import LaneOutcome
+
+                    return LaneOutcome(
+                        part_id=part_id,
+                        failed_step="budget",
+                        warnings=[
+                            f"lane:{part_id}:budget exhausted "
+                            f"({lane_limits['budget_seconds']}s)"
+                        ],
+                    )
+
+            return _factory
+
+        lane_factories = [
+            _lane_factory_for(order)
+            for order in bundle.section_orders
+            if order.section.id not in preserved_sections
+        ]
+
         for order in bundle.visual_orders:
             related = visual_sections.get(order.work_order_id, set())
             if related and related.issubset(preserved_sections):
@@ -518,49 +556,79 @@ async def run_generation(
             if order.dependency == "blueprint_only":
                 _schedule_visual(order, label=f"visual:{order.visual.id}")
 
+        lane_sem = asyncio.Semaphore(max(1, int(lane_limits["lane"])))
+
+        async def _limited(factory: Callable[[], Awaitable[Any]]) -> Any:
+            async with lane_sem:
+                return await factory()
+
+        lane_tasks = [
+            asyncio.create_task(_limited(factory)) for factory in lane_factories
+        ]
+        for finished in asyncio.as_completed(lane_tasks):
+            outcome = await finished
+            if not hasattr(outcome, "part_id"):
+                result.warnings.append(f"lane: unexpected {outcome!r}")
+                continue
+            part_id = outcome.part_id
+            result.component_blocks.extend(
+                b for b in outcome.component_blocks if isinstance(b, GeneratedComponentBlock)
+            )
+            result.question_blocks.extend(
+                b for b in outcome.question_blocks if isinstance(b, GeneratedQuestionBlock)
+            )
+            result.warnings.extend(outcome.warnings)
+            section_done.add(part_id)
+            question_done.add(part_id)
+            await _emit_ready_sections()
+
+        for order in bundle.visual_orders:
+            if order.dependency == "blueprint_only":
+                continue
+            related = visual_sections.get(order.work_order_id, set())
+            if related and all(
+                section_id in section_done and section_id in question_done
+                for section_id in related
+            ):
+                _schedule_visual(order, label=f"visual:{order.visual.id}:late")
+
         while task_meta:
-            done, _pending = await asyncio.wait(task_meta.keys(), return_when=asyncio.FIRST_COMPLETED)
+            done, _pending = await asyncio.wait(
+                task_meta.keys(), return_when=asyncio.FIRST_COMPLETED
+            )
             for task in done:
                 kind, section_id, order = task_meta.pop(task)
                 batch = task.result()
                 if isinstance(batch, list):
                     for item in batch:
-                        if isinstance(item, GeneratedComponentBlock):
-                            result.component_blocks.append(item)
-                        elif isinstance(item, GeneratedQuestionBlock):
-                            result.question_blocks.append(item)
-                        elif isinstance(item, GeneratedVisualBlock):
+                        if isinstance(item, GeneratedVisualBlock):
                             result.visual_blocks.append(item)
-                if kind == "section":
-                    section_done.add(section_id)
-                elif kind == "question":
-                    question_done.add(section_id)
-                elif kind == "visual":
+                if kind == "visual":
                     completed_visual_orders.add(order.work_order_id)
                     _mark_visual_sections_ready(order)
+                    related = visual_sections.get(order.work_order_id, set())
+                    for part_id in related:
+                        try:
+                            await insert_step(
+                                generation_id,
+                                part_id=part_id,
+                                step="visual",
+                                payload={
+                                    "work_order_id": order.work_order_id,
+                                    "blocks": [
+                                        b.model_dump(mode="json", exclude_none=True)
+                                        for b in batch
+                                        if isinstance(b, GeneratedVisualBlock)
+                                    ],
+                                },
+                            )
+                        except Exception:  # noqa: BLE001
+                            pass
 
-            for order in bundle.visual_orders:
-                if order.dependency == "blueprint_only":
-                    continue
-                related = visual_sections.get(order.work_order_id, set())
-                if related and all(
-                    section_id in section_done and section_id in question_done
-                    for section_id in related
-                ):
-                    _schedule_visual(order, label=f"visual:{order.visual.id}:late")
-
-            for section_id, orders in visuals_by_section.items():
-                if not orders:
-                    visual_done.add(section_id)
-                    continue
-                if all(order.work_order_id in completed_visual_orders for order in orders):
-                    visual_done.add(section_id)
-
-            await _emit_ready_sections()
-
-        try:
-
-            async def _answer_key():
+        async def _answer_key_safe() -> Any:
+            if bundle.answer_key_order is None:
+                return None
+            try:
                 async with sem["answer_key_generator"]:
                     return await asyncio.wait_for(
                         execute_answer_key(
@@ -572,10 +640,17 @@ async def run_generation(
                         ),
                         timeout=V3_TIMEOUTS["answer_key_generator"],
                     )
+            except Exception as exc:  # noqa: BLE001
+                result.warnings.append(f"answer_key: {_format_exception(exc)}")
+                return None
 
-            result.answer_key = await _answer_key()
-        except Exception as exc:  # noqa: BLE001
-            result.warnings.append(f"answer_key: {_format_exception(exc)}")
+        # Start answer key early — overlaps assembly; later overlaps coherence (5.3).
+        answer_key_task = asyncio.create_task(_answer_key_safe())
+        print(
+            f"\n[TAIL OVERLAP START] generation_id={generation_id}"
+            f" answer_key+assembly (coherence joins after draft)",
+            flush=True,
+        )
 
         if trace_writer is not None:
             sections_attempted = len(bundle.section_orders)
@@ -649,6 +724,7 @@ async def run_generation(
             minor_count=0,
             fatal_issue_categories=set(),
         )
+        # Draft first without blocking on answer_key — ak overlaps coherence below.
         draft_pack = pack_builder.build(
             blueprint=blueprint,
             generation_id=generation_id,
@@ -656,7 +732,7 @@ async def run_generation(
             template_id=template_id,
             sections=sections,
             visual_blocks=result.visual_blocks,
-            answer_key=result.answer_key,
+            answer_key=None,
             warnings=list(result.warnings),
             booklet_status=initial_booklet_status,  # type: ignore[arg-type]
             section_diagnostics=section_diagnostics,
@@ -740,13 +816,42 @@ async def run_generation(
         resource_final_status = "failed"
         artifact_status: BookletStatus = draft_pack.status
         try:
-            coherence_report = await run_coherence_review(
-                blueprint,
-                draft_pack,
-                emit_event,
-                trace_id=trace_id or generation_id,
-                generation_id=generation_id,
-                model_overrides=model_overrides,
+            print(
+                f"\n[TAIL OVERLAP] generation_id={generation_id}"
+                f" gather(answer_key, coherence)",
+                flush=True,
+            )
+
+            async def _coherence():
+                return await run_coherence_review(
+                    blueprint,
+                    draft_pack,
+                    emit_event,
+                    trace_id=trace_id or generation_id,
+                    generation_id=generation_id,
+                    model_overrides=model_overrides,
+                )
+
+            result.answer_key, coherence_report = await asyncio.gather(
+                answer_key_task,
+                _coherence(),
+            )
+            if result.answer_key is not None:
+                draft_pack = pack_builder.build(
+                    blueprint=blueprint,
+                    generation_id=generation_id,
+                    blueprint_id=blueprint_id,
+                    template_id=template_id,
+                    sections=sections,
+                    visual_blocks=result.visual_blocks,
+                    answer_key=result.answer_key,
+                    warnings=list(result.warnings),
+                    booklet_status=draft_pack.status,  # type: ignore[arg-type]
+                    section_diagnostics=section_diagnostics,
+                )
+            print(
+                f"\n[TAIL OVERLAP DONE] generation_id={generation_id}",
+                flush=True,
             )
             await emit_event(
                 events.COHERENCE_REPORT_READY,
