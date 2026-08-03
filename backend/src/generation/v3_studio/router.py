@@ -1242,7 +1242,9 @@ async def _run_chunked_stage2_pipeline(
         if not isinstance(display_title, str) or not display_title.strip():
             display_title = form.topic
 
-        if not state.get("skip_item_generation"):
+        async def _items_job() -> dict[str, Any] | None:
+            if state.get("skip_item_generation"):
+                return None
             item_summary = await _generate_shared_pack_items(
                 generation_id=generation_id,
                 form=form,
@@ -1259,11 +1261,17 @@ async def _run_chunked_stage2_pipeline(
                     **item_summary,
                 },
             )
+            return item_summary
 
-        briefs = await resume_stage2(
-            generation_id,
-            emit_event=emit_event,
-        )
+        async def _stage2_job() -> list:
+            return await resume_stage2(
+                generation_id,
+                emit_event=emit_event,
+            )
+
+        # 5.1: items read only card fields; stage2 reads only the approved plan —
+        # overlap them to prove independence before lanes.
+        _item_summary, briefs = await asyncio.gather(_items_job(), _stage2_job())
         print(
             f"\n[STAGE2 PIPELINE BRIEFS DONE] generation_id={generation_id}"
             f" briefs={len(briefs)}",
