@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.database.models import ConceptCardModel, GenerationModel
+from core.database.models import ConceptCardModel, GenerationModel, GenerationStepModel
 from core.database.session import async_session_factory
 from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 from v3_blueprint.planning.models import (
@@ -21,6 +21,9 @@ from v3_blueprint.planning.models import (
 )
 
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
+
+DEFAULT_VARIANT_ID = "everyone"
+DEFAULT_KIND = "lesson"
 
 
 @asynccontextmanager
@@ -77,6 +80,105 @@ async def _write_chunked_state(
             ),
             {"generation_id": generation_id, "state": json.dumps(state)},
         )
+
+
+def fold(rows: list[GenerationStepModel] | list[Any]) -> dict[str, Any]:
+    """Build the part-output maps today's callers expect from immutable step rows.
+
+    State is computed rather than stored as a mutable section_briefs blob so that
+    concurrent lane/step writers cannot clobber each other via read-modify-write.
+    Do not reintroduce a cached mutable copy of these maps.
+    """
+    section_briefs: dict[str, Any] = {}
+    part_prose: dict[str, Any] = {}
+    part_questions: dict[str, Any] = {}
+    part_visuals: dict[str, Any] = {}
+    for row in rows:
+        payload = row.payload if hasattr(row, "payload") else row.get("payload")
+        part_id = row.part_id if hasattr(row, "part_id") else row["part_id"]
+        step = row.step if hasattr(row, "step") else row["step"]
+        if step == "brief":
+            section_briefs[part_id] = payload
+        elif step == "prose":
+            part_prose[part_id] = payload
+        elif step == "questions":
+            part_questions[part_id] = payload
+        elif step == "visual":
+            part_visuals[part_id] = payload
+    return {
+        "section_briefs": section_briefs,
+        "part_prose": part_prose,
+        "part_questions": part_questions,
+        "part_visuals": part_visuals,
+    }
+
+
+async def load_steps(
+    generation_id: str,
+    session: AsyncSession | None = None,
+    *,
+    variant_id: str | None = None,
+) -> list[GenerationStepModel]:
+    async with _session_scope(session) as (db, _):
+        stmt = select(GenerationStepModel).where(
+            GenerationStepModel.generation_id == generation_id
+        )
+        if variant_id is not None:
+            stmt = stmt.where(GenerationStepModel.variant_id == variant_id)
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+
+async def insert_step(
+    generation_id: str,
+    *,
+    part_id: str,
+    step: str,
+    payload: dict[str, Any],
+    variant_id: str = DEFAULT_VARIANT_ID,
+    kind: str = DEFAULT_KIND,
+    session: AsyncSession | None = None,
+) -> GenerationStepModel:
+    """Append one immutable step row. Simultaneous inserts need no coordination."""
+    import uuid
+
+    row = GenerationStepModel(
+        id=str(uuid.uuid4()),
+        generation_id=generation_id,
+        part_id=part_id,
+        variant_id=variant_id,
+        step=step,
+        kind=kind,
+        payload=payload,
+    )
+    async with _session_scope(session) as (db, should_commit):
+        db.add(row)
+        if should_commit:
+            await db.commit()
+            await db.refresh(row)
+        else:
+            await db.flush()
+        return row
+
+
+async def step_exists(
+    generation_id: str,
+    *,
+    part_id: str,
+    step: str,
+    variant_id: str = DEFAULT_VARIANT_ID,
+    session: AsyncSession | None = None,
+) -> bool:
+    async with _session_scope(session) as (db, _):
+        result = await db.execute(
+            select(GenerationStepModel.id).where(
+                GenerationStepModel.generation_id == generation_id,
+                GenerationStepModel.part_id == part_id,
+                GenerationStepModel.variant_id == variant_id,
+                GenerationStepModel.step == step,
+            )
+        )
+        return result.scalar_one_or_none() is not None
 
 
 async def persist_chunked_state(
@@ -198,18 +300,25 @@ async def persist_section_brief(
     session: AsyncSession | None = None,
 ) -> None:
     async with _session_scope(session) as (db, should_commit):
-        current = await _read_chunked_state(generation_id, db)
-
-        section_briefs = current.get("section_briefs", {})
         if getattr(brief, "_failed", False):
-            section_briefs[brief.section_id] = None
-            failed = current.get("failed_sections", [])
+            current = await _read_chunked_state(generation_id, db)
+            failed = list(current.get("failed_sections", []) or [])
             if brief.section_id not in failed:
                 failed.append(brief.section_id)
             current["failed_sections"] = failed
             current["stage"] = f"section_{brief.section_id}_failed"
+            # Do not write section_briefs into the mutable blob — no brief step row
+            # means resume will rebuild this part.
+            await _write_chunked_state(generation_id, current, db)
         else:
-            section_briefs[brief.section_id] = brief.model_dump(mode="json")
+            await insert_step(
+                generation_id,
+                part_id=brief.section_id,
+                step="brief",
+                payload=brief.model_dump(mode="json"),
+                session=db,
+            )
+            current = await _read_chunked_state(generation_id, db)
             failed = [
                 section
                 for section in current.get("failed_sections", [])
@@ -217,9 +326,11 @@ async def persist_section_brief(
             ]
             current["failed_sections"] = failed
             current["stage"] = f"section_{brief.section_id}_complete"
-
-        current["section_briefs"] = section_briefs
-        await _write_chunked_state(generation_id, current, db)
+            # Keep placeholder map keys for UI, but fold() is the source of truth.
+            section_briefs = dict(current.get("section_briefs") or {})
+            section_briefs.setdefault(brief.section_id, None)
+            current["section_briefs"] = section_briefs
+            await _write_chunked_state(generation_id, current, db)
         if should_commit:
             await db.commit()
 
@@ -234,6 +345,18 @@ async def load_chunked_state(
             raise ValueError(
                 f"No chunked state found for generation {generation_id}"
             )
+        rows = await load_steps(generation_id, db)
+        folded = fold(rows)
+        # Overlay folded part outputs onto generation-level metadata from the blob.
+        placeholders = dict(state.get("section_briefs") or {})
+        placeholders.update(folded.get("section_briefs") or {})
+        state["section_briefs"] = placeholders
+        if folded.get("part_prose"):
+            state["part_prose"] = folded["part_prose"]
+        if folded.get("part_questions"):
+            state["part_questions"] = folded["part_questions"]
+        if folded.get("part_visuals"):
+            state["part_visuals"] = folded["part_visuals"]
         return state
 
 

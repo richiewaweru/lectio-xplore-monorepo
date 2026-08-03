@@ -149,6 +149,46 @@ class GenerationModel(Base):
 
     user = relationship("UserModel", back_populates="generations")
     pack = relationship("LearningPackModel", back_populates="generations")
+    steps = relationship(
+        "GenerationStepModel",
+        back_populates="generation",
+        cascade="all, delete-orphan",
+    )
+
+
+class GenerationStepModel(Base):
+    """Append-only per-part generation outputs (brief / prose / questions / visual).
+
+    Key names are load-bearing: part_id / variant_id / step / kind — never section_id.
+    payload is opaque JSON with no lesson-specific schema at the storage layer.
+    """
+
+    __tablename__ = "generation_steps"
+    __table_args__ = (
+        UniqueConstraint(
+            "generation_id",
+            "part_id",
+            "variant_id",
+            "step",
+            name="uq_generation_steps_part_variant_step",
+        ),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    generation_id = Column(
+        String,
+        ForeignKey("generations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    part_id = Column(String, nullable=False)
+    variant_id = Column(String, nullable=False, default="everyone", server_default="everyone")
+    step = Column(String, nullable=False)
+    kind = Column(String, nullable=False, default="lesson", server_default="lesson")
+    payload = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    generation = relationship("GenerationModel", back_populates="steps")
 
 
 class ConceptModel(Base):
