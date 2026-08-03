@@ -167,7 +167,7 @@
 				{#if editing}
 					<textarea bind:value={draft} rows="24" aria-label="Prompt editor"></textarea>
 				{:else}
-					<div class="markdown" {@html renderMarkdown(detail.text)}></div>
+					<div class="markdown">{@html renderMarkdown(detail.text)}</div>
 				{/if}
 			{:else}
 				<p role="status">Loading…</p>
