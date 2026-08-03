@@ -1,0 +1,157 @@
+{
+  "plan_source": "fixed_structural_plan",
+  "note": "Stage 1 live call failed skeleton role validation (emitted 'build'). Expander A/B uses a fixed plan with apply+check and no visual_required.",
+  "roles": [
+    "orient",
+    "explain",
+    "model",
+    "apply",
+    "check"
+  ],
+  "section_ids": [
+    "orient",
+    "explain",
+    "model",
+    "apply",
+    "check"
+  ],
+  "visual_required": [],
+  "plan": {
+    "lesson_mode": "first_exposure",
+    "lesson_intent": {
+      "goal": "Explain photosynthesis as converting light energy into chemical energy stored in glucose.",
+      "structure_rationale": "Orient → explain → model → apply → check, targeting the soil-food misconception."
+    },
+    "anchor": {
+      "example": "A sunny windowsill plant making glucose from light, water, and CO2.",
+      "reuse_scope": "all sections"
+    },
+    "prior_knowledge": [
+      "plants need sunlight",
+      "plants need water"
+    ],
+    "repair_focus": null,
+    "cards": [
+      {
+        "id": "photosynthesis.energy_conversion",
+        "title": "Photosynthesis as energy conversion",
+        "objective": "Explain that plants convert light energy into chemical energy stored in glucose.",
+        "prereqs": [
+          "plants need sunlight",
+          "plants need water"
+        ],
+        "misconceptions": [
+          {
+            "id": "M1",
+            "description": "Plants get their food by absorbing nutrients from soil.",
+            "source": "drafted"
+          },
+          {
+            "id": "M2",
+            "description": "Photosynthesis is just the opposite of breathing / animals breathe out what plants breathe in.",
+            "source": "drafted"
+          }
+        ],
+        "no_known_misconceptions": false,
+        "opens_by": "Start from the windowsill plant and ask where its energy comes from."
+      }
+    ],
+    "sections": [
+      {
+        "id": "orient",
+        "title": "Where does a plant's energy come from?",
+        "role": "orient",
+        "card_id": "photosynthesis.energy_conversion",
+        "visual_required": false,
+        "transition_note": null,
+        "components": [
+          {
+            "slug": "hook-hero",
+            "purpose": "Open with the windowsill plant and surface the soil-food idea without resolving it yet."
+          }
+        ]
+      },
+      {
+        "id": "explain",
+        "title": "Light to chemical energy",
+        "role": "explain",
+        "card_id": "photosynthesis.energy_conversion",
+        "visual_required": false,
+        "transition_note": "After the hook, name the conversion: light energy becomes chemical energy in glucose.",
+        "components": [
+          {
+            "slug": "callout-block",
+            "purpose": "State that photosynthesis converts light energy into chemical energy stored in glucose; exclude soil-as-food."
+          },
+          {
+            "slug": "definition-card",
+            "purpose": "Define photosynthesis with inputs (light, water, CO2) and output (glucose + oxygen)."
+          }
+        ]
+      },
+      {
+        "id": "model",
+        "title": "Trace the windowsill example",
+        "role": "model",
+        "card_id": "photosynthesis.energy_conversion",
+        "visual_required": false,
+        "transition_note": "Apply the definition to the same windowsill plant step by step.",
+        "components": [
+          {
+            "slug": "worked-example-card",
+            "purpose": "Walk the windowsill plant through light → chlorophyll → glucose, contrasting soil nutrients vs food energy."
+          }
+        ]
+      },
+      {
+        "id": "apply",
+        "title": "Practice the conversion story",
+        "role": "apply",
+        "card_id": "photosynthesis.energy_conversion",
+        "visual_required": false,
+        "transition_note": "Learners try the conversion story on a new plant context after the model.",
+        "components": [
+          {
+            "slug": "practice-stack",
+            "purpose": "Prompt learners to explain energy conversion for a shaded vs sunny plant without inventing new science."
+          }
+        ]
+      },
+      {
+        "id": "check",
+        "title": "Check understanding",
+        "role": "check",
+        "card_id": "photosynthesis.energy_conversion",
+        "visual_required": false,
+        "transition_note": "Close with a check that targets M1 soil-food and M2 breathing-opposite ideas.",
+        "components": [
+          {
+            "slug": "quiz-check",
+            "purpose": "Ask one check that forces a choice between soil-food and light-to-glucose conversion."
+          }
+        ]
+      }
+    ],
+    "question_plan": [
+      {
+        "question_id": "q-warm-1",
+        "section_id": "orient",
+        "temperature": "warm",
+        "diagram_required": false
+      },
+      {
+        "question_id": "q-med-1",
+        "section_id": "apply",
+        "temperature": "medium",
+        "diagram_required": false
+      },
+      {
+        "question_id": "q-cold-1",
+        "section_id": "check",
+        "temperature": "cold",
+        "diagram_required": false
+      }
+    ],
+    "answer_key_style": "brief_explanations"
+  }
+}

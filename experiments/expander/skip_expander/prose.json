@@ -1,0 +1,242 @@
+{
+  "orient": {
+    "title": "Where does a plant's energy come from?",
+    "role": "orient",
+    "transition_note": null,
+    "learning_intent": "Where does a plant's energy come from?",
+    "components": [
+      {
+        "component_id": "hook-hero",
+        "content_intent": "Open with the windowsill plant and surface the soil-food idea without resolving it yet."
+      }
+    ],
+    "blocks": [
+      {
+        "block_id": "0ba87895-b476-4800-96d8-8be00a5f7e43",
+        "section_id": "orient",
+        "component_id": "hook-hero",
+        "section_field": "hook",
+        "position": 0,
+        "data": {
+          "headline": "The Mystery on the Windowsill",
+          "body": "A small potted plant sits on a sunny windowsill. You water it every few days. The potting mix smells like rich earth. It seems obvious: the plant soaks up food from the soil. After all, we add fertilizer to “feed” plants. But is soil really where most of the plant’s body comes from? If you put a seed in plain, dusty soil and give it only water and light, it can grow into a heavy, leafy plant. Where did all that material actually come from? The answer might surprise you.",
+          "anchor": "Pause and wonder: where does a plant’s energy really come from?",
+          "type": "prose"
+        },
+        "source_work_order_id": "sec-orient"
+      }
+    ]
+  },
+  "explain": {
+    "title": "Light to chemical energy",
+    "role": "explain",
+    "transition_note": "After the hook, name the conversion: light energy becomes chemical energy in glucose.",
+    "learning_intent": "Light to chemical energy",
+    "components": [
+      {
+        "component_id": "callout-block",
+        "content_intent": "State that photosynthesis converts light energy into chemical energy stored in glucose; exclude soil-as-food."
+      },
+      {
+        "component_id": "definition-card",
+        "content_intent": "Define photosynthesis with inputs (light, water, CO2) and output (glucose + oxygen)."
+      }
+    ],
+    "blocks": [
+      {
+        "block_id": "40e9d4bf-e422-4209-b505-2d7103f0cb38",
+        "section_id": "explain",
+        "component_id": "callout-block",
+        "section_field": "callout",
+        "position": 0,
+        "data": {
+          "variant": "remember",
+          "heading": "Key Conversion",
+          "body": "Photosynthesis converts light energy from the Sun into chemical energy stored in glucose. Soil is not a source of energy — plants rely on sunlight, water, and carbon dioxide."
+        },
+        "source_work_order_id": "sec-explain"
+      },
+      {
+        "block_id": "3a4d9712-9b15-4fc9-a8e3-4dbc13c6adbe",
+        "section_id": "explain",
+        "component_id": "definition-card",
+        "section_field": "definition",
+        "position": 1,
+        "data": {
+          "term": "Photosynthesis",
+          "formal": "The biochemical process by which plants, algae, and some bacteria convert light energy, water, and carbon dioxide into glucose and oxygen.",
+          "plain": "The process plants use to turn sunlight, water, and air into food and oxygen.",
+          "etymology": "From Greek *phōs* (light) and *synthesis* (putting together).",
+          "related_terms": [
+            "chloroplast",
+            "chlorophyll",
+            "glucose"
+          ],
+          "examples": [
+            "A leaf making sugar in sunlight."
+          ]
+        },
+        "source_work_order_id": "sec-explain"
+      }
+    ]
+  },
+  "model": {
+    "title": "Trace the windowsill example",
+    "role": "model",
+    "transition_note": "Apply the definition to the same windowsill plant step by step.",
+    "learning_intent": "Trace the windowsill example",
+    "components": [
+      {
+        "component_id": "worked-example-card",
+        "content_intent": "Walk the windowsill plant through light → chlorophyll → glucose, contrasting soil nutrients vs food energy."
+      }
+    ],
+    "blocks": [
+      {
+        "block_id": "1d603b9d-a09d-4467-b523-af454ec7cf42",
+        "section_id": "model",
+        "component_id": "worked-example-card",
+        "section_field": "worked_example",
+        "position": 0,
+        "data": {
+          "title": "Tracing Energy in a Windowsill Plant",
+          "setup": "Our windowsill plant receives sunlight and water every day. Follow each step to see how the plant actually converts light into chemical energy — and why potting soil does *not* provide its main food energy.",
+          "steps": [
+            {
+              "label": "Step 1: Light meets chlorophyll",
+              "content": "Sunlight shines on the leaves. Inside leaf cells, a green pigment called **chlorophyll** absorbs this light energy, especially in the blue and red wavelengths. The absorbed energy powers the next stage.",
+              "note": "Chlorophyll is what makes leaves look green because it reflects green light."
+            },
+            {
+              "label": "Step 2: Water is split",
+              "content": "The light energy is used to split water molecules (absorbed by roots) into hydrogen and oxygen inside the chloroplasts. Oxygen is released as a by‑product through tiny pores called stomata.",
+              "note": "This splitting releases the oxygen we breathe.",
+              "formula": "2H_2O \\xrightarrow{light} 4H^+ + 4e^- + O_2"
+            },
+            {
+              "label": "Step 3: Building glucose",
+              "content": "Using the hydrogen and energy from the light reactions, the plant combines carbon dioxide from the air with hydrogen to form glucose — a simple sugar. Glucose stores chemical energy the plant can use later for growth and repair.",
+              "note": "Glucose units can link together to form starch for longer‑term storage.",
+              "formula": "6CO_2 + 6H_2O + light \\; energy \\longrightarrow C_6H_{12}O_6 + 6O_2"
+            },
+            {
+              "label": "Step 4: Why soil is not “food”",
+              "content": "The potting soil supplies mineral nutrients like nitrogen, phosphorus, and potassium — essential for building proteins and DNA — but it provides **zero energy**. The real energy source is the sunlight captured in steps 1–3. Plants make their own food; soil only offers helpers.",
+              "note": "Think of soil as a vitamin supplement, not the meal."
+            }
+          ],
+          "conclusion": "The windowsill plant is a self‑feeder: it uses chlorophyll to capture light, rearranges atoms from water and air into glucose, and relies on soil only for mineral building blocks. Its food energy is homemade, from sunlight.",
+          "method_label": "Stepwise Energy Tracing",
+          "answer": "The plant makes glucose from light, water, and CO₂; soil gives minerals but no energy."
+        },
+        "source_work_order_id": "sec-model"
+      }
+    ]
+  },
+  "apply": {
+    "title": "Practice the conversion story",
+    "role": "apply",
+    "transition_note": "Learners try the conversion story on a new plant context after the model.",
+    "learning_intent": "Practice the conversion story",
+    "components": [
+      {
+        "component_id": "practice-stack",
+        "content_intent": "Prompt learners to explain energy conversion for a shaded vs sunny plant without inventing new science."
+      }
+    ],
+    "blocks": [
+      {
+        "block_id": "f35da821-d10f-4e30-81fd-204c69909f60",
+        "section_id": "apply",
+        "component_id": "practice-stack",
+        "section_field": "practice",
+        "position": 0,
+        "data": {
+          "problems": [
+            {
+              "difficulty": "medium",
+              "problem_type": "open",
+              "question": "Explain how energy is converted in a plant growing in a sunny spot compared to a plant growing in a shaded spot. Use the terms 'sunlight', 'water', and 'energy' in your explanation.",
+              "hints": [
+                {
+                  "level": 1,
+                  "text": "Think about what plants need to grow and where they get energy."
+                },
+                {
+                  "level": 2,
+                  "text": "Recall that plants use sunlight to turn water and carbon dioxide into food energy."
+                },
+                {
+                  "level": 3,
+                  "text": "A plant in full sunlight receives more light energy, so it can make more food energy. A shaded plant gets less light, so it makes food more slowly."
+                }
+              ],
+              "solution": {
+                "approach": "Compare the amount of sunlight each plant receives, then describe how that affects the plant's energy conversion process.",
+                "answer": "A sunny plant has plenty of sunlight, so it captures more light energy and converts it efficiently into chemical energy (food). The shaded plant receives little sunlight, so it captures less energy and converts it slowly, producing less food for growth.",
+                "worked": "Sunlight is the source of energy for plants. In a sunny spot, the plant's leaves absorb plenty of sunlight. This energy is used in photosynthesis to convert water and carbon dioxide into glucose (food). The plant stores this chemical energy and uses it to grow. In a shaded spot, there is less sunlight, so photosynthesis happens at a slower rate. The plant still uses water, but produces less food energy. Over time, the sunny plant will grow faster and be healthier because it makes more energy from the same amount of water and carbon dioxide."
+              },
+              "writein_lines": 4.0,
+              "self_assess": false,
+              "context": "Apply your understanding of energy conversion in plants to a real-world comparison."
+            }
+          ],
+          "hints_visible_default": false,
+          "solutions_available": true
+        },
+        "source_work_order_id": "sec-apply"
+      }
+    ]
+  },
+  "check": {
+    "title": "Check understanding",
+    "role": "check",
+    "transition_note": "Close with a check that targets M1 soil-food and M2 breathing-opposite ideas.",
+    "learning_intent": "Check understanding",
+    "components": [
+      {
+        "component_id": "quiz-check",
+        "content_intent": "Ask one check that forces a choice between soil-food and light-to-glucose conversion."
+      }
+    ],
+    "blocks": [
+      {
+        "block_id": "a49179fd-0cc0-4f05-82f0-6e333ca25447",
+        "section_id": "check",
+        "component_id": "quiz-check",
+        "section_field": "quiz",
+        "position": 0,
+        "data": {
+          "question": "Imagine a friend says that a plant’s ‘food’ comes from the soil. What would you say to explain where a plant really gets its food?",
+          "quiz_type": "multiple-choice",
+          "options": [
+            {
+              "text": "The plant takes in water and minerals from the soil, but its food is glucose, which it makes using sunlight and carbon dioxide from the air.",
+              "correct": true,
+              "explanation": "Yes! Plants use the energy in sunlight to build glucose (food) from water and carbon dioxide. Soil provides water and nutrients, but not the food itself."
+            },
+            {
+              "text": "Soil provides all the food a plant needs, just like food for animals.",
+              "correct": false,
+              "explanation": "Actually, soil provides water and minerals, not food. The plant makes its own food (glucose) through photosynthesis."
+            },
+            {
+              "text": "Plants breathe in oxygen and release carbon dioxide, similar to animals, to get their food.",
+              "correct": false,
+              "explanation": "While plants do respire, that process uses the food they already made. To make food, they take in carbon dioxide and release oxygen during photosynthesis, which is the opposite of animal respiration."
+            },
+            {
+              "text": "Plants capture food directly from sunlight.",
+              "correct": false,
+              "explanation": "Sunlight provides energy, not food. The plant converts carbon dioxide and water into glucose using that energy."
+            }
+          ],
+          "feedback_correct": "That's right! Plants make glucose using sunlight, not from soil.",
+          "feedback_incorrect": "Remember, soil provides water and minerals but not food. Plants produce their own food through photosynthesis.",
+          "show_explanations": true
+        },
+        "source_work_order_id": "sec-check"
+      }
+    ]
+  }
+}
