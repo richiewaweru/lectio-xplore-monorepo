@@ -2,19 +2,23 @@
 
 Branch: `xplore`. Restructure wave finished: 2026-08-03. **Reshape wave started: 2026-08-03.**
 
-Source of truth: [`handoff/RESHAPE_HANDOFF.md`](handoff/RESHAPE_HANDOFF.md) (supersedes `LANES_HANDOFF.md`). Prior wave: [`handoff/RESTRUCTURE_HANDOFF.md`](handoff/RESTRUCTURE_HANDOFF.md). Instructions: [`CURSOR_GOAL.md`](CURSOR_GOAL.md).
+Source of truth: [`handoff/RESHAPE_HANDOFF.md`](handoff/RESHAPE_HANDOFF.md) (**v2 post-decision**; supersedes `LANES_HANDOFF.md` and v1 reshape). Prior wave: [`handoff/RESTRUCTURE_HANDOFF.md`](handoff/RESTRUCTURE_HANDOFF.md). Instructions: [`CURSOR_GOAL.md`](CURSOR_GOAL.md).
+
+## DECISION: expander lives
+
+User recorded decision 2026-08-03 after three rounds (quality equal in round 2; timing non-decisive in round 3). **Keep the expander.** Remove `V3_SKIP_EXPANDER`; lanes are 3-step (`brief → prose → questions`). v1 Phase 1 (expander removal / VisualStrategySpec rehome) is cancelled. Stage 1 stays untouched. Forced order now: skip-flag cleanup → handoff §4 storage → §5 lanes → §9 acceptance. Migration choice remains **backfill** `generation_steps` from `chunked_state_json` when rows absent.
 
 ## Reshape baseline
 
-- Docs landed: `handoff/RESHAPE_HANDOFF.md`, `CURSOR_GOAL.md` (reshape), `handoff/LANES_HANDOFF.md` superseded stub.
-- Live API keys present in root `.env` — Phase 0 A/B can run locally.
+- Docs: `RESHAPE_HANDOFF.md` v2, post-decision `CURSOR_GOAL.md`, `LANES_HANDOFF.md` superseded stub.
+- Live API keys present in root `.env`.
 - Migration head before reshape: `20260803_0030_add_unit_class_notes`.
-- Forced order: Phase 0 → (Phase 4 while waiting) → Phase 1 only if expander dies → Phase 2 → Phase 3 → acceptance.
-- Migration choice (Phase 2, locked): **backfill** `generation_steps` from `chunked_state_json` when rows absent.
+- Migration choice (locked): **backfill** `generation_steps` from `chunked_state_json` when rows absent.
 
 ## Reshape commits
 
-- `docs: reshape handoff + superseded lanes pointer` — this baseline.
+- `docs: reshape handoff v2 post-decision + expander-lives` — this entry.
+- `docs: reshape handoff + superseded lanes pointer` — v1 baseline (superseded).
 - `0.1: V3_SKIP_EXPANDER writer branch` — flag (default false); Stage2 synthesizes briefs from plan purposes when on; writer prompt renders plan+registry structured constraints; `transition_note`/`role`/`card_id` on writer section; tests 15 passed (`test_stage2_parallel` + `test_shared_prompt_prefix`).
 - `7.1: teacher corrections as typed Correction list` — `Correction` model; router patch/repair append typed list; writer prompt dedicated section; patch test updated (3 passed).
 - `7.2: keep intents and visual constraints structured at seams` — `learning_intents` list on preview DTO; assembler strategy no longer joins must_show; compile_orders stops joining intents; preview_mapper/assembler tests 8 passed.
