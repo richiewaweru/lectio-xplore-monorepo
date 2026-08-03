@@ -130,7 +130,37 @@ async def run_adjacent_merge_critics(
     *,
     trace_id: str | None = None,
 ) -> list[dict[str, object]]:
-    pairs = list(zip(plan.lessons, plan.lessons[1:], strict=False))
+    lessons = plan.lessons
+    by_slug = {lesson.concept_candidate.slug: lesson for lesson in lessons}
+    pair_keys: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+
+    def _add_pair(lesson_a: PlannedLesson, lesson_b: PlannedLesson) -> None:
+        key = (lesson_a.concept_candidate.slug, lesson_b.concept_candidate.slug)
+        if key in seen:
+            return
+        seen.add(key)
+        pair_keys.append(key)
+
+    for nomination in plan.adjacent_merge_reviews:
+        lesson_a = by_slug.get(nomination.lesson_a)
+        lesson_b = by_slug.get(nomination.lesson_b)
+        if lesson_a is None or lesson_b is None:
+            continue
+        _add_pair(lesson_a, lesson_b)
+
+    for index, lesson in enumerate(lessons):
+        if not lesson.merge_warning:
+            continue
+        if index + 1 < len(lessons):
+            _add_pair(lesson, lessons[index + 1])
+        if index > 0:
+            _add_pair(lessons[index - 1], lesson)
+
+    pairs = [(by_slug[a], by_slug[b]) for a, b in pair_keys]
+    if not pairs:
+        return []
+
     results = await asyncio.gather(
         *[
             run_merge_critic(

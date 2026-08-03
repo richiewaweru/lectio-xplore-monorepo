@@ -342,7 +342,6 @@
 			<section class="path-health">
 				<div><p class="eyebrow">Completeness</p><h3>{path.forward_verified && path.reaches_destination ? 'Route verified' : 'Needs attention'}</h3><p>{path.completeness_note ?? 'Every prerequisite must resolve before the destination can be approved.'}</p></div>
 				<div><p class="eyebrow">Prerequisite risks</p><h3>{path.prerequisite_risks.length}</h3>{#if path.prerequisite_risks.length}<ul>{#each path.prerequisite_risks as risk}<li>{String(risk.note ?? risk.missing ?? 'Unresolved prerequisite')}</li>{/each}</ul>{:else}<p>No unresolved prerequisite risks.</p>{/if}</div>
-				<div><p class="eyebrow">Merge critic</p><h3>{path.merge_critic_results.length} reviews</h3>{#if path.merge_critic_results.length}<ul>{#each path.merge_critic_results as review}<li>{String(review.reason ?? review.verdict ?? 'Adjacent lessons reviewed')}</li>{/each}</ul>{:else}<p>No adjacent merge concerns.</p>{/if}</div>
 			</section>
 
 			<section class="history-panel">

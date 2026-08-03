@@ -173,8 +173,9 @@ def test_phase5_prompts_are_verbatim(resource_name: str, section: int, title_pat
     assert prompt_text(resource_name) == _prompt_section(section, title_pattern)
 
 
-async def test_merge_critic_runs_for_every_adjacent_pair(monkeypatch) -> None:
+async def test_merge_critic_runs_once_per_nominated_pair(monkeypatch) -> None:
     plan = PathPlan.model_validate(_fixture("grade4-photosynthesis-path.json"))
+    assert plan.adjacent_merge_reviews, "fixture must nominate at least one pair"
     calls: list[tuple[str, str]] = []
 
     async def fake_critic(lesson_a, lesson_b, *, trace_id=None):
@@ -190,5 +191,32 @@ async def test_merge_critic_runs_for_every_adjacent_pair(monkeypatch) -> None:
     monkeypatch.setattr("planning.agents.run_merge_critic", fake_critic)
     results = await run_adjacent_merge_critics(plan, trace_id="fixture")
 
-    assert len(calls) == len(plan.lessons) - 1
-    assert len(results) == len(plan.lessons) - 1
+    expected = {
+        (review.lesson_a, review.lesson_b) for review in plan.adjacent_merge_reviews
+    }
+    assert set(calls) == expected
+    assert len(results) == len(expected)
+
+
+async def test_merge_critic_runs_zero_times_when_nominations_empty(monkeypatch) -> None:
+    plan = PathPlan.model_validate(_fixture("grade4-photosynthesis-path.json"))
+    plan = plan.model_copy(update={"adjacent_merge_reviews": []})
+    for lesson in plan.lessons:
+        lesson.merge_warning = False
+    calls: list[tuple[str, str]] = []
+
+    async def fake_critic(lesson_a, lesson_b, *, trace_id=None):
+        _ = trace_id
+        calls.append((lesson_a.concept_candidate.slug, lesson_b.concept_candidate.slug))
+        return MergeCriticResult(
+            verdict="keep_separate",
+            reason="unused",
+            merged_objective=None,
+            diagnostic_cost=None,
+        )
+
+    monkeypatch.setattr("planning.agents.run_merge_critic", fake_critic)
+    results = await run_adjacent_merge_critics(plan, trace_id="fixture")
+
+    assert calls == []
+    assert results == []
