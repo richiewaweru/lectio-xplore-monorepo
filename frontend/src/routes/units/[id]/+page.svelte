@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import { isApiError } from '$lib/api/errors';
 	import {
 		approveUnitPath,
+		editUnitPathByChat,
 		getPreparedLessonStatus,
 		getHistoricalPath,
 		getPathHistory,
@@ -18,19 +20,17 @@
 		planUnitPath,
 		preparePathLesson,
 		regeneratePathLesson,
-		reorderPathLessons,
-		restorePathVersion,
-		skipPathLesson,
-		splitPathLesson
+		restorePathVersion
 	} from '$lib/api/units';
 	import TeachingSchedulePanel from '$lib/components/units/TeachingSchedulePanel.svelte';
 	import UnitGroupsPanel from '$lib/components/units/UnitGroupsPanel.svelte';
 	import LessonShapePanel from '$lib/components/units/LessonShapePanel.svelte';
+	import LessonVersionsPanel from '$lib/components/units/LessonVersionsPanel.svelte';
 	import LessonResultsPanel from '$lib/components/units/LessonResultsPanel.svelte';
 	import ResourceComposerPanel from '$lib/components/units/ResourceComposerPanel.svelte';
 	import type {
-		KnowledgeType,
 		LessonMode,
+		MergeCriticResult,
 		PathLesson,
 		PathStatusAggregate,
 		PathVersionSummary,
@@ -64,24 +64,43 @@
 	let activeView = $state<'path' | 'schedule' | 'groups' | 'results' | 'resources'>('path');
 	let restoreReason = $state('Restore this version as a new editable draft.');
 	let pendingAction = $state<{ label: string; description: string; run: () => Promise<void> } | null>(null);
-	let regenerationReason = $state('The path lesson changed after preparation.');
+	let regenerationReason = $state('The lesson changed after preparation.');
 	let editTitle = $state('');
 	let editObjective = $state('');
 	let editMustEstablish = $state('');
 	let editExclusions = $state('');
-	let editType = $state<KnowledgeType>('conceptual');
-	let showSplit = $state(false);
-	let splitATitle = $state('');
-	let splitAObjective = $state('');
-	let splitBTitle = $state('');
-	let splitBObjective = $state('');
-	let showMerge = $state(false);
-	let mergeTitle = $state('');
-	let mergeObjective = $state('');
+	let dismissedMergeKeys = $state<Set<string>>(new Set());
+	let chatMessage = $state('');
+	let chatBusy = $state(false);
+	let chatUnavailable = $state(false);
+	let chatNote = $state<string | null>(null);
+	let showVersions = $state(false);
+	const debugMode = import.meta.env.DEV;
 
 	const selected = $derived(path?.lessons.find((lesson) => lesson.id === selectedId) ?? null);
-	const selectedIndex = $derived(path && selected ? path.lessons.findIndex((lesson) => lesson.id === selected.id) : -1);
-	const nextLesson = $derived(path && selectedIndex >= 0 ? path.lessons[selectedIndex + 1] ?? null : null);
+	const canLockIn = $derived(Boolean(path?.reaches_destination) && (path?.prerequisite_risks.length ?? 0) === 0);
+	const lockBlockReason = $derived.by(() => {
+		if (!path) return '';
+		if (path.prerequisite_risks.length > 0) return "Something in this route relies on knowledge that isn't taught yet — fix that before locking it in.";
+		if (!path.reaches_destination) return "This route doesn't reach the destination yet.";
+		return '';
+	});
+	const mergeQuestions = $derived.by(() => {
+		if (!path) return [] as Array<{ key: string; result: MergeCriticResult; lessonA: PathLesson; lessonB: PathLesson }>;
+		const bySlug = new Map(path.lessons.map((lesson) => [lesson.concept_slug, lesson]));
+		return path.merge_critic_results
+			.filter((result) => result.verdict === 'teacher_decision' || result.verdict === 'merge_suggested')
+			.map((result) => ({
+				key: `${result.lesson_a}|${result.lesson_b}`,
+				result,
+				lessonA: bySlug.get(result.lesson_a) ?? null,
+				lessonB: bySlug.get(result.lesson_b) ?? null
+			}))
+			.filter(
+				(entry): entry is { key: string; result: MergeCriticResult; lessonA: PathLesson; lessonB: PathLesson } =>
+					Boolean(entry.lessonA && entry.lessonB) && !dismissedMergeKeys.has(entry.key)
+			);
+	});
 
 	function lines(value: string): string[] {
 		return value.split('\n').map((item) => item.trim()).filter(Boolean);
@@ -108,18 +127,24 @@
 		};
 	}
 
+	function dependencySentences(lesson: PathLesson | null): string[] {
+		if (!lesson || !path) return [];
+		const sentences: string[] = [];
+		for (const prerequisiteId of lesson.prerequisites) {
+			const prerequisite = path.lessons.find((candidate) => candidate.id === prerequisiteId);
+			if (prerequisite) sentences.push(`needs lesson ${prerequisite.position + 1}`);
+		}
+		for (const external of lesson.external_prerequisites) {
+			sentences.push(external);
+		}
+		return sentences;
+	}
+
 	function fillEditor(lesson: PathLesson): void {
 		editTitle = lesson.title;
 		editObjective = lesson.objective;
 		editMustEstablish = lesson.must_establish.join('\n');
 		editExclusions = lesson.exclusions.join('\n');
-		editType = lesson.primary_knowledge_type;
-		splitATitle = `${lesson.title} — foundation`;
-		splitAObjective = lesson.objective;
-		splitBTitle = `${lesson.title} — application`;
-		splitBObjective = lesson.objective;
-		mergeTitle = nextLesson ? `${lesson.title} and ${nextLesson.title}` : lesson.title;
-		mergeObjective = nextLesson ? `${lesson.objective} ${nextLesson.objective}` : lesson.objective;
 	}
 
 	async function selectLesson(lesson: PathLesson): Promise<void> {
@@ -145,7 +170,7 @@
 		try {
 			shape = await getLessonShape(unitId, selected.id, lessonMode, misconceptionCount);
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Could not load the controlled lesson shape.';
+			error = err instanceof Error ? err.message : 'Could not load this lesson shape.';
 		}
 	}
 
@@ -190,7 +215,7 @@
 			await action();
 			if (reload) await load({ preserveSelection: true });
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'The unit action failed.';
+			error = err instanceof Error ? err.message : 'That change did not go through.';
 		} finally {
 			busy = null;
 		}
@@ -210,46 +235,49 @@
 		if (!selected) return;
 		await act('save', () => patchPathLesson(unitId, path as UnitPath, selected, {
 			title: editTitle.trim(), objective: editObjective.trim(),
-			must_establish: lines(editMustEstablish), exclusions: lines(editExclusions),
-			primary_knowledge_type: editType
+			must_establish: lines(editMustEstablish), exclusions: lines(editExclusions)
 		}));
 	}
 
-	function move(offset: number): void {
-		if (!path || selectedIndex < 0) return;
-		const target = selectedIndex + offset;
-		if (target < 0 || target >= path.lessons.length) return;
-		const ids = path.lessons.map((lesson) => lesson.id);
-		[ids[selectedIndex], ids[target]] = [ids[target], ids[selectedIndex]];
-		pendingAction = {
-			label: `Move ${selected?.title ?? 'lesson'}`,
-			description: 'This creates a new draft path version. The current version stays in history for recovery.',
-			run: () => act('reorder', () => reorderPathLessons(unitId, path as UnitPath, ids))
-		};
-	}
-
-	async function splitSelected(event: SubmitEvent): Promise<void> {
-		event.preventDefault();
-		if (!selected) return;
-		await act('split', () => splitPathLesson(unitId, path as UnitPath, selected, [
-			{ concept_candidate: { slug: slug(splitATitle), title: splitATitle.trim() }, objective: splitAObjective.trim(), must_establish: [splitAObjective.trim()], exclusions: selected.exclusions, primary_knowledge_type: selected.primary_knowledge_type, secondary_demand: selected.secondary_demand },
-			{ concept_candidate: { slug: slug(splitBTitle), title: splitBTitle.trim() }, objective: splitBObjective.trim(), must_establish: [splitBObjective.trim()], exclusions: selected.exclusions, primary_knowledge_type: selected.primary_knowledge_type, secondary_demand: selected.secondary_demand }
-		]));
-		showSplit = false;
-	}
-
-	async function mergeSelected(event: SubmitEvent): Promise<void> {
-		event.preventDefault();
-		if (!selected || !nextLesson) return;
-		await act('merge', () => mergePathLessons(unitId, path as UnitPath, [selected, nextLesson], [selected.id, nextLesson.id], {
-			concept_candidate: { slug: slug(mergeTitle), title: mergeTitle.trim() },
-			objective: mergeObjective.trim(),
-			must_establish: [...selected.must_establish, ...nextLesson.must_establish],
-			exclusions: [...new Set([...selected.exclusions, ...nextLesson.exclusions])],
-			primary_knowledge_type: selected.primary_knowledge_type,
-			secondary_demand: selected.secondary_demand
+	async function combineLessons(question: { key: string; result: MergeCriticResult; lessonA: PathLesson; lessonB: PathLesson }): Promise<void> {
+		if (!path) return;
+		const { lessonA, lessonB, result } = question;
+		const mergedTitle = `${lessonA.title} and ${lessonB.title}`;
+		await act('merge', () => mergePathLessons(unitId, path as UnitPath, [lessonA, lessonB], [lessonA.id, lessonB.id], {
+			concept_candidate: { slug: slug(mergedTitle), title: mergedTitle },
+			objective: result.merged_objective?.trim() || `${lessonA.objective} ${lessonB.objective}`,
+			must_establish: [...lessonA.must_establish, ...lessonB.must_establish],
+			exclusions: [...new Set([...lessonA.exclusions, ...lessonB.exclusions])],
+			primary_knowledge_type: lessonA.primary_knowledge_type,
+			secondary_demand: lessonA.secondary_demand
 		}));
-		showMerge = false;
+		dismissedMergeKeys = new Set([...dismissedMergeKeys, question.key]);
+	}
+
+	function dismissMergeQuestion(key: string): void {
+		dismissedMergeKeys = new Set([...dismissedMergeKeys, key]);
+	}
+
+	async function sendChatEdit(event: SubmitEvent): Promise<void> {
+		event.preventDefault();
+		if (!path || chatUnavailable || chatMessage.trim().length < 2) return;
+		chatBusy = true;
+		error = null;
+		chatNote = null;
+		try {
+			const result = await editUnitPathByChat(unitId, path, chatMessage.trim());
+			chatMessage = '';
+			chatNote = result.issues?.length ? result.issues.join(' ') : (result.note ?? null);
+			await load({ preserveSelection: true });
+		} catch (err) {
+			if (isApiError(err) && err.status === 404) {
+				chatUnavailable = true;
+			} else {
+				error = err instanceof Error ? err.message : 'Could not update the lessons from that message.';
+			}
+		} finally {
+			chatBusy = false;
+		}
 	}
 
 	async function prepare(): Promise<void> {
@@ -308,28 +336,47 @@
 		<header class="unit-head">
 			<div><a href="/units" class="back">← Units</a><p class="eyebrow">{unit.subject} · {unit.grade_level}</p><h1>{unit.title}</h1><p>{unit.destination_objective}</p></div>
 			<div class="head-actions">
-				{#if path}<span class:approved={path.status === 'approved'}>Path v{path.version} · {path.status}</span>{/if}
-				<button class="secondary" type="button" disabled={busy !== null} onclick={() => planOrReplan(Boolean(path))}>{busy === 'replan' || busy === 'plan' ? 'Planning…' : path ? 'Replan path' : 'Plan concept path'}</button>
+				{#if path}<span class:approved={path.status === 'approved'}>{path.status === 'approved' ? 'Locked in' : 'Draft'}</span>{/if}
+				<button class="secondary" type="button" disabled={busy !== null} onclick={() => planOrReplan(Boolean(path))}>{busy === 'replan' || busy === 'plan' ? 'Planning…' : path ? 'Replan the lessons' : 'Plan the lessons'}</button>
 			</div>
 		</header>
 
 		{#if error}<p class="error" role="alert">{error}</p>{/if}
 
 		{#if !path}
-			<section class="empty"><p class="eyebrow">Destination saved</p><h2>Build the concept route</h2><p>The planner works backward from the destination and verifies every prerequisite forward. It receives no lesson-count or duration target.</p><button class="primary" type="button" disabled={busy !== null} onclick={() => planOrReplan(false)}>{busy === 'plan' ? 'Planning the route…' : 'Plan concept path'}</button></section>
+			<section class="empty"><p class="eyebrow">Destination saved</p><h2>Build your lessons</h2><p>This turns your destination into a numbered list of lessons, checking that every earlier lesson leads somewhere before the next one needs it.</p><button class="primary" type="button" disabled={busy !== null} onclick={() => planOrReplan(false)}>{busy === 'plan' ? 'Planning your lessons…' : 'Plan the lessons'}</button></section>
 		{:else}
 			<nav class="view-tabs" aria-label="Unit workspace views">
-				<button type="button" class:active={activeView === 'path'} aria-current={activeView === 'path' ? 'page' : undefined} onclick={() => (activeView = 'path')}>Concept path</button>
+				<button type="button" class:active={activeView === 'path'} aria-current={activeView === 'path' ? 'page' : undefined} onclick={() => (activeView = 'path')}>Your lessons</button>
 				<button type="button" class:active={activeView === 'schedule'} aria-current={activeView === 'schedule' ? 'page' : undefined} onclick={() => (activeView = 'schedule')}>Schedule <span>{schedule?.periods.length ?? 0}</span></button>
 				<button type="button" class:active={activeView === 'groups'} aria-current={activeView === 'groups' ? 'page' : undefined} onclick={() => (activeView = 'groups')}>Groups <span>{groups?.groups.length ?? 0}</span></button>
 				<button type="button" class:active={activeView === 'results'} aria-current={activeView === 'results' ? 'page' : undefined} onclick={() => (activeView = 'results')}>Results</button>
 				<button type="button" class:active={activeView === 'resources'} aria-current={activeView === 'resources' ? 'page' : undefined} onclick={() => (activeView = 'resources')}>Resources <span>{compositions.length}</span></button>
 			</nav>
 			{#if activeView === 'path'}
-			<section class="path-summary">
-				<div><strong>{path.lessons.length}</strong><span>capabilities</span></div><div><strong>{path.forward_verified ? 'Yes' : 'No'}</strong><span>forward verified</span></div><div><strong>{path.reaches_destination ? 'Yes' : 'No'}</strong><span>destination reached</span></div><div><strong>{path.prerequisite_risks.length}</strong><span>prerequisite risks</span></div>
-				{#if path.status !== 'approved'}<button class="primary" type="button" disabled={busy !== null || !path.reaches_destination || path.prerequisite_risks.length > 0} onclick={() => act('approve', async () => { path = await approveUnitPath(unitId, path as UnitPath); unit = await getUnit(unitId); await load({ preserveSelection: true }); }, false)}>{busy === 'approve' ? 'Approving…' : 'Approve path'}</button>{/if}
+			<section class="lock-in-bar">
+				<p>{path.lessons.length} {path.lessons.length === 1 ? 'lesson' : 'lessons'}</p>
+				{#if path.status !== 'approved'}
+					<div class="lock-in">
+						<button class="primary" type="button" disabled={busy !== null || !canLockIn} onclick={() => act('approve', async () => { path = await approveUnitPath(unitId, path as UnitPath); unit = await getUnit(unitId); await load({ preserveSelection: true }); }, false)}>{busy === 'approve' ? 'Locking it in…' : 'Looks good — lock it in'}</button>
+						{#if !canLockIn}<p class="lock-reason">{lockBlockReason}</p>{/if}
+					</div>
+				{/if}
 			</section>
+
+			{#if mergeQuestions.length}
+				<section class="merge-questions" aria-label="Merge suggestions">
+					{#each mergeQuestions as question (question.key)}
+						<div class="merge-question">
+							<p>Lessons {question.lessonA.position + 1} and {question.lessonB.position + 1} might work as one lesson — {question.result.reason}</p>
+							<div class="merge-actions">
+								<button type="button" class="secondary" disabled={busy !== null} onclick={() => dismissMergeQuestion(question.key)}>Keep apart</button>
+								<button type="button" class="primary" disabled={busy !== null} onclick={() => combineLessons(question)}>Combine</button>
+							</div>
+						</div>
+					{/each}
+				</section>
+			{/if}
 
 			{#if aggregate}
 				<section class="status-board" aria-label="Lesson preparation status">
@@ -339,40 +386,30 @@
 				</section>
 			{/if}
 
-			<section class="path-health">
-				<div><p class="eyebrow">Completeness</p><h3>{path.forward_verified && path.reaches_destination ? 'Route verified' : 'Needs attention'}</h3><p>{path.completeness_note ?? 'Every prerequisite must resolve before the destination can be approved.'}</p></div>
-				<div><p class="eyebrow">Prerequisite risks</p><h3>{path.prerequisite_risks.length}</h3>{#if path.prerequisite_risks.length}<ul>{#each path.prerequisite_risks as risk}<li>{String(risk.note ?? risk.missing ?? 'Unresolved prerequisite')}</li>{/each}</ul>{:else}<p>No unresolved prerequisite risks.</p>{/if}</div>
-			</section>
-
 			<section class="history-panel">
-				<div class="section-head"><div><p class="eyebrow">Path history</p><h2>Recoverable versions</h2></div><p>Structural edits create a new draft. Older routes remain available.</p></div>
+				<div class="section-head"><div><p class="eyebrow">Lesson history</p><h2>Recoverable versions</h2></div><p>Structural edits create a new draft. Older routes remain available.</p></div>
 				<div class="history-list">{#each history as version}<article class:current={version.id === path.id}><div><strong>v{version.version}</strong><span>{version.status}</span><small>{version.generated_by}</small></div><div class="history-actions"><button type="button" class="text-button" onclick={() => viewVersion(version)}>Inspect</button>{#if version.id !== path.id}<button type="button" class="text-button" onclick={() => confirmRestore(version)}>Restore</button>{/if}</div></article>{/each}</div>
-				{#if viewedVersion}<div class="history-preview"><div><strong>Path v{viewedVersion.version}</strong><span>{viewedVersion.status} · {viewedVersion.lessons.length} capabilities</span></div><ol>{#each viewedVersion.lessons as lesson}<li>{lesson.title}</li>{/each}</ol><button type="button" class="text-button" onclick={() => (viewedVersion = null)}>Close preview</button></div>{/if}
+				{#if viewedVersion}<div class="history-preview"><div><strong>v{viewedVersion.version}</strong><span>{viewedVersion.status} · {viewedVersion.lessons.length} lessons</span></div><ol>{#each viewedVersion.lessons as lesson}<li>{lesson.title}</li>{/each}</ol><button type="button" class="text-button" onclick={() => (viewedVersion = null)}>Close preview</button></div>{/if}
 			</section>
 
 			<div class="workspace">
-				<aside class="path-list" aria-label="Concept path">
-					<p class="eyebrow">Concept path</p>
-					<ol>{#each path.lessons as lesson, index (lesson.id)}<li class:active={lesson.id === selectedId} class:skipped={lesson.skipped}><button type="button" onclick={() => selectLesson(lesson)}><span>{index + 1}</span><span><strong>{lesson.title}</strong><small>{lesson.primary_knowledge_type}{lesson.pack_id ? ' · prepared' : ''}</small></span></button></li>{/each}</ol>
+				<aside class="path-list" aria-label="Your lessons">
+					<p class="eyebrow">Your lessons</p>
+					<ol>{#each path.lessons as lesson, index (lesson.id)}<li class:active={lesson.id === selectedId} class:skipped={lesson.skipped}><button type="button" onclick={() => selectLesson(lesson)}><span>{index + 1}</span><span><strong>{lesson.title}</strong>{#if dependencySentences(lesson).length}<small>{dependencySentences(lesson).join(' · ')}</small>{:else if lesson.pack_id}<small>prepared</small>{/if}</span></button></li>{/each}</ol>
 				</aside>
 
 				{#if selected}
 					<main class="inspector">
-						<div class="inspector-head"><div><p class="eyebrow">Capability {selected.position + 1}</p><h2>{selected.title}</h2></div><div class="compact-actions"><button type="button" aria-label="Move lesson up" disabled={selectedIndex <= 0 || busy !== null} onclick={() => move(-1)}>↑</button><button type="button" aria-label="Move lesson down" disabled={selectedIndex >= path.lessons.length - 1 || busy !== null} onclick={() => move(1)}>↓</button><button type="button" disabled={selected.skipped || busy !== null} onclick={() => (pendingAction = { label: `Skip ${selected.title}`, description: 'This creates a new draft path version and keeps the current route available for undo.', run: () => act('skip', () => skipPathLesson(unitId, path as UnitPath, selected)) })}>Skip</button></div></div>
+						<div class="inspector-head"><div><p class="eyebrow">Lesson {selected.position + 1}</p><h2>{selected.title}</h2></div></div>
 
 						<form class="editor" onsubmit={saveLesson}>
 							<label><span>Title</span><input bind:value={editTitle} required /></label>
-							<label><span>Objective <small>owned by this path lesson</small></span><textarea bind:value={editObjective} required></textarea></label>
-							<div class="two"><label><span>Must establish <small>one per line</small></span><textarea bind:value={editMustEstablish} required></textarea></label><label><span>Exclusions <small>one per line</small></span><textarea bind:value={editExclusions}></textarea></label></div>
-							<label><span>Knowledge type</span><select bind:value={editType}><option value="factual">Factual</option><option value="conceptual">Conceptual</option><option value="procedural">Procedural</option><option value="evaluative">Evaluative</option></select></label>
+							<label><span>What students will be able to do</span><textarea bind:value={editObjective} required></textarea></label>
+							<div class="two"><label><span>Must teach <small>one per line</small></span><textarea bind:value={editMustEstablish} required></textarea></label><label><span>Save for later <small>one per line</small></span><textarea bind:value={editExclusions}></textarea></label></div>
 							<button class="secondary" type="submit" disabled={busy !== null}>{busy === 'save' ? 'Saving…' : 'Save lesson changes'}</button>
 						</form>
 
-						<section class="dependencies"><div><p class="eyebrow">Prerequisites</p><h3>What this capability depends on</h3></div><div class="dependency-grid"><div><strong>Earlier path capabilities</strong>{#if selected.prerequisites.length}<ul>{#each selected.prerequisites as prerequisiteId}<li>{path.lessons.find((lesson) => lesson.id === prerequisiteId)?.title ?? prerequisiteId}</li>{/each}</ul>{:else}<p>None inside this path.</p>{/if}</div><div><strong>External starting knowledge</strong>{#if selected.external_prerequisites.length}<ul>{#each selected.external_prerequisites as prerequisite}<li>{prerequisite}</li>{/each}</ul>{:else}<p>None declared.</p>{/if}</div></div></section>
-
-						<div class="structure-actions"><button type="button" class="text-button" onclick={() => (showSplit = !showSplit)}>Split lesson</button><button type="button" class="text-button" disabled={!nextLesson} onclick={() => (showMerge = !showMerge)}>Merge with next</button></div>
-						{#if showSplit}<form class="operation-form" onsubmit={splitSelected}><h3>Split into two capabilities</h3><label><span>First title</span><input bind:value={splitATitle} required /></label><label><span>First objective</span><textarea bind:value={splitAObjective} required></textarea></label><label><span>Second title</span><input bind:value={splitBTitle} required /></label><label><span>Second objective</span><textarea bind:value={splitBObjective} required></textarea></label><button class="secondary" type="submit" disabled={busy !== null}>{busy === 'split' ? 'Splitting…' : 'Confirm split'}</button></form>{/if}
-						{#if showMerge && nextLesson}<form class="operation-form" onsubmit={mergeSelected}><h3>Merge with {nextLesson.title}</h3><label><span>Merged title</span><input bind:value={mergeTitle} required /></label><label><span>Merged objective</span><textarea bind:value={mergeObjective} required></textarea></label><button class="secondary" type="submit" disabled={busy !== null}>{busy === 'merge' ? 'Merging…' : 'Confirm merge'}</button></form>{/if}
+						<section class="dependencies"><div><p class="eyebrow">Before this lesson</p><h3>What it needs first</h3></div>{#if dependencySentences(selected).length}<ul>{#each dependencySentences(selected) as sentence}<li>{sentence}</li>{/each}</ul>{:else}<p>Nothing — this can be the starting point.</p>{/if}</section>
 
 						{#if shape}
 							<LessonShapePanel
@@ -382,29 +419,46 @@
 								{shape}
 								{lessonMode}
 								{misconceptionCount}
+								{debugMode}
 								onsettings={updateShapeSettings}
 								onshape={(value) => (shape = value)}
 								onrevision={updateShapeRevision}
 							/>
 						{:else}
-							<section class="shape"><p>Loading controlled lesson shape…</p></section>
+							<section class="shape"><p>Loading this lesson's shape…</p></section>
 						{/if}
 
 						<section class="prepare">
-							<div><p class="eyebrow">Preparation</p><h3>{preparation?.workflow_stage ?? 'Checking status…'}</h3><p>{preparation?.stale ? 'The existing preparation is stale and must be regenerated.' : 'Preparation enters the durable concept-card review before lesson writing.'}</p></div>
-							{#if groups?.groups.length}
-								<fieldset class="prepare-groups"><legend>Booklet groups</legend>{#each groups.groups as group}<label><input type="checkbox" value={group.id} bind:group={selectedGroupIds} /><span>{group.label} <small>{group.profile}</small></span></label>{/each}<p>All selected booklets use one shared diagnostic item set.</p></fieldset>
-							{/if}
+							<div><p class="eyebrow">Preparation</p><h3>{preparation?.workflow_stage ?? 'Checking status…'}</h3><p>{preparation?.stale ? 'This lesson changed since it was last written and needs to be made again.' : 'This starts the lesson-writing review before anything is generated.'}</p></div>
 							{#if preparation?.stale && preparation.can_regenerate}
 								<form class="regenerate" onsubmit={(event) => { event.preventDefault(); void regenerate(); }}>
-									<label><span>Regeneration reason</span><input bind:value={regenerationReason} minlength="3" maxlength="500" required /></label>
-									<button class="primary" type="submit" disabled={busy !== null || !shape?.can_prepare || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Regenerating…' : 'Regenerate preparation'}</button>
+									<label><span>What changed</span><input bind:value={regenerationReason} minlength="3" maxlength="500" required /></label>
+									<button class="primary" type="submit" disabled={busy !== null || !shape?.can_prepare || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Making it again…' : 'Make it again'}</button>
 								</form>
-							{:else if preparation?.generation_id}<a class="primary link" href={`/studio?generation_id=${encodeURIComponent(preparation.generation_id)}`}>Open review</a>{:else}<button class="primary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null || !shape?.can_prepare} onclick={prepare}>{busy === 'prepare' ? 'Preparing…' : 'Prepare lesson'}</button>{/if}
+							{:else if preparation?.generation_id}
+								<div class="ready-actions">
+									<a class="primary link" href={`/studio?generation_id=${encodeURIComponent(preparation.generation_id)}`}>Open review</a>
+									<a class="secondary link" href={`/studio/print/${encodeURIComponent(preparation.generation_id)}`}>Print</a>
+									<button class="secondary" type="button" onclick={() => (showVersions = true)}>Make versions for my groups</button>
+								</div>
+							{:else}<button class="primary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null || !shape?.can_prepare} onclick={prepare}>{busy === 'prepare' ? 'Making the lesson…' : 'Make the lesson'}</button>{/if}
 						</section>
 					</main>
 				{/if}
 			</div>
+
+			<section class="chat-edit" aria-label="Edit your lessons by chat">
+				<p class="eyebrow">Edit your lessons</p>
+				{#if chatUnavailable}
+					<p class="chat-disabled">Editing lessons by chat isn't available yet — use the lesson tools above for now.</p>
+				{:else}
+					<form onsubmit={sendChatEdit}>
+						<input bind:value={chatMessage} placeholder="e.g. Combine lessons 2 and 3, or add something about fractions" disabled={chatBusy} />
+						<button class="primary" type="submit" disabled={chatBusy || chatMessage.trim().length < 2}>{chatBusy ? 'Updating…' : 'Send'}</button>
+					</form>
+					{#if chatNote}<p class="chat-note">{chatNote}</p>{/if}
+				{/if}
+			</section>
 			{:else if activeView === 'schedule' && schedule}
 				<TeachingSchedulePanel {unitId} {path} {schedule} onsaved={(saved) => (schedule = saved)} />
 			{:else if activeView === 'groups' && groups}
@@ -418,6 +472,15 @@
 	{/if}
 </div>
 
+{#if showVersions && groups}
+	<LessonVersionsPanel
+		{unitId}
+		{groups}
+		onsaved={(saved) => { groups = saved; selectedGroupIds = saved.groups.map((group) => group.id); }}
+		onclose={() => (showVersions = false)}
+	/>
+{/if}
+
 {#if pendingAction}
 	<div class="confirm-backdrop" role="presentation">
 		<div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
@@ -430,7 +493,7 @@
 
 <style>
 	.unit-page { min-height: calc(100vh - 58px); padding: 38px 28px 80px; }
-	.unit-head, .view-tabs, .path-summary, .status-board, .path-health, .history-panel, .workspace, .empty, .error, .loading { max-width: 1180px; margin-inline: auto; }
+	.unit-head, .view-tabs, .lock-in-bar, .merge-questions, .status-board, .history-panel, .workspace, .chat-edit, .empty, .error, .loading { max-width: 1180px; margin-inline: auto; }
 	.unit-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
 	.back { display: inline-block; margin-bottom: 18px; color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; }
 	.eyebrow { margin: 0 0 6px; color: var(--ink-3); font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .1em; text-transform: uppercase; }
@@ -440,30 +503,29 @@
 	.head-actions > span { border-radius: 999px; background: var(--amber-soft); color: var(--amber); font: 500 10px 'IBM Plex Mono', monospace; padding: 6px 9px; text-transform: uppercase; }
 	.head-actions > span.approved { background: var(--accent-soft); color: var(--accent); }
 	button, input, textarea, select { font: inherit; }
-	.primary, .secondary, .text-button, .compact-actions button { cursor: pointer; }
+	.primary, .secondary, .text-button { cursor: pointer; }
 	.primary, .secondary { border-radius: 7px; font-size: 13px; font-weight: 600; padding: 9px 13px; }
 	.primary { border: 1px solid var(--accent); background: var(--accent); color: white; }
-	.primary.link { display: inline-block; text-decoration: none; }
+	.primary.link, .secondary.link { display: inline-block; text-decoration: none; }
 	.secondary { border: 1px solid var(--rule); background: var(--surface); color: var(--ink); }
 	button:disabled { cursor: not-allowed; opacity: .45; }
 	.view-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); margin-bottom: 22px; }
 	.view-tabs button { border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ink-3); cursor: pointer; padding: 10px 13px; font-size: 12px; font-weight: 600; }
 	.view-tabs button.active { border-bottom-color: var(--accent); color: var(--accent); }
 	.view-tabs span { display: inline-grid; place-items: center; min-width: 17px; height: 17px; border-radius: 999px; background: var(--paper); margin-left: 4px; font-size: 9px; }
-	.path-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; align-items: center; gap: 16px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); margin-bottom: 22px; padding: 16px 18px; }
-	.path-summary div { display: grid; gap: 2px; }
-	.path-summary strong { font: 500 20px Fraunces, Georgia, serif; }
-	.path-summary span { color: var(--ink-3); font-size: 11px; }
+	.lock-in-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); margin-bottom: 18px; padding: 16px 18px; }
+	.lock-in-bar p { margin: 0; color: var(--ink-2); font-size: 13px; }
+	.lock-in { display: grid; justify-items: end; gap: 6px; }
+	.lock-reason { max-width: 360px; margin: 0; color: var(--ink-3); font-size: 11px; text-align: right; }
+	.merge-questions { display: grid; gap: 8px; margin-bottom: 18px; }
+	.merge-question { display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid #dfb294; border-radius: 8px; background: #fff7ed; padding: 12px 14px; }
+	.merge-question p { margin: 0; color: #7b4625; font-size: 13px; line-height: 1.5; }
+	.merge-actions { display: flex; gap: 8px; flex-shrink: 0; }
 	.status-board { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; margin-bottom: 14px; }
 	.status-board div { display: grid; gap: 2px; border: 1px solid var(--rule); border-radius: 7px; background: var(--surface); padding: 9px 10px; }
 	.status-board div.attention { border-color: #dfb294; background: #fff7ed; }
 	.status-board strong { font: 500 18px Fraunces, Georgia, serif; }
 	.status-board span { color: var(--ink-3); font-size: 9px; text-transform: uppercase; }
-	.path-health { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
-	.path-health > div { border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); padding: 15px; }
-	.path-health h3 { margin: 0; font-size: 15px; }
-	.path-health p:last-child, .path-health li { color: var(--ink-2); font-size: 11px; line-height: 1.5; }
-	.path-health ul { margin: 8px 0 0; padding-left: 17px; }
 	.history-panel { border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); margin-bottom: 22px; padding: 18px; }
 	.history-panel .section-head > p { max-width: 430px; margin: 0; color: var(--ink-3); font-size: 11px; text-align: right; }
 	.history-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
@@ -485,52 +547,45 @@
 	.path-list li button > span:first-child { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--paper); color: var(--ink-3); font: 500 10px 'IBM Plex Mono', monospace; }
 	.path-list li button strong, .path-list li button small { display: block; }
 	.path-list li button strong { font-size: 13px; }
-	.path-list li button small { margin-top: 3px; color: var(--ink-3); font-size: 10px; text-transform: capitalize; }
+	.path-list li button small { margin-top: 3px; color: var(--ink-3); font-size: 10px; }
 	.path-list li.active button { background: var(--accent-soft); color: var(--accent); }
 	.path-list li.skipped { opacity: .5; text-decoration: line-through; }
 	.inspector { min-width: 0; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); padding: 24px; }
 	.inspector-head, .section-head, .prepare { display: flex; align-items: start; justify-content: space-between; gap: 18px; }
 	.inspector h2 { margin: 0; font: 500 27px Fraunces, Georgia, serif; }
 	.inspector h3 { margin: 0; font-size: 16px; }
-	.compact-actions { display: flex; gap: 4px; }
-	.compact-actions button, .text-button { border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); color: var(--ink-2); font-size: 12px; padding: 6px 9px; }
-	.editor, .operation-form { display: grid; gap: 14px; margin-top: 24px; }
+	.editor { display: grid; gap: 14px; margin-top: 24px; }
 	label { display: grid; gap: 6px; color: var(--ink-2); font-size: 11px; font-weight: 600; }
 	label small { color: var(--ink-3); font-weight: 400; }
 	input, textarea, select { box-sizing: border-box; width: 100%; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); color: var(--ink); font-size: 13px; padding: 9px 10px; }
 	textarea { min-height: 70px; resize: vertical; }
 	.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 	.editor > button { justify-self: start; }
-	.structure-actions { display: flex; gap: 8px; margin-top: 14px; }
 	.dependencies { border-top: 1px solid var(--rule); margin-top: 24px; padding-top: 20px; }
-	.dependency-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
-	.dependency-grid > div { border: 1px solid var(--rule); border-radius: 7px; background: var(--paper); padding: 12px; }
-	.dependency-grid strong { font-size: 11px; }
-	.dependency-grid p, .dependency-grid li { color: var(--ink-2); font-size: 11px; }
-	.dependency-grid ul { margin: 8px 0 0; padding-left: 17px; }
-	.operation-form { border: 1px solid var(--rule); border-radius: 8px; background: var(--paper); padding: 16px; }
-	.operation-form > button { justify-self: start; }
+	.dependencies ul { margin: 10px 0 0; padding-left: 17px; }
+	.dependencies li { color: var(--ink-2); font-size: 12px; line-height: 1.6; }
+	.dependencies p:last-child { color: var(--ink-2); font-size: 12px; }
 	.shape, .prepare { border-top: 1px solid var(--rule); margin-top: 26px; padding-top: 22px; }
 	.prepare { align-items: center; }
 	.regenerate { display: grid; min-width: min(100%, 360px); gap: 8px; }
 	.regenerate button { justify-self: end; }
 	.prepare p:last-child { margin: 6px 0 0; color: var(--ink-2); font-size: 12px; }
-	.prepare-groups { min-width: 210px; border: 1px solid var(--rule); border-radius: 7px; margin: 0; padding: 10px; }
-	.prepare-groups legend { color: var(--ink-3); font-size: 10px; font-weight: 600; }
-	.prepare-groups label { display: flex; align-items: center; gap: 6px; margin-top: 5px; }
-	.prepare-groups input { width: auto; }
-	.prepare-groups small { color: var(--ink-3); text-transform: capitalize; }
-	.prepare-groups p:last-child { font-size: 9px; }
+	.ready-actions { display: flex; align-items: center; gap: 8px; }
 	.empty { border: 1px dashed var(--rule); border-radius: 10px; padding: 54px 28px; text-align: center; }
 	.empty h2 { margin: 0; font: 500 28px Fraunces, Georgia, serif; }
 	.empty > p:last-of-type { max-width: 590px; margin: 12px auto 20px; color: var(--ink-2); font-size: 14px; line-height: 1.6; }
 	.error { border: 1px solid #e2b9ae; border-radius: 7px; background: #f8e9e5; color: #873f30; margin-bottom: 18px; padding: 10px 12px; font-size: 13px; }
+	.chat-edit { border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); margin-top: 22px; padding: 18px; }
+	.chat-edit form { display: flex; gap: 8px; margin-top: 10px; }
+	.chat-edit input { flex: 1; }
+	.chat-note { margin: 10px 0 0; color: var(--ink-2); font-size: 12px; line-height: 1.5; }
+	.chat-disabled { margin: 10px 0 0; color: var(--ink-3); font-size: 12px; }
 	.confirm-backdrop { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; background: rgb(18 23 21 / .48); padding: 18px; }
 	.confirm-dialog { width: min(100%, 470px); border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); box-shadow: 0 20px 60px rgb(0 0 0 / .18); padding: 22px; }
 	.confirm-dialog h2 { margin: 0; font: 500 25px Fraunces, Georgia, serif; }
 	.confirm-dialog > p:not(.eyebrow) { color: var(--ink-2); font-size: 13px; line-height: 1.5; }
 	.confirm-dialog > div { display: flex; justify-content: end; gap: 8px; margin-top: 18px; }
-	@media (max-width: 980px) { .status-board { grid-template-columns: repeat(4, 1fr); } .path-health { grid-template-columns: 1fr; } }
-	@media (max-width: 840px) { .workspace { grid-template-columns: 1fr; } .path-list { position: static; } .path-list ol { grid-template-columns: repeat(2, 1fr); } .path-summary { grid-template-columns: repeat(2, 1fr); } }
-	@media (max-width: 640px) { .unit-page { padding: 28px 16px 60px; } .unit-head, .head-actions, .inspector-head, .section-head, .prepare { align-items: stretch; flex-direction: column; } .history-panel .section-head > p { text-align: left; } .path-list ol, .two, .dependency-grid { grid-template-columns: 1fr; } .status-board { grid-template-columns: repeat(2, 1fr); } .inspector { padding: 18px; } }
+	@media (max-width: 980px) { .status-board { grid-template-columns: repeat(4, 1fr); } }
+	@media (max-width: 840px) { .workspace { grid-template-columns: 1fr; } .path-list { position: static; } .path-list ol { grid-template-columns: repeat(2, 1fr); } }
+	@media (max-width: 640px) { .unit-page { padding: 28px 16px 60px; } .unit-head, .head-actions, .inspector-head, .section-head, .prepare, .lock-in-bar { align-items: stretch; flex-direction: column; } .lock-reason { text-align: left; } .history-panel .section-head > p { text-align: left; } .path-list ol, .two { grid-template-columns: 1fr; } .status-board { grid-template-columns: repeat(2, 1fr); } .inspector { padding: 18px; } .chat-edit form { flex-direction: column; } }
 </style>

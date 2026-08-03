@@ -25,6 +25,22 @@ export interface UnitCreateInput {
 	curriculum_context?: string | null;
 }
 
+export interface ConstructorReadbackInput {
+	subject: string;
+	grade_level: string;
+	raw_text: string;
+	correction?: string;
+	clarifying_answer?: string;
+}
+
+export interface ConstructorReadback {
+	destination_objective: string;
+	starting_knowledge: string[];
+	curriculum_context: string | null;
+	class_notes: string | null;
+	clarifying_question: string | null;
+}
+
 export interface LegacyUnitWrapper {
 	id: string;
 	kind: 'legacy_unit';
@@ -79,6 +95,17 @@ export interface PathLesson {
 	pack_id: string | null;
 }
 
+export type MergeVerdict = 'keep_separate' | 'merge_suggested' | 'teacher_decision';
+
+export interface MergeCriticResult {
+	lesson_a: string;
+	lesson_b: string;
+	verdict: MergeVerdict;
+	reason: string;
+	merged_objective: string | null;
+	diagnostic_cost: string | null;
+}
+
 export interface UnitPath {
 	id: string;
 	unit_id: string;
@@ -86,7 +113,7 @@ export interface UnitPath {
 	revision: number;
 	status: string;
 	generated_by: string;
-	merge_critic_results: Record<string, unknown>[];
+	merge_critic_results: MergeCriticResult[];
 	prerequisite_risks: Record<string, unknown>[];
 	forward_verified: boolean;
 	reaches_destination: boolean;
@@ -94,6 +121,11 @@ export interface UnitPath {
 	approved_at: string | null;
 	created_at: string;
 	lessons: PathLesson[];
+}
+
+export interface PathEditChatResult extends UnitPath {
+	note?: string | null;
+	issues?: string[];
 }
 
 export interface PathVersionSummary {

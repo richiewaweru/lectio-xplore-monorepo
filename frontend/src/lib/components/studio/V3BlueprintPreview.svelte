@@ -10,6 +10,10 @@
 		approveLabel?: string;
 		cancelLabel?: string;
 		parentTitle?: string | null;
+		/** Plain-language summary of the one thing this lesson teaches. Falls back to the register summary. */
+		objective?: string | null;
+		/** Plain-language misconceptions to watch for. Omitted entirely when empty. */
+		watchFor?: string[];
 	}
 
 	let {
@@ -18,9 +22,11 @@
 		onAdjust,
 		onCancel,
 		contextLabel = 'Lesson plan',
-		approveLabel = 'Approve and generate',
+		approveLabel = 'Make the lesson',
 		cancelLabel = 'Back',
-		parentTitle = null
+		parentTitle = null,
+		objective = null,
+		watchFor = []
 	}: Props = $props();
 
 	let adjustText = $state('');
@@ -42,18 +48,20 @@
 			{#if parentTitle}
 				<p class="mt-1 text-xs text-muted-foreground">Based on: {parentTitle}</p>
 			{/if}
-			<p class="mt-2 text-sm text-muted-foreground">{blueprint.register_summary}</p>
+			<p class="mt-2 text-sm font-medium text-foreground">
+				The one thing this lesson teaches: {objective ?? blueprint.register_summary}
+			</p>
 		</div>
 		<span class="rounded-full bg-muted px-3 py-1 text-xs font-medium capitalize">
 			{blueprint.resource_type.replace(/_/g, ' ')}
 		</span>
 	</header>
 
-	{#if blueprint.support_summary.length}
+	{#if watchFor.length}
 		<section class="rounded-xl border border-border/60 bg-muted/30 p-4">
-			<h3 class="text-sm font-semibold">Support cues</h3>
+			<h3 class="text-sm font-semibold">Watch for</h3>
 			<ul class="mt-2 list-inside list-disc text-sm text-muted-foreground">
-				{#each blueprint.support_summary as line}
+				{#each watchFor as line}
 					<li>{line}</li>
 				{/each}
 			</ul>
@@ -151,7 +159,7 @@
 			class="flex-1 rounded-md border border-input px-4 py-3 text-sm font-semibold"
 			onclick={() => (showAdjust = !showAdjust)}
 		>
-			Request changes
+			something off? type it
 		</button>
 	</div>
 
@@ -160,7 +168,7 @@
 			<textarea
 				class="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 				bind:value={adjustText}
-				placeholder="Describe what you want to change."
+				placeholder="What's off?"
 			></textarea>
 			<button
 				type="button"
@@ -172,7 +180,7 @@
 					showAdjust = false;
 				}}
 			>
-				Update plan
+				Update
 			</button>
 		</div>
 	{/if}

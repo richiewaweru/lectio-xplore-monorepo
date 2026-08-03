@@ -45,6 +45,18 @@ def merge_critic_prompt() -> str:
     return effective_prompt_text("merge-critic")
 
 
+def constructor_prompt() -> str:
+    from core.prompts import effective_prompt_text
+
+    return effective_prompt_text("constructor")
+
+
+def plan_editor_prompt() -> str:
+    from core.prompts import effective_prompt_text
+
+    return effective_prompt_text("plan-editor")
+
+
 def component_selector_prompt() -> str:
     return prompt_text("component-selector-v1.txt")
 

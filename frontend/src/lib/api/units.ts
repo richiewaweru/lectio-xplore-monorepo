@@ -1,6 +1,8 @@
 import { apiFetch } from '$lib/api/client';
 import { ensureOk } from '$lib/api/errors';
 import type {
+	ConstructorReadback,
+	ConstructorReadbackInput,
 	KnowledgeType,
 	LegacyUnitWrapper,
 	LessonActual,
@@ -10,6 +12,7 @@ import type {
 	LessonMode,
 	LessonPace,
 	MarksSummary,
+	PathEditChatResult,
 	PathLesson,
 	PathPlannerInput,
 	PathStatusAggregate,
@@ -59,8 +62,16 @@ export function createUnit(input: UnitCreateInput): Promise<Unit> {
 	});
 }
 
+export function constructorReadback(input: ConstructorReadbackInput): Promise<ConstructorReadback> {
+	return jsonRequest('/api/v1/units/constructor/readback', "Could not read back what you're teaching.", {
+		method: 'POST',
+		headers: jsonHeaders,
+		body: JSON.stringify(input)
+	});
+}
+
 export function getUnitPath(unitId: string): Promise<UnitPath> {
-	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/path`, 'Could not load the concept path.');
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/path`, 'Could not load the lessons.');
 }
 
 export function getPathHistory(unitId: string): Promise<PathVersionSummary[]> {
@@ -142,15 +153,22 @@ export function restorePathVersion(unitId: string, sourceVersionId: string, acti
 export function planUnitPath(unitId: string, input: PathPlannerInput, replan = false, active?: UnitPath): Promise<UnitPath> {
 	const action = replan ? 'replan' : 'plan';
 	if (replan && !active) throw new Error('Replanning requires the active path revision.');
-	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/path:${action}`, 'Could not plan the concept path.', {
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/path:${action}`, 'Could not plan the lessons.', {
 		method: 'POST',
 		headers: jsonHeaders,
 		body: JSON.stringify(replan ? { ...input, path_version_id: active?.id, path_revision: active?.revision } : input)
 	});
 }
 
+export function editUnitPathByChat(unitId: string, path: UnitPath, message: string): Promise<PathEditChatResult> {
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/path:edit-chat`, 'Could not update the lessons from that message.', {
+		method: 'POST', headers: jsonHeaders,
+		body: JSON.stringify({ message, path_version_id: path.id, path_revision: path.revision })
+	});
+}
+
 export function approveUnitPath(unitId: string, path: UnitPath): Promise<UnitPath> {
-	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/path:approve`, 'Could not approve the concept path.', {
+	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/path:approve`, 'Could not lock in the lessons.', {
 		method: 'POST', headers: jsonHeaders,
 		body: JSON.stringify({ path_version_id: path.id, path_revision: path.revision })
 	});

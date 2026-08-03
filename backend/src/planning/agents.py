@@ -12,6 +12,7 @@ from core.config import settings
 from core.llm.runner import RetryPolicy, run_llm
 from planning.models import (
     ComponentSelection,
+    ConstructorOutput,
     MergeCriticResult,
     PathPlan,
     PathPlannerRequest,
@@ -20,17 +21,21 @@ from planning.models import (
 )
 from planning.prompts import (
     component_selector_prompt,
+    constructor_prompt,
     merge_critic_prompt,
     path_planner_prompt,
     path_structural_planner_prompt,
+    plan_editor_prompt,
 )
 from planning.validation import normalize_declared_external_prerequisites, validate_path_plan
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.models import (
     V2_COMPONENT_SELECTOR,
     V2_MERGE_CRITIC,
+    V2_PATH_CHAT_EDITOR,
     V2_PATH_PLANNER,
     V2_PATH_STRUCTURAL_PLANNER,
+    V3_CONSTRUCTOR,
 )
 from v3_execution.llm_helpers import structured_output_type_for_model
 
@@ -207,5 +212,54 @@ async def run_path_structural_planner(
         output_type=PathStructuralPlan,
         system_prompt=path_structural_planner_prompt(),
         user_payload=fixed_context,
+        trace_id=trace_id,
+    )
+
+
+async def run_constructor(
+    subject: str,
+    grade_level: str,
+    raw_text: str,
+    *,
+    correction: str | None = None,
+    clarifying_answer: str | None = None,
+    trace_id: str | None = None,
+) -> ConstructorOutput:
+    payload: dict[str, Any] = {
+        "subject": subject,
+        "grade_level": grade_level,
+        "raw_text": raw_text,
+    }
+    if correction is not None:
+        payload["correction"] = correction
+    if clarifying_answer is not None:
+        payload["clarifying_answer"] = clarifying_answer
+    return await _run_structured(
+        node=V3_CONSTRUCTOR,
+        caller="v3_constructor",
+        output_type=ConstructorOutput,
+        system_prompt=constructor_prompt(),
+        user_payload=payload,
+        trace_id=trace_id,
+    )
+
+
+async def run_plan_chat_edit(
+    plan: PathPlan,
+    message: str,
+    *,
+    unit_context: dict[str, Any] | None = None,
+    trace_id: str | None = None,
+) -> PathPlan:
+    return await _run_structured(
+        node=V2_PATH_CHAT_EDITOR,
+        caller="v2_path_chat_editor",
+        output_type=PathPlan,
+        system_prompt=plan_editor_prompt(),
+        user_payload={
+            "current_plan": plan.model_dump(mode="json"),
+            "edit_request": message,
+            "unit_context": unit_context or {},
+        },
         trace_id=trace_id,
     )

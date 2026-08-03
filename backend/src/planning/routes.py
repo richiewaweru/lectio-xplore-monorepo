@@ -20,9 +20,15 @@ from core.database.models import (
 from core.dependencies import get_async_session
 from core.entities.user import User
 from core.rate_limit import limiter
-from planning.agents import run_adjacent_merge_critics, run_path_planner
+from planning.agents import (
+    run_adjacent_merge_critics,
+    run_constructor,
+    run_path_planner,
+    run_plan_chat_edit,
+)
 from planning.bridge import PathPreparationBlocked, prepare_path_lesson
 from planning.models import (
+    ConstructorReadbackRequest,
     GuardedMergePathLessonsRequest,
     GuardedPrepareLessonRequest,
     GuardedPathLessonPatch,
@@ -30,7 +36,9 @@ from planning.models import (
     GuardedSplitPathLessonRequest,
     LessonActualWriteRequest,
     MarksWriteRequest,
+    PathChatEditRequest,
     PathLessonMutationRequest,
+    PathPlan,
     PathPlannerRequest,
     PathReplanRequest,
     PathVersionMutationRequest,
@@ -96,7 +104,12 @@ from planning.service import (
     split_lesson,
     update_unit,
 )
-from planning.validation import PathApprovalBlocked, PathValidationError
+from planning.validation import (
+    PathApprovalBlocked,
+    PathValidationError,
+    plain_validation_message,
+    validate_path_plan,
+)
 from v3_blueprint.planning.persistence import load_chunked_state
 
 
@@ -115,6 +128,7 @@ def _unit_payload(unit: UnitModel) -> dict[str, object]:
         "subject": unit.subject,
         "grade_level": unit.grade_level,
         "curriculum_context": unit.curriculum_context,
+        "class_notes": unit.class_notes,
         "destination_objective": unit.destination_objective,
         "starting_knowledge": unit.starting_knowledge,
         "status": unit.status,
@@ -217,6 +231,32 @@ def _raise_http(exc: Exception) -> None:
     ):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     raise exc
+
+
+@router.post("/constructor/readback")
+@limiter.limit("20/minute")
+async def post_constructor_readback(
+    request: Request,
+    body: ConstructorReadbackRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    from core.prompts import bind_prompt_cache, reset_prompt_cache, resolve_all_prompts
+
+    prompt_texts, _prompt_hashes = await resolve_all_prompts(current_user.id, session)
+    cache_token = bind_prompt_cache(prompt_texts)
+    try:
+        result = await run_constructor(
+            body.subject,
+            body.grade_level,
+            body.raw_text,
+            correction=body.correction,
+            clarifying_answer=body.clarifying_answer,
+            trace_id=f"constructor:{current_user.id}",
+        )
+    finally:
+        reset_prompt_cache(cache_token)
+    return result.model_dump(mode="json")
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -366,6 +406,73 @@ async def post_path_replan(
         session=session,
         replan=True,
     )
+
+
+@router.post("/{unit_id}/path:edit-chat")
+@limiter.limit("12/minute")
+async def post_path_chat_edit(
+    request: Request,
+    unit_id: str,
+    body: PathChatEditRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        version = await _active_version(session, unit)
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=body.path_version_id,
+            path_revision=body.path_revision,
+        )
+        current_plan = PathPlan.model_validate(version.source_plan_json)
+
+        from core.prompts import bind_prompt_cache, reset_prompt_cache, resolve_all_prompts
+
+        prompt_texts, _prompt_hashes = await resolve_all_prompts(current_user.id, session)
+        cache_token = bind_prompt_cache(prompt_texts)
+        try:
+            edited_plan = await run_plan_chat_edit(
+                current_plan,
+                body.message,
+                unit_context={
+                    "topic": unit.topic,
+                    "subject": unit.subject,
+                    "grade_level": unit.grade_level,
+                    "destination_objective": unit.destination_objective,
+                    "starting_knowledge": unit.starting_knowledge,
+                    "curriculum_context": unit.curriculum_context,
+                },
+                trace_id=f"unit:{unit.id}:chat-edit",
+            )
+        finally:
+            reset_prompt_cache(cache_token)
+
+        try:
+            validate_path_plan(edited_plan)
+        except PathValidationError as exc:
+            return {
+                "path": await _path_payload(session, version),
+                "validation_messages": [plain_validation_message(exc)],
+            }
+
+        new_version = await persist_path_plan(
+            session,
+            unit=unit,
+            plan=edited_plan,
+            generated_by="chat_editor",
+            prior_version=version,
+            merge_critic_results=version.merge_critic_results or [],
+        )
+        unit.status = "draft"
+        await session.commit()
+        return {
+            "path": await _path_payload(session, new_version),
+            "validation_messages": [],
+        }
+    except Exception as exc:
+        await session.rollback()
+        _raise_http(exc)
 
 
 async def _owned_version_and_lesson(

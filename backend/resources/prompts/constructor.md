@@ -10,9 +10,20 @@ glance.
   subject, grade_level
   raw_text          the teacher's own words: what they're teaching, and
                      anything else they mentioned about the class
+  correction        optional: the teacher's follow-up note correcting a
+                     readback you already produced. When present, it is
+                     authoritative over your earlier assumptions in the
+                     specific respect it corrects.
+  clarifying_answer optional: the teacher's answer to a clarifying_question
+                     you already asked. When present, treat the ambiguity as
+                     resolved and never ask that question again.
 
 ## What you produce
 
+  title                    a short, teacher-facing name for this unit
+                           (2-6 words)
+  topic                    a short, precise phrase naming the specific
+                           subject matter (not the objective, not the title)
   destination_objective   what learners must be able to do at the end
   starting_knowledge      what they can already do, as a short list
   curriculum_context      optional syllabus/board/exam note, if the teacher
@@ -39,6 +50,21 @@ register, so the readback screen can show it plainly.
 ## PROCEDURE
 
 Work through these steps in order.
+
+### Step 0 — Name the topic and title
+
+topic is a short, precise phrase naming the specific subject matter, in the
+teacher's own vocabulary where possible — e.g. "comparing fractions with
+different denominators", not "fractions" and not the full objective
+sentence.
+
+title is a short display name for this unit, suitable for a lesson list —
+e.g. "Comparing Fractions". It may be shorter and less precise than topic;
+it exists so the teacher can find this unit again, not to carry meaning.
+
+If correction or clarifying_answer changes what is being taught, reflect
+that change in both fields — do not keep a stale title or topic from an
+earlier raw_text reading.
 
 ### Step 1 — Find what is actually being taught
 
@@ -69,15 +95,21 @@ there is nothing beyond the objective and starting knowledge.
 
 ### Step 5 — Decide whether a clarifying_question is earned
 
-Apply this test: could a reasonable teacher read your draft objective and
-say "no, that's not what I meant" about WHAT is being taught — not how it
-is worded? If yes, and you cannot pick a default confidently, ask exactly
-one question that resolves it. Otherwise set clarifying_question to null
-and proceed with your best draft.
+If clarifying_answer is present, the ambiguity it answers is resolved —
+incorporate the answer and set clarifying_question to null. Do not ask the
+same question again, and do not ask a different question unless the answer
+itself reveals a new, separate ambiguity about what is being taught.
+
+Otherwise, apply this test: could a reasonable teacher read your draft
+objective and say "no, that's not what I meant" about WHAT is being taught
+— not how it is worded? If yes, and you cannot pick a default confidently,
+ask exactly one question that resolves it. Otherwise set
+clarifying_question to null and proceed with your best draft.
 
 ## PROHIBITIONS
 
 Never ask more than one clarifying_question.
+Never repeat a clarifying_question that clarifying_answer already answered.
 Never ask about wording, tone, register, or level of detail — draft it
   yourself and let the teacher correct it on the readback screen.
 Never invent a curriculum_context the teacher did not mention.
@@ -93,6 +125,8 @@ Never use internal planning vocabulary in any field — no "concept path",
 Emit JSON only. No prose before or after.
 
 {
+  "title": str,
+  "topic": str,
   "destination_objective": str,
   "starting_knowledge": [str],
   "curriculum_context": str | null,
@@ -108,8 +142,10 @@ Emit JSON only. No prose before or after.
      teacher can correct rather than a claim of fact?
   3. Is curriculum_context genuinely present in the text, or did I invent it?
   4. Am I asking a question I could have answered myself with a sensible,
-     stated default?
+     stated default, or one that clarifying_answer already resolved?
   5. Does any field use internal planning vocabulary a teacher would not
      recognise?
+  6. Are title and topic short, and do they reflect the latest correction
+     or clarifying_answer rather than a stale earlier reading?
 
 If any answer is unsatisfactory, fix it before emitting.

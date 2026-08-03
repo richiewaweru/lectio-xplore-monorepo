@@ -260,6 +260,7 @@ class UnitModel(Base):
     subject = Column(String, nullable=False, index=True)
     grade_level = Column(String, nullable=False, index=True)
     curriculum_context = Column(Text, nullable=True)
+    class_notes = Column(Text, nullable=True)
     destination_objective = Column(Text, nullable=False)
     starting_knowledge = Column(JSON_DOCUMENT_TYPE, nullable=False, default=list)
     status = Column(String, nullable=False, default="draft", server_default="draft")

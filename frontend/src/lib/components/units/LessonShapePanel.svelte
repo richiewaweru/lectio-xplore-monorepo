@@ -2,12 +2,13 @@
 	import { decideShapeDeviation, getLessonShape, requestShapeDeviation } from '$lib/api/units';
 	import type { LessonMode, LessonShapePreview, PathLesson, SkeletonVariantShape, UnitPath } from '$lib/types/units';
 
-	let { unitId, path, lesson, shape, lessonMode, misconceptionCount, onsettings, onshape, onrevision }: {
+	let { unitId, path, lesson, shape, lessonMode, misconceptionCount, onsettings, onshape, onrevision, debugMode = false }: {
 		unitId: string; path: UnitPath; lesson: PathLesson; shape: LessonShapePreview;
 		lessonMode: LessonMode; misconceptionCount: number;
 		onsettings: (mode: LessonMode, count: number) => Promise<void>;
 		onshape: (value: LessonShapePreview) => void;
 		onrevision: (revision: number) => Promise<void>;
+		debugMode?: boolean;
 	} = $props();
 
 	let operation = $state<'insert' | 'remove' | 'replace' | 'reorder'>('replace');
@@ -53,12 +54,16 @@
 <section class="shape" aria-labelledby="shape-title">
 	<div class="section-head">
 		<div><p class="eyebrow">Controlled lesson shape</p><h3 id="shape-title">{shape.skeleton_id}</h3><p>Every booklet keeps concept <code>{shape.concept_id}</code>, the exact path objective, scope exclusions, and one shared check.</p></div>
-		<div class="shape-settings">
-			<label><span>Mode</span><select value={lessonMode} onchange={(event) => void onsettings(event.currentTarget.value as LessonMode, misconceptionCount)}><option value="first_exposure">First exposure</option><option value="consolidation">Consolidation</option><option value="repair">Repair</option><option value="retrieval">Retrieval</option><option value="transfer">Transfer</option></select></label>
-			<label><span>Misconception slots</span><select value={misconceptionCount} onchange={(event) => void onsettings(lessonMode, Number(event.currentTarget.value))}><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
-		</div>
+		{#if debugMode}
+			<div class="shape-settings">
+				<label><span>Mode</span><select value={lessonMode} onchange={(event) => void onsettings(event.currentTarget.value as LessonMode, misconceptionCount)}><option value="first_exposure">First exposure</option><option value="consolidation">Consolidation</option><option value="repair">Repair</option><option value="retrieval">Retrieval</option><option value="transfer">Transfer</option></select></label>
+				<label><span>Misconception slots</span><select value={misconceptionCount} onchange={(event) => void onsettings(lessonMode, Number(event.currentTarget.value))}><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
+			</div>
+		{/if}
 	</div>
-	<p class="preview-note">This count stress-tests the shape before preparation. The approved card count is checked again before variants are created.</p>
+	{#if debugMode}
+		<p class="preview-note">This count stress-tests the shape before preparation. The approved card count is checked again before variants are created.</p>
+	{/if}
 	{#if shape.blocking_issues.length}<div class="shape-blocked" role="alert"><strong>Preparation blocked</strong><ul>{#each shape.blocking_issues as issue}<li><code>{issue.code}</code> · {issue.group_profile}: {issue.message}</li>{/each}</ul><p>Request a narrower approved deviation or reduce the misconception load; nothing will be silently dropped.</p></div>{/if}
 
 	<div class="shape-grid">

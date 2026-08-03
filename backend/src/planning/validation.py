@@ -93,6 +93,34 @@ def validate_path_plan(plan: PathPlan) -> None:
         )
 
 
+_PLAIN_VALIDATION_MESSAGES: dict[str, str] = {
+    "duplicate_concept_slug": (
+        "Two lessons ended up covering the same capability. Try rephrasing your "
+        "request so each lesson stays distinct."
+    ),
+    "prerequisite_not_earlier": (
+        "That change would make a lesson depend on something taught later in the "
+        "path. Try reordering, or rephrase what you'd like changed."
+    ),
+    "undeclared_external_prerequisite": (
+        "That change assumes prior knowledge the class isn't recorded as already "
+        "having. Add it to starting knowledge first, or rephrase the request."
+    ),
+    "must_not_introduce_violation": (
+        "That change introduces a term or idea this unit was scoped to avoid."
+    ),
+    "risks_require_unreachable": (
+        "That change leaves open prerequisite risks while still claiming the "
+        "path reaches its destination."
+    ),
+}
+
+
+def plain_validation_message(exc: PathValidationError) -> str:
+    """Human-readable rendering of a `PathValidationError` for teacher-facing UI."""
+    return _PLAIN_VALIDATION_MESSAGES.get(exc.code, str(exc))
+
+
 def assert_approvable(plan: PathPlan) -> None:
     validate_path_plan(plan)
     if plan.prerequisite_risks or not plan.completeness.reaches_destination:

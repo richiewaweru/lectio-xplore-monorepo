@@ -29,6 +29,8 @@ V2_PATH_PLANNER = "v2_path_planner"
 V2_MERGE_CRITIC = "v2_merge_critic"
 V2_COMPONENT_SELECTOR = "v2_component_selector"
 V2_PATH_STRUCTURAL_PLANNER = "v2_path_structural_planner"
+V2_PATH_CHAT_EDITOR = "v2_path_chat_editor"
+V3_CONSTRUCTOR = "v3_constructor"
 
 V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V3_SIGNAL_EXTRACTOR: ModelSlot.FAST,
@@ -51,6 +53,8 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V2_MERGE_CRITIC: ModelSlot.FAST,
     V2_COMPONENT_SELECTOR: ModelSlot.STANDARD,
     V2_PATH_STRUCTURAL_PLANNER: ModelSlot.STANDARD,
+    V2_PATH_CHAT_EDITOR: ModelSlot.STANDARD,
+    V3_CONSTRUCTOR: ModelSlot.FAST,
 }
 
 V3ReasoningLevel = Literal["low", "medium", "high"]
@@ -77,6 +81,8 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     V2_MERGE_CRITIC: "low",
     V2_COMPONENT_SELECTOR: "medium",
     V2_PATH_STRUCTURAL_PLANNER: "high",
+    V2_PATH_CHAT_EDITOR: "medium",
+    V3_CONSTRUCTOR: "medium",
 }
 
 V3_DEFAULT_SPECS: dict[ModelSlot, ModelSpec] = {
@@ -253,6 +259,7 @@ def get_v3_model(node_name: str, *, model_overrides: dict | None = None):
 __all__ = [
     "V2_COMPONENT_SELECTOR",
     "V2_MERGE_CRITIC",
+    "V2_PATH_CHAT_EDITOR",
     "V2_PATH_PLANNER",
     "V2_PATH_STRUCTURAL_PLANNER",
     "V3_ANSWER_KEY_GENERATOR",
@@ -260,6 +267,7 @@ __all__ = [
     "V3_BLOCK_WRITER_FAST",
     "V3_BLOCK_WRITER_STANDARD",
     "V3_BLUEPRINT_ADJUST",
+    "V3_CONSTRUCTOR",
     "V3_DEFAULT_SPECS",
     "V3_NARROW",
     "V3_PROPOSE_INTENT",

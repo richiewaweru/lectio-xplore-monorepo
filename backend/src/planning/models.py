@@ -103,6 +103,24 @@ class PathReplanRequest(PathPlannerRequest):
     path_revision: int = Field(ge=1)
 
 
+class ConstructorOutput(StrictModel):
+    title: str
+    topic: str
+    destination_objective: str
+    starting_knowledge: list[str]
+    curriculum_context: str | None = None
+    class_notes: str | None = None
+    clarifying_question: str | None = None
+
+
+class ConstructorReadbackRequest(StrictModel):
+    subject: str
+    grade_level: str
+    raw_text: str = Field(min_length=1)
+    correction: str | None = None
+    clarifying_answer: str | None = None
+
+
 class UnitCreate(StrictModel):
     title: str
     topic: str
@@ -111,6 +129,7 @@ class UnitCreate(StrictModel):
     destination_objective: str
     starting_knowledge: list[str]
     curriculum_context: str | None = None
+    class_notes: str | None = None
 
 
 class UnitUpdate(StrictModel):
@@ -118,6 +137,7 @@ class UnitUpdate(StrictModel):
     curriculum_context: str | None = None
     destination_objective: str | None = None
     starting_knowledge: list[str] | None = None
+    class_notes: str | None = None
 
 
 class PathLessonPatch(StrictModel):
@@ -185,6 +205,10 @@ class PathLessonMutationRequest(PathVersionMutationRequest):
 
 class RestorePathVersionRequest(PathVersionMutationRequest):
     reason: str = Field(min_length=3, max_length=500)
+
+
+class PathChatEditRequest(PathVersionMutationRequest):
+    message: str = Field(min_length=1, max_length=2000)
 
 
 class GroupVoice(StrictModel):

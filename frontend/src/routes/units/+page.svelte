@@ -1,26 +1,31 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { createUnit, listLegacyUnitWrappers, listUnits } from '$lib/api/units';
-	import type { LegacyUnitWrapper, Unit } from '$lib/types/units';
+	import { constructorReadback, createUnit, listLegacyUnitWrappers, listUnits, planUnitPath } from '$lib/api/units';
+	import type { ConstructorReadback, LegacyUnitWrapper, Unit } from '$lib/types/units';
+
+	const GRADE_LEVELS = ['Kindergarten', ...Array.from({ length: 12 }, (_, index) => `Grade ${index + 1}`)];
+	const SUBJECTS = [
+		'Mathematics', 'English Language Arts', 'Science', 'Biology', 'Chemistry', 'Physics',
+		'History', 'Geography', 'Economics', 'Computer Science', 'Art', 'Music', 'Physical Education', 'Other'
+	];
 
 	let units = $state<Unit[]>([]);
 	let legacyUnits = $state<LegacyUnitWrapper[]>([]);
 	let loading = $state(true);
-	let saving = $state(false);
 	let error = $state<string | null>(null);
+
 	let showCreate = $state(false);
-	let title = $state('');
-	let topic = $state('');
+	let step = $state<'ask' | 'clarify' | 'readback'>('ask');
 	let subject = $state('');
 	let gradeLevel = $state('');
-	let destinationObjective = $state('');
-	let startingKnowledge = $state('');
-	let curriculumContext = $state('');
-
-	function lines(value: string): string[] {
-		return value.split('\n').map((item) => item.trim()).filter(Boolean);
-	}
+	let rawText = $state('');
+	let clarifyingAnswer = $state('');
+	let readback = $state<ConstructorReadback | null>(null);
+	let correctionOpen = $state(false);
+	let correctionText = $state('');
+	let thinking = $state(false);
+	let lockingIn = $state(false);
 
 	async function load(): Promise<void> {
 		loading = true;
@@ -34,25 +39,123 @@
 		}
 	}
 
-	async function submit(event: SubmitEvent): Promise<void> {
+	function resetCreateFlow(): void {
+		step = 'ask';
+		subject = '';
+		gradeLevel = '';
+		rawText = '';
+		clarifyingAnswer = '';
+		readback = null;
+		correctionOpen = false;
+		correctionText = '';
+	}
+
+	function openCreate(): void {
+		resetCreateFlow();
+		showCreate = true;
+	}
+
+	function closeCreate(): void {
+		showCreate = false;
+		resetCreateFlow();
+	}
+
+	function deriveTitle(objective: string): string {
+		const sentence = objective.split(/[.!?]/)[0]?.trim() || objective.trim();
+		if (!sentence) return 'Untitled lesson';
+		const clipped = sentence.length > 80 ? `${sentence.slice(0, 77)}…` : sentence;
+		return clipped.charAt(0).toUpperCase() + clipped.slice(1);
+	}
+
+	async function planIt(event: SubmitEvent): Promise<void> {
 		event.preventDefault();
-		saving = true;
+		if (!subject || !gradeLevel || rawText.trim().length < 3) return;
+		thinking = true;
 		error = null;
 		try {
+			const result = await constructorReadback({
+				subject,
+				grade_level: gradeLevel,
+				raw_text: rawText.trim()
+			});
+			readback = result;
+			step = result.clarifying_question ? 'clarify' : 'readback';
+		} catch (err) {
+			error = err instanceof Error ? err.message : "Could not read that back — let's try again.";
+		} finally {
+			thinking = false;
+		}
+	}
+
+	async function answerClarifyingQuestion(event: SubmitEvent): Promise<void> {
+		event.preventDefault();
+		if (clarifyingAnswer.trim().length < 1) return;
+		thinking = true;
+		error = null;
+		try {
+			readback = await constructorReadback({
+				subject,
+				grade_level: gradeLevel,
+				raw_text: rawText.trim(),
+				clarifying_answer: clarifyingAnswer.trim()
+			});
+			step = 'readback';
+		} catch (err) {
+			error = err instanceof Error ? err.message : "Could not read that back — let's try again.";
+		} finally {
+			thinking = false;
+		}
+	}
+
+	async function sendCorrection(event: SubmitEvent): Promise<void> {
+		event.preventDefault();
+		if (correctionText.trim().length < 1) return;
+		thinking = true;
+		error = null;
+		try {
+			readback = await constructorReadback({
+				subject,
+				grade_level: gradeLevel,
+				raw_text: rawText.trim(),
+				correction: correctionText.trim()
+			});
+			correctionText = '';
+			correctionOpen = false;
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Could not update that from what you typed.';
+		} finally {
+			thinking = false;
+		}
+	}
+
+	async function confirmReadback(): Promise<void> {
+		if (!readback) return;
+		lockingIn = true;
+		error = null;
+		try {
+			const topic = rawText.trim().slice(0, 160) || subject;
 			const unit = await createUnit({
-				title: title.trim(),
-				topic: topic.trim(),
-				subject: subject.trim(),
-				grade_level: gradeLevel.trim(),
-				destination_objective: destinationObjective.trim(),
-				starting_knowledge: lines(startingKnowledge),
-				curriculum_context: curriculumContext.trim() || null
+				title: deriveTitle(readback.destination_objective),
+				topic,
+				subject,
+				grade_level: gradeLevel,
+				destination_objective: readback.destination_objective,
+				starting_knowledge: readback.starting_knowledge,
+				curriculum_context: readback.curriculum_context
+			});
+			await planUnitPath(unit.id, {
+				topic,
+				subject,
+				grade_level: gradeLevel,
+				destination_objective: readback.destination_objective,
+				starting_knowledge: readback.starting_knowledge,
+				curriculum_context: readback.curriculum_context
 			});
 			await goto(`/units/${encodeURIComponent(unit.id)}`);
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Could not create the unit.';
+			error = err instanceof Error ? err.message : "Could not lock that in — let's try again.";
 		} finally {
-			saving = false;
+			lockingIn = false;
 		}
 	}
 
@@ -66,9 +169,9 @@
 		<div>
 			<p class="eyebrow">Curriculum workspace</p>
 			<h1>Units</h1>
-			<p class="lede">Plan the concept route first, then prepare each lesson from its approved objective.</p>
+			<p class="lede">Tell me what you're teaching, and I'll turn it into a numbered list of lessons.</p>
 		</div>
-		<button class="primary" type="button" onclick={() => (showCreate = !showCreate)}>
+		<button class="primary" type="button" onclick={() => (showCreate ? closeCreate() : openCreate())}>
 			{showCreate ? 'Close' : '+ New unit'}
 		</button>
 	</header>
@@ -76,35 +179,97 @@
 	{#if error}<p class="error" role="alert">{error}</p>{/if}
 
 	{#if showCreate}
-		<form class="create-card" onsubmit={submit}>
-			<div class="form-head">
-				<div><p class="eyebrow">New unit</p><h2>Define the destination</h2></div>
-				<p>No lesson count or duration is sent to path planning.</p>
-			</div>
-			<div class="form-grid">
-				<label><span>Unit title</span><input required bind:value={title} placeholder="Photosynthesis" /></label>
-				<label><span>Topic</span><input required bind:value={topic} placeholder="How plants make food" /></label>
-				<label><span>Subject</span><input required bind:value={subject} placeholder="Biology" /></label>
-				<label><span>Grade level</span><input required bind:value={gradeLevel} placeholder="Grade 8" /></label>
-				<label class="wide"><span>Destination objective</span><textarea required bind:value={destinationObjective} placeholder="Explain how light energy is converted into stored chemical energy."></textarea></label>
-				<label class="wide"><span>Starting knowledge <small>one capability per line</small></span><textarea bind:value={startingKnowledge} placeholder="Plants are living things.&#10;Leaves receive light."></textarea></label>
-				<label class="wide"><span>Curriculum context <small>optional</small></span><textarea bind:value={curriculumContext} placeholder="Curriculum boundaries, terminology, or assessment context."></textarea></label>
-			</div>
-			<div class="form-actions">
-				<button class="secondary" type="button" onclick={() => (showCreate = false)}>Cancel</button>
-				<button class="primary" type="submit" disabled={saving}>{saving ? 'Creating…' : 'Create unit'}</button>
-			</div>
-		</form>
+		<div class="create-card">
+			{#if step === 'ask'}
+				<form class="ask-form" onsubmit={planIt}>
+					<div class="form-head">
+						<div><p class="eyebrow">New unit</p><h2>What are you teaching?</h2></div>
+					</div>
+					<div class="ask-grid">
+						<label>
+							<span>Subject</span>
+							<select bind:value={subject} required>
+								<option value="">Choose…</option>
+								{#each SUBJECTS as item}<option value={item}>{item}</option>{/each}
+							</select>
+						</label>
+						<label>
+							<span>Grade level</span>
+							<select bind:value={gradeLevel} required>
+								<option value="">Choose…</option>
+								{#each GRADE_LEVELS as item}<option value={item}>{item}</option>{/each}
+							</select>
+						</label>
+					</div>
+					<label class="wide">
+						<span>What are you teaching? Anything I should know about this class?</span>
+						<textarea
+							bind:value={rawText}
+							required
+							minlength="3"
+							placeholder="e.g. Photosynthesis for my Grade 8 class — they know plants need light but not the chemistry."
+						></textarea>
+					</label>
+					<div class="form-actions">
+						<button class="secondary" type="button" onclick={closeCreate}>Cancel</button>
+						<button class="primary" type="submit" disabled={thinking || !subject || !gradeLevel || rawText.trim().length < 3}>
+							{thinking ? 'Thinking…' : 'Plan it'}
+						</button>
+					</div>
+				</form>
+			{:else if step === 'clarify' && readback?.clarifying_question}
+				<form class="ask-form" onsubmit={answerClarifyingQuestion}>
+					<div class="form-head">
+						<div><p class="eyebrow">One quick question</p><h2>{readback.clarifying_question}</h2></div>
+					</div>
+					<label class="wide"><span>Your answer</span><input bind:value={clarifyingAnswer} required /></label>
+					<div class="form-actions">
+						<button class="secondary" type="button" onclick={closeCreate}>Cancel</button>
+						<button class="primary" type="submit" disabled={thinking || clarifyingAnswer.trim().length < 1}>
+							{thinking ? 'Thinking…' : 'Continue'}
+						</button>
+					</div>
+				</form>
+			{:else if step === 'readback' && readback}
+				<div class="readback">
+					<div class="form-head">
+						<div><p class="eyebrow">Readback</p><h2>Here's my understanding:</h2></div>
+					</div>
+					<p class="readback-line"><strong>By the end, students can</strong> {readback.destination_objective}</p>
+					<p class="readback-line"><strong>I'm assuming they already know</strong> {readback.starting_knowledge.join('; ')}</p>
+					{#if readback.curriculum_context}
+						<p class="readback-line"><strong>Curriculum note:</strong> {readback.curriculum_context}</p>
+					{/if}
+					<div class="readback-actions">
+						<button class="primary" type="button" disabled={lockingIn} onclick={confirmReadback}>
+							{lockingIn ? 'Setting up your lessons…' : "That's right"}
+						</button>
+						<button class="text-button" type="button" onclick={() => (correctionOpen = !correctionOpen)}>
+							type what's off
+						</button>
+						<button class="text-button" type="button" onclick={closeCreate}>Cancel</button>
+					</div>
+					{#if correctionOpen}
+						<form class="correction-form" onsubmit={sendCorrection}>
+							<input bind:value={correctionText} required placeholder="What should I fix?" />
+							<button class="secondary" type="submit" disabled={thinking || correctionText.trim().length < 1}>
+								{thinking ? 'Updating…' : 'Update'}
+							</button>
+						</form>
+					{/if}
+				</div>
+			{/if}
+		</div>
 	{/if}
 
 	{#if loading}
 		<p class="status" role="status">Loading units…</p>
 	{:else if units.length === 0 && legacyUnits.length === 0 && !showCreate}
 		<section class="empty">
-			<p class="eyebrow">Start with the route</p>
+			<p class="eyebrow">Get started</p>
 			<h2>No units yet</h2>
-			<p>Create a destination-led concept path, approve it, and prepare lessons one at a time.</p>
-			<button class="primary" type="button" onclick={() => (showCreate = true)}>Create your first unit</button>
+			<p>Tell me what you're teaching and I'll plan the lessons.</p>
+			<button class="primary" type="button" onclick={openCreate}>Get started</button>
 		</section>
 	{:else if units.length > 0}
 		<section class="unit-list" aria-label="Your units">
@@ -145,19 +310,23 @@
 	.primary, .secondary { border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600; padding: 9px 15px; }
 	.primary { border: 1px solid var(--accent); background: var(--accent); color: white; }
 	.secondary { border: 1px solid var(--rule); background: var(--surface); color: var(--ink); }
+	.text-button { border: 0; background: transparent; color: var(--ink-3); cursor: pointer; font-size: 13px; font-weight: 600; padding: 9px 4px; }
 	button:disabled { cursor: progress; opacity: .6; }
 	.create-card { border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); margin-bottom: 34px; padding: 26px; }
 	.form-head { display: flex; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
 	.form-head h2, .empty h2 { margin: 0; font: 500 25px Fraunces, Georgia, serif; }
-	.form-head p { max-width: 280px; margin: 0; text-align: right; }
-	.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+	.ask-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
 	label { display: grid; gap: 7px; color: var(--ink-2); font-size: 12px; font-weight: 600; }
-	label small { color: var(--ink-3); font-weight: 400; }
 	label.wide { grid-column: 1 / -1; }
-	input, textarea { box-sizing: border-box; width: 100%; border: 1px solid var(--rule); border-radius: 7px; background: var(--paper); color: var(--ink); font: 400 14px Inter, sans-serif; padding: 10px 11px; }
-	textarea { min-height: 82px; resize: vertical; }
-	input:focus, textarea:focus { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 18%, transparent); }
+	input, textarea, select { box-sizing: border-box; width: 100%; border: 1px solid var(--rule); border-radius: 7px; background: var(--paper); color: var(--ink); font: 400 14px Inter, sans-serif; padding: 10px 11px; }
+	textarea { min-height: 110px; resize: vertical; }
+	input:focus, textarea:focus, select:focus { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 18%, transparent); }
 	.form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+	.readback-line { margin: 0 0 12px; color: var(--ink); font-size: 15px; line-height: 1.6; }
+	.readback-line strong { font-weight: 600; }
+	.readback-actions { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+	.correction-form { display: flex; gap: 8px; margin-top: 14px; }
+	.correction-form input { flex: 1; }
 	.unit-list { display: grid; border-top: 1px solid var(--rule); }
 	.legacy-list { display: grid; border-top: 1px solid var(--rule); margin-top: 38px; }.legacy-list > div { padding: 0 16px 16px; }.legacy-list > div h2 { margin: 0; font: 500 22px Fraunces, Georgia, serif; }.legacy-list > div p:last-child { margin: 6px 0 0; color: var(--ink-2); font-size: 12px; }
 	.unit-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 20px; border-bottom: 1px solid var(--rule); color: inherit; padding: 22px 16px; text-decoration: none; }
@@ -172,5 +341,5 @@
 	.empty { border: 1px dashed var(--rule); border-radius: 10px; padding: 52px 28px; text-align: center; }
 	.empty > p { max-width: 520px; margin: 10px auto 20px; }
 	.error { border: 1px solid #e2b9ae; border-radius: 7px; background: #f8e9e5; color: #873f30; margin-bottom: 20px; padding: 10px 12px; font-size: 13px; }
-	@media (max-width: 640px) { .units-page { padding: 36px 18px 60px; } .page-head, .form-head { align-items: stretch; flex-direction: column; } .form-head p { text-align: left; } .form-grid { grid-template-columns: 1fr; } label.wide { grid-column: auto; } }
+	@media (max-width: 640px) { .units-page { padding: 36px 18px 60px; } .page-head, .form-head { align-items: stretch; flex-direction: column; } .ask-grid { grid-template-columns: 1fr; } }
 </style>

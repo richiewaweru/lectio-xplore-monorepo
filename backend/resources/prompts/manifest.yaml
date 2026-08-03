@@ -30,6 +30,12 @@ prompts:
     editable: true
     version: 1
 
+  - id: plan-editor
+    file: plan-editor.md
+    stage_label: Edits your lesson plan
+    editable: true
+    version: 1
+
   - id: structural-planner
     file: structural-planner.md
     stage_label: Designs each lesson's structure
