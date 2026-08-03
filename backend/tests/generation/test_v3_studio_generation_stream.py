@@ -670,7 +670,11 @@ async def test_v3_component_patch_replaces_document_component_without_retry() ->
     async def fake_execute_section(patch_order, emit, **kwargs):
         assert kwargs["max_retries"] == 0
         assert len(patch_order.section.components) == 1
-        assert "Teacher correction: make this clearer" in patch_order.section.components[0].content_intent
+        selected = patch_order.section.components[0]
+        assert "Teacher correction: make this clearer" not in selected.content_intent
+        assert len(selected.corrections) == 1
+        assert selected.corrections[0].text == "make this clearer"
+        assert selected.corrections[0].applied_in_generation == generation_id
         return [GeneratedComponentBlock(
             block_id="patched-block", section_id=order.section.id,
             component_id=component.component_id, section_field=field_name,

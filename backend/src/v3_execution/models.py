@@ -127,6 +127,16 @@ class SourceOfTruthEntry(BaseModel):
     unit_tokens: list[str] = Field(default_factory=list)
 
 
+class Correction(BaseModel):
+    """Teacher correction as typed data — countable, displayable, removable."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str
+    created_at: str
+    applied_in_generation: str | None = None
+
+
 class WriterSectionComponent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -134,6 +144,7 @@ class WriterSectionComponent(BaseModel):
     teacher_label: str = ""
     content_intent: str
     uses_anchor_id: str | None = None
+    corrections: list[Correction] = Field(default_factory=list)
 
 
 class WriterSection(BaseModel):
@@ -340,6 +351,7 @@ __all__ = [
     "AnswerKeyStyle",
     "BookletStatus",
     "CompiledWorkOrders",
+    "Correction",
     "DraftPack",
     "SectionAssemblyDiagnostic",
     "SectionAssemblyStatus",

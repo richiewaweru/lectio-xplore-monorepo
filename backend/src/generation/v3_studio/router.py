@@ -60,7 +60,13 @@ from v3_execution.compile_orders import compile_execution_bundle
 from v3_execution.executors.visual_executor import execute_visual
 from v3_execution.executors.item_executor import ItemGenerationResult, execute_items
 from v3_execution.executors.section_writer import execute_section
-from v3_execution.models import GeneratedComponentBlock, GeneratedVisualBlock, SectionWriterWorkOrder, VisualGeneratorWorkOrder
+from v3_execution.models import (
+    Correction,
+    GeneratedComponentBlock,
+    GeneratedVisualBlock,
+    SectionWriterWorkOrder,
+    VisualGeneratorWorkOrder,
+)
 from v3_execution.runtime.runner import sse_event_stream
 
 from generation.v3_studio.agents import (
@@ -3570,11 +3576,22 @@ def _work_order_for_component(
 
 
 def _single_component_order(
-    order: SectionWriterWorkOrder, component_id: str, teacher_instruction: str
+    order: SectionWriterWorkOrder,
+    component_id: str,
+    teacher_instruction: str,
+    *,
+    generation_id: str,
 ) -> SectionWriterWorkOrder:
     cloned = order.model_copy(deep=True)
     selected = next(component for component in cloned.section.components if component.component_id == component_id)
-    selected.content_intent = f"{selected.content_intent}\n\nTeacher correction: {teacher_instruction.strip()}"
+    selected.corrections = [
+        *selected.corrections,
+        Correction(
+            text=teacher_instruction.strip(),
+            created_at=datetime.utcnow().isoformat() + "Z",
+            applied_in_generation=generation_id,
+        ),
+    ]
     cloned.section.components = [selected]
     return cloned
 
@@ -3601,15 +3618,17 @@ def _card_section_orders(
         template_id=str(artifact.get("template_id") or "guided-concept-path"),
     )
     orders: list[SectionWriterWorkOrder] = []
+    correction = Correction(
+        text=correction_hint.strip(),
+        created_at=datetime.utcnow().isoformat() + "Z",
+        applied_in_generation=generation_id,
+    )
     for order in bundle.section_orders:
         if order.section.id not in section_ids:
             continue
         cloned = order.model_copy(deep=True)
         for component in cloned.section.components:
-            component.content_intent = (
-                f"{component.content_intent}\n\n"
-                f"Quality correction for card {card_id}: {correction_hint}"
-            )
+            component.corrections = [*component.corrections, correction.model_copy()]
         orders.append(cloned)
     if not orders:
         raise HTTPException(status_code=404, detail="Card work orders not found")
@@ -3765,7 +3784,12 @@ async def patch_v3_component(
     order, component_id = _work_order_for_component(
         artifact=artifact, component_ref=component_ref, generation_id=generation_id
     )
-    order = _single_component_order(order, component_id, body.teacher_instruction)
+    order = _single_component_order(
+        order,
+        component_id,
+        body.teacher_instruction,
+        generation_id=generation_id,
+    )
 
     async def emit_noop(_event_type: str, _payload: dict[str, Any]) -> None:
         return None

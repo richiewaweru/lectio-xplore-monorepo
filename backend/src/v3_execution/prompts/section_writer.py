@@ -167,6 +167,21 @@ def _format_skip_expander_component(
     return "\n".join(lines)
 
 
+def _format_corrections_block(order: SectionWriterWorkOrder) -> str:
+    lines: list[str] = []
+    for component in order.section.components:
+        for correction in component.corrections:
+            label = component.teacher_label or component.component_id
+            lines.append(
+                f"- [{label}] {correction.text}"
+                f" (at {correction.created_at}"
+                f"{', gen ' + correction.applied_in_generation if correction.applied_in_generation else ''})"
+            )
+    if not lines:
+        return ""
+    return "TEACHER CORRECTIONS (honour each; do not drop):\n" + "\n".join(lines)
+
+
 def _build_skip_expander_order_context(order: SectionWriterWorkOrder) -> str:
     from contracts.lectio import get_formatting_policy
 
@@ -179,6 +194,8 @@ def _build_skip_expander_order_context(order: SectionWriterWorkOrder) -> str:
         )
         for component in order.section.components
     )
+    corrections_block = _format_corrections_block(order)
+    corrections_section = f"\n\n{corrections_block}\n" if corrections_block else "\n"
     return f"""SECTION: {order.section.title}
 SECTION_ID: {order.section.id}
 ROLE: {order.section.role or "(unset)"}
@@ -190,8 +207,7 @@ PLAN CONSTRAINTS (structured — honour each item):
 - Use each component's plan purpose and registry contract; do not invent a separate brief.
 - Honour ANCHOR FACTS and CONSISTENCY RULES below.
 - Honour SUPPORT ADAPTATIONS and register guidance.
-
-COMPONENTS TO WRITE:
+{corrections_section}COMPONENTS TO WRITE:
 {component_blocks}
 
 REGISTER:
@@ -240,11 +256,13 @@ def _build_brief_order_context(order: SectionWriterWorkOrder) -> str:
         )
         for c in order.section.components
     )
+    corrections_block = _format_corrections_block(order)
+    corrections_section = f"\n{corrections_block}\n" if corrections_block else ""
 
     return f"""SECTION: {order.section.title}
 SECTION_ID: {order.section.id}
 LEARNING INTENT: {order.section.learning_intent}
-
+{corrections_section}
 COMPONENTS TO WRITE:
 {components_list}
 
