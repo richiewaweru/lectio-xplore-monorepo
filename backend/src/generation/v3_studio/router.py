@@ -1189,7 +1189,25 @@ async def _run_chunked_stage2_pipeline(
         f"\n[STAGE2 PIPELINE START] generation_id={generation_id}",
         flush=True,
     )
+    cache_token = None
     try:
+        from core.prompts import (
+            bind_prompt_cache,
+            reset_prompt_cache,
+            resolve_all_prompts,
+        )
+
+        async with async_session_factory() as session:
+            prompt_texts, prompt_hashes = await resolve_all_prompts(user_id, session)
+        cache_token = bind_prompt_cache(prompt_texts)
+        try:
+            writer = V3GenerationWriter(async_session_factory)
+            await writer.record_prompt_hashes(generation_id, prompt_hashes)
+        except Exception:  # noqa: BLE001
+            logger.exception(
+                "Failed to stamp prompt hashes generation_id=%s", generation_id
+            )
+
         state = await load_chunked_state(generation_id)
         plan_raw = state.get("structural_plan")
         if not isinstance(plan_raw, dict):
@@ -1291,6 +1309,10 @@ async def _run_chunked_stage2_pipeline(
             },
         )
     finally:
+        if cache_token is not None:
+            from core.prompts import reset_prompt_cache
+
+            reset_prompt_cache(cache_token)
         _chunked_stage2_tasks.pop(generation_id, None)
         print(
             f"\n[STAGE2 PIPELINE DONE] generation_id={generation_id}",

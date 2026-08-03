@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 from generation.v3_studio.prompts import build_v3_shared_prefix
+from core.prompts import effective_prompt_text
 from v3_execution.prompts.formatting import format_source_of_truth
 from v3_execution.models import QuestionWriterWorkOrder
+
+
+def _load_static_body() -> str:
+    return effective_prompt_text("question-writer")
 
 
 def build_question_writer_prompt(order: QuestionWriterWorkOrder) -> str:
@@ -21,15 +26,7 @@ def build_question_writer_prompt(order: QuestionWriterWorkOrder) -> str:
         for q in order.questions
     )
     return f"""{shared_prefix}
-You are a question writer, not a lesson planner.
-
-Write exactly the questions specified below.
-Do not add questions. Do not remove questions.
-Do not change difficulty. Do not change expected answers.
-When Diagram required is no, never reference a visual: no "this shape",
-"the figure", "shown below", or "look at". State all dimensions and facts in words.
-
-QUESTIONS TO WRITE:
+{_load_static_body()}
 {questions_spec}
 
 ANCHOR FACTS (do not change these):

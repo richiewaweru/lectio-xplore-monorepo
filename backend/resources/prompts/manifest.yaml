@@ -1,0 +1,61 @@
+# Prompt manifest for the "How lessons get written" settings surface.
+#
+# Each entry names one system-prompt body file under this directory. The
+# `file` contents are the static system-prompt body only — runtime
+# interpolation (planner index blocks, per-section context, component
+# contracts, order-specific data) is appended in code around the loaded
+# text, not stored here.
+#
+# `editable: false` prompts are locked: they never consult a per-teacher
+# overlay and the settings UI must reject edits to them at the API.
+#
+# Order below is pipeline order (constructor runs first, quiz-items last).
+
+prompts:
+  - id: constructor
+    file: constructor.md
+    stage_label: Understands what you're teaching
+    editable: true
+    version: 1
+
+  - id: path-planner
+    file: path-planner.md
+    stage_label: Plans your lessons
+    editable: true
+    version: 1
+
+  - id: merge-critic
+    file: merge-critic.md
+    stage_label: Checks lesson boundaries
+    editable: true
+    version: 1
+
+  - id: structural-planner
+    file: structural-planner.md
+    stage_label: Designs each lesson's structure
+    editable: false
+    version: 1
+
+  - id: section-expander
+    file: section-expander.md
+    stage_label: Writes section briefs
+    editable: true
+    version: 1
+
+  - id: section-writer
+    file: section-writer.md
+    stage_label: Writes lesson content
+    editable: true
+    version: 1
+
+  - id: question-writer
+    file: question-writer.md
+    stage_label: Writes practice questions
+    editable: true
+    version: 1
+
+  - id: quiz-items
+    file: quiz-items.md
+    stage_label: Writes the quiz
+    editable: false
+    version: 1

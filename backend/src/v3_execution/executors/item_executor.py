@@ -14,7 +14,7 @@ from v3_execution.config import (
     get_v3_spec,
 )
 from v3_execution.llm_helpers import structured_output_type_for_model
-from v3_execution.prompts.item_prompt import ITEM_SYSTEM_PROMPT, build_item_messages
+from v3_execution.prompts.item_prompt import build_item_messages, get_item_system_prompt
 
 ITEM_NODE = "v3_item_executor"
 
@@ -85,7 +85,7 @@ async def execute_items(card: ConceptCard) -> ItemGenerationResult:
     agent = Agent(
         model=model,
         output_type=structured_output_type_for_model(ItemGenerationResult, spec=spec),
-        system_prompt=ITEM_SYSTEM_PROMPT,
+        system_prompt=get_item_system_prompt(),
     )
     result = await run_llm(
         trace_id=f"items:{card.id}",

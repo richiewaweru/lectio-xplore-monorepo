@@ -25,6 +25,7 @@
 	<header>
 		<p class="eyebrow">Settings</p>
 		<h1>Teacher profile</h1>
+		<p><a href="/settings/prompts">How lessons get written →</a></p>
 	</header>
 	{#if errorMessage}
 		<p class="error" role="alert">{errorMessage}</p>

@@ -702,6 +702,21 @@ class V3TraceRunModel(Base):
     )
 
 
+class PromptOverrideModel(Base):
+    """Per-teacher overlay text for an editable prompt (Teacher Studio prompt packaging)."""
+
+    __tablename__ = "prompt_overrides"
+    __table_args__ = (
+        UniqueConstraint("user_id", "prompt_id", name="uq_prompt_overrides_user_prompt"),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    prompt_id = Column(String, nullable=False)
+    text = Column(Text, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
 class V3TraceEventModel(Base):
     """Append-only actionable events for a V3 trace run."""
 

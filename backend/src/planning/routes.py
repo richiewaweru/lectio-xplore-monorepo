@@ -305,11 +305,18 @@ async def _plan_or_replan(
             )
         planner_request = _planner_request_for_unit(unit, request)
         prior = await _active_version(session, unit) if replan else None
-        plan = await run_path_planner(planner_request, trace_id=f"unit:{unit.id}")
-        merge_results = await run_adjacent_merge_critics(
-            plan,
-            trace_id=f"unit:{unit.id}",
-        )
+        from core.prompts import bind_prompt_cache, reset_prompt_cache, resolve_all_prompts
+
+        prompt_texts, _prompt_hashes = await resolve_all_prompts(current_user.id, session)
+        cache_token = bind_prompt_cache(prompt_texts)
+        try:
+            plan = await run_path_planner(planner_request, trace_id=f"unit:{unit.id}")
+            merge_results = await run_adjacent_merge_critics(
+                plan,
+                trace_id=f"unit:{unit.id}",
+            )
+        finally:
+            reset_prompt_cache(cache_token)
         version = await persist_path_plan(
             session,
             unit=unit,

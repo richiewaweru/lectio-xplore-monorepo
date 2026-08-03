@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 from generation.v3_studio.prompts import build_v3_shared_prefix
+from core.prompts import effective_prompt_text
 from v3_execution.prompts.formatting import (
     format_consistency_rules,
     format_source_of_truth,
     format_support_adaptations,
 )
 from v3_execution.models import SectionWriterWorkOrder
+
+_ORDER_CONTEXT_MARKER = "<!-- ORDER_CONTEXT -->"
+
+
+def _load_static_template() -> str:
+    return effective_prompt_text("section-writer")
 
 
 def _format_schema_shape(shape: dict) -> str:
@@ -124,13 +131,7 @@ def build_section_writer_prompt(order: SectionWriterWorkOrder) -> str:
         for c in order.section.components
     )
 
-    return f"""{shared_prefix}
-You are a section writer, not a lesson planner.
-
-Your job is to generate component content for one section of a lesson.
-You have been given a precise work order. Follow it exactly.
-
-SECTION: {order.section.title}
+    order_context = f"""SECTION: {order.section.title}
 SECTION_ID: {order.section.id}
 LEARNING INTENT: {order.section.learning_intent}
 
@@ -165,24 +166,10 @@ SECTION CONSTRAINTS:
 {policy_block}
 
 LECTIO COMPONENT CONTRACTS:
-{contract_blocks}
+{contract_blocks}"""
 
-STRICT RULES:
-- Generate only the components listed above. Do not add others.
-- Do not add diagrams, questions, or visuals. Those are handled separately.
-- If writing practice-like text without an attached diagram, never reference a visual:
-  no "this shape", "the figure", "shown below", or "look at"; state all dimensions and facts in words.
-- explanation.emphasis must contain at most 3 items; definition.related_terms must contain at most 3 items.
-- Do not change anchor facts, units, or fixed terms.
-- Do not change question difficulty or numbering.
-- Each section_field key in your output must exactly match the
-  "section field" shown in the component contract above.
-Return JSON ONLY with this exact shape:
-{{"fields": {{
-  "<section_field snake_case>": {{ ...matching component schema }},
-  ...
-}}}}
-"""
+    body = _load_static_template().replace(_ORDER_CONTEXT_MARKER, order_context)
+    return f"{shared_prefix}\n{body}\n"
 
 
 def build_section_writer_retry_prompt(

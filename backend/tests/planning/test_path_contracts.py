@@ -11,7 +11,7 @@ from pydantic import ValidationError
 
 from planning.agents import run_adjacent_merge_critics
 from planning.models import MergeCriticResult, PathPlan, PathPlannerRequest
-from planning.prompts import prompt_text
+from planning.prompts import packaged_prompt_text, prompt_text
 from planning.validation import (
     PathApprovalBlocked,
     PathValidationError,
@@ -163,14 +163,23 @@ def test_planner_request_forbids_count_and_duration() -> None:
 @pytest.mark.parametrize(
     ("resource_name", "section", "title_pattern"),
     [
-        ("path-planner-v1.txt", 1, "Path Planner"),
-        ("merge-critic-v1.txt", 3, "Merge Critic"),
         ("component-selector-v1.txt", 4, "Component Selector"),
         ("path-structural-planner-v1.txt", 5, r"Structural Planner \(rewrite\)"),
     ],
 )
 def test_phase5_prompts_are_verbatim(resource_name: str, section: int, title_pattern: str) -> None:
     assert prompt_text(resource_name) == _prompt_section(section, title_pattern)
+
+
+@pytest.mark.parametrize(
+    ("resource_name", "section", "title_pattern"),
+    [
+        ("path-planner.md", 1, "Path Planner"),
+        ("merge-critic.md", 3, "Merge Critic"),
+    ],
+)
+def test_packaged_phase5_prompts_are_verbatim(resource_name: str, section: int, title_pattern: str) -> None:
+    assert packaged_prompt_text(resource_name) == _prompt_section(section, title_pattern)
 
 
 async def test_merge_critic_runs_once_per_nominated_pair(monkeypatch) -> None:

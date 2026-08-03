@@ -32,6 +32,7 @@ from core.pdf_export_runtime import cleanup_stale_pdf_exports
 from core.routes.auth import router as auth_router
 from core.routes.capabilities import router as capabilities_router
 from core.routes.profile import router as profile_router
+from core.routes.prompts import router as prompts_router
 from core.routes.shares import router as shares_router
 from core.version import VERSION
 from builder.routes import router as builder_router
@@ -295,6 +296,7 @@ def create_app() -> FastAPI:
     app.include_router(builder_router)
     app.include_router(shares_router)
     app.include_router(profile_router)
+    app.include_router(prompts_router)
     app.include_router(learning_router)
     app.include_router(generation_router)
     app.include_router(skeleton_router)

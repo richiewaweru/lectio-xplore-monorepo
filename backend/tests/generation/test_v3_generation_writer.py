@@ -619,3 +619,45 @@ async def test_claim_resume_attempt_increments_counter() -> None:
         assert model.report_json["resume_attempts"] == 1
     finally:
         await _cleanup_generation(generation_id)
+
+
+async def test_default_report_includes_empty_prompt_hashes() -> None:
+    generation_id = "v3-writer-prompt-hashes-default"
+    await _cleanup_generation(generation_id)
+    writer = V3GenerationWriter(async_session_factory)
+    try:
+        await _seed_snapshot(writer, generation_id)
+
+        model = await _load_generation(generation_id)
+        assert model.report_json["prompt_hashes"] == {}
+    finally:
+        await _cleanup_generation(generation_id)
+
+
+async def test_record_prompt_hashes_merges_into_report_json() -> None:
+    generation_id = "v3-writer-prompt-hashes-record"
+    await _cleanup_generation(generation_id)
+    writer = V3GenerationWriter(async_session_factory)
+    try:
+        await _seed_snapshot(writer, generation_id)
+
+        from core.prompts.loader import hash_prompt
+
+        section_writer_hash = hash_prompt("section writer prompt text")
+        await writer.record_prompt_hashes(
+            generation_id, {"section-writer": section_writer_hash}
+        )
+        model = await _load_generation(generation_id)
+        assert model.report_json["prompt_hashes"] == {"section-writer": section_writer_hash}
+
+        question_writer_hash = hash_prompt("question writer prompt text")
+        await writer.record_prompt_hashes(
+            generation_id, {"question-writer": question_writer_hash}
+        )
+        model = await _load_generation(generation_id)
+        assert model.report_json["prompt_hashes"] == {
+            "section-writer": section_writer_hash,
+            "question-writer": question_writer_hash,
+        }
+    finally:
+        await _cleanup_generation(generation_id)

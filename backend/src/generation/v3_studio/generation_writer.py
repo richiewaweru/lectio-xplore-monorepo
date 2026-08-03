@@ -588,6 +588,34 @@ class V3GenerationWriter:
             model.report_json = report
             await session.commit()
 
+    async def record_prompt_hashes(
+        self,
+        generation_id: str,
+        hashes: dict[str, str],
+    ) -> None:
+        """Merge `{prompt_id: sha256_hex}` into `report_json["prompt_hashes"]`.
+
+        Callers resolve each prompt they used via
+        `core.prompts.loader.resolve_prompt` (which already returns the
+        hash) and pass the accumulated mapping here, once per generation or
+        incrementally per stage. Existing entries for other prompt ids are
+        preserved; entries for the same prompt id are overwritten.
+        """
+        if not hashes:
+            return
+        async with self._session_factory() as session:
+            model = await session.get(GenerationModel, generation_id)
+            if model is None:
+                return
+            report = self._coerce_report(model.report_json, section_count=model.section_count or 0)
+            prompt_hashes = report.get("prompt_hashes")
+            if not isinstance(prompt_hashes, dict):
+                prompt_hashes = {}
+            prompt_hashes.update(hashes)
+            report["prompt_hashes"] = prompt_hashes
+            model.report_json = report
+            await session.commit()
+
     async def update_document_progress(
         self,
         generation_id: str,
@@ -986,6 +1014,13 @@ class V3GenerationWriter:
                 "last_export_status": "not_attempted",
                 "last_error": None,
             },
+            # Populated via `record_prompt_hashes` as {prompt_id: sha256_hex}
+            # for every prompt (default or teacher overlay) resolved while
+            # producing this generation. See core.prompts.loader.hash_prompt
+            # and handoff/RESTRUCTURE_HANDOFF.md §4 ("which prompt wrote
+            # this lesson?"). Left empty until callers thread prompt
+            # resolution through their builders (Workstream C/D).
+            "prompt_hashes": {},
         }
 
     def _merge_report(self, current: Any, baseline: dict[str, Any]) -> dict[str, Any]:
@@ -998,6 +1033,8 @@ class V3GenerationWriter:
             report["coherence"] = baseline["coherence"]
         if not isinstance(report.get("summary"), dict):
             report["summary"] = baseline["summary"]
+        if not isinstance(report.get("prompt_hashes"), dict):
+            report["prompt_hashes"] = baseline["prompt_hashes"]
         return report
 
     def _coerce_report(self, current: Any, *, section_count: int) -> dict[str, Any]:
@@ -1028,6 +1065,8 @@ class V3GenerationWriter:
                 "last_error": None,
             },
         )
+        if not isinstance(report.get("prompt_hashes"), dict):
+            report["prompt_hashes"] = {}
         summary = report.get("summary")
         if not isinstance(summary, dict):
             summary = {}
