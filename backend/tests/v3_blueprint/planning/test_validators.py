@@ -315,7 +315,10 @@ def test_stage2_models_preserve_long_content_and_ignore_unknown_fields() -> None
     question_plan = [
         QPlanItem(question_id="q1", section_id="practice", temperature="warm")
     ]
-    assert validate_section_brief(brief, section, question_plan) == []
+    errors = validate_section_brief(brief, section, question_plan)
+    assert any("reflection-prompt" in error and "words" in error for error in errors)
+    # Single-token incident strings remain under the word cap.
+    assert not any("practice-stack" in error and "words" in error for error in errors)
 
 
 def test_validate_section_brief_ignores_legacy_question_fields() -> None:
