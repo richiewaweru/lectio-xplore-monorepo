@@ -175,9 +175,13 @@ async def run_stage2(
     generation_id: str | None = None,
     trace_id: str | None = None,
 ) -> list[SectionBrief]:
+    from core.config import settings
+
     print(
         f"\n[STAGE2 START] generation_id={generation_id}"
-        f" sections={[s.id for s in plan.sections]}",
+        f" sections={[s.id for s in plan.sections]}"
+        f" parallel={_stage2_parallel_enabled()}"
+        f" timeout_stage2_section={settings.v3_timeout_stage2_section_seconds}s",
         flush=True,
     )
 
@@ -200,11 +204,12 @@ async def run_stage2(
     else:
         persistence_lock = asyncio.Lock()
 
-        async def run_section(section: SectionPlan, prior_briefs: list[SectionBrief]) -> SectionBrief:
-            brief = await _run_stage2_section(
+        async def run_section(section: SectionPlan) -> SectionBrief:
+            # Parallel mode: plan-derived continuity only; never feed prior briefs.
+            return await _run_stage2_section(
                 plan,
                 section,
-                prior_briefs,
+                [],
                 signals=signals,
                 form=form,
                 resource_spec=resource_spec,
@@ -214,17 +219,13 @@ async def run_stage2(
                 persist_brief=persist_brief,
                 persistence_lock=persistence_lock,
             )
-            return brief
 
-        anchor = await run_section(plan.sections[0], [])
-        prior_briefs = [] if getattr(anchor, "_failed", False) else [anchor]
-        fan_out_sections = plan.sections[1:]
         fan_out_results = await asyncio.gather(
-            *(run_section(section, prior_briefs) for section in fan_out_sections),
+            *(run_section(section) for section in plan.sections),
             return_exceptions=True,
         )
-        remaining_briefs: list[SectionBrief] = []
-        for section, result in zip(fan_out_sections, fan_out_results, strict=True):
+        completed_briefs = []
+        for section, result in zip(plan.sections, fan_out_results, strict=True):
             if isinstance(result, Exception):
                 errors = [f"{type(result).__name__}: {str(result)[:400]}"]
                 brief = _failed_placeholder(section.id, errors)
@@ -242,10 +243,9 @@ async def run_stage2(
                     })
                 async with persistence_lock:
                     await persist_brief(brief)
-                remaining_briefs.append(brief)
+                completed_briefs.append(brief)
             else:
-                remaining_briefs.append(result)
-        completed_briefs = [anchor, *remaining_briefs]
+                completed_briefs.append(result)
 
     return await _complete_stage2(
         completed_briefs,

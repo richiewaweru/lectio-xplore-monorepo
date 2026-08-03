@@ -17,6 +17,7 @@ from v3_execution.booklet_status import (
 )
 from v3_execution.compile_orders import compile_execution_bundle
 from v3_execution.config import make_semaphores
+from v3_execution.config.concurrency import resolved_concurrency_limits
 from v3_execution.config.timeouts import V3_TIMEOUTS
 from v3_execution.executors.answer_key_generator import execute_answer_key
 from v3_execution.executors.question_writer import execute_questions
@@ -295,6 +296,16 @@ async def run_generation(
         # dependency before the closure below captures it.
         assembler = V3SectionBuilder()
         sem = make_semaphores()
+        concurrency_limits = resolved_concurrency_limits()
+        print(
+            f"\n[V3 GENERATION START] generation_id={generation_id}"
+            f" concurrency_section={concurrency_limits['section']}"
+            f" concurrency_question={concurrency_limits['question']}"
+            f" concurrency_visual={concurrency_limits['visual']}"
+            f" timeout_section={V3_TIMEOUTS['section_writer']}s"
+            f" timeout_question={V3_TIMEOUTS['question_writer']}s",
+            flush=True,
+        )
 
         async def _guard(label: str, coro: Awaitable[list[Any]]) -> list[Any]:
             try:
