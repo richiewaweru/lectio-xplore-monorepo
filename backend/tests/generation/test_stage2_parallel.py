@@ -295,3 +295,44 @@ async def test_resume_stage2_isolates_fan_out_exception() -> None:
     assert failed["section_id"] == "two"
     complete = next(payload for name, payload in events if name == "stage2_complete")
     assert complete["failed_sections"] == ["two"]
+
+
+@pytest.mark.asyncio
+async def test_skip_expander_synthesizes_briefs_without_llm_call(monkeypatch) -> None:  # noqa: ANN001
+    plan = _plan()
+    monkeypatch.setenv("V3_SKIP_EXPANDER", "true")
+    call_stage2 = AsyncMock()
+
+    with (
+        patch("v3_blueprint.planning.retry._call_stage2_section", new=call_stage2),
+        patch("v3_blueprint.planning.retry.persist_section_brief", new=AsyncMock()),
+    ):
+        briefs = await _run(plan)
+
+    call_stage2.assert_not_called()
+    assert [brief.section_id for brief in briefs] == ["one", "two", "three"]
+    assert all(not getattr(brief, "_failed", False) for brief in briefs)
+    assert briefs[0].components[0].component_id == "hook-hero"
+    assert briefs[0].components[0].content_intent == "Teach the concept"
+    assert briefs[0].visual_strategy is None
+
+
+@pytest.mark.asyncio
+async def test_skip_expander_false_still_calls_expander(monkeypatch) -> None:  # noqa: ANN001
+    plan = _plan()
+    monkeypatch.setenv("V3_SKIP_EXPANDER", "false")
+    call_stage2 = AsyncMock(side_effect=lambda **kwargs: _brief(kwargs["section"].id))
+
+    with (
+        patch("v3_blueprint.planning.retry._call_stage2_section", new=call_stage2),
+        patch("v3_blueprint.planning.retry.validate_section_brief", return_value=[]),
+        patch("v3_blueprint.planning.retry.persist_section_brief", new=AsyncMock()),
+        patch(
+            "v3_blueprint.planning.retry._load_component_cards_for_section",
+            return_value={},
+        ),
+    ):
+        briefs = await _run(plan)
+
+    assert call_stage2.await_count == 3
+    assert [brief.section_id for brief in briefs] == ["one", "two", "three"]

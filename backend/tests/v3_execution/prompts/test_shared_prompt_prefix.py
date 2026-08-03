@@ -97,3 +97,49 @@ def test_writer_prompts_share_stable_prefix() -> None:
     ):
         assert build_section_writer_prompt(section_order).startswith(prefix)
     assert build_question_writer_prompt(question_order).startswith(prefix)
+
+
+def test_skip_expander_writer_prompt_uses_plan_structure(monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.setenv("V3_SKIP_EXPANDER", "true")
+    section_order = SectionWriterWorkOrder(
+        work_order_id="wo-1",
+        section=WriterSection(
+            id="practice",
+            title="Practice",
+            learning_intent="unused under skip",
+            role="practice",
+            transition_note="Apply the model from explain.",
+            card_id="fractions.equivalent",
+            components=[
+                WriterSectionComponent(
+                    component_id="hook-hero",
+                    teacher_label="Hook Hero",
+                    content_intent="Have learners compare two fraction strips.",
+                )
+            ],
+        ),
+        source_of_truth=[SourceOfTruthEntry(key="anchor", text="Pizza slices")],
+        component_cards={
+            "hook-hero": {
+                "component_id": "hook-hero",
+                "section_field": "hook",
+                "role": "orient",
+                "cognitive_job": "activate",
+                "capacity": {"max_words": 80},
+                "component_constraints": ["Keep it concrete"],
+                "field_contracts": {},
+            }
+        },
+        template_id="guided-concept-path",
+    )
+
+    with patch("contracts.lectio.get_formatting_policy", return_value={}):
+        prompt = build_section_writer_prompt(section_order)
+
+    assert "PLAN CONSTRAINTS" in prompt
+    assert "ROLE: practice" in prompt
+    assert "TRANSITION_NOTE: Apply the model from explain." in prompt
+    assert "purpose (from plan slot): Have learners compare two fraction strips." in prompt
+    assert "capacity: max_words=80" in prompt
+    assert "LEARNING INTENT:" not in prompt
+    assert "LECTIO COMPONENT CONTRACTS:" not in prompt

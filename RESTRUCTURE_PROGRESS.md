@@ -15,6 +15,7 @@ Source of truth: [`handoff/RESHAPE_HANDOFF.md`](handoff/RESHAPE_HANDOFF.md) (sup
 ## Reshape commits
 
 - `docs: reshape handoff + superseded lanes pointer` — this baseline.
+- `0.1: V3_SKIP_EXPANDER writer branch` — flag (default false); Stage2 synthesizes briefs from plan purposes when on; writer prompt renders plan+registry structured constraints; `transition_note`/`role`/`card_id` on writer section; tests 15 passed (`test_stage2_parallel` + `test_shared_prompt_prefix`).
 
 ## Baseline
 

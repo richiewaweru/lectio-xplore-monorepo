@@ -88,6 +88,7 @@ def assemble_blueprint(
             role=section_plan.role,
             visual_required=section_plan.visual_required,
             card_id=section_plan.card_id,
+            transition_note=section_plan.transition_note,
             components=components,
         ))
         included_section_ids.add(section_plan.id)

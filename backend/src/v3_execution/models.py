@@ -142,6 +142,9 @@ class WriterSection(BaseModel):
     id: str
     title: str
     learning_intent: str
+    role: str = ""
+    transition_note: str | None = None
+    card_id: str | None = None
     constraints: list[str] = Field(default_factory=list)
     register_notes: list[str] = Field(default_factory=list)
     components: list[WriterSectionComponent] = Field(default_factory=list)

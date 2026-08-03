@@ -71,6 +71,7 @@ class SectionPlan(BaseModel):
     role: str
     visual_required: bool = False
     card_id: str | None = None
+    transition_note: str | None = None
     components: list[ComponentPlan] = Field(default_factory=list, min_length=1)
 
 

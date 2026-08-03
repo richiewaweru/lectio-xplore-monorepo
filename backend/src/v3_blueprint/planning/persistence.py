@@ -248,6 +248,7 @@ async def resume_stage2(
         _run_stage2_section,
         _run_stage2_serial,
         _stage2_parallel_enabled,
+        skip_expander_enabled,
     )
 
     async with _session_scope(session) as (db, _):
@@ -287,6 +288,7 @@ async def resume_stage2(
             f"\n[STAGE2 START] generation_id={generation_id}"
             f" sections={[s.id for s in plan.sections]}"
             f" parallel={_stage2_parallel_enabled()}"
+            f" skip_expander={skip_expander_enabled()}"
             f" resume=true"
             f" remaining={[s.id for s in remaining]}",
             flush=True,
