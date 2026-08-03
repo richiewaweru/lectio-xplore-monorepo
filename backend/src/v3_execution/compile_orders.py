@@ -255,7 +255,9 @@ def compile_execution_bundle(
         if not writer_comps:
             learning_intent = sec.title
         else:
-            learning_intent = "; ".join(c.content_intent for c in writer_comps) or sec.title
+            # Keep component intents structured on WriterSectionComponent;
+            # prompt templates flatten at render time.
+            learning_intent = sec.title
         wo = SectionWriterWorkOrder(
             work_order_id=f"sec-{sec.section_id}",
             section=WriterSection(

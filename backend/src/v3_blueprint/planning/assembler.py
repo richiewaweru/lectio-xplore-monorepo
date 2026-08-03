@@ -202,15 +202,13 @@ def _assemble_visual_strategy(
 
         vs = brief.visual_strategy
         component_id = _find_visual_component_id(section_plan)
-        must_show = ", ".join(vs.must_show)
-        must_not_show = ", ".join(vs.must_not_show)
+        # Keep must_show / must_not_show structured on VisualInstruction.
+        # Flatten only in prompt templates at render time.
         strategy = (
             f"{vs.subject} "
             f"(job: {vs.visual_job}; "
             f"anchor: {vs.anchor_link}; "
-            f"style: {vs.visual_style or 'illustration'}; "
-            f"must_show: {must_show or 'none'}; "
-            f"must_not_show: {must_not_show or 'none'})"
+            f"style: {vs.visual_style or 'illustration'})"
         )
         frame_instructions = [
             VisualFrameInstruction(

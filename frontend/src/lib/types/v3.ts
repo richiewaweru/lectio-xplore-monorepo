@@ -175,6 +175,7 @@ export interface V3SectionPlanItem {
 	id: string;
 	title: string;
 	order: number;
+	learning_intents?: string[];
 	learning_intent: string;
 	components: V3ComponentPlan[];
 	visual_required: boolean;

@@ -105,7 +105,14 @@
 							{section.components.map((c) => c.teacher_label).join(' · ')}
 						</span>
 					</div>
-					<p class="mt-2 text-sm text-muted-foreground">{section.learning_intent}</p>
+					<p class="mt-2 text-sm text-muted-foreground">
+						{(section.learning_intents?.length
+							? section.learning_intents
+							: section.learning_intent
+								? [section.learning_intent]
+								: []
+						).join(' · ') || section.title}
+					</p>
 				</li>
 			{/each}
 		</ol>

@@ -54,7 +54,7 @@ def blueprint_to_preview_dto(
 
     section_plan: list[V3SectionPlanItemDTO] = []
     for order, sec in enumerate(blueprint.sections):
-        learning_intent = "; ".join(c.content_intent for c in sec.components) or sec.title
+        learning_intents = [c.content_intent for c in sec.components]
         comps: list[V3ComponentPlanDTO] = []
         for c in sec.components:
             cid = canonical_component_id(c.component)
@@ -70,7 +70,8 @@ def blueprint_to_preview_dto(
                 id=sec.section_id,
                 title=sec.title,
                 order=order,
-                learning_intent=learning_intent,
+                learning_intents=learning_intents,
+                learning_intent=sec.title if not learning_intents else "",
                 components=comps,
                 visual_required=sec.visual_required,
             )

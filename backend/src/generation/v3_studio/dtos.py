@@ -100,7 +100,8 @@ class V3SectionPlanItemDTO(BaseModel):
     id: str
     title: str
     order: int
-    learning_intent: str
+    learning_intents: list[str] = Field(default_factory=list)
+    learning_intent: str = ""
     components: list[V3ComponentPlanDTO] = Field(default_factory=list)
     visual_required: bool = False
 
