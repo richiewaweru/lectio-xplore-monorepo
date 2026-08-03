@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-
 from generation.v3_studio.prompts import build_v3_shared_prefix
 from core.prompts import effective_prompt_text
 from v3_execution.prompts.formatting import (
@@ -9,17 +7,9 @@ from v3_execution.prompts.formatting import (
     format_source_of_truth,
     format_support_adaptations,
 )
-from v3_execution.models import SectionWriterWorkOrder, WriterSectionComponent
+from v3_execution.models import SectionWriterWorkOrder
 
 _ORDER_CONTEXT_MARKER = "<!-- ORDER_CONTEXT -->"
-
-
-def _skip_expander_enabled() -> bool:
-    return os.getenv("V3_SKIP_EXPANDER", "false").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-    }
 
 
 def _load_static_template() -> str:
@@ -121,52 +111,6 @@ def format_component_contract_for_writer(card: dict, content_intent: str) -> str
     return "\n".join(lines)
 
 
-def _format_skip_expander_component(
-    component: WriterSectionComponent,
-    card: dict,
-) -> str:
-    """Phase 0 writer branch: structured plan purpose + registry, not brief prose."""
-    from contracts.lectio import get_component_schema_shape
-
-    capacity = card.get("capacity") or {}
-    capacity_bits = []
-    for key in ("max_words", "max_items", "max_sentences", "notes"):
-        if key in capacity and capacity[key] not in (None, "", []):
-            capacity_bits.append(f"{key}={capacity[key]}")
-
-    lines = [
-        f"COMPONENT: {component.teacher_label or component.component_id} ({component.component_id})",
-        f"  purpose (from plan slot): {component.content_intent}",
-        f"  section_field: {card.get('section_field', '')}",
-        f"  cognitive_job: {card.get('cognitive_job', '')}",
-        f"  registry_role: {card.get('role', '')}",
-    ]
-    if capacity_bits:
-        lines.append(f"  capacity: {', '.join(str(b) for b in capacity_bits)}")
-    else:
-        lines.append("  capacity: (none declared)")
-
-    constraints: list = card.get("component_constraints", [])
-    if constraints:
-        lines.append("  component_constraints:")
-        for item in constraints:
-            lines.append(f"    - {item}")
-
-    field_contracts: dict = card.get("field_contracts", {})
-    if field_contracts:
-        lines.append("  field_contracts:")
-        for fname, fdef in field_contracts.items():
-            fmt = fdef.get("format", "")
-            desc = fdef.get("description", "")
-            lines.append(f"    {fname} [{fmt}] {desc}".rstrip())
-
-    shape = get_component_schema_shape(component.component_id)
-    if shape:
-        lines.append(_format_schema_shape(shape))
-
-    return "\n".join(lines)
-
-
 def _format_corrections_block(order: SectionWriterWorkOrder) -> str:
     lines: list[str] = []
     for component in order.section.components:
@@ -180,84 +124,6 @@ def _format_corrections_block(order: SectionWriterWorkOrder) -> str:
     if not lines:
         return ""
     return "TEACHER CORRECTIONS (honour each; do not drop):\n" + "\n".join(lines)
-
-
-def _build_skip_expander_order_context(order: SectionWriterWorkOrder) -> str:
-    from contracts.lectio import get_formatting_policy
-
-    policy = get_formatting_policy()
-    policy_block = format_formatting_policy_legend(policy)
-    component_blocks = "\n\n".join(
-        _format_skip_expander_component(
-            component,
-            order.component_cards.get(component.component_id, {}),
-        )
-        for component in order.section.components
-    )
-    corrections_block = _format_corrections_block(order)
-    corrections_section = f"\n\n{corrections_block}\n" if corrections_block else "\n"
-
-    misconception_lines = (
-        "\n".join(
-            f"- {m.id}: {m.description}"
-            for m in order.section.misconceptions
-        )
-        if order.section.misconceptions
-        else "- (none declared)"
-    )
-    exclusion_lines = (
-        "\n".join(f"- {item}" for item in order.section.exclusions)
-        if order.section.exclusions
-        else "- (none declared)"
-    )
-    anchor_example = order.section.anchor_example.strip() or "(none declared)"
-    reuse_scope = order.section.anchor_reuse_scope.strip() or "(unset)"
-
-    return f"""SECTION: {order.section.title}
-SECTION_ID: {order.section.id}
-CARD_ID: {order.section.card_id or "(none)"}
-
-STRUCTURED CONSTRAINTS (honour each bullet; do not invent a separate brief):
-- ANCHOR: {anchor_example}
-- ANCHOR_INSTRUCTION: Use the anchor in this section unless a component purpose explicitly calls for a fresh context. Reuse scope: {reuse_scope}.
-- MISCONCEPTIONS (target here when purpose or role surfaces or corrects them):
-{misconception_lines}
-- EXCLUSIONS (do not teach or introduce as true):
-{exclusion_lines}
-- ROLE: {order.section.role or "(unset)"}
-- TRANSITION_NOTE: {order.section.transition_note or "first section — no prior"}
-- Write only the components listed below.
-- Use each component's plan purpose and registry contract.
-- Honour REGISTER, LEARNER PROFILE, SUPPORT ADAPTATIONS, ANCHOR FACTS, and CONSISTENCY RULES below.
-{corrections_section}COMPONENTS TO WRITE:
-{component_blocks}
-
-REGISTER:
-- Level: {order.register_spec.level}
-- Sentence length: {order.register_spec.sentence_length}
-- Vocabulary: {order.register_spec.vocabulary_policy}
-- Tone: {order.register_spec.tone}
-- Avoid: {", ".join(order.register_spec.avoid) or "none"}
-
-LEARNER PROFILE:
-{order.learner_profile.level_summary}
-Reading load: {order.learner_profile.reading_load}
-Language support: {order.learner_profile.language_support}
-Pacing: {order.learner_profile.pacing}
-
-SUPPORT ADAPTATIONS:
-{format_support_adaptations(order.support_adaptations)}
-
-ANCHOR FACTS (do not change these):
-{format_source_of_truth(order.source_of_truth)}
-
-CONSISTENCY RULES:
-{format_consistency_rules(order.consistency_rules)}
-
-SECTION CONSTRAINTS:
-{chr(10).join(f"- {c}" for c in order.section.constraints) or "- none"}
-
-{policy_block}"""
 
 
 def _build_brief_order_context(order: SectionWriterWorkOrder) -> str:
@@ -281,10 +147,37 @@ def _build_brief_order_context(order: SectionWriterWorkOrder) -> str:
     corrections_block = _format_corrections_block(order)
     corrections_section = f"\n{corrections_block}\n" if corrections_block else ""
 
+    misconception_lines = (
+        "\n".join(
+            f"- {m.id}: {m.description}"
+            for m in order.section.misconceptions
+        )
+        if order.section.misconceptions
+        else "- (none declared)"
+    )
+    exclusion_lines = (
+        "\n".join(f"- {item}" for item in order.section.exclusions)
+        if order.section.exclusions
+        else "- (none declared)"
+    )
+    anchor_example = order.section.anchor_example.strip() or "(none declared)"
+    reuse_scope = order.section.anchor_reuse_scope.strip() or "(unset)"
+
     return f"""SECTION: {order.section.title}
 SECTION_ID: {order.section.id}
+CARD_ID: {order.section.card_id or "(none)"}
 LEARNING INTENT: {order.section.learning_intent}
 {corrections_section}
+STRUCTURED CONSTRAINTS (honour each bullet):
+- ANCHOR: {anchor_example}
+- ANCHOR_INSTRUCTION: Use the anchor in this section unless a component purpose explicitly calls for a fresh context. Reuse scope: {reuse_scope}.
+- MISCONCEPTIONS (target here when purpose or role surfaces or corrects them):
+{misconception_lines}
+- EXCLUSIONS (do not teach or introduce as true):
+{exclusion_lines}
+- ROLE: {order.section.role or "(unset)"}
+- TRANSITION_NOTE: {order.section.transition_note or "first section — no prior"}
+
 COMPONENTS TO WRITE:
 {components_list}
 
@@ -321,10 +214,7 @@ LECTIO COMPONENT CONTRACTS:
 
 def build_section_writer_prompt(order: SectionWriterWorkOrder) -> str:
     shared_prefix = build_v3_shared_prefix()
-    if _skip_expander_enabled():
-        order_context = _build_skip_expander_order_context(order)
-    else:
-        order_context = _build_brief_order_context(order)
+    order_context = _build_brief_order_context(order)
 
     body = _load_static_template().replace(_ORDER_CONTEXT_MARKER, order_context)
     return f"{shared_prefix}\n{body}\n"

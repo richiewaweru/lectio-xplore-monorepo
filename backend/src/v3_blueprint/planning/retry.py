@@ -11,7 +11,6 @@ from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
 from core.config import settings
 from core.llm.runner import TruncatedCompletionError
 from v3_blueprint.planning.models import (
-    ComponentBrief,
     SectionBrief,
     SectionPlan,
     Stage1PlanFailure,
@@ -34,31 +33,6 @@ log = logging.getLogger(__name__)
 
 def _stage2_parallel_enabled() -> bool:
     return os.getenv("V3_STAGE2_PARALLEL", "true").strip().lower() != "false"
-
-
-def skip_expander_enabled() -> bool:
-    """Phase 0 experiment: skip Stage 2 expander LLM when true (default false)."""
-    return os.getenv("V3_SKIP_EXPANDER", "false").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-    }
-
-
-def synthesize_section_brief(section: SectionPlan) -> SectionBrief:
-    """Build a reversible brief from plan slots so assembler/writer keep working.
-
-    content_intent is the ComponentSlot.purpose; visual_strategy is left unset
-    (Phase 0 A/B should prefer lessons without visual_required).
-    """
-    return SectionBrief(
-        section_id=section.id,
-        components=[
-            ComponentBrief(component_id=slot.slug, content_intent=slot.purpose)
-            for slot in section.components
-        ],
-        visual_strategy=None,
-    )
 
 
 def _failed_placeholder(section_id: str, errors: list[str]) -> SectionBrief:
@@ -207,7 +181,6 @@ async def run_stage2(
         f"\n[STAGE2 START] generation_id={generation_id}"
         f" sections={[s.id for s in plan.sections]}"
         f" parallel={_stage2_parallel_enabled()}"
-        f" skip_expander={skip_expander_enabled()}"
         f" timeout_stage2_section={settings.v3_timeout_stage2_section_seconds}s",
         flush=True,
     )
@@ -424,16 +397,6 @@ async def _run_section_with_retry(
     generation_id: str | None,
     trace_id: str | None = None,
 ) -> SectionBrief:
-
-    if skip_expander_enabled():
-        brief = synthesize_section_brief(section)
-        print(
-            f"\n[STAGE2 SKIP EXPANDER] generation_id={generation_id}"
-            f" section_id={section.id}"
-            f" components={len(brief.components)}",
-            flush=True,
-        )
-        return brief
 
     component_cards = _load_component_cards_for_section(section)
     errors: list[str] = []

@@ -99,16 +99,15 @@ def test_writer_prompts_share_stable_prefix() -> None:
     assert build_question_writer_prompt(question_order).startswith(prefix)
 
 
-def test_skip_expander_writer_prompt_uses_plan_structure(monkeypatch) -> None:  # noqa: ANN001
+def test_section_writer_prompt_includes_structured_constraints() -> None:
     from v3_execution.models import WriterMisconception
 
-    monkeypatch.setenv("V3_SKIP_EXPANDER", "true")
     section_order = SectionWriterWorkOrder(
         work_order_id="wo-1",
         section=WriterSection(
             id="practice",
             title="Practice",
-            learning_intent="unused under skip",
+            learning_intent="Apply the conversion model.",
             role="apply",
             transition_note="Apply the model from explain.",
             card_id="fractions.equivalent",
@@ -148,7 +147,13 @@ def test_skip_expander_writer_prompt_uses_plan_structure(monkeypatch) -> None:  
         template_id="guided-concept-path",
     )
 
-    with patch("contracts.lectio.get_formatting_policy", return_value={}):
+    with (
+        patch("contracts.lectio.get_formatting_policy", return_value={}),
+        patch(
+            "v3_execution.prompts.section_writer.format_component_contract_for_writer",
+            return_value="contract block",
+        ),
+    ):
         prompt = build_section_writer_prompt(section_order)
 
     assert "STRUCTURED CONSTRAINTS" in prompt
@@ -159,9 +164,6 @@ def test_skip_expander_writer_prompt_uses_plan_structure(monkeypatch) -> None:  
     assert "EXCLUSIONS" in prompt and "(none declared)" in prompt
     assert "- ROLE: apply" in prompt
     assert "- TRANSITION_NOTE: Apply the model from explain." in prompt
-    assert "purpose (from plan slot): Have learners compare two fraction strips." in prompt
-    assert "capacity: max_words=80" in prompt
-    assert "LEARNING INTENT:" not in prompt
-    assert "LECTIO COMPONENT CONTRACTS:" not in prompt
-    # Must stay a list of bullets, not a concatenated brief paragraph.
-    assert "PLAN CONSTRAINTS" not in prompt
+    assert "LEARNING INTENT: Apply the conversion model." in prompt
+    assert "LECTIO COMPONENT CONTRACTS:" in prompt
+    assert "Have learners compare two fraction strips." in prompt

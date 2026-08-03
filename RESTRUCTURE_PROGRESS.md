@@ -18,6 +18,7 @@ User recorded decision 2026-08-03 after three rounds (quality equal in round 2; 
 ## Reshape commits
 
 - `docs: reshape handoff v2 post-decision + expander-lives` — this entry.
+- `1.0: remove V3_SKIP_EXPANDER keep expander` — deleted skip flag/branch; STRUCTURED CONSTRAINTS + anchor fields retained on brief writer path; tests 14 passed (`test_stage2_parallel` + `test_shared_prompt_prefix`).
 - `docs: reshape handoff + superseded lanes pointer` — v1 baseline (superseded).
 - `0.1: V3_SKIP_EXPANDER writer branch` — flag (default false); Stage2 synthesizes briefs from plan purposes when on; writer prompt renders plan+registry structured constraints; `transition_note`/`role`/`card_id` on writer section; tests 15 passed (`test_stage2_parallel` + `test_shared_prompt_prefix`).
 - `7.1: teacher corrections as typed Correction list` — `Correction` model; router patch/repair append typed list; writer prompt dedicated section; patch test updated (3 passed).
@@ -74,7 +75,7 @@ Skip is not uniformly slower on every section: orient and check medians are fast
 - Closest factual read: **(a) noise** — timing remains non-decisive; decision rests on the architectural case (and round-2 quality already closed).
 - Report-only note (lanes): expander stage-2 cost parallelizes per lane; a slower writer call sits on every lane’s critical path. Do not treat raw sequential totals as the final architecture wall.
 
-**Still halted:** Phases 1–3 and acceptance until the user records expander dies/lives. No deletion/retention recommendation from this round.
+**Decision recorded:** expander lives (see `## DECISION: expander lives`). Timing remains non-decisive; no deletion/retention recommendation from timing alone.
 
 ## AWAITING DECISION: expander
 
@@ -98,12 +99,7 @@ Phase 0 A/B complete. Artifacts: [`experiments/expander/`](experiments/expander/
 4. **Difficulty progression:** Both arms keep the planned role order `orient → explain → model → apply → check` with no failed briefs (`failed_briefs=[]`).
 5. **Brief vs purpose:** with_expander briefs rewrite plan purposes into longer `content_intent` prose (often adding option counts, word caps, variant hints). skip_expander feeds plan `purpose` strings + registry contracts to the writer unchanged.
 
-**User decision needed before Phase 1–3:**
-
-- **Expander dies** → Phase 1 removal (after VisualStrategySpec rehome), then lanes are 2-step (`prose`, `questions`).
-- **Expander lives** → remove `V3_SKIP_EXPANDER` branch; keep briefs; lanes are 3-step (`brief`, `prose`, `questions`); skip Phase 1.
-
-Phase 4 (§7.1–7.3) already landed while this decision was pending. **Phases 1–3 and acceptance are halted** until you answer.
+**Decision recorded:** expander lives — remove `V3_SKIP_EXPANDER`; lanes 3-step; v1 Phase 1 cancelled. Phase 4 (§7.1–7.3) already landed while awaiting.
 
 ## AWAITING DECISION: expander (round 2)
 
@@ -131,7 +127,7 @@ Role order preserved on all three arms; `failed_briefs=[]`. Exclusions declared 
 
 **Factual recommendation from §4 rule:** numbers support explanation **(b)** → expander as middleman; handoff says **it dies**. Prose quality remains the user's read (`skip_expander_v2/prose.json` vs `with_expander_v2/prose.json`).
 
-**Still halted:** do not start Phase 1–3 until the user records the decision.
+**Decision recorded:** expander lives (see `## DECISION: expander lives`). Round-2 quality equality stands; dies recommendation from §4 rule was superseded by the user's keep decision.
 
 ## KNOWN DEFECTS
 
