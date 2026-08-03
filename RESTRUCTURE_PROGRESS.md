@@ -21,6 +21,57 @@ Source of truth: [`handoff/RESHAPE_HANDOFF.md`](handoff/RESHAPE_HANDOFF.md) (sup
 - `7.3: plain groups-tab teacher copy` — UnitGroupsPanel / ResourceComposerPanel wording.
 - `0b.1: fair skip-writer constraints + anchor.example plumbing` — AnchorPlan.example; WriterSection misconceptions/exclusions/anchor fields; STRUCTURED CONSTRAINTS list in skip writer path; tests 10 passed.
 
+## Phase 0C — timing repeat (done)
+
+Measurement-only per [`handoff/PHASE_0C_HANDOFF.md`](handoff/PHASE_0C_HANDOFF.md): 3× with_expander + 3× skip interleaved on `shared_plan.json`; no product/prompt changes. Aggregate: [`experiments/expander/round3/timings.json`](experiments/expander/round3/timings.json).
+
+## AWAITING DECISION: expander (round 3 — timing)
+
+Timing repeat only (quality closed in round 2). Identical plan [`shared_plan.json`](experiments/expander/shared_plan.json); section ids `orient → explain → model → apply → check`. Harness: [`experiments/expander/run_round3.py`](experiments/expander/run_round3.py). No product/prompt diffs. All six runs OK (`affected_runs=[]`).
+
+### Six runs (start times UTC)
+
+| Order | Arm | Run | started_at | Stage2 | Writers | Total |
+| --- | --- | ---: | --- | ---: | ---: | ---: |
+| 1 | with_expander | 1 | 2026-08-03T15:47:15Z | 28.30s | 162.77s | 191.10s |
+| 2 | skip_expander | 1 | 2026-08-03T15:50:26Z | 0.00s | 211.89s | 211.89s |
+| 3 | with_expander | 2 | 2026-08-03T15:53:58Z | 32.38s | 207.41s | 239.80s |
+| 4 | skip_expander | 2 | 2026-08-03T15:57:58Z | 0.00s | 432.65s | 432.65s |
+| 5 | with_expander | 3 | 2026-08-03T16:05:10Z | 13.48s | 167.99s | 181.47s |
+| 6 | skip_expander | 3 | 2026-08-03T16:08:12Z | 0.00s | 169.91s | 169.91s |
+
+skip/run2 had a single-section spike: `model` writer **280.93s** (other skip model writers 47.49 / 38.86).
+
+### Per-arm medians and spreads
+
+| Arm | Stage2 median (min–max) | Writers median (min–max) | Total median (min–max) |
+| --- | --- | --- | --- |
+| with_expander | **28.30s** (13.48–32.38) | **167.99s** (162.77–207.41) | **191.10s** (181.47–239.80) |
+| skip_expander | **0.00s** (0–0) | **211.89s** (169.91–432.65) | **211.89s** (169.91–432.65) |
+
+Median-to-median deltas (skip − with): stage2 **−28.30s**; writers **+43.90s**; total **+20.79s**.
+
+### Per-section writer medians (both arms)
+
+| Section | with median (min–max) | skip median (min–max) |
+| --- | --- | --- |
+| orient | 27.35s (26.09–43.75) | 18.59s (18.33–22.79) |
+| explain | 25.17s (14.75–27.80) | 50.21s (27.73–74.36) |
+| model | 31.69s (21.86–63.63) | 47.49s (38.86–280.93) |
+| apply | 43.68s (33.65–55.29) | 49.36s (40.63–59.85) |
+| check | 36.13s (33.34–53.99) | 24.88s (18.41–42.03) |
+
+Skip is not uniformly slower on every section: orient and check medians are faster on skip; explain/model/apply medians are slower.
+
+### Factual mapping to §4 (no dies/lives recommendation)
+
+- Total median delta is **+20.79s** (skip slower) — slightly above the ~15s “within noise” band, **not** “skip median faster.”
+- That +20.79s is **smaller than each arm’s own total min–max spread** (with ≈58s; skip ≈263s, dominated by skip/run2). So the numbers do **not** meet the §4 bar for (b) (“slower by a margin larger than each arm’s own spread”).
+- Closest factual read: **(a) noise** — timing remains non-decisive; decision rests on the architectural case (and round-2 quality already closed).
+- Report-only note (lanes): expander stage-2 cost parallelizes per lane; a slower writer call sits on every lane’s critical path. Do not treat raw sequential totals as the final architecture wall.
+
+**Still halted:** Phases 1–3 and acceptance until the user records expander dies/lives. No deletion/retention recommendation from this round.
+
 ## AWAITING DECISION: expander
 
 Phase 0 A/B complete. Artifacts: [`experiments/expander/`](experiments/expander/) (`with_expander/`, `skip_expander/`, `shared_plan.json`, `summary.json`, `factual_compare.json`).

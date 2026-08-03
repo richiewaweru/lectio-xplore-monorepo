@@ -1,0 +1,271 @@
+{
+  "orient": {
+    "title": "Where does a plant's energy come from?",
+    "role": "orient",
+    "transition_note": null,
+    "learning_intent": "Where does a plant's energy come from?",
+    "components": [
+      {
+        "component_id": "hook-hero",
+        "content_intent": "Open with the windowsill plant and surface the soil-food idea without resolving it yet."
+      }
+    ],
+    "blocks": [
+      {
+        "block_id": "60f23abc-ba1a-43db-8087-878b6a895491",
+        "section_id": "orient",
+        "component_id": "hook-hero",
+        "section_field": "hook",
+        "position": 0,
+        "data": {
+          "headline": "What Does a Plant Really Eat?",
+          "body": "A basil plant sits on a sunny windowsill. Its leaves are green, its stems sturdy. Day by day, it grows taller. But where does all that plant stuff come from? Many people guess it’s the nutrients in the soil—after all, we feed plants with fertilizer. But is the soil the real source of a plant’s energy? Or could it be something else hiding in plain sight?",
+          "anchor": "A sunny windowsill plant making glucose from light, water, and CO2",
+          "type": "question",
+          "question_options": [
+            "It absorbs its food from the soil.",
+            "It drinks energy from water.",
+            "It breathes in its food from the air.",
+            "It builds its own food using light, water, and carbon dioxide."
+          ]
+        },
+        "source_work_order_id": "sec-orient"
+      }
+    ]
+  },
+  "explain": {
+    "title": "Light to chemical energy",
+    "role": "explain",
+    "transition_note": "After the hook, name the conversion: light energy becomes chemical energy in glucose.",
+    "learning_intent": "Light to chemical energy",
+    "components": [
+      {
+        "component_id": "callout-block",
+        "content_intent": "State that photosynthesis converts light energy into chemical energy stored in glucose; exclude soil-as-food."
+      },
+      {
+        "component_id": "definition-card",
+        "content_intent": "Define photosynthesis with inputs (light, water, CO2) and output (glucose + oxygen)."
+      }
+    ],
+    "blocks": [
+      {
+        "block_id": "82154dd5-b9e5-492c-a94d-2747376439c9",
+        "section_id": "explain",
+        "component_id": "callout-block",
+        "section_field": "callout",
+        "position": 0,
+        "data": {
+          "variant": "remember",
+          "body": "Inside a leaf on your sunny windowsill, light energy is captured and converted into chemical energy stored in glucose. This process is called photosynthesis. Plants do **not** get their food by absorbing nutrients from the soil — they make it themselves."
+        },
+        "source_work_order_id": "sec-explain"
+      },
+      {
+        "block_id": "6ce717b3-30f3-497c-b0e2-bc786ad0fd27",
+        "section_id": "explain",
+        "component_id": "definition-card",
+        "section_field": "definition",
+        "position": 1,
+        "data": {
+          "term": "Photosynthesis",
+          "formal": "The biochemical process in which light energy is used to convert carbon dioxide and water into glucose and oxygen, occurring in chloroplasts of plant cells.",
+          "plain": "Photosynthesis is how plants use sunlight, water, and carbon dioxide to make glucose (their food) and release oxygen.",
+          "etymology": "From Greek *phōs* (light) and *synthesis* (putting together).",
+          "notation": "\\text{6CO}_2 + \\text{6H}_2\\text{O} \\xrightarrow{\\text{light}} \\text{C}_6\\text{H}_{12}\\text{O}_6 + \\text{6O}_2",
+          "related_terms": [
+            "glucose",
+            "chloroplast",
+            "light energy"
+          ],
+          "examples": [
+            "A sunny windowsill plant making glucose from light, water, and CO₂."
+          ]
+        },
+        "source_work_order_id": "sec-explain"
+      }
+    ]
+  },
+  "model": {
+    "title": "Trace the windowsill example",
+    "role": "model",
+    "transition_note": "Apply the definition to the same windowsill plant step by step.",
+    "learning_intent": "Trace the windowsill example",
+    "components": [
+      {
+        "component_id": "worked-example-card",
+        "content_intent": "Walk the windowsill plant through light → chlorophyll → glucose, contrasting soil nutrients vs food energy."
+      }
+    ],
+    "blocks": [
+      {
+        "block_id": "4c9d1d49-a67f-452a-8619-f24f515adccd",
+        "section_id": "model",
+        "component_id": "worked-example-card",
+        "section_field": "worked_example",
+        "position": 0,
+        "data": {
+          "title": "From Sunlight to Sugar: A Windowsill Plant’s Kitchen",
+          "setup": "Imagine a geranium on a sunny windowsill. Its green leaves soak up light, and you remember giving it water this morning. But how does the plant actually make the glucose it uses for energy and building blocks? Let’s trace the process step by step, paying attention to where the atoms come from – and where they don’t.",
+          "steps": [
+            {
+              "label": "Light capture",
+              "content": "A photon of sunlight strikes a chlorophyll molecule inside a leaf cell’s chloroplast. The chlorophyll absorbs the light energy, converting it into chemical energy by boosting electrons to a higher energy level. This energy will power the rest of photosynthesis.",
+              "note": "No carbon enters yet; this step is purely about energy capture.",
+              "formula": "\\text{Chlorophyll} + \\text{light} \\rightarrow \\text{Chlorophyll}^*"
+            },
+            {
+              "label": "Water splitting",
+              "content": "The absorbed energy splits water molecules ($\\mathrm{H_2O}$) that the roots pulled up from the soil. This releases oxygen ($\\mathrm{O_2}$) as a by‑product and provides electrons and hydrogen ions ($\\mathrm{H^+}$). The oxygen gas escapes through tiny pores in the leaf (stomata).",
+              "note": "The oxygen you breathe out? That’s the remnant of broken water, not breathed‑out CO₂ reversed.",
+              "formula": "2\\mathrm{H_2O} \\rightarrow 4\\mathrm{H^+} + 4e^- + \\mathrm{O_2}"
+            },
+            {
+              "label": "Carbon dioxide entry",
+              "content": "Carbon dioxide ($\\mathrm{CO_2}$) from the air enters the leaf through the stomata. Inside, it diffuses into the chloroplasts. This is the only source of carbon atoms for the sugar backbone. Soil provides water and minerals, not the carbon skeleton of food.",
+              "note": "Soil nutrients (like nitrates or phosphates) are vital for proteins and DNA, but they are not the plant’s main energy source.",
+              "formula": "\\mathrm{CO_2} \\text{ (from air)}"
+            },
+            {
+              "label": "Carbon fixation and sugar assembly",
+              "content": "In the Calvin cycle, an enzyme (RuBisCO) attaches the $\\mathrm{CO_2}$ to a five‑carbon sugar. The resulting six‑carbon molecule is quickly split and rearranged, consuming the energy and electrons from the earlier light‑driven steps. The cycle produces glyceraldehyde‑3‑phosphate (G3P), which can be converted into glucose ($\\mathrm{C_6H_{12}O_6}$).",
+              "note": "Glucose is the plant’s “food” – a portable, energy‑rich molecule made entirely from light, water, and CO₂.",
+              "formula": "6\\mathrm{CO_2} + 6\\mathrm{H_2O} + \\text{light energy} \\rightarrow \\mathrm{C_6H_{12}O_6} + 6\\mathrm{O_2}"
+            },
+            {
+              "label": "Glucose use and storage",
+              "content": "The glucose produced can be burned immediately in cellular respiration to power the plant’s cells, or it can be stitched together into starch for storage. Either way, the energy in those chemical bonds ultimately came from sunlight, not from the soil.",
+              "note": "Respiration in plants may look like a reverse of photosynthesis, but the two are separate processes that occur at different times and in different organelles."
+            }
+          ],
+          "conclusion": "Our windowsill plant cooks its own food from scratch: light powers the splitting of water, and carbon from the air is reassembled into glucose. Soil minerals support growth but never become the plant’s carbon‑based energy supply. Photosynthesis is not simply the opposite of breathing – it’s an anabolic, energy‑storing pathway, while respiration is a catabolic, energy‑releasing one.",
+          "answer": "Glucose is synthesised from carbon dioxide and water using light energy, not absorbed from soil."
+        },
+        "source_work_order_id": "sec-model"
+      }
+    ]
+  },
+  "apply": {
+    "title": "Practice the conversion story",
+    "role": "apply",
+    "transition_note": "Learners try the conversion story on a new plant context after the model.",
+    "learning_intent": "Practice the conversion story",
+    "components": [
+      {
+        "component_id": "practice-stack",
+        "content_intent": "Prompt learners to explain energy conversion for a shaded vs sunny plant without inventing new science."
+      }
+    ],
+    "blocks": [
+      {
+        "block_id": "f4b9bcd8-f9dd-4fba-9255-42c0d935dba8",
+        "section_id": "apply",
+        "component_id": "practice-stack",
+        "section_field": "practice",
+        "position": 0,
+        "data": {
+          "problems": [
+            {
+              "difficulty": "warm",
+              "question": "A plant on a sunny windowsill makes glucose from light, water, and CO₂. An identical plant in a shaded corner gets the same water and CO₂ but much less light.\n\nExplain why the shaded plant grows more slowly.",
+              "hints": [
+                {
+                  "level": 1,
+                  "text": "Think about the ingredients for photosynthesis. Which one does the sunny windowsill provide more of?"
+                },
+                {
+                  "level": 2,
+                  "text": "Light is the energy source that drives the conversion of water and CO₂ into glucose. More light means more energy available for this process."
+                },
+                {
+                  "level": 3,
+                  "text": "The shaded plant receives less light, so it captures less energy. This means it cannot make as much glucose as the sunny plant, causing slower growth."
+                }
+              ],
+              "solution": {
+                "approach": "Compare the two plants. The only difference is light. Recall that light provides the energy to make glucose. The plant with more light can produce more glucose.",
+                "answer": "The shaded plant grows slower because it gets less light energy, which limits how much glucose it can make. Glucose is the plant's food for growth.",
+                "worked": "Photosynthesis converts light energy into chemical energy stored in glucose. With less light, the reaction slows down, producing fewer glucose molecules. Since glucose fuels growth, the shaded plant lags behind."
+              }
+            },
+            {
+              "difficulty": "medium",
+              "question": "Consider two plants: one on a bright windowsill, another placed in deep shade outdoors. Both receive the same amount of water and CO₂.\n\nUsing the **energy conversion story**, predict which plant will produce more glucose and explain why. Be specific about the role of light.",
+              "hints": [
+                {
+                  "level": 1,
+                  "text": "In the energy conversion story, light is the starting energy source. Which plant receives more light?"
+                },
+                {
+                  "level": 2,
+                  "text": "Light energy is captured and used to split water molecules. This releases oxygen and provides the energy needed to combine carbon dioxide and hydrogen into glucose."
+                },
+                {
+                  "level": 3,
+                  "text": "The bright windowsill plant captures more light energy than the shaded outdoor plant. More light energy means more water can be split, driving the production of more glucose."
+                }
+              ],
+              "solution": {
+                "approach": "Apply the conversion story: light energy → splitting of water → energy to build glucose. Compare the available light for each plant to determine which one can drive this process further.",
+                "answer": "The plant on the bright windowsill will produce more glucose. It receives more light energy, which is essential for splitting water and powering the reaction that builds glucose from CO₂ and water.",
+                "worked": "The overall reaction is:\n$$\n6\\text{CO}_2 + 6\\text{H}_2\\text{O} + \\text{light energy} \\rightarrow \\text{C}_6\\text{H}_{12}\\text{O}_6 + 6\\text{O}_2\n$$\nLight energy acts as a reactant. More light energy pushes the reaction toward the product side, yielding more glucose. The shaded plant has less light energy available, so the reaction proceeds more slowly and produces less glucose."
+              }
+            }
+          ],
+          "hints_visible_default": false,
+          "solutions_available": true,
+          "label": "Practice the Energy Conversion Story"
+        },
+        "source_work_order_id": "sec-apply"
+      }
+    ]
+  },
+  "check": {
+    "title": "Check understanding",
+    "role": "check",
+    "transition_note": "Close with a check that targets M1 soil-food and M2 breathing-opposite ideas.",
+    "learning_intent": "Check understanding",
+    "components": [
+      {
+        "component_id": "quiz-check",
+        "content_intent": "Ask one check that forces a choice between soil-food and light-to-glucose conversion."
+      }
+    ],
+    "blocks": [
+      {
+        "block_id": "fba6ada5-c1be-4240-8c5f-476e0c3ba5b5",
+        "section_id": "check",
+        "component_id": "quiz-check",
+        "section_field": "quiz",
+        "position": 0,
+        "data": {
+          "question": "Our sunny windowsill plant is making its own food. What is the main way it does this?",
+          "quiz_type": "multiple-choice",
+          "options": [
+            {
+              "text": "It absorbs nutrients from the soil and turns them into food.",
+              "correct": false,
+              "explanation": "Plants do absorb minerals from the soil, but these are micronutrients – they are not the main source of food. The plant makes its own glucose using photosynthesis.",
+              "diagnoses": "M1"
+            },
+            {
+              "text": "It does the opposite of animals breathing – taking in carbon dioxide and releasing oxygen.",
+              "correct": false,
+              "explanation": "While it’s true that photosynthesis takes in CO₂ and releases O₂, plants also respire, using oxygen and releasing CO₂ just like animals. Photosynthesis is not simply the reverse of breathing; it is a process that builds glucose.",
+              "diagnoses": "M2"
+            },
+            {
+              "text": "It uses light, water, and CO₂ to produce glucose.",
+              "correct": true,
+              "explanation": "That’s right! Photosynthesis uses light energy to convert water and carbon dioxide into glucose, storing energy in chemical bonds."
+            }
+          ],
+          "feedback_correct": "Correct! The plant captures light energy and converts it into chemical energy in glucose.",
+          "feedback_incorrect": "Not quite. Think about where the plant’s food really comes from – it isn’t pulled from the soil, and photosynthesis is more than just gas exchange.",
+          "show_explanations": true
+        },
+        "source_work_order_id": "sec-check"
+      }
+    ]
+  }
+}

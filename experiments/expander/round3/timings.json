@@ -1,0 +1,335 @@
+{
+  "round": 3,
+  "plan_source": "shared_plan.json",
+  "schedule": [
+    {
+      "arm": "with_expander",
+      "skip": false,
+      "run": 1
+    },
+    {
+      "arm": "skip_expander",
+      "skip": true,
+      "run": 1
+    },
+    {
+      "arm": "with_expander",
+      "skip": false,
+      "run": 2
+    },
+    {
+      "arm": "skip_expander",
+      "skip": true,
+      "run": 2
+    },
+    {
+      "arm": "with_expander",
+      "skip": false,
+      "run": 3
+    },
+    {
+      "arm": "skip_expander",
+      "skip": true,
+      "run": 3
+    }
+  ],
+  "affected_runs": [],
+  "with_expander": {
+    "n_ok": 3,
+    "n_failed": 0,
+    "runs": [
+      {
+        "arm": "with_expander",
+        "run": 1,
+        "skip_expander": false,
+        "started_at": "2026-08-03T15:47:15.390105+00:00",
+        "ok": true,
+        "stage2_seconds": 28.3,
+        "writers_seconds": 162.77,
+        "total_seconds": 191.1,
+        "section_writer_seconds": {
+          "orient": 26.09,
+          "explain": 25.17,
+          "model": 31.69,
+          "apply": 43.68,
+          "check": 36.13
+        },
+        "failed_briefs": []
+      },
+      {
+        "arm": "with_expander",
+        "run": 2,
+        "skip_expander": false,
+        "started_at": "2026-08-03T15:53:58.396816+00:00",
+        "ok": true,
+        "stage2_seconds": 32.38,
+        "writers_seconds": 207.41,
+        "total_seconds": 239.8,
+        "section_writer_seconds": {
+          "orient": 27.35,
+          "explain": 27.8,
+          "model": 63.63,
+          "apply": 55.29,
+          "check": 33.34
+        },
+        "failed_briefs": []
+      },
+      {
+        "arm": "with_expander",
+        "run": 3,
+        "skip_expander": false,
+        "started_at": "2026-08-03T16:05:10.860984+00:00",
+        "ok": true,
+        "stage2_seconds": 13.48,
+        "writers_seconds": 167.99,
+        "total_seconds": 181.47,
+        "section_writer_seconds": {
+          "orient": 43.75,
+          "explain": 14.75,
+          "model": 21.86,
+          "apply": 33.65,
+          "check": 53.99
+        },
+        "failed_briefs": []
+      }
+    ],
+    "stage2_seconds": {
+      "values": [
+        28.3,
+        32.38,
+        13.48
+      ],
+      "median": 28.3,
+      "min": 13.48,
+      "max": 32.38
+    },
+    "writers_seconds": {
+      "values": [
+        162.77,
+        207.41,
+        167.99
+      ],
+      "median": 167.99,
+      "min": 162.77,
+      "max": 207.41
+    },
+    "total_seconds": {
+      "values": [
+        191.1,
+        239.8,
+        181.47
+      ],
+      "median": 191.1,
+      "min": 181.47,
+      "max": 239.8
+    },
+    "section_writer_seconds": {
+      "apply": {
+        "median": 43.68,
+        "min": 33.65,
+        "max": 55.29,
+        "n": 3,
+        "values": [
+          43.68,
+          55.29,
+          33.65
+        ]
+      },
+      "check": {
+        "median": 36.13,
+        "min": 33.34,
+        "max": 53.99,
+        "n": 3,
+        "values": [
+          36.13,
+          33.34,
+          53.99
+        ]
+      },
+      "explain": {
+        "median": 25.17,
+        "min": 14.75,
+        "max": 27.8,
+        "n": 3,
+        "values": [
+          25.17,
+          27.8,
+          14.75
+        ]
+      },
+      "model": {
+        "median": 31.69,
+        "min": 21.86,
+        "max": 63.63,
+        "n": 3,
+        "values": [
+          31.69,
+          63.63,
+          21.86
+        ]
+      },
+      "orient": {
+        "median": 27.35,
+        "min": 26.09,
+        "max": 43.75,
+        "n": 3,
+        "values": [
+          26.09,
+          27.35,
+          43.75
+        ]
+      }
+    }
+  },
+  "skip_expander": {
+    "n_ok": 3,
+    "n_failed": 0,
+    "runs": [
+      {
+        "arm": "skip_expander",
+        "run": 1,
+        "skip_expander": true,
+        "started_at": "2026-08-03T15:50:26.501372+00:00",
+        "ok": true,
+        "stage2_seconds": 0.0,
+        "writers_seconds": 211.89,
+        "total_seconds": 211.89,
+        "section_writer_seconds": {
+          "orient": 22.79,
+          "explain": 50.21,
+          "model": 47.49,
+          "apply": 49.36,
+          "check": 42.03
+        },
+        "failed_briefs": []
+      },
+      {
+        "arm": "skip_expander",
+        "run": 2,
+        "skip_expander": true,
+        "started_at": "2026-08-03T15:57:58.201323+00:00",
+        "ok": true,
+        "stage2_seconds": 0.0,
+        "writers_seconds": 432.65,
+        "total_seconds": 432.65,
+        "section_writer_seconds": {
+          "orient": 18.33,
+          "explain": 74.36,
+          "model": 280.93,
+          "apply": 40.63,
+          "check": 18.41
+        },
+        "failed_briefs": []
+      },
+      {
+        "arm": "skip_expander",
+        "run": 3,
+        "skip_expander": true,
+        "started_at": "2026-08-03T16:08:12.337370+00:00",
+        "ok": true,
+        "stage2_seconds": 0.0,
+        "writers_seconds": 169.91,
+        "total_seconds": 169.91,
+        "section_writer_seconds": {
+          "orient": 18.59,
+          "explain": 27.73,
+          "model": 38.86,
+          "apply": 59.85,
+          "check": 24.88
+        },
+        "failed_briefs": []
+      }
+    ],
+    "stage2_seconds": {
+      "values": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "writers_seconds": {
+      "values": [
+        211.89,
+        432.65,
+        169.91
+      ],
+      "median": 211.89,
+      "min": 169.91,
+      "max": 432.65
+    },
+    "total_seconds": {
+      "values": [
+        211.89,
+        432.65,
+        169.91
+      ],
+      "median": 211.89,
+      "min": 169.91,
+      "max": 432.65
+    },
+    "section_writer_seconds": {
+      "apply": {
+        "median": 49.36,
+        "min": 40.63,
+        "max": 59.85,
+        "n": 3,
+        "values": [
+          49.36,
+          40.63,
+          59.85
+        ]
+      },
+      "check": {
+        "median": 24.88,
+        "min": 18.41,
+        "max": 42.03,
+        "n": 3,
+        "values": [
+          42.03,
+          18.41,
+          24.88
+        ]
+      },
+      "explain": {
+        "median": 50.21,
+        "min": 27.73,
+        "max": 74.36,
+        "n": 3,
+        "values": [
+          50.21,
+          74.36,
+          27.73
+        ]
+      },
+      "model": {
+        "median": 47.49,
+        "min": 38.86,
+        "max": 280.93,
+        "n": 3,
+        "values": [
+          47.49,
+          280.93,
+          38.86
+        ]
+      },
+      "orient": {
+        "median": 18.59,
+        "min": 18.33,
+        "max": 22.79,
+        "n": 3,
+        "values": [
+          22.79,
+          18.33,
+          18.59
+        ]
+      }
+    }
+  },
+  "median_to_median_delta_total_seconds": 20.79,
+  "median_to_median_delta_stage2_seconds": -28.3,
+  "median_to_median_delta_writers_seconds": 43.9,
+  "reading_note": "delta = skip_median - with_median. Within ~15s -> (a) noise. Skip slower by more than each arm's own min-max spread -> (b) real. Skip median faster -> round-2 skip slowdown was outlier."
+}
