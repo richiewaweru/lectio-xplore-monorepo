@@ -168,7 +168,11 @@ async def test_run_stage2_retries_only_failed_section_and_preserves_long_content
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     plan = _plan()
-    long_content = "Preserve this complete downstream instruction. " * 30
+    # Stay under the 80-word intent cap while still preserving a substantial brief.
+    long_content = " ".join(
+        ["Preserve this complete downstream writer instruction."] * 12
+    )
+    assert len(long_content.split()) <= 80
     responses = [
         _brief("intro", "hook-hero", "Introduce the pizza anchor."),
         SectionBrief(section_id="practice", components=[]),
@@ -196,7 +200,7 @@ async def test_run_stage2_retries_only_failed_section_and_preserves_long_content
     assert mock_call_stage2.await_count == 3
     assert briefs[0].components[0].content_intent == "Introduce the pizza anchor."
     assert briefs[1].components[0].content_intent == long_content
-    assert len(briefs[1].components[0].content_intent) > 1_000
+    assert len(briefs[1].components[0].content_intent) > 200
     assert prior_brief_snapshots == [[], [], []]
 
 
