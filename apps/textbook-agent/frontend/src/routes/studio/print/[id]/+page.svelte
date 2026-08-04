@@ -19,7 +19,7 @@
 	import { extractLectioDocumentV2 } from '$lib/studio/document-version';
 	import { forceEagerImages, waitForPrintImages, type PrintImageWaitResult } from '$lib/studio/print-readiness';
 	import type { GenerationDocument } from '$lib/types';
-	import type { LectioDocument } from '@lectio/page';
+	import type { LectioDocument } from '@lectio/page/contract';
 
 	const generationId = $derived(page.params.id);
 	const token = $derived(page.url.searchParams.get('token'));

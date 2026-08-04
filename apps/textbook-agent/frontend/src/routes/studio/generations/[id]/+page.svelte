@@ -9,7 +9,7 @@
 	import V3BookletPackView from '$lib/components/studio/V3BookletPackView.svelte';
 	import LectioPageDocumentView from '$lib/components/studio/LectioPageDocumentView.svelte';
 	import type { BookletStatus, V3DraftPack, V3GenerationDetail } from '$lib/types/v3';
-	import type { LectioDocument } from '@lectio/page';
+	import type { LectioDocument } from '@lectio/page/contract';
 
 	const generationId = $derived(page.params.id ?? '');
 

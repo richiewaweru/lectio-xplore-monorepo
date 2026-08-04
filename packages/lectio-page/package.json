@@ -15,6 +15,15 @@
 			"svelte": "./dist/index.js",
 			"default": "./dist/index.js"
 		},
+		"./LectioDocumentView.svelte": {
+			"types": "./dist/render/LectioDocumentView.svelte.d.ts",
+			"svelte": "./dist/render/LectioDocumentView.svelte",
+			"default": "./dist/render/LectioDocumentView.svelte"
+		},
+		"./contract": {
+			"types": "./dist/contract/document.d.ts",
+			"default": "./dist/contract/document.js"
+		},
 		"./print/base-print.css": "./src/lib/print/base-print.css",
 		"./contracts/*": "./contracts/*"
 	},

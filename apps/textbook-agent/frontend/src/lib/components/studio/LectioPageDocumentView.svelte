@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { LectioDocumentView, type LectioDocument } from '@lectio/page';
+	import LectioDocumentView from '@lectio/page/LectioDocumentView.svelte';
+	import type { LectioDocument } from '@lectio/page/contract';
 	import '@lectio/page/print/base-print.css';
 
 	let {

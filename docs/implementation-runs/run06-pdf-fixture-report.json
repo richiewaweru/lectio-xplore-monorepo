@@ -1,0 +1,14 @@
+{
+  "teacher_pages": 6,
+  "student_pages": 5,
+  "teacher_files": [
+    "photosynthesis-ref-bg-on.pdf",
+    "photosynthesis-ref-bg-off.pdf"
+  ],
+  "student_files": [
+    "photosynthesis-ref-student.pdf"
+  ],
+  "bg_on_off_page_counts_equal": true,
+  "ten_objects_in_teacher_dom": true,
+  "answer_key_teacher_only": true
+}

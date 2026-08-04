@@ -1,4 +1,4 @@
-import type { LectioDocument } from '@lectio/page';
+import type { LectioDocument } from '@lectio/page/contract';
 
 /** Discriminate generation document payloads for v1 vs v2 renderers. */
 export function extractLectioDocumentV2(payload: unknown): LectioDocument | null {

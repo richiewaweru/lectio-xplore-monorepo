@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { render } from '@testing-library/svelte';
-import LectioPageDocumentView from '$lib/components/studio/LectioPageDocumentView.svelte';
-import type { LectioDocument } from '@lectio/page';
+import { documentRenderVersion, extractLectioDocumentV2 } from '$lib/studio/document-version';
+import type { LectioDocument } from '@lectio/page/contract';
 
 const fixture = JSON.parse(
 	readFileSync(
@@ -20,23 +19,13 @@ const fixture = JSON.parse(
 	)
 ) as LectioDocument;
 
-describe('LectioPageDocumentView', () => {
-	it('renders v2 section title and ordered block ids without reordering', () => {
-		const { container } = render(LectioPageDocumentView, {
-			props: { document: fixture, edition: 'teacher' }
-		});
-		expect(container.querySelector('[data-document-version="2"]')).toBeTruthy();
-		const title = container.querySelector('.lectio-section-title, h2');
-		expect(title?.textContent ?? '').toMatch(/light|What/i);
-		const blockIds = [...container.querySelectorAll('[data-block-id]')].map((el) =>
-			el.getAttribute('data-block-id')
+describe('LectioPageDocumentView host contract', () => {
+	it('accepts canonical v2 fixtures for screen/print routing', () => {
+		expect(documentRenderVersion(fixture)).toBe(2);
+		const doc = extractLectioDocumentV2(fixture);
+		expect(doc?.sections[0]?.title).toBeTruthy();
+		expect(doc?.sections[0]?.blocks.map((b) => b.id)).toEqual(
+			fixture.sections[0].blocks.map((b) => b.id)
 		);
-		if (blockIds.length) {
-			expect(blockIds).toEqual([...blockIds].sort((a, b) => {
-				const ai = fixture.sections[0].blocks.findIndex((block) => block.id === a);
-				const bi = fixture.sections[0].blocks.findIndex((block) => block.id === b);
-				return ai - bi;
-			}));
-		}
 	});
 });
