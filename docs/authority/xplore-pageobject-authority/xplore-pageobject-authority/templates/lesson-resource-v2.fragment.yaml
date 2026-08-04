@@ -1,0 +1,70 @@
+# Merge into backend/resources/specs/lesson.yaml.
+# Keep all legacy component fields until v1 creation is retired.
+# Do not add stance.
+
+version: "2.0"
+produces_answer_key: true
+
+vocabulary:
+  intents:
+    core:
+      - orient
+      - activate-prior-knowledge
+      - define
+      - explain
+      - explain-cause
+      - demonstrate
+      - practise-guided
+      - practise-independent
+      - check-understanding
+      - diagnose-misconception
+      - warn
+      - emphasise
+      - summarise
+      - connect-forward
+    optional:
+      - name-parts
+      - show-structure
+      - sequence
+      - compare
+      - classify
+      - trace-flow
+      - interpret
+      - derive
+      - apply
+      - connect-back
+      - memory-aid
+    excluded:
+      investigate: >
+        Inquiry design requires a practical/investigation resource and its own
+        evidence and page budget.
+      evaluate: >
+        Extended evaluation needs explicit criteria and evidence space outside
+        the first-exposure lesson slice.
+      transfer: >
+        Far transfer belongs after successful familiar application.
+      model-thinking: >
+        Deferred until decision-commentary generation can be evaluated reliably.
+      reflect: >
+        Reflection is not required at the close of every lesson.
+      state-goal: >
+        The objective is already represented by lesson/section structure; do not
+        spend a separate block repeating it.
+  objects:
+    allowed:
+      - prose
+      - list
+      - table
+      - figure
+      - worked-example
+      - questions
+      - aside
+      - choices
+      - heading
+      - answer-key
+    excluded: {}
+
+# Add to each v2-capable section entry. Values are section capacity, not a
+# quality quota. The exact bounds must follow the approved skeleton.
+# min_blocks: 1
+# max_blocks: 3

@@ -1,0 +1,414 @@
+> HISTORICAL INPUT — NOT IMPLEMENTATION AUTHORITY
+
+# Resource Spec: Worksheet
+# Version: 2.0
+# Pedagogical owner: Lectio
+# Last updated: 2026-08-04
+#
+# v2 CHANGES
+#   + vocabulary:            intents and objects this resource type permits
+#   + produces_answer_key
+#   + candidate_intents per section — a worksheet has NO skeleton, so this
+#     file is the only narrowing source. Contrast with lesson.yaml, where
+#     skeletons.yaml owns per-slot narrowing.
+#   + supports.worked_examples now uses ensures_block {intent, object}
+#   ~ component lists RETAINED for the v1 write path. Dead to v2.
+#
+# THE KEY v2 DECISION IN THIS FILE
+#   v1 banned the worked-example-card component globally except behind a
+#   support flag, on the reasoning that a worksheet must not re-teach.
+#
+#   v2 keeps the reasoning and moves the ban to where it belongs. The
+#   worked-example OBJECT is allowed. The demonstrate INTENT is excluded.
+#
+#       worked-example + demonstrate       -> re-teaching.  Excluded.
+#       worked-example + practise-guided   -> scaffolding.  Allowed.
+#
+#   Same form on the page. Different teaching job. Under v1 this needed two
+#   components; under v2 it is one object and two intents.
+
+id: worksheet
+label: Practice Worksheet
+version: "2.0"
+
+produces_answer_key: true
+
+# ── PEDAGOGICAL INTENT ──────────────────────────────────────────────────────
+
+intent: |
+  A worksheet is a practice resource. The teacher has already taught
+  the concept — students come to the worksheet knowing the idea and
+  needing to use it. The worksheet's job is deliberate application,
+  not instruction.
+
+  A worksheet that re-teaches is a worksheet that has failed its purpose.
+  The opening context should be a brief reminder, not a new explanation.
+  Students should be doing work within the first 30 seconds of picking it up.
+
+  Problems move from guided to independent — warm problems support the
+  student, cold problems push them. This progression is not optional.
+  A flat set of identical problems is not a worksheet — it is a drill.
+  Drills have their place, but that is the practice_set resource type.
+
+  The worksheet is print-first and classroom-ready. A student should be
+  able to work through it independently without asking the teacher
+  what to do.
+
+when_to_use:
+  - Consolidating a concept taught in the same lesson
+  - Homework following a lesson
+  - Classwork following a mini booklet or direct instruction
+  - Review of a recently taught concept
+
+never_use_when:
+  - Students have not yet encountered the concept — use a mini booklet instead
+  - The goal is formal assessment — use a quiz instead
+  - The session is very short and only a check is needed — use an exit ticket
+
+allowed_outcomes: [practice, review, assess, understand, compare, vocabulary]
+
+# ── VOCABULARY (v2) ─────────────────────────────────────────────────────────
+
+vocabulary:
+  intents:
+    core:
+      - practise-guided
+      - practise-independent
+      - apply
+      - warn
+
+    optional:
+      - connect-back
+      - memory-aid
+      - transfer
+
+    excluded:
+      demonstrate: >
+        A worksheet rehearses a method; it does not teach it. If students
+        need to see the method worked, they need the lesson, not this.
+      model-thinking: >
+        Expert reasoning belongs in the lesson. A worksheet that narrates
+        decisions is doing the student's thinking for them.
+      derive: >
+        Justification belongs in the lesson. A worksheet asks the student to
+        use the result, not to re-establish it.
+      explain: >
+        A worksheet that explains is a lesson with questions attached.
+      explain-cause: >
+        A worksheet that explains is a lesson with questions attached.
+      define: >
+        Definitions belong in the lesson or a revision sheet. A reminder of
+        one term is a memory-aid, not a definition.
+      orient: >
+        A worksheet follows teaching; it does not open it. The student
+        already has the context.
+      check-understanding: >
+        Measurement is the quiz's job. A worksheet is rehearsal — the
+        student may get things wrong without it counting.
+      diagnose-misconception: >
+        Diagnostic items are shared across the unit and live in the quiz,
+        so every learner group answers the same check.
+      summarise: >
+        A worksheet closes with the student's voice, not the teacher's.
+      emphasise: >
+        Marking a key idea is a teaching move. Here, use warn for a
+        procedural reminder instead.
+
+  objects:
+    allowed:
+      - heading
+      - prose
+      - list
+      - table
+      - figure
+      - questions
+      - choices
+      - worked-example
+    excluded:
+      aside: >
+        Margin notes are teaching scaffolding. A worksheet carries its
+        instructions in the reading line where a student working through
+        it will not miss them.
+      answer-key: >
+        The key is produced at document level, not as a section block.
+
+# NOTE ON `warn`
+#   v1 globally forbade the pitfall-alert component: "belongs in the teaching
+#   resource, not practice." That was right about the component — a bordered
+#   alert box is a teaching device — and wrong about the job.
+#
+#   `warn` + prose is a one-line procedural reminder: "convert both to the
+#   same unit before you compare." That is not teaching. It is the kind of
+#   thing a teacher says while walking between desks.
+#
+#   The aside object is excluded here, so warn resolves to prose. The box is
+#   gone; the reminder stays.
+
+# ── DEPTH CONFIGURATION ─────────────────────────────────────────────────────
+
+depth:
+  quick:
+    sections: "2-3"
+    min_sections: 2
+    max_sections: 3
+    time_minutes: "10-15"
+    questions: "3-5"
+    note: >
+      Quick worksheets skip the optional worked example.
+      Context is one sentence only. Practice is the entire resource.
+  standard:
+    sections: "3-5"
+    min_sections: 3
+    max_sections: 5
+    time_minutes: "20-30"
+    questions: "5-8"
+    note: >
+      Standard is the primary use case. Brief context, optional worked
+      example if supports include worked_examples, then graduated practice.
+  deep:
+    sections: "4-6"
+    min_sections: 4
+    max_sections: 6
+    time_minutes: "30-45"
+    questions: "8-12"
+    note: >
+      Deep worksheets may include a reflection or extension section.
+      They should not become mini booklets — no full explanations.
+
+# ── SECTION STRUCTURE ───────────────────────────────────────────────────────
+# A worksheet has no skeleton. candidate_intents here IS the per-section
+# narrowing, and it is authoritative.
+
+sections:
+  required:
+    - role: intro
+      intent: >
+        One short context-setting block. Reminds the student what
+        concept they are practising. Maximum 3 sentences.
+        Must NOT introduce new content. Must NOT explain the concept.
+        It is a signpost, not a lesson.
+        Think: "In this worksheet you will practise [concept].
+        Remember that [one key fact]."
+      candidate_intents: [connect-back, memory-aid, warn]
+      min_blocks: 1
+      max_blocks: 2
+      preferred_components:
+        - key-fact
+        - callout-block
+      allowed_components:
+        - insight-strip
+      forbidden_components:
+        - hook-hero
+        - explanation-block
+        - worked-example-card
+        - summary-block
+        - what-next-bridge
+
+    - role: practice
+      intent: >
+        The core of the worksheet. Graduated problems from warm to cold.
+
+        WARM problems (first 1-2): fully guided, may include sentence
+        starters, fill-in-blank, or partially completed work. Any student
+        should be able to attempt these immediately.
+
+        MEDIUM problems (middle): independent application. Standard
+        difficulty for this concept at this grade level. No sentence
+        starters but clear question. Hints allowed.
+
+        COLD problems (last 1-2): transfer or combination. Requires the
+        student to use the concept in a new context, apply it to a real
+        scenario, or combine it with a prior concept. No hints.
+
+        The practice section MUST contain at least one of each tier
+        at standard and deep depth.
+      candidate_intents: [practise-guided, practise-independent, apply, transfer, warn]
+      min_blocks: 2
+      max_blocks: 5
+      preferred_components:
+        - practice-stack
+        - short-answer
+      allowed_components:
+        - fill-in-blank
+        - student-textbox
+        - reflection-prompt
+      forbidden_components:
+        - hook-hero
+        - explanation-block
+        - definition-card
+        - summary-block
+        - what-next-bridge
+        - worked-example-card
+
+    - role: summary
+      intent: >
+        Close with one reflection or metacognitive prompt.
+        Not a summary of the concept — a prompt for the student to
+        reflect on their own understanding.
+        Examples: "Which problem felt hardest? Why?"
+        "Explain in one sentence how you solved problem 3."
+        This is formative self-assessment, not content review.
+      candidate_intents: [connect-back, apply]
+      min_blocks: 1
+      max_blocks: 1
+      preferred_components:
+        - reflection-prompt
+        - short-answer
+      allowed_components:
+        - fill-in-blank
+      forbidden_components:
+        - explanation-block
+        - hook-hero
+        - summary-block
+        - what-next-bridge
+
+  optional:
+    - role: process
+      intent: >
+        A scaffolded worked example. Only include when supports include
+        worked_examples. Shows a PARTIALLY completed example immediately
+        before practice — the student finishes it. Each shown step states
+        WHY, not just WHAT.
+
+        This is not a demonstration. The demonstrate intent is excluded
+        from this resource. A worked example here is practise-guided with
+        the working held open.
+
+        Maximum one. Placement: always immediately before practice.
+      candidate_intents: [practise-guided]
+      min_blocks: 1
+      max_blocks: 1
+      max_count: 1
+      placement: before_practice
+      only_when_support: worked_examples
+      preferred_components:
+        - worked-example-card
+        - process-steps
+      allowed_components:
+        - callout-block
+      forbidden_components:
+        - explanation-block
+        - practice-stack
+
+# ── LEGACY (v1 write path only) ─────────────────────────────────────────────
+
+forbidden_components:
+  - hook-hero
+  - explanation-block
+  - definition-card
+  - glossary-rail
+  - summary-block
+  - what-next-bridge
+  - diagram-block
+  - diagram-series
+  - diagram-compare
+  - simulation-block
+  - quiz-check
+  - timeline-block
+  - prerequisite-strip
+  - pitfall-alert
+
+# ── SUPPORTS MAPPING ────────────────────────────────────────────────────────
+
+supports:
+  worked_examples:
+    intent_note: >
+      This learner group needs the method held open while they work.
+      Prefer partially-completed examples over bare prompts. The student
+      finishes the working; the worksheet does not finish it for them.
+    ensures_block:
+      intent: practise-guided
+      object: worked-example
+    preferred_objects: [worked-example]
+    # v1
+    adds_section:
+      role: process
+      placement: before_practice
+      preferred_components: [worked-example-card, process-steps]
+
+  step_by_step:
+    modifies_role: practice
+    intent_note: >
+      The first practice block shows the first step already taken, and the
+      student continues from step 2. Use the worked-example object with
+      practise-guided; do not narrate the whole method.
+    preferred_objects: [worked-example]
+    # v1
+    adds_component:
+      to_role: intro
+      component: callout-block
+
+  challenge_questions:
+    modifies_role: practice
+    intent_note: >
+      Ensure the final block uses the transfer intent: a genuinely new
+      context requiring the student to recognise the underlying structure.
+      No hints, no sentence starters. Label it as an extension.
+    preferred_objects: [questions]
+
+  simpler_reading:
+    modifies_all_sections:
+      note: >
+        Use simple sentence structure throughout. Maximum 12 words per
+        sentence in problem stems. Use active voice. Avoid embedded
+        clauses in question text. If the problem requires reading a
+        scenario, keep the scenario to 2 sentences maximum.
+
+  discussion_questions:
+    modifies_role: summary
+    intent_note: >
+      Frame the closing block as a discussion opener the teacher can use
+      after worksheets are collected: "Be ready to share: ..."
+
+  visuals:
+    note: >
+      Standalone figures are not standard in worksheets. A visual required
+      to answer a problem belongs inside the questions block, not as a
+      separate figure.
+
+# ── VISUAL POLICY ───────────────────────────────────────────────────────────
+
+visuals:
+  quick: 0
+  standard: 0
+  deep: 0
+  allow_diagrams: false
+  allow_images: false
+  note: >
+    Worksheets do not use standalone figure blocks. Any visual required for
+    a practice problem is embedded in the questions block itself.
+    The figure object is allowed in vocabulary so a labelled-diagram task
+    can be authored, but the budget is zero — a figure requires an explicit
+    teacher request.
+
+# ── TEXT POLICY ─────────────────────────────────────────────────────────────
+
+text:
+  density: low
+  max_reading_load: moderate
+  note: >
+    Students should be spending most of their time writing, not reading.
+    If a student spends more than 30% of their time reading the worksheet
+    rather than answering it, the worksheet has too much text.
+
+# ── VALIDATION RULES ────────────────────────────────────────────────────────
+
+validation:
+  # v2 — expressed in intents and objects
+  - "Must contain at least one block with intent practise-guided or practise-independent"
+  - "Must not contain any block with intent demonstrate, explain, explain-cause, define, or derive"
+  - "Must not contain the aside object in any section"
+  - "The practice section must appear before the summary section"
+  - "If the process section is present, it must appear immediately before practice"
+  - "The process section must use intent practise-guided, never demonstrate"
+  - "If depth=quick, the optional process section must not be included"
+  - "If supported=worked_examples, the process section must be present"
+  - "No block may use the heading object; headings come from section.title"
+
+  # v1 — legacy write path only, deleted with v1
+  - "Must contain practice-stack or short-answer in the practice section"
+  - "Must not contain explanation-block in any section"
+  - "Must not contain hook-hero in any section"
+  - "Must not contain summary-block — use reflection-prompt instead"
+  - "worked-example-card must not appear in the same section as practice-stack"
+  - "Must not contain diagram-block, diagram-series, or simulation-block"

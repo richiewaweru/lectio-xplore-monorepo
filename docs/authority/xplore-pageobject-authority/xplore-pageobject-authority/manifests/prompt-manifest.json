@@ -1,0 +1,58 @@
+{
+  "version": "1.0",
+  "production_selection_strategy": "section-level-block-planner",
+  "prompts": [
+    {
+      "id": "path-structural-planner-page-v1",
+      "file": "prompts/path-structural-planner-page-v1.txt",
+      "output": "path structural metadata without components/blocks"
+    },
+    {
+      "id": "section-block-planner-v1",
+      "file": "prompts/section-block-planner-v1.txt",
+      "output": "ordered planned blocks"
+    },
+    {
+      "id": "page-writer-common-v1",
+      "file": "prompts/page-writer-common-v1.txt",
+      "output": "composed common rules"
+    },
+    {
+      "id": "prose-writer-v1",
+      "file": "prompts/prose-writer-v1.txt",
+      "output": "ProseContent"
+    },
+    {
+      "id": "list-writer-v1",
+      "file": "prompts/list-writer-v1.txt",
+      "output": "ListContent"
+    },
+    {
+      "id": "table-writer-v1",
+      "file": "prompts/table-writer-v1.txt",
+      "output": "TableContent"
+    },
+    {
+      "id": "worked-example-writer-v1",
+      "file": "prompts/worked-example-writer-v1.txt",
+      "output": "WorkedExampleContent"
+    },
+    {
+      "id": "figure-brief-writer-v1",
+      "file": "prompts/figure-brief-writer-v1.txt",
+      "output": "FigureContent plus execution metadata"
+    },
+    {
+      "id": "document-qc-v1",
+      "file": "prompts/document-qc-v1.txt",
+      "output": "evidence-based QC findings",
+      "optional": true
+    }
+  ],
+  "no_prompt": [
+    {
+      "object": "questions",
+      "reason": "assembled from item generation behind the wall"
+    }
+  ]
+}

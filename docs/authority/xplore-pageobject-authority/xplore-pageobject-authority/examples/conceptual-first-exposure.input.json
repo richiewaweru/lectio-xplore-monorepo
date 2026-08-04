@@ -1,0 +1,54 @@
+{
+  "resource": {
+    "id": "lesson",
+    "label": "Lesson",
+    "purpose": "Teach one approved capability through a coherent first-exposure arc."
+  },
+  "lesson_mode": "first_exposure",
+  "subject": "Science",
+  "grade_level": "Grade 7",
+  "objective": "Explain why a green plant cannot make food in darkness.",
+  "knowledge_type": "conceptual",
+  "prior_established": [
+    "Plants are living things",
+    "Leaves are parts of plants"
+  ],
+  "must_establish": [
+    "Light is required for photosynthesis"
+  ],
+  "must_not_introduce": [
+    "cellular respiration equations"
+  ],
+  "terminology": [
+    "make food",
+    "light",
+    "leaf"
+  ],
+  "concept_card": {
+    "id": "photosynthesis.light-requirement",
+    "title": "Light is required to make food",
+    "objective": "Explain why a green plant cannot make food in darkness.",
+    "prereqs": [
+      "plants.have.leaves"
+    ],
+    "misconceptions": [
+      {
+        "id": "M1",
+        "description": "Plants take ready-made food from soil",
+        "source": "drafted"
+      }
+    ],
+    "no_known_misconceptions": false
+  },
+  "anchor": {
+    "description": "Two similar leaves kept in the same soil, one exposed to light and one covered"
+  },
+  "section": {
+    "id": "build",
+    "title": "What light changes",
+    "purpose": "Use the anchor evidence to establish that light, rather than soil, is the changed condition.",
+    "min_blocks": 1,
+    "max_blocks": 3
+  },
+  "available_question_ids": []
+}

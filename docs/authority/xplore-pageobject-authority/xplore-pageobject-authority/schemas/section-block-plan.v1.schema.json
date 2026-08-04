@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xplore.local/contracts/section-block-plan.v1.schema.json",
+  "title": "SectionBlockPlanV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "blocks",
+    "slot_concern"
+  ],
+  "properties": {
+    "blocks": {
+      "type": "array",
+      "items": {
+        "$ref": "planned-block.v1.schema.json"
+      }
+    },
+    "slot_concern": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "slot_concern": {
+            "type": "string"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "blocks": {
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ]
+}

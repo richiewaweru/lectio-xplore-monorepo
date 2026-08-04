@@ -1,0 +1,348 @@
+> HISTORICAL INPUT — NOT IMPLEMENTATION AUTHORITY
+
+# Resource Spec: Lesson
+# Version: 2.0
+# Pedagogical owner: Lectio
+# Last updated: 2026-08-04
+#
+# v2 CHANGES
+#   + vocabulary:            intents and objects this resource type permits
+#   + produces_answer_key
+#   ~ component lists RETAINED for the v1 write path. They are dead to v2 and
+#     are deleted when v1 is retired. Do not add to them.
+#
+# NARROWING FOR THIS RESOURCE
+#   A lesson is skeleton-driven. Per-slot narrowing comes from
+#   skeletons.yaml `candidate_intents`, not from this file, because this
+#   file's section roles (orient/build/model/practice/close) are a coarser
+#   arc than the skeleton's 13 slots.
+#
+#   This file therefore contributes the OUTER filter only:
+#       spec.vocabulary.intents  ∩  slot.candidate_intents  =  what the
+#                                                              selector sees
+#
+#   Do NOT add `candidate_intents` to the sections below. Two sources of
+#   truth for the same decision is the failure this rewrite exists to remove.
+
+id: lesson
+label: Lesson
+version: "2.0"
+
+produces_answer_key: true
+
+intent: |
+  A lesson is the default full teaching resource. It introduces a concept,
+  builds understanding, models the method, gives students guided-to-independent
+  practice, and closes with a retention check.
+
+  A lesson teaches before it asks students to perform independently. It is not
+  a worksheet, not a quick reference, and not a quiz. The teacher should be
+  able to use it as the main classroom arc for first contact with a concept.
+
+  The pedagogical arc is: orient -> build -> model -> practice -> close.
+  Every section must serve that arc. The planner must not skip the modelling
+  step, and it must not turn the close into a second teaching section.
+
+when_to_use:
+  - First exposure to a new concept
+  - A full classroom lesson with explicit teaching and practice
+  - When the teacher wants one coherent teaching arc from hook to check
+  - When learners need explanation before independent work
+
+never_use_when:
+  - The teacher only wants practice questions - use a worksheet or practice set
+  - The teacher only wants a fast definition or reminder - use a quick explainer
+  - The session is primarily assessment - use a quiz or exit ticket
+  - Students already know the concept and only need repetition
+
+allowed_outcomes: [teach_new_concept, develop_understanding, first_exposure_to_practice]
+
+# ── VOCABULARY (v2) ─────────────────────────────────────────────────────────
+# The teaching moves a lesson is permitted to make, and the forms it may take.
+# This is teacher-visible: it is the answer to "what is a lesson?"
+#
+# core      expected. A lesson that uses none of these is suspect.
+# optional  available when the concept calls for it.
+# excluded  deliberately withheld, with the reason. The reason is shown to
+#           the teacher and passed to the selector for information only.
+
+vocabulary:
+  intents:
+    core:
+      - orient
+      - activate-prior-knowledge
+      - define
+      - explain
+      - explain-cause
+      - demonstrate
+      - practise-guided
+      - practise-independent
+      - check-understanding
+      - diagnose-misconception
+      - warn
+      - emphasise
+      - summarise
+      - connect-forward
+
+    optional:
+      - name-parts
+      - show-structure
+      - sequence
+      - compare
+      - classify
+      - trace-flow
+      - interpret
+      - derive
+      - apply
+      - connect-back
+      - memory-aid
+
+    excluded:
+      investigate: >
+        A lesson is not a practical. Designing an inquiry needs its own
+        resource and its own page budget.
+      evaluate: >
+        Judging a claim against criteria is higher-order work that needs
+        more space than a lesson close allows.
+      transfer: >
+        Far transfer belongs in a consolidation lesson, after the idea has
+        been used successfully in a familiar context at least once.
+      model-thinking: >
+        Reserved until the model-thinking prompt is proven. Expert decision
+        commentary is easy to fake and hard to check.
+      reflect: >
+        Reflection belongs at the close of a unit, not at the close of every
+        lesson. Repeated weekly it becomes a ritual, not a prompt.
+      state-goal: >
+        The objective already appears in the section header. Restating it as
+        a block is duplication the reader learns to skip.
+
+  objects:
+    allowed:
+      - heading
+      - prose
+      - list
+      - table
+      - figure
+      - aside
+      - worked-example
+      - questions
+      - choices
+      - answer-key
+    excluded: {}
+
+# ── DEPTH CONFIGURATION ─────────────────────────────────────────────────────
+
+depth:
+  quick:
+    sections: "4"
+    min_sections: 4
+    max_sections: 4
+    time_minutes: "15-20"
+    questions: "3-4"
+    note: >
+      Keep the full teaching arc, but compress build and model to one tight
+      example and keep the close brief.
+  standard:
+    sections: "5"
+    min_sections: 5
+    max_sections: 5
+    time_minutes: "30-40"
+    questions: "4-6"
+    note: >
+      This is the default lesson shape: orient, build, model, practice, close.
+  deep:
+    sections: "5-6"
+    min_sections: 5
+    max_sections: 6
+    time_minutes: "45-60"
+    questions: "6-8"
+    note: >
+      Deep lessons may expand the build or practice work, or add one optional
+      section when the concept genuinely needs it.
+
+# ── SECTION STRUCTURE ───────────────────────────────────────────────────────
+# The `intent` prose below still guides the structural planner. The component
+# lists are v1-only and are read by the legacy write path.
+#
+# min_blocks / max_blocks apply to v2 and bound how much one section may hold.
+
+sections:
+  required:
+    - role: orient
+      intent: >
+        Open the lesson and create felt need. Activate prior knowledge, set the
+        context, and introduce the anchor example without fully teaching the
+        concept yet.
+      min_blocks: 1
+      max_blocks: 3
+      preferred_components:
+        - section-header
+        - hook-hero
+        - prerequisite-strip
+      allowed_components:
+        - explanation-block
+        - callout-block
+        - what-next-bridge
+        - section-divider
+        - diagram-block
+      forbidden_components:
+        - practice-stack
+        - quiz-check
+        - short-answer
+        - fill-in-blank
+
+    - role: build
+      intent: >
+        Make the concept precise. Define vocabulary, state key facts, and name
+        the central principle the lesson depends on.
+      min_blocks: 1
+      max_blocks: 4
+      preferred_components:
+        - definition-card
+        - key-fact
+        - explanation-block
+      allowed_components:
+        - definition-family
+        - glossary-rail
+        - insight-strip
+        - comparison-grid
+        - callout-block
+        - diagram-block
+        - diagram-compare
+      forbidden_components:
+        - practice-stack
+        - quiz-check
+
+    - role: model
+      intent: >
+        Demonstrate the method on the anchor. Show the reasoning step by step
+        before any independent work, and surface the main pitfall while the
+        teacher is still guiding.
+      min_blocks: 1
+      max_blocks: 3
+      preferred_components:
+        - worked-example-card
+        - process-steps
+      allowed_components:
+        - pitfall-alert
+        - key-fact
+        - callout-block
+        - diagram-block
+        - diagram-series
+      forbidden_components: []
+
+    - role: practice
+      intent: >
+        Move into independent application with a warm-to-cold progression that
+        fits the inferred lesson mode and the lesson depth.
+      min_blocks: 1
+      max_blocks: 3
+      preferred_components:
+        - practice-stack
+        - reflection-prompt
+      allowed_components:
+        - quiz-check
+        - student-textbox
+        - short-answer
+        - fill-in-blank
+        - pitfall-alert
+        - diagram-block
+      forbidden_components: []
+
+    - role: close
+      intent: >
+        Consolidate the lesson, check retention, and bridge to what the concept
+        enables next. Do not reteach the build section here.
+      min_blocks: 1
+      max_blocks: 3
+      preferred_components:
+        - summary-block
+        - quiz-check
+        - what-next-bridge
+      allowed_components:
+        - key-fact
+        - reflection-prompt
+        - callout-block
+      forbidden_components:
+        - worked-example-card
+
+  optional:
+    - role: build
+      intent: >
+        An optional second build section is only justified when the concept has
+        two distinct knowledge pieces that would overload a single section.
+      min_blocks: 1
+      max_blocks: 3
+      max_count: 1
+      preferred_components:
+        - comparison-grid
+        - definition-card
+        - explanation-block
+      allowed_components:
+        - key-fact
+        - insight-strip
+        - diagram-block
+
+    - role: practice
+      intent: >
+        An optional extension practice section for deep lessons. Use only when
+        students need a genuine second wave of application.
+      min_blocks: 1
+      max_blocks: 3
+      max_count: 1
+      preferred_components:
+        - practice-stack
+        - reflection-prompt
+      allowed_components:
+        - short-answer
+        - student-textbox
+        - diagram-block
+
+# ── LEGACY (v1 write path only) ─────────────────────────────────────────────
+
+forbidden_components: []
+
+supports: {}
+
+# ── VISUAL POLICY ───────────────────────────────────────────────────────────
+# In v2 this is a figure budget. It is a resource-consumption limit, not a
+# pedagogical rule, which is why it lives here and not in the intent catalogue.
+
+visuals:
+  quick: 1
+  standard: 1
+  deep: 2
+  allow_diagrams: true
+  allow_images: true
+  note: >
+    Visuals should support conceptual understanding, especially in orient and
+    model. They are not decorative and should not displace the teaching arc.
+
+# ── TEXT POLICY ─────────────────────────────────────────────────────────────
+
+text:
+  density: medium
+  max_reading_load: moderate
+  note: >
+    Keep teacher-facing clarity without turning the lesson into lecture notes.
+    Explanation should be purposeful, direct, and matched to reading level and
+    language support.
+
+# ── VALIDATION RULES ────────────────────────────────────────────────────────
+
+validation:
+  # v2 — expressed in intents and objects
+  - "Must contain at least one block with intent practise-guided or practise-independent"
+  - "Must contain at least one block with intent demonstrate, derive, or sequence"
+  - "Must contain at least one block with intent check-understanding or diagnose-misconception"
+  - "The close section must not contain intent demonstrate"
+  - "No block may use the heading object; headings come from section.title"
+  - "At most two sections may contain a figure object"
+
+  # v1 — legacy write path only, deleted with v1
+  - "Must contain at least one practice-stack, short-answer, or fill-in-blank"
+  - "Must contain a worked-example-card or process-steps in the model section"
+  - "Must contain summary-block, quiz-check, or what-next-bridge in the close section"
+  - "Must not use worked-example-card in the close section"
+  - "At most two sections may require visuals"

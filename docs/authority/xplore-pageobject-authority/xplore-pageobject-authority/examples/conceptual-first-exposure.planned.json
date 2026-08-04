@@ -1,0 +1,27 @@
+{
+  "blocks": [
+    {
+      "id": "build-b1-prose",
+      "position": 0,
+      "intent": "explain-cause",
+      "object": "prose",
+      "evidence": "The objective asks why food-making fails in darkness, so the missing condition must be linked causally to the outcome.",
+      "brief": "Use the two-leaf anchor: both leaves have the same plant and soil, but only the lit leaf can make food. State that light supplies the required condition and that soil cannot explain the difference.",
+      "role": "mechanism",
+      "placement": "main",
+      "source_question_ids": []
+    },
+    {
+      "id": "build-b2-table",
+      "position": 1,
+      "intent": "compare",
+      "object": "table",
+      "evidence": "The anchor contains two legitimate experimental cases that differ on one condition and need inspection across the same dimensions.",
+      "brief": "Compare lit and covered leaves across light received, same soil, and whether food can be made; make the controlled similarity visible without treating the misconception as a valid alternative.",
+      "role": "evidence-comparison",
+      "placement": "main",
+      "source_question_ids": []
+    }
+  ],
+  "slot_concern": null
+}

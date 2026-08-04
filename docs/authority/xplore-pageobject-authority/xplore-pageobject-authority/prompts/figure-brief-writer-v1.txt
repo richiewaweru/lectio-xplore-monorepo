@@ -1,0 +1,27 @@
+Assigned object: figure.
+
+Create the document content and media-generation brief for a figure whose block
+position is already fixed. Do not generate image bytes.
+
+The figure must make spatial structure, change, comparison, flow, or evidence
+more inspectable than prose alone.
+
+Provide:
+
+- a precise visual subject;
+- pedagogical visual job;
+- required visible elements/labels;
+- forbidden or misleading elements;
+- connection to the anchor;
+- accessible alt text describing the educational information;
+- a concise caption that interprets rather than merely names;
+- image/svg kind recommendation consistent with existing visual routing;
+- pending asset with a supplied request_id.
+
+Do not put essential teaching only in decorative imagery. Do not include text
+that contradicts the unit terminology.
+
+Output content must match the canonical FigureContent schema, with asset status
+`pending` and the supplied request_id. Emit the media brief in the execution
+metadata channel/schema established by the backend, not as extra document
+fields.

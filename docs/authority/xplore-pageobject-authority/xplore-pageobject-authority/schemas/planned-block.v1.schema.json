@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xplore.local/contracts/planned-block.v1.schema.json",
+  "title": "PlannedBlockV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "position",
+    "intent",
+    "object",
+    "evidence",
+    "brief",
+    "placement",
+    "source_question_ids"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "position": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "intent": {
+      "type": "string",
+      "minLength": 1
+    },
+    "object": {
+      "enum": [
+        "prose",
+        "list",
+        "table",
+        "figure",
+        "worked-example",
+        "questions",
+        "aside",
+        "choices",
+        "heading",
+        "answer-key"
+      ]
+    },
+    "evidence": {
+      "type": "string",
+      "minLength": 1
+    },
+    "brief": {
+      "type": "string",
+      "minLength": 1
+    },
+    "role": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "placement": {
+      "enum": [
+        "main",
+        "margin",
+        "spanning"
+      ]
+    },
+    "source_question_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

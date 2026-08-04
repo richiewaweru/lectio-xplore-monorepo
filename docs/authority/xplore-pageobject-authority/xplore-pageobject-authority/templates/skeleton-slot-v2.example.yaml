@@ -1,0 +1,27 @@
+# Example shape only. Apply candidate_intents to the actual conceptual
+# first-exposure slots found in backend/resources/skeletons.yaml.
+# Retain allowed_components for the legacy route.
+
+slots:
+  build-mechanism:
+    purpose: >
+      Establish the causal mechanism needed by the approved objective.
+    candidate_intents:
+      core:
+        - explain-cause
+      optional:
+        - explain
+        - trace-flow
+        - compare
+        - show-structure
+    min_blocks: 1
+    max_blocks: 3
+    allowed_components: []  # retain the existing real list; do not replace with this empty example
+
+# Rules:
+# - candidate_intents describes what this moment may need.
+# - resource vocabulary describes what a lesson may contain.
+# - resolver intersects them.
+# - do not duplicate the full resource vocabulary in each slot.
+# - do not add page objects to the skeleton; objects are resolved from the
+#   intent catalogue and resource object allowlist.

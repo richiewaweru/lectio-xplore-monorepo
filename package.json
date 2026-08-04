@@ -1,0 +1,13 @@
+﻿{
+  "name": "lectio-xplore-monorepo",
+  "private": true,
+  "scripts": {
+    "page:test": "pnpm --filter @lectio/page test",
+    "page:check": "pnpm --filter @lectio/page check",
+    "page:pdf": "pnpm --filter @lectio/page pdf:fixture",
+    "app:check": "pnpm --dir apps/textbook-agent/frontend check",
+    "app:test": "pnpm --dir apps/textbook-agent/frontend test",
+    "contracts:sync": "python apps/textbook-agent/tools/update_lectio_page_contracts.py",
+    "verify:phase": "powershell -ExecutionPolicy Bypass -File scripts/verify-phase.ps1"
+  }
+}

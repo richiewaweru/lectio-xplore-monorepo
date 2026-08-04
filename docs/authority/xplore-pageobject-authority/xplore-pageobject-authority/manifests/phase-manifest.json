@@ -1,0 +1,103 @@
+{
+  "version": "1.0",
+  "authority": "AUTHORITY.md",
+  "phases": [
+    {
+      "id": 0,
+      "name": "preflight-monorepo",
+      "depends_on": [],
+      "gate": "baseline-map-and-tests",
+      "cursor_run": "cursor-runs/RUN_00_PREFLIGHT_AND_MONOREPO.md"
+    },
+    {
+      "id": 1,
+      "name": "contracts-headings",
+      "depends_on": [
+        0
+      ],
+      "gate": "contract-drift-and-pdf",
+      "cursor_run": "cursor-runs/RUN_01_CONTRACTS_AND_HEADINGS.md"
+    },
+    {
+      "id": 2,
+      "name": "planning-contracts-candidates",
+      "depends_on": [
+        1
+      ],
+      "gate": "legacy-parse-and-candidate-coverage",
+      "cursor_run": "cursor-runs/RUN_02_PLANNING_CONTRACTS_AND_CANDIDATES.md"
+    },
+    {
+      "id": 3,
+      "name": "section-block-planner",
+      "depends_on": [
+        2
+      ],
+      "gate": "complete-compatible-block-plan",
+      "cursor_run": "cursor-runs/RUN_03_SECTION_BLOCK_PLANNER.md"
+    },
+    {
+      "id": 4,
+      "name": "object-writers",
+      "depends_on": [
+        3
+      ],
+      "gate": "typed-first-slice-content",
+      "cursor_run": "cursor-runs/RUN_04_OBJECT_WRITERS.md"
+    },
+    {
+      "id": 5,
+      "name": "document-persistence",
+      "depends_on": [
+        4
+      ],
+      "gate": "persist-reload-equality",
+      "cursor_run": "cursor-runs/RUN_05_DOCUMENT_ASSEMBLY_AND_PERSISTENCE.md"
+    },
+    {
+      "id": 6,
+      "name": "frontend-pdf",
+      "depends_on": [
+        5
+      ],
+      "gate": "application-a4-pdf",
+      "cursor_run": "cursor-runs/RUN_06_FRONTEND_RENDER_AND_PDF.md"
+    },
+    {
+      "id": 7,
+      "name": "questions-visuals",
+      "depends_on": [
+        6
+      ],
+      "gate": "wall-and-stable-media",
+      "cursor_run": "cursor-runs/RUN_07_QUESTIONS_AND_VISUALS.md"
+    },
+    {
+      "id": 8,
+      "name": "projections-qc-events",
+      "depends_on": [
+        7
+      ],
+      "gate": "no-wide-v2-projections",
+      "cursor_run": "cursor-runs/RUN_08_PROJECTIONS_QC_EVENTS.md"
+    },
+    {
+      "id": 9,
+      "name": "cutover-cleanup",
+      "depends_on": [
+        8
+      ],
+      "gate": "default-v2-with-rollback",
+      "cursor_run": "cursor-runs/RUN_09_CUTOVER_AND_CLEANUP.md"
+    },
+    {
+      "id": 10,
+      "name": "verification-handoff",
+      "depends_on": [
+        9
+      ],
+      "gate": "reproducible-evidence-pack",
+      "cursor_run": "cursor-runs/RUN_10_FINAL_VERIFICATION.md"
+    }
+  ]
+}

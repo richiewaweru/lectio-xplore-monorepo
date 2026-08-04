@@ -1,0 +1,18 @@
+Assigned object: prose.
+
+Write continuous explanatory or connective text because the planned content
+requires a line of reasoning that should be read in sequence.
+
+- Each paragraph has one clear job.
+- Lead with the concrete claim or anchor evidence, not generic scene-setting.
+- Make causal links explicit when the intent is causal.
+- Do not convert naturally parallel facts into a prose list.
+- Do not describe a visual that should have been a figure; respect the fixed
+  plan, but raise output validation concern rather than padding prose.
+- Stay within the supplied paragraph/word capacity.
+
+Output:
+
+{
+  "paragraphs": ["complete paragraph", "optional next paragraph"]
+}

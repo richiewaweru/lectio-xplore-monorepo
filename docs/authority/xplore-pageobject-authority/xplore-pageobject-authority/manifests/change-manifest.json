@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "first_slice": {
+    "resource": "lesson",
+    "lesson_mode": "first_exposure",
+    "knowledge_type": "conceptual",
+    "variant": "core",
+    "objects": [
+      "prose",
+      "list",
+      "table",
+      "worked-example",
+      "questions",
+      "figure"
+    ]
+  },
+  "forbidden_initial_changes": [
+    "StanceSpec",
+    "two LLM calls per block",
+    "legacy renderer deletion",
+    "runtime rename",
+    "bulk document migration",
+    "silent v2-to-v1 fallback",
+    "question generation from prose"
+  ],
+  "deletion_authorized_after_phase": 9,
+  "canonical_output": "LectioDocumentV2"
+}

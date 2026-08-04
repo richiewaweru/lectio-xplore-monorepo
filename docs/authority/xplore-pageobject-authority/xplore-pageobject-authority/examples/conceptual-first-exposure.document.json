@@ -1,0 +1,89 @@
+{
+  "document_version": 2,
+  "contract_version": "2.0.0-example",
+  "id": "lesson-photosynthesis-light",
+  "title": "Why Plants Need Light to Make Food",
+  "language": "en",
+  "subject": "Science",
+  "audience": {
+    "grade_level": "Grade 7"
+  },
+  "metadata": {
+    "catalogue_version": "1.1.0",
+    "resource_type": "lesson"
+  },
+  "sections": [
+    {
+      "id": "build",
+      "title": "What light changes",
+      "blocks": [
+        {
+          "id": "build-b1-prose",
+          "object": "prose",
+          "intent": "explain-cause",
+          "position": 0,
+          "content": {
+            "paragraphs": [
+              "Both leaves belong to similar plants and remain in the same soil. The important difference is light: the exposed leaf receives it, while the covered leaf does not. Because only the lit leaf has the condition needed to make food, soil cannot explain the different outcomes."
+            ]
+          },
+          "role": "mechanism",
+          "layout": {
+            "placement": "main"
+          }
+        },
+        {
+          "id": "build-b2-table",
+          "object": "table",
+          "intent": "compare",
+          "position": 1,
+          "content": {
+            "columns": [
+              {
+                "id": "condition",
+                "label": "Condition"
+              },
+              {
+                "id": "lit",
+                "label": "Leaf in light"
+              },
+              {
+                "id": "covered",
+                "label": "Covered leaf"
+              }
+            ],
+            "rows": [
+              {
+                "cells": {
+                  "condition": "Receives light",
+                  "lit": "Yes",
+                  "covered": "No"
+                }
+              },
+              {
+                "cells": {
+                  "condition": "Grows in soil",
+                  "lit": "Yes",
+                  "covered": "Yes"
+                }
+              },
+              {
+                "cells": {
+                  "condition": "Can make food",
+                  "lit": "Yes",
+                  "covered": "No"
+                }
+              }
+            ],
+            "caption": "The leaves share soil, but only the one receiving light can make food.",
+            "presentation": "comparison"
+          },
+          "role": "evidence-comparison",
+          "layout": {
+            "placement": "main"
+          }
+        }
+      ]
+    }
+  ]
+}
