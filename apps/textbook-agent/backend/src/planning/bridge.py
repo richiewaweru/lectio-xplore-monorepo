@@ -144,6 +144,7 @@ def _build_structural_plan(
     prior_knowledge: list[str],
     slots: list[str],
     selected_components: dict[str, list[str]],
+    page_block_plans: dict[str, Any] | None = None,
 ) -> StructuralPlan:
     if generated.deviation_request is not None:
         raise PathPreparationBlocked("A skeleton deviation requires teacher approval")
@@ -199,6 +200,12 @@ def _build_structural_plan(
     if any(section.id != role for section, role in zip(sections, slots, strict=True)):
         raise PathPreparationBlocked("Prepared section IDs must equal their fixed slot IDs")
     for section in sections:
+        if page_block_plans is not None:
+            plan_for_slot = page_block_plans.get(section.role)
+            if plan_for_slot is not None:
+                section.components = []
+                section.blocks = list(plan_for_slot.blocks)
+            continue
         actual = [component.slug for component in section.components]
         if actual != selected_components[section.role]:
             raise PathPreparationBlocked(
@@ -207,6 +214,7 @@ def _build_structural_plan(
 
     check = next(section for section in sections if section.role == "check")
     plan = StructuralPlan(
+        document_contract_version=2 if page_block_plans is not None else 1,
         lesson_mode=lesson_mode,
         lesson_intent=LessonIntent(
             goal=lesson.objective,
@@ -433,30 +441,48 @@ async def prepare_path_lesson(
         for slot in variant.slots
     }
     slots_by_id.update({slot.slot_id: slot for slot in preview.variants[0].slots})
+    from core.config import settings
+    from planning.page_blocks import (
+        page_document_scope_matches,
+        plan_conceptual_first_exposure_blocks,
+    )
+
+    use_page_docs = settings.xplore_page_documents_enabled and page_document_scope_matches(
+        knowledge_type=lesson.primary_knowledge_type,
+        lesson_mode=request.lesson_mode,
+        scope=settings.xplore_page_document_scope,
+    )
     component_selections: dict[str, ComponentSelection] = {}
-    for slot in slots_by_id.values():
-        registry_cards = [
-            card
-            for component_id in slot.allowed_components
-            if (card := get_component_card(component_id)) is not None
-        ]
-        selection = await component_selector(
-            {
-                "concept_id": lesson.concept_id,
-                "objective": lesson.objective,
-                "primary_knowledge_type": lesson.primary_knowledge_type,
-                "slot": slot.model_dump(mode="json"),
-                "component_registry_cards": registry_cards,
-                "component_budget": min(4, len(slot.allowed_components)),
-                "max_per_section": 4,
-            }
+    page_block_plans = None
+    if use_page_docs:
+        # Native v2 path: plan ordered page blocks; never call component selector.
+        page_block_plans = await plan_conceptual_first_exposure_blocks(
+            allow_paid=settings.allow_paid_llm_tests,
         )
-        selected_slugs = [component.slug for component in selection.components]
-        if not selected_slugs or not set(selected_slugs).issubset(set(slot.allowed_components)):
-            raise PathPreparationBlocked(
-                f"Component selector returned an invalid selection for slot {slot.slot_id!r}"
+    else:
+        for slot in slots_by_id.values():
+            registry_cards = [
+                card
+                for component_id in slot.allowed_components
+                if (card := get_component_card(component_id)) is not None
+            ]
+            selection = await component_selector(
+                {
+                    "concept_id": lesson.concept_id,
+                    "objective": lesson.objective,
+                    "primary_knowledge_type": lesson.primary_knowledge_type,
+                    "slot": slot.model_dump(mode="json"),
+                    "component_registry_cards": registry_cards,
+                    "component_budget": min(4, len(slot.allowed_components)),
+                    "max_per_section": 4,
+                }
             )
-        component_selections[slot.slot_id] = selection
+            selected_slugs = [component.slug for component in selection.components]
+            if not selected_slugs or not set(selected_slugs).issubset(set(slot.allowed_components)):
+                raise PathPreparationBlocked(
+                    f"Component selector returned an invalid selection for slot {slot.slot_id!r}"
+                )
+            component_selections[slot.slot_id] = selection
     fixed_context = {
         "concept_id": lesson.concept_id,
         "title": lesson.title,
@@ -504,6 +530,7 @@ async def prepare_path_lesson(
             slot_id: [component.slug for component in selection.components]
             for slot_id, selection in component_selections.items()
         },
+        page_block_plans=page_block_plans,
     )
     misconception_count = min(len(plan.cards[0].misconceptions), 3)
     group_preview = catalog.preview(

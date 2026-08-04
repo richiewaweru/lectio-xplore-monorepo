@@ -8,6 +8,8 @@ _PROMPT_NAMES = {
     "merge-critic-v1.txt",
     "component-selector-v1.txt",
     "path-structural-planner-v1.txt",
+    "path-structural-planner-page-v1.txt",
+    "section-block-planner-v1.txt",
 }
 
 # Prompts that have moved into the packaged `resources/prompts/` directory
@@ -63,4 +65,12 @@ def component_selector_prompt() -> str:
 
 def path_structural_planner_prompt() -> str:
     return prompt_text("path-structural-planner-v1.txt")
+
+
+def path_structural_planner_page_prompt() -> str:
+    return prompt_text("path-structural-planner-page-v1.txt")
+
+
+def section_block_planner_prompt() -> str:
+    return prompt_text("section-block-planner-v1.txt")
 
