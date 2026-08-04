@@ -384,9 +384,28 @@ async def resolve_path_assumption(
         None,
     )
     if match is None:
-        # Idempotent: already confirmed via starting knowledge or recorded as a risk.
-        await session.flush()
-        return version
+        settled = {
+            value.casefold()
+            for value in [
+                *(unit.starting_knowledge or []),
+                *(scope.assumed_prerequisites or []),
+            ]
+            if isinstance(value, str) and value.strip()
+        }
+        for risk in version.prerequisite_risks or []:
+            if isinstance(risk, dict):
+                missing = risk.get("missing")
+            else:
+                missing = getattr(risk, "missing", None)
+            if isinstance(missing, str) and missing.strip():
+                settled.add(missing.casefold())
+        if claimed.casefold() in settled:
+            # Idempotent: already confirmed via starting knowledge or recorded as a risk.
+            await session.flush()
+            return version
+        raise ValueError(
+            f"Assumption {claimed!r} is not an open assumption for this path"
+        )
 
     exact_claimed = match["claimed"]
     if decision == "known":
@@ -732,16 +751,22 @@ async def approve_path(session: AsyncSession, version: PathVersionModel) -> Path
         for value in [*(scope.assumed_prerequisites or []), *(unit.starting_knowledge or [])]
     }
     prohibited = [term.casefold() for term in (scope.must_not_introduce or []) if term.strip()]
+    undeclared = sorted(
+        {
+            prerequisite
+            for lesson in lessons
+            for prerequisite in (lesson.external_prerequisites or [])
+            if prerequisite.casefold() not in allowed_external
+        }
+    )
+    if undeclared:
+        raise PathApprovalBlocked(
+            "Path approval blocked: undeclared external prerequisite "
+            + ", ".join(repr(value) for value in undeclared)
+        )
     for lesson in lessons:
         if lesson.objective_hash != hash_path_objective(lesson.objective):
             raise PathApprovalBlocked("Path approval blocked: objective hash mismatch")
-        if any(
-            prerequisite.casefold() not in allowed_external
-            for prerequisite in (lesson.external_prerequisites or [])
-        ):
-            raise PathApprovalBlocked(
-                "Path approval blocked: undeclared external prerequisite"
-            )
         inspected = "\n".join([lesson.objective, *(lesson.must_establish or [])]).casefold()
         if any(term in inspected for term in prohibited):
             raise PathApprovalBlocked("Path approval blocked: must-not-introduce violation")

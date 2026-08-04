@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -302,7 +303,7 @@ async def test_paraphrased_external_prerequisite_blocks_approve_until_known(db_s
     )
     assert assumptions == [{"claimed": claimed, "needed_by": lessons[0].concept_slug}]
 
-    with pytest.raises(PathApprovalBlocked, match="undeclared external prerequisite"):
+    with pytest.raises(PathApprovalBlocked, match=re.escape(repr(claimed))):
         await approve_path(db_session, version)
 
     revision_before = version.revision
@@ -379,3 +380,53 @@ async def test_resolve_assumption_teach_records_risk_and_blocks_approve(db_sessi
     )
     with pytest.raises(PathApprovalBlocked, match="prerequisite"):
         await approve_path(db_session, version)
+
+
+async def test_resolve_assumption_idempotent_when_already_settled(db_session, owner) -> None:
+    plan = _plan("grade4-photosynthesis-path.json")
+    unit = await _unit(
+        db_session,
+        owner_id=owner.id,
+        fixture_name="grade4-photosynthesis-path.json",
+    )
+    claimed = "multiply any two fractions"
+    plan.lessons[0].external_prerequisites = [claimed]
+    version = await persist_path_plan(db_session, unit=unit, plan=plan)
+
+    await resolve_path_assumption(
+        db_session,
+        unit=unit,
+        version=version,
+        claimed=claimed,
+        decision="known",
+    )
+    revision_after_known = version.revision
+
+    await resolve_path_assumption(
+        db_session,
+        unit=unit,
+        version=version,
+        claimed=claimed,
+        decision="known",
+    )
+    assert version.revision == revision_after_known
+    assert (unit.starting_knowledge or []).count(claimed) == 1
+
+
+async def test_resolve_assumption_rejects_bogus_claim(db_session, owner) -> None:
+    plan = _plan("grade4-photosynthesis-path.json")
+    unit = await _unit(
+        db_session,
+        owner_id=owner.id,
+        fixture_name="grade4-photosynthesis-path.json",
+    )
+    version = await persist_path_plan(db_session, unit=unit, plan=plan)
+
+    with pytest.raises(ValueError, match="not an open assumption"):
+        await resolve_path_assumption(
+            db_session,
+            unit=unit,
+            version=version,
+            claimed="never claimed by any lesson",
+            decision="known",
+        )

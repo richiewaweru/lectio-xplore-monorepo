@@ -714,3 +714,43 @@ async def test_open_assumption_resolve_teach_over_http(db_session_factory) -> No
                 "note": "teacher declined",
             }
         ]
+
+
+async def test_open_assumption_resolve_bogus_claim_is_422(db_session_factory) -> None:
+    plan = PathPlan.model_validate_json(
+        (FIXTURES / "grade4-photosynthesis-path.json").read_text(encoding="utf-8")
+    )
+    async with db_session_factory() as session:
+        session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
+        unit = await create_unit(
+            session,
+            owner_id=TEST_USER.id,
+            request=UnitCreate(
+                title=plan.unit or "Photosynthesis",
+                topic=plan.unit or "Photosynthesis",
+                subject=plan.subject or "Science",
+                grade_level=plan.grade_level or "Grade 4",
+                destination_objective=plan.destination_objective or "Destination",
+                starting_knowledge=plan.starting_knowledge,
+            ),
+        )
+        version = await persist_path_plan(session, unit=unit, plan=plan)
+        unit_id = unit.id
+        version_id = version.id
+        path_revision = version.revision
+        await session.commit()
+
+    app.dependency_overrides[get_current_user] = _override_user
+    await _install_session(db_session_factory)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.post(
+            f"/api/v1/units/{unit_id}/path/assumptions/resolve",
+            json={
+                "path_version_id": version_id,
+                "path_revision": path_revision,
+                "claimed": "never claimed by any lesson",
+                "decision": "known",
+            },
+        )
+        assert response.status_code == 422
+        assert "not an open assumption" in response.json()["detail"]

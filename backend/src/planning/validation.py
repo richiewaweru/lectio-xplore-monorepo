@@ -110,7 +110,10 @@ def open_assumptions(
             answered_as_risk.add(missing.casefold())
 
     result: list[dict[str, str]] = []
+    seen: set[str] = set()
     for lesson in lessons:
+        if getattr(lesson, "skipped", False):
+            continue
         slug = getattr(lesson, "concept_slug", None)
         if not isinstance(slug, str) or not slug:
             candidate = getattr(lesson, "concept_candidate", None)
@@ -121,8 +124,9 @@ def open_assumptions(
             if not isinstance(prerequisite, str) or not prerequisite.strip():
                 continue
             folded = prerequisite.casefold()
-            if folded in declared or folded in answered_as_risk:
+            if folded in declared or folded in answered_as_risk or folded in seen:
                 continue
+            seen.add(folded)
             result.append({"claimed": prerequisite, "needed_by": slug})
     return result
 

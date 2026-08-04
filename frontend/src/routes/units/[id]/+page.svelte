@@ -225,7 +225,12 @@
 			await action();
 			if (reload) await load({ preserveSelection: true });
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'That change did not go through.';
+			const message = err instanceof Error ? err.message : 'That change did not go through.';
+			error = message;
+			if (isApiError(err) && err.status === 409) {
+				await load({ preserveSelection: true });
+				error = message;
+			}
 		} finally {
 			busy = null;
 		}

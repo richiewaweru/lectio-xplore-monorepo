@@ -236,6 +236,32 @@ describe('/units/[id]', () => {
 		expect(await screen.findByText("Something in this route relies on knowledge that isn't taught yet — fix that before locking it in.")).toBeTruthy();
 	});
 
+	it('refetches the path on a 409 without retrying the mutation', async () => {
+		mocks.getUnitPath
+			.mockResolvedValueOnce(buildPath({
+				status: 'draft',
+				revision: 2,
+				open_assumptions: [{ claimed: 'multiply any two fractions', needed_by: lessonOne.concept_slug }]
+			}))
+			.mockResolvedValueOnce(buildPath({
+				status: 'draft',
+				revision: 4,
+				open_assumptions: []
+			}));
+		mocks.resolvePathAssumption.mockRejectedValue(
+			new ApiError(409, 'This path changed in another session. Refresh before applying your edit.')
+		);
+		render(UnitPage);
+		await screen.findByText(/1 thing to confirm/);
+		const pathCallsBefore = mocks.getUnitPath.mock.calls.length;
+		await fireEvent.click(screen.getByRole('button', { name: 'Yes, they know this' }));
+		expect(mocks.resolvePathAssumption).toHaveBeenCalledTimes(1);
+		await screen.findByText('This path changed in another session. Refresh before applying your edit.');
+		expect(mocks.getUnitPath.mock.calls.length).toBeGreaterThan(pathCallsBefore);
+		expect(mocks.resolvePathAssumption).toHaveBeenCalledTimes(1);
+		expect(screen.queryByText(/thing to confirm/)).toBeNull();
+	});
+
 	it('shows a plain-language prompt to make the lesson, with no knowledge-type controls', async () => {
 		render(UnitPage);
 		expect(await screen.findByRole('button', { name: 'Make the lesson' })).toBeTruthy();

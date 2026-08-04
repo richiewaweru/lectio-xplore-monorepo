@@ -171,6 +171,59 @@ def test_open_assumptions_exclude_claims_already_recorded_as_risks() -> None:
     assert assumptions == []
 
 
+def test_open_assumptions_dedupe_same_claim_across_lessons() -> None:
+    payload = copy.deepcopy(_fixture("grade4-photosynthesis-path.json"))
+    claimed = "multiply any two fractions"
+    payload["modules"][0]["lessons"][0]["external_prerequisites"] = [claimed]
+    payload["modules"][0]["lessons"][1]["external_prerequisites"] = [claimed.upper()]
+    plan = PathPlan.model_validate(payload)
+
+    assumptions = open_assumptions(
+        starting_knowledge=plan.starting_knowledge,
+        assumed_prerequisites=plan.scope_contract.assumed_prerequisites,
+        lessons=plan.lessons,
+        prerequisite_risks=[],
+    )
+    assert assumptions == [
+        {
+            "claimed": claimed,
+            "needed_by": plan.lessons[0].concept_candidate.slug,
+        }
+    ]
+
+
+def test_open_assumptions_ignore_skipped_lessons() -> None:
+    class _Lesson:
+        def __init__(self, *, slug: str, title: str, skipped: bool, external: list[str]) -> None:
+            self.concept_slug = slug
+            self.title = title
+            self.skipped = skipped
+            self.external_prerequisites = external
+
+    assumptions = open_assumptions(
+        starting_knowledge=[],
+        assumed_prerequisites=[],
+        lessons=[
+            _Lesson(
+                slug="skipped-lesson",
+                title="Skipped",
+                skipped=True,
+                external=["multiply any two fractions"],
+            ),
+            _Lesson(
+                slug="active-lesson",
+                title="Active",
+                skipped=False,
+                external=["read a clock face"],
+            ),
+        ],
+        prerequisite_risks=[],
+    )
+    assert assumptions == [
+        {"claimed": "read a clock face", "needed_by": "active-lesson"},
+    ]
+
+
 def test_plain_validation_message_keeps_undeclared_copy() -> None:
     from planning.validation import plain_validation_message
 
