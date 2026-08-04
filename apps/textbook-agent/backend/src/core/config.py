@@ -121,7 +121,7 @@ class Settings(BaseSettings):
     v2_skeleton_shadow_enabled: bool = True
     xplore_v2_enabled: bool = True
     xplore_v2_beta_users: str = ""
-    xplore_page_documents_enabled: bool = False
+    xplore_page_documents_enabled: bool = True
     xplore_page_document_scope: str = "conceptual_first_exposure"
     xplore_page_writer_retries: int = Field(default=1, ge=0)
     xplore_page_sequential_planning: bool = True

@@ -7,7 +7,7 @@ RUN 03 — DONE — Fixture section block planner; component selector skipped on
 RUN 04 — DONE — Object writers + questions assembler; schema-valid fixture content
 RUN 05 — DONE — LectioDocumentV2 assemble/persist/reload without SectionContent
 RUN 06 — DONE — @lectio/page render route + A4 PDF fixture proof
-RUN 07 — PENDING
-RUN 08 — PENDING
-RUN 09 — PENDING
-RUN 10 — PENDING
+RUN 07 — DONE — Question wall + stable figure asset completion
+RUN 08 — DONE — v2 projections/QC without legacy component field reads
+RUN 09 — DONE — First-slice creation flag default on; rollback documented
+RUN 10 — DONE — Handoff + expansion decision committed

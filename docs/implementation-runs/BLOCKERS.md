@@ -1,10 +1,10 @@
 # Blockers
 
-None open after RUN_00.
+None open after RUN_10.
 
-## Noted non-blocking caveats
+## Noted non-blocking follow-ups
 
-- Bootstrap script failed to stage `IMPORT_PROVENANCE.md` on first pass; recovered manually in the import commit.
-- Existing `C:\Projects\lectio` was renamed to `C:\Projects\lectio-legacy-20260805` before import.
-- `BLOCK_FIELD_ORDER` has no live symbol in the imported trees.
-- Active V3 studio SSE is poke+poll; named event canvas helpers are largely unwired.
+- Live paid section-block planner agent still fixture-backed unless `ALLOW_PAID_LLM_TESTS=1` and an agent is wired.
+- Full studio end-to-end PDF against a persisted generation ID still needs a seeded v2 `document_json` through `V3GenerationWriter`.
+- Authority pack nested-copy cleanup was completed; use `docs/authority/xplore-pageobject-authority/`.
+- Legacy path archived at `C:\Projects\lectio-legacy-20260805`.
