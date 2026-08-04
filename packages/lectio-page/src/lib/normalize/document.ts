@@ -8,8 +8,8 @@ export type SubstantiveBlock = Exclude<DocumentBlock, HeadingBlock>;
  * 2. Commit — `normalizeDocument` sorts by position then id, rewrites contiguous indexes.
  * 3. Render — array order is canonical; the renderer must not sort again.
  *
- * `section.title` is navigation/contents metadata only.
- * Visible section headings are authored `heading` blocks — never synthesized from title.
+ * `section.title` renders as the section h2 (see SectionView).
+ * Nested `heading` blocks remain structural (h3); planners exclude them in the first slice.
  */
 export type RenderUnit =
 	| {

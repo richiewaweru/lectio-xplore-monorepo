@@ -1,0 +1,1 @@
+"""Generated Lectio contract adapters."""

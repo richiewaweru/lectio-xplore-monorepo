@@ -8,12 +8,13 @@
 
 	/**
 	 * Array order is canonical after normalizeDocument.
-	 * section.title is for contents/nav only — not rendered as a heading here.
+	 * section.title renders exactly once as the section h2; nested heading blocks remain structural h3+.
 	 */
 	const units = $derived(buildRenderUnits(section.blocks));
 </script>
 
 <section class="lectio-section" id={section.id}>
+	<h2 class="lectio-section-title">{section.title}</h2>
 	{#each units as unit (unit.kind === 'heading-binding' ? unit.heading.id : unit.block.id)}
 		{#if unit.kind === 'heading-binding'}
 			<HeadingBinding>

@@ -34,6 +34,13 @@ body {
    page objects. They are derived from document metadata + section titles. */
 .lectio-cover { break-after: page; }
 .lectio-cover-title { font-size: 30pt; line-height: 36pt; margin: 0 0 var(--line); }
+.lectio-section-title {
+  font-size: 15pt;
+  line-height: 22.5pt;
+  margin-top: calc(var(--line) * 2);
+  margin-bottom: 7.5pt;
+  break-after: avoid;
+}
 .lectio-cover-subtitle { font-size: 13pt; line-height: 18pt; margin: 0 0 calc(var(--line) * 2); }
 .lectio-cover-fields { max-width: var(--main); }
 .lectio-cover-field { border-bottom: .5pt solid #777; height: 22pt; margin-bottom: var(--line); }
