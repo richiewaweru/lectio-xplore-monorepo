@@ -1,0 +1,28 @@
+{
+  "sync_tool": "update_lectio_page_contracts.py",
+  "source_package": "@lectio/page",
+  "catalogue_version": "1.1.0",
+  "contract_version": "1.0.0",
+  "files": {
+    "lectio-document-v2.schema.json": {
+      "path": "lectio-document-v2.schema.json",
+      "sha256": "6b63a908811485b71443fe178cde55f2aff9ee7a576d73db110dfeeaafde0e61",
+      "bytes": 17373
+    },
+    "intent-catalogue.v1.json": {
+      "path": "intent-catalogue.v1.json",
+      "sha256": "f32ddc947a5b70d4f2cb926d3eeacf1d83a0f7331edfa28846d53593df00855c",
+      "bytes": 17311
+    },
+    "object-catalogue.v1.json": {
+      "path": "object-catalogue.v1.json",
+      "sha256": "1813a43e1bb492b7594b016989db79cf48dceb8a8f3780dcb5dfebff82ce5729",
+      "bytes": 8637
+    },
+    "manifest.json": {
+      "path": "manifest.json",
+      "sha256": "c2a9de79ca7166bf592897b018ed132749401a6d75f7fc33712938f0bb0718c9",
+      "bytes": 791
+    }
+  }
+}
