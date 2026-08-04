@@ -106,6 +106,11 @@ export interface MergeCriticResult {
 	diagnostic_cost: string | null;
 }
 
+export interface OpenAssumption {
+	claimed: string;
+	needed_by: string;
+}
+
 export interface UnitPath {
 	id: string;
 	unit_id: string;
@@ -118,6 +123,7 @@ export interface UnitPath {
 	forward_verified: boolean;
 	reaches_destination: boolean;
 	completeness_note: string | null;
+	open_assumptions: OpenAssumption[];
 	approved_at: string | null;
 	created_at: string;
 	lessons: PathLesson[];

@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
 	getPathHistory: vi.fn(), getPathStatus: vi.fn(), getHistoricalPath: vi.fn(), restorePathVersion: vi.fn(),
 	getPreparedLessonStatus: vi.fn(), approveUnitPath: vi.fn(), planUnitPath: vi.fn(),
 	patchPathLesson: vi.fn(), mergePathLessons: vi.fn(), preparePathLesson: vi.fn(),
-	regeneratePathLesson: vi.fn(), editUnitPathByChat: vi.fn()
+	regeneratePathLesson: vi.fn(), editUnitPathByChat: vi.fn(), resolvePathAssumption: vi.fn()
 }));
 
 vi.mock('$app/state', () => ({ page: { params: { id: 'unit-1' } } }));
@@ -47,7 +47,8 @@ function buildPath(overrides: Record<string, unknown> = {}) {
 	return {
 		id: 'path-1', unit_id: 'unit-1', version: 1, revision: 2, status: 'approved', generated_by: 'path_planner',
 		merge_critic_results: [], prerequisite_risks: [], forward_verified: true,
-		reaches_destination: true, completeness_note: null, approved_at: '2026-07-31T00:00:00Z',
+		reaches_destination: true, completeness_note: null, open_assumptions: [],
+		approved_at: '2026-07-31T00:00:00Z',
 		created_at: '2026-07-31T00:00:00Z', lessons: [lessonOne, lessonTwo],
 		...overrides
 	};
@@ -176,6 +177,63 @@ describe('/units/[id]', () => {
 		render(UnitPage);
 		await screen.findByRole('button', { name: 'Looks good — lock it in' });
 		expect(screen.getByText("This route doesn't reach the destination yet.")).toBeTruthy();
+	});
+
+	it('blocks lock-in and asks the teacher to confirm open assumptions', async () => {
+		mocks.getUnitPath.mockResolvedValue(buildPath({
+			status: 'draft',
+			open_assumptions: [{ claimed: 'multiply any two fractions', needed_by: lessonOne.concept_slug }]
+		}));
+		mocks.resolvePathAssumption.mockResolvedValue(buildPath({
+			status: 'draft',
+			revision: 3,
+			open_assumptions: []
+		}));
+		mocks.getUnit.mockResolvedValue({
+			...unit,
+			starting_knowledge: [...unit.starting_knowledge, 'multiply any two fractions']
+		});
+		render(UnitPage);
+
+		expect(await screen.findByText(/1 thing to confirm/)).toBeTruthy();
+		expect(screen.getByText('multiply any two fractions')).toBeTruthy();
+		expect(screen.getByText('Needed for: Plant inputs')).toBeTruthy();
+		const lockButton = screen.getByRole('button', { name: 'Looks good — lock it in' });
+		expect(lockButton.hasAttribute('disabled')).toBe(true);
+		expect(screen.getByText('Confirm what the class already knows before locking it in.')).toBeTruthy();
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Yes, they know this' }));
+		expect(mocks.resolvePathAssumption).toHaveBeenCalledWith(
+			'unit-1',
+			expect.objectContaining({ id: 'path-1', revision: 2 }),
+			{ claimed: 'multiply any two fractions', decision: 'known' }
+		);
+		expect(await screen.findByRole('button', { name: 'Looks good — lock it in' })).toBeTruthy();
+		expect(screen.queryByText(/thing to confirm/)).toBeNull();
+		expect(screen.getByRole('button', { name: 'Looks good — lock it in' }).hasAttribute('disabled')).toBe(false);
+	});
+
+	it('records a teach decision for an open assumption', async () => {
+		mocks.getUnitPath.mockResolvedValue(buildPath({
+			status: 'draft',
+			open_assumptions: [{ claimed: 'multiply any two fractions', needed_by: lessonTwo.concept_slug }]
+		}));
+		mocks.resolvePathAssumption.mockResolvedValue(buildPath({
+			status: 'draft',
+			revision: 3,
+			open_assumptions: [],
+			reaches_destination: false,
+			prerequisite_risks: [{ missing: 'multiply any two fractions', needed_by: lessonTwo.concept_slug, note: 'teacher declined' }]
+		}));
+		render(UnitPage);
+		await screen.findByText(/1 thing to confirm/);
+		await fireEvent.click(screen.getByRole('button', { name: 'No, teach it' }));
+		expect(mocks.resolvePathAssumption).toHaveBeenCalledWith(
+			'unit-1',
+			expect.objectContaining({ id: 'path-1' }),
+			{ claimed: 'multiply any two fractions', decision: 'teach' }
+		);
+		expect(await screen.findByText("Something in this route relies on knowledge that isn't taught yet — fix that before locking it in.")).toBeTruthy();
 	});
 
 	it('shows a plain-language prompt to make the lesson, with no knowledge-type controls', async () => {

@@ -174,6 +174,27 @@ export function approveUnitPath(unitId: string, path: UnitPath): Promise<UnitPat
 	});
 }
 
+export function resolvePathAssumption(
+	unitId: string,
+	path: UnitPath,
+	input: { claimed: string; decision: 'known' | 'teach' }
+): Promise<UnitPath> {
+	return jsonRequest(
+		`/api/v1/units/${encodeURIComponent(unitId)}/path/assumptions/resolve`,
+		'Could not confirm that prior knowledge.',
+		{
+			method: 'POST',
+			headers: jsonHeaders,
+			body: JSON.stringify({
+				path_version_id: path.id,
+				path_revision: path.revision,
+				claimed: input.claimed,
+				decision: input.decision
+			})
+		}
+	);
+}
+
 export function patchPathLesson(
 	unitId: string,
 	path: UnitPath,

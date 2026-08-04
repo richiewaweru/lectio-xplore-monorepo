@@ -17,6 +17,7 @@ from planning.validation import (
     PathValidationError,
     assert_approvable,
     normalize_declared_external_prerequisites,
+    open_assumptions,
     validate_path_plan,
 )
 
@@ -83,12 +84,6 @@ def test_grade_scopes_share_no_concept_slug() -> None:
             "prerequisite_not_earlier",
         ),
         (
-            lambda p: p["modules"][0]["lessons"][0].update(
-                external_prerequisites=["undeclared capability"]
-            ),
-            "undeclared_external_prerequisite",
-        ),
-        (
             lambda p: p["modules"][0]["lessons"][0].update(objective="Explain ATP synthesis."),
             "must_not_introduce_violation",
         ),
@@ -111,6 +106,81 @@ def test_machine_checks_reject_silent_path_failures(mutate, code: str) -> None:
         validate_path_plan(plan)
 
     assert exc_info.value.code == code
+
+
+def test_undeclared_external_prerequisite_is_open_assumption_not_halt() -> None:
+    payload = copy.deepcopy(_fixture("grade4-photosynthesis-path.json"))
+    payload["modules"][0]["lessons"][0].update(
+        external_prerequisites=["undeclared capability"]
+    )
+    plan = PathPlan.model_validate(payload)
+
+    validate_path_plan(plan)
+
+    assumptions = open_assumptions(
+        starting_knowledge=plan.starting_knowledge,
+        assumed_prerequisites=plan.scope_contract.assumed_prerequisites,
+        lessons=plan.lessons,
+        prerequisite_risks=plan.prerequisite_risks,
+    )
+    assert assumptions == [
+        {
+            "claimed": "undeclared capability",
+            "needed_by": plan.lessons[0].concept_candidate.slug,
+        }
+    ]
+
+
+def test_open_assumptions_ignore_exact_and_casefold_matches() -> None:
+    payload = copy.deepcopy(_fixture("grade4-photosynthesis-path.json"))
+    declared = payload["starting_knowledge"][0]
+    payload["modules"][0]["lessons"][0]["external_prerequisites"] = [
+        declared,
+        declared.upper(),
+    ]
+    plan = PathPlan.model_validate(payload)
+
+    assert (
+        open_assumptions(
+            starting_knowledge=plan.starting_knowledge,
+            assumed_prerequisites=plan.scope_contract.assumed_prerequisites,
+            lessons=plan.lessons,
+            prerequisite_risks=[],
+        )
+        == []
+    )
+
+
+def test_open_assumptions_exclude_claims_already_recorded_as_risks() -> None:
+    payload = copy.deepcopy(_fixture("grade4-photosynthesis-path.json"))
+    payload["modules"][0]["lessons"][0]["external_prerequisites"] = ["multiply any two fractions"]
+    plan = PathPlan.model_validate(payload)
+
+    assumptions = open_assumptions(
+        starting_knowledge=plan.starting_knowledge,
+        assumed_prerequisites=plan.scope_contract.assumed_prerequisites,
+        lessons=plan.lessons,
+        prerequisite_risks=[
+            {
+                "missing": "Multiply Any Two Fractions",
+                "needed_by": plan.lessons[0].concept_candidate.slug,
+                "note": "teacher declined",
+            }
+        ],
+    )
+    assert assumptions == []
+
+
+def test_plain_validation_message_keeps_undeclared_copy() -> None:
+    from planning.validation import plain_validation_message
+
+    message = plain_validation_message(
+        PathValidationError(
+            "undeclared_external_prerequisite",
+            "External prerequisite 'x' is not declared",
+        )
+    )
+    assert "starting knowledge" in message
 
 
 def test_unreachable_fixture_blocks_approval() -> None:

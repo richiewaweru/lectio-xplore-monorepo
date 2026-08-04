@@ -199,6 +199,11 @@ class PathVersionMutationRequest(StrictModel):
     path_revision: int = Field(ge=1)
 
 
+class ResolvePathAssumptionRequest(PathVersionMutationRequest):
+    claimed: str = Field(min_length=1)
+    decision: Literal["known", "teach"]
+
+
 class PathLessonMutationRequest(PathVersionMutationRequest):
     lesson_revision: int = Field(ge=1)
 

@@ -52,13 +52,6 @@ def normalize_declared_external_prerequisites(plan: PathPlan) -> PathPlan:
 
 def validate_path_plan(plan: PathPlan) -> None:
     seen: set[str] = set()
-    allowed_external = {
-        value.casefold()
-        for value in [
-            *plan.scope_contract.assumed_prerequisites,
-            *plan.starting_knowledge,
-        ]
-    }
     prohibited = [term for term in plan.scope_contract.must_not_introduce if term.strip()]
 
     for lesson in plan.lessons:
@@ -71,12 +64,8 @@ def validate_path_plan(plan: PathPlan) -> None:
                     "prerequisite_not_earlier",
                     f"Prerequisite {prerequisite!r} for {slug!r} does not resolve to an earlier lesson",
                 )
-        for prerequisite in lesson.external_prerequisites:
-            if prerequisite.casefold() not in allowed_external:
-                _raise(
-                    "undeclared_external_prerequisite",
-                    f"External prerequisite {prerequisite!r} is not declared",
-                )
+        # Undeclared external prerequisites are teacher-owned confirmations, not
+        # hard halts. They surface as open_assumptions and block approve_path.
         inspected_text = "\n".join([lesson.objective, *lesson.must_establish]).casefold()
         for term in prohibited:
             if term.casefold() in inspected_text:
@@ -91,6 +80,51 @@ def validate_path_plan(plan: PathPlan) -> None:
             "risks_require_unreachable",
             "A path with prerequisite risks cannot claim to reach its destination",
         )
+
+
+def open_assumptions(
+    *,
+    starting_knowledge: list[str] | None,
+    assumed_prerequisites: list[str] | None,
+    lessons: list[object],
+    prerequisite_risks: list[object] | None,
+) -> list[dict[str, str]]:
+    """Derive undeclared external prerequisites awaiting teacher confirmation.
+
+    An assumption is open when a lesson claims an external prerequisite that is
+    neither in unit/scope starting knowledge nor already recorded as a
+    prerequisite risk (e.g. after the teacher answers ``teach``).
+    """
+    declared = {
+        value.casefold()
+        for value in [*(assumed_prerequisites or []), *(starting_knowledge or [])]
+        if isinstance(value, str) and value.strip()
+    }
+    answered_as_risk: set[str] = set()
+    for risk in prerequisite_risks or []:
+        if isinstance(risk, dict):
+            missing = risk.get("missing")
+        else:
+            missing = getattr(risk, "missing", None)
+        if isinstance(missing, str) and missing.strip():
+            answered_as_risk.add(missing.casefold())
+
+    result: list[dict[str, str]] = []
+    for lesson in lessons:
+        slug = getattr(lesson, "concept_slug", None)
+        if not isinstance(slug, str) or not slug:
+            candidate = getattr(lesson, "concept_candidate", None)
+            slug = getattr(candidate, "slug", None) if candidate is not None else None
+        if not isinstance(slug, str) or not slug:
+            continue
+        for prerequisite in getattr(lesson, "external_prerequisites", None) or []:
+            if not isinstance(prerequisite, str) or not prerequisite.strip():
+                continue
+            folded = prerequisite.casefold()
+            if folded in declared or folded in answered_as_risk:
+                continue
+            result.append({"claimed": prerequisite, "needed_by": slug})
+    return result
 
 
 _PLAIN_VALIDATION_MESSAGES: dict[str, str] = {

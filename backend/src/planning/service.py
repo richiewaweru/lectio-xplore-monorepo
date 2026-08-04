@@ -23,7 +23,13 @@ from planning.models import (
     UnitCreate,
     UnitUpdate,
 )
-from planning.validation import PathApprovalBlocked, assert_approvable, validate_path_plan
+from planning.validation import (
+    PathApprovalBlocked,
+    PathValidationError,
+    assert_approvable,
+    open_assumptions,
+    validate_path_plan,
+)
 from v3_blueprint.planning.objective_ownership import hash_path_objective
 
 
@@ -343,6 +349,83 @@ async def invalidate_path_approval(
     if unit is not None:
         unit.status = "draft"
     await session.flush()
+
+
+async def resolve_path_assumption(
+    session: AsyncSession,
+    *,
+    unit: UnitModel,
+    version: PathVersionModel,
+    claimed: str,
+    decision: str,
+) -> PathVersionModel:
+    """Confirm or decline an undeclared external prerequisite for the active path."""
+    scope = await session.get(UnitScopeContractModel, unit.id)
+    if scope is None:
+        raise PathValidationError(
+            "missing_scope_contract",
+            "Path assumption resolution blocked: scope contract is missing",
+        )
+    lessons = list(
+        await session.scalars(
+            select(PathLessonModel)
+            .where(PathLessonModel.path_version_id == version.id)
+            .order_by(PathLessonModel.position)
+        )
+    )
+    open_rows = open_assumptions(
+        starting_knowledge=unit.starting_knowledge,
+        assumed_prerequisites=scope.assumed_prerequisites,
+        lessons=lessons,
+        prerequisite_risks=version.prerequisite_risks,
+    )
+    match = next(
+        (row for row in open_rows if row["claimed"].casefold() == claimed.casefold()),
+        None,
+    )
+    if match is None:
+        # Idempotent: already confirmed via starting knowledge or recorded as a risk.
+        await session.flush()
+        return version
+
+    exact_claimed = match["claimed"]
+    if decision == "known":
+        knowledge = list(unit.starting_knowledge or [])
+        if exact_claimed.casefold() not in {value.casefold() for value in knowledge}:
+            knowledge.append(exact_claimed)
+            unit.starting_knowledge = knowledge
+    elif decision == "teach":
+        risk = {
+            "missing": exact_claimed,
+            "needed_by": match["needed_by"],
+            "note": "teacher declined",
+        }
+        risks = list(version.prerequisite_risks or [])
+        risks.append(risk)
+        version.prerequisite_risks = risks
+        version.reaches_destination = False
+
+        plan_json = dict(version.source_plan_json or {})
+        plan_risks = list(plan_json.get("prerequisite_risks") or [])
+        plan_risks.append(risk)
+        plan_json["prerequisite_risks"] = plan_risks
+        completeness = dict(plan_json.get("completeness") or {})
+        completeness["reaches_destination"] = False
+        plan_json["completeness"] = completeness
+        version.source_plan_json = plan_json
+    else:
+        raise PathValidationError(
+            "invalid_assumption_decision",
+            f"Unsupported assumption decision {decision!r}",
+        )
+
+    version.revision += 1
+    if version.status == "approved":
+        version.status = "draft"
+        version.approved_at = None
+        unit.status = "draft"
+    await session.flush()
+    return version
 
 
 async def reorder_lessons(

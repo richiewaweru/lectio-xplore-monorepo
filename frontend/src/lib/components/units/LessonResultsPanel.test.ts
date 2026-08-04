@@ -20,7 +20,7 @@ const lesson = {
 const path = {
 	id: 'path-1', unit_id: 'unit-1', version: 1, revision: 1, status: 'approved', generated_by: 'planner',
 	merge_critic_results: [], prerequisite_risks: [], forward_verified: true, reaches_destination: true,
-	completeness_note: null, approved_at: '2026-08-01', created_at: '2026-08-01', lessons: [lesson]
+	completeness_note: null, open_assumptions: [], approved_at: '2026-08-01', created_at: '2026-08-01', lessons: [lesson]
 };
 const summary = {
 	path_lesson_id: lesson.id, group_id: null, revision: 0,

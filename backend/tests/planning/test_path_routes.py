@@ -60,6 +60,7 @@ def test_phase5_unit_and_path_routes_are_registered() -> None:
         ("/api/v1/units/{unit_id}/path:plan", "POST"),
         ("/api/v1/units/{unit_id}/path:replan", "POST"),
         ("/api/v1/units/{unit_id}/path:approve", "POST"),
+        ("/api/v1/units/{unit_id}/path/assumptions/resolve", "POST"),
         ("/api/v1/units/{unit_id}/path", "GET"),
         ("/api/v1/units/{unit_id}/path/versions", "GET"),
         ("/api/v1/units/{unit_id}/path/versions/{version_id}", "GET"),
@@ -598,3 +599,118 @@ async def test_lesson_actual_round_trip_is_revision_guarded_over_http(db_session
     assert loaded.json() == saved.json()
     assert stale.status_code == 409
     assert "expected 1" in stale.json()["detail"]
+
+
+async def test_open_assumption_resolve_known_and_stale_revision(db_session_factory) -> None:
+    plan = PathPlan.model_validate_json(
+        (FIXTURES / "grade4-photosynthesis-path.json").read_text(encoding="utf-8")
+    )
+    claimed = "multiply any two fractions"
+    plan.lessons[0].external_prerequisites = [claimed]
+    async with db_session_factory() as session:
+        session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
+        unit = await create_unit(
+            session,
+            owner_id=TEST_USER.id,
+            request=UnitCreate(
+                title=plan.unit or "Photosynthesis",
+                topic=plan.unit or "Photosynthesis",
+                subject=plan.subject or "Science",
+                grade_level=plan.grade_level or "Grade 4",
+                destination_objective=plan.destination_objective or "Destination",
+                starting_knowledge=plan.starting_knowledge,
+            ),
+        )
+        version = await persist_path_plan(session, unit=unit, plan=plan)
+        unit_id = unit.id
+        version_id = version.id
+        path_revision = version.revision
+        await session.commit()
+
+    app.dependency_overrides[get_current_user] = _override_user
+    await _install_session(db_session_factory)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        path = await client.get(f"/api/v1/units/{unit_id}/path")
+        assert path.status_code == 200
+        assert path.json()["open_assumptions"] == [
+            {"claimed": claimed, "needed_by": plan.lessons[0].concept_candidate.slug}
+        ]
+
+        stale = await client.post(
+            f"/api/v1/units/{unit_id}/path/assumptions/resolve",
+            json={
+                "path_version_id": version_id,
+                "path_revision": path_revision - 1 if path_revision > 1 else 999,
+                "claimed": claimed,
+                "decision": "known",
+            },
+        )
+        assert stale.status_code == 409
+
+        resolved = await client.post(
+            f"/api/v1/units/{unit_id}/path/assumptions/resolve",
+            json={
+                "path_version_id": version_id,
+                "path_revision": path_revision,
+                "claimed": claimed,
+                "decision": "known",
+            },
+        )
+        assert resolved.status_code == 200
+        body = resolved.json()
+        assert body["open_assumptions"] == []
+        assert body["revision"] == path_revision + 1
+
+        unit_response = await client.get(f"/api/v1/units/{unit_id}")
+        assert claimed in unit_response.json()["starting_knowledge"]
+
+
+async def test_open_assumption_resolve_teach_over_http(db_session_factory) -> None:
+    plan = PathPlan.model_validate_json(
+        (FIXTURES / "grade4-photosynthesis-path.json").read_text(encoding="utf-8")
+    )
+    claimed = "multiply any two fractions"
+    plan.lessons[0].external_prerequisites = [claimed]
+    async with db_session_factory() as session:
+        session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
+        unit = await create_unit(
+            session,
+            owner_id=TEST_USER.id,
+            request=UnitCreate(
+                title=plan.unit or "Photosynthesis",
+                topic=plan.unit or "Photosynthesis",
+                subject=plan.subject or "Science",
+                grade_level=plan.grade_level or "Grade 4",
+                destination_objective=plan.destination_objective or "Destination",
+                starting_knowledge=plan.starting_knowledge,
+            ),
+        )
+        version = await persist_path_plan(session, unit=unit, plan=plan)
+        unit_id = unit.id
+        version_id = version.id
+        path_revision = version.revision
+        await session.commit()
+
+    app.dependency_overrides[get_current_user] = _override_user
+    await _install_session(db_session_factory)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resolved = await client.post(
+            f"/api/v1/units/{unit_id}/path/assumptions/resolve",
+            json={
+                "path_version_id": version_id,
+                "path_revision": path_revision,
+                "claimed": claimed,
+                "decision": "teach",
+            },
+        )
+        assert resolved.status_code == 200
+        body = resolved.json()
+        assert body["open_assumptions"] == []
+        assert body["reaches_destination"] is False
+        assert body["prerequisite_risks"] == [
+            {
+                "missing": claimed,
+                "needed_by": plan.lessons[0].concept_candidate.slug,
+                "note": "teacher declined",
+            }
+        ]

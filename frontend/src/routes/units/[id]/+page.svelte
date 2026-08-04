@@ -20,6 +20,7 @@
 		planUnitPath,
 		preparePathLesson,
 		regeneratePathLesson,
+		resolvePathAssumption,
 		restorePathVersion
 	} from '$lib/api/units';
 	import TeachingSchedulePanel from '$lib/components/units/TeachingSchedulePanel.svelte';
@@ -31,6 +32,7 @@
 	import type {
 		LessonMode,
 		MergeCriticResult,
+		OpenAssumption,
 		PathLesson,
 		PathStatusAggregate,
 		PathVersionSummary,
@@ -78,9 +80,17 @@
 	const debugMode = import.meta.env.DEV;
 
 	const selected = $derived(path?.lessons.find((lesson) => lesson.id === selectedId) ?? null);
-	const canLockIn = $derived(Boolean(path?.reaches_destination) && (path?.prerequisite_risks.length ?? 0) === 0);
+	const openAssumptions = $derived(path?.open_assumptions ?? []);
+	const canLockIn = $derived(
+		Boolean(path?.reaches_destination) &&
+			(path?.prerequisite_risks.length ?? 0) === 0 &&
+			openAssumptions.length === 0
+	);
 	const lockBlockReason = $derived.by(() => {
 		if (!path) return '';
+		if (openAssumptions.length > 0) {
+			return 'Confirm what the class already knows before locking it in.';
+		}
 		if (path.prerequisite_risks.length > 0) return "Something in this route relies on knowledge that isn't taught yet — fix that before locking it in.";
 		if (!path.reaches_destination) return "This route doesn't reach the destination yet.";
 		return '';
@@ -258,6 +268,21 @@
 		dismissedMergeKeys = new Set([...dismissedMergeKeys, key]);
 	}
 
+	function lessonTitleForSlug(slugValue: string): string {
+		return path?.lessons.find((lesson) => lesson.concept_slug === slugValue)?.title ?? slugValue;
+	}
+
+	async function resolveAssumption(assumption: OpenAssumption, decision: 'known' | 'teach'): Promise<void> {
+		if (!path) return;
+		await act(`assumption-${decision}-${assumption.claimed}`, async () => {
+			path = await resolvePathAssumption(unitId, path as UnitPath, {
+				claimed: assumption.claimed,
+				decision
+			});
+			unit = await getUnit(unitId);
+		}, false);
+	}
+
 	async function sendChatEdit(event: SubmitEvent): Promise<void> {
 		event.preventDefault();
 		if (!path || chatUnavailable || chatMessage.trim().length < 2) return;
@@ -354,6 +379,26 @@
 				<button type="button" class:active={activeView === 'resources'} aria-current={activeView === 'resources' ? 'page' : undefined} onclick={() => (activeView = 'resources')}>Resources <span>{compositions.length}</span></button>
 			</nav>
 			{#if activeView === 'path'}
+			{#if path.status !== 'approved' && openAssumptions.length}
+				<section class="open-assumptions" aria-label="Confirm prior knowledge">
+					<p class="open-assumptions-lead">
+						Before locking it in — {openAssumptions.length === 1 ? '1 thing' : `${openAssumptions.length} things`} to confirm
+					</p>
+					{#each openAssumptions as assumption (assumption.claimed + '|' + assumption.needed_by)}
+						<div class="open-assumption">
+							<div>
+								<p>The planner assumed the class can already:</p>
+								<p class="claimed">{assumption.claimed}</p>
+								<p class="needed-by">Needed for: {lessonTitleForSlug(assumption.needed_by)}</p>
+							</div>
+							<div class="open-assumption-actions">
+								<button type="button" class="primary" disabled={busy !== null} onclick={() => resolveAssumption(assumption, 'known')}>Yes, they know this</button>
+								<button type="button" class="secondary" disabled={busy !== null} onclick={() => resolveAssumption(assumption, 'teach')}>No, teach it</button>
+							</div>
+						</div>
+					{/each}
+				</section>
+			{/if}
 			<section class="lock-in-bar">
 				<p>{path.lessons.length} {path.lessons.length === 1 ? 'lesson' : 'lessons'}</p>
 				{#if path.status !== 'approved'}
@@ -495,7 +540,7 @@
 
 <style>
 	.unit-page { min-height: calc(100vh - 58px); padding: 38px 28px 80px; }
-	.unit-head, .view-tabs, .lock-in-bar, .merge-questions, .status-board, .history-panel, .workspace, .chat-edit, .empty, .error, .loading { max-width: 1180px; margin-inline: auto; }
+	.unit-head, .view-tabs, .lock-in-bar, .open-assumptions, .merge-questions, .status-board, .history-panel, .workspace, .chat-edit, .empty, .error, .loading { max-width: 1180px; margin-inline: auto; }
 	.unit-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
 	.back { display: inline-block; margin-bottom: 18px; color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; }
 	.eyebrow { margin: 0 0 6px; color: var(--ink-3); font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .1em; text-transform: uppercase; }
@@ -519,6 +564,13 @@
 	.lock-in-bar p { margin: 0; color: var(--ink-2); font-size: 13px; }
 	.lock-in { display: grid; justify-items: end; gap: 6px; }
 	.lock-reason { max-width: 360px; margin: 0; color: var(--ink-3); font-size: 11px; text-align: right; }
+	.open-assumptions { display: grid; gap: 8px; margin-bottom: 18px; }
+	.open-assumptions-lead { margin: 0 0 2px; color: #7b4625; font-size: 13px; font-weight: 600; }
+	.open-assumption { display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid #dfb294; border-radius: 8px; background: #fff7ed; padding: 12px 14px; }
+	.open-assumption p { margin: 0; color: #7b4625; font-size: 13px; line-height: 1.5; }
+	.open-assumption .claimed { margin-top: 4px; font-weight: 600; }
+	.open-assumption .needed-by { margin-top: 4px; opacity: .85; font-size: 12px; }
+	.open-assumption-actions { display: flex; gap: 8px; flex-shrink: 0; }
 	.merge-questions { display: grid; gap: 8px; margin-bottom: 18px; }
 	.merge-question { display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid #dfb294; border-radius: 8px; background: #fff7ed; padding: 12px 14px; }
 	.merge-question p { margin: 0; color: #7b4625; font-size: 13px; line-height: 1.5; }

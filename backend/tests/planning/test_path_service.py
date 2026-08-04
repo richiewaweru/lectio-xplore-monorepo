@@ -10,6 +10,7 @@ from core.database.models import (
     PathLessonModel,
     PathLessonPrerequisiteModel,
     PathVersionModel,
+    UnitScopeContractModel,
     UserModel,
 )
 from planning.models import (
@@ -30,10 +31,11 @@ from planning.service import (
     patch_lesson,
     persist_path_plan,
     reorder_lessons,
+    resolve_path_assumption,
     skip_lesson,
     split_lesson,
 )
-from planning.validation import PathApprovalBlocked
+from planning.validation import PathApprovalBlocked, open_assumptions
 
 
 FIXTURES = Path(__file__).resolve().parents[3] / "handoff" / "fixtures"
@@ -269,3 +271,111 @@ async def test_structural_checkpoint_preserves_identity_and_prerequisites(db_ses
     assert set(mapping) == {lesson.id for lesson in source_lessons}
     assert all(positions[link.prerequisite_lesson_id] < positions[link.path_lesson_id] for link in links)
     assert await db_session.scalar(select(func.count()).select_from(PathVersionModel)) == 2
+
+
+async def test_paraphrased_external_prerequisite_blocks_approve_until_known(db_session, owner) -> None:
+    plan = _plan("grade4-photosynthesis-path.json")
+    unit = await _unit(
+        db_session,
+        owner_id=owner.id,
+        fixture_name="grade4-photosynthesis-path.json",
+    )
+    claimed = "multiply any two fractions"
+    first = plan.lessons[0]
+    first.external_prerequisites = [claimed]
+    version = await persist_path_plan(db_session, unit=unit, plan=plan)
+    lessons = list(
+        await db_session.scalars(
+            select(PathLessonModel)
+            .where(PathLessonModel.path_version_id == version.id)
+            .order_by(PathLessonModel.position)
+        )
+    )
+    scope = await db_session.get(UnitScopeContractModel, unit.id)
+    assert scope is not None
+
+    assumptions = open_assumptions(
+        starting_knowledge=unit.starting_knowledge,
+        assumed_prerequisites=scope.assumed_prerequisites,
+        lessons=lessons,
+        prerequisite_risks=version.prerequisite_risks,
+    )
+    assert assumptions == [{"claimed": claimed, "needed_by": lessons[0].concept_slug}]
+
+    with pytest.raises(PathApprovalBlocked, match="undeclared external prerequisite"):
+        await approve_path(db_session, version)
+
+    revision_before = version.revision
+    await resolve_path_assumption(
+        db_session,
+        unit=unit,
+        version=version,
+        claimed=claimed,
+        decision="known",
+    )
+    assert claimed in (unit.starting_knowledge or [])
+    assert version.revision == revision_before + 1
+    assert (
+        open_assumptions(
+            starting_knowledge=unit.starting_knowledge,
+            assumed_prerequisites=scope.assumed_prerequisites,
+            lessons=lessons,
+            prerequisite_risks=version.prerequisite_risks,
+        )
+        == []
+    )
+    await approve_path(db_session, version)
+    assert version.status == "approved"
+
+
+async def test_resolve_assumption_teach_records_risk_and_blocks_approve(db_session, owner) -> None:
+    plan = _plan("grade4-photosynthesis-path.json")
+    unit = await _unit(
+        db_session,
+        owner_id=owner.id,
+        fixture_name="grade4-photosynthesis-path.json",
+    )
+    claimed = "multiply any two fractions"
+    plan.lessons[0].external_prerequisites = [claimed]
+    version = await persist_path_plan(db_session, unit=unit, plan=plan)
+    lessons = list(
+        await db_session.scalars(
+            select(PathLessonModel)
+            .where(PathLessonModel.path_version_id == version.id)
+            .order_by(PathLessonModel.position)
+        )
+    )
+
+    await resolve_path_assumption(
+        db_session,
+        unit=unit,
+        version=version,
+        claimed=claimed,
+        decision="teach",
+    )
+
+    assert version.reaches_destination is False
+    assert version.prerequisite_risks == [
+        {
+            "missing": claimed,
+            "needed_by": lessons[0].concept_slug,
+            "note": "teacher declined",
+        }
+    ]
+    assert version.source_plan_json["prerequisite_risks"] == version.prerequisite_risks
+    assert version.source_plan_json["completeness"]["reaches_destination"] is False
+    assert claimed not in (unit.starting_knowledge or [])
+
+    scope = await db_session.get(UnitScopeContractModel, unit.id)
+    assert scope is not None
+    assert (
+        open_assumptions(
+            starting_knowledge=unit.starting_knowledge,
+            assumed_prerequisites=scope.assumed_prerequisites,
+            lessons=lessons,
+            prerequisite_risks=version.prerequisite_risks,
+        )
+        == []
+    )
+    with pytest.raises(PathApprovalBlocked, match="prerequisite"):
+        await approve_path(db_session, version)

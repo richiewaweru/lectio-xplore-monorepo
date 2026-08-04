@@ -30,7 +30,7 @@ const schedule = {
 const path = {
 	id: 'path-1', unit_id: 'unit-1', version: 1, revision: 2, status: 'approved', generated_by: 'planner',
 	merge_critic_results: [], prerequisite_risks: [], forward_verified: true, reaches_destination: true,
-	completeness_note: null, approved_at: null, created_at: '2026-08-01T00:00:00Z',
+	completeness_note: null, open_assumptions: [], approved_at: null, created_at: '2026-08-01T00:00:00Z',
 	lessons: lessons.map((lesson, index) => ({ ...lesson, concept_slug: `c.${index}`, objective_hash: 'hash', prerequisites: [], external_prerequisites: [], must_establish: ['x'], exclusions: [], primary_knowledge_type: 'conceptual' as const, secondary_demand: null, knowledge_type_source: 'planner', merge_warning: false, position: index, source: 'planner', teacher_edited: false, skipped: false, revision: 1, pack_id: null }))
 };
 

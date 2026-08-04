@@ -16,6 +16,7 @@ from core.database.models import (
     ResourceCompositionModel,
     UnitGroupModel,
     UnitModel,
+    UnitScopeContractModel,
 )
 from core.dependencies import get_async_session
 from core.entities.user import User
@@ -45,6 +46,7 @@ from planning.models import (
     PrepareLessonRequest,
     PreparedLessonStatusResponse,
     RegenerateLessonRequest,
+    ResolvePathAssumptionRequest,
     ResourceComposeRequest,
     RestorePathVersionRequest,
     ScheduleSuggestRequest,
@@ -100,6 +102,7 @@ from planning.service import (
     patch_lesson,
     persist_path_plan,
     reorder_lessons,
+    resolve_path_assumption,
     skip_lesson,
     split_lesson,
     update_unit,
@@ -107,6 +110,7 @@ from planning.service import (
 from planning.validation import (
     PathApprovalBlocked,
     PathValidationError,
+    open_assumptions,
     plain_validation_message,
     validate_path_plan,
 )
@@ -166,6 +170,17 @@ async def _path_payload(session: AsyncSession, version) -> dict[str, object]:
     prerequisites: dict[str, list[str]] = {lesson.id: [] for lesson in lessons}
     for link in links:
         prerequisites[link.path_lesson_id].append(link.prerequisite_lesson_id)
+    scope = await session.get(UnitScopeContractModel, version.unit_id) if unit is not None else None
+    assumptions = (
+        open_assumptions(
+            starting_knowledge=unit.starting_knowledge if unit is not None else [],
+            assumed_prerequisites=scope.assumed_prerequisites if scope is not None else [],
+            lessons=lessons,
+            prerequisite_risks=version.prerequisite_risks,
+        )
+        if unit is not None
+        else []
+    )
     return {
         "id": version.id,
         "unit_id": version.unit_id,
@@ -182,6 +197,7 @@ async def _path_payload(session: AsyncSession, version) -> dict[str, object]:
         "forward_verified": version.forward_verified,
         "reaches_destination": version.reaches_destination,
         "completeness_note": (version.source_plan_json.get("completeness") or {}).get("note"),
+        "open_assumptions": assumptions,
         "approved_at": version.approved_at,
         "created_at": version.created_at,
         "lessons": [
@@ -225,10 +241,9 @@ def _raise_http(exc: Exception) -> None:
             status_code=409,
             detail={"code": "projection_unavailable", "message": str(exc)},
         ) from exc
-    if isinstance(
-        exc,
-        (PathValidationError, ConceptResolutionError, OutcomeValidationError, ValueError),
-    ):
+    if isinstance(exc, PathValidationError):
+        raise HTTPException(status_code=422, detail=plain_validation_message(exc)) from exc
+    if isinstance(exc, (ConceptResolutionError, OutcomeValidationError, ValueError)):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     raise exc
 
@@ -504,6 +519,35 @@ async def post_path_approve(
             path_revision=request.path_revision,
         )
         await approve_path(session, version)
+        await session.commit()
+        return await _path_payload(session, version)
+    except Exception as exc:
+        await session.rollback()
+        _raise_http(exc)
+
+
+@router.post("/{unit_id}/path/assumptions/resolve")
+async def post_resolve_path_assumption(
+    unit_id: str,
+    request: ResolvePathAssumptionRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        version = await _active_version(session, unit)
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
+        )
+        await resolve_path_assumption(
+            session,
+            unit=unit,
+            version=version,
+            claimed=request.claimed,
+            decision=request.decision,
+        )
         await session.commit()
         return await _path_payload(session, version)
     except Exception as exc:
