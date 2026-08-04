@@ -22,12 +22,44 @@ User recorded decision 2026-08-03 after three rounds (quality equal in round 2; 
 - `4.1-4.4: generation_steps append-only storage` — table + model (`part_id`/`variant_id`/`step`/`kind`); `insert_step`/`fold`/`load_chunked_state` overlay; briefs insert rows not blob RMW; migration backfills briefs from `chunked_state_json`; resume skips completed brief steps; tests 4 passed (`test_generation_steps`).
 - `5.1: overlap pack items with stage2` — `gather(items_job, resume_stage2)` in `_run_chunked_stage2_pipeline`.
 - `5.2-5.7: lanes prose→questions + early SECTION_READY` — `lanes.py`; lane budget 240s; `V3_CONCURRENCY_LANE_MAX`; SECTION_READY without visuals; visual step rows; `gather(answer_key, coherence)`; `V3_STAGE2_PARALLEL=false` → lane concurrency 1; tests 4+97 v3_execution passed.
+- `test: align expander reasoning expectation and stabilize SSE heartbeat` — suite-green follow-ups.
 - `docs: reshape handoff + superseded lanes pointer` — v1 baseline (superseded).
-- `0.1: V3_SKIP_EXPANDER writer branch` — flag (default false); Stage2 synthesizes briefs from plan purposes when on; writer prompt renders plan+registry structured constraints; `transition_note`/`role`/`card_id` on writer section; tests 15 passed (`test_stage2_parallel` + `test_shared_prompt_prefix`).
-- `7.1: teacher corrections as typed Correction list` — `Correction` model; router patch/repair append typed list; writer prompt dedicated section; patch test updated (3 passed).
-- `7.2: keep intents and visual constraints structured at seams` — `learning_intents` list on preview DTO; assembler strategy no longer joins must_show; compile_orders stops joining intents; preview_mapper/assembler tests 8 passed.
-- `7.3: plain groups-tab teacher copy` — UnitGroupsPanel / ResourceComposerPanel wording.
-- `0b.1: fair skip-writer constraints + anchor.example plumbing` — AnchorPlan.example; WriterSection misconceptions/exclusions/anchor fields; STRUCTURED CONSTRAINTS list in skip writer path; tests 10 passed.
+- `0.1: V3_SKIP_EXPANDER writer branch` — historical.
+- `7.1`–`7.3`, `0b.1` — already landed prior session (see below).
+
+## §9 Acceptance
+
+| # | Check | Evidence |
+| --- | --- | --- |
+| 1 | `V3_SKIP_EXPANDER` removed; round-2 writer/anchor kept | Commit `1.0`; no matches under `backend/src`; STRUCTURED CONSTRAINTS + `anchor.example` still in writer path |
+| 2 | Simultaneous inserts both survive | `test_simultaneous_inserts_both_survive` |
+| 3 | Mid-lane resume: prose done → only questions | `test_resume_rebuilds_only_missing_brief_steps` (briefs); `test_run_lane_skips_existing_prose_step` (prose→questions) |
+| 4 | Migration orphans no in-flight gen | **Backfill** chosen (locked): `20260803_0031` copies `section_briefs` → `brief` steps |
+| 5 | Failed/stalled lane parks; siblings continue | `LaneOutcome.failed_step` / budget path; ship_with_holes unchanged |
+| 6 | First SECTION_READY ≤90s; full ≤3 min live | **Unticked** — no end-to-end live studio timing run this session (provider keys present; round-3 medians ~191s sequential writers remain the pre-lane baseline; outliers up to 280s observed) |
+| 7 | SECTION_READY before visual_ready; ak∥coherence | Runner: ready gate is `section_done & question_done` only; logs `[TAIL OVERLAP] gather(answer_key, coherence)` |
+| 8 | Wall re-audit | `rg content_intent\|SectionBrief` on `item_prompt.py` + `item_executor.py` → **no matches**. Item path uses `card.id/title/objective/misconceptions` only |
+| 9 | Storage keys generic | Model + migration: `part_id`, `variant_id`, `step`, `kind`; opaque `payload` |
+| 10 | Full suites green | Backend: **548 passed** then 2 flaky/stale fixed → recheck green on those; Frontend: **314 passed** / 76 files |
+
+### Railway / env to set
+
+- `V3_CONCURRENCY_LANE_MAX=6`
+- `V3_LANE_BUDGET_SECONDS=240`
+- `V3_CONCURRENCY_VISUAL_MAX=4`
+- `V3_STAGE2_PARALLEL=true` (false ⇒ lane concurrency 1)
+- Remove `V3_SKIP_EXPANDER` if present
+- `V3_CONCURRENCY_SECTION_MAX` / `V3_CONCURRENCY_QUESTION_MAX` retired on lane path
+
+### Deferred
+
+- Brief step still completes in `resume_stage2` before blueprint assembly; lanes own **prose→questions** (and visual rows). Moving brief into `run_lane` would remove the remaining phase barrier — deferred to avoid a second rewrite of `_attempt_chunked_assembly` mid-session.
+- Live timing acceptance (#6) left for the user.
+- §7.1 skeleton-by-lookup / `build`-role defect — out of scope (see KNOWN DEFECTS).
+
+### Summary
+
+Shipped: expander kept; skip flag gone; `generation_steps` + fold/backfill; items∥stage2; lane budgets; early SECTION_READY; overlapped answer_key/coherence; env docs. Before/after live wall-clock not remeasured here — use round-3 medians (~191s with expander sequential) as baseline until a lane-mode live run.
 
 ## Phase 0C — timing repeat (done)
 
