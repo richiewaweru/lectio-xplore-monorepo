@@ -1,0 +1,32 @@
+name: Agent Task
+description: Define a task intended for a coding or review agent.
+title: "chore: agent task - "
+labels:
+  - runbook
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: State the exact task the agent should complete.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How will you know the task is complete?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and docs
+      description: Link the project docs, stage pack, and runbook the agent should start from.
+    validations:
+      required: true
+  - type: textarea
+    id: guardrails
+    attributes:
+      label: Guardrails
+      description: Any architecture, testing, or workflow constraints.

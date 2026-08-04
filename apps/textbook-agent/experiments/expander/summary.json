@@ -1,0 +1,47 @@
+{
+  "topic": "Photosynthesis",
+  "plan_source": "fixed_structural_plan",
+  "roles": [
+    "orient",
+    "explain",
+    "model",
+    "apply",
+    "check"
+  ],
+  "has_practice_role": true,
+  "has_check_like_role": true,
+  "with_expander": {
+    "label": "with_expander",
+    "skip_expander": false,
+    "stage2_seconds": 27.23,
+    "writers_seconds": 177.48,
+    "section_writer_seconds": {
+      "orient": 19.11,
+      "explain": 11.08,
+      "model": 51.17,
+      "apply": 55.38,
+      "check": 40.74
+    },
+    "total_seconds": 204.71,
+    "section_count": 5,
+    "failed_briefs": []
+  },
+  "skip_expander": {
+    "label": "skip_expander",
+    "skip_expander": true,
+    "stage2_seconds": 0.0,
+    "writers_seconds": 159.57,
+    "section_writer_seconds": {
+      "orient": 23.02,
+      "explain": 16.94,
+      "model": 49.32,
+      "apply": 29.85,
+      "check": 40.45
+    },
+    "total_seconds": 159.58,
+    "section_count": 5,
+    "failed_briefs": []
+  },
+  "stage2_delta_seconds": 27.23,
+  "total_delta_seconds": 45.13
+}

@@ -1,0 +1,307 @@
+# Resource Spec: Practice Set
+# Version: 1.0
+# Pedagogical owner: Lectio
+# Last updated: 2026-05-01
+
+id: practice_set
+label: Practice Set
+version: "1.0"
+
+# ── PEDAGOGICAL INTENT ──────────────────────────────────────────────────────
+
+intent: |
+  A practice set builds fluency through volume. Where a worksheet
+  teaches through gradation — warm to cold, guided to independent —
+  a practice set drills a skill until the student can do it without
+  thinking. It is repetition with enough variation to reveal whether
+  the student has genuinely understood or just memorised one instance.
+
+  The difference matters pedagogically:
+  - Worksheet: 5-8 graduated problems, the difficulty arc is the point.
+  - Practice set: 8-20 problems, the volume is the point.
+
+  A practice set is NOT instruction. It contains no explanations,
+  no context-setting beyond the minimal reminder of what is being
+  practised. A student should be able to start the first problem
+  within 10 seconds of picking it up.
+
+  The practice set is the right resource for:
+  - Times tables and arithmetic facts
+  - Algebraic manipulation (expand, factorise, rearrange)
+  - Verb conjugation and grammar drills
+  - Vocabulary recall and spelling
+  - Any procedural skill where speed and accuracy both matter
+
+  It is NOT the right resource for:
+  - Concepts requiring understanding of WHY — use a worksheet or booklet
+  - Assessment — use a quiz
+  - First exposure — use a mini booklet or worksheet
+
+  A good practice set has variation within the same skill — different
+  numbers, different contexts, different surface forms of the same
+  operation. Students who complete it confidently have built fluency.
+  Students who struggle have revealed a gap the teacher needs to address.
+
+when_to_use:
+  - Building procedural fluency after conceptual understanding is established
+  - Homework following multiple lessons on the same skill
+  - Warm-up or consolidation activity
+  - Pre-assessment fluency check
+
+never_use_when:
+  - Students do not yet understand the concept — fluency cannot precede understanding
+  - The concept requires explanation first — use a mini booklet or worksheet
+  - The goal is to assess understanding of multiple concepts — use a quiz
+  - The teacher wants warm/medium/cold gradation — use a worksheet instead
+
+allowed_outcomes: [practice, review, vocabulary, assess]
+
+# ── DEPTH CONFIGURATION ─────────────────────────────────────────────────────
+
+depth:
+  quick:
+    sections: "1-2"
+    min_sections: 1
+    max_sections: 2
+    time_minutes: "5-10"
+    questions: "4-6"
+    note: >
+      Quick practice sets are warm-up drills. One type of problem,
+      repeated cleanly. No warm-up section, straight to practice.
+  standard:
+    sections: "2-4"
+    min_sections: 2
+    max_sections: 4
+    time_minutes: "15-25"
+    questions: "8-12"
+    note: >
+      Standard is the primary use case. Enough volume to build fluency.
+      Variation across problems — same skill, different instances.
+      Optional: one worked model at the start.
+  deep:
+    sections: "3-5"
+    min_sections: 3
+    max_sections: 5
+    time_minutes: "30-45"
+    questions: "12-20"
+    note: >
+      Deep practice sets are extended drills for skills requiring
+      significant repetition (e.g. timed arithmetic, conjugation
+      tables, vocabulary banks). May include a challenge cluster
+      at the end. Answer check is important at this depth.
+
+# ── SECTION STRUCTURE ───────────────────────────────────────────────────────
+
+sections:
+  required:
+    - role: practice
+      intent: >
+        The entire resource, in most cases. Multiple practice items
+        of the same skill type with variation across instances.
+
+        VARIATION is not the same as GRADATION:
+        - Gradation (worksheet): easy → medium → hard
+        - Variation (practice set): different instances of the same
+          difficulty level — e.g. 3×4, 7×8, 12×6 are varied but
+          not graduated
+
+        For standard/deep depth, variation is required. Repeating
+        identical problem structures (same numbers, same format,
+        same surface form) is a drill, not a practice set.
+
+        For procedural skills (maths, grammar): use practice-stack
+        with fill-in or short-answer format. Do NOT use hints — the
+        goal is fluency, not scaffolded understanding.
+
+        For vocabulary recall: fill-in-blank or short-answer only.
+        No sentence starters. No prompts beyond the question stem.
+
+        For extended practice: student-textbox for show-your-work
+        items where the method matters, not just the answer.
+      preferred_components:
+        - practice-stack
+        - fill-in-blank
+        - short-answer
+      allowed_components:
+        - student-textbox
+      forbidden_components:
+        - explanation-block
+        - definition-card
+        - hook-hero
+        - summary-block
+        - what-next-bridge
+        - worked-example-card   # goes in its own section, never mixed with practice
+        - reflection-prompt     # not appropriate in a fluency drill
+
+  optional:
+    - role: process
+      intent: >
+        One worked model at the very start, before any practice items.
+        Shows the procedure once, completely. Student then repeats
+        the same procedure across all practice items.
+
+        Maximum one worked model. More than one is instruction, not
+        a model — use a worksheet or mini booklet instead.
+
+        Only include when supports include worked_examples, OR when
+        depth=deep and the procedure has multiple steps that students
+        may misremember.
+
+        Each step in the model must state the action, not the reason.
+        "Step 1: Move the variable to the left side" is correct.
+        "Step 1: Move the variable because equations must balance" is
+        explanation — do not include it here.
+      preferred_components:
+        - worked-example-card
+        - process-steps
+      allowed_components:
+        - callout-block
+      forbidden_components:
+        - explanation-block
+        - practice-stack        # model ≠ practice
+      max_count: 1
+      placement: before_practice
+      only_when_support: worked_examples
+
+    - role: summary
+      intent: >
+        An answer check section at the end. Only appropriate at
+        standard and deep depth. Gives students a way to check
+        their own work after completing all practice items.
+
+        Not a reflection prompt — a direct answer reference.
+        "Check your answers:" followed by concise correct answers
+        for each practice item.
+
+        If self-checking is not the pedagogical intent, omit this
+        section. Teacher-marked practice sets do not need an answer
+        check in the student copy.
+
+        Use short-answer with answers provided inline (inline mode).
+        Do not use reflection-prompt here — the student is not
+        reflecting, they are checking.
+      preferred_components:
+        - short-answer
+        - fill-in-blank
+      allowed_components:
+        - reflection-prompt     # only if teacher explicitly wants reflection
+      forbidden_components:
+        - summary-block         # too formal — practice sets do not summarise
+        - what-next-bridge      # practice sets are self-contained
+        - explanation-block
+      max_count: 1
+
+# ── FORBIDDEN COMPONENTS (globally, across all sections) ────────────────────
+
+forbidden_components:
+  - hook-hero              # no time for hooks — straight to practice
+  - explanation-block      # practice sets do not teach
+  - definition-card        # vocabulary instruction belongs in mini booklet
+  - definition-family      # vocabulary instruction belongs in mini booklet
+  - glossary-rail          # not appropriate in a fluency drill
+  - summary-block          # practice sets do not summarise
+  - what-next-bridge       # practice sets are self-contained units
+  - diagram-block          # standalone visuals not appropriate for drills
+  - diagram-series         # screen-first
+  - diagram-compare        # screen-first
+  - simulation-block       # screen-only
+  - quiz-check             # use quiz resource type for assessment
+  - timeline-block         # not relevant
+  - prerequisite-strip     # students already have conceptual foundation
+  - pitfall-alert          # instruction — not appropriate in a practice set
+  - comparison-grid        # analytical — not a drill component
+  - insight-strip          # informational — not a drill component
+  - interview-anchor       # requires teacher facilitation
+
+# ── SUPPORTS MAPPING ────────────────────────────────────────────────────────
+
+supports:
+  worked_examples:
+    adds_section:
+      role: process
+      placement: before_practice
+      preferred_components: [worked-example-card, process-steps]
+    note: >
+      Adds one worked model before practice begins. Maximum one.
+      The model shows procedure, not reasoning.
+
+  step_by_step:
+    adds_section:
+      role: process
+      placement: before_practice
+      preferred_components: [process-steps]
+    note: >
+      Adds a step breakdown before practice. Each step numbered.
+      Used for multi-step procedures where students lose track of
+      the sequence (e.g. long division, quadratic formula).
+
+  challenge_questions:
+    modifies_role: practice
+    intent_note: >
+      Add a challenge cluster at the end of the practice section.
+      Label it clearly: "Challenge — try these if you're ready."
+      3-4 problems that are harder instances of the same skill
+      or require combining the skill with a prior concept.
+      No worked model for challenge problems.
+
+  simpler_reading:
+    modifies_all_sections:
+      note: >
+        Keep all question stems to maximum 8 words. No embedded
+        clauses in problem text. Use numbers and symbols rather
+        than words where possible ("3x + 5 = 14" not "three x
+        plus five equals fourteen"). For language-based practice
+        (vocabulary, grammar), use the most common everyday words
+        in the question stem and only the target language in the
+        answer slot.
+
+  visuals:
+    note: >
+      Visuals are not standard in practice sets. If a specific
+      diagram is required to answer a problem (label this diagram,
+      find angle x in the figure), the diagram is embedded within
+      the practice-stack problem itself, not a standalone section.
+
+  discussion_questions:
+    note: >
+      Discussion questions are not appropriate in a practice set.
+      If the teacher wants discussion after the drill, that is a
+      separate classroom activity. Do not include it in the resource.
+
+# ── VISUAL POLICY ───────────────────────────────────────────────────────────
+
+visuals:
+  quick: 0
+  standard: 0
+  deep: 1
+  allow_diagrams: true
+  allow_images: false
+  note: >
+    Practice sets do not use standalone visual sections.
+    At deep depth, one diagram is permitted only when the practice
+    items require reference to a visual (e.g. geometry problems
+    all referring to the same labelled figure).
+
+# ── TEXT POLICY ─────────────────────────────────────────────────────────────
+
+text:
+  density: low
+  max_reading_load: light
+  note: >
+    Minimum possible reading. Students should spend 90% of their
+    time writing answers, not reading questions. Problem stems
+    should be scannable in under 3 seconds.
+
+# ── VALIDATION RULES ────────────────────────────────────────────────────────
+
+validation:
+  - "Must contain practice-stack, fill-in-blank, or short-answer"
+  - "Must not contain explanation-block in any section"
+  - "Must not contain hook-hero in any section"
+  - "Must not contain summary-block or what-next-bridge"
+  - "Must not contain diagram-block, diagram-series, or simulation-block as standalone sections"
+  - "worked-example-card must only appear in the optional process section, never in practice"
+  - "If supports does not include worked_examples, process section must not be included"
+  - "If depth=quick, optional process and summary sections must not be included"
+  - "Question count must meet the minimum for the selected depth"
+  - "Must not contain quiz-check — use quiz resource type for assessment"

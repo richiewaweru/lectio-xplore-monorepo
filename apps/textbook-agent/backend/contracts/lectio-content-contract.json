@@ -1,0 +1,2927 @@
+{
+  "version": "0.6.0",
+  "source": "lectio",
+  "print_surface": {
+    "assumed_page": "A4",
+    "assumed_margins_mm": {
+      "top": 16,
+      "right": 14,
+      "bottom": 18,
+      "left": 14
+    },
+    "usable_height_px": 970,
+    "usable_width_px": 680
+  },
+  "default_template_id": "guided-concept-path",
+  "formatting_policy": {
+    "default": "plain_text unless field contract says otherwise",
+    "inline_markdown": "Supports bold, italic, inline code, and inline math using $...$.",
+    "block_markdown": "Supports paragraphs, lists, bold, italic, and math using $...$ or $$...$$.",
+    "latex_raw": "Raw LaTeX only. Do not wrap in $...$ unless field contract says markdown math.",
+    "plain_phrase_list": "Plain phrases, no markdown. Usually used for matching and highlighting.",
+    "positioned_callouts": "Labels positioned using x/y percentages from 0 to 100."
+  },
+  "templates": {
+    "guided-concept-path": {
+      "id": "guided-concept-path",
+      "name": "Guided Concept Path",
+      "always_present": [],
+      "contextually_present": [],
+      "available_components": [
+        "section-header",
+        "hook-hero",
+        "explanation-block",
+        "prerequisite-strip",
+        "what-next-bridge",
+        "interview-anchor",
+        "callout-block",
+        "summary-block",
+        "section-divider",
+        "definition-card",
+        "definition-family",
+        "glossary-rail",
+        "insight-strip",
+        "key-fact",
+        "comparison-grid",
+        "worked-example-card",
+        "process-steps",
+        "practice-stack",
+        "quiz-check",
+        "reflection-prompt",
+        "student-textbox",
+        "short-answer",
+        "fill-in-blank",
+        "pitfall-alert",
+        "diagram-block",
+        "diagram-compare",
+        "diagram-series",
+        "timeline-block",
+        "simulation-block",
+        "answer-key"
+      ],
+      "component_budget": {
+        "diagram-block": 3,
+        "diagram-series": 2,
+        "simulation-block": 1
+      },
+      "max_per_section": {
+        "practice-stack": 1,
+        "quiz-check": 1,
+        "reflection-prompt": 1
+      }
+    },
+    "open-canvas": {
+      "id": "open-canvas",
+      "name": "Open Canvas",
+      "always_present": [],
+      "contextually_present": [],
+      "available_components": [
+        "hook-hero",
+        "explanation-block",
+        "prerequisite-strip",
+        "interview-anchor",
+        "callout-block",
+        "summary-block",
+        "section-divider",
+        "definition-card",
+        "definition-family",
+        "glossary-rail",
+        "insight-strip",
+        "key-fact",
+        "worked-example-card",
+        "comparison-grid",
+        "process-steps",
+        "practice-stack",
+        "quiz-check",
+        "reflection-prompt",
+        "student-textbox",
+        "short-answer",
+        "fill-in-blank",
+        "pitfall-alert",
+        "diagram-block",
+        "diagram-compare",
+        "diagram-series",
+        "timeline-block",
+        "simulation-block"
+      ],
+      "component_budget": {
+        "simulation-block": 2,
+        "diagram-compare": 2,
+        "diagram-series": 2,
+        "comparison-grid": 2,
+        "timeline-block": 2
+      },
+      "max_per_section": {}
+    }
+  },
+  "planner_index": {
+    "component_ids": [
+      "section-header",
+      "hook-hero",
+      "explanation-block",
+      "prerequisite-strip",
+      "what-next-bridge",
+      "interview-anchor",
+      "callout-block",
+      "summary-block",
+      "section-divider",
+      "definition-card",
+      "definition-family",
+      "glossary-rail",
+      "insight-strip",
+      "key-fact",
+      "comparison-grid",
+      "worked-example-card",
+      "process-steps",
+      "practice-stack",
+      "quiz-check",
+      "reflection-prompt",
+      "student-textbox",
+      "short-answer",
+      "fill-in-blank",
+      "pitfall-alert",
+      "diagram-block",
+      "diagram-compare",
+      "diagram-series",
+      "timeline-block",
+      "simulation-block",
+      "answer-key"
+    ],
+    "phase_map": {
+      "1": {
+        "name": "Orient",
+        "description": "Set direction, context, purpose, or closure.",
+        "components": [
+          "section-header",
+          "hook-hero",
+          "explanation-block",
+          "prerequisite-strip",
+          "what-next-bridge",
+          "interview-anchor",
+          "callout-block",
+          "summary-block",
+          "section-divider"
+        ]
+      },
+      "2": {
+        "name": "Build Knowledge",
+        "description": "Define, compare, organize, or anchor key knowledge.",
+        "components": [
+          "definition-card",
+          "definition-family",
+          "glossary-rail",
+          "insight-strip",
+          "key-fact",
+          "comparison-grid"
+        ]
+      },
+      "3": {
+        "name": "Model",
+        "description": "Show a method, example, or process before independent work.",
+        "components": [
+          "worked-example-card",
+          "process-steps"
+        ]
+      },
+      "4": {
+        "name": "Practice and Check",
+        "description": "Let students answer, practise, retrieve, reflect, or show thinking.",
+        "components": [
+          "practice-stack",
+          "quiz-check",
+          "reflection-prompt",
+          "student-textbox",
+          "short-answer",
+          "fill-in-blank",
+          "answer-key"
+        ]
+      },
+      "5": {
+        "name": "Address Mistakes",
+        "description": "Warn against misconceptions or correct common errors.",
+        "components": [
+          "pitfall-alert"
+        ]
+      },
+      "6": {
+        "name": "Visualize",
+        "description": "Make spatial, relational, chronological, or visual structure visible.",
+        "components": [
+          "diagram-block",
+          "diagram-compare",
+          "diagram-series",
+          "timeline-block"
+        ]
+      },
+      "7": {
+        "name": "Interact",
+        "description": "Let learners manipulate, observe, or explore a concept interactively.",
+        "components": [
+          "simulation-block"
+        ]
+      }
+    }
+  },
+  "component_cards": {
+    "section-header": {
+      "component_id": "section-header",
+      "section_field": "header",
+      "role": "Opens a section with title, subject, objective, and level indicators",
+      "cognitive_job": "Orient the learner",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "titleMaxWords": 12,
+        "subtitleMaxWords": 20,
+        "objectiveMaxWords": 30
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/SectionHeaderContent"
+      },
+      "field_contracts": {
+        "title": {
+          "format": "plain_text",
+          "description": "Primary section title.",
+          "renderBehavior": "Plain text heading."
+        },
+        "subtitle": {
+          "format": "inline_markdown",
+          "description": "Optional subtitle line.",
+          "renderBehavior": "Inline markdown."
+        },
+        "subject": {
+          "format": "plain_text",
+          "description": "Subject label for the section.",
+          "renderBehavior": "Plain text."
+        },
+        "section_number": {
+          "format": "plain_text",
+          "description": "Optional numeric or ordinal section label.",
+          "renderBehavior": "Plain text chip."
+        },
+        "grade_band": {
+          "format": "enum",
+          "description": "Audience level band for the section."
+        },
+        "objectives": {
+          "format": "structured_array",
+          "description": "Optional learning objective strings.",
+          "renderBehavior": "Plain text bullet lines."
+        },
+        "level_pills": {
+          "format": "structured_array",
+          "description": "Optional difficulty pills with labels.",
+          "renderBehavior": "Structured items with label and warm/medium/cold variant."
+        }
+      },
+      "component_constraints": [
+        "Keep title concise; subtitle optional for tonal context."
+      ],
+      "examples": [
+        {
+          "title": "Intro",
+          "subject": "Mathematics",
+          "grade_band": "secondary"
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Full static header"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Full static header"
+      }
+    },
+    "hook-hero": {
+      "component_id": "hook-hero",
+      "section_field": "hook",
+      "role": "Creates felt need before explanation arrives",
+      "cognitive_job": "Create felt need",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "headlineMaxWords": 12,
+        "bodyMaxWords": 80
+      },
+      "capabilities": {
+        "acceptsMedia": true,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/HookHeroContent"
+      },
+      "field_contracts": {
+        "headline": {
+          "format": "plain_text",
+          "description": "Short attention-grabbing headline.",
+          "renderBehavior": "Plain text heading."
+        },
+        "body": {
+          "format": "inline_markdown",
+          "description": "Primary hook narrative.",
+          "renderBehavior": "Usually inline markdown. When type is quote, treat as plain quote text without markdown emphasis unless explicitly needed."
+        },
+        "anchor": {
+          "format": "plain_text_short",
+          "description": "Short anchor tying the hook to the lesson concept.",
+          "renderBehavior": "Plain text snippet."
+        },
+        "type": {
+          "format": "enum",
+          "description": "Hook presentation mode (prose, quote, question, data-point).",
+          "constraints": [
+            "When type is question, provide question_options.",
+            "When type is data-point, provide data_point."
+          ]
+        },
+        "question_options": {
+          "format": "structured_array",
+          "description": "Optional multiple choice stems for question hooks.",
+          "renderBehavior": "Plain text entries per option."
+        },
+        "data_point": {
+          "format": "structured_object",
+          "description": "Structured numeric or textual evidence for data-point hooks.",
+          "renderBehavior": "Rendered as a compact fact card when present."
+        },
+        "image": {
+          "format": "structured_object",
+          "description": "Optional inline illustration with url and alt text.",
+          "renderBehavior": "Rendered as an inline image when present."
+        },
+        "svg_content": {
+          "format": "plain_text",
+          "description": "Optional inline SVG markup.",
+          "renderBehavior": "Sanitized SVG inserted when present.",
+          "constraints": [
+            "SVG must be trusted or sanitized."
+          ]
+        },
+        "quote_attribution": {
+          "format": "plain_text",
+          "description": "Attribution line for quote hooks.",
+          "renderBehavior": "Plain text."
+        }
+      },
+      "component_constraints": [
+        "Anchor should be short and specific to the section concept.",
+        "Match optional payloads to the selected hook type."
+      ],
+      "examples": [
+        {
+          "headline": "Why?",
+          "body": "Because.",
+          "anchor": "Need"
+        },
+        {
+          "headline": "What happens when the lights go out?",
+          "body": "A forest at night reveals a hidden world of chemical reactions that only begin after sunset.",
+          "anchor": "photosynthesis stops and respiration dominates",
+          "image": {
+            "url": "https://placehold.co/800x400/e2e8f0/334155?text=Forest+at+dusk",
+            "alt": "Forest silhouette at dusk"
+          }
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": true,
+        "mediaConstraint": "constrain-height",
+        "requiresColorReset": true,
+        "fallback": "Image above headline when present; pull quote block with left border when text-only"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": true,
+        "mediaConstraint": "constrain-height",
+        "requiresColorReset": true,
+        "fallback": "Image above headline when present; pull quote block with left border when text-only"
+      }
+    },
+    "explanation-block": {
+      "component_id": "explanation-block",
+      "section_field": "explanation",
+      "role": "Sustained prose that builds a mental model",
+      "cognitive_job": "Build understanding",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "bodyMaxWords": 350,
+        "emphasisMax": 3
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/ExplanationContent"
+      },
+      "field_contracts": {
+        "body": {
+          "format": "block_markdown",
+          "description": "Main explanation text for the section.",
+          "renderBehavior": "Rendered as block markdown. Supports markdown and LaTeX math."
+        },
+        "emphasis": {
+          "format": "plain_phrase_list",
+          "description": "Phrases highlighted inside the explanation body.",
+          "renderBehavior": "Lectio highlights matching phrases in the body.",
+          "constraints": [
+            "Use plain phrases.",
+            "Do not use markdown in emphasis items.",
+            "Each phrase should appear in body.",
+            "Prefer key terms or short phrases, not full sentences."
+          ]
+        },
+        "callouts": {
+          "format": "structured_array",
+          "description": "Optional sideline notes with a tone tag and text.",
+          "renderBehavior": "Displayed as optional notes associated with the explanation block."
+        }
+      },
+      "component_constraints": [
+        "Put the primary teaching narrative in body.",
+        "Use emphasis for concepts that should visually pop when they recur in body."
+      ],
+      "examples": [
+        {
+          "body": "Explain.",
+          "emphasis": []
+        }
+      ],
+      "print": {
+        "breakBehavior": "prose",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Static prose"
+      },
+      "print_behavior": {
+        "breakBehavior": "prose",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Static prose"
+      }
+    },
+    "prerequisite-strip": {
+      "component_id": "prerequisite-strip",
+      "section_field": "prerequisites",
+      "role": "Lists assumed knowledge with optional refresher pop-ups",
+      "cognitive_job": "Activate prior knowledge",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "itemsMax": 4
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/PrerequisiteContent"
+      },
+      "field_contracts": {
+        "label": {
+          "format": "plain_text",
+          "description": "Optional strip heading.",
+          "renderBehavior": "Plain text."
+        },
+        "items[].concept": {
+          "format": "plain_text",
+          "description": "Named prerequisite concept.",
+          "renderBehavior": "Plain text."
+        },
+        "items[].refresher": {
+          "format": "inline_markdown",
+          "description": "Optional one-line refresher.",
+          "renderBehavior": "Inline markdown."
+        }
+      },
+      "component_constraints": [
+        "List only prerequisites the section truly depends on."
+      ],
+      "examples": [
+        {
+          "items": [
+            {
+              "concept": "Prior idea"
+            }
+          ]
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Inline list of prerequisites"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Inline list of prerequisites"
+      }
+    },
+    "what-next-bridge": {
+      "component_id": "what-next-bridge",
+      "section_field": "what_next",
+      "role": "Connects the section forward to what the concept enables",
+      "cognitive_job": "Connect forward",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "bodyMaxWords": 50,
+        "nextMaxWords": 15,
+        "previewMaxWords": 30
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/WhatNextContent"
+      },
+      "field_contracts": {
+        "body": {
+          "format": "inline_markdown",
+          "description": "Bridge narrative from this section to upcoming work.",
+          "renderBehavior": "Inline markdown."
+        },
+        "next": {
+          "format": "plain_text_short",
+          "description": "Short label for what comes next.",
+          "renderBehavior": "Plain text."
+        },
+        "preview": {
+          "format": "plain_text",
+          "description": "Optional preview blurb of the next chunk.",
+          "renderBehavior": "Plain text."
+        },
+        "prerequisites": {
+          "format": "structured_array",
+          "description": "Optional short prerequisites the learner should recall.",
+          "renderBehavior": "Plain text list items."
+        }
+      },
+      "component_constraints": [
+        "Keep next concrete and short."
+      ],
+      "examples": [
+        {
+          "body": "Next unit builds on this.",
+          "next": "Quadratics",
+          "preview": "Preview."
+        }
+      ],
+      "print": {
+        "breakBehavior": "prose",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "End card with next-lesson label and arrow"
+      },
+      "print_behavior": {
+        "breakBehavior": "prose",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "End card with next-lesson label and arrow"
+      }
+    },
+    "interview-anchor": {
+      "component_id": "interview-anchor",
+      "section_field": "interview",
+      "role": "Makes knowledge speakable - rehearse explaining the concept",
+      "cognitive_job": "Make knowledge speakable",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "promptMaxWords": 35,
+        "audienceMaxWords": 10,
+        "followUpMaxWords": 25
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/InterviewContent"
+      },
+      "field_contracts": {
+        "prompt": {
+          "format": "block_markdown",
+          "description": "Main interview framing prompt.",
+          "renderBehavior": "Block markdown."
+        },
+        "audience": {
+          "format": "plain_text_short",
+          "description": "Who the interview voice represents.",
+          "renderBehavior": "Plain text."
+        },
+        "follow_up": {
+          "format": "block_markdown",
+          "description": "Optional follow-up question block.",
+          "renderBehavior": "Block markdown."
+        }
+      },
+      "component_constraints": [
+        "Keep audience concrete and short."
+      ],
+      "examples": [
+        {
+          "prompt": "Explain to a peer.",
+          "audience": "Friend"
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Static with write-in lines"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Static with write-in lines"
+      }
+    },
+    "callout-block": {
+      "component_id": "callout-block",
+      "section_field": "callout",
+      "role": "Standalone highlighted callout ΓÇö tip, warning, info, or exam note",
+      "cognitive_job": "Flag what matters",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "bodyMaxWords": 60,
+        "headingMaxWords": 6
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/CalloutBlockContent"
+      },
+      "field_contracts": {
+        "variant": {
+          "format": "enum",
+          "description": "Callout tone (info, tip, warning, exam-tip, remember).",
+          "renderBehavior": "Selects surface styling and iconography."
+        },
+        "heading": {
+          "format": "plain_text",
+          "description": "Optional short heading above the body.",
+          "renderBehavior": "Plain text."
+        },
+        "body": {
+          "format": "block_markdown",
+          "description": "Primary callout body text.",
+          "renderBehavior": "Block markdown with support for emphasis and short lists."
+        }
+      },
+      "component_constraints": [
+        "Use headings sparingly; variant already carries tone."
+      ],
+      "examples": [
+        {
+          "variant": "tip",
+          "body": "Notice this."
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "aside",
+        "hasMedia": false,
+        "requiresColorReset": true,
+        "fallback": "Bordered box; floats as aside when adjacent to explanation, full-width otherwise"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "aside",
+        "hasMedia": false,
+        "requiresColorReset": true,
+        "fallback": "Bordered box; floats as aside when adjacent to explanation, full-width otherwise"
+      }
+    },
+    "summary-block": {
+      "component_id": "summary-block",
+      "section_field": "summary",
+      "role": "Lists what this section covered ΓÇö key takeaways as bullets",
+      "cognitive_job": "Consolidate and close",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "itemsMin": 2,
+        "itemsMax": 5,
+        "itemMaxWords": 25,
+        "closingMaxWords": 30
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/SummaryBlockContent"
+      },
+      "field_contracts": {
+        "heading": {
+          "format": "plain_text",
+          "description": "Optional summary heading.",
+          "renderBehavior": "Plain text."
+        },
+        "items[].text": {
+          "format": "inline_markdown",
+          "description": "Bullet text for each take-away.",
+          "renderBehavior": "Inline markdown."
+        },
+        "closing": {
+          "format": "inline_markdown",
+          "description": "Optional closing line after bullets.",
+          "renderBehavior": "Inline markdown."
+        }
+      },
+      "component_constraints": [
+        "Keep items tight and parallel in structure where possible."
+      ],
+      "examples": [
+        {
+          "items": [
+            {
+              "text": "Idea one"
+            },
+            {
+              "text": "Idea two"
+            }
+          ]
+        }
+      ],
+      "print": {
+        "breakBehavior": "prose",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": true,
+        "fallback": "Bulleted list with border"
+      },
+      "print_behavior": {
+        "breakBehavior": "prose",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": true,
+        "fallback": "Bulleted list with border"
+      }
+    },
+    "section-divider": {
+      "component_id": "section-divider",
+      "section_field": "divider",
+      "role": "Named visual break between parts within a section",
+      "cognitive_job": "Signal a phase change",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "labelMaxWords": 4
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/SectionDividerContent"
+      },
+      "field_contracts": {
+        "label": {
+          "format": "plain_text",
+          "description": "Short divider label between sections.",
+          "renderBehavior": "Plain text."
+        }
+      },
+      "component_constraints": [
+        "Use a concise transition label, not a second heading."
+      ],
+      "examples": [
+        {
+          "label": "Part B"
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Horizontal rule with label"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Horizontal rule with label"
+      }
+    },
+    "definition-card": {
+      "component_id": "definition-card",
+      "section_field": "definition",
+      "role": "Anchors a formal term with formal and plain versions",
+      "cognitive_job": "Anchor formal knowledge",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "formalMaxWords": 80,
+        "plainMaxWords": 60,
+        "relatedTermsMax": 3
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/DefinitionContent"
+      },
+      "field_contracts": {
+        "term": {
+          "format": "plain_text",
+          "description": "The defined term as a heading.",
+          "renderBehavior": "Plain text heading."
+        },
+        "plain": {
+          "format": "inline_markdown",
+          "description": "Student-friendly definition in plain language.",
+          "renderBehavior": "Inline markdown."
+        },
+        "formal": {
+          "format": "inline_markdown",
+          "description": "More precise or formal definition.",
+          "renderBehavior": "Inline markdown."
+        },
+        "notation": {
+          "format": "latex_raw",
+          "description": "Mathematical notation line when applicable.",
+          "constraints": [
+            "Use raw LaTeX for heavy notation.",
+            "If content is mostly prose, prefer inline_markdown stored elsewhere instead."
+          ]
+        },
+        "symbol": {
+          "format": "plain_text",
+          "description": "Short symbol label when relevant.",
+          "renderBehavior": "Plain text."
+        },
+        "examples": {
+          "format": "structured_array",
+          "description": "Short example strings illustrating usage.",
+          "renderBehavior": "Rendered as plain example lines (no extra quotes added by contract)."
+        },
+        "related_terms": {
+          "format": "structured_array",
+          "description": "Related vocabulary references.",
+          "renderBehavior": "Plain text entries."
+        },
+        "etymology": {
+          "format": "inline_markdown",
+          "description": "Optional etymology note.",
+          "renderBehavior": "Inline markdown."
+        }
+      },
+      "component_constraints": [
+        "plain should read approachable; formal should be more precise.",
+        "Do not wrap examples in quotation marks if the renderer already decorates them."
+      ],
+      "examples": [
+        {
+          "term": "Term",
+          "formal": "Formal def.",
+          "plain": "Plain def."
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Both versions shown"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Both versions shown"
+      }
+    },
+    "definition-family": {
+      "component_id": "definition-family",
+      "section_field": "definition_family",
+      "role": "Groups related terms that belong together conceptually",
+      "cognitive_job": "Distinguish related concepts",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "definitionsMax": 4,
+        "introMaxWords": 40
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/DefinitionFamilyContent"
+      },
+      "field_contracts": {
+        "family_title": {
+          "format": "plain_text",
+          "description": "Title for the definition cluster.",
+          "renderBehavior": "Plain text."
+        },
+        "family_intro": {
+          "format": "inline_markdown",
+          "description": "Optional introduction before accordion items.",
+          "renderBehavior": "Inline markdown."
+        },
+        "definitions": {
+          "format": "structured_array",
+          "description": "List of DefinitionCard-shaped objects.",
+          "renderBehavior": "Each entry uses the same field semantics as definition-card."
+        }
+      },
+      "component_constraints": [
+        "Keep related definitions grouped by a single conceptual family."
+      ],
+      "examples": [
+        {
+          "family_title": "Related",
+          "definitions": [
+            {
+              "term": "A",
+              "formal": "FA",
+              "plain": "PA"
+            }
+          ]
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Horizontal card strip when 4 or fewer terms; vertical list when more"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Horizontal card strip when 4 or fewer terms; vertical list when more"
+      }
+    },
+    "glossary-rail": {
+      "component_id": "glossary-rail",
+      "section_field": "glossary",
+      "role": "Vocabulary visible in peripheral field, updates by section",
+      "cognitive_job": "Retrieve meaning without losing place",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "termsMax": 8,
+        "termsWarning": 6,
+        "definitionMaxWords": 30
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/GlossaryContent"
+      },
+      "field_contracts": {
+        "terms[].term": {
+          "format": "plain_text",
+          "description": "Glossary entry term.",
+          "renderBehavior": "Plain text."
+        },
+        "terms[].definition": {
+          "format": "inline_markdown",
+          "description": "Definition body for the term.",
+          "renderBehavior": "Inline markdown."
+        },
+        "terms[].used_in": {
+          "format": "plain_text",
+          "description": "Optional note about where the word appears in the lesson.",
+          "renderBehavior": "Plain text."
+        },
+        "terms[].pronunciation": {
+          "format": "plain_text",
+          "description": "Optional pronunciation hint.",
+          "renderBehavior": "Plain text."
+        },
+        "terms[].related": {
+          "format": "structured_array",
+          "description": "Optional related term strings.",
+          "renderBehavior": "Plain text cross-links."
+        }
+      },
+      "component_constraints": [
+        "Keep definitions short and classroom-ready for the rail layout."
+      ],
+      "examples": [
+        {
+          "terms": [
+            {
+              "term": "Omega",
+              "definition": "A Greek letter commonly used as a variable."
+            }
+          ]
+        }
+      ],
+      "print": {
+        "breakBehavior": "prose",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": true,
+        "fallback": "Compact inline term strip with bold terms and inline definitions"
+      },
+      "print_behavior": {
+        "breakBehavior": "prose",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": true,
+        "fallback": "Compact inline term strip with bold terms and inline definitions"
+      }
+    },
+    "insight-strip": {
+      "component_id": "insight-strip",
+      "section_field": "insight_strip",
+      "role": "Side-by-side comparison of 2-3 related values or concepts",
+      "cognitive_job": "Compare values simultaneously",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "cellsMax": 3,
+        "cellsMin": 2,
+        "cellLinesMax": 2
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/InsightStripContent"
+      },
+      "field_contracts": {
+        "cells[].label": {
+          "format": "plain_text_short",
+          "description": "Short label for the cell.",
+          "renderBehavior": "Plain text."
+        },
+        "cells[].value": {
+          "format": "inline_markdown",
+          "description": "Primary value text.",
+          "renderBehavior": "Inline markdown."
+        },
+        "cells[].note": {
+          "format": "inline_markdown",
+          "description": "Optional supporting note.",
+          "renderBehavior": "Inline markdown."
+        },
+        "cells[].highlight": {
+          "format": "boolean",
+          "description": "Optional emphasis flag for the cell.",
+          "renderBehavior": "Toggles highlight styling when true."
+        }
+      },
+      "component_constraints": [
+        "Keep each cell to a single insight; avoid long paragraphs per cell."
+      ],
+      "examples": [
+        {
+          "cells": [
+            {
+              "label": "A",
+              "value": "1"
+            },
+            {
+              "label": "B",
+              "value": "2"
+            }
+          ]
+        }
+      ],
+      "print": {
+        "breakBehavior": "table",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": true,
+        "fallback": "Horizontal metric cards with top accent border"
+      },
+      "print_behavior": {
+        "breakBehavior": "table",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": true,
+        "fallback": "Horizontal metric cards with top accent border"
+      }
+    },
+    "key-fact": {
+      "component_id": "key-fact",
+      "section_field": "key_fact",
+      "role": "Visually prominent stat, formula, or date that anchors the section",
+      "cognitive_job": "Anchor a critical fact",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "factMaxWords": 20,
+        "contextMaxWords": 30
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/KeyFactContent"
+      },
+      "field_contracts": {
+        "fact": {
+          "format": "inline_markdown",
+          "description": "The key fact statement.",
+          "renderBehavior": "Inline markdown with optional emphasis and math."
+        },
+        "context": {
+          "format": "inline_markdown",
+          "description": "Optional framing context.",
+          "renderBehavior": "Inline markdown."
+        },
+        "source": {
+          "format": "plain_text",
+          "description": "Optional attribution or source label.",
+          "renderBehavior": "Plain text."
+        },
+        "formula": {
+          "format": "latex_raw",
+          "description": "Standalone equation or formula to display prominently.",
+          "constraints": [
+            "Use raw LaTeX.",
+            "Do not wrap in dollar-sign delimiters.",
+            "When formula is present, it takes visual priority over the fact text."
+          ]
+        }
+      },
+      "component_constraints": [
+        "Keep the fact line short and exam-ready."
+      ],
+      "examples": [
+        {
+          "fact": "E = mc²"
+        },
+        {
+          "fact": "The Essential Equation of Photosynthesis",
+          "formula": "6CO_2 + 6H_2O + \\text{light energy} \\rightarrow C_6H_{12}O_6 + 6O_2",
+          "context": "Carbon Dioxide + Water + Light → Glucose + Oxygen"
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Centred equation display when formula present; bold bordered fact box otherwise"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Centred equation display when formula present; bold bordered fact box otherwise"
+      }
+    },
+    "comparison-grid": {
+      "component_id": "comparison-grid",
+      "section_field": "comparison_grid",
+      "role": "Holds multiple concepts in view so distinctions become structural",
+      "cognitive_job": "Compare and classify in parallel",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "columnsMin": 2,
+        "columnsMax": 4,
+        "rowsMax": 6,
+        "criterionMaxWords": 8,
+        "valueMaxWords": 20
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/ComparisonGridContent"
+      },
+      "field_contracts": {
+        "title": {
+          "format": "plain_text",
+          "description": "Comparison grid title.",
+          "renderBehavior": "Plain text."
+        },
+        "intro": {
+          "format": "plain_text",
+          "description": "Optional framing paragraph.",
+          "renderBehavior": "Plain text."
+        },
+        "columns[].id": {
+          "format": "plain_text_short",
+          "description": "Stable column identifier.",
+          "renderBehavior": "Plain text key used for row mapping.",
+          "constraints": [
+            "Keep ids stable and short."
+          ]
+        },
+        "columns[].title": {
+          "format": "plain_text_short",
+          "description": "Column heading.",
+          "renderBehavior": "Plain text."
+        },
+        "columns[].summary": {
+          "format": "plain_text",
+          "description": "Summary line for the column.",
+          "renderBehavior": "Plain text."
+        },
+        "columns[].detail": {
+          "format": "plain_text",
+          "description": "Optional expanded column detail.",
+          "renderBehavior": "Plain text."
+        },
+        "rows[].criterion": {
+          "format": "plain_text_short",
+          "description": "Row label for the compared criterion.",
+          "renderBehavior": "Plain text."
+        },
+        "rows[].values": {
+          "format": "structured_array",
+          "description": "Per-column cell values in column order.",
+          "renderBehavior": "Plain text entries aligned to columns by index."
+        },
+        "rows[].takeaway": {
+          "format": "plain_text_short",
+          "description": "Optional short synthesis for the row.",
+          "renderBehavior": "Plain text."
+        },
+        "apply_prompt": {
+          "format": "plain_text",
+          "description": "Optional apply/synthesis prompt after the grid.",
+          "renderBehavior": "Plain text."
+        }
+      },
+      "component_constraints": [
+        "Each row.values array length must match the number of columns.",
+        "Use stable column ids when referencing columns in downstream tooling."
+      ],
+      "examples": [
+        {
+          "title": "Compare",
+          "columns": [
+            {
+              "id": "c1",
+              "title": "A",
+              "summary": "SA"
+            }
+          ],
+          "rows": [
+            {
+              "criterion": "Speed",
+              "values": [
+                "Fast"
+              ],
+              "takeaway": ""
+            }
+          ]
+        }
+      ],
+      "print": {
+        "breakBehavior": "table",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Static comparison table"
+      },
+      "print_behavior": {
+        "breakBehavior": "table",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Static comparison table"
+      }
+    },
+    "worked-example-card": {
+      "component_id": "worked-example-card",
+      "section_field": "worked_example",
+      "role": "Shows reasoning in action step by step, each step justified",
+      "cognitive_job": "Watch reasoning in action",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "stepsMax": 6,
+        "stepsWarning": 4,
+        "stepLabelMaxWords": 12,
+        "stepContentMaxWords": 80
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/WorkedExampleContent"
+      },
+      "field_contracts": {
+        "title": {
+          "format": "plain_text",
+          "description": "Short title for the worked example.",
+          "renderBehavior": "Rendered as a readable heading line."
+        },
+        "setup": {
+          "format": "inline_markdown",
+          "description": "Context framing the example.",
+          "renderBehavior": "Inline markdown with optional emphasis and inline math."
+        },
+        "steps[].label": {
+          "format": "plain_text_short",
+          "description": "Short label for each reasoning step.",
+          "renderBehavior": "Displayed next to step content."
+        },
+        "steps[].content": {
+          "format": "block_markdown",
+          "description": "Main text for the step.",
+          "renderBehavior": "Block markdown with support for lists and math."
+        },
+        "steps[].note": {
+          "format": "inline_markdown",
+          "description": "Optional side note for a step.",
+          "renderBehavior": "Inline markdown."
+        },
+        "steps[].formula": {
+          "format": "latex_raw",
+          "description": "Standalone equation material for the step.",
+          "constraints": [
+            "Use raw LaTeX.",
+            "Do not wrap in delimiters unless the renderer applies math mode."
+          ]
+        },
+        "conclusion": {
+          "format": "inline_markdown",
+          "description": "Closing takeaway tying steps together.",
+          "renderBehavior": "Inline markdown."
+        },
+        "answer": {
+          "format": "plain_text",
+          "description": "Short canonical answer line when provided.",
+          "renderBehavior": "Plain text result line."
+        },
+        "diagram": {
+          "format": "structured_object",
+          "description": "Optional diagram attached to the worked example.",
+          "renderBehavior": "Rendered with the shared diagram surface when present."
+        }
+      },
+      "component_constraints": [
+        "Each step should represent one clear reasoning move.",
+        "Keep formulas as raw LaTeX in formula fields."
+      ],
+      "examples": [
+        {
+          "title": "Demo",
+          "setup": "Problem setup.",
+          "steps": [
+            {
+              "label": "Step 1",
+              "content": "Do this."
+            }
+          ],
+          "conclusion": "Done."
+        }
+      ],
+      "print": {
+        "breakBehavior": "itemized",
+        "itemSelector": ".worked-step-print",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Bordered card with numbered step indicators, all steps expanded"
+      },
+      "print_behavior": {
+        "breakBehavior": "itemized",
+        "itemSelector": ".worked-step-print",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Bordered card with numbered step indicators, all steps expanded"
+      }
+    },
+    "process-steps": {
+      "component_id": "process-steps",
+      "section_field": "process",
+      "role": "A repeatable procedure where order is non-negotiable",
+      "cognitive_job": "Follow a procedure",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "stepsMax": 8,
+        "actionMaxWords": 15,
+        "detailMaxWords": 60
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/ProcessContent"
+      },
+      "field_contracts": {
+        "title": {
+          "format": "plain_text",
+          "description": "Title for the procedure.",
+          "renderBehavior": "Plain text."
+        },
+        "intro": {
+          "format": "inline_markdown",
+          "description": "Optional introductory framing.",
+          "renderBehavior": "Inline markdown."
+        },
+        "steps[].number": {
+          "format": "number",
+          "description": "Step order index.",
+          "constraints": [
+            "Numbers should be sequential."
+          ]
+        },
+        "steps[].action": {
+          "format": "plain_text_short",
+          "description": "Short verb-led action for the step.",
+          "renderBehavior": "Plain text."
+        },
+        "steps[].detail": {
+          "format": "inline_markdown",
+          "description": "Expanded explanation of the action.",
+          "renderBehavior": "Inline markdown."
+        },
+        "steps[].input": {
+          "format": "plain_text_short",
+          "description": "Short input label for the step.",
+          "renderBehavior": "Plain text."
+        },
+        "steps[].output": {
+          "format": "plain_text_short",
+          "description": "Short output label for the step.",
+          "renderBehavior": "Plain text."
+        },
+        "steps[].warning": {
+          "format": "plain_text",
+          "description": "Optional caution for the step.",
+          "renderBehavior": "Plain text."
+        }
+      },
+      "component_constraints": [
+        "Action should be short and verb-first.",
+        "detail expands the action; input/output are labels, not paragraphs."
+      ],
+      "examples": [
+        {
+          "title": "Method",
+          "steps": [
+            {
+              "number": 1,
+              "action": "Start",
+              "detail": "Details."
+            }
+          ]
+        }
+      ],
+      "print": {
+        "breakBehavior": "itemized",
+        "itemSelector": ".process-print-step",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "All steps visible, checkbox squares for print"
+      },
+      "print_behavior": {
+        "breakBehavior": "itemized",
+        "itemSelector": ".process-print-step",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "All steps visible, checkbox squares for print"
+      }
+    },
+    "practice-stack": {
+      "component_id": "practice-stack",
+      "section_field": "practice",
+      "role": "Problems at calibrated difficulty with progressive hints and optional solutions",
+      "cognitive_job": "Apply understanding under calibrated difficulty",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "problemsMin": 2,
+        "problemsMax": 5,
+        "hintsPerProblemMax": 3,
+        "questionMaxWords": 100,
+        "hintMaxWords": 60
+      },
+      "capabilities": {
+        "acceptsMedia": true,
+        "acceptsQuestions": true,
+        "producesAnswerKey": true,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/PracticeContent"
+      },
+      "field_contracts": {
+        "problems[].question": {
+          "format": "block_markdown",
+          "description": "The problem statement shown to the learner.",
+          "renderBehavior": "Rendered as block markdown."
+        },
+        "problems[].hints[].text": {
+          "format": "block_markdown",
+          "description": "Progressive hint text for a given hint level.",
+          "renderBehavior": "Rendered as block markdown inside the hint stack."
+        },
+        "problems[].hints[].level": {
+          "format": "enum",
+          "description": "Hint level (1, 2, or 3).",
+          "constraints": [
+            "Levels should increase in strength.",
+            "Use 1 (light), 2 (medium), or 3 (strong)."
+          ]
+        },
+        "problems[].solution.approach": {
+          "format": "block_markdown",
+          "description": "High-level solution approach when a solution is provided.",
+          "renderBehavior": "Rendered as block markdown."
+        },
+        "problems[].solution.answer": {
+          "format": "block_markdown",
+          "description": "Final answer text.",
+          "renderBehavior": "Rendered as block markdown."
+        },
+        "problems[].solution.worked": {
+          "format": "block_markdown",
+          "description": "Optional extended worked explanation.",
+          "renderBehavior": "Rendered as block markdown."
+        },
+        "problems[].diagram": {
+          "format": "structured_object",
+          "description": "Optional instructional diagram payload matching DiagramContent.",
+          "renderBehavior": "Rendered using the shared diagram renderer when present."
+        },
+        "problems[].difficulty": {
+          "format": "enum",
+          "description": "Declared difficulty band for the problem."
+        }
+      },
+      "component_constraints": [
+        "Order hints from light support to stronger support.",
+        "Problem difficulty must use the supported enum values."
+      ],
+      "examples": [
+        {
+          "problems": [
+            {
+              "difficulty": "warm",
+              "question": "Try this.",
+              "hints": [
+                {
+                  "level": 1,
+                  "text": "Hint one"
+                }
+              ]
+            },
+            {
+              "difficulty": "medium",
+              "question": "Try that.",
+              "hints": [
+                {
+                  "level": 1,
+                  "text": "Hint one"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "print": {
+        "breakBehavior": "itemized",
+        "itemSelector": ".practice-print-problem",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "All visible, write-in lines rendered; inline answers hidden by default"
+      },
+      "print_behavior": {
+        "breakBehavior": "itemized",
+        "itemSelector": ".practice-print-problem",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "All visible, write-in lines rendered; inline answers hidden by default"
+      }
+    },
+    "quiz-check": {
+      "component_id": "quiz-check",
+      "section_field": "quiz",
+      "role": "Quick concept check with immediate feedback mid-section",
+      "cognitive_job": "Verify understanding immediately",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "optionsMin": 3,
+        "optionsMax": 4,
+        "questionMaxWords": 60,
+        "optionMaxWords": 20
+      },
+      "capabilities": {
+        "acceptsMedia": true,
+        "acceptsQuestions": true,
+        "producesAnswerKey": true,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/QuizContent"
+      },
+      "field_contracts": {
+        "question": {
+          "format": "inline_markdown",
+          "description": "The quiz stem.",
+          "renderBehavior": "Inline markdown with optional math."
+        },
+        "options[].text": {
+          "format": "inline_markdown",
+          "description": "Visible option text shown to the learner.",
+          "renderBehavior": "Inline markdown."
+        },
+        "options[].explanation": {
+          "format": "inline_markdown",
+          "description": "Per-option rationale after answering.",
+          "renderBehavior": "Inline markdown."
+        },
+        "options[].correct": {
+          "format": "boolean",
+          "description": "Whether this option is the correct answer."
+        },
+        "options[].diagnoses": {
+          "format": "plain_text",
+          "description": "Optional caller-supplied misconception id revealed by this option.",
+          "renderBehavior": "Metadata only; never rendered in the learner-facing quiz."
+        },
+        "feedback_correct": {
+          "format": "plain_text",
+          "description": "Short feedback when the learner is correct.",
+          "renderBehavior": "Plain text."
+        },
+        "feedback_incorrect": {
+          "format": "plain_text",
+          "description": "Short feedback when the learner is incorrect.",
+          "renderBehavior": "Plain text."
+        },
+        "quiz_type": {
+          "format": "enum",
+          "description": "Optional quiz mode discriminator (multiple-choice vs true-false)."
+        }
+      },
+      "component_constraints": [
+        "Every option should include an explanation.",
+        "Prefer exactly one correct option unless the quiz explicitly supports otherwise.",
+        "Never generate, validate, or reinterpret a diagnoses id inside Lectio.",
+        "Do not prefix option text with A/B/C labels in the string; the UI numbers options."
+      ],
+      "examples": [
+        {
+          "question": "Pick one.",
+          "options": [
+            {
+              "text": "A",
+              "correct": false,
+              "explanation": "No."
+            },
+            {
+              "text": "B",
+              "correct": true,
+              "explanation": "Yes."
+            },
+            {
+              "text": "C",
+              "correct": false,
+              "explanation": "No."
+            }
+          ],
+          "feedback_correct": "Nice.",
+          "feedback_incorrect": "Review."
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Question and options shown, correct answer marked"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Question and options shown, correct answer marked"
+      }
+    },
+    "reflection-prompt": {
+      "component_id": "reflection-prompt",
+      "section_field": "reflection",
+      "role": "Pauses forward motion and turns attention inward",
+      "cognitive_job": "Pause and consolidate",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "promptMaxWords": 40,
+        "spaceMax": 6
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": true,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/ReflectionContent"
+      },
+      "field_contracts": {
+        "prompt": {
+          "format": "inline_markdown",
+          "description": "The reflective question or task.",
+          "renderBehavior": "Inline markdown."
+        },
+        "type": {
+          "format": "enum",
+          "description": "Reflection mode (open, pair-share, sentence-stem, timed, etc.).",
+          "constraints": [
+            "When type is sentence-stem, fill sentence_stem.",
+            "When type is timed, set time_minutes.",
+            "When type is pair-share, set pair_instruction."
+          ]
+        },
+        "space": {
+          "format": "number_of_print_lines",
+          "description": "Reserved vertical space for written responses when applicable.",
+          "renderBehavior": "Controls print line affordance, not screen layout."
+        },
+        "sentence_stem": {
+          "format": "plain_text",
+          "description": "Starter clause when using sentence-stem mode.",
+          "renderBehavior": "Plain text."
+        },
+        "time_minutes": {
+          "format": "number",
+          "description": "Duration guidance for timed reflections.",
+          "renderBehavior": "Numeric minutes."
+        },
+        "pair_instruction": {
+          "format": "plain_text",
+          "description": "Pair-share facilitation line.",
+          "renderBehavior": "Plain text."
+        }
+      },
+      "component_constraints": [
+        "Choose optional fields that match the reflection type."
+      ],
+      "examples": [
+        {
+          "prompt": "Think briefly.",
+          "type": "open"
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Prompt with write-in lines"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Prompt with write-in lines"
+      }
+    },
+    "student-textbox": {
+      "component_id": "student-textbox",
+      "section_field": "student_textbox",
+      "role": "Simple write-in box for student responses ΓÇö no framing beyond a prompt",
+      "cognitive_job": "Record thinking",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "promptMaxWords": 40,
+        "linesMax": 10
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": true,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/StudentTextboxContent"
+      },
+      "field_contracts": {
+        "prompt": {
+          "format": "inline_markdown",
+          "description": "Prompt for the written response.",
+          "renderBehavior": "Inline markdown."
+        },
+        "lines": {
+          "format": "number",
+          "description": "Optional number of ruled lines for print layouts.",
+          "renderBehavior": "Controls ruled line count, not screen layout height."
+        },
+        "label": {
+          "format": "plain_text",
+          "description": "Optional accessible label for the input.",
+          "renderBehavior": "Plain text."
+        }
+      },
+      "component_constraints": [
+        "Keep prompts concrete and tied to a single task."
+      ],
+      "examples": [
+        {
+          "prompt": "Write notes."
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Lined write-in area"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Lined write-in area"
+      }
+    },
+    "short-answer": {
+      "component_id": "short-answer",
+      "section_field": "short_answer",
+      "role": "Open question with write-in space and optional mark scheme",
+      "cognitive_job": "Recall and explain in own words",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "questionMaxWords": 60,
+        "linesMax": 10,
+        "marksMax": 10
+      },
+      "capabilities": {
+        "acceptsMedia": true,
+        "acceptsQuestions": true,
+        "producesAnswerKey": true,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/ShortAnswerContent"
+      },
+      "field_contracts": {
+        "question": {
+          "format": "inline_markdown",
+          "description": "Question stem.",
+          "renderBehavior": "Inline markdown."
+        },
+        "marks": {
+          "format": "number",
+          "description": "Optional point value.",
+          "renderBehavior": "Numeric marks shown to learners when provided."
+        },
+        "lines": {
+          "format": "number",
+          "description": "Optional ruled line count for print.",
+          "renderBehavior": "Print layout hint."
+        },
+        "mark_scheme": {
+          "format": "block_markdown",
+          "description": "Optional marking guidance for teachers or auto-graders.",
+          "renderBehavior": "Block markdown rubric text."
+        }
+      },
+      "component_constraints": [
+        "Keep mark_scheme aligned to the stated marks when both exist."
+      ],
+      "examples": [
+        {
+          "question": "Explain inertia in one paragraph."
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Question with lined answer space, mark allocation shown"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Question with lined answer space, mark allocation shown"
+      }
+    },
+    "fill-in-blank": {
+      "component_id": "fill-in-blank",
+      "section_field": "fill_in_blank",
+      "role": "Cloze passage with student-completed blanks ΓÇö tests recall not recognition",
+      "cognitive_job": "Retrieve and complete",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "segmentsMax": 60,
+        "blanksMax": 10,
+        "wordBankMax": 15
+      },
+      "capabilities": {
+        "acceptsMedia": true,
+        "acceptsQuestions": true,
+        "producesAnswerKey": true,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/FillInBlankContent"
+      },
+      "field_contracts": {
+        "instruction": {
+          "format": "plain_text",
+          "description": "Leading instruction for the activity.",
+          "renderBehavior": "Plain text."
+        },
+        "segments[].text": {
+          "format": "plain_text",
+          "description": "Text chunk for a segment.",
+          "renderBehavior": "Plain text segment content."
+        },
+        "segments[].is_blank": {
+          "format": "boolean",
+          "description": "Whether this segment is rendered as a blank.",
+          "renderBehavior": "Controls blank UI for the segment."
+        },
+        "segments[].answer": {
+          "format": "plain_text",
+          "description": "Answer text when is_blank is true.",
+          "constraints": [
+            "Required whenever is_blank is true."
+          ]
+        },
+        "word_bank": {
+          "format": "structured_array",
+          "description": "Optional word bank entries.",
+          "renderBehavior": "Plain text entries; should cover blank answers when provided."
+        }
+      },
+      "component_constraints": [
+        "Alternate plain text segments with blanks as needed.",
+        "Every blank segment should have an answer.",
+        "If word_bank exists, include answers for all blanks."
+      ],
+      "examples": [
+        {
+          "segments": [
+            {
+              "text": "The answer is ",
+              "is_blank": false
+            },
+            {
+              "text": "",
+              "is_blank": true,
+              "answer": "x"
+            }
+          ]
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Passage with underlined blanks, word bank box below"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Passage with underlined blanks, word bank box below"
+      }
+    },
+    "pitfall-alert": {
+      "component_id": "pitfall-alert",
+      "section_field": "pitfall",
+      "role": "Names a specific misconception before the learner makes it",
+      "cognitive_job": "Inoculate against error",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "misconceptionMaxWords": 20,
+        "correctionMaxWords": 80,
+        "exampleMaxWords": 40
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/PitfallContent"
+      },
+      "field_contracts": {
+        "misconception": {
+          "format": "plain_text_short",
+          "description": "Names the misconception briefly.",
+          "renderBehavior": "Plain text lead line."
+        },
+        "correction": {
+          "format": "inline_markdown",
+          "description": "Direct correction of the misconception.",
+          "renderBehavior": "Inline markdown."
+        },
+        "why": {
+          "format": "inline_markdown",
+          "description": "Why the correction matters.",
+          "renderBehavior": "Inline markdown."
+        },
+        "example": {
+          "format": "inline_markdown",
+          "description": "Single optional illustrative example.",
+          "renderBehavior": "Inline markdown."
+        },
+        "examples": {
+          "format": "structured_array",
+          "description": "Optional list of illustrative examples.",
+          "renderBehavior": "Inline markdown entries when multiple examples are needed."
+        },
+        "severity": {
+          "format": "enum",
+          "description": "Relative severity tag (minor or major)."
+        },
+        "label": {
+          "format": "plain_text_short",
+          "description": "Header label for the pitfall box.",
+          "renderBehavior": "Rendered as a bold heading inside the alert box. Defaults to \"Common Misconception\" when absent.",
+          "constraints": [
+            "Keep to 3 words or fewer."
+          ]
+        }
+      },
+      "component_constraints": [
+        "Correction should directly address the misconception line.",
+        "Prefer examples[] when you need more than one short illustration."
+      ],
+      "examples": [
+        {
+          "misconception": "Wrong idea",
+          "correction": "Right idea."
+        },
+        {
+          "label": "Exam Trap",
+          "misconception": "Heavier objects fall faster",
+          "correction": "In a vacuum, all objects accelerate at the same rate regardless of mass."
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Bordered warning box with icon and misconception/correction structure"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Bordered warning box with icon and misconception/correction structure"
+      }
+    },
+    "diagram-block": {
+      "component_id": "diagram-block",
+      "section_field": "diagram",
+      "role": "Makes spatial or relational structure visible",
+      "cognitive_job": "See the structure",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "calloutsMax": 6,
+        "captionMaxWords": 60
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": true
+      },
+      "writer_excluded": true,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/DiagramContent"
+      },
+      "field_contracts": {
+        "image_url": {
+          "format": "media_url",
+          "description": "Raster diagram image URL.",
+          "renderBehavior": "Rendered as a responsive <img> when present. Callout overlays use the same percentage coordinates as SVG paths."
+        },
+        "svg_content": {
+          "format": "plain_text",
+          "description": "Optional inline SVG document string.",
+          "renderBehavior": "Sanitized SVG inserted when image_url is absent.",
+          "constraints": [
+            "SVG must be safe/trusted content before sanitization."
+          ]
+        },
+        "caption": {
+          "format": "plain_text",
+          "description": "Figure caption displayed under the diagram.",
+          "renderBehavior": "Plain text caption line."
+        },
+        "alt_text": {
+          "format": "accessibility_text",
+          "description": "Accessibility description for screen readers.",
+          "renderBehavior": "Plain descriptive text."
+        },
+        "zoom_label": {
+          "format": "plain_text_short",
+          "description": "Short label used in zoom/detail affordances.",
+          "renderBehavior": "Plain text."
+        },
+        "figure_number": {
+          "format": "number",
+          "description": "Optional numeric figure identifier.",
+          "renderBehavior": "Displayed as a figure chip when provided."
+        },
+        "callouts": {
+          "format": "positioned_callouts",
+          "description": "Labeled points on the diagram with percentage coordinates.",
+          "renderBehavior": "Rendered as positioned overlays on raster or SVG output. x/y are percentages from 0 to 100 relative to the diagram viewport.",
+          "constraints": [
+            "Keep labels short.",
+            "Explanations should clarify the labeled region.",
+            "Compatible with image-based and SVG-based diagrams."
+          ]
+        },
+        "description": {
+          "format": "block_markdown",
+          "description": "Extended description of the diagram for side-by-side layout.",
+          "renderBehavior": "When present, diagram renders in a two-column grid: image left, description right.",
+          "constraints": [
+            "Keep under 80 words.",
+            "Describe what the diagram shows and why it matters."
+          ]
+        },
+        "figure_ref": {
+          "format": "plain_text_short",
+          "description": "Sequential figure reference label.",
+          "renderBehavior": "Rendered as a label above or beside the caption.",
+          "constraints": [
+            "Use format \"Figure X.Y\" where X is section number and Y is figure sequence."
+          ]
+        }
+      },
+      "component_constraints": [
+        "Provide either image_url or svg_content for a visible diagram.",
+        "Keep callout coordinates inside 0–100 for both raster and vector diagrams."
+      ],
+      "examples": [
+        {
+          "caption": "A labelled diagram for the lesson.",
+          "alt_text": "Diagram showing key parts referenced in the prose."
+        },
+        {
+          "caption": "Position–time graph for uniform acceleration.",
+          "alt_text": "Curved line on axes labelled time and position.",
+          "figure_ref": "Figure 2.1",
+          "description": "The curve bends upward because velocity increases over time. Notice how equal time steps cover larger distances — that is the signature of acceleration.",
+          "svg_content": "<svg viewBox=\"0 0 200 120\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20 100 Q100 20 180 40\" fill=\"none\" stroke=\"#333\" stroke-width=\"2\"/></svg>"
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": true,
+        "mediaConstraint": "constrain-width",
+        "requiresColorReset": false,
+        "fallback": "Static diagram centred, width constrained for print"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": true,
+        "mediaConstraint": "constrain-width",
+        "requiresColorReset": false,
+        "fallback": "Static diagram centred, width constrained for print"
+      }
+    },
+    "diagram-compare": {
+      "component_id": "diagram-compare",
+      "section_field": "diagram_compare",
+      "role": "Before and after comparison with a drag slider",
+      "cognitive_job": "See transformation",
+      "subjects": [
+        "history",
+        "science",
+        "mathematics",
+        "geography"
+      ],
+      "capacity": {
+        "captionMaxWords": 60
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": true
+      },
+      "writer_excluded": true,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/DiagramCompareContent"
+      },
+      "field_contracts": {
+        "before_svg": {
+          "format": "plain_text",
+          "description": "Optional SVG markup for the before panel.",
+          "renderBehavior": "Sanitized SVG string."
+        },
+        "after_svg": {
+          "format": "plain_text",
+          "description": "Optional SVG markup for the after panel.",
+          "renderBehavior": "Sanitized SVG string."
+        },
+        "before_image_url": {
+          "format": "media_url",
+          "description": "Optional raster image URL for the before panel.",
+          "renderBehavior": "Rendered as <img> when provided."
+        },
+        "after_image_url": {
+          "format": "media_url",
+          "description": "Optional raster image URL for the after panel.",
+          "renderBehavior": "Rendered as <img> when provided."
+        },
+        "before_label": {
+          "format": "plain_text",
+          "description": "Short label for the before column.",
+          "renderBehavior": "Plain text."
+        },
+        "after_label": {
+          "format": "plain_text",
+          "description": "Short label for the after column.",
+          "renderBehavior": "Plain text."
+        },
+        "before_details": {
+          "format": "structured_array",
+          "description": "Optional bullet strings elaborating the before state.",
+          "renderBehavior": "Plain text entries."
+        },
+        "after_details": {
+          "format": "structured_array",
+          "description": "Optional bullet strings elaborating the after state.",
+          "renderBehavior": "Plain text entries."
+        },
+        "caption": {
+          "format": "plain_text",
+          "description": "Shared caption for the compare figure.",
+          "renderBehavior": "Plain text."
+        },
+        "alt_text": {
+          "format": "accessibility_text",
+          "description": "Accessibility description covering both panels.",
+          "renderBehavior": "Plain text."
+        }
+      },
+      "component_constraints": [
+        "Provide either SVG or image URLs for each side you want to show.",
+        "Keep column labels short; they appear in compact headers."
+      ],
+      "examples": [
+        {
+          "before_label": "Before",
+          "after_label": "After",
+          "caption": "Compare both states.",
+          "alt_text": "Side-by-side diagram comparison."
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": true,
+        "mediaConstraint": "constrain-width",
+        "requiresColorReset": false,
+        "fallback": "Both diagrams shown side by side"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": true,
+        "mediaConstraint": "constrain-width",
+        "requiresColorReset": false,
+        "fallback": "Both diagrams shown side by side"
+      }
+    },
+    "diagram-series": {
+      "component_id": "diagram-series",
+      "section_field": "diagram_series",
+      "role": "A progression of diagrams that tells a sequence",
+      "cognitive_job": "Follow a visual progression",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "diagramsMax": 4
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": true
+      },
+      "writer_excluded": true,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/DiagramSeriesContent"
+      },
+      "field_contracts": {
+        "title": {
+          "format": "plain_text",
+          "description": "Title for the multi-step diagram series.",
+          "renderBehavior": "Plain text."
+        },
+        "diagrams[].step_label": {
+          "format": "plain_text_short",
+          "description": "Label for the step position in the series.",
+          "renderBehavior": "Plain text."
+        },
+        "diagrams[].caption": {
+          "format": "plain_text",
+          "description": "Caption for the individual step diagram.",
+          "renderBehavior": "Plain text."
+        },
+        "diagrams[].svg_content": {
+          "format": "plain_text",
+          "description": "Optional SVG markup for the step.",
+          "renderBehavior": "Sanitized SVG when present."
+        },
+        "diagrams[].image_url": {
+          "format": "media_url",
+          "description": "Optional raster image for the step.",
+          "renderBehavior": "Rendered when svg_content is absent."
+        }
+      },
+      "component_constraints": [
+        "Each step should include at least one visual source (SVG or image).",
+        "Keep step labels parallel in tone and length."
+      ],
+      "examples": [
+        {
+          "title": "Steps",
+          "diagrams": [
+            {
+              "step_label": "1",
+              "caption": "First frame.",
+              "svg_content": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1\" height=\"1\"/>"
+            }
+          ]
+        }
+      ],
+      "print": {
+        "breakBehavior": "itemized",
+        "itemSelector": ".diagram-series-print-item",
+        "preferredWidth": "full",
+        "hasMedia": true,
+        "mediaConstraint": "constrain-height",
+        "requiresColorReset": false,
+        "fallback": "All diagrams in sequence with step labels"
+      },
+      "print_behavior": {
+        "breakBehavior": "itemized",
+        "itemSelector": ".diagram-series-print-item",
+        "preferredWidth": "full",
+        "hasMedia": true,
+        "mediaConstraint": "constrain-height",
+        "requiresColorReset": false,
+        "fallback": "All diagrams in sequence with step labels"
+      }
+    },
+    "timeline-block": {
+      "component_id": "timeline-block",
+      "section_field": "timeline",
+      "role": "Turns chronology into a readable instructional spine",
+      "cognitive_job": "Follow cause and sequence over time",
+      "subjects": [
+        "history",
+        "science",
+        "universal"
+      ],
+      "capacity": {
+        "eventsMin": 3,
+        "eventsMax": 8,
+        "titleMaxWords": 10,
+        "summaryMaxWords": 50
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": false,
+        "isMedia": true
+      },
+      "writer_excluded": true,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/TimelineContent"
+      },
+      "field_contracts": {
+        "title": {
+          "format": "plain_text",
+          "description": "Timeline title.",
+          "renderBehavior": "Plain text."
+        },
+        "intro": {
+          "format": "plain_text",
+          "description": "Optional introduction to the sequence.",
+          "renderBehavior": "Plain text."
+        },
+        "events[].id": {
+          "format": "plain_text_short",
+          "description": "Stable identifier for the event row.",
+          "renderBehavior": "Plain text key."
+        },
+        "events[].year": {
+          "format": "plain_text_short",
+          "description": "Date, era, or sequence label.",
+          "renderBehavior": "Plain text label column."
+        },
+        "events[].title": {
+          "format": "plain_text",
+          "description": "Event headline.",
+          "renderBehavior": "Plain text."
+        },
+        "events[].summary": {
+          "format": "plain_text",
+          "description": "Concise description of the event.",
+          "renderBehavior": "Plain text."
+        },
+        "events[].impact": {
+          "format": "plain_text",
+          "description": "Optional impact or consequence line.",
+          "renderBehavior": "Plain text."
+        },
+        "events[].tags": {
+          "format": "structured_array",
+          "description": "Optional short tag strings for filtering or emphasis.",
+          "renderBehavior": "Plain text entries."
+        },
+        "events[].era": {
+          "format": "plain_text",
+          "description": "Optional era grouping label.",
+          "renderBehavior": "Plain text."
+        },
+        "closing_takeaway": {
+          "format": "plain_text",
+          "description": "Optional synthesis line after events.",
+          "renderBehavior": "Plain text."
+        }
+      },
+      "component_constraints": [
+        "Events should usually appear in chronological order.",
+        "Each event should have a stable id."
+      ],
+      "examples": [
+        {
+          "title": "Timeline",
+          "events": [
+            {
+              "id": "e1",
+              "year": "1066",
+              "title": "Event",
+              "summary": "What happened."
+            }
+          ]
+        }
+      ],
+      "print": {
+        "breakBehavior": "itemized",
+        "itemSelector": ".timeline-print-event",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Vertical event list"
+      },
+      "print_behavior": {
+        "breakBehavior": "itemized",
+        "itemSelector": ".timeline-print-event",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Vertical event list"
+      }
+    },
+    "simulation-block": {
+      "component_id": "simulation-block",
+      "section_field": "simulation",
+      "role": "Manipulate a variable and discover the concept through observation",
+      "cognitive_job": "Manipulate and discover",
+      "subjects": [
+        "mathematics",
+        "physics",
+        "chemistry",
+        "statistics"
+      ],
+      "capacity": {
+        "countGuidance": "template-defined"
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": false,
+        "producesAnswerKey": false,
+        "interactive": true,
+        "isMedia": true
+      },
+      "writer_excluded": true,
+      "status": "beta",
+      "schema_summary": {
+        "$ref": "#/definitions/SimulationContent"
+      },
+      "field_contracts": {
+        "spec.type": {
+          "format": "plain_text",
+          "description": "Discriminator string for the embedded interaction.",
+          "renderBehavior": "Plain text token consumed by the interaction host."
+        },
+        "spec.goal": {
+          "format": "plain_text",
+          "description": "Human-readable learning goal for the interaction.",
+          "renderBehavior": "Plain text summary line."
+        },
+        "spec.anchor_content": {
+          "format": "structured_object",
+          "description": "Structured anchor parameters for the interaction.",
+          "renderBehavior": "Arbitrary JSON object interpreted by the interaction renderer."
+        },
+        "spec.context": {
+          "format": "structured_object",
+          "description": "Visual context for the interaction (theme, colors, learner level).",
+          "renderBehavior": "Passed to the interaction shell for styling and layout."
+        },
+        "spec.dimensions": {
+          "format": "structured_object",
+          "description": "Width/height hints for the iframe surface.",
+          "renderBehavior": "Controls iframe sizing hints."
+        },
+        "spec.print_translation": {
+          "format": "enum",
+          "description": "How the interaction degrades in print (static snapshot, hide, etc.)."
+        },
+        "html_content": {
+          "format": "plain_text",
+          "description": "Optional HTML bundle for iframe embedding.",
+          "renderBehavior": "Trusted HTML inserted into the sandboxed iframe host."
+        },
+        "fallback_diagram": {
+          "format": "structured_object",
+          "description": "Optional DiagramContent used when iframe content is unavailable.",
+          "renderBehavior": "Rendered with DiagramBlock semantics."
+        },
+        "explanation": {
+          "format": "inline_markdown",
+          "description": "Optional instructor-facing explanation of the interaction.",
+          "renderBehavior": "Inline markdown helper text."
+        }
+      },
+      "component_constraints": [
+        "Provide either html_content or a meaningful fallback_diagram for offline contexts.",
+        "Keep spec.goal aligned with what the iframe interaction practices."
+      ],
+      "examples": [
+        {
+          "spec": {
+            "type": "sandbox",
+            "goal": "Explore the slider effect on the graph.",
+            "anchor_content": {},
+            "context": {
+              "learner_level": "secondary",
+              "template_id": "sandbox",
+              "color_mode": "light",
+              "accent_color": "#0f172a",
+              "surface_color": "#ffffff",
+              "font_mono": "ui-monospace"
+            },
+            "dimensions": {
+              "width": "100%",
+              "height": 420,
+              "resizable": true
+            },
+            "print_translation": "static_diagram"
+          }
+        }
+      ],
+      "print": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Static diagram at midstate or explanation text"
+      },
+      "print_behavior": {
+        "breakBehavior": "atomic",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": false,
+        "fallback": "Static diagram at midstate or explanation text"
+      }
+    },
+    "answer-key": {
+      "component_id": "answer-key",
+      "section_field": "answer_key",
+      "role": "Provides correct answers with misconception evidence for each diagnostic distractor",
+      "cognitive_job": "Support diagnostic marking",
+      "subjects": [
+        "universal"
+      ],
+      "capacity": {
+        "entriesMin": 0,
+        "entriesMax": 50
+      },
+      "capabilities": {
+        "acceptsMedia": false,
+        "acceptsQuestions": true,
+        "producesAnswerKey": true,
+        "interactive": false,
+        "isMedia": false
+      },
+      "writer_excluded": false,
+      "status": "stable",
+      "schema_summary": {
+        "$ref": "#/definitions/AnswerKeyContent"
+      },
+      "field_contracts": {
+        "label": {
+          "format": "plain_text_short",
+          "description": "Optional heading; defaults to \"Answer key\".",
+          "renderBehavior": "Plain text heading."
+        },
+        "note": {
+          "format": "plain_text",
+          "description": "Optional standing note beneath the heading.",
+          "renderBehavior": "Defaults to the standard indicative-not-conclusive diagnostic note."
+        },
+        "entries[].question_number": {
+          "format": "number",
+          "description": "Source question number used for ordered-list numbering."
+        },
+        "entries[].question": {
+          "format": "plain_text",
+          "description": "Full question stem repeated for standalone use.",
+          "renderBehavior": "Plain text that wraps without truncation."
+        },
+        "entries[].correct_key": {
+          "format": "plain_text_short",
+          "description": "Optional source option key such as \"a\"."
+        },
+        "entries[].correct_answer": {
+          "format": "plain_text",
+          "description": "Correct option text."
+        },
+        "entries[].diagnostics[].option_text": {
+          "format": "plain_text",
+          "description": "Incorrect option text selected by a learner."
+        },
+        "entries[].diagnostics[].misconception_id": {
+          "format": "plain_text_short",
+          "description": "Caller-supplied misconception id; Lectio does not interpret it."
+        },
+        "entries[].diagnostics[].misconception_label": {
+          "format": "plain_text",
+          "description": "Human-readable misconception hypothesis."
+        }
+      },
+      "component_constraints": [
+        "Use evidence language: chose \"{option_text}\" → consistent with: {misconception_label}.",
+        "Never describe a diagnostic tag as a confirmed learner belief.",
+        "Do not deduplicate repeated misconception ids; consumers own aggregation."
+      ],
+      "examples": [
+        {
+          "label": "Answer key",
+          "entries": [
+            {
+              "question_number": 1,
+              "question": "A tree gains 50 kg of wood. Where did most of that mass come from?",
+              "correct_key": "a",
+              "correct_answer": "carbon dioxide from the air",
+              "diagnostics": [
+                {
+                  "option_key": "b",
+                  "option_text": "minerals from the soil",
+                  "misconception_id": "M1",
+                  "misconception_label": "mass comes from the soil"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "print": {
+        "breakBehavior": "itemized",
+        "itemSelector": ".answer-key-entry",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": true,
+        "fallback": "Diagnostic answer list with grouped misconception evidence",
+        "notes": "Starts on a fresh page; each question and its diagnostic rows stay together."
+      },
+      "print_behavior": {
+        "breakBehavior": "itemized",
+        "itemSelector": ".answer-key-entry",
+        "preferredWidth": "full",
+        "hasMedia": false,
+        "requiresColorReset": true,
+        "fallback": "Diagnostic answer list with grouped misconception evidence",
+        "notes": "Starts on a fresh page; each question and its diagnostic rows stay together."
+      }
+    }
+  },
+  "excluded_components": {
+    "image-block": {
+      "component_id": "image-block",
+      "reason": "Editor-attached image content, not a generation-facing section block."
+    },
+    "video-embed": {
+      "component_id": "video-embed",
+      "reason": "Editor-attached video content, not a generation-facing section block."
+    },
+    "glossary-inline": {
+      "component_id": "glossary-inline",
+      "reason": "Inline helper content, not a standalone section block."
+    }
+  }
+}

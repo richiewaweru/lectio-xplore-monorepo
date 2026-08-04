@@ -1,0 +1,162 @@
+[
+  {
+    "path": "00_DECISION_RECORD.md",
+    "bytes": 3126,
+    "sha256": "e31191e465a35b24ba9b7f02fe22b445f7386f20b6a08842f13c7ee19875bbb3"
+  },
+  {
+    "path": "01_PRODUCT_SPEC.md",
+    "bytes": 1893,
+    "sha256": "17bc4aaccfa17f148dde85a3b707fcc1a77de1b07cdf333c16f9635a049d2a9c"
+  },
+  {
+    "path": "02_CURRENT_SYSTEM_AND_DEFECTS.md",
+    "bytes": 2454,
+    "sha256": "fdf605982746b643a02aa36cdf45706e17b443244bf000e26f57a64a276c6953"
+  },
+  {
+    "path": "03_DOMAIN_MODEL.md",
+    "bytes": 2470,
+    "sha256": "f07086e30a7c8116dabd7844c9bc7ae27c5f701118ded82806a3b55543bdaa5a"
+  },
+  {
+    "path": "04_CONCEPT_REGISTRY.md",
+    "bytes": 1493,
+    "sha256": "c1e929670f3c980d4c4c2162abe9670fdaff001058a56d9ed8fcdce7e57f6eff"
+  },
+  {
+    "path": "05_PATH_PLANNER.md",
+    "bytes": 2631,
+    "sha256": "c5c11aa22e22bca1c4e8ad5d0c1b63ee2545efff393e5676d58b0bb36d221123"
+  },
+  {
+    "path": "06_SKELETON_ENGINE.md",
+    "bytes": 2401,
+    "sha256": "d785804272c29e67980a4b04a747553296da64e379a15e4e28933a9ab6c1c2c0"
+  },
+  {
+    "path": "07_DIFFERENTIATION_MODEL.md",
+    "bytes": 2006,
+    "sha256": "3aaa7506458aa2e9e704925bf9277a862ab0bd38dcc8e1f6e7a00d83fcb9f732"
+  },
+  {
+    "path": "08_LESSON_BRIDGE.md",
+    "bytes": 1732,
+    "sha256": "f096986656d51500266ae9fd8e2b90338d945f5779ae3769a3e742fc3695b983"
+  },
+  {
+    "path": "09_CONTINUITY_AND_ACTUALS.md",
+    "bytes": 1147,
+    "sha256": "e8a8777475c38ea7f5830b823e5aa5000b1805b7bb1f5da656a4f47df0a115cd"
+  },
+  {
+    "path": "10_RESOURCE_PROJECTIONS.md",
+    "bytes": 1412,
+    "sha256": "156d413d4ee35e6d1bd7cbccb47e11db168d5d5f177ce6ddf243dc0892773c49"
+  },
+  {
+    "path": "11_UI_AND_FLOWS.md",
+    "bytes": 3934,
+    "sha256": "0e9a35ebed116990a2567958671e842d6d4579340ac6f5190bf3e58f4b92dd7f"
+  },
+  {
+    "path": "12_API_CONTRACTS.md",
+    "bytes": 1995,
+    "sha256": "2695d4c61b95d66c72745aecbe8bc654a2348ac5f08f21809ec9ba102f6ac629"
+  },
+  {
+    "path": "13_DATABASE_AND_MIGRATIONS.md",
+    "bytes": 1350,
+    "sha256": "40813d94263d846e424db4b5f9e42555ead18d408616fa9b8058cfbdea6de278"
+  },
+  {
+    "path": "14_IMPLEMENTATION_PHASES.md",
+    "bytes": 2649,
+    "sha256": "e57c256b80c398f9febfab85c01f52a84013e2b4be3fd4ead008373b4cb03ac7"
+  },
+  {
+    "path": "15_TEST_AND_EXPERIMENT_PLAN.md",
+    "bytes": 2449,
+    "sha256": "6dc07c7ce193cf339250915bfa98cb151b7902b4c401d39baac43e734e581601"
+  },
+  {
+    "path": "16_ACCEPTANCE_WALKTHROUGH.md",
+    "bytes": 1834,
+    "sha256": "6ba7fe42da89d36ef367fd70c3058e1f0a5db8768598f3fa158f09d0c8ae188d"
+  },
+  {
+    "path": "17_RISKS_NON_GOALS_STOP_RULES.md",
+    "bytes": 1520,
+    "sha256": "1920a2a8a3c6c8b919c0f9e1b9e943d199eff6a7f87f45dbfca00eab41b7025c"
+  },
+  {
+    "path": "18_AGENT_MASTER_PROMPT.md",
+    "bytes": 2520,
+    "sha256": "d865390b43884e20686ff3048d8600876d38f6a45a83b8812de9bbe2be07501e"
+  },
+  {
+    "path": "19_AGENT_PROGRESS_TEMPLATE.md",
+    "bytes": 1091,
+    "sha256": "22f12ff702f33f6edb94d8c34219513e43ff943cd6b60f167178ae871838d8c5"
+  },
+  {
+    "path": "README.md",
+    "bytes": 4055,
+    "sha256": "4aa8356ee36d2f7bb54a787d42efe0192a942fb117038715b54872053e5f1852"
+  },
+  {
+    "path": "fixtures/grade12-photosynthesis-path.json",
+    "bytes": 1848,
+    "sha256": "014db61105a934e12bf3e5d1fa9bc621d71fbff64d0f5cd13cb1004874f2e316"
+  },
+  {
+    "path": "fixtures/grade4-photosynthesis-path.json",
+    "bytes": 1270,
+    "sha256": "418ac00d19415ef24841a846338bb6fa861703393f77874b15f63fb598d5a88e"
+  },
+  {
+    "path": "fixtures/shadow-review-template.csv",
+    "bytes": 168,
+    "sha256": "b782dabf9e137a7e0af613ec76bf724f57d88eb5a6a6e4f8ba4434522d6153c1"
+  },
+  {
+    "path": "schemas/concept.schema.json",
+    "bytes": 506,
+    "sha256": "342e9cdb8980c6401d23b1f36068c16402420ac94b8651f551b85d28181f402e"
+  },
+  {
+    "path": "schemas/lesson-actual.schema.json",
+    "bytes": 820,
+    "sha256": "993bf189296b04477842a3bd7d72abb3cb55d4d8543f82666f5fb76d5afbbb3b"
+  },
+  {
+    "path": "schemas/lesson-provenance.schema.json",
+    "bytes": 1370,
+    "sha256": "d50c4af9826842b695890145a6019751048d86c0bde6e64f0678ba63faaa9133"
+  },
+  {
+    "path": "schemas/path-lesson.schema.json",
+    "bytes": 1249,
+    "sha256": "cae89ea904f0182caf641de9b78052724eff06f0b84577f38aee0746f73458c7"
+  },
+  {
+    "path": "schemas/skeleton-preview.schema.json",
+    "bytes": 759,
+    "sha256": "a82464d2e029311ccc8a5d9cef30996f42433214c2799b65b340f41e45ebcc03"
+  },
+  {
+    "path": "source_material/README.md",
+    "bytes": 256,
+    "sha256": "9ee146b3173b40b55c0456360c5b688bcf1579272801df573bd74f132e332852"
+  },
+  {
+    "path": "source_material/VETTING_BRIEF.md",
+    "bytes": 19285,
+    "sha256": "e156f19e2b04fd65cccc0d7b98d3b5737119905051b3dee9bed025b146034172"
+  },
+  {
+    "path": "source_material/skeletons-v1-draft.yaml",
+    "bytes": 17351,
+    "sha256": "15842ab4e6234ab622a683432f412300e7ba03d6bc100584c8fc9dc7158b9ee8"
+  }
+]

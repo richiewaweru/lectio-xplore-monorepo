@@ -1,0 +1,351 @@
+{
+  "section-header": {
+    "id": "section-header",
+    "sectionField": "header",
+    "role": "Opens a section with title, subject, objective, and level indicators",
+    "cognitive_job": "Orient the learner",
+    "generation_hint": "Orient the learner",
+    "capacity": {
+      "titleMaxWords": 12,
+      "subtitleMaxWords": 20,
+      "objectiveMaxWords": 30
+    }
+  },
+  "hook-hero": {
+    "id": "hook-hero",
+    "sectionField": "hook",
+    "role": "Creates felt need before explanation arrives",
+    "cognitive_job": "Create felt need",
+    "generation_hint": "Create felt need",
+    "capacity": {
+      "headlineMaxWords": 12,
+      "bodyMaxWords": 80
+    }
+  },
+  "explanation-block": {
+    "id": "explanation-block",
+    "sectionField": "explanation",
+    "role": "Sustained prose that builds a mental model",
+    "cognitive_job": "Build understanding",
+    "generation_hint": "Build understanding",
+    "capacity": {
+      "bodyMaxWords": 350,
+      "emphasisMax": 3
+    }
+  },
+  "prerequisite-strip": {
+    "id": "prerequisite-strip",
+    "sectionField": "prerequisites",
+    "role": "Lists assumed knowledge with optional refresher pop-ups",
+    "cognitive_job": "Activate prior knowledge",
+    "generation_hint": "Activate prior knowledge",
+    "capacity": {
+      "itemsMax": 4
+    }
+  },
+  "what-next-bridge": {
+    "id": "what-next-bridge",
+    "sectionField": "what_next",
+    "role": "Connects the section forward to what the concept enables",
+    "cognitive_job": "Connect forward",
+    "generation_hint": "Connect forward",
+    "capacity": {
+      "bodyMaxWords": 50,
+      "nextMaxWords": 15,
+      "previewMaxWords": 30
+    }
+  },
+  "interview-anchor": {
+    "id": "interview-anchor",
+    "sectionField": "interview",
+    "role": "Makes knowledge speakable - rehearse explaining the concept",
+    "cognitive_job": "Make knowledge speakable",
+    "generation_hint": "Make knowledge speakable",
+    "capacity": {
+      "promptMaxWords": 35,
+      "audienceMaxWords": 10,
+      "followUpMaxWords": 25
+    }
+  },
+  "callout-block": {
+    "id": "callout-block",
+    "sectionField": "callout",
+    "role": "Standalone highlighted callout ΓÇö tip, warning, info, or exam note",
+    "cognitive_job": "Flag what matters",
+    "generation_hint": "Flag what matters",
+    "capacity": {
+      "bodyMaxWords": 60,
+      "headingMaxWords": 6
+    }
+  },
+  "summary-block": {
+    "id": "summary-block",
+    "sectionField": "summary",
+    "role": "Lists what this section covered ΓÇö key takeaways as bullets",
+    "cognitive_job": "Consolidate and close",
+    "generation_hint": "Consolidate and close",
+    "capacity": {
+      "itemsMin": 2,
+      "itemsMax": 5,
+      "itemMaxWords": 25,
+      "closingMaxWords": 30
+    }
+  },
+  "section-divider": {
+    "id": "section-divider",
+    "sectionField": "divider",
+    "role": "Named visual break between parts within a section",
+    "cognitive_job": "Signal a phase change",
+    "generation_hint": "Signal a phase change",
+    "capacity": {
+      "labelMaxWords": 4
+    }
+  },
+  "definition-card": {
+    "id": "definition-card",
+    "sectionField": "definition",
+    "role": "Anchors a formal term with formal and plain versions",
+    "cognitive_job": "Anchor formal knowledge",
+    "generation_hint": "Anchor formal knowledge",
+    "capacity": {
+      "formalMaxWords": 80,
+      "plainMaxWords": 60,
+      "relatedTermsMax": 3
+    }
+  },
+  "definition-family": {
+    "id": "definition-family",
+    "sectionField": "definition_family",
+    "role": "Groups related terms that belong together conceptually",
+    "cognitive_job": "Distinguish related concepts",
+    "generation_hint": "Distinguish related concepts",
+    "capacity": {
+      "definitionsMax": 4,
+      "introMaxWords": 40
+    }
+  },
+  "glossary-rail": {
+    "id": "glossary-rail",
+    "sectionField": "glossary",
+    "role": "Vocabulary visible in peripheral field, updates by section",
+    "cognitive_job": "Retrieve meaning without losing place",
+    "generation_hint": "Retrieve meaning without losing place",
+    "capacity": {
+      "termsMax": 8,
+      "termsWarning": 6,
+      "definitionMaxWords": 30
+    }
+  },
+  "insight-strip": {
+    "id": "insight-strip",
+    "sectionField": "insight_strip",
+    "role": "Side-by-side comparison of 2-3 related values or concepts",
+    "cognitive_job": "Compare values simultaneously",
+    "generation_hint": "Compare values simultaneously",
+    "capacity": {
+      "cellsMax": 3,
+      "cellsMin": 2,
+      "cellLinesMax": 2
+    }
+  },
+  "key-fact": {
+    "id": "key-fact",
+    "sectionField": "key_fact",
+    "role": "Visually prominent stat, formula, or date that anchors the section",
+    "cognitive_job": "Anchor a critical fact",
+    "generation_hint": "Anchor a critical fact",
+    "capacity": {
+      "factMaxWords": 20,
+      "contextMaxWords": 30
+    }
+  },
+  "comparison-grid": {
+    "id": "comparison-grid",
+    "sectionField": "comparison_grid",
+    "role": "Holds multiple concepts in view so distinctions become structural",
+    "cognitive_job": "Compare and classify in parallel",
+    "generation_hint": "Compare and classify in parallel",
+    "capacity": {
+      "columnsMin": 2,
+      "columnsMax": 4,
+      "rowsMax": 6,
+      "criterionMaxWords": 8,
+      "valueMaxWords": 20
+    }
+  },
+  "worked-example-card": {
+    "id": "worked-example-card",
+    "sectionField": "worked_example",
+    "role": "Shows reasoning in action step by step, each step justified",
+    "cognitive_job": "Watch reasoning in action",
+    "generation_hint": "Watch reasoning in action",
+    "capacity": {
+      "stepsMax": 6,
+      "stepsWarning": 4,
+      "stepLabelMaxWords": 12,
+      "stepContentMaxWords": 80
+    }
+  },
+  "process-steps": {
+    "id": "process-steps",
+    "sectionField": "process",
+    "role": "A repeatable procedure where order is non-negotiable",
+    "cognitive_job": "Follow a procedure",
+    "generation_hint": "Follow a procedure",
+    "capacity": {
+      "stepsMax": 8,
+      "actionMaxWords": 15,
+      "detailMaxWords": 60
+    }
+  },
+  "practice-stack": {
+    "id": "practice-stack",
+    "sectionField": "practice",
+    "role": "Problems at calibrated difficulty with progressive hints and optional solutions",
+    "cognitive_job": "Apply understanding under calibrated difficulty",
+    "generation_hint": "Apply understanding under calibrated difficulty",
+    "capacity": {
+      "problemsMin": 2,
+      "problemsMax": 5,
+      "hintsPerProblemMax": 3,
+      "questionMaxWords": 100,
+      "hintMaxWords": 60
+    }
+  },
+  "quiz-check": {
+    "id": "quiz-check",
+    "sectionField": "quiz",
+    "role": "Quick concept check with immediate feedback mid-section",
+    "cognitive_job": "Verify understanding immediately",
+    "generation_hint": "Verify understanding immediately",
+    "capacity": {
+      "optionsMin": 3,
+      "optionsMax": 4,
+      "questionMaxWords": 60,
+      "optionMaxWords": 20
+    }
+  },
+  "reflection-prompt": {
+    "id": "reflection-prompt",
+    "sectionField": "reflection",
+    "role": "Pauses forward motion and turns attention inward",
+    "cognitive_job": "Pause and consolidate",
+    "generation_hint": "Pause and consolidate",
+    "capacity": {
+      "promptMaxWords": 40,
+      "spaceMax": 6
+    }
+  },
+  "student-textbox": {
+    "id": "student-textbox",
+    "sectionField": "student_textbox",
+    "role": "Simple write-in box for student responses ΓÇö no framing beyond a prompt",
+    "cognitive_job": "Record thinking",
+    "generation_hint": "Record thinking",
+    "capacity": {
+      "promptMaxWords": 40,
+      "linesMax": 10
+    }
+  },
+  "short-answer": {
+    "id": "short-answer",
+    "sectionField": "short_answer",
+    "role": "Open question with write-in space and optional mark scheme",
+    "cognitive_job": "Recall and explain in own words",
+    "generation_hint": "Recall and explain in own words",
+    "capacity": {
+      "questionMaxWords": 60,
+      "linesMax": 10,
+      "marksMax": 10
+    }
+  },
+  "fill-in-blank": {
+    "id": "fill-in-blank",
+    "sectionField": "fill_in_blank",
+    "role": "Cloze passage with student-completed blanks ΓÇö tests recall not recognition",
+    "cognitive_job": "Retrieve and complete",
+    "generation_hint": "Retrieve and complete",
+    "capacity": {
+      "segmentsMax": 60,
+      "blanksMax": 10,
+      "wordBankMax": 15
+    }
+  },
+  "pitfall-alert": {
+    "id": "pitfall-alert",
+    "sectionField": "pitfall",
+    "role": "Names a specific misconception before the learner makes it",
+    "cognitive_job": "Inoculate against error",
+    "generation_hint": "Inoculate against error",
+    "capacity": {
+      "misconceptionMaxWords": 20,
+      "correctionMaxWords": 80,
+      "exampleMaxWords": 40
+    }
+  },
+  "diagram-block": {
+    "id": "diagram-block",
+    "sectionField": "diagram",
+    "role": "Makes spatial or relational structure visible",
+    "cognitive_job": "See the structure",
+    "generation_hint": "See the structure",
+    "capacity": {
+      "calloutsMax": 6,
+      "captionMaxWords": 60
+    }
+  },
+  "diagram-compare": {
+    "id": "diagram-compare",
+    "sectionField": "diagram_compare",
+    "role": "Before and after comparison with a drag slider",
+    "cognitive_job": "See transformation",
+    "generation_hint": "See transformation",
+    "capacity": {
+      "captionMaxWords": 60
+    }
+  },
+  "diagram-series": {
+    "id": "diagram-series",
+    "sectionField": "diagram_series",
+    "role": "A progression of diagrams that tells a sequence",
+    "cognitive_job": "Follow a visual progression",
+    "generation_hint": "Follow a visual progression",
+    "capacity": {
+      "diagramsMax": 4
+    }
+  },
+  "timeline-block": {
+    "id": "timeline-block",
+    "sectionField": "timeline",
+    "role": "Turns chronology into a readable instructional spine",
+    "cognitive_job": "Follow cause and sequence over time",
+    "generation_hint": "Follow cause and sequence over time",
+    "capacity": {
+      "eventsMin": 3,
+      "eventsMax": 8,
+      "titleMaxWords": 10,
+      "summaryMaxWords": 50
+    }
+  },
+  "simulation-block": {
+    "id": "simulation-block",
+    "sectionField": "simulation",
+    "role": "Manipulate a variable and discover the concept through observation",
+    "cognitive_job": "Manipulate and discover",
+    "generation_hint": "Manipulate and discover",
+    "capacity": {
+      "countGuidance": "template-defined"
+    }
+  },
+  "answer-key": {
+    "id": "answer-key",
+    "sectionField": "answer_key",
+    "role": "Provides correct answers with misconception evidence for each diagnostic distractor",
+    "cognitive_job": "Support diagnostic marking",
+    "generation_hint": "Support diagnostic marking",
+    "capacity": {
+      "entriesMin": 0,
+      "entriesMax": 50
+    }
+  }
+}

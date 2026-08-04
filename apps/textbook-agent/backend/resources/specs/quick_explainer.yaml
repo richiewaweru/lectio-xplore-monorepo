@@ -1,0 +1,263 @@
+# Resource Spec: Quick Explainer
+# Version: 1.0
+# Pedagogical owner: Lectio
+# Last updated: 2026-05-01
+
+id: quick_explainer
+label: Quick Explainer
+version: "1.0"
+
+# ── PEDAGOGICAL INTENT ──────────────────────────────────────────────────────
+
+intent: |
+  A quick explainer focuses on one idea and explains it clearly in
+  the shortest space that does the job well. It is not a mini booklet —
+  it does not have a full arc of orient → explain → practise → check.
+  It is a focused explanation with a light check.
+
+  The quick explainer is most useful when:
+  - A student needs one concept clarified without a full lesson
+  - A teacher wants to supplement a lesson with a targeted explanation
+  - A concept is returning from a prior unit and needs reactivating
+  - Vocabulary needs to be established before a task
+
+  A quick explainer that runs more than 15 minutes has become a
+  mini booklet. Keep it tight. One concept. One explanation.
+  One or two questions maximum.
+
+  The tone is direct and clear. No filler. No padding. Every sentence
+  must do work. A student who reads a quick explainer should finish
+  it knowing the one thing it was supposed to teach.
+
+when_to_use:
+  - Clarifying one concept a student missed or misunderstood
+  - Vocabulary activation before a task
+  - Supplementing a lesson with one focused idea
+  - Providing a reference for one specific concept
+  - Reteaching one sub-concept within a broader topic
+
+never_use_when:
+  - The concept requires context-building before the explanation lands
+  - Multiple connected ideas all need explaining — use a mini booklet
+  - Practice is the primary goal — use a worksheet
+  - Assessment is the goal — use an exit ticket or quiz
+
+allowed_outcomes: [understand, vocabulary, review]
+
+# ── DEPTH CONFIGURATION ─────────────────────────────────────────────────────
+
+depth:
+  quick:
+    sections: "1-2"
+    min_sections: 1
+    max_sections: 2
+    time_minutes: "5-8"
+    questions: "0-1"
+    note: >
+      Quick quick-explainers are pure explanation with no check.
+      One section. One idea. Used as a vocabulary card or concept note.
+  standard:
+    sections: "2-3"
+    min_sections: 2
+    max_sections: 3
+    time_minutes: "8-15"
+    questions: "1-2"
+    note: >
+      Standard is the primary use case. Explanation plus a brief check.
+      Maximum two questions — recall or apply, not extended response.
+  deep:
+    sections: "2-3"
+    min_sections: 2
+    max_sections: 3
+    time_minutes: "12-18"
+    questions: "2-3"
+    note: >
+      Deep quick explainers push toward mini booklet territory.
+      If depth=deep is chosen, review whether mini booklet is more
+      appropriate.
+    warning: >
+      Deep quick explainers may outgrow the format.
+      Consider using a mini booklet for richer coverage.
+
+# ── SECTION STRUCTURE ───────────────────────────────────────────────────────
+
+sections:
+  required:
+    - role: explain
+      intent: >
+        The explanation is the resource. This section must deliver
+        the concept clearly and directly.
+
+        Choose components based on what the concept actually is:
+        - A term or definition → definition-card
+        - A process with steps → process-steps
+        - A comparison → comparison-grid
+        - A concept with a key insight → key-fact + explanation-block
+        - Vocabulary across a family of related terms → definition-family
+
+        Do not default to explanation-block when a more structured
+        component would teach the concept better.
+
+        The explanation must be self-contained. A student who has
+        never seen this concept before should understand it by the
+        end of this section.
+      preferred_components:
+        - explanation-block
+        - definition-card
+        - definition-family
+        - key-fact
+        - process-steps
+      allowed_components:
+        - glossary-rail
+        - comparison-grid
+        - callout-block
+        - insight-strip
+        - worked-example-card
+        - pitfall-alert
+      forbidden_components:
+        - hook-hero            # no time for hooks in a quick format
+        - practice-stack       # practice belongs in its own section
+        - short-answer         # assessment belongs in its own section
+        - fill-in-blank        # assessment belongs in its own section
+        - summary-block        # too formal for a quick format
+        - simulation-block     # screen-only
+
+  optional:
+    - role: intro
+      intent: >
+        One brief framing line or key fact that orients the student
+        before the explanation. Used only when the explanation section
+        benefits from a hook or orienting fact.
+        Keep to one component. Do not expand into a full intro section.
+      preferred_components:
+        - key-fact
+        - callout-block
+      allowed_components:
+        - insight-strip
+      forbidden_components:
+        - hook-hero            # too long for a quick format
+        - explanation-block
+      max_count: 1
+
+    - role: visual
+      intent: >
+        A supporting diagram only. Placed after the explanation
+        or embedded within it. Use only when the concept cannot
+        be understood without a visual (e.g. a labelled structure,
+        a process flow, a comparison of two states).
+        Do not add a diagram for decoration.
+      preferred_components:
+        - diagram-block
+      allowed_components:
+        - diagram-compare
+        - diagram-series
+      max_count: 1
+      only_when_support: visuals
+
+    - role: practice
+      intent: >
+        One or two questions maximum. Not a practice set — a quick
+        check. One recall question. One apply or explain question.
+        No warm/medium/cold progression — there are not enough
+        questions for a progression. Just: check recall, then check
+        understanding.
+        If depth=quick, this section is omitted.
+      preferred_components:
+        - short-answer
+        - fill-in-blank
+      allowed_components:
+        - reflection-prompt
+      forbidden_components:
+        - practice-stack       # too structured for a quick check
+        - student-textbox      # too open for a quick check
+        - worked-example-card
+      max_count: 1
+
+# ── FORBIDDEN COMPONENTS (globally, across all sections) ────────────────────
+
+forbidden_components:
+  - hook-hero              # quick explainers have no time for hooks
+  - summary-block          # too formal — quick explainers end when done
+  - what-next-bridge       # out of scope for a quick format
+  - practice-stack         # structured practice belongs in a worksheet
+  - student-textbox        # extended writing belongs in a worksheet
+  - quiz-check             # use quiz resource type for assessment
+  - simulation-block       # screen-only
+  - timeline-block         # too structural for a quick format
+  - prerequisite-strip     # no time for prerequisites
+  - interview-anchor       # requires teacher facilitation
+
+# ── SUPPORTS MAPPING ────────────────────────────────────────────────────────
+
+supports:
+  vocabulary_support:
+    ensures_component:
+      in_role: explain
+      component: definition-card
+    note: >
+      When vocabulary support is active, the explanation must define
+      every key term using definition-card. If there are multiple
+      related terms, use definition-family instead.
+
+  visuals:
+    ensures_role: visual
+    placement: after_explain
+    preferred_components: [diagram-block]
+
+  simpler_reading:
+    modifies_all_sections:
+      note: >
+        Maximum 10 words per sentence. Use the simplest accurate
+        word — "grows" instead of "proliferates", "breaks down"
+        instead of "metabolises". Every sentence must be necessary.
+
+  worked_examples:
+    modifies_role: explain
+    intent_note: >
+      Include one worked example within the explanation section.
+      Show one complete instance of the concept applied.
+      Use worked-example-card with step-by-step structure.
+    preferred_components: [worked-example-card]
+
+  step_by_step:
+    modifies_role: explain
+    intent_note: >
+      Structure the explanation as numbered steps using process-steps.
+      Each step is one action or one idea. No prose paragraphs —
+      the whole explanation should be in the step structure.
+    preferred_components: [process-steps]
+
+# ── VISUAL POLICY ───────────────────────────────────────────────────────────
+
+visuals:
+  quick: 0
+  standard: 1
+  deep: 1
+  allow_diagrams: true
+  allow_images: false
+  note: >
+    A quick explainer may include one diagram when the concept is
+    inherently visual. Images are not appropriate — diagrams only.
+
+# ── TEXT POLICY ─────────────────────────────────────────────────────────────
+
+text:
+  density: medium
+  max_reading_load: moderate
+  note: >
+    Quick explainers carry more reading than worksheets — explanation
+    is their job. But they must be tighter than a mini booklet.
+    Target: the minimum words that leave no confusion.
+
+# ── VALIDATION RULES ────────────────────────────────────────────────────────
+
+validation:
+  - "Must contain at least one of: explanation-block, definition-card, definition-family, process-steps, key-fact"
+  - "Must not contain hook-hero in any section"
+  - "Must not contain practice-stack or student-textbox"
+  - "Must not contain summary-block or what-next-bridge"
+  - "Must not contain simulation-block"
+  - "If depth=quick, practice section must not be included"
+  - "If depth=deep, review whether mini_booklet is more appropriate"
+  - "Section count must not exceed 3"
+  - "Optional practice section must not contain more than 2 questions"

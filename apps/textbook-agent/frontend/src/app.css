@@ -1,0 +1,62 @@
+@import 'tailwindcss';
+@import 'katex/dist/katex.min.css';
+@import 'lectio/theme.css';
+
+/**
+ * Print / Save as PDF: hide builder chrome; keep Lectio lesson content.
+ * Lectio component print rules come from lectio/theme.css.
+ */
+@media print {
+	.document-toolbar,
+	.canvas-outline,
+	.palette-sidebar,
+	.palette-toggle-bar,
+	.mobile-palette-fab,
+	.media-manager-overlay,
+	.version-panel-overlay,
+	.share-dialog-overlay,
+	.builder-print-hidden,
+	.add-section-control {
+		display: none !important;
+	}
+
+	.block-card-chrome,
+	.block-label {
+		display: none !important;
+	}
+
+	.builder-shell {
+		background: white !important;
+		min-height: auto !important;
+	}
+
+	.builder-main {
+		overflow: visible !important;
+		padding: 0 !important;
+	}
+
+	.block-card {
+		border: none !important;
+		box-shadow: none !important;
+		/* fragmentation handled by Lectio component data-print-* attributes */
+	}
+
+	.block-content {
+		padding: 0 !important;
+	}
+
+	/* Section headers in canvas (between sections) */
+	.section-divider {
+		page-break-before: always;
+		break-before: page;
+	}
+
+	.section-divider-first {
+		page-break-before: avoid;
+		break-before: avoid;
+	}
+
+	.section-divider-actions {
+		display: none !important;
+	}
+}

@@ -1,0 +1,66 @@
+[
+  {
+    "section_id": "orient",
+    "components": [
+      {
+        "component_id": "hook-hero",
+        "content_intent": "Open with the sunny windowsill plant anchor. Use a question hook that asks, 'Where does the plant get the energy to grow?' to surface the soil-food misconception (M1) without correcting it. Headline: a short, thought-provoking question. Body: briefly describe the plant thriving on the windowsill, then present two possible answers—soil nutrients vs. something else—to create felt need. Keep voice balanced and grade-level appropriate. Do not explain photosynthesis yet; simply raise the tension. Anchor: 'Plant energy mystery'."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  },
+  {
+    "section_id": "explain",
+    "components": [
+      {
+        "component_id": "callout-block",
+        "content_intent": "Use variant 'info'. Short heading (max 6 words) that flags the main idea. Body (max 60 words) must state that photosynthesis converts light energy into chemical energy stored in glucose, using the windowsill-plant anchor. Explicitly reject the soil-as-food misconception: plants do not eat soil; they make their own food from light. Connect to the hook from the orient section, but pivot to the correct energy story. Tone balanced."
+      },
+      {
+        "component_id": "definition-card",
+        "content_intent": "Define the term 'Photosynthesis'. Formal definition (≤80 words): precise process with light energy, water, and CO₂ as inputs, glucose and oxygen as outputs. Plain definition (≤60 words): student-friendly version that links to the windowsill plant and says plants make their own food (glucose) without mentioning soil. Include related terms: chlorophyll, glucose. No soil reference anywhere. The formal definition must not use the word 'food' to avoid reinforcing misconception."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  },
+  {
+    "section_id": "model",
+    "components": [
+      {
+        "component_id": "worked-example-card",
+        "content_intent": "Walk the windowsill plant through photosynthesis step by step, using the definition from the explain section. Use 4 steps: (1) light energy absorbed by chlorophyll, (2) water and CO2 enter via roots and leaves, (3) light energy converts into chemical energy in glucose, (4) oxygen released as byproduct. At each step, explicitly note that soil provides minerals, not energy. Title: 'Tracing energy in the windowsill plant'. Setup: brief definition recap. Conclusion: reinforce glucose is made from light, not soil. No breathing-opposite mention."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  },
+  {
+    "section_id": "apply",
+    "components": [
+      {
+        "component_id": "practice-stack",
+        "content_intent": "Build two practice problems. First, a warm recall: student identifies the energy source for the windowsill plant (light). Second, a medium application: given a plant in shade, student explains why it makes less glucose, using energy conversion language and avoiding the soil-food misconception. Each problem should include one to two progressive hints. Do not introduce new scientific terms beyond those defined in the explain section."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  },
+  {
+    "section_id": "check",
+    "components": [
+      {
+        "component_id": "quiz-check",
+        "content_intent": "Design one multiple‑choice question that forces students to select where a plant gets its energy for growth. The correct option must state that plants convert light into glucose (using the windowsill plant as context). Include one distracter targeting M1 (plants absorb food from soil) and one distracter targeting M2 (photosynthesis is just gas exchange, the opposite of breathing). Each option must have a brief explanation that diagnoses the misconception it reveals. Keep the stem under 60 words and each option under 20 words."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  }
+]

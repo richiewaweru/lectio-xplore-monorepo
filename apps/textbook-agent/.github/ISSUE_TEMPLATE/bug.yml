@@ -1,0 +1,25 @@
+name: Bug
+description: Report a bug or regression.
+title: "fix: "
+labels:
+  - runbook
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is broken?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Logs, screenshots, or reproduction steps.

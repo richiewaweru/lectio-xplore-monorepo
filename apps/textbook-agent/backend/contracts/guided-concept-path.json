@@ -1,0 +1,46 @@
+{
+  "id": "guided-concept-path",
+  "always_present": [],
+  "available_components": [
+    "section-header",
+    "hook-hero",
+    "explanation-block",
+    "prerequisite-strip",
+    "what-next-bridge",
+    "interview-anchor",
+    "callout-block",
+    "summary-block",
+    "section-divider",
+    "definition-card",
+    "definition-family",
+    "glossary-rail",
+    "insight-strip",
+    "key-fact",
+    "comparison-grid",
+    "worked-example-card",
+    "process-steps",
+    "practice-stack",
+    "quiz-check",
+    "reflection-prompt",
+    "student-textbox",
+    "short-answer",
+    "fill-in-blank",
+    "pitfall-alert",
+    "diagram-block",
+    "diagram-compare",
+    "diagram-series",
+    "timeline-block",
+    "simulation-block",
+    "answer-key"
+  ],
+  "component_budget": {
+    "diagram-block": 3,
+    "diagram-series": 2,
+    "simulation-block": 1
+  },
+  "max_per_section": {
+    "practice-stack": 1,
+    "quiz-check": 1,
+    "reflection-prompt": 1
+  }
+}

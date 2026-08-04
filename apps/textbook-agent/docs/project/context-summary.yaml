@@ -1,0 +1,289 @@
+repo:
+  name: Textbook Generation Agent
+  slug: richiewaweru/text-book-generator
+  default_branch: main
+  protected_branches:
+    - main
+    - master
+  user_agent: portable-agent-os
+
+stack:
+  languages:
+    - python
+    - typescript
+    - svelte
+  python:
+    working_directory: backend
+    install_command: uv sync --all-extras
+  frontend:
+    working_directory: frontend
+    install_command: npm ci
+
+validation:
+  scopes:
+    backend:
+      description: Backend lint and test suite.
+      steps:
+        - name: backend-ruff
+          cwd: backend
+          command: [uv, run, ruff, check, src/, tests/]
+        - name: backend-pytest
+          cwd: backend
+          command: [uv, run, pytest]
+    frontend:
+      description: Frontend type-check and production build.
+      steps:
+        - name: frontend-check
+          cwd: frontend
+          command: [npm, run, check]
+        - name: frontend-build
+          cwd: frontend
+          command: [npm, run, build]
+    tooling:
+      description: Project-local tooling and workflow automation tests.
+      steps:
+        - name: tooling-pytest
+          cwd: backend
+          command: [uv, run, python, -m, pytest, ../tools/agent/tests]
+    all:
+      include_scopes:
+        - backend
+        - frontend
+        - tooling
+
+architecture:
+  strategy:
+    type: composite
+    name: split-app-boundary
+    report_name: textbook-split-app-architecture-guard
+    checks:
+      - type: forbidden-import-prefix
+        name: core-no-app
+        package_root: backend/src/core
+        module_prefix: core
+        source_label: core
+        forbidden_prefixes:
+          - generation
+          - planning
+          - telemetry
+          - pipeline
+      - type: forbidden-import-prefix
+        name: telemetry-no-generation-planning
+        package_root: backend/src/telemetry
+        module_prefix: telemetry
+        source_label: telemetry
+        forbidden_prefixes:
+          - generation
+          - planning
+      - type: forbidden-import-prefix
+        name: planning-no-pipeline-internals
+        package_root: backend/src/planning
+        module_prefix: planning
+        source_label: planning
+        forbidden_prefixes:
+          - pipeline.llm_runner
+          - pipeline.providers
+          - pipeline.events
+          - pipeline.api
+          - pipeline.runtime_diagnostics
+      - type: forbidden-import-prefix
+        name: pipeline-no-shell
+        package_root: backend/src/pipeline
+        module_prefix: pipeline
+        source_label: pipeline
+        forbidden_prefixes:
+          - generation
+          - planning
+          - telemetry
+
+github:
+  required_checks:
+    - backend-quality
+    - frontend-quality
+  pr_required_sections:
+    - Summary
+    - Agent Contract
+    - Validation
+    - Risks And Rollback
+  labels:
+    - name: ai-review
+      color: "0E8A16"
+      description: Opts a pull request into advisory AI review.
+    - name: architecture
+      color: "1D76DB"
+      description: Tracks architecture or dependency-boundary changes.
+    - name: release
+      color: "5319E7"
+      description: Marks release preparation, tagging, or release follow-up work.
+    - name: runbook
+      color: "BFDADC"
+      description: Highlights work that updates or depends on a tracked runbook.
+  ai_review_prompts:
+    - agents/prompts/bug-risk.md
+    - agents/prompts/architecture-compliance.md
+    - agents/prompts/test-gap.md
+    - agents/prompts/workflow-compliance.md
+  codeowners_paths:
+    - path: "*"
+      owner: "@TODO-OWNER"
+    - path: "/backend/"
+      owner: "@TODO-OWNER"
+    - path: "/frontend/"
+      owner: "@TODO-OWNER"
+    - path: "/agents/"
+      owner: "@TODO-OWNER"
+    - path: "/docs/"
+      owner: "@TODO-OWNER"
+
+release:
+  current_version: "0.1.0"
+  tag_pattern: "v*"
+  changelog_path: CHANGELOG.md
+
+agent_policy:
+  runbook_required: true
+  allowed_commit_types:
+    - feat
+    - fix
+    - refactor
+    - docs
+    - test
+    - chore
+    - ci
+    - build
+  change_classes:
+    - minor
+    - major
+  stage_packs:
+    - bootstrap
+    - active-delivery
+    - release-prep
+    - handoff
+  primary_entry_docs:
+    - AGENTS.md
+    - docs/project/context-summary.yaml
+    - docs/project/stage-packs/bootstrap.md
+
+docs:
+  live_root: docs/project
+  stage_pack_root: docs/project/stage-packs
+  run_root: docs/project/runs
+  local_context_docs:
+    - CLAUDE.md
+    - docs/project/agent-context.md
+    - docs/project/ARCHITECTURE.md
+    - docs/project/SETUP.md
+    - docs/project/DEVELOPMENT_WORKFLOW.md
+    - docs/project/SCHEMAS.md
+  snapshot_docs:
+    - docs/v0.1.0/ARCHITECTURE.md
+    - docs/v0.1.0/SETUP.md
+    - docs/v0.1.0/DEVELOPMENT_WORKFLOW.md
+    - docs/v0.1.0/SCHEMAS.md
+    - docs/v0.1.0/progress/HANDOFF_v0.1.0.md
+    - docs/v0.1.0/progress/HANDOFF_v0.1.0_phase2.md
+    - docs/v0.1.0/progress/HANDOFF_v0.1.0_phase3.md
+
+process_packs:
+  bootstrap-setup:
+    template: setup-runbook
+    variant: full
+    validation_scope: all
+    steps:
+      - id: read-entrypoint
+        title: Read AGENTS.md and the project context summary.
+      - id: review-stage-pack
+        title: Review the bootstrap stage pack and linked local docs.
+      - id: scaffold-assets
+        title: Generate or sync the managed scaffold files for docs, project-local tools, and GitHub assets.
+      - id: verify-context
+        title: Confirm the context summary still matches the repo layout and policy.
+      - id: run-validation
+        title: Run backend, frontend, project-local tool, and agent-layer validation.
+      - id: update-runbook
+        title: Record validation evidence, blockers, and next actions in the runbook.
+      - id: handoff
+        title: Prepare the final handoff or PR summary with the runbook reference.
+  feature-delivery:
+    template: task-runbook
+    variant: full
+    validation_scope: all
+    steps:
+      - id: read-entrypoint
+        title: Read AGENTS.md, the context summary, and the active-delivery stage pack.
+      - id: classify-change
+        title: Classify the work as major or minor and note the affected subsystems.
+      - id: inspect-context
+        title: Review the relevant local architecture, setup, schema, and handoff docs.
+      - id: implement-change
+        title: Implement the smallest coherent change set that satisfies the task.
+      - id: run-validation
+        title: Run the required validation commands for the affected scopes.
+      - id: record-results
+        title: Update the runbook with evidence, blockers, and follow-up items.
+      - id: prepare-pr
+        title: Update the PR body with the runbook path, validation, and rollback notes.
+  bugfix-delivery:
+    template: task-runbook
+    variant: compact
+    validation_scope: all
+    steps:
+      - id: read-entrypoint
+        title: Read AGENTS.md, the context summary, and the active-delivery stage pack.
+      - id: identify-regression
+        title: Capture the regression, impacted paths, and expected fix.
+      - id: implement-fix
+        title: Apply the smallest targeted fix.
+      - id: run-validation
+        title: Run the required regression and scope validation.
+      - id: record-results
+        title: Update the runbook with evidence, blockers, and next action.
+  release-prep:
+    template: setup-runbook
+    variant: full
+    validation_scope: all
+    steps:
+      - id: read-release-pack
+        title: Review the release-prep stage pack, changelog, and snapshot docs.
+      - id: refresh-scaffold
+        title: Confirm the managed scaffold, project-local tools, and deployment docs are in sync.
+      - id: validate-release
+        title: Run full repo validation plus any manual release checks that apply to the target deploy.
+      - id: update-docs
+        title: Update changelog, deploy notes, and release-facing handoff records.
+      - id: verify-runbook
+        title: Record release evidence, risks, and rollback steps.
+      - id: tag-and-handoff
+        title: Prepare the release handoff with version and runbook references.
+  handoff:
+    template: task-runbook
+    variant: compact
+    validation_scope: all
+    steps:
+      - id: summarize-work
+        title: Summarize what changed and what remains open.
+      - id: collect-evidence
+        title: Record validation evidence and unresolved risks.
+      - id: link-runbook
+        title: Link the parent runbook, PR, and follow-up actions.
+      - id: handoff-state
+        title: Mark the final state and next owner.
+  migration-or-refactor:
+    template: task-runbook
+    variant: full
+    validation_scope: all
+    steps:
+      - id: read-entrypoint
+        title: Read AGENTS.md, the context summary, and the active-delivery stage pack.
+      - id: document-scope
+        title: Document the migration or refactor scope and interfaces affected.
+      - id: implement-change
+        title: Apply the structural change while preserving behavior.
+      - id: run-validation
+        title: Run full validation and targeted regression coverage.
+      - id: update-docs
+        title: Refresh architecture, workflow, or handoff docs affected by the change.
+      - id: record-results
+        title: Update the runbook with evidence, blockers, and follow-up items.
+      - id: prepare-pr
+        title: Prepare the PR with the runbook reference and rollback notes.

@@ -1,0 +1,66 @@
+[
+  {
+    "section_id": "orient",
+    "components": [
+      {
+        "component_id": "hook-hero",
+        "content_intent": "Create a question-type hook using the sunny windowsill plant anchor. The headline should pose a brief, thought-provoking question (max 12 words) about the plant's energy source. The body should describe the plant on a windowsill and present 3–4 possible answers as question options, including 'nutrients from the soil' (the soil-food misconception), 'sunlight', 'water', etc. Do not indicate the correct answer; the goal is to surface the misconception and activate prior knowledge. Use a balanced, neutral voice. Keep body under 80 words."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  },
+  {
+    "section_id": "explain",
+    "components": [
+      {
+        "component_id": "callout-block",
+        "content_intent": "Highlight that photosynthesis converts light energy into chemical energy stored in glucose, using the sunny windowsill plant as the example. Explicitly state that soil does not supply food energy. Keep it tight and direct; resist explaining the process stepwise or listing all ingredients—that's for the definition card."
+      },
+      {
+        "component_id": "definition-card",
+        "content_intent": "Define photosynthesis with both a formal statement and a student-friendly plain version. Include inputs (light energy, water, CO2) and outputs (glucose, oxygen). Use the sunny windowsill plant as an illustrative example in the examples field. Add 'glucose' and 'chlorophyll' as related terms. Keep the formal definition under 80 words; the plain under 60."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  },
+  {
+    "section_id": "model",
+    "components": [
+      {
+        "component_id": "worked-example-card",
+        "content_intent": "Step through the windowsill plant's photosynthesis. Apply the definition from the explain section: light energy + water + CO2 → glucose + oxygen. Show light capture by chlorophyll, then glucose production storing chemical energy. Contrast with soil: soil provides water and minerals for structure, not energy or food. Conclude that the plant made its own food (glucose), correcting the soil-food misconception. Keep language balanced; each step one clear reasoning move."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  },
+  {
+    "section_id": "apply",
+    "components": [
+      {
+        "component_id": "practice-stack",
+        "content_intent": "Prompt learners to explain energy conversion for a shaded vs sunny plant, using the windowsill anchor as reference. Write 2-3 short problems: first warm (direct conversion for a plant in sunlight, naming inputs and glucose output), then medium (comparing shaded conditions, asking why a shaded plant grows less and where its food comes from). Include progressive hints that reinforce light-to-glucose conversion and steer away from soil-as-food. Do not introduce new science terms; keep language balanced and grade-appropriate."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  },
+  {
+    "section_id": "check",
+    "components": [
+      {
+        "component_id": "quiz-check",
+        "content_intent": "Craft a single multiple‑choice question that uses the sunny windowsill plant anchor. The question must force students to decide how a plant really gets its energy‑carrying glucose. Include exactly one correct option (light energy → glucose, using water and CO2) and 2–3 distractors. At least one distractor must directly represent the soil‑as‑food idea (M1), and another must reflect the breathing‑opposite idea (M2). Each option’s explanation should briefly correct or confirm the thinking. Keep the stem under 60 words and options under 20 words each."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  }
+]

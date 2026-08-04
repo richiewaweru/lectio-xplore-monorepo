@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PathPlan",
+  "description": "Output of the path planner, BEFORE concept resolution. Lessons carry concept_candidate slugs; prerequisites reference those slugs. After resolution against the concepts registry each becomes a PathLesson with UUID concept_id. Do not validate planner output against path-lesson.schema.json.",
+  "type": "object",
+  "required": ["scope_contract", "modules", "adjacent_merge_reviews", "prerequisite_risks", "completeness"],
+  "additionalProperties": false,
+  "properties": {
+    "unit": { "type": "string" },
+    "subject": { "type": "string" },
+    "grade_level": { "type": "string" },
+    "destination_objective": { "type": "string" },
+    "starting_knowledge": { "type": "array", "items": { "type": "string" } },
+
+    "scope_contract": {
+      "type": "object",
+      "required": ["must_establish", "must_not_introduce", "assumed_prerequisites", "terminology"],
+      "additionalProperties": false,
+      "properties": {
+        "must_establish": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "may_include": { "type": "array", "items": { "type": "string" } },
+        "must_not_introduce": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "assumed_prerequisites": { "type": "array", "items": { "type": "string" } },
+        "terminology": { "type": "array", "items": { "type": "string" } },
+        "notation": { "type": ["string", "null"] }
+      }
+    },
+
+    "modules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["title", "lessons"],
+        "additionalProperties": false,
+        "properties": {
+          "title": { "type": "string" },
+          "lessons": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/$defs/plannedLesson" }
+          }
+        }
+      }
+    },
+
+    "adjacent_merge_reviews": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["lesson_a", "lesson_b", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "lesson_a": { "type": "string" },
+          "lesson_b": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+
+    "prerequisite_risks": {
+      "type": "array",
+      "description": "Capabilities required by some lesson but neither taught in this path nor listed in assumed_prerequisites. Non-empty means the path is NOT complete.",
+      "items": {
+        "type": "object",
+        "required": ["missing", "needed_by", "note"],
+        "additionalProperties": false,
+        "properties": {
+          "missing": { "type": "string" },
+          "needed_by": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+
+    "completeness": {
+      "type": "object",
+      "required": ["forward_verified", "reaches_destination"],
+      "additionalProperties": false,
+      "properties": {
+        "forward_verified": { "type": "boolean" },
+        "reaches_destination": { "type": "boolean" },
+        "note": { "type": ["string", "null"] }
+      }
+    }
+  },
+
+  "$defs": {
+    "plannedLesson": {
+      "type": "object",
+      "required": ["concept_candidate", "objective", "prerequisites", "must_establish", "exclusions", "primary_knowledge_type"],
+      "additionalProperties": false,
+      "properties": {
+        "concept_candidate": {
+          "type": "object",
+          "required": ["slug", "title"],
+          "additionalProperties": false,
+          "properties": {
+            "slug": { "type": "string", "pattern": "^[a-z0-9.-]+$" },
+            "title": { "type": "string" }
+          }
+        },
+        "objective": { "type": "string", "minLength": 3 },
+        "prerequisites": {
+          "type": "array",
+          "description": "Slugs of EARLIER lessons in this same path. Must resolve.",
+          "items": { "type": "string", "pattern": "^[a-z0-9.-]+$" }
+        },
+        "external_prerequisites": {
+          "type": "array",
+          "description": "Capabilities assumed already held. Each MUST appear in scope_contract.assumed_prerequisites or starting_knowledge.",
+          "items": { "type": "string" }
+        },
+        "must_establish": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "exclusions": { "type": "array", "items": { "type": "string" } },
+        "primary_knowledge_type": { "enum": ["procedural", "conceptual", "factual", "evaluative"] },
+        "secondary_demand": { "type": ["string", "null"] },
+        "merge_warning": { "type": "boolean" }
+      }
+    }
+  }
+}

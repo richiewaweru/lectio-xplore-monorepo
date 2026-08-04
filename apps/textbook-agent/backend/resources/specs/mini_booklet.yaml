@@ -1,0 +1,290 @@
+# Resource Spec: Mini Booklet
+# Version: 1.0
+# Pedagogical owner: Lectio
+# Last updated: 2026-05-01
+
+id: mini_booklet
+label: Mini Booklet
+version: "1.0"
+
+# ── PEDAGOGICAL INTENT ──────────────────────────────────────────────────────
+# This block is rendered directly into the LLM prompt.
+# Write it as if explaining to an expert teacher what this resource is for.
+
+intent: |
+  A mini booklet is a self-contained learning unit. A student should be able
+  to pick it up with no prior explanation from the teacher and work through it
+  independently. It introduces a concept, explains it clearly, and checks
+  understanding before the student puts it down.
+
+  The booklet is NOT a textbook chapter. It covers one concept, not many.
+  It is NOT a worksheet — it teaches before it asks students to practise.
+  It is NOT a quiz — the check at the end is formative, not summative.
+
+  The pedagogical arc is always: orient → explain → apply → check.
+  Every section must earn its place. A mini booklet that feels padded has
+  failed its purpose.
+
+when_to_use:
+  - Introducing a concept for the first time
+  - When students need to work independently without teacher explanation
+  - When the teacher wants students to keep a reference they can return to
+  - First lesson on a new topic
+
+never_use_when:
+  - Students already know the concept — use a worksheet or practice set instead
+  - The lesson is primarily assessment — use a quiz or exit ticket instead
+  - The concept requires extended reading beyond 40 minutes
+  - The teacher plans to explain everything verbally — students do not need their own copy
+
+allowed_outcomes: [understand, review, vocabulary, compare]
+
+# ── DEPTH CONFIGURATION ─────────────────────────────────────────────────────
+
+depth:
+  quick:
+    sections: "2-3"
+    min_sections: 2
+    max_sections: 3
+    time_minutes: "10-15"
+    questions: "2-4"
+    note: >
+      Quick booklets must still orient and check. Cut the elaboration,
+      not the arc. A quick booklet is not just a shorter standard booklet —
+      it is a tighter one.
+  standard:
+    sections: "3-5"
+    min_sections: 3
+    max_sections: 5
+    time_minutes: "25-40"
+    questions: "4-8"
+    note: >
+      Standard is the primary use case. One concept, explained fully,
+      with enough practice for a student to feel confident.
+  deep:
+    sections: "5-7"
+    min_sections: 5
+    max_sections: 7
+    time_minutes: "45-60"
+    questions: "6-10"
+    note: >
+      Deep booklets may introduce sub-concepts or go further into
+      application. They must not become lecture notes. Every section
+      still needs a clear job.
+
+# ── SECTION STRUCTURE ───────────────────────────────────────────────────────
+
+sections:
+  required:
+    - role: intro
+      intent: >
+        Create felt need before explanation arrives. The student should
+        finish this section wanting to know the answer. Do NOT preview
+        the explanation here — just create the question in the student's mind.
+        One short compelling section. Should not run long.
+      preferred_components:
+        - hook-hero
+        - key-fact
+      allowed_components:
+        - callout-block
+      forbidden_components:
+        - explanation-block
+        - worked-example-card
+        - practice-stack
+
+    - role: explain
+      intent: >
+        Build the mental model. Write for the student, not the teacher.
+        Use plain language. Avoid jargon unless the jargon is the concept.
+        If the concept has steps, use process-steps. If it has terms,
+        define them with definition-card. If it has a comparison, use
+        comparison-grid. Choose the component that fits the concept —
+        do not default to explanation-block when a more structured
+        component would teach it better.
+      preferred_components:
+        - explanation-block
+        - definition-card
+        - process-steps
+        - worked-example-card
+      allowed_components:
+        - glossary-rail
+        - key-fact
+        - callout-block
+        - comparison-grid
+        - insight-strip
+        - diagram-block
+        - pitfall-alert
+      forbidden_components:
+        - practice-stack
+        - short-answer
+        - fill-in-blank
+        - student-textbox
+        - hook-hero
+
+    - role: practice
+      intent: >
+        Make the student use the concept, not just read about it.
+        Problems should start easy enough that any student can begin,
+        and end hard enough that strong students are pushed.
+        Always use warm → medium → cold progression.
+        Hints are allowed on warm problems. Cold problems have none.
+        The practice section must align exactly with what was explained —
+        do not introduce new requirements here.
+      preferred_components:
+        - practice-stack
+        - reflection-prompt
+      allowed_components:
+        - short-answer
+        - fill-in-blank
+        - student-textbox
+      forbidden_components:
+        - explanation-block
+        - hook-hero
+        - summary-block
+        - worked-example-card
+
+    - role: summary
+      intent: >
+        Close the booklet cleanly. Confirm what the student now knows.
+        Point forward to what comes next if relevant.
+        Do NOT repeat the explanation. Do NOT add new content.
+        A summary that feels like a second explanation has failed.
+      preferred_components:
+        - summary-block
+        - what-next-bridge
+      allowed_components:
+        - reflection-prompt
+      forbidden_components:
+        - explanation-block
+        - hook-hero
+        - practice-stack
+
+  optional:
+    - role: visual
+      intent: >
+        Only include if the concept cannot be adequately explained without
+        a visual. A diagram of a process, a labelled structure, a comparison
+        of two states. Do not add visuals for decoration.
+        If included, place after the explain section or embedded within it.
+      preferred_components:
+        - diagram-block
+        - diagram-series
+      allowed_components:
+        - diagram-compare
+      max_count: 1
+
+    - role: explain
+      intent: >
+        A second explain section is only justified when the concept has
+        two genuinely distinct sub-ideas that cannot be combined.
+        Do not use a second explain section to add more content to a
+        first section that is already complete.
+      preferred_components:
+        - definition-card
+        - process-steps
+        - comparison-grid
+      allowed_components:
+        - explanation-block
+        - worked-example-card
+        - glossary-rail
+      max_count: 1
+
+# ── FORBIDDEN COMPONENTS (globally, across all sections) ────────────────────
+
+forbidden_components:
+  - quiz-check           # assessment tool — not appropriate in a learning booklet
+  - simulation-block     # screen-only — booklets are print-first
+  - prerequisite-strip   # not needed — booklets start from the concept
+  - interview-anchor     # requires teacher facilitation
+  - timeline-block       # use process-steps instead for sequence
+
+# ── SUPPORTS MAPPING ────────────────────────────────────────────────────────
+
+supports:
+  visuals:
+    ensures_role: visual
+    placement: after_explain
+    preferred_components: [diagram-block, diagram-series]
+
+  vocabulary_support:
+    adds_component:
+      to_role: explain
+      component: definition-card
+    note: >
+      When vocabulary support is selected, ensure all key terms
+      are defined using definition-card. Do not leave terms in
+      the explanation prose without a definition.
+
+  worked_examples:
+    adds_section:
+      role: explain
+      intent: >
+        A worked example section that walks through one complete
+        example step by step before the student attempts practice.
+        Each step must say WHY, not just WHAT.
+      preferred_components: [worked-example-card, process-steps]
+      placement: before_practice
+
+  step_by_step:
+    modifies_role: explain
+    intent_note: >
+      Use process-steps for any procedural content.
+      Number every step. Keep each step to one action.
+    preferred_components: [process-steps, worked-example-card]
+
+  discussion_questions:
+    adds_component:
+      to_role: practice
+      component: reflection-prompt
+    note: Use in addition to, not instead of, practice-stack.
+
+  simpler_reading:
+    modifies_all_sections:
+      note: >
+        Use shorter sentences throughout. Maximum 15 words per sentence
+        in explanation sections. Avoid passive voice. Define every term
+        the first time it appears, even if it seems obvious.
+
+  challenge_questions:
+    modifies_role: practice
+    intent_note: >
+      Add a cold-tier extension problem at the end of practice.
+      No hints. Requires transfer to a new context or combination
+      of two ideas.
+
+# ── VISUAL POLICY ───────────────────────────────────────────────────────────
+
+visuals:
+  quick: 0
+  standard: 1
+  deep: 2
+  allow_diagrams: true
+  allow_images: true
+  note: >
+    Visuals in a mini booklet should illustrate structure or process —
+    not decorate. A diagram of cell division serves the concept.
+    A generic photo of a plant does not.
+
+# ── TEXT POLICY ─────────────────────────────────────────────────────────────
+
+text:
+  density: medium
+  max_reading_load: heavy
+  note: >
+    A mini booklet can carry more reading than a worksheet because
+    teaching is its job. But reading load should still be purposeful —
+    no filler, no repetition, no hedge language.
+
+# ── VALIDATION RULES ────────────────────────────────────────────────────────
+# These are checked by plan_validator against selected_components.
+
+validation:
+  - "Must contain at least one practice-stack or short-answer"
+  - "Must contain at least one explanation-block, definition-card, or process-steps"
+  - "Must contain summary-block or what-next-bridge in the final section"
+  - "hook-hero must appear in the first section only"
+  - "explanation-block must not appear in intro or summary sections"
+  - "practice-stack must not appear in intro or explain sections"
+  - "Must not contain quiz-check, simulation-block, or prerequisite-strip"
+  - "If depth=quick, section count must not exceed 3"
+  - "If depth=deep, must include at least one visual component when visuals support is active"

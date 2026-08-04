@@ -1,0 +1,146 @@
+{
+  "metadata": {
+    "version": "3.0",
+    "title": "Equivalent Fractions Repair",
+    "subject": "Mathematics"
+  },
+  "lesson": {
+    "lesson_mode": "repair",
+    "resource_type": "lesson"
+  },
+  "voice": {
+    "register": "clear",
+    "tone": "diagnostic"
+  },
+  "anchor": {
+    "reuse_scope": "misconception_thread"
+  },
+  "sections": [
+    {
+      "section_id": "diagnose",
+      "title": "Surface misconception",
+      "role": "diagnose",
+      "visual_required": true,
+      "components": [
+        {
+          "component": "misconception_probe",
+          "content_intent": "Expose why learners think value changes with numerator and denominator."
+        }
+      ]
+    },
+    {
+      "section_id": "concrete_model",
+      "title": "Concrete equivalence model",
+      "role": "model",
+      "visual_required": true,
+      "components": [
+        {
+          "component": "area_model_sequence",
+          "content_intent": "Show invariant area across equivalent partitions."
+        }
+      ]
+    },
+    {
+      "section_id": "repair_practice",
+      "title": "Misconception-only practice",
+      "role": "practice",
+      "visual_required": false,
+      "components": [
+        {
+          "component": "focused_questions",
+          "content_intent": "Practice only equivalent-fraction invariance checks."
+        }
+      ]
+    },
+    {
+      "section_id": "exit_check",
+      "title": "Exit check",
+      "role": "assessment",
+      "visual_required": false,
+      "components": [
+        {
+          "component": "quick_check",
+          "content_intent": "Confirm misconception is resolved before moving on."
+        }
+      ]
+    }
+  ],
+  "question_plan": [
+    {
+      "question_id": "q1",
+      "section_id": "repair_practice",
+      "temperature": "warm",
+      "prompt": "Explain why 2/3 and 4/6 represent the same value.",
+      "expected_answer": "States multiplicative scaling of numerator and denominator preserves value.",
+      "diagram_required": false
+    },
+    {
+      "question_id": "q2",
+      "section_id": "exit_check",
+      "temperature": "medium",
+      "prompt": "Choose all fractions equivalent to 3/5 and justify one choice.",
+      "expected_answer": "Selects correct equivalents and explains proportional scaling.",
+      "diagram_required": false
+    }
+  ],
+  "visual_strategy": {
+    "visuals": [
+      {
+        "section_id": "diagnose",
+        "component_id": "diagram-block",
+        "subject": "Fraction bar examples that surface the misconception",
+        "visual_job": "introduce the misconception visually before repair",
+        "type_hint": "diagram",
+        "anchor_link": "Uses partitioned shapes to show the value does not change",
+        "must_show": ["fraction bars", "equal wholes", "misleading comparison setup"],
+        "must_not_show": ["correct symbolic proof only", "decorative clutter"],
+        "source_question_ids": [],
+        "frames": [],
+        "strategy": "misconception-revealing fraction bar examples",
+        "density": "high"
+      },
+      {
+        "section_id": "concrete_model",
+        "component_id": "diagram-series",
+        "subject": "Equivalent fraction area models across matching partitions",
+        "visual_job": "summarize the repair explanation as a stepwise diagram series",
+        "type_hint": "diagram",
+        "anchor_link": "Shows the same whole partitioned in equivalent ways",
+        "must_show": ["same whole", "equal shaded area", "matching fraction labels"],
+        "must_not_show": ["changing wholes", "unequal partitions"],
+        "source_question_ids": [],
+        "frames": [
+          {
+            "description": "Show one whole split into a small number of equal parts with one region shaded.",
+            "must_show": ["single whole", "equal partitions", "one shaded fraction"]
+          },
+          {
+            "description": "Show the same whole split into more equal parts with the same total area shaded.",
+            "must_show": ["same whole size", "more equal partitions", "same shaded area"]
+          },
+          {
+            "description": "Show both equivalent fraction labels together to make the invariant value explicit.",
+            "must_show": ["two equivalent labels", "matching shaded area", "equal wholes"]
+          }
+        ],
+        "strategy": "equivalent fraction area-model series",
+        "density": "high"
+      }
+    ]
+  },
+  "answer_key": {
+    "style": "explanation_focused"
+  },
+  "teacher_materials": [
+    "answer_key"
+  ],
+  "prior_knowledge": [
+    "basic fraction notation"
+  ],
+  "repair_focus": {
+    "fault_line": "students do not see why equivalent fractions keep the same value when numerator and denominator change proportionally",
+    "what_not_to_teach": [
+      "broad fraction review"
+    ]
+  }
+}

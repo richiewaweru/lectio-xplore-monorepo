@@ -1,0 +1,6 @@
+# Replace the placeholder owners below before enabling required CODEOWNER review.
+* @TODO-OWNER
+/backend/ @TODO-OWNER
+/frontend/ @TODO-OWNER
+/agents/ @TODO-OWNER
+/docs/ @TODO-OWNER

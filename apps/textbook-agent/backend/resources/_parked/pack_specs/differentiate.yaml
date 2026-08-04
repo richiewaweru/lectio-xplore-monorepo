@@ -1,0 +1,112 @@
+# Pack Spec: Differentiate Pack
+# Version: 1.0
+# Pedagogical owner: Lectio
+# Last updated: 2026-05-01
+
+id: differentiate
+label: Differentiate Pack
+version: "1.0"
+
+intent: |
+  This pack delivers the SAME concept to students who need different
+  levels of access. The objective is identical for all students.
+  The materials differ in depth, scaffolding, language, and complexity.
+
+  Differentiation is not giving different students different concepts.
+  It is giving the same concept through different doors.
+
+  The pack produces three versions:
+    1. Standard version — the core resource for most students
+    2. Simplified version — more scaffolding, simpler language, same concept
+    3. Extension worksheet — for students ready to go further
+
+  All three versions share:
+    - The same learning objective
+    - The same key vocabulary
+    - The same anchor example (surface form may vary)
+    - A shared exit ticket — assessment is the same for all groups
+
+  The shared learning plan must:
+    - Define the ONE objective all versions target
+    - State the minimum vocabulary all students must encounter
+    - Choose one anchor example robust enough for all levels
+    - Note what scaffolding is appropriate for the simplified version
+    - Note what extension looks like for the advanced version
+
+plan_guidance:
+  objective_focus: >
+    The objective must be achievable at all access levels.
+    Frame at the "secure" middle — what a student who genuinely understood
+    the concept can do. Scaffolding helps struggling students reach it.
+    Extension pushes advanced students beyond it.
+  example_guidance: >
+    Choose an anchor example that works at all levels.
+    Simplified version: more support (labelled, sentence starters).
+    Standard version: used cleanly.
+    Extension version: students apply the principle to a harder case.
+  misconception_focus: >
+    Misconceptions don't respect ability levels — all groups may hold them.
+    The simplified version must not reinforce the misconception through
+    oversimplification. The extension version should require students to
+    explain why the wrong belief is wrong.
+  vocabulary_priority: >
+    All versions use the same key terms.
+    Simplified version may add plain-language glosses alongside terms.
+    Extension version may introduce one additional advanced term.
+    Core terms must appear in all three versions identically.
+
+resources:
+  - resource_type: mini_booklet
+    intended_outcome: understand
+    label: Standard version
+    purpose: >
+      The core resource for most students. Full concept, standard scaffolding,
+      standard language. The benchmark all other versions differentiate from.
+    depth: standard
+    required: true
+    order: 1
+
+  - resource_type: quick_explainer
+    intended_outcome: understand
+    label: Simplified version
+    purpose: >
+      Same concept, more scaffolding. Simpler language, shorter sentences,
+      more visual support, sentence starters in practice sections.
+      NOT a watered-down concept — the same intellectual content at a
+      more accessible reading level.
+    depth: standard
+    required: true
+    order: 2
+
+  - resource_type: worksheet
+    intended_outcome: practice
+    label: Extension worksheet
+    purpose: >
+      For students ready to go further. Assumes the core concept is secure.
+      Problems require combining the concept with prior knowledge or
+      applying it to unfamiliar scenarios.
+    depth: deep
+    required: false
+    order: 3
+
+  - resource_type: exit_ticket
+    intended_outcome: assess
+    label: Shared exit ticket
+    purpose: >
+      THE SAME for all students. Differentiation in instruction does not
+      mean differentiation in assessment. All students are checked against
+      the same objective.
+    depth: quick
+    required: true
+    order: 4
+
+default_supports:
+  - simpler_reading
+  - visuals
+
+validation:
+  - "Must contain mini_booklet (standard) and quick_explainer (simplified)"
+  - "Must contain one shared exit_ticket for all groups"
+  - "All resources must target the same learning objective"
+  - "Simplified version must not reduce intellectual content — only access difficulty"
+  - "Exit ticket must be identical across all student groups"

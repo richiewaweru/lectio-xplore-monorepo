@@ -1,0 +1,126 @@
+{
+  "metadata": {
+    "version": "3.0",
+    "title": "Photosynthesis",
+    "subject": "Science"
+  },
+  "lesson": {
+    "lesson_mode": "first_exposure",
+    "resource_type": "lesson"
+  },
+  "voice": {
+    "register_name": "balanced",
+    "tone": "neutral",
+    "notation": null,
+    "variant_label": "Core"
+  },
+  "anchor": {
+    "example": "A sunny windowsill plant making glucose from light, water, and CO2.",
+    "reuse_scope": "all sections"
+  },
+  "sections": [
+    {
+      "section_id": "orient",
+      "title": "Where does a plant's energy come from?",
+      "role": "orient",
+      "visual_required": false,
+      "card_id": "photosynthesis.energy_conversion",
+      "transition_note": null,
+      "components": [
+        {
+          "component": "hook-hero",
+          "content_intent": "Open with the windowsill plant and surface the soil-food idea without resolving it yet."
+        }
+      ]
+    },
+    {
+      "section_id": "explain",
+      "title": "Light to chemical energy",
+      "role": "explain",
+      "visual_required": false,
+      "card_id": "photosynthesis.energy_conversion",
+      "transition_note": "After the hook, name the conversion: light energy becomes chemical energy in glucose.",
+      "components": [
+        {
+          "component": "callout-block",
+          "content_intent": "State that photosynthesis converts light energy into chemical energy stored in glucose; exclude soil-as-food."
+        },
+        {
+          "component": "definition-card",
+          "content_intent": "Define photosynthesis with inputs (light, water, CO2) and output (glucose + oxygen)."
+        }
+      ]
+    },
+    {
+      "section_id": "model",
+      "title": "Trace the windowsill example",
+      "role": "model",
+      "visual_required": false,
+      "card_id": "photosynthesis.energy_conversion",
+      "transition_note": "Apply the definition to the same windowsill plant step by step.",
+      "components": [
+        {
+          "component": "worked-example-card",
+          "content_intent": "Walk the windowsill plant through light → chlorophyll → glucose, contrasting soil nutrients vs food energy."
+        }
+      ]
+    },
+    {
+      "section_id": "apply",
+      "title": "Practice the conversion story",
+      "role": "apply",
+      "visual_required": false,
+      "card_id": "photosynthesis.energy_conversion",
+      "transition_note": "Learners try the conversion story on a new plant context after the model.",
+      "components": [
+        {
+          "component": "practice-stack",
+          "content_intent": "Prompt learners to explain energy conversion for a shaded vs sunny plant without inventing new science."
+        }
+      ]
+    },
+    {
+      "section_id": "check",
+      "title": "Check understanding",
+      "role": "check",
+      "visual_required": false,
+      "card_id": "photosynthesis.energy_conversion",
+      "transition_note": "Close with a check that targets M1 soil-food and M2 breathing-opposite ideas.",
+      "components": [
+        {
+          "component": "quiz-check",
+          "content_intent": "Ask one check that forces a choice between soil-food and light-to-glucose conversion."
+        }
+      ]
+    }
+  ],
+  "card_rubrics": [
+    {
+      "card_id": "photosynthesis.energy_conversion",
+      "objective": "Explain that plants convert light energy into chemical energy stored in glucose.",
+      "misconceptions": [
+        {
+          "id": "M1",
+          "description": "Plants get their food by absorbing nutrients from soil."
+        },
+        {
+          "id": "M2",
+          "description": "Photosynthesis is just the opposite of breathing / animals breathe out what plants breathe in."
+        }
+      ]
+    }
+  ],
+  "question_plan": [],
+  "visual_strategy": {
+    "visuals": []
+  },
+  "answer_key": {
+    "style": "brief_explanations"
+  },
+  "teacher_materials": [],
+  "prior_knowledge": [
+    "plants need sunlight",
+    "plants need water"
+  ],
+  "repair_focus": null
+}

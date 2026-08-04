@@ -1,0 +1,233 @@
+{
+  "phases": {
+    "1": {
+      "id": "1",
+      "name": "Orient",
+      "description": "Set direction, context, purpose, or closure.",
+      "components": [
+        {
+          "id": "section-header",
+          "section_field": "header",
+          "role": "Opens a section with title, subject, objective, and level indicators",
+          "cognitive_job": "Orient the learner"
+        },
+        {
+          "id": "hook-hero",
+          "section_field": "hook",
+          "role": "Creates felt need before explanation arrives",
+          "cognitive_job": "Create felt need"
+        },
+        {
+          "id": "explanation-block",
+          "section_field": "explanation",
+          "role": "Sustained prose that builds a mental model",
+          "cognitive_job": "Build understanding"
+        },
+        {
+          "id": "prerequisite-strip",
+          "section_field": "prerequisites",
+          "role": "Lists assumed knowledge with optional refresher pop-ups",
+          "cognitive_job": "Activate prior knowledge"
+        },
+        {
+          "id": "what-next-bridge",
+          "section_field": "what_next",
+          "role": "Connects the section forward to what the concept enables",
+          "cognitive_job": "Connect forward"
+        },
+        {
+          "id": "interview-anchor",
+          "section_field": "interview",
+          "role": "Makes knowledge speakable - rehearse explaining the concept",
+          "cognitive_job": "Make knowledge speakable"
+        },
+        {
+          "id": "callout-block",
+          "section_field": "callout",
+          "role": "Standalone highlighted callout ΓÇö tip, warning, info, or exam note",
+          "cognitive_job": "Flag what matters"
+        },
+        {
+          "id": "summary-block",
+          "section_field": "summary",
+          "role": "Lists what this section covered ΓÇö key takeaways as bullets",
+          "cognitive_job": "Consolidate and close"
+        },
+        {
+          "id": "section-divider",
+          "section_field": "divider",
+          "role": "Named visual break between parts within a section",
+          "cognitive_job": "Signal a phase change"
+        }
+      ]
+    },
+    "2": {
+      "id": "2",
+      "name": "Build Knowledge",
+      "description": "Define, compare, organize, or anchor key knowledge.",
+      "components": [
+        {
+          "id": "definition-card",
+          "section_field": "definition",
+          "role": "Anchors a formal term with formal and plain versions",
+          "cognitive_job": "Anchor formal knowledge"
+        },
+        {
+          "id": "definition-family",
+          "section_field": "definition_family",
+          "role": "Groups related terms that belong together conceptually",
+          "cognitive_job": "Distinguish related concepts"
+        },
+        {
+          "id": "glossary-rail",
+          "section_field": "glossary",
+          "role": "Vocabulary visible in peripheral field, updates by section",
+          "cognitive_job": "Retrieve meaning without losing place"
+        },
+        {
+          "id": "insight-strip",
+          "section_field": "insight_strip",
+          "role": "Side-by-side comparison of 2-3 related values or concepts",
+          "cognitive_job": "Compare values simultaneously"
+        },
+        {
+          "id": "key-fact",
+          "section_field": "key_fact",
+          "role": "Visually prominent stat, formula, or date that anchors the section",
+          "cognitive_job": "Anchor a critical fact"
+        },
+        {
+          "id": "comparison-grid",
+          "section_field": "comparison_grid",
+          "role": "Holds multiple concepts in view so distinctions become structural",
+          "cognitive_job": "Compare and classify in parallel"
+        }
+      ]
+    },
+    "3": {
+      "id": "3",
+      "name": "Model",
+      "description": "Show a method, example, or process before independent work.",
+      "components": [
+        {
+          "id": "worked-example-card",
+          "section_field": "worked_example",
+          "role": "Shows reasoning in action step by step, each step justified",
+          "cognitive_job": "Watch reasoning in action"
+        },
+        {
+          "id": "process-steps",
+          "section_field": "process",
+          "role": "A repeatable procedure where order is non-negotiable",
+          "cognitive_job": "Follow a procedure"
+        }
+      ]
+    },
+    "4": {
+      "id": "4",
+      "name": "Practice and Check",
+      "description": "Let students answer, practise, retrieve, reflect, or show thinking.",
+      "components": [
+        {
+          "id": "practice-stack",
+          "section_field": "practice",
+          "role": "Problems at calibrated difficulty with progressive hints and optional solutions",
+          "cognitive_job": "Apply understanding under calibrated difficulty"
+        },
+        {
+          "id": "quiz-check",
+          "section_field": "quiz",
+          "role": "Quick concept check with immediate feedback mid-section",
+          "cognitive_job": "Verify understanding immediately"
+        },
+        {
+          "id": "reflection-prompt",
+          "section_field": "reflection",
+          "role": "Pauses forward motion and turns attention inward",
+          "cognitive_job": "Pause and consolidate"
+        },
+        {
+          "id": "student-textbox",
+          "section_field": "student_textbox",
+          "role": "Simple write-in box for student responses ΓÇö no framing beyond a prompt",
+          "cognitive_job": "Record thinking"
+        },
+        {
+          "id": "short-answer",
+          "section_field": "short_answer",
+          "role": "Open question with write-in space and optional mark scheme",
+          "cognitive_job": "Recall and explain in own words"
+        },
+        {
+          "id": "fill-in-blank",
+          "section_field": "fill_in_blank",
+          "role": "Cloze passage with student-completed blanks ΓÇö tests recall not recognition",
+          "cognitive_job": "Retrieve and complete"
+        },
+        {
+          "id": "answer-key",
+          "section_field": "answer_key",
+          "role": "Provides correct answers with misconception evidence for each diagnostic distractor",
+          "cognitive_job": "Support diagnostic marking"
+        }
+      ]
+    },
+    "5": {
+      "id": "5",
+      "name": "Address Mistakes",
+      "description": "Warn against misconceptions or correct common errors.",
+      "components": [
+        {
+          "id": "pitfall-alert",
+          "section_field": "pitfall",
+          "role": "Names a specific misconception before the learner makes it",
+          "cognitive_job": "Inoculate against error"
+        }
+      ]
+    },
+    "6": {
+      "id": "6",
+      "name": "Visualize",
+      "description": "Make spatial, relational, chronological, or visual structure visible.",
+      "components": [
+        {
+          "id": "diagram-block",
+          "section_field": "diagram",
+          "role": "Makes spatial or relational structure visible",
+          "cognitive_job": "See the structure"
+        },
+        {
+          "id": "diagram-compare",
+          "section_field": "diagram_compare",
+          "role": "Before and after comparison with a drag slider",
+          "cognitive_job": "See transformation"
+        },
+        {
+          "id": "diagram-series",
+          "section_field": "diagram_series",
+          "role": "A progression of diagrams that tells a sequence",
+          "cognitive_job": "Follow a visual progression"
+        },
+        {
+          "id": "timeline-block",
+          "section_field": "timeline",
+          "role": "Turns chronology into a readable instructional spine",
+          "cognitive_job": "Follow cause and sequence over time"
+        }
+      ]
+    },
+    "7": {
+      "id": "7",
+      "name": "Interact",
+      "description": "Let learners manipulate, observe, or explore a concept interactively.",
+      "components": [
+        {
+          "id": "simulation-block",
+          "section_field": "simulation",
+          "role": "Manipulate a variable and discover the concept through observation",
+          "cognitive_job": "Manipulate and discover"
+        }
+      ]
+    }
+  }
+}

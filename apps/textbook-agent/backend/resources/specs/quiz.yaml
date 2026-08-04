@@ -1,0 +1,349 @@
+# Resource Spec: Quiz
+# Version: 1.0
+# Pedagogical owner: Lectio
+# Last updated: 2026-05-01
+
+id: quiz
+label: Quiz
+version: "1.0"
+
+# ── PEDAGOGICAL INTENT ──────────────────────────────────────────────────────
+
+intent: |
+  A quiz is a formal assessment instrument. It measures whether students
+  have understood and can apply a concept or set of concepts. It is used
+  when the teacher needs documented evidence of student understanding —
+  for grading, for tracking progress, or for deciding whether to move on.
+
+  A quiz is NOT instruction. It contains no explanations, no worked
+  examples, no teaching of any kind. If a student needs instruction
+  before completing the quiz, they are not ready for the quiz.
+
+  A quiz differs from an exit ticket in three critical ways:
+  1. SCOPE: A quiz can cover multiple sub-concepts from a unit.
+     An exit ticket checks one concept from one lesson.
+  2. LENGTH: A quiz is 6-15 questions. An exit ticket is 3-5.
+  3. FORMALITY: A quiz is marked and recorded. An exit ticket is
+     a quick teacher check, often ungraded.
+
+  A quiz differs from a practice set in one critical way:
+  - Practice sets build fluency through repetition of the same skill.
+  - Quizzes assess breadth of understanding across a concept or unit.
+
+  The quiz always includes an answer key. This is non-negotiable.
+  The answer key is generated as a separate teacher-facing section,
+  clearly separated from student-facing content. Students never see
+  the answer key in their copy.
+
+  Question types should vary across a quiz:
+  - Short recall questions (what, when, who, name the...)
+  - Application questions (calculate, solve, explain why...)
+  - Analysis questions (compare, evaluate, justify...)
+  This variation ensures the quiz assesses depth of understanding,
+  not just memorisation.
+
+when_to_use:
+  - End-of-unit assessment
+  - Mid-unit check on multiple concepts
+  - Formal graded assessment
+  - When the teacher needs documented evidence of student performance
+  - Review check before a test
+
+never_use_when:
+  - Students have not yet completed instruction on the assessed concepts
+  - The teacher only needs a quick end-of-lesson check — use an exit ticket
+  - The goal is fluency building — use a practice set
+  - The concept has not been taught — use a mini booklet first
+
+allowed_outcomes: [assess, review, vocabulary, practice]
+
+# ── DEPTH CONFIGURATION ─────────────────────────────────────────────────────
+
+depth:
+  quick:
+    sections: "1-2"
+    min_sections: 1
+    max_sections: 2
+    time_minutes: "5-10"
+    questions: "3-5"
+    note: >
+      Quick quizzes are spot-checks on one concept. Effectively a
+      more formal exit ticket. One question type only — short recall
+      or short application. No extended response.
+  standard:
+    sections: "2-3"
+    min_sections: 2
+    max_sections: 3
+    time_minutes: "10-20"
+    questions: "6-10"
+    note: >
+      Standard is the primary quiz format. Two or three question
+      types. Covers one concept in depth or two related sub-concepts.
+      Includes recall, application, and at least one explain/justify item.
+  deep:
+    sections: "3-5"
+    min_sections: 3
+    max_sections: 5
+    time_minutes: "20-35"
+    questions: "10-15"
+    note: >
+      Deep quizzes assess a full unit or multiple related concepts.
+      Multiple question sections by type or sub-topic.
+      Extended response required at deep depth.
+      Must include an answer key section.
+
+# ── SECTION STRUCTURE ───────────────────────────────────────────────────────
+
+sections:
+  required:
+    - role: practice
+      intent: >
+        The main question set. This is the quiz.
+
+        Questions must span at least two cognitive levels:
+        RECALL: Direct retrieval. "What is...?" / "Name..." / "State..."
+          Use short-answer or fill-in-blank. One correct answer.
+          Fast to mark. Places low cognitive demand.
+
+        APPLICATION: Use the concept in a specific situation.
+          "Calculate..." / "Solve..." / "Identify which..."
+          Use short-answer or practice-stack. Requires understanding,
+          not just memory.
+
+        ANALYSIS (at standard/deep depth): Explain or justify.
+          "Explain why..." / "Compare X and Y..." / "Which is better and why?"
+          Use student-textbox for extended response. Requires synthesis.
+          Marking requires a rubric or mark scheme — note this explicitly.
+
+        Do not use practice-stack's hint-toggle feature in a quiz.
+        Hints invalidate assessment data.
+
+        Do not repeat question types monotonously. A quiz with 10
+        fill-in-blank questions is a worksheet-style drill, not an
+        assessment of understanding.
+      preferred_components:
+        - short-answer
+        - fill-in-blank
+        - student-textbox
+      allowed_components:
+        - practice-stack        # allowed only in flat-list mode, no hints
+        - quiz-check            # allowed for quick multiple-choice recall items
+      forbidden_components:
+        - explanation-block
+        - worked-example-card
+        - hook-hero
+        - reflection-prompt     # too open — quizzes need specific evidence
+        - summary-block
+        - what-next-bridge
+        - definition-card
+
+    - role: summary
+      intent: >
+        The answer key. This is a required section for all quizzes
+        at standard and deep depth.
+
+        IMPORTANT: The answer key is teacher-facing only. It must be
+        clearly labelled "Answer Key — Teacher Copy" and structurally
+        separated from the student question section. In the generated
+        PDF, the answer key appears on a final page that teachers
+        can detach or withhold.
+
+        The answer key must include:
+        - Correct answer for every recall and application question
+        - Mark scheme or acceptable response range for analysis questions
+        - Total marks available (if the quiz is marked with points)
+
+        Use short-answer component in answer-key mode (answers visible,
+        student response space hidden). This is the closest available
+        component to an answer key in the current system.
+
+        At quick depth, the answer key is optional — the teacher
+        may prefer to mark from memory for a 3-5 question spot check.
+      preferred_components:
+        - short-answer
+        - fill-in-blank
+      allowed_components:
+        - reflection-prompt     # for extended response mark schemes
+        - student-textbox       # for sample model answers
+      forbidden_components:
+        - explanation-block
+        - hook-hero
+        - summary-block         # answer keys are not concept summaries
+        - what-next-bridge
+        - worked-example-card
+
+  optional:
+    - role: intro
+      intent: >
+        Brief quiz instructions for the student. One callout-block only.
+        States: time allowed, materials permitted (calculator yes/no),
+        and what to do if stuck.
+        Do NOT include any content hints or reminders about the concept.
+        Students should come to a quiz already knowing the material.
+        Maximum 3 bullet points. No more.
+      preferred_components:
+        - callout-block
+        - key-fact
+      allowed_components:
+        - insight-strip
+      forbidden_components:
+        - hook-hero
+        - explanation-block
+        - definition-card
+      max_count: 1
+
+    - role: practice
+      intent: >
+        A second question section for a different question type
+        or a different sub-concept in the unit.
+
+        Only appropriate at standard or deep depth.
+        Label this section clearly to signal the shift —
+        "Section B: Application" or "Part 2: Extended Response."
+
+        Use student-textbox for this section when it requires
+        longer written responses. The marking criteria for this
+        section should appear in the answer key.
+      preferred_components:
+        - student-textbox
+        - short-answer
+      allowed_components:
+        - fill-in-blank
+        - practice-stack
+      forbidden_components:
+        - explanation-block
+        - worked-example-card
+        - hook-hero
+        - reflection-prompt
+      max_count: 1
+
+# ── FORBIDDEN COMPONENTS (globally, across all sections) ────────────────────
+
+forbidden_components:
+  - hook-hero              # quizzes do not introduce — students are assessed
+  - explanation-block      # quizzes do not teach
+  - worked-example-card    # worked examples during assessment invalidate the check
+  - process-steps          # instructional — not appropriate in assessment
+  - definition-card        # vocabulary instruction — not appropriate in assessment
+  - definition-family      # vocabulary instruction
+  - glossary-rail          # vocabulary reference — invalidates vocabulary assessment
+  - summary-block          # quizzes do not summarise content
+  - what-next-bridge       # quizzes are standalone
+  - diagram-block          # standalone visual not appropriate in formal assessment
+  - diagram-series         # screen-first, complex
+  - simulation-block       # screen-only, incompatible with formal assessment
+  - timeline-block         # not appropriate for assessment
+  - prerequisite-strip     # students should already have the prerequisites
+  - pitfall-alert          # instruction — not assessment
+  - comparison-grid        # analytical display — not a question component
+  - insight-strip          # informational — not appropriate in assessment context
+  - interview-anchor       # requires teacher facilitation
+
+# ── ANSWER KEY NOTE ─────────────────────────────────────────────────────────
+# The answer key is handled as a separate teacher-facing document,
+# not as a Lectio component. The quiz generation pipeline must produce
+# two outputs: one student copy (questions only) and one teacher copy
+# (questions + answer key section).
+#
+# Until the two-copy PDF split is implemented, the answer key section
+# appears at the end of the single generated PDF. Teachers are instructed
+# to detach or withhold the final page.
+#
+# This is noted here so the generation pipeline and QC agent know
+# that a quiz without an answer key section is incomplete.
+
+# ── SUPPORTS MAPPING ────────────────────────────────────────────────────────
+
+supports:
+  visuals:
+    modifies_role: practice
+    intent_note: >
+      When visuals support is active, at least one question may
+      reference a diagram. The diagram is embedded within the
+      practice-stack or short-answer question, not a standalone
+      visual section. The question must require the student to
+      interpret or use the diagram — not just observe it.
+    note: >
+      Standalone diagram-block sections are not used in quizzes.
+
+  challenge_questions:
+    modifies_role: practice
+    intent_note: >
+      Add 1-2 extension questions at the end of the main question
+      set. Label them clearly: "Extension — for students aiming
+      for full marks." These are optional for most students.
+      Typically analysis-level: "Justify your answer" or
+      "How would X change if Y?"
+
+  simpler_reading:
+    modifies_role: practice
+    intent_note: >
+      Use the shortest possible question stems throughout.
+      Maximum 12 words per question stem. Avoid embedded clauses.
+      The linguistic complexity of questions must not exceed the
+      linguistic complexity of the assessed concept.
+      Students who can answer the question conceptually should
+      not be blocked by reading difficulty in the question itself.
+
+  vocabulary_support:
+    modifies_role: intro
+    intent_note: >
+      Add a vocabulary reference list to the intro section.
+      List key terms with their definitions.
+      This is appropriate when vocabulary knowledge is not what
+      is being assessed — the quiz is assessing concept application,
+      and technical terms should not be a barrier.
+      Do NOT add vocabulary support if vocabulary recall is what
+      the quiz is testing.
+    adds_component:
+      to_role: intro
+      component: key-fact
+
+  discussion_questions:
+    note: >
+      Discussion questions are not appropriate in a formal quiz.
+      If the teacher wants class discussion after a quiz, that
+      is a separate activity. Do not include it in the resource.
+
+# ── VISUAL POLICY ───────────────────────────────────────────────────────────
+
+visuals:
+  quick: 0
+  standard: 1
+  deep: 1
+  allow_diagrams: true
+  allow_images: true
+  note: >
+    Visuals in a quiz are always embedded within a question —
+    they are part of the assessment prompt, not standalone sections.
+    A diagram that students must interpret is appropriate.
+    A decorative or explanatory diagram is not.
+
+# ── TEXT POLICY ─────────────────────────────────────────────────────────────
+
+text:
+  density: low
+  max_reading_load: moderate
+  note: >
+    Question stems should be clear and concise. Students should
+    spend their time answering, not decoding the question.
+    Extended response items (student-textbox) will have higher
+    reading load in the student's answer — that is expected.
+    The question prompt itself must still be brief.
+
+# ── VALIDATION RULES ────────────────────────────────────────────────────────
+
+validation:
+  - "Must contain short-answer, fill-in-blank, student-textbox, or practice-stack in the main practice section"
+  - "Must not contain explanation-block in any section"
+  - "Must not contain worked-example-card — assessment must be unaided"
+  - "Must not contain hook-hero in any section"
+  - "Must not contain summary-block — use short-answer in answer-key mode for the answer key"
+  - "Must not contain diagram-block, diagram-series, or simulation-block as standalone sections"
+  - "Must not contain reflection-prompt in the main practice section"
+  - "At standard and deep depth, must include an answer key summary section"
+  - "At quick depth, answer key is optional"
+  - "Question count must meet the minimum for the selected depth"
+  - "Must not contain definition-card, definition-family, or glossary-rail unless vocabulary_support is active in the intro section"
+  - "If practice-stack is used, it must be in flat-list mode with no hints"
+  - "Must include at least two different question types (components) at standard/deep depth"

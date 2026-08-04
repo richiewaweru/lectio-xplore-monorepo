@@ -1,0 +1,271 @@
+# Resource Spec: Worksheet
+# Version: 1.0
+# Pedagogical owner: Lectio
+# Last updated: 2026-05-01
+
+id: worksheet
+label: Practice Worksheet
+version: "1.0"
+
+# ── PEDAGOGICAL INTENT ──────────────────────────────────────────────────────
+
+intent: |
+  A worksheet is a practice resource. The teacher has already taught
+  the concept — students come to the worksheet knowing the idea and
+  needing to use it. The worksheet's job is deliberate application,
+  not instruction.
+
+  A worksheet that re-teaches is a worksheet that has failed its purpose.
+  The opening context should be a brief reminder, not a new explanation.
+  Students should be doing work within the first 30 seconds of picking it up.
+
+  Problems move from guided to independent — warm problems support the
+  student, cold problems push them. This progression is not optional.
+  A flat set of identical problems is not a worksheet — it is a drill.
+  Drills have their place, but that is the practice_set resource type.
+
+  The worksheet is print-first and classroom-ready. A student should be
+  able to work through it independently without asking the teacher
+  what to do.
+
+when_to_use:
+  - Consolidating a concept taught in the same lesson
+  - Homework following a lesson
+  - Classwork following a mini booklet or direct instruction
+  - Review of a recently taught concept
+
+never_use_when:
+  - Students have not yet encountered the concept — use a mini booklet instead
+  - The goal is formal assessment — use a quiz instead
+  - The session is very short and only a check is needed — use an exit ticket
+
+allowed_outcomes: [practice, review, assess, understand, compare, vocabulary]
+
+# ── DEPTH CONFIGURATION ─────────────────────────────────────────────────────
+
+depth:
+  quick:
+    sections: "2-3"
+    min_sections: 2
+    max_sections: 3
+    time_minutes: "10-15"
+    questions: "3-5"
+    note: >
+      Quick worksheets skip the optional worked example.
+      Context is one sentence only. Practice is the entire resource.
+  standard:
+    sections: "3-5"
+    min_sections: 3
+    max_sections: 5
+    time_minutes: "20-30"
+    questions: "5-8"
+    note: >
+      Standard is the primary use case. Brief context, optional worked
+      example if supports include worked_examples, then graduated practice.
+  deep:
+    sections: "4-6"
+    min_sections: 4
+    max_sections: 6
+    time_minutes: "30-45"
+    questions: "8-12"
+    note: >
+      Deep worksheets may include a reflection or extension section.
+      They should not become mini booklets — no full explanations.
+
+# ── SECTION STRUCTURE ───────────────────────────────────────────────────────
+
+sections:
+  required:
+    - role: intro
+      intent: >
+        One short context-setting block. Reminds the student what
+        concept they are practising. Maximum 3 sentences.
+        Must NOT introduce new content. Must NOT explain the concept.
+        It is a signpost, not a lesson.
+        Think: "In this worksheet you will practise [concept].
+        Remember that [one key fact]."
+      preferred_components:
+        - key-fact
+        - callout-block
+      allowed_components:
+        - insight-strip
+      forbidden_components:
+        - hook-hero          # not needed — student already knows the concept
+        - explanation-block  # must not teach — that was the lesson
+        - worked-example-card
+        - summary-block
+        - what-next-bridge
+
+    - role: practice
+      intent: >
+        The core of the worksheet. Graduated problems from warm to cold.
+
+        WARM problems (first 1-2): fully guided, may include sentence
+        starters, fill-in-blank, or partially completed work. Any student
+        should be able to attempt these immediately.
+
+        MEDIUM problems (middle): independent application. Standard
+        difficulty for this concept at this grade level. No sentence
+        starters but clear question. Hints allowed.
+
+        COLD problems (last 1-2): transfer or combination. Requires the
+        student to use the concept in a new context, apply it to a real
+        scenario, or combine it with a prior concept. No hints.
+
+        The practice section MUST contain at least one of each tier
+        at standard and deep depth.
+      preferred_components:
+        - practice-stack
+        - short-answer
+      allowed_components:
+        - fill-in-blank
+        - student-textbox
+        - reflection-prompt
+      forbidden_components:
+        - hook-hero
+        - explanation-block
+        - definition-card
+        - summary-block
+        - what-next-bridge
+        - worked-example-card  # goes in its own section, not mixed with practice
+
+    - role: summary
+      intent: >
+        Close with one reflection or metacognitive prompt.
+        Not a summary of the concept — a prompt for the student to
+        reflect on their own understanding.
+        Examples: "Which problem felt hardest? Why?"
+        "Explain in one sentence how you solved problem 3."
+        This is formative self-assessment, not content review.
+      preferred_components:
+        - reflection-prompt
+        - short-answer
+      allowed_components:
+        - fill-in-blank
+      forbidden_components:
+        - explanation-block
+        - hook-hero
+        - summary-block        # avoid — worksheets close with student voice
+        - what-next-bridge     # not appropriate — no next section exists
+
+  optional:
+    - role: process
+      intent: >
+        A worked example section. Only include when supports include
+        worked_examples. Shows one complete worked example BEFORE
+        students begin practice. Each step must state WHY, not just WHAT.
+        Maximum one worked example.
+        Placement: always immediately before the practice section.
+      preferred_components:
+        - worked-example-card
+        - process-steps
+      allowed_components:
+        - callout-block        # for key rule callout alongside steps
+      forbidden_components:
+        - explanation-block    # use process-steps instead
+        - practice-stack       # worked example ≠ practice
+      max_count: 1
+      placement: before_practice
+      only_when_support: worked_examples
+
+# ── FORBIDDEN COMPONENTS (globally, across all sections) ────────────────────
+
+forbidden_components:
+  - hook-hero              # teacher already introduced the concept
+  - explanation-block      # must not re-teach
+  - definition-card        # must not re-teach vocabulary
+  - glossary-rail          # vocabulary support handled by mini booklet
+  - summary-block          # worksheets close with student reflection
+  - what-next-bridge       # worksheets are self-contained units
+  - diagram-block          # diagrams belong in the booklet, not the worksheet
+  - diagram-series         # screen-first — print resource
+  - diagram-compare        # screen-first — print resource
+  - simulation-block       # screen-only
+  - quiz-check             # use quiz resource type for assessment
+  - timeline-block         # not appropriate for practice context
+  - prerequisite-strip     # not needed — students already have background
+  - pitfall-alert          # belongs in the teaching resource, not practice
+
+# ── SUPPORTS MAPPING ────────────────────────────────────────────────────────
+
+supports:
+  worked_examples:
+    adds_section:
+      role: process
+      placement: before_practice
+      preferred_components: [worked-example-card, process-steps]
+
+  step_by_step:
+    modifies_role: practice
+    intent_note: >
+      Add a step-starter callout at the top of the practice section.
+      Show the first step of the first problem as a worked step,
+      then ask students to continue from step 2.
+    adds_component:
+      to_role: intro
+      component: callout-block
+
+  challenge_questions:
+    modifies_role: practice
+    intent_note: >
+      Ensure the final problem is cold-tier requiring genuine transfer
+      to a new situation. No hints. No sentence starters.
+      Label it clearly as an extension for students ready to go further.
+
+  simpler_reading:
+    modifies_all_sections:
+      note: >
+        Use simple sentence structure throughout. Maximum 12 words per
+        sentence in problem stems. Use active voice. Avoid embedded
+        clauses in question text. If the problem requires reading a
+        scenario, keep the scenario to 2 sentences maximum.
+
+  discussion_questions:
+    modifies_role: summary
+    intent_note: >
+      Replace the reflection prompt with a discussion question that
+      the teacher can use to open class conversation after worksheets
+      are completed. Frame it as "Be ready to share: ..."
+
+  visuals:
+    note: >
+      Visuals are not standard in worksheets. If a specific diagram
+      is required to answer a problem (e.g. label the diagram), the
+      diagram is part of the problem text in practice-stack.
+      Standalone diagram-block components are not used in worksheets.
+
+# ── VISUAL POLICY ───────────────────────────────────────────────────────────
+
+visuals:
+  quick: 0
+  standard: 0
+  deep: 0
+  allow_diagrams: false
+  allow_images: false
+  note: >
+    Worksheets do not use standalone visual sections.
+    Any visual required for a practice problem is embedded in the
+    problem itself via the practice-stack component's image slot.
+
+# ── TEXT POLICY ─────────────────────────────────────────────────────────────
+
+text:
+  density: low
+  max_reading_load: moderate
+  note: >
+    Students should be spending most of their time writing, not reading.
+    If a student spends more than 30% of their time reading the worksheet
+    rather than answering it, the worksheet has too much text.
+
+# ── VALIDATION RULES ────────────────────────────────────────────────────────
+
+validation:
+  - "Must contain practice-stack or short-answer in the practice section"
+  - "Must not contain explanation-block in any section"
+  - "Must not contain hook-hero in any section"
+  - "Must not contain summary-block — use reflection-prompt instead"
+  - "worked-example-card must not appear in the same section as practice-stack"
+  - "If depth=quick, optional process section must not be included"
+  - "practice section must appear before summary section"
+  - "Must not contain diagram-block, diagram-series, or simulation-block"
+  - "If supported=worked_examples, process section must be present"

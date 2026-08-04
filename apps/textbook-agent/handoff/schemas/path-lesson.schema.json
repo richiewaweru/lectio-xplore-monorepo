@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PathLesson",
+  "type": "object",
+  "required": [
+    "concept_id",
+    "title",
+    "objective",
+    "prerequisites",
+    "must_establish",
+    "exclusions",
+    "primary_knowledge_type"
+  ],
+  "properties": {
+    "concept_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "title": {
+      "type": "string"
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 3
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "external_prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "must_establish": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "exclusions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "primary_knowledge_type": {
+      "enum": [
+        "procedural",
+        "conceptual",
+        "factual",
+        "evaluative"
+      ]
+    },
+    "secondary_demand": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "merge_warning": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

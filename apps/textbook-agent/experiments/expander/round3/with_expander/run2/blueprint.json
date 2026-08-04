@@ -1,0 +1,126 @@
+{
+  "metadata": {
+    "version": "3.0",
+    "title": "Photosynthesis",
+    "subject": "Science"
+  },
+  "lesson": {
+    "lesson_mode": "first_exposure",
+    "resource_type": "lesson"
+  },
+  "voice": {
+    "register_name": "balanced",
+    "tone": "neutral",
+    "notation": null,
+    "variant_label": "Core"
+  },
+  "anchor": {
+    "example": "A sunny windowsill plant making glucose from light, water, and CO2.",
+    "reuse_scope": "all sections"
+  },
+  "sections": [
+    {
+      "section_id": "orient",
+      "title": "Where does a plant's energy come from?",
+      "role": "orient",
+      "visual_required": false,
+      "card_id": "photosynthesis.energy_conversion",
+      "transition_note": null,
+      "components": [
+        {
+          "component": "hook-hero",
+          "content_intent": "Use the sunny windowsill plant as the anchor. Pose a thought-provoking question or scenario that makes students wonder where the plant gets its energy. Allow the soil-as-food idea to surface, but do not correct or resolve it. Keep the tone curious and open—this is the hook, not the explanation. Headline (≤12 words) should spark curiosity; body (≤80 words) should set the scene without giving away the answer."
+        }
+      ]
+    },
+    {
+      "section_id": "explain",
+      "title": "Light to chemical energy",
+      "role": "explain",
+      "visual_required": false,
+      "card_id": "photosynthesis.energy_conversion",
+      "transition_note": "After the hook, name the conversion: light energy becomes chemical energy in glucose.",
+      "components": [
+        {
+          "component": "callout-block",
+          "content_intent": "State that the windowsill plant converts light energy into chemical energy stored in glucose. Emphasise glucose as the plant’s food, not soil nutrients. This follows the hook and names the conversion for the first time. Use variant 'info' with a short heading like 'Light to food energy'. Do not define photosynthesis here — that comes next."
+        },
+        {
+          "component": "definition-card",
+          "content_intent": "Define 'Photosynthesis' with plain and formal versions. Plain version: connect to the windowsill plant and say it uses light, water, and CO2 to make food (glucose) and release oxygen. Formal version: list the same inputs and outputs precisely. Keep focus on the energy conversion and exclude soil. Do not introduce chlorophyll or chemical equations; those belong in the model section. No notation or symbol needed."
+        }
+      ]
+    },
+    {
+      "section_id": "model",
+      "title": "Trace the windowsill example",
+      "role": "model",
+      "visual_required": false,
+      "card_id": "photosynthesis.energy_conversion",
+      "transition_note": "Apply the definition to the same windowsill plant step by step.",
+      "components": [
+        {
+          "component": "worked-example-card",
+          "content_intent": "Walk the windowsill plant through light energy → chlorophyll capturing → water + CO2 used to make glucose (chemical energy) + oxygen. Contrast: soil provides minerals, not food energy. Surface M1 by asking where the plant's mass comes from, then clarify the conversion. Use 4 steps max. Keep each step concrete, tied to the anchor, and explicitly label input/output. Do not restate the build section definitions; instead, apply them."
+        }
+      ]
+    },
+    {
+      "section_id": "apply",
+      "title": "Practice the conversion story",
+      "role": "apply",
+      "visual_required": false,
+      "card_id": "photosynthesis.energy_conversion",
+      "transition_note": "Learners try the conversion story on a new plant context after the model.",
+      "components": [
+        {
+          "component": "practice-stack",
+          "content_intent": "Write two practice problems using the sunny windowsill anchor and a new shaded plant. Problem 1 (warm): ask learners to retell the energy conversion story for the sunny windowsill plant, emphasizing light → chlorophyll → glucose. Problem 2 (medium): ask why a shaded plant makes less glucose, comparing to the sunny anchor. Hints should push recalling the conversion steps without introducing new science. Solutions must distinguish food energy from soil nutrients. Cap question text at 100 words, hints at 60 words."
+        }
+      ]
+    },
+    {
+      "section_id": "check",
+      "title": "Check understanding",
+      "role": "check",
+      "visual_required": false,
+      "card_id": "photosynthesis.energy_conversion",
+      "transition_note": "Close with a check that targets M1 soil-food and M2 breathing-opposite ideas.",
+      "components": [
+        {
+          "component": "quiz-check",
+          "content_intent": "Design one multiple-choice question that forces a decision between the misconception that plants get food from soil (M1) and the correct idea that plants convert light energy into chemical energy in glucose. Include a plausible distractor suggesting photosynthesis is opposite breathing (M2) without stating it directly. The correct option must anchor to the windowsill plant making glucose from light. Brief per-option explanations should diagnose M1 or M2. Feedback correct/incorrect must reinforce the light-to-glucose conversion, not just right/wrong."
+        }
+      ]
+    }
+  ],
+  "card_rubrics": [
+    {
+      "card_id": "photosynthesis.energy_conversion",
+      "objective": "Explain that plants convert light energy into chemical energy stored in glucose.",
+      "misconceptions": [
+        {
+          "id": "M1",
+          "description": "Plants get their food by absorbing nutrients from soil."
+        },
+        {
+          "id": "M2",
+          "description": "Photosynthesis is just the opposite of breathing / animals breathe out what plants breathe in."
+        }
+      ]
+    }
+  ],
+  "question_plan": [],
+  "visual_strategy": {
+    "visuals": []
+  },
+  "answer_key": {
+    "style": "brief_explanations"
+  },
+  "teacher_materials": [],
+  "prior_knowledge": [
+    "plants need sunlight",
+    "plants need water"
+  ],
+  "repair_focus": null
+}

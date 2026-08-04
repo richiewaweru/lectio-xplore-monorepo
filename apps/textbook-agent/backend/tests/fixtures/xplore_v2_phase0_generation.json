@@ -1,0 +1,66 @@
+{
+  "contract_version": "0.6.0",
+  "learning_job_type": "xplore_variants",
+  "subject": "Biology",
+  "topic": "Photosynthesis",
+  "cards": [
+    {
+      "slug": "biology.photosynthesis.inputs",
+      "title": "Inputs to photosynthesis",
+      "objective": "Identify carbon dioxide, water, and light as inputs to photosynthesis.",
+      "misconceptions": [
+        {
+          "id": "M1",
+          "description": "Plants obtain their food directly from soil.",
+          "source": "drafted"
+        }
+      ]
+    },
+    {
+      "slug": "biology.photosynthesis.products",
+      "title": "Products of photosynthesis",
+      "objective": "Identify glucose and oxygen as products of photosynthesis.",
+      "misconceptions": [
+        {
+          "id": "M2",
+          "description": "Oxygen is an input rather than a product.",
+          "source": "drafted"
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": "q-inputs-1",
+      "card_slug": "biology.photosynthesis.inputs",
+      "stem": "Which pair supplies matter used during photosynthesis?",
+      "options": [
+        {"key": "a", "text": "Carbon dioxide and water", "correct": true, "diagnoses": null},
+        {"key": "b", "text": "Soil and sunlight", "correct": false, "diagnoses": "M1"}
+      ],
+      "correct_key": "a"
+    },
+    {
+      "id": "q-products-1",
+      "card_slug": "biology.photosynthesis.products",
+      "stem": "Which substances are products of photosynthesis?",
+      "options": [
+        {"key": "a", "text": "Glucose and oxygen", "correct": true, "diagnoses": null},
+        {"key": "b", "text": "Water and oxygen", "correct": false, "diagnoses": "M2"}
+      ],
+      "correct_key": "a"
+    }
+  ],
+  "variants": [
+    {
+      "label": "Support",
+      "group_description": "More scaffolding and explicit steps.",
+      "voice": {"register": "simple", "tone": "encouraging", "notation": null}
+    },
+    {
+      "label": "Extension",
+      "group_description": "More concise explanation and transfer prompts.",
+      "voice": {"register": "formal", "tone": "direct", "notation": null}
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "label": "skip_expander",
+  "skip_expander": true,
+  "stage2_seconds": 0.0,
+  "writers_seconds": 159.57,
+  "section_writer_seconds": {
+    "orient": 23.02,
+    "explain": 16.94,
+    "model": 49.32,
+    "apply": 29.85,
+    "check": 40.45
+  },
+  "total_seconds": 159.58,
+  "section_count": 5,
+  "failed_briefs": []
+}

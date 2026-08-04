@@ -1,0 +1,635 @@
+# Lively HTML Rendering System — Implementation Plan
+
+## 1. Spec Comparison
+
+### Where the Specs Agree (Confirmed Approach)
+Both specifications converge on the same core architecture:
+
+| Concept | Agreement |
+|---|---|
+| **Separation of concerns** | Content generation, layout, behaviour, and QC are four distinct responsibilities |
+| **Pipeline stages** | Content → LayoutPlan → BehaviorPlan → ResponsivePlan → HTML → universal.js → runtime.js → QC |
+| **universal.js** | Safety net that runs first, unconditionally, on every page — nav anchors, reading progress, table overflow scroll, diagram zoom detection, keyboard navigation |
+| **runtime.js** | Reads `data-behaviour` attributes, activates named interactions, shared across all templates |
+| **Behaviour vocabulary** | A shared registry of named behaviours (hint-toggle, step-reveal, accordion, zoom, sticky-sidebar, section-tabs, scrollspy, etc.) |
+| **LLM never writes JS** | LLM emits HTML + `data-behaviour` attributes only |
+| **Three plans** | LayoutPlan, BehaviorPlan, ResponsivePlan are structured objects produced before HTML |
+| **Template capability declaration** | JSON schema declaring allowed behaviours, preferred defaults, interaction ceiling, responsive fallbacks |
+| **Three confidence tiers** | Tier 1 = automatic/deterministic, Tier 2 = LLM-reasoned, Tier 3 = safe fallback |
+| **Visual QC at three widths** | Desktop, tablet, mobile — catches layout, structural, visual, and behaviour problems |
+| **Section-level rerender** | Failed blocks are regenerated individually, not whole sections |
+| **Print fallback** | All hidden content visible when printed |
+
+### Where They Differ (Resolutions)
+
+| Topic | Claude spec (FINAL_RENDERING_SPEC) | ChatGPT spec (adaptive_html_rendering) | Resolution |
+|---|---|---|---|
+| **Behaviour categories** | 6 tiers: Disclosure, Visual, Navigation, Assessment, Subject, Premium | 4 tiers: Disclosure, Visual, Navigation, Assessment | **Take Claude's 6-tier system** — more complete and specific |
+| **Layout decision rules** | Detailed table with override conditions (insight-strip > 2 lines → comparison-grid, etc.) | Not specified | **Take Claude's override table** — concrete and implementable |
+| **QC issue report format** | Structured: location, problem, severity, fix, confidence, action | Mentioned but not specified | **Take Claude's format** as the schema |
+| **Two display modes** | Long scroll + section tabs, teacher-selected | Not mentioned | **Take Claude's** — adds value, straightforward |
+| **Classroom display (>1400px)** | Breakpoint increase for projectors | Not mentioned | **Take Claude's** — adds a fourth CSS breakpoint, easy to add |
+| **Plans as HTML comments** | Plans recorded as HTML comment at top | Plans recorded but format unclear | **HTML comments** — inspectable, machine-parseable |
+| **Behaviour safety** | Unknown behaviours logged, page falls back to static | Claude also mentions unknown behaviours gracefully degrade | Both agree; Claude is more specific — **follow Claude: log + static fallback** |
+| **Three breakpoints** | Desktop >900px, Tablet 600-900px, Mobile <600px | Desktop, Tablet, Mobile (no specific values) | **Use Claude's px values** |
+| **Keyboard navigation** | Arrow keys between sections | Arrow keys mentioned | **Follow Claude** — sections + tabs navigation |
+
+### Unique Contributions Taken From Each
+
+**From ChatGPT spec only:**
+- Behaviour categories concept (even though Claude also mentions categories, ChatGPT structures them cleanly)
+- Explicit phasing guidance (Phase 1–4)
+- `quiz-check` and `toggle-view` in assessment category
+- Concept of "interaction must improve understanding" as a design principle
+
+**From Claude spec only:**
+- `expand-card`, `compare-toggle`, `equation-reveal`, `tree-stepper`, `timeline-scrubber`, `graph-slider`, `pyodide-cell`, `simulation` behaviours
+- Specific layout decision override table
+- `self-check` behaviour
+- Two display modes (long scroll vs section tabs)
+- Classroom display breakpoint
+- `data-term` and `data-definition` attributes on vocabulary terms
+- `data-zoom="true"` explicit attribute
+
+---
+
+## 2. Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        EXISTING PIPELINE                        │
+│  Planner → ContentGen → DiagramGen → Assembler → RawTextbook   │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+                               ▼
+        ┌──────────────────────────────────────────┐
+        │         PresentationAdapter              │
+        │  (builds PresentationManifest from       │
+        │   RawTextbook + TemplateConfig)          │
+        │                                          │
+        │  NEW: LayoutPlan, BehaviorPlan,          │  ◄── NEW
+        │       ResponsivePlan generation          │
+        └──────────────────┬───────────────────────┘
+                           │
+                           ▼
+        ┌──────────────────────────────────────────┐
+        │         PresentationEngine               │
+        │  (Jinja2 render + QA check)              │
+        │                                          │
+        │  MODIFIED: inject universal.js +         │  ◄── MODIFIED
+        │  runtime.js into HTML output             │
+        │  Emit plans as HTML comments             │
+        └──────────────────┬───────────────────────┘
+                           │
+                           ▼
+        ┌──────────────────────────────────────────┐
+        │         Enhanced Visual QC               │  ◄── NEW
+        │  (3 viewport widths, behaviour checks,   │
+        │   layout measurements, structured report)│
+        └──────────────────────────────────────────┘
+```
+
+> [!IMPORTANT]
+> All new code respects the DDD 4-layer architecture:
+> - **Domain layer**: behaviour registry, plan value objects, enhanced QC rules, updated prompts
+> - **Infrastructure layer**: template config updates, JS assets, Jinja2 template enhancements
+> - **Application/Interface layers**: minimal changes (no new API endpoints needed)
+
+---
+
+## 3. Proposed Changes
+
+### Component 1: Behaviour Vocabulary Registry
+
+This is the source of truth for all named behaviours. Both JS files and the LLM prompt reference it.
+
+#### [NEW] [behaviour_registry.py](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/value_objects/behaviour_registry.py)
+
+A pure domain module (no framework imports). Defines:
+- `BehaviourCategory` enum: `DISCLOSURE`, `VISUAL`, `NAVIGATION`, `ASSESSMENT`, `SUBJECT`, `PREMIUM`
+- `BehaviourTier` enum: `AUTOMATIC`, `LLM_REASONED`, `SAFE_FALLBACK`
+- `BehaviourSpec` dataclass: `name`, `category`, [tier](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/services/presentation_quality.py#289-310), `fallback_rendering`, `print_fallback`, `description`
+- `BEHAVIOUR_REGISTRY`: a `dict[str, BehaviourSpec]` containing all behaviours from both specs
+- `INTERACTION_LEVEL_CEILING`: maps `InteractionLevel` → set of allowed `BehaviourCategory` values
+- Helper: `allowed_behaviours_for_level(level: InteractionLevel) -> set[str]`
+- Helper: `is_valid_behaviour(name: str) -> bool`
+
+---
+
+### Component 2: Template Capability Declaration Schema
+
+#### [MODIFY] [presentation.py](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/entities/presentation.py)
+
+Add new Pydantic models:
+- `TemplateCapability`: `allowed_behaviours: dict[str, bool]`, `preferred_behaviours: dict[str, str]`, `responsive_fallbacks: dict[str, str]`
+- Extend [TemplateConfig](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/entities/presentation.py#109-124) with a new field: `capability: TemplateCapability` (with backwards-compatible defaults)
+- Add plan value objects: `LayoutPlanEntry`, `BehaviorPlanEntry`, `ResponsivePlanBreakpoint`
+- Add container objects: `LayoutPlan`, `BehaviorPlan`, `ResponsivePlan`
+- Extend [PresentationBlock](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/entities/presentation.py#137-153) with optional field: `behaviours: list[str]` (data-behaviour values to emit)
+- Extend [SemanticSection](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/entities/presentation.py#155-163) with optional field: `section_behaviours: list[str]`
+- Add `BehaviourQCIssue` model: `location`, `problem`, `severity`, `fix`, `confidence`, [action](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/entities/presentation.py#70-78)
+
+---
+
+### Component 3: Template Config Updates
+
+#### [MODIFY] All 6 template configs in [template_configs/](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/template_configs)
+
+Add `capability` block to each JSON config following the schema from the Claude spec. Example for T01:
+```json
+{
+  "capability": {
+    "allowed_behaviours": {
+      "hint-toggle": true,
+      "step-reveal": true,
+      "accordion": true,
+      "zoom": true,
+      "sticky-sidebar": true,
+      "anchor-nav": true,
+      "scrollspy": true,
+      "section-tabs": true,
+      "quiz-check": false,
+      "graph-slider": false,
+      "pyodide-cell": false
+    },
+    "preferred_behaviours": {
+      "practice": "hint-toggle + accordion",
+      "worked_example": "step-reveal",
+      "key_terms": "sticky-sidebar",
+      "dense_diagram": "zoom"
+    },
+    "responsive_fallbacks": {
+      "sticky-sidebar": "inline vocab strip",
+      "two-column": "single column stacked",
+      "section-tabs": "long scroll",
+      "accordion": "expanded flat list"
+    }
+  }
+}
+```
+
+Each template gets a tailored set based on its `interaction.level` and visual identity. The existing `interaction` block is preserved for backwards compatibility.
+
+---
+
+### Component 4: Plan Generation (LayoutPlan, BehaviorPlan, ResponsivePlan)
+
+#### [NEW] [plan_generator.py](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/services/plan_generator.py)
+
+A deterministic plan generator that produces plans without an LLM call (consistent with "Renderer has no LLM calls" invariant). Uses rules from both specs:
+
+- `generate_layout_plan(sections, template) -> LayoutPlan`: applies the layout decision override table (Claude spec §Layout Decision Rules)
+- `generate_behavior_plan(sections, template) -> BehaviorPlan`: applies Tier 1 automatics, respects template capability ceiling
+- `generate_responsive_plan(template) -> ResponsivePlan`: builds from template's responsive_fallbacks + standard breakpoints
+
+The plans are recorded as structured objects on the [PresentationManifest](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/entities/presentation.py#165-179). The plans are also serialised as HTML comments in the output.
+
+#### [MODIFY] [presentation_engine.py](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/presentation_engine.py)
+
+- `PresentationAdapter.build_manifest()` calls the plan generator and attaches plans to the manifest
+- Plans drive `data-behaviour` attribute emission on blocks
+- `PresentationEngine.render()` injects plan HTML comments at the top of the rendered output
+
+---
+
+### Component 5: universal.js — The Safety Net
+
+#### [NEW] [universal.js](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/assets/universal.js)
+
+Runs first on every generated page, unconditionally. Implements:
+1. **Nav anchor smooth scroll** — intercepts clicks on `a[href^="#"]`
+2. **Reading progress bar** — creates a fixed bar at document top, updates on scroll
+3. **Hint toggle baseline** — finds `.hint` elements without `data-behaviour`, wraps with toggle
+4. **Diagram zoom detection** — auto-adds zoom trigger to `<svg>` elements where text < 10px
+5. **Table overflow scroll** — wraps any `<table>` wider than its container in a scroll wrapper
+6. **Keyboard navigation** — arrow keys move focus between `[data-section-index]` sections
+7. **External link safety** — adds `target="_blank" rel="noopener noreferrer"` to external links
+
+~150–200 lines of vanilla JS. No dependencies. Uses `DOMContentLoaded` event.
+
+#### [NEW] [universal.css](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/assets/universal.css)
+
+Styles for universal features: progress bar, zoom triggers, scroll wrappers, print overrides for all hidden content.
+
+---
+
+### Component 6: runtime.js — The Behaviour Engine
+
+#### [NEW] [runtime.js](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/assets/runtime.js)
+
+Reads `data-behaviour` attributes after universal.js has run. Implements a dispatcher pattern:
+
+```js
+const BEHAVIOURS = {
+  'hint-toggle': initHintToggle,
+  'step-reveal': initStepReveal,
+  'accordion': initAccordion,
+  'zoom': initZoom,
+  'sticky-sidebar': initStickySidebar,
+  'section-tabs': initSectionTabs,
+  'scrollspy': initScrollspy,
+  'expand-card': initExpandCard,
+  'highlight-row': initHighlightRow,
+  'tooltip': initTooltip,
+  'compare-toggle': initCompareToggle,
+  'quiz-check': initQuizCheck,
+  'self-check': initSelfCheck,
+  'toggle-view': initToggleView,
+};
+```
+
+Each behaviour handler:
+- Receives the element with the `data-behaviour` attribute
+- Attaches event listeners, creates UI controls
+- Has a print fallback (CSS `@media print` shows all hidden content)
+- Falls back gracefully if behaviour is unknown (logs to console, element remains static)
+
+~400–500 lines of vanilla JS. No dependencies.
+
+#### [NEW] [runtime.css](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/assets/runtime.css)
+
+Styles for all runtime behaviours: accordion arrows, step-reveal buttons, zoom overlay, sticky sidebar, tab bars, scrollspy active states, tooltip positioning. Includes comprehensive `@media print` rules.
+
+---
+
+### Component 7: Template HTML & CSS Enhancements
+
+#### [MODIFY] [presentation.html.j2](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/templates/presentation.html.j2)
+
+- Add `<script>` tags for universal.js and runtime.js (inline or referenced)
+- Add `<style>` blocks for universal.css and runtime.css
+- Add plan HTML comments at top of `<body>`
+- Add `data-section-index` attributes on section articles
+- Add `data-behaviour` attributes on blocks based on manifest plans
+
+#### [MODIFY] Jinja2 component templates
+
+Update the following components to emit `data-behaviour` attributes:
+- [WorkedExampleStepper.html.j2](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/templates/components/WorkedExampleStepper.html.j2) → `data-behaviour="step-reveal"`
+- [PracticeTierGrid.html.j2](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/templates/components/PracticeTierGrid.html.j2) → `data-behaviour="hint-toggle"` on hint elements
+- [SplitExplainVisual.html.j2](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/templates/components/SplitExplainVisual.html.j2) → `data-behaviour="zoom"` on figures (conditional)
+- [DefinitionCard.html.j2](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/templates/components/DefinitionCard.html.j2) → `data-term` and `data-definition` attributes
+- [HookCard.html.j2](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/templates/components/HookCard.html.j2) → `data-behaviour="expand-card"` (conditional)
+
+#### [MODIFY] [_build_screen_css()](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/presentation_engine.py#397-642) in [presentation_engine.py](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/presentation_engine.py)
+
+- Add responsive breakpoints from spec: desktop >900px, tablet 600–900px, mobile <600px, classroom >1400px
+- Add CSS for sidebar drawer on tablet, inline vocab strip on mobile
+- Ensure all touch targets ≥ 44px on mobile
+
+#### [MODIFY] [_build_print_css()](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/presentation_engine.py#644-692) in [presentation_engine.py](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/presentation_engine.py)
+
+- Add rules: all `[data-behaviour]` collapsed content becomes visible
+- Step-reveal shows all steps
+- Accordion shows all panels
+- Hint-toggle shows all hints
+- Zoom overlay, tooltips, sticky sidebar hidden
+
+---
+
+### Component 8: Enhanced Visual QC
+
+#### [MODIFY] [presentation_quality.py](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/services/presentation_quality.py)
+
+Add new check methods:
+- `_check_behaviour_validity()`: verifies `data-behaviour` values against the registry, flags unknown behaviours
+- `_check_behaviour_ceiling()`: verifies no behaviour exceeds template's `interaction_level` ceiling
+- `_check_layout_overflow()`: detects insight-strip cells >50 words, accordion groups >6 items, sidebar taller than viewport
+- `_check_nav_integrity()`: nav links with no matching anchor target, empty blocks
+- `_check_responsive()`: simulated viewport checks — elements wider than container at each breakpoint
+
+Extend [PresentationIssue](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/entities/presentation.py#181-188) with new `IssueCategory` values: `"behaviour"`, `"layout_overflow"`, `"navigation"`.
+
+Extend the QC report with:
+- `fix_confidence: Literal["auto_patch", "needs_rerender", "manual"]`
+- `location: str` (CSS selector or block_id path)
+
+---
+
+### Component 9: Updated LLM Prompt
+
+#### [MODIFY] [formatting_rules.py](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/prompts/formatting_rules.py)
+
+Add new prompt blocks teaching the LLM:
+- `[PROMPT:LAYOUT_FIT]` — reason about content density before choosing components (the override table)
+- `[PROMPT:BEHAVIOUR_ATTRIBUTES]` — emit `data-behaviour` attributes, never write JS or inline event handlers
+- `[PROMPT:VOCABULARY_TERMS]` — mark first-use terms with `data-term` and `data-definition`
+- `[PROMPT:PLAN_COMMENTS]` — emit LayoutPlan, BehaviorPlan, ResponsivePlan as HTML comments
+- `[PROMPT:BEHAVIOUR_RULES]` — list the full behaviour vocabulary with categories, when to use each
+- `[PROMPT:NEVER_RULES]` — never write JS, never invent behaviour names, never exceed template ceiling
+
+> [!NOTE]
+> Because the current system generates content as structured JSON (not raw HTML), the LLM prompt changes primarily affect the content structure. The `data-behaviour` attributes are added by the template engine based on the plans, not by the LLM directly. The prompt teaches the LLM to reason about layout fit so it structures content appropriately (e.g. splitting long comparisons into items rather than prose).
+
+---
+
+### Component 10: Integration & Wiring
+
+#### [MODIFY] [html_renderer.py](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/html_renderer.py)
+
+- Load and inject `universal.js`, `universal.css`, `runtime.js`, `runtime.css` via the [PresentationEngine](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/presentation_engine.py#309-395)
+
+#### [MODIFY] [presentation_engine.py](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/presentation_engine.py)
+
+- `PresentationEngine.__init__()` loads JS/CSS assets
+- `PresentationEngine.render()` passes assets and plans to the Jinja2 template
+- Plans emitted as HTML comments at top of `<body>`
+
+---
+
+## 4. Build Order (Dependency Graph)
+
+```
+Ticket 1: Behaviour Registry (no deps)
+    ↓
+Ticket 2: Plan Value Objects & Template Capability Schema (deps: 1)
+    ↓
+Ticket 3: Template Config Updates (deps: 2)
+    ↓
+Ticket 4: Plan Generator Service (deps: 1, 2, 3)
+    ↓
+Ticket 5: universal.js + universal.css (no code deps, just assets)
+    ↓
+Ticket 6: runtime.js + runtime.css (deps: 1 for behaviour names)
+    ↓
+Ticket 7: Template HTML & CSS Enhancements (deps: 4, 5, 6)
+    ↓
+Ticket 8: Enhanced Visual QC (deps: 1, 2)
+    ↓
+Ticket 9: LLM Prompt Updates (deps: 1)
+    ↓
+Ticket 10: Integration Wiring & End-to-End Validation (deps: all)
+```
+
+> [!NOTE]
+> Tickets 5 and 6 can be built in parallel with Tickets 2–4 since they are standalone JS/CSS assets.
+
+---
+
+## 5. Verification Plan
+
+### Existing Tests to Leverage
+
+The project has the following test infrastructure (run from `backend/`):
+
+```bash
+# Run all tests
+python -m pytest tests/ -v
+
+# Run specific test modules relevant to rendering
+python -m pytest tests/infrastructure/test_presentation_engine.py -v
+python -m pytest tests/infrastructure/test_renderer.py -v
+python -m pytest tests/domain/test_quality_rules.py -v
+python -m pytest tests/domain/test_entities.py -v
+python -m pytest tests/integration/test_mock_pipeline_render.py -v
+```
+
+Architecture validation:
+```bash
+python tools/agent/check_architecture.py --format text
+```
+
+### New Tests to Add
+
+| Test File | What It Tests | Run Command |
+|---|---|---|
+| `tests/domain/test_behaviour_registry.py` | All behaviours registered, categories valid, tier assignments correct, `is_valid_behaviour` and `allowed_behaviours_for_level` helpers | `python -m pytest tests/domain/test_behaviour_registry.py -v` |
+| `tests/domain/test_plan_generator.py` | LayoutPlan override rules, BehaviorPlan tier-1 automatics, ResponsivePlan breakpoints, ceiling enforcement | `python -m pytest tests/domain/test_plan_generator.py -v` |
+| `tests/domain/test_behaviour_qc.py` | QC catches unknown behaviours, ceiling violations, layout overflow, nav integrity | `python -m pytest tests/domain/test_behaviour_qc.py -v` |
+| `tests/infrastructure/test_template_capabilities.py` | All 6 template configs load with capability field, allowed_behaviours are subset of registry | `python -m pytest tests/infrastructure/test_template_capabilities.py -v` |
+| `tests/infrastructure/test_js_assets.py` | universal.js and runtime.js exist, are non-empty, contain expected function names | `python -m pytest tests/infrastructure/test_js_assets.py -v` |
+| `tests/infrastructure/test_plan_html_comments.py` | Rendered HTML contains plan comments, parseable back to plan objects | `python -m pytest tests/infrastructure/test_plan_html_comments.py -v` |
+| `tests/infrastructure/test_data_behaviour_attrs.py` | Rendered HTML has correct `data-behaviour` attributes on expected elements | `python -m pytest tests/infrastructure/test_data_behaviour_attrs.py -v` |
+
+### Integration Validation
+
+```bash
+# Full pipeline render with mock LLM — verifies plans, behaviours, and QC
+python -m pytest tests/integration/test_mock_pipeline_render.py -v
+
+# Architecture boundary check — verifies no DDD violations
+python tools/agent/check_architecture.py --format text
+
+# Full validation
+python tools/agent/validate_repo.py --scope all
+```
+
+### Manual Verification
+
+Open a generated HTML textbook in a browser and verify:
+1. Reading progress bar appears at the top and moves on scroll
+2. Nav sidebar links scroll smoothly to sections
+3. Worked example steps are hidden behind "Show next step" buttons
+4. Practice hints are hidden by default and reveal on click
+5. Dense diagrams have a zoom button that opens an overlay
+6. Tables wider than their container scroll horizontally
+7. Print preview (Ctrl+P) shows all hints visible, all steps visible, no interactive controls
+8. Resize browser to <600px — layout becomes single column, sidebar becomes inline
+9. View page source — plans are visible as HTML comments at top of `<body>`
+
+---
+
+## 6. Tickets
+
+---
+
+### Ticket 1: Behaviour Vocabulary Registry
+
+**Title:** Create shared behaviour vocabulary registry
+
+**Description:**
+Create `domain/value_objects/behaviour_registry.py` — a pure domain module that is the single source of truth for all named behaviours. Define enums for `BehaviourCategory` (DISCLOSURE, VISUAL, NAVIGATION, ASSESSMENT, SUBJECT, PREMIUM) and `BehaviourTier` (AUTOMATIC, LLM_REASONED, SAFE_FALLBACK). Populate the registry with all behaviours from both specs (~20 behaviours). Include helper functions `is_valid_behaviour(name)`, `allowed_behaviours_for_level(level)`, and `get_behaviour(name)`.
+
+**Done when:**
+- Module exists with zero framework imports
+- All behaviours from both specs are registered
+- `is_valid_behaviour` returns True for all registered names, False for unknowns
+- `allowed_behaviours_for_level("none")` returns empty set, [("high")](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/services/assembler.py#36-71) returns all
+- Tests pass: `python -m pytest tests/domain/test_behaviour_registry.py -v`
+- Architecture check passes: `python tools/agent/check_architecture.py --format text`
+
+**Dependencies:** None
+
+---
+
+### Ticket 2: Plan Value Objects & Template Capability Schema
+
+**Title:** Define plan value objects and template capability schema
+
+**Description:**
+Extend [domain/entities/presentation.py](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/entities/presentation.py) with new Pydantic models: `TemplateCapability` (allowed_behaviours, preferred_behaviours, responsive_fallbacks), `LayoutPlanEntry`, `BehaviorPlanEntry`, `ResponsivePlanBreakpoint`, `LayoutPlan`, `BehaviorPlan`, `ResponsivePlan`. Extend [TemplateConfig](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/entities/presentation.py#109-124) with optional `capability: TemplateCapability` field (defaults to empty for backwards compatibility). Extend [PresentationBlock](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/entities/presentation.py#137-153) with `behaviours: list[str]`. Extend [PresentationManifest](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/entities/presentation.py#165-179) with `layout_plan`, `behavior_plan`, `responsive_plan` optional fields.
+
+**Done when:**
+- All new models validate with Pydantic
+- Existing [TemplateConfig](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/entities/presentation.py#109-124) instances still load without `capability` (backwards compat)
+- [PresentationManifest](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/entities/presentation.py#165-179) accepts plans
+- Existing tests still pass: `python -m pytest tests/domain/test_entities.py tests/infrastructure/test_presentation_engine.py -v`
+
+**Dependencies:** Ticket 1
+
+---
+
+### Ticket 3: Template Config Updates
+
+**Title:** Add capability declarations to all template configs
+
+**Description:**
+Add `capability` JSON block to each of the 6 template config files. T01 (Concept Explorer) and T03 (Middle School) get `medium` interaction ceiling with rich behaviour sets. T10 (Minimal Print) gets `none` with empty allowed_behaviours. T08 (Proof Track) gets `light` with only disclosure behaviours. T02 and T05 get tailored sets based on their existing `interaction.level`. Include `preferred_behaviours` mapping block types to default behaviours, and `responsive_fallbacks` for each allowed behaviour.
+
+**Done when:**
+- All 6 configs load without validation errors
+- Each config's `capability.allowed_behaviours` is a subset of the behaviour registry
+- Each config's `interaction_level` ceiling is respected in `allowed_behaviours`
+- Tests pass: `python -m pytest tests/infrastructure/test_template_capabilities.py -v`
+
+**Dependencies:** Ticket 2
+
+---
+
+### Ticket 4: Plan Generator Service
+
+**Title:** Implement deterministic plan generator
+
+**Description:**
+Create `domain/services/plan_generator.py`. Implement three pure functions:
+- `generate_layout_plan()`: applies the layout decision override table from the Claude spec. For each block, determines the correct component based on content density (e.g. insight-strip with items > 2 lines → accordion).
+- `generate_behavior_plan()`: identifies Tier 1 automatics (practice→hint-toggle, worked_example→step-reveal, vocab→sticky-sidebar, nav→anchor-nav), checks template capability ceiling, records all decisions.
+- `generate_responsive_plan()`: builds from template's `responsive_fallbacks` + standard breakpoints (desktop >900px, tablet 600–900px, mobile <600px, classroom >1400px).
+
+Modify `PresentationAdapter.build_manifest()` to call the plan generator and attach plans to the manifest. Modify `PresentationEngine.render()` to pass plans to the Jinja2 template.
+
+**Done when:**
+- Plan generator produces valid plans for all 6 templates
+- Tier 1 behaviours are always assigned regardless of template
+- Behaviours above template ceiling are never assigned
+- Layout override rules are applied (e.g. worked example > 3 steps → step-reveal)
+- Tests pass: `python -m pytest tests/domain/test_plan_generator.py -v`
+
+**Dependencies:** Tickets 1, 2, 3
+
+---
+
+### Ticket 5: universal.js + universal.css
+
+**Title:** Build the universal safety-net runtime
+
+**Description:**
+Create `infrastructure/renderer/assets/universal.js` (~150–200 lines vanilla JS). Implements: nav anchor smooth scroll, reading progress bar, hint toggle baseline, diagram zoom detection (SVG text < 10px), table overflow scroll, keyboard navigation (arrow keys between sections), external link safety. Create `infrastructure/renderer/assets/universal.css` for progress bar, zoom triggers, scroll wrappers, and comprehensive `@media print` rules that make all hidden content visible.
+
+**Done when:**
+- Both files exist and are valid JS/CSS
+- universal.js uses `DOMContentLoaded`, no external dependencies
+- Print CSS shows all hidden content
+- Smoke test: include in a sample HTML page and verify in browser
+- Tests pass: `python -m pytest tests/infrastructure/test_js_assets.py -v`
+
+**Dependencies:** None (can be built in parallel with Tickets 2–4)
+
+---
+
+### Ticket 6: runtime.js + runtime.css
+
+**Title:** Build the behaviour dispatch runtime
+
+**Description:**
+Create `infrastructure/renderer/assets/runtime.js` (~400–500 lines vanilla JS). Implements a dispatcher that reads `data-behaviour` attributes and initialises handlers for: hint-toggle, step-reveal, accordion, zoom, sticky-sidebar, section-tabs, scrollspy, expand-card, highlight-row, tooltip, compare-toggle, quiz-check, self-check, toggle-view. Unknown behaviours log a warning but don't break. Create `infrastructure/renderer/assets/runtime.css` with styles for all behaviours including `@media print` fallbacks.
+
+**Done when:**
+- Both files exist and are valid JS/CSS
+- runtime.js dispatches to correct handler for each `data-behaviour` value
+- Unknown behaviours produce a console.warn and leave element static
+- Each handler has a print CSS fallback
+- Smoke test: include in a sample HTML page with data-behaviour attributes and verify
+- Tests pass: `python -m pytest tests/infrastructure/test_js_assets.py -v`
+
+**Dependencies:** Ticket 1 (for canonical behaviour names)
+
+---
+
+### Ticket 7: Template HTML & CSS Enhancements
+
+**Title:** Wire behaviours and assets into Jinja2 templates
+
+**Description:**
+Modify [presentation.html.j2](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/templates/presentation.html.j2) to: include universal.js/css and runtime.js/css, emit plan HTML comments, add `data-section-index` on articles, emit `data-behaviour` from block.behaviours. Modify component templates to emit `data-behaviour` attributes (WorkedExampleStepper→step-reveal, PracticeTierGrid→hint-toggle, etc., conditioned on manifest plans). Update [_build_screen_css()](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/presentation_engine.py#397-642) with responsive breakpoints (900px, 600px, 1400px) and mobile/tablet layout rules. Update [_build_print_css()](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/infrastructure/renderer/presentation_engine.py#644-692) with behaviour print fallbacks.
+
+**Done when:**
+- Rendered HTML includes universal.js, runtime.js, and their CSS
+- Plan HTML comments appear at top of `<body>`
+- `data-behaviour` attributes appear on correct elements
+- Responsive CSS uses spec breakpoints
+- Print CSS makes all behaviour-hidden content visible
+- Tests pass: `python -m pytest tests/infrastructure/test_plan_html_comments.py tests/infrastructure/test_data_behaviour_attrs.py -v`
+- Existing render tests still pass: `python -m pytest tests/infrastructure/test_presentation_engine.py tests/infrastructure/test_renderer.py -v`
+
+**Dependencies:** Tickets 4, 5, 6
+
+---
+
+### Ticket 8: Enhanced Visual QC
+
+**Title:** Extend QC with behaviour and layout checks
+
+**Description:**
+Add new check methods to [PresentationQualityChecker](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/services/presentation_quality.py#63-310): `_check_behaviour_validity()` (unknown behaviours), `_check_behaviour_ceiling()` (exceeds template level), `_check_layout_overflow()` (insight-strip > 50 words, accordion > 6 items), `_check_nav_integrity()` (nav links without anchors). Extend `IssueCategory` with new values. Add `fix_confidence` and `location` fields to [PresentationIssue](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/entities/presentation.py#181-188). Structured issue report follows Claude spec format.
+
+**Done when:**
+- Unknown behaviours in HTML are flagged
+- Behaviours above template ceiling are flagged as errors
+- Layout overflow conditions are caught
+- Issue report includes location, severity, fix_confidence
+- Tests pass: `python -m pytest tests/domain/test_behaviour_qc.py -v`
+- Existing QC tests still pass: `python -m pytest tests/domain/test_quality_rules.py -v`
+
+**Dependencies:** Tickets 1, 2
+
+---
+
+### Ticket 9: LLM Prompt Updates
+
+**Title:** Update LLM prompts for layout-fit reasoning
+
+**Description:**
+Add new prompt blocks to [formatting_rules.py](file:///c:/Projects/Textbook%20agent/backend/src/textbook_agent/domain/prompts/formatting_rules.py):
+- `[PROMPT:LAYOUT_FIT]` with the override table
+- `[PROMPT:BEHAVIOUR_ATTRIBUTES]` explaining data-behaviour usage
+- `[PROMPT:VOCABULARY_TERMS]` for data-term/data-definition
+- `[PROMPT:NEVER_RULES]` (no JS, no invented names, no ceiling violations)
+
+These teach the LLM to structure content for appropriate component fit, not to emit HTML directly.
+
+**Done when:**
+- New prompt blocks appear in the formatted output of `compose_prompt()`
+- Prompt text includes the full layout override table
+- Prompt text includes the full behaviour vocabulary
+- Existing prompt tests still pass: `python -m pytest tests/domain/test_prompts.py -v`
+
+**Dependencies:** Ticket 1
+
+---
+
+### Ticket 10: Integration Wiring & End-to-End Validation
+
+**Title:** Integration wiring and full pipeline validation
+
+**Description:**
+Wire everything together:
+- `HTMLRenderer.__init__()` loads all JS/CSS assets
+- `PresentationEngine.__init__()` receives and stores assets
+- `PresentationEngine.render()` passes assets to Jinja2 context
+- End-to-end test: mock pipeline → render → verify plans, behaviours, QC, print CSS
+
+Run full validation suite:
+```bash
+python -m pytest tests/ -v
+python tools/agent/check_architecture.py --format text
+python tools/agent/validate_repo.py --scope all
+```
+
+**Done when:**
+- Full test suite passes with zero failures
+- Architecture boundary check passes
+- A sample rendered HTML opens in browser with working behaviours
+- Generated HTML is a complete, interactive learning page with all safety-net features
+
+**Dependencies:** All previous tickets

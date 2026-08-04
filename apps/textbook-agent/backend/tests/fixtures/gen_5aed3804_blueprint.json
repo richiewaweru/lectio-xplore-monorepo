@@ -1,0 +1,215 @@
+{
+  "anchor": {
+    "reuse_scope": "introduced in orient; defined in build; worked example in model; varied in practice; consolidated in close"
+  },
+  "answer_key": {
+    "style": "brief_explanations"
+  },
+  "lesson": {
+    "lesson_mode": "first_exposure",
+    "resource_type": "lesson"
+  },
+  "metadata": {
+    "subject": "Mathematics",
+    "title": "findin rhe area of irregular shapes",
+    "version": "3.0"
+  },
+  "prior_knowledge": [],
+  "question_plan": [
+    {
+      "diagram_required": false,
+      "expected_answer": "Area of first rectangle: 5 \u00d7 3 = 15 square units. Area of second rectangle: 3 \u00d7 2 = 6 square units. Total area: 15 + 6 = 21 square units.",
+      "prompt": "Look at the L-shaped figure on the grid. It can be split into two rectangles: one is 5 units long and 3 units wide, the other is 3 units long and 2 units wide. Find the area of the whole shape.",
+      "question_id": "q1",
+      "section_id": "practice",
+      "temperature": "warm"
+    },
+    {
+      "diagram_required": false,
+      "expected_answer": "6 \u00d7 2 = 12 square units. 1 \u00d7 4 = 4 square units. 1 \u00d7 4 = 4 square units. Total area: 12 + 4 + 4 = 20 square units.",
+      "prompt": "A T-shaped figure on a grid can be split into three rectangles: a 6-unit by 2-unit rectangle, and two 1-unit by 4-unit rectangles. Find the total area.",
+      "question_id": "q2",
+      "section_id": "practice",
+      "temperature": "medium"
+    },
+    {
+      "diagram_required": false,
+      "expected_answer": "You can find the area of each rectangle using the formula length \u00d7 width, and then add the areas together because the whole shape is made of those parts without overlap.",
+      "prompt": "Why does breaking a shape into rectangles help you find its area? Explain in your own words.",
+      "question_id": "q3",
+      "section_id": "practice",
+      "temperature": "medium"
+    },
+    {
+      "diagram_required": false,
+      "expected_answer": "30 square units",
+      "prompt": "An L-shaped figure can be split into a rectangle that is 6 units long and 4 units wide, and a smaller rectangle that is 2 units long and 3 units wide. What is the total area of the L-shape?",
+      "question_id": "q4",
+      "section_id": "close",
+      "temperature": "warm"
+    }
+  ],
+  "repair_focus": null,
+  "sections": [
+    {
+      "components": [
+        {
+          "component": "section-header",
+          "content_intent": "Title: 'What do we do with a shape that is not a rectangle?' Subject: Mathematics. Objective: 'You'll learn to break an irregular shape into rectangles and add their areas.' Grade band: Grade 5. Keep it simple and encouraging; no examples yet."
+        },
+        {
+          "component": "hook-hero",
+          "content_intent": "Type: question. Headline: 'The L-Shape Puzzle.' Body: Show the L-shaped anchor and ask: 'We know how to find area of a rectangle, but what about this shape?' Anchor: 'Finding area of an irregular shape.' Pose the question to create felt need."
+        },
+        {
+          "component": "diagram-block",
+          "content_intent": "Show only anchor L-shape on grid, no decomposition lines or measurements. Caption: 'How can we find the area of this L-shaped figure?' No callouts, just outline and grid to make problem concrete."
+        }
+      ],
+      "role": "orient",
+      "section_id": "orient",
+      "title": "What do we do with a shape that is not a rectangle?",
+      "visual_required": true
+    },
+    {
+      "components": [
+        {
+          "component": "definition-card",
+          "content_intent": "Define 'decompose': plain = 'break a shape into smaller, simpler shapes'; formal = 'separate a shape into non-overlapping rectangles whose areas can be computed.' Connect to anchor L-shape from orient: we will split it. Related terms: rectangle, area. Keep tone simple."
+        },
+        {
+          "component": "key-fact",
+          "content_intent": "Restate the rectangle area formula as the tool. Fact: 'Area of a rectangle = length \u00d7 width.' Context: 'You already know how to find the area of a rectangle. Now we will use this formula after breaking the shape apart.'"
+        },
+        {
+          "component": "explanation-block",
+          "content_intent": "Explain decomposition using anchor L-shape from orient. Show splitting into two rectangles: 4\u00d73 and 2\u00d72. Use rectangle area formula to compute each: 4\u00d73=12, 2\u00d72=4. Sum = 16. Emphasize total area = sum of part areas. Keep tone simple. No pitfalls."
+        },
+        {
+          "component": "diagram-block",
+          "content_intent": "Show anchor L-shape on grid with dashed line dividing into two rectangles. Label each with dimensions: 4 units by 3 units and 2 units by 2 units. Caption: 'We can split the L-shape into two rectangles we know how to measure.' No area numbers, no pitfall. Use callouts."
+        }
+      ],
+      "role": "build",
+      "section_id": "build",
+      "title": "Breaking it down: decompose and conquer",
+      "visual_required": true
+    },
+    {
+      "components": [
+        {
+          "component": "worked-example-card",
+          "content_intent": "Titled 'Decomposing the L-Shape for Area'. Steps: split shape (4\u00d73 and 2\u00d72 rectangles), compute 4\u00d73=12 and 2\u00d72=4, add 12+4=16, total area 16 sq units. Conclusion: decompose, use rectangle formula, sum parts. Keep simple, encouraging tone, and reuse exact anchor numbers from build."
+        },
+        {
+          "component": "pitfall-alert",
+          "content_intent": "Misconception: 'I found each rectangle's area, so I'm done.' Correction: Must add all part areas to get total. Why: Without adding, you only have pieces, not the whole shape's area. Example: 12+4=16, not just 12 or 4. Severity major. Link to worked example above, using simple language."
+        }
+      ],
+      "role": "model",
+      "section_id": "model",
+      "title": "Watch me decompose the L-shape step by step",
+      "visual_required": false
+    },
+    {
+      "components": [
+        {
+          "component": "practice-stack",
+          "content_intent": "Two problems: warm L-shape (5x3, 3x2) on grid, find total area; medium T-shape (6x2, 1x4, 1x4), find total area. Provide 1-2 hints each. Solutions with steps. Simple tone, connect to anchor method."
+        },
+        {
+          "component": "short-answer",
+          "content_intent": "Pose the question: 'Why does breaking a shape into rectangles help you find its area? Explain in your own words.' Provide a mark scheme with key points: rectangles have known area formula, and sum of non-overlapping parts gives total area. Keep it simple."
+        },
+        {
+          "component": "reflection-prompt",
+          "content_intent": "Prompt: 'What mistake should you watch out for when decomposing shapes? How can you avoid it?' Use type open. Aim for students to recall the pitfall from model: forgetting to sum sub-areas after finding each. Keep space for 2-3 lines."
+        }
+      ],
+      "role": "practice",
+      "section_id": "practice",
+      "title": "Your turn to break shapes apart",
+      "visual_required": false
+    },
+    {
+      "components": [
+        {
+          "component": "summary-block",
+          "content_intent": "List three key takeaways: 1) decompose means breaking a shape into rectangles, 2) rectangle area = length \u00d7 width, 3) total area is the sum of part areas. Use simple, encouraging language. Closing line: 'You now have a superpower for measuring all kinds of shapes!' Max 25 words per bullet."
+        },
+        {
+          "component": "quiz-check",
+          "content_intent": "One multiple-choice question: find total area of L-shape with 6\u00d74 and 2\u00d73 rectangles. Correct answer: 30 sq units. Distractors: 24, 6, 20. Feedback correct: 'You remembered to add!' Incorrect: 'Don't forget to sum the parts.'"
+        },
+        {
+          "component": "what-next-bridge",
+          "content_intent": "Bridge to composite shapes with missing sections. Body: 'Knowing how to add is just the start. Next, we'll subtract to find area of shapes with cutouts.' Next: 'Composite Shapes with Missing Sections'. Preview: 'When a shape has a cutout, subtract!'"
+        }
+      ],
+      "role": "close",
+      "section_id": "close",
+      "title": "What we learned and where we go next",
+      "visual_required": false
+    }
+  ],
+  "teacher_materials": [],
+  "visual_strategy": {
+    "visuals": [
+      {
+        "anchor_link": "This is the anchor example itself\u2014the L-shape on a grid that will be reused throughout the lesson.",
+        "component_id": "diagram-block",
+        "density": "diagram",
+        "frames": [],
+        "must_not_show": [
+          "internal dividing lines separating the two rectangles",
+          "numerical dimensions or labels on the shape",
+          "area calculations or sub-areas",
+          "arrows or decomposition hints"
+        ],
+        "must_show": [
+          "L-shaped outline filled or outlined prominently",
+          "grid squares background",
+          "clear 90-degree angles at the L junction",
+          "two distinct rectangle regions visually implied but not separated by lines"
+        ],
+        "section_id": "orient",
+        "source_question_ids": [],
+        "strategy": "An L-shaped figure drawn on a grid, composed of two attached rectangles (4x3 and 2x2). (job: Introduce the anchor irregular shape visually, making the area problem concrete before any solution steps.; anchor: This is the anchor example itself\u2014the L-shape on a grid that will be reused throughout the lesson.; style: diagram_precision; must_show: L-shaped outline filled or outlined prominently, grid squares background, clear 90-degree angles at the L junction, two distinct rectangle regions visually implied but not separated by lines; must_not_show: internal dividing lines separating the two rectangles, numerical dimensions or labels on the shape, area calculations or sub-areas, arrows or decomposition hints)",
+        "subject": "An L-shaped figure drawn on a grid, composed of two attached rectangles (4x3 and 2x2).",
+        "type_hint": "diagram",
+        "visual_job": "Introduce the anchor irregular shape visually, making the area problem concrete before any solution steps.",
+        "visual_style": "diagram_precision"
+      },
+      {
+        "anchor_link": "Same anchor shape from orient, now split into two rectangles (4\u00d73 and 2\u00d72) on the same grid.",
+        "component_id": "diagram-block",
+        "density": "diagram",
+        "frames": [],
+        "must_not_show": [
+          "Area products (12, 4, 16)",
+          "Summation annotations",
+          "Pitfall warnings",
+          "Any non-rectangle parts"
+        ],
+        "must_show": [
+          "Grid background",
+          "L-shape outline",
+          "Dashed line dividing into 4\u00d73 and 2\u00d72 rectangles",
+          "Dimension labels: 4 units, 3 units, 2 units, 2 units",
+          "Caption 'We can split the L-shape into two rectangles we know how to measure.'"
+        ],
+        "section_id": "build",
+        "source_question_ids": [],
+        "strategy": "The L-shaped figure from the anchor decomposed into two rectangles on a grid. (job: Show the anchor shape split into two rectangles with dimension labels; separate the visual step from area calculation.; anchor: Same anchor shape from orient, now split into two rectangles (4\u00d73 and 2\u00d72) on the same grid.; style: diagram_precision; must_show: Grid background, L-shape outline, Dashed line dividing into 4\u00d73 and 2\u00d72 rectangles, Dimension labels: 4 units, 3 units, 2 units, 2 units, Caption 'We can split the L-shape into two rectangles we know how to measure.'; must_not_show: Area products (12, 4, 16), Summation annotations, Pitfall warnings, Any non-rectangle parts)",
+        "subject": "The L-shaped figure from the anchor decomposed into two rectangles on a grid.",
+        "type_hint": "diagram",
+        "visual_job": "Show the anchor shape split into two rectangles with dimension labels; separate the visual step from area calculation.",
+        "visual_style": "diagram_precision"
+      }
+    ]
+  },
+  "voice": {
+    "register_name": "simple",
+    "tone": "encouraging"
+  }
+}

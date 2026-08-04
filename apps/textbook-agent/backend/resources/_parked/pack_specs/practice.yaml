@@ -1,0 +1,85 @@
+# Pack Spec: Practice Pack
+# Version: 1.0
+# Pedagogical owner: Lectio
+# Last updated: 2026-05-01
+
+id: practice
+label: Practice Pack
+version: "1.0"
+
+intent: |
+  This pack consolidates a concept students have already been taught.
+  The teacher is NOT re-explaining. Students come knowing the concept
+  and needing to use it. The pack builds confidence and fluency.
+
+  There is no mini lesson here. The pack opens with a brief context
+  reminder (not instruction), moves to practice, and closes with a check.
+
+  The sequence:
+    1. Practice worksheet — deliberate application, warm to cold
+    2. Practice set (optional) — additional fluency drilling if needed
+    3. Exit ticket — check whether the practice landed
+
+  The shared learning plan must:
+    - State the specific skill being consolidated (not the concept generally)
+    - Define what "confident application" looks like for this skill
+    - Note any common error patterns students make when practising this
+    - Choose examples that feel fresh — not identical to the teaching examples
+
+plan_guidance:
+  objective_focus: >
+    Frame as consolidation and application. Students already have the
+    mental model — the objective is about using it confidently and
+    consistently across different instances. Not "understand X" but
+    "apply X independently to Y".
+  example_guidance: >
+    Choose examples DIFFERENT from the teaching examples the teacher used
+    in the original lesson. Students who only remember the taught example
+    need to be pushed to transfer.
+  misconception_focus: >
+    What errors appear specifically when practising, not just learning?
+    Procedural errors: wrong order of steps, forgetting a rule under pressure.
+  vocabulary_priority: >
+    Vocabulary was established in the original lesson. Use the same terms
+    consistently. Do not introduce new terminology in a practice pack.
+
+resources:
+  - resource_type: worksheet
+    intended_outcome: practice
+    label: Practice worksheet
+    purpose: >
+      Core practice resource. Graduated problems from guided to independent.
+      Students should spend most of this lesson doing work, not reading.
+    depth: standard
+    required: true
+    order: 1
+
+  - resource_type: practice_set
+    intended_outcome: practice
+    label: Fluency drill
+    purpose: >
+      Additional volume practice for procedural skills that need repetition.
+      Only appropriate when the concept has a procedural component that
+      benefits from speed and accuracy practice.
+    depth: quick
+    required: false
+    order: 2
+
+  - resource_type: exit_ticket
+    intended_outcome: assess
+    label: Exit ticket
+    purpose: >
+      Quick check after practice. Did the practice land?
+      Three questions: recall, apply, explain.
+    depth: quick
+    required: true
+    order: 3
+
+default_supports:
+  - worked_examples
+
+validation:
+  - "Must not contain mini_booklet — this pack does not teach"
+  - "Must contain worksheet as first resource"
+  - "Must contain exit_ticket as final resource"
+  - "Worksheet must not re-explain the concept"

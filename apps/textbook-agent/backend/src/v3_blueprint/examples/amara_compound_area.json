@@ -1,0 +1,141 @@
+{
+  "metadata": {
+    "version": "3.0",
+    "title": "Compound Area Foundations",
+    "subject": "Mathematics"
+  },
+  "lesson": {
+    "lesson_mode": "first_exposure",
+    "resource_type": "lesson"
+  },
+  "voice": {
+    "register": "simple",
+    "tone": "supportive"
+  },
+  "anchor": {
+    "reuse_scope": "entire_resource"
+  },
+  "sections": [
+    {
+      "section_id": "orient",
+      "title": "What is compound area?",
+      "role": "orient",
+      "visual_required": true,
+      "components": [
+        {
+          "component": "concept_intro",
+          "content_intent": "Define compound shapes in student-friendly language."
+        }
+      ]
+    },
+    {
+      "section_id": "model",
+      "title": "Break shapes into rectangles",
+      "role": "model",
+      "visual_required": true,
+      "components": [
+        {
+          "component": "worked_example",
+          "content_intent": "Show partitioning and area calculation with explicit steps."
+        }
+      ]
+    },
+    {
+      "section_id": "practice",
+      "title": "Guided practice",
+      "role": "practice",
+      "visual_required": true,
+      "components": [
+        {
+          "component": "guided_questions",
+          "content_intent": "Build confidence with warm and medium prompts only."
+        }
+      ]
+    },
+    {
+      "section_id": "summary",
+      "title": "Exit summary",
+      "role": "summary",
+      "visual_required": false,
+      "components": [
+        {
+          "component": "key_takeaways",
+          "content_intent": "Reinforce the 3-step routine for compound area."
+        }
+      ]
+    }
+  ],
+  "question_plan": [
+    {
+      "question_id": "q1",
+      "section_id": "practice",
+      "temperature": "warm",
+      "prompt": "Find the area of an L-shape split into two rectangles.",
+      "expected_answer": "Shows both rectangle areas and sums correctly.",
+      "diagram_required": true
+    },
+    {
+      "question_id": "q2",
+      "section_id": "practice",
+      "temperature": "medium",
+      "prompt": "Choose a valid split and calculate total area.",
+      "expected_answer": "Provides a correct split with accurate total area.",
+      "diagram_required": true
+    }
+  ],
+  "visual_strategy": {
+    "visuals": [
+      {
+        "section_id": "orient",
+        "component_id": "diagram-block",
+        "subject": "A compound shape split into smaller rectangles",
+        "visual_job": "introduce the shape-splitting idea visually",
+        "type_hint": "diagram",
+        "anchor_link": "Shows the same split-into-parts idea used across the lesson",
+        "must_show": ["one compound shape", "clear split lines", "two or more rectangles"],
+        "must_not_show": ["worked calculations", "decorative textures"],
+        "source_question_ids": [],
+        "frames": [],
+        "strategy": "compound shape overview with visible rectangle partitions",
+        "density": "high"
+      },
+      {
+        "section_id": "model",
+        "component_id": "worked-example-card",
+        "subject": "A worked compound area diagram with labeled dimensions",
+        "visual_job": "summarize the section explanation as a labeled diagram",
+        "type_hint": "diagram",
+        "anchor_link": "Uses the same partitioning move introduced in orient",
+        "must_show": ["dimension labels", "partition lines", "rectangles named or numbered"],
+        "must_not_show": ["extra shapes unrelated to the example"],
+        "source_question_ids": [],
+        "frames": [],
+        "strategy": "worked compound area diagram with annotations",
+        "density": "high"
+      },
+      {
+        "section_id": "practice",
+        "component_id": "diagram-block",
+        "subject": "Practice compound shapes that match the guided questions",
+        "visual_job": "support practice questions q1 and q2 with clean figures",
+        "type_hint": "diagram",
+        "anchor_link": "Reuses the same partition-then-add routine",
+        "must_show": ["clear compound outlines", "dimension labels where needed"],
+        "must_not_show": ["solution steps", "final answers"],
+        "source_question_ids": ["q1", "q2"],
+        "frames": [],
+        "strategy": "practice-support compound area figures",
+        "density": "high"
+      }
+    ]
+  },
+  "answer_key": {
+    "style": "concise_steps"
+  },
+  "teacher_materials": [
+    "answer_key"
+  ],
+  "prior_knowledge": [
+    "rectangle area formula"
+  ]
+}

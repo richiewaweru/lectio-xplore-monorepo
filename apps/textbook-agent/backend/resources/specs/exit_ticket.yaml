@@ -1,0 +1,233 @@
+# Resource Spec: Exit Ticket
+# Version: 1.0
+# Pedagogical owner: Lectio
+# Last updated: 2026-05-01
+
+id: exit_ticket
+label: Exit Ticket
+version: "1.0"
+
+# ── PEDAGOGICAL INTENT ──────────────────────────────────────────────────────
+
+intent: |
+  An exit ticket is a formative check completed at the end of a lesson.
+  It tells the teacher, before students leave the room, who understood
+  the concept and who did not. It informs tomorrow's lesson.
+
+  An exit ticket is NOT instruction. It contains no explanations,
+  no worked examples, no hooks. Students come to it already taught.
+
+  An exit ticket is SHORT. 5 minutes maximum. If it takes longer,
+  it is a quiz, not an exit ticket. Three questions is the target.
+  Never more than five.
+
+  The three questions follow a deliberate structure:
+    Q1 — RECALL: "What is [term/fact]?" Tests memory. Any student
+         who attended should answer correctly.
+    Q2 — APPLY: "Use [concept] to solve [problem]." Tests
+         understanding. Most students should get this.
+    Q3 — EXPLAIN: "Why does [X] happen?" or "Explain [X] in
+         your own words." Tests depth. Strong students excel here.
+
+  This three-tier structure is not optional. Every exit ticket must
+  have one question of each type, in this order.
+
+  The teacher copy includes an answer key. The student copy does not.
+
+when_to_use:
+  - End of lesson — final 5-10 minutes
+  - Before moving to a new concept the following lesson
+  - When the teacher wants quick data on who got it
+
+never_use_when:
+  - There is not enough time for all students to complete it
+  - The concept was only half-taught — the check will be meaningless
+  - The teacher wants more than 3-5 questions — use a quiz instead
+  - The lesson was a lab, activity, or discussion where written
+    response is not the right evidence format
+
+allowed_outcomes: [assess, review]
+
+# ── DEPTH CONFIGURATION ─────────────────────────────────────────────────────
+
+depth:
+  quick:
+    sections: "1"
+    min_sections: 1
+    max_sections: 1
+    time_minutes: "5"
+    questions: "3"
+    note: >
+      Quick is the ONLY appropriate depth for exit tickets.
+      Three questions, one concept, five minutes.
+  standard:
+    sections: "1-2"
+    min_sections: 1
+    max_sections: 2
+    time_minutes: "8-10"
+    questions: "4-5"
+    note: >
+      Standard is acceptable when the teacher needs slightly more
+      evidence. Still one concept. Max five questions.
+  deep:
+    sections: "2"
+    min_sections: 2
+    max_sections: 2
+    time_minutes: "12-15"
+    questions: "5"
+    note: >
+      Deep is the maximum permitted. A deep exit ticket borders on
+      a quiz. Consider using the quiz resource type instead.
+    warning: >
+      Deep exit tickets tend to sprawl. Consider using a quiz
+      if you need more than 5 questions or 15 minutes.
+
+# ── SECTION STRUCTURE ───────────────────────────────────────────────────────
+
+sections:
+  required:
+    - role: practice
+      intent: >
+        Three questions, structured as recall → apply → explain.
+
+        Q1 RECALL — direct retrieval. "What is X?" / "Name the three..."
+        / "Which of these is...?" Short answer or fill-in-blank only.
+        One right answer. Fast to mark.
+
+        Q2 APPLY — transfer to a simple new case. "Given [scenario],
+        what would happen?" / "Solve [problem] using [concept]."
+        Shows whether the student can USE the concept, not just repeat it.
+
+        Q3 EXPLAIN — student expresses understanding in their own words.
+        "Explain why..." / "In your own words, describe..."
+        No sentence starters. The quality of explanation reveals depth.
+
+        Do not add hints to any question. This is an assessment.
+        Hints defeat the purpose of measuring what students know.
+      preferred_components:
+        - short-answer
+        - fill-in-blank
+      allowed_components:
+        - practice-stack       # allowed if teacher wants structured hint-free problems
+        - student-textbox      # for the explain question only
+      forbidden_components:
+        - explanation-block
+        - worked-example-card
+        - hook-hero
+        - summary-block
+        - what-next-bridge
+        - definition-card
+        - glossary-rail
+        - reflection-prompt    # too open-ended — exit ticket needs specific evidence
+
+  optional:
+    - role: intro
+      intent: >
+        One line only. States what concept is being checked.
+        "Today's exit check: [topic]" or similar.
+        Used when the teacher wants students to see the topic
+        before they begin answering.
+        Never more than one sentence.
+      preferred_components:
+        - key-fact
+      allowed_components:
+        - callout-block
+      forbidden_components:
+        - hook-hero
+        - explanation-block
+        - worked-example-card
+      max_count: 1
+
+# ── FORBIDDEN COMPONENTS (globally, across all sections) ────────────────────
+
+forbidden_components:
+  - hook-hero              # exit tickets have no time for hooks
+  - explanation-block      # exit tickets do not teach
+  - worked-example-card    # worked examples contradict assessment purpose
+  - process-steps          # no procedural instruction in assessment
+  - definition-card        # no vocabulary instruction
+  - definition-family      # no vocabulary instruction
+  - glossary-rail          # no vocabulary instruction
+  - summary-block          # not appropriate — no lesson arc to summarise
+  - what-next-bridge       # exit tickets are standalone
+  - diagram-block          # visual complexity slows the check
+  - diagram-series         # screen-first — not for a 5-minute check
+  - diagram-compare        # screen-first
+  - simulation-block       # screen-only, incompatible with time constraint
+  - quiz-check             # use quiz resource type instead
+  - timeline-block         # not appropriate for assessment
+  - prerequisite-strip     # students should already know prerequisites
+  - pitfall-alert          # instruction not assessment
+  - reflection-prompt      # too open — not specific enough for formative data
+  - comparison-grid        # too complex for a 5-minute check
+  - insight-strip          # informational — not an assessment component
+
+# ── SUPPORTS MAPPING ────────────────────────────────────────────────────────
+
+supports:
+  visuals:
+    note: >
+      Visuals are not used in exit tickets. If a diagram is required
+      to answer a question (e.g. "label this diagram"), it is embedded
+      in the question text within practice-stack or short-answer.
+      No standalone visual sections.
+
+  vocabulary_support:
+    note: >
+      Do not add vocabulary support to exit tickets.
+      If students need vocabulary support during the check, the check
+      is measuring vocabulary access, not concept understanding.
+      Consider providing a vocabulary reference separately.
+
+  simpler_reading:
+    modifies_role: practice
+    intent_note: >
+      Use the shortest possible question stems. Maximum 10 words in
+      the question. Avoid embedded clauses. Use familiar, everyday
+      language rather than academic vocabulary in the question stem
+      (the concept being assessed may still use technical terms).
+
+  challenge_questions:
+    modifies_role: practice
+    intent_note: >
+      Replace the explain question (Q3) with a higher-order transfer
+      question. "How would [concept] apply if [condition changed]?"
+      Do not add a fourth question — replace, do not extend.
+
+# ── VISUAL POLICY ───────────────────────────────────────────────────────────
+
+visuals:
+  quick: 0
+  standard: 0
+  deep: 0
+  allow_diagrams: false
+  allow_images: false
+  note: >
+    Exit tickets contain no standalone visuals.
+    Any diagram needed to answer a question is part of the question,
+    not a separate visual component.
+
+# ── TEXT POLICY ─────────────────────────────────────────────────────────────
+
+text:
+  density: low
+  max_reading_load: light
+  note: >
+    Students should spend their time answering, not reading.
+    Total reading burden should be under 60 words.
+    Question stems should be scannable in 2-3 seconds.
+
+# ── VALIDATION RULES ────────────────────────────────────────────────────────
+
+validation:
+  - "Must contain exactly one practice section"
+  - "Must contain short-answer or fill-in-blank — questions must have defined answers"
+  - "Must not contain explanation-block in any section"
+  - "Must not contain worked-example-card — assessment must be unaided"
+  - "Must not contain hook-hero — exit tickets do not introduce"
+  - "Must not contain summary-block or what-next-bridge"
+  - "Must not contain diagram-block, diagram-series, or simulation-block"
+  - "Must not contain reflection-prompt — too open for formative check"
+  - "Section count must not exceed 2"
+  - "If depth=deep, teacher must review whether quiz resource type is more appropriate"
+  - "No hints permitted on any question — hints invalidate formative assessment"

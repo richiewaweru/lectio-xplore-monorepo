@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Concept",
+  "type": "object",
+  "required": [
+    "canonical_slug",
+    "subject",
+    "title"
+  ],
+  "properties": {
+    "canonical_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9.-]+$"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "canonical_description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,95 @@
+# Pack Spec: Reteach Pack
+# Version: 1.0
+# Pedagogical owner: Lectio
+# Last updated: 2026-05-01
+
+id: reteach
+label: Reteach Pack
+version: "1.0"
+
+intent: |
+  This pack repairs understanding after something went wrong.
+  The teacher has identified a misconception, a gap, or a failed lesson.
+  The pack must address the specific problem — not reteach the whole
+  concept from the beginning.
+
+  Reteaching is NOT the same as teaching again.
+  Teaching introduces. Reteaching targets the fault line.
+
+  The pack must:
+    - Open with the simplest possible targeted explanation that repairs the gap
+    - Use a different approach than the original lesson
+    - Move quickly to guided practice so the repair is immediately tested
+    - Close with a tight check focused exactly on what went wrong
+
+  The sequence:
+    1. Quick explainer — targeted re-explanation, different angle
+    2. Practice worksheet — guided practice on the specific gap
+    3. Exit ticket — verify the misconception is resolved
+
+  The shared learning plan must:
+    - State the specific misconception or gap being repaired
+    - Choose a DIFFERENT anchor example from the original lesson
+    - Define success as resolution of the specific problem, not full mastery
+
+plan_guidance:
+  objective_focus: >
+    Frame as misconception repair. The objective is NOT the full concept —
+    it is the specific thing that went wrong. Very specific.
+    "Students can correctly sequence X" when sequencing was the error.
+  example_guidance: >
+    CRITICAL: Choose a different example from the original lesson.
+    The student's failure is often tied to the specific example used.
+    A different example forces genuine understanding.
+  misconception_focus: >
+    State it precisely: "Students believe X when actually Y."
+    All resources must actively correct this.
+  vocabulary_priority: >
+    Focus only on terms directly involved in the misconception.
+    Do not reintroduce all vocabulary from the original lesson.
+
+resources:
+  - resource_type: quick_explainer
+    intended_outcome: understand
+    label: Targeted re-explanation
+    purpose: >
+      Concise explanation addressing the specific gap. NOT a repeat of
+      the original lesson — takes a different angle, uses a different
+      example. Covers only the fault, not the full concept.
+    depth: quick
+    required: true
+    order: 1
+
+  - resource_type: worksheet
+    intended_outcome: practice
+    label: Guided practice
+    purpose: >
+      Structured practice on the specific gap. More scaffolding than a
+      standard worksheet — warm problems are heavily guided.
+      Feels like gradual release, not a test.
+    depth: standard
+    required: true
+    order: 2
+
+  - resource_type: exit_ticket
+    intended_outcome: assess
+    label: Misconception check
+    purpose: >
+      Three questions focused specifically on the misconception.
+      Q1: Can they recall the correct version?
+      Q2: Can they identify the error in a worked example?
+      Q3: Can they explain why the misconception is wrong?
+    depth: quick
+    required: true
+    order: 3
+
+default_supports:
+  - worked_examples
+  - step_by_step
+
+validation:
+  - "Must not contain mini_booklet — reteach is targeted, not full instruction"
+  - "Must contain quick_explainer as first resource"
+  - "Must contain exit_ticket as final resource"
+  - "Quick explainer must use a different anchor example from the original lesson"
+  - "Exit ticket must focus on the specific misconception"

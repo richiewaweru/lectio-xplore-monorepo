@@ -1,0 +1,124 @@
+{
+  "metadata": {
+    "version": "3.0",
+    "title": "Parallel Circuits Consolidation",
+    "subject": "Physics"
+  },
+  "lesson": {
+    "lesson_mode": "consolidation",
+    "resource_type": "lesson"
+  },
+  "voice": {
+    "register": "formal",
+    "tone": "exam_formal"
+  },
+  "anchor": {
+    "reuse_scope": "topic_unit"
+  },
+  "sections": [
+    {
+      "section_id": "recall",
+      "title": "Recall key laws",
+      "role": "recall",
+      "visual_required": false,
+      "components": [
+        {
+          "component": "retrieval_prompt_set",
+          "content_intent": "Elicit prior understanding without reteaching basics."
+        }
+      ]
+    },
+    {
+      "section_id": "challenge",
+      "title": "Multi-step challenge set",
+      "role": "practice",
+      "visual_required": true,
+      "components": [
+        {
+          "component": "problem_set",
+          "content_intent": "Advance from medium to cold and transfer tasks."
+        }
+      ]
+    },
+    {
+      "section_id": "worked_example",
+      "title": "Single exam-style model",
+      "role": "model",
+      "visual_required": true,
+      "components": [
+        {
+          "component": "worked_example",
+          "content_intent": "Provide one high-fidelity full-working exemplar."
+        }
+      ]
+    }
+  ],
+  "question_plan": [
+    {
+      "question_id": "q1",
+      "section_id": "challenge",
+      "temperature": "medium",
+      "prompt": "Calculate branch currents in a three-branch parallel network.",
+      "expected_answer": "Uses correct branch voltage and current calculations.",
+      "diagram_required": true
+    },
+    {
+      "question_id": "q2",
+      "section_id": "challenge",
+      "temperature": "cold",
+      "prompt": "Determine equivalent resistance after a topology change.",
+      "expected_answer": "Derives equivalent resistance with complete reasoning.",
+      "diagram_required": true
+    },
+    {
+      "question_id": "q3",
+      "section_id": "challenge",
+      "temperature": "transfer",
+      "prompt": "Apply parallel-circuit reasoning to a fault diagnosis scenario.",
+      "expected_answer": "Maps diagnosis evidence to resistance and current behavior.",
+      "diagram_required": false
+    }
+  ],
+  "visual_strategy": {
+    "visuals": [
+      {
+        "section_id": "challenge",
+        "component_id": "diagram-block",
+        "subject": "Parallel circuit diagrams with branch labels",
+        "visual_job": "support challenge questions q1 and q2 with circuit figures",
+        "type_hint": "diagram",
+        "anchor_link": "Keeps the same branch structure across challenge variants",
+        "must_show": ["parallel branches", "component labels", "current or voltage labels"],
+        "must_not_show": ["worked solutions", "irrelevant symbols"],
+        "source_question_ids": ["q1", "q2"],
+        "frames": [],
+        "strategy": "parallel circuit variants with labeled branches",
+        "density": "medium"
+      },
+      {
+        "section_id": "worked_example",
+        "component_id": "worked-example-card",
+        "subject": "An annotated exam-style parallel circuit diagram",
+        "visual_job": "summarize the section explanation as a labeled diagram",
+        "type_hint": "diagram",
+        "anchor_link": "Uses the same circuit conventions as the challenge set",
+        "must_show": ["branch labels", "component values", "clear node structure"],
+        "must_not_show": ["extra branches not discussed"],
+        "source_question_ids": [],
+        "frames": [],
+        "strategy": "annotated parallel circuit walkthrough",
+        "density": "medium"
+      }
+    ]
+  },
+  "answer_key": {
+    "style": "full_working"
+  },
+  "teacher_materials": [
+    "answer_key"
+  ],
+  "prior_knowledge": [
+    "ohms_law",
+    "series_vs_parallel_basics"
+  ]
+}

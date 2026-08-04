@@ -1,0 +1,66 @@
+[
+  {
+    "section_id": "orient",
+    "components": [
+      {
+        "component_id": "hook-hero",
+        "content_intent": "Use type: question. Headline (max 12 words) asks where the windowsill plant's food comes from. Body (max 80 words) sets the scene: a healthy, growing plant on a sunny windowsill that gets water but no visible food. Include question_options that surface the soil-food idea ('from the soil') alongside light-based answers, but do not resolve which is correct. Anchor field names the sunny windowsill plant as the specific example that the whole lesson will follow. Tone: curious, not correcting."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  },
+  {
+    "section_id": "explain",
+    "components": [
+      {
+        "component_id": "callout-block",
+        "content_intent": "Write an info callout with a short heading (max 6 words). The body states that in the windowsill plant, photosynthesis converts light energy into chemical energy stored in glucose. Focus solely on this energy transformation; do not mention soil, nutrients, or food from the ground."
+      },
+      {
+        "component_id": "definition-card",
+        "content_intent": "Define 'Photosynthesis' with term, plain, and formal definitions. Plain: use the windowsill plant to describe light energy turning water and CO2 into glucose and oxygen. Formal: state the conversion of light energy to chemical energy, producing glucose and releasing oxygen. Include inputs (light, water, CO2) and outputs (glucose, oxygen). Do not mention soil. Related terms: 'chlorophyll', 'glucose'."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  },
+  {
+    "section_id": "model",
+    "components": [
+      {
+        "component_id": "worked-example-card",
+        "content_intent": "Apply the photosynthesis definition to the windowsill plant step by step. Walk through: light energy captured by chlorophyll, water and CO2 entering the plant, production of glucose (stored chemical energy) and oxygen, and finally contrast soil minerals as nutrients vs. glucose as food energy. Conclude by reinforcing the energy conversion. Use the anchor example name explicitly, keep steps concrete, and do not introduce new science beyond the definition from the explain section. Aim for 4–5 steps, each label under 12 words, each content under 80 words."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  },
+  {
+    "section_id": "apply",
+    "components": [
+      {
+        "component_id": "practice-stack",
+        "content_intent": "Two apply problems. First: explain energy conversion for the sunny windowsill plant, referencing the light energy to glucose pathway. Second: contrast with a shaded plant, requiring learners to explain why less light means less glucose. Use the anchor vocabulary from the build section. Provide progressive hints (max 3 per problem) that guide recall of chlorophyll's role and the concept that light energy, not soil, is the source. No new science; rely on the model section's reasoning. Difficulty: warm then medium."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  },
+  {
+    "section_id": "check",
+    "components": [
+      {
+        "component_id": "quiz-check",
+        "content_intent": "Ask a multiple-choice question that forces students to decide where a plant's energy-rich matter comes from, using the windowsill plant anchor. The correct option must describe light energy being converted into chemical energy in glucose. Include one distractor reflecting the soil-food misconception (plants get food from soil) and another reflecting the breathing-opposite misconception (plants get energy by breathing in CO2 and out O2). Each option must have a short explanation linking back to the energy conversion story. Feedback should clarify that soil provides minerals, not energy, and that gas exchange is not the energy source. Question max 60 words, options max 20 words each."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  }
+]

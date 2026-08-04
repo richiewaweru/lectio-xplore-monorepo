@@ -1,0 +1,423 @@
+from __future__ import annotations
+
+import logging
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
+
+log = logging.getLogger(__name__)
+
+
+# ── Stage 1 output models ─────────────────────────────────────────────────
+
+VisualStyle = Literal["diagram_precision", "illustration"]
+_VISUAL_STYLES = {"diagram_precision", "illustration"}
+
+
+class LessonIntent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    goal: str = Field(
+        description="By the end of this lesson the student can... "
+        "One sentence, specific and testable. Max 200 chars.",
+        max_length=200,
+    )
+    structure_rationale: str = Field(
+        description="Why this structure was chosen given this learner group "
+        "and concept. Max 300 chars.",
+        max_length=300,
+    )
+
+
+class AnchorSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    example: str = Field(
+        description="Named anchor example. Specific, concrete, reusable. "
+        "e.g. 'splitting a pizza into 8 equal slices'. Max 100 chars.",
+        max_length=100,
+    )
+    reuse_scope: str = Field(
+        description="How the anchor recurs across sections — named per section. "
+        "Max 200 chars.",
+        max_length=200,
+    )
+
+
+class ComponentSlot(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    slug: str = Field(description="Component slug from registry. Must exist.")
+    purpose: str = Field(
+        description="One-line pedagogical purpose of this component "
+        "at this exact point in the lesson. Aim for 80 chars or fewer, "
+        "but preserve a longer purpose when needed for clarity.",
+    )
+
+
+class SectionPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="Unique section identifier slug e.g. 'orient', 'model'")
+    title: str = Field(description="Section title. Max 80 chars.", max_length=80)
+    role: str = Field(description="Spec-vocabulary role string for this section.")
+    card_id: str | None = Field(
+        default=None,
+        description="Stable concept-card id for teaching sections; null for plain sections.",
+    )
+    visual_required: bool
+    transition_note: str | None = Field(
+        default=None,
+        description="Why this section follows the previous one. "
+        "Names what prior section established and what this one does with it. "
+        "Null for first section only. Max 120 chars.",
+        max_length=120,
+    )
+    components: list[ComponentSlot] = Field(
+        description="Ordered component slots. Max 4 per section.",
+        max_length=4,
+    )
+
+    @field_validator("components")
+    @classmethod
+    def max_four_components(cls, v: list[ComponentSlot]) -> list[ComponentSlot]:
+        if len(v) > 4:
+            raise ValueError("Max 4 components per section")
+        return v
+
+
+class QPlanItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    question_id: str
+    section_id: str
+    temperature: Literal["warm", "medium", "cold", "transfer"]
+    diagram_required: bool = False
+
+
+class VoiceSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    register_name: Literal["simple", "balanced", "formal"]
+    tone: Literal["encouraging", "neutral", "direct"]
+    notation: str | None = Field(
+        default=None,
+        description="Notation and terminology constraint shared by all sections.",
+    )
+
+
+class Misconception(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="Misconception id unique within this card, e.g. M1.")
+    description: str
+    source: Literal["drafted", "teacher"] = "drafted"
+
+
+class ConceptCard(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="Stable lowercase dotted concept slug.")
+    title: str
+    objective: str = Field(description="One observable learner capability.")
+    prereqs: list[str] = Field(default_factory=list)
+    misconceptions: list[Misconception] = Field(default_factory=list)
+    no_known_misconceptions: bool = False
+    opens_by: str = Field(
+        default="",
+        description="Specific continuity instruction for how this card opens.",
+    )
+    _item_subject: str = PrivateAttr(default="")
+    _item_level: str = PrivateAttr(default="")
+    _item_notation: str | None = PrivateAttr(default=None)
+
+    def with_item_context(
+        self,
+        *,
+        subject: str,
+        level: str,
+        notation: str | None,
+    ) -> ConceptCard:
+        """Return an isolated card carrying only scalar item-writing context."""
+        card = self.model_copy(deep=True)
+        card._item_subject = subject
+        card._item_level = level
+        card._item_notation = notation
+        return card
+
+    def item_context(self) -> tuple[str, str, str | None]:
+        if not self._item_subject.strip() or not self._item_level.strip():
+            raise ValueError("Item generation requires subject and level on the approved card")
+        return self._item_subject, self._item_level, self._item_notation
+
+
+class VariantSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: str
+    voice: VoiceSpec
+    group_description: str
+
+
+def core_variant_spec() -> VariantSpec:
+    return VariantSpec(
+        label="Core",
+        voice=VoiceSpec(register_name="balanced", tone="neutral"),
+        group_description="The main class group.",
+    )
+
+
+class RepairFocus(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    fault_line: str = Field(
+        description="Precisely what went wrong in prior learning."
+    )
+    what_not_to_teach: list[str] = Field(
+        description="Concepts or approaches to avoid repeating."
+    )
+
+
+class StructuralPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    lesson_mode: Literal[
+        "first_exposure", "consolidation", "repair", "retrieval", "transfer"
+    ]
+    lesson_intent: LessonIntent
+    anchor: AnchorSpec
+    prior_knowledge: list[str]
+    repair_focus: RepairFocus | None = None
+    cards: list[ConceptCard] = Field(default_factory=list)
+    sections: list[SectionPlan] = Field(
+        description="Ordered section plans. Max 6.",
+    )
+    question_plan: list[QPlanItem]
+    answer_key_style: Literal[
+        "brief_explanations", "full_working", "answers_only"
+    ]
+    _variant: VariantSpec = PrivateAttr(default_factory=core_variant_spec)
+
+    def with_variant(self, variant: VariantSpec) -> StructuralPlan:
+        plan = self.model_copy(deep=True)
+        plan._variant = variant
+        return plan
+
+    def variant_spec(self) -> VariantSpec:
+        return self._variant
+
+    @field_validator("sections")
+    @classmethod
+    def max_six_sections(cls, v: list[SectionPlan]) -> list[SectionPlan]:
+        if len(v) > 6:
+            raise ValueError("Max 6 sections")
+        return v
+
+    @model_validator(mode="after")
+    def first_section_no_transition(self) -> StructuralPlan:
+        if self.sections and self.sections[0].transition_note is not None:
+            raise ValueError("First section must have transition_note=null")
+        return self
+
+    @model_validator(mode="after")
+    def repair_mode_requires_repair_focus(self) -> StructuralPlan:
+        if self.lesson_mode == "repair" and self.repair_focus is None:
+            raise ValueError("lesson_mode=repair requires repair_focus")
+        return self
+
+
+def adapt_legacy_structural_plan(
+    payload: StructuralPlan | dict[str, Any] | BaseModel,
+    *,
+    source: str,
+) -> StructuralPlan:
+    """Load a persisted plan, adapting only the named legacy top-level voice field."""
+    if isinstance(payload, StructuralPlan):
+        return payload
+    if isinstance(payload, BaseModel):
+        raw = payload.model_dump()
+    else:
+        raw = dict(payload)
+
+    legacy_voice = raw.pop("voice", None)
+    plan = StructuralPlan.model_validate(raw)
+    if legacy_voice is None:
+        return plan
+
+    voice = VoiceSpec.model_validate(legacy_voice)
+    log.warning(
+        "adapted legacy StructuralPlan top-level voice into variant ownership; source=%s",
+        source,
+    )
+    return plan.with_variant(
+        VariantSpec(
+            label="Legacy",
+            voice=voice,
+            group_description="Voice adapted from a persisted legacy StructuralPlan.",
+        )
+    )
+
+
+# ── Stage 1 error types ───────────────────────────────────────────────────
+
+
+class Stage1PlanFailure(Exception):
+    def __init__(self, errors: list[str]):
+        self.errors = errors
+        super().__init__(f"Stage 1 failed after 2 attempts: {errors}")
+
+
+# ── Stage 2 output models ─────────────────────────────────────────────────
+
+
+class VisualFrameBrief(BaseModel):
+    """Stage 2 description of one frame in a diagram-series."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    description: str = Field(
+        description="What this frame shows. One sentence."
+    )
+    must_show: list[str] = Field(default_factory=list)
+
+
+class VisualStrategySpec(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    subject: str = Field(
+        description="What the visual depicts. One sentence.",
+    )
+    visual_job: str = Field(
+        description=(
+            "What this visual is FOR - pedagogical purpose. "
+            "E.g. 'introduce the anchor visually', "
+            "'summarize the section explanation as a labeled diagram', "
+            "'support practice question q-practice-2 with an unlabeled figure'. "
+            "Describes intent, not timing."
+        ),
+    )
+    type_hint: Literal["diagram", "chart", "illustration", "comparison"]
+    anchor_link: str = Field(
+        description="How this visual connects to the anchor example.",
+    )
+    visual_style: VisualStyle | None = Field(
+        default=None,
+        description=(
+            "Use diagram_precision for label-heavy diagrams, charts, comparisons, "
+            "or visuals that must be inspected. Use illustration for explanatory "
+            "scene-style artwork."
+        ),
+    )
+    must_show: list[str] = Field(
+        default_factory=list,
+        description="Two to five short required visual elements or labels.",
+    )
+    must_not_show: list[str] = Field(
+        default_factory=list,
+        description="Two to five short exclusions that would distract or mislead.",
+    )
+    source_question_ids: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Question IDs this visual supports. "
+            "Populate when the visual must match exact question content."
+        ),
+    )
+    frames: list[VisualFrameBrief] = Field(
+        default_factory=list,
+        description=(
+            "Frame descriptions for diagram-series components. "
+            "Must have >= 2 entries when the section's visual-capable "
+            "component is diagram-series."
+        ),
+    )
+
+    @field_validator("visual_style", mode="before")
+    @classmethod
+    def normalize_visual_style(cls, value: object) -> object:
+        if value is None:
+            return None
+        if isinstance(value, str) and value in _VISUAL_STYLES:
+            return value
+        return None
+
+
+class ComponentBrief(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    component_id: str = Field(
+        description="Planned component IDs must match StructuralPlan slugs."
+    )
+    content_intent: str = Field(
+        description="Precise, actionable writer brief. Prefer concise wording, "
+        "but preserve all instructions needed for correct downstream generation.",
+    )
+
+
+class ItemOption(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    key: str = Field(min_length=1)
+    text: str = Field(min_length=1)
+    correct: bool
+    diagnoses: str | None = None
+
+
+class QuestionBrief(BaseModel):
+    """Pack-level diagnostic item; never a field on SectionBrief."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    question_id: str = Field(min_length=1)
+    prompt_text: str = Field(min_length=1)
+    options: list[ItemOption] = Field(min_length=2)
+    expected_answer: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def exactly_one_correct(self) -> QuestionBrief:
+        if sum(option.correct for option in self.options) != 1:
+            raise ValueError("Each item must have exactly one correct option")
+        if any(option.correct and option.diagnoses is not None for option in self.options):
+            raise ValueError("A correct option cannot diagnose a misconception")
+        keys = [option.key for option in self.options]
+        if len(keys) != len(set(keys)):
+            raise ValueError("Option keys must be unique within an item")
+        return self
+
+
+class SectionBrief(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    section_id: str = Field(
+        description="Must match the section assigned to this call."
+    )
+    components: list[ComponentBrief]
+    visual_strategy: VisualStrategySpec | None = None
+
+    # Internal flags — not emitted by LLM, set by retry logic on failure
+    _failed: bool = PrivateAttr(default=False)
+    _errors: list[str] = PrivateAttr(default_factory=list)
+
+
+def stage2_brief_preview_payload(brief: SectionBrief) -> dict[str, object]:
+    return {
+        "components": [
+            {
+                "component_id": component.component_id,
+                "content_intent": component.content_intent,
+            }
+            for component in brief.components
+        ],
+        "visual_subject": brief.visual_strategy.subject if brief.visual_strategy else None,
+    }
+
+
+# ── Stage 2 error types ───────────────────────────────────────────────────
+
+
+class BlueprintAssemblyBlocked(Exception):
+    def __init__(self, failed_sections: list[str]):
+        self.failed_sections = failed_sections
+        super().__init__(
+            f"Assembly blocked — sections failed: {failed_sections}"
+        )

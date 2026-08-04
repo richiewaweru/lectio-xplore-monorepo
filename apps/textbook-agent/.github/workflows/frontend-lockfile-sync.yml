@@ -1,0 +1,75 @@
+name: Frontend Lockfile Sync
+
+on:
+  pull_request:
+    paths:
+      - frontend/package.json
+      - frontend/package-lock.json
+      - frontend/pnpm-lock.yaml
+      - .github/workflows/frontend-lockfile-sync.yml
+  push:
+    branches:
+      - main
+    paths:
+      - frontend/package.json
+      - frontend/package-lock.json
+      - frontend/pnpm-lock.yaml
+      - .github/workflows/frontend-lockfile-sync.yml
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-lockfile-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify frontend lockfiles stay in sync
+        working-directory: frontend
+        run: |
+          python - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          root = Path(".")
+          package_json = json.loads(root.joinpath("package.json").read_text(encoding="utf-8"))
+          package_lock = json.loads(root.joinpath("package-lock.json").read_text(encoding="utf-8"))
+          pnpm_lock = root.joinpath("pnpm-lock.yaml").read_text(encoding="utf-8")
+
+          version = package_json.get("dependencies", {}).get("lectio")
+          if not version:
+              raise SystemExit("lectio dependency missing from frontend/package.json")
+
+          npm_root = package_lock["packages"][""]["dependencies"]["lectio"]
+          npm_installed = package_lock["packages"]["node_modules/lectio"]["version"]
+          if npm_root != version or npm_installed != version:
+              raise SystemExit(
+                  "npm lockfile drift detected: "
+                  f"package.json={version}, package-lock root={npm_root}, installed={npm_installed}"
+              )
+
+          match = re.search(
+              r"(?ms)^\s+lectio:\n\s+specifier:\s*([^\n]+)\n\s+version:\s*([^\n]+)\n",
+              pnpm_lock,
+          )
+          if not match:
+              raise SystemExit("lectio entry missing from frontend/pnpm-lock.yaml")
+
+          pnpm_specifier, pnpm_version = match.groups()
+          if pnpm_specifier.strip() != version:
+              raise SystemExit(
+                  "pnpm specifier drift detected: "
+                  f"package.json={version}, pnpm={pnpm_specifier.strip()}"
+              )
+          if not pnpm_version.startswith(f"{version}("):
+              raise SystemExit(
+                  "pnpm version drift detected: "
+                  f"package.json={version}, pnpm={pnpm_version}"
+              )
+
+          print(f"Lectio lockfiles are in sync at {version}")
+          PY

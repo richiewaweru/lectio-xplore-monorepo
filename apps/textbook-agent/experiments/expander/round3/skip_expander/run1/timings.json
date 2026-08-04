@@ -1,0 +1,16 @@
+{
+  "label": "round3/skip_expander/run1",
+  "skip_expander": true,
+  "stage2_seconds": 0.0,
+  "writers_seconds": 211.89,
+  "section_writer_seconds": {
+    "orient": 22.79,
+    "explain": 50.21,
+    "model": 47.49,
+    "apply": 49.36,
+    "check": 42.03
+  },
+  "total_seconds": 211.89,
+  "section_count": 5,
+  "failed_briefs": []
+}

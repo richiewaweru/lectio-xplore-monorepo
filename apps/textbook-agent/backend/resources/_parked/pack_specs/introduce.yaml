@@ -1,0 +1,99 @@
+# Pack Spec: Introduce Pack
+# Version: 1.0
+# Pedagogical owner: Lectio
+# Last updated: 2026-05-01
+
+id: introduce
+label: Introduce Pack
+version: "1.0"
+
+intent: |
+  This pack introduces a concept students have never seen before.
+  The teacher's job is to get students from zero to a working understanding
+  in one lesson. The pack must do the teaching — the teacher may not be
+  able to explain to every student individually.
+
+  The sequence matters:
+    1. Mini lesson — teach the concept fully, self-contained
+    2. Vocabulary cards — anchor the key terms before practice
+    3. Practice worksheet — apply immediately while the lesson is fresh
+    4. Exit ticket — check who got it before students leave
+
+  The shared learning plan must:
+    - Define the exact vocabulary all resources will use (no synonyms)
+    - Choose one anchor example all resources will reference
+    - State the success criteria clearly — what does "got it" look like?
+    - Identify the most likely misconception — all resources watch for this
+
+plan_guidance:
+  objective_focus: >
+    Frame as first understanding. Students are building a mental model
+    from scratch. The objective should be achievable after 30-40 minutes
+    of first exposure, not mastery.
+  example_guidance: >
+    Choose one concrete anchor example that will appear in ALL resources.
+    The mini lesson introduces it. The worksheet uses it in problems.
+    The exit ticket asks about it. Consistency reduces cognitive load.
+  misconception_focus: >
+    What do students almost always get wrong the first time?
+    This is usually about confusing the new concept with something familiar.
+    All resources should actively address this without stating it directly.
+  vocabulary_priority: >
+    Choose the minimum set of terms a student needs to discuss this concept.
+    3-4 terms maximum for a first exposure. Every term must appear in both
+    the mini lesson definition and the exit ticket check.
+
+resources:
+  - resource_type: mini_booklet
+    intended_outcome: understand
+    label: Mini lesson
+    purpose: >
+      Teaches the concept from scratch. Self-contained — students can
+      work through it without teacher explanation. Introduces all key
+      vocabulary. Uses the anchor example. Ends with a light check.
+    depth: standard
+    required: true
+    order: 1
+
+  - resource_type: quick_explainer
+    intended_outcome: vocabulary
+    label: Vocabulary cards
+    purpose: >
+      Anchors the key terms before students attempt practice.
+      Particularly important when the concept uses technical vocabulary
+      that students will need to use in the worksheet.
+      Quick to read — 2-3 minutes only.
+    depth: quick
+    required: false
+    order: 2
+
+  - resource_type: worksheet
+    intended_outcome: practice
+    label: Practice worksheet
+    purpose: >
+      Applies the concept taught in the mini lesson.
+      Problems use the same anchor example and vocabulary as the mini lesson.
+      Warm to cold progression — guided first, then independent.
+    depth: standard
+    required: true
+    order: 3
+
+  - resource_type: exit_ticket
+    intended_outcome: assess
+    label: Exit ticket
+    purpose: >
+      Checks who understood before students leave.
+      Three questions: recall, apply, explain.
+      Uses the same vocabulary and anchor example as the rest of the pack.
+    depth: quick
+    required: true
+    order: 4
+
+default_supports: []
+
+validation:
+  - "Must contain mini_booklet as first resource"
+  - "Must contain exit_ticket as final resource"
+  - "Worksheet must appear after mini_booklet"
+  - "All resources must reference the same anchor example"
+  - "All resources must use the same vocabulary terms"

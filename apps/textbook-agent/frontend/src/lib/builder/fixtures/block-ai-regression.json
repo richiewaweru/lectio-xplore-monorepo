@@ -1,0 +1,134 @@
+{
+  "lesson": {
+    "version": 1,
+    "id": "lesson-builder-ai-regression",
+    "title": "Builder AI regression lesson",
+    "subject": "science",
+    "preset_id": "blue-classroom",
+    "source": "generated",
+    "source_generation_id": "gen-builder-ai-regression",
+    "grade_band": "secondary",
+    "sections": [
+      {
+        "id": "build",
+        "template_id": "guided-concept-path",
+        "title": "Build understanding",
+        "position": 0,
+        "block_ids": ["empty-explanation", "written-explanation", "practice-questions", "flagged-diagram"],
+        "meta": {
+          "issues": [
+            {
+              "id": "repair-practice",
+              "severity": "minor",
+              "message": "Question references a visual without a planned diagram.",
+              "kind": "visual_mismatch",
+              "generated_ref": "build.practice.problems[0].question",
+              "repair_target_id": "questions:build",
+              "resolved": false
+            },
+            {
+              "id": "advisory-anchor",
+              "severity": "major",
+              "message": "The section anchor needs whole-section review.",
+              "kind": "anchor_drift",
+              "repair_target_id": "section:build",
+              "resolved": false
+            },
+            {
+              "id": "repair-visual",
+              "severity": "major",
+              "message": "The photosynthesis labels are incomplete.",
+              "kind": "visual_quality_flagged",
+              "visual_id": "vis-build-0",
+              "repair_target_id": "visual:vis-build-0",
+              "resolved": false
+            }
+          ]
+        }
+      },
+      {
+        "id": "ambiguous",
+        "template_id": "guided-concept-path",
+        "title": "Ambiguous questions",
+        "position": 1,
+        "block_ids": ["ambiguous-practice-a", "ambiguous-practice-b"],
+        "meta": {
+          "issues": [
+            {
+              "id": "ambiguous-practice",
+              "severity": "minor",
+              "message": "Question references a visual without a planned diagram.",
+              "kind": "visual_mismatch",
+              "generated_ref": "ambiguous.practice.problems[0].question",
+              "repair_target_id": "questions:ambiguous",
+              "resolved": false
+            }
+          ]
+        }
+      }
+    ],
+    "blocks": {
+      "empty-explanation": {
+        "id": "empty-explanation",
+        "component_id": "explanation-block",
+        "content": { "body": "", "emphasis": [] },
+        "position": 0
+      },
+      "written-explanation": {
+        "id": "written-explanation",
+        "component_id": "explanation-block",
+        "content": {
+          "body": "Plants turn light into stored chemical energy.",
+          "emphasis": []
+        },
+        "position": 1
+      },
+      "practice-questions": {
+        "id": "practice-questions",
+        "component_id": "practice-stack",
+        "content": { "title": "Check your understanding", "problems": [] },
+        "position": 2
+      },
+      "flagged-diagram": {
+        "id": "flagged-diagram",
+        "component_id": "diagram-block",
+        "content": {
+          "image_url": "https://example.invalid/photosynthesis-old.png",
+          "media_id": "",
+          "svg_content": "",
+          "caption": "Photosynthesis",
+          "alt_text": "A flagged photosynthesis diagram",
+          "width": "full"
+        },
+        "position": 3
+      },
+      "ambiguous-practice-a": {
+        "id": "ambiguous-practice-a",
+        "component_id": "practice-stack",
+        "content": { "title": "Practice A", "problems": [] },
+        "position": 0
+      },
+      "ambiguous-practice-b": {
+        "id": "ambiguous-practice-b",
+        "component_id": "practice-stack",
+        "content": { "title": "Practice B", "problems": [] },
+        "position": 1
+      }
+    },
+    "media": {},
+    "created_at": "2026-07-22T00:00:00.000Z",
+    "updated_at": "2026-07-22T00:00:00.000Z"
+  },
+  "visual_blocks": [
+    {
+      "visual_id": "vis-build-0",
+      "attaches_to": "build",
+      "mode": "diagram",
+      "image_url": "https://example.invalid/photosynthesis-old.png",
+      "source_work_order_id": "vis-build-0",
+      "status": "flagged_quality",
+      "qc_reasons": ["Reaction labels are incomplete", "Arrows are difficult to follow"],
+      "qc_correction_hint": "Show the complete balanced photosynthesis equation."
+    }
+  ]
+}

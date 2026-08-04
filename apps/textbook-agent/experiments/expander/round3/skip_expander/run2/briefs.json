@@ -1,0 +1,66 @@
+[
+  {
+    "section_id": "orient",
+    "components": [
+      {
+        "component_id": "hook-hero",
+        "content_intent": "Open with the windowsill plant and surface the soil-food idea without resolving it yet."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  },
+  {
+    "section_id": "explain",
+    "components": [
+      {
+        "component_id": "callout-block",
+        "content_intent": "State that photosynthesis converts light energy into chemical energy stored in glucose; exclude soil-as-food."
+      },
+      {
+        "component_id": "definition-card",
+        "content_intent": "Define photosynthesis with inputs (light, water, CO2) and output (glucose + oxygen)."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  },
+  {
+    "section_id": "model",
+    "components": [
+      {
+        "component_id": "worked-example-card",
+        "content_intent": "Walk the windowsill plant through light → chlorophyll → glucose, contrasting soil nutrients vs food energy."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  },
+  {
+    "section_id": "apply",
+    "components": [
+      {
+        "component_id": "practice-stack",
+        "content_intent": "Prompt learners to explain energy conversion for a shaded vs sunny plant without inventing new science."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  },
+  {
+    "section_id": "check",
+    "components": [
+      {
+        "component_id": "quiz-check",
+        "content_intent": "Ask one check that forces a choice between soil-food and light-to-glucose conversion."
+      }
+    ],
+    "visual_strategy": null,
+    "_failed": false,
+    "_errors": []
+  }
+]

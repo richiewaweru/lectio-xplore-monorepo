@@ -1,0 +1,12 @@
+- name: ai-review
+  color: "0E8A16"
+  description: Opts a pull request into advisory AI review.
+- name: architecture
+  color: "1D76DB"
+  description: Tracks architecture or dependency-boundary changes.
+- name: release
+  color: "5319E7"
+  description: Marks release preparation, tagging, or release follow-up work.
+- name: runbook
+  color: "BFDADC"
+  description: Highlights work that updates or depends on a tracked runbook.

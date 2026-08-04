@@ -1,0 +1,78 @@
+# Pack Spec: Assess Pack
+# Version: 1.0
+# Pedagogical owner: Lectio
+# Last updated: 2026-05-01
+
+id: assess
+label: Assess Pack
+version: "1.0"
+
+intent: |
+  This pack collects evidence of student understanding.
+  The teacher needs data — who got it, how well, and what gaps remain.
+
+  The pack contains no instruction. Students must already know the
+  concept before this pack is used.
+
+  The teacher uses this data to:
+    - Decide whether to move on or reteach
+    - Identify which students need support
+    - Plan the next lesson
+
+  The sequence is lean:
+    1. Quiz — formal evidence with multiple question types
+    2. Exit ticket (optional) — quick informal cross-check
+
+  The shared learning plan must:
+    - Define what mastery looks like for this concept at this grade level
+    - State the success criteria explicitly — these become the mark scheme
+    - Note all sub-topics that might appear in the assessment
+    - Choose examples that are DIFFERENT from teaching examples
+
+plan_guidance:
+  objective_focus: >
+    Frame as assessment of mastery. Distinguish between procedural mastery
+    (can do the steps) and conceptual mastery (understands why).
+    The objective describes what genuine understanding looks like.
+  example_guidance: >
+    Choose examples that transfer — the student has not seen them before
+    but can use their understanding to answer. Avoid teaching examples.
+  misconception_focus: >
+    Common misconceptions become useful assessment targets.
+    A student with the misconception will answer predictably.
+    This makes the data actionable.
+  vocabulary_priority: >
+    Match teaching vocabulary exactly. Do not introduce alternative terms.
+    Unfamiliar vocabulary adds measurement error to the assessment.
+
+resources:
+  - resource_type: quiz
+    intended_outcome: assess
+    label: Quiz
+    purpose: >
+      Formal assessment. Multiple question types: recall, application,
+      extended response. Includes answer key for the teacher.
+      Covers the full scope of the concept.
+      Students complete independently without hints.
+    depth: standard
+    required: true
+    order: 1
+
+  - resource_type: exit_ticket
+    intended_outcome: assess
+    label: Quick check
+    purpose: >
+      Optional informal cross-check alongside the quiz.
+      Useful for one specific aspect of the concept.
+      Only include if the teacher explicitly needs both.
+    depth: quick
+    required: false
+    order: 2
+
+default_supports: []
+
+validation:
+  - "Must not contain mini_booklet, worksheet, or quick_explainer — assess packs do not teach"
+  - "Must contain quiz as the primary resource"
+  - "Quiz must include an answer key section"
+  - "No hints permitted on any question"

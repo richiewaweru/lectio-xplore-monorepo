@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Repository
+    url: https://github.com/richiewaweru/text-book-generator
+    about: Review the project context summary and stage packs before opening work.
