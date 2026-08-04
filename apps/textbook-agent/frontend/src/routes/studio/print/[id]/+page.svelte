@@ -9,14 +9,17 @@
 	import '$lib/styles/print.css';
 	import { buildApiUrl } from '$lib/api/client';
 	import V3LectioPrintDocumentView from '$lib/components/studio/V3LectioPrintDocumentView.svelte';
+	import LectioPageDocumentView from '$lib/components/studio/LectioPageDocumentView.svelte';
 	import {
 		adaptV3PackToLectioDocument,
 		adaptV3PackToLectioDocumentWithDiagnostics,
 		type V3PackAdapterDiagnostic,
 		type V3PackDocument
 	} from '$lib/studio/v3-pack-to-lectio-document';
+	import { extractLectioDocumentV2 } from '$lib/studio/document-version';
 	import { forceEagerImages, waitForPrintImages, type PrintImageWaitResult } from '$lib/studio/print-readiness';
 	import type { GenerationDocument } from '$lib/types';
+	import type { LectioDocument } from '@lectio/page';
 
 	const generationId = $derived(page.params.id);
 	const token = $derived(page.url.searchParams.get('token'));
@@ -33,6 +36,7 @@
 	let templateId = $state('none');
 	let loadError = $state<string | null>(null);
 	let lectioDocument = $state<GenerationDocument | null>(null);
+	let pageDocumentV2 = $state<LectioDocument | null>(null);
 	let adapterDiagnostic = $state<V3PackAdapterDiagnostic | null>(null);
 	let subject = $state('');
 	let imageDebug = $state<PrintImageWaitResult | null>(null);
@@ -41,6 +45,7 @@
 	const dataRenderer = $derived.by(() => {
 		if (!dataReady) return 'lectio';
 		if (loadError) return 'lectio';
+		if (pageDocumentV2) return 'lectio-page-v2';
 		if (lectioDocument) return 'lectio';
 		return 'lectio-adapter-failed';
 	});
@@ -74,30 +79,39 @@
 			}
 
 			const data = (await res.json()) as V3PackDocument;
+			const v2 = extractLectioDocumentV2(data);
+			if (v2) {
+				pageDocumentV2 = v2;
+				lectioDocument = null;
+				sectionCount = v2.sections.length;
+				templateId = 'lectio-page-v2';
+				subject = typeof v2.subject === 'string' ? v2.subject.trim() : v2.title;
+			} else {
+				pageDocumentV2 = null;
+				const list = Array.isArray(data.sections) ? data.sections : [];
+				sectionCount = list.length;
+				templateId = typeof data.template_id === 'string' ? data.template_id : 'missing';
+				subject = typeof data.subject === 'string' ? data.subject.trim() : '';
 
-			const list = Array.isArray(data.sections) ? data.sections : [];
-			sectionCount = list.length;
-			templateId = typeof data.template_id === 'string' ? data.template_id : 'missing';
-			subject = typeof data.subject === 'string' ? data.subject.trim() : '';
-
-			try {
-				if (debugPrint) {
-					const r = adaptV3PackToLectioDocumentWithDiagnostics(data, {
-						routeGenerationId: generationId
-					});
-					lectioDocument = r.document;
-					adapterDiagnostic = r.diagnostic;
-				} else {
-					lectioDocument = adaptV3PackToLectioDocument(data, {
-						routeGenerationId: generationId,
-						includeAnswerKey: includePackKey
-					});
+				try {
+					if (debugPrint) {
+						const r = adaptV3PackToLectioDocumentWithDiagnostics(data, {
+							routeGenerationId: generationId
+						});
+						lectioDocument = r.document;
+						adapterDiagnostic = r.diagnostic;
+					} else {
+						lectioDocument = adaptV3PackToLectioDocument(data, {
+							routeGenerationId: generationId,
+							includeAnswerKey: includePackKey
+						});
+						adapterDiagnostic = null;
+					}
+				} catch (err) {
+					console.error('[v3-print] adaptV3PackToLectioDocument failed', err);
+					lectioDocument = null;
 					adapterDiagnostic = null;
 				}
-			} catch (err) {
-				console.error('[v3-print] adaptV3PackToLectioDocument failed', err);
-				lectioDocument = null;
-				adapterDiagnostic = null;
 			}
 
 			dataReady = true;
@@ -172,7 +186,9 @@
 			</div>
 		{/if}
 
-		{#if lectioDocument}
+		{#if pageDocumentV2}
+			<LectioPageDocumentView document={pageDocumentV2} edition="teacher" />
+		{:else if lectioDocument}
 			<V3LectioPrintDocumentView document={lectioDocument} />
 		{:else}
 			<p class="print-error">Unable to render print view.</p>

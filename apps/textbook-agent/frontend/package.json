@@ -14,6 +14,7 @@
 		"test": "vitest run"
 	},
 	"dependencies": {
+		"@lectio/page": "workspace:*",
 		"@microsoft/fetch-event-source": "^2.0.1",
 		"bits-ui": "^2.11.0",
 		"clsx": "^2.1.1",

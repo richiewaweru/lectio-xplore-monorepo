@@ -4,9 +4,12 @@
 
 	import { downloadV3GenerationPdf, fetchV3Document, getV3GenerationDetail } from '$lib/api/v3';
 	import { coerceV3DocumentToPack } from '$lib/studio/v3-document';
+	import { extractLectioDocumentV2 } from '$lib/studio/document-version';
 	import { getBookletExportPolicy, isBookletStatus } from '$lib/studio/v3-booklet';
 	import V3BookletPackView from '$lib/components/studio/V3BookletPackView.svelte';
+	import LectioPageDocumentView from '$lib/components/studio/LectioPageDocumentView.svelte';
 	import type { BookletStatus, V3DraftPack, V3GenerationDetail } from '$lib/types/v3';
+	import type { LectioDocument } from '@lectio/page';
 
 	const generationId = $derived(page.params.id ?? '');
 
@@ -14,6 +17,7 @@
 	let loadError = $state<string | null>(null);
 	let detail = $state<V3GenerationDetail | null>(null);
 	let pack = $state<V3DraftPack | null>(null);
+	let pageDocumentV2 = $state<LectioDocument | null>(null);
 	let pdfLoading = $state(false);
 	let pdfError = $state<string | null>(null);
 	let pdfOpen = $state(false);
@@ -23,6 +27,7 @@
 	let includeAnswers = $state(true);
 
 	const resolvedStatus = $derived.by<BookletStatus>(() => {
+		if (pageDocumentV2) return 'final';
 		if (pack?.status) return pack.status;
 		if (detail && isBookletStatus(detail.booklet_status)) {
 			return detail.booklet_status;
@@ -44,12 +49,18 @@
 		loadError = null;
 		detail = null;
 		pack = null;
+		pageDocumentV2 = null;
 		try {
 			const [nextDetail, document] = await Promise.all([
 				getV3GenerationDetail(id),
 				fetchV3Document(id)
 			]);
 			detail = nextDetail;
+			const v2 = extractLectioDocumentV2(document);
+			if (v2) {
+				pageDocumentV2 = v2;
+				return;
+			}
 			const nextPack = coerceV3DocumentToPack(id, document, {
 				templateId: nextDetail.template_id,
 				fallbackStatus: isBookletStatus(nextDetail.booklet_status)
@@ -110,14 +121,22 @@
 		<p class="text-sm text-muted-foreground">Loading V3 generation...</p>
 	{:else if loadError}
 		<p class="text-sm text-destructive" role="alert">{loadError}</p>
-	{:else if pack}
+	{:else if pageDocumentV2 || pack}
 		<div class="mb-4 rounded-lg border border-border/60 bg-card p-4">
 			<div class="flex flex-wrap items-center justify-between gap-3">
 				<div>
-					<p class="text-xs uppercase tracking-wide text-muted-foreground">V3 generation</p>
-					<h1 class="text-lg font-semibold">{detail?.title ?? detail?.subject ?? generationId}</h1>
+					<p class="text-xs uppercase tracking-wide text-muted-foreground">
+						{pageDocumentV2 ? 'V2 page document' : 'V3 generation'}
+					</p>
+					<h1 class="text-lg font-semibold">
+						{pageDocumentV2?.title ?? detail?.title ?? detail?.subject ?? generationId}
+					</h1>
 					<p class="text-sm text-muted-foreground">
-						Status: {pack.status} - Sections: {pack.sections.length}
+						{#if pageDocumentV2}
+							Document version: 2 - Sections: {pageDocumentV2.sections.length}
+						{:else if pack}
+							Status: {pack.status} - Sections: {pack.sections.length}
+						{/if}
 					</p>
 					{#if supplementLineage}
 						<p class="mt-2 text-sm text-muted-foreground">
@@ -189,7 +208,11 @@
 				</div>
 			{/if}
 		</div>
-		<V3BookletPackView pack={pack} status={pack.status} issues={pack.booklet_issues} />
+		{#if pageDocumentV2}
+			<LectioPageDocumentView document={pageDocumentV2} edition="teacher" />
+		{:else if pack}
+			<V3BookletPackView pack={pack} status={pack.status} issues={pack.booklet_issues} />
+		{/if}
 	{:else}
 		<p class="text-sm text-muted-foreground">No renderable V3 booklet was found.</p>
 	{/if}

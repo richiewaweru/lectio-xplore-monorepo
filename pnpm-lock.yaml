@@ -10,6 +10,9 @@ importers:
 
   apps/textbook-agent/frontend:
     dependencies:
+      '@lectio/page':
+        specifier: workspace:*
+        version: link:../../../packages/lectio-page
       '@microsoft/fetch-event-source':
         specifier: ^2.0.1
         version: 2.0.1
