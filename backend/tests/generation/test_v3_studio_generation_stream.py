@@ -198,11 +198,12 @@ async def test_v3_generation_events_emit_heartbeat_before_late_chunk() -> None:
     )
 
     async def delayed_emit() -> None:
-        await asyncio.sleep(0.03)
+        # Long enough after the stream starts waiting that HEARTBEAT_SECONDS fires.
+        await asyncio.sleep(0.25)
         await queue.put("event: component_ready\ndata: {}\n\n")
         await queue.put(None)
 
-    with patch.object(v3_router, "HEARTBEAT_SECONDS", 0.01):
+    with patch.object(v3_router, "HEARTBEAT_SECONDS", 0.05):
         producer = asyncio.create_task(delayed_emit())
         async with _client() as client:
             async with client.stream(
@@ -210,7 +211,13 @@ async def test_v3_generation_events_emit_heartbeat_before_late_chunk() -> None:
                 f"/api/v1/v3/generations/{generation_id}/events",
             ) as resp:
                 assert resp.status_code == 200
-                payload = await resp.aread()
+                chunks: list[bytes] = []
+                async for chunk in resp.aiter_bytes():
+                    chunks.append(chunk)
+                    joined = b"".join(chunks)
+                    if b": ping\n\n" in joined and b"component_ready" in joined:
+                        break
+                payload = b"".join(chunks)
         await producer
 
     assert b": ping\n\n" in payload

@@ -178,7 +178,7 @@ async def test_call_stage2_section_omits_extended_cache_beta_header(monkeypatch:
     assert result == brief
     call_kwargs = mock_run_llm.await_args.kwargs
     assert call_kwargs["model_settings"] == {
-        "openai_reasoning_effort": "medium",
+        "openai_reasoning_effort": "low",
         "extra_body": {"thinking": {"type": "enabled"}},
         "max_tokens": 120000,
     }
