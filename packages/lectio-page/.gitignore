@@ -1,0 +1,23 @@
+node_modules/
+.svelte-kit/
+build/
+dist/
+*.log
+.env
+.env.*
+!.env.example
+*.pdf
+out/
+.DS_Store
+Thumbs.db
+
+# npm & build
+npm-debug.log*
+package-lock.json
+*.tsbuildinfo
+*.tgz
+
+# Ensure contracts are version controlled for publish
+!contracts/
+.env.example
+.npmrc

@@ -1,0 +1,337 @@
+{
+  "document_version": 2,
+  "contract_version": "1.0.0",
+  "id": "photosynthesis-ref-pages",
+  "title": "Photosynthesis — Three Lessons",
+  "language": "en",
+  "subject": "Science · Grade 7",
+  "metadata": {
+    "school": "Sample School",
+    "teacher": "Ms. Rivera",
+    "date": "2026-08-04"
+  },
+  "front_matter": {
+    "cover": true,
+    "contents": true,
+    "running_head": "Photosynthesis",
+    "fields": [
+      "Student Name",
+      "Date",
+      "Class"
+    ]
+  },
+  "sections": [
+    {
+      "id": "section-1",
+      "title": "What is photosynthesis?",
+      "blocks": [
+        {
+          "id": "b1",
+          "object": "heading",
+          "position": 0,
+          "content": {
+            "level": 2,
+            "text": "What is photosynthesis?",
+            "number": "1"
+          }
+        },
+        {
+          "id": "b2",
+          "object": "prose",
+          "intent": "orient",
+          "position": 1,
+          "content": {
+            "paragraphs": [
+              "A green leaf can make food from sunlight, air, and water. That process is called photosynthesis. Without it, almost every food chain on Earth would collapse."
+            ]
+          }
+        },
+        {
+          "id": "b3",
+          "object": "aside",
+          "intent": "warn",
+          "position": 2,
+          "content": {
+            "label": "Watch out",
+            "body": "Photosynthesis is not the same as respiration. Plants do both."
+          }
+        },
+        {
+          "id": "b4",
+          "object": "prose",
+          "intent": "define",
+          "position": 3,
+          "content": {
+            "paragraphs": [
+              "Photosynthesis is the process by which green plants use light energy to convert carbon dioxide and water into glucose and oxygen."
+            ]
+          }
+        },
+        {
+          "id": "b5",
+          "object": "list",
+          "intent": "name-parts",
+          "position": 4,
+          "content": {
+            "style": "unordered",
+            "lead_in": "You will need to know these inputs and outputs:",
+            "items": [
+              {
+                "text": "Inputs: carbon dioxide, water, light energy"
+              },
+              {
+                "text": "Outputs: glucose, oxygen"
+              },
+              {
+                "text": "Where: mainly in chloroplasts inside leaf cells"
+              }
+            ]
+          }
+        },
+        {
+          "id": "b6",
+          "object": "figure",
+          "intent": "show-structure",
+          "position": 5,
+          "layout": {
+            "placement": "spanning"
+          },
+          "content": {
+            "alt_text": "Simple leaf cross-section showing chloroplasts in palisade cells",
+            "caption": "Figure 1. Chloroplasts are concentrated where light is strongest.",
+            "width": "span",
+            "asset": {
+              "kind": "svg",
+              "status": "ready",
+              "svg": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 160' role='img'><rect width='400' height='160' fill='#f7f7f7' stroke='#777'/><text x='20' y='40' font-size='14'>Leaf cross-section (placeholder)</text><ellipse cx='200' cy='90' rx='90' ry='35' fill='#cfe8cf' stroke='#333'/><text x='155' y='95' font-size='12'>chloroplast zone</text></svg>"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "section-2",
+      "title": "Following the flow",
+      "blocks": [
+        {
+          "id": "b7",
+          "object": "heading",
+          "position": 0,
+          "content": {
+            "level": 2,
+            "text": "Following the flow",
+            "number": "2"
+          }
+        },
+        {
+          "id": "b8",
+          "object": "prose",
+          "intent": "explain-cause",
+          "position": 1,
+          "content": {
+            "paragraphs": [
+              "Light energy is captured by chlorophyll. That energy drives reactions that split water and fix carbon dioxide into sugar. Oxygen is released as a by-product."
+            ]
+          }
+        },
+        {
+          "id": "b9",
+          "object": "table",
+          "intent": "compare",
+          "position": 2,
+          "layout": {
+            "placement": "spanning"
+          },
+          "content": {
+            "presentation": "comparison",
+            "caption": "Word and symbol equations",
+            "columns": [
+              {
+                "id": "form",
+                "label": "Form"
+              },
+              {
+                "id": "equation",
+                "label": "Equation"
+              }
+            ],
+            "rows": [
+              {
+                "cells": {
+                  "form": "Word",
+                  "equation": "carbon dioxide + water → glucose + oxygen"
+                }
+              },
+              {
+                "cells": {
+                  "form": "Symbol",
+                  "equation": "6CO₂ + 6H₂O → C₆H₁₂O₆ + 6O₂"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "b10",
+          "object": "worked-example",
+          "intent": "demonstrate",
+          "position": 3,
+          "content": {
+            "title": "Balancing check",
+            "problem": "Show that atoms balance on both sides of the symbol equation.",
+            "steps": [
+              {
+                "text": "Count carbon: 6 on the left, 6 inside glucose on the right."
+              },
+              {
+                "text": "Count hydrogen: 12 from water on the left, 12 in glucose on the right."
+              },
+              {
+                "text": "Count oxygen: 18 on the left, 6 in glucose + 12 in oxygen gas on the right."
+              }
+            ],
+            "answer": "Atoms balance; the equation is conserved.",
+            "check": "If oxygen counts do not match, re-check the coefficients."
+          }
+        },
+        {
+          "id": "b11",
+          "object": "aside",
+          "intent": "memory-aid",
+          "position": 4,
+          "content": {
+            "label": "Memory aid",
+            "body": "CO₂ in, O₂ out — plants take the carbon, release the oxygen."
+          }
+        }
+      ]
+    },
+    {
+      "id": "section-3",
+      "title": "Check your understanding",
+      "blocks": [
+        {
+          "id": "b12",
+          "object": "heading",
+          "position": 0,
+          "content": {
+            "level": 2,
+            "text": "Check your understanding",
+            "number": "3"
+          }
+        },
+        {
+          "id": "b13",
+          "object": "choices",
+          "intent": "diagnose-misconception",
+          "position": 1,
+          "content": {
+            "stem": "Which statement is correct?",
+            "marks": 1,
+            "options": [
+              {
+                "letter": "A",
+                "text": "Plants only photosynthesise; they never respire."
+              },
+              {
+                "letter": "B",
+                "text": "Photosynthesis stores light energy as chemical energy in glucose."
+              },
+              {
+                "letter": "C",
+                "text": "Oxygen is an essential input for photosynthesis."
+              },
+              {
+                "letter": "D",
+                "text": "Photosynthesis happens only at night."
+              }
+            ]
+          }
+        },
+        {
+          "id": "b14",
+          "object": "questions",
+          "intent": "practise-guided",
+          "position": 2,
+          "content": {
+            "instructions": "Answer in full sentences.",
+            "items": [
+              {
+                "id": "q1",
+                "prompt": "Name the two raw materials that enter the leaf for photosynthesis.",
+                "marks": 2,
+                "answer_lines": 2
+              },
+              {
+                "id": "q2",
+                "prompt": "Explain why a plant in continuous darkness will eventually die even if watered.",
+                "marks": 3,
+                "answer_lines": 4
+              }
+            ]
+          }
+        },
+        {
+          "id": "b15",
+          "object": "list",
+          "intent": "summarise",
+          "position": 3,
+          "content": {
+            "style": "ordered",
+            "lead_in": "Summary",
+            "items": [
+              {
+                "text": "Photosynthesis converts light energy into chemical energy."
+              },
+              {
+                "text": "Inputs are carbon dioxide and water; outputs are glucose and oxygen."
+              },
+              {
+                "text": "Chloroplasts are the sites of the process."
+              }
+            ]
+          }
+        },
+        {
+          "id": "b16",
+          "object": "prose",
+          "intent": "connect-forward",
+          "position": 4,
+          "content": {
+            "paragraphs": [
+              "Next lesson: how glucose is used in respiration and growth."
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "answer_key": {
+    "id": "ak1",
+    "object": "answer-key",
+    "intent": "answer-key",
+    "position": 0,
+    "content": {
+      "groups": [
+        {
+          "title": "Section 3",
+          "entries": [
+            {
+              "question_id": "b13",
+              "answer": "B — Photosynthesis stores light energy as chemical energy in glucose."
+            },
+            {
+              "question_id": "q1",
+              "answer": "Carbon dioxide and water."
+            },
+            {
+              "question_id": "q2",
+              "answer": "Without light the plant cannot photosynthesise, so it cannot make glucose. Stored reserves run out and respiration cannot continue.",
+              "rubric": "Award marks for energy/glucose link and eventual death of tissues."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

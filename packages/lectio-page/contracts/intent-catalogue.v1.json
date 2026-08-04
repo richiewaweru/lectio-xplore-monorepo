@@ -1,0 +1,418 @@
+{
+  "catalogue_version": "1.1.0",
+  "intents": {
+    "orient": {
+      "teacher_label": "Orient",
+      "pedagogical_role": "Open attention and establish a reason to learn",
+      "cognitive_job": "activate curiosity and situational framing",
+      "valid_objects": [
+        "prose",
+        "figure",
+        "choices"
+      ],
+      "generation_guidance": "Begin with a concrete phenomenon, dilemma, observation, or question. Do not explain the full idea yet."
+    },
+    "activate-prior-knowledge": {
+      "teacher_label": "Recall what you know",
+      "pedagogical_role": "Surface prerequisite knowledge",
+      "cognitive_job": "retrieve relevant prior knowledge",
+      "valid_objects": [
+        "prose",
+        "list",
+        "questions",
+        "choices"
+      ],
+      "generation_guidance": "Prompt recall of concepts required for this lesson. Keep it brief and diagnostic."
+    },
+    "state-goal": {
+      "teacher_label": "Learning goal",
+      "pedagogical_role": "Clarify the expected learning outcome",
+      "cognitive_job": "metacognitive goal setting",
+      "valid_objects": [
+        "prose",
+        "list"
+      ],
+      "generation_guidance": "State what the learner should be able to explain, do, compare, or justify."
+    },
+    "define": {
+      "teacher_label": "Define",
+      "pedagogical_role": "Establish precise meaning",
+      "cognitive_job": "concept formation and vocabulary encoding",
+      "valid_objects": [
+        "prose",
+        "table",
+        "aside"
+      ],
+      "generation_guidance": "Give a precise learner-appropriate definition, distinguish it from nearby terms, and include notation only when useful."
+    },
+    "name-parts": {
+      "teacher_label": "Name the parts",
+      "pedagogical_role": "Identify constituent elements",
+      "cognitive_job": "decomposition and labeling",
+      "valid_objects": [
+        "list",
+        "table",
+        "figure"
+      ],
+      "generation_guidance": "Identify the important parts of a system or idea and state each part's role."
+    },
+    "classify": {
+      "teacher_label": "Classify",
+      "pedagogical_role": "Organize examples into categories",
+      "cognitive_job": "categorical reasoning",
+      "valid_objects": [
+        "list",
+        "table",
+        "questions",
+        "choices"
+      ],
+      "generation_guidance": "Provide or elicit a rule for category membership and contrast borderline cases."
+    },
+    "compare": {
+      "teacher_label": "Compare",
+      "pedagogical_role": "Expose similarities and differences",
+      "cognitive_job": "relational comparison",
+      "valid_objects": [
+        "table",
+        "prose",
+        "questions"
+      ],
+      "generation_guidance": "Compare using consistent criteria. End with the distinction that matters most.",
+      "choose_when": "Two or more named things must be told apart, and the same criteria apply to each.",
+      "not_when": {
+        "classify": "instances are being sorted by a rule rather than two things contrasted",
+        "diagnose-misconception": "one side is a wrong belief, not a legitimate alternative",
+        "evaluate": "one option must be judged better, not merely distinguished"
+      }
+    },
+    "sequence": {
+      "teacher_label": "Put in order",
+      "pedagogical_role": "Represent an ordered process",
+      "cognitive_job": "temporal and procedural ordering",
+      "valid_objects": [
+        "list",
+        "table",
+        "figure",
+        "questions"
+      ],
+      "generation_guidance": "Express steps or events in a meaningful order. Include dependencies and stopping conditions where relevant."
+    },
+    "explain": {
+      "teacher_label": "Explain",
+      "pedagogical_role": "Build a coherent mental model",
+      "cognitive_job": "causal and conceptual understanding",
+      "valid_objects": [
+        "prose",
+        "figure",
+        "table"
+      ],
+      "generation_guidance": "Explain why or how, not merely what. Use explicit relationships and avoid decorative segmentation.",
+      "choose_when": "The learner must reason about instances they have not seen, and the difficulty is the idea itself — not its cause, its flow, its arrangement, or a representation of it.",
+      "not_when": {
+        "explain-cause": "the objective asks WHY, and a mechanism links cause to result",
+        "trace-flow": "something is followed as it moves or changes through a system",
+        "show-structure": "the difficulty is arrangement, containment, or hierarchy",
+        "interpret": "a specific representation is on the page and must be read"
+      }
+    },
+    "explain-cause": {
+      "teacher_label": "Explain cause and effect",
+      "pedagogical_role": "Connect causes, mechanisms, and outcomes",
+      "cognitive_job": "causal reasoning",
+      "valid_objects": [
+        "prose",
+        "figure",
+        "table",
+        "questions"
+      ],
+      "generation_guidance": "Identify cause, mechanism, and result. Separate correlation from mechanism when relevant.",
+      "choose_when": "The objective asks why, or what happens if, and there is a mechanism between cause and result that the learner must be able to state.",
+      "not_when": {
+        "explain": "there is no cause-and-effect chain, only meaning or structure",
+        "trace-flow": "the emphasis is on what moves, not on what causes",
+        "sequence": "order matters but no causal mechanism does",
+        "derive": "the chain is logical rather than physical"
+      }
+    },
+    "trace-flow": {
+      "teacher_label": "Trace the flow",
+      "pedagogical_role": "Follow matter, energy, information, or value",
+      "cognitive_job": "systems tracing",
+      "valid_objects": [
+        "figure",
+        "list",
+        "table",
+        "prose"
+      ],
+      "generation_guidance": "Track what enters, changes, moves, and leaves. Preserve identity and direction.",
+      "choose_when": "Something identifiable — matter, energy, information, money, data — enters, changes, moves, and leaves, and the learner must not lose track of it.",
+      "not_when": {
+        "sequence": "the steps are actions taken, not a substance being followed",
+        "explain-cause": "the point is why it happens, not where it goes",
+        "show-structure": "the arrangement is static and nothing travels through it"
+      }
+    },
+    "show-structure": {
+      "teacher_label": "Show the structure",
+      "pedagogical_role": "Reveal spatial or hierarchical organization",
+      "cognitive_job": "structural visualization",
+      "valid_objects": [
+        "figure",
+        "table",
+        "list"
+      ],
+      "generation_guidance": "Show levels, containment, arrangement, or relationships that are hard to infer from prose."
+    },
+    "demonstrate": {
+      "teacher_label": "Worked demonstration",
+      "pedagogical_role": "Model a complete method",
+      "cognitive_job": "procedural modeling",
+      "valid_objects": [
+        "worked-example",
+        "figure"
+      ],
+      "generation_guidance": "Show a representative problem or task from setup through reasoning to answer.",
+      "choose_when": "The learner has not yet seen the method carried out end to end on a real instance, and the method is unambiguous once seen. If the learner has already seen it worked through in this lesson, this condition is no longer met.",
+      "not_when": {
+        "model-thinking": "the difficulty is choosing between approaches, not executing one",
+        "derive": "the result must be justified from prior statements, not computed",
+        "practise-guided": "the learner is attempting the work, not watching it"
+      }
+    },
+    "model-thinking": {
+      "teacher_label": "Think aloud",
+      "pedagogical_role": "Expose expert decision making",
+      "cognitive_job": "metacognitive strategy modeling",
+      "valid_objects": [
+        "worked-example",
+        "prose"
+      ],
+      "generation_guidance": "State why each decision is made, what alternatives were rejected, and what signal triggered the next step."
+    },
+    "derive": {
+      "teacher_label": "Derive",
+      "pedagogical_role": "Build a result from prior statements",
+      "cognitive_job": "deductive reasoning",
+      "valid_objects": [
+        "worked-example",
+        "prose",
+        "table"
+      ],
+      "generation_guidance": "Show each justified transformation. Do not skip the conceptual reason for a step.",
+      "choose_when": "The result must be shown to FOLLOW from statements the learner already accepts, and each transformation needs a stated justification.",
+      "not_when": {
+        "demonstrate": "the point is the procedure, not its justification",
+        "model-thinking": "steps are chosen from alternatives rather than compelled",
+        "explain-cause": "the chain is physical rather than logical"
+      }
+    },
+    "interpret": {
+      "teacher_label": "Interpret",
+      "pedagogical_role": "Translate representation into meaning",
+      "cognitive_job": "representational fluency",
+      "valid_objects": [
+        "prose",
+        "figure",
+        "table",
+        "questions"
+      ],
+      "generation_guidance": "Explain what a graph, formula, diagram, table, or result means in context."
+    },
+    "apply": {
+      "teacher_label": "Apply",
+      "pedagogical_role": "Use knowledge in a familiar situation",
+      "cognitive_job": "near transfer",
+      "valid_objects": [
+        "questions",
+        "worked-example",
+        "table"
+      ],
+      "generation_guidance": "Require selection and use of the learned idea in a recognizable context."
+    },
+    "transfer": {
+      "teacher_label": "Transfer",
+      "pedagogical_role": "Use knowledge in a changed context",
+      "cognitive_job": "farther transfer and abstraction",
+      "valid_objects": [
+        "questions",
+        "worked-example"
+      ],
+      "generation_guidance": "Change surface features enough that learners must recognize the underlying structure."
+    },
+    "practise-guided": {
+      "teacher_label": "Guided practice",
+      "pedagogical_role": "Rehearse with structured support",
+      "cognitive_job": "scaffolded retrieval and execution",
+      "valid_objects": [
+        "questions",
+        "worked-example"
+      ],
+      "generation_guidance": "Provide prompts, hints, partial steps, or gradually withdrawn support.",
+      "choose_when": "The learner can begin the task but will stall without prompts, partial steps, or hints.",
+      "not_when": {
+        "practise-independent": "support would now be a crutch",
+        "demonstrate": "the learner is watching rather than attempting",
+        "apply": "the point is first unaided use, not scaffolded rehearsal"
+      }
+    },
+    "practise-independent": {
+      "teacher_label": "Independent practice",
+      "pedagogical_role": "Rehearse without scaffolding",
+      "cognitive_job": "independent retrieval and execution",
+      "valid_objects": [
+        "questions",
+        "choices"
+      ],
+      "generation_guidance": "Require learners to produce or select answers without embedded hints.",
+      "choose_when": "The learner has already succeeded with support and must now perform unaided, with enough repetition for fluency.",
+      "not_when": {
+        "practise-guided": "the learner has not yet succeeded with support",
+        "check-understanding": "the purpose is measurement, not rehearsal",
+        "transfer": "the context is deliberately changed"
+      }
+    },
+    "check-understanding": {
+      "teacher_label": "Quick check",
+      "pedagogical_role": "Detect immediate misunderstanding",
+      "cognitive_job": "formative assessment",
+      "valid_objects": [
+        "questions",
+        "choices"
+      ],
+      "generation_guidance": "Use a small number of high-signal items tied directly to the lesson objective.",
+      "choose_when": "The teacher needs to know right now whether the objective landed, and correct-versus-incorrect is the signal being read.",
+      "not_when": {
+        "diagnose-misconception": "wrong answers must identify WHICH wrong model the learner holds",
+        "practise-independent": "the purpose is rehearsal rather than measurement",
+        "reflect": "there is no correct answer"
+      }
+    },
+    "diagnose-misconception": {
+      "teacher_label": "Diagnose misconception",
+      "pedagogical_role": "Distinguish a known wrong model from the target model",
+      "cognitive_job": "misconception diagnosis",
+      "valid_objects": [
+        "choices",
+        "questions",
+        "aside"
+      ],
+      "generation_guidance": "Include distractors or prompts based on plausible misconceptions and require explanation where useful.",
+      "choose_when": "A named, real misconception exists on the card, and a wrong answer can be written that only a learner holding it would confidently choose. One block per misconception the card declares — a misconception not on the card does not exist.",
+      "not_when": {
+        "check-understanding": "no specific wrong model is known; the check only detects failure",
+        "warn": "the error is a slip or lapse, not a held belief",
+        "compare": "both sides are legitimate"
+      }
+    },
+    "warn": {
+      "teacher_label": "Watch out",
+      "pedagogical_role": "Prevent a predictable error",
+      "cognitive_job": "error avoidance",
+      "valid_objects": [
+        "aside",
+        "prose"
+      ],
+      "generation_guidance": "Name the error, why it seems plausible, and the correction. Keep it short.",
+      "choose_when": "A specific error is predictable at this exact point, and naming it before it happens prevents it.",
+      "not_when": {
+        "diagnose-misconception": "the error is a held belief that must be surfaced and tested, not a slip to flag",
+        "emphasise": "the content is a positive statement to retain, not an error to avoid"
+      }
+    },
+    "emphasise": {
+      "teacher_label": "Key idea",
+      "pedagogical_role": "Mark a high-value statement",
+      "cognitive_job": "selective attention and encoding",
+      "valid_objects": [
+        "aside",
+        "prose"
+      ],
+      "generation_guidance": "Set apart only the single statement learners should retain. Do not create multiple competing key ideas."
+    },
+    "memory-aid": {
+      "teacher_label": "Memory aid",
+      "pedagogical_role": "Support recall with a compact cue",
+      "cognitive_job": "mnemonic encoding",
+      "valid_objects": [
+        "aside",
+        "list"
+      ],
+      "generation_guidance": "Provide a short, accurate cue that does not replace understanding."
+    },
+    "summarise": {
+      "teacher_label": "Summarise",
+      "pedagogical_role": "Compress the lesson into essential relationships",
+      "cognitive_job": "schema consolidation",
+      "valid_objects": [
+        "list",
+        "prose",
+        "table"
+      ],
+      "generation_guidance": "Restate the minimum complete model, not a list of disconnected facts."
+    },
+    "connect-forward": {
+      "teacher_label": "What comes next",
+      "pedagogical_role": "Bridge current learning to the next idea",
+      "cognitive_job": "curricular coherence",
+      "valid_objects": [
+        "prose",
+        "list"
+      ],
+      "generation_guidance": "State what the current idea enables next and the unresolved question that follows."
+    },
+    "connect-back": {
+      "teacher_label": "Use what came before",
+      "pedagogical_role": "Make prerequisite dependence explicit",
+      "cognitive_job": "knowledge integration",
+      "valid_objects": [
+        "prose",
+        "list",
+        "questions"
+      ],
+      "generation_guidance": "Show which prior idea is being reused and exactly how it supports the current task."
+    },
+    "reflect": {
+      "teacher_label": "Reflect",
+      "pedagogical_role": "Prompt learners to examine their understanding",
+      "cognitive_job": "metacognitive monitoring",
+      "valid_objects": [
+        "questions",
+        "prose"
+      ],
+      "generation_guidance": "Ask learners to explain what changed in their thinking, what remains difficult, or which strategy helped."
+    },
+    "investigate": {
+      "teacher_label": "Investigate",
+      "pedagogical_role": "Structure an inquiry or practical",
+      "cognitive_job": "scientific and empirical reasoning",
+      "valid_objects": [
+        "questions",
+        "list",
+        "table",
+        "figure"
+      ],
+      "generation_guidance": "Specify question, variables, observations, and evidence expectations. Avoid pretending a screen simulation is a paper practical."
+    },
+    "evaluate": {
+      "teacher_label": "Evaluate",
+      "pedagogical_role": "Judge a claim, method, or evidence",
+      "cognitive_job": "critical evaluation",
+      "valid_objects": [
+        "questions",
+        "table",
+        "prose"
+      ],
+      "generation_guidance": "Require criteria, evidence, a judgment, and limitations."
+    },
+    "answer-key": {
+      "teacher_label": "Teacher guidance",
+      "pedagogical_role": "Provide checking and marking guidance",
+      "cognitive_job": "assessment interpretation",
+      "valid_objects": [
+        "answer-key"
+      ],
+      "generation_guidance": "Supply correct answers, acceptable alternatives, working, misconceptions, and marks where appropriate.",
+      "selectable": false
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"C:/Projects/lectio\" add .github/workflows/publish.yml)",
+      "Bash(git -C C:/Projects/lectio commit -m ' *)",
+      "Bash(git -C \"C:/Projects/lectio\" push origin master)",
+      "Bash(git -C \"C:/Projects/lectio\" tag v0.2.0)",
+      "Bash(git -C \"C:/Projects/lectio\" push origin v0.2.0)"
+    ]
+  }
+}

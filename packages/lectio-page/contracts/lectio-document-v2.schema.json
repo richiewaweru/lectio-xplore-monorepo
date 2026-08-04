@@ -1,0 +1,557 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lectio.example/contracts/lectio-document-v2.schema.json",
+  "title": "LectioDocumentV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "document_version",
+    "contract_version",
+    "id",
+    "title",
+    "language",
+    "metadata",
+    "sections"
+  ],
+  "properties": {
+    "document_version": { "const": 2 },
+    "contract_version": { "type": "string", "minLength": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "language": { "type": "string", "minLength": 2 },
+    "subject": { "type": "string" },
+    "audience": { "type": "object" },
+    "metadata": { "type": "object" },
+    "front_matter": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cover": { "type": "boolean" },
+        "contents": { "type": "boolean" },
+        "running_head": { "type": ["string", "null"] },
+        "fields": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/section" }
+    },
+    "answer_key": { "$ref": "#/$defs/answer-key-block" }
+  },
+  "$defs": {
+    "inline-node": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "value"],
+          "properties": {
+            "type": { "const": "text" },
+            "value": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "children"],
+          "properties": {
+            "type": { "enum": ["strong", "emphasis", "small-caps"] },
+            "children": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/inline-node" }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "value"],
+          "properties": {
+            "type": { "const": "term" },
+            "value": { "type": "string" },
+            "definition": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "latex"],
+          "properties": {
+            "type": { "const": "math" },
+            "latex": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "target_id", "label"],
+          "properties": {
+            "type": { "const": "reference" },
+            "target_id": { "type": "string" },
+            "label": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "rich-text": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/inline-node" }
+        }
+      ]
+    },
+    "rich-paragraph": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["children"],
+          "properties": {
+            "children": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/inline-node" }
+            }
+          }
+        }
+      ]
+    },
+    "layout-hint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "placement": { "enum": ["main", "margin", "spanning"] }
+      }
+    },
+    "intent-id": {
+      "enum": [
+        "orient",
+        "activate-prior-knowledge",
+        "state-goal",
+        "define",
+        "name-parts",
+        "classify",
+        "compare",
+        "sequence",
+        "explain",
+        "explain-cause",
+        "trace-flow",
+        "show-structure",
+        "demonstrate",
+        "model-thinking",
+        "derive",
+        "interpret",
+        "apply",
+        "transfer",
+        "practise-guided",
+        "practise-independent",
+        "check-understanding",
+        "diagnose-misconception",
+        "warn",
+        "emphasise",
+        "memory-aid",
+        "summarise",
+        "connect-forward",
+        "connect-back",
+        "reflect",
+        "investigate",
+        "evaluate",
+        "answer-key"
+      ]
+    },
+    "heading-content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "text"],
+      "properties": {
+        "level": { "enum": [1, 2, 3, "1", "2", "3"] },
+        "text": { "type": "string", "minLength": 1 },
+        "number": { "type": ["string", "null"] }
+      }
+    },
+    "prose-content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["paragraphs"],
+      "properties": {
+        "paragraphs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/rich-paragraph" }
+        }
+      }
+    },
+    "list-content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["style", "items"],
+      "properties": {
+        "style": { "enum": ["ordered", "unordered", "steps", "glossary"] },
+        "lead_in": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }]
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["text"],
+            "properties": {
+              "text": { "$ref": "#/$defs/rich-text" }
+            }
+          }
+        }
+      }
+    },
+    "table-content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["columns", "rows"],
+      "properties": {
+        "columns": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "label": { "type": "string" }
+            }
+          }
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["cells"],
+            "properties": {
+              "cells": {
+                "type": "object",
+                "additionalProperties": { "$ref": "#/$defs/rich-text" }
+              }
+            }
+          }
+        },
+        "caption": { "type": ["string", "null"] },
+        "presentation": { "enum": ["standard", "comparison", "timeline"] }
+      }
+    },
+    "figure-content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset", "alt_text"],
+      "properties": {
+        "asset": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "enum": ["image", "svg"] },
+            "src": { "type": "string" },
+            "svg": { "type": "string" },
+            "status": { "enum": ["ready", "pending", "failed"] },
+            "request_id": { "type": "string" }
+          }
+        },
+        "caption": { "type": ["string", "null"] },
+        "alt_text": { "type": "string", "minLength": 1 },
+        "width": { "enum": ["main", "span"] }
+      }
+    },
+    "aside-content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["body"],
+      "properties": {
+        "label": { "type": ["string", "null"] },
+        "body": { "$ref": "#/$defs/rich-text" }
+      }
+    },
+    "worked-example-content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["problem", "steps", "answer"],
+      "properties": {
+        "title": { "type": ["string", "null"] },
+        "problem": { "$ref": "#/$defs/rich-text" },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["text"],
+            "properties": {
+              "text": { "$ref": "#/$defs/rich-text" }
+            }
+          }
+        },
+        "answer": { "$ref": "#/$defs/rich-text" },
+        "check": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }]
+        }
+      }
+    },
+    "questions-content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items"],
+      "properties": {
+        "instructions": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }]
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "prompt"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "prompt": { "$ref": "#/$defs/rich-text" },
+              "marks": { "type": ["number", "null"] },
+              "answer_lines": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "choices-content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stem", "options"],
+      "properties": {
+        "stem": { "$ref": "#/$defs/rich-text" },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["letter", "text"],
+            "properties": {
+              "letter": { "type": "string", "minLength": 1 },
+              "text": { "$ref": "#/$defs/rich-text" }
+            }
+          }
+        },
+        "marks": { "type": ["number", "null"] }
+      }
+    },
+    "answer-key-content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["groups"],
+      "properties": {
+        "groups": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["entries"],
+            "properties": {
+              "title": { "type": ["string", "null"] },
+              "entries": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["question_id", "answer"],
+                  "properties": {
+                    "question_id": { "type": "string", "minLength": 1 },
+                    "answer": { "$ref": "#/$defs/rich-text" },
+                    "alternatives": {
+                      "type": "array",
+                      "items": { "$ref": "#/$defs/rich-text" }
+                    },
+                    "working": {
+                      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }]
+                    },
+                    "rubric": {
+                      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/rich-text" }]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "heading-block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "object", "position", "content"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "object": { "const": "heading" },
+        "position": { "type": "integer", "minimum": 0 },
+        "content": { "$ref": "#/$defs/heading-content" },
+        "role": { "type": "string" },
+        "layout": { "$ref": "#/$defs/layout-hint" }
+      }
+    },
+    "prose-block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "object", "intent", "position", "content"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "object": { "const": "prose" },
+        "intent": { "$ref": "#/$defs/intent-id" },
+        "position": { "type": "integer", "minimum": 0 },
+        "content": { "$ref": "#/$defs/prose-content" },
+        "role": { "type": "string" },
+        "layout": { "$ref": "#/$defs/layout-hint" }
+      }
+    },
+    "list-block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "object", "intent", "position", "content"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "object": { "const": "list" },
+        "intent": { "$ref": "#/$defs/intent-id" },
+        "position": { "type": "integer", "minimum": 0 },
+        "content": { "$ref": "#/$defs/list-content" },
+        "role": { "type": "string" },
+        "layout": { "$ref": "#/$defs/layout-hint" }
+      }
+    },
+    "table-block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "object", "intent", "position", "content"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "object": { "const": "table" },
+        "intent": { "$ref": "#/$defs/intent-id" },
+        "position": { "type": "integer", "minimum": 0 },
+        "content": { "$ref": "#/$defs/table-content" },
+        "role": { "type": "string" },
+        "layout": { "$ref": "#/$defs/layout-hint" }
+      }
+    },
+    "figure-block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "object", "intent", "position", "content"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "object": { "const": "figure" },
+        "intent": { "$ref": "#/$defs/intent-id" },
+        "position": { "type": "integer", "minimum": 0 },
+        "content": { "$ref": "#/$defs/figure-content" },
+        "role": { "type": "string" },
+        "layout": { "$ref": "#/$defs/layout-hint" }
+      }
+    },
+    "aside-block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "object", "intent", "position", "content"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "object": { "const": "aside" },
+        "intent": { "$ref": "#/$defs/intent-id" },
+        "position": { "type": "integer", "minimum": 0 },
+        "content": { "$ref": "#/$defs/aside-content" },
+        "role": { "type": "string" },
+        "layout": { "$ref": "#/$defs/layout-hint" }
+      }
+    },
+    "worked-example-block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "object", "intent", "position", "content"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "object": { "const": "worked-example" },
+        "intent": { "$ref": "#/$defs/intent-id" },
+        "position": { "type": "integer", "minimum": 0 },
+        "content": { "$ref": "#/$defs/worked-example-content" },
+        "role": { "type": "string" },
+        "layout": { "$ref": "#/$defs/layout-hint" }
+      }
+    },
+    "questions-block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "object", "intent", "position", "content"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "object": { "const": "questions" },
+        "intent": { "$ref": "#/$defs/intent-id" },
+        "position": { "type": "integer", "minimum": 0 },
+        "content": { "$ref": "#/$defs/questions-content" },
+        "role": { "type": "string" },
+        "layout": { "$ref": "#/$defs/layout-hint" }
+      }
+    },
+    "choices-block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "object", "intent", "position", "content"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "object": { "const": "choices" },
+        "intent": { "$ref": "#/$defs/intent-id" },
+        "position": { "type": "integer", "minimum": 0 },
+        "content": { "$ref": "#/$defs/choices-content" },
+        "role": { "type": "string" },
+        "layout": { "$ref": "#/$defs/layout-hint" }
+      }
+    },
+    "answer-key-block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "object", "intent", "position", "content"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "object": { "const": "answer-key" },
+        "intent": { "const": "answer-key" },
+        "position": { "type": "integer", "minimum": 0 },
+        "content": { "$ref": "#/$defs/answer-key-content" },
+        "role": { "type": "string" },
+        "layout": { "$ref": "#/$defs/layout-hint" }
+      }
+    },
+    "block": {
+      "oneOf": [
+        { "$ref": "#/$defs/heading-block" },
+        { "$ref": "#/$defs/prose-block" },
+        { "$ref": "#/$defs/list-block" },
+        { "$ref": "#/$defs/table-block" },
+        { "$ref": "#/$defs/figure-block" },
+        { "$ref": "#/$defs/aside-block" },
+        { "$ref": "#/$defs/worked-example-block" },
+        { "$ref": "#/$defs/questions-block" },
+        { "$ref": "#/$defs/choices-block" },
+        { "$ref": "#/$defs/answer-key-block" }
+      ]
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "blocks"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string" },
+        "blocks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/block" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "document_version": 2,
+  "contract_version": "1.0.0",
+  "id": "empty-shell",
+  "title": "Empty shell",
+  "language": "en",
+  "metadata": {},
+  "front_matter": {
+    "cover": false,
+    "contents": false
+  },
+  "sections": [
+    {
+      "id": "s1",
+      "title": "Shell",
+      "blocks": [
+        {
+          "id": "h1",
+          "object": "heading",
+          "position": 0,
+          "content": {
+            "level": 2,
+            "text": "Shell heading"
+          }
+        },
+        {
+          "id": "p1",
+          "object": "prose",
+          "intent": "state-goal",
+          "position": 1,
+          "content": {
+            "paragraphs": [
+              "This fixture exists so the contract validates an empty-ish document."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

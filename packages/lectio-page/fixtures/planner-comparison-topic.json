@@ -1,0 +1,37 @@
+{
+  "subject": "Science",
+  "grade_level": "Grade 7",
+  "topic": "The particle model and why food colouring spreads in still water",
+  "destination_objective": "Learners can explain that matter is made of tiny moving particles with spaces between them and use this model to explain mixing.",
+  "starting_knowledge": [
+    "Learners know solids, liquids and gases are forms of matter."
+  ],
+  "must_include": [
+    "food colouring phenomenon",
+    "matter is made of particles",
+    "particles are always moving",
+    "spaces exist between particles",
+    "guided explanation",
+    "independent application",
+    "misconception that matter is continuous"
+  ],
+  "must_avoid": [
+    "Brownian motion",
+    "diffusion coefficient equations",
+    "molecular kinetic theory beyond Grade 7"
+  ],
+  "learner_groups": [
+    {
+      "profile": "support",
+      "needs": "shorter sentences, concrete examples, guided prompts"
+    },
+    {
+      "profile": "core",
+      "needs": "standard explanation and practice"
+    },
+    {
+      "profile": "extension",
+      "needs": "transfer to dissolving sugar and apparent solidity"
+    }
+  ]
+}

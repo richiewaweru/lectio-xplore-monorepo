@@ -1,0 +1,219 @@
+LECTIO V2 DOCUMENT PALETTE
+Use pedagogical intent first. Then choose the simplest valid paper object.
+
+OBJECTS
+heading — structural title; bound to first following block; no box.
+prose — explanatory paragraphs; free fragmentation; main column.
+list — ordered/unordered/steps/glossary; split between items.
+table — comparison/reference/timeline; repeating header; no enclosing box.
+figure — image/SVG plus caption; atomic; main or spanning.
+aside — short set-apart note; atomic; only boxed/bordered object; margin preferred.
+worked-example — problem, reasoning steps, answer; split between steps.
+questions — open response with marks and answer space; split between questions.
+choices — lettered selected response; no radio controls.
+answer-key — teacher checking/marking guidance.
+
+INTENTS
+
+orient [prose, figure, choices]
+  label: Orient
+  role: Open attention and establish a reason to learn
+  cognitive_job: activate curiosity and situational framing
+  guidance: Begin with a concrete phenomenon, dilemma, observation, or question. Do not explain the full idea yet.
+
+activate-prior-knowledge [prose, list, questions, choices]
+  label: Recall what you know
+  role: Surface prerequisite knowledge
+  cognitive_job: retrieve relevant prior knowledge
+  guidance: Prompt recall of concepts required for this lesson. Keep it brief and diagnostic.
+
+state-goal [prose, list]
+  label: Learning goal
+  role: Clarify the expected learning outcome
+  cognitive_job: metacognitive goal setting
+  guidance: State what the learner should be able to explain, do, compare, or justify.
+
+define [prose, table, aside]
+  label: Define
+  role: Establish precise meaning
+  cognitive_job: concept formation and vocabulary encoding
+  guidance: Give a precise learner-appropriate definition, distinguish it from nearby terms, and include notation only when useful.
+
+name-parts [list, table, figure]
+  label: Name the parts
+  role: Identify constituent elements
+  cognitive_job: decomposition and labeling
+  guidance: Identify the important parts of a system or idea and state each part's role.
+
+classify [list, table, questions, choices]
+  label: Classify
+  role: Organize examples into categories
+  cognitive_job: categorical reasoning
+  guidance: Provide or elicit a rule for category membership and contrast borderline cases.
+
+compare [table, prose, questions]
+  label: Compare
+  role: Expose similarities and differences
+  cognitive_job: relational comparison
+  guidance: Compare using consistent criteria. End with the distinction that matters most.
+
+sequence [list, table, figure, questions]
+  label: Put in order
+  role: Represent an ordered process
+  cognitive_job: temporal and procedural ordering
+  guidance: Express steps or events in a meaningful order. Include dependencies and stopping conditions where relevant.
+
+explain [prose, figure, table]
+  label: Explain
+  role: Build a coherent mental model
+  cognitive_job: causal and conceptual understanding
+  guidance: Explain why or how, not merely what. Use explicit relationships and avoid decorative segmentation.
+
+explain-cause [prose, figure, table, questions]
+  label: Explain cause and effect
+  role: Connect causes, mechanisms, and outcomes
+  cognitive_job: causal reasoning
+  guidance: Identify cause, mechanism, and result. Separate correlation from mechanism when relevant.
+
+trace-flow [figure, list, table, prose]
+  label: Trace the flow
+  role: Follow matter, energy, information, or value
+  cognitive_job: systems tracing
+  guidance: Track what enters, changes, moves, and leaves. Preserve identity and direction.
+
+show-structure [figure, table, list]
+  label: Show the structure
+  role: Reveal spatial or hierarchical organization
+  cognitive_job: structural visualization
+  guidance: Show levels, containment, arrangement, or relationships that are hard to infer from prose.
+
+demonstrate [worked-example, figure]
+  label: Worked demonstration
+  role: Model a complete method
+  cognitive_job: procedural modeling
+  guidance: Show a representative problem or task from setup through reasoning to answer.
+
+model-thinking [worked-example, prose]
+  label: Think aloud
+  role: Expose expert decision making
+  cognitive_job: metacognitive strategy modeling
+  guidance: State why each decision is made, what alternatives were rejected, and what signal triggered the next step.
+
+derive [worked-example, prose, table]
+  label: Derive
+  role: Build a result from prior statements
+  cognitive_job: deductive reasoning
+  guidance: Show each justified transformation. Do not skip the conceptual reason for a step.
+
+interpret [prose, figure, table, questions]
+  label: Interpret
+  role: Translate representation into meaning
+  cognitive_job: representational fluency
+  guidance: Explain what a graph, formula, diagram, table, or result means in context.
+
+apply [questions, worked-example, table]
+  label: Apply
+  role: Use knowledge in a familiar situation
+  cognitive_job: near transfer
+  guidance: Require selection and use of the learned idea in a recognizable context.
+
+transfer [questions, worked-example]
+  label: Transfer
+  role: Use knowledge in a changed context
+  cognitive_job: farther transfer and abstraction
+  guidance: Change surface features enough that learners must recognize the underlying structure.
+
+practise-guided [questions, worked-example]
+  label: Guided practice
+  role: Rehearse with structured support
+  cognitive_job: scaffolded retrieval and execution
+  guidance: Provide prompts, hints, partial steps, or gradually withdrawn support.
+
+practise-independent [questions, choices]
+  label: Independent practice
+  role: Rehearse without scaffolding
+  cognitive_job: independent retrieval and execution
+  guidance: Require learners to produce or select answers without embedded hints.
+
+check-understanding [questions, choices]
+  label: Quick check
+  role: Detect immediate misunderstanding
+  cognitive_job: formative assessment
+  guidance: Use a small number of high-signal items tied directly to the lesson objective.
+
+diagnose-misconception [choices, questions, aside]
+  label: Diagnose misconception
+  role: Distinguish a known wrong model from the target model
+  cognitive_job: misconception diagnosis
+  guidance: Include distractors or prompts based on plausible misconceptions and require explanation where useful.
+
+warn [aside, prose]
+  label: Watch out
+  role: Prevent a predictable error
+  cognitive_job: error avoidance
+  guidance: Name the error, why it seems plausible, and the correction. Keep it short.
+
+emphasise [aside, prose]
+  label: Key idea
+  role: Mark a high-value statement
+  cognitive_job: selective attention and encoding
+  guidance: Set apart only the single statement learners should retain. Do not create multiple competing key ideas.
+
+memory-aid [aside, list]
+  label: Memory aid
+  role: Support recall with a compact cue
+  cognitive_job: mnemonic encoding
+  guidance: Provide a short, accurate cue that does not replace understanding.
+
+summarise [list, prose, table]
+  label: Summarise
+  role: Compress the lesson into essential relationships
+  cognitive_job: schema consolidation
+  guidance: Restate the minimum complete model, not a list of disconnected facts.
+
+connect-forward [prose, list]
+  label: What comes next
+  role: Bridge current learning to the next idea
+  cognitive_job: curricular coherence
+  guidance: State what the current idea enables next and the unresolved question that follows.
+
+connect-back [prose, list, questions]
+  label: Use what came before
+  role: Make prerequisite dependence explicit
+  cognitive_job: knowledge integration
+  guidance: Show which prior idea is being reused and exactly how it supports the current task.
+
+reflect [questions, prose]
+  label: Reflect
+  role: Prompt learners to examine their understanding
+  cognitive_job: metacognitive monitoring
+  guidance: Ask learners to explain what changed in their thinking, what remains difficult, or which strategy helped.
+
+investigate [questions, list, table, figure]
+  label: Investigate
+  role: Structure an inquiry or practical
+  cognitive_job: scientific and empirical reasoning
+  guidance: Specify question, variables, observations, and evidence expectations. Avoid pretending a screen simulation is a paper practical.
+
+evaluate [questions, table, prose]
+  label: Evaluate
+  role: Judge a claim, method, or evidence
+  cognitive_job: critical evaluation
+  guidance: Require criteria, evidence, a judgment, and limitations.
+
+answer-key [answer-key]
+  label: Teacher guidance
+  role: Provide checking and marking guidance
+  cognitive_job: assessment interpretation
+  guidance: Supply correct answers, acceptable alternatives, working, misconceptions, and marks where appropriate.
+
+PLANNING RULES
+- Output ordered moves with explicit position.
+- Repeated object types are valid.
+- No more than two asides in a normal lesson unless justified.
+- Never choose an object because it looks attractive.
+- Do not use object names as student-visible labels.
+- Do not plan screen interactions.
+- Support/core/extension differences must alter structure or scaffolding.
+- Figure plans must state what the figure must show and why prose is insufficient.
+- Every required lesson objective must map to at least one move.

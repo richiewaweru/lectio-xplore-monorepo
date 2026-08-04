@@ -1,0 +1,158 @@
+<html lang="en">
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 18mm; }
+
+  html { font-family: system-ui, sans-serif; }
+  body {
+    margin: 0;
+    font-size: 10.5pt;
+    line-height: 15pt;
+    color: #111;
+    orphans: 3;
+    widows: 3;
+    hyphens: auto;
+  }
+
+  /* ---- TEST A: scholar's margin via float + negative margin ---- */
+  .doc-a { padding-right: 62mm; }
+  .doc-a .aside {
+    float: right;
+    clear: right;
+    width: 56mm;
+    margin-right: -62mm;
+    margin-top: 0;
+    margin-bottom: 15pt;
+    font-size: 9pt;
+    line-height: 13pt;
+    border-left: 0.75pt solid #333;
+    padding-left: 3mm;
+  }
+
+  /* ---- TEST B: scholar's margin via CSS grid ---- */
+  .doc-b {
+    display: grid;
+    grid-template-columns: 112mm 6mm 56mm;
+  }
+  .doc-b > * { grid-column: 1; }
+  .doc-b > .aside {
+    grid-column: 3;
+    font-size: 9pt;
+    line-height: 13pt;
+    border-left: 0.75pt solid #333;
+    padding-left: 3mm;
+  }
+
+  h2 { font-size: 15pt; line-height: 22.5pt; margin: 30pt 0 7.5pt; break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 22.5pt 0 0; break-after: avoid; }
+  p  { margin: 0 0 15pt; max-width: 112mm; }
+
+  /* ---- TEST C: table header repeat ---- */
+  table { border-collapse: collapse; width: 112mm; font-size: 9.5pt; margin-bottom: 15pt; }
+  thead { display: table-header-group; }
+  th, td { text-align: left; padding: 3pt 4pt; border-bottom: 0.5pt solid #bbb; }
+  th { border-bottom: 1pt solid #333; font-weight: 600;
+       font-size: 8pt; letter-spacing: 0.06em; text-transform: uppercase; }
+  tr { break-inside: avoid; }
+
+  /* ---- TEST D: figure atomicity ---- */
+  figure { margin: 0 0 15pt; break-inside: avoid; width: 112mm; }
+  figure .plate { height: 55mm; background: repeating-linear-gradient(
+      45deg, #eee, #eee 6px, #fff 6px, #fff 12px); border: 0.5pt solid #999; }
+  figcaption { font-size: 9pt; line-height: 13pt; margin-top: 4pt; }
+
+  /* ---- TEST E: hanging indent ---- */
+  ol.hang { margin: 0 0 15pt; padding: 0; list-style: none; counter-reset: q; width: 112mm; }
+  ol.hang li { counter-increment: q; position: relative;
+               padding-left: 9mm; margin-bottom: 15pt; break-inside: avoid; }
+  ol.hang li::before { content: counter(q) "."; position: absolute; left: 0;
+                       font-weight: 600; }
+
+  .marker { font-size: 8pt; color: #b00; letter-spacing: .08em;
+            text-transform: uppercase; margin: 0 0 6pt; }
+</style>
+
+<!-- ============ TEST A ============ -->
+<div class="doc-a">
+  <h2>Test A — margin column via float</h2>
+  <p class="marker">Pass if: every aside sits in the right margin, appears exactly once, is not clipped at a page edge, and stays near its paragraph.</p>
+
+  <aside class="aside"><strong>Aside A1</strong><br>Placed early. Should sit beside the opening paragraphs.</aside>
+  <p>Photosynthesis is the process green plants use to convert light energy into chemical energy stored as glucose. Water is drawn up from the roots, carbon dioxide enters through pores on the underside of the leaf, and light is captured by chlorophyll held inside the chloroplasts of leaf cells.</p>
+  <p>The reaction produces glucose and releases oxygen as a by-product. That oxygen leaves the leaf through the same pores that admitted the carbon dioxide, which is why a submerged water plant under a bright lamp appears to give off a steady stream of small bubbles.</p>
+  <p>Because the process depends on light, the rate at which it happens changes with the conditions around the plant. Light intensity, carbon dioxide concentration, temperature and the availability of water all act as limiting factors, and the slowest of them sets the overall pace.</p>
+
+  <aside class="aside"><strong>Aside A2</strong><br>Positioned deliberately so that it falls close to a page boundary. Watch whether it is clipped, duplicated, or pushed awkwardly.</aside>
+  <p>A plant kept in darkness cannot photosynthesise however well it is watered, because no light energy is available to drive the reaction. A plant in bright light with closed pores cannot photosynthesise well either, because carbon dioxide can no longer reach the interior of the leaf.</p>
+  <p>Leaves are shaped for the job they do. They are broad and flat, which presents a large surface to incoming light. They are thin, so gases have only a short distance to travel. They contain many chloroplasts near the upper surface, where the light is strongest, and they are served by veins that bring water in and carry sugars away.</p>
+  <p>Photosynthesis and respiration are often confused because they involve the same substances. Respiration runs in the opposite direction: glucose and oxygen are consumed, carbon dioxide and water are produced, and energy is released for the cell to use. Plants do both; animals do only the second.</p>
+  <p>The relationship between the two processes is what keeps the composition of the atmosphere roughly stable. Carbon dioxide exhaled by animals is taken up by plants, and oxygen released by plants is taken up by animals, in a continuous exchange usually described as the carbon-oxygen cycle.</p>
+
+  <aside class="aside"><strong>Aside A3</strong><br>A longer note, set here to test whether a tall aside near a break behaves. It should either sit fully on one page or move cleanly to the next, never split and never overlap the main column.</aside>
+  <p>Most of the mass a plant gains as it grows does not come from the soil. It comes from the air. The carbon atoms in the sugars, starches and cellulose that make up the body of the plant were carbon dioxide molecules before photosynthesis captured them.</p>
+  <p>This is unintuitive and worth stating plainly, because learners commonly assume that a plant eats soil in the way an animal eats food. Soil supplies water and dissolved minerals. It does not supply the bulk of the material from which the plant is built.</p>
+</div>
+
+<!-- ============ TEST B ============ -->
+<div class="doc-b" style="break-before: page;">
+  <h2>Test B — margin column via CSS grid</h2>
+  <p class="marker">Pass if: asides land in column 3, beside their paragraph, and pagination does not scramble row placement.</p>
+
+  <p>The same content set again, this time using a three-column grid rather than floats. Grid gives explicit placement, which is easier to reason about, but grid containers and page fragmentation have historically interacted poorly in Blink.</p>
+  <aside class="aside"><strong>Aside B1</strong><br>Should appear beside the paragraph above, not below it.</aside>
+  <p>Water is drawn up from the roots, carbon dioxide enters through pores on the underside of the leaf, and light is captured by chlorophyll held inside the chloroplasts of the leaf cells.</p>
+  <p>The reaction produces glucose and releases oxygen as a by-product. That oxygen leaves the leaf through the same pores that admitted the carbon dioxide.</p>
+  <aside class="aside"><strong>Aside B2</strong><br>A second note, deeper into the flow.</aside>
+  <p>Because the process depends on light, the rate at which it happens changes with the conditions around the plant. Light intensity, carbon dioxide concentration, temperature and water availability all act as limiting factors.</p>
+  <p>A plant kept in darkness cannot photosynthesise however well it is watered. A plant in bright light with closed pores cannot photosynthesise well either, because carbon dioxide can no longer reach the interior of the leaf.</p>
+  <p>Leaves are broad and flat, presenting a large surface to incoming light. They are thin, so gases travel only a short distance. They hold many chloroplasts near the upper surface, and veins bring water in and carry sugars away.</p>
+  <p>Respiration runs in the opposite direction: glucose and oxygen are consumed, carbon dioxide and water are produced, and energy is released. Plants do both processes; animals do only the second.</p>
+  <p>Carbon dioxide exhaled by animals is taken up by plants, and oxygen released by plants is taken up by animals, in a continuous exchange known as the carbon-oxygen cycle.</p>
+  <p>Most of the mass a plant gains as it grows comes from the air, not the soil. The carbon atoms in its sugars and cellulose were carbon dioxide molecules before photosynthesis captured them.</p>
+</div>
+
+<!-- ============ TEST C/D/E ============ -->
+<div class="doc-a" style="break-before: page;">
+  <div style="height:170mm"></div><h2>Test C — table header repeat across a page break</h2>
+  <p class="marker">Pass if: the header row reappears at the top of the continuation page.</p>
+  <table>
+    <thead><tr><th>Factor</th><th>Too little</th><th>More of it, at first</th></tr></thead>
+    <tbody>
+      <tr><td>Light intensity</td><td>Slow photosynthesis</td><td>Faster photosynthesis</td></tr>
+      <tr><td>Carbon dioxide</td><td>Slow photosynthesis</td><td>Faster photosynthesis</td></tr>
+      <tr><td>Temperature</td><td>Enzymes work slowly</td><td>Rate rises to an optimum</td></tr>
+      <tr><td>Water</td><td>Pores close, rate falls</td><td>Plant continues normally</td></tr>
+      <tr><td>Chlorophyll</td><td>Less light absorbed</td><td>More light absorbed</td></tr>
+      <tr><td>Leaf area</td><td>Small capture surface</td><td>Larger capture surface</td></tr>
+      <tr><td>Leaf thickness</td><td>Longer diffusion path</td><td>Shorter diffusion path</td></tr>
+      <tr><td>Pore density</td><td>Restricted gas exchange</td><td>Freer gas exchange</td></tr>
+      <tr><td>Vein supply</td><td>Water arrives slowly</td><td>Water arrives steadily</td></tr>
+      <tr><td>Root surface</td><td>Less water absorbed</td><td>More water absorbed</td></tr>
+      <tr><td>Soil minerals</td><td>Chlorophyll production falls</td><td>Chlorophyll production normal</td></tr>
+      <tr><td>Air movement</td><td>Stale air at leaf surface</td><td>Fresh carbon dioxide supplied</td></tr>
+      <tr><td>Humidity</td><td>Water lost rapidly</td><td>Water conserved</td></tr>
+      <tr><td>Day length</td><td>Short productive period</td><td>Longer productive period</td></tr>
+      <tr><td>Shading</td><td>Light blocked</td><td>Light reaches the leaf</td></tr>
+      <tr><td>Leaf age</td><td>Chloroplasts degrading</td><td>Chloroplasts fully active</td></tr>
+      <tr><td>Cloud cover</td><td>Diffuse weak light</td><td>Direct strong light</td></tr>
+      <tr><td>Water clarity</td><td>Light absorbed by water</td><td>Light reaches submerged leaves</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Test D — figure atomicity</h2>
+  <p class="marker">Pass if: the plate and its caption stay together on one page.</p>
+  <figure>
+    <div class="plate"></div>
+    <figcaption>Figure 1. Cross-section of a leaf showing the arrangement of cells, the position of the chloroplasts, and the pores on the lower surface through which gases enter and leave.</figcaption>
+  </figure>
+
+  <h2>Test E — hanging indent and question spacing</h2>
+  <p class="marker">Pass if: numbers hang left of the text column and no question splits across pages.</p>
+  <ol class="hang">
+    <li>In your own words, explain what photosynthesis is and why plants need it.</li>
+    <li>Name the four things a plant requires in order to carry out photosynthesis.</li>
+    <li>Which gas do plants take in during photosynthesis, and which gas do they release?</li>
+    <li>Explain why a plant kept in a dark cupboard will not grow well, even if it is watered regularly.</li>
+    <li>Most of the mass a plant gains comes from the air rather than the soil. Explain why this is the case, using what you know about where the carbon in glucose originates.</li>
+  </ol>
+</div>

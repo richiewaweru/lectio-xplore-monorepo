@@ -1,0 +1,129 @@
+[
+  {
+    "path": "AUDIT_CHECKLIST.md",
+    "sha256": "b39412d54440aa3989ce1d0a9da0b75af32071b88f169bca31db70a8d58026f4",
+    "bytes": 2060
+  },
+  {
+    "path": "README.md",
+    "sha256": "8be65ee864303a89f7cda90435c584e89616df767e26eadfa35ce24447931c78",
+    "bytes": 3285
+  },
+  {
+    "path": "SOURCE_MANIFEST.md",
+    "sha256": "20de0672a04f439d2fd568230d76642ea7f9dccb5386a6e27c6036d1813a75e5",
+    "bytes": 2896
+  },
+  {
+    "path": "artifacts/A_FORK_PLAN.md",
+    "sha256": "782757920f8edddef94b999da3bbfb0d20edf4f6b317325a3aa8f91ccfc89704",
+    "bytes": 8454
+  },
+  {
+    "path": "artifacts/B_CONTRACT_AND_INTENT_CATALOGUE.md",
+    "sha256": "1eff09f0347f8317a478bb640ae4401c52445dcfe4b1709b0bda97b14e06ecd5",
+    "bytes": 13190
+  },
+  {
+    "path": "artifacts/C_CONTRACT_VALIDATION_TEST.md",
+    "sha256": "17ef40447faaa31b544f550559455f9d6e5452236bbd1a6cc4a75eb76cf7ee1b",
+    "bytes": 5302
+  },
+  {
+    "path": "artifacts/D_PAGE_OBJECT_SPECS.md",
+    "sha256": "7785b4c4c5c6bca738b5264900638fb9e7815fcc930a323062233785312ef75c",
+    "bytes": 8344
+  },
+  {
+    "path": "artifacts/E_BASE_PRINT_STYLESHEET.md",
+    "sha256": "769bd1df9177c0757f8a32d24169812e08e59c05e6097d996a64affcbadc3e4b",
+    "bytes": 2091
+  },
+  {
+    "path": "artifacts/F_BACKEND_REWIRING_MAP.md",
+    "sha256": "bd19fe43ab9176a289d31a39d5081bf264a0c7b5f59301e17474b587f2f68bf9",
+    "bytes": 9645
+  },
+  {
+    "path": "artifacts/G_PHASING_PLAN.md",
+    "sha256": "ef918045c51a123cfbc3cc0a668f6af6332a207ed37402e8739ec5dfd2b2efa7",
+    "bytes": 7801
+  },
+  {
+    "path": "contracts/base-print.css",
+    "sha256": "1b0c681a9787d95421976feb23c6323a3979a19fc4ad006b9977e102f1041fb3",
+    "bytes": 2249
+  },
+  {
+    "path": "contracts/lectio-document-v2.schema.json",
+    "sha256": "e5b3c8b5e1f66302e345371592576b294d84402085d1ea0de0d9b702eaa8256e",
+    "bytes": 3742
+  },
+  {
+    "path": "../../../contracts/intent-catalogue.v1.json",
+    "note": "Canonical catalogue lives at repo-root contracts/; not duplicated in this pack",
+    "sha256": "see-repo-root",
+    "bytes": 0
+  },
+  {
+    "path": "../../../contracts/object-catalogue.v1.json",
+    "note": "Canonical catalogue lives at repo-root contracts/; not duplicated in this pack",
+    "sha256": "see-repo-root",
+    "bytes": 0
+  },
+  {
+    "path": "fixtures/planner-comparison-topic.json",
+    "sha256": "541d4b8f6470d0af0d09aada91bb6d1daed5a752c4960a65dc3ab11d27946e64",
+    "bytes": 1127
+  },
+  {
+    "path": "fixtures/planner-palette-v2.txt",
+    "sha256": "2fb309a3af5fb3cd4f7dfb6cdd64c0a5e04e4e4d98801762d37f7699016b8d0f",
+    "bytes": 9209
+  },
+  {
+    "path": "references/uploaded/0b878c0f-639b-4edc-a0da-04f922a9a6c4-student.pdf",
+    "sha256": "cf169370ab891e2a56d0f8c1eb87d216e3f06cf53288f95842bdbadfae993e09",
+    "bytes": 137164
+  },
+  {
+    "path": "references/uploaded/0b878c0f-639b-4edc-a0da-04f922a9a6c4-teacher.pdf",
+    "sha256": "54772edef661428391a45045ecec1e2f230d002c049554e774974a1a9d67d657",
+    "bytes": 111499
+  },
+  {
+    "path": "references/uploaded/Lessons \u00b7 Lectio.pdf",
+    "sha256": "2a84cd2ea2f65d6b9bd077d5426214c7ce1b8f36e5cd76a5f83be4cb07531702",
+    "bytes": 2485941
+  },
+  {
+    "path": "references/uploaded/Pasted markdown.md",
+    "sha256": "ecec0373f445957f5937aa5024329c2efecffbf813a99ac4ae29609e244d7fce",
+    "bytes": 20276
+  },
+  {
+    "path": "references/uploaded/Photosynthesis_Booklet.docx",
+    "sha256": "95b685130e9f2da659f79d1063240f1db901aae40faa1b379f3dc3aa3200f1ed",
+    "bytes": 12094
+  },
+  {
+    "path": "references/uploaded/grade7_photosynthesis_3_lesson_booklet.pdf",
+    "sha256": "510f63ca4db7b721070bbfbd6047a90f94c9374fc023bf6e50e35dc0c10cb9f2",
+    "bytes": 20847
+  },
+  {
+    "path": "references/uploaded/margin-test-2.html",
+    "sha256": "2bfcdbfd11c6805107f111014f3ec9216ff68e64a8dcd7354795c6d74a9e0797",
+    "bytes": 11554
+  },
+  {
+    "path": "references/uploaded/margin-test-2.pdf",
+    "sha256": "793624b6d5de06e6e36890fa7dede0c7b2e5b0b586f97fd60180d86f9909dd37",
+    "bytes": 44151
+  },
+  {
+    "path": "references/uploaded/margin-test.pdf",
+    "sha256": "22bc8ff5fcfc6ffc9dd670c6ee28d9d7297462a9b6baa301d4b8c7ca0a10b54e",
+    "bytes": 43069
+  }
+]

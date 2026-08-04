@@ -1,0 +1,212 @@
+{
+  "catalogue_version": "1.1.0",
+  "objects": {
+    "heading": {
+      "holds": "Heading text, hierarchy level, optional numbering.",
+      "content_schema": {
+        "level": "1|2|3",
+        "text": "string",
+        "number": "string|null"
+      },
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "fragmentation": "Must be bound with the first following block in one break-inside:avoid wrapper. Never render alone.",
+      "emphasis": "Type size, weight, rule, and spacing only. No box.",
+      "screen_layer": "Review wrapper may show selection and hierarchy controls outside the print subtree."
+    },
+    "prose": {
+      "holds": "Paragraphs and restrained inline nodes.",
+      "content_schema": {
+        "paragraphs": "RichParagraph[]"
+      },
+      "placement": [
+        "main"
+      ],
+      "fragmentation": "Splits freely with widows/orphans. Paragraphs may split.",
+      "emphasis": "Inline weight, italic, small caps, and whitespace. No background or border.",
+      "screen_layer": "Optional hover boundary and edit handle outside print subtree.",
+      "earns_its_place_when": "Default. Use unless another object earns its place against it.",
+      "reject_when": "Never rejected. Prose is the fallback.",
+      "capacity": {
+        "paragraphsMin": 1,
+        "paragraphsMax": 4,
+        "wordsPerParagraph": 120
+      }
+    },
+    "list": {
+      "holds": "Ordered or unordered items with optional lead-in.",
+      "content_schema": {
+        "style": "ordered|unordered|steps|glossary",
+        "lead_in": "RichText|null",
+        "items": "ListItem[]"
+      },
+      "placement": [
+        "main",
+        "margin"
+      ],
+      "fragmentation": "List may split between items; individual item avoids splitting when practical.",
+      "emphasis": "Markers, hanging indent, weight, and spacing. No box.",
+      "screen_layer": "Editing controls wrap list; no student-visible object label.",
+      "earns_its_place_when": "Three or more genuinely parallel items that lose nothing when the connective prose between them is removed.",
+      "reject_when": "Fewer than three items, or items that need explaining to one another. Two bullets is a sentence.",
+      "capacity": {
+        "itemsMin": 3,
+        "itemsMax": 8,
+        "wordsPerItem": 25,
+        "leadInMaxWords": 20
+      }
+    },
+    "table": {
+      "holds": "Columns, rows, header, caption, and semantic presentation hint.",
+      "content_schema": {
+        "columns": "TableColumn[]",
+        "rows": "TableRow[]",
+        "caption": "string|null",
+        "presentation": "standard|comparison|timeline"
+      },
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "fragmentation": "May split across pages. thead repeats. Rows avoid splitting.",
+      "emphasis": "Rules, alignment, weight, and sparse header tint only when photocopy-safe. No enclosing box.",
+      "screen_layer": "Column resize/edit affordances outside print subtree.",
+      "earns_its_place_when": "Two or more columns of comparable values AND two or more rows, with every cell fillable.",
+      "reject_when": "One column of values, or any cell that would be empty, 'n/a', or a full sentence.",
+      "capacity": {
+        "columnsMin": 2,
+        "columnsMax": 4,
+        "rowsMin": 2,
+        "rowsMax": 8,
+        "wordsPerCell": 12,
+        "captionMaxWords": 20
+      }
+    },
+    "figure": {
+      "holds": "Image or SVG asset, caption, alt text, width hint.",
+      "content_schema": {
+        "asset": "FigureAsset",
+        "caption": "string|null",
+        "alt_text": "string",
+        "width": "main|span"
+      },
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "fragmentation": "Figure and caption are atomic. May move to next page.",
+      "emphasis": "Scale, whitespace, caption typography, and optional hairline around the plate only—not a card.",
+      "screen_layer": "Asset status and replacement controls outside print subtree.",
+      "earns_its_place_when": "Spatial, sequential, or structural content the reader would otherwise have to construct mentally.",
+      "reject_when": "Decorative, or the caption would restate the surrounding prose.",
+      "capacity": {
+        "captionMaxWords": 30,
+        "altTextMaxWords": 40
+      }
+    },
+    "aside": {
+      "holds": "Short set-apart note with optional student-facing label.",
+      "content_schema": {
+        "label": "string|null",
+        "body": "RichText"
+      },
+      "placement": [
+        "margin",
+        "main"
+      ],
+      "fragmentation": "Atomic. Margin placement uses float, clear:right, and negative margin. Move cleanly if it does not fit.",
+      "emphasis": "The only object allowed a border or background. Default is a single vertical rule with restrained label.",
+      "screen_layer": "Can receive intent badge in teacher review only; badge excluded from print.",
+      "earns_its_place_when": "One short point that must sit outside the reading line without breaking it.",
+      "reject_when": "Longer than the margin column holds, or the point belongs in the flow. If it will not fit in 40 words it is prose.",
+      "capacity": {
+        "bodyMaxWords": 40,
+        "labelMaxWords": 4,
+        "maxPerSection": 2
+      }
+    },
+    "worked-example": {
+      "holds": "Problem/setup, ordered reasoning steps, final answer, optional checks.",
+      "content_schema": {
+        "title": "string|null",
+        "problem": "RichText",
+        "steps": "WorkedStep[]",
+        "answer": "RichText",
+        "check": "RichText|null"
+      },
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "fragmentation": "May split between steps. A step avoids internal split where practical. Final step and answer stay together.",
+      "emphasis": "Numbered steps, hanging labels, indentation, and rules. No enclosing box.",
+      "screen_layer": "Step editing and collapse controls may exist only in review shell.",
+      "earns_its_place_when": "A complete instance from setup to answer, with every step visible.",
+      "reject_when": "No final answer, or steps the learner is meant to supply themselves.",
+      "capacity": {
+        "stepsMin": 3,
+        "stepsMax": 7,
+        "wordsPerStep": 40,
+        "problemMaxWords": 60
+      }
+    },
+    "questions": {
+      "holds": "Open prompts, marks, response guidance, answer-space specification.",
+      "content_schema": {
+        "items": "QuestionItem[]",
+        "instructions": "RichText|null"
+      },
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "fragmentation": "Split between questions, never inside a question. Prompt stays with minimum answer space.",
+      "emphasis": "Hanging numbers, marks aligned to edge, ruled answer space. No cards.",
+      "screen_layer": "Teacher may inspect answer metadata in adjacent review panel.",
+      "earns_its_place_when": "The learner must produce something in their own words or working.",
+      "reject_when": "Fixed options exist — use choices. Or nothing is actually being asked.",
+      "capacity": {
+        "itemsMin": 1,
+        "itemsMax": 6,
+        "stemMaxWords": 45
+      }
+    },
+    "choices": {
+      "holds": "Stem, lettered options, optional marks.",
+      "content_schema": {
+        "stem": "RichText",
+        "options": "ChoiceOption[]",
+        "marks": "number|null"
+      },
+      "placement": [
+        "main"
+      ],
+      "fragmentation": "Atomic when it fits; otherwise keep stem with at least two options and split only between options.",
+      "emphasis": "Letters A/B/C/D, hanging indent, whitespace. Never radio controls.",
+      "screen_layer": "Interactive selection may appear in review mode but print renderer emits letters only.",
+      "earns_its_place_when": "Selection is the response AND every wrong option carries diagnostic meaning.",
+      "reject_when": "Distractors are filler, or the answer cannot be reduced to a selectable option.",
+      "capacity": {
+        "optionsMin": 3,
+        "optionsMax": 4,
+        "stemMaxWords": 40,
+        "optionMaxWords": 15
+      }
+    },
+    "answer-key": {
+      "holds": "Question references, expected answers, alternatives, working, rubric and misconceptions.",
+      "content_schema": {
+        "groups": "AnswerGroup[]"
+      },
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "fragmentation": "Split between entries. Entry keeps question reference with first answer line.",
+      "emphasis": "Heading hierarchy, compact typography, rules. No card.",
+      "screen_layer": "Teacher-only visibility control outside document content."
+    }
+  }
+}

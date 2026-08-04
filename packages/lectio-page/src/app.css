@@ -1,0 +1,14 @@
+@import 'tailwindcss';
+
+:root {
+	--font-sans: 'Public Sans', system-ui, sans-serif;
+	--font-serif: 'Fraunces', Georgia, serif;
+}
+
+html {
+	scroll-behavior: smooth;
+}
+
+body {
+	-webkit-font-smoothing: antialiased;
+}

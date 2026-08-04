@@ -1,0 +1,110 @@
+/* Lectio v2 base print stylesheet
+   Positive page rules only. No !important. No override rules. No print-mode branches.
+   Requires: <html lang="..."> on the render root, or hyphens:auto silently does nothing. */
+
+@page { size: A4; margin: var(--page-margin, 18mm); }
+
+/* ── Page geometry ───────────────────────────────────────────
+   Everything derives from --page-width, --page-margin and --gutter.
+   Change --gutter in a preset and the whole two-track layout follows.
+   Nothing below may hardcode a millimetre value that depends on these. */
+.lectio-document {
+  --page-width: 210mm;
+  --page-margin: 18mm;
+  --content: calc(var(--page-width) - (2 * var(--page-margin)));  /* 174mm */
+  --gutter: 62mm;
+  --main: calc(var(--content) - var(--gutter));                   /* 112mm */
+  --aside-gap: 6mm;
+  --aside-width: calc(var(--gutter) - var(--aside-gap));          /* 56mm */
+  --line: 15pt;
+}
+
+html { font-family: var(--lectio-body, sans-serif); }
+body {
+  margin: 0; color: #111;
+  font-size: 10.5pt; line-height: var(--line, 15pt);
+  orphans: 3; widows: 3; hyphens: auto;
+}
+
+.lectio-page-flow { padding-right: var(--gutter); }
+.lectio-main { max-width: var(--main); }
+
+/* ── Front matter (FIX 1) ────────────────────────────────────
+   Cover, contents and running head are renderer furniture, not authored
+   page objects. They are derived from document metadata + section titles. */
+.lectio-cover { break-after: page; }
+.lectio-cover-title { font-size: 30pt; line-height: 36pt; margin: 0 0 var(--line); }
+.lectio-cover-subtitle { font-size: 13pt; line-height: 18pt; margin: 0 0 calc(var(--line) * 2); }
+.lectio-cover-fields { max-width: var(--main); }
+.lectio-cover-field { border-bottom: .5pt solid #777; height: 22pt; margin-bottom: var(--line); }
+
+.lectio-contents { break-after: page; max-width: var(--main); }
+.lectio-contents-entry { display: flex; justify-content: space-between; margin-bottom: 7.5pt; }
+
+/* ── Headings ────────────────────────────────────────────────
+   break-after:avoid does NOT chain in Chromium — it protects only the
+   immediately next element. .lectio-heading-binding is the real mechanism:
+   wrap heading + first following block in it. */
+h1, h2, h3 { break-after: avoid; margin: 0; color: inherit; }
+h1 { font-size: 24pt;   line-height: 30pt;   margin-bottom: var(--line); }
+h2 { font-size: 15pt;   line-height: 22.5pt; margin-top: calc(var(--line) * 2); margin-bottom: 7.5pt; }
+h3 { font-size: 11.5pt; line-height: var(--line); margin-top: calc(var(--line) * 1.5); margin-bottom: 7.5pt; }
+.lectio-heading-binding { break-inside: avoid; }
+
+/* ── Prose ───────────────────────────────────────────────────*/
+p { max-width: var(--main); margin: 0 0 var(--line); }
+
+/* ── Aside — only pedagogical border; technical hairlines OK elsewhere ─*/
+.lectio-aside {
+  float: right; clear: right;
+  width: var(--aside-width);
+  margin: 0 calc(-1 * var(--gutter)) var(--line) var(--aside-gap);
+  padding-left: 3mm;
+  border-left: .75pt solid currentColor;
+  font-size: 9pt; line-height: 13pt;
+  break-inside: avoid;
+}
+
+/* ── List ────────────────────────────────────────────────────*/
+.lectio-list { max-width: var(--main); margin: 0 0 var(--line); padding-left: 9mm; }
+.lectio-list > li { margin-bottom: 7.5pt; break-inside: avoid; }
+
+/* ── Table (FIX 4: span modifier) ────────────────────────────*/
+.lectio-table {
+  border-collapse: collapse; width: var(--main);
+  margin: 0 0 var(--line); font-size: 9.5pt;
+}
+.lectio-table--span { width: var(--content); }
+.lectio-table thead { display: table-header-group; }
+.lectio-table th, .lectio-table td { text-align: left; padding: 3pt 4pt; border-bottom: .5pt solid #777; }
+.lectio-table th { font-size: 8pt; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1pt solid #111; }
+.lectio-table tr { break-inside: avoid; }
+
+/* ── Figure (FIX 3: span derives from geometry) ──────────────*/
+.lectio-figure { width: var(--main); margin: 0 0 var(--line); break-inside: avoid; }
+.lectio-figure--span { width: var(--content); }
+.lectio-figure img, .lectio-figure svg { display: block; max-width: 100%; height: auto; }
+.lectio-caption { margin-top: 4pt; font-size: 9pt; line-height: 13pt; }
+
+/* ── Worked example ──────────────────────────────────────────*/
+.lectio-step { position: relative; padding-left: 12mm; margin-bottom: var(--line); }
+.lectio-step-number { position: absolute; left: 0; font-weight: 700; }
+.lectio-step:last-child { break-before: avoid; }
+
+/* ── Questions (FIX 2: ruled lines must not be background images) ──
+   Chrome's print dialog defaults "Background graphics" to OFF, so a
+   repeating-linear-gradient silently disappears on teacher Ctrl+P.
+   Borders always render. Emit one .lectio-answer-line per required line. */
+.lectio-question { position: relative; padding-left: 9mm; margin-bottom: var(--line); break-inside: avoid; }
+.lectio-question-number { position: absolute; left: 0; font-weight: 700; }
+.lectio-question-marks { float: right; font-size: 9pt; }
+.lectio-answer-lines { margin-top: 7.5pt; }
+.lectio-answer-line { height: 16pt; border-bottom: .5pt solid #999; }
+
+/* ── Choices ─────────────────────────────────────────────────*/
+.lectio-choice { position: relative; padding-left: 9mm; margin-bottom: 7.5pt; break-inside: avoid; }
+.lectio-choice-letter { position: absolute; left: 0; font-weight: 700; }
+
+/* ── Answer key ──────────────────────────────────────────────*/
+.lectio-answer-key { break-before: page; max-width: var(--main); font-size: 9.5pt; line-height: 13pt; }
+.lectio-answer-key-entry { margin-bottom: var(--line); break-inside: avoid; }
