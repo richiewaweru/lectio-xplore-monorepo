@@ -96,20 +96,31 @@ def validate_block_plan_against_candidates(
 
 def _fixture_plan_for_slot(slot_id: str) -> SectionBlockPlan:
     """Deterministic fixture planner used when paid LLM tests are disabled."""
-    if slot_id in {"explain", "build"}:
-        monorepo = Path(__file__).resolve().parents[5]
-        example = (
-            monorepo
-            / "docs"
-            / "authority"
-            / "xplore-pageobject-authority"
-            / "examples"
-            / "conceptual-first-exposure.planned.json"
-        )
-        if example.exists():
-            return SectionBlockPlan.model_validate(json.loads(example.read_text(encoding="utf-8")))
-
+    # Prefer the authority example only when it validates against this slot's candidates.
+    monorepo = Path(__file__).resolve().parents[5]
+    example = (
+        monorepo
+        / "docs"
+        / "authority"
+        / "xplore-pageobject-authority"
+        / "examples"
+        / "conceptual-first-exposure.planned.json"
+    )
     candidates = candidates_for_slot(slot_id)
+    catalog = load_skeleton_catalog()
+    slot = catalog.slots[slot_id]
+    min_blocks = int(slot.get("min_blocks") or 1)
+    max_blocks = int(slot.get("max_blocks") or 3)
+    if example.exists():
+        try:
+            planned = SectionBlockPlan.model_validate(json.loads(example.read_text(encoding="utf-8")))
+            validate_block_plan_against_candidates(
+                planned, candidates, min_blocks=min_blocks, max_blocks=max_blocks
+            )
+            return planned
+        except (PageBlockPlanError, ValueError, json.JSONDecodeError):
+            pass
+
     first = candidates[0]
     obj = first.objects[0]
     block = PlannedBlock(
@@ -122,7 +133,6 @@ def _fixture_plan_for_slot(slot_id: str) -> SectionBlockPlan:
         source_question_ids=["q-fixture-1"] if obj.id == "questions" else [],
     )
     return SectionBlockPlan(blocks=[block])
-
 
 async def plan_section_blocks(
     *,

@@ -1,0 +1,20 @@
+Assigned object: list.
+
+Use the specified list style. Items must express genuinely discrete, parallel,
+or sequential units.
+
+- `steps`: each item is an action in required order.
+- `ordered`: order matters but items may be claims or stages.
+- `unordered`: parallel items with no sequence claim.
+- `glossary`: each item names a term and its concise meaning using the contract's
+  permitted rich text representation.
+- Avoid fragments unless the educational form calls for labels.
+- Do not hide causal explanation inside oversized list items.
+
+Output:
+
+{
+  "style": "ordered|unordered|steps|glossary",
+  "lead_in": "optional concise lead-in or null",
+  "items": [{"text": "..."}]
+}

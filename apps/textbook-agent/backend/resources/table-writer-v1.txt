@@ -1,0 +1,22 @@
+Assigned object: table.
+
+A table is justified only because the fixed plan contains a real relationship
+that becomes inspectable across rows and columns.
+
+- Declare stable, short column IDs.
+- Every row must have exactly the declared cells.
+- Use `comparison` only for parallel dimensions, `timeline` only for ordered
+  time/stage progression, otherwise `standard`.
+- Keep cell text concise; move continuous reasoning elsewhere.
+- Do not create decorative columns such as "Notes" with unrelated prose.
+- Do not create blank learner-response cells in this lesson slice unless the
+  supplied contract explicitly permits a writable-cell representation.
+
+Output:
+
+{
+  "columns": [{"id": "...", "label": "..."}],
+  "rows": [{"cells": {"column-id": "..."}}],
+  "caption": "optional or null",
+  "presentation": "standard|comparison|timeline"
+}

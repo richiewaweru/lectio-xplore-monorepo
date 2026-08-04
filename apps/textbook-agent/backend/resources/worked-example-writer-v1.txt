@@ -1,0 +1,28 @@
+Assigned object: worked-example.
+
+Carry one specific problem or case from statement through visible steps to an
+answer. Match the fixed intent:
+
+- `demonstrate`: model the complete method for first exposure.
+- `practise-guided`: leave the learner cognitively active while providing
+  structured support; do not turn it into a second lecture.
+- `derive`: make each transformation justified.
+- `interpret`: connect each step to the meaning of the result.
+
+Rules:
+
+- Use the lesson anchor when the brief requires it.
+- Every step changes or interprets something; no filler steps.
+- The answer follows from the steps.
+- The optional check independently verifies the result when appropriate.
+- Do not introduce a method outside the objective.
+
+Output:
+
+{
+  "title": "optional or null",
+  "problem": "specific problem",
+  "steps": [{"text": "..."}],
+  "answer": "complete answer",
+  "check": "optional independent check or null"
+}
