@@ -14,6 +14,8 @@ class SectionSpec(BaseModel):
     max_count: int = 1
     placement: str | None = None
     only_when_support: str | None = None
+    min_blocks: int | None = None
+    max_blocks: int | None = None
 
 
 class SectionsSpec(BaseModel):
@@ -70,6 +72,31 @@ class TextPolicy(BaseModel):
     note: str | None = None
 
 
+class VocabularyIntents(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    core: list[str] = Field(default_factory=list)
+    optional: list[str] = Field(default_factory=list)
+    # excluded may be a list of ids or a map of id -> reason
+    excluded: list[str] | dict[str, str] = Field(default_factory=list)
+
+
+class VocabularyObjects(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    allowed: list[str] = Field(default_factory=list)
+    excluded: list[str] | dict[str, str] = Field(default_factory=dict)
+
+
+class ResourceVocabulary(BaseModel):
+    """Page-object planning vocabulary. Not a StanceSpec."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    intents: VocabularyIntents = Field(default_factory=VocabularyIntents)
+    objects: VocabularyObjects = Field(default_factory=VocabularyObjects)
+
+
 class ResourceSpec(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -87,6 +114,9 @@ class ResourceSpec(BaseModel):
     visuals: VisualPolicy
     text: TextPolicy
     validation: list[str] = Field(default_factory=list)
+    vocabulary: ResourceVocabulary | None = None
+    produces_answer_key: bool | None = None
+
 
     def all_allowed_components_for_role(self, role: str) -> set[str]:
         for section in [*self.sections.required, *self.sections.optional]:

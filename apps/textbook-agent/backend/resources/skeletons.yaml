@@ -113,6 +113,11 @@ slots:
     purpose: "Give the learner a reason to care and a concrete situation to hold."
     preferred: [hook-hero]
     allowed:   [hook-hero, interview-anchor, insight-strip, timeline-block]
+    min_blocks: 1
+    max_blocks: 2
+    candidate_intents:
+      core: [orient, activate-prior-knowledge]
+      optional: [emphasise]
 
   recall:
     role: recall
@@ -121,6 +126,11 @@ slots:
     preferred: [prerequisite-strip]
     allowed:   [prerequisite-strip, key-fact, definition-card, short-answer]
     fill_from: "PathLesson.prerequisites and the preceding lessons' must_establish"
+    min_blocks: 1
+    max_blocks: 2
+    candidate_intents:
+      core: [activate-prior-knowledge]
+      optional: [define, summarise]
 
   model:
     role: model
@@ -136,6 +146,11 @@ slots:
     preferred: [explanation-block, definition-card]
     allowed:   [explanation-block, definition-card, definition-family, key-fact,
                 diagram-block, insight-strip, callout-block]
+    min_blocks: 1
+    max_blocks: 3
+    candidate_intents:
+      core: [explain-cause, explain, define]
+      optional: [show-structure, trace-flow, compare, name-parts]
 
   contrast:
     role: contrast
@@ -145,6 +160,11 @@ slots:
       boundary of the idea, not just the idea.
     preferred: [comparison-grid, diagram-compare]
     allowed:   [comparison-grid, diagram-compare, definition-family, key-fact]
+    min_blocks: 1
+    max_blocks: 3
+    candidate_intents:
+      core: [compare, classify]
+      optional: [explain, warn, show-structure]
 
   confront:
     role: confront
@@ -156,6 +176,11 @@ slots:
     allowed:   [pitfall-alert, comparison-grid, callout-block, diagram-compare]
     emitted_per: misconception     # one slot per REAL misconception on the card
     max_instances: 2               # beyond 2, the card is doing too much
+    min_blocks: 1
+    max_blocks: 2
+    candidate_intents:
+      core: [diagnose-misconception, warn]
+      optional: [compare, explain]
 
   organise:
     role: organise
@@ -203,6 +228,11 @@ slots:
     preferred: [quiz-check]
     allowed:   [quiz-check]
     locked: true      # never toggled, never removed, never varied by group
+    min_blocks: 1
+    max_blocks: 1
+    candidate_intents:
+      core: [check-understanding]
+      optional: [practise-independent, diagnose-misconception]
 
   close:
     role: close
