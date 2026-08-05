@@ -28,6 +28,7 @@ from planning.models import (
     PathStructuralPlan,
     PrepareLessonRequest,
     PreparedLessonResponse,
+    SelectedComponent,
 )
 from planning.outcomes import actual_context_for_lessons
 from planning.schedule import selected_unit_groups
@@ -160,12 +161,9 @@ def _normalize_page_concept_card_payload(
 ) -> dict[str, Any]:
     """Coerce page structural planner card output onto ConceptCard contract."""
     payload = dict(card_payload)
-    if not payload.get("objective"):
-        payload["objective"] = (
-            payload.get("definition")
-            or payload.get("goal")
-            or lesson.objective
-        )
+    # The path layer owns the objective. The planner may explain how it will be
+    # taught; it may not restate it. Assignment makes drift impossible.
+    payload["objective"] = lesson.objective
     payload["id"] = lesson.concept_id
     if not payload.get("title"):
         payload["title"] = lesson.title
@@ -177,14 +175,22 @@ def _normalize_page_concept_card_payload(
                 row = dict(item)
                 if "description" not in row and "statement" in row:
                     row["description"] = row.pop("statement")
+                description = row.get("description")
+                if not (isinstance(description, str) and description.strip()):
+                    # Planner sometimes emits id-only shells; drop rather than 422.
+                    continue
                 row.setdefault("id", f"M{index}")
                 if row.get("source") not in _ALLOWED_MISCONCEPTION_SOURCES:
                     row.pop("source", None)
                 row = {k: v for k, v in row.items() if k in _ALLOWED_MISCONCEPTION_KEYS}
                 normalized.append(row)
             elif isinstance(item, str):
+                if not item.strip():
+                    continue
                 normalized.append({"id": f"M{index}", "description": item})
         payload["misconceptions"] = normalized
+        if not normalized:
+            payload["no_known_misconceptions"] = True
     if payload.get("opens_by") is None:
         payload["opens_by"] = ""
     # Drop any planner-only extras (definition, goal, concept_id, examples, …)
@@ -209,17 +215,10 @@ def _build_structural_plan(
     if len(generated.cards) != 1:
         raise PathPreparationBlocked("Path preparation must produce exactly one concept card")
     card_payload = dict(generated.cards[0])
-    if page_block_plans is not None:
-        card_payload = _normalize_page_concept_card_payload(
-            card_payload,
-            lesson=lesson,
-        )
-    # Structured model responses occasionally encode an omitted continuity
-    # instruction as JSON null. The contract already treats an omitted value
-    # as an empty instruction, so normalize only that equivalent representation
-    # before strict validation.
-    if card_payload.get("opens_by") is None:
-        card_payload["opens_by"] = ""
+    card_payload = _normalize_page_concept_card_payload(
+        card_payload,
+        lesson=lesson,
+    )
     card = ConceptCard.model_validate(card_payload)
     ownership = ObjectiveOwnership.from_path_objective(lesson.objective)
     try:
@@ -339,7 +338,28 @@ def _materialize_variant_plan(
         if slot_occurrence <= len(existing):
             section = existing[slot_occurrence - 1].model_copy(deep=True)
         else:
-            selection = component_selections[slot.slot_id]
+            selection = component_selections.get(slot.slot_id)
+            if selection is None:
+                # Native whole-lesson prepare skips the legacy component selector.
+                # Variant shapes may still introduce slots absent from the base
+                # plan (e.g. support/extension toggles); synthesize a minimal
+                # legal selection from the skeleton slot so materialization does
+                # not invent content or fall back to legacy generation.
+                allowed = list(slot.allowed_components or [])
+                if not allowed:
+                    raise PathPreparationBlocked(
+                        f"Cannot materialize variant slot {slot.slot_id!r} without allowed components"
+                    )
+                selection = ComponentSelection(
+                    components=[
+                        SelectedComponent(
+                            slug=allowed[0],
+                            purpose=(slot.purpose or slot.slot_id).strip() or slot.slot_id,
+                            reason="Native path variant materialization",
+                        )
+                    ],
+                    budget_pressure=None,
+                )
             section = SectionPlan(
                 id=(slot.slot_id if slot_occurrence == 1 else f"{slot.slot_id}-{slot_occurrence}"),
                 title=(slot.purpose.strip() or slot.role.replace("_", " ").title())[:80],

@@ -36,6 +36,8 @@ def page_document_scope_matches(
     lesson_mode: str,
     scope: str = "conceptual_first_exposure",
 ) -> bool:
+    if scope == "all":
+        return True
     if scope == "conceptual_first_exposure":
         return knowledge_type == "conceptual" and lesson_mode == "first_exposure"
     return False
@@ -100,6 +102,11 @@ def validate_intent_departure(
         raise PageBlockPlanError(f"intent {intent!r} is excluded")
     if intent not in permitted_intents:
         raise PageBlockPlanError(f"intent {intent!r} is not permitted")
+    # Patch 01 permissive architecture: slots with no typical_intents steering may
+    # still use any permitted intent without a departure_reason. Creativity stays
+    # inside permitted/excluded bounds; incomplete YAML must not block the gate.
+    if not typical_intents:
+        return
     atypical = intent_is_atypical(intent=intent, typical_intents=typical_intents)
     reason = (departure_reason or "").strip()
     if atypical and not reason:

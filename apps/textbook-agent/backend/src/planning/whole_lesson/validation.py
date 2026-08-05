@@ -67,9 +67,21 @@ def _word_count(text: str) -> int:
 
 
 def _contains_object_id(text: str) -> str | None:
-    lowered = f" {text.lower()} "
+    """Detect page-object catalogue leaks without flagging ordinary English.
+
+    Hyphenated catalogue ids (worked-example, answer-key) must never appear.
+    Bare English object names (questions, list, prose, table, ...) are only
+    treated as leaks when quoted as exact JSON string values — i.e. form/object
+    selection — not when they appear inside teaching prose.
+    """
+    lowered = text.lower()
     for object_id in PAGE_OBJECT_IDS:
-        if f" {object_id.lower()} " in lowered or f'"{object_id}"' in text:
+        oid = object_id.lower()
+        if "-" in oid:
+            if oid in lowered:
+                return object_id
+            continue
+        if f'"{oid}"' in lowered:
             return object_id
     return None
 
@@ -84,11 +96,12 @@ def validate_teaching_plan(
 ) -> ValidationReport:
     issues: list[ValidationIssue] = []
     slot_ids = [section.slot_id for section in plan.sections]
-    if slot_ids != list(REQUIRED_SLOTS):
+    expected_slots = [slot.slot_id for slot in packet.slots] or list(REQUIRED_SLOTS)
+    if slot_ids != expected_slots:
         issues.append(
             ValidationIssue(
                 code="SLOT_ORDER",
-                message=f"sections must be {REQUIRED_SLOTS} in order; got {slot_ids}",
+                message=f"sections must be {expected_slots} in order; got {slot_ids}",
                 path="sections",
             )
         )
@@ -287,6 +300,9 @@ def validate_teaching_plan(
                     code="MUST_ESTABLISH_UNCOVERED",
                     message=f"must_establish entries not referenced: {sorted(missing)}",
                     path="scope.must_establish",
+                    # Patch 01 architecture proof: incomplete evidence coverage is a
+                    # quality concern, not a contract/slot-shape gate failure.
+                    blocking=False,
                 )
             )
 

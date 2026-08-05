@@ -1,0 +1,161 @@
+{
+  "started_at": "2026-08-05T17:46:45.724434+00:00",
+  "shapes": {
+    "conceptual": {
+      "shape": "conceptual",
+      "knowledge_type": "conceptual",
+      "unit_id": "0041424a-5c8d-496e-a88e-cf0b7ea459d6",
+      "lesson_id": "41283845-0de5-4f7d-b464-9c8714fcf924",
+      "generation_id": "208f45d5-fd2c-4d7b-8f3b-18c3dc895d92",
+      "skeleton_id": "conceptual.first_exposure",
+      "prepare_slots": [
+        "orient",
+        "explain",
+        "contrast",
+        "check"
+      ],
+      "stage": "awaiting_teaching_approval",
+      "note": "Captured from first Patch 01 smoke pass before factual failure."
+    },
+    "factual": {
+      "shape": "factual",
+      "knowledge_type": "factual",
+      "unit_id": "e9c079e6-44ad-48e0-bd42-2ace63d59ad2",
+      "lesson_id": "dba10c97-26b1-4611-9366-17818c1429d1",
+      "generation_id": "56331eb7-72de-4cd7-9d3c-9affbbd91fa9",
+      "skeleton_id": "factual.first_exposure",
+      "prepare_slots": [
+        "orient",
+        "organise",
+        "guided",
+        "independent",
+        "check"
+      ],
+      "teaching_section_order": [
+        "orient",
+        "organise",
+        "guided",
+        "independent",
+        "check"
+      ],
+      "stage": "awaiting_teaching_approval",
+      "document_contract_version": null,
+      "prepared": {
+        "generation_id": "56331eb7-72de-4cd7-9d3c-9affbbd91fa9",
+        "path_lesson_id": "dba10c97-26b1-4611-9366-17818c1429d1",
+        "objective": "Identify and name the cell wall, cell membrane, nucleus, chloroplast, and vacuole in a plant cell diagram.",
+        "objective_hash": "e58b8cf7f905c7757f43c4caff62aa104e21ee927ffaeaa2a39a0f1496425baf",
+        "skeleton_id": "factual.first_exposure",
+        "skeleton_version": 1,
+        "slots": [
+          "orient",
+          "organise",
+          "guided",
+          "independent",
+          "check"
+        ],
+        "section_roles": [
+          "orient",
+          "organise",
+          "guided",
+          "independent",
+          "check"
+        ],
+        "status": "awaiting_review",
+        "reused": false
+      },
+      "teaching_review": {
+        "has_teaching_plan": true,
+        "section_count": 5,
+        "section_order": [
+          "orient",
+          "organise",
+          "guided",
+          "independent",
+          "check"
+        ]
+      },
+      "log": [
+        "[2026-08-05T16:46:43.164746+00:00] === shape=factual target_knowledge=factual",
+        "[2026-08-05T16:46:51.091474+00:00] unit_id=e9c079e6-44ad-48e0-bd42-2ace63d59ad2",
+        "[2026-08-05T16:48:33.597573+00:00] path_version=6be0e62f-5988-40ea-8bca-31106e21246c lessons=2 types=['factual', 'factual']",
+        "[2026-08-05T16:48:57.525261+00:00] lesson_id=dba10c97-26b1-4611-9366-17818c1429d1 knowledge=factual objective=Identify and name the cell wall, cell membrane, nucleus, chloroplast, and vacuole in a plant cell diagram.",
+        "[2026-08-05T16:50:05.282341+00:00] generation_id=56331eb7-72de-4cd7-9d3c-9affbbd91fa9 slots=['orient', 'organise', 'guided', 'independent', 'check'] skeleton=factual.first_exposure",
+        "[2026-08-05T16:55:34.961536+00:00] reached stage=awaiting_teaching_approval"
+      ]
+    },
+    "procedural": {
+      "shape": "procedural",
+      "knowledge_type": "procedural",
+      "unit_id": "9d24d1e8-c8bc-4c10-8fa2-a36780b92531",
+      "lesson_id": "4207b08d-6763-40d5-be98-3e810f93bb1f",
+      "generation_id": "030c6461-5b2d-4d2f-9f9f-3603fb88adc7",
+      "skeleton_id": "procedural.first_exposure",
+      "prepare_slots": [
+        "orient",
+        "recall",
+        "model",
+        "guided",
+        "check"
+      ],
+      "teaching_section_order": [
+        "orient",
+        "recall",
+        "model",
+        "guided",
+        "check"
+      ],
+      "stage": "awaiting_teaching_approval",
+      "document_contract_version": null,
+      "prepared": {
+        "generation_id": "030c6461-5b2d-4d2f-9f9f-3603fb88adc7",
+        "path_lesson_id": "4207b08d-6763-40d5-be98-3e810f93bb1f",
+        "objective": "Add two 2-digit numbers where the sum of the ones is less than 10, using column addition, and write the correct sum.",
+        "objective_hash": "ffa335ff9a41d7190addc5d1fbc447a2f4612f69bb8b495200f95399ba9691d6",
+        "skeleton_id": "procedural.first_exposure",
+        "skeleton_version": 1,
+        "slots": [
+          "orient",
+          "recall",
+          "model",
+          "guided",
+          "check"
+        ],
+        "section_roles": [
+          "orient",
+          "recall",
+          "model",
+          "guided",
+          "check"
+        ],
+        "status": "awaiting_review",
+        "reused": false
+      },
+      "teaching_review": {
+        "has_teaching_plan": true,
+        "section_count": 5,
+        "section_order": [
+          "orient",
+          "recall",
+          "model",
+          "guided",
+          "check"
+        ]
+      },
+      "log": [
+        "[2026-08-05T17:46:45.901914+00:00] === shape=procedural target_knowledge=procedural",
+        "[2026-08-05T17:46:52.458292+00:00] unit_id=0d7a0ffe-a3b6-4810-8e19-3811c2d31f4d",
+        "[2026-08-05T17:48:51.054843+00:00] path:plan failed (422); creating alternate procedural unit",
+        "[2026-08-05T17:52:27.059019+00:00] path_version=437302bb-74c1-4e9b-b707-51ee7fe7ac85 lessons=8 types=['conceptual', 'procedural', 'procedural', 'conceptual', 'conceptual', 'procedural', 'procedural', 'conceptual']",
+        "[2026-08-05T17:52:44.889483+00:00] lesson_id=1d28160e-0f7b-4d9b-806f-ef165f5a3d9b knowledge=procedural objective=Given two two-digit numbers, write them vertically with tens under tens and ones under ones.",
+        "[2026-08-05T17:52:44.889483+00:00] trying lesson_id=1d28160e-0f7b-4d9b-806f-ef165f5a3d9b objective=Given two two-digit numbers, write them vertically with tens under tens and ones under ones.",
+        "[2026-08-05T17:53:47.235118+00:00] prepare failed for 1d28160e-0f7b-4d9b-806f-ef165f5a3d9b: 409",
+        "[2026-08-05T17:53:47.235118+00:00] trying lesson_id=4207b08d-6763-40d5-be98-3e810f93bb1f objective=Add two 2-digit numbers where the sum of the ones is less than 10, using column addition, and write the correct sum.",
+        "[2026-08-05T17:55:17.099445+00:00] generation_id=030c6461-5b2d-4d2f-9f9f-3603fb88adc7 slots=['orient', 'recall', 'model', 'guided', 'check'] skeleton=procedural.first_exposure",
+        "[2026-08-05T18:00:55.650608+00:00] reached stage=awaiting_teaching_approval"
+      ]
+    }
+  },
+  "completed_at": "2026-08-05T18:01:12.354021+00:00",
+  "prior_started_at": "2026-08-05T17:42:21.107318+00:00"
+}

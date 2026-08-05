@@ -6,7 +6,8 @@ Recommended flags, adapted to existing settings conventions:
 
 ```text
 XPLORE_PAGE_DOCUMENTS_ENABLED=false
-XPLORE_PAGE_DOCUMENT_SCOPE=conceptual_first_exposure
+# Accepted values: all | conceptual_first_exposure (emergency rollback)
+XPLORE_PAGE_DOCUMENT_SCOPE=all
 XPLORE_PAGE_WRITER_RETRIES=1
 XPLORE_PAGE_SEQUENTIAL_PLANNING=true
 ```

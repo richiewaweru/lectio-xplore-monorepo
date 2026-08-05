@@ -22,6 +22,31 @@ def test_page_document_scope_matches_conceptual_first_exposure() -> None:
     assert not page_document_scope_matches(
         knowledge_type="procedural", lesson_mode="first_exposure"
     )
+    assert not page_document_scope_matches(
+        knowledge_type="factual",
+        lesson_mode="first_exposure",
+        scope="conceptual_first_exposure",
+    )
+    assert not page_document_scope_matches(
+        knowledge_type="conceptual",
+        lesson_mode="consolidation",
+        scope="conceptual_first_exposure",
+    )
+
+
+def test_page_document_scope_matches_all_shapes() -> None:
+    for knowledge_type, lesson_mode in (
+        ("conceptual", "first_exposure"),
+        ("factual", "first_exposure"),
+        ("procedural", "first_exposure"),
+        ("conceptual", "repair"),
+        ("evaluative", "transfer"),
+    ):
+        assert page_document_scope_matches(
+            knowledge_type=knowledge_type,
+            lesson_mode=lesson_mode,
+            scope="all",
+        )
 
 
 def test_guidance_for_orient_has_typical_and_permitted() -> None:

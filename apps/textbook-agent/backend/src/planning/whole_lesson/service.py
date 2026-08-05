@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Mapping
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,11 +11,24 @@ from core.database.models import ConceptCardModel, GenerationModel, PackItemMode
 from planning.approved_items import ItemPoolEmptyError, load_approved_item_records
 from planning.whole_lesson.events import make_event
 from planning.whole_lesson.packet import ImmutableLessonPacket
-from planning.whole_lesson.packet_builder import build_lesson_packet
+from planning.whole_lesson.packet_builder import (
+    CONCEPTUAL_FIRST_EXPOSURE_SLOTS,
+    build_lesson_packet,
+)
 from planning.whole_lesson.repository import PageDocumentRepository
 from planning.whole_lesson.teaching_agent import run_lesson_approach_planner
 from planning.whole_lesson.teaching_plan import TeachingPlan
 from v3_blueprint.planning.persistence import load_chunked_state
+
+
+def slot_ids_from_structural_plan(plan_raw: Mapping[str, Any] | dict[str, Any] | None) -> tuple[str, ...]:
+    """Derive packet slot IDs from persisted structural-plan section order."""
+    sections = (plan_raw or {}).get("sections") or []
+    return tuple(
+        str(section.get("role") or section.get("id"))
+        for section in sections
+        if isinstance(section, dict) and (section.get("role") or section.get("id"))
+    )
 
 
 async def _concept_card_for_generation(
@@ -84,6 +97,7 @@ async def build_packet_for_generation(
         misconceptions = list(card.misconceptions)
 
     scope = context.get("scope_contract") or {}
+    slot_ids = slot_ids_from_structural_plan(plan_raw if isinstance(plan_raw, dict) else {})
     return build_lesson_packet(
         path_lesson_id=str(context.get("path_lesson_id") or generation.id),
         subject=str(generation.subject or context.get("subject") or "General"),
@@ -115,6 +129,7 @@ async def build_packet_for_generation(
         ],
         prior_established=list(context.get("prior_established") or plan_raw.get("prior_knowledge") or []),
         approved_items=items,
+        slot_ids=slot_ids or CONCEPTUAL_FIRST_EXPOSURE_SLOTS,
     )
 
 

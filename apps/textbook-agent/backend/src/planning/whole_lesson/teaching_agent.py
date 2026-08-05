@@ -230,4 +230,9 @@ async def run_lesson_approach_planner(
 
     raise RuntimeError(
         f"lesson approach planner failed after {len(attempts)} attempts: {last_error}"
+        + (
+            f" issues={validation.to_dict()['issues']}"
+            if last_error == "validation_failed" and validation.issues
+            else ""
+        )
     )

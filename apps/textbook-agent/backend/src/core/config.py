@@ -198,7 +198,7 @@ class Settings(BaseSettings):
         ),
     )
     xplore_page_document_scope: str = Field(
-        default="conceptual_first_exposure",
+        default="all",
         validation_alias=AliasChoices(
             "XPLORE_PAGE_DOCUMENT_SCOPE",
             "xplore_page_document_scope",

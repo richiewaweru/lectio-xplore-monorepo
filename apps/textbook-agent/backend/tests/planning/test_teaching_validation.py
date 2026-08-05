@@ -53,13 +53,39 @@ def test_atypical_intent_requires_departure_reason() -> None:
     )
 
 
-def test_excluded_intent_rejected() -> None:
+def test_object_leak_ignores_english_questions_in_prose() -> None:
+    from planning.whole_lesson.validation import _contains_object_id
+
+    assert _contains_object_id("Ask retrieval questions about the cell wall.") is None
+    assert _contains_object_id('{"brief":"Ask retrieval questions about cells."}') is None
+    assert _contains_object_id('{"object":"questions"}') == "questions"
+    assert _contains_object_id("Use a worked-example here") == "worked-example"
+
     with pytest.raises(PageBlockPlanError):
         validate_intent_departure(
             intent="investigate",
             typical_intents=set(),
             permitted_intents={"orient"},
             excluded_intents={"investigate"},
+            departure_reason=None,
+        )
+
+
+def test_empty_typical_intents_allows_permitted_without_departure() -> None:
+    """Incomplete slot guidance must not block Patch 01 architecture proof."""
+    validate_intent_departure(
+        intent="explain",
+        typical_intents=set(),
+        permitted_intents={"orient", "explain"},
+        excluded_intents=set(),
+        departure_reason=None,
+    )
+    with pytest.raises(PageBlockPlanError, match="not permitted"):
+        validate_intent_departure(
+            intent="invented-intent",
+            typical_intents=set(),
+            permitted_intents={"orient", "explain"},
+            excluded_intents=set(),
             departure_reason=None,
         )
 
@@ -125,3 +151,114 @@ def test_generic_brief_fails_validation() -> None:
     assert not report.ok
     codes = {issue.code for issue in report.issues}
     assert "BRIEF_GENERIC" in codes or "BRIEF_TOO_SHORT" in codes or "BRIEF_NO_ANCHOR_OR_TERM" in codes
+
+
+def _slot_order_packet(slots: tuple[str, ...], *, knowledge_type: str = "conceptual") -> ImmutableLessonPacket:
+    return ImmutableLessonPacket(
+        lesson=LessonIdentity(
+            path_lesson_id="l-slot",
+            subject="Science",
+            grade_level="Grade 4",
+            objective="Explain why plants need light to make food.",
+            knowledge_type=knowledge_type,
+            lesson_mode="first_exposure",
+        ),
+        scope=ScopeContract(
+            must_establish=[ScopeEntry(id="must-1", statement="Light is required.")],
+            terminology=["light", "food", "plant"],
+        ),
+        anchor=AnchorRecord(id="anchor-1", description="Two plants by a window"),
+        approved_items=[
+            ApprovedItemRef(id="item-1", card_id="c1", stem="Why did the leaf fail?", correct_key="A")
+        ],
+        slots=[SlotRecord(slot_id=slot) for slot in slots],
+        limits=LessonLimits(),
+    )
+
+
+def _slot_order_plan(slots: tuple[str, ...]) -> TeachingPlan:
+    return TeachingPlan(
+        arc="Uses the window plants to establish light, then checks transfer on a new case.",
+        anchor_usage=AnchorUsage(
+            orient="show plants",
+            explain="reuse plants",
+            confront="test soil belief",
+            check="new case",
+        ),
+        sections=[
+            TeachingPlanSection(
+                slot_id=slot,
+                blocks=[
+                    TeachingPlanBlock(
+                        id=f"{slot}-b1",
+                        position=0,
+                        intent="orient" if slot == "orient" else "explain",
+                        brief=(
+                            f"In {slot}, reuse the window plants and the term light "
+                            "so learners see why food-making needs light."
+                        ),
+                        evidence_refs=["lesson.objective", "must-1", "anchor.anchor-1"],
+                        evidence="Objective and must-establish force light as the cause.",
+                    )
+                ],
+            )
+            for slot in slots
+        ],
+    )
+
+
+def _slot_order_report(plan: TeachingPlan, packet: ImmutableLessonPacket):
+    slots = [section.slot_id for section in plan.sections] or [
+        slot.slot_id for slot in packet.slots
+    ]
+    return validate_teaching_plan(
+        plan,
+        packet,
+        permitted_intents={"orient", "explain"},
+        excluded_intents=set(),
+        typical_by_slot={slot: {"orient", "explain"} for slot in slots},
+    )
+
+
+def test_slot_order_validation_uses_factual_packet_slots() -> None:
+    factual = ("orient", "organise", "guided", "independent", "check")
+    packet = _slot_order_packet(factual, knowledge_type="factual")
+    report = _slot_order_report(_slot_order_plan(factual), packet)
+    assert not any(issue.code == "SLOT_ORDER" for issue in report.issues)
+
+
+def test_slot_order_validation_uses_procedural_packet_slots() -> None:
+    procedural = ("orient", "recall", "model", "guided", "check")
+    packet = _slot_order_packet(procedural, knowledge_type="procedural")
+    report = _slot_order_report(_slot_order_plan(procedural), packet)
+    assert not any(issue.code == "SLOT_ORDER" for issue in report.issues)
+
+
+def test_slot_order_validation_rejects_missing_extra_and_reordered() -> None:
+    expected = ("orient", "organise", "guided", "independent", "check")
+    packet = _slot_order_packet(expected, knowledge_type="factual")
+
+    missing = _slot_order_report(_slot_order_plan(expected[:-1]), packet)
+    assert any(issue.code == "SLOT_ORDER" for issue in missing.issues)
+    assert "organise" in missing.issues[0].message or "independent" in (
+        next(i.message for i in missing.issues if i.code == "SLOT_ORDER")
+    )
+
+    extra = _slot_order_report(
+        _slot_order_plan(expected + ("transfer",)),
+        packet,
+    )
+    assert any(issue.code == "SLOT_ORDER" for issue in extra.issues)
+
+    reordered = ("orient", "guided", "organise", "independent", "check")
+    report = _slot_order_report(_slot_order_plan(reordered), packet)
+    order_issue = next(i for i in report.issues if i.code == "SLOT_ORDER")
+    assert str(list(expected)) in order_issue.message
+    assert str(list(reordered)) in order_issue.message
+
+
+def test_slot_order_exact_packet_order_passes_slot_check() -> None:
+    expected = ("orient", "explain", "contrast", "confront", "check")
+    packet = _slot_order_packet(expected)
+    report = _slot_order_report(_slot_order_plan(expected), packet)
+    assert not any(issue.code == "SLOT_ORDER" for issue in report.issues)

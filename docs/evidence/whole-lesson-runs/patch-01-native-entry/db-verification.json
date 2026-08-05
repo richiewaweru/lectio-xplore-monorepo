@@ -1,0 +1,89 @@
+{
+  "conceptual": {
+    "generation_id": "208f45d5-fd2c-4d7b-8f3b-18c3dc895d92",
+    "generation_status": "awaiting_teaching_approval",
+    "chunked_stage": "awaiting_teaching_approval",
+    "document_contract_version": 2,
+    "structural_roles": [
+      "orient",
+      "explain",
+      "contrast",
+      "check"
+    ],
+    "packet_slots": [
+      "orient",
+      "explain",
+      "contrast",
+      "check"
+    ],
+    "teaching_slots": [
+      "orient",
+      "explain",
+      "contrast",
+      "check"
+    ],
+    "native_page_document": true,
+    "has_teaching_plan": true,
+    "slots_match": true
+  },
+  "factual": {
+    "generation_id": "56331eb7-72de-4cd7-9d3c-9affbbd91fa9",
+    "generation_status": "awaiting_teaching_approval",
+    "chunked_stage": "awaiting_teaching_approval",
+    "document_contract_version": 2,
+    "structural_roles": [
+      "orient",
+      "organise",
+      "guided",
+      "independent",
+      "check"
+    ],
+    "packet_slots": [
+      "orient",
+      "organise",
+      "guided",
+      "independent",
+      "check"
+    ],
+    "teaching_slots": [
+      "orient",
+      "organise",
+      "guided",
+      "independent",
+      "check"
+    ],
+    "native_page_document": true,
+    "has_teaching_plan": true,
+    "slots_match": true
+  },
+  "procedural": {
+    "generation_id": "030c6461-5b2d-4d2f-9f9f-3603fb88adc7",
+    "generation_status": "awaiting_teaching_approval",
+    "chunked_stage": "awaiting_teaching_approval",
+    "document_contract_version": 2,
+    "structural_roles": [
+      "orient",
+      "recall",
+      "model",
+      "guided",
+      "check"
+    ],
+    "packet_slots": [
+      "orient",
+      "recall",
+      "model",
+      "guided",
+      "check"
+    ],
+    "teaching_slots": [
+      "orient",
+      "recall",
+      "model",
+      "guided",
+      "check"
+    ],
+    "native_page_document": true,
+    "has_teaching_plan": true,
+    "slots_match": true
+  }
+}

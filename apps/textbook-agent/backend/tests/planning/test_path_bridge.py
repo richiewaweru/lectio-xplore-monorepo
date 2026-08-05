@@ -57,6 +57,11 @@ def test_normalize_page_concept_card_payload_strips_planner_extras():
         "title": "Why Light Is Essential",
         "objective": "Explain why plants need light to make food.",
         "opens_by": "",
+        "body": "Planner-only prose that must not reach ConceptCard.",
+        "must_establish": ["Light is energy for food-making."],
+        "definition": "A planner definition that must not own the objective.",
+        "goal": "A planner goal that must not own the objective.",
+        "examples": ["window plant"],
         "misconceptions": [
             {
                 "id": "M1",
@@ -74,8 +79,13 @@ def test_normalize_page_concept_card_payload_strips_planner_extras():
 
     out = _normalize_page_concept_card_payload(raw, lesson=lesson)
 
-    # Card-level planner extra dropped; canonical id enforced.
+    # Card-level planner extras dropped; canonical id enforced.
     assert "concept_id" not in out
+    assert "body" not in out
+    assert "must_establish" not in out
+    assert "definition" not in out
+    assert "goal" not in out
+    assert "examples" not in out
     assert out["id"] == "c-1"
     # Misconceptions restricted to the allowed keys; statement mapped; bad source dropped.
     assert all(set(m).issubset({"id", "description", "source"}) for m in out["misconceptions"])
@@ -85,7 +95,68 @@ def test_normalize_page_concept_card_payload_strips_planner_extras():
     # The normalized payload validates against the strict contract.
     card = ConceptCard.model_validate(out)
     assert card.id == "c-1"
+    assert card.objective == lesson.objective
     assert len(card.misconceptions) == 2
+
+
+def test_normalize_page_concept_card_payload_drops_empty_misconceptions():
+    from types import SimpleNamespace
+
+    from planning.bridge import _normalize_page_concept_card_payload
+    from v3_blueprint.planning.models import ConceptCard
+
+    lesson = SimpleNamespace(
+        concept_id="c-1",
+        objective="Explain why plants need light to make food.",
+        title="Why Light Is Essential",
+    )
+    out = _normalize_page_concept_card_payload(
+        {
+            "title": "Why Light Is Essential",
+            "misconceptions": [{"id": "M1"}, {"id": "M2", "statement": ""}, ""],
+            "opens_by": None,
+        },
+        lesson=lesson,
+    )
+    assert out["misconceptions"] == []
+    assert out["no_known_misconceptions"] is True
+    ConceptCard.model_validate(out)
+
+
+@pytest.mark.parametrize(
+    "raw_overrides",
+    [
+        {"objective": "A paraphrase of the approved path objective."},
+        {},  # generated objective missing
+        {"objective": "A conflicting objective about soil nutrition."},
+        {"definition": "Light is plant food.", "goal": "Teach photosynthesis."},
+    ],
+)
+def test_normalize_page_concept_card_payload_forces_approved_objective(raw_overrides):
+    """Path objective ownership is unconditional; planner text cannot replace it."""
+    from types import SimpleNamespace
+
+    from planning.bridge import _normalize_page_concept_card_payload
+    from v3_blueprint.planning.models import ConceptCard
+
+    lesson = SimpleNamespace(
+        concept_id="c-owned",
+        objective="Explain why plants need light to make food.",
+        title="Why Light Is Essential",
+    )
+    raw = {
+        "title": "Why Light Is Essential",
+        "opens_by": None,
+        "misconceptions": [],
+        **raw_overrides,
+    }
+    out = _normalize_page_concept_card_payload(raw, lesson=lesson)
+    assert out["objective"] == lesson.objective
+    assert out["id"] == lesson.concept_id
+    assert out["opens_by"] == ""
+    card = ConceptCard.model_validate(out)
+    assert card.objective == lesson.objective
+    assert card.id == lesson.concept_id
 
 
 def test_length_limits_are_advisory_not_enforced():
@@ -567,8 +638,75 @@ async def test_prepare_bridge_uses_persisted_groups_and_one_shared_pack(db_sessi
     assert "support.low.add_transfer" in provenance.toggles_applied
 
 
-async def test_prepare_bridge_rejects_objective_rewrite(db_session) -> None:
+async def test_prepare_bridge_forces_approved_objective_over_rewrite(
+    db_session, monkeypatch
+) -> None:
+    from core.config import settings
+
+    monkeypatch.setattr(settings, "xplore_page_documents_enabled", True)
+    monkeypatch.setattr(settings, "xplore_page_document_scope", "all")
+
     user = UserModel(id="bridge-rewrite", email="rewrite@example.invalid", name="Rewrite")
+    db_session.add(user)
+    plan = PathPlan.model_validate_json(FIXTURE.read_text(encoding="utf-8"))
+    unit = await create_unit(
+        db_session,
+        owner_id=user.id,
+        request=UnitCreate(
+            title="Photosynthesis",
+            topic="Photosynthesis",
+            subject="Science",
+            grade_level="Grade 4",
+            destination_objective=plan.destination_objective or "Destination",
+            starting_knowledge=plan.starting_knowledge,
+        ),
+    )
+    version = await persist_path_plan(db_session, unit=unit, plan=plan)
+    await approve_path(db_session, version)
+    # Fixture lesson 0 is factual; pick a conceptual lesson so native routing
+    # is also exercised under scope=all.
+    lesson = await db_session.scalar(
+        select(PathLessonModel)
+        .where(
+            PathLessonModel.path_version_id == version.id,
+            PathLessonModel.primary_knowledge_type == "conceptual",
+        )
+        .order_by(PathLessonModel.position)
+    )
+    assert lesson is not None
+
+    async def rewriting_planner(context: dict) -> PathStructuralPlan:
+        generated = await _fake_structural_planner(context)
+        generated.cards[0]["objective"] = "A plausible but rewritten objective."
+        generated.cards[0]["body"] = "Planner-only body that must be stripped."
+        generated.cards[0]["must_establish"] = ["extra"]
+        generated.cards[0]["concept_id"] = "wrong-id"
+        return generated
+
+    response, structural_plan = await prepare_path_lesson(
+        db_session,
+        unit=unit,
+        version=version,
+        lesson=lesson,
+        request=PrepareLessonRequest(lesson_mode="first_exposure"),
+        structural_planner=rewriting_planner,
+        component_selector=_fake_component_selector,
+    )
+    assert structural_plan.cards[0].objective == lesson.objective
+    assert structural_plan.cards[0].id == lesson.concept_id
+    assert structural_plan.document_contract_version == 2
+    assert response.generation_id
+
+
+async def test_prepare_bridge_routes_factual_to_native_under_scope_all(
+    db_session, monkeypatch
+) -> None:
+    from core.config import settings
+
+    monkeypatch.setattr(settings, "xplore_page_documents_enabled", True)
+    monkeypatch.setattr(settings, "xplore_page_document_scope", "all")
+
+    user = UserModel(id="bridge-factual-native", email="factual@example.invalid", name="Factual")
     db_session.add(user)
     plan = PathPlan.model_validate_json(FIXTURE.read_text(encoding="utf-8"))
     unit = await create_unit(
@@ -587,23 +725,27 @@ async def test_prepare_bridge_rejects_objective_rewrite(db_session) -> None:
     await approve_path(db_session, version)
     lesson = await db_session.scalar(
         select(PathLessonModel)
-        .where(PathLessonModel.path_version_id == version.id)
+        .where(
+            PathLessonModel.path_version_id == version.id,
+            PathLessonModel.primary_knowledge_type == "factual",
+        )
         .order_by(PathLessonModel.position)
     )
     assert lesson is not None
 
-    async def rewriting_planner(context: dict) -> PathStructuralPlan:
-        generated = await _fake_structural_planner(context)
-        generated.cards[0]["objective"] = "A plausible but rewritten objective."
-        return generated
-
-    with pytest.raises(PathPreparationBlocked, match="objective"):
-        await prepare_path_lesson(
-            db_session,
-            unit=unit,
-            version=version,
-            lesson=lesson,
-            request=PrepareLessonRequest(lesson_mode="first_exposure"),
-            structural_planner=rewriting_planner,
-            component_selector=_fake_component_selector,
-        )
+    _, structural_plan = await prepare_path_lesson(
+        db_session,
+        unit=unit,
+        version=version,
+        lesson=lesson,
+        request=PrepareLessonRequest(lesson_mode="first_exposure"),
+        structural_planner=_fake_structural_planner,
+        component_selector=_fake_component_selector,
+    )
+    assert structural_plan.document_contract_version == 2
+    assert [section.role for section in structural_plan.sections] != [
+        "orient",
+        "explain",
+        "confront",
+        "check",
+    ]

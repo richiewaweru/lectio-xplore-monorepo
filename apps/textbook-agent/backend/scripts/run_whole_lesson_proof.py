@@ -195,10 +195,12 @@ async def resolve_open_assumptions(
     client: httpx.AsyncClient,
     unit_id: str,
     path: dict[str, Any],
-) -> None:
+) -> dict[str, Any]:
+    """Resolve open assumptions and return the latest path payload."""
     assumptions = path.get("open_assumptions") or []
+    current = path
     if not assumptions:
-        return
+        return current
     for row in assumptions:
         claimed = row.get("claimed") or row.get("assumption") or row.get("text")
         if not claimed:
@@ -206,14 +208,29 @@ async def resolve_open_assumptions(
         resp = await client.post(
             f"/api/v1/units/{unit_id}/path/assumptions/resolve",
             json={
-                "path_version_id": path["id"],
-                "path_revision": path["revision"],
+                "path_version_id": current["id"],
+                "path_revision": current["revision"],
                 "claimed": claimed,
                 "decision": "known",
             },
         )
         _raise(resp)
+        payload = resp.json()
+        # Resolver may return the updated path or a wrapper.
+        if isinstance(payload, dict) and payload.get("revision") is not None:
+            current = payload
+        elif isinstance(payload, dict) and isinstance(payload.get("path"), dict):
+            current = payload["path"]
         print(f"  resolved assumption: {claimed[:80]}", flush=True)
+    # Always re-fetch so approve uses the latest revision.
+    refreshed = await client.get(f"/api/v1/units/{unit_id}/path")
+    if refreshed.is_success:
+        body = refreshed.json()
+        if isinstance(body, dict) and body.get("revision") is not None:
+            return body
+        if isinstance(body, dict) and isinstance(body.get("path"), dict):
+            return body["path"]
+    return current
 
 
 async def run_single(
