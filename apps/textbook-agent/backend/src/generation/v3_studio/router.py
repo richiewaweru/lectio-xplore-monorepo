@@ -1263,6 +1263,48 @@ async def _run_chunked_stage2_pipeline(
             )
             return item_summary
 
+        # Native whole-lesson path: items → teaching plan → halt for teacher approval.
+        # Do not run legacy section briefs, assembly, or component writers.
+        native_whole_lesson = bool(
+            (state.get("context") or {}).get("native_whole_lesson")
+            or int(getattr(plan, "document_contract_version", 1) or 1) >= 2
+            or state.get("page_document_v2")
+        )
+        if native_whole_lesson:
+            await _items_job()
+            from planning.whole_lesson.service import run_and_persist_teaching_plan
+
+            async with async_session_factory() as session:
+                teaching_summary = await run_and_persist_teaching_plan(
+                    session, generation_id, require_items=True
+                )
+            await persist_chunked_state(
+                generation_id,
+                {
+                    "stage": "awaiting_teaching_approval",
+                    "native_whole_lesson": True,
+                    "teaching_plan_summary": {
+                        "arc": (teaching_summary.get("teaching_plan") or {}).get("arc"),
+                        "section_count": len(
+                            (teaching_summary.get("teaching_plan") or {}).get("sections")
+                            or []
+                        ),
+                    },
+                },
+            )
+            await emit_event(
+                "awaiting_teaching_approval",
+                {
+                    "generation_id": generation_id,
+                    "arc": (teaching_summary.get("teaching_plan") or {}).get("arc"),
+                },
+            )
+            print(
+                f"\n[STAGE2 NATIVE TEACHING HALT] generation_id={generation_id}",
+                flush=True,
+            )
+            return
+
         async def _stage2_job() -> list:
             return await resume_stage2(
                 generation_id,
@@ -4052,7 +4094,36 @@ async def post_v3_export_pdf(
     if document_json is None:
         raise HTTPException(status_code=404, detail="Document not found")
     document_json = await _with_shared_pack_assessment(model, document_json)
+    # Strict print policy for native v2: pending/failed required figures block final export.
+    allow_placeholders = bool(getattr(body, "allow_placeholders", False))
+    lectio_doc = document_json.get("lectio_document")
+    if isinstance(lectio_doc, dict) and int(document_json.get("document_version") or 0) == 2:
+        pending_ids: list[str] = []
+        for section in lectio_doc.get("sections") or []:
+            for block in section.get("blocks") or []:
+                if block.get("object") != "figure":
+                    continue
+                asset = (block.get("content") or {}).get("asset") or {}
+                status = str(asset.get("status") or "")
+                if status in {"pending", "failed"}:
+                    pending_ids.append(str(block.get("id")))
+        if pending_ids and not allow_placeholders:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "FIGURES_NOT_READY",
+                    "message": "Required figures are pending or failed",
+                    "block_ids": pending_ids,
+                },
+            )
     sections = document_json.get("sections")
+    if not isinstance(sections, list) or not sections:
+        # Native v2 may store only lectio_document; synthesize section list for legacy PDF path.
+        if isinstance(lectio_doc, dict) and isinstance(lectio_doc.get("sections"), list):
+            sections = lectio_doc["sections"]
+            document_json = {**document_json, "sections": sections}
+        else:
+            raise HTTPException(status_code=404, detail="Document not found")
     if not isinstance(sections, list) or not sections:
         raise HTTPException(status_code=404, detail="Document not found")
     template_id = (
@@ -4193,3 +4264,154 @@ async def get_v3_trace_by_id(
 
 
 __all__ = ["v3_studio_router"]
+
+# -- Whole-lesson teaching approach gate (native page documents) --------------
+
+
+class LessonApproachApproveRequest(BaseModel):
+    expected_revision: int = 1
+    teacher_note: str | None = None
+
+
+class LessonApproachRejectRequest(BaseModel):
+    expected_revision: int = 1
+    teacher_note: str | None = None
+
+
+class PageBlockPatchRequest(BaseModel):
+    expected_document_revision: int
+    content_patch: dict[str, Any]
+
+
+@v3_studio_router.get("/generations/{generation_id}/lesson-approach")
+async def get_lesson_approach(
+    generation_id: str,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    await _load_owned_generation(generation_id, current_user.id)
+    from planning.whole_lesson.repository import PageDocumentRepository
+
+    async with async_session_factory() as session:
+        repo = PageDocumentRepository(session, generation_id)
+        state = await repo.load_page_generation_state()
+    if not state.get("teaching_plan"):
+        raise HTTPException(status_code=404, detail="Teaching plan not ready")
+    return {
+        "generation_id": generation_id,
+        "teaching_plan": state.get("teaching_plan"),
+        "teaching_validation": state.get("teaching_validation"),
+        "teaching_qc": state.get("teaching_qc"),
+        "teaching_review": state.get("teaching_review"),
+        "lesson_packet": state.get("lesson_packet"),
+        "catalogue": state.get("catalogue"),
+    }
+
+
+@v3_studio_router.post("/generations/{generation_id}/lesson-approach/approve")
+async def post_lesson_approach_approve(
+    generation_id: str,
+    body: LessonApproachApproveRequest,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    await _load_owned_generation(generation_id, current_user.id)
+    from planning.whole_lesson.service import approve_teaching_and_execute
+
+    async with async_session_factory() as session:
+        try:
+            result = await approve_teaching_and_execute(
+                session,
+                generation_id,
+                expected_revision=body.expected_revision,
+                reviewed_by=current_user.id,
+                teacher_note=body.teacher_note,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.exception("lesson approach approve failed generation_id=%s", generation_id)
+            raise HTTPException(status_code=500, detail=str(exc)[:400]) from exc
+    return {
+        "generation_id": generation_id,
+        "status": "completed",
+        "writer_count": result.get("writer_count"),
+        "document_version": 2,
+    }
+
+
+@v3_studio_router.post("/generations/{generation_id}/lesson-approach/reject")
+async def post_lesson_approach_reject(
+    generation_id: str,
+    body: LessonApproachRejectRequest,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    await _load_owned_generation(generation_id, current_user.id)
+    from planning.whole_lesson.repository import PageDocumentRepository
+
+    async with async_session_factory() as session:
+        repo = PageDocumentRepository(session, generation_id)
+        try:
+            await repo.save_teaching_review(
+                status="rejected",
+                expected_revision=body.expected_revision,
+                reviewed_by=current_user.id,
+                teacher_note=body.teacher_note,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"generation_id": generation_id, "status": "rejected_by_teacher"}
+
+
+@v3_studio_router.patch("/generations/{generation_id}/page-blocks/{block_id}")
+async def patch_page_block(
+    generation_id: str,
+    block_id: str,
+    body: PageBlockPatchRequest,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    await _load_owned_generation(generation_id, current_user.id)
+    from generation.page_objects.document_assembly import reload_document
+    from planning.whole_lesson.events import make_event
+    from planning.whole_lesson.repository import PageDocumentRepository
+    from contracts.lectio_page import validate_document
+
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, generation_id)
+        if generation is None:
+            raise HTTPException(status_code=404, detail="Generation not found")
+        repo = PageDocumentRepository(session, generation_id)
+        state = await repo.load_page_generation_state()
+        current_rev = int(state.get("document_revision") or 0)
+        if body.expected_document_revision != current_rev:
+            raise HTTPException(status_code=409, detail="stale document revision")
+        envelope = generation.document_json or {}
+        document = reload_document(envelope)
+        found = False
+        for section in document.get("sections") or []:
+            for block in section.get("blocks") or []:
+                if block.get("id") == block_id:
+                    content = dict(block.get("content") or {})
+                    content.update(body.content_patch)
+                    block["content"] = content
+                    found = True
+                    break
+            if found:
+                break
+        if not found:
+            raise HTTPException(status_code=404, detail=f"block {block_id!r} not found")
+        errors = validate_document(document)
+        if errors:
+            raise HTTPException(status_code=400, detail="; ".join(errors[:5]))
+        from generation.page_objects.document_assembly import persist_document_json
+
+        generation.document_json = persist_document_json(envelope, document)
+        revision = await repo.bump_document_revision()
+        await repo.append_event(
+            make_event(
+                "block_patched",
+                generation_id=generation_id,
+                block_id=block_id,
+                status="ready",
+            )
+        )
+        await session.commit()
+    return {"generation_id": generation_id, "block_id": block_id, "document_revision": revision}

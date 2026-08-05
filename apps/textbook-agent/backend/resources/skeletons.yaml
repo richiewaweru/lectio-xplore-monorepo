@@ -115,7 +115,7 @@ slots:
     allowed:   [hook-hero, interview-anchor, insight-strip, timeline-block]
     min_blocks: 1
     max_blocks: 2
-    candidate_intents:
+    typical_intents:
       core: [orient, activate-prior-knowledge]
       optional: [emphasise]
 
@@ -128,7 +128,7 @@ slots:
     fill_from: "PathLesson.prerequisites and the preceding lessons' must_establish"
     min_blocks: 1
     max_blocks: 2
-    candidate_intents:
+    typical_intents:
       core: [activate-prior-knowledge]
       optional: [define, summarise]
 
@@ -148,7 +148,7 @@ slots:
                 diagram-block, insight-strip, callout-block]
     min_blocks: 1
     max_blocks: 3
-    candidate_intents:
+    typical_intents:
       core: [explain-cause, explain, define]
       optional: [show-structure, trace-flow, compare, name-parts]
 
@@ -162,7 +162,7 @@ slots:
     allowed:   [comparison-grid, diagram-compare, definition-family, key-fact]
     min_blocks: 1
     max_blocks: 3
-    candidate_intents:
+    typical_intents:
       core: [compare, classify]
       optional: [explain, warn, show-structure]
 
@@ -178,7 +178,7 @@ slots:
     max_instances: 2               # beyond 2, the card is doing too much
     min_blocks: 1
     max_blocks: 2
-    candidate_intents:
+    typical_intents:
       core: [diagnose-misconception, warn]
       optional: [compare, explain]
 
@@ -230,7 +230,7 @@ slots:
     locked: true      # never toggled, never removed, never varied by group
     min_blocks: 1
     max_blocks: 1
-    candidate_intents:
+    typical_intents:
       core: [check-understanding]
       optional: [practise-independent, diagnose-misconception]
 

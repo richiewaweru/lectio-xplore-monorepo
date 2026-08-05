@@ -1,0 +1,1 @@
+call_id,trace_id,generation_id,stage,block_id,attempt,tier,provider,model,prompt_file,prompt_version,prompt_artifact,response_artifact,started_at,completed_at,latency_ms,tokens_in,tokens_out,thinking_tokens,cost_usd,status,error_code

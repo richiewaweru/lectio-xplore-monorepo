@@ -1,0 +1,30 @@
+{
+  "pack_name": "xplore-whole-lesson-e2e-four-run-final-pack-v1.2",
+  "created_date": "2026-08-05",
+  "purpose": "Implementation and four-run proof of native whole-lesson Xplore generation using LectioDocumentV2.",
+  "authority": "01_ARCHITECTURE/xplore-whole-lesson-planning-resolved-proposal-v1.1.md",
+  "implementation_brief": "02_IMPLEMENTATION/xplore-whole-lesson-planning-implementation-kickoff.md",
+  "addendum": "03_CODEX_ADDITIONS/KICKOFF_ADDENDUM_cutline_1_5.md",
+  "immutable_supplied_prompts": [
+    "03_CODEX_ADDITIONS/lesson-approach-planner-v1.txt",
+    "03_CODEX_ADDITIONS/form-planner-v1.txt"
+  ],
+  "original_upload_archive": "03_CODEX_ADDITIONS/ORIGINAL_UPLOAD/files (10).zip",
+  "proof_protocol": "04_PROOF_RUNS/FOUR_RUN_PROOF_PROTOCOL.md",
+  "master_goal": "05_HANDOFF/CODEX_MASTER_GOAL_PROMPT.md",
+  "official_runs": [
+    "science",
+    "mathematics",
+    "economics",
+    "english"
+  ],
+  "expected_product_state": "Teacher prepares lesson, approves teaching plan, generates forms and writers, persists and reloads native document, renders and exports teacher/student PDFs.",
+  "forbidden_shortcuts": [
+    "fixture planner",
+    "placeholder writer",
+    "legacy component conversion",
+    "manual document insertion",
+    "auto approval",
+    "questions from generated prose"
+  ]
+}

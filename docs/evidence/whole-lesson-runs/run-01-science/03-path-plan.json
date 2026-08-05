@@ -1,0 +1,203 @@
+{
+  "id": "81536b3a-e720-42ca-9b14-9b6651391353",
+  "unit_id": "7e048492-b18a-4c98-9266-ac7cd88edb1e",
+  "version": 1,
+  "revision": 1,
+  "status": "draft",
+  "generated_by": "path_planner",
+  "merge_critic_results": [
+    {
+      "lesson_a": "food.making.process",
+      "lesson_b": "why.plants.need.light",
+      "verdict": "keep_separate",
+      "reason": "A learner can plausibly know the full input/output process yet not grasp that light is the essential energy source, and the two lessons target distinct misconceptions (e.g., light as mere trigger vs. energy).",
+      "merged_objective": null,
+      "diagnostic_cost": null
+    },
+    {
+      "lesson_a": "raw.materials.water.carbon.dioxide",
+      "lesson_b": "chlorophyll.captures.light.energy",
+      "verdict": "keep_separate",
+      "reason": "A learner can plausibly hold one without the other and each has distinct misconceptions, so merging would lose diagnostic clarity.",
+      "merged_objective": null,
+      "diagnostic_cost": null
+    },
+    {
+      "lesson_a": "plants.make.own.food",
+      "lesson_b": "raw.materials.water.carbon.dioxide",
+      "verdict": "keep_separate",
+      "reason": "A learner can plausibly know that plants make their own food without knowing the specific raw materials, so merging would obscure which capability is missing.",
+      "merged_objective": null,
+      "diagnostic_cost": null
+    },
+    {
+      "lesson_a": "chlorophyll.captures.light.energy",
+      "lesson_b": "food.making.process",
+      "verdict": "keep_separate",
+      "reason": "A learner can plausibly know that chlorophyll captures light energy without grasping the full food-making process, and vice versa; the lessons represent distinct knowledge types (factual vs. conceptual) with different misconceptions.",
+      "merged_objective": null,
+      "diagnostic_cost": null
+    }
+  ],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": null,
+  "created_at": "2026-08-05T08:25:21.225277",
+  "lessons": [
+    {
+      "id": "205c6469-4ffa-4440-bafe-95c2ab5ddd54",
+      "concept_id": "8d31c2e3-511d-4eb4-9161-9204d0973f29",
+      "concept_slug": "plants.make.own.food",
+      "title": "Plants Make Their Own Food",
+      "objective": "Describe that plants make their own food (a type of sugar) inside their leaves, unlike animals that obtain food from other sources.",
+      "objective_hash": "5e4121e2550d62694618f5befd3e51408fa97c1b798ce2e24fddad2b5a6cc8ef",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "plants make their own food",
+        "food is made inside leaves"
+      ],
+      "exclusions": [
+        "chemical formula of sugar",
+        "photosynthesis equation",
+        "other plant parts making food"
+      ],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "d1ecd97d-5a84-44ac-9075-3d40c0347f5e",
+      "concept_id": "224ff3a9-cfa7-415d-be81-bf1428393773",
+      "concept_slug": "raw.materials.water.carbon.dioxide",
+      "title": "Raw Materials for Food‑Making",
+      "objective": "Identify that plants take in water from the soil through their roots and carbon dioxide from the air through their leaves.",
+      "objective_hash": "4a874b5c12b1ccbb290df828a2b749d92c4372b47d65047a9c97f0bad4a8d1f4",
+      "prerequisites": [
+        "205c6469-4ffa-4440-bafe-95c2ab5ddd54"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "water is taken from the soil via roots",
+        "carbon dioxide is taken from the air via leaves"
+      ],
+      "exclusions": [
+        "stomata",
+        "transpiration",
+        "how roots absorb water"
+      ],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": true,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "4a1c0b94-979a-4e4e-bc77-c158cfb9189c",
+      "concept_id": "d524cbc7-b3de-4404-bc24-3a8a25272f1c",
+      "concept_slug": "chlorophyll.captures.light.energy",
+      "title": "Chlorophyll Captures Light Energy",
+      "objective": "Describe that the green substance in leaves, called chlorophyll, captures light energy needed for food‑making.",
+      "objective_hash": "db5fe83691611867aca4260b39699d389333e06fe4c7e3fa16dd7e0fc99f406f",
+      "prerequisites": [
+        "205c6469-4ffa-4440-bafe-95c2ab5ddd54"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "leaves contain chlorophyll",
+        "chlorophyll captures light energy"
+      ],
+      "exclusions": [
+        "chloroplast structure",
+        "photosystems",
+        "pigment chemistry"
+      ],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": true,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "f13a9f67-2f58-4b31-808e-7af4520649ce",
+      "concept_id": "e0c96ab6-c6e7-4161-aa43-b19aa63f127b",
+      "concept_slug": "food.making.process",
+      "title": "The Food‑Making Process",
+      "objective": "Explain that plants use light energy, water, and carbon dioxide to produce food (sugar) and oxygen during food‑making.",
+      "objective_hash": "aeaef94616e3a691d9b44e1c553fe82b573b2f082626bbf42811ddc0daeef207",
+      "prerequisites": [
+        "d1ecd97d-5a84-44ac-9075-3d40c0347f5e",
+        "4a1c0b94-979a-4e4e-bc77-c158cfb9189c"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "light energy powers the process",
+        "outputs are food (sugar) and oxygen"
+      ],
+      "exclusions": [
+        "chemical reaction steps",
+        "energy storage as chemical energy"
+      ],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 3,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "dd64bdc3-cd1c-4682-bd7f-7195ea4a9db5",
+      "concept_id": "f1dc7373-561f-414e-b3ac-ccede61f6dbe",
+      "concept_slug": "why.plants.need.light",
+      "title": "Why Plants Need Light to Make Food",
+      "objective": "Explain why plants need light to make food, stating that light provides the essential energy; without light, the plant cannot combine the raw materials and would eventually stop growing.",
+      "objective_hash": "dd75a11f2e56f49a366070dd064bfcc4955beb040611b6fe69e68361586b01b1",
+      "prerequisites": [
+        "f13a9f67-2f58-4b31-808e-7af4520649ce"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "light provides the energy for food‑making",
+        "without light the plant cannot make food"
+      ],
+      "exclusions": [
+        "details of energy conversion",
+        "light‑independent reactions"
+      ],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 4,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}

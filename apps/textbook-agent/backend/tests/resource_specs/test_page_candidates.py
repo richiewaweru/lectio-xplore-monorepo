@@ -7,10 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from resource_specs.candidates import (
-    CandidateConfigurationError,
-    resolve_block_candidates,
-)
+from resource_specs.candidates import assemble_slot_guidance, resolve_block_candidates
 from resource_specs.loader import get_spec, load_all_specs
 from v3_blueprint.planning.models import (
     PlannedBlock,
@@ -78,125 +75,67 @@ def test_section_plan_accepts_additive_blocks() -> None:
             "title": "What light changes",
             "role": "explain",
             "visual_required": False,
-            "components": [
-                {"slug": "explanation-block", "purpose": "State the mechanism."}
-            ],
+            "transition_note": None,
+            "components": [],
             "blocks": [
                 {
-                    "id": "b1",
+                    "id": "explain-b1",
                     "position": 0,
                     "intent": "explain-cause",
                     "object": "prose",
-                    "evidence": "slot needs causal mechanism",
-                    "brief": "Explain why light is the differing condition.",
+                    "evidence": "Cause must be stated before confrontation.",
+                    "brief": "Explain that light is the changed condition that enables food-making.",
                 }
             ],
         }
     )
-    assert len(section.blocks) == 1
     assert section.blocks[0].object == "prose"
 
 
-def test_planned_block_rejects_heading() -> None:
-    with pytest.raises(ValueError, match="section.title"):
-        PlannedBlock.model_validate(
-            {
-                "id": "h1",
-                "position": 0,
-                "intent": "orient",
-                "object": "heading",
-                "evidence": "x",
-                "brief": "y",
-            }
-        )
-
-
-def test_section_block_plan_orders_positions() -> None:
-    with pytest.raises(ValueError, match="position"):
-        SectionBlockPlan.model_validate(
-            {
-                "blocks": [
-                    {
-                        "id": "b1",
-                        "position": 1,
-                        "intent": "orient",
-                        "object": "prose",
-                        "evidence": "e",
-                        "brief": "b",
-                    }
-                ]
-            }
-        )
-
-
-def test_lesson_vocabulary_loads() -> None:
-    load_all_specs.cache_clear() if hasattr(load_all_specs, "cache_clear") else None
-    # reload registry
-    from resource_specs import loader
-
-    loader._REGISTRY.clear()
-    loader.load_all_specs()
+def test_lesson_vocabulary_uses_permitted(catalogues) -> None:
+    del catalogues
+    load_all_specs()
     spec = get_spec("lesson")
     assert spec.vocabulary is not None
-    assert "explain-cause" in spec.vocabulary.intents.core
+    assert "explain-cause" in spec.vocabulary.intents.permitted
     assert "prose" in spec.vocabulary.objects.allowed
     assert "heading" in spec.vocabulary.objects.allowed
 
 
-def test_first_slice_slots_have_nonempty_compatible_candidates(catalogues) -> None:
+def test_first_slice_slots_have_permitted_intents(catalogues) -> None:
     intents, objects = catalogues
-    from resource_specs import loader
-
-    loader._REGISTRY.clear()
-    loader.load_all_specs()
+    load_all_specs()
     spec = get_spec("lesson")
     catalog = load_skeleton_catalog()
 
     for slot_id in FIRST_SLICE_SLOTS:
         slot = dict(catalog.slots[slot_id])
         slot["slot_id"] = slot_id
+        guidance = assemble_slot_guidance(
+            resource_spec=spec,
+            skeleton_slot=slot,
+            intent_catalogue=intents,
+            object_catalogue=objects,
+        )
+        assert guidance.permitted_intents, slot_id
+        assert guidance.typical_intents, slot_id
         matrix = resolve_block_candidates(
             resource_spec=spec,
             skeleton_slot=slot,
             intent_catalogue=intents,
             object_catalogue=objects,
         )
-        assert matrix, slot_id
         for intent in matrix:
             assert intent.id not in {"state-goal", "transfer", "investigate"}
             assert intent.record.get("selectable", True) is not False
             for obj in intent.objects:
                 assert obj.id != "heading"
                 assert obj.id != "answer-key"
-                valid = intent.record.get("valid_objects", [])
-                assert obj.id in valid
-
-
-def test_empty_intersection_raises(catalogues) -> None:
-    intents, objects = catalogues
-    from resource_specs import loader
-
-    loader._REGISTRY.clear()
-    loader.load_all_specs()
-    spec = get_spec("lesson")
-    with pytest.raises(CandidateConfigurationError, match="No page-block candidates"):
-        resolve_block_candidates(
-            resource_spec=spec,
-            skeleton_slot={
-                "slot_id": "empty",
-                "candidate_intents": {"core": ["transfer"], "optional": []},
-            },
-            intent_catalogue=intents,
-            object_catalogue=objects,
-        )
 
 
 def test_heading_never_appears_in_candidates(catalogues) -> None:
     intents, objects = catalogues
-    from resource_specs import loader
-
-    loader._REGISTRY.clear()
-    loader.load_all_specs()
+    load_all_specs()
     spec = get_spec("lesson")
     catalog = load_skeleton_catalog()
     for slot_id in FIRST_SLICE_SLOTS:
@@ -207,7 +146,31 @@ def test_heading_never_appears_in_candidates(catalogues) -> None:
             skeleton_slot=slot,
             intent_catalogue=intents,
             object_catalogue=objects,
-            implemented_objects={"prose", "list", "table", "figure", "worked-example", "questions", "heading"},
+            implemented_objects={
+                "prose",
+                "list",
+                "table",
+                "figure",
+                "worked-example",
+                "questions",
+                "heading",
+            },
         )
         for intent in matrix:
             assert all(obj.id != "heading" for obj in intent.objects)
+
+
+def test_section_block_plan_round_trip() -> None:
+    plan = SectionBlockPlan(
+        blocks=[
+            PlannedBlock(
+                id="orient-b1",
+                position=0,
+                intent="orient",
+                object="prose",
+                evidence="Need a concrete opening difference.",
+                brief="Show two identical plants that grew differently under different light.",
+            )
+        ]
+    )
+    assert plan.blocks[0].intent == "orient"

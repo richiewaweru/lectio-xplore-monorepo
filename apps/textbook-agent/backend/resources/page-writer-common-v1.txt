@@ -5,18 +5,26 @@ content schema for the assigned object.
 
 ## INPUT
 
+LESSON CONTEXT
+  objective, grade, terminology, must_not_introduce, anchor
+
+THIS BLOCK — FIXED, NOT YOURS TO CHANGE
+  block_id, position
+  intent          + generation_guidance from the intent catalogue
+  brief
+  object          + content_schema + capacity from the object catalogue
+
+NEIGHBOURS
+  brief of the block before
+  brief of the block after
+
+Also provided when available:
 - subject and grade level
-- immutable objective
 - approved concept card
 - actual prior_established
-- scope_contract and required terminology
-- anchor
+- scope_contract
 - section purpose
-- planned block
 - summaries of preceding blocks
-- briefs of following blocks
-- assigned intent guidance
-- assigned object contract and capacity
 
 ## HARD RULES
 
@@ -32,5 +40,12 @@ content schema for the assigned object.
   system. The page-writer system has no questions writer.
 - Preserve complete thoughts. Never truncate educational content to satisfy a
   word limit; instead write economically from the start.
+- Use the intent generation_guidance. Different intents with the same object
+  are different jobs; the guidance is what separates them.
+- The briefs before and after yours are shown so you do not repeat them and do
+  not leave a gap. Do not write their content. Do not refer to them as "the
+  previous section".
+- Never write the name of your object into the content. No "Worked example:",
+  no "Table showing...", no "Note:". The renderer supplies all labels.
 
 Return JSON only matching the assigned object content schema.

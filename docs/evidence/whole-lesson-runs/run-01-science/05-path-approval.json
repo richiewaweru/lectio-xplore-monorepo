@@ -1,0 +1,220 @@
+{
+  "id": "fe5cad73-62d0-493a-8950-1868c03388f4",
+  "unit_id": "a32bc2d0-b344-4b52-8a31-2068ca9c9930",
+  "version": 1,
+  "revision": 2,
+  "status": "approved",
+  "generated_by": "path_planner",
+  "merge_critic_results": [
+    {
+      "reason": "A learner can plausibly hold one capability (leaves make food) without the other (the required inputs), so merging would obscure which fact is missing.",
+      "verdict": "keep_separate",
+      "lesson_a": "leaves-food-factories",
+      "lesson_b": "inputs-for-food",
+      "diagnostic_cost": "Merging would prevent distinguishing a failure to identify leaves as the food-making site from a failure to list the three inputs.",
+      "merged_objective": null
+    },
+    {
+      "reason": "A learner can plausibly recognize sunlight as energy without understanding that it drives photosynthesis, and vice versa, so merging would lose the ability to diagnose which concept is missing.",
+      "verdict": "keep_separate",
+      "lesson_a": "light-as-energy",
+      "lesson_b": "energy-for-food-making",
+      "diagnostic_cost": null,
+      "merged_objective": null
+    },
+    {
+      "reason": "A learner can plausibly know that plants make their own food without knowing that leaves are the main production site, and the lessons are different knowledge types (conceptual vs. factual) with distinct misconceptions, so merging would blind diagnosis of which capability is missing.",
+      "verdict": "keep_separate",
+      "lesson_a": "plants-make-own-food",
+      "lesson_b": "leaves-food-factories",
+      "diagnostic_cost": null,
+      "merged_objective": null
+    },
+    {
+      "reason": "A learner can plausibly list plant inputs without understanding light as energy; they are distinct factual and conceptual capabilities with different misconceptions.",
+      "verdict": "keep_separate",
+      "lesson_a": "inputs-for-food",
+      "lesson_b": "light-as-energy",
+      "diagnostic_cost": null,
+      "merged_objective": null
+    }
+  ],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": "2026-08-05T08:09:41.583904",
+  "created_at": "2026-08-05T08:09:22.898291",
+  "lessons": [
+    {
+      "id": "ccda6c2a-a033-4346-a821-58e40fba5989",
+      "concept_id": "d66ffe14-d76b-47db-ba13-adb32b77c33c",
+      "concept_slug": "plants-make-own-food",
+      "title": "Plants Make Their Own Food",
+      "objective": "Explain that plants make their own food, unlike animals that eat other living things.",
+      "objective_hash": "c2b11f1d45600edd3ec02ce89653ea92499dfd97883fe0d1d8e7fa1590f50bec",
+      "prerequisites": [],
+      "external_prerequisites": [
+        "living things need food to grow"
+      ],
+      "must_establish": [
+        "plants are producers (make their own food)",
+        "animals are consumers (obtain food by eating)"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "0fd9dd0b-0e64-47bf-8b59-dd97eda7c7c6",
+      "concept_id": "8289eb4f-e356-4e23-8327-8119c17c8347",
+      "concept_slug": "leaves-food-factories",
+      "title": "Leaves as Food Factories",
+      "objective": "Identify that leaves are the main plant parts where food is made.",
+      "objective_hash": "3d4d26cbf5ea7ee86fd5df6c8ed813fda957bcb9ab0f103b153e29e3456086b7",
+      "prerequisites": [
+        "ccda6c2a-a033-4346-a821-58e40fba5989"
+      ],
+      "external_prerequisites": [
+        "plants have roots, stems and leaves"
+      ],
+      "must_establish": [
+        "food production mainly occurs in leaves"
+      ],
+      "exclusions": [
+        "photosynthesis location details"
+      ],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": true,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "5aa8e74c-6ed9-426c-83e1-05be42ceddbb",
+      "concept_id": "1a4bf710-77c1-48b6-bbee-846a03a6461a",
+      "concept_slug": "inputs-for-food",
+      "title": "Inputs for Food Making",
+      "objective": "List the three things a plant needs to make food: water, air (carbon dioxide), and light.",
+      "objective_hash": "d8f19282731cc4fe089c07aaf68527a94657b94de2f0e30205b47c74adcfc9c9",
+      "prerequisites": [
+        "0fd9dd0b-0e64-47bf-8b59-dd97eda7c7c6"
+      ],
+      "external_prerequisites": [
+        "plants have roots, stems and leaves"
+      ],
+      "must_establish": [
+        "water is taken in by roots",
+        "air provides a gas called carbon dioxide",
+        "light comes from the sun"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": true,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "ec85d9b3-4ad8-41ef-8252-bd1d08dea1a4",
+      "concept_id": "d1853660-885f-4d77-9579-d3cf5e8388fe",
+      "concept_slug": "light-as-energy",
+      "title": "Light as Energy",
+      "objective": "Recognize that sunlight is a form of energy that can help do work.",
+      "objective_hash": "cb99be6190dd671ddd3506e6d5cef59454951fe05289b5bba633c4c7e1f1eca5",
+      "prerequisites": [
+        "5aa8e74c-6ed9-426c-83e1-05be42ceddbb"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "light provides energy for processes"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 3,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "4395ed76-55a9-448e-9ebd-a9f0f483f1ca",
+      "concept_id": "b6358e5e-2404-4ed7-bb7b-a2080b0a6eab",
+      "concept_slug": "energy-for-food-making",
+      "title": "Energy Drives Food Making",
+      "objective": "Explain that the energy from light is used to change water and carbon dioxide into food (sugar) inside leaves.",
+      "objective_hash": "41910eff173106f5c002fab5074c2a7e1291fa21d5c8db7cca9e5a50565a52c9",
+      "prerequisites": [
+        "ec85d9b3-4ad8-41ef-8252-bd1d08dea1a4",
+        "5aa8e74c-6ed9-426c-83e1-05be42ceddbb",
+        "0fd9dd0b-0e64-47bf-8b59-dd97eda7c7c6"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "light energy is essential for converting inputs to food"
+      ],
+      "exclusions": [
+        "photosynthesis chemical equation"
+      ],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 4,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "7802b571-0da5-4cfd-b507-6b15ce74605e",
+      "concept_id": "314d0534-90b2-4a2d-9101-4ae12c01fb65",
+      "concept_slug": "why-plants-need-light",
+      "title": "Why Plants Need Light",
+      "objective": "Explain why plants need light to make food, using the concepts of energy and inputs.",
+      "objective_hash": "657f7162f762a7b75d48d792ef401cbf283ca48bf947eec823f06b3aa8606647",
+      "prerequisites": [
+        "4395ed76-55a9-448e-9ebd-a9f0f483f1ca"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "complete explanation linking light, energy, inputs, leaves, and food"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 5,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}

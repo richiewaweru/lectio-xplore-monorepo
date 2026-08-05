@@ -30,6 +30,8 @@ V2_MERGE_CRITIC = "v2_merge_critic"
 V2_COMPONENT_SELECTOR = "v2_component_selector"
 V2_PATH_STRUCTURAL_PLANNER = "v2_path_structural_planner"
 V2_PATH_CHAT_EDITOR = "v2_path_chat_editor"
+V2_LESSON_APPROACH_PLANNER = "v2_lesson_approach_planner"
+V2_FORM_PLANNER = "v2_form_planner"
 V3_CONSTRUCTOR = "v3_constructor"
 
 V3_NODE_SLOTS: dict[str, ModelSlot] = {
@@ -54,6 +56,8 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V2_COMPONENT_SELECTOR: ModelSlot.STANDARD,
     V2_PATH_STRUCTURAL_PLANNER: ModelSlot.STANDARD,
     V2_PATH_CHAT_EDITOR: ModelSlot.STANDARD,
+    V2_LESSON_APPROACH_PLANNER: ModelSlot.STANDARD,
+    V2_FORM_PLANNER: ModelSlot.FAST,
     V3_CONSTRUCTOR: ModelSlot.FAST,
 }
 
@@ -82,6 +86,8 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     V2_COMPONENT_SELECTOR: "medium",
     V2_PATH_STRUCTURAL_PLANNER: "high",
     V2_PATH_CHAT_EDITOR: "medium",
+    V2_LESSON_APPROACH_PLANNER: "high",
+    V2_FORM_PLANNER: "low",
     V3_CONSTRUCTOR: "medium",
 }
 
@@ -258,6 +264,8 @@ def get_v3_model(node_name: str, *, model_overrides: dict | None = None):
 
 __all__ = [
     "V2_COMPONENT_SELECTOR",
+    "V2_FORM_PLANNER",
+    "V2_LESSON_APPROACH_PLANNER",
     "V2_MERGE_CRITIC",
     "V2_PATH_CHAT_EDITOR",
     "V2_PATH_PLANNER",

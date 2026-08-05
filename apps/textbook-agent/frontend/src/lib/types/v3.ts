@@ -372,6 +372,8 @@ export interface V3ParentSnapshot {
 export type V3Stage =
 	| 'intent'
 	| 'skeleton'
+	| 'teaching_review'
+	| 'generating'
 	| 'fill'
 	| 'edit';
 

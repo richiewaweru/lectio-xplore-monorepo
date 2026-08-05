@@ -206,11 +206,18 @@ async def run_path_structural_planner(
     *,
     trace_id: str | None = None,
 ) -> PathStructuralPlan:
+    from planning.prompts import path_structural_planner_page_prompt
+
+    use_page = bool(fixed_context.get("native_whole_lesson"))
     return await _run_structured(
         node=V2_PATH_STRUCTURAL_PLANNER,
         caller="v2_path_structural_planner",
         output_type=PathStructuralPlan,
-        system_prompt=path_structural_planner_prompt(),
+        system_prompt=(
+            path_structural_planner_page_prompt()
+            if use_page
+            else path_structural_planner_prompt()
+        ),
         user_payload=fixed_context,
         trace_id=trace_id,
     )

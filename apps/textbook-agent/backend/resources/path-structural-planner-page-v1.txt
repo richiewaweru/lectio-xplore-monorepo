@@ -38,6 +38,8 @@ objects, layouts, or question text.
 - Never reteach prior_established in the structural rationale.
 - Never introduce must_not_introduce content.
 - Never manufacture a misconception to fill a count.
+- Never choose page blocks, intents, objects, or briefs. A later planner
+  owns the teaching design.
 
 If the objective cannot honestly fit the skeleton, emit deviation_request.
 If the objective itself is wrong, emit objective_concern. Do not repair either.

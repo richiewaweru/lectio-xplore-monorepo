@@ -213,7 +213,7 @@ produces_answer_key: true
 
 vocabulary:
   intents:
-    core:
+    permitted:
       - orient
       - activate-prior-knowledge
       - define
@@ -228,7 +228,6 @@ vocabulary:
       - emphasise
       - summarise
       - connect-forward
-    optional:
       - name-parts
       - show-structure
       - sequence

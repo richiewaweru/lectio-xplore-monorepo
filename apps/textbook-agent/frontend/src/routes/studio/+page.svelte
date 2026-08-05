@@ -13,6 +13,9 @@
 
 	import {
 		approveChunkedPlan,
+		getLessonApproach,
+		approveLessonApproach,
+		rejectLessonApproach,
 		connectV3ChunkedStream,
 		connectV3StudioGenerationStream,
 		downloadV3GenerationPdf,
@@ -55,6 +58,8 @@
 
 	let pdfLoading = $state(false);
 	let recoveryBusy = $state(false);
+	let lessonApproach = $state<Record<string, unknown> | null>(null);
+	let teachingApproveBusy = $state(false);
 	let pdfError = $state<string | null>(null);
 	let pdfOpen = $state(false);
 	let schoolName = $state('');
@@ -207,6 +212,19 @@
 				v3Studio.canvas = buildStructuralPlanCanvas(resolved.structural_plan);
 			}
 			v3Studio.stage = 'skeleton';
+			return;
+		}
+		if (resolved.stage === 'awaiting_teaching_approval') {
+			disconnectActiveChunkedStream();
+			clearRenderedBookletState();
+			displayTitle = resolved.display_title ?? displayTitle;
+			try {
+				lessonApproach = await getLessonApproach(resolved.generation_id);
+			} catch (err) {
+				v3Studio.error = friendly(err);
+				lessonApproach = null;
+			}
+			v3Studio.stage = 'teaching_review';
 			return;
 		}
 		if (resolved.stage === 'assembly_blocked' || resolved.stage === 'stage2_error') {
@@ -364,6 +382,7 @@
 		if (
 			state.stage === 'awaiting_review' ||
 			state.stage === 'plan_ready' ||
+			state.stage === 'awaiting_teaching_approval' ||
 			state.stage === 'assembly_blocked' ||
 			state.stage === 'stage2_error' ||
 			state.stage === 'complete'
@@ -671,6 +690,11 @@
 			if (!structuralPlan) {
 				throw new Error('The lesson plan is missing its structural plan.');
 			}
+			if (structuralPlan.document_contract_version === 2) {
+				const next = await approveChunkedPlan(generationId, { display_title: displayTitle.trim() });
+				await continueChunkedStage2(next);
+				return;
+			}
 			const existing = (await listBuilderLessons()).find(
 				(lesson) => lesson.source_generation_id === generationId
 			);
@@ -728,6 +752,45 @@
 			v3Studio.error = friendly(err);
 		} finally {
 			recoveryBusy = false;
+		}
+	}
+
+	async function handleTeachingApproachApprove() {
+		const chunked = v3Studio.chunkedState;
+		if (!chunked || !lessonApproach) return;
+		teachingApproveBusy = true;
+		v3Studio.error = null;
+		try {
+			const review = (lessonApproach.teaching_review || {}) as { revision?: number };
+			await approveLessonApproach(chunked.generation_id, {
+				expected_revision: Number(review.revision || 1),
+				teacher_note: 'Approved'
+			});
+			startGenerationPolling(chunked.generation_id, { immediate: true });
+			v3Studio.stage = 'generating';
+		} catch (err) {
+			v3Studio.error = friendly(err);
+		} finally {
+			teachingApproveBusy = false;
+		}
+	}
+
+	async function handleTeachingApproachReject() {
+		const chunked = v3Studio.chunkedState;
+		if (!chunked || !lessonApproach) return;
+		teachingApproveBusy = true;
+		v3Studio.error = null;
+		try {
+			const review = (lessonApproach.teaching_review || {}) as { revision?: number };
+			await rejectLessonApproach(chunked.generation_id, {
+				expected_revision: Number(review.revision || 1),
+				teacher_note: 'Rejected'
+			});
+			v3Studio.stage = 'skeleton';
+		} catch (err) {
+			v3Studio.error = friendly(err);
+		} finally {
+			teachingApproveBusy = false;
 		}
 	}
 
@@ -948,6 +1011,97 @@
 				</div>
 			{/if}
 		</div>
+		{:else if v3Studio.stage === 'teaching_review' && lessonApproach}
+			<section class="mx-auto max-w-3xl space-y-6 px-4 py-8">
+				<header class="space-y-2">
+					<p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lesson approach</p>
+					<h2 class="text-2xl font-semibold text-foreground">Review the teaching plan</h2>
+					<p class="text-sm text-muted-foreground">
+						Approve the pedagogical arc before forms and writers run. Read the last brief first.
+					</p>
+				</header>
+				{#if lessonApproach.teaching_plan}
+					{@const plan = lessonApproach.teaching_plan as {
+						arc?: string;
+						anchor_usage?: Record<string, string>;
+						misconception_focus_ids?: string[];
+						sections?: Array<{
+							slot_id: string;
+							specific_purpose?: string;
+							blocks?: Array<{
+								id: string;
+								intent: string;
+								brief: string;
+								evidence?: string;
+								departure_reason?: string | null;
+								source_question_ids?: string[];
+							}>;
+						}>;
+					}}
+					<div class="rounded-xl border border-border/70 bg-card p-4">
+						<h3 class="text-sm font-semibold">Arc</h3>
+						<p class="mt-2 text-sm leading-relaxed text-foreground">{plan.arc}</p>
+					</div>
+					{#if plan.anchor_usage}
+						<div class="rounded-xl border border-border/70 bg-card p-4">
+							<h3 class="text-sm font-semibold">Anchor usage</h3>
+							<ul class="mt-2 space-y-1 text-sm text-muted-foreground">
+								{#each Object.entries(plan.anchor_usage) as [slot, usage]}
+									<li><span class="font-medium text-foreground">{slot}:</span> {usage}</li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
+					{#if plan.misconception_focus_ids?.length}
+						<p class="text-sm text-muted-foreground">
+							Focused misconceptions: {plan.misconception_focus_ids.join(', ')}
+						</p>
+					{/if}
+					{#each [...(plan.sections || [])].reverse() as section}
+						<article class="rounded-xl border border-border/70 bg-card p-4">
+							<h3 class="text-sm font-semibold uppercase tracking-wide">{section.slot_id}</h3>
+							{#if section.specific_purpose}
+								<p class="mt-1 text-sm text-muted-foreground">{section.specific_purpose}</p>
+							{/if}
+							{#each [...(section.blocks || [])].reverse() as block}
+								<div class="mt-3 border-t border-border/50 pt-3">
+									<p class="text-xs font-semibold text-muted-foreground">{block.id} · {block.intent}</p>
+									<p class="mt-1 text-sm text-foreground">{block.brief}</p>
+									{#if block.departure_reason}
+										<p class="mt-1 text-xs text-amber-800">Departure: {block.departure_reason}</p>
+									{/if}
+								</div>
+							{/each}
+						</article>
+					{/each}
+				{/if}
+				{#if Array.isArray(lessonApproach.teaching_qc) && lessonApproach.teaching_qc.length}
+					<div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+						<p class="font-semibold">Advisory warnings</p>
+						<ul class="mt-2 list-disc space-y-1 pl-5">
+							{#each lessonApproach.teaching_qc as finding}
+								<li>{(finding as { code?: string; message?: string }).code}: {(finding as { message?: string }).message}</li>
+							{/each}
+						</ul>
+					</div>
+				{/if}
+				<div class="flex flex-wrap gap-3">
+					<button
+						class="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+						disabled={teachingApproveBusy}
+						onclick={handleTeachingApproachApprove}
+					>
+						{teachingApproveBusy ? 'Approving…' : 'Approve teaching plan'}
+					</button>
+					<button
+						class="rounded-md border border-border px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-50"
+						disabled={teachingApproveBusy}
+						onclick={handleTeachingApproachReject}
+					>
+						Reject
+					</button>
+				</div>
+			</section>
 		{:else if v3Studio.stage === 'skeleton' && v3Studio.chunkedState?.structural_plan}
 			{#if v3Studio.signals}
 				<div class="mx-auto max-w-4xl px-4 pt-6">

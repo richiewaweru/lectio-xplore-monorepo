@@ -1,0 +1,2 @@
+Official procedure: see docs/authority/whole-lesson-e2e-pack-v1.2/04_PROOF_RUNS/FOUR_RUN_PROOF_PROTOCOL.md
+Capture helper: apps/textbook-agent/backend/scripts/capture_whole_lesson_evidence.py

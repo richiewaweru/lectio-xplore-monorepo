@@ -9,14 +9,23 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 def _default_env_file() -> Path:
-    """Resolve the backend-local .env file regardless of the current working directory."""
+    """Prefer ``backend/.env``, then walk ancestors for a local ``.env``.
+
+    Config lives at ``backend/src/core/config.py``. Native monorepo runs should
+    load ``apps/textbook-agent/backend/.env`` even if a parent compose ``.env``
+    also exists.
+    """
 
     current = Path(__file__).resolve()
+    backend_root = current.parents[2]  # .../backend
+    backend_env = backend_root / ".env"
+    if backend_env.exists():
+        return backend_env
     for ancestor in current.parents:
         candidate = ancestor / ".env"
         if candidate.exists():
             return candidate
-    return current.parents[3] / ".env"
+    return backend_root / ".env"
 
 
 def _normalize_path_env(var_name: str, *, base_dir: Path) -> None:
@@ -24,8 +33,16 @@ def _normalize_path_env(var_name: str, *, base_dir: Path) -> None:
     if not raw:
         return
 
-    candidate = Path(raw)
+    cleaned = raw.strip().strip('"').strip("'")
+    candidate = Path(cleaned)
     if candidate.is_absolute():
+        if candidate.exists():
+            os.environ[var_name] = str(candidate)
+            return
+        # Docker/Railway absolute paths are invalid on a local checkout.
+        fallback = (base_dir / "contracts").resolve()
+        if var_name == "LECTIO_CONTRACTS_DIR" and fallback.exists():
+            os.environ[var_name] = str(fallback)
         return
 
     os.environ[var_name] = str((base_dir / candidate).resolve())
@@ -52,6 +69,12 @@ def _normalize_backend_local_env_paths(env_file: Path) -> None:
     base_dir = env_file.parent
     _normalize_path_env("LECTIO_CONTRACTS_DIR", base_dir=base_dir)
     _normalize_sqlite_database_url("DATABASE_URL", base_dir=base_dir)
+    # Ensure contracts always resolve for local backend runs.
+    contracts = os.getenv("LECTIO_CONTRACTS_DIR")
+    if not contracts or not Path(contracts).exists():
+        fallback = (base_dir / "contracts").resolve()
+        if fallback.exists():
+            os.environ["LECTIO_CONTRACTS_DIR"] = str(fallback)
 
 
 def bootstrap_environment(env_file: str | Path | None = None) -> Path:
@@ -121,10 +144,66 @@ class Settings(BaseSettings):
     v2_skeleton_shadow_enabled: bool = True
     xplore_v2_enabled: bool = True
     xplore_v2_beta_users: str = ""
-    xplore_page_documents_enabled: bool = True
-    xplore_page_document_scope: str = "conceptual_first_exposure"
     xplore_page_writer_retries: int = Field(default=1, ge=0)
     xplore_page_sequential_planning: bool = True
+    # Whole-lesson native planning: semantic tiers (model names are configurable).
+    # Prefer PAGE_MODEL_*; fall back to the live V3 slot model names from Textbook agent.
+    page_model_standard: str = Field(
+        default="deepseek-v4-pro",
+        validation_alias=AliasChoices(
+            "PAGE_MODEL_STANDARD",
+            "V3_STANDARD_MODEL_NAME",
+            "V3_STANDARD_MODEL",
+        ),
+    )
+    page_model_fast: str = Field(
+        default="deepseek-v4-flash",
+        validation_alias=AliasChoices(
+            "PAGE_MODEL_FAST",
+            "V3_FAST_MODEL_NAME",
+            "V3_FAST_MODEL",
+        ),
+    )
+    page_lesson_plan_timeout_seconds: int = Field(
+        default=420,
+        ge=1,
+        validation_alias=AliasChoices(
+            "PAGE_LESSON_PLAN_TIMEOUT_SECONDS",
+            "V3_TIMEOUT_STAGE1_SECONDS",
+        ),
+    )
+    page_form_plan_timeout_seconds: int = Field(default=120, ge=1)
+    page_standard_writer_timeout_seconds: int = Field(
+        default=180,
+        ge=1,
+        validation_alias=AliasChoices(
+            "PAGE_STANDARD_WRITER_TIMEOUT_SECONDS",
+            "V3_TIMEOUT_SECTION_SECONDS",
+        ),
+    )
+    page_fast_writer_timeout_seconds: int = Field(
+        default=90,
+        ge=1,
+        validation_alias=AliasChoices(
+            "PAGE_FAST_WRITER_TIMEOUT_SECONDS",
+            "V3_TIMEOUT_QUESTION_SECONDS",
+        ),
+    )
+    page_planning_heartbeat_seconds: int = Field(default=5, ge=1)
+    xplore_page_documents_enabled: bool = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "XPLORE_PAGE_DOCUMENTS_ENABLED",
+            "xplore_page_documents_enabled",
+        ),
+    )
+    xplore_page_document_scope: str = Field(
+        default="conceptual_first_exposure",
+        validation_alias=AliasChoices(
+            "XPLORE_PAGE_DOCUMENT_SCOPE",
+            "xplore_page_document_scope",
+        ),
+    )
     allow_paid_llm_tests: bool = False
 
     # Output

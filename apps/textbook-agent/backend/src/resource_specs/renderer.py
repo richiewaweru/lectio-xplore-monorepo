@@ -3,6 +3,21 @@ from __future__ import annotations
 from resource_specs.schema import ResourceSpec, SectionSpec
 
 
+def render_resource_identity(spec: ResourceSpec) -> str:
+    """Resource identity for planner prompts. Reads existing spec fields.
+    Introduces no new schema."""
+    lines = [f"  Resource: {spec.label} ({spec.id})", ""]
+    lines += [f"  {line}" for line in spec.intent.strip().splitlines()]
+    lines.append("")
+    if spec.when_to_use:
+        lines.append("  Use when:")
+        lines += [f"    - {x}" for x in spec.when_to_use]
+    if spec.never_use_when:
+        lines.append("  Never when:")
+        lines += [f"    - {x}" for x in spec.never_use_when]
+    return "\n".join(lines)
+
+
 def render_spec_for_prompt(
     spec: ResourceSpec,
     depth: str,

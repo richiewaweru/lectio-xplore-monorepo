@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class SectionSpec(BaseModel):
@@ -75,10 +75,18 @@ class TextPolicy(BaseModel):
 class VocabularyIntents(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
+    # v1.1: permitted replaces core/optional. Legacy fields accepted then merged.
+    permitted: list[str] = Field(default_factory=list)
     core: list[str] = Field(default_factory=list)
     optional: list[str] = Field(default_factory=list)
     # excluded may be a list of ids or a map of id -> reason
     excluded: list[str] | dict[str, str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _merge_legacy_buckets(self) -> VocabularyIntents:
+        if not self.permitted and (self.core or self.optional):
+            self.permitted = list(dict.fromkeys([*self.core, *self.optional]))
+        return self
 
 
 class VocabularyObjects(BaseModel):

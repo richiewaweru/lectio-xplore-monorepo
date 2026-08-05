@@ -1,0 +1,56 @@
+run_id: run-00-subject
+generation_id: ""
+unit_id: ""
+path_version_id: ""
+path_lesson_id: ""
+concept_card_id: ""
+subject: ""
+grade_level: ""
+lesson_title: ""
+objective: ""
+knowledge_type: conceptual
+lesson_mode: first_exposure
+skeleton:
+  id: ""
+  version: ""
+  slots: [orient, explain, confront, check]
+repository:
+  full_name: richiewaweru/lectio-xplore-monorepo
+  branch: ""
+  commit_sha: ""
+contracts:
+  document_version: 2
+  lectio_page_contract_version: ""
+  catalogue_version: ""
+prompts:
+  lesson_approach: lesson-approach-planner-v1
+  form_planner: form-planner-v1
+  writer_common: ""
+models:
+  lesson_approach:
+    tier: standard
+    provider: ""
+    model: ""
+  form_planner:
+    tier: fast
+    provider: ""
+    model: ""
+started_at: ""
+completed_at: ""
+status: pending
+teacher_plan_decision:
+  status: pending
+  decided_at: ""
+  edits_made: false
+counts:
+  sections: 0
+  blocks: 0
+  atypical_departures: 0
+  approved_items: 0
+  planner_calls: 0
+  writer_calls: 0
+  repairs: 0
+  timeouts: 0
+artifacts_complete: false
+legacy_path_used: false
+fixture_used: false

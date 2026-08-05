@@ -1,0 +1,22 @@
+{
+  "generation_id": "0f4b9fd2-1ac7-4ec8-aa52-ca17fd0e3be9",
+  "path_lesson_id": "c833b867-efb2-47a9-8e7b-9f6fab31686e",
+  "objective": "State that plants, unlike animals, can produce their own food.",
+  "objective_hash": "8bc73d90de65f0ddecf02b28b02b5711963c95447f175ecb8cd7efc642b336b9",
+  "skeleton_id": "conceptual.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "explain",
+    "contrast",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "explain",
+    "contrast",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

@@ -14,6 +14,14 @@ from v3_blueprint.planning.objective_ownership import hash_path_objective
 from v3_blueprint.planning.persistence import persist_chunked_state, persist_structural_plan
 
 
+async def _read_existing_context(session: AsyncSession, generation_id: str) -> dict[str, Any]:
+    from v3_blueprint.planning.persistence import load_chunked_state
+
+    state = await load_chunked_state(generation_id, session)
+    context = state.get("context")
+    return dict(context) if isinstance(context, dict) else {}
+
+
 def _path_resource_spec() -> dict[str, Any]:
     spec = get_spec("lesson")
     return {
@@ -57,6 +65,7 @@ async def initialise_path_generation(
     scope_contract: dict[str, Any],
     variants: list[VariantSpec] | None = None,
     variant_plans: dict[str, StructuralPlan] | None = None,
+    native_whole_lesson: bool = False,
 ) -> None:
     signals = V3SignalSummary(
         topic=topic,
@@ -91,7 +100,22 @@ async def initialise_path_generation(
         "display_title": plan.cards[0].title,
         "execution_started": False,
         "path_prepared": True,
+        "native_whole_lesson": bool(native_whole_lesson)
+        or int(getattr(plan, "document_contract_version", 1) or 1) >= 2,
     }
+    # Merge into existing context from persist_structural_plan (do not clobber signals/form).
+    existing = await _read_existing_context(session, generation.id)
+    existing.update(
+        {
+            "native_whole_lesson": state["native_whole_lesson"],
+            "lesson_mode": lesson_mode,
+            "grade_level": grade_level,
+            "subject": subject,
+            "scope_contract": scope_contract,
+            "prior_established": prior_established,
+        }
+    )
+    state["context"] = existing
     if variants:
         state.update(
             {

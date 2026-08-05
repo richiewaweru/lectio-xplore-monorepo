@@ -10,14 +10,40 @@ from generation.page_objects.document_assembly import (
     reload_document,
     write_planned_section,
 )
-from planning.page_blocks import plan_conceptual_first_exposure_blocks
-import pytest
+from v3_blueprint.planning.models import PlannedBlock, SectionBlockPlan
 
 
-@pytest.mark.asyncio
-async def test_fixture_lesson_persists_and_reloads_equal() -> None:
-    plans = await plan_conceptual_first_exposure_blocks(allow_paid=False)
-    item_records = ({"id": "q-fixture-1", "prompt": "Why no food in dark?", "answer": "No light"},)
+def test_manual_lesson_persists_and_reloads_equal() -> None:
+    plans = {
+        "orient": SectionBlockPlan(
+            blocks=[
+                PlannedBlock(
+                    id="orient-b1",
+                    position=0,
+                    intent="orient",
+                    object="prose",
+                    evidence="Need a concrete opening difference learners can see.",
+                    brief="Show two identical plants that grew differently under different light.",
+                )
+            ]
+        ),
+        "check": SectionBlockPlan(
+            blocks=[
+                PlannedBlock(
+                    id="check-b1",
+                    position=0,
+                    intent="check-understanding",
+                    object="questions",
+                    evidence="Check with approved items only.",
+                    brief="Ask the approved item that diagnoses the light-food misconception.",
+                    source_question_ids=["q-fixture-1"],
+                )
+            ]
+        ),
+    }
+    item_records = (
+        {"id": "q-fixture-1", "prompt": "Why no food in dark?", "answer": "No light"},
+    )
     sections = []
     for slot_id, plan in plans.items():
         section, _ = write_planned_section(

@@ -138,6 +138,47 @@ export async function approveChunkedPlan(
 	return res.json() as Promise<V3ChunkedPlanState>;
 }
 
+export async function getLessonApproach(generationId: string): Promise<Record<string, unknown>> {
+	const res = await apiFetch(
+		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/lesson-approach`,
+		{ headers: bearerHeaders() }
+	);
+	await ensureOk(res, 'Could not load the lesson approach.');
+	return res.json() as Promise<Record<string, unknown>>;
+}
+
+export async function approveLessonApproach(
+	generationId: string,
+	payload: { expected_revision: number; teacher_note?: string }
+): Promise<Record<string, unknown>> {
+	const res = await apiFetch(
+		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/lesson-approach/approve`,
+		{
+			method: 'POST',
+			headers: bearerHeaders(),
+			body: JSON.stringify(payload)
+		}
+	);
+	await ensureOk(res, 'Could not approve the lesson approach.');
+	return res.json() as Promise<Record<string, unknown>>;
+}
+
+export async function rejectLessonApproach(
+	generationId: string,
+	payload: { expected_revision: number; teacher_note?: string }
+): Promise<Record<string, unknown>> {
+	const res = await apiFetch(
+		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/lesson-approach/reject`,
+		{
+			method: 'POST',
+			headers: bearerHeaders(),
+			body: JSON.stringify(payload)
+		}
+	);
+	await ensureOk(res, 'Could not reject the lesson approach.');
+	return res.json() as Promise<Record<string, unknown>>;
+}
+
 export async function regenerateChunkedPlan(payload: {
 	generation_id: string;
 	note?: string;

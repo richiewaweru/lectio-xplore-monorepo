@@ -386,6 +386,8 @@ class V3PdfExportRequest(BaseModel):
     date: str | None = None
     include_toc: bool = True
     include_answers: bool = True
+    edition: str | None = None
+    allow_placeholders: bool = False
 
 
 class V3GenerationHistoryItemDTO(BaseModel):

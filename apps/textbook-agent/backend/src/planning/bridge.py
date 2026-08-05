@@ -136,6 +136,42 @@ async def _preparation_context(
     return scope_contract, prior_established, prerequisites, actuals
 
 
+def _normalize_page_concept_card_payload(
+    card_payload: dict[str, Any],
+    *,
+    lesson: PathLessonModel,
+) -> dict[str, Any]:
+    """Coerce page structural planner card output onto ConceptCard contract."""
+    payload = dict(card_payload)
+    if not payload.get("objective"):
+        payload["objective"] = (
+            payload.get("definition")
+            or payload.get("goal")
+            or lesson.objective
+        )
+    payload["id"] = lesson.concept_id
+    if not payload.get("title"):
+        payload["title"] = lesson.title
+    for extra in ("definition", "examples", "non-examples", "non_examples", "goal"):
+        payload.pop(extra, None)
+    misconceptions = payload.get("misconceptions")
+    if isinstance(misconceptions, list):
+        normalized: list[dict[str, Any]] = []
+        for index, item in enumerate(misconceptions, start=1):
+            if isinstance(item, dict):
+                row = dict(item)
+                if "description" not in row and "statement" in row:
+                    row["description"] = row.pop("statement")
+                row.setdefault("id", f"M{index}")
+                normalized.append(row)
+            elif isinstance(item, str):
+                normalized.append({"id": f"M{index}", "description": item})
+        payload["misconceptions"] = normalized
+    if payload.get("opens_by") is None:
+        payload["opens_by"] = ""
+    return payload
+
+
 def _build_structural_plan(
     *,
     generated: PathStructuralPlan,
@@ -153,6 +189,11 @@ def _build_structural_plan(
     if len(generated.cards) != 1:
         raise PathPreparationBlocked("Path preparation must produce exactly one concept card")
     card_payload = dict(generated.cards[0])
+    if page_block_plans is not None:
+        card_payload = _normalize_page_concept_card_payload(
+            card_payload,
+            lesson=lesson,
+        )
     # Structured model responses occasionally encode an omitted continuity
     # instruction as JSON null. The contract already treats an omitted value
     # as an empty instruction, so normalize only that equivalent representation
@@ -190,6 +231,12 @@ def _build_structural_plan(
                 else component
                 for component in components
             ]
+        if page_block_plans is not None:
+            # Native v2 path: structural planner may still emit legacy component
+            # shapes; whole-lesson teaching/form planners own block selection.
+            plan_for_slot = page_block_plans.get(section_payload.get("role") or section_payload.get("id"))
+            section_payload["components"] = []
+            section_payload["blocks"] = list(getattr(plan_for_slot, "blocks", []) or [])
         section_payloads.append(section_payload)
     sections = [SectionPlan.model_validate(section) for section in section_payloads]
     roles = [section.role for section in sections]
@@ -442,10 +489,7 @@ async def prepare_path_lesson(
     }
     slots_by_id.update({slot.slot_id: slot for slot in preview.variants[0].slots})
     from core.config import settings
-    from planning.page_blocks import (
-        page_document_scope_matches,
-        plan_conceptual_first_exposure_blocks,
-    )
+    from planning.page_blocks import page_document_scope_matches
 
     use_page_docs = settings.xplore_page_documents_enabled and page_document_scope_matches(
         knowledge_type=lesson.primary_knowledge_type,
@@ -455,10 +499,9 @@ async def prepare_path_lesson(
     component_selections: dict[str, ComponentSelection] = {}
     page_block_plans = None
     if use_page_docs:
-        # Native v2 path: plan ordered page blocks; never call component selector.
-        page_block_plans = await plan_conceptual_first_exposure_blocks(
-            allow_paid=settings.allow_paid_llm_tests,
-        )
+        # Native whole-lesson path: no per-slot fixture planner. Teaching plan
+        # runs after approved items exist (awaiting_teaching_approval gate).
+        page_block_plans = {}
     else:
         for slot in slots_by_id.values():
             registry_cards = [
@@ -490,6 +533,7 @@ async def prepare_path_lesson(
         "objective_hash": lesson.objective_hash,
         "primary_knowledge_type": lesson.primary_knowledge_type,
         "secondary_demand": lesson.secondary_demand,
+        "native_whole_lesson": bool(use_page_docs),
         "slots": [slot.model_dump(mode="json") for slot in preview.variants[0].slots],
         "component_selections": {
             slot_id: selection.model_dump(mode="json")
@@ -670,6 +714,7 @@ async def prepare_path_lesson(
         scope_contract=scope_contract,
         variants=variants,
         variant_plans=variant_plans,
+        native_whole_lesson=bool(use_page_docs),
     )
     lesson.pack_id = generation_id
     await session.flush()
