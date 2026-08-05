@@ -227,6 +227,17 @@
 			v3Studio.stage = 'teaching_review';
 			return;
 		}
+		if (resolved.stage === 'planning_forms') {
+			// Native whole-lesson: teacher approved; form planner + writers run server-side and
+			// persist a LectioDocumentV2. Keep a generating state and poll until the document lands.
+			disconnectActiveChunkedStream();
+			displayTitle = resolved.display_title ?? displayTitle;
+			const hydrated = await hydrateFromDocument(resolved.generation_id);
+			if (!hydrated && v3Studio.stage !== 'edit') {
+				v3Studio.stage = 'generating';
+			}
+			return;
+		}
 		if (resolved.stage === 'assembly_blocked' || resolved.stage === 'stage2_error') {
 			disconnectActiveChunkedStream();
 			displayTitle = resolved.display_title ?? displayTitle;
@@ -272,7 +283,7 @@
 			}
 			return;
 		}
-		if (resolved.stage === 'complete') {
+		if (resolved.stage === 'complete' || resolved.stage === 'completed') {
 			disconnectActiveChunkedStream();
 			v3Studio.stage = 'edit';
 			try {
@@ -389,8 +400,12 @@
 		) {
 			return false;
 		}
+		if (state.stage === 'completed') return false;
 		if (state.next_action === 'done') return false;
 		if (state.execution_started) return true;
+		// Native whole-lesson: forms/writers run server-side after teacher approval; the
+		// chunked stage stays 'planning_forms' until the document is persisted, so keep polling.
+		if (state.stage === 'planning_forms') return true;
 		if (['stage2_running', 'stage2_complete', 'blueprint_ready'].includes(state.stage)) return true;
 		return state.next_action === 'wait_for_stage2' || state.next_action === 'generation_running';
 	}
@@ -1155,7 +1170,17 @@
 					? handleRetryFailedSections
 					: handleChunkedResume}
 			/>
-	{:else if v3Studio.stage === 'edit'}
+	{:else if v3Studio.stage === 'generating'}
+			<section class="mx-auto max-w-3xl space-y-4 px-4 py-16 text-center">
+				<div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary" aria-hidden="true"></div>
+				<h2 class="text-xl font-semibold text-foreground">Building your lesson…</h2>
+				<p class="text-sm text-muted-foreground">
+					Teaching plan approved. Planning forms, writing each block, and assembling the printable
+					document. This can take several minutes — you can leave this page and return to
+					<code>/studio?generation_id={v3Studio.generationId}</code> or the lesson viewer.
+				</p>
+			</section>
+		{:else if v3Studio.stage === 'edit'}
 		{#if v3Studio.activePack}
 			{#if v3Studio.chunkedState?.stage === 'assembly_blocked' || v3Studio.chunkedState?.stage === 'stage2_error'}
 				<div class="mx-auto max-w-4xl px-4 pt-4">

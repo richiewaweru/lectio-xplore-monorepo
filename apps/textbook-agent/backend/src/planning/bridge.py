@@ -136,6 +136,23 @@ async def _preparation_context(
     return scope_contract, prior_established, prerequisites, actuals
 
 
+# Fields the strict (extra="forbid") ConceptCard / Misconception contracts accept.
+# The page structural planner occasionally emits richer shapes (e.g. a per-card
+# ``concept_id`` or a per-misconception ``rationale``); those must be dropped
+# rather than forwarded, or ConceptCard.model_validate raises extra_forbidden.
+_ALLOWED_MISCONCEPTION_KEYS = {"id", "description", "source"}
+_ALLOWED_MISCONCEPTION_SOURCES = {"drafted", "teacher"}
+_ALLOWED_CONCEPT_CARD_KEYS = {
+    "id",
+    "title",
+    "objective",
+    "prereqs",
+    "misconceptions",
+    "no_known_misconceptions",
+    "opens_by",
+}
+
+
 def _normalize_page_concept_card_payload(
     card_payload: dict[str, Any],
     *,
@@ -152,8 +169,6 @@ def _normalize_page_concept_card_payload(
     payload["id"] = lesson.concept_id
     if not payload.get("title"):
         payload["title"] = lesson.title
-    for extra in ("definition", "examples", "non-examples", "non_examples", "goal"):
-        payload.pop(extra, None)
     misconceptions = payload.get("misconceptions")
     if isinstance(misconceptions, list):
         normalized: list[dict[str, Any]] = []
@@ -163,13 +178,18 @@ def _normalize_page_concept_card_payload(
                 if "description" not in row and "statement" in row:
                     row["description"] = row.pop("statement")
                 row.setdefault("id", f"M{index}")
+                if row.get("source") not in _ALLOWED_MISCONCEPTION_SOURCES:
+                    row.pop("source", None)
+                row = {k: v for k, v in row.items() if k in _ALLOWED_MISCONCEPTION_KEYS}
                 normalized.append(row)
             elif isinstance(item, str):
                 normalized.append({"id": f"M{index}", "description": item})
         payload["misconceptions"] = normalized
     if payload.get("opens_by") is None:
         payload["opens_by"] = ""
-    return payload
+    # Drop any planner-only extras (definition, goal, concept_id, examples, …)
+    # not part of the strict ConceptCard contract.
+    return {k: v for k, v in payload.items() if k in _ALLOWED_CONCEPT_CARD_KEYS}
 
 
 def _build_structural_plan(

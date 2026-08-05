@@ -77,6 +77,9 @@ export interface V3StructuralPlanQuestion {
 }
 
 export interface V3StructuralPlan {
+	// document_contract_version === 2 marks the native whole-lesson path, which routes
+	// approval through the chunked teaching-approval gate instead of Builder conversion.
+	document_contract_version?: 1 | 2;
 	lesson_mode: string;
 	lesson_intent: {
 		goal: string;
@@ -101,7 +104,12 @@ export type V3ChunkedPlanStage =
 	| 'assembly_blocked'
 	| 'stage2_error'
 	| 'blueprint_ready'
+	// Native whole-lesson (document_contract_version=2) stages.
+	| 'awaiting_teaching_approval'
+	| 'planning_forms'
+	| 'rejected_by_teacher'
 	| 'complete'
+	| 'completed'
 	| 'unknown';
 
 export interface V3ChunkedPlanState {

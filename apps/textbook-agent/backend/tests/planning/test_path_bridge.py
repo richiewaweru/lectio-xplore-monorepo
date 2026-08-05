@@ -38,6 +38,74 @@ from v3_blueprint.planning.objective_ownership import hash_path_objective
 from v3_blueprint.planning.persistence import load_chunked_state
 
 
+def test_normalize_page_concept_card_payload_strips_planner_extras():
+    """Page structural planner cards carry extras (concept_id, misconception
+    rationale) the strict ConceptCard contract forbids; normalization must drop
+    them so prepare does not 422."""
+    from types import SimpleNamespace
+
+    from planning.bridge import _normalize_page_concept_card_payload
+    from v3_blueprint.planning.models import ConceptCard
+
+    lesson = SimpleNamespace(
+        concept_id="c-1",
+        objective="Explain why plants need light to make food.",
+        title="Why Light Is Essential",
+    )
+    raw = {
+        "concept_id": "f1dc7373-561f-414e-b3ac-ccede61f6dbe",
+        "title": "Why Light Is Essential",
+        "objective": "Explain why plants need light to make food.",
+        "opens_by": "",
+        "misconceptions": [
+            {
+                "id": "M1",
+                "description": "Sunlight is the plant's food itself.",
+                "source": "drafted",
+                "rationale": "Learners often think plants eat light.",
+            },
+            {
+                "statement": "Light just keeps plants warm.",
+                "source": "not-a-valid-source",
+                "rationale": "Confusing warmth with food-making.",
+            },
+        ],
+    }
+
+    out = _normalize_page_concept_card_payload(raw, lesson=lesson)
+
+    # Card-level planner extra dropped; canonical id enforced.
+    assert "concept_id" not in out
+    assert out["id"] == "c-1"
+    # Misconceptions restricted to the allowed keys; statement mapped; bad source dropped.
+    assert all(set(m).issubset({"id", "description", "source"}) for m in out["misconceptions"])
+    assert out["misconceptions"][0]["description"].startswith("Sunlight")
+    assert out["misconceptions"][1]["description"] == "Light just keeps plants warm."
+    assert "source" not in out["misconceptions"][1]
+    # The normalized payload validates against the strict contract.
+    card = ConceptCard.model_validate(out)
+    assert card.id == "c-1"
+    assert len(card.misconceptions) == 2
+
+
+def test_length_limits_are_advisory_not_enforced():
+    """Character limits on planner contracts are advisory: long compound
+    objectives / titles must not fail generation."""
+    from v3_blueprint.planning.models import AnchorSpec, LessonIntent
+
+    long_objective = (
+        "Explain why plants need light to make food: light provides the energy that "
+        "chlorophyll captures; this energy drives the food-making process; without "
+        "light, the plant cannot make food and will not grow."
+    )
+    assert len(long_objective) > 200
+    # Full text passes without truncation or error.
+    intent = LessonIntent(goal=long_objective, structure_rationale="x" * 400)
+    assert intent.goal == long_objective
+    anchor = AnchorSpec(example="y" * 250, reuse_scope="z" * 400)
+    assert anchor.example == "y" * 250
+
+
 FIXTURE = (
     Path(__file__).resolve().parents[3]
     / "handoff"

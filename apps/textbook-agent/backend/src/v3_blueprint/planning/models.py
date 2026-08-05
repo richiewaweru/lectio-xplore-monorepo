@@ -19,13 +19,11 @@ class LessonIntent(BaseModel):
 
     goal: str = Field(
         description="By the end of this lesson the student can... "
-        "One sentence, specific and testable. Max 200 chars.",
-        max_length=200,
+        "One sentence, specific and testable. Aim for ~200 chars (advisory).",
     )
     structure_rationale: str = Field(
         description="Why this structure was chosen given this learner group "
-        "and concept. Max 300 chars.",
-        max_length=300,
+        "and concept. Aim for ~300 chars (advisory).",
     )
 
 
@@ -34,13 +32,11 @@ class AnchorSpec(BaseModel):
 
     example: str = Field(
         description="Named anchor example. Specific, concrete, reusable. "
-        "e.g. 'splitting a pizza into 8 equal slices'. Max 100 chars.",
-        max_length=100,
+        "e.g. 'splitting a pizza into 8 equal slices'. Aim for ~100 chars (advisory).",
     )
     reuse_scope: str = Field(
         description="How the anchor recurs across sections — named per section. "
-        "Max 200 chars.",
-        max_length=200,
+        "Aim for ~200 chars (advisory).",
     )
 
 
@@ -120,7 +116,7 @@ class SectionPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: str = Field(description="Unique section identifier slug e.g. 'orient', 'model'")
-    title: str = Field(description="Section title. Max 80 chars.", max_length=80)
+    title: str = Field(description="Section title. Aim for ~80 chars (advisory).")
     role: str = Field(description="Spec-vocabulary role string for this section.")
     card_id: str | None = Field(
         default=None,
@@ -131,8 +127,7 @@ class SectionPlan(BaseModel):
         default=None,
         description="Why this section follows the previous one. "
         "Names what prior section established and what this one does with it. "
-        "Null for first section only. Max 120 chars.",
-        max_length=120,
+        "Null for first section only. Aim for ~120 chars (advisory).",
     )
     components: list[ComponentSlot] = Field(
         description="Ordered component slots. Max 4 per section.",

@@ -380,6 +380,81 @@ describe('studio chunked URL resume', () => {
 		expect(mocks.connectV3ChunkedStream).not.toHaveBeenCalled();
 	});
 
+	it('approves a native (document_contract_version=2) plan through the chunked teaching gate, not Builder', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-native');
+		const nativePlan = {
+			document_contract_version: 2,
+			lesson_mode: 'first_exposure',
+			lesson_intent: { goal: 'Why plants need light', structure_rationale: 'orient then explain' },
+			anchor: { example: 'A potted plant on a windowsill', reuse_scope: 'all sections' },
+			sections: [
+				{ id: 'orient', title: 'Orient', role: 'orient', visual_required: false, transition_note: null, components: [] }
+			],
+			question_plan: []
+		};
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-native', stage: 'plan_ready', structural_plan: nativePlan,
+			section_briefs: {}, failed_sections: [], blueprint_id: null, execution_started: false,
+			next_action: 'approve_or_regenerate'
+		});
+		mocks.approveChunkedPlan.mockResolvedValue({
+			generation_id: 'gen-native', stage: 'stage2_running', structural_plan: nativePlan,
+			section_briefs: {}, failed_sections: [], blueprint_id: null, execution_started: true,
+			next_action: 'wait_for_stage2'
+		});
+
+		render(StudioPage);
+		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-native'));
+		await fireEvent.click(await screen.findByRole('button', { name: 'Review concepts' }));
+
+		// Native path derives the display title from lesson_intent.goal when none is typed.
+		await waitFor(() =>
+			expect(mocks.approveChunkedPlan).toHaveBeenCalledWith('gen-native', {
+				display_title: 'Why plants need light'
+			})
+		);
+		await waitFor(() =>
+			expect(mocks.connectV3ChunkedStream).toHaveBeenCalledWith('gen-native', expect.any(Object))
+		);
+		expect(builderMocks.createBuilderLesson).not.toHaveBeenCalled();
+		expect(navigationMocks.goto).not.toHaveBeenCalled();
+	});
+
+	it('resumes a native planning_forms generation into a generating/polling state (not a blank screen)', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-native-forms');
+		mocks.getChunkedPlan.mockResolvedValue({
+			generation_id: 'gen-native-forms',
+			structural_plan: {
+				document_contract_version: 2,
+				lesson_mode: 'first_exposure',
+				lesson_intent: { goal: 'Why plants need light', structure_rationale: 'orient then explain' },
+				anchor: { example: 'A potted plant', reuse_scope: 'all sections' },
+				sections: [],
+				question_plan: []
+			},
+			display_title: 'Why plants need light',
+			inferred_lesson_mode: 'first_exposure',
+			lesson_mode_confidence: 'high'
+		});
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-native-forms',
+			stage: 'planning_forms',
+			doc_version: null,
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: false,
+			next_action: null
+		});
+		mocks.fetchV3Document.mockRejectedValue(Object.assign(new Error('Document not ready'), { status: 404 }));
+
+		render(StudioPage);
+
+		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-native-forms'));
+		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-native-forms'));
+		await waitFor(() => expect(v3Studio.stage).toBe('generating'));
+		expect(await screen.findByText('Building your lesson…')).toBeTruthy();
+	});
+
 	it('hands an awaiting-review structural plan to Builder without starting generation', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-approve-blocked');
 		mocks.getChunkedPlanStatus.mockResolvedValue({
