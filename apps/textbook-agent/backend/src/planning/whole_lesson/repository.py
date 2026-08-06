@@ -143,6 +143,47 @@ class DocumentFenceError(RuntimeError):
     """Raised when candidate/finalize fencing checks fail."""
 
 
+class VisualRequestNotFound(LookupError):
+    pass
+
+
+class VisualCompletionConflict(RuntimeError):
+    pass
+
+
+class VisualCompletionInvariantError(RuntimeError):
+    """Missing execution outcome or unknown asset status."""
+
+
+class VisualCompletionStateError(RuntimeError):
+    """Visual callback received in an unrelated generation status."""
+
+
+_UNRESOLVED_ASSET_STATUSES = frozenset({"pending", "generating", "failed"})
+_VISUAL_CALLBACK_STATUSES = frozenset({"awaiting_visuals", "ready"})
+
+
+def visual_outcome_status(asset_status: str) -> str:
+    status = str(asset_status or "").strip()
+    if status == "ready":
+        return "ready"
+    if status in {"pending", "generating"}:
+        return "visual_pending"
+    if status == "failed":
+        return "failed_recoverable"
+    raise VisualCompletionInvariantError(f"unknown asset status {status!r}")
+
+
+@dataclass(frozen=True)
+class VisualCompletionResult:
+    generation_id: str
+    block_id: str
+    request_id: str
+    status: str
+    document_revision: int
+    idempotent: bool
+
+
 class PageDocumentRepository:
     def __init__(self, session: AsyncSession, generation_id: str) -> None:
         self.session = session
@@ -767,7 +808,7 @@ class PageDocumentRepository:
         request_id: str,
         asset: dict[str, Any],
         supplied_block_id: str | None = None,
-    ) -> "VisualCompletionResult":
+    ) -> VisualCompletionResult:
         """Atomically apply figure asset completion keyed by request_id."""
         from generation.page_objects.document_assembly import (
             persist_document_json,
@@ -778,6 +819,12 @@ class PageDocumentRepository:
         box: list[VisualCompletionResult] = []
 
         def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
+            current = str(generation.status or "")
+            if current not in _VISUAL_CALLBACK_STATUSES:
+                raise VisualCompletionStateError(
+                    f"visual callback rejected in status {current!r}"
+                )
+
             try:
                 document = reload_document(generation.document_json or {})
             except Exception as exc:  # noqa: BLE001
@@ -807,17 +854,39 @@ class PageDocumentRepository:
                     f"found {target_block_id!r} for request_id {request_id!r}"
                 )
 
+            block_execution = dict(state.get("block_execution") or {})
+            matched_key = None
+            for key, outcome in list(block_execution.items()):
+                if not isinstance(outcome, dict):
+                    continue
+                if str(outcome.get("request_id") or "") == request_id:
+                    matched_key = key
+                    break
+            if matched_key is None:
+                raise VisualCompletionInvariantError(
+                    f"no block_execution outcome for request_id {request_id!r}"
+                )
+
             asset_payload = dict(asset)
             asset_payload["request_id"] = request_id
-            # Idempotent: same status+request already applied with matching src.
+            outcome_status = visual_outcome_status(
+                str(asset_payload.get("status") or "")
+            )
+
             already = (
                 str(existing_asset.get("status") or "")
                 == str(asset_payload.get("status") or "")
-                and str(existing_asset.get("status") or "") in {"ready", "failed"}
                 and str(existing_asset.get("request_id") or "") == request_id
                 and str(existing_asset.get("src") or "")
                 == str(asset_payload.get("src") or "")
+                and str(existing_asset.get("svg") or "")
+                == str(asset_payload.get("svg") or "")
             )
+
+            if current == "ready" and not already:
+                raise VisualCompletionConflict(
+                    "material asset replacement rejected on ready document"
+                )
 
             revision = int(state.get("document_revision") or 0)
             if not already:
@@ -832,33 +901,19 @@ class PageDocumentRepository:
                 revision += 1
                 state["document_revision"] = revision
 
-                block_execution = dict(state.get("block_execution") or {})
-                matched_key = None
-                for key, outcome in list(block_execution.items()):
-                    if not isinstance(outcome, dict):
-                        continue
-                    if str(outcome.get("request_id") or "") == request_id:
-                        matched_key = key
-                        break
-                if matched_key is not None:
-                    outcome = dict(block_execution.get(matched_key) or {})
-                    asset_status = str(asset_payload.get("status") or "ready")
-                    outcome_status = (
-                        "ready" if asset_status == "ready" else "failed_recoverable"
-                    )
-                    content = dict(outcome.get("content") or {})
-                    content["asset"] = asset_payload
-                    block_execution[matched_key] = {
-                        **outcome,
-                        "status": outcome_status,
-                        "request_id": request_id,
-                        "block_id": target_block_id,
-                        "content": content,
-                    }
-                    state["block_execution"] = block_execution
+                outcome = dict(block_execution.get(matched_key) or {})
+                content = dict(outcome.get("content") or {})
+                content["asset"] = asset_payload
+                block_execution[matched_key] = {
+                    **outcome,
+                    "status": outcome_status,
+                    "request_id": request_id,
+                    "block_id": target_block_id,
+                    "content": content,
+                }
+                state["block_execution"] = block_execution
 
-            # Recompute pending from document after update
-            pending = False
+            unresolved = False
             for section in document.get("sections") or []:
                 for block in section.get("blocks") or []:
                     if block.get("object") != "figure":
@@ -867,17 +922,16 @@ class PageDocumentRepository:
                         ((block.get("content") or {}).get("asset") or {}).get("status")
                         or ""
                     )
-                    if status in {"pending", "failed"}:
-                        pending = True
+                    if status in _UNRESOLVED_ASSET_STATUSES:
+                        unresolved = True
                         break
-                if pending:
+                if unresolved:
                     break
 
-            current = str(generation.status or "")
             terminal = current
             if current == "ready":
                 terminal = "ready"
-            elif not pending and current == "awaiting_visuals":
+            elif not unresolved and current == "awaiting_visuals":
                 assert_legal_transition(current, "ready")
                 generation.status = "ready"
                 terminal = "ready"
@@ -889,7 +943,7 @@ class PageDocumentRepository:
                         "visual_callback",
                         generation_id=self.generation_id,
                         block_id=target_block_id,
-                        status=str(asset_payload.get("status") or "ready"),
+                        status=str(asset_payload.get("status") or ""),
                         request_id=request_id,
                         idempotent=already,
                     ),
@@ -910,24 +964,6 @@ class PageDocumentRepository:
 
         await self.mutate_state(mutation=_mut)
         return box[0]
-
-
-@dataclass(frozen=True)
-class VisualCompletionResult:
-    generation_id: str
-    block_id: str
-    request_id: str
-    status: str
-    document_revision: int
-    idempotent: bool
-
-
-class VisualRequestNotFound(LookupError):
-    pass
-
-
-class VisualCompletionConflict(RuntimeError):
-    pass
 
 
 async def claim_next_native_job(

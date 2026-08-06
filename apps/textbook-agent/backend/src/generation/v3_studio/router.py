@@ -4430,6 +4430,8 @@ async def post_figure_visual_callback(
     from planning.whole_lesson.repository import (
         PageDocumentRepository,
         VisualCompletionConflict,
+        VisualCompletionInvariantError,
+        VisualCompletionStateError,
         VisualRequestNotFound,
     )
 
@@ -4449,7 +4451,11 @@ async def post_figure_visual_callback(
             )
         except VisualRequestNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
-        except VisualCompletionConflict as exc:
+        except (
+            VisualCompletionConflict,
+            VisualCompletionStateError,
+            VisualCompletionInvariantError,
+        ) as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except Exception as exc:  # noqa: BLE001
             from generation.page_objects.visual_completion import VisualCompletionError

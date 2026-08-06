@@ -105,6 +105,7 @@ async def _seed(
     *,
     status: str = "awaiting_visuals",
     figures: list[dict[str, Any]] | None = None,
+    include_block_execution: bool = True,
 ) -> str:
     gid = str(uuid.uuid4())
     figs = figures or [
@@ -116,20 +117,26 @@ async def _seed(
     state["teaching_plan"] = {"arc": "test", "sections": []}
     state["form_validation"] = {"ok": True}
     state["document_revision"] = 1
-    block_execution = {}
-    for fig in figs:
-        rid = fig["content"]["asset"]["request_id"]
-        block_execution[f"explain:{fig['id']}:everyone"] = {
-            "status": "visual_pending"
-            if fig["content"]["asset"]["status"] == "pending"
-            else "ready",
-            "block_id": fig["id"],
-            "request_id": rid,
-            "object": "figure",
-            "intent": "show-structure",
-            "content": fig["content"],
-        }
-    state["block_execution"] = block_execution
+    if include_block_execution:
+        block_execution: dict[str, Any] = {}
+        for fig in figs:
+            rid = fig["content"]["asset"]["request_id"]
+            asset_status = str(fig["content"]["asset"]["status"] or "")
+            block_execution[f"explain:{fig['id']}:everyone"] = {
+                "status": (
+                    "ready"
+                    if asset_status == "ready"
+                    else "failed_recoverable"
+                    if asset_status == "failed"
+                    else "visual_pending"
+                ),
+                "block_id": fig["id"],
+                "request_id": rid,
+                "object": "figure",
+                "intent": "show-structure",
+                "content": fig["content"],
+            }
+        state["block_execution"] = block_execution
     async with async_session_factory() as session:
         existing = await session.get(UserModel, TEST_USER.id)
         if existing is None:
@@ -336,3 +343,251 @@ async def test_pdf_export_figures_not_ready_then_passes_gate(tmp_path) -> None:
             )
     assert ok.status_code == 200
     assert ok.headers.get("content-type", "").startswith("application/pdf")
+
+
+async def _snapshot(gid: str) -> dict[str, Any]:
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        state = await PageDocumentRepository(session, gid).load_page_generation_state()
+        return {
+            "status": generation.status,
+            "revision": int(state.get("document_revision") or 0),
+            "document_json": generation.document_json,
+            "block_execution": dict(state.get("block_execution") or {}),
+        }
+
+
+@pytest.mark.asyncio
+async def test_visual_callback_rejects_missing_execution_outcome() -> None:
+    gid = await _seed(include_block_execution=False)
+    before = await _snapshot(gid)
+    async with _client() as client:
+        resp = await client.post(
+            f"/api/v1/v3/generations/{gid}/visuals/callback",
+            json={
+                "request_id": "req-fig-1",
+                "asset": {
+                    "status": "ready",
+                    "kind": "image",
+                    "src": "https://example.test/a.png",
+                },
+            },
+        )
+    assert resp.status_code == 409
+    after = await _snapshot(gid)
+    assert after["status"] == "awaiting_visuals"
+    assert after["revision"] == before["revision"]
+    assert after["document_json"] == before["document_json"]
+    assert after["block_execution"] == {}
+    assert "ready" not in {
+        str((o or {}).get("status") or "") for o in after["block_execution"].values()
+    }
+
+
+@pytest.mark.asyncio
+async def test_visual_callback_pending_remains_visual_pending() -> None:
+    gid = await _seed()
+    async with _client() as client:
+        resp = await client.post(
+            f"/api/v1/v3/generations/{gid}/visuals/callback",
+            json={
+                "request_id": "req-fig-1",
+                "asset": {"status": "pending", "kind": "image", "request_id": "req-fig-1"},
+            },
+        )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "awaiting_visuals"
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        assert generation.status == "awaiting_visuals"
+        state = await PageDocumentRepository(session, gid).load_page_generation_state()
+        outcome = state["block_execution"]["explain:fig-1:everyone"]
+        assert outcome["status"] == "visual_pending"
+        asset = ((generation.document_json or {}).get("lectio_document") or {})[
+            "sections"
+        ][0]["blocks"][0]["content"]["asset"]
+        assert asset["status"] == "pending"
+
+
+@pytest.mark.asyncio
+async def test_visual_callback_generating_remains_visual_pending() -> None:
+    gid = await _seed()
+    async with _client() as client:
+        resp = await client.post(
+            f"/api/v1/v3/generations/{gid}/visuals/callback",
+            json={
+                "request_id": "req-fig-1",
+                "asset": {
+                    "status": "generating",
+                    "kind": "image",
+                    "request_id": "req-fig-1",
+                },
+            },
+        )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "awaiting_visuals"
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        assert generation.status == "awaiting_visuals"
+        state = await PageDocumentRepository(session, gid).load_page_generation_state()
+        assert state["block_execution"]["explain:fig-1:everyone"]["status"] == (
+            "visual_pending"
+        )
+
+
+@pytest.mark.asyncio
+async def test_visual_callback_failed_is_recoverable_and_not_ready() -> None:
+    gid = await _seed()
+    async with _client() as client:
+        resp = await client.post(
+            f"/api/v1/v3/generations/{gid}/visuals/callback",
+            json={
+                "request_id": "req-fig-1",
+                "asset": {
+                    "status": "failed",
+                    "kind": "image",
+                    "request_id": "req-fig-1",
+                },
+            },
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "awaiting_visuals"
+        blocked = await client.post(
+            f"/api/v1/v3/generations/{gid}/export/pdf",
+            json={
+                "school_name": "School",
+                "teacher_name": "Teacher",
+                "include_toc": False,
+                "include_answers": True,
+            },
+        )
+    assert blocked.status_code == 409
+    assert blocked.json()["detail"]["code"] == "FIGURES_NOT_READY"
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        assert generation.status == "awaiting_visuals"
+        state = await PageDocumentRepository(session, gid).load_page_generation_state()
+        assert state["block_execution"]["explain:fig-1:everyone"]["status"] == (
+            "failed_recoverable"
+        )
+
+
+@pytest.mark.asyncio
+async def test_visual_callback_unknown_asset_status_rejected() -> None:
+    gid = await _seed()
+    before = await _snapshot(gid)
+    async with _client() as client:
+        resp = await client.post(
+            f"/api/v1/v3/generations/{gid}/visuals/callback",
+            json={
+                "request_id": "req-fig-1",
+                "asset": {"status": "mystery", "kind": "image"},
+            },
+        )
+    assert resp.status_code == 409
+    after = await _snapshot(gid)
+    assert after["status"] == before["status"]
+    assert after["revision"] == before["revision"]
+    assert after["document_json"] == before["document_json"]
+    assert after["block_execution"] == before["block_execution"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "stage",
+    ["planning_forms", "writing_blocks", "assembling", "failed_terminal"],
+)
+async def test_visual_callback_rejected_in_unrelated_stage(stage: str) -> None:
+    gid = await _seed(status=stage)
+    before = await _snapshot(gid)
+    async with _client() as client:
+        resp = await client.post(
+            f"/api/v1/v3/generations/{gid}/visuals/callback",
+            json={
+                "request_id": "req-fig-1",
+                "asset": {
+                    "status": "ready",
+                    "kind": "image",
+                    "src": "https://example.test/a.png",
+                },
+            },
+        )
+    assert resp.status_code == 409
+    after = await _snapshot(gid)
+    assert after["status"] == stage
+    assert after["revision"] == before["revision"]
+    assert after["document_json"] == before["document_json"]
+
+
+@pytest.mark.asyncio
+async def test_ready_document_identical_callback_does_not_increment_revision() -> None:
+    ready_asset = {
+        "status": "ready",
+        "kind": "image",
+        "src": "https://example.test/a.png",
+        "request_id": "req-fig-1",
+    }
+    gid = await _seed(
+        status="ready",
+        figures=[
+            _figure(
+                block_id="fig-1",
+                request_id="req-fig-1",
+                status="ready",
+                src="https://example.test/a.png",
+            )
+        ],
+    )
+    before = await _snapshot(gid)
+    async with _client() as client:
+        resp = await client.post(
+            f"/api/v1/v3/generations/{gid}/visuals/callback",
+            json={"request_id": "req-fig-1", "asset": ready_asset},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["idempotent"] is True
+    assert body["status"] == "ready"
+    assert body["document_revision"] == before["revision"]
+    after = await _snapshot(gid)
+    assert after["revision"] == before["revision"]
+    assert after["status"] == "ready"
+
+
+@pytest.mark.asyncio
+async def test_ready_document_material_asset_replacement_rejected() -> None:
+    gid = await _seed(
+        status="ready",
+        figures=[
+            _figure(
+                block_id="fig-1",
+                request_id="req-fig-1",
+                status="ready",
+                src="https://example.test/a.png",
+            )
+        ],
+    )
+    before = await _snapshot(gid)
+    async with _client() as client:
+        resp = await client.post(
+            f"/api/v1/v3/generations/{gid}/visuals/callback",
+            json={
+                "request_id": "req-fig-1",
+                "asset": {
+                    "status": "ready",
+                    "kind": "image",
+                    "src": "https://example.test/b.png",
+                },
+            },
+        )
+    assert resp.status_code == 409
+    after = await _snapshot(gid)
+    assert after["revision"] == before["revision"]
+    assert after["status"] == "ready"
+    doc = (after["document_json"] or {}).get("lectio_document") or {}
+    asset = doc["sections"][0]["blocks"][0]["content"]["asset"]
+    assert asset["src"] == "https://example.test/a.png"
