@@ -1,0 +1,7 @@
+{
+  "subject": "Science",
+  "status": "harness_ready",
+  "legacy_invoked": false,
+  "driver": "tools/phase02_four_runs_driver.py",
+  "objective": "Explain why plants need light to make food."
+}

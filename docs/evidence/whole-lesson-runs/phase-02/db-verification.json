@@ -1,0 +1,25 @@
+{
+  "suite": "phase02",
+  "baseline": "00cc3c7eea7c8d3bf5e56b4988f261e07aa247d6",
+  "checks": {
+    "approve_returns_202_queued": true,
+    "duplicate_approve_idempotent": true,
+    "two_worker_claim_exclusive": true,
+    "stale_reclaim": true,
+    "composite_execution_keys": true,
+    "skip_ready_blocks": true,
+    "middle_failure_siblings_continue": true,
+    "form_plan_reuse": true,
+    "db_first_assembly": true,
+    "fresh_session_reload": true,
+    "terminal_ready_or_awaiting_visuals": true,
+    "visual_callback_idempotent": true,
+    "pdf_blocked_on_pending_figures": true,
+    "legacy_resume_stage2_disabled_for_new": true
+  },
+  "tests": [
+    "tests/planning/test_phase02_queue_and_lease.py",
+    "tests/planning/test_phase02_resume_and_assembly.py",
+    "tests/planning/test_phase02_delivery_proof.py"
+  ]
+}

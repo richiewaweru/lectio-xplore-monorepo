@@ -1,0 +1,18 @@
+{
+  "forced_middle_block_failure": {
+    "injection": "XPLORE_NATIVE_FAILURE_INJECTION / configure_failure_injection(fail_block_index=1, fail_once=True)",
+    "expected": {
+      "failed_key_status": "failed_recoverable",
+      "sibling_status": "ready",
+      "generation_may_enter": "failed_recoverable"
+    },
+    "verified_by": "test_middle_block_failure_does_not_stop_siblings"
+  },
+  "restart_reclaim": {
+    "expected": "stale ACTIVE status with expired heartbeat is reclaimable without stage change",
+    "verified_by": "test_stale_active_can_be_reclaimed"
+  },
+  "resume_skip_ready_retry_failed": {
+    "verified_by": ["test_composite_execution_keys_and_skip_ready", "test_conceptual_resilience_then_assemble"]
+  }
+}

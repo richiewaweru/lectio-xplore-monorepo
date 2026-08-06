@@ -1,0 +1,22 @@
+{
+  "generation_id": "",
+  "commit_sha": "",
+  "canonical_status": "",
+  "compatibility_stage": "",
+  "document_contract_version": 2,
+  "worker": {
+    "worker_id": "",
+    "attempt": 0,
+    "claimed_at": "",
+    "heartbeat_at": "",
+    "lease_seconds": 90
+  },
+  "form_plan_persisted": false,
+  "block_execution_keys": [],
+  "ready_count": 0,
+  "failed_count": 0,
+  "visual_pending_count": 0,
+  "document_persisted": false,
+  "document_reloaded": false,
+  "legacy_resume_stage2_observed": false
+}

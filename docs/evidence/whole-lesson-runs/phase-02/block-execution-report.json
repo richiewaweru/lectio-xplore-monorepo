@@ -1,0 +1,26 @@
+{
+  "key_scheme": "section_id:block_id:variant_id",
+  "variant_default": "everyone",
+  "concurrency_max": 3,
+  "outcome_fields": [
+    "status",
+    "attempts",
+    "section_id",
+    "block_id",
+    "variant_id",
+    "object",
+    "intent",
+    "content",
+    "request_id",
+    "error",
+    "created_at",
+    "updated_at"
+  ],
+  "skip_statuses": ["ready", "visual_pending"],
+  "retry_statuses": ["failed", "failed_recoverable", "started", "missing"],
+  "terminal_failed": ["failed_terminal"],
+  "proof_tests": [
+    "test_composite_execution_keys_and_skip_ready",
+    "test_middle_block_failure_does_not_stop_siblings"
+  ]
+}

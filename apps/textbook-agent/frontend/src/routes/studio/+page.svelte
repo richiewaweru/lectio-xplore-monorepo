@@ -227,7 +227,13 @@
 			v3Studio.stage = 'teaching_review';
 			return;
 		}
-		if (resolved.stage === 'planning_forms') {
+		if (
+			resolved.stage === 'planning_forms' ||
+			resolved.stage === 'queued' ||
+			resolved.stage === 'writing_blocks' ||
+			resolved.stage === 'assembling' ||
+			resolved.stage === 'awaiting_visuals'
+		) {
 			// Native whole-lesson: teacher approved; form planner + writers run server-side and
 			// persist a LectioDocumentV2. Keep a generating state and poll until the document lands.
 			disconnectActiveChunkedStream();
@@ -236,6 +242,12 @@
 			if (!hydrated && v3Studio.stage !== 'edit') {
 				v3Studio.stage = 'generating';
 			}
+			return;
+		}
+		if (resolved.stage === 'ready') {
+			disconnectActiveChunkedStream();
+			displayTitle = resolved.display_title ?? displayTitle;
+			await hydrateFromDocument(resolved.generation_id);
 			return;
 		}
 		if (resolved.stage === 'assembly_blocked' || resolved.stage === 'stage2_error') {
@@ -404,8 +416,17 @@
 		if (state.next_action === 'done') return false;
 		if (state.execution_started) return true;
 		// Native whole-lesson: forms/writers run server-side after teacher approval; the
-		// chunked stage stays 'planning_forms' until the document is persisted, so keep polling.
-		if (state.stage === 'planning_forms') return true;
+		// chunked stage stays in execution phases until the document is persisted, so keep polling.
+		if (
+			state.stage === 'queued' ||
+			state.stage === 'planning_forms' ||
+			state.stage === 'writing_blocks' ||
+			state.stage === 'assembling' ||
+			state.stage === 'awaiting_visuals'
+		) {
+			return true;
+		}
+		if (state.stage === 'ready') return false;
 		if (['stage2_running', 'stage2_complete', 'blueprint_ready'].includes(state.stage)) return true;
 		return state.next_action === 'wait_for_stage2' || state.next_action === 'generation_running';
 	}

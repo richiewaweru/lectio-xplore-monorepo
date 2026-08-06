@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 from sqlalchemy import select, update
@@ -47,7 +47,6 @@ from v3_blueprint.planning.models import (
 from v3_blueprint.planning.persistence import (
     load_chunked_state,
     persist_chunked_state,
-    resume_stage2,
 )
 from v3_blueprint.planning.retry import (
     retry_failed_section,
@@ -1305,33 +1304,28 @@ async def _run_chunked_stage2_pipeline(
             )
             return
 
-        async def _stage2_job() -> list:
-            return await resume_stage2(
-                generation_id,
-                emit_event=emit_event,
-            )
-
-        # 5.1: items read only card fields; stage2 reads only the approved plan —
-        # overlap them to prove independence before lanes.
-        _item_summary, briefs = await asyncio.gather(_items_job(), _stage2_job())
-        print(
-            f"\n[STAGE2 PIPELINE BRIEFS DONE] generation_id={generation_id}"
-            f" briefs={len(briefs)}",
-            flush=True,
+        # Phase 02 Commit F: legacy stage2 back half is disabled for new lessons.
+        # Historical v1 documents remain readable; new work must use the native path.
+        logger.error(
+            "legacy resume_stage2 blocked for new generation generation_id=%s",
+            generation_id,
         )
-        await _attempt_chunked_assembly(
-            generation_id=generation_id,
-            user_id=user_id,
-            plan=plan,
-            briefs=briefs,
-            form=form,
-            resource_spec=resource_spec,
-            display_title=display_title,
+        await persist_chunked_state(
+            generation_id,
+            {
+                "stage": "stage2_error",
+                "error": "Legacy stage2 back half is disabled; use native whole-lesson path",
+                "error_type": "LegacyBackHalfDisabled",
+            },
         )
-        print(
-            f"\n[STAGE2 PIPELINE ASSEMBLY CALLED] generation_id={generation_id}",
-            flush=True,
+        await emit_event(
+            "stage2_error",
+            {
+                "generation_id": generation_id,
+                "error": "Legacy stage2 back half is disabled for new lessons",
+            },
         )
+        return
     except Exception as exc:  # noqa: BLE001
         import traceback
 
@@ -4283,6 +4277,12 @@ class PageBlockPatchRequest(BaseModel):
     content_patch: dict[str, Any]
 
 
+class FigureVisualCallbackRequest(BaseModel):
+    request_id: str
+    block_id: str | None = None
+    asset: dict[str, Any]
+
+
 @v3_studio_router.get("/generations/{generation_id}/lesson-approach")
 async def get_lesson_approach(
     generation_id: str,
@@ -4312,13 +4312,13 @@ async def post_lesson_approach_approve(
     generation_id: str,
     body: LessonApproachApproveRequest,
     current_user: User = Depends(get_current_user),
-) -> dict[str, Any]:
+) -> JSONResponse:
     await _load_owned_generation(generation_id, current_user.id)
-    from planning.whole_lesson.service import approve_teaching_and_execute
+    from planning.whole_lesson.service import approve_teaching_and_queue
 
     async with async_session_factory() as session:
         try:
-            result = await approve_teaching_and_execute(
+            result = await approve_teaching_and_queue(
                 session,
                 generation_id,
                 expected_revision=body.expected_revision,
@@ -4330,12 +4330,14 @@ async def post_lesson_approach_approve(
         except Exception as exc:
             logger.exception("lesson approach approve failed generation_id=%s", generation_id)
             raise HTTPException(status_code=500, detail=str(exc)[:400]) from exc
-    return {
-        "generation_id": generation_id,
-        "status": "completed",
-        "writer_count": result.get("writer_count"),
-        "document_version": 2,
-    }
+    return JSONResponse(
+        status_code=202,
+        content={
+            "generation_id": generation_id,
+            "status": result.get("status") or "queued",
+            "document_version": 2,
+        },
+    )
 
 
 @v3_studio_router.post("/generations/{generation_id}/lesson-approach/reject")
@@ -4415,3 +4417,138 @@ async def patch_page_block(
         )
         await session.commit()
     return {"generation_id": generation_id, "block_id": block_id, "document_revision": revision}
+
+
+@v3_studio_router.post("/generations/{generation_id}/visuals/callback")
+async def post_figure_visual_callback(
+    generation_id: str,
+    body: FigureVisualCallbackRequest,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Idempotent figure asset completion keyed by request_id."""
+    await _load_owned_generation(generation_id, current_user.id)
+    from generation.page_objects.document_assembly import persist_document_json, reload_document
+    from generation.page_objects.visual_completion import (
+        VisualCompletionError,
+        apply_figure_asset_update,
+    )
+    from planning.whole_lesson.events import make_event
+    from planning.whole_lesson.repository import PageDocumentRepository
+
+    request_id = str(body.request_id or "").strip()
+    if not request_id:
+        raise HTTPException(status_code=400, detail="request_id is required")
+    asset = dict(body.asset or {})
+    asset["request_id"] = request_id
+
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, generation_id)
+        if generation is None:
+            raise HTTPException(status_code=404, detail="Generation not found")
+        envelope = generation.document_json if isinstance(generation.document_json, dict) else {}
+        try:
+            document = reload_document(envelope)
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status_code=404, detail="Document not found") from exc
+
+        target_block_id = body.block_id
+        already_applied = False
+        if not target_block_id:
+            for section in document.get("sections") or []:
+                for block in section.get("blocks") or []:
+                    if block.get("object") != "figure":
+                        continue
+                    existing = ((block.get("content") or {}).get("asset") or {}).get("request_id")
+                    if existing == request_id:
+                        target_block_id = str(block.get("id") or "")
+                        status = str(((block.get("content") or {}).get("asset") or {}).get("status") or "")
+                        if status == str(asset.get("status") or "") and status in {
+                            "ready",
+                            "failed",
+                        }:
+                            already_applied = True
+                        break
+                if target_block_id:
+                    break
+        if not target_block_id:
+            raise HTTPException(status_code=404, detail="figure request_id not found")
+
+        if not already_applied:
+            try:
+                document = apply_figure_asset_update(
+                    document,
+                    block_id=target_block_id,
+                    asset=asset,
+                )
+            except VisualCompletionError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            generation.document_json = persist_document_json(envelope, document)
+
+        repo = PageDocumentRepository(session, generation_id)
+        # Mirror outcome status for the matching execution key if present.
+        state = await repo.load_page_generation_state()
+        block_execution = dict(state.get("block_execution") or {})
+        for key, outcome in list(block_execution.items()):
+            if not isinstance(outcome, dict):
+                continue
+            if str(outcome.get("request_id") or "") != request_id and str(
+                outcome.get("block_id") or ""
+            ) != target_block_id:
+                continue
+            asset_status = str(asset.get("status") or "ready")
+            outcome_status = "ready" if asset_status == "ready" else "failed_recoverable"
+            await repo.save_block_outcome(
+                key,
+                {
+                    **outcome,
+                    "status": outcome_status,
+                    "request_id": request_id,
+                    "content": {
+                        **dict(outcome.get("content") or {}),
+                        "asset": asset,
+                    },
+                },
+            )
+            break
+
+        pending = False
+        for section in document.get("sections") or []:
+            for block in section.get("blocks") or []:
+                if block.get("object") != "figure":
+                    continue
+                status = str(((block.get("content") or {}).get("asset") or {}).get("status") or "")
+                if status in {"pending", "failed"}:
+                    pending = True
+                    break
+            if pending:
+                break
+
+        generation = await session.get(GenerationModel, generation_id)
+        current = str(generation.status if generation else "")
+        terminal = current
+        if not pending and current == "awaiting_visuals":
+            await repo.transition(
+                expected={"awaiting_visuals"},
+                target="ready",
+                event="visuals_ready",
+            )
+            terminal = "ready"
+        await repo.append_event(
+            make_event(
+                "visual_callback",
+                generation_id=generation_id,
+                block_id=target_block_id,
+                status=str(asset.get("status") or "ready"),
+                request_id=request_id,
+                idempotent=already_applied,
+            )
+        )
+        await session.commit()
+
+    return {
+        "generation_id": generation_id,
+        "block_id": target_block_id,
+        "request_id": request_id,
+        "status": terminal,
+        "idempotent": already_applied,
+    }

@@ -1,0 +1,7 @@
+{
+  "subject": "Economics",
+  "status": "harness_ready",
+  "legacy_invoked": false,
+  "driver": "tools/phase02_four_runs_driver.py",
+  "objective": "Explain opportunity cost with a classroom choice."
+}

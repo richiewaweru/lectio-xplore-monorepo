@@ -204,6 +204,13 @@ class Settings(BaseSettings):
             "xplore_page_document_scope",
         ),
     )
+    xplore_native_worker_enabled: bool = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "XPLORE_NATIVE_WORKER_ENABLED",
+            "xplore_native_worker_enabled",
+        ),
+    )
     allow_paid_llm_tests: bool = False
 
     # Output

@@ -1,0 +1,7 @@
+{
+  "subject": "English",
+  "status": "harness_ready",
+  "legacy_invoked": false,
+  "driver": "tools/phase02_four_runs_driver.py",
+  "objective": "Explain how a thesis guides a short argument paragraph."
+}

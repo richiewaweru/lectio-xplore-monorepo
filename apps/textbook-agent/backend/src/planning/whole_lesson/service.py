@@ -193,6 +193,35 @@ async def run_and_persist_teaching_plan(
     }
 
 
+async def approve_teaching_and_queue(
+    session: AsyncSession,
+    generation_id: str,
+    *,
+    expected_revision: int,
+    reviewed_by: str | None = None,
+    teacher_note: str | None = None,
+) -> dict[str, Any]:
+    """Validate revision, persist approval, transition to queued. Never runs planners inline."""
+    repo = PageDocumentRepository(session, generation_id)
+    state = await repo.load_page_generation_state()
+    if not state.get("teaching_plan"):
+        raise RuntimeError("no teaching plan to approve")
+    state = await repo.save_teaching_review(
+        status="approved",
+        expected_revision=expected_revision,
+        reviewed_by=reviewed_by,
+        teacher_note=teacher_note,
+        queue=True,
+    )
+    generation = await session.get(GenerationModel, generation_id)
+    status = str(generation.status if generation else "queued") or "queued"
+    return {
+        "status": status,
+        "teaching_review": state.get("teaching_review"),
+        "queued": True,
+    }
+
+
 async def approve_teaching_and_execute(
     session: AsyncSession,
     generation_id: str,
@@ -201,32 +230,13 @@ async def approve_teaching_and_execute(
     reviewed_by: str | None = None,
     teacher_note: str | None = None,
 ) -> dict[str, Any]:
-    from planning.whole_lesson.executor import execute_after_teaching_approval
-
-    repo = PageDocumentRepository(session, generation_id)
-    state = await repo.load_page_generation_state()
-    if not state.get("teaching_plan"):
-        raise RuntimeError("no teaching plan to approve")
-    await repo.save_teaching_review(
-        status="approved",
+    """Queue approval only (Phase 02). Execution is owned by the leased worker."""
+    return await approve_teaching_and_queue(
+        session,
+        generation_id,
         expected_revision=expected_revision,
         reviewed_by=reviewed_by,
         teacher_note=teacher_note,
-    )
-    await repo.append_event(
-        make_event(
-            "teaching_plan_approved",
-            generation_id=generation_id,
-            status="approved",
-        )
-    )
-    packet = ImmutableLessonPacket.model_validate(state["lesson_packet"])
-    teaching_plan = TeachingPlan.model_validate(state["teaching_plan"])
-    return await execute_after_teaching_approval(
-        session=session,
-        generation_id=generation_id,
-        packet=packet,
-        teaching_plan=teaching_plan,
     )
 
 

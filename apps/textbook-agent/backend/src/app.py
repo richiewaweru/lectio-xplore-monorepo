@@ -251,7 +251,15 @@ async def lifespan(app: FastAPI):
             "pdf_temp_cleaned": pdf_temp_cleaned,
         },
     )
+    if settings.xplore_native_worker_enabled:
+        from planning.whole_lesson.worker import start_native_worker
+
+        await start_native_worker()
     yield
+    if settings.xplore_native_worker_enabled:
+        from planning.whole_lesson.worker import stop_native_worker
+
+        await stop_native_worker(drain_seconds=5.0)
     await telemetry_monitor.stop()
     telemetry_monitor.configure()
     await engine.dispose()
