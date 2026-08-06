@@ -1,4 +1,6 @@
 {
+  "verification_level": "route_and_projection_tests_only",
+  "real_pdf_binary_verified": false,
   "pending_figures_block_export": true,
   "http_status_when_pending": 409,
   "code": "FIGURES_NOT_READY",

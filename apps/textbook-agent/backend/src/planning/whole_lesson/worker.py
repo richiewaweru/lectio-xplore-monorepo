@@ -10,11 +10,14 @@ from typing import Any
 
 from core.database.models import GenerationModel
 from core.database.session import async_session_factory
+from planning.whole_lesson.failure_policy import classify_failure, structured_error_from_exc
 from planning.whole_lesson.repository import PageDocumentRepository, claim_next_native_job
 from planning.whole_lesson.states import (
     DEFAULT_LEASE_SECONDS,
     DEFAULT_WORKER_POLL_SECONDS,
     HEARTBEAT_INTERVAL_SECONDS,
+    ExecutionLease,
+    LeaseLostError,
 )
 
 logger = logging.getLogger(__name__)
@@ -80,16 +83,22 @@ class NativeExecutionWorker:
             self._busy = True
             try:
                 await self._run_job(claimed)
+            except LeaseLostError:
+                logger.info(
+                    "native worker lost lease generation_id=%s worker_id=%s",
+                    claimed.generation_id,
+                    self.worker_id,
+                )
             except Exception:  # noqa: BLE001
                 logger.exception(
                     "native worker job failed generation_id=%s worker_id=%s",
-                    claimed,
+                    claimed.generation_id,
                     self.worker_id,
                 )
             finally:
                 self._busy = False
 
-    async def _claim_one(self) -> str | None:
+    async def _claim_one(self) -> ExecutionLease | None:
         async with async_session_factory() as session:
             return await claim_next_native_job(
                 session,
@@ -97,37 +106,49 @@ class NativeExecutionWorker:
                 lease_seconds=self.lease_seconds,
             )
 
-    async def _heartbeat_loop(self, generation_id: str) -> None:
+    async def _heartbeat_loop(self, lease: ExecutionLease) -> None:
         while not self._stop.is_set():
             await asyncio.sleep(self.heartbeat_seconds)
             try:
                 async with async_session_factory() as session:
-                    repo = PageDocumentRepository(session, generation_id)
-                    await repo.heartbeat(worker_id=self.worker_id)
+                    repo = PageDocumentRepository(session, lease.generation_id)
+                    await repo.heartbeat(
+                        worker_id=lease.worker_id,
+                        lease_token=lease.lease_token,
+                    )
+            except LeaseLostError:
+                logger.info(
+                    "heartbeat stopped: lease lost generation_id=%s",
+                    lease.generation_id,
+                )
+                return
             except Exception:  # noqa: BLE001
                 logger.warning(
                     "native worker heartbeat failed generation_id=%s worker_id=%s",
-                    generation_id,
+                    lease.generation_id,
                     self.worker_id,
                     exc_info=True,
                 )
 
-    async def _run_job(self, generation_id: str) -> None:
+    async def _run_job(self, lease: ExecutionLease) -> None:
         from planning.whole_lesson.executor import execute_after_teaching_approval
 
         heartbeat = asyncio.create_task(
-            self._heartbeat_loop(generation_id),
-            name=f"native-hb-{generation_id[:8]}",
+            self._heartbeat_loop(lease),
+            name=f"native-hb-{lease.generation_id[:8]}",
         )
         try:
             async with async_session_factory() as session:
                 await execute_after_teaching_approval(
                     session=session,
-                    generation_id=generation_id,
-                    worker_id=self.worker_id,
+                    generation_id=lease.generation_id,
+                    worker_id=lease.worker_id,
+                    lease=lease,
                 )
+        except LeaseLostError:
+            raise
         except Exception as exc:  # noqa: BLE001
-            await self._persist_failure(generation_id, exc)
+            await self._persist_failure(lease, exc)
             raise
         finally:
             heartbeat.cancel()
@@ -136,19 +157,19 @@ class NativeExecutionWorker:
             except asyncio.CancelledError:
                 pass
 
-    async def _persist_failure(self, generation_id: str, exc: BaseException) -> None:
-        error = {
-            "type": type(exc).__name__,
-            "code": "WORKER_FAILURE",
-            "message": str(exc)[:500] or type(exc).__name__,
-            "stage": "writing_blocks",
-            "retryable": True,
-            "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        }
+    async def _persist_failure(self, lease: ExecutionLease, exc: BaseException) -> None:
+        classification = classify_failure(exc)
+        if classification.code == "LEASE_LOST":
+            return
+        error = structured_error_from_exc(
+            exc=exc,
+            stage="writing_blocks",
+            attempt=1,
+        )
         try:
             async with async_session_factory() as session:
-                repo = PageDocumentRepository(session, generation_id)
-                generation = await session.get(GenerationModel, generation_id)
+                repo = PageDocumentRepository(session, lease.generation_id)
+                generation = await session.get(GenerationModel, lease.generation_id)
                 current = str(generation.status if generation else "")
                 if current in {"planning_forms", "writing_blocks", "assembling"}:
                     await repo.transition(
@@ -156,11 +177,19 @@ class NativeExecutionWorker:
                         target="failed_recoverable",
                         event="worker_failure",
                         error=error,
+                        worker_id=lease.worker_id,
+                        lease_token=lease.lease_token,
                     )
-                await repo.release_execution(worker_id=self.worker_id)
+                await repo.release_execution(
+                    worker_id=lease.worker_id,
+                    lease_token=lease.lease_token,
+                )
+        except LeaseLostError:
+            return
         except Exception:  # noqa: BLE001
             logger.exception(
-                "failed to persist worker failure generation_id=%s", generation_id
+                "failed to persist worker failure generation_id=%s",
+                lease.generation_id,
             )
 
 

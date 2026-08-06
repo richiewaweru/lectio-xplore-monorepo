@@ -1,25 +1,31 @@
 {
-  "suite": "phase02",
-  "baseline": "00cc3c7eea7c8d3bf5e56b4988f261e07aa247d6",
+  "suite": "phase02.1",
+  "baseline": "2739d74c26625c63b52efdba5fdebf0f5bd3d669",
+  "status": "CODE_HARDENING_COMPLETE_LIVE_E2E_DEFERRED",
   "checks": {
     "approve_returns_202_queued": true,
     "duplicate_approve_idempotent": true,
     "two_worker_claim_exclusive": true,
-    "stale_reclaim": true,
+    "stale_reclaim_exclusive": true,
+    "lease_token_monotonic": true,
+    "stale_worker_write_rejected": true,
+    "concurrent_mutation_preserves_updates": true,
+    "resume_current_token_skip": true,
+    "resume_old_token_retry": true,
+    "typed_failure_classification": true,
     "composite_execution_keys": true,
-    "skip_ready_blocks": true,
-    "middle_failure_siblings_continue": true,
-    "form_plan_reuse": true,
-    "db_first_assembly": true,
-    "fresh_session_reload": true,
-    "terminal_ready_or_awaiting_visuals": true,
-    "visual_callback_idempotent": true,
-    "pdf_blocked_on_pending_figures": true,
+    "exact_set_assembly": true,
+    "unknown_keys_rejected": true,
+    "fresh_session_hash_reload": true,
     "legacy_resume_stage2_disabled_for_new": true
   },
   "tests": [
     "tests/planning/test_phase02_queue_and_lease.py",
+    "tests/planning/test_phase02_state_mutation.py",
+    "tests/planning/test_phase02_failure_classification.py",
     "tests/planning/test_phase02_resume_and_assembly.py",
-    "tests/planning/test_phase02_delivery_proof.py"
+    "tests/planning/test_phase02_delivery_proof.py",
+    "tests/planning/test_phase02_legacy_shutdown.py",
+    "tests/planning/test_phase02_transition_ownership.py"
   ]
 }

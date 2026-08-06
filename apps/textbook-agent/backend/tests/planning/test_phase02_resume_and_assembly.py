@@ -305,3 +305,93 @@ async def test_assemble_from_db_rejects_missing_and_completes_when_ready() -> No
         assert generation.status == "ready"
         assert isinstance(generation.document_json, dict)
         assert generation.document_json.get("lectio_document")
+        assert assembled.get("document_sha256")
+        assert assembled["document_sha256"] == assembled["reloaded_sha256"]
+
+
+@pytest.mark.asyncio
+async def test_assemble_rejects_unknown_keys() -> None:
+    plan = _form_plan()
+    gid = await _seed(status="assembling")
+    async with async_session_factory() as session:
+        repo = PageDocumentRepository(session, gid)
+        for section in plan.sections:
+            for block in section.blocks:
+                key = execution_key(section.slot_id, block.id)
+                await repo.save_block_outcome(
+                    key,
+                    {
+                        "status": "ready",
+                        "block_id": block.id,
+                        "object": block.object,
+                        "intent": block.intent,
+                        "content": {"paragraphs": [block.brief]},
+                    },
+                )
+        await repo.save_block_outcome(
+            "ghost:ghost-1:everyone",
+            {
+                "status": "ready",
+                "block_id": "ghost-1",
+                "object": "prose",
+                "intent": "explain",
+                "content": {"paragraphs": ["extra"]},
+            },
+        )
+        with pytest.raises(AssemblyError, match="unknown"):
+            await assemble_from_db(
+                session=session,
+                generation_id=gid,
+                packet=_packet(),
+                form_plan=plan,
+            )
+
+
+@pytest.mark.asyncio
+async def test_started_current_token_not_duplicated() -> None:
+    plan = _form_plan()
+    gid = await _seed(status="writing_blocks")
+    key = execution_key("orient", "orient-b1")
+    async with async_session_factory() as session:
+        repo = PageDocumentRepository(session, gid)
+
+        def _lease(_gen, state):
+            state["execution"]["worker_id"] = "w"
+            state["execution"]["lease_token"] = 5
+            state["block_execution"][key] = {
+                "status": "started",
+                "lease_token": 5,
+                "attempts": 1,
+                "block_id": "orient-b1",
+            }
+
+        await repo.mutate_state(mutation=_lease)
+
+    written: list[str] = []
+
+    async def _fake_dispatch(ctx):  # noqa: ANN001
+        written.append(ctx.planned.id)
+        return WriterResult(
+            block_id=ctx.planned.id,
+            object=ctx.planned.object,
+            intent=ctx.planned.intent,
+            content={"paragraphs": ["x"]},
+            status="ready",
+        )
+
+    from planning.whole_lesson.states import ExecutionLease
+
+    lease = ExecutionLease(
+        generation_id=gid, worker_id="w", lease_token=5, stage="writing_blocks"
+    )
+    with patch(
+        "planning.whole_lesson.executor.dispatch_writer_async",
+        new=AsyncMock(side_effect=_fake_dispatch),
+    ):
+        await write_form_blocks(
+            generation_id=gid, form_plan=plan, packet=_packet(), lease=lease
+        )
+    assert "orient-b1" not in written
+    async with async_session_factory() as session:
+        stored = await PageDocumentRepository(session, gid).load_block_results()
+    assert stored[key]["attempts"] == 1

@@ -1,7 +1,6 @@
 {
   "subject": "Economics",
-  "status": "harness_ready",
-  "legacy_invoked": false,
-  "driver": "tools/phase02_four_runs_driver.py",
-  "objective": "Explain opportunity cost with a classroom choice."
+  "status": "not_run",
+  "reason": "Deferred to Claude/manual browser E2E after Patch 02.1",
+  "legacy_invoked": false
 }

@@ -260,12 +260,13 @@ async def test_conceptual_resilience_then_assemble() -> None:
             claimed = await PageDocumentRepository(session, gid).claim_execution(
                 worker_id="proof-worker"
             )
-            assert claimed is True
+            assert claimed is not None
             result = await execute_after_teaching_approval(
                 session=session,
                 generation_id=gid,
                 packet=_packet(),
                 worker_id="proof-worker",
+                lease=claimed,
             )
     assert result["status"] == "ready"
 

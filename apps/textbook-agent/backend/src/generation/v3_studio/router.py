@@ -4434,6 +4434,7 @@ async def post_figure_visual_callback(
     )
     from planning.whole_lesson.events import make_event
     from planning.whole_lesson.repository import PageDocumentRepository
+    from planning.whole_lesson.states import IllegalTransitionError
 
     request_id = str(body.request_id or "").strip()
     if not request_id:
@@ -4453,23 +4454,27 @@ async def post_figure_visual_callback(
 
         target_block_id = body.block_id
         already_applied = False
-        if not target_block_id:
-            for section in document.get("sections") or []:
-                for block in section.get("blocks") or []:
-                    if block.get("object") != "figure":
-                        continue
-                    existing = ((block.get("content") or {}).get("asset") or {}).get("request_id")
-                    if existing == request_id:
-                        target_block_id = str(block.get("id") or "")
-                        status = str(((block.get("content") or {}).get("asset") or {}).get("status") or "")
-                        if status == str(asset.get("status") or "") and status in {
-                            "ready",
-                            "failed",
-                        }:
-                            already_applied = True
-                        break
-                if target_block_id:
-                    break
+        for section in document.get("sections") or []:
+            for block in section.get("blocks") or []:
+                if block.get("object") != "figure":
+                    continue
+                existing_rid = ((block.get("content") or {}).get("asset") or {}).get(
+                    "request_id"
+                )
+                if existing_rid != request_id:
+                    continue
+                target_block_id = str(block.get("id") or "")
+                status = str(
+                    ((block.get("content") or {}).get("asset") or {}).get("status") or ""
+                )
+                if status == str(asset.get("status") or "") and status in {
+                    "ready",
+                    "failed",
+                }:
+                    already_applied = True
+                break
+            if target_block_id:
+                break
         if not target_block_id:
             raise HTTPException(status_code=404, detail="figure request_id not found")
 
@@ -4485,38 +4490,45 @@ async def post_figure_visual_callback(
             generation.document_json = persist_document_json(envelope, document)
 
         repo = PageDocumentRepository(session, generation_id)
-        # Mirror outcome status for the matching execution key if present.
         state = await repo.load_page_generation_state()
         block_execution = dict(state.get("block_execution") or {})
+        matched_key = None
         for key, outcome in list(block_execution.items()):
             if not isinstance(outcome, dict):
                 continue
-            if str(outcome.get("request_id") or "") != request_id and str(
-                outcome.get("block_id") or ""
-            ) != target_block_id:
-                continue
+            if str(outcome.get("request_id") or "") == request_id:
+                matched_key = key
+                break
+            if str(outcome.get("block_id") or "") == target_block_id:
+                matched_key = key
+        if matched_key is not None:
+            outcome = dict(block_execution.get(matched_key) or {})
             asset_status = str(asset.get("status") or "ready")
             outcome_status = "ready" if asset_status == "ready" else "failed_recoverable"
             await repo.save_block_outcome(
-                key,
+                matched_key,
                 {
                     **outcome,
                     "status": outcome_status,
                     "request_id": request_id,
+                    "block_id": target_block_id,
                     "content": {
                         **dict(outcome.get("content") or {}),
                         "asset": asset,
                     },
                 },
             )
-            break
+
+        revision = await repo.bump_document_revision()
 
         pending = False
         for section in document.get("sections") or []:
             for block in section.get("blocks") or []:
                 if block.get("object") != "figure":
                     continue
-                status = str(((block.get("content") or {}).get("asset") or {}).get("status") or "")
+                status = str(
+                    ((block.get("content") or {}).get("asset") or {}).get("status") or ""
+                )
                 if status in {"pending", "failed"}:
                     pending = True
                     break
@@ -4526,13 +4538,18 @@ async def post_figure_visual_callback(
         generation = await session.get(GenerationModel, generation_id)
         current = str(generation.status if generation else "")
         terminal = current
-        if not pending and current == "awaiting_visuals":
-            await repo.transition(
-                expected={"awaiting_visuals"},
-                target="ready",
-                event="visuals_ready",
-            )
+        if current == "ready":
             terminal = "ready"
+        elif not pending and current == "awaiting_visuals":
+            try:
+                await repo.transition(
+                    expected={"awaiting_visuals"},
+                    target="ready",
+                    event="visuals_ready",
+                )
+                terminal = "ready"
+            except IllegalTransitionError:
+                terminal = current
         await repo.append_event(
             make_event(
                 "visual_callback",
@@ -4543,12 +4560,12 @@ async def post_figure_visual_callback(
                 idempotent=already_applied,
             )
         )
-        await session.commit()
 
     return {
         "generation_id": generation_id,
         "block_id": target_block_id,
         "request_id": request_id,
         "status": terminal,
+        "document_revision": revision,
         "idempotent": already_applied,
     }
