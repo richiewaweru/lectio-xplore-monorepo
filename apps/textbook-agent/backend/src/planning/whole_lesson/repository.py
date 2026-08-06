@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from copy import deepcopy
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
@@ -77,6 +78,9 @@ def empty_execution_meta() -> dict[str, Any]:
         "document_sha256": None,
         "reloaded_sha256": None,
         "reload_verified": False,
+        "candidate_document_sha256": None,
+        "candidate_lease_token": None,
+        "candidate_written_at": None,
     }
 
 
@@ -133,6 +137,10 @@ def _normalize_page_state(state: dict[str, Any] | None) -> dict[str, Any]:
 
 class _ClaimAbort(Exception):
     """Internal: claim could not be acquired."""
+
+
+class DocumentFenceError(RuntimeError):
+    """Raised when candidate/finalize fencing checks fail."""
 
 
 class PageDocumentRepository:
@@ -648,6 +656,278 @@ class PageDocumentRepository:
             lease_token=lease_token,
             mutation=_mut,
         )
+
+    async def persist_document_candidate(
+        self,
+        document: dict[str, Any],
+        *,
+        document_sha256: str,
+        worker_id: str,
+        lease_token: int,
+    ) -> dict[str, Any]:
+        """Lease-fenced write of document_json as a non-terminal candidate."""
+        from generation.page_objects.document_assembly import persist_document_json
+
+        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
+            generation.document_json = persist_document_json(
+                generation.document_json, document
+            )
+            execution = dict(state.get("execution") or empty_execution_meta())
+            execution["candidate_document_sha256"] = document_sha256
+            execution["candidate_lease_token"] = int(lease_token)
+            execution["candidate_written_at"] = _now()
+            execution["heartbeat_at"] = _now()
+            state["execution"] = execution
+
+        return await self.mutate_state(
+            worker_id=worker_id,
+            lease_token=lease_token,
+            mutation=_mut,
+        )
+
+    async def finalize_verified_document(
+        self,
+        *,
+        expected_document_sha256: str,
+        reloaded_sha256: str,
+        pending_visuals: bool,
+        worker_id: str,
+        lease_token: int,
+    ) -> dict[str, Any]:
+        """Atomic lease-fenced finalization after fresh-session hash verification."""
+        from generation.page_objects.document_assembly import (
+            canonical_document_sha256,
+            reload_document,
+        )
+
+        target = "awaiting_visuals" if pending_visuals else "ready"
+        event_name = "document_awaiting_visuals" if pending_visuals else "document_ready"
+
+        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
+            execution = dict(state.get("execution") or empty_execution_meta())
+            candidate_sha = execution.get("candidate_document_sha256")
+            candidate_token = execution.get("candidate_lease_token")
+            if candidate_sha != expected_document_sha256:
+                raise DocumentFenceError(
+                    f"candidate sha mismatch: have {candidate_sha!r}, "
+                    f"want {expected_document_sha256!r}"
+                )
+            if candidate_token is None or int(candidate_token) != int(lease_token):
+                raise DocumentFenceError(
+                    f"candidate lease token mismatch: have {candidate_token!r}, "
+                    f"want {lease_token!r}"
+                )
+            if reloaded_sha256 != expected_document_sha256:
+                raise DocumentFenceError(
+                    f"reloaded sha mismatch: have {reloaded_sha256!r}, "
+                    f"want {expected_document_sha256!r}"
+                )
+            try:
+                persisted = reload_document(generation.document_json or {})
+            except Exception as exc:  # noqa: BLE001
+                raise DocumentFenceError(f"cannot reload persisted document: {exc}") from exc
+            locked_sha = canonical_document_sha256(persisted)
+            if locked_sha != expected_document_sha256:
+                raise DocumentFenceError(
+                    f"locked document tamper: have {locked_sha!r}, "
+                    f"want {expected_document_sha256!r}"
+                )
+            current = str(generation.status or "")
+            assert_legal_transition(current, target)
+            generation.status = target
+            execution["document_sha256"] = expected_document_sha256
+            execution["reloaded_sha256"] = reloaded_sha256
+            execution["reload_verified"] = True
+            execution["heartbeat_at"] = _now()
+            state["execution"] = execution
+            state["document_revision"] = int(state.get("document_revision") or 0) + 1
+            events = list(state.get("events") or [])
+            events.append(
+                {
+                    **make_event(
+                        event_name,
+                        generation_id=self.generation_id,
+                        status=target,
+                    ),
+                    "at": _now(),
+                }
+            )
+            state["events"] = events[-500:]
+
+        return await self.mutate_state(
+            expected_statuses={"assembling", "writing_blocks"},
+            worker_id=worker_id,
+            lease_token=lease_token,
+            mutation=_mut,
+        )
+
+    async def apply_visual_completion(
+        self,
+        *,
+        request_id: str,
+        asset: dict[str, Any],
+        supplied_block_id: str | None = None,
+    ) -> "VisualCompletionResult":
+        """Atomically apply figure asset completion keyed by request_id."""
+        from generation.page_objects.document_assembly import (
+            persist_document_json,
+            reload_document,
+        )
+        from generation.page_objects.visual_completion import apply_figure_asset_update
+
+        box: list[VisualCompletionResult] = []
+
+        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
+            try:
+                document = reload_document(generation.document_json or {})
+            except Exception as exc:  # noqa: BLE001
+                raise VisualRequestNotFound("Document not found") from exc
+
+            target_block_id: str | None = None
+            existing_asset: dict[str, Any] = {}
+            for section in document.get("sections") or []:
+                for block in section.get("blocks") or []:
+                    if block.get("object") != "figure":
+                        continue
+                    block_asset = dict((block.get("content") or {}).get("asset") or {})
+                    if str(block_asset.get("request_id") or "") != request_id:
+                        continue
+                    target_block_id = str(block.get("id") or "")
+                    existing_asset = block_asset
+                    break
+                if target_block_id:
+                    break
+
+            if not target_block_id:
+                raise VisualRequestNotFound(f"figure request_id {request_id!r} not found")
+
+            if supplied_block_id and str(supplied_block_id) != target_block_id:
+                raise VisualCompletionConflict(
+                    f"block_id mismatch: supplied {supplied_block_id!r}, "
+                    f"found {target_block_id!r} for request_id {request_id!r}"
+                )
+
+            asset_payload = dict(asset)
+            asset_payload["request_id"] = request_id
+            # Idempotent: same status+request already applied with matching src.
+            already = (
+                str(existing_asset.get("status") or "")
+                == str(asset_payload.get("status") or "")
+                and str(existing_asset.get("status") or "") in {"ready", "failed"}
+                and str(existing_asset.get("request_id") or "") == request_id
+                and str(existing_asset.get("src") or "")
+                == str(asset_payload.get("src") or "")
+            )
+
+            revision = int(state.get("document_revision") or 0)
+            if not already:
+                document = apply_figure_asset_update(
+                    document,
+                    block_id=target_block_id,
+                    asset=asset_payload,
+                )
+                generation.document_json = persist_document_json(
+                    generation.document_json, document
+                )
+                revision += 1
+                state["document_revision"] = revision
+
+                block_execution = dict(state.get("block_execution") or {})
+                matched_key = None
+                for key, outcome in list(block_execution.items()):
+                    if not isinstance(outcome, dict):
+                        continue
+                    if str(outcome.get("request_id") or "") == request_id:
+                        matched_key = key
+                        break
+                if matched_key is not None:
+                    outcome = dict(block_execution.get(matched_key) or {})
+                    asset_status = str(asset_payload.get("status") or "ready")
+                    outcome_status = (
+                        "ready" if asset_status == "ready" else "failed_recoverable"
+                    )
+                    content = dict(outcome.get("content") or {})
+                    content["asset"] = asset_payload
+                    block_execution[matched_key] = {
+                        **outcome,
+                        "status": outcome_status,
+                        "request_id": request_id,
+                        "block_id": target_block_id,
+                        "content": content,
+                    }
+                    state["block_execution"] = block_execution
+
+            # Recompute pending from document after update
+            pending = False
+            for section in document.get("sections") or []:
+                for block in section.get("blocks") or []:
+                    if block.get("object") != "figure":
+                        continue
+                    status = str(
+                        ((block.get("content") or {}).get("asset") or {}).get("status")
+                        or ""
+                    )
+                    if status in {"pending", "failed"}:
+                        pending = True
+                        break
+                if pending:
+                    break
+
+            current = str(generation.status or "")
+            terminal = current
+            if current == "ready":
+                terminal = "ready"
+            elif not pending and current == "awaiting_visuals":
+                assert_legal_transition(current, "ready")
+                generation.status = "ready"
+                terminal = "ready"
+
+            events = list(state.get("events") or [])
+            events.append(
+                {
+                    **make_event(
+                        "visual_callback",
+                        generation_id=self.generation_id,
+                        block_id=target_block_id,
+                        status=str(asset_payload.get("status") or "ready"),
+                        request_id=request_id,
+                        idempotent=already,
+                    ),
+                    "at": _now(),
+                }
+            )
+            state["events"] = events[-500:]
+            box.append(
+                VisualCompletionResult(
+                    generation_id=self.generation_id,
+                    block_id=target_block_id,
+                    request_id=request_id,
+                    status=terminal,
+                    document_revision=revision,
+                    idempotent=already,
+                )
+            )
+
+        await self.mutate_state(mutation=_mut)
+        return box[0]
+
+
+@dataclass(frozen=True)
+class VisualCompletionResult:
+    generation_id: str
+    block_id: str
+    request_id: str
+    status: str
+    document_revision: int
+    idempotent: bool
+
+
+class VisualRequestNotFound(LookupError):
+    pass
+
+
+class VisualCompletionConflict(RuntimeError):
+    pass
 
 
 async def claim_next_native_job(

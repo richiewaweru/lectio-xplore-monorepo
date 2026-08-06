@@ -1,6 +1,6 @@
 {
-  "suite": "phase02.1",
-  "baseline": "2739d74c26625c63b52efdba5fdebf0f5bd3d669",
+  "suite": "phase02.1a",
+  "baseline": "c861800",
   "status": "CODE_HARDENING_COMPLETE_LIVE_E2E_DEFERRED",
   "checks": {
     "approve_returns_202_queued": true,
@@ -17,6 +17,17 @@
     "exact_set_assembly": true,
     "unknown_keys_rejected": true,
     "fresh_session_hash_reload": true,
+    "figure_status_visual_pending": true,
+    "assemble_figure_awaiting_visuals": true,
+    "document_candidate_lease_fenced": true,
+    "finalize_candidate_token_mismatch_rejected": true,
+    "finalize_tamper_rejected": true,
+    "atomic_finalize_fields": true,
+    "visual_route_404_409_idempotent_partial_final": true,
+    "pdf_route_figures_not_ready_then_ready": true,
+    "worker_transport_recoverable": true,
+    "worker_programming_terminal": true,
+    "worker_lease_lost_quiet": true,
     "legacy_resume_stage2_disabled_for_new": true
   },
   "tests": [
@@ -26,6 +37,9 @@
     "tests/planning/test_phase02_resume_and_assembly.py",
     "tests/planning/test_phase02_delivery_proof.py",
     "tests/planning/test_phase02_legacy_shutdown.py",
-    "tests/planning/test_phase02_transition_ownership.py"
+    "tests/planning/test_phase02_transition_ownership.py",
+    "tests/planning/test_phase02_document_fencing.py",
+    "tests/planning/test_phase02_worker_failure_policy.py",
+    "tests/planning/test_phase02_visual_pdf_routes.py"
   ]
 }

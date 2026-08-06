@@ -4427,14 +4427,11 @@ async def post_figure_visual_callback(
 ) -> dict[str, Any]:
     """Idempotent figure asset completion keyed by request_id."""
     await _load_owned_generation(generation_id, current_user.id)
-    from generation.page_objects.document_assembly import persist_document_json, reload_document
-    from generation.page_objects.visual_completion import (
-        VisualCompletionError,
-        apply_figure_asset_update,
+    from planning.whole_lesson.repository import (
+        PageDocumentRepository,
+        VisualCompletionConflict,
+        VisualRequestNotFound,
     )
-    from planning.whole_lesson.events import make_event
-    from planning.whole_lesson.repository import PageDocumentRepository
-    from planning.whole_lesson.states import IllegalTransitionError
 
     request_id = str(body.request_id or "").strip()
     if not request_id:
@@ -4443,129 +4440,29 @@ async def post_figure_visual_callback(
     asset["request_id"] = request_id
 
     async with async_session_factory() as session:
-        generation = await session.get(GenerationModel, generation_id)
-        if generation is None:
-            raise HTTPException(status_code=404, detail="Generation not found")
-        envelope = generation.document_json if isinstance(generation.document_json, dict) else {}
-        try:
-            document = reload_document(envelope)
-        except Exception as exc:  # noqa: BLE001
-            raise HTTPException(status_code=404, detail="Document not found") from exc
-
-        target_block_id = body.block_id
-        already_applied = False
-        for section in document.get("sections") or []:
-            for block in section.get("blocks") or []:
-                if block.get("object") != "figure":
-                    continue
-                existing_rid = ((block.get("content") or {}).get("asset") or {}).get(
-                    "request_id"
-                )
-                if existing_rid != request_id:
-                    continue
-                target_block_id = str(block.get("id") or "")
-                status = str(
-                    ((block.get("content") or {}).get("asset") or {}).get("status") or ""
-                )
-                if status == str(asset.get("status") or "") and status in {
-                    "ready",
-                    "failed",
-                }:
-                    already_applied = True
-                break
-            if target_block_id:
-                break
-        if not target_block_id:
-            raise HTTPException(status_code=404, detail="figure request_id not found")
-
-        if not already_applied:
-            try:
-                document = apply_figure_asset_update(
-                    document,
-                    block_id=target_block_id,
-                    asset=asset,
-                )
-            except VisualCompletionError as exc:
-                raise HTTPException(status_code=400, detail=str(exc)) from exc
-            generation.document_json = persist_document_json(envelope, document)
-
         repo = PageDocumentRepository(session, generation_id)
-        state = await repo.load_page_generation_state()
-        block_execution = dict(state.get("block_execution") or {})
-        matched_key = None
-        for key, outcome in list(block_execution.items()):
-            if not isinstance(outcome, dict):
-                continue
-            if str(outcome.get("request_id") or "") == request_id:
-                matched_key = key
-                break
-            if str(outcome.get("block_id") or "") == target_block_id:
-                matched_key = key
-        if matched_key is not None:
-            outcome = dict(block_execution.get(matched_key) or {})
-            asset_status = str(asset.get("status") or "ready")
-            outcome_status = "ready" if asset_status == "ready" else "failed_recoverable"
-            await repo.save_block_outcome(
-                matched_key,
-                {
-                    **outcome,
-                    "status": outcome_status,
-                    "request_id": request_id,
-                    "block_id": target_block_id,
-                    "content": {
-                        **dict(outcome.get("content") or {}),
-                        "asset": asset,
-                    },
-                },
-            )
-
-        revision = await repo.bump_document_revision()
-
-        pending = False
-        for section in document.get("sections") or []:
-            for block in section.get("blocks") or []:
-                if block.get("object") != "figure":
-                    continue
-                status = str(
-                    ((block.get("content") or {}).get("asset") or {}).get("status") or ""
-                )
-                if status in {"pending", "failed"}:
-                    pending = True
-                    break
-            if pending:
-                break
-
-        generation = await session.get(GenerationModel, generation_id)
-        current = str(generation.status if generation else "")
-        terminal = current
-        if current == "ready":
-            terminal = "ready"
-        elif not pending and current == "awaiting_visuals":
-            try:
-                await repo.transition(
-                    expected={"awaiting_visuals"},
-                    target="ready",
-                    event="visuals_ready",
-                )
-                terminal = "ready"
-            except IllegalTransitionError:
-                terminal = current
-        await repo.append_event(
-            make_event(
-                "visual_callback",
-                generation_id=generation_id,
-                block_id=target_block_id,
-                status=str(asset.get("status") or "ready"),
+        try:
+            result = await repo.apply_visual_completion(
                 request_id=request_id,
-                idempotent=already_applied,
+                asset=asset,
+                supplied_block_id=body.block_id,
             )
-        )
+        except VisualRequestNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except VisualCompletionConflict as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except Exception as exc:  # noqa: BLE001
+            from generation.page_objects.visual_completion import VisualCompletionError
+
+            if isinstance(exc, VisualCompletionError):
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            raise
 
     return {
-        "generation_id": generation_id,
-        "block_id": target_block_id,
-        "request_id": request_id,
-        "status": terminal,
-        "document_revision": revision,
-        "idempotent": already_applied,
+        "generation_id": result.generation_id,
+        "block_id": result.block_id,
+        "request_id": result.request_id,
+        "status": result.status,
+        "document_revision": result.document_revision,
+        "idempotent": result.idempotent,
     }

@@ -159,8 +159,10 @@ class NativeExecutionWorker:
 
     async def _persist_failure(self, lease: ExecutionLease, exc: BaseException) -> None:
         classification = classify_failure(exc)
-        if classification.code == "LEASE_LOST":
+        if classification.code in {"LEASE_LOST", "CANCELLED"}:
             return
+        recoverable = classification.code in {"TRANSPORT", "TIMEOUT", "RATE_LIMIT"}
+        target = "failed_recoverable" if recoverable else "failed_terminal"
         error = structured_error_from_exc(
             exc=exc,
             stage="writing_blocks",
@@ -174,16 +176,16 @@ class NativeExecutionWorker:
                 if current in {"planning_forms", "writing_blocks", "assembling"}:
                     await repo.transition(
                         expected={current},
-                        target="failed_recoverable",
+                        target=target,
                         event="worker_failure",
                         error=error,
                         worker_id=lease.worker_id,
                         lease_token=lease.lease_token,
                     )
-                await repo.release_execution(
-                    worker_id=lease.worker_id,
-                    lease_token=lease.lease_token,
-                )
+                    await repo.release_execution(
+                        worker_id=lease.worker_id,
+                        lease_token=lease.lease_token,
+                    )
         except LeaseLostError:
             return
         except Exception:  # noqa: BLE001

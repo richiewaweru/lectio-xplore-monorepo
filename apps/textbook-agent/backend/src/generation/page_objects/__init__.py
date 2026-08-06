@@ -139,7 +139,7 @@ def write_figure(ctx: WriterContext) -> WriterResult:
         block_id=ctx.planned.id,
         object="figure",
         intent=ctx.planned.intent,
-        status="pending",
+        status="visual_pending",
         request_id=request_id,
         content={
             "alt_text": ctx.planned.brief[:160],
@@ -302,7 +302,7 @@ async def dispatch_writer_async(ctx: WriterContext) -> WriterResult:
                 object=base.object,
                 intent=base.intent,
                 content=merged,
-                status="pending",
+                status="visual_pending",
                 request_id=base.request_id,
             )
         except Exception:

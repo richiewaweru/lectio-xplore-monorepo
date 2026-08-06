@@ -80,7 +80,7 @@ def test_figure_pending_has_stable_request_id() -> None:
         )
     )
     result = dispatch_writer(ctx)
-    assert result.status == "pending"
+    assert result.status == "visual_pending"
     assert result.request_id
     assert result.content["asset"]["status"] == "pending"
     assert result.content["asset"]["request_id"] == result.request_id

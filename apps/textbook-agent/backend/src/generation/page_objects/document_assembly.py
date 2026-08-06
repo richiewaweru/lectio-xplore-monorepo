@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from copy import deepcopy
 from typing import Any
@@ -99,6 +100,11 @@ def write_planned_section(
         section_id=section_id, title=title, plan=plan, writer_results=results
     )
     return section, results
+
+
+def canonical_document_sha256(document: dict[str, Any]) -> str:
+    payload = json.dumps(document, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def persist_document_json(

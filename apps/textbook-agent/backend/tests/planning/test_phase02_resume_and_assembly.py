@@ -31,7 +31,16 @@ from planning.whole_lesson.packet import (
     SlotRecord,
 )
 from planning.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
-from planning.whole_lesson.states import execution_key
+from planning.whole_lesson.states import ExecutionLease, execution_key
+
+
+async def _claim_lease(gid: str, *, worker_id: str = "asm-worker") -> ExecutionLease:
+    async with async_session_factory() as session:
+        lease = await PageDocumentRepository(session, gid).claim_execution(
+            worker_id=worker_id
+        )
+        assert lease is not None
+        return lease
 
 
 def _packet() -> ImmutableLessonPacket:
@@ -246,9 +255,13 @@ async def test_form_plan_reused_when_persisted() -> None:
             new=AsyncMock(side_effect=_fake_dispatch),
         ),
     ):
+        lease = await _claim_lease(gid, worker_id="reuse-worker")
         async with async_session_factory() as session:
             result = await execute_after_teaching_approval(
-                session=session, generation_id=gid, packet=_packet()
+                session=session,
+                generation_id=gid,
+                packet=_packet(),
+                lease=lease,
             )
     assert form_calls["n"] == 0
     assert result["status"] in {"ready", "awaiting_visuals"}
@@ -258,14 +271,15 @@ async def test_form_plan_reused_when_persisted() -> None:
 async def test_assemble_from_db_rejects_missing_and_completes_when_ready() -> None:
     plan = _form_plan()
     gid = await _seed(status="assembling")
+    lease = await _claim_lease(gid)
     async with async_session_factory() as session:
-        repo = PageDocumentRepository(session, gid)
         with pytest.raises(AssemblyError, match="missing"):
             await assemble_from_db(
                 session=session,
                 generation_id=gid,
                 packet=_packet(),
                 form_plan=plan,
+                lease=lease,
             )
 
     for section in plan.sections:
@@ -288,7 +302,6 @@ async def test_assemble_from_db_rejects_missing_and_completes_when_ready() -> No
                 )
 
     async with async_session_factory() as session:
-        # generation may still be assembling from earlier failure path
         generation = await session.get(GenerationModel, gid)
         assert generation is not None
         generation.status = "assembling"
@@ -298,6 +311,7 @@ async def test_assemble_from_db_rejects_missing_and_completes_when_ready() -> No
             generation_id=gid,
             packet=_packet(),
             form_plan=plan,
+            lease=lease,
         )
         assert assembled["terminal"] == "ready"
         generation = await session.get(GenerationModel, gid)
@@ -310,9 +324,72 @@ async def test_assemble_from_db_rejects_missing_and_completes_when_ready() -> No
 
 
 @pytest.mark.asyncio
+async def test_assemble_with_figure_reaches_awaiting_visuals() -> None:
+    plan = FormPlan(
+        sections=[
+            FormPlanSection(
+                slot_id="explain",
+                blocks=[
+                    FormPlanBlock(
+                        id="fig-1",
+                        position=0,
+                        intent="show-structure",
+                        brief="Show two plants.",
+                        object="figure",
+                    )
+                ],
+            )
+        ]
+    )
+    gid = await _seed(status="assembling", form_plan=plan)
+    key = execution_key("explain", "fig-1")
+    async with async_session_factory() as session:
+        await PageDocumentRepository(session, gid).save_block_outcome(
+            key,
+            {
+                "status": "visual_pending",
+                "block_id": "fig-1",
+                "section_id": "explain",
+                "variant_id": "everyone",
+                "object": "figure",
+                "intent": "show-structure",
+                "request_id": "req-fig-1",
+                "content": {
+                    "alt_text": "Two plants",
+                    "caption": "Lit vs covered",
+                    "asset": {
+                        "status": "pending",
+                        "request_id": "req-fig-1",
+                        "kind": "image",
+                    },
+                },
+                "attempts": 1,
+            },
+        )
+    lease = await _claim_lease(gid)
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        generation.status = "assembling"
+        await session.commit()
+        assembled = await assemble_from_db(
+            session=session,
+            generation_id=gid,
+            packet=_packet(),
+            form_plan=plan,
+            lease=lease,
+        )
+        assert assembled["terminal"] == "awaiting_visuals"
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        assert generation.status == "awaiting_visuals"
+
+
+@pytest.mark.asyncio
 async def test_assemble_rejects_unknown_keys() -> None:
     plan = _form_plan()
     gid = await _seed(status="assembling")
+    lease = await _claim_lease(gid)
     async with async_session_factory() as session:
         repo = PageDocumentRepository(session, gid)
         for section in plan.sections:
@@ -344,8 +421,8 @@ async def test_assemble_rejects_unknown_keys() -> None:
                 generation_id=gid,
                 packet=_packet(),
                 form_plan=plan,
+                lease=lease,
             )
-
 
 @pytest.mark.asyncio
 async def test_started_current_token_not_duplicated() -> None:

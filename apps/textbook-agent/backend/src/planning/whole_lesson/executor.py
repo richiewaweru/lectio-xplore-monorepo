@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import json
 import random
 import time
 from typing import Any
@@ -14,11 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from contracts.lectio_page import get_intent_catalogue, validate_document
 from core.database.models import GenerationModel
 from core.database.session import async_session_factory
-from generation.page_objects import WriterContext, WriterResult, dispatch_writer_async
+from generation.page_objects import WriterContext, WriterError, WriterResult, dispatch_writer_async
 from generation.page_objects.document_assembly import (
     assemble_document_v2,
     assemble_section,
-    persist_document_json,
+    canonical_document_sha256,
     reload_document,
 )
 from planning.approved_items import ApprovedItemRecord, approved_items_as_writer_records
@@ -48,6 +46,37 @@ from v3_blueprint.planning.models import PlannedBlock, SectionBlockPlan
 
 class AssemblyError(RuntimeError):
     pass
+
+
+def normalize_writer_status(
+    *,
+    object_id: str,
+    writer_status: str,
+    content: dict[str, Any],
+) -> str:
+    """Canonicalize block execution status. Never default unknown to ready."""
+    status = str(writer_status or "").strip()
+    asset = dict((content or {}).get("asset") or {})
+    asset_status = str(asset.get("status") or "").strip()
+    if object_id == "figure":
+        if asset_status and asset_status != "ready":
+            return "visual_pending"
+        if status in {"pending", "visual_pending"}:
+            return "visual_pending"
+        if status == "ready" and (not asset_status or asset_status == "ready"):
+            return "ready"
+        if status == "ready":
+            return "visual_pending"
+        raise WriterError(
+            f"invalid figure writer status {status!r} asset={asset_status!r}"
+        )
+    if status == "ready":
+        return "ready"
+    if status == "visual_pending":
+        return "visual_pending"
+    if status == "pending" and object_id == "figure":
+        return "visual_pending"
+    raise WriterError(f"invalid writer status {status!r} for object {object_id!r}")
 
 
 def form_plan_to_section_plans(form_plan: FormPlan) -> dict[str, SectionBlockPlan]:
@@ -83,11 +112,6 @@ def _packet_item_records(packet: ImmutableLessonPacket) -> tuple[dict[str, Any],
         for item in packet.approved_items
     )
     return approved_items_as_writer_records(records)
-
-
-def canonical_document_sha256(document: dict[str, Any]) -> str:
-    payload = json.dumps(document, sort_keys=True, separators=(",", ":"), default=str)
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def expected_execution_keys(
@@ -251,7 +275,11 @@ async def _write_one_block(
                 content["asset"] = asset
                 result.request_id = rid
                 result.content = content
-            status = result.status if result.status in {"ready", "visual_pending"} else "ready"
+            status = normalize_writer_status(
+                object_id=result.object,
+                writer_status=result.status,
+                content=dict(result.content or {}),
+            )
             async with async_session_factory() as session:
                 repo = PageDocumentRepository(session, generation_id)
                 await repo.save_block_outcome(
@@ -462,6 +490,8 @@ async def assemble_from_db(
     lease: ExecutionLease | None = None,
 ) -> dict[str, Any]:
     """Assemble from exact DB key set. Dict storage precludes duplicate keys."""
+    if lease is None:
+        raise AssemblyError("assemble_from_db requires an ExecutionLease")
     repo = PageDocumentRepository(session, generation_id)
     form_dump = form_plan.model_dump(mode="json")
     expected = await repo.load_expected_writer_results(
@@ -527,11 +557,12 @@ async def assemble_from_db(
         },
     )
     before_hash = canonical_document_sha256(document)
-    generation = await session.get(GenerationModel, generation_id)
-    if generation is None:
-        raise KeyError(generation_id)
-    generation.document_json = persist_document_json(generation.document_json, document)
-    await session.commit()
+    await repo.persist_document_candidate(
+        document,
+        document_sha256=before_hash,
+        worker_id=lease.worker_id,
+        lease_token=lease.lease_token,
+    )
 
     async with async_session_factory() as fresh:
         gen2 = await fresh.get(GenerationModel, generation_id)
@@ -545,39 +576,18 @@ async def assemble_from_db(
         if after_hash != before_hash:
             raise AssemblyError("fresh-session hash mismatch")
 
-    worker_id = lease.worker_id if lease else None
-    lease_token = lease.lease_token if lease else None
-    repo = PageDocumentRepository(session, generation_id)
-    await repo.persist_reload_proof(
-        document_sha256=before_hash,
-        reloaded_sha256=after_hash,
-        worker_id=worker_id,
-        lease_token=lease_token,
-    )
-    await repo.bump_document_revision(worker_id=worker_id, lease_token=lease_token)
-
     pending_visuals = any(
         str((expected[key] or {}).get("status") or "") == "visual_pending"
         for key in expected_keys
     )
-    if pending_visuals:
-        await repo.transition(
-            expected={"assembling", "writing_blocks"},
-            target="awaiting_visuals",
-            event="document_awaiting_visuals",
-            worker_id=worker_id,
-            lease_token=lease_token,
-        )
-        terminal = "awaiting_visuals"
-    else:
-        await repo.transition(
-            expected={"assembling", "writing_blocks", "awaiting_visuals"},
-            target="ready",
-            event="document_ready",
-            worker_id=worker_id,
-            lease_token=lease_token,
-        )
-        terminal = "ready"
+    await repo.finalize_verified_document(
+        expected_document_sha256=before_hash,
+        reloaded_sha256=after_hash,
+        pending_visuals=pending_visuals,
+        worker_id=lease.worker_id,
+        lease_token=lease.lease_token,
+    )
+    terminal = "awaiting_visuals" if pending_visuals else "ready"
     return {
         "document": document,
         "terminal": terminal,
