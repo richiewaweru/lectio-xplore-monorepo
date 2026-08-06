@@ -337,13 +337,55 @@ def _normalize_chunked_status(
     generation_id: str,
     state: dict[str, Any],
     document_json: Any,
+    *,
+    generation_status: str | None = None,
 ) -> V3ChunkedStatusDTO:
+    from planning.whole_lesson.native_status import project_native_status
+
     full_state = _normalize_chunked_state(generation_id, state)
     progress = document_json.get("progress") if isinstance(document_json, dict) else None
     doc_version = progress.get("updated_at") if isinstance(progress, dict) else None
     if not isinstance(doc_version, str) and isinstance(document_json, dict):
         canonical = json.dumps(document_json, sort_keys=True, separators=(",", ":"), default=str)
         doc_version = f"sha256:{hashlib.sha256(canonical.encode('utf-8')).hexdigest()}"
+
+    native = project_native_status(
+        generation_id,
+        state,
+        document_json,
+        generation_status=generation_status,
+    )
+    if native is not None:
+        failed_sections = list(native.get("failed_section_ids") or full_state.failed_sections)
+        return V3ChunkedStatusDTO(
+            generation_id=generation_id,
+            pack_id=full_state.pack_id,
+            stage=str(native.get("stage") or full_state.stage),
+            doc_version=doc_version if isinstance(doc_version, str) else None,
+            failed_sections=failed_sections,
+            blueprint_id=full_state.blueprint_id,
+            execution_started=bool(native.get("execution_started", full_state.execution_started)),
+            next_action=native.get("next_action"),
+            error=native.get("error") if isinstance(native.get("error"), str) else full_state.error,
+            error_type=native.get("error_type")
+            if isinstance(native.get("error_type"), str)
+            else full_state.error_type,
+            variant_generation_ids=full_state.variant_generation_ids,
+            document_version=native.get("document_version"),
+            document_exists=bool(native.get("document_exists")),
+            sections_total=int(native.get("sections_total") or 0),
+            sections_ready=int(native.get("sections_ready") or 0),
+            sections_failed=int(native.get("sections_failed") or 0),
+            blocks_total=int(native.get("blocks_total") or 0),
+            blocks_ready=int(native.get("blocks_ready") or 0),
+            blocks_failed=int(native.get("blocks_failed") or 0),
+            failed_section_ids=list(native.get("failed_section_ids") or []),
+            failed_block_ids=list(native.get("failed_block_ids") or []),
+            error_detail=native.get("error_detail")
+            if isinstance(native.get("error_detail"), dict)
+            else None,
+        )
+
     return V3ChunkedStatusDTO(
         generation_id=generation_id,
         pack_id=full_state.pack_id,
@@ -1725,7 +1767,12 @@ async def get_chunked_plan_status(
         state = await load_chunked_state(generation_id)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=404, detail="Chunked state not found") from exc
-    return _normalize_chunked_status(generation_id, state, model.document_json)
+    return _normalize_chunked_status(
+        generation_id,
+        state,
+        model.document_json,
+        generation_status=str(model.status or "") or None,
+    )
 
 
 @v3_studio_router.get("/chunked/{generation_id}/events")
@@ -2735,8 +2782,52 @@ async def post_chunked_retry_section(
     body: V3ChunkedRetrySectionRequest,
     current_user: User = Depends(get_current_user),
 ) -> V3ChunkedPlanStateDTO:
-    await _load_owned_generation(generation_id, current_user.id)
+    model = await _load_owned_generation(generation_id, current_user.id)
     state = await load_chunked_state(generation_id)
+
+    from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
+    from planning.whole_lesson.repository import PageDocumentRepository
+
+    if generation_is_native_whole_lesson(state, model):
+        status = str(model.status or state.get("stage") or "")
+        if status == "failed_recoverable":
+            async with async_session_factory() as session:
+                repo = PageDocumentRepository(session, generation_id)
+                await repo.transition(
+                    expected={"failed_recoverable"},
+                    target="queued",
+                    event="native_retry_requeued",
+                )
+            latest = await load_chunked_state(generation_id)
+            latest = {
+                **latest,
+                "stage": "queued",
+                "error": None,
+                "error_type": None,
+                "next_action": "wait",
+            }
+            await persist_chunked_state(
+                generation_id,
+                {
+                    "stage": "queued",
+                    "error": None,
+                    "error_type": None,
+                },
+            )
+            return _normalize_chunked_state(generation_id, {**latest, "stage": "queued"})
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error_type": "NativeRetryRequired",
+                "message": (
+                    "Legacy retry-section is disabled for native whole-lesson generations. "
+                    "Requeue via failed_recoverable → queued or approve/retry native path."
+                ),
+                "stage": status,
+                "generation_id": generation_id,
+            },
+        )
+
     plan_raw = state.get("structural_plan")
     if not isinstance(plan_raw, dict):
         raise HTTPException(status_code=409, detail="No structural plan available.")

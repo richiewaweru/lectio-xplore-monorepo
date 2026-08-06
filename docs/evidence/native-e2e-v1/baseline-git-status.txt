@@ -1,0 +1,12 @@
+﻿?? .tmp-xplore-native-phase02-pack/xplore-native-phase02-completion-pack-v1.0/00_READ_ME_FIRST.md
+?? .tmp-xplore-native-phase02-pack/xplore-native-phase02-completion-pack-v1.0/01_ARCHITECTURE/PHASE_02_RESOLVED_ARCHITECTURE.md
+?? .tmp-xplore-native-phase02-pack/xplore-native-phase02-completion-pack-v1.0/02_PATCH/
+?? .tmp-xplore-native-phase02-pack/xplore-native-phase02-completion-pack-v1.0/03_IMPLEMENTATION/
+?? .tmp-xplore-native-phase02-pack/xplore-native-phase02-completion-pack-v1.0/04_VERIFICATION/
+?? .tmp-xplore-native-phase02-pack/xplore-native-phase02-completion-pack-v1.0/05_EVIDENCE_TEMPLATES/
+?? .tmp-xplore-native-phase02-pack/xplore-native-phase02-completion-pack-v1.0/06_HANDOFF/
+?? .tmp-xplore-native-phase02-pack/xplore-native-phase02-completion-pack-v1.0/MANIFEST.json
+?? .tmp-xplore-native-phase02-pack/xplore-native-phase02-completion-pack-v1.0/SHA256SUMS.txt
+?? docs/evidence/native-e2e-v1/
+?? docs/evidence/whole-lesson-runs/browser-smoke-two-lessons-rerun/
+?? docs/evidence/whole-lesson-runs/browser-smoke-two-lessons/

@@ -29,6 +29,7 @@ class FormPlanSection(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     slot_id: str
+    title: str = ""
     blocks: list[FormPlanBlock] = Field(default_factory=list)
 
 

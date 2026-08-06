@@ -541,6 +541,7 @@ class PageDocumentRepository:
         post_approval = {
             "queued",
             "planning_forms",
+            "writing_sections",
             "writing_blocks",
             "assembling",
             "awaiting_visuals",
@@ -796,7 +797,7 @@ class PageDocumentRepository:
             state["events"] = events[-500:]
 
         return await self.mutate_state(
-            expected_statuses={"assembling", "writing_blocks"},
+            expected_statuses={"assembling", "writing_sections", "writing_blocks"},
             worker_id=worker_id,
             lease_token=lease_token,
             mutation=_mut,

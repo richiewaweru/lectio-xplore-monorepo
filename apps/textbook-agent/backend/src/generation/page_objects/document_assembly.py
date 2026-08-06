@@ -9,8 +9,10 @@ from typing import Any
 from uuid import uuid4
 
 from contracts.lectio_page import validate_document
-from generation.page_objects import WriterContext, WriterResult, dispatch_writer
-from v3_blueprint.planning.models import PlannedBlock, SectionBlockPlan
+from generation.page_objects.models import WriterContext, WriterResult
+from generation.page_objects.registry import dispatch_writer
+from generation.page_objects.validation import validate_answer_key_integrity
+from v3_blueprint.planning.models import SectionBlockPlan
 
 
 class DocumentAssemblyError(ValueError):
@@ -24,6 +26,45 @@ def normalize_block_positions(blocks: list[dict[str, Any]]) -> list[dict[str, An
         item["position"] = index
         out.append(item)
     return out
+
+
+def collect_answer_entries(writer_results: list[WriterResult]) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    for result in writer_results:
+        for entry in result.answer_entries:
+            entries.append(dict(entry))
+    return entries
+
+
+def build_answer_key_block(
+    *,
+    document_id: str,
+    answer_entries: list[dict[str, Any]],
+    group_title: str | None = None,
+) -> dict[str, Any]:
+    entries: list[dict[str, Any]] = []
+    for raw in answer_entries:
+        entry: dict[str, Any] = {
+            "question_id": str(raw["question_id"]),
+            "answer": raw["answer"],
+        }
+        if raw.get("alternatives"):
+            entry["alternatives"] = list(raw["alternatives"])
+        if "working" in raw:
+            entry["working"] = raw.get("working")
+        if "rubric" in raw:
+            entry["rubric"] = raw.get("rubric")
+        entries.append(entry)
+    group: dict[str, Any] = {"entries": entries}
+    if group_title:
+        group["title"] = group_title
+    return {
+        "id": f"answer-key-{document_id}",
+        "object": "answer-key",
+        "intent": "answer-key",
+        "position": 0,
+        "content": {"groups": [group]},
+    }
 
 
 def assemble_section(
@@ -65,11 +106,18 @@ def assemble_document_v2(
     sections: list[dict[str, Any]],
     document_id: str | None = None,
     metadata: dict[str, Any] | None = None,
+    answer_entries: list[dict[str, Any]] | None = None,
+    writer_results: list[WriterResult] | None = None,
 ) -> dict[str, Any]:
-    doc = {
+    doc_id = document_id or f"doc-{uuid4().hex[:12]}"
+    entries = list(answer_entries or [])
+    if not entries and writer_results:
+        entries = collect_answer_entries(writer_results)
+
+    doc: dict[str, Any] = {
         "document_version": 2,
         "contract_version": "1.0.0",
-        "id": document_id or f"doc-{uuid4().hex[:12]}",
+        "id": doc_id,
         "title": title,
         "language": "en",
         "metadata": metadata
@@ -79,6 +127,22 @@ def assemble_document_v2(
         },
         "sections": sections,
     }
+
+    if entries:
+        blocks = [
+            block
+            for section in sections
+            for block in (section.get("blocks") or [])
+        ]
+        try:
+            validate_answer_key_integrity(blocks, entries)
+        except ValueError as exc:
+            raise DocumentAssemblyError(str(exc)) from exc
+        doc["answer_key"] = build_answer_key_block(
+            document_id=doc_id,
+            answer_entries=entries,
+        )
+
     errors = validate_document(doc)
     if errors:
         raise DocumentAssemblyError("; ".join(errors[:8]))

@@ -23,6 +23,19 @@ def test_transport_timeout_rate_limit_retryable() -> None:
     )
 
 
+def test_content_validation_error_not_executor_repairable() -> None:
+    from generation.page_objects import ContentValidationError
+
+    exc = ContentValidationError(
+        "questions",
+        [{"path": "items.0.correct_key", "message": "Extra inputs are not permitted"}],
+    )
+    c = classify_failure(exc)
+    assert c.code == "VALIDATION"
+    assert c.retryable is True
+    assert c.repairable is False
+
+
 def test_validation_repairable_once() -> None:
     class M(BaseModel):
         x: int

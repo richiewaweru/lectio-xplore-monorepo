@@ -108,6 +108,7 @@ export type V3ChunkedPlanStage =
 	| 'awaiting_teaching_approval'
 	| 'queued'
 	| 'planning_forms'
+	| 'writing_sections'
 	| 'writing_blocks'
 	| 'assembling'
 	| 'awaiting_visuals'
@@ -161,6 +162,17 @@ export interface V3ChunkedStatus {
 	error?: string | null;
 	error_type?: string | null;
 	variant_generation_ids?: Record<string, string>;
+	document_version?: number | null;
+	document_exists?: boolean;
+	sections_total?: number;
+	sections_ready?: number;
+	sections_failed?: number;
+	blocks_total?: number;
+	blocks_ready?: number;
+	blocks_failed?: number;
+	failed_section_ids?: string[];
+	failed_block_ids?: string[];
+	error_detail?: Record<string, unknown> | null;
 }
 
 export interface V3PackVariant {

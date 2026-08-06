@@ -24,6 +24,8 @@ class PageModelCall(str, Enum):
     LIST_WRITER = "list_writer"
     TABLE_WRITER = "table_writer"
     FIGURE_BRIEF_WRITER = "figure_brief_writer"
+    ASIDE_WRITER = "aside_writer"
+    CHOICES_WRITER = "choices_writer"
     ANSWER_KEY = "answer_key"
 
 
@@ -37,6 +39,8 @@ _CALL_TIERS: dict[PageModelCall, ModelTier] = {
     PageModelCall.LIST_WRITER: "FAST",
     PageModelCall.TABLE_WRITER: "FAST",
     PageModelCall.FIGURE_BRIEF_WRITER: "FAST",
+    PageModelCall.ASIDE_WRITER: "FAST",
+    PageModelCall.CHOICES_WRITER: "FAST",
     PageModelCall.ANSWER_KEY: "FAST",
 }
 
@@ -46,6 +50,8 @@ _OBJECT_WRITER_CALLS: dict[str, PageModelCall] = {
     "list": PageModelCall.LIST_WRITER,
     "table": PageModelCall.TABLE_WRITER,
     "figure": PageModelCall.FIGURE_BRIEF_WRITER,
+    "aside": PageModelCall.ASIDE_WRITER,
+    "choices": PageModelCall.CHOICES_WRITER,
 }
 
 
@@ -57,7 +63,8 @@ def tier_for_call(call: PageModelCall | str) -> ModelTier:
 
 def tier_for_object_writer(object_id: str) -> ModelTier | None:
     """Return tier for a writer object, or None when no model call is used."""
-    if object_id == "questions":
+    # questions/choices use deterministic approved item records when available.
+    if object_id in {"questions", "choices"}:
         return None
     call = _OBJECT_WRITER_CALLS.get(object_id)
     if call is None:

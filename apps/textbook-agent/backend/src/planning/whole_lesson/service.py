@@ -240,27 +240,14 @@ async def approve_teaching_and_execute(
     )
 
 
-def generation_is_native_whole_lesson(generation: GenerationModel) -> bool:
-    import json
+def generation_is_native_whole_lesson(
+    generation: GenerationModel | None = None,
+    *,
+    state: Mapping[str, Any] | None = None,
+) -> bool:
+    """Delegate to planning.whole_lesson.native_routing (GenerationModel-first API)."""
+    from planning.whole_lesson.native_routing import (
+        generation_is_native_whole_lesson as _detect,
+    )
 
-    chunked: dict[str, Any] = {}
-    raw = getattr(generation, "chunked_state_json", None)
-    if isinstance(raw, str) and raw.strip():
-        try:
-            chunked = json.loads(raw)
-        except json.JSONDecodeError:
-            chunked = {}
-    elif isinstance(raw, dict):
-        chunked = raw
-    if chunked.get("page_document_v2"):
-        return True
-    context = chunked.get("context") or {}
-    if context.get("native_whole_lesson"):
-        return True
-    plan = {}
-    if generation.planning_spec_json:
-        try:
-            plan = json.loads(generation.planning_spec_json)
-        except Exception:
-            plan = {}
-    return int(plan.get("document_contract_version") or 1) >= 2
+    return _detect(state, generation)

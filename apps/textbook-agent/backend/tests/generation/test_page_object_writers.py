@@ -66,6 +66,10 @@ def test_questions_assembler_uses_item_ids_only() -> None:
     result = assemble_questions(ctx)
     assert result.content["items"][0]["prompt"] == "Why does the covered leaf fail?"
     assert "THIS BRIEF" not in result.content["items"][0]["prompt"]
+    assert "options" not in result.content["items"][0]
+    assert "correct_key" not in result.content["items"][0]
+    assert "answer_key_ref" not in result.content["items"][0]
+    assert result.answer_entries[0]["answer"] == "No light"
 
 
 def test_figure_pending_has_stable_request_id() -> None:

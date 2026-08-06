@@ -1,0 +1,71 @@
+[
+  {
+    "stage": "writing_sections",
+    "status": {
+      "blocks_failed": 0,
+      "blocks_ready": 8,
+      "blocks_total": 8,
+      "document_exists": false,
+      "document_version": 2,
+      "error": null,
+      "error_detail": null,
+      "error_type": null,
+      "execution_started": true,
+      "failed_block_ids": [],
+      "failed_section_ids": [],
+      "failed_sections": [],
+      "generation_id": "native-e2e-all_valid_out_of_order",
+      "next_action": "wait",
+      "sections_failed": 0,
+      "sections_ready": 4,
+      "sections_total": 4,
+      "stage": "writing_sections"
+    }
+  },
+  {
+    "stage": "assembling",
+    "status": {
+      "blocks_failed": 0,
+      "blocks_ready": 8,
+      "blocks_total": 8,
+      "document_exists": false,
+      "document_version": 2,
+      "error": null,
+      "error_detail": null,
+      "error_type": null,
+      "execution_started": true,
+      "failed_block_ids": [],
+      "failed_section_ids": [],
+      "failed_sections": [],
+      "generation_id": "native-e2e-all_valid_out_of_order",
+      "next_action": "wait",
+      "sections_failed": 0,
+      "sections_ready": 4,
+      "sections_total": 4,
+      "stage": "assembling"
+    }
+  },
+  {
+    "stage": "ready",
+    "status": {
+      "blocks_failed": 0,
+      "blocks_ready": 8,
+      "blocks_total": 8,
+      "document_exists": true,
+      "document_version": 2,
+      "error": null,
+      "error_detail": null,
+      "error_type": null,
+      "execution_started": true,
+      "failed_block_ids": [],
+      "failed_section_ids": [],
+      "failed_sections": [],
+      "generation_id": "native-e2e-all_valid_out_of_order",
+      "next_action": "done",
+      "sections_failed": 0,
+      "sections_ready": 4,
+      "sections_total": 4,
+      "stage": "ready"
+    }
+  }
+]

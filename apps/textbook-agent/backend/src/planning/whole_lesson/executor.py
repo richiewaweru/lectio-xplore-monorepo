@@ -33,7 +33,9 @@ from planning.whole_lesson.packet import ImmutableLessonPacket
 from planning.whole_lesson.repository import PageDocumentRepository
 from planning.whole_lesson.states import (
     DEFAULT_VARIANT_ID,
+    MAX_SECTION_CONCURRENCY,
     MAX_WRITER_CONCURRENCY,
+    WRITING_STATUSES,
     ExecutionLease,
     LeaseLostError,
     ResumeDecision,
@@ -91,7 +93,11 @@ def form_plan_to_section_plans(form_plan: FormPlan) -> dict[str, SectionBlockPla
                 evidence=block.evidence or "Form-assigned block.",
                 brief=block.brief,
                 placement=block.placement,
-                source_question_ids=list(block.source_question_ids),
+                source_question_ids=(
+                    list(block.source_question_ids)
+                    if block.object == "questions"
+                    else []
+                ),
             )
             for block in section.blocks
         ]
@@ -130,7 +136,8 @@ async def _write_one_block(
     slot_id: str,
     block: Any,
     index: int,
-    flat_blocks: list[tuple[str, Any]],
+    absolute_index: int,
+    section_blocks: list[Any],
     packet: ImmutableLessonPacket,
     intents: dict[str, Any],
     item_records: tuple[dict[str, Any], ...],
@@ -178,11 +185,11 @@ async def _write_one_block(
             return {"execution_key": key, "status": "lease_lost", "error": str(exc)}
 
     injection = get_failure_injection()
-    if injection.should_fail(generation_id=generation_id, block_index=index):
+    if injection.should_fail(generation_id=generation_id, block_index=absolute_index):
         exc = RuntimeError("injected writer failure for Phase 02 proof")
         error = structured_error_from_exc(
             exc=exc,
-            stage="writing_blocks",
+            stage="writing_sections",
             section_id=slot_id,
             block_id=block.id,
             key=key,
@@ -224,8 +231,10 @@ async def _write_one_block(
                 return {"execution_key": key, "status": "lease_lost", "error": str(lost)}
         return {"execution_key": key, "status": "failed_recoverable", "error": error}
 
-    prev_brief = flat_blocks[index - 1][1].brief if index > 0 else ""
-    next_brief = flat_blocks[index + 1][1].brief if index + 1 < len(flat_blocks) else ""
+    prev_brief = section_blocks[index - 1].brief if index > 0 else ""
+    next_brief = (
+        section_blocks[index + 1].brief if index + 1 < len(section_blocks) else ""
+    )
     intent_guidance = ""
     intent_rec = intents.get(block.intent)
     if isinstance(intent_rec, dict):
@@ -256,11 +265,11 @@ async def _write_one_block(
         },
         generation_id=generation_id,
         use_llm=True,
+        section_id=slot_id,
     )
 
     last_error: dict[str, Any] | None = None
     transport_attempts = 0
-    repair_used = False
     max_transport = 3
     while True:
         try:
@@ -280,6 +289,7 @@ async def _write_one_block(
                 writer_status=result.status,
                 content=dict(result.content or {}),
             )
+            answer_entries = [dict(entry) for entry in (result.answer_entries or ())]
             async with async_session_factory() as session:
                 repo = PageDocumentRepository(session, generation_id)
                 await repo.save_block_outcome(
@@ -294,6 +304,7 @@ async def _write_one_block(
                         "intent": result.intent,
                         "content": result.content,
                         "request_id": result.request_id,
+                        "answer_entries": answer_entries,
                         "error": None,
                     },
                     worker_id=worker_id,
@@ -310,14 +321,19 @@ async def _write_one_block(
                     worker_id=worker_id,
                     lease_token=lease_token,
                 )
-            return {"execution_key": key, "status": status, "result": result}
+            return {
+                "execution_key": key,
+                "status": status,
+                "result": result,
+                "answer_entries": answer_entries,
+            }
         except LeaseLostError as exc:
             return {"execution_key": key, "status": "lease_lost", "error": str(exc)}
         except Exception as exc:  # noqa: BLE001
             classification = classify_failure(exc)
             last_error = structured_error_from_exc(
                 exc=exc,
-                stage="writing_blocks",
+                stage="writing_sections",
                 section_id=slot_id,
                 block_id=block.id,
                 key=key,
@@ -332,9 +348,11 @@ async def _write_one_block(
                     await asyncio.sleep(delay)
                     continue
                 terminal_status = "failed_terminal"
-            elif classification.repairable and not repair_used:
-                repair_used = True
-                continue
+            elif classification.code in {"VALIDATION", "CONTRACT"}:
+                # Informed repair already ran inside dispatch_writer_async.
+                terminal_status = (
+                    "failed_recoverable" if classification.retryable else "failed_terminal"
+                )
             elif classification.code == "PROGRAMMING":
                 terminal_status = "failed_terminal"
             elif classification.retryable:
@@ -343,13 +361,7 @@ async def _write_one_block(
                     continue
                 terminal_status = "failed_terminal"
             else:
-                terminal_status = (
-                    "failed_recoverable"
-                    if classification.code in {"VALIDATION", "CONTRACT"} and repair_used
-                    else "failed_terminal"
-                )
-                if classification.code in {"VALIDATION", "CONTRACT"} and not repair_used:
-                    terminal_status = "failed_terminal"
+                terminal_status = "failed_terminal"
             async with async_session_factory() as session:
                 repo = PageDocumentRepository(session, generation_id)
                 try:
@@ -397,14 +409,9 @@ async def write_form_blocks(
     variant_id: str = DEFAULT_VARIANT_ID,
     lease: ExecutionLease | None = None,
 ) -> list[dict[str, Any]]:
-    """Write pending form blocks with bounded concurrency and failure isolation."""
+    """Write pending form blocks section-by-section with bounded concurrency."""
     intents = get_intent_catalogue().get("intents") or {}
     item_records = _packet_item_records(packet)
-    flat_blocks = [
-        (section.slot_id, block)
-        for section in form_plan.sections
-        for block in section.blocks
-    ]
     async with async_session_factory() as session:
         repo = PageDocumentRepository(session, generation_id)
         stored = await repo.load_block_results()
@@ -413,63 +420,88 @@ async def write_form_blocks(
             state = await repo.load_page_generation_state()
             current_token = int((state.get("execution") or {}).get("lease_token") or 0)
 
-    pending: list[tuple[int, str, Any]] = []
-    for index, (slot_id, block) in enumerate(flat_blocks):
-        key = execution_key(slot_id, block.id, variant_id)
-        prior = stored.get(key)
-        decision = decide_resume(prior, current_lease_token=current_token)
-        async with async_session_factory() as session:
-            repo = PageDocumentRepository(session, generation_id)
-            try:
-                await repo.append_event(
-                    make_event(
-                        "resume_decision",
-                        generation_id=generation_id,
-                        section_id=slot_id,
-                        block_id=block.id,
-                        status=decision.value,
-                        execution_key=key,
-                    ),
-                    worker_id=lease.worker_id if lease else None,
-                    lease_token=lease.lease_token if lease else None,
-                )
-            except LeaseLostError:
-                return [{"execution_key": key, "status": "lease_lost"}]
-        if decision in {
-            ResumeDecision.SKIP_READY,
-            ResumeDecision.SKIP_IN_FLIGHT,
-            ResumeDecision.BLOCK_TERMINAL,
-        }:
-            continue
-        pending.append((index, slot_id, block))
-
-    semaphore = asyncio.Semaphore(MAX_WRITER_CONCURRENCY)
+    section_semaphore = asyncio.Semaphore(MAX_SECTION_CONCURRENCY)
     outcomes: list[dict[str, Any]] = []
+    absolute_offsets: dict[str, int] = {}
+    running = 0
+    for section in form_plan.sections:
+        absolute_offsets[section.slot_id] = running
+        running += len(section.blocks)
 
-    async def _run(item: tuple[int, str, Any]) -> dict[str, Any]:
-        index, slot_id, block = item
-        key = execution_key(slot_id, block.id, variant_id)
-        async with semaphore:
-            return await _write_one_block(
-                generation_id=generation_id,
-                slot_id=slot_id,
-                block=block,
-                index=index,
-                flat_blocks=flat_blocks,
-                packet=packet,
-                intents=intents,
-                item_records=item_records,
-                variant_id=variant_id,
-                prior=stored.get(key),
-                lease=lease,
-            )
+    async def _write_section(section: Any) -> list[dict[str, Any]]:
+        slot_id = section.slot_id
+        section_blocks = list(section.blocks)
+        section_offset = absolute_offsets[slot_id]
+        pending: list[tuple[int, Any]] = []
+        for index, block in enumerate(section_blocks):
+            key = execution_key(slot_id, block.id, variant_id)
+            prior = stored.get(key)
+            decision = decide_resume(prior, current_lease_token=current_token)
+            async with async_session_factory() as session:
+                repo = PageDocumentRepository(session, generation_id)
+                try:
+                    await repo.append_event(
+                        make_event(
+                            "resume_decision",
+                            generation_id=generation_id,
+                            section_id=slot_id,
+                            block_id=block.id,
+                            status=decision.value,
+                            execution_key=key,
+                        ),
+                        worker_id=lease.worker_id if lease else None,
+                        lease_token=lease.lease_token if lease else None,
+                    )
+                except LeaseLostError:
+                    return [{"execution_key": key, "status": "lease_lost"}]
+            if decision in {
+                ResumeDecision.SKIP_READY,
+                ResumeDecision.SKIP_IN_FLIGHT,
+                ResumeDecision.BLOCK_TERMINAL,
+            }:
+                continue
+            pending.append((index, block))
 
-    if pending:
-        outcomes = list(await asyncio.gather(*[_run(item) for item in pending]))
+        if not pending:
+            return []
+
+        block_semaphore = asyncio.Semaphore(MAX_WRITER_CONCURRENCY)
+
+        async def _run(item: tuple[int, Any]) -> dict[str, Any]:
+            index, block = item
+            key = execution_key(slot_id, block.id, variant_id)
+            async with block_semaphore:
+                return await _write_one_block(
+                    generation_id=generation_id,
+                    slot_id=slot_id,
+                    block=block,
+                    index=index,
+                    absolute_index=section_offset + index,
+                    section_blocks=section_blocks,
+                    packet=packet,
+                    intents=intents,
+                    item_records=item_records,
+                    variant_id=variant_id,
+                    prior=stored.get(key),
+                    lease=lease,
+                )
+
+        async with section_semaphore:
+            return list(await asyncio.gather(*[_run(item) for item in pending]))
+
+    section_results = await asyncio.gather(
+        *[_write_section(section) for section in form_plan.sections]
+    )
+    for batch in section_results:
+        outcomes.extend(batch)
     return outcomes
 
 
 def _writer_result_from_outcome(outcome: dict[str, Any]) -> WriterResult:
+    raw_answers = outcome.get("answer_entries") or ()
+    answer_entries = tuple(
+        dict(entry) for entry in raw_answers if isinstance(entry, dict)
+    )
     return WriterResult(
         block_id=str(outcome.get("block_id") or ""),
         object=str(outcome.get("object") or "prose"),
@@ -477,7 +509,26 @@ def _writer_result_from_outcome(outcome: dict[str, Any]) -> WriterResult:
         status=str(outcome.get("status") or "ready"),
         content=dict(outcome.get("content") or {}),
         request_id=outcome.get("request_id"),
+        answer_entries=answer_entries,
     )
+
+
+def _section_title(
+    section: Any,
+    *,
+    teaching_plan: TeachingPlan | None = None,
+) -> str:
+    title = str(getattr(section, "title", "") or "").strip()
+    if title:
+        return title
+    if teaching_plan is not None:
+        for teaching_section in teaching_plan.sections:
+            if teaching_section.slot_id == section.slot_id:
+                purpose = str(teaching_section.specific_purpose or "").strip()
+                if purpose:
+                    return purpose
+                break
+    return section.slot_id.replace("_", " ").title()
 
 
 async def assemble_from_db(
@@ -488,6 +539,7 @@ async def assemble_from_db(
     form_plan: FormPlan,
     variant_id: str = DEFAULT_VARIANT_ID,
     lease: ExecutionLease | None = None,
+    teaching_plan: TeachingPlan | None = None,
 ) -> dict[str, Any]:
     """Assemble from exact DB key set. Dict storage precludes duplicate keys."""
     if lease is None:
@@ -524,6 +576,8 @@ async def assemble_from_db(
 
     section_plans = form_plan_to_section_plans(form_plan)
     sections_out = []
+    answer_entries: list[dict[str, Any]] = []
+    writer_results: list[WriterResult] = []
     for section in form_plan.sections:
         ordered: list[WriterResult] = []
         for block in section.blocks:
@@ -533,11 +587,15 @@ async def assemble_from_db(
                 raise AssemblyError(f"object mismatch for {key}")
             if str(outcome.get("intent") or "") != block.intent:
                 raise AssemblyError(f"intent mismatch for {key}")
-            ordered.append(_writer_result_from_outcome({**outcome, "block_id": block.id}))
+            result = _writer_result_from_outcome({**outcome, "block_id": block.id})
+            ordered.append(result)
+            writer_results.append(result)
+            for entry in result.answer_entries:
+                answer_entries.append(dict(entry))
         sections_out.append(
             assemble_section(
                 section_id=section.slot_id,
-                title=section.slot_id.title(),
+                title=_section_title(section, teaching_plan=teaching_plan),
                 plan=section_plans[section.slot_id],
                 writer_results=ordered,
             )
@@ -555,6 +613,8 @@ async def assemble_from_db(
             "lesson_mode": packet.lesson.lesson_mode,
             "native_whole_lesson": True,
         },
+        answer_entries=answer_entries or None,
+        writer_results=writer_results if not answer_entries else None,
     )
     before_hash = canonical_document_sha256(document)
     await repo.persist_document_candidate(
@@ -702,8 +762,8 @@ async def execute_after_teaching_approval(
     if generation and generation.status == "planning_forms":
         await repo.transition(
             expected={"planning_forms"},
-            target="writing_blocks",
-            event="writing_blocks_started",
+            target="writing_sections",
+            event="writing_sections_started",
             worker_id=wid,
             lease_token=ltok,
         )
@@ -733,18 +793,19 @@ async def execute_after_teaching_approval(
         for key, outcome in expected.items()
         if str((outcome or {}).get("status") or "") == "failed_terminal"
     ]
+    writing_expected = set(WRITING_STATUSES) | {"assembling"}
     if terminal_failed:
         async with async_session_factory() as s:
             r = PageDocumentRepository(s, generation_id)
             await r.transition(
-                expected={"writing_blocks", "assembling"},
+                expected=writing_expected,
                 target="failed_terminal",
                 event="writing_failed_terminal",
                 error={
                     "type": "WriterError",
                     "code": "TERMINAL_BLOCK_FAILURE",
                     "message": f"terminal failures: {terminal_failed}",
-                    "stage": "writing_blocks",
+                    "stage": "writing_sections",
                     "retryable": False,
                     "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 },
@@ -760,14 +821,14 @@ async def execute_after_teaching_approval(
         async with async_session_factory() as s:
             r = PageDocumentRepository(s, generation_id)
             await r.transition(
-                expected={"writing_blocks", "assembling"},
+                expected=writing_expected,
                 target="failed_recoverable",
                 event="writing_failed_recoverable",
                 error={
                     "type": "WriterError",
                     "code": "RETRYABLE_BLOCK_FAILURE",
                     "message": f"retryable failures: {retryable}",
-                    "stage": "writing_blocks",
+                    "stage": "writing_sections",
                     "retryable": True,
                     "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 },
@@ -783,9 +844,9 @@ async def execute_after_teaching_approval(
     async with async_session_factory() as s:
         r = PageDocumentRepository(s, generation_id)
         generation = await s.get(GenerationModel, generation_id)
-        if generation and generation.status == "writing_blocks":
+        if generation and generation.status in WRITING_STATUSES:
             await r.transition(
-                expected={"writing_blocks"},
+                expected=set(WRITING_STATUSES),
                 target="assembling",
                 event="document_assembling",
                 worker_id=wid,
@@ -797,6 +858,7 @@ async def execute_after_teaching_approval(
             packet=packet,
             form_plan=form_plan,
             lease=lease,
+            teaching_plan=teaching_plan,
         )
         if lease is not None:
             await r.release_execution(

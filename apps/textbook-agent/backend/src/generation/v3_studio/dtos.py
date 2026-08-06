@@ -232,6 +232,18 @@ class V3ChunkedStatusDTO(BaseModel):
     error: str | None = None
     error_type: str | None = None
     variant_generation_ids: dict[str, str] = Field(default_factory=dict)
+    # Native whole-lesson projection (optional; defaults keep legacy clients working).
+    document_version: int | None = None
+    document_exists: bool = False
+    sections_total: int = 0
+    sections_ready: int = 0
+    sections_failed: int = 0
+    blocks_total: int = 0
+    blocks_ready: int = 0
+    blocks_failed: int = 0
+    failed_section_ids: list[str] = Field(default_factory=list)
+    failed_block_ids: list[str] = Field(default_factory=list)
+    error_detail: dict[str, Any] | None = None
 
 
 class V3CardMisconceptionDTO(BaseModel):

@@ -5,15 +5,26 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+# writing_sections is the preferred writing stage; writing_blocks remains a
+# compatibility alias for in-flight leases and resume.
+_WRITING_TARGETS = frozenset(
+    {"assembling", "failed_recoverable", "failed_terminal", "cancelled"}
+)
+
 LEGAL_TRANSITIONS: dict[str, frozenset[str]] = {
     "awaiting_teaching_approval": frozenset({"queued", "cancelled"}),
     "queued": frozenset({"planning_forms", "cancelled", "failed_terminal"}),
     "planning_forms": frozenset(
-        {"writing_blocks", "failed_recoverable", "failed_terminal", "cancelled"}
+        {
+            "writing_sections",
+            "writing_blocks",  # compatibility
+            "failed_recoverable",
+            "failed_terminal",
+            "cancelled",
+        }
     ),
-    "writing_blocks": frozenset(
-        {"assembling", "failed_recoverable", "failed_terminal", "cancelled"}
-    ),
+    "writing_sections": _WRITING_TARGETS,
+    "writing_blocks": _WRITING_TARGETS,
     "assembling": frozenset(
         {
             "awaiting_visuals",
@@ -34,14 +45,34 @@ LEGAL_TRANSITIONS: dict[str, frozenset[str]] = {
 }
 
 CLAIMABLE_STATUSES = frozenset({"queued", "failed_recoverable"})
-ACTIVE_STATUSES = frozenset({"planning_forms", "writing_blocks", "assembling"})
+ACTIVE_STATUSES = frozenset(
+    {"planning_forms", "writing_sections", "writing_blocks", "assembling"}
+)
+WRITING_STATUSES = frozenset({"writing_sections", "writing_blocks"})
 TERMINAL_STATUSES = frozenset(
     {"ready", "completed", "failed_terminal", "cancelled", "rejected_by_teacher"}
+)
+NATIVE_STATUSES = frozenset(
+    {
+        "awaiting_teaching_approval",
+        "queued",
+        "planning_forms",
+        "writing_sections",
+        "writing_blocks",
+        "assembling",
+        "awaiting_visuals",
+        "ready",
+        "failed_recoverable",
+        "failed_terminal",
+        "rejected_by_teacher",
+    }
 )
 
 DEFAULT_VARIANT_ID = "everyone"
 DEFAULT_LEASE_SECONDS = 90
 HEARTBEAT_INTERVAL_SECONDS = 25
+MAX_SECTION_CONCURRENCY = 4
+# Within a single section, bound concurrent block writers.
 MAX_WRITER_CONCURRENCY = 3
 DEFAULT_WORKER_POLL_SECONDS = 2.0
 

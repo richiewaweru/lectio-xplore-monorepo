@@ -1,0 +1,297 @@
+
+# Gate 9/10 commands — 2026-08-06T22:05:07
+
+$ .venv\Scripts\python.exe tools\run_native_e2e_fixture.py --scenario all --provider mock --output C:\Projects\lectio\docs\evidence\native-e2e-v1
+
+# Gate 9/10 rerun after scripted YAML fix — 2026-08-06T22:06:05
+
+$ .venv\Scripts\python.exe -m pytest tests/generation/test_native_all_forms_e2e.py tests/generation/test_native_pdf_exports.py -q --tb=short
+.......                                                                  [100%]
+7 passed in 1.37s
+
+$ .venv\Scripts\python.exe tools\run_native_e2e_fixture.py --scenario all --provider mock --output C:\Projects\lectio\docs\evidence\native-e2e-v1
+{
+  "artifacts": {
+    "reloaded_id": "lesson-light-food-001",
+    "student_html": "C:\\Projects\\lectio\\docs\\evidence\\native-e2e-v1\\student-render.html",
+    "student_pdf": "C:\\Projects\\lectio\\docs\\evidence\\native-e2e-v1\\student.pdf",
+    "teacher_html": "C:\\Projects\\lectio\\docs\\evidence\\native-e2e-v1\\teacher-render.html",
+    "teacher_pdf": "C:\\Projects\\lectio\\docs\\evidence\\native-e2e-v1\\teacher.pdf"
+  },
+  "failed": 0,
+  "passed": 9,
+  "provider": "mock",
+  "scenarios": [
+    {
+      "details": {
+        "expect": {
+          "canonical_section_order": [
+            "section-1",
+            "section-2",
+            "section-3",
+            "section-4"
+          ],
+          "max_concurrency": 4,
+          "stage": "ready"
+        },
+        "forms": [
+          "aside",
+          "choices",
+          "figure",
+          "list",
+          "prose",
+          "questions",
+          "table",
+          "worked-example"
+        ]
+      },
+      "document_id": "lesson-light-food-001",
+      "error": null,
+      "error_code": null,
+      "hash_equal": true,
+      "name": "all_valid_out_of_order",
+      "provider_calls": 6,
+      "repair_calls": 0,
+      "stage": "ready",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "repair_calls": 1,
+          "stage": "ready"
+        },
+        "forms": [
+          "aside",
+          "choices",
+          "figure",
+          "list",
+          "prose",
+          "questions",
+          "table",
+          "worked-example"
+        ]
+      },
+      "document_id": "lesson-light-food-001",
+      "error": null,
+      "error_code": null,
+      "hash_equal": true,
+      "name": "invalid_json_then_valid",
+      "provider_calls": 7,
+      "repair_calls": 1,
+      "stage": "ready",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "repair_calls": 1,
+          "stage": "ready"
+        },
+        "forms": [
+          "aside",
+          "choices",
+          "figure",
+          "list",
+          "prose",
+          "questions",
+          "table",
+          "worked-example"
+        ]
+      },
+      "document_id": "lesson-light-food-001",
+      "error": null,
+      "error_code": null,
+      "hash_equal": true,
+      "name": "wrong_schema_then_valid",
+      "provider_calls": 7,
+      "repair_calls": 1,
+      "stage": "ready",
+      "status": "passed"
+    },
+    {
+      "details": {},
+      "document_id": null,
+      "error": "questions/choices are assembler-driven from assessment item records; LLM schema scenarios covered in unit tests",
+      "error_code": null,
+      "hash_equal": null,
+      "name": "questions_extra_fields_then_valid",
+      "provider_calls": null,
+      "repair_calls": null,
+      "stage": null,
+      "status": "skipped"
+    },
+    {
+      "details": {},
+      "document_id": null,
+      "error": "questions/choices are assembler-driven from assessment item records; LLM schema scenarios covered in unit tests",
+      "error_code": null,
+      "hash_equal": null,
+      "name": "permanently_invalid_questions",
+      "provider_calls": null,
+      "repair_calls": null,
+      "stage": null,
+      "status": "skipped"
+    },
+    {
+      "details": {
+        "expect": {
+          "schema_repair_calls": 0,
+          "stage": "ready",
+          "transport_retries": 1
+        },
+        "forms": [
+          "aside",
+          "choices",
+          "figure",
+          "list",
+          "prose",
+          "questions",
+          "table",
+          "worked-example"
+        ]
+      },
+      "document_id": "lesson-light-food-001",
+      "error": null,
+      "error_code": null,
+      "hash_equal": true,
+      "name": "transport_then_valid",
+      "provider_calls": 7,
+      "repair_calls": 0,
+      "stage": "ready",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "error_code": "ANSWER_REFERENCE_INVALID",
+          "stage": "failed_recoverable"
+        },
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\document_assembly.py\", line 138, in assemble_document_v2\n    validate_answer_key_integrity(blocks, entries)\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\validation.py\", line 105, in validate_answer_key_integrity\n    raise AnswerKeyIntegrityError(\"; \".join(parts))\ngeneration.page_objects.validation.AnswerKeyIntegrityError: orphan answers for ['unknown-q']\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\run_native_e2e_fixture.py\", line 585, in run_mock_scenario\n    document = assemble_from_results(\n               ^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\run_native_e2e_fixture.py\", line 393, in assemble_from_results\n    return assemble_document_v2(\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\document_assembly.py\", line 140, in assemble_document_v2\n    raise DocumentAssemblyError(str(exc)) from exc\ngeneration.page_objects.document_assembly.DocumentAssemblyError: orphan answers for ['unknown-q']\n"
+      },
+      "document_id": null,
+      "error": "orphan answers for ['unknown-q']",
+      "error_code": "ANSWER_REFERENCE_INVALID",
+      "hash_equal": null,
+      "name": "orphan_answer",
+      "provider_calls": 6,
+      "repair_calls": 0,
+      "stage": "failed_recoverable",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "error_code": "ANSWER_MISSING",
+          "stage": "failed_recoverable"
+        },
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\document_assembly.py\", line 138, in assemble_document_v2\n    validate_answer_key_integrity(blocks, entries)\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\validation.py\", line 105, in validate_answer_key_integrity\n    raise AnswerKeyIntegrityError(\"; \".join(parts))\ngeneration.page_objects.validation.AnswerKeyIntegrityError: missing answers for ['q-open-1']\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\run_native_e2e_fixture.py\", line 585, in run_mock_scenario\n    document = assemble_from_results(\n               ^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\run_native_e2e_fixture.py\", line 393, in assemble_from_results\n    return assemble_document_v2(\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\document_assembly.py\", line 140, in assemble_document_v2\n    raise DocumentAssemblyError(str(exc)) from exc\ngeneration.page_objects.document_assembly.DocumentAssemblyError: missing answers for ['q-open-1']\n"
+      },
+      "document_id": null,
+      "error": "missing answers for ['q-open-1']",
+      "error_code": "ANSWER_MISSING",
+      "hash_equal": null,
+      "name": "missing_answer",
+      "provider_calls": 6,
+      "repair_calls": 0,
+      "stage": "failed_recoverable",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "error_code": "MCQ_ANSWER_INVALID",
+          "stage": "failed_recoverable"
+        },
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\document_assembly.py\", line 138, in assemble_document_v2\n    validate_answer_key_integrity(blocks, entries)\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\validation.py\", line 117, in validate_answer_key_integrity\n    raise AnswerKeyIntegrityError(\ngeneration.page_objects.validation.AnswerKeyIntegrityError: MCQ answer 'D' not in options ['A', 'B', 'C'] for 'q-mcq-1'\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\run_native_e2e_fixture.py\", line 585, in run_mock_scenario\n    document = assemble_from_results(\n               ^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\run_native_e2e_fixture.py\", line 393, in assemble_from_results\n    return assemble_document_v2(\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\document_assembly.py\", line 140, in assemble_document_v2\n    raise DocumentAssemblyError(str(exc)) from exc\ngeneration.page_objects.document_assembly.DocumentAssemblyError: MCQ answer 'D' not in options ['A', 'B', 'C'] for 'q-mcq-1'\n"
+      },
+      "document_id": null,
+      "error": "MCQ answer 'D' not in options ['A', 'B', 'C'] for 'q-mcq-1'",
+      "error_code": "MCQ_ANSWER_INVALID",
+      "hash_equal": null,
+      "name": "invalid_mcq_answer",
+      "provider_calls": 6,
+      "repair_calls": 0,
+      "stage": "failed_recoverable",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "repair_calls": 1,
+          "stage": "ready"
+        },
+        "forms": [
+          "aside",
+          "choices",
+          "figure",
+          "list",
+          "prose",
+          "questions",
+          "table",
+          "worked-example"
+        ]
+      },
+      "document_id": "lesson-light-food-001",
+      "error": null,
+      "error_code": null,
+      "hash_equal": true,
+      "name": "figure_missing_alt_then_valid",
+      "provider_calls": 7,
+      "repair_calls": 1,
+      "stage": "ready",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "skipped_on_resume": [
+            "section-1",
+            "section-2"
+          ],
+          "stage": "ready"
+        },
+        "forms": [
+          "aside",
+          "choices",
+          "figure",
+          "list",
+          "prose",
+          "questions",
+          "table",
+          "worked-example"
+        ]
+      },
+      "document_id": "lesson-light-food-001",
+      "error": null,
+      "error_code": null,
+      "hash_equal": true,
+      "name": "partial_resume",
+      "provider_calls": 6,
+      "repair_calls": 0,
+      "stage": "ready",
+      "status": "passed"
+    }
+  ],
+  "skipped": 2
+}
+
+$ .venv\Scripts\python.exe tools\run_native_e2e_fixture.py --provider real --output C:\Projects\lectio\docs\evidence\native-e2e-v1
+{
+  "provider": "real",
+  "report": {
+    "provider": "real",
+    "status": "SKIPPED_NO_CREDENTIALS",
+    "credentials_checked": [
+      "ANTHROPIC_API_KEY",
+      "OPENAI_API_KEY",
+      "GOOGLE_API_KEY",
+      "GEMINI_API_KEY"
+    ],
+    "credentials_present": [],
+    "message": "No LLM API credentials found in environment. Mock Gate 9 path is green; real smoke awaits credentials."
+  }
+}
+
+# Evidence reports written
+# GATE_09_REPORT.md GATE_10_REPORT.md 00_SUMMARY.md

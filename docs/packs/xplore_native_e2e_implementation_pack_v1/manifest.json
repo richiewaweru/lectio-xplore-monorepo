@@ -1,0 +1,32 @@
+{
+  "pack_name": "Xplore Native End-to-End Implementation Pack",
+  "version": "1.0",
+  "created_for": "richiewaweru/lectio-xplore-monorepo",
+  "target_branch": "pageobject-integration",
+  "repository_baseline": "0cc0ff3454f231cdbd357f4040fa27d0f2bb144e",
+  "goal": "Implement and prove a native-only, parallel, validated LectioDocumentV2 generation flow that produces student and teacher documents.",
+  "artifact_order": [
+    "00_READ_ME_FIRST.md",
+    "01_MASTER_GROK_IMPLEMENTATION_PROMPT.md",
+    "02_ARCHITECTURE_AND_DECISIONS.md",
+    "03_REPOSITORY_CHANGE_MAP.md",
+    "04_STAGE_GATED_IMPLEMENTATION_PLAN.md",
+    "05_TEST_STRATEGY_AND_COMMANDS.md",
+    "06_MOCK_PROVIDER_SPEC.md",
+    "07_FAILURE_SCENARIO_MATRIX.csv",
+    "08_FIXTURES/lesson_request_all_forms.json",
+    "08_FIXTURES/form_plan_all_forms.json",
+    "08_FIXTURES/assessment_bundle.json",
+    "08_FIXTURES/expected_lectio_document_v2.json",
+    "08_FIXTURES/native_status_examples.json",
+    "09_MOCK_SCENARIOS/mock_llm_scenarios.yaml",
+    "10_PROMPTS/writer_prompt_contract.md",
+    "10_PROMPTS/repair_prompt_template.md",
+    "10_PROMPTS/real_llm_smoke_prompt.md",
+    "11_ACCEPTANCE_CHECKLIST.md",
+    "12_RUN_REPORT_TEMPLATE.md",
+    "13_LEGACY_REMOVAL_CHECKLIST.md",
+    "14_GROK_VERIFICATION_PROMPT.md",
+    "15_REFERENCE_PSEUDOCODE.md"
+  ]
+}

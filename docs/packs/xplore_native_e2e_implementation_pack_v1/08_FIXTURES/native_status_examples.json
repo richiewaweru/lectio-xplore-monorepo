@@ -1,0 +1,66 @@
+{
+  "examples": {
+    "writing": {
+      "generation_id": "fixture-generation-001",
+      "stage": "writing_sections",
+      "document_version": 2,
+      "document_exists": false,
+      "sections_total": 4,
+      "sections_ready": 2,
+      "sections_failed": 0,
+      "blocks_total": 8,
+      "blocks_ready": 4,
+      "blocks_failed": 0,
+      "failed_section_ids": [],
+      "failed_block_ids": [],
+      "error": null
+    },
+    "recoverable_failure": {
+      "generation_id": "fixture-generation-002",
+      "stage": "failed_recoverable",
+      "document_version": 2,
+      "document_exists": false,
+      "sections_total": 4,
+      "sections_ready": 3,
+      "sections_failed": 1,
+      "blocks_total": 8,
+      "blocks_ready": 7,
+      "blocks_failed": 1,
+      "failed_section_ids": [
+        "section-4"
+      ],
+      "failed_block_ids": [
+        "s4-questions"
+      ],
+      "error": {
+        "scope": "block",
+        "code": "WRITER_SCHEMA_INVALID",
+        "message": "questions item contains forbidden property correct_key",
+        "retryable": true,
+        "section_id": "section-4",
+        "block_id": "s4-questions",
+        "validation_errors": [
+          {
+            "path": "content.items.0.correct_key",
+            "message": "Extra inputs are not permitted"
+          }
+        ]
+      }
+    },
+    "ready": {
+      "generation_id": "fixture-generation-003",
+      "stage": "ready",
+      "document_version": 2,
+      "document_exists": true,
+      "sections_total": 4,
+      "sections_ready": 4,
+      "sections_failed": 0,
+      "blocks_total": 8,
+      "blocks_ready": 8,
+      "blocks_failed": 0,
+      "failed_section_ids": [],
+      "failed_block_ids": [],
+      "error": null
+    }
+  }
+}

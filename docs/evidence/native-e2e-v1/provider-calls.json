@@ -1,0 +1,82 @@
+[
+  {
+    "attempt": 1,
+    "block_id": "s1-prose",
+    "exception": null,
+    "object": "prose",
+    "prompt_hash": "090eac34d94a2280855c83b232fae2d9733edb63a6b8a05fedfa5526cfc52953",
+    "result_kind": "valid",
+    "scenario": "all_valid_out_of_order",
+    "section_id": "section-1"
+  },
+  {
+    "attempt": 1,
+    "block_id": "s1-aside",
+    "exception": null,
+    "object": "aside",
+    "prompt_hash": "e706e4955a5a2f5a233d43f4c037b243c7cb0d62e7db71cb2fa91fc9f537f28d",
+    "result_kind": "valid",
+    "scenario": "all_valid_out_of_order",
+    "section_id": "section-1"
+  },
+  {
+    "attempt": 1,
+    "block_id": "s2-list",
+    "exception": null,
+    "object": "list",
+    "prompt_hash": "dfc5f4e49d19472e4ac9fbf64ed97de14fcd7d4a92a65d03eb44c7cd8bc3f1ba",
+    "result_kind": "valid",
+    "scenario": "all_valid_out_of_order",
+    "section_id": "section-2"
+  },
+  {
+    "attempt": 1,
+    "block_id": "s2-figure",
+    "exception": null,
+    "object": "figure",
+    "prompt_hash": "68faaa3cce786b69be37dc6cd3c61749edf0d7be5413c19c345f733db06235fe",
+    "result_kind": "valid",
+    "scenario": "all_valid_out_of_order",
+    "section_id": "section-2"
+  },
+  {
+    "attempt": 1,
+    "block_id": "s3-table",
+    "exception": null,
+    "object": "table",
+    "prompt_hash": "f78bc0065b6703e6af81f94bfc07113e6f51f47bd3e7194f50dd29e4144f389a",
+    "result_kind": "valid",
+    "scenario": "all_valid_out_of_order",
+    "section_id": "section-3"
+  },
+  {
+    "attempt": 1,
+    "block_id": "s3-worked",
+    "exception": null,
+    "object": "worked-example",
+    "prompt_hash": "32cd090c2b99e9eeb8745d7002275fda4e5ed6c3210374e0f3a82175c56593d2",
+    "result_kind": "valid",
+    "scenario": "all_valid_out_of_order",
+    "section_id": "section-3"
+  },
+  {
+    "attempt": 1,
+    "block_id": "s4-questions",
+    "exception": null,
+    "object": "questions",
+    "prompt_hash": "466dc919eab2655f3918b3d0b5894fd7e816d67e70e17c96f20cca1ea2f78a0c",
+    "result_kind": "valid",
+    "scenario": "all_valid_out_of_order",
+    "section_id": "section-4"
+  },
+  {
+    "attempt": 1,
+    "block_id": "q-mcq-1",
+    "exception": null,
+    "object": "choices",
+    "prompt_hash": "25b79c5a55137cc7d019f2b675cb7b28951a3089cc82c96f58326f47fbf32edd",
+    "result_kind": "valid",
+    "scenario": "all_valid_out_of_order",
+    "section_id": "section-4"
+  }
+]

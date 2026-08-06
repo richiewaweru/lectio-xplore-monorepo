@@ -1,0 +1,289 @@
+{
+  "artifacts": {
+    "reloaded_id": "lesson-light-food-001",
+    "student_html": "C:\\Projects\\lectio\\docs\\evidence\\native-e2e-v1\\student-render.html",
+    "student_pdf": "C:\\Projects\\lectio\\docs\\evidence\\native-e2e-v1\\student.pdf",
+    "teacher_html": "C:\\Projects\\lectio\\docs\\evidence\\native-e2e-v1\\teacher-render.html",
+    "teacher_pdf": "C:\\Projects\\lectio\\docs\\evidence\\native-e2e-v1\\teacher.pdf"
+  },
+  "failed": 0,
+  "passed": 11,
+  "provider": "mock",
+  "scenarios": [
+    {
+      "details": {
+        "expect": {
+          "canonical_section_order": [
+            "section-1",
+            "section-2",
+            "section-3",
+            "section-4"
+          ],
+          "max_concurrency": 4,
+          "stage": "ready"
+        },
+        "forms": [
+          "aside",
+          "choices",
+          "figure",
+          "list",
+          "prose",
+          "questions",
+          "table",
+          "worked-example"
+        ]
+      },
+      "document_id": "lesson-light-food-001",
+      "error": null,
+      "error_code": null,
+      "hash_equal": true,
+      "name": "all_valid_out_of_order",
+      "provider_calls": 8,
+      "repair_calls": 0,
+      "stage": "ready",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "repair_calls": 1,
+          "stage": "ready"
+        },
+        "forms": [
+          "aside",
+          "choices",
+          "figure",
+          "list",
+          "prose",
+          "questions",
+          "table",
+          "worked-example"
+        ]
+      },
+      "document_id": "lesson-light-food-001",
+      "error": null,
+      "error_code": null,
+      "hash_equal": true,
+      "name": "invalid_json_then_valid",
+      "provider_calls": 9,
+      "repair_calls": 1,
+      "stage": "ready",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "repair_calls": 1,
+          "stage": "ready"
+        },
+        "forms": [
+          "aside",
+          "choices",
+          "figure",
+          "list",
+          "prose",
+          "questions",
+          "table",
+          "worked-example"
+        ]
+      },
+      "document_id": "lesson-light-food-001",
+      "error": null,
+      "error_code": null,
+      "hash_equal": true,
+      "name": "wrong_schema_then_valid",
+      "provider_calls": 9,
+      "repair_calls": 1,
+      "stage": "ready",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "repair_calls": 1,
+          "stage": "ready"
+        },
+        "forms": [
+          "aside",
+          "choices",
+          "figure",
+          "list",
+          "prose",
+          "questions",
+          "table",
+          "worked-example"
+        ]
+      },
+      "document_id": "lesson-light-food-001",
+      "error": null,
+      "error_code": null,
+      "hash_equal": true,
+      "name": "questions_extra_fields_then_valid",
+      "provider_calls": 9,
+      "repair_calls": 1,
+      "stage": "ready",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "error_code": "WRITER_SCHEMA_INVALID",
+          "failed_block_ids": [
+            "s4-questions"
+          ],
+          "stage": "failed_recoverable"
+        },
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\validation.py\", line 45, in validate_content\n    validated = model.model_validate(raw)\n                ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\.venv\\Lib\\site-packages\\pydantic\\main.py\", line 716, in model_validate\n    return cls.__pydantic_validator__.validate_python(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\npydantic_core._pydantic_core.ValidationError: 1 validation error for QuestionsContent\nitems\n  List should have at least 1 item after validation, not 0 [type=too_short, input_value=[], input_type=list]\n    For further information visit https://errors.pydantic.dev/2.12/v/too_short\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\run_native_e2e_fixture.py\", line 583, in run_mock_scenario\n    section_results[section.slot_id] = await write_section_blocks(\n                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\run_native_e2e_fixture.py\", line 332, in write_section_blocks\n    result = await dispatch_writer_async(ctx, provider=provider)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\registry.py\", line 396, in dispatch_writer_async\n    return await _write_validated_llm(ctx, provider=provider)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\registry.py\", line 372, in _write_validated_llm\n    raise final_exc\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\registry.py\", line 369, in _write_validated_llm\n    content = validate_content(object_id, coerced)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\validation.py\", line 47, in validate_content\n    raise ContentValidationError(object_id, _format_pydantic_errors(exc)) from exc\ngeneration.page_objects.validation.ContentValidationError: content validation failed for 'questions': items: List should have at least 1 item after validation, not 0\n"
+      },
+      "document_id": null,
+      "error": "content validation failed for 'questions': items: List should have at least 1 item after validation, not 0",
+      "error_code": "WRITER_SCHEMA_INVALID",
+      "hash_equal": null,
+      "name": "permanently_invalid_questions",
+      "provider_calls": 8,
+      "repair_calls": 1,
+      "stage": "failed_recoverable",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "schema_repair_calls": 0,
+          "stage": "ready",
+          "transport_retries": 1
+        },
+        "forms": [
+          "aside",
+          "choices",
+          "figure",
+          "list",
+          "prose",
+          "questions",
+          "table",
+          "worked-example"
+        ]
+      },
+      "document_id": "lesson-light-food-001",
+      "error": null,
+      "error_code": null,
+      "hash_equal": true,
+      "name": "transport_then_valid",
+      "provider_calls": 9,
+      "repair_calls": 0,
+      "stage": "ready",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "error_code": "ANSWER_REFERENCE_INVALID",
+          "stage": "failed_recoverable"
+        },
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\document_assembly.py\", line 138, in assemble_document_v2\n    validate_answer_key_integrity(blocks, entries)\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\validation.py\", line 105, in validate_answer_key_integrity\n    raise AnswerKeyIntegrityError(\"; \".join(parts))\ngeneration.page_objects.validation.AnswerKeyIntegrityError: orphan answers for ['unknown-q']\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\run_native_e2e_fixture.py\", line 630, in run_mock_scenario\n    document = assemble_from_results(\n               ^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\run_native_e2e_fixture.py\", line 398, in assemble_from_results\n    return assemble_document_v2(\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\document_assembly.py\", line 140, in assemble_document_v2\n    raise DocumentAssemblyError(str(exc)) from exc\ngeneration.page_objects.document_assembly.DocumentAssemblyError: orphan answers for ['unknown-q']\n"
+      },
+      "document_id": null,
+      "error": "orphan answers for ['unknown-q']",
+      "error_code": "ANSWER_REFERENCE_INVALID",
+      "hash_equal": null,
+      "name": "orphan_answer",
+      "provider_calls": 8,
+      "repair_calls": 0,
+      "stage": "failed_recoverable",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "error_code": "ANSWER_MISSING",
+          "stage": "failed_recoverable"
+        },
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\document_assembly.py\", line 138, in assemble_document_v2\n    validate_answer_key_integrity(blocks, entries)\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\validation.py\", line 105, in validate_answer_key_integrity\n    raise AnswerKeyIntegrityError(\"; \".join(parts))\ngeneration.page_objects.validation.AnswerKeyIntegrityError: missing answers for ['q-open-1']\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\run_native_e2e_fixture.py\", line 630, in run_mock_scenario\n    document = assemble_from_results(\n               ^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\run_native_e2e_fixture.py\", line 398, in assemble_from_results\n    return assemble_document_v2(\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\document_assembly.py\", line 140, in assemble_document_v2\n    raise DocumentAssemblyError(str(exc)) from exc\ngeneration.page_objects.document_assembly.DocumentAssemblyError: missing answers for ['q-open-1']\n"
+      },
+      "document_id": null,
+      "error": "missing answers for ['q-open-1']",
+      "error_code": "ANSWER_MISSING",
+      "hash_equal": null,
+      "name": "missing_answer",
+      "provider_calls": 8,
+      "repair_calls": 0,
+      "stage": "failed_recoverable",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "error_code": "MCQ_ANSWER_INVALID",
+          "stage": "failed_recoverable"
+        },
+        "traceback": "Traceback (most recent call last):\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\document_assembly.py\", line 138, in assemble_document_v2\n    validate_answer_key_integrity(blocks, entries)\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\validation.py\", line 117, in validate_answer_key_integrity\n    raise AnswerKeyIntegrityError(\ngeneration.page_objects.validation.AnswerKeyIntegrityError: MCQ answer 'D' not in options ['A', 'B', 'C'] for 'q-mcq-1'\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\run_native_e2e_fixture.py\", line 630, in run_mock_scenario\n    document = assemble_from_results(\n               ^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\run_native_e2e_fixture.py\", line 398, in assemble_from_results\n    return assemble_document_v2(\n           ^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\src\\generation\\page_objects\\document_assembly.py\", line 140, in assemble_document_v2\n    raise DocumentAssemblyError(str(exc)) from exc\ngeneration.page_objects.document_assembly.DocumentAssemblyError: MCQ answer 'D' not in options ['A', 'B', 'C'] for 'q-mcq-1'\n"
+      },
+      "document_id": null,
+      "error": "MCQ answer 'D' not in options ['A', 'B', 'C'] for 'q-mcq-1'",
+      "error_code": "MCQ_ANSWER_INVALID",
+      "hash_equal": null,
+      "name": "invalid_mcq_answer",
+      "provider_calls": 8,
+      "repair_calls": 0,
+      "stage": "failed_recoverable",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "repair_calls": 1,
+          "stage": "ready"
+        },
+        "forms": [
+          "aside",
+          "choices",
+          "figure",
+          "list",
+          "prose",
+          "questions",
+          "table",
+          "worked-example"
+        ]
+      },
+      "document_id": "lesson-light-food-001",
+      "error": null,
+      "error_code": null,
+      "hash_equal": true,
+      "name": "figure_missing_alt_then_valid",
+      "provider_calls": 9,
+      "repair_calls": 1,
+      "stage": "ready",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "expect": {
+          "skipped_on_resume": [
+            "section-1",
+            "section-2"
+          ],
+          "stage": "ready"
+        },
+        "forms": [
+          "aside",
+          "choices",
+          "figure",
+          "list",
+          "prose",
+          "questions",
+          "table",
+          "worked-example"
+        ]
+      },
+      "document_id": "lesson-light-food-001",
+      "error": null,
+      "error_code": null,
+      "hash_equal": true,
+      "name": "partial_resume",
+      "provider_calls": 8,
+      "repair_calls": 0,
+      "stage": "ready",
+      "status": "passed"
+    }
+  ],
+  "skipped": 0
+}

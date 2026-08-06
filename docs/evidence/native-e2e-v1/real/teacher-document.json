@@ -1,0 +1,273 @@
+{
+  "answer_key": {
+    "content": {
+      "groups": [
+        {
+          "entries": [
+            {
+              "alternatives": [
+                "A correct answer compares covered and uncovered parts and links the different result to light."
+              ],
+              "answer": "The covered part does not receive light while the uncovered part does. When food-making evidence appears only in the lit part, the changed condition shows that light is required.",
+              "question_id": "q-open-1",
+              "rubric": "2 marks: identifies light as the changed condition and connects the different result to food making. 1 mark: states light is needed without using the comparison."
+            },
+            {
+              "answer": "B",
+              "question_id": "q-mcq-1",
+              "rubric": "1 mark for B."
+            }
+          ]
+        }
+      ]
+    },
+    "id": "answer-key-lesson-light-food-001",
+    "intent": "answer-key",
+    "object": "answer-key",
+    "position": 0
+  },
+  "contract_version": "1.0.0",
+  "document_version": 2,
+  "id": "lesson-light-food-001",
+  "language": "en",
+  "metadata": {
+    "catalogue_version": "1.1.0",
+    "fixture": true,
+    "native_flow": true,
+    "objective": "Explain that light provides energy plants use to make food and use evidence to distinguish a lit leaf from a covered leaf.",
+    "resource_type": "lesson"
+  },
+  "sections": [
+    {
+      "blocks": [
+        {
+          "content": {
+            "paragraphs": [
+              "Have you ever noticed how the leaves on a plant often turn to face the sunlight? This everyday observation hints at something important: leaves need light to do their job. Just like we need food for energy, plants must make their own food, and light is a key ingredient. The way leaves reach toward the sun suggests they are gathering something vital.",
+              "Inside the leaf, light provides the energy to power a process that makes sugar, the plant\u2019s food. Without enough light, the plant cannot produce enough food to grow or repair itself. Researchers can show this by covering part of a leaf so no light reaches it. Comparing a leaf that gets light with one kept in the dark reveals clear differences in food production. This simple experiment helps us understand that light is not just for warmth\u2014it fuels the plant\u2019s food supply."
+            ]
+          },
+          "id": "s1-prose",
+          "intent": "orient",
+          "layout": {
+            "placement": "main"
+          },
+          "object": "prose",
+          "position": 0
+        },
+        {
+          "content": {
+            "body": "Soil is not plant food. Plants make their own food using light.",
+            "label": "Not soil!"
+          },
+          "id": "s1-aside",
+          "intent": "warn",
+          "layout": {
+            "placement": "margin"
+          },
+          "object": "aside",
+          "position": 1
+        }
+      ],
+      "id": "section-1",
+      "title": "Why light matters"
+    },
+    {
+      "blocks": [
+        {
+          "content": {
+            "items": [
+              {
+                "text": "Light reaches the leaf."
+              },
+              {
+                "text": "The leaf uses light energy."
+              },
+              {
+                "text": "The plant makes food."
+              }
+            ],
+            "lead_in": "Light helps a plant make food in this sequence:",
+            "style": "ordered"
+          },
+          "id": "s2-list",
+          "intent": "sequence",
+          "layout": {
+            "placement": "main"
+          },
+          "object": "list",
+          "position": 0
+        },
+        {
+          "content": {
+            "alt_text": "Diagram showing sunlight shining on a green leaf; water and carbon dioxide enter, and food is made inside the leaf.",
+            "asset": {
+              "kind": "image",
+              "request_id": "fig-req-8a995dc73b376e5d9a4aa95a",
+              "src": "/assets/s2-figure.svg",
+              "status": "pending"
+            },
+            "caption": "Light provides energy for a leaf to make food from water and carbon dioxide.",
+            "width": "span"
+          },
+          "id": "s2-figure",
+          "intent": "show-structure",
+          "layout": {
+            "placement": "spanning"
+          },
+          "object": "figure",
+          "position": 1
+        }
+      ],
+      "id": "section-2",
+      "title": "From light to food"
+    },
+    {
+      "blocks": [
+        {
+          "content": {
+            "caption": "Comparing a lit leaf part with a covered leaf part",
+            "columns": [
+              {
+                "id": "observation",
+                "label": "Observation"
+              },
+              {
+                "id": "lit_part",
+                "label": "Lit part of leaf"
+              },
+              {
+                "id": "covered_part",
+                "label": "Covered part of leaf"
+              }
+            ],
+            "presentation": "comparison",
+            "rows": [
+              {
+                "cells": {
+                  "covered_part": "No",
+                  "lit_part": "Yes",
+                  "observation": "Light reaching this part"
+                }
+              },
+              {
+                "cells": {
+                  "covered_part": "Orange/yellow",
+                  "lit_part": "Blue-black",
+                  "observation": "Colour after adding iodine"
+                }
+              },
+              {
+                "cells": {
+                  "covered_part": "No starch (food) is present",
+                  "lit_part": "Starch (food) is present",
+                  "observation": "What the colour shows"
+                }
+              },
+              {
+                "cells": {
+                  "covered_part": "Without light, the leaf cannot make food",
+                  "lit_part": "Light helps the leaf make food",
+                  "observation": "What this tells us"
+                }
+              }
+            ]
+          },
+          "id": "s3-table",
+          "intent": "compare",
+          "layout": {
+            "placement": "main"
+          },
+          "object": "table",
+          "position": 0
+        },
+        {
+          "content": {
+            "answer": "Light is required for a plant leaf to make food (starch). The covered area received no light and made no starch, while the uncovered area did.",
+            "problem": "A plant leaf was partly covered with black paper. After a day, the leaf was tested for starch. The uncovered area turned blue-black; the covered area stayed yellow-brown.",
+            "steps": [
+              {
+                "text": "Recall the setup: one part of the leaf was covered to block light, while the rest received light. This creates a fair test where only one variable (light) differs."
+              },
+              {
+                "text": "Observe the iodine test results. Blue-black color tells us starch is present. The uncovered part turned blue-black, so it contains starch. The covered part did not, so no starch."
+              },
+              {
+                "text": "Connect the results to conditions. The only difference between the two areas was light. The lit area made starch, the dark area did not. So light must be needed to make starch."
+              },
+              {
+                "text": "Rule out other factors. Both areas were on the same leaf, so they had the same water, air, and leaf cells. The cover only blocked light, confirming light is the key factor."
+              },
+              {
+                "text": "Draw a conclusion: Because starch is a form of food the plant stores, light is necessary for the leaf to make food. Without light, the food-making process cannot occur."
+              }
+            ],
+            "title": "Reasoning from a Covered-Leaf Investigation"
+          },
+          "id": "s3-worked",
+          "intent": "model-thinking",
+          "layout": {
+            "placement": "main"
+          },
+          "object": "worked-example",
+          "position": 1
+        }
+      ],
+      "id": "section-3",
+      "title": "Evidence from a covered leaf"
+    },
+    {
+      "blocks": [
+        {
+          "content": {
+            "items": [
+              {
+                "answer_lines": 3,
+                "id": "q-open-1",
+                "marks": 2,
+                "prompt": "Explain why covering part of a leaf helps show that light is needed for the plant to make food."
+              }
+            ]
+          },
+          "id": "s4-questions",
+          "intent": "check-understanding",
+          "layout": {
+            "placement": "main"
+          },
+          "object": "questions",
+          "position": 0
+        },
+        {
+          "content": {
+            "marks": 1,
+            "options": [
+              {
+                "letter": "A",
+                "text": "Soil is the food the plant eats."
+              },
+              {
+                "letter": "B",
+                "text": "Soil supplies water and minerals, but the plant makes food in its leaves."
+              },
+              {
+                "letter": "C",
+                "text": "Soil supplies sunlight to the roots."
+              }
+            ],
+            "stem": "Which statement best describes the role of soil in plant food making?"
+          },
+          "id": "q-mcq-1",
+          "intent": "diagnose-misconception",
+          "layout": {
+            "placement": "main"
+          },
+          "object": "choices",
+          "position": 1
+        }
+      ],
+      "id": "section-4",
+      "title": "Check your understanding"
+    }
+  ],
+  "title": "How Light Helps Plants Make Food"
+}

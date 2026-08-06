@@ -1,0 +1,79 @@
+{
+  "blocks": [
+    {
+      "block_id": "s1-prose",
+      "content_sha256": "ed7a81e370084ff9e1cce1eda1cabe16869d13ae8be26fd954784552f65a0746",
+      "object": "prose",
+      "section_id": "section-1",
+      "status": "ready"
+    },
+    {
+      "block_id": "s1-aside",
+      "content_sha256": "3c237702f322b307d2c2b968d71649f762286c0b1382687d5f51bb2f7f8dc29c",
+      "object": "aside",
+      "section_id": "section-1",
+      "status": "ready"
+    },
+    {
+      "block_id": "s2-list",
+      "content_sha256": "9476b1849903484bc7f975646b76612e28e4140bee9538f5a9eeead2c571a550",
+      "object": "list",
+      "section_id": "section-2",
+      "status": "ready"
+    },
+    {
+      "block_id": "s2-figure",
+      "content_sha256": "3d0522c9e8c69c207a04a7cb9c2215247882ee549b5f82809c494186d06a244c",
+      "object": "figure",
+      "section_id": "section-2",
+      "status": "visual_pending"
+    },
+    {
+      "block_id": "s3-table",
+      "content_sha256": "f48be51e7317176b679823d1ba8530f85124ea1745618c7d7bc7e553d7ee4a96",
+      "object": "table",
+      "section_id": "section-3",
+      "status": "ready"
+    },
+    {
+      "block_id": "s3-worked",
+      "content_sha256": "bd3815c7cffe35b2500c0b68be895b6d1c1c375713439a5d947f3b2462d48147",
+      "object": "worked-example",
+      "section_id": "section-3",
+      "status": "ready"
+    },
+    {
+      "block_id": "s4-questions",
+      "content_sha256": "a9031542b8c3de86f394c2c2a9ed3a21691b0f9b16664bbc22d9d6c4e91fdc00",
+      "object": "questions",
+      "section_id": "section-4",
+      "status": "ready"
+    },
+    {
+      "block_id": "q-mcq-1",
+      "content_sha256": "d0f53e6ed85cd4e609f596c4423023fa735c9e2153af3870d9155e71fda5240c",
+      "object": "choices",
+      "section_id": "section-4",
+      "status": "ready"
+    }
+  ],
+  "credentials_checked": [
+    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
+    "GOOGLE_API_KEY",
+    "GEMINI_API_KEY"
+  ],
+  "credentials_present": [
+    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
+    "XAI_API_KEY",
+    "DEEPSEEK_API_KEY",
+    "V3_FAST_API_KEY_ENV->DEEPSEEK_API_KEY",
+    "V3_STANDARD_API_KEY_ENV->DEEPSEEK_API_KEY",
+    "V3_PREMIUM_API_KEY_ENV->DEEPSEEK_API_KEY"
+  ],
+  "document_id": "lesson-light-food-001",
+  "provider": "real",
+  "reload_ok": true,
+  "status": "PASSED"
+}

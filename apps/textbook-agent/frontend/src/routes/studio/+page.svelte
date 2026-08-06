@@ -230,6 +230,7 @@
 		if (
 			resolved.stage === 'planning_forms' ||
 			resolved.stage === 'queued' ||
+			resolved.stage === 'writing_sections' ||
 			resolved.stage === 'writing_blocks' ||
 			resolved.stage === 'assembling' ||
 			resolved.stage === 'awaiting_visuals'
@@ -408,7 +409,10 @@
 			state.stage === 'awaiting_teaching_approval' ||
 			state.stage === 'assembly_blocked' ||
 			state.stage === 'stage2_error' ||
-			state.stage === 'complete'
+			state.stage === 'complete' ||
+			state.stage === 'failed_recoverable' ||
+			state.stage === 'failed_terminal' ||
+			state.stage === 'rejected_by_teacher'
 		) {
 			return false;
 		}
@@ -420,6 +424,7 @@
 		if (
 			state.stage === 'queued' ||
 			state.stage === 'planning_forms' ||
+			state.stage === 'writing_sections' ||
 			state.stage === 'writing_blocks' ||
 			state.stage === 'assembling' ||
 			state.stage === 'awaiting_visuals'

@@ -165,7 +165,7 @@ class NativeExecutionWorker:
         target = "failed_recoverable" if recoverable else "failed_terminal"
         error = structured_error_from_exc(
             exc=exc,
-            stage="writing_blocks",
+            stage="writing_sections",
             attempt=1,
         )
         try:
@@ -173,7 +173,12 @@ class NativeExecutionWorker:
                 repo = PageDocumentRepository(session, lease.generation_id)
                 generation = await session.get(GenerationModel, lease.generation_id)
                 current = str(generation.status if generation else "")
-                if current in {"planning_forms", "writing_blocks", "assembling"}:
+                if current in {
+                    "planning_forms",
+                    "writing_sections",
+                    "writing_blocks",
+                    "assembling",
+                }:
                     await repo.transition(
                         expected={current},
                         target=target,

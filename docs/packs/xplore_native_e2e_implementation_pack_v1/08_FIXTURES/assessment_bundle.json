@@ -1,0 +1,63 @@
+{
+  "student_blocks": [
+    {
+      "id": "s4-questions",
+      "object": "questions",
+      "intent": "check-understanding",
+      "position": 0,
+      "content": {
+        "instructions": "Answer in one or two complete sentences.",
+        "items": [
+          {
+            "id": "q-open-1",
+            "prompt": "Explain why covering part of a leaf helps show that light is needed for the plant to make food.",
+            "marks": 2,
+            "answer_lines": 3
+          }
+        ]
+      }
+    },
+    {
+      "id": "q-mcq-1",
+      "object": "choices",
+      "intent": "diagnose-misconception",
+      "position": 1,
+      "content": {
+        "stem": "Which statement best describes the role of soil in plant food making?",
+        "options": [
+          {
+            "letter": "A",
+            "text": "Soil is the food the plant eats."
+          },
+          {
+            "letter": "B",
+            "text": "Soil supplies water and minerals, but the plant makes food in its leaves."
+          },
+          {
+            "letter": "C",
+            "text": "Soil supplies sunlight to the roots."
+          }
+        ],
+        "marks": 1
+      }
+    }
+  ],
+  "answer_entries": [
+    {
+      "question_id": "q-open-1",
+      "answer": "The covered part does not receive light while the uncovered part does. When food-making evidence appears only in the lit part, the changed condition shows that light is required.",
+      "alternatives": [
+        "A correct answer compares covered and uncovered parts and links the different result to light."
+      ],
+      "working": null,
+      "rubric": "2 marks: identifies light as the changed condition and connects the different result to food making. 1 mark: states light is needed without using the comparison."
+    },
+    {
+      "question_id": "q-mcq-1",
+      "answer": "B",
+      "alternatives": [],
+      "working": null,
+      "rubric": "1 mark for B."
+    }
+  ]
+}

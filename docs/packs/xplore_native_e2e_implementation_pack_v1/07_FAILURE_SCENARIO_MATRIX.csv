@@ -1,0 +1,19 @@
+ID,Stage,Injected condition,Expected classification,Expected retry/repair,Expected final state,Must persist
+F01,writer parse,truncated JSON,CONTRACT,one informed repair,ready if repaired,both attempts and parse error
+F02,writer validation,table receives prose schema,VALIDATION,one informed repair,ready if repaired,validation paths
+F03,writer validation,questions item has correct_key,VALIDATION,one informed repair,ready if repaired,forbidden field error
+F04,writer invariant,writer changes object,PROGRAMMING/CONTRACT,no silent fallback,failed with exact block,object mismatch
+F05,provider,one transport failure,TRANSPORT,bounded retry,ready,attempt count
+F06,provider,transport exhausted,TRANSPORT,bounded retries,failed_recoverable,provider error
+F07,assessment integrity,orphan answer,VALIDATION,no LLM repair at assembly,failed_recoverable/programming boundary,question_id
+F08,assessment integrity,missing answer,VALIDATION,no assembly,failed_recoverable,missing ID
+F09,assessment integrity,duplicate question ID,VALIDATION,no assembly,failed_recoverable,duplicate ID
+F10,assessment integrity,invalid MCQ answer letter,VALIDATION,no assembly,failed_recoverable,allowed letters
+F11,figure,pending visual,NONE,none,ready,request_id
+F12,figure,missing alt_text,VALIDATION,one repair if LLM-produced,ready or recoverable,field error
+F13,parallelism,"completion order 3,1,4,2",NONE,none,ready in canonical order,start/finish timestamps
+F14,resume,process stops after sections 1 and 2,RECOVERY,resume remaining only,ready after resume,skip decisions
+F15,assembly,missing expected block,PROGRAMMING,none,failed_terminal with non-null error,expected vs actual keys
+F16,status,native failure nested in page_document_v2,NONE,none,API returns structured error,scope/code/message
+F17,frontend,failed_terminal,NONE,none,polling stops,terminal state
+F18,legacy,new request attempts legacy route,PROGRAMMING,none,test failure,legacy call spy

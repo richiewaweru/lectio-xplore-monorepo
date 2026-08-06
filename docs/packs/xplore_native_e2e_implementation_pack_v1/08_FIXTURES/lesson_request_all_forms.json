@@ -1,0 +1,34 @@
+{
+  "fixture_id": "xplore-all-forms-grade7-light-plants-v1",
+  "lesson": {
+    "title": "How Light Helps Plants Make Food",
+    "subject": "Science",
+    "grade_level": "7",
+    "language": "en",
+    "objective": "Explain that light provides energy plants use to make food and use evidence to distinguish a lit leaf from a covered leaf.",
+    "duration_minutes": 45
+  },
+  "learner_context": {
+    "student_arrives_with": [
+      "Plants need water.",
+      "Leaves receive sunlight."
+    ],
+    "common_misconception": "Plants obtain their food directly from soil.",
+    "reader_is": "A Grade 7 learner who needs concrete explanations and visible contrasts."
+  },
+  "resource_stance": {
+    "page_is_spent_on": "Building and checking the causal connection between light and food making.",
+    "fails_by": [
+      "Saying only that plants need light without explaining its role.",
+      "Implying soil is the plant's food.",
+      "Using advanced biochemical detail outside Grade 7 scope."
+    ]
+  },
+  "constraints": {
+    "maximum_sections": 4,
+    "maximum_concurrent_sections": 4,
+    "visual_generation": "pending_placeholder",
+    "teacher_gate": true,
+    "native_only": true
+  }
+}

@@ -1,0 +1,138 @@
+version: 1
+default_fixture: xplore-all-forms-grade7-light-plants-v1
+scenarios:
+- name: all_valid_out_of_order
+  section_delays_ms:
+    section-1: 20
+    section-2: 40
+    section-3: 10
+    section-4: 30
+  responses:
+    '*':
+    - attempt: 1
+      mode: valid
+  expect:
+    stage: ready
+    canonical_section_order:
+    - section-1
+    - section-2
+    - section-3
+    - section-4
+    max_concurrency: 4
+- name: invalid_json_then_valid
+  responses:
+    s1-prose:
+    - attempt: 1
+      mode: raw
+      value: '{"paragraphs": ['
+    - attempt: 2
+      mode: valid
+  expect:
+    repair_calls: 1
+    stage: ready
+- name: wrong_schema_then_valid
+  responses:
+    s3-table:
+    - attempt: 1
+      mode: dict
+      value:
+        paragraphs:
+        - Not a table
+    - attempt: 2
+      mode: valid
+  expect:
+    repair_calls: 1
+    stage: ready
+- name: questions_extra_fields_then_valid
+  responses:
+    s4-questions:
+    - attempt: 1
+      mode: dict
+      value:
+        items:
+        - id: q-open-1
+          prompt: Why?
+          correct_key: Because
+    - attempt: 2
+      mode: valid
+  expect:
+    repair_calls: 1
+    stage: ready
+- name: permanently_invalid_questions
+  responses:
+    s4-questions:
+    - attempt: 1
+      mode: dict
+      value:
+        items:
+        - id: q-open-1
+          correct_key: A
+    - attempt: 2
+      mode: dict
+      value:
+        items: []
+  expect:
+    stage: failed_recoverable
+    failed_block_ids:
+    - s4-questions
+    error_code: WRITER_SCHEMA_INVALID
+- name: transport_then_valid
+  responses:
+    s2-list:
+    - attempt: 1
+      mode: raise
+      exception: TransportError
+    - attempt: 2
+      mode: valid
+  expect:
+    schema_repair_calls: 0
+    transport_retries: 1
+    stage: ready
+- name: orphan_answer
+  assessment_mutation:
+    append_answer:
+      question_id: unknown-q
+      answer: X
+  expect:
+    stage: failed_recoverable
+    error_code: ANSWER_REFERENCE_INVALID
+- name: missing_answer
+  assessment_mutation:
+    remove_answer_for: q-open-1
+  expect:
+    stage: failed_recoverable
+    error_code: ANSWER_MISSING
+- name: invalid_mcq_answer
+  assessment_mutation:
+    set_answer:
+      question_id: q-mcq-1
+      answer: D
+  expect:
+    stage: failed_recoverable
+    error_code: MCQ_ANSWER_INVALID
+- name: figure_missing_alt_then_valid
+  responses:
+    s2-figure:
+    - attempt: 1
+      mode: dict
+      value:
+        asset:
+          kind: image
+          status: pending
+          request_id: x
+        caption: x
+    - attempt: 2
+      mode: valid
+  expect:
+    repair_calls: 1
+    stage: ready
+- name: partial_resume
+  first_run_stop_after_sections:
+  - section-1
+  - section-2
+  second_run: true
+  expect:
+    skipped_on_resume:
+    - section-1
+    - section-2
+    stage: ready

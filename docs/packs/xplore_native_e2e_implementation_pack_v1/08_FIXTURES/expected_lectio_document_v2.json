@@ -1,0 +1,262 @@
+{
+  "document_version": 2,
+  "contract_version": "2.0",
+  "id": "lesson-light-food-001",
+  "title": "How Light Helps Plants Make Food",
+  "language": "en",
+  "subject": "Science",
+  "audience": {
+    "grade_level": "7"
+  },
+  "metadata": {
+    "fixture": true,
+    "native_flow": true,
+    "objective": "Explain that light provides energy plants use to make food and use evidence to distinguish a lit leaf from a covered leaf."
+  },
+  "front_matter": {
+    "cover": true,
+    "contents": false,
+    "running_head": "Light and plant food",
+    "fields": []
+  },
+  "sections": [
+    {
+      "id": "section-1",
+      "title": "Why light matters",
+      "blocks": [
+        {
+          "id": "s1-prose",
+          "object": "prose",
+          "intent": "orient",
+          "position": 0,
+          "content": {
+            "paragraphs": [
+              "Leaves are often positioned where they can receive light. Light is not the plant's food; it supplies the energy the leaf uses to make food from raw materials."
+            ]
+          },
+          "layout": {
+            "placement": "main"
+          }
+        },
+        {
+          "id": "s1-aside",
+          "object": "aside",
+          "intent": "warn",
+          "position": 1,
+          "content": {
+            "label": "Do not confuse raw materials with food",
+            "body": "Soil supplies water and minerals. The plant makes its food rather than taking ready-made food from the soil."
+          },
+          "layout": {
+            "placement": "margin"
+          }
+        }
+      ]
+    },
+    {
+      "id": "section-2",
+      "title": "From light to food",
+      "blocks": [
+        {
+          "id": "s2-list",
+          "object": "list",
+          "intent": "sequence",
+          "position": 0,
+          "content": {
+            "style": "steps",
+            "lead_in": "A simple sequence:",
+            "items": [
+              {
+                "text": "Light reaches the leaf."
+              },
+              {
+                "text": "The leaf uses light energy."
+              },
+              {
+                "text": "The plant makes food from raw materials."
+              }
+            ]
+          },
+          "layout": {
+            "placement": "main"
+          }
+        },
+        {
+          "id": "s2-figure",
+          "object": "figure",
+          "intent": "show-structure",
+          "position": 1,
+          "content": {
+            "asset": {
+              "kind": "image",
+              "status": "pending",
+              "request_id": "fig-lesson-light-food-001-s2-figure"
+            },
+            "caption": "Inputs and energy involved when a leaf makes food.",
+            "alt_text": "A planned diagram showing sunlight reaching a leaf, water entering from the roots, carbon dioxide entering the leaf, and food being made.",
+            "width": "span"
+          },
+          "layout": {
+            "placement": "spanning"
+          }
+        }
+      ]
+    },
+    {
+      "id": "section-3",
+      "title": "Evidence from a covered leaf",
+      "blocks": [
+        {
+          "id": "s3-table",
+          "object": "table",
+          "intent": "compare",
+          "position": 0,
+          "content": {
+            "columns": [
+              {
+                "id": "part",
+                "label": "Leaf part"
+              },
+              {
+                "id": "light",
+                "label": "Received light?"
+              },
+              {
+                "id": "evidence",
+                "label": "Food-making evidence"
+              }
+            ],
+            "rows": [
+              {
+                "cells": {
+                  "part": "Uncovered",
+                  "light": "Yes",
+                  "evidence": "Present"
+                }
+              },
+              {
+                "cells": {
+                  "part": "Covered",
+                  "light": "No",
+                  "evidence": "Absent"
+                }
+              }
+            ],
+            "caption": "A controlled comparison of lit and covered leaf areas.",
+            "presentation": "comparison"
+          },
+          "layout": {
+            "placement": "main"
+          }
+        },
+        {
+          "id": "s3-worked",
+          "object": "worked-example",
+          "intent": "model-thinking",
+          "position": 1,
+          "content": {
+            "title": "Reasoning from the evidence",
+            "problem": "A leaf is partly covered while the rest remains in light. Food-making evidence is later found only in the uncovered part. What conclusion is supported?",
+            "steps": [
+              {
+                "text": "Identify what changed: access to light."
+              },
+              {
+                "text": "Check that both parts belong to the same leaf and share other conditions."
+              },
+              {
+                "text": "Compare the result: evidence appears in the lit part but not the covered part."
+              },
+              {
+                "text": "Connect the changed condition to the different result."
+              }
+            ],
+            "answer": "The comparison supports the conclusion that light is required for the leaf to make food.",
+            "check": "The conclusion should name light and use the difference between covered and uncovered parts."
+          },
+          "layout": {
+            "placement": "main"
+          }
+        }
+      ]
+    },
+    {
+      "id": "section-4",
+      "title": "Check your understanding",
+      "blocks": [
+        {
+          "id": "s4-questions",
+          "object": "questions",
+          "intent": "check-understanding",
+          "position": 0,
+          "content": {
+            "instructions": "Answer in one or two complete sentences.",
+            "items": [
+              {
+                "id": "q-open-1",
+                "prompt": "Explain why covering part of a leaf helps show that light is needed for the plant to make food.",
+                "marks": 2,
+                "answer_lines": 3
+              }
+            ]
+          }
+        },
+        {
+          "id": "q-mcq-1",
+          "object": "choices",
+          "intent": "diagnose-misconception",
+          "position": 1,
+          "content": {
+            "stem": "Which statement best describes the role of soil in plant food making?",
+            "options": [
+              {
+                "letter": "A",
+                "text": "Soil is the food the plant eats."
+              },
+              {
+                "letter": "B",
+                "text": "Soil supplies water and minerals, but the plant makes food in its leaves."
+              },
+              {
+                "letter": "C",
+                "text": "Soil supplies sunlight to the roots."
+              }
+            ],
+            "marks": 1
+          }
+        }
+      ]
+    }
+  ],
+  "answer_key": {
+    "id": "answer-key-lesson-light-food-001",
+    "object": "answer-key",
+    "intent": "answer-key",
+    "position": 0,
+    "content": {
+      "groups": [
+        {
+          "title": "Check your understanding",
+          "entries": [
+            {
+              "question_id": "q-open-1",
+              "answer": "The covered part does not receive light while the uncovered part does. When food-making evidence appears only in the lit part, the changed condition shows that light is required.",
+              "alternatives": [
+                "A correct answer compares covered and uncovered parts and links the different result to light."
+              ],
+              "working": null,
+              "rubric": "2 marks: identifies light as the changed condition and connects the different result to food making. 1 mark: states light is needed without using the comparison."
+            },
+            {
+              "question_id": "q-mcq-1",
+              "answer": "B",
+              "alternatives": [],
+              "working": null,
+              "rubric": "1 mark for B."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -27,6 +27,15 @@ class FailureClassification:
 
 
 def classify_failure(exc: BaseException) -> FailureClassification:
+    # ContentValidationError: repair already consumed inside dispatch_writer_async.
+    # Surface VALIDATION as retryable (failed_recoverable) but not executor-repairable.
+    try:
+        from generation.page_objects import ContentValidationError
+    except ImportError:  # pragma: no cover
+        ContentValidationError = None  # type: ignore[misc, assignment]
+
+    if ContentValidationError is not None and isinstance(exc, ContentValidationError):
+        return FailureClassification(code="VALIDATION", retryable=True, repairable=False)
     if isinstance(exc, LeaseLostError):
         return FailureClassification(code="LEASE_LOST", retryable=False, repairable=False)
     if isinstance(exc, asyncio.CancelledError):
