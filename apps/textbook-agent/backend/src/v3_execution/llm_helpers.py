@@ -11,6 +11,19 @@ from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot
 
 _CALLER = "v3_execution"
 
+# Disables pydantic-ai's in-library structured-output retry.
+#
+# On a validation failure pydantic-ai appends a corrective request to the *same*
+# message history, so the model's own invalid reply is replayed back to the
+# provider. DeepSeek rejects that with HTTP 400 "Invalid assistant message:
+# content or tool_calls must be set" whenever the invalid reply was
+# reasoning-only (empty ``content``).
+#
+# Apply this only at call sites that own an explicit outer repair attempt, so
+# repair has exactly one owner. Sites without an outer loop must keep the
+# library default.
+NO_OUTPUT_RETRY = {"output": 0}
+
 
 def structured_output_type_for_model(
     output_type: Any,

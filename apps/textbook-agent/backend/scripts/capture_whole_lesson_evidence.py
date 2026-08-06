@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -113,18 +114,51 @@ async def capture(generation_id: str, run_dir: Path) -> list[str]:
     return missing
 
 
+RUN_SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
+
+
+def run_slug(value: str) -> str:
+    """Validate a run slug used as a directory name under EVIDENCE_ROOT.
+
+    Previously this was a hard-coded ``choices`` list, which rejected ad-hoc runs
+    such as ``browser-smoke-science``. The slug now only has to be safe: lowercase
+    alphanumerics and hyphens, starting with an alphanumeric. That excludes ``..``,
+    path separators, drive letters, leading hyphens, and the empty string, so the
+    value cannot escape the evidence root.
+    """
+    if not RUN_SLUG_PATTERN.match(value):
+        raise argparse.ArgumentTypeError(
+            f"invalid run slug {value!r}: expected lowercase letters, digits and "
+            "hyphens, starting with a letter or digit, at most 64 characters"
+        )
+    return value
+
+
+def resolve_run_dir(slug: str) -> Path:
+    """Resolve the run directory, refusing anything outside EVIDENCE_ROOT.
+
+    The regex already excludes traversal; this is the belt-and-braces check that
+    survives future edits to the pattern.
+    """
+    root = EVIDENCE_ROOT.resolve()
+    candidate = (root / slug).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:  # pragma: no cover - unreachable via run_slug
+        raise argparse.ArgumentTypeError(
+            f"run slug {slug!r} resolves outside the evidence root"
+        ) from exc
+    return candidate
+
+
 def main() -> int:
     import asyncio
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("generation_id")
-    parser.add_argument(
-        "--run",
-        required=True,
-        choices=["run-01-science", "run-02-mathematics", "run-03-economics", "run-04-english"],
-    )
+    parser.add_argument("--run", required=True, type=run_slug)
     args = parser.parse_args()
-    run_dir = EVIDENCE_ROOT / args.run
+    run_dir = resolve_run_dir(args.run)
     missing = asyncio.run(capture(args.generation_id, run_dir))
     print(json.dumps({"run_dir": str(run_dir), "missing": missing}, indent=2))
     return 0 if not missing else 2

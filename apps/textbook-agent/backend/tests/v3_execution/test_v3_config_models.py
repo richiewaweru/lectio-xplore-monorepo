@@ -6,8 +6,13 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from core.llm import ModelFamily, ModelSlot, ModelSpec, build_model
 from v3_execution.config.answer_key_node import effective_answer_key_node_name
 from v3_execution.config.models import (
+    V2_FORM_PLANNER,
+    V2_LESSON_APPROACH_PLANNER,
+    V2_PATH_PLANNER,
+    V2_PATH_STRUCTURAL_PLANNER,
     V3_ANSWER_KEY_GENERATOR,
     V3_ANSWER_KEY_GENERATOR_HEAVY,
+    V3_NODE_REASONING,
     V3_PROPOSE_INTENT,
     V3_VISUAL_QC,
     get_v3_model_settings,
@@ -110,6 +115,49 @@ def test_get_v3_model_settings_adds_deepseek_reasoning_for_standard_nodes(
         "extra_body": {"thinking": {"type": "enabled"}},
         "max_tokens": 120000,
     }
+
+
+def test_constrained_planner_nodes_disable_provider_reasoning() -> None:
+    """The structural and form planners must not run with DeepSeek thinking on.
+
+    Thinking mode returns reasoning-only assistant messages with empty content.
+    Replaying one is what produced the observed HTTP 400 "Invalid assistant
+    message: content or tool_calls must be set" at planning_forms.
+    """
+    assert V3_NODE_REASONING[V2_FORM_PLANNER] is False
+    assert V3_NODE_REASONING[V2_PATH_STRUCTURAL_PLANNER] is False
+
+
+def test_constrained_planner_nodes_send_no_thinking_payload(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for tier in ("FAST", "STANDARD"):
+        monkeypatch.setenv(f"V3_{tier}_PROVIDER", "openai_compatible")
+        monkeypatch.setenv(f"V3_{tier}_BASE_URL", "https://api.deepseek.com")
+        monkeypatch.setenv(f"V3_{tier}_API_KEY_ENV", "DEEPSEEK_API_KEY")
+    monkeypatch.setenv("V3_FAST_MODEL_NAME", "deepseek-v4-flash")
+    monkeypatch.setenv("V3_STANDARD_MODEL_NAME", "deepseek-v4-pro")
+
+    for node in (V2_FORM_PLANNER, V2_PATH_STRUCTURAL_PLANNER):
+        settings = get_v3_model_settings(node)
+        assert settings == {"max_tokens": 120000}, node
+        assert "openai_reasoning_effort" not in settings
+        assert "extra_body" not in settings
+
+
+def test_reasoning_change_is_scoped_to_the_constrained_nodes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Nodes doing broad pedagogical reasoning must be unaffected."""
+    monkeypatch.setenv("V3_STANDARD_PROVIDER", "openai_compatible")
+    monkeypatch.setenv("V3_STANDARD_MODEL_NAME", "deepseek-v4-pro")
+    monkeypatch.setenv("V3_STANDARD_BASE_URL", "https://api.deepseek.com")
+    monkeypatch.setenv("V3_STANDARD_API_KEY_ENV", "DEEPSEEK_API_KEY")
+
+    for node in (V2_PATH_PLANNER, V2_LESSON_APPROACH_PLANNER):
+        settings = get_v3_model_settings(node)
+        assert settings["openai_reasoning_effort"] == "high", node
+        assert settings["extra_body"] == {"thinking": {"type": "enabled"}}, node
 
 
 def test_get_v3_model_settings_preserves_thinking_when_base_sets_extra_body(

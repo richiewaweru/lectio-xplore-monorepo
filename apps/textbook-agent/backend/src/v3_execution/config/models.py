@@ -84,10 +84,16 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     V2_PATH_PLANNER: "high",
     V2_MERGE_CRITIC: "low",
     V2_COMPONENT_SELECTOR: "medium",
-    V2_PATH_STRUCTURAL_PLANNER: "high",
+    # Constrained-output nodes run without provider reasoning. On DeepSeek,
+    # thinking mode returns reasoning-only assistant messages with empty
+    # ``content``; replaying one produces HTTP 400 "Invalid assistant message:
+    # content or tool_calls must be set". Correctness for these two nodes comes
+    # from the typed output schema plus their own outer repair attempt, not from
+    # provider reasoning.
+    V2_PATH_STRUCTURAL_PLANNER: False,
     V2_PATH_CHAT_EDITOR: "medium",
     V2_LESSON_APPROACH_PLANNER: "high",
-    V2_FORM_PLANNER: "low",
+    V2_FORM_PLANNER: False,
     V3_CONSTRUCTOR: "medium",
 }
 

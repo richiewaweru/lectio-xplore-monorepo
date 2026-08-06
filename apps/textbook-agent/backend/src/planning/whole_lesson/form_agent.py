@@ -13,6 +13,7 @@ from contracts.lectio_page import get_intent_catalogue, get_object_catalogue
 from core.config import settings
 from core.llm.runner import RetryPolicy, run_llm
 from planning.catalogue_projections import project_form_guidance
+from planning.planner_diagnostics import log_planner_attempt_failed
 from planning.whole_lesson.form_plan import FormPlan
 from planning.whole_lesson.packet import ImmutableLessonPacket
 from planning.whole_lesson.prompt_render import render_form_prompt
@@ -24,7 +25,7 @@ from planning.whole_lesson.validation import (
 )
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.models import V2_FORM_PLANNER
-from v3_execution.llm_helpers import structured_output_type_for_model
+from v3_execution.llm_helpers import NO_OUTPUT_RETRY, structured_output_type_for_model
 
 
 @dataclass
@@ -53,6 +54,11 @@ async def _call_form_model(
         model=model,
         output_type=structured_output_type_for_model(FormPlan, spec=spec),
         system_prompt=system_prompt or prompt,
+        # Repair is owned by run_form_planner's outer attempt loop below.
+        # pydantic-ai's in-library output retry replays the model's own invalid
+        # response in the same conversation, which DeepSeek rejects with HTTP 400
+        # when that response is reasoning-only with empty content.
+        retries=NO_OUTPUT_RETRY,
     )
     result = await run_llm(
         trace_id=trace_id,
@@ -167,8 +173,23 @@ async def run_form_planner(
                     attempts=attempt,
                 )
             last_error = "validation_failed"
+            log_planner_attempt_failed(
+                node=V2_FORM_PLANNER,
+                attempt=attempt,
+                errors=[str(issue) for issue in validation.to_dict()["issues"]],
+                repair_attached=attempt == 2 and plan is not None,
+                will_retry=attempt == 1,
+            )
         except Exception as exc:
             last_error = str(exc)
+            log_planner_attempt_failed(
+                node=V2_FORM_PLANNER,
+                attempt=attempt,
+                errors=[],
+                exc=exc,
+                repair_attached=attempt == 2 and plan is not None,
+                will_retry=attempt == 1,
+            )
             continue
 
     raise RuntimeError(f"form planner failed after 2 attempts: {last_error}")

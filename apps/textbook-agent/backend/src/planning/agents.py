@@ -5,7 +5,7 @@ import uuid
 import asyncio
 from typing import Any, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from pydantic_ai import Agent
 
 from core.config import settings
@@ -27,6 +27,7 @@ from planning.prompts import (
     path_structural_planner_prompt,
     plan_editor_prompt,
 )
+from planning.planner_diagnostics import log_planner_attempt_failed
 from planning.validation import normalize_declared_external_prerequisites, validate_path_plan
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.models import (
@@ -37,7 +38,7 @@ from v3_execution.config.models import (
     V2_PATH_STRUCTURAL_PLANNER,
     V3_CONSTRUCTOR,
 )
-from v3_execution.llm_helpers import structured_output_type_for_model
+from v3_execution.llm_helpers import NO_OUTPUT_RETRY, structured_output_type_for_model
 
 
 OutputT = TypeVar("OutputT", bound=BaseModel)
@@ -59,6 +60,12 @@ async def _run_structured(
         model=model,
         output_type=structured_output_type_for_model(output_type, spec=spec),
         system_prompt=system_prompt,
+        # Repair is owned by the caller's outer attempt loop (see
+        # run_path_structural_planner). pydantic-ai's in-library output retry
+        # appends to the same message history, which replays the model's own
+        # invalid response — fatal on DeepSeek when that response is
+        # reasoning-only with empty content.
+        retries=NO_OUTPUT_RETRY,
     )
     result = await run_llm(
         trace_id=trace_id or str(uuid.uuid4()),
@@ -201,25 +208,129 @@ async def run_component_selector(
     )
 
 
+def _schema_errors(exc: BaseException) -> list[str]:
+    """Extract actionable validation messages from a structured-output failure.
+
+    With in-library output retry disabled (``NO_OUTPUT_RETRY``), a schema failure
+    does not surface as a bare ``ValidationError``. pydantic-ai raises
+    ``UnexpectedModelBehavior`` whose ``__cause__`` is a ``ToolRetryError`` whose
+    ``tool_retry.content`` holds the pydantic error list. Walk that chain first,
+    then fall back to a direct ``ValidationError`` (``_run_structured`` re-validates
+    its own result and can raise one), then to the exception text.
+    """
+    content = getattr(getattr(exc, "__cause__", None), "tool_retry", None)
+    content = getattr(content, "content", None)
+    if isinstance(content, list):
+        messages = []
+        for item in content:
+            if isinstance(item, dict):
+                loc = ".".join(str(part) for part in (item.get("loc") or ()))
+                messages.append(f"{loc}: {item.get('msg')}" if loc else str(item.get("msg")))
+            else:
+                messages.append(str(item))
+        if messages:
+            return messages
+    if isinstance(exc, ValidationError):
+        return [
+            f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}"
+            for error in exc.errors()
+        ]
+    return [f"{type(exc).__name__}: {exc}"]
+
+
 async def run_path_structural_planner(
     fixed_context: dict[str, Any],
     *,
     trace_id: str | None = None,
 ) -> PathStructuralPlan:
+    """Plan lesson structure, with one targeted repair attempt.
+
+    The typed output schema is the primary protection. This loop is the net
+    beneath it: at most two fresh attempts, the second one carrying the previous
+    output and the exact violations. Each attempt builds a new Agent, so no
+    provider message history is ever replayed.
+    """
     from planning.prompts import path_structural_planner_page_prompt
+    from planning.structural_validation import (
+        PathStructuralContextError,
+        validate_path_structural_result,
+    )
 
     use_page = bool(fixed_context.get("native_whole_lesson"))
-    return await _run_structured(
-        node=V2_PATH_STRUCTURAL_PLANNER,
-        caller="v2_path_structural_planner",
-        output_type=PathStructuralPlan,
-        system_prompt=(
-            path_structural_planner_page_prompt()
-            if use_page
-            else path_structural_planner_prompt()
-        ),
-        user_payload=fixed_context,
-        trace_id=trace_id,
+    system_prompt = (
+        path_structural_planner_page_prompt()
+        if use_page
+        else path_structural_planner_prompt()
+    )
+    expected_slots = [
+        slot["slot_id"]
+        for slot in (fixed_context.get("slots") or [])
+        if isinstance(slot, dict) and slot.get("slot_id")
+    ]
+    tid = trace_id or str(uuid.uuid4())
+    errors: list[str] = []
+    previous_output: dict[str, Any] | None = None
+
+    for attempt in (1, 2):
+        payload = fixed_context
+        if attempt == 2:
+            payload = {
+                **fixed_context,
+                "repair": {
+                    "instruction": (
+                        "Your previous output violated the fixed contract. Return "
+                        "the complete corrected JSON. Change only what the listed "
+                        "errors name. Section ids and roles are fixed: do not "
+                        "rename, add, remove, or reorder them, and preserve the "
+                        "objective and concept id exactly."
+                    ),
+                    "previous_output": previous_output,
+                    "validation_errors": errors,
+                },
+            }
+        try:
+            plan = await _run_structured(
+                node=V2_PATH_STRUCTURAL_PLANNER,
+                caller="v2_path_structural_planner",
+                output_type=PathStructuralPlan,
+                system_prompt=system_prompt,
+                user_payload=payload,
+                trace_id=f"{tid}:structural{attempt}",
+            )
+        except Exception as exc:  # noqa: BLE001 - classified below, re-raised on attempt 2
+            errors = _schema_errors(exc)
+            # Raw model text never escapes _run_structured, so there is no
+            # previous output to echo on this branch. The pydantic messages are
+            # actionable on their own.
+            previous_output = None
+            log_planner_attempt_failed(
+                node=V2_PATH_STRUCTURAL_PLANNER,
+                attempt=attempt,
+                errors=errors,
+                exc=exc,
+                repair_attached=attempt == 2,
+                will_retry=attempt == 1,
+            )
+            if attempt == 2:
+                raise
+            continue
+
+        errors = validate_path_structural_result(plan, expected_slots=expected_slots)
+        if not errors:
+            return plan
+        previous_output = plan.model_dump(mode="json", exclude_none=True)
+        log_planner_attempt_failed(
+            node=V2_PATH_STRUCTURAL_PLANNER,
+            attempt=attempt,
+            errors=errors,
+            repair_attached=attempt == 2,
+            will_retry=attempt == 1,
+        )
+        if attempt == 2:
+            raise PathStructuralContextError(errors)
+
+    raise PathStructuralContextError(
+        errors or ["structural planner produced no usable result"]
     )
 
 

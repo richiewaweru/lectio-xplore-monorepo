@@ -214,7 +214,11 @@ def _build_structural_plan(
         raise PathPreparationBlocked(f"Structural planner objective concern: {generated.objective_concern}")
     if len(generated.cards) != 1:
         raise PathPreparationBlocked("Path preparation must produce exactly one concept card")
-    card_payload = dict(generated.cards[0])
+    # exclude_none is load-bearing: _normalize_page_concept_card_payload branches
+    # on key ABSENCE (`"description" not in row and "statement" in row`). A plain
+    # model_dump() would make description always present as None, the rename would
+    # never fire, and the misconception would be silently dropped.
+    card_payload = generated.cards[0].model_dump(mode="json", exclude_none=True)
     card_payload = _normalize_page_concept_card_payload(
         card_payload,
         lesson=lesson,
@@ -230,7 +234,10 @@ def _build_structural_plan(
 
     section_payloads: list[dict[str, Any]] = []
     for index, generated_section in enumerate(generated.sections):
-        section_payload = dict(generated_section)
+        section_payload = generated_section.model_dump(mode="json", exclude_none=True)
+        # SectionPlan.components has no default, and exclude_none drops the key
+        # when the planner omits it (the native prompt forbids components).
+        section_payload.setdefault("components", [])
         title = section_payload.get("title")
         if isinstance(title, str):
             section_payload["title"] = _clip_advisory_text(title, limit=80)
@@ -242,6 +249,10 @@ def _build_structural_plan(
                 transition_note,
                 limit=120,
             )
+        # The path layer owns concept identity. Coerce rather than validate, for
+        # the same reason the card's id and objective are assigned above.
+        if section_payload.get("card_id") is not None:
+            section_payload["card_id"] = lesson.concept_id
         components = section_payload.get("components")
         if isinstance(components, list):
             section_payload["components"] = [
@@ -253,7 +264,7 @@ def _build_structural_plan(
         if page_block_plans is not None:
             # Native v2 path: structural planner may still emit legacy component
             # shapes; whole-lesson teaching/form planners own block selection.
-            plan_for_slot = page_block_plans.get(section_payload.get("role") or section_payload.get("id"))
+            plan_for_slot = page_block_plans.get(generated_section.role or generated_section.id)
             section_payload["components"] = []
             section_payload["blocks"] = list(getattr(plan_for_slot, "blocks", []) or [])
         section_payloads.append(section_payload)

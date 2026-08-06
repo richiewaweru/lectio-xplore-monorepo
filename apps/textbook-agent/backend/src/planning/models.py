@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 KnowledgeType = Literal["procedural", "conceptual", "factual", "evaluative"]
@@ -380,9 +380,119 @@ class PathDeviationRequest(StrictModel):
     reason: str
 
 
+# ── Structural planner prompt-facing contract ─────────────────────────────
+#
+# These models are the JSON schema the structural planner sees. They are
+# deliberately NOT the canonical execution contracts:
+#
+#   * They are prompt-facing. On DeepSeek the schema is rendered into the prompt
+#     text (see v3_execution.llm_helpers.structured_output_type_for_model), not
+#     enforced by constrained decoding, so ``extra="forbid"`` here would not stop
+#     the model emitting stray keys — it would only turn drift that
+#     planning.bridge._normalize_page_concept_card_payload already absorbs into
+#     hard failures. Hence ``extra="ignore"`` on every nested model.
+#   * The canonical ConceptCard is an execution/storage contract whose ``id`` and
+#     ``objective`` the bridge ASSIGNS rather than reads. The two must stay free
+#     to diverge.
+#
+# Field descriptions are the only steering available on the prompted path, so
+# they carry the contract that the schema itself cannot enforce.
+
+
+class PathStructuralComponentSlot(BaseModel):
+    """Legacy component-selector shape. Ignored entirely on the native page path."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    slug: str
+    purpose: str = ""
+    # Declared so the advisory-stripping pass in the bridge still sees it.
+    reason: str | None = None
+
+
+class PathStructuralMisconception(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str | None = None
+    description: str | None = Field(
+        default=None,
+        description="The wrong belief, stated the way a learner would state it.",
+    )
+    # The planner sometimes names this field 'statement'. Declared so the bridge's
+    # statement -> description rename still has something to rename.
+    statement: str | None = None
+    # Deliberately not a Literal: unrecognised sources are dropped downstream
+    # rather than failing the whole plan.
+    source: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_bare_string(cls, value: object) -> object:
+        if isinstance(value, str):
+            return {"description": value}
+        return value
+
+
+class PathStructuralCard(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str | None = Field(
+        default=None,
+        description="Echo concept_id verbatim. The path layer owns this value.",
+    )
+    title: str | None = None
+    objective: str | None = Field(
+        default=None,
+        description="Echo the supplied objective verbatim. Never rewrite it.",
+    )
+    prereqs: list[str] = Field(default_factory=list)
+    misconceptions: list[PathStructuralMisconception] = Field(default_factory=list)
+    no_known_misconceptions: bool = False
+    opens_by: str | None = None
+
+
+class PathStructuralSection(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str = Field(
+        description=(
+            "Must equal slots[i].slot_id verbatim, in the supplied order. "
+            "The field is named 'id' — do not emit a key called 'slot_id'."
+        ),
+    )
+    role: str = Field(
+        description=(
+            "Must ALSO equal slots[i].slot_id verbatim — not slots[i].role."
+        ),
+    )
+    title: str = Field(description="Concise section title. Aim for ~80 chars (advisory).")
+    card_id: str | None = Field(
+        default=None,
+        description="concept_id for teaching sections; null for plain sections.",
+    )
+    visual_required: bool = False
+    transition_note: str | None = Field(
+        default=None,
+        description=(
+            "Why this section follows the previous one. Null for the first "
+            "section only. Aim for ~120 chars (advisory)."
+        ),
+    )
+    components: list[PathStructuralComponentSlot] | None = None
+
+
 class PathStructuralPlan(StrictModel):
     anchor: PathAnchor
-    cards: list[dict]
-    sections: list[dict]
-    deviation_request: PathDeviationRequest | None
-    objective_concern: str | None
+    # max_length only. The lower bound lives in
+    # planning.structural_validation.validate_path_structural_result, which runs
+    # AFTER the deviation_request / objective_concern escape hatches — a
+    # legitimate "this objective does not fit" response carries no cards, and
+    # must keep its readable message instead of becoming a schema error.
+    cards: list[PathStructuralCard] = Field(
+        default_factory=list,
+        max_length=1,
+        description="Exactly one concept card, unless emitting objective_concern.",
+    )
+    sections: list[PathStructuralSection] = Field(default_factory=list)
+    deviation_request: PathDeviationRequest | None = None
+    objective_concern: str | None = None

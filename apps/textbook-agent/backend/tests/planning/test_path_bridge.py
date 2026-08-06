@@ -676,12 +676,22 @@ async def test_prepare_bridge_forces_approved_objective_over_rewrite(
     assert lesson is not None
 
     async def rewriting_planner(context: dict) -> PathStructuralPlan:
+        # Rebuild through model_validate rather than mutating the parsed model:
+        # this is the shape a drifting planner actually returns, so the prompt
+        # -facing extras (body / must_establish / concept_id) travel the same
+        # extra="ignore" path they would in production.
         generated = await _fake_structural_planner(context)
-        generated.cards[0]["objective"] = "A plausible but rewritten objective."
-        generated.cards[0]["body"] = "Planner-only body that must be stripped."
-        generated.cards[0]["must_establish"] = ["extra"]
-        generated.cards[0]["concept_id"] = "wrong-id"
-        return generated
+        payload = generated.model_dump(mode="json", exclude_none=True)
+        payload["cards"] = [
+            {
+                **payload["cards"][0],
+                "objective": "A plausible but rewritten objective.",
+                "body": "Planner-only body that must be stripped.",
+                "must_establish": ["extra"],
+                "concept_id": "wrong-id",
+            }
+        ]
+        return PathStructuralPlan.model_validate(payload)
 
     response, structural_plan = await prepare_path_lesson(
         db_session,
@@ -748,4 +758,68 @@ async def test_prepare_bridge_routes_factual_to_native_under_scope_all(
         "explain",
         "confront",
         "check",
+    ]
+
+
+async def test_native_sections_take_blocks_only_from_page_block_plans(
+    db_session, monkeypatch
+) -> None:
+    """The structural planner must not be able to choose page objects.
+
+    Its prompt forbids components and blocks, but the fake planner emits legacy
+    component shapes anyway (as the real one does). On the native path the bridge
+    must discard those and take blocks solely from the page/form planning path.
+    """
+    from core.config import settings
+
+    monkeypatch.setattr(settings, "xplore_page_documents_enabled", True)
+    monkeypatch.setattr(settings, "xplore_page_document_scope", "all")
+
+    user = UserModel(
+        id="bridge-native-blocks", email="native-blocks@example.invalid", name="Native"
+    )
+    db_session.add(user)
+    plan = PathPlan.model_validate_json(FIXTURE.read_text(encoding="utf-8"))
+    unit = await create_unit(
+        db_session,
+        owner_id=user.id,
+        request=UnitCreate(
+            title="Photosynthesis",
+            topic="Photosynthesis",
+            subject="Science",
+            grade_level="Grade 4",
+            destination_objective=plan.destination_objective or "Destination",
+            starting_knowledge=plan.starting_knowledge,
+        ),
+    )
+    version = await persist_path_plan(db_session, unit=unit, plan=plan)
+    await approve_path(db_session, version)
+    lesson = await db_session.scalar(
+        select(PathLessonModel)
+        .where(
+            PathLessonModel.path_version_id == version.id,
+            PathLessonModel.primary_knowledge_type == "conceptual",
+        )
+        .order_by(PathLessonModel.position)
+    )
+    assert lesson is not None
+
+    _, structural_plan = await prepare_path_lesson(
+        db_session,
+        unit=unit,
+        version=version,
+        lesson=lesson,
+        request=PrepareLessonRequest(lesson_mode="first_exposure"),
+        structural_planner=_fake_structural_planner,
+        component_selector=_fake_component_selector,
+    )
+
+    assert structural_plan.document_contract_version == 2
+    for section in structural_plan.sections:
+        assert section.components == [], (
+            f"section {section.id!r} kept planner-chosen components"
+        )
+    # Section identity stays pinned to the fixed skeleton slots.
+    assert [section.id for section in structural_plan.sections] == [
+        section.role for section in structural_plan.sections
     ]

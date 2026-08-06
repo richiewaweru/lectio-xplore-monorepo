@@ -28,7 +28,7 @@ from resource_specs.loader import get_spec
 from v3_blueprint.skeletons import load_skeleton_catalog
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.models import V2_LESSON_APPROACH_PLANNER
-from v3_execution.llm_helpers import structured_output_type_for_model
+from v3_execution.llm_helpers import NO_OUTPUT_RETRY, structured_output_type_for_model
 from contracts.lectio_page import get_intent_catalogue, get_object_catalogue
 
 
@@ -103,6 +103,8 @@ async def _call_teaching_model(
         model=model,
         output_type=structured_output_type_for_model(TeachingPlan, spec=spec),
         system_prompt=system_prompt or prompt,
+        # Repair is owned by run_teaching_planner's outer attempt loop below.
+        retries=NO_OUTPUT_RETRY,
     )
     result = await run_llm(
         trace_id=trace_id,
