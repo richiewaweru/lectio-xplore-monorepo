@@ -309,3 +309,53 @@ def _all_keys(value: Any, acc: set[str] | None = None) -> set[str]:
 
 def registered_page_object_ids() -> tuple[str, ...]:
     return tuple(PAGE_OBJECT_IDS)
+
+
+# Objects the native Xplore writer registry can materialize.
+_IMPLEMENTED_FORM_OBJECTS: frozenset[str] = frozenset(
+    {
+        "prose",
+        "list",
+        "table",
+        "figure",
+        "aside",
+        "worked-example",
+        "questions",
+        "choices",
+    }
+)
+_NEVER_SELECTABLE_OBJECTS: frozenset[str] = frozenset({"heading", "answer-key"})
+
+
+def build_form_candidate_map(
+    teaching_plan: Any,
+    *,
+    form_guidance: FormGuidanceProjection | None = None,
+    permitted_object_ids: set[str] | None = None,
+    implemented_objects: set[str] | frozenset[str] | None = None,
+) -> dict[str, tuple[str, ...]]:
+    """Per-block legal object set for form planning and validation.
+
+    Same map must feed the form prompt envelope and validate_form_plan.
+    """
+    guidance = form_guidance or project_form_guidance(
+        permitted_object_ids=permitted_object_ids
+    )
+    implemented = set(implemented_objects or _IMPLEMENTED_FORM_OBJECTS)
+    implemented -= set(_NEVER_SELECTABLE_OBJECTS)
+
+    candidates: dict[str, tuple[str, ...]] = {}
+    for section in teaching_plan.sections:
+        for block in section.blocks:
+            by_intent = set(guidance.by_intent.get(block.intent, ()))
+            legal = sorted(
+                object_id
+                for object_id in by_intent
+                if object_id in implemented
+                and object_id not in _NEVER_SELECTABLE_OBJECTS
+            )
+            # questions requires teaching-owned source_question_ids.
+            if not getattr(block, "source_question_ids", None):
+                legal = [object_id for object_id in legal if object_id != "questions"]
+            candidates[block.id] = tuple(legal)
+    return candidates

@@ -121,7 +121,9 @@ def project_native_status(
         if not isinstance(section, Mapping):
             continue
         slot_id = str(section.get("slot_id") or "")
-        blocks = section.get("blocks") if isinstance(section.get("blocks"), list) else []
+        blocks = section.get("forms") if isinstance(section.get("forms"), list) else None
+        if blocks is None:
+            blocks = section.get("blocks") if isinstance(section.get("blocks"), list) else []
         section_ready = True
         section_failed = False
         section_has_blocks = False
@@ -130,7 +132,7 @@ def project_native_status(
                 continue
             section_has_blocks = True
             blocks_total += 1
-            block_id = str(block.get("id") or "")
+            block_id = str(block.get("block_id") or block.get("id") or "")
             key = execution_key(slot_id, block_id, DEFAULT_VARIANT_ID)
             outcome = block_execution.get(key)
             if not isinstance(outcome, Mapping):

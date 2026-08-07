@@ -67,43 +67,57 @@ def load_yaml(path: Path) -> dict[str, Any]:
 
 
 def load_form_plan(path: Path):
-    from planning.whole_lesson.form_plan import FormPlan, FormPlanBlock, FormPlanSection
+    """Load pack fixture (possibly legacy fat) as ResolvedLessonPlan for writers."""
+    from planning.whole_lesson.form_plan import coerce_form_plan
+    from planning.whole_lesson.resolved_block_plan import resolve_block_plans
+    from planning.whole_lesson.teaching_plan import (
+        AnchorUsage,
+        TeachingPlan,
+        TeachingPlanBlock,
+        TeachingPlanSection,
+    )
 
     raw = load_json(path)
-    sections: list[FormPlanSection] = []
+    teaching_sections: list[TeachingPlanSection] = []
     for section in raw.get("sections") or []:
         if not isinstance(section, dict):
             continue
-        blocks = []
-        for block in section.get("blocks") or []:
+        blocks_raw = section.get("blocks") or section.get("forms") or []
+        teaching_blocks: list[TeachingPlanBlock] = []
+        for index, block in enumerate(blocks_raw):
             if not isinstance(block, dict):
                 continue
-            allowed = {
-                key: block[key]
-                for key in (
-                    "id",
-                    "position",
-                    "intent",
-                    "brief",
-                    "evidence",
-                    "evidence_refs",
-                    "departure_reason",
-                    "source_question_ids",
-                    "object",
-                    "placement",
-                    "reason",
+            block_id = str(block.get("block_id") or block.get("id") or "")
+            teaching_blocks.append(
+                TeachingPlanBlock(
+                    id=block_id,
+                    position=int(block.get("position") or index),
+                    intent=str(block.get("intent") or "explain"),
+                    brief=str(block.get("brief") or f"Brief for {block_id}"),
+                    evidence=str(block.get("evidence") or "Fixture evidence."),
+                    evidence_refs=list(block.get("evidence_refs") or []),
+                    departure_reason=block.get("departure_reason"),
+                    source_question_ids=list(block.get("source_question_ids") or []),
                 )
-                if key in block
-            }
-            blocks.append(FormPlanBlock.model_validate(allowed))
-        sections.append(
-            FormPlanSection(
-                slot_id=str(section["slot_id"]),
-                title=str(section.get("title") or ""),
-                blocks=blocks,
+            )
+        teaching_sections.append(
+            TeachingPlanSection(
+                slot_id=str(section.get("slot_id") or ""),
+                specific_purpose=str(section.get("title") or section.get("slot_id") or ""),
+                blocks=teaching_blocks,
             )
         )
-    return FormPlan(sections=sections)
+    teaching = TeachingPlan(
+        arc="Fixture teaching arc",
+        anchor_usage=AnchorUsage(),
+        sections=teaching_sections,
+    )
+    form = coerce_form_plan(raw)
+    resolved = resolve_block_plans(teaching, form)
+    # Preserve section titles for assemble_from_results compatibility.
+    for section, teaching_section in zip(resolved.sections, teaching.sections):
+        section.specific_purpose = teaching_section.specific_purpose
+    return resolved
 
 
 def item_records_from_assessment(bundle: dict[str, Any]) -> tuple[dict[str, Any], ...]:
@@ -228,12 +242,14 @@ def list_scenario_names(scenarios_payload: dict[str, Any]) -> list[str]:
 def planned_block_from_form(block) -> Any:
     from v3_blueprint.planning.models import PlannedBlock
 
+    if hasattr(block, "to_planned_block"):
+        return block.to_planned_block()
     return PlannedBlock(
         id=block.id,
         position=block.position,
         intent=block.intent,
         object=block.object,  # type: ignore[arg-type]
-        evidence=block.evidence or "Form-assigned block.",
+        evidence=getattr(block, "evidence", None) or "Form-assigned block.",
         brief=block.brief,
         placement=block.placement,
         source_question_ids=(
@@ -364,7 +380,9 @@ def assemble_from_results(
         plan = SectionBlockPlan(blocks=[planned_block_from_form(b) for b in section.blocks])
         assembled = assemble_section(
             section_id=section.slot_id,
-            title=section.title or section.slot_id,
+            title=getattr(section, "specific_purpose", None)
+            or getattr(section, "title", None)
+            or section.slot_id,
             plan=plan,
             writer_results=results,
         )
@@ -420,13 +438,13 @@ def project_status_timeline(
         "sections": [
             {
                 "slot_id": section.slot_id,
-                "title": section.title,
-                "blocks": [
+                "forms": [
                     {
-                        "id": block.id,
+                        "block_id": block.id,
                         "object": block.object,
-                        "intent": block.intent,
-                        "position": block.position,
+                        "placement": block.placement,
+                        "reason": getattr(block, "reason", "") or "",
+                        "escalation": getattr(block, "escalation", None),
                     }
                     for block in section.blocks
                 ],

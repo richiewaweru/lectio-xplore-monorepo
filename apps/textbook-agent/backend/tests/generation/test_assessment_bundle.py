@@ -37,7 +37,8 @@ def test_open_response_bundle_separates_answers() -> None:
     )
     bundle = build_assessment_bundle(ctx)
     student = bundle.student_blocks[0]
-    assert student.object == "questions"
+    assert ctx.planned.object == "questions"
+    assert student.block_id == "s4-questions"
     item = student.content["items"][0]
     assert item["id"] == "q-open-1"
     assert item["prompt"] == "Explain why covering the leaf helps."
@@ -77,7 +78,7 @@ def test_mcq_bundle_uses_block_id_for_answer() -> None:
     )
     bundle = build_assessment_bundle(ctx)
     student = bundle.student_blocks[0]
-    assert student.object == "choices"
+    assert ctx.planned.object == "choices"
     assert student.content["stem"] == "Role of soil?"
     assert len(student.content["options"]) == 3
     assert bundle.answer_entries[0].question_id == "q-mcq-1"

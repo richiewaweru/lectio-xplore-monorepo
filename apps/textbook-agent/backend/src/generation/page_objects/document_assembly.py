@@ -9,7 +9,7 @@ from typing import Any
 from uuid import uuid4
 
 from contracts.lectio_page import validate_document
-from generation.page_objects.models import WriterContext, WriterResult
+from generation.page_objects.models import WriterContext, WriterOutcome, WriterResult
 from generation.page_objects.registry import dispatch_writer
 from generation.page_objects.validation import validate_answer_key_integrity
 from v3_blueprint.planning.models import SectionBlockPlan
@@ -28,7 +28,7 @@ def normalize_block_positions(blocks: list[dict[str, Any]]) -> list[dict[str, An
     return out
 
 
-def collect_answer_entries(writer_results: list[WriterResult]) -> list[dict[str, Any]]:
+def collect_answer_entries(writer_results: list[WriterOutcome]) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
     for result in writer_results:
         for entry in result.answer_entries:
@@ -72,7 +72,7 @@ def assemble_section(
     section_id: str,
     title: str,
     plan: SectionBlockPlan,
-    writer_results: list[WriterResult],
+    writer_results: list[WriterOutcome],
 ) -> dict[str, Any]:
     by_id = {result.block_id: result for result in writer_results}
     blocks: list[dict[str, Any]] = []
@@ -80,8 +80,6 @@ def assemble_section(
         result = by_id.get(planned.id)
         if result is None:
             raise DocumentAssemblyError(f"missing writer result for block {planned.id}")
-        if result.object != planned.object or result.intent != planned.intent:
-            raise DocumentAssemblyError("writer result diverged from plan")
         block = {
             "id": planned.id,
             "object": planned.object,
@@ -107,7 +105,7 @@ def assemble_document_v2(
     document_id: str | None = None,
     metadata: dict[str, Any] | None = None,
     answer_entries: list[dict[str, Any]] | None = None,
-    writer_results: list[WriterResult] | None = None,
+    writer_results: list[WriterOutcome] | None = None,
 ) -> dict[str, Any]:
     doc_id = document_id or f"doc-{uuid4().hex[:12]}"
     entries = list(answer_entries or [])
@@ -155,7 +153,7 @@ def write_planned_section(
     title: str,
     plan: SectionBlockPlan,
     item_records: tuple[dict[str, Any], ...] = (),
-) -> tuple[dict[str, Any], list[WriterResult]]:
+) -> tuple[dict[str, Any], list[WriterOutcome]]:
     results = [
         dispatch_writer(WriterContext(planned=block, item_records=item_records))
         for block in plan.blocks

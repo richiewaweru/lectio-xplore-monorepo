@@ -10,7 +10,7 @@ import pytest
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
-from generation.page_objects import WriterResult
+from generation.page_objects import WriterOutcome
 from planning.whole_lesson.executor import (
     AssemblyError,
     assemble_from_db,
@@ -21,7 +21,7 @@ from planning.whole_lesson.failure_injection import (
     configure_failure_injection,
     reset_failure_injection,
 )
-from planning.whole_lesson.form_plan import FormPlan, FormPlanBlock, FormPlanSection
+from planning.whole_lesson.form_plan import FormPlan
 from planning.whole_lesson.packet import (
     AnchorRecord,
     ImmutableLessonPacket,
@@ -32,6 +32,8 @@ from planning.whole_lesson.packet import (
 )
 from planning.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
 from planning.whole_lesson.states import ExecutionLease, execution_key
+from planning.whole_lesson.teaching_plan import TeachingPlan
+from tests.planning.contract_fixtures import teaching_and_form
 
 
 async def _claim_lease(gid: str, *, worker_id: str = "asm-worker") -> ExecutionLease:
@@ -63,58 +65,45 @@ def _packet() -> ImmutableLessonPacket:
     )
 
 
-def _form_plan() -> FormPlan:
-    return FormPlan(
+def _plans() -> tuple[TeachingPlan, FormPlan]:
+    return teaching_and_form(
         sections=[
-            FormPlanSection(
-                slot_id="orient",
-                blocks=[
-                    FormPlanBlock(
-                        id="orient-b1",
-                        position=0,
-                        intent="orient",
-                        brief="Open with the two plants.",
-                        object="prose",
-                    )
-                ],
-            ),
-            FormPlanSection(
-                slot_id="explain",
-                blocks=[
-                    FormPlanBlock(
-                        id="explain-b1",
-                        position=0,
-                        intent="explain",
-                        brief="Middle block that may fail.",
-                        object="prose",
-                    ),
-                    FormPlanBlock(
-                        id="explain-b2",
-                        position=1,
-                        intent="explain",
-                        brief="Later sibling must still finish.",
-                        object="prose",
-                    ),
+            ("orient", [("orient-b1", "orient", "prose")]),
+            (
+                "explain",
+                [
+                    ("explain-b1", "explain", "prose"),
+                    ("explain-b2", "explain", "prose"),
                 ],
             ),
         ]
     )
 
 
+def _teaching_block_map(teaching: TeachingPlan) -> dict[str, Any]:
+    return {
+        block.id: block
+        for section in teaching.sections
+        for block in section.blocks
+    }
+
+
 async def _seed(
     *,
     status: str = "writing_blocks",
+    teaching: TeachingPlan | None = None,
     form_plan: FormPlan | None = None,
     block_execution: dict[str, Any] | None = None,
 ) -> str:
     gid = str(uuid.uuid4())
     user_id = f"user-{gid[:8]}"
     packet = _packet()
-    plan = form_plan or _form_plan()
+    if teaching is None or form_plan is None:
+        teaching, form_plan = _plans()
     state = empty_page_document_state()
     state["lesson_packet"] = packet.model_dump(mode="json")
-    state["teaching_plan"] = {"arc": "test", "sections": []}
-    state["form_plan"] = plan.model_dump(mode="json")
+    state["teaching_plan"] = teaching.model_dump(mode="json")
+    state["form_plan"] = form_plan.model_dump(mode="json")
     state["form_validation"] = {"ok": True}
     if block_execution:
         state["block_execution"] = block_execution
@@ -148,7 +137,7 @@ def _reset_injection():
 
 @pytest.mark.asyncio
 async def test_composite_execution_keys_and_skip_ready() -> None:
-    plan = _form_plan()
+    teaching, plan = _plans()
     key0 = execution_key("orient", "orient-b1", "everyone")
     key1 = execution_key("explain", "explain-b1", "everyone")
     key2 = execution_key("explain", "explain-b2", "everyone")
@@ -165,15 +154,13 @@ async def test_composite_execution_keys_and_skip_ready() -> None:
             "attempts": 1,
         }
     }
-    gid = await _seed(block_execution=ready)
+    gid = await _seed(teaching=teaching, form_plan=plan, block_execution=ready)
     written: list[str] = []
 
     async def _fake_dispatch(ctx):  # noqa: ANN001
         written.append(ctx.planned.id)
-        return WriterResult(
+        return WriterOutcome(
             block_id=ctx.planned.id,
-            object=ctx.planned.object,
-            intent=ctx.planned.intent,
             content={"paragraphs": [f"wrote {ctx.planned.id}"]},
             status="ready",
         )
@@ -183,7 +170,10 @@ async def test_composite_execution_keys_and_skip_ready() -> None:
         new=AsyncMock(side_effect=_fake_dispatch),
     ):
         await write_form_blocks(
-            generation_id=gid, form_plan=plan, packet=_packet()
+            generation_id=gid,
+            form_plan=plan,
+            packet=_packet(),
+            teaching_plan=teaching,
         )
 
     assert "orient-b1" not in written
@@ -199,17 +189,15 @@ async def test_composite_execution_keys_and_skip_ready() -> None:
 
 @pytest.mark.asyncio
 async def test_middle_block_failure_does_not_stop_siblings() -> None:
-    plan = _form_plan()
-    gid = await _seed()
+    teaching, plan = _plans()
+    gid = await _seed(teaching=teaching, form_plan=plan)
     configure_failure_injection(
         enabled=True, generation_id=gid, fail_block_index=1, fail_once=True
     )
 
     async def _fake_dispatch(ctx):  # noqa: ANN001
-        return WriterResult(
+        return WriterOutcome(
             block_id=ctx.planned.id,
-            object=ctx.planned.object,
-            intent=ctx.planned.intent,
             content={"paragraphs": [f"ok {ctx.planned.id}"]},
             status="ready",
         )
@@ -219,7 +207,10 @@ async def test_middle_block_failure_does_not_stop_siblings() -> None:
         new=AsyncMock(side_effect=_fake_dispatch),
     ):
         await write_form_blocks(
-            generation_id=gid, form_plan=plan, packet=_packet()
+            generation_id=gid,
+            form_plan=plan,
+            packet=_packet(),
+            teaching_plan=teaching,
         )
 
     async with async_session_factory() as session:
@@ -232,7 +223,10 @@ async def test_middle_block_failure_does_not_stop_siblings() -> None:
 
 @pytest.mark.asyncio
 async def test_form_plan_reused_when_persisted() -> None:
-    gid = await _seed(status="planning_forms")
+    teaching, plan = _plans()
+    gid = await _seed(
+        status="planning_forms", teaching=teaching, form_plan=plan
+    )
     form_calls = {"n": 0}
 
     async def _boom(*_a, **_k):  # noqa: ANN001
@@ -240,10 +234,8 @@ async def test_form_plan_reused_when_persisted() -> None:
         raise AssertionError("form planner must not run when plan is persisted")
 
     async def _fake_dispatch(ctx):  # noqa: ANN001
-        return WriterResult(
+        return WriterOutcome(
             block_id=ctx.planned.id,
-            object=ctx.planned.object,
-            intent=ctx.planned.intent,
             content={"paragraphs": [ctx.planned.brief]},
             status="ready",
         )
@@ -269,8 +261,9 @@ async def test_form_plan_reused_when_persisted() -> None:
 
 @pytest.mark.asyncio
 async def test_assemble_from_db_rejects_missing_and_completes_when_ready() -> None:
-    plan = _form_plan()
-    gid = await _seed(status="assembling")
+    teaching, plan = _plans()
+    by_id = _teaching_block_map(teaching)
+    gid = await _seed(status="assembling", teaching=teaching, form_plan=plan)
     lease = await _claim_lease(gid)
     async with async_session_factory() as session:
         with pytest.raises(AssemblyError, match="missing"):
@@ -279,24 +272,26 @@ async def test_assemble_from_db_rejects_missing_and_completes_when_ready() -> No
                 generation_id=gid,
                 packet=_packet(),
                 form_plan=plan,
+                teaching_plan=teaching,
                 lease=lease,
             )
 
     for section in plan.sections:
-        for block in section.blocks:
-            key = execution_key(section.slot_id, block.id)
+        for decision in section.forms:
+            teaching_block = by_id[decision.block_id]
+            key = execution_key(section.slot_id, decision.block_id)
             async with async_session_factory() as session:
                 repo = PageDocumentRepository(session, gid)
                 await repo.save_block_outcome(
                     key,
                     {
                         "status": "ready",
-                        "block_id": block.id,
+                        "block_id": decision.block_id,
                         "section_id": section.slot_id,
                         "variant_id": "everyone",
-                        "object": block.object,
-                        "intent": block.intent,
-                        "content": {"paragraphs": [block.brief]},
+                        "object": decision.object,
+                        "intent": teaching_block.intent,
+                        "content": {"paragraphs": [teaching_block.brief]},
                         "attempts": 1,
                     },
                 )
@@ -311,6 +306,7 @@ async def test_assemble_from_db_rejects_missing_and_completes_when_ready() -> No
             generation_id=gid,
             packet=_packet(),
             form_plan=plan,
+            teaching_plan=teaching,
             lease=lease,
         )
         assert assembled["terminal"] == "ready"
@@ -325,23 +321,10 @@ async def test_assemble_from_db_rejects_missing_and_completes_when_ready() -> No
 
 @pytest.mark.asyncio
 async def test_assemble_with_figure_reaches_awaiting_visuals() -> None:
-    plan = FormPlan(
-        sections=[
-            FormPlanSection(
-                slot_id="explain",
-                blocks=[
-                    FormPlanBlock(
-                        id="fig-1",
-                        position=0,
-                        intent="show-structure",
-                        brief="Show two plants.",
-                        object="figure",
-                    )
-                ],
-            )
-        ]
+    teaching, plan = teaching_and_form(
+        sections=[("explain", [("fig-1", "show-structure", "figure")])]
     )
-    gid = await _seed(status="assembling", form_plan=plan)
+    gid = await _seed(status="assembling", teaching=teaching, form_plan=plan)
     key = execution_key("explain", "fig-1")
     async with async_session_factory() as session:
         await PageDocumentRepository(session, gid).save_block_outcome(
@@ -377,6 +360,7 @@ async def test_assemble_with_figure_reaches_awaiting_visuals() -> None:
             generation_id=gid,
             packet=_packet(),
             form_plan=plan,
+            teaching_plan=teaching,
             lease=lease,
         )
         assert assembled["terminal"] == "awaiting_visuals"
@@ -387,22 +371,24 @@ async def test_assemble_with_figure_reaches_awaiting_visuals() -> None:
 
 @pytest.mark.asyncio
 async def test_assemble_rejects_unknown_keys() -> None:
-    plan = _form_plan()
-    gid = await _seed(status="assembling")
+    teaching, plan = _plans()
+    by_id = _teaching_block_map(teaching)
+    gid = await _seed(status="assembling", teaching=teaching, form_plan=plan)
     lease = await _claim_lease(gid)
     async with async_session_factory() as session:
         repo = PageDocumentRepository(session, gid)
         for section in plan.sections:
-            for block in section.blocks:
-                key = execution_key(section.slot_id, block.id)
+            for decision in section.forms:
+                teaching_block = by_id[decision.block_id]
+                key = execution_key(section.slot_id, decision.block_id)
                 await repo.save_block_outcome(
                     key,
                     {
                         "status": "ready",
-                        "block_id": block.id,
-                        "object": block.object,
-                        "intent": block.intent,
-                        "content": {"paragraphs": [block.brief]},
+                        "block_id": decision.block_id,
+                        "object": decision.object,
+                        "intent": teaching_block.intent,
+                        "content": {"paragraphs": [teaching_block.brief]},
                     },
                 )
         await repo.save_block_outcome(
@@ -421,13 +407,15 @@ async def test_assemble_rejects_unknown_keys() -> None:
                 generation_id=gid,
                 packet=_packet(),
                 form_plan=plan,
+                teaching_plan=teaching,
                 lease=lease,
             )
 
+
 @pytest.mark.asyncio
 async def test_started_current_token_not_duplicated() -> None:
-    plan = _form_plan()
-    gid = await _seed(status="writing_blocks")
+    teaching, plan = _plans()
+    gid = await _seed(status="writing_blocks", teaching=teaching, form_plan=plan)
     key = execution_key("orient", "orient-b1")
     async with async_session_factory() as session:
         repo = PageDocumentRepository(session, gid)
@@ -448,10 +436,8 @@ async def test_started_current_token_not_duplicated() -> None:
 
     async def _fake_dispatch(ctx):  # noqa: ANN001
         written.append(ctx.planned.id)
-        return WriterResult(
+        return WriterOutcome(
             block_id=ctx.planned.id,
-            object=ctx.planned.object,
-            intent=ctx.planned.intent,
             content={"paragraphs": ["x"]},
             status="ready",
         )
@@ -466,7 +452,11 @@ async def test_started_current_token_not_duplicated() -> None:
         new=AsyncMock(side_effect=_fake_dispatch),
     ):
         await write_form_blocks(
-            generation_id=gid, form_plan=plan, packet=_packet(), lease=lease
+            generation_id=gid,
+            form_plan=plan,
+            packet=_packet(),
+            teaching_plan=teaching,
+            lease=lease,
         )
     assert "orient-b1" not in written
     async with async_session_factory() as session:

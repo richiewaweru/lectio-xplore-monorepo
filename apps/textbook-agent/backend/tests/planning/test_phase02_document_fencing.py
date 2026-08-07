@@ -14,7 +14,7 @@ from generation.page_objects.document_assembly import (
     persist_document_json,
 )
 from planning.whole_lesson.executor import AssemblyError, assemble_from_db
-from planning.whole_lesson.form_plan import FormPlan, FormPlanBlock, FormPlanSection
+from planning.whole_lesson.form_plan import FormPlan
 from planning.whole_lesson.packet import (
     AnchorRecord,
     ImmutableLessonPacket,
@@ -29,6 +29,8 @@ from planning.whole_lesson.repository import (
     empty_page_document_state,
 )
 from planning.whole_lesson.states import ExecutionLease, LeaseLostError, execution_key
+from planning.whole_lesson.teaching_plan import TeachingPlan
+from tests.planning.contract_fixtures import teaching_and_form
 
 
 def _packet() -> ImmutableLessonPacket:
@@ -48,22 +50,9 @@ def _packet() -> ImmutableLessonPacket:
     )
 
 
-def _form_plan() -> FormPlan:
-    return FormPlan(
-        sections=[
-            FormPlanSection(
-                slot_id="orient",
-                blocks=[
-                    FormPlanBlock(
-                        id="orient-b1",
-                        position=0,
-                        intent="orient",
-                        brief="Open with the two plants.",
-                        object="prose",
-                    )
-                ],
-            )
-        ]
+def _plans() -> tuple[TeachingPlan, FormPlan]:
+    return teaching_and_form(
+        sections=[("orient", [("orient-b1", "orient", "prose")])]
     )
 
 
@@ -94,13 +83,13 @@ def _tiny_document() -> dict[str, Any]:
     }
 
 
-async def _seed(*, status: str = "assembling") -> str:
+async def _seed(*, status: str = "assembling") -> tuple[str, TeachingPlan, FormPlan]:
     gid = str(uuid.uuid4())
     user_id = f"user-{gid[:8]}"
-    plan = _form_plan()
+    teaching, plan = _plans()
     state = empty_page_document_state()
     state["lesson_packet"] = _packet().model_dump(mode="json")
-    state["teaching_plan"] = {"arc": "test", "sections": []}
+    state["teaching_plan"] = teaching.model_dump(mode="json")
     state["form_plan"] = plan.model_dump(mode="json")
     state["form_validation"] = {"ok": True}
     state["block_execution"] = {
@@ -133,7 +122,7 @@ async def _seed(*, status: str = "assembling") -> str:
             )
         )
         await session.commit()
-    return gid
+    return gid, teaching, plan
 
 
 async def _claim(gid: str, worker_id: str = "fence-w") -> ExecutionLease:
@@ -147,7 +136,7 @@ async def _claim(gid: str, worker_id: str = "fence-w") -> ExecutionLease:
 
 @pytest.mark.asyncio
 async def test_stale_worker_candidate_write_rejected() -> None:
-    gid = await _seed()
+    gid, _teaching, _plan = await _seed()
     lease = await _claim(gid, worker_id="owner")
     doc = _tiny_document()
     sha = canonical_document_sha256(doc)
@@ -164,7 +153,7 @@ async def test_stale_worker_candidate_write_rejected() -> None:
 
 @pytest.mark.asyncio
 async def test_wrong_token_candidate_write_rejected() -> None:
-    gid = await _seed()
+    gid, _teaching, _plan = await _seed()
     lease = await _claim(gid, worker_id="owner")
     doc = _tiny_document()
     sha = canonical_document_sha256(doc)
@@ -181,7 +170,7 @@ async def test_wrong_token_candidate_write_rejected() -> None:
 
 @pytest.mark.asyncio
 async def test_finalize_rejects_candidate_token_mismatch() -> None:
-    gid = await _seed()
+    gid, _teaching, _plan = await _seed()
     lease = await _claim(gid)
     doc = _tiny_document()
     sha = canonical_document_sha256(doc)
@@ -214,7 +203,7 @@ async def test_finalize_rejects_candidate_token_mismatch() -> None:
 
 @pytest.mark.asyncio
 async def test_finalize_rejects_tampered_document() -> None:
-    gid = await _seed()
+    gid, _teaching, _plan = await _seed()
     lease = await _claim(gid)
     doc = _tiny_document()
     sha = canonical_document_sha256(doc)
@@ -247,7 +236,7 @@ async def test_finalize_rejects_tampered_document() -> None:
 
 @pytest.mark.asyncio
 async def test_atomic_finalize_fields() -> None:
-    gid = await _seed()
+    gid, teaching, plan = await _seed()
     lease = await _claim(gid)
     async with async_session_factory() as session:
         generation = await session.get(GenerationModel, gid)
@@ -258,7 +247,8 @@ async def test_atomic_finalize_fields() -> None:
             session=session,
             generation_id=gid,
             packet=_packet(),
-            form_plan=_form_plan(),
+            form_plan=plan,
+            teaching_plan=teaching,
             lease=lease,
         )
         assert assembled["terminal"] == "ready"
@@ -278,13 +268,14 @@ async def test_atomic_finalize_fields() -> None:
 
 @pytest.mark.asyncio
 async def test_assemble_requires_lease() -> None:
-    gid = await _seed()
+    gid, teaching, plan = await _seed()
     async with async_session_factory() as session:
         with pytest.raises(AssemblyError, match="ExecutionLease"):
             await assemble_from_db(
                 session=session,
                 generation_id=gid,
                 packet=_packet(),
-                form_plan=_form_plan(),
+                form_plan=plan,
+                teaching_plan=teaching,
                 lease=None,
             )

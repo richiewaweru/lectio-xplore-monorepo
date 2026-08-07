@@ -365,8 +365,16 @@ def validate_form_plan(
     form_plan: FormPlan,
     teaching_plan: TeachingPlan,
     *,
-    compatible_objects: dict[str, set[str]],
+    candidate_map: dict[str, tuple[str, ...] | set[str]],
+    compatible_objects: dict[str, set[str]] | None = None,
 ) -> ValidationReport:
+    """Validate form-owned decisions against teaching identity + legal candidates.
+
+    `candidate_map` is the single shared legality source (block_id → objects).
+    `compatible_objects` is accepted only as a legacy alias and ignored when
+    `candidate_map` is provided.
+    """
+    del compatible_objects  # ownership: candidate_map is the sole legality source
     issues: list[ValidationIssue] = []
     teaching_blocks = {
         block.id: (section.slot_id, block)
@@ -375,19 +383,21 @@ def validate_form_plan(
     }
     form_ids: list[str] = []
     for section in form_plan.sections:
-        for index, block in enumerate(section.blocks):
-            form_ids.append(block.id)
-            path = f"sections.{section.slot_id}.blocks[{index}]"
-            if block.id not in teaching_blocks:
+        for index, decision in enumerate(section.forms):
+            form_ids.append(decision.block_id)
+            path = f"sections.{section.slot_id}.forms[{index}]"
+            if decision.block_id not in teaching_blocks:
                 issues.append(
                     ValidationIssue(
                         code="UNKNOWN_BLOCK",
-                        message=f"form plan references unknown block {block.id!r}",
+                        message=(
+                            f"form plan references unknown block {decision.block_id!r}"
+                        ),
                         path=path,
                     )
                 )
                 continue
-            slot_id, teaching = teaching_blocks[block.id]
+            slot_id, teaching = teaching_blocks[decision.block_id]
             if section.slot_id != slot_id:
                 issues.append(
                     ValidationIssue(
@@ -396,27 +406,7 @@ def validate_form_plan(
                         path=path,
                     )
                 )
-            if block.position != teaching.position:
-                issues.append(
-                    ValidationIssue(
-                        code="REORDER",
-                        message="form plan must not reorder blocks",
-                        path=path,
-                    )
-                )
-            if (
-                block.intent != teaching.intent
-                or block.brief != teaching.brief
-                or (block.evidence and block.evidence != teaching.evidence)
-            ):
-                issues.append(
-                    ValidationIssue(
-                        code="TEACHING_MUTATION",
-                        message="form plan must not change intent/brief/evidence",
-                        path=path,
-                    )
-                )
-            if block.object == "heading":
+            if decision.object == "heading":
                 issues.append(
                     ValidationIssue(
                         code="HEADING_OBJECT",
@@ -424,29 +414,41 @@ def validate_form_plan(
                         path=path,
                     )
                 )
-            allowed = compatible_objects.get(block.intent, set())
-            if allowed and block.object not in allowed:
+            if decision.object == "answer-key":
                 issues.append(
                     ValidationIssue(
-                        code="INCOMPATIBLE_OBJECT",
-                        message=f"object {block.object!r} not compatible with intent {block.intent!r}",
+                        code="ANSWER_KEY_OBJECT",
+                        message="answer-key is document-level and not selectable",
                         path=path,
                     )
                 )
-            if block.object == "questions":
-                if set(block.source_question_ids) != set(teaching.source_question_ids):
-                    issues.append(
-                        ValidationIssue(
-                            code="QUESTION_IDS",
-                            message="questions blocks must preserve source_question_ids",
-                            path=path,
-                        )
+            allowed = set(candidate_map.get(decision.block_id, ()))
+            if allowed and decision.object not in allowed:
+                issues.append(
+                    ValidationIssue(
+                        code="INCOMPATIBLE_OBJECT",
+                        message=(
+                            f"object {decision.object!r} not in legal candidates "
+                            f"for block {decision.block_id!r}"
+                        ),
+                        path=path,
                     )
-            if block.placement not in {"main", "margin", "spanning"}:
+                )
+            if decision.object == "questions" and not teaching.source_question_ids:
+                issues.append(
+                    ValidationIssue(
+                        code="QUESTION_IDS",
+                        message=(
+                            "questions object requires teaching source_question_ids"
+                        ),
+                        path=path,
+                    )
+                )
+            if decision.placement not in {"main", "margin"}:
                 issues.append(
                     ValidationIssue(
                         code="PLACEMENT",
-                        message=f"illegal placement {block.placement!r}",
+                        message=f"illegal placement {decision.placement!r}",
                         path=path,
                     )
                 )
@@ -474,9 +476,16 @@ def validate_form_plan(
 
 def advisory_form_qc(form_plan: FormPlan) -> list[AdvisoryFinding]:
     findings: list[AdvisoryFinding] = []
-    objects = [block.object for section in form_plan.sections for block in section.blocks]
+    objects = [
+        decision.object
+        for section in form_plan.sections
+        for decision in section.forms
+    ]
     for index in range(len(objects) - 2):
-        if objects[index] == objects[index + 1] == objects[index + 2] and objects[index] != "questions":
+        if (
+            objects[index] == objects[index + 1] == objects[index + 2]
+            and objects[index] != "questions"
+        ):
             findings.append(
                 AdvisoryFinding(
                     code="FORM_STREAK",
@@ -494,7 +503,10 @@ def advisory_form_qc(form_plan: FormPlan) -> list[AdvisoryFinding]:
                 findings.append(
                     AdvisoryFinding(
                         code="FORM_DOMINANCE",
-                        message=f"object {top_obj!r} dominates form plan ({top_count}/{len(objects)})",
+                        message=(
+                            f"object {top_obj!r} dominates form plan "
+                            f"({top_count}/{len(objects)})"
+                        ),
                     )
                 )
     figure_idxs = [i for i, obj in enumerate(objects) if obj == "figure"]

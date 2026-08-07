@@ -10,7 +10,7 @@ import pytest
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
-from generation.page_objects import WriterResult
+from generation.page_objects import WriterOutcome
 from generation.page_objects.document_assembly import persist_document_json
 from generation.page_objects.visual_completion import apply_figure_asset_update
 from planning.whole_lesson.executor import execute_after_teaching_approval, write_form_blocks
@@ -18,7 +18,7 @@ from planning.whole_lesson.failure_injection import (
     configure_failure_injection,
     reset_failure_injection,
 )
-from planning.whole_lesson.form_plan import FormPlan, FormPlanBlock, FormPlanSection
+from planning.whole_lesson.form_plan import FormPlan
 from planning.whole_lesson.packet import (
     AnchorRecord,
     ImmutableLessonPacket,
@@ -29,6 +29,8 @@ from planning.whole_lesson.packet import (
 )
 from planning.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
 from planning.whole_lesson.states import execution_key
+from planning.whole_lesson.teaching_plan import TeachingPlan
+from tests.planning.contract_fixtures import teaching_and_form
 
 
 ANSWER_PHRASE = "TEACHER_ONLY_ANSWER_PHRASE_42"
@@ -51,33 +53,15 @@ def _packet() -> ImmutableLessonPacket:
     )
 
 
-def _form_plan() -> FormPlan:
-    return FormPlan(
+def _plans() -> tuple[TeachingPlan, FormPlan]:
+    return teaching_and_form(
         sections=[
-            FormPlanSection(
-                slot_id="explain",
-                blocks=[
-                    FormPlanBlock(
-                        id="e1",
-                        position=0,
-                        intent="explain",
-                        brief="First.",
-                        object="prose",
-                    ),
-                    FormPlanBlock(
-                        id="e2",
-                        position=1,
-                        intent="explain",
-                        brief="Middle.",
-                        object="prose",
-                    ),
-                    FormPlanBlock(
-                        id="e3",
-                        position=2,
-                        intent="explain",
-                        brief="Last.",
-                        object="prose",
-                    ),
+            (
+                "explain",
+                [
+                    ("e1", "explain", "prose"),
+                    ("e2", "explain", "prose"),
+                    ("e3", "explain", "prose"),
                 ],
             )
         ]
@@ -143,11 +127,12 @@ def _document_with_figure_and_answer() -> dict[str, Any]:
 async def _seed_ready_doc(*, status: str = "awaiting_visuals") -> str:
     gid = str(uuid.uuid4())
     user_id = f"user-{gid[:8]}"
+    teaching, plan = _plans()
     doc = _document_with_figure_and_answer()
     state = empty_page_document_state()
     state["lesson_packet"] = _packet().model_dump(mode="json")
-    state["teaching_plan"] = {"arc": "test", "sections": []}
-    state["form_plan"] = _form_plan().model_dump(mode="json")
+    state["teaching_plan"] = teaching.model_dump(mode="json")
+    state["form_plan"] = plan.model_dump(mode="json")
     state["form_validation"] = {"ok": True}
     state["block_execution"] = {
         "explain:fig-1:everyone": {
@@ -191,10 +176,10 @@ def _reset_injection():
 async def test_conceptual_resilience_then_assemble() -> None:
     gid = str(uuid.uuid4())
     user_id = f"user-{gid[:8]}"
-    plan = _form_plan()
+    teaching, plan = _plans()
     state = empty_page_document_state()
     state["lesson_packet"] = _packet().model_dump(mode="json")
-    state["teaching_plan"] = {"arc": "test", "sections": []}
+    state["teaching_plan"] = teaching.model_dump(mode="json")
     state["form_plan"] = plan.model_dump(mode="json")
     state["form_validation"] = {"ok": True}
     async with async_session_factory() as session:
@@ -221,10 +206,8 @@ async def test_conceptual_resilience_then_assemble() -> None:
     )
 
     async def _fake_dispatch(ctx):  # noqa: ANN001
-        return WriterResult(
+        return WriterOutcome(
             block_id=ctx.planned.id,
-            object=ctx.planned.object,
-            intent=ctx.planned.intent,
             content={"paragraphs": [ctx.planned.brief]},
             status="ready",
         )
@@ -233,7 +216,12 @@ async def test_conceptual_resilience_then_assemble() -> None:
         "planning.whole_lesson.executor.dispatch_writer_async",
         new=AsyncMock(side_effect=_fake_dispatch),
     ):
-        await write_form_blocks(generation_id=gid, form_plan=plan, packet=_packet())
+        await write_form_blocks(
+            generation_id=gid,
+            form_plan=plan,
+            packet=_packet(),
+            teaching_plan=teaching,
+        )
 
     async with async_session_factory() as session:
         stored = await PageDocumentRepository(session, gid).load_block_results()

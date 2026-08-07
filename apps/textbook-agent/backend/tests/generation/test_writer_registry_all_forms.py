@@ -63,9 +63,9 @@ def test_dispatch_all_eight_forms() -> None:
             item_records=items if obj in {"questions", "choices"} else (),
         )
         result = dispatch_writer(ctx)
-        assert result.object == obj
-        assert result.intent == intent
         assert result.block_id == planned.id
+        assert ctx.planned.object == obj
+        assert ctx.planned.intent == intent
         assert isinstance(result.content, dict)
 
 

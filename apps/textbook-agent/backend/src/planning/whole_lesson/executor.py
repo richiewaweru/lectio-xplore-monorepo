@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from contracts.lectio_page import get_intent_catalogue, validate_document
 from core.database.models import GenerationModel
 from core.database.session import async_session_factory
-from generation.page_objects import WriterContext, WriterError, WriterResult, dispatch_writer_async
+from generation.page_objects import WriterContext, WriterError, WriterOutcome, dispatch_writer_async
 from generation.page_objects.document_assembly import (
     assemble_document_v2,
     assemble_section,
@@ -28,9 +28,13 @@ from planning.whole_lesson.failure_policy import (
 )
 from planning.whole_lesson.figure_ids import stable_figure_request_id
 from planning.whole_lesson.form_agent import run_form_planner
-from planning.whole_lesson.form_plan import FormPlan
+from planning.whole_lesson.form_plan import FormPlan, coerce_form_plan
 from planning.whole_lesson.packet import ImmutableLessonPacket
 from planning.whole_lesson.repository import PageDocumentRepository
+from planning.whole_lesson.resolved_block_plan import (
+    ResolvedBlockPlan,
+    resolve_block_plans,
+)
 from planning.whole_lesson.states import (
     DEFAULT_VARIANT_ID,
     MAX_SECTION_CONCURRENCY,
@@ -43,7 +47,7 @@ from planning.whole_lesson.states import (
     execution_key,
 )
 from planning.whole_lesson.teaching_plan import TeachingPlan
-from v3_blueprint.planning.models import PlannedBlock, SectionBlockPlan
+from v3_blueprint.planning.models import SectionBlockPlan
 
 
 class AssemblyError(RuntimeError):
@@ -81,28 +85,13 @@ def normalize_writer_status(
     raise WriterError(f"invalid writer status {status!r} for object {object_id!r}")
 
 
-def form_plan_to_section_plans(form_plan: FormPlan) -> dict[str, SectionBlockPlan]:
-    plans: dict[str, SectionBlockPlan] = {}
-    for section in form_plan.sections:
-        blocks = [
-            PlannedBlock(
-                id=block.id,
-                position=block.position,
-                intent=block.intent,
-                object=block.object,  # type: ignore[arg-type]
-                evidence=block.evidence or "Form-assigned block.",
-                brief=block.brief,
-                placement=block.placement,
-                source_question_ids=(
-                    list(block.source_question_ids)
-                    if block.object == "questions"
-                    else []
-                ),
-            )
-            for block in section.blocks
-        ]
-        plans[section.slot_id] = SectionBlockPlan(blocks=blocks)
-    return plans
+def form_plan_to_section_plans(
+    form_plan: FormPlan,
+    *,
+    teaching_plan: TeachingPlan,
+) -> dict[str, SectionBlockPlan]:
+    """Join teaching + form into writer SectionBlockPlan views."""
+    return resolve_block_plans(teaching_plan, form_plan).to_section_block_plans()
 
 
 def _packet_item_records(packet: ImmutableLessonPacket) -> tuple[dict[str, Any], ...]:
@@ -124,9 +113,9 @@ def expected_execution_keys(
     form_plan: FormPlan, *, variant_id: str = DEFAULT_VARIANT_ID
 ) -> set[str]:
     return {
-        execution_key(section.slot_id, block.id, variant_id)
+        execution_key(section.slot_id, decision.block_id, variant_id)
         for section in form_plan.sections
-        for block in section.blocks
+        for decision in section.forms
     }
 
 
@@ -134,10 +123,10 @@ async def _write_one_block(
     *,
     generation_id: str,
     slot_id: str,
-    block: Any,
+    block: ResolvedBlockPlan,
     index: int,
     absolute_index: int,
-    section_blocks: list[Any],
+    section_blocks: list[ResolvedBlockPlan],
     packet: ImmutableLessonPacket,
     intents: dict[str, Any],
     item_records: tuple[dict[str, Any], ...],
@@ -239,16 +228,7 @@ async def _write_one_block(
     intent_rec = intents.get(block.intent)
     if isinstance(intent_rec, dict):
         intent_guidance = str(intent_rec.get("generation_guidance") or "")
-    planned = PlannedBlock(
-        id=block.id,
-        position=block.position,
-        intent=block.intent,
-        object=block.object,  # type: ignore[arg-type]
-        evidence=block.evidence or "Form-assigned block.",
-        brief=block.brief,
-        placement=block.placement,
-        source_question_ids=list(block.source_question_ids),
-    )
+    planned = block.to_planned_block()
     ctx = WriterContext(
         planned=planned,
         terminology=tuple(packet.scope.terminology),
@@ -274,7 +254,7 @@ async def _write_one_block(
     while True:
         try:
             result = await dispatch_writer_async(ctx)
-            if result.object == "figure":
+            if block.object == "figure":
                 rid = stable_figure_request_id(
                     generation_id=generation_id, block_id=block.id
                 )
@@ -285,7 +265,7 @@ async def _write_one_block(
                 result.request_id = rid
                 result.content = content
             status = normalize_writer_status(
-                object_id=result.object,
+                object_id=block.object,
                 writer_status=result.status,
                 content=dict(result.content or {}),
             )
@@ -300,8 +280,9 @@ async def _write_one_block(
                         "section_id": slot_id,
                         "block_id": block.id,
                         "variant_id": variant_id,
-                        "object": result.object,
-                        "intent": result.intent,
+                        # Denormalized from ResolvedBlockPlan for resume matching.
+                        "object": block.object,
+                        "intent": block.intent,
                         "content": result.content,
                         "request_id": result.request_id,
                         "answer_entries": answer_entries,
@@ -406,10 +387,12 @@ async def write_form_blocks(
     generation_id: str,
     form_plan: FormPlan,
     packet: ImmutableLessonPacket,
+    teaching_plan: TeachingPlan,
     variant_id: str = DEFAULT_VARIANT_ID,
     lease: ExecutionLease | None = None,
 ) -> list[dict[str, Any]]:
     """Write pending form blocks section-by-section with bounded concurrency."""
+    resolved = resolve_block_plans(teaching_plan, form_plan)
     intents = get_intent_catalogue().get("intents") or {}
     item_records = _packet_item_records(packet)
     async with async_session_factory() as session:
@@ -424,7 +407,7 @@ async def write_form_blocks(
     outcomes: list[dict[str, Any]] = []
     absolute_offsets: dict[str, int] = {}
     running = 0
-    for section in form_plan.sections:
+    for section in resolved.sections:
         absolute_offsets[section.slot_id] = running
         running += len(section.blocks)
 
@@ -432,7 +415,7 @@ async def write_form_blocks(
         slot_id = section.slot_id
         section_blocks = list(section.blocks)
         section_offset = absolute_offsets[slot_id]
-        pending: list[tuple[int, Any]] = []
+        pending: list[tuple[int, ResolvedBlockPlan]] = []
         for index, block in enumerate(section_blocks):
             key = execution_key(slot_id, block.id, variant_id)
             prior = stored.get(key)
@@ -467,7 +450,7 @@ async def write_form_blocks(
 
         block_semaphore = asyncio.Semaphore(MAX_WRITER_CONCURRENCY)
 
-        async def _run(item: tuple[int, Any]) -> dict[str, Any]:
+        async def _run(item: tuple[int, ResolvedBlockPlan]) -> dict[str, Any]:
             index, block = item
             key = execution_key(slot_id, block.id, variant_id)
             async with block_semaphore:
@@ -490,22 +473,20 @@ async def write_form_blocks(
             return list(await asyncio.gather(*[_run(item) for item in pending]))
 
     section_results = await asyncio.gather(
-        *[_write_section(section) for section in form_plan.sections]
+        *[_write_section(section) for section in resolved.sections]
     )
     for batch in section_results:
         outcomes.extend(batch)
     return outcomes
 
 
-def _writer_result_from_outcome(outcome: dict[str, Any]) -> WriterResult:
+def _writer_result_from_outcome(outcome: dict[str, Any]) -> WriterOutcome:
     raw_answers = outcome.get("answer_entries") or ()
     answer_entries = tuple(
         dict(entry) for entry in raw_answers if isinstance(entry, dict)
     )
-    return WriterResult(
+    return WriterOutcome(
         block_id=str(outcome.get("block_id") or ""),
-        object=str(outcome.get("object") or "prose"),
-        intent=str(outcome.get("intent") or ""),
         status=str(outcome.get("status") or "ready"),
         content=dict(outcome.get("content") or {}),
         request_id=outcome.get("request_id"),
@@ -518,6 +499,9 @@ def _section_title(
     *,
     teaching_plan: TeachingPlan | None = None,
 ) -> str:
+    purpose = str(getattr(section, "specific_purpose", "") or "").strip()
+    if purpose:
+        return purpose
     title = str(getattr(section, "title", "") or "").strip()
     if title:
         return title
@@ -537,13 +521,14 @@ async def assemble_from_db(
     generation_id: str,
     packet: ImmutableLessonPacket,
     form_plan: FormPlan,
+    teaching_plan: TeachingPlan,
     variant_id: str = DEFAULT_VARIANT_ID,
     lease: ExecutionLease | None = None,
-    teaching_plan: TeachingPlan | None = None,
 ) -> dict[str, Any]:
     """Assemble from exact DB key set. Dict storage precludes duplicate keys."""
     if lease is None:
         raise AssemblyError("assemble_from_db requires an ExecutionLease")
+    resolved = resolve_block_plans(teaching_plan, form_plan)
     repo = PageDocumentRepository(session, generation_id)
     form_dump = form_plan.model_dump(mode="json")
     expected = await repo.load_expected_writer_results(
@@ -574,12 +559,12 @@ async def assemble_from_db(
     if failures:
         raise AssemblyError(f"cannot assemble: {failures}")
 
-    section_plans = form_plan_to_section_plans(form_plan)
+    section_plans = resolved.to_section_block_plans()
     sections_out = []
     answer_entries: list[dict[str, Any]] = []
-    writer_results: list[WriterResult] = []
-    for section in form_plan.sections:
-        ordered: list[WriterResult] = []
+    writer_results: list[WriterOutcome] = []
+    for section in resolved.sections:
+        ordered: list[WriterOutcome] = []
         for block in section.blocks:
             key = execution_key(section.slot_id, block.id, variant_id)
             outcome = expected[key]
@@ -705,7 +690,7 @@ async def execute_after_teaching_approval(
     form_plan_raw = state.get("form_plan")
     form_validation = state.get("form_validation") or {}
     if isinstance(form_plan_raw, dict) and form_validation.get("ok") is True:
-        form_plan = FormPlan.model_validate(form_plan_raw)
+        form_plan = coerce_form_plan(form_plan_raw)
         await repo.append_event(
             make_event("form_plan_reused", generation_id=generation_id, status="ready"),
             worker_id=wid,
@@ -717,6 +702,8 @@ async def execute_after_teaching_approval(
             worker_id=wid,
             lease_token=ltok,
         )
+        if teaching_plan is None:
+            raise RuntimeError("teaching_plan required to run form planner")
         form_result = await run_form_planner(
             packet, teaching_plan, generation_id=generation_id
         )
@@ -768,10 +755,14 @@ async def execute_after_teaching_approval(
             lease_token=ltok,
         )
 
+    if teaching_plan is None:
+        raise RuntimeError("teaching_plan required for form execution and assembly")
+
     write_outcomes = await write_form_blocks(
         generation_id=generation_id,
         form_plan=form_plan,
         packet=packet,
+        teaching_plan=teaching_plan,
         lease=lease,
     )
     if any(o.get("status") == "lease_lost" for o in write_outcomes):
@@ -857,8 +848,8 @@ async def execute_after_teaching_approval(
             generation_id=generation_id,
             packet=packet,
             form_plan=form_plan,
-            lease=lease,
             teaching_plan=teaching_plan,
+            lease=lease,
         )
         if lease is not None:
             await r.release_execution(

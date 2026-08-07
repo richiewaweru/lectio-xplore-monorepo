@@ -24,9 +24,11 @@ def test_prose_writer_fills_fixed_plan() -> None:
         )
     )
     result = dispatch_writer(ctx)
-    assert result.object == "prose"
-    assert result.intent == "explain-cause"
+    assert result.block_id == "b1"
+    assert not hasattr(result, "object") or getattr(result, "object", None) is None
     assert result.content["paragraphs"]
+    # Object ownership stays on the planned block, not WriterOutcome.
+    assert ctx.planned.object == "prose"
 
 
 def test_writer_cannot_change_object() -> None:
@@ -112,4 +114,6 @@ def test_dispatch_all_first_slice_objects() -> None:
         )
         ctx = WriterContext(planned=planned, item_records=items if obj == "questions" else ())
         result = dispatch_writer(ctx)
-        assert result.object == obj
+        assert result.block_id == planned.id
+        assert ctx.planned.object == obj
+        assert isinstance(result.content, dict)

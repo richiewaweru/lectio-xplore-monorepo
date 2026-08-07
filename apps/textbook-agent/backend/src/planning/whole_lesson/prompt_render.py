@@ -6,7 +6,10 @@ import json
 from typing import Any
 
 from contracts.lectio_page import PAGE_OBJECT_IDS
-from planning.catalogue_projections import TeachingGuidanceProjection
+from planning.catalogue_projections import (
+    TeachingGuidanceProjection,
+    build_form_candidate_map,
+)
 from planning.prompts import form_planner_prompt, lesson_approach_planner_prompt
 from planning.whole_lesson.packet import ImmutableLessonPacket
 from planning.whole_lesson.teaching_plan import TeachingPlan
@@ -63,17 +66,16 @@ def render_teaching_prompt(
     return rendered
 
 
-def render_form_prompt(
+def build_form_planner_payload(
     packet: ImmutableLessonPacket,
     teaching_plan: TeachingPlan,
     form_guidance: dict[str, Any],
     *,
-    resource_id: str = "lesson",
-) -> str:
-    spec = get_spec(resource_id)
-    identity = render_resource_identity(spec)
-    system = form_planner_prompt().replace("{resource_identity}", identity)
-    payload = {
+    candidate_map: dict[str, tuple[str, ...]] | None = None,
+) -> dict[str, Any]:
+    """Rich form-planner input envelope (narrow owned output elsewhere)."""
+    candidates = candidate_map or build_form_candidate_map(teaching_plan)
+    return {
         "arc": teaching_plan.arc,
         "sections": [
             {
@@ -84,6 +86,9 @@ def render_form_prompt(
                         "position": block.position,
                         "intent": block.intent,
                         "brief": block.brief,
+                        "legal_object_candidates": list(
+                            candidates.get(block.id, ())
+                        ),
                     }
                     for block in section.blocks
                 ],
@@ -97,5 +102,24 @@ def render_form_prompt(
             "subject": packet.lesson.subject,
         },
     }
+
+
+def render_form_prompt(
+    packet: ImmutableLessonPacket,
+    teaching_plan: TeachingPlan,
+    form_guidance: dict[str, Any],
+    *,
+    resource_id: str = "lesson",
+    candidate_map: dict[str, tuple[str, ...]] | None = None,
+) -> str:
+    spec = get_spec(resource_id)
+    identity = render_resource_identity(spec)
+    system = form_planner_prompt().replace("{resource_identity}", identity)
+    payload = build_form_planner_payload(
+        packet,
+        teaching_plan,
+        form_guidance,
+        candidate_map=candidate_map,
+    )
     user = json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False)
     return f"{system}\n\n## USER INPUT\n\n{user}"

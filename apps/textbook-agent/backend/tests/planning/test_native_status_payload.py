@@ -16,22 +16,20 @@ def _native_state(*, stage: str, block_execution: dict | None = None) -> dict:
                 "sections": [
                     {
                         "slot_id": "section-1",
-                        "blocks": [{"id": "s1-b1", "object": "prose", "intent": "orient"}],
+                        "forms": [{"block_id": "s1-b1", "object": "prose"}],
                     },
                     {
                         "slot_id": "section-2",
-                        "blocks": [{"id": "s2-b1", "object": "prose", "intent": "explain"}],
+                        "forms": [{"block_id": "s2-b1", "object": "prose"}],
                     },
                     {
                         "slot_id": "section-3",
-                        "blocks": [
-                            {"id": "s3-b1", "object": "questions", "intent": "check"}
-                        ],
+                        "forms": [{"block_id": "s3-b1", "object": "questions"}],
                     },
                     {
                         "slot_id": "section-4",
-                        "blocks": [
-                            {"id": "s4-questions", "object": "questions", "intent": "check"}
+                        "forms": [
+                            {"block_id": "s4-questions", "object": "questions"}
                         ],
                     },
                 ]

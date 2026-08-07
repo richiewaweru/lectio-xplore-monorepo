@@ -21,6 +21,7 @@ from planning.whole_lesson.packet import (
 from planning.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
 from planning.whole_lesson.states import LeaseLostError
 from planning.whole_lesson.worker import NativeExecutionWorker
+from tests.planning.contract_fixtures import teaching_and_form
 
 
 def _packet() -> ImmutableLessonPacket:
@@ -43,25 +44,13 @@ def _packet() -> ImmutableLessonPacket:
 async def _seed(*, status: str = "writing_blocks") -> str:
     gid = str(uuid.uuid4())
     user_id = f"user-{gid[:8]}"
+    teaching, form_plan = teaching_and_form(
+        sections=[("orient", [("orient-b1", "orient", "prose")])]
+    )
     state = empty_page_document_state()
     state["lesson_packet"] = _packet().model_dump(mode="json")
-    state["teaching_plan"] = {"arc": "test", "sections": []}
-    state["form_plan"] = {
-        "sections": [
-            {
-                "slot_id": "orient",
-                "blocks": [
-                    {
-                        "id": "orient-b1",
-                        "position": 0,
-                        "intent": "orient",
-                        "brief": "Open.",
-                        "object": "prose",
-                    }
-                ],
-            }
-        ]
-    }
+    state["teaching_plan"] = teaching.model_dump(mode="json")
+    state["form_plan"] = form_plan.model_dump(mode="json")
     state["form_validation"] = {"ok": True}
     async with async_session_factory() as session:
         session.add(UserModel(id=user_id, email=f"{user_id}@example.com", name="Test"))

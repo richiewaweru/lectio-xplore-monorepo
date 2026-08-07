@@ -27,14 +27,18 @@ class WriterContext:
 
 
 @dataclass
-class WriterResult:
+class WriterOutcome:
+    """Runtime wrapper for writer content. Object/intent live on ResolvedBlockPlan."""
+
     block_id: str
-    object: str
-    intent: str
     content: dict[str, Any]
     status: str = "ready"
     request_id: str | None = None
     answer_entries: tuple[dict[str, Any], ...] = ()
+
+
+# Backward-compatible alias; prefer WriterOutcome.
+WriterResult = WriterOutcome
 
 
 class _ForbidModel(BaseModel):

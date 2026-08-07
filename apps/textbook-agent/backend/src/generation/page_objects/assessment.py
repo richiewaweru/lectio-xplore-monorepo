@@ -9,7 +9,7 @@ from generation.page_objects.models import (
     AssessmentBundle,
     WriterContext,
     WriterError,
-    WriterResult,
+    WriterOutcome,
 )
 
 
@@ -68,7 +68,7 @@ def _answer_entry_from_record(
     return entry
 
 
-def assemble_questions(ctx: WriterContext) -> WriterResult:
+def assemble_questions(ctx: WriterContext) -> WriterOutcome:
     """Deterministic assembler. Student content only — no options/correct_key."""
     _assert_fixed_object(ctx, "questions")
     if not ctx.planned.source_question_ids:
@@ -93,17 +93,14 @@ def assemble_questions(ctx: WriterContext) -> WriterResult:
         if entry is not None:
             answer_entries.append(entry)
     content: dict[str, Any] = {"items": items}
-    # instructions intentionally omitted unless present on planned brief metadata later
-    return WriterResult(
+    return WriterOutcome(
         block_id=ctx.planned.id,
-        object="questions",
-        intent=ctx.planned.intent,
         content=content,
         answer_entries=tuple(answer_entries),
     )
 
 
-def assemble_choices(ctx: WriterContext) -> WriterResult:
+def assemble_choices(ctx: WriterContext) -> WriterOutcome:
     """Assemble one MCQ choices block from item records (or brief stub)."""
     _assert_fixed_object(ctx, "choices")
     by_id = _records_by_id(ctx)
@@ -145,17 +142,15 @@ def assemble_choices(ctx: WriterContext) -> WriterResult:
         }
         answer_entries = ()
 
-    return WriterResult(
+    return WriterOutcome(
         block_id=ctx.planned.id,
-        object="choices",
-        intent=ctx.planned.intent,
         content=content,
         answer_entries=answer_entries,
     )
 
 
 def build_assessment_bundle(ctx: WriterContext) -> AssessmentBundle:
-    """Build student WriterResult(s) plus AnswerEntry models for questions or choices."""
+    """Build student WriterOutcome(s) plus AnswerEntry models for questions or choices."""
     if ctx.planned.object == "questions":
         result = assemble_questions(ctx)
     elif ctx.planned.object == "choices":

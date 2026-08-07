@@ -464,10 +464,14 @@ class PageDocumentRepository:
             if not isinstance(section, dict):
                 continue
             section_id = str(section.get("slot_id") or "")
-            for block in section.get("blocks") or []:
+            decisions = section.get("forms")
+            if not isinstance(decisions, list):
+                # Legacy fat form_plan used blocks[].id
+                decisions = section.get("blocks") or []
+            for block in decisions:
                 if not isinstance(block, dict):
                     continue
-                block_id = str(block.get("id") or "")
+                block_id = str(block.get("block_id") or block.get("id") or "")
                 key = execution_key(section_id, block_id, variant_id)
                 expected[key] = stored.get(key) or {}
         return expected

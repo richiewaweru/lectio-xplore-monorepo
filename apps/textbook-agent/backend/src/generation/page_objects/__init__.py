@@ -29,6 +29,7 @@ from generation.page_objects.models import (
     WorkedExampleContent,
     WriterContext,
     WriterError,
+    WriterOutcome,
     WriterResult,
 )
 from generation.page_objects.prompts import build_repair_prompt, build_writer_prompt
@@ -71,6 +72,7 @@ __all__ = [
     "WorkedExampleContent",
     "WriterContext",
     "WriterError",
+    "WriterOutcome",
     "WriterResult",
     "assemble_choices",
     "assemble_questions",

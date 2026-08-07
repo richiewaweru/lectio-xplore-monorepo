@@ -11,6 +11,7 @@ from generation.page_objects.models import (
     FORM_OUTPUTS,
     WriterContext,
     WriterError,
+    WriterOutcome,
     WriterResult,
 )
 from generation.page_objects.prompts import build_repair_prompt, build_writer_prompt
@@ -29,12 +30,10 @@ def _assert_fixed_object(ctx: WriterContext, expected: str) -> None:
         )
 
 
-def write_prose(ctx: WriterContext) -> WriterResult:
+def write_prose(ctx: WriterContext) -> WriterOutcome:
     _assert_fixed_object(ctx, "prose")
-    return WriterResult(
+    return WriterOutcome(
         block_id=ctx.planned.id,
-        object="prose",
-        intent=ctx.planned.intent,
         content={
             "paragraphs": [
                 ctx.planned.brief.strip()
@@ -44,22 +43,20 @@ def write_prose(ctx: WriterContext) -> WriterResult:
     )
 
 
-def write_list(ctx: WriterContext) -> WriterResult:
+def write_list(ctx: WriterContext) -> WriterOutcome:
     _assert_fixed_object(ctx, "list")
     items = [
         {"text": part.strip()}
         for part in ctx.planned.brief.replace(";", ".").split(".")
         if part.strip()
     ][:6] or [{"text": ctx.planned.brief}]
-    return WriterResult(
+    return WriterOutcome(
         block_id=ctx.planned.id,
-        object="list",
-        intent=ctx.planned.intent,
         content={"style": "unordered", "items": items},
     )
 
 
-def write_table(ctx: WriterContext) -> WriterResult:
+def write_table(ctx: WriterContext) -> WriterOutcome:
     _assert_fixed_object(ctx, "table")
     columns = [
         {"id": "case", "label": "Case"},
@@ -69,10 +66,8 @@ def write_table(ctx: WriterContext) -> WriterResult:
         {"cells": {"case": "Lit leaf", "observation": "Receives light; can make food"}},
         {"cells": {"case": "Covered leaf", "observation": "No light; cannot make food"}},
     ]
-    return WriterResult(
+    return WriterOutcome(
         block_id=ctx.planned.id,
-        object="table",
-        intent=ctx.planned.intent,
         content={
             "columns": columns,
             "rows": rows,
@@ -82,12 +77,10 @@ def write_table(ctx: WriterContext) -> WriterResult:
     )
 
 
-def write_worked_example(ctx: WriterContext) -> WriterResult:
+def write_worked_example(ctx: WriterContext) -> WriterOutcome:
     _assert_fixed_object(ctx, "worked-example")
-    return WriterResult(
+    return WriterOutcome(
         block_id=ctx.planned.id,
-        object="worked-example",
-        intent=ctx.planned.intent,
         content={
             "problem": ctx.planned.brief,
             "steps": [
@@ -100,7 +93,7 @@ def write_worked_example(ctx: WriterContext) -> WriterResult:
     )
 
 
-def write_figure(ctx: WriterContext) -> WriterResult:
+def write_figure(ctx: WriterContext) -> WriterOutcome:
     _assert_fixed_object(ctx, "figure")
     request_id = (
         stable_figure_request_id(
@@ -111,10 +104,8 @@ def write_figure(ctx: WriterContext) -> WriterResult:
         else f"fig-req-{uuid.uuid4().hex[:12]}"
     )
     alt = (ctx.planned.brief or "").strip()[:160] or "Figure"
-    return WriterResult(
+    return WriterOutcome(
         block_id=ctx.planned.id,
-        object="figure",
-        intent=ctx.planned.intent,
         status="visual_pending",
         request_id=request_id,
         content={
@@ -125,16 +116,14 @@ def write_figure(ctx: WriterContext) -> WriterResult:
     )
 
 
-def write_aside(ctx: WriterContext) -> WriterResult:
+def write_aside(ctx: WriterContext) -> WriterOutcome:
     _assert_fixed_object(ctx, "aside")
     brief = (ctx.planned.brief or "").strip()
     first_sentence = brief.split(".")[0].strip() if brief else ""
     label = first_sentence[:80] if first_sentence else "Note"
     body = brief or "Note"
-    return WriterResult(
+    return WriterOutcome(
         block_id=ctx.planned.id,
-        object="aside",
-        intent=ctx.planned.intent,
         content={"label": label, "body": body},
     )
 
@@ -151,16 +140,14 @@ _STUB_WRITERS = {
 }
 
 
-def _finalize_result(ctx: WriterContext, result: WriterResult) -> WriterResult:
-    if result.object != ctx.planned.object or result.intent != ctx.planned.intent:
-        raise WriterError("writer attempted to change planned object or intent")
+def _finalize_result(ctx: WriterContext, result: WriterOutcome) -> WriterOutcome:
     if result.block_id != ctx.planned.id:
         raise WriterError("writer attempted to change block id")
     result.content = validate_content(ctx.planned.object, result.content)
     return result
 
 
-def dispatch_writer(ctx: WriterContext) -> WriterResult:
+def dispatch_writer(ctx: WriterContext) -> WriterOutcome:
     writer = _STUB_WRITERS.get(ctx.planned.object)
     if writer is None:
         raise WriterError(f"no writer for object {ctx.planned.object!r}")
@@ -296,8 +283,8 @@ def _figure_result_from_content(
     ctx: WriterContext,
     content: dict[str, Any],
     *,
-    base: WriterResult | None = None,
-) -> WriterResult:
+    base: WriterOutcome | None = None,
+) -> WriterOutcome:
     base = base or write_figure(ctx)
     merged = dict(base.content)
     merged.update({k: v for k, v in content.items() if k != "asset"})
@@ -312,10 +299,8 @@ def _figure_result_from_content(
     if not merged.get("alt_text"):
         merged["alt_text"] = base.content.get("alt_text") or "Figure"
     validated = validate_content("figure", merged)
-    return WriterResult(
+    return WriterOutcome(
         block_id=base.block_id,
-        object=base.object,
-        intent=base.intent,
         content=validated,
         status="visual_pending",
         request_id=base.request_id,
@@ -326,7 +311,7 @@ async def _write_validated_llm(
     ctx: WriterContext,
     *,
     provider: WriterProvider | None = None,
-) -> WriterResult:
+) -> WriterOutcome:
     object_id = ctx.planned.object
     if object_id not in FORM_OUTPUTS:
         raise UnsupportedObject(object_id)
@@ -377,10 +362,8 @@ async def _write_validated_llm(
     if object_id == "figure":
         return _figure_result_from_content(ctx, content)
 
-    return WriterResult(
+    return WriterOutcome(
         block_id=ctx.planned.id,
-        object=ctx.planned.object,
-        intent=ctx.planned.intent,
         content=content,
         status="ready",
     )
@@ -390,7 +373,7 @@ async def dispatch_writer_async(
     ctx: WriterContext,
     *,
     provider: WriterProvider | None = None,
-) -> WriterResult:
+) -> WriterOutcome:
     # Scripted/mock providers may exercise questions/choices validation+repair.
     if provider is not None and ctx.use_llm:
         return await _write_validated_llm(ctx, provider=provider)
