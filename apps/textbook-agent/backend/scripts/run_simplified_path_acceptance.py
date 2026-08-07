@@ -133,9 +133,18 @@ async def main() -> int:
             "prerequisite_risks": path.get("prerequisite_risks"),
             "lesson_titles": [l.get("title") for l in path.get("lessons") or []],
             "concept_slugs": [l.get("concept_slug") for l in path.get("lessons") or []],
+            "do_not_cover": (path.get("source_plan_json") or {}).get("scope", {}).get("do_not_cover")
+            if isinstance(path.get("source_plan_json"), dict)
+            else None,
         }
         assert path.get("open_assumptions") == []
-        assert path.get("merge_critic_results") == []
+        # Deterministic advisory merge hints may be present; they must not block approve.
+        hints = path.get("merge_critic_results") or []
+        assert all(
+            (row.get("source") == "deterministic") or not row.get("source")
+            for row in hints
+            if isinstance(row, dict)
+        )
         assert len(path.get("lessons") or []) >= 1
 
         lesson = path["lessons"][0]

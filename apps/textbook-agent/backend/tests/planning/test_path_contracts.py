@@ -30,7 +30,7 @@ def test_canonical_fixtures_parse() -> None:
         plan = CanonicalPathPlan.model_validate(_fixture(name))
         assert plan.lessons
         assert plan.scope.must_cover
-        assert plan.scope.do_not_cover
+        assert isinstance(plan.scope.do_not_cover, list)
 
 
 def test_planner_request_forbids_count_and_duration() -> None:

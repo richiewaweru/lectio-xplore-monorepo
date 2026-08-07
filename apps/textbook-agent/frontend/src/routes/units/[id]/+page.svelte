@@ -29,6 +29,7 @@
 	import ResourceComposerPanel from '$lib/components/units/ResourceComposerPanel.svelte';
 	import type {
 		LessonMode,
+		KnowledgeType,
 		PathLesson,
 		PathVersionSummary,
 		PreparedLessonStatus,
@@ -77,11 +78,34 @@
 	let chatNote = $state<string | null>(null);
 	let showVersions = $state(false);
 	let showShapeDebug = $state(false);
+	let shapeError = $state<string | null>(null);
 	let dismissedSuggestions = $state<string[]>([]);
+	let mergeDraft = $state<{
+		hintKey: string;
+		lessonAId: string;
+		lessonBId: string;
+		lessonALabel: string;
+		lessonBLabel: string;
+		objectiveA: string;
+		objectiveB: string;
+		title: string;
+		objective: string;
+		mustEstablish: string;
+		knowledgeType: KnowledgeType | '';
+	} | null>(null);
 	const debugMode = import.meta.env.DEV;
 
 	const mergeSuggestions = $derived(
 		(path?.merge_critic_results ?? []).filter((row) => row.source === 'deterministic')
+	);
+	const mergeDraftValid = $derived(
+		Boolean(
+			mergeDraft &&
+				mergeDraft.title.trim() &&
+				mergeDraft.objective.trim().length >= 3 &&
+				lines(mergeDraft.mustEstablish).length >= 1 &&
+				mergeDraft.knowledgeType
+		)
 	);
 
 	const selected = $derived(path?.lessons.find((lesson) => lesson.id === selectedId) ?? null);
@@ -125,6 +149,7 @@
 		selectedId = lesson.id;
 		fillEditor(lesson);
 		shape = null;
+		shapeError = null;
 		preparation = null;
 		showShapeDebug = false;
 	}
@@ -133,11 +158,37 @@
 		return `${row.lesson_a}:${row.lesson_b}`;
 	}
 
-	async function mergeSuggested(row: MergeCriticResult): Promise<void> {
+	function openMergeReview(row: MergeCriticResult): void {
 		if (!path) return;
 		const lessonA = path.lessons.find((lesson) => lesson.id === row.lesson_a);
 		const lessonB = path.lessons.find((lesson) => lesson.id === row.lesson_b);
 		if (!lessonA || !lessonB) return;
+		const sameType = lessonA.primary_knowledge_type === lessonB.primary_knowledge_type;
+		mergeDraft = {
+			hintKey: suggestionKey(row),
+			lessonAId: lessonA.id,
+			lessonBId: lessonB.id,
+			lessonALabel: `Lesson ${lessonA.position + 1}`,
+			lessonBLabel: `Lesson ${lessonB.position + 1}`,
+			objectiveA: lessonA.objective,
+			objectiveB: lessonB.objective,
+			title: `${lessonA.title} + ${lessonB.title}`,
+			objective: '',
+			mustEstablish: [...new Set([...lessonA.must_establish, ...lessonB.must_establish])].join('\n'),
+			knowledgeType: sameType ? lessonA.primary_knowledge_type : ''
+		};
+	}
+
+	function cancelMergeReview(): void {
+		mergeDraft = null;
+	}
+
+	async function confirmMergeReview(): Promise<void> {
+		if (!path || !mergeDraft || !mergeDraftValid) return;
+		const lessonA = path.lessons.find((lesson) => lesson.id === mergeDraft!.lessonAId);
+		const lessonB = path.lessons.find((lesson) => lesson.id === mergeDraft!.lessonBId);
+		if (!lessonA || !lessonB || !mergeDraft.knowledgeType) return;
+		const draft = mergeDraft;
 		await act('merge-suggestion', async () => {
 			const result = await mergePathLessons(
 				unitId,
@@ -145,15 +196,18 @@
 				[lessonA, lessonB],
 				[lessonA.id, lessonB.id],
 				{
-					title: `${lessonA.title} and ${lessonB.title}`,
-					objective: lessonA.objective,
-					must_establish: [...new Set([...lessonA.must_establish, ...lessonB.must_establish])],
-					knowledge_type: lessonA.primary_knowledge_type
+					title: draft.title.trim(),
+					objective: draft.objective.trim(),
+					must_establish: lines(draft.mustEstablish),
+					knowledge_type: draft.knowledgeType as KnowledgeType
 				}
 			);
 			path = result.path;
-			dismissedSuggestions = [...dismissedSuggestions, suggestionKey(row)];
-			if (path.lessons[0]) selectLesson(path.lessons[0]);
+			dismissedSuggestions = [...dismissedSuggestions, draft.hintKey];
+			mergeDraft = null;
+			const merged =
+				path.lessons.find((lesson) => lesson.id === result.merged_lesson_id) ?? path.lessons[0];
+			if (merged) selectLesson(merged);
 		});
 	}
 
@@ -171,9 +225,10 @@
 		if (!selected) return;
 		try {
 			shape = await getLessonShape(unitId, selected.id, lessonMode, misconceptionCount);
+			shapeError = null;
 		} catch (err) {
 			shape = null;
-			error = err instanceof Error ? err.message : 'Could not load this lesson shape.';
+			shapeError = err instanceof Error ? err.message : 'Could not load this lesson shape.';
 		}
 	}
 
@@ -324,7 +379,6 @@
 					selectedGroupIds = [];
 				}
 			}
-			await ensureShape();
 			const prepared = await preparePathLesson(
 				unitId,
 				path as UnitPath,
@@ -427,13 +481,43 @@
 								<li>
 									<p>{row.reason}</p>
 									<div class="suggestion-actions">
-										<button type="button" disabled={busy !== null} onclick={() => mergeSuggested(row)}>Merge these</button>
+										<button type="button" disabled={busy !== null} onclick={() => openMergeReview(row)}>Review merge</button>
 										<button type="button" class="ghost" disabled={busy !== null} onclick={() => { dismissedSuggestions = [...dismissedSuggestions, suggestionKey(row)]; }}>Dismiss</button>
 									</div>
 								</li>
 							{/if}
 						{/each}
 					</ul>
+				</section>
+			{/if}
+			{#if mergeDraft}
+				<section class="merge-editor" aria-label="Review merge">
+					<p class="eyebrow">Merge {mergeDraft.lessonALabel} + {mergeDraft.lessonBLabel}</p>
+					<label><span>Title</span><input bind:value={mergeDraft.title} /></label>
+					<div class="merge-source-objectives">
+						<p><strong>{mergeDraft.lessonALabel}:</strong> {mergeDraft.objectiveA}</p>
+						<p><strong>{mergeDraft.lessonBLabel}:</strong> {mergeDraft.objectiveB}</p>
+					</div>
+					<label>
+						<span>Objective</span>
+						<textarea bind:value={mergeDraft.objective} placeholder="Write one capability that genuinely covers both lessons."></textarea>
+						<small>Write one capability that genuinely covers both lessons.</small>
+					</label>
+					<label><span>Must establish <small>one per line</small></span><textarea bind:value={mergeDraft.mustEstablish}></textarea></label>
+					<label>
+						<span>Knowledge type</span>
+						<select bind:value={mergeDraft.knowledgeType}>
+							<option value="">Select a type</option>
+							<option value="factual">factual</option>
+							<option value="conceptual">conceptual</option>
+							<option value="procedural">procedural</option>
+							<option value="evaluative">evaluative</option>
+						</select>
+					</label>
+					<div class="suggestion-actions">
+						<button type="button" class="ghost" disabled={busy !== null} onclick={cancelMergeReview}>Cancel</button>
+						<button class="primary" type="button" disabled={busy !== null || !mergeDraftValid} onclick={() => confirmMergeReview()}>Merge lessons</button>
+					</div>
 				</section>
 			{/if}
 			<section class="lock-in-bar">
@@ -467,7 +551,7 @@
 						{#if debugMode}
 							<section class="shape">
 								{#if !showShapeDebug}
-									<button class="text-button" type="button" onclick={() => { showShapeDebug = true; void ensureShape(); }}>Show shape debug</button>
+									<button class="text-button" type="button" onclick={() => { showShapeDebug = true; shapeError = null; void ensureShape(); }}>Show shape debug</button>
 								{:else if shape}
 									<LessonShapePanel
 										{unitId}
@@ -481,6 +565,9 @@
 										onshape={(value) => (shape = value)}
 										onrevision={updateShapeRevision}
 									/>
+								{:else if shapeError}
+									<p class="error" role="alert">{shapeError}</p>
+									<button class="text-button" type="button" onclick={() => { shapeError = null; void ensureShape(); }}>Retry shape</button>
 								{:else}
 									<p>Loading this lesson's shape…</p>
 								{/if}
@@ -615,6 +702,13 @@
 	.suggestions p { margin: 0; color: var(--ink-2); font-size: 13px; }
 	.suggestion-actions { display: flex; gap: 8px; flex-shrink: 0; }
 	.suggestion-actions .ghost { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); }
+	.merge-editor { max-width: 1180px; margin: 0 auto 18px; display: grid; gap: 12px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); padding: 16px 18px; }
+	.merge-editor label { display: grid; gap: 6px; }
+	.merge-editor input, .merge-editor textarea, .merge-editor select { width: 100%; border: 1px solid var(--rule); border-radius: 7px; background: var(--paper); color: var(--ink); padding: 9px 11px; }
+	.merge-editor textarea { min-height: 72px; resize: vertical; }
+	.merge-editor small { color: var(--ink-3); font-size: 12px; }
+	.merge-source-objectives { display: grid; gap: 6px; color: var(--ink-2); font-size: 13px; }
+	.merge-source-objectives p { margin: 0; }
 	.lock-in-bar p { margin: 0; color: var(--ink-2); font-size: 13px; }
 	.lock-in { display: grid; justify-items: end; gap: 6px; }
 	.history-panel { border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); margin-bottom: 22px; padding: 18px; }

@@ -220,3 +220,30 @@ def test_path_planner_request_excludes_empty_placeholders() -> None:
         "curriculum_context",
         "class_notes",
     }
+
+
+def test_empty_do_not_cover_normalizes_successfully() -> None:
+    payload = four_lesson_draft().model_dump()
+    payload["scope"]["do_not_cover"] = []
+    plan = normalize_path_plan_draft(PathPlanDraft.model_validate(payload))
+    assert plan.scope.do_not_cover == []
+    assert plan.scope.must_cover
+    jsonschema.validate(
+        plan.model_dump(mode="json"),
+        json.loads(SCHEMA_PATH.read_text(encoding="utf-8")),
+    )
+
+
+def test_blank_do_not_cover_items_strip_to_empty() -> None:
+    payload = four_lesson_draft().model_dump()
+    payload["scope"]["do_not_cover"] = [""]
+    plan = normalize_path_plan_draft(PathPlanDraft.model_validate(payload))
+    assert plan.scope.do_not_cover == []
+
+
+def test_empty_must_cover_is_rejected() -> None:
+    payload = four_lesson_draft().model_dump()
+    payload["scope"]["must_cover"] = []
+    with pytest.raises(PathValidationError) as exc_info:
+        normalize_path_plan_draft(PathPlanDraft.model_validate(payload))
+    assert exc_info.value.code == "empty_must_cover"

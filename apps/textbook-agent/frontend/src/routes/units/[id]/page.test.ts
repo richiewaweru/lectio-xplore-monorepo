@@ -166,16 +166,109 @@ describe('/units/[id]', () => {
 			}]
 		}));
 		mocks.mergePathLessons.mockResolvedValue({
-			path: buildPath({ status: 'draft', lessons: [{ ...lessonOne, title: 'Plant inputs and outputs' }] }),
+			path: buildPath({
+				status: 'draft',
+				lessons: [{ ...lessonOne, title: 'Plant inputs + Plant outputs', objective: 'Explain plant inputs and outputs together.' }]
+			}),
 			merged_lesson_id: lessonOne.id,
 			source: 'teacher_merge'
 		});
 		render(UnitPage);
 		await screen.findByText(/might work as one lesson/);
-		expect(screen.getByRole('button', { name: 'Merge these' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Review merge' })).toBeTruthy();
 		expect(screen.getByRole('button', { name: 'Looks good — lock it in' }).hasAttribute('disabled')).toBe(false);
-		await fireEvent.click(screen.getByRole('button', { name: 'Merge these' }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Review merge' }));
+		expect(mocks.mergePathLessons).not.toHaveBeenCalled();
+		expect(screen.getByText(lessonOne.objective)).toBeTruthy();
+		expect(screen.getByText(lessonTwo.objective)).toBeTruthy();
+		const mergeButton = screen.getByRole('button', { name: 'Merge lessons' });
+		expect(mergeButton.hasAttribute('disabled')).toBe(true);
+		const objectiveField = screen.getByPlaceholderText(/Write one capability that genuinely covers both/);
+		expect((objectiveField as HTMLTextAreaElement).value).toBe('');
+		await fireEvent.input(objectiveField, {
+			target: { value: 'Explain plant inputs and outputs together.' }
+		});
+		await waitFor(() => expect(mergeButton.hasAttribute('disabled')).toBe(false));
+		await fireEvent.click(mergeButton);
 		await waitFor(() => expect(mocks.mergePathLessons).toHaveBeenCalled());
+		const payload = mocks.mergePathLessons.mock.calls[0][4];
+		expect(payload.objective).toBe('Explain plant inputs and outputs together.');
+		expect(payload.title).toBe('Plant inputs + Plant outputs');
+		expect(payload.knowledge_type).toBe('factual');
+		expect(payload.must_establish).toEqual(['plant inputs', 'plant outputs']);
+	});
+
+	it('requires knowledge type when merge sources differ', async () => {
+		const conceptualTwo = { ...lessonTwo, primary_knowledge_type: 'conceptual' as const };
+		mocks.getUnitPath.mockResolvedValue(buildPath({
+			status: 'draft',
+			lessons: [lessonOne, conceptualTwo],
+			merge_critic_results: [{
+				lesson_a: lessonOne.id,
+				lesson_b: conceptualTwo.id,
+				verdict: 'review_suggested',
+				reason: 'These adjacent lessons overlap in what they establish.',
+				source: 'deterministic'
+			}]
+		}));
+		render(UnitPage);
+		await fireEvent.click(await screen.findByRole('button', { name: 'Review merge' }));
+		const mergeButton = screen.getByRole('button', { name: 'Merge lessons' });
+		await fireEvent.input(screen.getByPlaceholderText(/Write one capability/), {
+			target: { value: 'Explain both plant inputs and outputs.' }
+		});
+		expect(mergeButton.hasAttribute('disabled')).toBe(true);
+		expect(mocks.mergePathLessons).not.toHaveBeenCalled();
+		await fireEvent.change(screen.getByDisplayValue('Select a type'), { target: { value: 'conceptual' } });
+		await waitFor(() => expect(mergeButton.hasAttribute('disabled')).toBe(false));
+	});
+
+	it('prepare does not preflight lesson shape', async () => {
+		const locationStub = { href: '' };
+		vi.stubGlobal('location', locationStub);
+		mocks.preparePathLesson.mockResolvedValue({
+			generation_id: 'gen-1',
+			path_lesson_id: lessonOne.id,
+			objective: lessonOne.objective,
+			objective_hash: lessonOne.objective_hash,
+			skeleton_id: 'factual-core',
+			skeleton_version: 1,
+			slots: [],
+			section_roles: [],
+			status: 'awaiting_review',
+			reused: false
+		});
+		render(UnitPage);
+		await screen.findByRole('button', { name: 'Prepare Lesson' });
+		await fireEvent.click(screen.getByRole('button', { name: 'Prepare Lesson' }));
+		await waitFor(() => expect(mocks.preparePathLesson).toHaveBeenCalled());
+		expect(mocks.getLessonShape).not.toHaveBeenCalled();
+		expect(mocks.preparePathLesson.mock.calls[0][4]).toEqual(['group-core']);
+		expect(locationStub.href).toContain('gen-1');
+		vi.unstubAllGlobals();
+	});
+
+	it('prepare still runs when groups load fails', async () => {
+		vi.stubGlobal('location', { href: '' });
+		mocks.getUnitGroups.mockRejectedValue(new Error('groups unavailable'));
+		mocks.preparePathLesson.mockResolvedValue({
+			generation_id: 'gen-2',
+			path_lesson_id: lessonOne.id,
+			objective: lessonOne.objective,
+			objective_hash: lessonOne.objective_hash,
+			skeleton_id: 'factual-core',
+			skeleton_version: 1,
+			slots: [],
+			section_roles: [],
+			status: 'awaiting_review',
+			reused: false
+		});
+		render(UnitPage);
+		await fireEvent.click(await screen.findByRole('button', { name: 'Prepare Lesson' }));
+		await waitFor(() => expect(mocks.preparePathLesson).toHaveBeenCalled());
+		expect(mocks.getLessonShape).not.toHaveBeenCalled();
+		expect(mocks.preparePathLesson.mock.calls[0][4]).toEqual([]);
+		vi.unstubAllGlobals();
 	});
 
 	it('edits the lessons from the chat input', async () => {

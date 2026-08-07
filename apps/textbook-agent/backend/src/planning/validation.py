@@ -192,8 +192,6 @@ def normalize_path_plan_draft(draft: PathPlanDraft) -> CanonicalPathPlan:
     ]
     if not must_cover:
         _raise("empty_must_cover", "scope.must_cover must contain at least one item")
-    if not do_not_cover:
-        _raise("empty_do_not_cover", "scope.do_not_cover must contain at least one item")
 
     lessons: list[CanonicalPathLesson] = []
     for lesson in draft.lessons:

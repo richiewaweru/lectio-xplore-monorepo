@@ -23,6 +23,7 @@ from planning.models import (
 )
 from planning.service import (
     approve_path,
+    canonical_plan_from_version,
     clone_path_version,
     create_unit,
     merge_lessons,
@@ -360,3 +361,114 @@ async def test_persist_maps_scope_and_compat_fields(db_session, owner) -> None:
     assert all(lesson.external_prerequisites == [] for lesson in lessons)
     assert all(lesson.merge_warning is False for lesson in lessons)
     assert all(lesson.concept_slug.startswith("science.") for lesson in lessons)
+
+
+async def test_canonical_plan_from_version_empty_exclusions(db_session, owner) -> None:
+    from planning.models import CanonicalPathPlan, CanonicalPathScope
+    from tests.planning.path_helpers import sample_canonical_plan
+
+    plan = sample_canonical_plan()
+    plan = CanonicalPathPlan(
+        scope=CanonicalPathScope(
+            must_cover=list(plan.scope.must_cover),
+            do_not_cover=[],
+        ),
+        lessons=list(plan.lessons),
+    )
+    unit = await create_unit(
+        db_session,
+        owner_id=owner.id,
+        request=UnitCreate(
+            title="Circulation",
+            topic="circulatory system",
+            subject="Science",
+            grade_level="Grade 7",
+            destination_objective="describe circulation",
+            starting_knowledge=["organs exist"],
+        ),
+    )
+    version = await persist_path_plan(db_session, unit=unit, plan=plan)
+    rebuilt = await canonical_plan_from_version(db_session, version)
+    assert rebuilt.scope.do_not_cover == []
+    assert "out-of-grade content" not in rebuilt.scope.do_not_cover
+    assert "unit outcomes" not in rebuilt.scope.must_cover
+
+
+async def test_canonical_plan_from_version_falls_back_to_lesson_must_establish(
+    db_session, owner
+) -> None:
+    from tests.planning.path_helpers import sample_canonical_plan
+
+    plan = sample_canonical_plan()
+    unit = await create_unit(
+        db_session,
+        owner_id=owner.id,
+        request=UnitCreate(
+            title="Circulation",
+            topic="circulatory system",
+            subject="Science",
+            grade_level="Grade 7",
+            destination_objective="describe circulation",
+            starting_knowledge=["organs exist"],
+        ),
+    )
+    version = await persist_path_plan(db_session, unit=unit, plan=plan)
+    scope = await db_session.get(UnitScopeContractModel, unit.id)
+    assert scope is not None
+    scope.must_establish = []
+    scope.must_not_introduce = []
+    await db_session.flush()
+
+    rebuilt = await canonical_plan_from_version(db_session, version)
+    assert rebuilt.scope.do_not_cover == []
+    assert "out-of-grade content" not in rebuilt.scope.do_not_cover
+    assert "unit outcomes" not in rebuilt.scope.must_cover
+    expected: list[str] = []
+    seen: set[str] = set()
+    for lesson in plan.lessons:
+        for item in lesson.must_establish:
+            key = item.casefold()
+            if key in seen:
+                continue
+            seen.add(key)
+            expected.append(item)
+    assert rebuilt.scope.must_cover == expected
+
+
+async def test_canonical_plan_from_version_falls_back_to_destination(
+    db_session, owner
+) -> None:
+    from tests.planning.path_helpers import sample_canonical_plan
+
+    plan = sample_canonical_plan()
+    unit = await create_unit(
+        db_session,
+        owner_id=owner.id,
+        request=UnitCreate(
+            title="Circulation",
+            topic="circulatory system",
+            subject="Science",
+            grade_level="Grade 7",
+            destination_objective="describe how blood moves",
+            starting_knowledge=["organs exist"],
+        ),
+    )
+    version = await persist_path_plan(db_session, unit=unit, plan=plan)
+    scope = await db_session.get(UnitScopeContractModel, unit.id)
+    assert scope is not None
+    scope.must_establish = []
+    scope.must_not_introduce = []
+    lessons = list(
+        await db_session.scalars(
+            select(PathLessonModel).where(PathLessonModel.path_version_id == version.id)
+        )
+    )
+    for lesson in lessons:
+        lesson.must_establish = [""]
+    await db_session.flush()
+
+    rebuilt = await canonical_plan_from_version(db_session, version)
+    assert rebuilt.scope.must_cover == ["describe how blood moves"]
+    assert rebuilt.scope.do_not_cover == []
+    assert "unit outcomes" not in rebuilt.scope.must_cover
+    assert "out-of-grade content" not in rebuilt.scope.do_not_cover

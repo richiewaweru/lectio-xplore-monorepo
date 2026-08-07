@@ -215,6 +215,8 @@ async def _refresh_merge_hints(session: AsyncSession, version: PathVersionModel)
         )
     )
     version.merge_critic_results = adjacent_merge_hints(lessons)
+    # Compat column: stores deterministic advisory merge hints for new paths,
+    # not LLM merge-critic output.
     await session.flush()
 
 
@@ -251,11 +253,29 @@ async def canonical_plan_from_version(
         if prereq_key is not None:
             requires_by_id[link.path_lesson_id].append(prereq_key)
 
-    must_cover = list(scope.must_establish) if scope and scope.must_establish else ["unit outcomes"]
+    if scope and scope.must_establish:
+        must_cover = list(scope.must_establish)
+    else:
+        seen: set[str] = set()
+        must_cover = []
+        for lesson in lessons:
+            if getattr(lesson, "skipped", False):
+                continue
+            for item in lesson.must_establish or []:
+                if not isinstance(item, str):
+                    continue
+                value = item.strip()
+                if not value or value.casefold() in seen:
+                    continue
+                seen.add(value.casefold())
+                must_cover.append(value)
+        if not must_cover and unit.destination_objective:
+            must_cover = [unit.destination_objective]
+
     do_not_cover = (
         list(scope.must_not_introduce)
         if scope and scope.must_not_introduce
-        else ["out-of-grade content"]
+        else []
     )
 
     return CanonicalPathPlan(

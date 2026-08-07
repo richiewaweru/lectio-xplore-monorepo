@@ -31,8 +31,12 @@ of meaningful assessable capabilities — not one vocabulary word per lesson.
 
 Before decomposing lessons, establish:
 
-  must_cover     non-negotiable outcomes for this unit at this grade
-  do_not_cover   named exclusions for this grade (specific, not "advanced content")
+  must_cover     non-negotiable outcomes for the unit
+  do_not_cover   specific concepts clearly outside the intended grade/scope;
+                 use [] when there is no useful named exclusion.
+                 A real exclusion is useful; a fabricated exclusion
+                 (e.g. "advanced material", "out-of-grade content",
+                 "other concepts") is worse than [].
 
 The same topic at different grades must produce materially different conceptual
 ceilings, not the same ideas with easier vocabulary.

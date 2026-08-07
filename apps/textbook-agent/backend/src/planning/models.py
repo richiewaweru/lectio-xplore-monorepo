@@ -43,7 +43,7 @@ class PathPlanDraft(TolerantModel):
 
 class CanonicalPathScope(StrictModel):
     must_cover: list[str] = Field(min_length=1)
-    do_not_cover: list[str] = Field(min_length=1)
+    do_not_cover: list[str] = Field(default_factory=list)
 
 
 class CanonicalPathLesson(StrictModel):
