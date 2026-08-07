@@ -1,65 +1,38 @@
 {
-  "unit": "Photosynthesis and enzyme rate",
-  "subject": "Science",
-  "grade_level": "Grade 8",
-  "destination_objective": "Explain how enzyme saturation limits the rate of carbon fixation at high carbon dioxide concentration.",
-  "starting_knowledge": ["plants make food in their leaves", "plants need light, water and carbon dioxide"],
-  "scope_contract": {
-    "must_establish": [
+  "scope": {
+    "must_cover": [
       "rate can be limited by the factor in shortest supply",
       "increasing one factor does not always increase rate"
     ],
-    "may_include": ["simple rate graphs"],
-    "must_not_introduce": ["ATP", "Calvin cycle", "RuBP", "chemical equations"],
-    "assumed_prerequisites": ["plants make food in their leaves", "plants need light, water and carbon dioxide"],
-    "terminology": ["rate", "light", "carbon dioxide", "temperature"],
-    "notation": null
+    "do_not_cover": [
+      "ATP",
+      "Calvin cycle",
+      "RuBP",
+      "chemical equations"
+    ]
   },
-  "modules": [
+  "lessons": [
     {
-      "title": "What changes the rate",
-      "lessons": [
-        {
-          "concept_candidate": { "slug": "photosynthesis.rate-light", "title": "Light and rate" },
-          "objective": "Explain how increasing light changes how fast a plant makes food.",
-          "prerequisites": [],
-          "external_prerequisites": ["plants make food in their leaves"],
-          "must_establish": ["more light increases rate up to a point"],
-          "exclusions": ["light saturation as a named phenomenon"],
-          "primary_knowledge_type": "conceptual",
-          "secondary_demand": null,
-          "merge_warning": false
-        },
-        {
-          "concept_candidate": { "slug": "photosynthesis.rate-limiting", "title": "The factor in shortest supply" },
-          "objective": "Predict which factor is limiting when increasing one factor stops changing the rate.",
-          "prerequisites": ["photosynthesis.rate-light"],
-          "external_prerequisites": ["plants need light, water and carbon dioxide"],
-          "must_establish": ["rate is limited by the factor in shortest supply"],
-          "exclusions": ["enzyme explanation of the plateau"],
-          "primary_knowledge_type": "conceptual",
-          "secondary_demand": null,
-          "merge_warning": false
-        }
-      ]
-    }
-  ],
-  "adjacent_merge_reviews": [],
-  "prerequisite_risks": [
-    {
-      "missing": "enzymes act as catalysts with a limited number of active sites",
-      "needed_by": "destination_objective",
-      "note": "Enzyme saturation cannot be explained without enzyme action, which is absent from starting_knowledge and outside this unit's scope contract. Teach enzymes first or lower the destination objective."
+      "key": "L1",
+      "title": "Light and rate",
+      "objective": "Explain how increasing light changes how fast a plant makes food.",
+      "requires": [],
+      "must_establish": [
+        "more light increases rate up to a point"
+      ],
+      "knowledge_type": "conceptual"
     },
     {
-      "missing": "carbon fixation as a distinct step",
-      "needed_by": "destination_objective",
-      "note": "The destination names carbon fixation, but Calvin cycle terms are listed in must_not_introduce. The destination and the scope contract contradict each other."
+      "key": "L2",
+      "title": "The factor in shortest supply",
+      "objective": "Predict which factor is limiting when increasing one factor stops changing the rate.",
+      "requires": [
+        "L1"
+      ],
+      "must_establish": [
+        "rate is limited by the factor in shortest supply"
+      ],
+      "knowledge_type": "conceptual"
     }
-  ],
-  "completeness": {
-    "forward_verified": true,
-    "reaches_destination": false,
-    "note": "The path reaches limiting factors but cannot reach the stated destination. Two prerequisites are unavailable at this grade level and one is excluded by the unit's own scope contract. Approval must be blocked until the destination objective is revised or the scope contract is widened."
-  }
+  ]
 }

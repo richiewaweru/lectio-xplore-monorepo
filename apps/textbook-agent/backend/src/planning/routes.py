@@ -29,6 +29,7 @@ from planning.agents import (
 from planning.bridge import PathPreparationBlocked, prepare_path_lesson
 from planning.models import (
     ConstructorReadbackRequest,
+    InsertFoundationLessonRequest,
     GuardedMergePathLessonsRequest,
     GuardedPrepareLessonRequest,
     GuardedPathLessonPatch,
@@ -36,6 +37,7 @@ from planning.models import (
     GuardedSplitPathLessonRequest,
     LessonActualWriteRequest,
     MarksWriteRequest,
+    MarkStartingKnowledgeRequest,
     PathChatEditRequest,
     PathLessonMutationRequest,
     PathPlannerRequest,
@@ -44,7 +46,6 @@ from planning.models import (
     PrepareLessonRequest,
     PreparedLessonStatusResponse,
     RegenerateLessonRequest,
-    ResolvePathAssumptionRequest,
     ResourceComposeRequest,
     RestorePathVersionRequest,
     ScheduleSuggestRequest,
@@ -95,13 +96,14 @@ from planning.service import (
     get_owned_unit,
     get_path_lesson,
     get_path_version,
+    insert_foundation_lesson,
     invalidate_path_approval,
     list_path_versions,
+    mark_starting_knowledge,
     merge_lessons,
     patch_lesson,
     persist_path_plan,
     reorder_lessons,
-    resolve_path_assumption,
     skip_lesson,
     split_lesson,
     update_unit,
@@ -531,35 +533,6 @@ async def post_path_approve(
             path_revision=request.path_revision,
         )
         await approve_path(session, version)
-        await session.commit()
-        return await _path_payload(session, version)
-    except Exception as exc:
-        await session.rollback()
-        _raise_http(exc)
-
-
-@router.post("/{unit_id}/path/assumptions/resolve")
-async def post_resolve_path_assumption(
-    unit_id: str,
-    request: ResolvePathAssumptionRequest,
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_async_session),
-) -> dict[str, object]:
-    try:
-        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
-        version = await _active_version(session, unit)
-        assert_path_mutation_fresh(
-            version,
-            path_version_id=request.path_version_id,
-            path_revision=request.path_revision,
-        )
-        await resolve_path_assumption(
-            session,
-            unit=unit,
-            version=version,
-            claimed=request.claimed,
-            decision=request.decision,
-        )
         await session.commit()
         return await _path_payload(session, version)
     except Exception as exc:
@@ -1009,6 +982,71 @@ async def post_path_lessons_merge(
             "merged_lesson_id": merged.id,
             "source": merged.source,
         }
+    except Exception as exc:
+        await session.rollback()
+        _raise_http(exc)
+
+
+@router.post("/{unit_id}/path/lessons:insert-foundation")
+async def post_insert_foundation_lesson(
+    unit_id: str,
+    request: InsertFoundationLessonRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        version = await _active_version(session, unit)
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
+        )
+        cloned, mapping = await clone_path_version(
+            session,
+            unit=unit,
+            source=version,
+            supersede_active=version,
+            generated_by="teacher_foundation",
+        )
+        target = mapping.get(request.before_lesson_id)
+        if target is None:
+            raise PathNotFoundError(
+                f"Lesson {request.before_lesson_id!r} was not found on this path"
+            )
+        await insert_foundation_lesson(
+            session,
+            unit=unit,
+            version=cloned,
+            before_lesson_id=target.id,
+            part=request.lesson,
+        )
+        await invalidate_path_approval(session, cloned)
+        await session.commit()
+        return await _path_payload(session, cloned)
+    except Exception as exc:
+        await session.rollback()
+        _raise_http(exc)
+
+
+@router.post("/{unit_id}/path/starting-knowledge:mark")
+async def post_mark_starting_knowledge(
+    unit_id: str,
+    request: MarkStartingKnowledgeRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    try:
+        unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+        version = await _active_version(session, unit)
+        assert_path_mutation_fresh(
+            version,
+            path_version_id=request.path_version_id,
+            path_revision=request.path_revision,
+        )
+        await mark_starting_knowledge(session, unit=unit, knowledge=request.knowledge)
+        await session.commit()
+        return await _path_payload(session, version)
     except Exception as exc:
         await session.rollback()
         _raise_http(exc)

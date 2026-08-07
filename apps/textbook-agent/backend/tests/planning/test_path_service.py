@@ -14,8 +14,7 @@ from core.database.models import (
     UserModel,
 )
 from planning.models import (
-    ConceptCandidate,
-    LessonPart,
+    CanonicalLessonPart,
     MergePathLessonsRequest,
     PathLessonPatch,
     ReorderPathLessonsRequest,
@@ -30,12 +29,11 @@ from planning.service import (
     patch_lesson,
     persist_path_plan,
     reorder_lessons,
-    resolve_path_assumption,
     skip_lesson,
     split_lesson,
 )
 from planning.validation import PathApprovalBlocked
-from tests.planning.path_helpers import load_canonical_plan, load_legacy_path_plan
+from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 
 
 FIXTURES = Path(__file__).resolve().parents[3] / "handoff" / "fixtures"
@@ -46,16 +44,11 @@ def _plan(name: str):
 
 
 async def _unit(db_session, *, owner_id: str, fixture_name: str):
-    legacy = load_legacy_path_plan(fixture_name)
-    request = UnitCreate(
-        title=legacy.unit or "Unit",
-        topic=legacy.unit or "Topic",
-        subject=legacy.subject or "Science",
-        grade_level=legacy.grade_level or "Grade 4",
-        destination_objective=legacy.destination_objective or "Destination",
-        starting_knowledge=legacy.starting_knowledge,
+    return await create_unit(
+        db_session,
+        owner_id=owner_id,
+        request=unit_create_from_fixture(fixture_name),
     )
-    return await create_unit(db_session, owner_id=owner_id, request=request)
 
 
 @pytest.fixture
@@ -166,17 +159,17 @@ async def test_skip_reorder_split_and_merge_are_explicit_state(db_session, owner
         lesson=lessons[1],
         request=SplitPathLessonRequest(
             parts=[
-                LessonPart(
-                    concept_candidate=ConceptCandidate(slug="split.part-a", title="Part A"),
+                CanonicalLessonPart(
+                    title="Part A",
                     objective="Identify part A.",
                     must_establish=["part A"],
-                    primary_knowledge_type="factual",
+                    knowledge_type="factual",
                 ),
-                LessonPart(
-                    concept_candidate=ConceptCandidate(slug="split.part-b", title="Part B"),
+                CanonicalLessonPart(
+                    title="Part B",
                     objective="Explain part B.",
                     must_establish=["part B"],
-                    primary_knowledge_type="conceptual",
+                    knowledge_type="conceptual",
                 ),
             ]
         ),
@@ -190,11 +183,11 @@ async def test_skip_reorder_split_and_merge_are_explicit_state(db_session, owner
         version=version,
         request=MergePathLessonsRequest(
             lesson_ids=[parts[0].id, parts[1].id],
-            merged=LessonPart(
-                concept_candidate=ConceptCandidate(slug="split.merged", title="Merged"),
+            merged=CanonicalLessonPart(
+                title="Merged Parts",
                 objective="Relate part A to part B.",
                 must_establish=["relationship between A and B"],
-                primary_knowledge_type="conceptual",
+                knowledge_type="conceptual",
             ),
         ),
     )
@@ -367,28 +360,3 @@ async def test_persist_maps_scope_and_compat_fields(db_session, owner) -> None:
     assert all(lesson.external_prerequisites == [] for lesson in lessons)
     assert all(lesson.merge_warning is False for lesson in lessons)
     assert all(lesson.concept_slug.startswith("science.") for lesson in lessons)
-
-
-async def test_resolve_assumption_rejects_bogus_claim(db_session, owner) -> None:
-    plan = _plan("grade4-photosynthesis-path.json")
-    unit = await _unit(
-        db_session,
-        owner_id=owner.id,
-        fixture_name="grade4-photosynthesis-path.json",
-    )
-    version = await persist_path_plan(db_session, unit=unit, plan=plan)
-    lessons = list(
-        await db_session.scalars(
-            select(PathLessonModel).where(PathLessonModel.path_version_id == version.id)
-        )
-    )
-    lessons[0].external_prerequisites = ["multiply any two fractions"]
-    await db_session.flush()
-    with pytest.raises(ValueError, match="not an open assumption"):
-        await resolve_path_assumption(
-            db_session,
-            unit=unit,
-            version=version,
-            claimed="never claimed by any lesson",
-            decision="known",
-        )

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import uuid
-import asyncio
 from typing import Any, TypeVar
 
 from pydantic import BaseModel, ValidationError
@@ -14,17 +13,13 @@ from planning.models import (
     CanonicalPathPlan,
     ComponentSelection,
     ConstructorOutput,
-    MergeCriticResult,
-    PathPlan,
     PathPlanDraft,
     PathPlannerRequest,
     PathStructuralPlan,
-    PlannedLesson,
 )
 from planning.prompts import (
     component_selector_prompt,
     constructor_prompt,
-    merge_critic_prompt,
     path_planner_prompt,
     path_structural_planner_prompt,
     plan_editor_prompt,
@@ -40,7 +35,6 @@ from planning.validation import (
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.models import (
     V2_COMPONENT_SELECTOR,
-    V2_MERGE_CRITIC,
     V2_PATH_CHAT_EDITOR,
     V2_PATH_PLANNER,
     V2_PATH_STRUCTURAL_PLANNER,
@@ -170,81 +164,6 @@ async def run_path_planner(
             raise PathPlanningError(errors)
 
     raise PathPlanningError(errors or ["path planner produced no usable result"])
-
-
-async def run_merge_critic(
-    lesson_a: PlannedLesson,
-    lesson_b: PlannedLesson,
-    *,
-    trace_id: str | None = None,
-) -> MergeCriticResult:
-    return await _run_structured(
-        node=V2_MERGE_CRITIC,
-        caller="v2_merge_critic",
-        output_type=MergeCriticResult,
-        system_prompt=merge_critic_prompt(),
-        user_payload={
-            "lesson_a": lesson_a.model_dump(mode="json"),
-            "lesson_b": lesson_b.model_dump(mode="json"),
-        },
-        trace_id=trace_id,
-    )
-
-
-async def run_adjacent_merge_critics(
-    plan: PathPlan,
-    *,
-    trace_id: str | None = None,
-) -> list[dict[str, object]]:
-    lessons = plan.lessons
-    by_slug = {lesson.concept_candidate.slug: lesson for lesson in lessons}
-    pair_keys: list[tuple[str, str]] = []
-    seen: set[tuple[str, str]] = set()
-
-    def _add_pair(lesson_a: PlannedLesson, lesson_b: PlannedLesson) -> None:
-        key = (lesson_a.concept_candidate.slug, lesson_b.concept_candidate.slug)
-        if key in seen:
-            return
-        seen.add(key)
-        pair_keys.append(key)
-
-    for nomination in plan.adjacent_merge_reviews:
-        lesson_a = by_slug.get(nomination.lesson_a)
-        lesson_b = by_slug.get(nomination.lesson_b)
-        if lesson_a is None or lesson_b is None:
-            continue
-        _add_pair(lesson_a, lesson_b)
-
-    for index, lesson in enumerate(lessons):
-        if not lesson.merge_warning:
-            continue
-        if index + 1 < len(lessons):
-            _add_pair(lesson, lessons[index + 1])
-        if index > 0:
-            _add_pair(lessons[index - 1], lesson)
-
-    pairs = [(by_slug[a], by_slug[b]) for a, b in pair_keys]
-    if not pairs:
-        return []
-
-    results = await asyncio.gather(
-        *[
-            run_merge_critic(
-                lesson_a,
-                lesson_b,
-                trace_id=f"{trace_id or 'path'}:merge:{index}",
-            )
-            for index, (lesson_a, lesson_b) in enumerate(pairs)
-        ]
-    )
-    return [
-        {
-            "lesson_a": lesson_a.concept_candidate.slug,
-            "lesson_b": lesson_b.concept_candidate.slug,
-            **result.model_dump(mode="json"),
-        }
-        for (lesson_a, lesson_b), result in zip(pairs, results, strict=True)
-    ]
 
 
 async def run_component_selector(

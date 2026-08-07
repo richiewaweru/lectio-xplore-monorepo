@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
 	getPathHistory: vi.fn(), getPathStatus: vi.fn(), getHistoricalPath: vi.fn(), restorePathVersion: vi.fn(),
 	getPreparedLessonStatus: vi.fn(), approveUnitPath: vi.fn(), planUnitPath: vi.fn(),
 	patchPathLesson: vi.fn(), mergePathLessons: vi.fn(), preparePathLesson: vi.fn(),
-	regeneratePathLesson: vi.fn(), editUnitPathByChat: vi.fn(), resolvePathAssumption: vi.fn()
+	regeneratePathLesson: vi.fn(), editUnitPathByChat: vi.fn()
 }));
 
 vi.mock('$app/state', () => ({ page: { params: { id: 'unit-1' } } }));
@@ -47,7 +47,7 @@ function buildPath(overrides: Record<string, unknown> = {}) {
 	return {
 		id: 'path-1', unit_id: 'unit-1', version: 1, revision: 2, status: 'approved', generated_by: 'path_planner',
 		merge_critic_results: [], prerequisite_risks: [], forward_verified: true,
-		reaches_destination: true, completeness_note: null, open_assumptions: [],
+		reaches_destination: true, completeness_note: null,
 		approved_at: '2026-07-31T00:00:00Z',
 		created_at: '2026-07-31T00:00:00Z', lessons: [lessonOne, lessonTwo],
 		...overrides
@@ -146,13 +146,36 @@ describe('/units/[id]', () => {
 				verdict: 'merge_suggested', reason: 'they teach the same skill from two angles.',
 				merged_objective: 'Explain what plants need and produce.', diagnostic_cost: null
 			}],
-			open_assumptions: [{ claimed: 'multiply any two fractions', needed_by: lessonOne.concept_slug }]
 		}));
 		render(UnitPage);
 		await screen.findByDisplayValue('Plant inputs');
 		expect(screen.queryByText(/might work as one lesson/)).toBeNull();
 		expect(screen.queryByText(/thing to confirm/)).toBeNull();
 		expect(screen.getByRole('button', { name: 'Looks good — lock it in' }).hasAttribute('disabled')).toBe(false);
+	});
+
+	it('shows deterministic merge suggestions without blocking lock-in', async () => {
+		mocks.getUnitPath.mockResolvedValue(buildPath({
+			status: 'draft',
+			merge_critic_results: [{
+				lesson_a: lessonOne.id,
+				lesson_b: lessonTwo.id,
+				verdict: 'review_suggested',
+				reason: 'Lessons 1 and 2 cover similar ground and might work as one lesson.',
+				source: 'deterministic'
+			}]
+		}));
+		mocks.mergePathLessons.mockResolvedValue({
+			path: buildPath({ status: 'draft', lessons: [{ ...lessonOne, title: 'Plant inputs and outputs' }] }),
+			merged_lesson_id: lessonOne.id,
+			source: 'teacher_merge'
+		});
+		render(UnitPage);
+		await screen.findByText(/might work as one lesson/);
+		expect(screen.getByRole('button', { name: 'Merge these' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Looks good — lock it in' }).hasAttribute('disabled')).toBe(false);
+		await fireEvent.click(screen.getByRole('button', { name: 'Merge these' }));
+		await waitFor(() => expect(mocks.mergePathLessons).toHaveBeenCalled());
 	});
 
 	it('edits the lessons from the chat input', async () => {

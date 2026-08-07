@@ -1,100 +1,81 @@
 {
-  "unit": "Photosynthesis",
-  "subject": "Science",
-  "grade_level": "Grade 4",
-  "destination_objective": "Explain why photosynthesis matters for plants and for other living things.",
-  "starting_knowledge": ["plants have roots, stems and leaves", "living things need food to grow"],
-  "scope_contract": {
-    "must_establish": [
+  "scope": {
+    "must_cover": [
       "plants need light, water and carbon dioxide",
       "plants make their own food in their leaves",
       "oxygen is released when plants make food"
     ],
-    "may_include": ["what happens to a plant kept in the dark"],
-    "must_not_introduce": ["ATP", "NADPH", "Calvin cycle", "redox reactions", "chlorophyll absorption spectra", "chemical equations"],
-    "assumed_prerequisites": ["plants have roots, stems and leaves", "living things need food to grow"],
-    "terminology": ["light", "water", "carbon dioxide", "oxygen", "food"],
-    "notation": null
+    "do_not_cover": [
+      "ATP",
+      "NADPH",
+      "Calvin cycle",
+      "redox reactions",
+      "chlorophyll absorption spectra",
+      "chemical equations"
+    ]
   },
-  "modules": [
+  "lessons": [
     {
-      "title": "What plants take in",
-      "lessons": [
-        {
-          "concept_candidate": { "slug": "photosynthesis.plant-needs", "title": "What plants need" },
-          "objective": "Identify light, water and carbon dioxide as the things a plant takes in to make food.",
-          "prerequisites": [],
-          "external_prerequisites": ["plants have roots, stems and leaves"],
-          "must_establish": ["light, water and carbon dioxide are the three things taken in"],
-          "exclusions": ["how each one is used", "minerals from soil"],
-          "primary_knowledge_type": "factual",
-          "secondary_demand": null,
-          "merge_warning": true
-        },
-        {
-          "concept_candidate": { "slug": "photosynthesis.leaf-site", "title": "Where food is made" },
-          "objective": "Explain that leaves are the main place where a plant makes its food.",
-          "prerequisites": ["photosynthesis.plant-needs"],
-          "external_prerequisites": ["plants have roots, stems and leaves"],
-          "must_establish": ["the leaf is the site of food-making"],
-          "exclusions": ["chloroplast structure", "cell structure"],
-          "primary_knowledge_type": "conceptual",
-          "secondary_demand": null,
-          "merge_warning": false
-        }
-      ]
+      "key": "L1",
+      "title": "What plants need",
+      "objective": "Identify light, water and carbon dioxide as the things a plant takes in to make food.",
+      "requires": [],
+      "must_establish": [
+        "light, water and carbon dioxide are the three things taken in"
+      ],
+      "knowledge_type": "factual"
     },
     {
-      "title": "Making food",
-      "lessons": [
-        {
-          "concept_candidate": { "slug": "photosynthesis.plants-make-food", "title": "Plants make their own food" },
-          "objective": "Explain that a plant makes its own food rather than taking food in from the soil.",
-          "prerequisites": ["photosynthesis.plant-needs", "photosynthesis.leaf-site"],
-          "external_prerequisites": ["living things need food to grow"],
-          "must_establish": ["plants make food; they do not absorb ready-made food"],
-          "exclusions": ["glucose as a named substance", "the word photosynthesis as a formula"],
-          "primary_knowledge_type": "conceptual",
-          "secondary_demand": null,
-          "merge_warning": false
-        },
-        {
-          "concept_candidate": { "slug": "photosynthesis.oxygen-released", "title": "What comes out" },
-          "objective": "Distinguish what a plant takes in from what it gives out when it makes food.",
-          "prerequisites": ["photosynthesis.plants-make-food"],
-          "external_prerequisites": [],
-          "must_establish": ["oxygen is given out", "carbon dioxide goes in, oxygen comes out"],
-          "exclusions": ["gas exchange in animals", "respiration in plants"],
-          "primary_knowledge_type": "conceptual",
-          "secondary_demand": null,
-          "merge_warning": false
-        }
-      ]
+      "key": "L2",
+      "title": "Where food is made",
+      "objective": "Explain that leaves are the main place where a plant makes its food.",
+      "requires": [
+        "L1"
+      ],
+      "must_establish": [
+        "the leaf is the site of food-making"
+      ],
+      "knowledge_type": "conceptual"
     },
     {
-      "title": "Why it matters",
-      "lessons": [
-        {
-          "concept_candidate": { "slug": "photosynthesis.why-it-matters", "title": "Why photosynthesis matters" },
-          "objective": "Explain why photosynthesis matters for plants and for other living things.",
-          "prerequisites": ["photosynthesis.plants-make-food", "photosynthesis.oxygen-released"],
-          "external_prerequisites": ["living things need food to grow"],
-          "must_establish": ["plants are the source of food for other living things", "plants are a source of the oxygen animals use"],
-          "exclusions": ["food chains as a formal topic", "carbon cycle"],
-          "primary_knowledge_type": "conceptual",
-          "secondary_demand": null,
-          "merge_warning": false
-        }
-      ]
-    }
-  ],
-  "adjacent_merge_reviews": [
+      "key": "L3",
+      "title": "Plants make their own food",
+      "objective": "Explain that a plant makes its own food rather than taking food in from the soil.",
+      "requires": [
+        "L1",
+        "L2"
+      ],
+      "must_establish": [
+        "plants make food; they do not absorb ready-made food"
+      ],
+      "knowledge_type": "conceptual"
+    },
     {
-      "lesson_a": "photosynthesis.plant-needs",
-      "lesson_b": "photosynthesis.leaf-site",
-      "reason": "The first is a short factual set and may be too thin to stand alone; it could be established while teaching where food is made."
+      "key": "L4",
+      "title": "What comes out",
+      "objective": "Distinguish what a plant takes in from what it gives out when it makes food.",
+      "requires": [
+        "L3"
+      ],
+      "must_establish": [
+        "oxygen is given out",
+        "carbon dioxide goes in, oxygen comes out"
+      ],
+      "knowledge_type": "conceptual"
+    },
+    {
+      "key": "L5",
+      "title": "Why photosynthesis matters",
+      "objective": "Explain why photosynthesis matters for plants and for other living things.",
+      "requires": [
+        "L3",
+        "L4"
+      ],
+      "must_establish": [
+        "plants are the source of food for other living things",
+        "plants are a source of the oxygen animals use"
+      ],
+      "knowledge_type": "conceptual"
     }
-  ],
-  "prerequisite_risks": [],
-  "completeness": { "forward_verified": true, "reaches_destination": true, "note": null }
+  ]
 }

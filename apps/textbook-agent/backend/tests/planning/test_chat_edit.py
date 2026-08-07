@@ -10,10 +10,10 @@ from core.auth.middleware import get_current_user
 from core.database.models import UserModel
 from core.dependencies import get_async_session
 from core.entities.user import User
-from planning.models import CanonicalPathPlan, UnitCreate
+from planning.models import CanonicalPathPlan
 from planning.service import create_unit, persist_path_plan
 from planning.validation import PathPlanningError
-from tests.planning.path_helpers import load_canonical_plan, load_legacy_path_plan
+from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 
 
 TEST_USER = User(
@@ -49,20 +49,12 @@ async def _seed_unit(
     db_session_factory, *, fixture_name: str
 ) -> tuple[str, str, int, CanonicalPathPlan]:
     plan = load_canonical_plan(fixture_name)
-    legacy = load_legacy_path_plan(fixture_name)
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
-            request=UnitCreate(
-                title=legacy.unit or "Unit",
-                topic=legacy.unit or "Topic",
-                subject=legacy.subject or "Science",
-                grade_level=legacy.grade_level or "Grade 4",
-                destination_objective=legacy.destination_objective or "Destination",
-                starting_knowledge=legacy.starting_knowledge,
-            ),
+            request=unit_create_from_fixture(fixture_name),
         )
         version = await persist_path_plan(session, unit=unit, plan=plan)
         unit_id = unit.id

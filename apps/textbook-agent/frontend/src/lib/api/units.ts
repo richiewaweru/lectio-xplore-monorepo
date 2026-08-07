@@ -184,27 +184,6 @@ export function approveUnitPath(unitId: string, path: UnitPath): Promise<UnitPat
 	});
 }
 
-export function resolvePathAssumption(
-	unitId: string,
-	path: UnitPath,
-	input: { claimed: string; decision: 'known' | 'teach' }
-): Promise<UnitPath> {
-	return jsonRequest(
-		`/api/v1/units/${encodeURIComponent(unitId)}/path/assumptions/resolve`,
-		'Could not confirm that prior knowledge.',
-		{
-			method: 'POST',
-			headers: jsonHeaders,
-			body: JSON.stringify({
-				path_version_id: path.id,
-				path_revision: path.revision,
-				claimed: input.claimed,
-				decision: input.decision
-			})
-		}
-	);
-}
-
 export function patchPathLesson(
 	unitId: string,
 	path: UnitPath,
@@ -254,12 +233,10 @@ export function splitPathLesson(
 	path: UnitPath,
 	lesson: PathLesson,
 	parts: Array<{
-		concept_candidate: { slug: string; title: string };
+		title: string;
 		objective: string;
 		must_establish: string[];
-		exclusions: string[];
-		primary_knowledge_type: KnowledgeType;
-		secondary_demand: KnowledgeType | null;
+		knowledge_type: KnowledgeType;
 	}>
 ): Promise<{ path: UnitPath; source_lesson_id: string; part_ids: string[] }> {
 	return jsonRequest(
@@ -278,12 +255,10 @@ export function mergePathLessons(
 	lessons: PathLesson[],
 	lessonIds: string[],
 	merged: {
-		concept_candidate: { slug: string; title: string };
+		title: string;
 		objective: string;
 		must_establish: string[];
-		exclusions: string[];
-		primary_knowledge_type: KnowledgeType;
-		secondary_demand: KnowledgeType | null;
+		knowledge_type: KnowledgeType;
 	}
 ): Promise<{ path: UnitPath; merged_lesson_id: string; source: string }> {
 	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons:merge`, 'Could not merge the path lessons.', {
@@ -293,6 +268,53 @@ export function mergePathLessons(
 			lesson_revisions: Object.fromEntries(lessons.map((lesson) => [lesson.id, lesson.revision])), merged
 		})
 	});
+}
+
+export function insertFoundationLesson(
+	unitId: string,
+	path: UnitPath,
+	beforeLessonId: string,
+	lesson: {
+		title: string;
+		objective: string;
+		must_establish: string[];
+		knowledge_type: KnowledgeType;
+	}
+): Promise<UnitPath> {
+	return jsonRequest(
+		`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons:insert-foundation`,
+		'Could not insert a foundation lesson.',
+		{
+			method: 'POST',
+			headers: jsonHeaders,
+			body: JSON.stringify({
+				path_version_id: path.id,
+				path_revision: path.revision,
+				before_lesson_id: beforeLessonId,
+				lesson
+			})
+		}
+	);
+}
+
+export function markStartingKnowledge(
+	unitId: string,
+	path: UnitPath,
+	knowledge: string
+): Promise<{ starting_knowledge: string[] }> {
+	return jsonRequest(
+		`/api/v1/units/${encodeURIComponent(unitId)}/path/starting-knowledge:mark`,
+		'Could not mark starting knowledge.',
+		{
+			method: 'POST',
+			headers: jsonHeaders,
+			body: JSON.stringify({
+				path_version_id: path.id,
+				path_revision: path.revision,
+				knowledge
+			})
+		}
+	);
 }
 
 export function preparePathLesson(unitId: string, path: UnitPath, lesson: PathLesson, lessonMode: LessonMode, groupIds: string[] = []): Promise<PreparedLesson> {

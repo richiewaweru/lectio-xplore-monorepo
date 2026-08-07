@@ -6,52 +6,74 @@ import json
 from pathlib import Path
 
 from planning.models import (
-    CanonicalPathLesson,
     CanonicalPathPlan,
-    CanonicalPathScope,
-    PathPlan,
     PathPlanDraft,
+    UnitCreate,
 )
+from planning.validation import normalize_path_plan_draft
 
 FIXTURES = Path(__file__).resolve().parents[3] / "handoff" / "fixtures"
 
-
-def load_legacy_path_plan(name: str) -> PathPlan:
-    return PathPlan.model_validate_json((FIXTURES / name).read_text(encoding="utf-8"))
-
-
-def legacy_to_canonical(plan: PathPlan) -> CanonicalPathPlan:
-    """Convert an old PathPlan fixture into the active CanonicalPathPlan shape."""
-    lessons = plan.lessons
-    slug_to_key = {
-        lesson.concept_candidate.slug: f"L{index}"
-        for index, lesson in enumerate(lessons, start=1)
-    }
-    return CanonicalPathPlan(
-        scope=CanonicalPathScope(
-            must_cover=list(plan.scope_contract.must_establish),
-            do_not_cover=list(plan.scope_contract.must_not_introduce),
+UNIT_FIXTURE_META: dict[str, dict[str, object]] = {
+    "grade4-photosynthesis-path.json": {
+        "title": "Photosynthesis",
+        "topic": "Photosynthesis",
+        "subject": "Science",
+        "grade_level": "Grade 4",
+        "destination_objective": (
+            "Explain why photosynthesis matters for plants and for other living things."
         ),
-        lessons=[
-            CanonicalPathLesson(
-                key=slug_to_key[lesson.concept_candidate.slug],
-                title=lesson.concept_candidate.title,
-                objective=lesson.objective,
-                requires=[
-                    slug_to_key[prerequisite]
-                    for prerequisite in lesson.prerequisites
-                    if prerequisite in slug_to_key
-                ],
-                must_establish=list(lesson.must_establish),
-                knowledge_type=lesson.primary_knowledge_type,
-            )
-            for lesson in lessons
+        "starting_knowledge": [
+            "plants have roots, stems and leaves",
+            "living things need food to grow",
         ],
-    )
+    },
+    "grade12-photosynthesis-path.json": {
+        "title": "Photosynthesis",
+        "topic": "Photosynthesis",
+        "subject": "Biology",
+        "grade_level": "Grade 12",
+        "destination_objective": (
+            "Explain how light energy is converted to chemical energy "
+            "and used to fix carbon into carbohydrate."
+        ),
+        "starting_knowledge": [
+            "cell and organelle structure",
+            "enzymes lower activation energy",
+            "the concept of a concentration gradient",
+        ],
+    },
+    "grade8-unreachable-destination-path.json": {
+        "title": "Photosynthesis and enzyme rate",
+        "topic": "Photosynthesis and enzyme rate",
+        "subject": "Science",
+        "grade_level": "Grade 8",
+        "destination_objective": (
+            "Explain how enzyme saturation limits the rate of carbon fixation "
+            "at high carbon dioxide concentration."
+        ),
+        "starting_knowledge": [
+            "plants make food in their leaves",
+            "plants need light, water and carbon dioxide",
+        ],
+    },
+}
 
 
 def load_canonical_plan(name: str) -> CanonicalPathPlan:
-    return legacy_to_canonical(load_legacy_path_plan(name))
+    return CanonicalPathPlan.model_validate_json((FIXTURES / name).read_text(encoding="utf-8"))
+
+
+def unit_create_from_fixture(name: str) -> UnitCreate:
+    meta = UNIT_FIXTURE_META[name]
+    return UnitCreate(
+        title=str(meta["title"]),
+        topic=str(meta["topic"]),
+        subject=str(meta["subject"]),
+        grade_level=str(meta["grade_level"]),
+        destination_objective=str(meta["destination_objective"]),
+        starting_knowledge=list(meta["starting_knowledge"]),  # type: ignore[arg-type]
+    )
 
 
 def four_lesson_draft(**overrides: object) -> PathPlanDraft:
@@ -100,6 +122,45 @@ def four_lesson_draft(**overrides: object) -> PathPlanDraft:
 
 
 def sample_canonical_plan() -> CanonicalPathPlan:
-    from planning.validation import normalize_path_plan_draft
-
     return normalize_path_plan_draft(four_lesson_draft())
+
+
+def overlapping_pair_plan() -> CanonicalPathPlan:
+    """Two adjacent lessons with high must_establish overlap for merge-hint tests."""
+    return normalize_path_plan_draft(
+        four_lesson_draft(
+            lessons=[
+                {
+                    "key": "L1",
+                    "title": "Heart Structure",
+                    "objective": "identify the chambers of the heart",
+                    "requires": [],
+                    "must_establish": [
+                        "the heart has four chambers",
+                        "blood flows through the heart",
+                    ],
+                    "knowledge_type": "conceptual",
+                },
+                {
+                    "key": "L2",
+                    "title": "Heart Function",
+                    "objective": "explain how the heart pumps blood",
+                    "requires": ["L1"],
+                    "must_establish": [
+                        "the heart has four chambers",
+                        "blood flows through the heart",
+                        "the heart acts as a pump",
+                    ],
+                    "knowledge_type": "conceptual",
+                },
+                {
+                    "key": "L3",
+                    "title": "Blood Vessels",
+                    "objective": "name arteries veins and capillaries",
+                    "requires": ["L2"],
+                    "must_establish": ["arteries carry blood away from the heart"],
+                    "knowledge_type": "factual",
+                },
+            ]
+        )
+    )

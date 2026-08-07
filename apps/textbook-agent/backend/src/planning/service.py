@@ -17,7 +17,7 @@ from planning.models import (
     CanonicalPathLesson,
     CanonicalPathPlan,
     CanonicalPathScope,
-    LessonPart,
+    CanonicalLessonPart,
     MergePathLessonsRequest,
     PathLessonPatch,
     ReorderPathLessonsRequest,
@@ -28,8 +28,9 @@ from planning.models import (
 from planning.validation import (
     PathApprovalBlocked,
     PathValidationError,
+    adjacent_merge_hints,
     assert_concept_slugs_unique,
-    open_assumptions,
+    concept_slug_for,
 )
 from v3_blueprint.planning.objective_ownership import hash_path_objective
 
@@ -201,7 +202,20 @@ async def persist_path_plan(
             )
     unit.active_path_version_id = version.id
     await session.flush()
+    await _refresh_merge_hints(session, version)
     return version
+
+
+async def _refresh_merge_hints(session: AsyncSession, version: PathVersionModel) -> None:
+    lessons = list(
+        await session.scalars(
+            select(PathLessonModel)
+            .where(PathLessonModel.path_version_id == version.id)
+            .order_by(PathLessonModel.position)
+        )
+    )
+    version.merge_critic_results = adjacent_merge_hints(lessons)
+    await session.flush()
 
 
 async def canonical_plan_from_version(
@@ -412,102 +426,6 @@ async def invalidate_path_approval(
     await session.flush()
 
 
-async def resolve_path_assumption(
-    session: AsyncSession,
-    *,
-    unit: UnitModel,
-    version: PathVersionModel,
-    claimed: str,
-    decision: str,
-) -> PathVersionModel:
-    """Confirm or decline an undeclared external prerequisite for the active path."""
-    scope = await session.get(UnitScopeContractModel, unit.id)
-    if scope is None:
-        raise PathValidationError(
-            "missing_scope_contract",
-            "Path assumption resolution blocked: scope contract is missing",
-        )
-    lessons = list(
-        await session.scalars(
-            select(PathLessonModel)
-            .where(PathLessonModel.path_version_id == version.id)
-            .order_by(PathLessonModel.position)
-        )
-    )
-    open_rows = open_assumptions(
-        starting_knowledge=unit.starting_knowledge,
-        assumed_prerequisites=scope.assumed_prerequisites,
-        lessons=lessons,
-        prerequisite_risks=version.prerequisite_risks,
-    )
-    match = next(
-        (row for row in open_rows if row["claimed"].casefold() == claimed.casefold()),
-        None,
-    )
-    if match is None:
-        settled = {
-            value.casefold()
-            for value in [
-                *(unit.starting_knowledge or []),
-                *(scope.assumed_prerequisites or []),
-            ]
-            if isinstance(value, str) and value.strip()
-        }
-        for risk in version.prerequisite_risks or []:
-            if isinstance(risk, dict):
-                missing = risk.get("missing")
-            else:
-                missing = getattr(risk, "missing", None)
-            if isinstance(missing, str) and missing.strip():
-                settled.add(missing.casefold())
-        if claimed.casefold() in settled:
-            # Idempotent: already confirmed via starting knowledge or recorded as a risk.
-            await session.flush()
-            return version
-        raise ValueError(
-            f"Assumption {claimed!r} is not an open assumption for this path"
-        )
-
-    exact_claimed = match["claimed"]
-    if decision == "known":
-        knowledge = list(unit.starting_knowledge or [])
-        if exact_claimed.casefold() not in {value.casefold() for value in knowledge}:
-            knowledge.append(exact_claimed)
-            unit.starting_knowledge = knowledge
-    elif decision == "teach":
-        risk = {
-            "missing": exact_claimed,
-            "needed_by": match["needed_by"],
-            "note": "teacher declined",
-        }
-        risks = list(version.prerequisite_risks or [])
-        risks.append(risk)
-        version.prerequisite_risks = risks
-        version.reaches_destination = False
-
-        plan_json = dict(version.source_plan_json or {})
-        plan_risks = list(plan_json.get("prerequisite_risks") or [])
-        plan_risks.append(risk)
-        plan_json["prerequisite_risks"] = plan_risks
-        completeness = dict(plan_json.get("completeness") or {})
-        completeness["reaches_destination"] = False
-        plan_json["completeness"] = completeness
-        version.source_plan_json = plan_json
-    else:
-        raise PathValidationError(
-            "invalid_assumption_decision",
-            f"Unsupported assumption decision {decision!r}",
-        )
-
-    version.revision += 1
-    if version.status == "approved":
-        version.status = "draft"
-        version.approved_at = None
-        unit.status = "draft"
-    await session.flush()
-    return version
-
-
 async def reorder_lessons(
     session: AsyncSession,
     *,
@@ -553,29 +471,42 @@ async def _lesson_from_part(
     *,
     version: PathVersionModel,
     unit: UnitModel,
-    part: LessonPart,
+    part: CanonicalLessonPart,
     position: int,
     source: str,
+    exclude_lesson_ids: set[str] | None = None,
 ) -> PathLessonModel:
+    slug = concept_slug_for(unit.subject, part.title)
+    existing = await session.scalars(
+        select(PathLessonModel).where(PathLessonModel.path_version_id == version.id)
+    )
+    for lesson in existing:
+        if exclude_lesson_ids and lesson.id in exclude_lesson_ids:
+            continue
+        if lesson.concept_slug == slug:
+            raise PathValidationError(
+                "duplicate_concept_slug",
+                f"Lesson title {part.title!r} would reuse concept slug {slug!r}",
+            )
     concept = await _resolve_concept(
         session,
-        slug=part.concept_candidate.slug,
-        title=part.concept_candidate.title,
+        slug=slug,
+        title=part.title,
         subject=unit.subject,
         owner_id=unit.owner_id,
     )
     lesson = PathLessonModel(
         path_version_id=version.id,
         concept_id=concept.id,
-        concept_slug=part.concept_candidate.slug,
-        title=part.concept_candidate.title,
+        concept_slug=slug,
+        title=part.title,
         objective=part.objective,
         objective_hash=hash_path_objective(part.objective),
         external_prerequisites=[],
         must_establish=part.must_establish,
-        exclusions=part.exclusions,
-        primary_knowledge_type=part.primary_knowledge_type,
-        secondary_demand=part.secondary_demand,
+        exclusions=[],
+        primary_knowledge_type=part.knowledge_type,
+        secondary_demand=None,
         knowledge_type_source="teacher",
         position=position,
         source=source,
@@ -638,6 +569,7 @@ async def split_lesson(
                 part=part,
                 position=source_position + offset,
                 source="teacher_split",
+                exclude_lesson_ids={lesson.id},
             )
         )
     parts[0].external_prerequisites = list(lesson.external_prerequisites or [])
@@ -667,6 +599,7 @@ async def split_lesson(
     ordered = remaining[:source_position] + parts + remaining[source_position:]
     for position, current in enumerate(ordered):
         current.position = position
+    await _refresh_merge_hints(session, version)
     await session.flush()
     return parts
 
@@ -733,6 +666,7 @@ async def merge_lessons(
         part=request.merged,
         position=positions[0],
         source="teacher_merge",
+        exclude_lesson_ids=source_ids,
     )
     merged.external_prerequisites = list(
         dict.fromkeys(
@@ -761,8 +695,70 @@ async def merge_lessons(
     ordered = remaining[: positions[0]] + [merged] + remaining[positions[0] :]
     for position, current in enumerate(ordered):
         current.position = position
+    await _refresh_merge_hints(session, version)
     await session.flush()
     return merged
+
+
+async def insert_foundation_lesson(
+    session: AsyncSession,
+    *,
+    unit: UnitModel,
+    version: PathVersionModel,
+    before_lesson_id: str,
+    part: CanonicalLessonPart,
+) -> PathLessonModel:
+    all_lessons = list(
+        await session.scalars(
+            select(PathLessonModel)
+            .where(PathLessonModel.path_version_id == version.id)
+            .order_by(PathLessonModel.position)
+        )
+    )
+    target = next((lesson for lesson in all_lessons if lesson.id == before_lesson_id), None)
+    if target is None:
+        raise PathNotFoundError(f"Lesson {before_lesson_id!r} was not found on this path")
+
+    target_index = target.position
+    for offset, existing in enumerate(all_lessons, start=1):
+        existing.position = -offset
+    await session.flush()
+
+    new_lesson = await _lesson_from_part(
+        session,
+        version=version,
+        unit=unit,
+        part=part,
+        position=target_index,
+        source="teacher_foundation",
+    )
+    session.add(
+        PathLessonPrerequisiteModel(
+            path_lesson_id=target.id,
+            prerequisite_lesson_id=new_lesson.id,
+        )
+    )
+    ordered = all_lessons[:target_index] + [new_lesson] + all_lessons[target_index:]
+    for position, current in enumerate(ordered):
+        current.position = position
+    await _refresh_merge_hints(session, version)
+    await session.flush()
+    return new_lesson
+
+
+async def mark_starting_knowledge(
+    session: AsyncSession,
+    *,
+    unit: UnitModel,
+    knowledge: str,
+) -> UnitModel:
+    items = list(unit.starting_knowledge or [])
+    folded = {value.casefold() for value in items if isinstance(value, str)}
+    if knowledge.casefold() not in folded:
+        items.append(knowledge)
+        unit.starting_knowledge = items
+        await session.flush()
+    return unit
 
 
 async def approve_path(session: AsyncSession, version: PathVersionModel) -> PathVersionModel:

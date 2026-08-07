@@ -14,6 +14,7 @@
 		getUnitGroups,
 		getUnitPath,
 		listUnitResources,
+		mergePathLessons,
 		patchPathLesson,
 		planUnitPath,
 		preparePathLesson,
@@ -36,7 +37,8 @@
 		TeachingSchedule,
 		Unit,
 		UnitGroups,
-		UnitPath
+		UnitPath,
+		MergeCriticResult
 	} from '$lib/types/units';
 
 	const unitId = $derived(page.params.id ?? '');
@@ -75,7 +77,12 @@
 	let chatNote = $state<string | null>(null);
 	let showVersions = $state(false);
 	let showShapeDebug = $state(false);
+	let dismissedSuggestions = $state<string[]>([]);
 	const debugMode = import.meta.env.DEV;
+
+	const mergeSuggestions = $derived(
+		(path?.merge_critic_results ?? []).filter((row) => row.source === 'deterministic')
+	);
 
 	const selected = $derived(path?.lessons.find((lesson) => lesson.id === selectedId) ?? null);
 	const canLockIn = $derived(Boolean(path && path.lessons.length > 0 && path.status !== 'approved'));
@@ -120,6 +127,34 @@
 		shape = null;
 		preparation = null;
 		showShapeDebug = false;
+	}
+
+	function suggestionKey(row: MergeCriticResult): string {
+		return `${row.lesson_a}:${row.lesson_b}`;
+	}
+
+	async function mergeSuggested(row: MergeCriticResult): Promise<void> {
+		if (!path) return;
+		const lessonA = path.lessons.find((lesson) => lesson.id === row.lesson_a);
+		const lessonB = path.lessons.find((lesson) => lesson.id === row.lesson_b);
+		if (!lessonA || !lessonB) return;
+		await act('merge-suggestion', async () => {
+			const result = await mergePathLessons(
+				unitId,
+				path as UnitPath,
+				[lessonA, lessonB],
+				[lessonA.id, lessonB.id],
+				{
+					title: `${lessonA.title} and ${lessonB.title}`,
+					objective: lessonA.objective,
+					must_establish: [...new Set([...lessonA.must_establish, ...lessonB.must_establish])],
+					knowledge_type: lessonA.primary_knowledge_type
+				}
+			);
+			path = result.path;
+			dismissedSuggestions = [...dismissedSuggestions, suggestionKey(row)];
+			if (path.lessons[0]) selectLesson(path.lessons[0]);
+		});
 	}
 
 	async function ensurePreparationStatus(): Promise<void> {
@@ -383,6 +418,24 @@
 				<p class="error" role="alert">{tabError}</p>
 			{/if}
 			{#if activeView === 'path'}
+			{#if mergeSuggestions.some((row) => !dismissedSuggestions.includes(suggestionKey(row)))}
+				<section class="suggestions" aria-label="Lesson suggestions">
+					<p class="eyebrow">Suggestions</p>
+					<ul>
+						{#each mergeSuggestions as row (suggestionKey(row))}
+							{#if !dismissedSuggestions.includes(suggestionKey(row))}
+								<li>
+									<p>{row.reason}</p>
+									<div class="suggestion-actions">
+										<button type="button" disabled={busy !== null} onclick={() => mergeSuggested(row)}>Merge these</button>
+										<button type="button" class="ghost" disabled={busy !== null} onclick={() => { dismissedSuggestions = [...dismissedSuggestions, suggestionKey(row)]; }}>Dismiss</button>
+									</div>
+								</li>
+							{/if}
+						{/each}
+					</ul>
+				</section>
+			{/if}
 			<section class="lock-in-bar">
 				<p>{path.lessons.length} {path.lessons.length === 1 ? 'lesson' : 'lessons'}</p>
 				{#if path.status !== 'approved'}
@@ -535,7 +588,7 @@
 
 <style>
 	.unit-page { min-height: calc(100vh - 58px); padding: 38px 28px 80px; }
-	.unit-head, .view-tabs, .lock-in-bar, .open-assumptions, .merge-questions, .status-board, .history-panel, .workspace, .chat-edit, .empty, .error, .loading { max-width: 1180px; margin-inline: auto; }
+	.unit-head, .view-tabs, .lock-in-bar, .history-panel, .workspace, .chat-edit, .empty, .error, .loading { max-width: 1180px; margin-inline: auto; }
 	.unit-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
 	.back { display: inline-block; margin-bottom: 18px; color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; }
 	.eyebrow { margin: 0 0 6px; color: var(--ink-3); font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .1em; text-transform: uppercase; }
@@ -556,25 +609,14 @@
 	.view-tabs button.active { border-bottom-color: var(--accent); color: var(--accent); }
 	.view-tabs span { display: inline-grid; place-items: center; min-width: 17px; height: 17px; border-radius: 999px; background: var(--paper); margin-left: 4px; font-size: 9px; }
 	.lock-in-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); margin-bottom: 18px; padding: 16px 18px; }
+	.suggestions { max-width: 1180px; margin: 0 auto 18px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); padding: 16px 18px; }
+	.suggestions ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+	.suggestions li { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+	.suggestions p { margin: 0; color: var(--ink-2); font-size: 13px; }
+	.suggestion-actions { display: flex; gap: 8px; flex-shrink: 0; }
+	.suggestion-actions .ghost { background: transparent; border: 1px solid var(--rule); color: var(--ink-2); }
 	.lock-in-bar p { margin: 0; color: var(--ink-2); font-size: 13px; }
 	.lock-in { display: grid; justify-items: end; gap: 6px; }
-	.lock-reason { max-width: 360px; margin: 0; color: var(--ink-3); font-size: 11px; text-align: right; }
-	.open-assumptions { display: grid; gap: 8px; margin-bottom: 18px; }
-	.open-assumptions-lead { margin: 0 0 2px; color: #7b4625; font-size: 13px; font-weight: 600; }
-	.open-assumption { display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid #dfb294; border-radius: 8px; background: #fff7ed; padding: 12px 14px; }
-	.open-assumption p { margin: 0; color: #7b4625; font-size: 13px; line-height: 1.5; }
-	.open-assumption .claimed { margin-top: 4px; font-weight: 600; }
-	.open-assumption .needed-by { margin-top: 4px; opacity: .85; font-size: 12px; }
-	.open-assumption-actions { display: flex; gap: 8px; flex-shrink: 0; }
-	.merge-questions { display: grid; gap: 8px; margin-bottom: 18px; }
-	.merge-question { display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid #dfb294; border-radius: 8px; background: #fff7ed; padding: 12px 14px; }
-	.merge-question p { margin: 0; color: #7b4625; font-size: 13px; line-height: 1.5; }
-	.merge-actions { display: flex; gap: 8px; flex-shrink: 0; }
-	.status-board { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; margin-bottom: 14px; }
-	.status-board div { display: grid; gap: 2px; border: 1px solid var(--rule); border-radius: 7px; background: var(--surface); padding: 9px 10px; }
-	.status-board div.attention { border-color: #dfb294; background: #fff7ed; }
-	.status-board strong { font: 500 18px Fraunces, Georgia, serif; }
-	.status-board span { color: var(--ink-3); font-size: 9px; text-transform: uppercase; }
 	.history-panel { border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); margin-bottom: 22px; padding: 18px; }
 	.history-panel .section-head > p { max-width: 430px; margin: 0; color: var(--ink-3); font-size: 11px; text-align: right; }
 	.history-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
@@ -634,7 +676,6 @@
 	.confirm-dialog h2 { margin: 0; font: 500 25px Fraunces, Georgia, serif; }
 	.confirm-dialog > p:not(.eyebrow) { color: var(--ink-2); font-size: 13px; line-height: 1.5; }
 	.confirm-dialog > div { display: flex; justify-content: end; gap: 8px; margin-top: 18px; }
-	@media (max-width: 980px) { .status-board { grid-template-columns: repeat(4, 1fr); } }
 	@media (max-width: 840px) { .workspace { grid-template-columns: 1fr; } .path-list { position: static; } .path-list ol { grid-template-columns: repeat(2, 1fr); } }
-	@media (max-width: 640px) { .unit-page { padding: 28px 16px 60px; } .unit-head, .head-actions, .inspector-head, .section-head, .prepare, .lock-in-bar { align-items: stretch; flex-direction: column; } .lock-reason { text-align: left; } .history-panel .section-head > p { text-align: left; } .path-list ol, .two { grid-template-columns: 1fr; } .status-board { grid-template-columns: repeat(2, 1fr); } .inspector { padding: 18px; } .chat-edit form { flex-direction: column; } }
+	@media (max-width: 640px) { .unit-page { padding: 28px 16px 60px; } .unit-head, .head-actions, .inspector-head, .section-head, .prepare, .lock-in-bar { align-items: stretch; flex-direction: column; } .history-panel .section-head > p { text-align: left; } .path-list ol, .two { grid-template-columns: 1fr; } .inspector { padding: 18px; } .chat-edit form { flex-direction: column; } }
 </style>

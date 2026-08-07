@@ -7,7 +7,6 @@ from planning.models import (
     CanonicalPathLesson,
     CanonicalPathPlan,
     CanonicalPathScope,
-    PathPlan,
     PathPlanDraft,
 )
 
@@ -294,6 +293,54 @@ def assert_concept_slugs_unique(subject: str, plan: CanonicalPathPlan) -> dict[s
     return slugs
 
 
+def _token_set(text: str) -> set[str]:
+    return set(re.findall(r"[a-z0-9]+", text.casefold()))
+
+
+def _jaccard(left: set[str], right: set[str]) -> float:
+    if not left or not right:
+        return 0.0
+    union = left | right
+    return len(left & right) / len(union)
+
+
+def adjacent_merge_hints(lessons: list[object]) -> list[dict[str, object]]:
+    """Deterministic adjacent-pair merge suggestions (advisory only)."""
+    active = [lesson for lesson in lessons if not getattr(lesson, "skipped", False)]
+    hints: list[dict[str, object]] = []
+    for index in range(len(active) - 1):
+        lesson_a = active[index]
+        lesson_b = active[index + 1]
+        type_a = getattr(lesson_a, "primary_knowledge_type", None) or getattr(
+            lesson_a, "knowledge_type", None
+        )
+        type_b = getattr(lesson_b, "primary_knowledge_type", None) or getattr(
+            lesson_b, "knowledge_type", None
+        )
+        if type_a != type_b:
+            continue
+        must_a = _token_set("\n".join(getattr(lesson_a, "must_establish", None) or []))
+        must_b = _token_set("\n".join(getattr(lesson_b, "must_establish", None) or []))
+        obj_a = _token_set(getattr(lesson_a, "objective", "") or "")
+        obj_b = _token_set(getattr(lesson_b, "objective", "") or "")
+        if _jaccard(must_a, must_b) < 0.4 and _jaccard(obj_a, obj_b) < 0.5:
+            continue
+        id_a = getattr(lesson_a, "id", None) or getattr(lesson_a, "key", "")
+        id_b = getattr(lesson_b, "id", None) or getattr(lesson_b, "key", "")
+        hints.append(
+            {
+                "lesson_a": id_a,
+                "lesson_b": id_b,
+                "verdict": "review_suggested",
+                "reason": "These adjacent lessons overlap in what they establish.",
+                "merged_objective": None,
+                "diagnostic_cost": None,
+                "source": "deterministic",
+            }
+        )
+    return hints
+
+
 _PLAIN_VALIDATION_MESSAGES: dict[str, str] = {
     "duplicate_lesson_key": (
         "Two lessons used the same key. Try rephrasing so each lesson stays distinct."
@@ -327,119 +374,3 @@ _PLAIN_VALIDATION_MESSAGES: dict[str, str] = {
 def plain_validation_message(exc: PathValidationError) -> str:
     """Human-readable rendering of a `PathValidationError` for teacher-facing UI."""
     return _PLAIN_VALIDATION_MESSAGES.get(exc.code, str(exc))
-
-
-# ── Legacy helpers (retained for old fixtures / assumption APIs) ───────────
-
-
-def normalize_declared_external_prerequisites(plan: PathPlan) -> PathPlan:
-    """Legacy repair for old PathPlan shapes. Not used by the active planner."""
-    normalized = plan.model_copy(deep=True)
-    declared = {
-        value.casefold(): value
-        for value in [
-            *normalized.scope_contract.assumed_prerequisites,
-            *normalized.starting_knowledge,
-        ]
-    }
-    for lesson in normalized.lessons:
-        internal: list[str] = []
-        external = list(lesson.external_prerequisites)
-        external_folded = {value.casefold() for value in external}
-        for prerequisite in lesson.prerequisites:
-            canonical = declared.get(prerequisite.casefold())
-            if canonical is None:
-                internal.append(prerequisite)
-                continue
-            if canonical.casefold() not in external_folded:
-                external.append(canonical)
-                external_folded.add(canonical.casefold())
-        lesson.prerequisites = internal
-        lesson.external_prerequisites = external
-    return normalized
-
-
-def validate_path_plan(plan: PathPlan) -> None:
-    """Legacy PathPlan validator. Not used by the active planner."""
-    seen: set[str] = set()
-    prohibited = [term for term in plan.scope_contract.must_not_introduce if term.strip()]
-
-    for lesson in plan.lessons:
-        slug = lesson.concept_candidate.slug
-        if slug in seen:
-            _raise("duplicate_concept_slug", f"Duplicate concept candidate slug: {slug}")
-        for prerequisite in lesson.prerequisites:
-            if prerequisite not in seen:
-                _raise(
-                    "prerequisite_not_earlier",
-                    f"Prerequisite {prerequisite!r} for {slug!r} does not resolve to an earlier lesson",
-                )
-        inspected_text = "\n".join([lesson.objective, *lesson.must_establish]).casefold()
-        for term in prohibited:
-            if term.casefold() in inspected_text:
-                _raise(
-                    "must_not_introduce_violation",
-                    f"Lesson {slug!r} introduces prohibited term {term!r}",
-                )
-        seen.add(slug)
-
-    if plan.prerequisite_risks and plan.completeness.reaches_destination:
-        _raise(
-            "risks_require_unreachable",
-            "A path with prerequisite risks cannot claim to reach its destination",
-        )
-
-
-def open_assumptions(
-    *,
-    starting_knowledge: list[str] | None,
-    assumed_prerequisites: list[str] | None,
-    lessons: list[object],
-    prerequisite_risks: list[object] | None,
-) -> list[dict[str, str]]:
-    """Legacy open-assumption derivation. New paths always return []."""
-    declared = {
-        value.casefold()
-        for value in [*(assumed_prerequisites or []), *(starting_knowledge or [])]
-        if isinstance(value, str) and value.strip()
-    }
-    answered_as_risk: set[str] = set()
-    for risk in prerequisite_risks or []:
-        if isinstance(risk, dict):
-            missing = risk.get("missing")
-        else:
-            missing = getattr(risk, "missing", None)
-        if isinstance(missing, str) and missing.strip():
-            answered_as_risk.add(missing.casefold())
-
-    result: list[dict[str, str]] = []
-    seen: set[str] = set()
-    for lesson in lessons:
-        if getattr(lesson, "skipped", False):
-            continue
-        slug = getattr(lesson, "concept_slug", None)
-        if not isinstance(slug, str) or not slug:
-            candidate = getattr(lesson, "concept_candidate", None)
-            slug = getattr(candidate, "slug", None) if candidate is not None else None
-        if not isinstance(slug, str) or not slug:
-            continue
-        for prerequisite in getattr(lesson, "external_prerequisites", None) or []:
-            if not isinstance(prerequisite, str) or not prerequisite.strip():
-                continue
-            folded = prerequisite.casefold()
-            if folded in declared or folded in answered_as_risk or folded in seen:
-                continue
-            seen.add(folded)
-            result.append({"claimed": prerequisite, "needed_by": slug})
-    return result
-
-
-def assert_approvable(plan: PathPlan) -> None:
-    """Legacy approve gate on PathPlan JSON. Active approve uses DB graph."""
-    validate_path_plan(plan)
-    if plan.prerequisite_risks or not plan.completeness.reaches_destination:
-        raise PathApprovalBlocked(
-            "Path approval blocked: prerequisite risks prevent reaching the destination"
-        )
-    if not plan.completeness.forward_verified:
-        raise PathApprovalBlocked("Path approval blocked: forward verification is incomplete")

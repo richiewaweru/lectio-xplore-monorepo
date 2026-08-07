@@ -12,7 +12,7 @@ from core.database.models import PathLessonModel, UserModel
 from core.dependencies import get_async_session
 from core.entities.user import User
 from planning.models import UnitCreate
-from tests.planning.path_helpers import load_canonical_plan, load_legacy_path_plan
+from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 from planning.service import approve_path, create_unit, persist_path_plan
 
 
@@ -61,7 +61,6 @@ def test_phase5_unit_and_path_routes_are_registered() -> None:
         ("/api/v1/units/{unit_id}/path:plan", "POST"),
         ("/api/v1/units/{unit_id}/path:replan", "POST"),
         ("/api/v1/units/{unit_id}/path:approve", "POST"),
-        ("/api/v1/units/{unit_id}/path/assumptions/resolve", "POST"),
         ("/api/v1/units/{unit_id}/path", "GET"),
         ("/api/v1/units/{unit_id}/path/versions", "GET"),
         ("/api/v1/units/{unit_id}/path/versions/{version_id}", "GET"),
@@ -113,20 +112,12 @@ def test_path_planner_openapi_has_no_count_or_duration_input() -> None:
 
 async def test_canonical_path_approval_succeeds_over_http(db_session_factory) -> None:
     plan = load_canonical_plan("grade8-unreachable-destination-path.json")
-    legacy = load_legacy_path_plan("grade8-unreachable-destination-path.json")
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
-            request=UnitCreate(
-                title=legacy.unit or "Unreachable",
-                topic=legacy.unit or "Unreachable",
-                subject=legacy.subject or "Science",
-                grade_level=legacy.grade_level or "Grade 8",
-                destination_objective=legacy.destination_objective or "Destination",
-                starting_knowledge=legacy.starting_knowledge,
-            ),
+            request=unit_create_from_fixture("grade8-unreachable-destination-path.json"),
         )
         version = await persist_path_plan(session, unit=unit, plan=plan)
         unit_id = unit.id
@@ -149,20 +140,12 @@ async def test_canonical_path_approval_succeeds_over_http(db_session_factory) ->
 
 async def test_unprepared_lesson_status_is_explicit_over_http(db_session_factory) -> None:
     plan = load_canonical_plan("grade4-photosynthesis-path.json")
-    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
-            request=UnitCreate(
-                title=legacy.unit or "Photosynthesis",
-                topic=legacy.unit or "Photosynthesis",
-                subject=legacy.subject or "Science",
-                grade_level=legacy.grade_level or "Grade 4",
-                destination_objective=legacy.destination_objective or "Destination",
-                starting_knowledge=legacy.starting_knowledge,
-            ),
+            request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
         )
         version = await persist_path_plan(session, unit=unit, plan=plan)
         await approve_path(session, version)
@@ -200,20 +183,12 @@ async def test_unprepared_lesson_status_is_explicit_over_http(db_session_factory
 
 async def test_path_edit_revokes_approval_before_preparation(db_session_factory) -> None:
     plan = load_canonical_plan("grade4-photosynthesis-path.json")
-    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
-            request=UnitCreate(
-                title=legacy.unit or "Photosynthesis",
-                topic=legacy.unit or "Photosynthesis",
-                subject=legacy.subject or "Science",
-                grade_level=legacy.grade_level or "Grade 4",
-                destination_objective=legacy.destination_objective or "Destination",
-                starting_knowledge=legacy.starting_knowledge,
-            ),
+            request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
         )
         version = await persist_path_plan(session, unit=unit, plan=plan)
         await approve_path(session, version)
@@ -260,20 +235,12 @@ async def test_path_edit_revokes_approval_before_preparation(db_session_factory)
 
 async def test_history_restore_status_and_stale_edit_are_explicit(db_session_factory) -> None:
     plan = load_canonical_plan("grade4-photosynthesis-path.json")
-    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
-            request=UnitCreate(
-                title=legacy.unit or "Photosynthesis",
-                topic=legacy.unit or "Photosynthesis",
-                subject=legacy.subject or "Science",
-                grade_level=legacy.grade_level or "Grade 4",
-                destination_objective=legacy.destination_objective or "Destination",
-                starting_knowledge=legacy.starting_knowledge,
-            ),
+            request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
         )
         first = await persist_path_plan(session, unit=unit, plan=plan)
         second = await persist_path_plan(session, unit=unit, plan=plan, prior_version=first)
@@ -363,20 +330,12 @@ async def test_schedule_and_groups_reject_cross_user_access(db_session_factory) 
 
 async def test_shape_deviation_requires_explicit_approval_over_http(db_session_factory) -> None:
     plan = load_canonical_plan("grade4-photosynthesis-path.json")
-    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
-            request=UnitCreate(
-                title=legacy.unit or "Photosynthesis",
-                topic=legacy.unit or "Photosynthesis",
-                subject=legacy.subject or "Science",
-                grade_level=legacy.grade_level or "Grade 4",
-                destination_objective=legacy.destination_objective or "Destination",
-                starting_knowledge=legacy.starting_knowledge,
-            ),
+            request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
         )
         version = await persist_path_plan(session, unit=unit, plan=plan)
         await approve_path(session, version)
@@ -447,20 +406,12 @@ async def test_shape_deviation_requires_explicit_approval_over_http(db_session_f
 
 async def test_schedule_and_groups_round_trip_over_http(db_session_factory) -> None:
     plan = load_canonical_plan("grade4-photosynthesis-path.json")
-    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
-            request=UnitCreate(
-                title=legacy.unit or "Photosynthesis",
-                topic=legacy.unit or "Photosynthesis",
-                subject=legacy.subject or "Science",
-                grade_level=legacy.grade_level or "Grade 4",
-                destination_objective=legacy.destination_objective or "Destination",
-                starting_knowledge=legacy.starting_knowledge,
-            ),
+            request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
         )
         version = await persist_path_plan(session, unit=unit, plan=plan)
         await approve_path(session, version)
@@ -545,18 +496,12 @@ async def test_schedule_and_groups_round_trip_over_http(db_session_factory) -> N
 
 async def test_lesson_actual_round_trip_is_revision_guarded_over_http(db_session_factory) -> None:
     plan = load_canonical_plan("grade4-photosynthesis-path.json")
-    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
-            request=UnitCreate(
-                title=legacy.unit or "Photosynthesis", topic=legacy.unit or "Photosynthesis",
-                subject=legacy.subject or "Science", grade_level=legacy.grade_level or "Grade 4",
-                destination_objective=legacy.destination_objective or "Destination",
-                starting_knowledge=legacy.starting_knowledge,
-            ),
+            request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
         )
         version = await persist_path_plan(session, unit=unit, plan=plan)
         await approve_path(session, version)
@@ -598,20 +543,12 @@ async def test_lesson_actual_round_trip_is_revision_guarded_over_http(db_session
 
 async def test_new_paths_expose_empty_open_assumptions(db_session_factory) -> None:
     plan = load_canonical_plan("grade4-photosynthesis-path.json")
-    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
-            request=UnitCreate(
-                title=legacy.unit or "Photosynthesis",
-                topic=legacy.unit or "Photosynthesis",
-                subject=legacy.subject or "Science",
-                grade_level=legacy.grade_level or "Grade 4",
-                destination_objective=legacy.destination_objective or "Destination",
-                starting_knowledge=legacy.starting_knowledge,
-            ),
+            request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
         )
         version = await persist_path_plan(session, unit=unit, plan=plan)
         unit_id = unit.id

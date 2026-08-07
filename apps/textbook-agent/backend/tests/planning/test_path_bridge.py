@@ -33,7 +33,7 @@ from planning.outcomes import record_lesson_actual
 from planning.schedule import write_groups
 from planning.service import approve_path, create_unit, persist_path_plan
 from planning.shapes import decide_shape_deviation, request_shape_deviation
-from tests.planning.path_helpers import load_canonical_plan, load_legacy_path_plan
+from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 from v3_blueprint.planning.objective_ownership import hash_path_objective
 from v3_blueprint.planning.persistence import load_chunked_state
 
@@ -253,18 +253,10 @@ async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None
     user = UserModel(id="bridge-owner", email="bridge@example.invalid", name="Bridge")
     db_session.add(user)
     plan = load_canonical_plan("grade4-photosynthesis-path.json")
-    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     unit = await create_unit(
         db_session,
         owner_id=user.id,
-        request=UnitCreate(
-            title=legacy.unit or "Photosynthesis",
-            topic=legacy.unit or "Photosynthesis",
-            subject=legacy.subject or "Science",
-            grade_level=legacy.grade_level or "Grade 4",
-            destination_objective=legacy.destination_objective or "Destination",
-            starting_knowledge=legacy.starting_knowledge,
-        ),
+        request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
     )
     version = await persist_path_plan(db_session, unit=unit, plan=plan)
     await approve_path(db_session, version)
@@ -382,15 +374,10 @@ async def test_later_preparation_receives_actuals_as_explicit_advisory_context(d
     user = UserModel(id="bridge-actual", email="bridge-actual@example.invalid", name="Actual")
     db_session.add(user)
     plan = load_canonical_plan("grade4-photosynthesis-path.json")
-    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     unit = await create_unit(
         db_session,
         owner_id=user.id,
-        request=UnitCreate(
-            title="Photosynthesis", topic="Photosynthesis", subject="Science",
-            grade_level="Grade 4", destination_objective=legacy.destination_objective or "Destination",
-            starting_knowledge=legacy.starting_knowledge,
-        ),
+        request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
     )
     version = await persist_path_plan(db_session, unit=unit, plan=plan)
     await approve_path(db_session, version)
@@ -454,18 +441,10 @@ async def test_approved_shape_deviation_survives_safe_regeneration(db_session) -
     user = UserModel(id="bridge-shape", email="bridge-shape@example.invalid", name="Shape")
     db_session.add(user)
     plan = load_canonical_plan("grade4-photosynthesis-path.json")
-    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     unit = await create_unit(
         db_session,
         owner_id=user.id,
-        request=UnitCreate(
-            title="Photosynthesis",
-            topic="Photosynthesis",
-            subject="Science",
-            grade_level="Grade 4",
-            destination_objective=legacy.destination_objective or "Destination",
-            starting_knowledge=legacy.starting_knowledge,
-        ),
+        request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
     )
     version = await persist_path_plan(db_session, unit=unit, plan=plan)
     await approve_path(db_session, version)
@@ -534,18 +513,10 @@ async def test_prepare_bridge_uses_persisted_groups_and_one_shared_pack(db_sessi
     user = UserModel(id="bridge-groups", email="bridge-groups@example.invalid", name="Groups")
     db_session.add(user)
     plan = load_canonical_plan("grade4-photosynthesis-path.json")
-    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     unit = await create_unit(
         db_session,
         owner_id=user.id,
-        request=UnitCreate(
-            title=legacy.unit or "Photosynthesis",
-            topic=legacy.unit or "Photosynthesis",
-            subject=legacy.subject or "Science",
-            grade_level=legacy.grade_level or "Grade 4",
-            destination_objective=legacy.destination_objective or "Destination",
-            starting_knowledge=legacy.starting_knowledge,
-        ),
+        request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
     )
     version = await persist_path_plan(db_session, unit=unit, plan=plan)
     await approve_path(db_session, version)
@@ -653,18 +624,10 @@ async def test_prepare_bridge_forces_approved_objective_over_rewrite(
     user = UserModel(id="bridge-rewrite", email="rewrite@example.invalid", name="Rewrite")
     db_session.add(user)
     plan = load_canonical_plan("grade4-photosynthesis-path.json")
-    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     unit = await create_unit(
         db_session,
         owner_id=user.id,
-        request=UnitCreate(
-            title="Photosynthesis",
-            topic="Photosynthesis",
-            subject="Science",
-            grade_level="Grade 4",
-            destination_objective=legacy.destination_objective or "Destination",
-            starting_knowledge=legacy.starting_knowledge,
-        ),
+        request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
     )
     version = await persist_path_plan(db_session, unit=unit, plan=plan)
     await approve_path(db_session, version)
@@ -724,18 +687,10 @@ async def test_prepare_bridge_routes_factual_to_native_under_scope_all(
     user = UserModel(id="bridge-factual-native", email="factual@example.invalid", name="Factual")
     db_session.add(user)
     plan = load_canonical_plan("grade4-photosynthesis-path.json")
-    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     unit = await create_unit(
         db_session,
         owner_id=user.id,
-        request=UnitCreate(
-            title="Photosynthesis",
-            topic="Photosynthesis",
-            subject="Science",
-            grade_level="Grade 4",
-            destination_objective=legacy.destination_objective or "Destination",
-            starting_knowledge=legacy.starting_knowledge,
-        ),
+        request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
     )
     version = await persist_path_plan(db_session, unit=unit, plan=plan)
     await approve_path(db_session, version)
@@ -786,18 +741,10 @@ async def test_native_sections_take_blocks_only_from_page_block_plans(
     )
     db_session.add(user)
     plan = load_canonical_plan("grade4-photosynthesis-path.json")
-    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     unit = await create_unit(
         db_session,
         owner_id=user.id,
-        request=UnitCreate(
-            title="Photosynthesis",
-            topic="Photosynthesis",
-            subject="Science",
-            grade_level="Grade 4",
-            destination_objective=legacy.destination_objective or "Destination",
-            starting_knowledge=legacy.starting_knowledge,
-        ),
+        request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
     )
     version = await persist_path_plan(db_session, unit=unit, plan=plan)
     await approve_path(db_session, version)

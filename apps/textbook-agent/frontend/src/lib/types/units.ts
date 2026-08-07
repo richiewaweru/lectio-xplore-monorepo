@@ -101,13 +101,9 @@ export interface MergeCriticResult {
 	lesson_b: string;
 	verdict: MergeVerdict;
 	reason: string;
-	merged_objective: string | null;
-	diagnostic_cost: string | null;
-}
-
-export interface OpenAssumption {
-	claimed: string;
-	needed_by: string;
+	merged_objective?: string | null;
+	diagnostic_cost?: string | null;
+	source?: string;
 }
 
 export interface UnitPath {
@@ -117,12 +113,11 @@ export interface UnitPath {
 	revision: number;
 	status: string;
 	generated_by: string;
-	merge_critic_results: MergeCriticResult[];
-	prerequisite_risks: Record<string, unknown>[];
+	merge_critic_results?: MergeCriticResult[];
+	prerequisite_risks?: Record<string, unknown>[];
 	forward_verified: boolean;
 	reaches_destination: boolean;
 	completeness_note: string | null;
-	open_assumptions: OpenAssumption[];
 	approved_at: string | null;
 	created_at: string;
 	lessons: PathLesson[];

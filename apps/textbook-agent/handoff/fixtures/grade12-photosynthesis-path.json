@@ -1,124 +1,111 @@
 {
-  "unit": "Photosynthesis",
-  "subject": "Biology",
-  "grade_level": "Grade 12",
-  "destination_objective": "Explain how light energy is converted to chemical energy and used to fix carbon into carbohydrate.",
-  "starting_knowledge": ["cell and organelle structure", "enzymes lower activation energy", "the concept of a concentration gradient"],
-  "scope_contract": {
-    "must_establish": [
+  "scope": {
+    "must_cover": [
       "chloroplast structure relates to function",
       "pigments absorb specific wavelengths",
       "light-dependent reactions generate ATP and reduced NADP",
       "the Calvin cycle fixes carbon using those products",
       "rate is limited by the factor in shortest supply"
     ],
-    "may_include": ["chromatography evidence for pigment separation"],
-    "must_not_introduce": ["C4 pathway", "CAM pathway", "photorespiration", "quantum yield calculations"],
-    "assumed_prerequisites": ["cell and organelle structure", "enzymes lower activation energy", "the concept of a concentration gradient"],
-    "terminology": ["thylakoid", "stroma", "photosystem", "ATP", "reduced NADP", "RuBP", "GP", "TP"],
-    "notation": "Use reduced NADP rather than NADPH throughout."
+    "do_not_cover": [
+      "C4 pathway",
+      "CAM pathway",
+      "photorespiration",
+      "quantum yield calculations"
+    ]
   },
-  "modules": [
+  "lessons": [
     {
-      "title": "Structure and light capture",
-      "lessons": [
-        {
-          "concept_candidate": { "slug": "photosynthesis.chloroplast-structure", "title": "Chloroplast structure and function" },
-          "objective": "Relate the internal structure of a chloroplast to the two stages it houses.",
-          "prerequisites": [],
-          "external_prerequisites": ["cell and organelle structure"],
-          "must_establish": ["thylakoid membranes host the light-dependent stage", "the stroma hosts carbon fixation"],
-          "exclusions": ["chloroplast genome", "endosymbiotic theory"],
-          "primary_knowledge_type": "conceptual",
-          "secondary_demand": null,
-          "merge_warning": false
-        },
-        {
-          "concept_candidate": { "slug": "photosynthesis.pigment-absorption", "title": "Pigments and wavelength" },
-          "objective": "Explain why a plant appears green given which wavelengths its pigments absorb.",
-          "prerequisites": ["photosynthesis.chloroplast-structure"],
-          "external_prerequisites": [],
-          "must_establish": ["different pigments absorb different wavelengths", "reflected light determines apparent colour"],
-          "exclusions": ["absorption spectra as quantitative data", "action spectra"],
-          "primary_knowledge_type": "conceptual",
-          "secondary_demand": null,
-          "merge_warning": false
-        }
-      ]
+      "key": "L1",
+      "title": "Chloroplast structure and function",
+      "objective": "Relate the internal structure of a chloroplast to the two stages it houses.",
+      "requires": [],
+      "must_establish": [
+        "thylakoid membranes host the light-dependent stage",
+        "the stroma hosts carbon fixation"
+      ],
+      "knowledge_type": "conceptual"
     },
     {
-      "title": "Light-dependent reactions",
-      "lessons": [
-        {
-          "concept_candidate": { "slug": "photosynthesis.electron-transport", "title": "Electron transport" },
-          "objective": "Explain how excited electrons move along the electron transport chain and what replaces them.",
-          "prerequisites": ["photosynthesis.chloroplast-structure", "photosynthesis.pigment-absorption"],
-          "external_prerequisites": [],
-          "must_establish": ["photolysis of water replaces lost electrons", "oxygen is a by-product of photolysis"],
-          "exclusions": ["cyclic photophosphorylation", "specific carrier names"],
-          "primary_knowledge_type": "conceptual",
-          "secondary_demand": null,
-          "merge_warning": false
-        },
-        {
-          "concept_candidate": { "slug": "photosynthesis.chemiosmosis", "title": "ATP synthesis by chemiosmosis" },
-          "objective": "Explain how a proton gradient across the thylakoid membrane drives ATP synthesis.",
-          "prerequisites": ["photosynthesis.electron-transport"],
-          "external_prerequisites": ["the concept of a concentration gradient"],
-          "must_establish": ["a proton gradient stores energy", "ATP synthase couples proton flow to ATP formation"],
-          "exclusions": ["comparison with mitochondrial chemiosmosis"],
-          "primary_knowledge_type": "conceptual",
-          "secondary_demand": null,
-          "merge_warning": false
-        }
-      ]
+      "key": "L2",
+      "title": "Pigments and wavelength",
+      "objective": "Explain why a plant appears green given which wavelengths its pigments absorb.",
+      "requires": [
+        "L1"
+      ],
+      "must_establish": [
+        "different pigments absorb different wavelengths",
+        "reflected light determines apparent colour"
+      ],
+      "knowledge_type": "conceptual"
     },
     {
-      "title": "Carbon fixation",
-      "lessons": [
-        {
-          "concept_candidate": { "slug": "photosynthesis.carbon-fixation", "title": "Fixing carbon dioxide" },
-          "objective": "Explain how carbon dioxide is fixed onto RuBP to produce GP.",
-          "prerequisites": ["photosynthesis.chloroplast-structure"],
-          "external_prerequisites": ["enzymes lower activation energy"],
-          "must_establish": ["RuBP accepts carbon dioxide", "GP is the first product"],
-          "exclusions": ["rubisco kinetics", "C4 pathway"],
-          "primary_knowledge_type": "conceptual",
-          "secondary_demand": null,
-          "merge_warning": false
-        },
-        {
-          "concept_candidate": { "slug": "photosynthesis.calvin-reduction", "title": "Reduction and regeneration" },
-          "objective": "Explain how ATP and reduced NADP convert GP to TP and regenerate RuBP.",
-          "prerequisites": ["photosynthesis.carbon-fixation", "photosynthesis.chemiosmosis"],
-          "external_prerequisites": [],
-          "must_establish": ["the cycle consumes the products of the light-dependent stage", "RuBP must be regenerated for the cycle to continue"],
-          "exclusions": ["turn-count stoichiometry", "photorespiration"],
-          "primary_knowledge_type": "conceptual",
-          "secondary_demand": "procedural",
-          "merge_warning": false
-        },
-        {
-          "concept_candidate": { "slug": "photosynthesis.limiting-factors", "title": "Limiting factors" },
-          "objective": "Predict how photosynthetic rate responds when light, carbon dioxide or temperature is varied.",
-          "prerequisites": ["photosynthesis.chemiosmosis", "photosynthesis.calvin-reduction"],
-          "external_prerequisites": ["enzymes lower activation energy"],
-          "must_establish": ["rate is limited by the factor in shortest supply", "temperature acts through enzyme activity"],
-          "exclusions": ["quantitative rate calculations", "compensation point"],
-          "primary_knowledge_type": "conceptual",
-          "secondary_demand": null,
-          "merge_warning": false
-        }
-      ]
-    }
-  ],
-  "adjacent_merge_reviews": [
+      "key": "L3",
+      "title": "Electron transport",
+      "objective": "Explain how excited electrons move along the electron transport chain and what replaces them.",
+      "requires": [
+        "L1",
+        "L2"
+      ],
+      "must_establish": [
+        "photolysis of water replaces lost electrons",
+        "oxygen is a by-product of photolysis"
+      ],
+      "knowledge_type": "conceptual"
+    },
     {
-      "lesson_a": "photosynthesis.carbon-fixation",
-      "lesson_b": "photosynthesis.calvin-reduction",
-      "reason": "Often taught as one cycle; a critic should judge whether separating them preserves useful diagnostic resolution."
+      "key": "L4",
+      "title": "ATP synthesis by chemiosmosis",
+      "objective": "Explain how a proton gradient across the thylakoid membrane drives ATP synthesis.",
+      "requires": [
+        "L3"
+      ],
+      "must_establish": [
+        "a proton gradient stores energy",
+        "ATP synthase couples proton flow to ATP formation"
+      ],
+      "knowledge_type": "conceptual"
+    },
+    {
+      "key": "L5",
+      "title": "Fixing carbon dioxide",
+      "objective": "Explain how carbon dioxide is fixed onto RuBP to produce GP.",
+      "requires": [
+        "L1"
+      ],
+      "must_establish": [
+        "RuBP accepts carbon dioxide",
+        "GP is the first product"
+      ],
+      "knowledge_type": "conceptual"
+    },
+    {
+      "key": "L6",
+      "title": "Reduction and regeneration",
+      "objective": "Explain how ATP and reduced NADP convert GP to TP and regenerate RuBP.",
+      "requires": [
+        "L5",
+        "L4"
+      ],
+      "must_establish": [
+        "the cycle consumes the products of the light-dependent stage",
+        "RuBP must be regenerated for the cycle to continue"
+      ],
+      "knowledge_type": "conceptual"
+    },
+    {
+      "key": "L7",
+      "title": "Limiting factors",
+      "objective": "Predict how photosynthetic rate responds when light, carbon dioxide or temperature is varied.",
+      "requires": [
+        "L4",
+        "L6"
+      ],
+      "must_establish": [
+        "rate is limited by the factor in shortest supply",
+        "temperature acts through enzyme activity"
+      ],
+      "knowledge_type": "conceptual"
     }
-  ],
-  "prerequisite_risks": [],
-  "completeness": { "forward_verified": true, "reaches_destination": true, "note": null }
+  ]
 }

@@ -33,7 +33,7 @@ from planning.service import (
     create_unit,
     persist_path_plan,
 )
-from tests.planning.path_helpers import load_canonical_plan, load_legacy_path_plan
+from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 
 
 FIXTURE = (
@@ -56,18 +56,10 @@ def _period_input(payload: dict) -> TeachingPeriodInput:
 async def _unit_with_approved_path(db_session, *, owner_id: str, email: str):
     db_session.add(UserModel(id=owner_id, email=email, name=owner_id))
     plan = load_canonical_plan("grade4-photosynthesis-path.json")
-    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     unit = await create_unit(
         db_session,
         owner_id=owner_id,
-        request=UnitCreate(
-            title=legacy.unit or "Photosynthesis",
-            topic=legacy.unit or "Photosynthesis",
-            subject=legacy.subject or "Science",
-            grade_level=legacy.grade_level or "Grade 4",
-            destination_objective=legacy.destination_objective or "Destination",
-            starting_knowledge=legacy.starting_knowledge,
-        ),
+        request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
     )
     version = await persist_path_plan(db_session, unit=unit, plan=plan)
     await approve_path(db_session, version)

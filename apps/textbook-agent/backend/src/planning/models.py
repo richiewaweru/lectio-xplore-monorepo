@@ -60,79 +60,11 @@ class CanonicalPathPlan(StrictModel):
     lessons: list[CanonicalPathLesson] = Field(min_length=1)
 
 
-# ── Legacy PathPlan (manual merge/split + old fixtures; not active planner) ─
-
-
-class ScopeContract(StrictModel):
-    must_establish: list[str] = Field(min_length=1)
-    may_include: list[str] = Field(default_factory=list)
-    must_not_introduce: list[str] = Field(min_length=1)
-    assumed_prerequisites: list[str] = Field(default_factory=list)
-    terminology: list[str] = Field(default_factory=list)
-    notation: str | None = None
-
-
-class ConceptCandidate(StrictModel):
-    slug: str = Field(pattern=r"^[a-z0-9.-]+$")
-    title: str
-
-
-class PlannedLesson(StrictModel):
-    concept_candidate: ConceptCandidate
+class CanonicalLessonPart(StrictModel):
+    title: str = Field(min_length=1)
     objective: str = Field(min_length=3)
-    prerequisites: list[str] = Field(default_factory=list)
-    external_prerequisites: list[str] = Field(default_factory=list)
     must_establish: list[str] = Field(min_length=1)
-    exclusions: list[str] = Field(default_factory=list)
-    primary_knowledge_type: KnowledgeType
-    secondary_demand: KnowledgeType | None = None
-    merge_warning: bool = False
-
-
-class PathModule(StrictModel):
-    title: str
-    lessons: list[PlannedLesson] = Field(min_length=1)
-
-
-class AdjacentMergeReview(StrictModel):
-    lesson_a: str
-    lesson_b: str
-    reason: str
-
-
-class PrerequisiteRisk(StrictModel):
-    missing: str
-    needed_by: str
-    note: str
-
-
-class PathCompleteness(StrictModel):
-    forward_verified: bool
-    reaches_destination: bool
-    note: str | None = None
-
-
-class PathPlan(StrictModel):
-    """Legacy full planner shape — retained for merge critic / old fixtures only."""
-
-    unit: str | None = None
-    subject: str | None = None
-    grade_level: str | None = None
-    destination_objective: str | None = None
-    starting_knowledge: list[str] = Field(default_factory=list)
-    scope_contract: ScopeContract
-    modules: list[PathModule] = Field(min_length=1)
-    adjacent_merge_reviews: list[AdjacentMergeReview] = Field(default_factory=list)
-    prerequisite_risks: list[PrerequisiteRisk] = Field(default_factory=list)
-    completeness: PathCompleteness
-
-    @property
-    def lessons(self) -> list[PlannedLesson]:
-        return [lesson for module in self.modules for lesson in module.lessons]
-
-    @property
-    def concept_slugs(self) -> set[str]:
-        return {lesson.concept_candidate.slug for lesson in self.lessons}
+    knowledge_type: KnowledgeType
 
 
 class PathPlannerRequest(StrictModel):
@@ -202,17 +134,8 @@ class GuardedPathLessonPatch(PathLessonPatch):
     lesson_revision: int = Field(ge=1)
 
 
-class LessonPart(StrictModel):
-    concept_candidate: ConceptCandidate
-    objective: str = Field(min_length=3)
-    must_establish: list[str] = Field(min_length=1)
-    exclusions: list[str] = Field(default_factory=list)
-    primary_knowledge_type: KnowledgeType
-    secondary_demand: KnowledgeType | None = None
-
-
 class SplitPathLessonRequest(StrictModel):
-    parts: list[LessonPart] = Field(min_length=2)
+    parts: list[CanonicalLessonPart] = Field(min_length=2)
 
 
 class GuardedSplitPathLessonRequest(SplitPathLessonRequest):
@@ -223,7 +146,7 @@ class GuardedSplitPathLessonRequest(SplitPathLessonRequest):
 
 class MergePathLessonsRequest(StrictModel):
     lesson_ids: list[str] = Field(min_length=2)
-    merged: LessonPart
+    merged: CanonicalLessonPart
 
 
 class GuardedMergePathLessonsRequest(MergePathLessonsRequest):
@@ -246,11 +169,6 @@ class PathVersionMutationRequest(StrictModel):
     path_revision: int = Field(ge=1)
 
 
-class ResolvePathAssumptionRequest(PathVersionMutationRequest):
-    claimed: str = Field(min_length=1)
-    decision: Literal["known", "teach"]
-
-
 class PathLessonMutationRequest(PathVersionMutationRequest):
     lesson_revision: int = Field(ge=1)
 
@@ -261,6 +179,15 @@ class RestorePathVersionRequest(PathVersionMutationRequest):
 
 class PathChatEditRequest(PathVersionMutationRequest):
     message: str = Field(min_length=1, max_length=2000)
+
+
+class InsertFoundationLessonRequest(PathVersionMutationRequest):
+    before_lesson_id: str
+    lesson: CanonicalLessonPart
+
+
+class MarkStartingKnowledgeRequest(PathVersionMutationRequest):
+    knowledge: str = Field(min_length=1)
 
 
 class GroupVoice(StrictModel):
