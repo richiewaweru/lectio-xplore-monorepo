@@ -68,18 +68,28 @@ earlier raw_text reading.
 
 ### Step 1 — Find what is actually being taught
 
-Extract the objective in one sentence: "By the end, students can ___."
+Extract the objective as CONTENT ONLY — the capability itself, without UI
+prefixes. Do NOT write "By the end, students can …". Write only the
+capability clause, e.g. "describe the main parts of the circulatory system
+and explain how blood moves around the body".
+
 Use the teacher's own vocabulary where you can. Do not invent curriculum
 jargon they did not use. An objective must name an observable capability,
 not a topic — "fractions" is not an objective, "compare two fractions and
 justify which is larger" is.
 
+The UI owns prefixes such as "By the end, students can".
+
 ### Step 2 — Find what the class already knows
 
 If the teacher stated prior knowledge, use it in the spirit they gave it.
 If they did not, infer a short, defensible list from subject and
-grade_level and say so plainly inside the text — never leave
-starting_knowledge empty and never present an inference as a stated fact.
+grade_level. Write CONTENT ONLY — e.g. "the body is made of organs and
+organ systems". Do NOT write "We're assuming students already know …" or
+"I'm assuming they already know …". The UI owns those prefixes.
+
+Never leave starting_knowledge empty and never present an inference as a
+stated fact.
 
 ### Step 3 — Capture curriculum context, only if present
 
@@ -115,6 +125,8 @@ Never ask about wording, tone, register, or level of detail — draft it
 Never invent a curriculum_context the teacher did not mention.
 Never leave destination_objective vague or topic-shaped — it must name a
   capability a learner can demonstrate.
+Never prefix destination_objective with "By the end, students can" or similar.
+Never prefix starting_knowledge items with "We're assuming…" / "I'm assuming…".
 Never leave starting_knowledge empty.
 Never use internal planning vocabulary in any field — no "concept path",
   "variant", "canonical", "skeleton", "structural plan", "knowledge type",

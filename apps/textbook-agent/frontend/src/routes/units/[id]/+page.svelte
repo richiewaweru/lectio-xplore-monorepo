@@ -8,19 +8,16 @@
 		getPreparedLessonStatus,
 		getHistoricalPath,
 		getPathHistory,
-		getPathStatus,
 		getTeachingSchedule,
 		getLessonShape,
 		getUnit,
 		getUnitGroups,
 		getUnitPath,
 		listUnitResources,
-		mergePathLessons,
 		patchPathLesson,
 		planUnitPath,
 		preparePathLesson,
 		regeneratePathLesson,
-		resolvePathAssumption,
 		restorePathVersion
 	} from '$lib/api/units';
 	import TeachingSchedulePanel from '$lib/components/units/TeachingSchedulePanel.svelte';
@@ -31,10 +28,7 @@
 	import ResourceComposerPanel from '$lib/components/units/ResourceComposerPanel.svelte';
 	import type {
 		LessonMode,
-		MergeCriticResult,
-		OpenAssumption,
 		PathLesson,
-		PathStatusAggregate,
 		PathVersionSummary,
 		PreparedLessonStatus,
 		ResourceComposition,
@@ -52,18 +46,22 @@
 	let loading = $state(true);
 	let busy = $state<string | null>(null);
 	let error = $state<string | null>(null);
+	let tabError = $state<string | null>(null);
 	let lessonMode = $state<LessonMode>('first_exposure');
 	let shape = $state<LessonShapePreview | null>(null);
 	let misconceptionCount = $state(1);
 	let preparation = $state<PreparedLessonStatus | null>(null);
 	let history = $state<PathVersionSummary[]>([]);
-	let aggregate = $state<PathStatusAggregate | null>(null);
+	let historyLoaded = $state(false);
 	let viewedVersion = $state<UnitPath | null>(null);
 	let schedule = $state<TeachingSchedule | null>(null);
+	let scheduleLoaded = $state(false);
 	let groups = $state<UnitGroups | null>(null);
+	let groupsLoaded = $state(false);
 	let compositions = $state<ResourceComposition[]>([]);
+	let resourcesLoaded = $state(false);
 	let selectedGroupIds = $state<string[]>([]);
-	let activeView = $state<'path' | 'schedule' | 'groups' | 'results' | 'resources'>('path');
+	let activeView = $state<'path' | 'schedule' | 'groups' | 'results' | 'resources' | 'history'>('path');
 	let restoreReason = $state('Restore this version as a new editable draft.');
 	let pendingAction = $state<{ label: string; description: string; run: () => Promise<void> } | null>(null);
 	let regenerationReason = $state('The lesson changed after preparation.');
@@ -71,53 +69,20 @@
 	let editObjective = $state('');
 	let editMustEstablish = $state('');
 	let editExclusions = $state('');
-	let dismissedMergeKeys = $state<Set<string>>(new Set());
 	let chatMessage = $state('');
 	let chatBusy = $state(false);
 	let chatUnavailable = $state(false);
 	let chatNote = $state<string | null>(null);
 	let showVersions = $state(false);
+	let showShapeDebug = $state(false);
 	const debugMode = import.meta.env.DEV;
 
 	const selected = $derived(path?.lessons.find((lesson) => lesson.id === selectedId) ?? null);
-	const openAssumptions = $derived(path?.open_assumptions ?? []);
-	const canLockIn = $derived(
-		Boolean(path?.reaches_destination) &&
-			(path?.prerequisite_risks.length ?? 0) === 0 &&
-			openAssumptions.length === 0
-	);
-	const lockBlockReason = $derived.by(() => {
-		if (!path) return '';
-		if (openAssumptions.length > 0) {
-			return 'Confirm what the class already knows before locking it in.';
-		}
-		if (path.prerequisite_risks.length > 0) return "Something in this route relies on knowledge that isn't taught yet — fix that before locking it in.";
-		if (!path.reaches_destination) return "This route doesn't reach the destination yet.";
-		return '';
-	});
-	const mergeQuestions = $derived.by(() => {
-		if (!path) return [] as Array<{ key: string; result: MergeCriticResult; lessonA: PathLesson; lessonB: PathLesson }>;
-		const bySlug = new Map(path.lessons.map((lesson) => [lesson.concept_slug, lesson]));
-		return path.merge_critic_results
-			.filter((result) => result.verdict === 'teacher_decision' || result.verdict === 'merge_suggested')
-			.map((result) => ({
-				key: `${result.lesson_a}|${result.lesson_b}`,
-				result,
-				lessonA: bySlug.get(result.lesson_a) ?? null,
-				lessonB: bySlug.get(result.lesson_b) ?? null
-			}))
-			.filter(
-				(entry): entry is { key: string; result: MergeCriticResult; lessonA: PathLesson; lessonB: PathLesson } =>
-					Boolean(entry.lessonA && entry.lessonB) && !dismissedMergeKeys.has(entry.key)
-			);
-	});
+	const canLockIn = $derived(Boolean(path && path.lessons.length > 0 && path.status !== 'approved'));
+	const planningFailed = $derived(Boolean(unit && !unit.active_path_version_id && !path));
 
 	function lines(value: string): string[] {
 		return value.split('\n').map((item) => item.trim()).filter(Boolean);
-	}
-
-	function slug(value: string): string {
-		return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.|\.$/g, '') || 'teacher.part';
 	}
 
 	function plannerInput(current: Unit) {
@@ -128,12 +93,7 @@
 			destination_objective: current.destination_objective,
 			starting_knowledge: current.starting_knowledge,
 			curriculum_context: current.curriculum_context,
-			must_include: [],
-			must_avoid: [],
-			terminology: [],
-			notation: null,
-			assessment_context: null,
-			known_difficulties: []
+			class_notes: current.class_notes
 		};
 	}
 
@@ -143,9 +103,6 @@
 		for (const prerequisiteId of lesson.prerequisites) {
 			const prerequisite = path.lessons.find((candidate) => candidate.id === prerequisiteId);
 			if (prerequisite) sentences.push(`needs lesson ${prerequisite.position + 1}`);
-		}
-		for (const external of lesson.external_prerequisites) {
-			sentences.push(external);
 		}
 		return sentences;
 	}
@@ -157,18 +114,31 @@
 		editExclusions = lesson.exclusions.join('\n');
 	}
 
-	async function selectLesson(lesson: PathLesson): Promise<void> {
+	function selectLesson(lesson: PathLesson): void {
 		selectedId = lesson.id;
 		fillEditor(lesson);
 		shape = null;
 		preparation = null;
+		showShapeDebug = false;
+	}
+
+	async function ensurePreparationStatus(): Promise<void> {
+		if (!selected) return;
 		try {
-			[shape, preparation] = await Promise.all([
-				getLessonShape(unitId, lesson.id, lessonMode, misconceptionCount),
-				getPreparedLessonStatus(unitId, lesson.id)
-			]);
+			preparation = await getPreparedLessonStatus(unitId, selected.id);
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Could not load lesson details.';
+			preparation = null;
+			error = err instanceof Error ? err.message : 'Could not load preparation status.';
+		}
+	}
+
+	async function ensureShape(): Promise<void> {
+		if (!selected) return;
+		try {
+			shape = await getLessonShape(unitId, selected.id, lessonMode, misconceptionCount);
+		} catch (err) {
+			shape = null;
+			error = err instanceof Error ? err.message : 'Could not load this lesson shape.';
 		}
 	}
 
@@ -177,17 +147,13 @@
 		lessonMode = mode;
 		misconceptionCount = count;
 		shape = null;
-		try {
-			shape = await getLessonShape(unitId, selected.id, lessonMode, misconceptionCount);
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Could not load this lesson shape.';
-		}
+		await ensureShape();
 	}
 
 	async function updateShapeRevision(revision: number): Promise<void> {
 		if (!selected) return;
 		selected.revision = revision;
-		preparation = await getPreparedLessonStatus(unitId, selected.id);
+		await ensurePreparationStatus();
 	}
 
 	async function load(options: { preserveSelection?: boolean } = {}): Promise<void> {
@@ -195,26 +161,60 @@
 		error = null;
 		try {
 			unit = await getUnit(unitId);
-			groups = await getUnitGroups(unitId);
-			selectedGroupIds = groups.groups.map((group) => group.id);
 			if (unit.active_path_version_id) {
-				[path, history, aggregate, schedule, compositions] = await Promise.all([
-					getUnitPath(unitId), getPathHistory(unitId), getPathStatus(unitId),
-					getTeachingSchedule(unitId), listUnitResources(unitId)
-				]);
+				path = await getUnitPath(unitId);
 			} else {
-				path = null; history = []; aggregate = null; schedule = null; compositions = [];
+				path = null;
 			}
 			if (path?.lessons.length) {
 				const target = options.preserveSelection
 					? path.lessons.find((lesson) => lesson.id === selectedId) ?? path.lessons[0]
 					: path.lessons[0];
-				await selectLesson(target);
+				selectLesson(target);
+			} else {
+				selectedId = null;
 			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Could not load the unit workspace.';
 		} finally {
 			loading = false;
+		}
+	}
+
+	async function openTab(view: typeof activeView): Promise<void> {
+		activeView = view;
+		tabError = null;
+		if (!unit) return;
+		try {
+			if (view === 'groups' && !groupsLoaded) {
+				groups = await getUnitGroups(unitId);
+				selectedGroupIds = groups.groups.map((group) => group.id);
+				groupsLoaded = true;
+			} else if (view === 'schedule' && !scheduleLoaded) {
+				schedule = await getTeachingSchedule(unitId);
+				scheduleLoaded = true;
+			} else if (view === 'resources' && !resourcesLoaded) {
+				if (!groupsLoaded) {
+					groups = await getUnitGroups(unitId);
+					selectedGroupIds = groups.groups.map((group) => group.id);
+					groupsLoaded = true;
+				}
+				if (!scheduleLoaded) {
+					schedule = await getTeachingSchedule(unitId);
+					scheduleLoaded = true;
+				}
+				compositions = await listUnitResources(unitId);
+				resourcesLoaded = true;
+			} else if (view === 'history' && !historyLoaded) {
+				history = await getPathHistory(unitId);
+				historyLoaded = true;
+			} else if (view === 'results' && !groupsLoaded) {
+				groups = await getUnitGroups(unitId);
+				selectedGroupIds = groups.groups.map((group) => group.id);
+				groupsLoaded = true;
+			}
+		} catch (err) {
+			tabError = err instanceof Error ? err.message : 'Could not load this tab.';
 		}
 	}
 
@@ -241,7 +241,8 @@
 		await act(replan ? 'replan' : 'plan', async () => {
 			path = await planUnitPath(unitId, plannerInput(unit as Unit), replan, path ?? undefined);
 			unit = await getUnit(unitId);
-			if (path.lessons.length) await selectLesson(path.lessons[0]);
+			historyLoaded = false;
+			if (path.lessons.length) selectLesson(path.lessons[0]);
 		}, false);
 	}
 
@@ -252,40 +253,6 @@
 			title: editTitle.trim(), objective: editObjective.trim(),
 			must_establish: lines(editMustEstablish), exclusions: lines(editExclusions)
 		}));
-	}
-
-	async function combineLessons(question: { key: string; result: MergeCriticResult; lessonA: PathLesson; lessonB: PathLesson }): Promise<void> {
-		if (!path) return;
-		const { lessonA, lessonB, result } = question;
-		const mergedTitle = `${lessonA.title} and ${lessonB.title}`;
-		await act('merge', () => mergePathLessons(unitId, path as UnitPath, [lessonA, lessonB], [lessonA.id, lessonB.id], {
-			concept_candidate: { slug: slug(mergedTitle), title: mergedTitle },
-			objective: result.merged_objective?.trim() || `${lessonA.objective} ${lessonB.objective}`,
-			must_establish: [...lessonA.must_establish, ...lessonB.must_establish],
-			exclusions: [...new Set([...lessonA.exclusions, ...lessonB.exclusions])],
-			primary_knowledge_type: lessonA.primary_knowledge_type,
-			secondary_demand: lessonA.secondary_demand
-		}));
-		dismissedMergeKeys = new Set([...dismissedMergeKeys, question.key]);
-	}
-
-	function dismissMergeQuestion(key: string): void {
-		dismissedMergeKeys = new Set([...dismissedMergeKeys, key]);
-	}
-
-	function lessonTitleForSlug(slugValue: string): string {
-		return path?.lessons.find((lesson) => lesson.concept_slug === slugValue)?.title ?? slugValue;
-	}
-
-	async function resolveAssumption(assumption: OpenAssumption, decision: 'known' | 'teach'): Promise<void> {
-		if (!path) return;
-		await act(`assumption-${decision}-${assumption.claimed}`, async () => {
-			path = await resolvePathAssumption(unitId, path as UnitPath, {
-				claimed: assumption.claimed,
-				decision
-			});
-			unit = await getUnit(unitId);
-		}, false);
 	}
 
 	async function sendChatEdit(event: SubmitEvent): Promise<void> {
@@ -313,7 +280,23 @@
 	async function prepare(): Promise<void> {
 		if (!selected) return;
 		await act('prepare', async () => {
-			const prepared = await preparePathLesson(unitId, path as UnitPath, selected, lessonMode, selectedGroupIds);
+			if (!groupsLoaded) {
+				try {
+					groups = await getUnitGroups(unitId);
+					selectedGroupIds = groups.groups.map((group) => group.id);
+					groupsLoaded = true;
+				} catch {
+					selectedGroupIds = [];
+				}
+			}
+			await ensureShape();
+			const prepared = await preparePathLesson(
+				unitId,
+				path as UnitPath,
+				selected,
+				lessonMode,
+				selectedGroupIds
+			);
 			window.location.href = `/studio?generation_id=${encodeURIComponent(prepared.generation_id)}`;
 		}, false);
 	}
@@ -334,9 +317,9 @@
 	}
 
 	async function viewVersion(version: PathVersionSummary): Promise<void> {
-		error = null;
+		tabError = null;
 		try { viewedVersion = await getHistoricalPath(unitId, version.id); }
-		catch (err) { error = err instanceof Error ? err.message : 'Could not load path history.'; }
+		catch (err) { tabError = err instanceof Error ? err.message : 'Could not load path history.'; }
 	}
 
 	function confirmRestore(version: PathVersionSummary): void {
@@ -374,72 +357,39 @@
 		{#if error}<p class="error" role="alert">{error}</p>{/if}
 
 		{#if !path}
-			<section class="empty"><p class="eyebrow">Destination saved</p><h2>Build your lessons</h2><p>This turns your destination into a numbered list of lessons, checking that every earlier lesson leads somewhere before the next one needs it.</p><button class="primary" type="button" disabled={busy !== null} onclick={() => planOrReplan(false)}>{busy === 'plan' ? 'Planning your lessons…' : 'Plan the lessons'}</button></section>
+			<section class="empty">
+				{#if planningFailed}
+					<p class="eyebrow">Planning did not finish</p>
+					<h2>This unit is saved as a draft</h2>
+					<p>Lesson planning did not complete. Nothing else was corrupted — try planning again on this same unit.</p>
+					<button class="primary" type="button" disabled={busy !== null} onclick={() => planOrReplan(false)}>{busy === 'plan' ? 'Planning your lessons…' : 'Try planning again'}</button>
+				{:else}
+					<p class="eyebrow">Destination saved</p>
+					<h2>Build your lessons</h2>
+					<p>This turns your destination into a numbered list of lessons.</p>
+					<button class="primary" type="button" disabled={busy !== null} onclick={() => planOrReplan(false)}>{busy === 'plan' ? 'Planning your lessons…' : 'Plan the lessons'}</button>
+				{/if}
+			</section>
 		{:else}
 			<nav class="view-tabs" aria-label="Unit workspace views">
-				<button type="button" class:active={activeView === 'path'} aria-current={activeView === 'path' ? 'page' : undefined} onclick={() => (activeView = 'path')}>Your lessons</button>
-				<button type="button" class:active={activeView === 'schedule'} aria-current={activeView === 'schedule' ? 'page' : undefined} onclick={() => (activeView = 'schedule')}>Schedule <span>{schedule?.periods.length ?? 0}</span></button>
-				<button type="button" class:active={activeView === 'groups'} aria-current={activeView === 'groups' ? 'page' : undefined} onclick={() => (activeView = 'groups')}>Groups <span>{groups?.groups.length ?? 0}</span></button>
-				<button type="button" class:active={activeView === 'results'} aria-current={activeView === 'results' ? 'page' : undefined} onclick={() => (activeView = 'results')}>Results</button>
-				<button type="button" class:active={activeView === 'resources'} aria-current={activeView === 'resources' ? 'page' : undefined} onclick={() => (activeView = 'resources')}>Resources <span>{compositions.length}</span></button>
+				<button type="button" class:active={activeView === 'path'} aria-current={activeView === 'path' ? 'page' : undefined} onclick={() => openTab('path')}>Lessons</button>
+				<button type="button" class:active={activeView === 'schedule'} aria-current={activeView === 'schedule' ? 'page' : undefined} onclick={() => openTab('schedule')}>Schedule</button>
+				<button type="button" class:active={activeView === 'groups'} aria-current={activeView === 'groups' ? 'page' : undefined} onclick={() => openTab('groups')}>Groups</button>
+				<button type="button" class:active={activeView === 'resources'} aria-current={activeView === 'resources' ? 'page' : undefined} onclick={() => openTab('resources')}>Resources</button>
+				<button type="button" class:active={activeView === 'results'} aria-current={activeView === 'results' ? 'page' : undefined} onclick={() => openTab('results')}>Results</button>
+				<button type="button" class:active={activeView === 'history'} aria-current={activeView === 'history' ? 'page' : undefined} onclick={() => openTab('history')}>History</button>
 			</nav>
-			{#if activeView === 'path'}
-			{#if path.status !== 'approved' && openAssumptions.length}
-				<section class="open-assumptions" aria-label="Confirm prior knowledge">
-					<p class="open-assumptions-lead">
-						Before locking it in — {openAssumptions.length === 1 ? '1 thing' : `${openAssumptions.length} things`} to confirm
-					</p>
-					{#each openAssumptions as assumption (assumption.claimed + '|' + assumption.needed_by)}
-						<div class="open-assumption">
-							<div>
-								<p>The planner assumed the class can already:</p>
-								<p class="claimed">{assumption.claimed}</p>
-								<p class="needed-by">Needed for: {lessonTitleForSlug(assumption.needed_by)}</p>
-							</div>
-							<div class="open-assumption-actions">
-								<button type="button" class="primary" disabled={busy !== null} onclick={() => resolveAssumption(assumption, 'known')}>Yes, they know this</button>
-								<button type="button" class="secondary" disabled={busy !== null} onclick={() => resolveAssumption(assumption, 'teach')}>No, teach it</button>
-							</div>
-						</div>
-					{/each}
-				</section>
+			{#if tabError && activeView !== 'path'}
+				<p class="error" role="alert">{tabError}</p>
 			{/if}
+			{#if activeView === 'path'}
 			<section class="lock-in-bar">
 				<p>{path.lessons.length} {path.lessons.length === 1 ? 'lesson' : 'lessons'}</p>
 				{#if path.status !== 'approved'}
 					<div class="lock-in">
-						<button class="primary" type="button" disabled={busy !== null || !canLockIn} onclick={() => act('approve', async () => { path = await approveUnitPath(unitId, path as UnitPath); unit = await getUnit(unitId); await load({ preserveSelection: true }); }, false)}>{busy === 'approve' ? 'Locking it in…' : 'Looks good — lock it in'}</button>
-						{#if !canLockIn}<p class="lock-reason">{lockBlockReason}</p>{/if}
+						<button class="primary" type="button" disabled={busy !== null || !canLockIn} onclick={() => act('approve', async () => { path = await approveUnitPath(unitId, path as UnitPath); unit = await getUnit(unitId); }, false)}>{busy === 'approve' ? 'Locking it in…' : 'Looks good — lock it in'}</button>
 					</div>
 				{/if}
-			</section>
-
-			{#if mergeQuestions.length}
-				<section class="merge-questions" aria-label="Merge suggestions">
-					{#each mergeQuestions as question (question.key)}
-						<div class="merge-question">
-							<p>Lessons {question.lessonA.position + 1} and {question.lessonB.position + 1} might work as one lesson — {question.result.reason}</p>
-							<div class="merge-actions">
-								<button type="button" class="secondary" disabled={busy !== null} onclick={() => dismissMergeQuestion(question.key)}>Keep apart</button>
-								<button type="button" class="primary" disabled={busy !== null} onclick={() => combineLessons(question)}>Combine</button>
-							</div>
-						</div>
-					{/each}
-				</section>
-			{/if}
-
-			{#if aggregate}
-				<section class="status-board" aria-label="Lesson preparation status">
-					{#each Object.entries(aggregate.counts) as [state, count]}
-						<div class:attention={state === 'failed' || state === 'stale' || state === 'warning'}><strong>{count}</strong><span>{state.replace('_', ' ')}</span></div>
-					{/each}
-				</section>
-			{/if}
-
-			<section class="history-panel">
-				<div class="section-head"><div><p class="eyebrow">Lesson history</p><h2>Recoverable versions</h2></div><p>Structural edits create a new draft. Older routes remain available.</p></div>
-				<div class="history-list">{#each history as version}<article class:current={version.id === path.id}><div><strong>v{version.version}</strong><span>{version.status}</span><small>{version.generated_by}</small></div><div class="history-actions"><button type="button" class="text-button" onclick={() => viewVersion(version)}>Inspect</button>{#if version.id !== path.id}<button type="button" class="text-button" onclick={() => confirmRestore(version)}>Restore</button>{/if}</div></article>{/each}</div>
-				{#if viewedVersion}<div class="history-preview"><div><strong>v{viewedVersion.version}</strong><span>{viewedVersion.status} · {viewedVersion.lessons.length} lessons</span></div><ol>{#each viewedVersion.lessons as lesson}<li>{lesson.title}</li>{/each}</ol><button type="button" class="text-button" onclick={() => (viewedVersion = null)}>Close preview</button></div>{/if}
 			</section>
 
 			<div class="workspace">
@@ -455,45 +405,59 @@
 						<form class="editor" onsubmit={saveLesson}>
 							<label><span>Title</span><input bind:value={editTitle} required /></label>
 							<label><span>What students will be able to do</span><textarea bind:value={editObjective} required></textarea></label>
-							<div class="two"><label><span>Must teach <small>one per line</small></span><textarea bind:value={editMustEstablish} required></textarea></label><label><span>Save for later <small>one per line</small></span><textarea bind:value={editExclusions}></textarea></label></div>
+							<label><span>Must establish <small>one per line</small></span><textarea bind:value={editMustEstablish} required></textarea></label>
 							<button class="secondary" type="submit" disabled={busy !== null}>{busy === 'save' ? 'Saving…' : 'Save lesson changes'}</button>
 						</form>
 
-						<section class="dependencies"><div><p class="eyebrow">Before this lesson</p><h3>What it needs first</h3></div>{#if dependencySentences(selected).length}<ul>{#each dependencySentences(selected) as sentence}<li>{sentence}</li>{/each}</ul>{:else}<p>Nothing — this can be the starting point.</p>{/if}</section>
+						<section class="dependencies"><div><p class="eyebrow">Before this lesson</p><h3>What earlier lessons it requires</h3></div>{#if dependencySentences(selected).length}<ul>{#each dependencySentences(selected) as sentence}<li>{sentence}</li>{/each}</ul>{:else}<p>Nothing — this can be the starting point.</p>{/if}</section>
 
 						{#if debugMode}
-							{#if shape}
-								<LessonShapePanel
-									{unitId}
-									{path}
-									lesson={selected}
-									{shape}
-									{lessonMode}
-									{misconceptionCount}
-									{debugMode}
-									onsettings={updateShapeSettings}
-									onshape={(value) => (shape = value)}
-									onrevision={updateShapeRevision}
-								/>
-							{:else}
-								<section class="shape"><p>Loading this lesson's shape…</p></section>
-							{/if}
+							<section class="shape">
+								{#if !showShapeDebug}
+									<button class="text-button" type="button" onclick={() => { showShapeDebug = true; void ensureShape(); }}>Show shape debug</button>
+								{:else if shape}
+									<LessonShapePanel
+										{unitId}
+										{path}
+										lesson={selected}
+										{shape}
+										{lessonMode}
+										{misconceptionCount}
+										{debugMode}
+										onsettings={updateShapeSettings}
+										onshape={(value) => (shape = value)}
+										onrevision={updateShapeRevision}
+									/>
+								{:else}
+									<p>Loading this lesson's shape…</p>
+								{/if}
+							</section>
 						{/if}
 
 						<section class="prepare">
-							<div><p class="eyebrow">Preparation</p><h3>{preparation?.workflow_stage ?? 'Checking status…'}</h3><p>{preparation?.stale ? 'This lesson changed since it was last written and needs to be made again.' : 'This starts the lesson-writing review before anything is generated.'}</p></div>
+							<div>
+								<p class="eyebrow">Preparation</p>
+								<h3>{preparation?.workflow_stage ?? 'Ready when you are'}</h3>
+								<p>{preparation?.stale ? 'This lesson changed since it was last written and needs to be made again.' : 'Prepare uses the approved lesson path and the existing page-oriented generation flow.'}</p>
+							</div>
 							{#if preparation?.stale && preparation.can_regenerate}
 								<form class="regenerate" onsubmit={(event) => { event.preventDefault(); void regenerate(); }}>
 									<label><span>What changed</span><input bind:value={regenerationReason} minlength="3" maxlength="500" required /></label>
-									<button class="primary" type="submit" disabled={busy !== null || !shape?.can_prepare || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Making it again…' : 'Make it again'}</button>
+									<button class="primary" type="submit" disabled={busy !== null || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Making it again…' : 'Make it again'}</button>
 								</form>
 							{:else if preparation?.generation_id}
 								<div class="ready-actions">
 									<a class="primary link" href={`/studio?generation_id=${encodeURIComponent(preparation.generation_id)}`}>Open review</a>
 									<a class="secondary link" href={`/studio/print/${encodeURIComponent(preparation.generation_id)}`}>Print</a>
-									<button class="secondary" type="button" onclick={() => (showVersions = true)}>Make versions for my groups</button>
+									<button class="secondary" type="button" onclick={() => { void openTab('groups'); showVersions = true; }}>Make versions for my groups</button>
+									<button class="text-button" type="button" disabled={busy !== null} onclick={() => ensurePreparationStatus()}>Refresh status</button>
 								</div>
-							{:else}<button class="primary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null || !shape?.can_prepare} onclick={prepare}>{busy === 'prepare' ? 'Making the lesson…' : 'Make the lesson'}</button>{/if}
+							{:else}
+								<div class="ready-actions">
+									<button class="primary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={prepare}>{busy === 'prepare' ? 'Making the lesson…' : 'Prepare Lesson'}</button>
+									<button class="text-button" type="button" disabled={busy !== null} onclick={() => ensurePreparationStatus()}>Check preparation status</button>
+								</div>
+							{/if}
 						</section>
 					</main>
 				{/if}
@@ -511,14 +475,40 @@
 					{#if chatNote}<p class="chat-note">{chatNote}</p>{/if}
 				{/if}
 			</section>
-			{:else if activeView === 'schedule' && schedule}
-				<TeachingSchedulePanel {unitId} {path} {schedule} onsaved={(saved) => (schedule = saved)} />
-			{:else if activeView === 'groups' && groups}
-				<UnitGroupsPanel {unitId} {groups} onsaved={(saved) => { groups = saved; selectedGroupIds = saved.groups.map((group) => group.id); }} />
+			{:else if activeView === 'schedule'}
+				{#if schedule}
+					<TeachingSchedulePanel {unitId} {path} {schedule} onsaved={(saved) => (schedule = saved)} />
+				{:else if !tabError}
+					<p class="loading" role="status">Loading schedule…</p>
+				{/if}
+			{:else if activeView === 'groups'}
+				{#if groups}
+					<UnitGroupsPanel {unitId} {groups} onsaved={(saved) => { groups = saved; selectedGroupIds = saved.groups.map((group) => group.id); }} />
+				{:else if !tabError}
+					<p class="loading" role="status">Loading groups…</p>
+				{/if}
 			{:else if activeView === 'results'}
-				<LessonResultsPanel {unitId} {path} lessons={path.lessons} {groups} />
+				{#if groups}
+					<LessonResultsPanel {unitId} {path} lessons={path.lessons} {groups} />
+				{:else if !tabError}
+					<p class="loading" role="status">Loading results…</p>
+				{/if}
 			{:else if activeView === 'resources'}
-				<ResourceComposerPanel {unitId} {path} lessons={path.lessons} {groups} {schedule} {compositions} oncreated={(created) => (compositions = [created, ...compositions])} />
+				{#if groups && schedule}
+					<ResourceComposerPanel {unitId} {path} lessons={path.lessons} {groups} {schedule} {compositions} oncreated={(created) => (compositions = [created, ...compositions])} />
+				{:else if !tabError}
+					<p class="loading" role="status">Loading resources…</p>
+				{/if}
+			{:else if activeView === 'history'}
+				<section class="history-panel">
+					<div class="section-head"><div><p class="eyebrow">Lesson history</p><h2>Recoverable versions</h2></div><p>Structural edits create a new draft. Older routes remain available.</p></div>
+					{#if historyLoaded}
+						<div class="history-list">{#each history as version}<article class:current={version.id === path.id}><div><strong>v{version.version}</strong><span>{version.status}</span><small>{version.generated_by}</small></div><div class="history-actions"><button type="button" class="text-button" onclick={() => viewVersion(version)}>Inspect</button>{#if version.id !== path.id}<button type="button" class="text-button" onclick={() => confirmRestore(version)}>Restore</button>{/if}</div></article>{/each}</div>
+						{#if viewedVersion}<div class="history-preview"><div><strong>v{viewedVersion.version}</strong><span>{viewedVersion.status} · {viewedVersion.lessons.length} lessons</span></div><ol>{#each viewedVersion.lessons as lesson}<li>{lesson.title}</li>{/each}</ol><button type="button" class="text-button" onclick={() => (viewedVersion = null)}>Close preview</button></div>{/if}
+					{:else if !tabError}
+						<p class="loading" role="status">Loading history…</p>
+					{/if}
+				</section>
 			{/if}
 		{/if}
 	{/if}

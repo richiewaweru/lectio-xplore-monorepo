@@ -14,10 +14,12 @@ from core.database.models import (
     UnitScopeContractModel,
 )
 from planning.models import (
+    CanonicalPathLesson,
+    CanonicalPathPlan,
+    CanonicalPathScope,
     LessonPart,
     MergePathLessonsRequest,
     PathLessonPatch,
-    PathPlan,
     ReorderPathLessonsRequest,
     SplitPathLessonRequest,
     UnitCreate,
@@ -26,9 +28,8 @@ from planning.models import (
 from planning.validation import (
     PathApprovalBlocked,
     PathValidationError,
-    assert_approvable,
+    assert_concept_slugs_unique,
     open_assumptions,
-    validate_path_plan,
 )
 from v3_blueprint.planning.objective_ownership import hash_path_objective
 
@@ -110,19 +111,23 @@ async def persist_path_plan(
     session: AsyncSession,
     *,
     unit: UnitModel,
-    plan: PathPlan,
+    plan: CanonicalPathPlan,
     generated_by: str = "path_planner",
     prior_version: PathVersionModel | None = None,
     merge_critic_results: list[dict[str, object]] | None = None,
 ) -> PathVersionModel:
-    validate_path_plan(plan)
-    scope = plan.scope_contract
+    concept_slugs = assert_concept_slugs_unique(unit.subject, plan)
+
     existing_scope = await session.get(UnitScopeContractModel, unit.id)
     if existing_scope is None:
         existing_scope = UnitScopeContractModel(unit_id=unit.id)
         session.add(existing_scope)
-    for field, value in scope.model_dump().items():
-        setattr(existing_scope, field, value)
+    existing_scope.must_establish = list(plan.scope.must_cover)
+    existing_scope.must_not_introduce = list(plan.scope.do_not_cover)
+    existing_scope.may_include = []
+    existing_scope.assumed_prerequisites = []
+    existing_scope.terminology = []
+    existing_scope.notation = None
 
     prior_by_slug: dict[str, PathLessonModel] = {}
     if prior_version is not None:
@@ -139,64 +144,120 @@ async def persist_path_plan(
         status="draft",
         generated_by=generated_by,
         source_plan_json=plan.model_dump(mode="json"),
-        merge_critic_results=merge_critic_results or [],
-        prerequisite_risks=[risk.model_dump(mode="json") for risk in plan.prerequisite_risks],
-        forward_verified=plan.completeness.forward_verified,
-        reaches_destination=plan.completeness.reaches_destination,
+        merge_critic_results=merge_critic_results if merge_critic_results is not None else [],
+        prerequisite_risks=[],
+        forward_verified=True,
+        reaches_destination=True,
     )
     session.add(version)
     await session.flush()
 
-    lesson_by_slug: dict[str, PathLessonModel] = {}
+    lesson_by_key: dict[str, PathLessonModel] = {}
     for position, planned in enumerate(plan.lessons):
+        slug = concept_slugs[planned.key]
         concept = await _resolve_concept(
             session,
-            slug=planned.concept_candidate.slug,
-            title=planned.concept_candidate.title,
+            slug=slug,
+            title=planned.title,
             subject=unit.subject,
             owner_id=unit.owner_id,
         )
-        prior = prior_by_slug.get(planned.concept_candidate.slug)
+        prior = prior_by_slug.get(slug)
         preserve_edit = prior is not None and prior.teacher_edited
         objective = prior.objective if preserve_edit else planned.objective
         lesson = PathLessonModel(
             path_version_id=version.id,
             concept_id=concept.id,
-            concept_slug=planned.concept_candidate.slug,
-            title=prior.title if preserve_edit else planned.concept_candidate.title,
+            concept_slug=slug,
+            title=prior.title if preserve_edit else planned.title,
             objective=objective,
             objective_hash=hash_path_objective(objective),
-            external_prerequisites=planned.external_prerequisites,
-            must_establish=(prior.must_establish if preserve_edit else planned.must_establish),
-            exclusions=prior.exclusions if preserve_edit else planned.exclusions,
+            external_prerequisites=[],
+            must_establish=(prior.must_establish if preserve_edit else list(planned.must_establish)),
+            exclusions=prior.exclusions if preserve_edit else [],
             primary_knowledge_type=(
-                prior.primary_knowledge_type if preserve_edit else planned.primary_knowledge_type
+                prior.primary_knowledge_type if preserve_edit else planned.knowledge_type
             ),
-            secondary_demand=(prior.secondary_demand if preserve_edit else planned.secondary_demand),
+            secondary_demand=(prior.secondary_demand if preserve_edit else None),
             knowledge_type_source="teacher" if preserve_edit else "path_planner",
-            merge_warning=planned.merge_warning,
+            merge_warning=False,
             position=position,
             source="replan" if prior_version is not None else "path_planner",
             teacher_edited=preserve_edit,
             revision=(prior.revision if preserve_edit else 1),
         )
         session.add(lesson)
-        lesson_by_slug[planned.concept_candidate.slug] = lesson
+        lesson_by_key[planned.key] = lesson
     await session.flush()
 
     for planned in plan.lessons:
-        lesson = lesson_by_slug[planned.concept_candidate.slug]
-        for prerequisite_slug in planned.prerequisites:
+        lesson = lesson_by_key[planned.key]
+        for required_key in planned.requires:
             session.add(
                 PathLessonPrerequisiteModel(
                     path_lesson_id=lesson.id,
-                    prerequisite_lesson_id=lesson_by_slug[prerequisite_slug].id,
+                    prerequisite_lesson_id=lesson_by_key[required_key].id,
                 )
             )
     unit.active_path_version_id = version.id
     await session.flush()
     return version
 
+
+async def canonical_plan_from_version(
+    session: AsyncSession,
+    version: PathVersionModel,
+) -> CanonicalPathPlan:
+    """Rebuild the editable minimal plan from persisted lessons + scope."""
+    unit = await session.get(UnitModel, version.unit_id)
+    if unit is None:
+        raise PathNotFoundError("Unit not found")
+    scope = await session.get(UnitScopeContractModel, unit.id)
+    lessons = list(
+        await session.scalars(
+            select(PathLessonModel)
+            .where(PathLessonModel.path_version_id == version.id)
+            .order_by(PathLessonModel.position)
+        )
+    )
+    if not lessons:
+        raise PathValidationError("empty_lesson_list", "Path has no lessons to edit")
+
+    links = list(
+        await session.scalars(
+            select(PathLessonPrerequisiteModel).where(
+                PathLessonPrerequisiteModel.path_lesson_id.in_([lesson.id for lesson in lessons])
+            )
+        )
+    )
+    id_to_key = {lesson.id: f"L{index}" for index, lesson in enumerate(lessons, start=1)}
+    requires_by_id: dict[str, list[str]] = {lesson.id: [] for lesson in lessons}
+    for link in links:
+        prereq_key = id_to_key.get(link.prerequisite_lesson_id)
+        if prereq_key is not None:
+            requires_by_id[link.path_lesson_id].append(prereq_key)
+
+    must_cover = list(scope.must_establish) if scope and scope.must_establish else ["unit outcomes"]
+    do_not_cover = (
+        list(scope.must_not_introduce)
+        if scope and scope.must_not_introduce
+        else ["out-of-grade content"]
+    )
+
+    return CanonicalPathPlan(
+        scope=CanonicalPathScope(must_cover=must_cover, do_not_cover=do_not_cover),
+        lessons=[
+            CanonicalPathLesson(
+                key=id_to_key[lesson.id],
+                title=lesson.title,
+                objective=lesson.objective,
+                requires=requires_by_id[lesson.id],
+                must_establish=list(lesson.must_establish or []),
+                knowledge_type=lesson.primary_knowledge_type,  # type: ignore[arg-type]
+            )
+            for lesson in lessons
+        ],
+    )
 
 def assert_path_mutation_fresh(
     version: PathVersionModel,
@@ -705,10 +766,6 @@ async def merge_lessons(
 
 
 async def approve_path(session: AsyncSession, version: PathVersionModel) -> PathVersionModel:
-    plan = PathPlan.model_validate(version.source_plan_json)
-    assert_approvable(plan)
-    if version.prerequisite_risks or not version.reaches_destination:
-        raise PathApprovalBlocked("Path approval blocked by persisted prerequisite risks")
     lessons = list(
         await session.scalars(
             select(PathLessonModel)
@@ -746,24 +803,7 @@ async def approve_path(session: AsyncSession, version: PathVersionModel) -> Path
     scope = await session.get(UnitScopeContractModel, unit.id)
     if scope is None:
         raise PathApprovalBlocked("Path approval blocked: scope contract is missing")
-    allowed_external = {
-        value.casefold()
-        for value in [*(scope.assumed_prerequisites or []), *(unit.starting_knowledge or [])]
-    }
     prohibited = [term.casefold() for term in (scope.must_not_introduce or []) if term.strip()]
-    undeclared = sorted(
-        {
-            prerequisite
-            for lesson in lessons
-            for prerequisite in (lesson.external_prerequisites or [])
-            if prerequisite.casefold() not in allowed_external
-        }
-    )
-    if undeclared:
-        raise PathApprovalBlocked(
-            "Path approval blocked: undeclared external prerequisite "
-            + ", ".join(repr(value) for value in undeclared)
-        )
     for lesson in lessons:
         if lesson.objective_hash != hash_path_objective(lesson.objective):
             raise PathApprovalBlocked("Path approval blocked: objective hash mismatch")
@@ -773,6 +813,10 @@ async def approve_path(session: AsyncSession, version: PathVersionModel) -> Path
     version.status = "approved"
     version.approved_at = _utcnow()
     version.revision += 1
+    # Compatibility persistence values for columns no longer owned by the LLM.
+    version.forward_verified = True
+    version.reaches_destination = True
+    version.prerequisite_risks = []
     unit.status = "approved"
     unit.active_path_version_id = version.id
     await session.flush()

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { constructorReadback, createUnit, listLegacyUnitWrappers, listUnits, planUnitPath } from '$lib/api/units';
-	import type { ConstructorReadback, LegacyUnitWrapper, Unit } from '$lib/types/units';
+	import { constructorReadback, createUnit, listUnits, planUnitPath } from '$lib/api/units';
+	import type { ConstructorReadback, Unit } from '$lib/types/units';
 
 	const GRADE_LEVELS = ['Kindergarten', ...Array.from({ length: 12 }, (_, index) => `Grade ${index + 1}`)];
 	const SUBJECTS = [
@@ -11,7 +11,6 @@
 	];
 
 	let units = $state<Unit[]>([]);
-	let legacyUnits = $state<LegacyUnitWrapper[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 
@@ -31,7 +30,7 @@
 		loading = true;
 		error = null;
 		try {
-			[units, legacyUnits] = await Promise.all([listUnits(), listLegacyUnitWrappers()]);
+			units = await listUnits();
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Could not load units.';
 		} finally {
@@ -58,13 +57,6 @@
 	function closeCreate(): void {
 		showCreate = false;
 		resetCreateFlow();
-	}
-
-	function deriveTitle(objective: string): string {
-		const sentence = objective.split(/[.!?]/)[0]?.trim() || objective.trim();
-		if (!sentence) return 'Untitled lesson';
-		const clipped = sentence.length > 80 ? `${sentence.slice(0, 77)}…` : sentence;
-		return clipped.charAt(0).toUpperCase() + clipped.slice(1);
 	}
 
 	async function planIt(event: SubmitEvent): Promise<void> {
@@ -133,24 +125,29 @@
 		lockingIn = true;
 		error = null;
 		try {
-			const topic = rawText.trim().slice(0, 160) || subject;
 			const unit = await createUnit({
-				title: deriveTitle(readback.destination_objective),
-				topic,
+				title: readback.title,
+				topic: readback.topic,
 				subject,
 				grade_level: gradeLevel,
 				destination_objective: readback.destination_objective,
 				starting_knowledge: readback.starting_knowledge,
-				curriculum_context: readback.curriculum_context
+				curriculum_context: readback.curriculum_context,
+				class_notes: readback.class_notes
 			});
-			await planUnitPath(unit.id, {
-				topic,
-				subject,
-				grade_level: gradeLevel,
-				destination_objective: readback.destination_objective,
-				starting_knowledge: readback.starting_knowledge,
-				curriculum_context: readback.curriculum_context
-			});
+			try {
+				await planUnitPath(unit.id, {
+					topic: readback.topic,
+					subject,
+					grade_level: gradeLevel,
+					destination_objective: readback.destination_objective,
+					starting_knowledge: readback.starting_knowledge,
+					curriculum_context: readback.curriculum_context,
+					class_notes: readback.class_notes
+				});
+			} catch {
+				// Unit remains as a recoverable draft; the unit page offers retry.
+			}
 			await goto(`/units/${encodeURIComponent(unit.id)}`);
 		} catch (err) {
 			error = err instanceof Error ? err.message : "Could not lock that in — let's try again.";
@@ -233,8 +230,9 @@
 			{:else if step === 'readback' && readback}
 				<div class="readback">
 					<div class="form-head">
-						<div><p class="eyebrow">Readback</p><h2>Here's my understanding:</h2></div>
+						<div><p class="eyebrow">Readback</p><h2>{readback.title}</h2></div>
 					</div>
+					<p class="readback-line"><strong>Topic:</strong> {readback.topic}</p>
 					<p class="readback-line"><strong>By the end, students can</strong> {readback.destination_objective}</p>
 					<p class="readback-line"><strong>I'm assuming they already know</strong> {readback.starting_knowledge.join('; ')}</p>
 					{#if readback.curriculum_context}
@@ -242,7 +240,7 @@
 					{/if}
 					<div class="readback-actions">
 						<button class="primary" type="button" disabled={lockingIn} onclick={confirmReadback}>
-							{lockingIn ? 'Setting up your lessons…' : "That's right"}
+							{lockingIn ? 'Planning lessons…' : "That's right"}
 						</button>
 						<button class="text-button" type="button" onclick={() => (correctionOpen = !correctionOpen)}>
 							type what's off
@@ -264,7 +262,7 @@
 
 	{#if loading}
 		<p class="status" role="status">Loading units…</p>
-	{:else if units.length === 0 && legacyUnits.length === 0 && !showCreate}
+	{:else if units.length === 0 && !showCreate}
 		<section class="empty">
 			<p class="eyebrow">Get started</p>
 			<h2>No units yet</h2>
@@ -285,22 +283,11 @@
 			{/each}
 		</section>
 	{/if}
-	{#if !loading && legacyUnits.length > 0}
-		<section class="legacy-list" aria-label="Legacy packs as units">
-			<div><p class="eyebrow">Compatibility</p><h2>Legacy one-lesson units</h2><p>Computed views of existing packs. No data was migrated or rewritten.</p></div>
-			{#each legacyUnits as wrapper (wrapper.id)}
-				<a class="unit-row" href={wrapper.lesson.open_href}>
-					<div><div class="row-title"><h2>{wrapper.title}</h2><span>legacy</span></div><p>{wrapper.subject} · {wrapper.completed_count}/{wrapper.resource_count} resources</p><p class="objective">{wrapper.destination_objective}</p></div>
-					<span class="open">Open pack →</span>
-				</a>
-			{/each}
-		</section>
-	{/if}
 </div>
 
 <style>
 	.units-page { min-height: calc(100vh - 58px); padding: 54px 28px 80px; }
-	.page-head, .create-card, .unit-list, .legacy-list, .empty, .status, .error { max-width: 960px; margin-inline: auto; }
+	.page-head, .create-card, .unit-list, .empty, .status, .error { max-width: 960px; margin-inline: auto; }
 	.page-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 34px; }
 	.eyebrow { margin: 0 0 7px; color: var(--ink-3); font: 500 11px 'IBM Plex Mono', monospace; letter-spacing: .1em; text-transform: uppercase; }
 	h1 { margin: 0; font: 500 38px/1.1 Fraunces, Georgia, serif; letter-spacing: -.03em; }
@@ -328,7 +315,6 @@
 	.correction-form { display: flex; gap: 8px; margin-top: 14px; }
 	.correction-form input { flex: 1; }
 	.unit-list { display: grid; border-top: 1px solid var(--rule); }
-	.legacy-list { display: grid; border-top: 1px solid var(--rule); margin-top: 38px; }.legacy-list > div { padding: 0 16px 16px; }.legacy-list > div h2 { margin: 0; font: 500 22px Fraunces, Georgia, serif; }.legacy-list > div p:last-child { margin: 6px 0 0; color: var(--ink-2); font-size: 12px; }
 	.unit-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 20px; border-bottom: 1px solid var(--rule); color: inherit; padding: 22px 16px; text-decoration: none; }
 	.unit-row:hover, .unit-row:focus-visible { border-radius: 8px; background: var(--surface); outline: none; }
 	.row-title { display: flex; align-items: center; gap: 10px; }

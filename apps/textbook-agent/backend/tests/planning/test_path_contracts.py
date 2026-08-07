@@ -1,30 +1,30 @@
+"""Legacy PathPlan helpers and non-critical-path merge critic coverage.
+
+Active planner contract tests live in test_canonical_path.py and
+test_path_planner_repair.py.
+"""
+
 from __future__ import annotations
 
-import copy
 import json
-import re
 from pathlib import Path
 
-import jsonschema
 import pytest
 from pydantic import ValidationError
 
 from planning.agents import run_adjacent_merge_critics
 from planning.models import MergeCriticResult, PathPlan, PathPlannerRequest
-from planning.prompts import packaged_prompt_text, prompt_text
+from planning.prompts import prompt_text
 from planning.validation import (
     PathApprovalBlocked,
-    PathValidationError,
     assert_approvable,
     normalize_declared_external_prerequisites,
-    open_assumptions,
     validate_path_plan,
 )
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURES = REPO_ROOT / "handoff" / "fixtures"
-SCHEMA_PATH = REPO_ROOT / "patch" / "schemas" / "path-plan.schema.json"
 PROMPT_PACK = REPO_ROOT / "patch" / "20_PROMPT_PACK.md"
 
 
@@ -32,239 +32,20 @@ def _fixture(name: str) -> dict:
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
 
-def _prompt_section(number: int, title_pattern: str) -> str:
-    source = PROMPT_PACK.read_text(encoding="utf-8")
-    match = re.search(
-        rf"## {number}\. {title_pattern}.*?### System prompt\s*\n```\n(.*?)\n```",
-        source,
-        flags=re.DOTALL,
-    )
-    assert match is not None
-    return match.group(1) + "\n"
-
-
-@pytest.mark.parametrize(
-    "fixture_name",
-    [
+def test_legacy_fixtures_still_parse_as_path_plan() -> None:
+    for name in (
         "grade4-photosynthesis-path.json",
         "grade12-photosynthesis-path.json",
         "grade8-unreachable-destination-path.json",
-    ],
-)
-def test_supplied_path_fixtures_pass_schema_and_machine_checks(fixture_name: str) -> None:
-    payload = _fixture(fixture_name)
-    jsonschema.validate(payload, json.loads(SCHEMA_PATH.read_text(encoding="utf-8")))
-    plan = PathPlan.model_validate(payload)
-
-    validate_path_plan(plan)
+    ):
+        plan = PathPlan.model_validate(_fixture(name))
+        assert plan.lessons
 
 
-def test_grade_scopes_share_no_concept_slug() -> None:
-    grade4 = PathPlan.model_validate(_fixture("grade4-photosynthesis-path.json"))
-    grade12 = PathPlan.model_validate(_fixture("grade12-photosynthesis-path.json"))
-
-    assert grade4.concept_slugs.isdisjoint(grade12.concept_slugs)
-
-
-@pytest.mark.parametrize(
-    ("mutate", "code"),
-    [
-        (
-            lambda p: p["modules"][0]["lessons"][1]["concept_candidate"].update(
-                slug=p["modules"][0]["lessons"][0]["concept_candidate"]["slug"]
-            ),
-            "duplicate_concept_slug",
-        ),
-        (
-            lambda p: p["modules"][0]["lessons"][0].update(
-                prerequisites=[
-                    p["modules"][0]["lessons"][1]["concept_candidate"]["slug"]
-                ]
-            ),
-            "prerequisite_not_earlier",
-        ),
-        (
-            lambda p: p["modules"][0]["lessons"][0].update(objective="Explain ATP synthesis."),
-            "must_not_introduce_violation",
-        ),
-        (
-            lambda p: p.update(
-                prerequisite_risks=[
-                    {"missing": "x", "needed_by": "y", "note": "z"}
-                ]
-            ),
-            "risks_require_unreachable",
-        ),
-    ],
-)
-def test_machine_checks_reject_silent_path_failures(mutate, code: str) -> None:
-    payload = copy.deepcopy(_fixture("grade4-photosynthesis-path.json"))
-    mutate(payload)
-    plan = PathPlan.model_validate(payload)
-
-    with pytest.raises(PathValidationError) as exc_info:
-        validate_path_plan(plan)
-
-    assert exc_info.value.code == code
-
-
-def test_undeclared_external_prerequisite_is_open_assumption_not_halt() -> None:
-    payload = copy.deepcopy(_fixture("grade4-photosynthesis-path.json"))
-    payload["modules"][0]["lessons"][0].update(
-        external_prerequisites=["undeclared capability"]
-    )
-    plan = PathPlan.model_validate(payload)
-
-    validate_path_plan(plan)
-
-    assumptions = open_assumptions(
-        starting_knowledge=plan.starting_knowledge,
-        assumed_prerequisites=plan.scope_contract.assumed_prerequisites,
-        lessons=plan.lessons,
-        prerequisite_risks=plan.prerequisite_risks,
-    )
-    assert assumptions == [
-        {
-            "claimed": "undeclared capability",
-            "needed_by": plan.lessons[0].concept_candidate.slug,
-        }
-    ]
-
-
-def test_open_assumptions_ignore_exact_and_casefold_matches() -> None:
-    payload = copy.deepcopy(_fixture("grade4-photosynthesis-path.json"))
-    declared = payload["starting_knowledge"][0]
-    payload["modules"][0]["lessons"][0]["external_prerequisites"] = [
-        declared,
-        declared.upper(),
-    ]
-    plan = PathPlan.model_validate(payload)
-
-    assert (
-        open_assumptions(
-            starting_knowledge=plan.starting_knowledge,
-            assumed_prerequisites=plan.scope_contract.assumed_prerequisites,
-            lessons=plan.lessons,
-            prerequisite_risks=[],
-        )
-        == []
-    )
-
-
-def test_open_assumptions_exclude_claims_already_recorded_as_risks() -> None:
-    payload = copy.deepcopy(_fixture("grade4-photosynthesis-path.json"))
-    payload["modules"][0]["lessons"][0]["external_prerequisites"] = ["multiply any two fractions"]
-    plan = PathPlan.model_validate(payload)
-
-    assumptions = open_assumptions(
-        starting_knowledge=plan.starting_knowledge,
-        assumed_prerequisites=plan.scope_contract.assumed_prerequisites,
-        lessons=plan.lessons,
-        prerequisite_risks=[
-            {
-                "missing": "Multiply Any Two Fractions",
-                "needed_by": plan.lessons[0].concept_candidate.slug,
-                "note": "teacher declined",
-            }
-        ],
-    )
-    assert assumptions == []
-
-
-def test_open_assumptions_dedupe_same_claim_across_lessons() -> None:
-    payload = copy.deepcopy(_fixture("grade4-photosynthesis-path.json"))
-    claimed = "multiply any two fractions"
-    payload["modules"][0]["lessons"][0]["external_prerequisites"] = [claimed]
-    payload["modules"][0]["lessons"][1]["external_prerequisites"] = [claimed.upper()]
-    plan = PathPlan.model_validate(payload)
-
-    assumptions = open_assumptions(
-        starting_knowledge=plan.starting_knowledge,
-        assumed_prerequisites=plan.scope_contract.assumed_prerequisites,
-        lessons=plan.lessons,
-        prerequisite_risks=[],
-    )
-    assert assumptions == [
-        {
-            "claimed": claimed,
-            "needed_by": plan.lessons[0].concept_candidate.slug,
-        }
-    ]
-
-
-def test_open_assumptions_ignore_skipped_lessons() -> None:
-    class _Lesson:
-        def __init__(self, *, slug: str, title: str, skipped: bool, external: list[str]) -> None:
-            self.concept_slug = slug
-            self.title = title
-            self.skipped = skipped
-            self.external_prerequisites = external
-
-    assumptions = open_assumptions(
-        starting_knowledge=[],
-        assumed_prerequisites=[],
-        lessons=[
-            _Lesson(
-                slug="skipped-lesson",
-                title="Skipped",
-                skipped=True,
-                external=["multiply any two fractions"],
-            ),
-            _Lesson(
-                slug="active-lesson",
-                title="Active",
-                skipped=False,
-                external=["read a clock face"],
-            ),
-        ],
-        prerequisite_risks=[],
-    )
-    assert assumptions == [
-        {"claimed": "read a clock face", "needed_by": "active-lesson"},
-    ]
-
-
-def test_plain_validation_message_keeps_undeclared_copy() -> None:
-    from planning.validation import plain_validation_message
-
-    message = plain_validation_message(
-        PathValidationError(
-            "undeclared_external_prerequisite",
-            "External prerequisite 'x' is not declared",
-        )
-    )
-    assert "starting knowledge" in message
-
-
-def test_unreachable_fixture_blocks_approval() -> None:
+def test_legacy_unreachable_fixture_blocks_legacy_assert_approvable() -> None:
     plan = PathPlan.model_validate(_fixture("grade8-unreachable-destination-path.json"))
-
-    with pytest.raises(PathApprovalBlocked, match="prerequisite"):
+    with pytest.raises(PathApprovalBlocked):
         assert_approvable(plan)
-
-
-def test_declared_starting_knowledge_is_reclassified_as_external() -> None:
-    payload = copy.deepcopy(_fixture("grade4-photosynthesis-path.json"))
-    declared = payload["starting_knowledge"][0]
-    first_lesson = payload["modules"][0]["lessons"][0]
-    first_lesson["prerequisites"] = [declared]
-    first_lesson["external_prerequisites"] = []
-
-    normalized = normalize_declared_external_prerequisites(PathPlan.model_validate(payload))
-
-    assert normalized.lessons[0].prerequisites == []
-    assert normalized.lessons[0].external_prerequisites == [declared]
-    validate_path_plan(normalized)
-
-
-def test_undeclared_prerequisite_is_not_normalized_away() -> None:
-    payload = copy.deepcopy(_fixture("grade4-photosynthesis-path.json"))
-    payload["modules"][0]["lessons"][0]["prerequisites"] = ["unknown.capability"]
-
-    normalized = normalize_declared_external_prerequisites(PathPlan.model_validate(payload))
-
-    with pytest.raises(PathValidationError, match="does not resolve"):
-        validate_path_plan(normalized)
 
 
 def test_planner_request_forbids_count_and_duration() -> None:
@@ -283,26 +64,36 @@ def test_planner_request_forbids_count_and_duration() -> None:
         PathPlannerRequest.model_validate({**request, "duration_minutes": 120})
 
 
+def test_legacy_normalize_moves_declared_starting_knowledge() -> None:
+    payload = _fixture("grade4-photosynthesis-path.json")
+    declared = payload["starting_knowledge"][0]
+    first_lesson = payload["modules"][0]["lessons"][0]
+    first_lesson["prerequisites"] = [declared]
+    first_lesson["external_prerequisites"] = []
+
+    normalized = normalize_declared_external_prerequisites(PathPlan.model_validate(payload))
+    assert normalized.lessons[0].prerequisites == []
+    assert declared in normalized.lessons[0].external_prerequisites
+    validate_path_plan(normalized)
+
+
 @pytest.mark.parametrize(
     ("resource_name", "section", "title_pattern"),
     [
-        ("component-selector-v1.txt", 4, "Component Selector"),
         ("path-structural-planner-v1.txt", 5, r"Structural Planner \(rewrite\)"),
     ],
 )
 def test_phase5_prompts_are_verbatim(resource_name: str, section: int, title_pattern: str) -> None:
-    assert prompt_text(resource_name) == _prompt_section(section, title_pattern)
+    import re
 
-
-@pytest.mark.parametrize(
-    ("resource_name", "section", "title_pattern"),
-    [
-        ("path-planner.md", 1, "Path Planner"),
-        ("merge-critic.md", 3, "Merge Critic"),
-    ],
-)
-def test_packaged_phase5_prompts_are_verbatim(resource_name: str, section: int, title_pattern: str) -> None:
-    assert packaged_prompt_text(resource_name) == _prompt_section(section, title_pattern)
+    source = PROMPT_PACK.read_text(encoding="utf-8")
+    match = re.search(
+        rf"## {section}\. {title_pattern}.*?### System prompt\s*\n```\n(.*?)\n```",
+        source,
+        flags=re.DOTALL,
+    )
+    assert match is not None
+    assert prompt_text(resource_name) == match.group(1) + "\n"
 
 
 async def test_merge_critic_runs_once_per_nominated_pair(monkeypatch) -> None:
@@ -349,6 +140,5 @@ async def test_merge_critic_runs_zero_times_when_nominations_empty(monkeypatch) 
 
     monkeypatch.setattr("planning.agents.run_merge_critic", fake_critic)
     results = await run_adjacent_merge_critics(plan, trace_id="fixture")
-
     assert calls == []
     assert results == []

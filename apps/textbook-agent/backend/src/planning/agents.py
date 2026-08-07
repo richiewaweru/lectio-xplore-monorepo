@@ -11,10 +11,12 @@ from pydantic_ai import Agent
 from core.config import settings
 from core.llm.runner import RetryPolicy, run_llm
 from planning.models import (
+    CanonicalPathPlan,
     ComponentSelection,
     ConstructorOutput,
     MergeCriticResult,
     PathPlan,
+    PathPlanDraft,
     PathPlannerRequest,
     PathStructuralPlan,
     PlannedLesson,
@@ -28,7 +30,13 @@ from planning.prompts import (
     plan_editor_prompt,
 )
 from planning.planner_diagnostics import log_planner_attempt_failed
-from planning.validation import normalize_declared_external_prerequisites, validate_path_plan
+from planning.validation import (
+    PathPlanningError,
+    PathValidationError,
+    normalize_constructor_fields,
+    normalize_path_plan_draft,
+    validate_canonical_path_plan,
+)
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.models import (
     V2_COMPONENT_SELECTOR,
@@ -95,27 +103,73 @@ async def run_path_planner(
     request: PathPlannerRequest,
     *,
     trace_id: str | None = None,
-) -> PathPlan:
-    plan = await _run_structured(
-        node=V2_PATH_PLANNER,
-        caller="v2_path_planner",
-        output_type=PathPlan,
-        system_prompt=path_planner_prompt(),
-        user_payload={
-            **request.model_dump(mode="json"),
-            "planner_output_contract": {
-                "prerequisites": "slugs of earlier lessons in this path only",
-                "external_prerequisites": (
-                    "assumed capabilities; each must match starting_knowledge or "
-                    "scope_contract.assumed_prerequisites"
-                ),
-            },
-        },
-        trace_id=trace_id,
-    )
-    plan = normalize_declared_external_prerequisites(plan)
-    validate_path_plan(plan)
-    return plan
+) -> CanonicalPathPlan:
+    """Plan a unit path with at most one targeted repair attempt."""
+    tid = trace_id or str(uuid.uuid4())
+    base_payload = request.model_dump(mode="json")
+    errors: list[str] = []
+    previous_output: dict[str, Any] | None = None
+
+    for attempt in (1, 2):
+        payload: dict[str, Any] = dict(base_payload)
+        if attempt == 2:
+            payload = {
+                **base_payload,
+                "repair": {
+                    "instruction": (
+                        "Your previous output violated the path contract. Return "
+                        "the complete corrected JSON matching the minimal plan "
+                        "shape. Change only what the listed errors name."
+                    ),
+                    "previous_output": previous_output,
+                    "validation_errors": errors,
+                },
+            }
+        try:
+            draft = await _run_structured(
+                node=V2_PATH_PLANNER,
+                caller="v2_path_planner",
+                output_type=PathPlanDraft,
+                system_prompt=path_planner_prompt(),
+                user_payload=payload,
+                trace_id=f"{tid}:plan{attempt}",
+            )
+        except Exception as exc:  # noqa: BLE001 - classified below
+            errors = _schema_errors(exc)
+            previous_output = None
+            log_planner_attempt_failed(
+                node=V2_PATH_PLANNER,
+                attempt=attempt,
+                errors=errors,
+                exc=exc,
+                repair_attached=attempt == 2,
+                will_retry=attempt == 1,
+            )
+            if attempt == 2:
+                raise PathPlanningError(errors) from exc
+            continue
+
+        try:
+            plan = normalize_path_plan_draft(draft)
+            errors = validate_canonical_path_plan(plan)
+            if not errors:
+                return plan
+        except PathValidationError as exc:
+            errors = [str(exc)]
+            plan = None  # type: ignore[assignment]
+
+        previous_output = draft.model_dump(mode="json", exclude_none=True)
+        log_planner_attempt_failed(
+            node=V2_PATH_PLANNER,
+            attempt=attempt,
+            errors=errors,
+            repair_attached=attempt == 2,
+            will_retry=attempt == 1,
+        )
+        if attempt == 2:
+            raise PathPlanningError(errors)
+
+    raise PathPlanningError(errors or ["path planner produced no usable result"])
 
 
 async def run_merge_critic(
@@ -352,7 +406,7 @@ async def run_constructor(
         payload["correction"] = correction
     if clarifying_answer is not None:
         payload["clarifying_answer"] = clarifying_answer
-    return await _run_structured(
+    result = await _run_structured(
         node=V3_CONSTRUCTOR,
         caller="v3_constructor",
         output_type=ConstructorOutput,
@@ -360,24 +414,91 @@ async def run_constructor(
         user_payload=payload,
         trace_id=trace_id,
     )
+    objective, starting = normalize_constructor_fields(
+        destination_objective=result.destination_objective,
+        starting_knowledge=result.starting_knowledge,
+    )
+    return result.model_copy(
+        update={
+            "destination_objective": objective,
+            "starting_knowledge": starting,
+        }
+    )
 
 
 async def run_plan_chat_edit(
-    plan: PathPlan,
+    plan: CanonicalPathPlan,
     message: str,
     *,
     unit_context: dict[str, Any] | None = None,
     trace_id: str | None = None,
-) -> PathPlan:
-    return await _run_structured(
-        node=V2_PATH_CHAT_EDITOR,
-        caller="v2_path_chat_editor",
-        output_type=PathPlan,
-        system_prompt=plan_editor_prompt(),
-        user_payload={
-            "current_plan": plan.model_dump(mode="json"),
-            "edit_request": message,
-            "unit_context": unit_context or {},
-        },
-        trace_id=trace_id,
-    )
+) -> CanonicalPathPlan:
+    """Edit a path via chat with at most one targeted repair attempt."""
+    tid = trace_id or str(uuid.uuid4())
+    base_payload: dict[str, Any] = {
+        "current_plan": plan.model_dump(mode="json"),
+        "edit_request": message,
+        "unit_context": unit_context or {},
+    }
+    errors: list[str] = []
+    previous_output: dict[str, Any] | None = None
+
+    for attempt in (1, 2):
+        payload = dict(base_payload)
+        if attempt == 2:
+            payload = {
+                **base_payload,
+                "repair": {
+                    "instruction": (
+                        "Your previous output violated the path contract. Return "
+                        "the complete corrected minimal plan JSON. Change only "
+                        "what the listed errors name."
+                    ),
+                    "previous_output": previous_output,
+                    "validation_errors": errors,
+                },
+            }
+        try:
+            draft = await _run_structured(
+                node=V2_PATH_CHAT_EDITOR,
+                caller="v2_path_chat_editor",
+                output_type=PathPlanDraft,
+                system_prompt=plan_editor_prompt(),
+                user_payload=payload,
+                trace_id=f"{tid}:edit{attempt}",
+            )
+        except Exception as exc:  # noqa: BLE001 - classified below
+            errors = _schema_errors(exc)
+            previous_output = None
+            log_planner_attempt_failed(
+                node=V2_PATH_CHAT_EDITOR,
+                attempt=attempt,
+                errors=errors,
+                exc=exc,
+                repair_attached=attempt == 2,
+                will_retry=attempt == 1,
+            )
+            if attempt == 2:
+                raise PathPlanningError(errors) from exc
+            continue
+
+        try:
+            edited = normalize_path_plan_draft(draft)
+            errors = validate_canonical_path_plan(edited)
+            if not errors:
+                return edited
+        except PathValidationError as exc:
+            errors = [str(exc)]
+
+        previous_output = draft.model_dump(mode="json", exclude_none=True)
+        log_planner_attempt_failed(
+            node=V2_PATH_CHAT_EDITOR,
+            attempt=attempt,
+            errors=errors,
+            repair_attached=attempt == 2,
+            will_retry=attempt == 1,
+        )
+        if attempt == 2:
+            raise PathPlanningError(errors)
+
+    raise PathPlanningError(errors or ["path chat editor produced no usable result"])

@@ -22,7 +22,6 @@ from core.dependencies import get_async_session
 from core.entities.user import User
 from core.rate_limit import limiter
 from planning.agents import (
-    run_adjacent_merge_critics,
     run_constructor,
     run_path_planner,
     run_plan_chat_edit,
@@ -39,7 +38,6 @@ from planning.models import (
     MarksWriteRequest,
     PathChatEditRequest,
     PathLessonMutationRequest,
-    PathPlan,
     PathPlannerRequest,
     PathReplanRequest,
     PathVersionMutationRequest,
@@ -91,6 +89,7 @@ from planning.service import (
     approve_path,
     assert_lesson_mutation_fresh,
     assert_path_mutation_fresh,
+    canonical_plan_from_version,
     clone_path_version,
     create_unit,
     get_owned_unit,
@@ -109,10 +108,9 @@ from planning.service import (
 )
 from planning.validation import (
     PathApprovalBlocked,
+    PathPlanningError,
     PathValidationError,
-    open_assumptions,
     plain_validation_message,
-    validate_path_plan,
 )
 from v3_blueprint.planning.persistence import load_chunked_state
 
@@ -170,17 +168,11 @@ async def _path_payload(session: AsyncSession, version) -> dict[str, object]:
     prerequisites: dict[str, list[str]] = {lesson.id: [] for lesson in lessons}
     for link in links:
         prerequisites[link.path_lesson_id].append(link.prerequisite_lesson_id)
-    scope = await session.get(UnitScopeContractModel, version.unit_id) if unit is not None else None
-    assumptions = (
-        open_assumptions(
-            starting_knowledge=unit.starting_knowledge if unit is not None else [],
-            assumed_prerequisites=scope.assumed_prerequisites if scope is not None else [],
-            lessons=lessons,
-            prerequisite_risks=version.prerequisite_risks,
-        )
-        if unit is not None
-        else []
-    )
+    completeness_note = None
+    if isinstance(version.source_plan_json, dict):
+        completeness = version.source_plan_json.get("completeness")
+        if isinstance(completeness, dict):
+            completeness_note = completeness.get("note")
     return {
         "id": version.id,
         "unit_id": version.unit_id,
@@ -192,12 +184,12 @@ async def _path_payload(session: AsyncSession, version) -> dict[str, object]:
             else "superseded"
         ),
         "generated_by": version.generated_by,
-        "merge_critic_results": version.merge_critic_results,
-        "prerequisite_risks": version.prerequisite_risks,
+        "merge_critic_results": version.merge_critic_results or [],
+        "prerequisite_risks": version.prerequisite_risks or [],
         "forward_verified": version.forward_verified,
         "reaches_destination": version.reaches_destination,
-        "completeness_note": (version.source_plan_json.get("completeness") or {}).get("note"),
-        "open_assumptions": assumptions,
+        "completeness_note": completeness_note,
+        "open_assumptions": [],
         "approved_at": version.approved_at,
         "created_at": version.created_at,
         "lessons": [
@@ -240,6 +232,15 @@ def _raise_http(exc: Exception) -> None:
         raise HTTPException(
             status_code=409,
             detail={"code": "projection_unavailable", "message": str(exc)},
+        ) from exc
+    if isinstance(exc, PathPlanningError):
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "path_planning_failed",
+                "message": str(exc),
+                "errors": exc.errors,
+            },
         ) from exc
     if isinstance(exc, PathValidationError):
         raise HTTPException(status_code=422, detail=plain_validation_message(exc)) from exc
@@ -366,10 +367,6 @@ async def _plan_or_replan(
         cache_token = bind_prompt_cache(prompt_texts)
         try:
             plan = await run_path_planner(planner_request, trace_id=f"unit:{unit.id}")
-            merge_results = await run_adjacent_merge_critics(
-                plan,
-                trace_id=f"unit:{unit.id}",
-            )
         finally:
             reset_prompt_cache(cache_token)
         version = await persist_path_plan(
@@ -378,7 +375,7 @@ async def _plan_or_replan(
             plan=plan,
             generated_by="path_replanner" if replan else "path_planner",
             prior_version=prior,
-            merge_critic_results=merge_results,
+            merge_critic_results=[],
         )
         await session.commit()
         return await _path_payload(session, version)
@@ -440,7 +437,7 @@ async def post_path_chat_edit(
             path_version_id=body.path_version_id,
             path_revision=body.path_revision,
         )
-        current_plan = PathPlan.model_validate(version.source_plan_json)
+        current_plan = await canonical_plan_from_version(session, version)
 
         from core.prompts import bind_prompt_cache, reset_prompt_cache, resolve_all_prompts
 
@@ -457,19 +454,12 @@ async def post_path_chat_edit(
                     "destination_objective": unit.destination_objective,
                     "starting_knowledge": unit.starting_knowledge,
                     "curriculum_context": unit.curriculum_context,
+                    "class_notes": unit.class_notes,
                 },
                 trace_id=f"unit:{unit.id}:chat-edit",
             )
         finally:
             reset_prompt_cache(cache_token)
-
-        try:
-            validate_path_plan(edited_plan)
-        except PathValidationError as exc:
-            return {
-                "path": await _path_payload(session, version),
-                "validation_messages": [plain_validation_message(exc)],
-            }
 
         new_version = await persist_path_plan(
             session,
@@ -477,7 +467,7 @@ async def post_path_chat_edit(
             plan=edited_plan,
             generated_by="chat_editor",
             prior_version=version,
-            merge_critic_results=version.merge_critic_results or [],
+            merge_critic_results=[],
         )
         unit.status = "draft"
         await session.commit()
@@ -485,6 +475,28 @@ async def post_path_chat_edit(
             "path": await _path_payload(session, new_version),
             "validation_messages": [],
         }
+    except PathPlanningError as exc:
+        await session.rollback()
+        try:
+            unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+            version = await _active_version(session, unit)
+            return {
+                "path": await _path_payload(session, version),
+                "validation_messages": exc.errors or [str(exc)],
+            }
+        except Exception:
+            _raise_http(exc)
+    except PathValidationError as exc:
+        await session.rollback()
+        try:
+            unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
+            version = await _active_version(session, unit)
+            return {
+                "path": await _path_payload(session, version),
+                "validation_messages": [plain_validation_message(exc)],
+            }
+        except Exception:
+            _raise_http(exc)
     except Exception as exc:
         await session.rollback()
         _raise_http(exc)

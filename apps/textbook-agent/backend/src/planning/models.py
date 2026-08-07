@@ -13,6 +13,56 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class TolerantModel(BaseModel):
+    """Prompt-facing draft: tolerate stray LLM keys without failing the plan."""
+
+    model_config = ConfigDict(extra="ignore")
+
+
+# ── Active minimal path-planner contract ───────────────────────────────────
+
+
+class PathScopeDraft(TolerantModel):
+    must_cover: list[str] = Field(default_factory=list)
+    do_not_cover: list[str] = Field(default_factory=list)
+
+
+class PathLessonDraft(TolerantModel):
+    key: str = ""
+    title: str = ""
+    objective: str = ""
+    requires: list[str] = Field(default_factory=list)
+    must_establish: list[str] = Field(default_factory=list)
+    knowledge_type: str = ""
+
+
+class PathPlanDraft(TolerantModel):
+    scope: PathScopeDraft = Field(default_factory=PathScopeDraft)
+    lessons: list[PathLessonDraft] = Field(default_factory=list)
+
+
+class CanonicalPathScope(StrictModel):
+    must_cover: list[str] = Field(min_length=1)
+    do_not_cover: list[str] = Field(min_length=1)
+
+
+class CanonicalPathLesson(StrictModel):
+    key: str
+    title: str = Field(min_length=1)
+    objective: str = Field(min_length=1)
+    requires: list[str] = Field(default_factory=list)
+    must_establish: list[str] = Field(min_length=1)
+    knowledge_type: KnowledgeType
+
+
+class CanonicalPathPlan(StrictModel):
+    scope: CanonicalPathScope
+    lessons: list[CanonicalPathLesson] = Field(min_length=1)
+
+
+# ── Legacy PathPlan (manual merge/split + old fixtures; not active planner) ─
+
+
 class ScopeContract(StrictModel):
     must_establish: list[str] = Field(min_length=1)
     may_include: list[str] = Field(default_factory=list)
@@ -63,6 +113,8 @@ class PathCompleteness(StrictModel):
 
 
 class PathPlan(StrictModel):
+    """Legacy full planner shape — retained for merge critic / old fixtures only."""
+
     unit: str | None = None
     subject: str | None = None
     grade_level: str | None = None
@@ -70,8 +122,8 @@ class PathPlan(StrictModel):
     starting_knowledge: list[str] = Field(default_factory=list)
     scope_contract: ScopeContract
     modules: list[PathModule] = Field(min_length=1)
-    adjacent_merge_reviews: list[AdjacentMergeReview]
-    prerequisite_risks: list[PrerequisiteRisk]
+    adjacent_merge_reviews: list[AdjacentMergeReview] = Field(default_factory=list)
+    prerequisite_risks: list[PrerequisiteRisk] = Field(default_factory=list)
     completeness: PathCompleteness
 
     @property
@@ -90,12 +142,7 @@ class PathPlannerRequest(StrictModel):
     destination_objective: str
     starting_knowledge: list[str]
     curriculum_context: str | None = None
-    must_include: list[str] = Field(default_factory=list)
-    must_avoid: list[str] = Field(default_factory=list)
-    terminology: list[str] = Field(default_factory=list)
-    notation: str | None = None
-    assessment_context: str | None = None
-    known_difficulties: list[str] = Field(default_factory=list)
+    class_notes: str | None = None
 
 
 class PathReplanRequest(PathPlannerRequest):

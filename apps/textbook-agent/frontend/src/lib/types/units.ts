@@ -8,6 +8,7 @@ export interface Unit {
 	subject: string;
 	grade_level: string;
 	curriculum_context: string | null;
+	class_notes: string | null;
 	destination_objective: string;
 	starting_knowledge: string[];
 	status: string;
@@ -23,6 +24,7 @@ export interface UnitCreateInput {
 	destination_objective: string;
 	starting_knowledge: string[];
 	curriculum_context?: string | null;
+	class_notes?: string | null;
 }
 
 export interface ConstructorReadbackInput {
@@ -34,6 +36,8 @@ export interface ConstructorReadbackInput {
 }
 
 export interface ConstructorReadback {
+	title: string;
+	topic: string;
 	destination_objective: string;
 	starting_knowledge: string[];
 	curriculum_context: string | null;
@@ -64,12 +68,7 @@ export interface PathPlannerInput {
 	destination_objective: string;
 	starting_knowledge: string[];
 	curriculum_context?: string | null;
-	must_include?: string[];
-	must_avoid?: string[];
-	terminology?: string[];
-	notation?: string | null;
-	assessment_context?: string | null;
-	known_difficulties?: string[];
+	class_notes?: string | null;
 }
 
 export interface PathLesson {

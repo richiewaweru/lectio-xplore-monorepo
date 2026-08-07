@@ -5,7 +5,8 @@ from pathlib import Path
 from sqlalchemy import select
 
 from core.database.models import PathLessonModel, UserModel
-from planning.models import PathPlan, ShapeDeviationCreateRequest, UnitCreate
+from planning.models import ShapeDeviationCreateRequest, UnitCreate
+from tests.planning.path_helpers import load_canonical_plan, load_legacy_path_plan
 from planning.service import approve_path, create_unit, persist_path_plan
 from planning.shapes import (
     decide_shape_deviation,
@@ -24,17 +25,18 @@ FIXTURE = (
 
 async def _conceptual_lesson(db_session):
     db_session.add(UserModel(id="shape-owner", email="shape@example.invalid", name="Shape"))
-    plan = PathPlan.model_validate_json(FIXTURE.read_text(encoding="utf-8"))
+    plan = load_canonical_plan("grade4-photosynthesis-path.json")
+    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     unit = await create_unit(
         db_session,
         owner_id="shape-owner",
         request=UnitCreate(
-            title=plan.unit or "Photosynthesis",
-            topic=plan.unit or "Photosynthesis",
-            subject=plan.subject or "Science",
-            grade_level=plan.grade_level or "Grade 4",
-            destination_objective=plan.destination_objective or "Destination",
-            starting_knowledge=plan.starting_knowledge,
+            title=legacy.unit or "Photosynthesis",
+            topic=legacy.unit or "Photosynthesis",
+            subject=legacy.subject or "Science",
+            grade_level=legacy.grade_level or "Grade 4",
+            destination_objective=legacy.destination_objective or "Destination",
+            starting_knowledge=legacy.starting_knowledge,
         ),
     )
     version = await persist_path_plan(db_session, unit=unit, plan=plan)

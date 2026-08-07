@@ -160,11 +160,21 @@ export function planUnitPath(unitId: string, input: PathPlannerInput, replan = f
 	});
 }
 
-export function editUnitPathByChat(unitId: string, path: UnitPath, message: string): Promise<PathEditChatResult> {
-	return jsonRequest(`/api/v1/units/${encodeURIComponent(unitId)}/path:edit-chat`, 'Could not update the lessons from that message.', {
+export async function editUnitPathByChat(unitId: string, path: UnitPath, message: string): Promise<PathEditChatResult> {
+	const body = await jsonRequest<{
+		path: UnitPath;
+		validation_messages?: string[];
+	}>(`/api/v1/units/${encodeURIComponent(unitId)}/path:edit-chat`, 'Could not update the lessons from that message.', {
 		method: 'POST', headers: jsonHeaders,
 		body: JSON.stringify({ message, path_version_id: path.id, path_revision: path.revision })
 	});
+	return {
+		...body.path,
+		issues: body.validation_messages ?? [],
+		note: body.validation_messages?.length
+			? body.validation_messages.join(' ')
+			: null
+	};
 }
 
 export function approveUnitPath(unitId: string, path: UnitPath): Promise<UnitPath> {

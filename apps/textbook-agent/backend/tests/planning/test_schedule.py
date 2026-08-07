@@ -13,7 +13,6 @@ from core.database.models import (
 )
 from planning.models import (
     GroupVoice,
-    PathPlan,
     ScheduleSuggestRequest,
     ScheduleWriteRequest,
     TeachingPeriodInput,
@@ -34,6 +33,7 @@ from planning.service import (
     create_unit,
     persist_path_plan,
 )
+from tests.planning.path_helpers import load_canonical_plan, load_legacy_path_plan
 
 
 FIXTURE = (
@@ -55,17 +55,18 @@ def _period_input(payload: dict) -> TeachingPeriodInput:
 
 async def _unit_with_approved_path(db_session, *, owner_id: str, email: str):
     db_session.add(UserModel(id=owner_id, email=email, name=owner_id))
-    plan = PathPlan.model_validate_json(FIXTURE.read_text(encoding="utf-8"))
+    plan = load_canonical_plan("grade4-photosynthesis-path.json")
+    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     unit = await create_unit(
         db_session,
         owner_id=owner_id,
         request=UnitCreate(
-            title=plan.unit or "Photosynthesis",
-            topic=plan.unit or "Photosynthesis",
-            subject=plan.subject or "Science",
-            grade_level=plan.grade_level or "Grade 4",
-            destination_objective=plan.destination_objective or "Destination",
-            starting_knowledge=plan.starting_knowledge,
+            title=legacy.unit or "Photosynthesis",
+            topic=legacy.unit or "Photosynthesis",
+            subject=legacy.subject or "Science",
+            grade_level=legacy.grade_level or "Grade 4",
+            destination_objective=legacy.destination_objective or "Destination",
+            starting_knowledge=legacy.starting_knowledge,
         ),
     )
     version = await persist_path_plan(db_session, unit=unit, plan=plan)

@@ -11,7 +11,8 @@ from core.auth.middleware import get_current_user
 from core.database.models import PathLessonModel, UserModel
 from core.dependencies import get_async_session
 from core.entities.user import User
-from planning.models import PathPlan, UnitCreate
+from planning.models import UnitCreate
+from tests.planning.path_helpers import load_canonical_plan, load_legacy_path_plan
 from planning.service import approve_path, create_unit, persist_path_plan
 
 
@@ -110,22 +111,21 @@ def test_path_planner_openapi_has_no_count_or_duration_input() -> None:
     assert planner_schema["additionalProperties"] is False
 
 
-async def test_negative_fixture_approval_is_blocked_over_http(db_session_factory) -> None:
-    plan = PathPlan.model_validate_json(
-        (FIXTURES / "grade8-unreachable-destination-path.json").read_text(encoding="utf-8")
-    )
+async def test_canonical_path_approval_succeeds_over_http(db_session_factory) -> None:
+    plan = load_canonical_plan("grade8-unreachable-destination-path.json")
+    legacy = load_legacy_path_plan("grade8-unreachable-destination-path.json")
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
             request=UnitCreate(
-                title=plan.unit or "Unreachable",
-                topic=plan.unit or "Unreachable",
-                subject=plan.subject or "Science",
-                grade_level=plan.grade_level or "Grade 8",
-                destination_objective=plan.destination_objective or "Destination",
-                starting_knowledge=plan.starting_knowledge,
+                title=legacy.unit or "Unreachable",
+                topic=legacy.unit or "Unreachable",
+                subject=legacy.subject or "Science",
+                grade_level=legacy.grade_level or "Grade 8",
+                destination_objective=legacy.destination_objective or "Destination",
+                starting_knowledge=legacy.starting_knowledge,
             ),
         )
         version = await persist_path_plan(session, unit=unit, plan=plan)
@@ -142,26 +142,26 @@ async def test_negative_fixture_approval_is_blocked_over_http(db_session_factory
             json={"path_version_id": version_id, "path_revision": path_revision},
         )
 
-    assert response.status_code == 409
-    assert "prerequisite" in response.json()["detail"].lower()
+    assert response.status_code == 200
+    assert response.json()["status"] == "approved"
+    assert response.json()["open_assumptions"] == []
 
 
 async def test_unprepared_lesson_status_is_explicit_over_http(db_session_factory) -> None:
-    plan = PathPlan.model_validate_json(
-        (FIXTURES / "grade4-photosynthesis-path.json").read_text(encoding="utf-8")
-    )
+    plan = load_canonical_plan("grade4-photosynthesis-path.json")
+    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
             request=UnitCreate(
-                title=plan.unit or "Photosynthesis",
-                topic=plan.unit or "Photosynthesis",
-                subject=plan.subject or "Science",
-                grade_level=plan.grade_level or "Grade 4",
-                destination_objective=plan.destination_objective or "Destination",
-                starting_knowledge=plan.starting_knowledge,
+                title=legacy.unit or "Photosynthesis",
+                topic=legacy.unit or "Photosynthesis",
+                subject=legacy.subject or "Science",
+                grade_level=legacy.grade_level or "Grade 4",
+                destination_objective=legacy.destination_objective or "Destination",
+                starting_knowledge=legacy.starting_knowledge,
             ),
         )
         version = await persist_path_plan(session, unit=unit, plan=plan)
@@ -199,21 +199,20 @@ async def test_unprepared_lesson_status_is_explicit_over_http(db_session_factory
 
 
 async def test_path_edit_revokes_approval_before_preparation(db_session_factory) -> None:
-    plan = PathPlan.model_validate_json(
-        (FIXTURES / "grade4-photosynthesis-path.json").read_text(encoding="utf-8")
-    )
+    plan = load_canonical_plan("grade4-photosynthesis-path.json")
+    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
             request=UnitCreate(
-                title=plan.unit or "Photosynthesis",
-                topic=plan.unit or "Photosynthesis",
-                subject=plan.subject or "Science",
-                grade_level=plan.grade_level or "Grade 4",
-                destination_objective=plan.destination_objective or "Destination",
-                starting_knowledge=plan.starting_knowledge,
+                title=legacy.unit or "Photosynthesis",
+                topic=legacy.unit or "Photosynthesis",
+                subject=legacy.subject or "Science",
+                grade_level=legacy.grade_level or "Grade 4",
+                destination_objective=legacy.destination_objective or "Destination",
+                starting_knowledge=legacy.starting_knowledge,
             ),
         )
         version = await persist_path_plan(session, unit=unit, plan=plan)
@@ -260,21 +259,20 @@ async def test_path_edit_revokes_approval_before_preparation(db_session_factory)
 
 
 async def test_history_restore_status_and_stale_edit_are_explicit(db_session_factory) -> None:
-    plan = PathPlan.model_validate_json(
-        (FIXTURES / "grade4-photosynthesis-path.json").read_text(encoding="utf-8")
-    )
+    plan = load_canonical_plan("grade4-photosynthesis-path.json")
+    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
             request=UnitCreate(
-                title=plan.unit or "Photosynthesis",
-                topic=plan.unit or "Photosynthesis",
-                subject=plan.subject or "Science",
-                grade_level=plan.grade_level or "Grade 4",
-                destination_objective=plan.destination_objective or "Destination",
-                starting_knowledge=plan.starting_knowledge,
+                title=legacy.unit or "Photosynthesis",
+                topic=legacy.unit or "Photosynthesis",
+                subject=legacy.subject or "Science",
+                grade_level=legacy.grade_level or "Grade 4",
+                destination_objective=legacy.destination_objective or "Destination",
+                starting_knowledge=legacy.starting_knowledge,
             ),
         )
         first = await persist_path_plan(session, unit=unit, plan=plan)
@@ -364,21 +362,20 @@ async def test_schedule_and_groups_reject_cross_user_access(db_session_factory) 
 
 
 async def test_shape_deviation_requires_explicit_approval_over_http(db_session_factory) -> None:
-    plan = PathPlan.model_validate_json(
-        (FIXTURES / "grade4-photosynthesis-path.json").read_text(encoding="utf-8")
-    )
+    plan = load_canonical_plan("grade4-photosynthesis-path.json")
+    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
             request=UnitCreate(
-                title=plan.unit or "Photosynthesis",
-                topic=plan.unit or "Photosynthesis",
-                subject=plan.subject or "Science",
-                grade_level=plan.grade_level or "Grade 4",
-                destination_objective=plan.destination_objective or "Destination",
-                starting_knowledge=plan.starting_knowledge,
+                title=legacy.unit or "Photosynthesis",
+                topic=legacy.unit or "Photosynthesis",
+                subject=legacy.subject or "Science",
+                grade_level=legacy.grade_level or "Grade 4",
+                destination_objective=legacy.destination_objective or "Destination",
+                starting_knowledge=legacy.starting_knowledge,
             ),
         )
         version = await persist_path_plan(session, unit=unit, plan=plan)
@@ -449,21 +446,20 @@ async def test_shape_deviation_requires_explicit_approval_over_http(db_session_f
 
 
 async def test_schedule_and_groups_round_trip_over_http(db_session_factory) -> None:
-    plan = PathPlan.model_validate_json(
-        (FIXTURES / "grade4-photosynthesis-path.json").read_text(encoding="utf-8")
-    )
+    plan = load_canonical_plan("grade4-photosynthesis-path.json")
+    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
             request=UnitCreate(
-                title=plan.unit or "Photosynthesis",
-                topic=plan.unit or "Photosynthesis",
-                subject=plan.subject or "Science",
-                grade_level=plan.grade_level or "Grade 4",
-                destination_objective=plan.destination_objective or "Destination",
-                starting_knowledge=plan.starting_knowledge,
+                title=legacy.unit or "Photosynthesis",
+                topic=legacy.unit or "Photosynthesis",
+                subject=legacy.subject or "Science",
+                grade_level=legacy.grade_level or "Grade 4",
+                destination_objective=legacy.destination_objective or "Destination",
+                starting_knowledge=legacy.starting_knowledge,
             ),
         )
         version = await persist_path_plan(session, unit=unit, plan=plan)
@@ -548,19 +544,18 @@ async def test_schedule_and_groups_round_trip_over_http(db_session_factory) -> N
 
 
 async def test_lesson_actual_round_trip_is_revision_guarded_over_http(db_session_factory) -> None:
-    plan = PathPlan.model_validate_json(
-        (FIXTURES / "grade4-photosynthesis-path.json").read_text(encoding="utf-8")
-    )
+    plan = load_canonical_plan("grade4-photosynthesis-path.json")
+    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
             request=UnitCreate(
-                title=plan.unit or "Photosynthesis", topic=plan.unit or "Photosynthesis",
-                subject=plan.subject or "Science", grade_level=plan.grade_level or "Grade 4",
-                destination_objective=plan.destination_objective or "Destination",
-                starting_knowledge=plan.starting_knowledge,
+                title=legacy.unit or "Photosynthesis", topic=legacy.unit or "Photosynthesis",
+                subject=legacy.subject or "Science", grade_level=legacy.grade_level or "Grade 4",
+                destination_objective=legacy.destination_objective or "Destination",
+                starting_knowledge=legacy.starting_knowledge,
             ),
         )
         version = await persist_path_plan(session, unit=unit, plan=plan)
@@ -601,30 +596,25 @@ async def test_lesson_actual_round_trip_is_revision_guarded_over_http(db_session
     assert "expected 1" in stale.json()["detail"]
 
 
-async def test_open_assumption_resolve_known_and_stale_revision(db_session_factory) -> None:
-    plan = PathPlan.model_validate_json(
-        (FIXTURES / "grade4-photosynthesis-path.json").read_text(encoding="utf-8")
-    )
-    claimed = "multiply any two fractions"
-    plan.lessons[0].external_prerequisites = [claimed]
+async def test_new_paths_expose_empty_open_assumptions(db_session_factory) -> None:
+    plan = load_canonical_plan("grade4-photosynthesis-path.json")
+    legacy = load_legacy_path_plan("grade4-photosynthesis-path.json")
     async with db_session_factory() as session:
         session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
         unit = await create_unit(
             session,
             owner_id=TEST_USER.id,
             request=UnitCreate(
-                title=plan.unit or "Photosynthesis",
-                topic=plan.unit or "Photosynthesis",
-                subject=plan.subject or "Science",
-                grade_level=plan.grade_level or "Grade 4",
-                destination_objective=plan.destination_objective or "Destination",
-                starting_knowledge=plan.starting_knowledge,
+                title=legacy.unit or "Photosynthesis",
+                topic=legacy.unit or "Photosynthesis",
+                subject=legacy.subject or "Science",
+                grade_level=legacy.grade_level or "Grade 4",
+                destination_objective=legacy.destination_objective or "Destination",
+                starting_knowledge=legacy.starting_knowledge,
             ),
         )
         version = await persist_path_plan(session, unit=unit, plan=plan)
         unit_id = unit.id
-        version_id = version.id
-        path_revision = version.revision
         await session.commit()
 
     app.dependency_overrides[get_current_user] = _override_user
@@ -632,125 +622,9 @@ async def test_open_assumption_resolve_known_and_stale_revision(db_session_facto
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         path = await client.get(f"/api/v1/units/{unit_id}/path")
         assert path.status_code == 200
-        assert path.json()["open_assumptions"] == [
-            {"claimed": claimed, "needed_by": plan.lessons[0].concept_candidate.slug}
-        ]
-
-        stale = await client.post(
-            f"/api/v1/units/{unit_id}/path/assumptions/resolve",
-            json={
-                "path_version_id": version_id,
-                "path_revision": path_revision - 1 if path_revision > 1 else 999,
-                "claimed": claimed,
-                "decision": "known",
-            },
-        )
-        assert stale.status_code == 409
-
-        resolved = await client.post(
-            f"/api/v1/units/{unit_id}/path/assumptions/resolve",
-            json={
-                "path_version_id": version_id,
-                "path_revision": path_revision,
-                "claimed": claimed,
-                "decision": "known",
-            },
-        )
-        assert resolved.status_code == 200
-        body = resolved.json()
+        body = path.json()
         assert body["open_assumptions"] == []
-        assert body["revision"] == path_revision + 1
-
-        unit_response = await client.get(f"/api/v1/units/{unit_id}")
-        assert claimed in unit_response.json()["starting_knowledge"]
-
-
-async def test_open_assumption_resolve_teach_over_http(db_session_factory) -> None:
-    plan = PathPlan.model_validate_json(
-        (FIXTURES / "grade4-photosynthesis-path.json").read_text(encoding="utf-8")
-    )
-    claimed = "multiply any two fractions"
-    plan.lessons[0].external_prerequisites = [claimed]
-    async with db_session_factory() as session:
-        session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
-        unit = await create_unit(
-            session,
-            owner_id=TEST_USER.id,
-            request=UnitCreate(
-                title=plan.unit or "Photosynthesis",
-                topic=plan.unit or "Photosynthesis",
-                subject=plan.subject or "Science",
-                grade_level=plan.grade_level or "Grade 4",
-                destination_objective=plan.destination_objective or "Destination",
-                starting_knowledge=plan.starting_knowledge,
-            ),
-        )
-        version = await persist_path_plan(session, unit=unit, plan=plan)
-        unit_id = unit.id
-        version_id = version.id
-        path_revision = version.revision
-        await session.commit()
-
-    app.dependency_overrides[get_current_user] = _override_user
-    await _install_session(db_session_factory)
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resolved = await client.post(
-            f"/api/v1/units/{unit_id}/path/assumptions/resolve",
-            json={
-                "path_version_id": version_id,
-                "path_revision": path_revision,
-                "claimed": claimed,
-                "decision": "teach",
-            },
-        )
-        assert resolved.status_code == 200
-        body = resolved.json()
-        assert body["open_assumptions"] == []
-        assert body["reaches_destination"] is False
-        assert body["prerequisite_risks"] == [
-            {
-                "missing": claimed,
-                "needed_by": plan.lessons[0].concept_candidate.slug,
-                "note": "teacher declined",
-            }
-        ]
-
-
-async def test_open_assumption_resolve_bogus_claim_is_422(db_session_factory) -> None:
-    plan = PathPlan.model_validate_json(
-        (FIXTURES / "grade4-photosynthesis-path.json").read_text(encoding="utf-8")
-    )
-    async with db_session_factory() as session:
-        session.add(UserModel(id=TEST_USER.id, email=TEST_USER.email, name=TEST_USER.name))
-        unit = await create_unit(
-            session,
-            owner_id=TEST_USER.id,
-            request=UnitCreate(
-                title=plan.unit or "Photosynthesis",
-                topic=plan.unit or "Photosynthesis",
-                subject=plan.subject or "Science",
-                grade_level=plan.grade_level or "Grade 4",
-                destination_objective=plan.destination_objective or "Destination",
-                starting_knowledge=plan.starting_knowledge,
-            ),
-        )
-        version = await persist_path_plan(session, unit=unit, plan=plan)
-        unit_id = unit.id
-        version_id = version.id
-        path_revision = version.revision
-        await session.commit()
-
-    app.dependency_overrides[get_current_user] = _override_user
-    await _install_session(db_session_factory)
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.post(
-            f"/api/v1/units/{unit_id}/path/assumptions/resolve",
-            json={
-                "path_version_id": version_id,
-                "path_revision": path_revision,
-                "claimed": "never claimed by any lesson",
-                "decision": "known",
-            },
-        )
-        assert response.status_code == 422
-        assert "not an open assumption" in response.json()["detail"]
+        assert body["merge_critic_results"] == []
+        assert body["prerequisite_risks"] == []
+        assert body["forward_verified"] is True
+        assert body["reaches_destination"] is True

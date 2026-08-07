@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import pytest
@@ -19,7 +18,6 @@ from planning.models import (
     LessonPart,
     MergePathLessonsRequest,
     PathLessonPatch,
-    PathPlan,
     ReorderPathLessonsRequest,
     SplitPathLessonRequest,
     UnitCreate,
@@ -36,25 +34,26 @@ from planning.service import (
     skip_lesson,
     split_lesson,
 )
-from planning.validation import PathApprovalBlocked, open_assumptions
+from planning.validation import PathApprovalBlocked
+from tests.planning.path_helpers import load_canonical_plan, load_legacy_path_plan
 
 
 FIXTURES = Path(__file__).resolve().parents[3] / "handoff" / "fixtures"
 
 
-def _plan(name: str) -> PathPlan:
-    return PathPlan.model_validate_json((FIXTURES / name).read_text(encoding="utf-8"))
+def _plan(name: str):
+    return load_canonical_plan(name)
 
 
 async def _unit(db_session, *, owner_id: str, fixture_name: str):
-    plan = _plan(fixture_name)
+    legacy = load_legacy_path_plan(fixture_name)
     request = UnitCreate(
-        title=plan.unit or "Unit",
-        topic=plan.unit or "Topic",
-        subject=plan.subject or "Science",
-        grade_level=plan.grade_level or "Grade 4",
-        destination_objective=plan.destination_objective or "Destination",
-        starting_knowledge=plan.starting_knowledge,
+        title=legacy.unit or "Unit",
+        topic=legacy.unit or "Topic",
+        subject=legacy.subject or "Science",
+        grade_level=legacy.grade_level or "Grade 4",
+        destination_objective=legacy.destination_objective or "Destination",
+        starting_knowledge=legacy.starting_knowledge,
     )
     return await create_unit(db_session, owner_id=owner_id, request=request)
 
@@ -207,7 +206,8 @@ async def test_skip_reorder_split_and_merge_are_explicit_state(db_session, owner
     assert version.status == "approved"
 
 
-async def test_unreachable_path_cannot_be_approved(db_session, owner) -> None:
+async def test_unreachable_legacy_fixture_is_approvable_after_canonical_persist(db_session, owner) -> None:
+    """Old risk-flagged fixtures map to valid DB graphs; approval no longer reads LLM risks."""
     plan = _plan("grade8-unreachable-destination-path.json")
     unit = await _unit(
         db_session,
@@ -215,11 +215,10 @@ async def test_unreachable_path_cannot_be_approved(db_session, owner) -> None:
         fixture_name="grade8-unreachable-destination-path.json",
     )
     version = await persist_path_plan(db_session, unit=unit, plan=plan)
-
-    with pytest.raises(PathApprovalBlocked, match="prerequisite"):
-        await approve_path(db_session, version)
-
-    assert version.status == "draft"
+    assert version.prerequisite_risks == []
+    assert version.reaches_destination is True
+    await approve_path(db_session, version)
+    assert version.status == "approved"
 
 
 async def test_structural_checkpoint_preserves_identity_and_prerequisites(db_session, owner) -> None:
@@ -274,16 +273,13 @@ async def test_structural_checkpoint_preserves_identity_and_prerequisites(db_ses
     assert await db_session.scalar(select(func.count()).select_from(PathVersionModel)) == 2
 
 
-async def test_paraphrased_external_prerequisite_blocks_approve_until_known(db_session, owner) -> None:
+async def test_approve_validates_persisted_graph_not_external_prerequisites(db_session, owner) -> None:
     plan = _plan("grade4-photosynthesis-path.json")
     unit = await _unit(
         db_session,
         owner_id=owner.id,
         fixture_name="grade4-photosynthesis-path.json",
     )
-    claimed = "multiply any two fractions"
-    first = plan.lessons[0]
-    first.external_prerequisites = [claimed]
     version = await persist_path_plan(db_session, unit=unit, plan=plan)
     lessons = list(
         await db_session.scalars(
@@ -292,125 +288,85 @@ async def test_paraphrased_external_prerequisite_blocks_approve_until_known(db_s
             .order_by(PathLessonModel.position)
         )
     )
-    scope = await db_session.get(UnitScopeContractModel, unit.id)
-    assert scope is not None
-
-    assumptions = open_assumptions(
-        starting_knowledge=unit.starting_knowledge,
-        assumed_prerequisites=scope.assumed_prerequisites,
-        lessons=lessons,
-        prerequisite_risks=version.prerequisite_risks,
-    )
-    assert assumptions == [{"claimed": claimed, "needed_by": lessons[0].concept_slug}]
-
-    with pytest.raises(PathApprovalBlocked, match=re.escape(repr(claimed))):
-        await approve_path(db_session, version)
-
-    revision_before = version.revision
-    await resolve_path_assumption(
-        db_session,
-        unit=unit,
-        version=version,
-        claimed=claimed,
-        decision="known",
-    )
-    assert claimed in (unit.starting_knowledge or [])
-    assert version.revision == revision_before + 1
-    assert (
-        open_assumptions(
-            starting_knowledge=unit.starting_knowledge,
-            assumed_prerequisites=scope.assumed_prerequisites,
-            lessons=lessons,
-            prerequisite_risks=version.prerequisite_risks,
-        )
-        == []
-    )
+    lessons[0].external_prerequisites = ["multiply any two fractions"]
+    await db_session.flush()
     await approve_path(db_session, version)
     assert version.status == "approved"
 
 
-async def test_resolve_assumption_teach_records_risk_and_blocks_approve(db_session, owner) -> None:
+async def test_approve_blocks_objective_hash_mismatch(db_session, owner) -> None:
     plan = _plan("grade4-photosynthesis-path.json")
     unit = await _unit(
         db_session,
         owner_id=owner.id,
         fixture_name="grade4-photosynthesis-path.json",
     )
-    claimed = "multiply any two fractions"
-    plan.lessons[0].external_prerequisites = [claimed]
     version = await persist_path_plan(db_session, unit=unit, plan=plan)
-    lessons = list(
-        await db_session.scalars(
-            select(PathLessonModel)
-            .where(PathLessonModel.path_version_id == version.id)
-            .order_by(PathLessonModel.position)
-        )
+    lesson = await db_session.scalar(
+        select(PathLessonModel)
+        .where(PathLessonModel.path_version_id == version.id)
+        .order_by(PathLessonModel.position)
     )
-
-    await resolve_path_assumption(
-        db_session,
-        unit=unit,
-        version=version,
-        claimed=claimed,
-        decision="teach",
-    )
-
-    assert version.reaches_destination is False
-    assert version.prerequisite_risks == [
-        {
-            "missing": claimed,
-            "needed_by": lessons[0].concept_slug,
-            "note": "teacher declined",
-        }
-    ]
-    assert version.source_plan_json["prerequisite_risks"] == version.prerequisite_risks
-    assert version.source_plan_json["completeness"]["reaches_destination"] is False
-    assert claimed not in (unit.starting_knowledge or [])
-
-    scope = await db_session.get(UnitScopeContractModel, unit.id)
-    assert scope is not None
-    assert (
-        open_assumptions(
-            starting_knowledge=unit.starting_knowledge,
-            assumed_prerequisites=scope.assumed_prerequisites,
-            lessons=lessons,
-            prerequisite_risks=version.prerequisite_risks,
-        )
-        == []
-    )
-    with pytest.raises(PathApprovalBlocked, match="prerequisite"):
+    assert lesson is not None
+    lesson.objective_hash = "0" * 64
+    await db_session.flush()
+    with pytest.raises(PathApprovalBlocked, match="objective hash"):
         await approve_path(db_session, version)
 
 
-async def test_resolve_assumption_idempotent_when_already_settled(db_session, owner) -> None:
+async def test_approve_blocks_do_not_cover_violation(db_session, owner) -> None:
+    from v3_blueprint.planning.objective_ownership import hash_path_objective
+
     plan = _plan("grade4-photosynthesis-path.json")
     unit = await _unit(
         db_session,
         owner_id=owner.id,
         fixture_name="grade4-photosynthesis-path.json",
     )
-    claimed = "multiply any two fractions"
-    plan.lessons[0].external_prerequisites = [claimed]
     version = await persist_path_plan(db_session, unit=unit, plan=plan)
-
-    await resolve_path_assumption(
-        db_session,
-        unit=unit,
-        version=version,
-        claimed=claimed,
-        decision="known",
+    scope = await db_session.get(UnitScopeContractModel, unit.id)
+    assert scope is not None
+    prohibited = (scope.must_not_introduce or ["ATP"])[0]
+    lesson = await db_session.scalar(
+        select(PathLessonModel)
+        .where(PathLessonModel.path_version_id == version.id)
+        .order_by(PathLessonModel.position)
     )
-    revision_after_known = version.revision
+    assert lesson is not None
+    lesson.objective = f"Explain {prohibited} in detail."
+    lesson.objective_hash = hash_path_objective(lesson.objective)
+    await db_session.flush()
+    with pytest.raises(PathApprovalBlocked, match="must-not-introduce"):
+        await approve_path(db_session, version)
 
-    await resolve_path_assumption(
+
+async def test_persist_maps_scope_and_compat_fields(db_session, owner) -> None:
+    plan = _plan("grade4-photosynthesis-path.json")
+    unit = await _unit(
         db_session,
-        unit=unit,
-        version=version,
-        claimed=claimed,
-        decision="known",
+        owner_id=owner.id,
+        fixture_name="grade4-photosynthesis-path.json",
     )
-    assert version.revision == revision_after_known
-    assert (unit.starting_knowledge or []).count(claimed) == 1
+    version = await persist_path_plan(db_session, unit=unit, plan=plan)
+    scope = await db_session.get(UnitScopeContractModel, unit.id)
+    assert scope is not None
+    assert scope.must_establish == plan.scope.must_cover
+    assert scope.must_not_introduce == plan.scope.do_not_cover
+    assert scope.may_include == []
+    assert scope.assumed_prerequisites == []
+    assert version.merge_critic_results == []
+    assert version.prerequisite_risks == []
+    assert version.forward_verified is True
+    assert version.reaches_destination is True
+    assert version.source_plan_json["scope"]["must_cover"] == plan.scope.must_cover
+    lessons = list(
+        await db_session.scalars(
+            select(PathLessonModel).where(PathLessonModel.path_version_id == version.id)
+        )
+    )
+    assert all(lesson.external_prerequisites == [] for lesson in lessons)
+    assert all(lesson.merge_warning is False for lesson in lessons)
+    assert all(lesson.concept_slug.startswith("science.") for lesson in lessons)
 
 
 async def test_resolve_assumption_rejects_bogus_claim(db_session, owner) -> None:
@@ -421,7 +377,13 @@ async def test_resolve_assumption_rejects_bogus_claim(db_session, owner) -> None
         fixture_name="grade4-photosynthesis-path.json",
     )
     version = await persist_path_plan(db_session, unit=unit, plan=plan)
-
+    lessons = list(
+        await db_session.scalars(
+            select(PathLessonModel).where(PathLessonModel.path_version_id == version.id)
+        )
+    )
+    lessons[0].external_prerequisites = ["multiply any two fractions"]
+    await db_session.flush()
     with pytest.raises(ValueError, match="not an open assumption"):
         await resolve_path_assumption(
             db_session,
