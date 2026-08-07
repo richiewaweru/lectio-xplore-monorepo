@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+if TYPE_CHECKING:
+    from v3_blueprint.planning.models import PlannedBlock
 
 
 class WriterError(ValueError):
@@ -16,7 +19,7 @@ class WriterError(ValueError):
 class WriterContext:
     """Immutable writer context. No alternative objects. No lesson prose for questions."""
 
-    planned: Any  # PlannedBlock — kept loose to avoid circular imports at type-check time
+    planned: PlannedBlock
     terminology: tuple[str, ...] = ()
     neighbour_summaries: tuple[str, ...] = ()
     item_records: tuple[dict[str, Any], ...] = ()

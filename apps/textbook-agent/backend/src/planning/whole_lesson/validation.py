@@ -422,18 +422,40 @@ def validate_form_plan(
                         path=path,
                     )
                 )
-            allowed = set(candidate_map.get(decision.block_id, ()))
-            if allowed and decision.object not in allowed:
+            if decision.block_id not in candidate_map:
                 issues.append(
                     ValidationIssue(
-                        code="INCOMPATIBLE_OBJECT",
+                        code="MISSING_CANDIDATE_SET",
                         message=(
-                            f"object {decision.object!r} not in legal candidates "
-                            f"for block {decision.block_id!r}"
+                            f"no candidate map entry for block {decision.block_id!r}"
                         ),
                         path=path,
                     )
                 )
+            else:
+                allowed = set(candidate_map[decision.block_id])
+                if not allowed:
+                    issues.append(
+                        ValidationIssue(
+                            code="NO_LEGAL_OBJECT",
+                            message=(
+                                f"block {decision.block_id!r} has an empty legal "
+                                "object candidate set"
+                            ),
+                            path=path,
+                        )
+                    )
+                elif decision.object not in allowed:
+                    issues.append(
+                        ValidationIssue(
+                            code="INCOMPATIBLE_OBJECT",
+                            message=(
+                                f"object {decision.object!r} not in legal candidates "
+                                f"for block {decision.block_id!r}"
+                            ),
+                            path=path,
+                        )
+                    )
             if decision.object == "questions" and not teaching.source_question_ids:
                 issues.append(
                     ValidationIssue(

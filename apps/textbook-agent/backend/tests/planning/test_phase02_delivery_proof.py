@@ -27,6 +27,7 @@ from planning.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
+from planning.whole_lesson.legality import build_lesson_legality_snapshot
 from planning.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
 from planning.whole_lesson.states import execution_key
 from planning.whole_lesson.teaching_plan import TeachingPlan
@@ -131,6 +132,9 @@ async def _seed_ready_doc(*, status: str = "awaiting_visuals") -> str:
     doc = _document_with_figure_and_answer()
     state = empty_page_document_state()
     state["lesson_packet"] = _packet().model_dump(mode="json")
+    state["lesson_legality"] = build_lesson_legality_snapshot(_packet()).model_dump(
+        mode="json"
+    )
     state["teaching_plan"] = teaching.model_dump(mode="json")
     state["form_plan"] = plan.model_dump(mode="json")
     state["form_validation"] = {"ok": True}
@@ -177,8 +181,12 @@ async def test_conceptual_resilience_then_assemble() -> None:
     gid = str(uuid.uuid4())
     user_id = f"user-{gid[:8]}"
     teaching, plan = _plans()
+    packet = _packet()
     state = empty_page_document_state()
-    state["lesson_packet"] = _packet().model_dump(mode="json")
+    state["lesson_packet"] = packet.model_dump(mode="json")
+    state["lesson_legality"] = build_lesson_legality_snapshot(packet).model_dump(
+        mode="json"
+    )
     state["teaching_plan"] = teaching.model_dump(mode="json")
     state["form_plan"] = plan.model_dump(mode="json")
     state["form_validation"] = {"ok": True}

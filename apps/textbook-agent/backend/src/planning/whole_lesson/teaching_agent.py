@@ -15,6 +15,12 @@ from planning.catalogue_projections import (
     TeachingGuidanceProjection,
     project_teaching_guidance,
 )
+from planning.llm_contract_errors import is_transport_error, structured_output_errors
+from planning.whole_lesson.legality import (
+    LessonLegalitySnapshot,
+    build_lesson_legality_snapshot,
+    snapshot_as_teaching_sets,
+)
 from planning.whole_lesson.packet import ImmutableLessonPacket
 from planning.whole_lesson.prompt_render import render_teaching_prompt
 from planning.whole_lesson.teaching_plan import TeachingPlan
@@ -23,13 +29,9 @@ from planning.whole_lesson.validation import (
     advisory_teaching_qc,
     validate_teaching_plan,
 )
-from resource_specs.candidates import assemble_lesson_guidance
-from resource_specs.loader import get_spec
-from v3_blueprint.skeletons import load_skeleton_catalog
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.models import V2_LESSON_APPROACH_PLANNER
 from v3_execution.llm_helpers import NO_OUTPUT_RETRY, structured_output_type_for_model
-from contracts.lectio_page import get_intent_catalogue, get_object_catalogue
 
 
 @dataclass
@@ -55,35 +57,7 @@ class TeachingPlanResult:
     typical_by_slot: dict[str, set[str]]
     permitted_intents: set[str]
     excluded_intents: set[str]
-
-
-def _legality_context(packet: ImmutableLessonPacket) -> tuple[set[str], set[str], dict[str, set[str]]]:
-    intents = get_intent_catalogue()["intents"]
-    objects = get_object_catalogue()["objects"]
-    spec = get_spec(packet.resource_id)
-    catalog = load_skeleton_catalog()
-    slots = {
-        slot.slot_id: {
-            **dict(catalog.slots.get(slot.slot_id) or {}),
-            "slot_id": slot.slot_id,
-            "typical_intents": slot.typical_intents,
-        }
-        for slot in packet.slots
-    }
-    guidance = assemble_lesson_guidance(
-        resource_spec=spec,
-        skeleton_slots=slots,
-        intent_catalogue=intents,
-        object_catalogue=objects,
-    )
-    typical_by_slot = {
-        slot.slot_id: set(slot.typical_intents) for slot in guidance.slots
-    }
-    return (
-        set(guidance.permitted_intent_ids),
-        set(guidance.excluded_intents.keys()),
-        typical_by_slot,
-    )
+    legality: LessonLegalitySnapshot
 
 
 async def _call_teaching_model(
@@ -96,14 +70,11 @@ async def _call_teaching_model(
     model = get_v3_model(V2_LESSON_APPROACH_PLANNER)
     spec = get_v3_spec(V2_LESSON_APPROACH_PLANNER)
     slot = get_v3_slot(V2_LESSON_APPROACH_PLANNER)
-    # System prompt is the full rendered prompt minus user JSON — keep identity clauses.
-    # Use the resource prompt body before USER INPUT as system; user_payload as user.
     system_prompt, _, _user = prompt.partition("\n\n## USER INPUT\n\n")
     agent = Agent(
         model=model,
         output_type=structured_output_type_for_model(TeachingPlan, spec=spec),
         system_prompt=system_prompt or prompt,
-        # Repair is owned by run_teaching_planner's outer attempt loop below.
         retries=NO_OUTPUT_RETRY,
     )
     result = await run_llm(
@@ -138,6 +109,7 @@ async def _call_teaching_model(
 async def run_lesson_approach_planner(
     packet: ImmutableLessonPacket,
     *,
+    legality: LessonLegalitySnapshot | None = None,
     trace_id: str | None = None,
     generation_id: str | None = None,
     require_items: bool = True,
@@ -147,7 +119,8 @@ async def run_lesson_approach_planner(
 
         raise ItemPoolEmptyError(card_id="unknown", pack_id=None)
 
-    permitted, excluded, typical_by_slot = _legality_context(packet)
+    snapshot = legality or build_lesson_legality_snapshot(packet)
+    permitted, excluded, typical_by_slot = snapshot_as_teaching_sets(snapshot)
     teaching_guidance = project_teaching_guidance(
         permitted_intent_ids=permitted,
         excluded_intents={key: "excluded" for key in excluded},
@@ -162,18 +135,23 @@ async def run_lesson_approach_planner(
     plan: TeachingPlan | None = None
     validation = ValidationReport(ok=False, issues=[])
     raw_response = ""
+    previous_output: object | None = None
+    repair_errors: list[str] = []
     tid = trace_id or str(uuid.uuid4())
 
     for attempt in (1, 2):
         try:
             call_payload = user_payload
-            if attempt == 2 and plan is not None:
+            if attempt == 2 and repair_errors:
                 call_payload = {
                     **user_payload,
                     "repair": {
-                        "instruction": "Change only invalid fields. Keep immutable paths.",
-                        "previous_plan": plan.model_dump(mode="json"),
-                        "failures": validation.to_dict()["issues"],
+                        "instruction": (
+                            "Return the complete corrected TeachingPlan JSON. "
+                            "Change only fields required to satisfy these errors."
+                        ),
+                        "previous_output": previous_output,
+                        "validation_errors": repair_errors,
                     },
                 }
             plan, raw_response = await _call_teaching_model(
@@ -182,6 +160,7 @@ async def run_lesson_approach_planner(
                 trace_id=f"{tid}:attempt{attempt}",
                 generation_id=generation_id,
             )
+            previous_output = plan.model_dump(mode="json")
             validation = validate_teaching_plan(
                 plan,
                 packet,
@@ -212,9 +191,13 @@ async def run_lesson_approach_planner(
                     typical_by_slot=typical_by_slot,
                     permitted_intents=permitted,
                     excluded_intents=excluded,
+                    legality=snapshot,
                 )
             last_error = "validation_failed"
-        except Exception as exc:  # transport / schema
+            repair_errors = [
+                f"{issue.code}: {issue.message}" for issue in validation.issues
+            ]
+        except Exception as exc:
             last_error = str(exc)
             attempts.append(
                 TeachingPlanAttempt(
@@ -227,7 +210,17 @@ async def run_lesson_approach_planner(
                     error=last_error,
                 )
             )
-            # Attempt 2 is the final try (repair OR transport retry).
+            if is_transport_error(exc):
+                # Provider/backoff retry — do not invent contract repair context.
+                repair_errors = []
+                previous_output = previous_output
+            else:
+                repair_errors = structured_output_errors(exc)
+                if previous_output is None and raw_response:
+                    try:
+                        previous_output = json.loads(raw_response)
+                    except Exception:  # noqa: BLE001
+                        previous_output = raw_response
             continue
 
     raise RuntimeError(

@@ -85,9 +85,16 @@ def empty_execution_meta() -> dict[str, Any]:
 
 
 def empty_page_document_state() -> dict[str, Any]:
+    """Empty page_document_v2 state.
+
+    schema_version 1: optional fat FormPlan; no lesson_legality.
+    schema_version 2: slim FormDecision; persisted LessonLegalitySnapshot required
+    for form planning/resume revalidation.
+    """
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "lesson_packet": None,
+        "lesson_legality": None,
         "catalogue": {
             "version": None,
             "teaching_projection_hash": None,
@@ -481,6 +488,34 @@ class PageDocumentRepository:
             state["lesson_packet"] = packet
 
         return await self.mutate_state(mutation=_mut)
+
+    async def save_lesson_legality(self, legality: dict[str, Any]) -> dict[str, Any]:
+        def _mut(_generation: GenerationModel, state: dict[str, Any]) -> None:
+            state["lesson_legality"] = legality
+            state["schema_version"] = 2
+
+        return await self.mutate_state(mutation=_mut)
+
+    async def load_lesson_legality(self) -> dict[str, Any]:
+        """Fail closed: missing/invalid snapshot is an execution error."""
+        from planning.whole_lesson.legality import (
+            LessonLegalityError,
+            LessonLegalitySnapshot,
+        )
+
+        state = await self.load_page_generation_state()
+        raw = state.get("lesson_legality")
+        if not isinstance(raw, dict) or not raw:
+            raise LessonLegalityError(
+                "lesson_legality snapshot missing; cannot plan forms or resume"
+            )
+        try:
+            snapshot = LessonLegalitySnapshot.model_validate(raw)
+        except Exception as exc:  # noqa: BLE001
+            raise LessonLegalityError(
+                f"lesson_legality snapshot invalid: {exc}"
+            ) from exc
+        return snapshot.model_dump(mode="json")
 
     async def save_catalogue_meta(
         self,

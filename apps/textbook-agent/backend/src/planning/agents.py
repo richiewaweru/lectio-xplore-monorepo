@@ -4,11 +4,12 @@ import json
 import uuid
 from typing import Any, TypeVar
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 from pydantic_ai import Agent
 
 from core.config import settings
 from core.llm.runner import RetryPolicy, run_llm
+from planning.llm_contract_errors import structured_output_errors as _schema_errors
 from planning.models import (
     CanonicalPathPlan,
     ComponentSelection,
@@ -179,36 +180,6 @@ async def run_component_selector(
         user_payload=context,
         trace_id=trace_id,
     )
-
-
-def _schema_errors(exc: BaseException) -> list[str]:
-    """Extract actionable validation messages from a structured-output failure.
-
-    With in-library output retry disabled (``NO_OUTPUT_RETRY``), a schema failure
-    does not surface as a bare ``ValidationError``. pydantic-ai raises
-    ``UnexpectedModelBehavior`` whose ``__cause__`` is a ``ToolRetryError`` whose
-    ``tool_retry.content`` holds the pydantic error list. Walk that chain first,
-    then fall back to a direct ``ValidationError`` (``_run_structured`` re-validates
-    its own result and can raise one), then to the exception text.
-    """
-    content = getattr(getattr(exc, "__cause__", None), "tool_retry", None)
-    content = getattr(content, "content", None)
-    if isinstance(content, list):
-        messages = []
-        for item in content:
-            if isinstance(item, dict):
-                loc = ".".join(str(part) for part in (item.get("loc") or ()))
-                messages.append(f"{loc}: {item.get('msg')}" if loc else str(item.get("msg")))
-            else:
-                messages.append(str(item))
-        if messages:
-            return messages
-    if isinstance(exc, ValidationError):
-        return [
-            f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}"
-            for error in exc.errors()
-        ]
-    return [f"{type(exc).__name__}: {exc}"]
 
 
 async def run_path_structural_planner(

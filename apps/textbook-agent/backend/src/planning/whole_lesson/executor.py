@@ -27,14 +27,17 @@ from planning.whole_lesson.failure_policy import (
     structured_error_from_exc,
 )
 from planning.whole_lesson.figure_ids import stable_figure_request_id
-from planning.whole_lesson.form_agent import run_form_planner
+from planning.whole_lesson.form_agent import NoLegalFormCandidatesError, run_form_planner
 from planning.whole_lesson.form_plan import FormPlan, coerce_form_plan
+from planning.whole_lesson.legality import LessonLegalityError, LessonLegalitySnapshot
 from planning.whole_lesson.packet import ImmutableLessonPacket
+from planning.catalogue_projections import build_form_candidate_map, project_form_guidance
 from planning.whole_lesson.repository import PageDocumentRepository
 from planning.whole_lesson.resolved_block_plan import (
     ResolvedBlockPlan,
     resolve_block_plans,
 )
+from planning.whole_lesson.validation import validate_form_plan
 from planning.whole_lesson.states import (
     DEFAULT_VARIANT_ID,
     MAX_SECTION_CONCURRENCY,
@@ -280,7 +283,8 @@ async def _write_one_block(
                         "section_id": slot_id,
                         "block_id": block.id,
                         "variant_id": variant_id,
-                        # Denormalized from ResolvedBlockPlan for resume matching.
+                        # DENORMALIZED CACHE ONLY.
+                        # Canonical object/intent come from ResolvedBlockPlan.
                         "object": block.object,
                         "intent": block.intent,
                         "content": result.content,
@@ -688,25 +692,103 @@ async def execute_after_teaching_approval(
         )
 
     form_plan_raw = state.get("form_plan")
-    form_validation = state.get("form_validation") or {}
-    if isinstance(form_plan_raw, dict) and form_validation.get("ok") is True:
-        form_plan = coerce_form_plan(form_plan_raw)
-        await repo.append_event(
-            make_event("form_plan_reused", generation_id=generation_id, status="ready"),
-            worker_id=wid,
-            lease_token=ltok,
-        )
-    else:
+    form_plan: FormPlan | None = None
+    legality: LessonLegalitySnapshot | None = None
+    try:
+        legality_raw = await repo.load_lesson_legality()
+        legality = LessonLegalitySnapshot.model_validate(legality_raw)
+    except LessonLegalityError:
+        legality = None
+
+    if teaching_plan is None:
+        raise RuntimeError("teaching_plan required for form execution and assembly")
+
+    if isinstance(form_plan_raw, dict) and legality is not None:
+        try:
+            candidate = coerce_form_plan(form_plan_raw)
+            form_proj = project_form_guidance(
+                permitted_object_ids=set(legality.permitted_objects)
+            )
+            candidate_map = build_form_candidate_map(
+                teaching_plan,
+                form_guidance=form_proj,
+                permitted_object_ids=set(legality.permitted_objects),
+            )
+            revalidation = validate_form_plan(
+                candidate, teaching_plan, candidate_map=candidate_map
+            )
+            if revalidation.ok:
+                form_plan = candidate
+                await repo.append_event(
+                    make_event(
+                        "form_plan_reused",
+                        generation_id=generation_id,
+                        status="ready",
+                    ),
+                    worker_id=wid,
+                    lease_token=ltok,
+                )
+        except Exception:  # noqa: BLE001
+            form_plan = None
+
+    if form_plan is None:
         await repo.append_event(
             make_event("form_plan_started", generation_id=generation_id, status="started"),
             worker_id=wid,
             lease_token=ltok,
         )
-        if teaching_plan is None:
-            raise RuntimeError("teaching_plan required to run form planner")
-        form_result = await run_form_planner(
-            packet, teaching_plan, generation_id=generation_id
-        )
+        if legality is None:
+            error = {
+                "type": "LessonLegalityError",
+                "code": "LESSON_LEGALITY_MISSING",
+                "message": "lesson_legality snapshot missing; cannot plan forms",
+                "stage": "planning_forms",
+                "retryable": False,
+                "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            }
+            await repo.transition(
+                expected={"planning_forms"},
+                target="failed_terminal",
+                event="form_plan_failed",
+                error=error,
+                worker_id=wid,
+                lease_token=ltok,
+            )
+            if lease is not None:
+                await repo.release_execution(
+                    worker_id=lease.worker_id, lease_token=lease.lease_token
+                )
+            return {"status": "failed_terminal", "error": error}
+        try:
+            form_result = await run_form_planner(
+                packet,
+                teaching_plan,
+                legality=legality,
+                generation_id=generation_id,
+            )
+        except NoLegalFormCandidatesError as exc:
+            error = {
+                "type": "NoLegalFormCandidatesError",
+                "code": exc.code,
+                "message": str(exc),
+                "stage": "planning_forms",
+                "block_ids": exc.block_ids,
+                "retryable": False,
+                "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            }
+            await repo.transition(
+                expected={"planning_forms"},
+                target="failed_terminal",
+                event="form_plan_failed",
+                error=error,
+                worker_id=wid,
+                lease_token=ltok,
+            )
+            if lease is not None:
+                await repo.release_execution(
+                    worker_id=lease.worker_id, lease_token=lease.lease_token
+                )
+            return {"status": "failed_terminal", "error": error}
         if not form_result.validation.ok:
             error = {
                 "type": "ValidationError",
@@ -754,9 +836,6 @@ async def execute_after_teaching_approval(
             worker_id=wid,
             lease_token=ltok,
         )
-
-    if teaching_plan is None:
-        raise RuntimeError("teaching_plan required for form execution and assembly")
 
     write_outcomes = await write_form_blocks(
         generation_id=generation_id,

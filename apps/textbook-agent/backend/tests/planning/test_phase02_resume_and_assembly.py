@@ -32,6 +32,7 @@ from planning.whole_lesson.packet import (
 )
 from planning.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
 from planning.whole_lesson.states import ExecutionLease, execution_key
+from planning.whole_lesson.legality import build_lesson_legality_snapshot
 from planning.whole_lesson.teaching_plan import TeachingPlan
 from tests.planning.contract_fixtures import teaching_and_form
 
@@ -102,6 +103,7 @@ async def _seed(
         teaching, form_plan = _plans()
     state = empty_page_document_state()
     state["lesson_packet"] = packet.model_dump(mode="json")
+    state["lesson_legality"] = build_lesson_legality_snapshot(packet).model_dump(mode="json")
     state["teaching_plan"] = teaching.model_dump(mode="json")
     state["form_plan"] = form_plan.model_dump(mode="json")
     state["form_validation"] = {"ok": True}

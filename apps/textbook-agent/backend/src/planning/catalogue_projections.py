@@ -126,7 +126,11 @@ def project_teaching_guidance(
     objects_doc = object_catalogue or get_object_catalogue()
     intents = intents_doc.get("intents") or {}
     excluded = _excluded_map(excluded_intents)
-    permitted = set(permitted_intent_ids or intents.keys()) - set(excluded.keys())
+    # Empty set must fail closed. Only None means "all catalogue intents".
+    if permitted_intent_ids is None:
+        permitted = set(intents.keys()) - set(excluded.keys())
+    else:
+        permitted = set(permitted_intent_ids) - set(excluded.keys())
 
     rows: list[TeachingIntentGuidance] = []
     for intent_id, record in sorted(intents.items()):
@@ -181,7 +185,11 @@ def project_form_guidance(
     objects_doc = object_catalogue or get_object_catalogue()
     intents = intents_doc.get("intents") or {}
     objects = objects_doc.get("objects") or {}
-    allowed_objects = set(permitted_object_ids or objects.keys()) - {"heading", "answer-key"}
+    # Empty set must fail closed (no catalogue widen). Only None means "all objects".
+    if permitted_object_ids is None:
+        allowed_objects = set(objects.keys()) - {"heading", "answer-key"}
+    else:
+        allowed_objects = set(permitted_object_ids) - {"heading", "answer-key"}
 
     by_intent: dict[str, tuple[str, ...]] = {}
     for intent_id, record in intents.items():

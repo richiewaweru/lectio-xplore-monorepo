@@ -15,8 +15,10 @@ from planning.catalogue_projections import (
     build_form_candidate_map,
     project_form_guidance,
 )
+from planning.llm_contract_errors import is_transport_error, structured_output_errors
 from planning.planner_diagnostics import log_planner_attempt_failed
 from planning.whole_lesson.form_plan import FormPlan
+from planning.whole_lesson.legality import LessonLegalitySnapshot
 from planning.whole_lesson.packet import ImmutableLessonPacket
 from planning.whole_lesson.prompt_render import (
     build_form_planner_payload,
@@ -28,13 +30,20 @@ from planning.whole_lesson.validation import (
     advisory_form_qc,
     validate_form_plan,
 )
-from resource_specs.candidates import assemble_lesson_guidance
-from resource_specs.loader import get_spec
-from v3_blueprint.skeletons import load_skeleton_catalog
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.models import V2_FORM_PLANNER
 from v3_execution.llm_helpers import NO_OUTPUT_RETRY, structured_output_type_for_model
-from contracts.lectio_page import get_intent_catalogue, get_object_catalogue
+
+
+class NoLegalFormCandidatesError(RuntimeError):
+    """Deterministic configuration failure — do not call the form LLM."""
+
+    def __init__(self, block_ids: list[str]) -> None:
+        self.block_ids = list(block_ids)
+        self.code = "NO_LEGAL_FORM_CANDIDATES"
+        super().__init__(
+            f"no legal form candidates for blocks: {self.block_ids}"
+        )
 
 
 @dataclass
@@ -47,27 +56,6 @@ class FormPlanResult:
     form_guidance: dict[str, Any]
     candidate_map: dict[str, tuple[str, ...]]
     attempts: int
-
-
-def _resource_permitted_objects(resource_id: str) -> set[str] | None:
-    try:
-        intents = get_intent_catalogue()["intents"]
-        objects = get_object_catalogue()["objects"]
-        spec = get_spec(resource_id)
-        catalog = load_skeleton_catalog()
-        slots = {
-            slot_id: {**dict(slot or {}), "slot_id": slot_id}
-            for slot_id, slot in (catalog.slots or {}).items()
-        }
-        guidance = assemble_lesson_guidance(
-            resource_spec=spec,
-            skeleton_slots=slots,
-            intent_catalogue=intents,
-            object_catalogue=objects,
-        )
-        return set(guidance.permitted_object_ids)
-    except Exception:  # noqa: BLE001
-        return None
 
 
 async def _call_form_model(
@@ -85,10 +73,6 @@ async def _call_form_model(
         model=model,
         output_type=structured_output_type_for_model(FormPlan, spec=spec),
         system_prompt=system_prompt or prompt,
-        # Repair is owned by run_form_planner's outer attempt loop below.
-        # pydantic-ai's in-library output retry replays the model's own invalid
-        # response in the same conversation, which DeepSeek rejects with HTTP 400
-        # when that response is reasoning-only with empty content.
         retries=NO_OUTPUT_RETRY,
     )
     result = await run_llm(
@@ -124,10 +108,11 @@ async def run_form_planner(
     packet: ImmutableLessonPacket,
     teaching_plan: TeachingPlan,
     *,
+    legality: LessonLegalitySnapshot,
     trace_id: str | None = None,
     generation_id: str | None = None,
 ) -> FormPlanResult:
-    permitted_objects = _resource_permitted_objects(packet.resource_id)
+    permitted_objects = set(legality.permitted_objects)
     form_proj = project_form_guidance(permitted_object_ids=permitted_objects)
     form_guidance = form_proj.to_dict()
     candidate_map = build_form_candidate_map(
@@ -135,6 +120,17 @@ async def run_form_planner(
         form_guidance=form_proj,
         permitted_object_ids=permitted_objects,
     )
+    teaching_block_ids = [
+        block.id for section in teaching_plan.sections for block in section.blocks
+    ]
+    empty_candidates = [
+        block_id
+        for block_id in teaching_block_ids
+        if not candidate_map.get(block_id)
+    ]
+    if empty_candidates:
+        raise NoLegalFormCandidatesError(sorted(empty_candidates))
+
     prompt = render_form_prompt(
         packet,
         teaching_plan,
@@ -152,23 +148,26 @@ async def run_form_planner(
     plan: FormPlan | None = None
     validation = ValidationReport(ok=False, issues=[])
     raw_response = ""
+    previous_output: object | None = None
+    repair_errors: list[str] = []
     last_error = None
 
     for attempt in (1, 2):
         try:
             payload = user_payload
-            if attempt == 2 and plan is not None:
+            if attempt == 2 and repair_errors:
                 payload = {
                     **user_payload,
                     "repair": {
                         "instruction": (
-                            "Change only invalid form fields "
-                            "(object, placement, reason, escalation). "
-                            "Do not invent teaching fields. "
-                            "Keep every block_id exactly once."
+                            "Return the complete corrected FormPlan. "
+                            "You may modify only: block_id only when necessary to match "
+                            "an existing teaching block; object; placement; reason; "
+                            "escalation. You may not introduce teaching-owned fields. "
+                            "Every teaching block must appear exactly once."
                         ),
-                        "previous_plan": plan.model_dump(mode="json"),
-                        "failures": validation.to_dict()["issues"],
+                        "previous_output": previous_output,
+                        "validation_errors": repair_errors,
                     },
                 }
             plan, raw_response = await _call_form_model(
@@ -177,6 +176,7 @@ async def run_form_planner(
                 trace_id=f"{tid}:form{attempt}",
                 generation_id=generation_id,
             )
+            previous_output = plan.model_dump(mode="json")
 
             validation = validate_form_plan(
                 plan, teaching_plan, candidate_map=candidate_map
@@ -194,21 +194,33 @@ async def run_form_planner(
                     attempts=attempt,
                 )
             last_error = "validation_failed"
+            repair_errors = [
+                f"{issue.code}: {issue.message}" for issue in validation.issues
+            ]
             log_planner_attempt_failed(
                 node=V2_FORM_PLANNER,
                 attempt=attempt,
-                errors=[str(issue) for issue in validation.to_dict()["issues"]],
-                repair_attached=attempt == 2 and plan is not None,
+                errors=repair_errors,
+                repair_attached=attempt == 2,
                 will_retry=attempt == 1,
             )
         except Exception as exc:
             last_error = str(exc)
+            if is_transport_error(exc):
+                repair_errors = []
+            else:
+                repair_errors = structured_output_errors(exc)
+                if previous_output is None and raw_response:
+                    try:
+                        previous_output = json.loads(raw_response)
+                    except Exception:  # noqa: BLE001
+                        previous_output = raw_response
             log_planner_attempt_failed(
                 node=V2_FORM_PLANNER,
                 attempt=attempt,
-                errors=[],
+                errors=repair_errors,
                 exc=exc,
-                repair_attached=attempt == 2 and plan is not None,
+                repair_attached=attempt == 2 and bool(repair_errors),
                 will_retry=attempt == 1,
             )
             continue

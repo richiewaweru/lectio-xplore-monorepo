@@ -7,6 +7,10 @@ from planning.whole_lesson.form_plan import (
     FormPlanSection,
     coerce_form_plan,
 )
+from planning.whole_lesson.legality import (
+    LessonLegalitySnapshot,
+    build_lesson_legality_snapshot,
+)
 from planning.whole_lesson.packet import ImmutableLessonPacket
 from planning.whole_lesson.resolved_block_plan import (
     ResolvedBlockPlan,
@@ -26,12 +30,14 @@ __all__ = [
     "FormPlanBlock",
     "FormPlanSection",
     "ImmutableLessonPacket",
+    "LessonLegalitySnapshot",
     "ResolvedBlockPlan",
     "ResolvedLessonPlan",
     "ResolvedSectionPlan",
     "TeachingPlan",
     "TeachingPlanBlock",
     "TeachingPlanSection",
+    "build_lesson_legality_snapshot",
     "coerce_form_plan",
     "resolve_block_plans",
 ]

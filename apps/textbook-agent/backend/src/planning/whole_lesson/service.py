@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database.models import ConceptCardModel, GenerationModel, PackItemModel
 from planning.approved_items import ItemPoolEmptyError, load_approved_item_records
 from planning.whole_lesson.events import make_event
+from planning.whole_lesson.legality import build_lesson_legality_snapshot
 from planning.whole_lesson.packet import ImmutableLessonPacket
 from planning.whole_lesson.packet_builder import (
     CONCEPTUAL_FIRST_EXPOSURE_SLOTS,
@@ -152,8 +153,12 @@ async def run_and_persist_teaching_plan(
     )
     await repo.save_lesson_packet(packet.model_dump(mode="json"))
 
+    legality = build_lesson_legality_snapshot(packet)
+    await repo.save_lesson_legality(legality.model_dump(mode="json"))
+
     result = await run_lesson_approach_planner(
         packet,
+        legality=legality,
         generation_id=generation_id,
         require_items=require_items,
     )
