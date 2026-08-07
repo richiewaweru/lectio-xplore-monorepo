@@ -507,13 +507,15 @@ class PageDocumentRepository:
         raw = state.get("lesson_legality")
         if not isinstance(raw, dict) or not raw:
             raise LessonLegalityError(
-                "lesson_legality snapshot missing; cannot plan forms or resume"
+                "lesson_legality snapshot missing; cannot plan forms or resume",
+                code="LESSON_LEGALITY_MISSING",
             )
         try:
             snapshot = LessonLegalitySnapshot.model_validate(raw)
         except Exception as exc:  # noqa: BLE001
             raise LessonLegalityError(
-                f"lesson_legality snapshot invalid: {exc}"
+                f"lesson_legality snapshot invalid: {exc}",
+                code="LESSON_LEGALITY_INVALID",
             ) from exc
         return snapshot.model_dump(mode="json")
 

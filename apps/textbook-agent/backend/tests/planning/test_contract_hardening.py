@@ -21,6 +21,8 @@ from planning.whole_lesson.legality import (
     LessonLegalityError,
     LessonLegalitySnapshot,
     build_lesson_legality_snapshot,
+    legality_hash,
+    validate_legality_snapshot,
 )
 from planning.whole_lesson.packet import (
     AnchorRecord,
@@ -58,6 +60,35 @@ def _packet() -> ImmutableLessonPacket:
     )
 
 
+def _make_snapshot(**overrides: Any) -> LessonLegalitySnapshot:
+    """Build a hash-valid snapshot for executor/resume tests."""
+    data: dict[str, Any] = {
+        "resource_id": "lesson",
+        "catalogue_version": "test",
+        "permitted_intents": ["orient", "explain-cause"],
+        "excluded_intents": [],
+        "typical_by_slot": {
+            "orient": ["orient"],
+            "explain": ["explain-cause"],
+        },
+        "permitted_objects": ["prose", "list", "table", "figure"],
+        "compatible_objects_by_intent": {
+            "orient": ["prose", "figure"],
+            "explain-cause": ["prose", "list", "table", "figure"],
+        },
+    }
+    data.update(overrides)
+    # Ensure every permitted intent has an explicit compatibility key.
+    compat = dict(data.get("compatible_objects_by_intent") or {})
+    for intent_id in data.get("permitted_intents") or []:
+        compat.setdefault(str(intent_id), [])
+    data["compatible_objects_by_intent"] = {
+        key: list(value) for key, value in sorted(compat.items())
+    }
+    data["catalogue_hash"] = legality_hash(data)
+    return LessonLegalitySnapshot.model_validate(data)
+
+
 def test_missing_candidate_map_entry_fails() -> None:
     teaching, form = teaching_and_form(
         sections=[("orient", [("orient-b1", "orient", "prose")])]
@@ -90,32 +121,24 @@ def test_illegal_object_fails_when_candidate_set_empty() -> None:
     assert "INCOMPATIBLE_OBJECT" not in codes
 
 
-def test_form_uses_persisted_legality_not_recomputed_catalogue() -> None:
+def test_form_uses_snapshot_compatibility_not_live_catalogue() -> None:
     teaching, _ = teaching_and_form(
         sections=[("orient", [("orient-b1", "orient", "prose")])]
     )
-    legality = LessonLegalitySnapshot(
-        resource_id="lesson",
-        catalogue_version="test",
-        catalogue_hash="abc",
-        permitted_intents=["orient"],
-        excluded_intents=[],
-        typical_by_slot={"orient": ["orient"]},
-        permitted_objects=["prose"],
-    )
-    form_proj = project_form_guidance(
-        permitted_object_ids=set(legality.permitted_objects)
-    )
+    # Snapshot freezes orient → prose only, even though live catalogue is wider.
     candidates = build_form_candidate_map(
         teaching,
-        form_guidance=form_proj,
-        permitted_object_ids=set(legality.permitted_objects),
+        compatible_objects_by_intent={
+            "orient": ["prose"],
+        },
     )
     assert candidates["orient-b1"] == ("prose",)
-    # Even if catalogue guidance alone would allow more, snapshot fence wins.
     wide = project_form_guidance()
-    assert "table" in (wide.by_intent.get("orient") or ()) or True
+    live_orient = set(wide.by_intent.get("orient") or ())
+    assert live_orient - {"prose"}, "live catalogue must be wider than the freeze"
     assert "table" not in candidates["orient-b1"]
+    assert set(candidates["orient-b1"]).issubset({"prose"})
+    assert not (live_orient - {"prose"}).issubset(set(candidates["orient-b1"]))
 
 
 @pytest.mark.asyncio
@@ -153,15 +176,11 @@ async def test_form_planner_skips_llm_when_no_candidates() -> None:
     teaching, _ = teaching_and_form(
         sections=[("orient", [("orient-b1", "orient", "prose")])]
     )
-    legality = LessonLegalitySnapshot(
-        resource_id="lesson",
-        catalogue_version="test",
-        catalogue_hash="abc",
+    legality = _make_snapshot(
         permitted_intents=["orient"],
-        excluded_intents=[],
-        typical_by_slot={"orient": ["orient"]},
-        # No objects → empty candidates after filtering.
-        permitted_objects=[],
+        typical_by_slot={"orient": ["orient"], "explain": ["explain-cause"]},
+        permitted_objects=["prose"],
+        compatible_objects_by_intent={"orient": []},
     )
     called = {"n": 0}
 
@@ -270,14 +289,13 @@ async def test_form_schema_extra_intent_gets_informed_repair() -> None:
     teaching, valid_form = teaching_and_form(
         sections=[("explain", [("explain-b1", "explain-cause", "prose")])]
     )
-    legality = LessonLegalitySnapshot(
-        resource_id="lesson",
-        catalogue_version="test",
-        catalogue_hash="abc",
+    legality = _make_snapshot(
         permitted_intents=["explain-cause"],
-        excluded_intents=[],
-        typical_by_slot={"explain": ["explain-cause"]},
+        typical_by_slot={"orient": ["orient"], "explain": ["explain-cause"]},
         permitted_objects=["prose", "list", "table", "figure", "aside", "worked-example"],
+        compatible_objects_by_intent={
+            "explain-cause": ["prose", "list", "table", "figure", "aside", "worked-example"],
+        },
     )
     payloads: list[dict[str, Any]] = []
 
@@ -336,15 +354,13 @@ async def test_resume_revalidates_legacy_fat_form_plan() -> None:
         sections=[("orient", [("orient-b1", "orient", "prose")])]
     )
     packet = _packet()
-    legality = LessonLegalitySnapshot(
-        resource_id="lesson",
-        catalogue_version="test",
-        catalogue_hash="abc",
+    legality = _make_snapshot(
         permitted_intents=["orient"],
-        excluded_intents=[],
-        typical_by_slot={"orient": ["orient"]},
+        excluded_intents=["explain-cause"],
+        typical_by_slot={"orient": ["orient"], "explain": ["explain-cause"]},
         # Selected object prose is no longer permitted → reuse must fail.
         permitted_objects=["list"],
+        compatible_objects_by_intent={"orient": ["list"]},
     )
     legacy_fat = {
         "sections": [
@@ -652,3 +668,221 @@ def test_build_lesson_legality_snapshot_calls_assemble_once() -> None:
     assert calls["n"] == 1
     assert snap.resource_id == "lesson"
     assert snap.permitted_objects
+    assert snap.compatible_objects_by_intent
+    assert set(snap.compatible_objects_by_intent) == set(snap.permitted_intents)
+    validate_legality_snapshot(packet, snap)
+
+
+def test_legality_snapshot_hash_mismatch_fails() -> None:
+    packet = _packet()
+    snapshot = build_lesson_legality_snapshot(packet)
+    corrupted = snapshot.model_copy(
+        update={
+            "permitted_objects": list(snapshot.permitted_objects) + ["something-new"],
+        }
+    )
+    with pytest.raises(LessonLegalityError) as exc:
+        validate_legality_snapshot(packet, corrupted)
+    assert exc.value.code == "LESSON_LEGALITY_HASH_MISMATCH"
+
+
+def test_legality_snapshot_resource_mismatch_fails() -> None:
+    packet = _packet()
+    snapshot = build_lesson_legality_snapshot(packet)
+    mismatched = snapshot.model_copy(update={"resource_id": "worksheet"})
+    # Recompute hash so only resource identity fails.
+    mismatched = mismatched.model_copy(
+        update={"catalogue_hash": legality_hash(mismatched)}
+    )
+    with pytest.raises(LessonLegalityError) as exc:
+        validate_legality_snapshot(packet, mismatched)
+    assert exc.value.code == "LESSON_LEGALITY_RESOURCE_MISMATCH"
+
+
+def test_missing_compatibility_key_fails() -> None:
+    packet = _packet()
+    # Bypass helper auto-fill by constructing explicitly.
+    bad = LessonLegalitySnapshot(
+        resource_id="lesson",
+        catalogue_version="test",
+        catalogue_hash="pending",
+        permitted_intents=["orient", "explain-cause"],
+        excluded_intents=[],
+        typical_by_slot={"orient": ["orient"], "explain": ["explain-cause"]},
+        permitted_objects=["prose"],
+        compatible_objects_by_intent={"orient": ["prose"]},
+    )
+    bad = bad.model_copy(update={"catalogue_hash": legality_hash(bad)})
+    with pytest.raises(LessonLegalityError) as exc:
+        validate_legality_snapshot(packet, bad)
+    assert exc.value.code == "LESSON_LEGALITY_MISSING_COMPATIBILITY"
+
+
+def test_illegal_compatibility_object_fails() -> None:
+    packet = _packet()
+    outside = LessonLegalitySnapshot(
+        resource_id="lesson",
+        catalogue_version="test",
+        catalogue_hash="pending",
+        permitted_intents=["orient"],
+        excluded_intents=["explain-cause"],
+        typical_by_slot={"orient": ["orient"], "explain": ["explain-cause"]},
+        permitted_objects=["prose"],
+        compatible_objects_by_intent={"orient": ["prose", "table"]},
+    )
+    outside = outside.model_copy(update={"catalogue_hash": legality_hash(outside)})
+    with pytest.raises(LessonLegalityError) as exc:
+        validate_legality_snapshot(packet, outside)
+    assert exc.value.code == "LESSON_LEGALITY_OBJECT_FENCE"
+
+    forbidden = LessonLegalitySnapshot(
+        resource_id="lesson",
+        catalogue_version="test",
+        catalogue_hash="pending",
+        permitted_intents=["orient"],
+        excluded_intents=["explain-cause"],
+        typical_by_slot={"orient": ["orient"], "explain": ["explain-cause"]},
+        permitted_objects=["prose", "heading"],
+        compatible_objects_by_intent={"orient": ["prose", "heading"]},
+    )
+    forbidden = forbidden.model_copy(update={"catalogue_hash": legality_hash(forbidden)})
+    with pytest.raises(LessonLegalityError) as exc2:
+        validate_legality_snapshot(packet, forbidden)
+    assert exc2.value.code == "LESSON_LEGALITY_FORBIDDEN_OBJECT"
+
+
+@pytest.mark.asyncio
+async def test_explicit_empty_compatibility_skips_llm() -> None:
+    teaching, _ = teaching_and_form(
+        sections=[("explain", [("explain-b1", "explain-cause", "prose")])]
+    )
+    legality = _make_snapshot(
+        permitted_intents=["explain-cause"],
+        compatible_objects_by_intent={"explain-cause": []},
+    )
+    called = {"n": 0}
+
+    async def _boom(*_a, **_k):  # noqa: ANN001
+        called["n"] += 1
+        raise AssertionError("LLM must not be called")
+
+    with patch(
+        "planning.whole_lesson.form_agent._call_form_model",
+        new=AsyncMock(side_effect=_boom),
+    ):
+        with pytest.raises(NoLegalFormCandidatesError) as exc:
+            await run_form_planner(
+                _packet(), teaching, legality=legality, generation_id=None
+            )
+    assert called["n"] == 0
+    assert exc.value.block_ids == ["explain-b1"]
+
+
+@pytest.mark.asyncio
+async def test_resume_uses_persisted_compatibility_not_live_catalogue() -> None:
+    packet = _packet()
+    teaching, plan = teaching_and_form(
+        sections=[("orient", [("orient-b1", "orient", "prose")])]
+    )
+    # Persist a narrow freeze: orient → prose only.
+    legality = _make_snapshot(
+        permitted_intents=["orient", "explain-cause"],
+        permitted_objects=["prose", "table"],
+        compatible_objects_by_intent={
+            "orient": ["prose"],
+            "explain-cause": ["prose", "table"],
+        },
+    )
+    gid = str(uuid.uuid4())
+    user_id = f"user-{gid[:8]}"
+    state = empty_page_document_state()
+    state["lesson_packet"] = packet.model_dump(mode="json")
+    state["lesson_legality"] = legality.model_dump(mode="json")
+    state["teaching_plan"] = teaching.model_dump(mode="json")
+    state["form_plan"] = plan.model_dump(mode="json")
+    state["form_validation"] = {"ok": True}
+    async with async_session_factory() as session:
+        session.add(UserModel(id=user_id, email=f"{user_id}@example.com", name="Test"))
+        session.add(
+            GenerationModel(
+                id=gid,
+                user_id=user_id,
+                subject="Science",
+                requested_template_id="guided-concept-path",
+                requested_preset_id="default",
+                status="planning_forms",
+                chunked_state_json={
+                    "page_document_v2": state,
+                    "stage": "planning_forms",
+                    "native_whole_lesson": True,
+                },
+            )
+        )
+        await session.commit()
+
+    async with async_session_factory() as session:
+        lease = await PageDocumentRepository(session, gid).claim_execution(
+            worker_id="w1"
+        )
+        assert lease is not None
+
+    guidance_calls = {"n": 0}
+    seen_maps: list[dict[str, tuple[str, ...]]] = []
+
+    def _counting(*args, **kwargs):  # noqa: ANN001
+        guidance_calls["n"] += 1
+        raise AssertionError("assemble_lesson_guidance must not re-run on resume")
+
+    real_build = build_form_candidate_map
+
+    def _capture(teaching_plan, *, compatible_objects_by_intent, **kwargs):  # noqa: ANN001
+        result = real_build(
+            teaching_plan,
+            compatible_objects_by_intent=compatible_objects_by_intent,
+            **kwargs,
+        )
+        seen_maps.append(result)
+        return result
+
+    async def _fake_dispatch(ctx):  # noqa: ANN001
+        return WriterOutcome(
+            block_id=ctx.planned.id,
+            content={"paragraphs": [ctx.planned.brief]},
+            status="ready",
+        )
+
+    with patch(
+        "planning.whole_lesson.legality.assemble_lesson_guidance",
+        side_effect=_counting,
+    ), patch(
+        "planning.whole_lesson.executor.build_form_candidate_map",
+        side_effect=_capture,
+    ), patch(
+        "planning.whole_lesson.executor.run_form_planner",
+        new=AsyncMock(side_effect=AssertionError("must reuse form plan")),
+    ), patch(
+        "planning.whole_lesson.executor.dispatch_writer_async",
+        new=AsyncMock(side_effect=_fake_dispatch),
+    ), patch(
+        "planning.whole_lesson.executor.assemble_from_db",
+        new=AsyncMock(
+            return_value={
+                "document": {"document_version": 2},
+                "terminal": "ready",
+                "writer_count": 1,
+                "document_sha256": "abc",
+            }
+        ),
+    ):
+        async with async_session_factory() as session:
+            await execute_after_teaching_approval(
+                session=session,
+                generation_id=gid,
+                packet=packet,
+                teaching_plan=teaching,
+                lease=lease,
+            )
+
+    assert guidance_calls["n"] == 0
+    assert seen_maps
+    assert seen_maps[0]["orient-b1"] == ("prose",)

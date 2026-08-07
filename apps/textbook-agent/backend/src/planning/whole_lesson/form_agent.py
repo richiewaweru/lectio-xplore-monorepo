@@ -112,13 +112,9 @@ async def run_form_planner(
     trace_id: str | None = None,
     generation_id: str | None = None,
 ) -> FormPlanResult:
-    permitted_objects = set(legality.permitted_objects)
-    form_proj = project_form_guidance(permitted_object_ids=permitted_objects)
-    form_guidance = form_proj.to_dict()
     candidate_map = build_form_candidate_map(
         teaching_plan,
-        form_guidance=form_proj,
-        permitted_object_ids=permitted_objects,
+        compatible_objects_by_intent=legality.compatible_objects_by_intent,
     )
     teaching_block_ids = [
         block.id for section in teaching_plan.sections for block in section.blocks
@@ -130,6 +126,15 @@ async def run_form_planner(
     ]
     if empty_candidates:
         raise NoLegalFormCandidatesError(sorted(empty_candidates))
+
+    # Descriptive guidance only for already-legal object IDs.
+    legal_object_ids = {
+        object_id
+        for objects in candidate_map.values()
+        for object_id in objects
+    } | set(legality.permitted_objects)
+    form_proj = project_form_guidance(permitted_object_ids=legal_object_ids)
+    form_guidance = form_proj.to_dict()
 
     prompt = render_form_prompt(
         packet,

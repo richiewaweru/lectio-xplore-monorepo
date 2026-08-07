@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pydantic import ValidationError
 
+from planning.whole_lesson.failure_policy import classify_failure
+
 
 def structured_output_errors(exc: BaseException) -> list[str]:
     """Extract actionable validation messages from a structured-output failure.
@@ -41,22 +43,5 @@ def structured_output_errors(exc: BaseException) -> list[str]:
 
 
 def is_transport_error(exc: BaseException) -> bool:
-    """Heuristic: provider/network failures are not contract repair targets."""
-    name = type(exc).__name__.lower()
-    text = str(exc).lower()
-    markers = (
-        "timeout",
-        "timed out",
-        "rate limit",
-        "ratelimit",
-        "connection",
-        "unavailable",
-        "503",
-        "502",
-        "429",
-        "transport",
-        "network",
-    )
-    if any(marker in name for marker in ("timeout", "connection", "transport", "http")):
-        return True
-    return any(marker in text for marker in markers)
+    """Provider/network failures are not contract repair targets."""
+    return classify_failure(exc).code in {"TRANSPORT", "TIMEOUT", "RATE_LIMIT"}

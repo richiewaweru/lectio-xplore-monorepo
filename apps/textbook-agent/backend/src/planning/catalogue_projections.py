@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import asdict, dataclass, field
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from contracts.lectio_page import (
     PAGE_OBJECT_IDS,
@@ -338,29 +338,27 @@ _NEVER_SELECTABLE_OBJECTS: frozenset[str] = frozenset({"heading", "answer-key"})
 def build_form_candidate_map(
     teaching_plan: Any,
     *,
-    form_guidance: FormGuidanceProjection | None = None,
-    permitted_object_ids: set[str] | None = None,
+    compatible_objects_by_intent: Mapping[str, Sequence[str]],
     implemented_objects: set[str] | frozenset[str] | None = None,
 ) -> dict[str, tuple[str, ...]]:
-    """Per-block legal object set for form planning and validation.
+    """Per-block legal object set from a frozen snapshot compatibility map.
 
     Same map must feed the form prompt envelope and validate_form_plan.
+    Live catalogue compatibility must not widen this set.
     """
-    guidance = form_guidance or project_form_guidance(
-        permitted_object_ids=permitted_object_ids
-    )
     implemented = set(implemented_objects or _IMPLEMENTED_FORM_OBJECTS)
     implemented -= set(_NEVER_SELECTABLE_OBJECTS)
 
     candidates: dict[str, tuple[str, ...]] = {}
     for section in teaching_plan.sections:
         for block in section.blocks:
-            by_intent = set(guidance.by_intent.get(block.intent, ()))
+            frozen = {
+                str(object_id)
+                for object_id in compatible_objects_by_intent.get(block.intent, ())
+                if object_id
+            }
             legal = sorted(
-                object_id
-                for object_id in by_intent
-                if object_id in implemented
-                and object_id not in _NEVER_SELECTABLE_OBJECTS
+                (frozen & implemented) - set(_NEVER_SELECTABLE_OBJECTS)
             )
             # questions requires teaching-owned source_question_ids.
             if not getattr(block, "source_question_ids", None):

@@ -22,6 +22,7 @@ from planning.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
+from planning.whole_lesson.legality import build_lesson_legality_snapshot
 from planning.whole_lesson.prompt_render import build_form_planner_payload
 from planning.whole_lesson.resolved_block_plan import resolve_block_plans
 from planning.whole_lesson.teaching_plan import (
@@ -52,7 +53,12 @@ def _packet() -> ImmutableLessonPacket:
             SlotRecord(slot_id="explain", typical_intents=["explain-cause"]),
         ],
         limits=LessonLimits(),
+        resource_id="lesson",
     )
+
+
+def _compat() -> dict[str, list[str]]:
+    return build_lesson_legality_snapshot(_packet()).compatible_objects_by_intent
 
 
 def test_form_decision_rejects_teaching_owned_fields() -> None:
@@ -122,7 +128,9 @@ def test_validate_form_plan_uses_shared_candidate_map() -> None:
     teaching, form = teaching_and_form(
         sections=[("orient", [("orient-b1", "orient", "prose")])]
     )
-    candidates = build_form_candidate_map(teaching)
+    candidates = build_form_candidate_map(
+        teaching, compatible_objects_by_intent=_compat()
+    )
     report = validate_form_plan(form, teaching, candidate_map=candidates)
     assert report.ok
 
@@ -151,7 +159,9 @@ def test_validate_form_plan_rejects_unknown_and_duplicate_blocks() -> None:
     teaching, _ = teaching_and_form(
         sections=[("orient", [("orient-b1", "orient", "prose")])]
     )
-    candidates = build_form_candidate_map(teaching)
+    candidates = build_form_candidate_map(
+        teaching, compatible_objects_by_intent=_compat()
+    )
     unknown = FormPlan(
         sections=[
             FormPlanSection(
@@ -205,7 +215,9 @@ def test_form_planner_input_envelope_has_required_context() -> None:
         ]
     )
     guidance = project_form_guidance().to_dict()
-    candidates = build_form_candidate_map(teaching)
+    candidates = build_form_candidate_map(
+        teaching, compatible_objects_by_intent=_compat()
+    )
     payload = build_form_planner_payload(
         _packet(), teaching, guidance, candidate_map=candidates
     )

@@ -10,6 +10,7 @@ from planning.whole_lesson.form_plan import (
 from planning.whole_lesson.legality import (
     LessonLegalitySnapshot,
     build_lesson_legality_snapshot,
+    validate_legality_snapshot,
 )
 from planning.whole_lesson.packet import ImmutableLessonPacket
 from planning.whole_lesson.resolved_block_plan import (
@@ -40,4 +41,5 @@ __all__ = [
     "build_lesson_legality_snapshot",
     "coerce_form_plan",
     "resolve_block_plans",
+    "validate_legality_snapshot",
 ]

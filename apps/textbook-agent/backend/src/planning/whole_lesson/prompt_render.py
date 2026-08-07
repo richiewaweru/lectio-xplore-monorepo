@@ -6,10 +6,7 @@ import json
 from typing import Any
 
 from contracts.lectio_page import PAGE_OBJECT_IDS
-from planning.catalogue_projections import (
-    TeachingGuidanceProjection,
-    build_form_candidate_map,
-)
+from planning.catalogue_projections import TeachingGuidanceProjection
 from planning.prompts import form_planner_prompt, lesson_approach_planner_prompt
 from planning.whole_lesson.packet import ImmutableLessonPacket
 from planning.whole_lesson.teaching_plan import TeachingPlan
@@ -71,10 +68,10 @@ def build_form_planner_payload(
     teaching_plan: TeachingPlan,
     form_guidance: dict[str, Any],
     *,
-    candidate_map: dict[str, tuple[str, ...]] | None = None,
+    candidate_map: dict[str, tuple[str, ...]],
 ) -> dict[str, Any]:
     """Rich form-planner input envelope (narrow owned output elsewhere)."""
-    candidates = candidate_map or build_form_candidate_map(teaching_plan)
+    candidates = candidate_map
     return {
         "arc": teaching_plan.arc,
         "sections": [
@@ -110,7 +107,7 @@ def render_form_prompt(
     form_guidance: dict[str, Any],
     *,
     resource_id: str = "lesson",
-    candidate_map: dict[str, tuple[str, ...]] | None = None,
+    candidate_map: dict[str, tuple[str, ...]],
 ) -> str:
     spec = get_spec(resource_id)
     identity = render_resource_identity(spec)

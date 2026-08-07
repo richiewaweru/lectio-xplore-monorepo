@@ -29,9 +29,13 @@ from planning.whole_lesson.failure_policy import (
 from planning.whole_lesson.figure_ids import stable_figure_request_id
 from planning.whole_lesson.form_agent import NoLegalFormCandidatesError, run_form_planner
 from planning.whole_lesson.form_plan import FormPlan, coerce_form_plan
-from planning.whole_lesson.legality import LessonLegalityError, LessonLegalitySnapshot
+from planning.whole_lesson.legality import (
+    LessonLegalityError,
+    LessonLegalitySnapshot,
+    validate_legality_snapshot,
+)
 from planning.whole_lesson.packet import ImmutableLessonPacket
-from planning.catalogue_projections import build_form_candidate_map, project_form_guidance
+from planning.catalogue_projections import build_form_candidate_map
 from planning.whole_lesson.repository import PageDocumentRepository
 from planning.whole_lesson.resolved_block_plan import (
     ResolvedBlockPlan,
@@ -694,11 +698,32 @@ async def execute_after_teaching_approval(
     form_plan_raw = state.get("form_plan")
     form_plan: FormPlan | None = None
     legality: LessonLegalitySnapshot | None = None
+    legality_error: dict[str, Any] | None = None
     try:
         legality_raw = await repo.load_lesson_legality()
         legality = LessonLegalitySnapshot.model_validate(legality_raw)
-    except LessonLegalityError:
+        validate_legality_snapshot(packet, legality)
+    except LessonLegalityError as exc:
         legality = None
+        legality_error = {
+            "type": "LessonLegalityError",
+            "code": getattr(exc, "code", None) or "LESSON_LEGALITY_INVALID",
+            "message": str(exc),
+            "stage": "planning_forms",
+            "retryable": False,
+            "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
+    except Exception as exc:  # noqa: BLE001
+        # Structural/pydantic load failures are also fail-closed.
+        legality = None
+        legality_error = {
+            "type": type(exc).__name__,
+            "code": "LESSON_LEGALITY_INVALID",
+            "message": str(exc),
+            "stage": "planning_forms",
+            "retryable": False,
+            "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        }
 
     if teaching_plan is None:
         raise RuntimeError("teaching_plan required for form execution and assembly")
@@ -706,13 +731,9 @@ async def execute_after_teaching_approval(
     if isinstance(form_plan_raw, dict) and legality is not None:
         try:
             candidate = coerce_form_plan(form_plan_raw)
-            form_proj = project_form_guidance(
-                permitted_object_ids=set(legality.permitted_objects)
-            )
             candidate_map = build_form_candidate_map(
                 teaching_plan,
-                form_guidance=form_proj,
-                permitted_object_ids=set(legality.permitted_objects),
+                compatible_objects_by_intent=legality.compatible_objects_by_intent,
             )
             revalidation = validate_form_plan(
                 candidate, teaching_plan, candidate_map=candidate_map
@@ -738,7 +759,7 @@ async def execute_after_teaching_approval(
             lease_token=ltok,
         )
         if legality is None:
-            error = {
+            error = legality_error or {
                 "type": "LessonLegalityError",
                 "code": "LESSON_LEGALITY_MISSING",
                 "message": "lesson_legality snapshot missing; cannot plan forms",
