@@ -6,7 +6,7 @@ Evidence date: 2026-08-08
 
 ## 1. Commit SHA
 
-*(filled after commit — see git log on this file’s landing commit)*
+`2f33bf26be1e9b7d926a9d3a3063596075629959`
 
 ## 2. Files changed
 
