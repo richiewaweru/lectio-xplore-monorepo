@@ -156,6 +156,9 @@ async def test_teaching_planner_failure_syncs_all_status_sources() -> None:
         assert last_error.get("stage") == "planning_teaching"
         assert "teaching planner boom" in str(last_error.get("message") or "")
         assert "retryable" in last_error
+        assert generation.error == last_error.get("message")
+        assert generation.error_type == last_error.get("type")
+        assert generation.error_code == last_error.get("code")
         events = list(page.get("events") or [])
         assert any(
             str(event.get("type") or "") == "pre_worker_failure"
@@ -170,5 +173,44 @@ async def test_teaching_planner_failure_syncs_all_status_sources() -> None:
         )
         assert projected is not None
         assert projected["stage"] == "failed_terminal"
+        assert projected.get("next_action") == "inspect_error"
         assert projected.get("error_detail")
         assert "teaching planner boom" in str(projected["error_detail"].get("message") or "")
+
+
+@pytest.mark.asyncio
+async def test_recoverable_teaching_failure_syncs_generation_error_aliases() -> None:
+    gid, user_id = await _seed_native_pre_worker()
+
+    with (
+        patch(
+            "planning.whole_lesson.service.run_and_persist_teaching_plan",
+            new=AsyncMock(side_effect=TimeoutError("provider timed out")),
+        ),
+        patch(
+            "generation.v3_studio.router._chunked_emit_event",
+            new=AsyncMock(),
+        ),
+    ):
+        await _run_chunked_stage2_pipeline(generation_id=gid, user_id=user_id)
+
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        assert generation.status == "failed_recoverable"
+        chunked = dict(generation.chunked_state_json or {})
+        assert chunked.get("stage") == generation.status
+        page = dict(chunked.get("page_document_v2") or {})
+        last_error = dict((page.get("execution") or {}).get("last_error") or {})
+        assert last_error.get("stage") == "planning_teaching"
+        assert generation.error == last_error.get("message")
+        assert generation.error_type == last_error.get("type")
+        assert generation.error_code == last_error.get("code")
+        projected = project_native_status(
+            gid,
+            chunked,
+            generation.document_json,
+            generation_status=generation.status,
+        )
+        assert projected is not None
+        assert projected["next_action"] == "retry_teaching"

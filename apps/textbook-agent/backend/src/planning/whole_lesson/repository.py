@@ -7,7 +7,7 @@ import json
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -76,6 +76,7 @@ def empty_execution_meta() -> dict[str, Any]:
         "heartbeat_at": None,
         "lease_seconds": DEFAULT_LEASE_SECONDS,
         "last_error": None,
+        "pre_worker_retry_active": False,
         "document_sha256": None,
         "reloaded_sha256": None,
         "reload_verified": False,
@@ -83,6 +84,37 @@ def empty_execution_meta() -> dict[str, Any]:
         "candidate_lease_token": None,
         "candidate_written_at": None,
     }
+
+
+def apply_generation_error_aliases(
+    generation: GenerationModel,
+    error: Mapping[str, Any] | dict[str, Any] | None,
+) -> None:
+    """Mirror structured last_error onto GenerationModel error columns."""
+    if not isinstance(error, Mapping):
+        generation.error = None
+        generation.error_type = None
+        generation.error_code = None
+        return
+    generation.error = str(error.get("message") or "")[:2000] or None
+    generation.error_type = str(error.get("type") or "") or None
+    generation.error_code = str(error.get("code") or "") or None
+
+
+def clear_generation_error_state(
+    generation: GenerationModel,
+    state: dict[str, Any],
+) -> None:
+    """Clear generation-level error aliases together with execution.last_error."""
+    apply_generation_error_aliases(generation, None)
+    execution = dict(state.get("execution") or empty_execution_meta())
+    execution["last_error"] = None
+    execution["pre_worker_retry_active"] = False
+    state["execution"] = execution
+    chunked = _coerce_chunked(generation.chunked_state_json)
+    chunked.pop("error", None)
+    chunked.pop("error_type", None)
+    generation.chunked_state_json = chunked
 
 
 def empty_page_document_state() -> dict[str, Any]:
@@ -312,8 +344,16 @@ class PageDocumentRepository:
             execution["heartbeat_at"] = _now()
             if error is not None:
                 execution["last_error"] = error
-            elif target in {"ready", "queued", "planning_forms"}:
-                execution["last_error"] = None
+                apply_generation_error_aliases(generation, error)
+            elif target in {
+                "ready",
+                "queued",
+                "planning_forms",
+                "awaiting_teaching_approval",
+            }:
+                clear_generation_error_state(generation, state)
+                execution = dict(state.get("execution") or empty_execution_meta())
+                execution["heartbeat_at"] = _now()
             state["execution"] = execution
             events = list(state.get("events") or [])
             events.append(
@@ -396,7 +436,9 @@ class PageDocumentRepository:
             execution["heartbeat_at"] = _now()
             execution["last_error"] = error
             execution["attempt"] = int(execution.get("attempt") or 0) + 1
+            execution["pre_worker_retry_active"] = False
             state["execution"] = execution
+            apply_generation_error_aliases(generation, error)
             events = list(state.get("events") or [])
             events.append(
                 {
@@ -412,11 +454,8 @@ class PageDocumentRepository:
             )
             state["events"] = events[-500:]
             # Clear legacy stage2_error keys from the outer chunked blob after write
-            # by stamping authoritative stage via _write_page_state; also drop error
-            # aliases that would disagree with structured last_error.
+            # by stamping authoritative stage via _write_page_state.
             chunked_out = _coerce_chunked(generation.chunked_state_json)
-            chunked_out.pop("error", None)
-            chunked_out.pop("error_type", None)
             if chunked_out.get("stage") == "stage2_error":
                 chunked_out["stage"] = target
             generation.chunked_state_json = chunked_out
@@ -663,7 +702,14 @@ class PageDocumentRepository:
             state["teaching_review"] = review
             if not isinstance(state.get("execution"), dict):
                 state["execution"] = empty_execution_meta()
+            current = str(generation.status or "").strip() or "pending"
+            if current in LEGAL_TRANSITIONS and stage in LEGAL_TRANSITIONS.get(
+                current, frozenset()
+            ):
+                assert_legal_transition(current, stage)
             generation.status = stage
+            if stage == "awaiting_teaching_approval":
+                clear_generation_error_state(generation, state)
 
         return await self.mutate_state(mutation=_mut)
 
@@ -710,9 +756,9 @@ class PageDocumentRepository:
                 current = str(generation.status or "")
                 assert_legal_transition(current, "queued")
                 generation.status = "queued"
+                clear_generation_error_state(generation, state)
                 execution = dict(state.get("execution") or empty_execution_meta())
                 execution["heartbeat_at"] = _now()
-                execution["last_error"] = None
                 state["execution"] = execution
                 events = list(state.get("events") or [])
                 events.append(
@@ -1348,6 +1394,7 @@ class PageDocumentRepository:
             execution["last_error"] = error
             execution["heartbeat_at"] = _now()
             state["execution"] = execution
+            apply_generation_error_aliases(generation, error)
             events = list(state.get("events") or [])
             events.append(
                 {
@@ -1371,15 +1418,16 @@ class PageDocumentRepository:
     async def clear_visual_last_error(self) -> dict[str, Any]:
         """Clear execution.last_error after a successful visuals-only redispath."""
 
-        def _mut(_generation: GenerationModel, state: dict[str, Any]) -> None:
+        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
             execution = dict(state.get("execution") or empty_execution_meta())
             last = execution.get("last_error")
             if isinstance(last, dict) and str(last.get("stage") or "") in {
                 "awaiting_visuals",
                 "visual_generation",
             }:
-                execution["last_error"] = None
-            state["execution"] = execution
+                clear_generation_error_state(generation, state)
+            else:
+                state["execution"] = execution
 
         return await self.mutate_state(
             expected_statuses={"awaiting_visuals", "ready"},

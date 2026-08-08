@@ -19,6 +19,12 @@ def _native_next_action(
     error_detail: Mapping[str, Any] | None = None,
     has_failed_visuals: bool = False,
 ) -> str | None:
+    from planning.whole_lesson.native_retry import (
+        NativeRetryTarget,
+        decide_native_retry_target,
+        next_action_for_retry_target,
+    )
+
     if stage == "awaiting_teaching_approval":
         return "approve_teaching"
     if stage in {
@@ -27,25 +33,26 @@ def _native_next_action(
         "writing_sections",
         "writing_blocks",
         "assembling",
+        "item_generation",
+        "planning_teaching",
     }:
         return "wait"
-    if stage == "failed_recoverable":
-        return "retry_native"
-    if stage == "failed_terminal":
-        return "inspect_error"
     if stage == "ready":
         return "done"
-    if stage == "awaiting_visuals":
-        visual_error = False
-        if isinstance(error_detail, Mapping):
-            err_stage = str(error_detail.get("stage") or "")
-            if err_stage in {"awaiting_visuals", "visual_generation"}:
-                visual_error = True
-        if has_failed_visuals or visual_error:
-            return "retry_visuals"
-        return "wait_visuals"
     if stage == "rejected_by_teacher":
         return "none"
+
+    target = decide_native_retry_target(
+        stage,
+        error_detail if isinstance(error_detail, Mapping) else None,
+        has_failed_visuals=has_failed_visuals,
+    )
+    if stage == "awaiting_visuals" and target == NativeRetryTarget.VISUALS:
+        return "retry_visuals"
+    if stage == "awaiting_visuals":
+        return "wait_visuals"
+    if stage in {"failed_recoverable", "failed_terminal"}:
+        return next_action_for_retry_target(target)
     return None
 
 

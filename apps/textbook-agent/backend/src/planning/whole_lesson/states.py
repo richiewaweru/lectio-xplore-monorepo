@@ -17,11 +17,28 @@ _PRE_WORKER_FAIL_TARGETS = frozenset(
 
 LEGAL_TRANSITIONS: dict[str, frozenset[str]] = {
     # Pre-worker bootstrap statuses (items / teaching plan before teacher gate).
-    "pending": _PRE_WORKER_FAIL_TARGETS,
-    "stage2_running": _PRE_WORKER_FAIL_TARGETS,
+    "pending": _PRE_WORKER_FAIL_TARGETS | frozenset({"item_generation", "planning_teaching"}),
+    "stage2_running": _PRE_WORKER_FAIL_TARGETS | frozenset({"item_generation", "planning_teaching"}),
     "plan_ready": _PRE_WORKER_FAIL_TARGETS,
     "awaiting_review": _PRE_WORKER_FAIL_TARGETS,
     "stage2_error": frozenset({"failed_recoverable", "failed_terminal", "cancelled"}),
+    # Pre-worker retry checkpoints (not claimable by the post-approval worker).
+    "item_generation": frozenset(
+        {
+            "planning_teaching",
+            "failed_recoverable",
+            "failed_terminal",
+            "cancelled",
+        }
+    ),
+    "planning_teaching": frozenset(
+        {
+            "awaiting_teaching_approval",
+            "failed_recoverable",
+            "failed_terminal",
+            "cancelled",
+        }
+    ),
     "awaiting_teaching_approval": frozenset(
         {"queued", "cancelled", "failed_recoverable", "failed_terminal"}
     ),
@@ -48,7 +65,9 @@ LEGAL_TRANSITIONS: dict[str, frozenset[str]] = {
     ),
     "awaiting_visuals": frozenset({"ready", "cancelled", "failed_terminal"}),
     "ready": frozenset(),
-    "failed_recoverable": frozenset({"queued", "cancelled"}),
+    "failed_recoverable": frozenset(
+        {"queued", "item_generation", "planning_teaching", "cancelled"}
+    ),
     "failed_terminal": frozenset(),
     "cancelled": frozenset(),
     # Compatibility aliases treated as nonterminal peers of ready/completed.
@@ -66,6 +85,8 @@ TERMINAL_STATUSES = frozenset(
 )
 NATIVE_STATUSES = frozenset(
     {
+        "item_generation",
+        "planning_teaching",
         "awaiting_teaching_approval",
         "queued",
         "planning_forms",

@@ -11,6 +11,7 @@ from fastapi import HTTPException
 
 from generation.v3_studio import router as studio_router
 from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
+from planning.whole_lesson.native_retry import NativeRetryConflict, NativeRetryTarget
 
 
 def test_generation_is_native_from_context_flag() -> None:
@@ -83,6 +84,17 @@ async def test_native_retry_section_does_not_call_legacy_retry() -> None:
             "load_chunked_state",
             new=AsyncMock(return_value=state),
         ),
+        patch(
+            "planning.whole_lesson.native_retry.execute_native_retry",
+            new=AsyncMock(
+                side_effect=NativeRetryConflict(
+                    "retry-native requires failed_recoverable",
+                    code="INVALID_STATUS",
+                    status="writing_sections",
+                    target=NativeRetryTarget.NOT_RETRYABLE,
+                )
+            ),
+        ),
         patch.object(
             studio_router,
             "retry_failed_section",
@@ -98,7 +110,7 @@ async def test_native_retry_section_does_not_call_legacy_retry() -> None:
         assert exc_info.value.status_code == 409
         detail = exc_info.value.detail
         assert isinstance(detail, dict)
-        assert detail["error_type"] == "NativeRetryRequired"
+        assert detail["error_type"] == "INVALID_STATUS"
         legacy_retry.assert_not_called()
 
 
@@ -109,7 +121,10 @@ async def test_native_retry_section_requeues_failed_recoverable() -> None:
         status="failed_recoverable",
         chunked_state_json={
             "native_whole_lesson": True,
-            "page_document_v2": {"schema_version": 1, "execution": {}},
+            "page_document_v2": {
+                "schema_version": 1,
+                "execution": {"last_error": {"stage": "planning_forms", "retryable": True}},
+            },
             "stage": "failed_recoverable",
         },
         planning_spec_json='{"document_contract_version": 2}',
@@ -117,18 +132,15 @@ async def test_native_retry_section_requeues_failed_recoverable() -> None:
     )
     state = {
         "native_whole_lesson": True,
-        "page_document_v2": {"schema_version": 1, "execution": {}},
+        "page_document_v2": {
+            "schema_version": 1,
+            "execution": {"last_error": {"stage": "planning_forms", "retryable": True}},
+        },
         "stage": "failed_recoverable",
     }
     body = SimpleNamespace(section_id="orient")
     user = SimpleNamespace(id="user-1")
     queued_state = {**state, "stage": "queued"}
-
-    repo = MagicMock()
-    repo.transition = AsyncMock(return_value={})
-    session_cm = MagicMock()
-    session_cm.__aenter__ = AsyncMock(return_value=MagicMock())
-    session_cm.__aexit__ = AsyncMock(return_value=None)
 
     with (
         patch.object(
@@ -141,20 +153,17 @@ async def test_native_retry_section_requeues_failed_recoverable() -> None:
             "load_chunked_state",
             new=AsyncMock(side_effect=[state, queued_state]),
         ),
-        patch.object(
-            studio_router,
-            "persist_chunked_state",
-            new=AsyncMock(),
-        ),
-        patch.object(
-            studio_router,
-            "async_session_factory",
-            return_value=session_cm,
-        ),
         patch(
-            "planning.whole_lesson.repository.PageDocumentRepository",
-            return_value=repo,
-        ),
+            "planning.whole_lesson.native_retry.execute_native_retry",
+            new=AsyncMock(
+                return_value={
+                    "generation_id": "gen-native-2",
+                    "status": "queued",
+                    "retry_target": "post_approval_worker",
+                    "next_action": "wait",
+                }
+            ),
+        ) as execute_retry,
         patch.object(
             studio_router,
             "retry_failed_section",
@@ -172,6 +181,6 @@ async def test_native_retry_section_requeues_failed_recoverable() -> None:
             user,  # type: ignore[arg-type]
         )
         assert result.stage == "queued"
-        repo.transition.assert_awaited_once()
+        execute_retry.assert_awaited_once()
         legacy_retry.assert_not_called()
         normalize.assert_called()

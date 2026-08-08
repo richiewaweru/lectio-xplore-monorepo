@@ -2893,42 +2893,35 @@ async def post_chunked_retry_section(
     from planning.whole_lesson.repository import PageDocumentRepository
 
     if generation_is_native_whole_lesson(state, model):
+        from planning.whole_lesson.native_retry import (
+            NativeRetryConflict,
+            execute_native_retry,
+        )
+
         status = str(model.status or state.get("stage") or "")
-        if status == "failed_recoverable":
-            async with async_session_factory() as session:
-                repo = PageDocumentRepository(session, generation_id)
-                await repo.transition(
-                    expected={"failed_recoverable"},
-                    target="queued",
-                    event="native_retry_requeued",
-                )
-            latest = await load_chunked_state(generation_id)
-            latest = {
-                **latest,
-                "stage": "queued",
-                "error": None,
-                "error_type": None,
-                "next_action": "wait",
-            }
-            await persist_chunked_state(
-                generation_id,
-                {
-                    "stage": "queued",
-                    "error": None,
-                    "error_type": None,
-                },
+        try:
+            result = await execute_native_retry(
+                generation_id, user_id=current_user.id
             )
-            return _normalize_chunked_state(generation_id, {**latest, "stage": "queued"})
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "error_type": "NativeRetryRequired",
-                "message": (
-                    "Legacy retry-section is disabled for native whole-lesson generations. "
-                    "Requeue via failed_recoverable → queued or approve/retry native path."
-                ),
-                "stage": status,
-                "generation_id": generation_id,
+        except NativeRetryConflict as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "error_type": exc.code,
+                    "message": str(exc),
+                    "stage": exc.status or status,
+                    "retry_target": exc.target.value if exc.target else None,
+                    "generation_id": generation_id,
+                    **(exc.detail or {}),
+                },
+            ) from exc
+        latest = await load_chunked_state(generation_id)
+        return _normalize_chunked_state(
+            generation_id,
+            {
+                **latest,
+                "stage": result.get("status") or latest.get("stage"),
+                "next_action": result.get("next_action"),
             },
         )
 
@@ -4728,3 +4721,55 @@ async def post_visuals_retry(
         ),
         "error_detail": last_error if isinstance(last_error, dict) else None,
     }
+
+
+@v3_studio_router.post("/generations/{generation_id}/retry-native")
+async def post_retry_native(
+    generation_id: str,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Stage-aware native retry for failed_recoverable generations.
+
+    Routes by execution.last_error.stage:
+    - item_generation → retry missing/failed items then teaching
+    - planning_teaching → teaching only
+    - post-approval stages → queued for worker reclaim
+    Visual failures must use /visuals/retry.
+    """
+    model = await _load_owned_generation(generation_id, current_user.id)
+    from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
+    from planning.whole_lesson.native_retry import (
+        NativeRetryConflict,
+        execute_native_retry,
+    )
+    from v3_blueprint.planning.persistence import load_chunked_state
+
+    state = await load_chunked_state(generation_id)
+    if not generation_is_native_whole_lesson(state, model):
+        raise HTTPException(
+            status_code=409,
+            detail="retry-native is only available for native whole-lesson generations",
+        )
+    try:
+        result = await execute_native_retry(
+            generation_id, user_id=current_user.id
+        )
+    except NativeRetryConflict as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error_type": exc.code,
+                "message": str(exc),
+                "stage": exc.status or str(model.status or ""),
+                "retry_target": exc.target.value if exc.target else None,
+                "generation_id": generation_id,
+                **(exc.detail or {}),
+            },
+        ) from exc
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("native retry failed generation_id=%s", generation_id)
+        raise HTTPException(
+            status_code=502,
+            detail=f"native retry failed: {str(exc)[:400]}",
+        ) from exc
+    return result
