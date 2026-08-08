@@ -269,6 +269,22 @@ class PageDocumentRepository:
         generation.chunked_state_json = chunked
         return state
 
+    async def require_execution_lease(
+        self,
+        *,
+        worker_id: str,
+        lease_token: int,
+    ) -> GenerationModel:
+        """Row-lock the generation and assert lease ownership in this transaction."""
+        generation = await self._lock_generation()
+        state = self._page_state_from_generation(generation)
+        self._assert_lease_on_state(
+            state,
+            worker_id=worker_id,
+            lease_token=lease_token,
+        )
+        return generation
+
     async def mutate_state(
         self,
         *,
@@ -698,18 +714,38 @@ class PageDocumentRepository:
                 expected[key] = stored.get(key) or {}
         return expected
 
-    async def save_lesson_packet(self, packet: dict[str, Any]) -> dict[str, Any]:
+    async def save_lesson_packet(
+        self,
+        packet: dict[str, Any],
+        *,
+        worker_id: str | None = None,
+        lease_token: int | None = None,
+    ) -> dict[str, Any]:
         def _mut(_generation: GenerationModel, state: dict[str, Any]) -> None:
             state["lesson_packet"] = packet
 
-        return await self.mutate_state(mutation=_mut)
+        return await self.mutate_state(
+            worker_id=worker_id,
+            lease_token=lease_token,
+            mutation=_mut,
+        )
 
-    async def save_lesson_legality(self, legality: dict[str, Any]) -> dict[str, Any]:
+    async def save_lesson_legality(
+        self,
+        legality: dict[str, Any],
+        *,
+        worker_id: str | None = None,
+        lease_token: int | None = None,
+    ) -> dict[str, Any]:
         def _mut(_generation: GenerationModel, state: dict[str, Any]) -> None:
             state["lesson_legality"] = legality
             state["schema_version"] = 2
 
-        return await self.mutate_state(mutation=_mut)
+        return await self.mutate_state(
+            worker_id=worker_id,
+            lease_token=lease_token,
+            mutation=_mut,
+        )
 
     async def load_lesson_legality(self) -> dict[str, Any]:
         """Fail closed: missing/invalid snapshot is an execution error."""
@@ -740,6 +776,8 @@ class PageDocumentRepository:
         version: str,
         teaching_projection_hash: str | None = None,
         form_projection_hash: str | None = None,
+        worker_id: str | None = None,
+        lease_token: int | None = None,
     ) -> dict[str, Any]:
         def _mut(_generation: GenerationModel, state: dict[str, Any]) -> None:
             catalogue = dict(state.get("catalogue") or {})
@@ -750,7 +788,11 @@ class PageDocumentRepository:
                 catalogue["form_projection_hash"] = form_projection_hash
             state["catalogue"] = catalogue
 
-        return await self.mutate_state(mutation=_mut)
+        return await self.mutate_state(
+            worker_id=worker_id,
+            lease_token=lease_token,
+            mutation=_mut,
+        )
 
     async def save_teaching_plan(
         self,

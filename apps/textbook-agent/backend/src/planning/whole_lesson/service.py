@@ -151,16 +151,26 @@ async def run_and_persist_teaching_plan(
 
     repo = PageDocumentRepository(session, generation_id)
     await repo.append_event(
-        make_event("teaching_plan_started", generation_id=generation_id, status="started")
+        make_event("teaching_plan_started", generation_id=generation_id, status="started"),
+        worker_id=worker_id,
+        lease_token=lease_token,
     )
     packet = await build_packet_for_generation(
         session, generation, require_items=require_items
     )
-    await repo.save_lesson_packet(packet.model_dump(mode="json"))
+    await repo.save_lesson_packet(
+        packet.model_dump(mode="json"),
+        worker_id=worker_id,
+        lease_token=lease_token,
+    )
 
     legality = build_lesson_legality_snapshot(packet)
     validate_legality_snapshot(packet, legality)
-    await repo.save_lesson_legality(legality.model_dump(mode="json"))
+    await repo.save_lesson_legality(
+        legality.model_dump(mode="json"),
+        worker_id=worker_id,
+        lease_token=lease_token,
+    )
 
     result = await run_lesson_approach_planner(
         packet,
@@ -171,6 +181,8 @@ async def run_and_persist_teaching_plan(
     await repo.save_catalogue_meta(
         version=result.teaching_guidance.catalogue_version,
         teaching_projection_hash=result.teaching_guidance.projection_hash,
+        worker_id=worker_id,
+        lease_token=lease_token,
     )
     state = await repo.save_teaching_plan(
         plan=result.plan.model_dump(mode="json"),
@@ -188,14 +200,18 @@ async def run_and_persist_teaching_plan(
             generation_id=generation_id,
             status="ready",
             arc=result.plan.arc,
-        )
+        ),
+        worker_id=worker_id,
+        lease_token=lease_token,
     )
     await repo.append_event(
         make_event(
             "awaiting_teaching_approval",
             generation_id=generation_id,
             status="pending",
-        )
+        ),
+        worker_id=worker_id,
+        lease_token=lease_token,
     )
     return {
         "teaching_plan": result.plan.model_dump(mode="json"),

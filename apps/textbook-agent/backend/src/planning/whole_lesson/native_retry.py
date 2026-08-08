@@ -305,14 +305,7 @@ async def _run_items_under_lease(
     from v3_blueprint.planning.persistence import (
         load_chunked_state,
         merge_item_generation_summary,
-        persist_chunked_state,
     )
-
-    async with async_session_factory() as session:
-        repo = PageDocumentRepository(session, generation_id)
-        await repo.assert_lease(
-            worker_id=lease.worker_id, lease_token=lease.lease_token
-        )
 
     state = await load_chunked_state(generation_id)
     plan_raw = state.get("structural_plan")
@@ -331,22 +324,8 @@ async def _run_items_under_lease(
         generation_id=generation_id,
         form=form,
         plan=plan,
-    )
-
-    async with async_session_factory() as session:
-        repo = PageDocumentRepository(session, generation_id)
-        await repo.assert_lease(
-            worker_id=lease.worker_id, lease_token=lease.lease_token
-        )
-
-    current = await load_chunked_state(generation_id)
-    item_gen = merge_item_generation_summary(
-        dict(current.get("item_generation") or {}),
-        item_summary,
-    )
-    await persist_chunked_state(
-        generation_id,
-        {"item_generation": item_gen, "stage": "item_generation"},
+        worker_id=lease.worker_id,
+        lease_token=lease.lease_token,
     )
 
     async with async_session_factory() as session:
@@ -355,6 +334,15 @@ async def _run_items_under_lease(
         def _checkpoint(generation: GenerationModel, state: dict[str, Any]) -> None:
             current_status = str(generation.status or "")
             assert_legal_transition(current_status, "planning_teaching")
+            chunked = dict(generation.chunked_state_json or {})
+            if not isinstance(chunked, dict):
+                chunked = {}
+            item_gen = merge_item_generation_summary(
+                dict(chunked.get("item_generation") or {}),
+                item_summary,
+            )
+            chunked["item_generation"] = item_gen
+            generation.chunked_state_json = chunked
             generation.status = "planning_teaching"
             execution = dict(state.get("execution") or empty_execution_meta())
             execution["work_kind"] = WORK_KIND_PRE_WORKER_TEACHING
@@ -394,13 +382,8 @@ async def _run_teaching_under_lease(
     skip_item_generation: bool,
 ) -> dict[str, Any]:
     from planning.whole_lesson.service import run_and_persist_teaching_plan
-    from v3_blueprint.planning.persistence import persist_chunked_state
 
     async with async_session_factory() as session:
-        repo = PageDocumentRepository(session, generation_id)
-        await repo.assert_lease(
-            worker_id=lease.worker_id, lease_token=lease.lease_token
-        )
         teaching = await run_and_persist_teaching_plan(
             session,
             generation_id,
@@ -409,19 +392,17 @@ async def _run_teaching_under_lease(
             lease_token=lease.lease_token,
         )
 
-    await persist_chunked_state(
-        generation_id,
-        {
-            "stage": "awaiting_teaching_approval",
-            "native_whole_lesson": True,
-            "skip_item_generation": skip_item_generation,
-        },
-    )
-
     async with async_session_factory() as session:
         repo = PageDocumentRepository(session, generation_id)
 
-        def _release(_generation: GenerationModel, state: dict[str, Any]) -> None:
+        def _release(generation: GenerationModel, state: dict[str, Any]) -> None:
+            chunked = dict(generation.chunked_state_json or {})
+            if not isinstance(chunked, dict):
+                chunked = {}
+            chunked["stage"] = "awaiting_teaching_approval"
+            chunked["native_whole_lesson"] = True
+            chunked["skip_item_generation"] = skip_item_generation
+            generation.chunked_state_json = chunked
             execution = dict(state.get("execution") or empty_execution_meta())
             execution["work_kind"] = None
             execution["pre_worker_retry_active"] = False

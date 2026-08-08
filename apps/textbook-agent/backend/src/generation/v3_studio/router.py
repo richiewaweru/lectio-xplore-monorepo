@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.background import BackgroundTask
 
 from core.auth.jwt_handler import JWTHandler
@@ -1067,6 +1068,8 @@ async def _generate_shared_pack_items(
     generation_id: str,
     form: V3InputForm,
     plan: StructuralPlan,
+    worker_id: str | None = None,
+    lease_token: int | None = None,
 ) -> dict[str, Any]:
     """Generate the pack's single diagnostic set from approved cards alone."""
     from v3_execution.executors.item_executor import (
@@ -1134,6 +1137,8 @@ async def _generate_shared_pack_items(
             attempts=to_write,
             failed_cards=new_failed,
             pack_id=pack_id,
+            worker_id=worker_id,
+            lease_token=lease_token,
         )
         for row in to_write:
             flushed_attempt_keys.add(
@@ -1180,7 +1185,13 @@ async def _generate_shared_pack_items(
         await _flush_attempts()
 
     if results:
-        await _persist_item_results(pack_id, results)
+        await _persist_item_results(
+            pack_id,
+            results,
+            generation_id=generation_id,
+            worker_id=worker_id,
+            lease_token=lease_token,
+        )
 
     review_cards = [
         {
@@ -1237,63 +1248,97 @@ def _item_row_teacher_edited(row: PackItemModel) -> bool:
 async def _persist_item_results(
     pack_id: str,
     results: list[ItemGenerationResult],
+    *,
+    generation_id: str | None = None,
+    worker_id: str | None = None,
+    lease_token: int | None = None,
 ) -> None:
-    async with async_session_factory() as session:
-        for result in results:
-            stored = await session.execute(
-                select(PackItemModel).where(
-                    PackItemModel.pack_id == pack_id,
-                    PackItemModel.card_id == result.card_id,
-                )
-            )
-            existing_rows = {row.id: row for row in stored.scalars()}
-            generated_ids: set[str] = set()
-            for item in result.items:
-                correct = next(option for option in item.options if option.correct)
-                db_id = f"{pack_id}:{item.question_id}"
-                generated_ids.add(db_id)
-                existing = existing_rows.get(db_id)
-                if existing is not None and _item_row_teacher_edited(existing):
-                    existing.stale = True
-                    continue
-                payload = {
-                    "stem": item.prompt_text,
-                    "options": [
-                        {
-                            **option.model_dump(mode="json"),
-                            "teacher_edited": False,
-                        }
-                        for option in item.options
-                    ],
-                    "correct_key": correct.key,
-                    "diagnoses": {
-                        option.key: option.diagnoses
-                        for option in item.options
-                    },
-                    "stale": False,
-                }
-                if existing is None:
-                    session.add(
-                        PackItemModel(
-                            id=db_id,
-                            pack_id=pack_id,
-                            card_id=result.card_id,
-                            **payload,
-                        )
-                    )
-                else:
-                    for field, value in payload.items():
-                        setattr(existing, field, value)
+    leased = worker_id is not None or lease_token is not None
+    if leased and (generation_id is None or worker_id is None or lease_token is None):
+        raise ValueError(
+            "generation_id, worker_id, and lease_token are required for leased PackItem writes"
+        )
 
-            for db_id, existing in existing_rows.items():
-                if db_id in generated_ids:
-                    continue
-                if _item_row_teacher_edited(existing):
-                    existing.stale = True
-                else:
-                    await session.delete(existing)
+    async with async_session_factory() as session:
+        if leased:
+            from planning.whole_lesson.repository import (
+                PageDocumentRepository,
+                _page_state_lock,
+            )
+
+            lock = await _page_state_lock(str(generation_id))
+            async with lock:
+                repo = PageDocumentRepository(session, str(generation_id))
+                await repo.require_execution_lease(
+                    worker_id=str(worker_id),
+                    lease_token=int(lease_token),
+                )
+                await _write_pack_item_rows(session, pack_id, results)
+                await session.commit()
+            return
+
+        await _write_pack_item_rows(session, pack_id, results)
         await session.commit()
 
+
+async def _write_pack_item_rows(
+    session: AsyncSession,
+    pack_id: str,
+    results: list[ItemGenerationResult],
+) -> None:
+    for result in results:
+        stored = await session.execute(
+            select(PackItemModel).where(
+                PackItemModel.pack_id == pack_id,
+                PackItemModel.card_id == result.card_id,
+            )
+        )
+        existing_rows = {row.id: row for row in stored.scalars()}
+        generated_ids: set[str] = set()
+        for item in result.items:
+            correct = next(option for option in item.options if option.correct)
+            db_id = f"{pack_id}:{item.question_id}"
+            generated_ids.add(db_id)
+            existing = existing_rows.get(db_id)
+            if existing is not None and _item_row_teacher_edited(existing):
+                existing.stale = True
+                continue
+            payload = {
+                "stem": item.prompt_text,
+                "options": [
+                    {
+                        **option.model_dump(mode="json"),
+                        "teacher_edited": False,
+                    }
+                    for option in item.options
+                ],
+                "correct_key": correct.key,
+                "diagnoses": {
+                    option.key: option.diagnoses
+                    for option in item.options
+                },
+                "stale": False,
+            }
+            if existing is None:
+                session.add(
+                    PackItemModel(
+                        id=db_id,
+                        pack_id=pack_id,
+                        card_id=result.card_id,
+                        **payload,
+                    )
+                )
+            else:
+                for field, value in payload.items():
+                    setattr(existing, field, value)
+
+        for db_id, existing in existing_rows.items():
+            if db_id in generated_ids:
+                continue
+            if _item_row_teacher_edited(existing):
+                existing.stale = True
+            else:
+                await session.delete(existing)
 
 async def _run_chunked_stage2_pipeline(
     *,

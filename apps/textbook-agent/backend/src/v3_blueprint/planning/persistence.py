@@ -269,45 +269,95 @@ async def append_item_attempt_records(
     failed_cards: list[dict[str, Any]] | None = None,
     pack_id: str | None = None,
     session: AsyncSession | None = None,
+    worker_id: str | None = None,
+    lease_token: int | None = None,
 ) -> dict[str, Any]:
     """Append-only merge of item-generation attempt journals into chunked state.
 
     Never wipes prior attempts. Dedupes by (correlation_id, card_id, attempt).
+    When worker_id/lease_token are provided, lease verification and journal write
+    share one row-locked transaction.
     """
+    leased = worker_id is not None or lease_token is not None
+    if leased and (worker_id is None or lease_token is None):
+        raise ValueError("worker_id and lease_token must both be provided for leased writes")
+
     async with _session_scope(session) as (db, should_commit):
-        current = await _read_chunked_state(generation_id, db)
-        item_gen = dict(current.get("item_generation") or {})
-        existing = [
-            dict(row)
-            for row in (item_gen.get("attempts") or [])
-            if isinstance(row, dict)
-        ]
-        seen = {_attempt_key(row) for row in existing}
-        for record in attempts:
-            if not isinstance(record, dict):
-                continue
-            key = _attempt_key(record)
-            if key in seen:
-                continue
-            seen.add(key)
-            existing.append(dict(record))
-        item_gen["attempts"] = existing
-        if pack_id:
-            item_gen["pack_id"] = pack_id
-        if failed_cards:
-            item_gen["failed_cards"] = merge_failed_card_records(
-                [
-                    dict(row)
-                    for row in (item_gen.get("failed_cards") or [])
-                    if isinstance(row, dict)
-                ],
-                failed_cards,
+        if leased:
+            from planning.whole_lesson.repository import (
+                PageDocumentRepository,
+                _page_state_lock,
             )
-        current["item_generation"] = item_gen
-        await _write_chunked_state(generation_id, current, db)
+
+            lock = await _page_state_lock(generation_id)
+            async with lock:
+                repo = PageDocumentRepository(db, generation_id)
+                await repo.require_execution_lease(
+                    worker_id=str(worker_id),
+                    lease_token=int(lease_token),
+                )
+                item_gen = await _merge_item_attempt_journal(
+                    generation_id,
+                    db,
+                    attempts=attempts,
+                    failed_cards=failed_cards,
+                    pack_id=pack_id,
+                )
+                if should_commit:
+                    await db.commit()
+                return item_gen
+
+        item_gen = await _merge_item_attempt_journal(
+            generation_id,
+            db,
+            attempts=attempts,
+            failed_cards=failed_cards,
+            pack_id=pack_id,
+        )
         if should_commit:
             await db.commit()
         return item_gen
+
+
+async def _merge_item_attempt_journal(
+    generation_id: str,
+    db: AsyncSession,
+    *,
+    attempts: list[dict[str, Any]],
+    failed_cards: list[dict[str, Any]] | None,
+    pack_id: str | None,
+) -> dict[str, Any]:
+    current = await _read_chunked_state(generation_id, db)
+    item_gen = dict(current.get("item_generation") or {})
+    existing = [
+        dict(row)
+        for row in (item_gen.get("attempts") or [])
+        if isinstance(row, dict)
+    ]
+    seen = {_attempt_key(row) for row in existing}
+    for record in attempts:
+        if not isinstance(record, dict):
+            continue
+        key = _attempt_key(record)
+        if key in seen:
+            continue
+        seen.add(key)
+        existing.append(dict(record))
+    item_gen["attempts"] = existing
+    if pack_id:
+        item_gen["pack_id"] = pack_id
+    if failed_cards:
+        item_gen["failed_cards"] = merge_failed_card_records(
+            [
+                dict(row)
+                for row in (item_gen.get("failed_cards") or [])
+                if isinstance(row, dict)
+            ],
+            failed_cards,
+        )
+    current["item_generation"] = item_gen
+    await _write_chunked_state(generation_id, current, db)
+    return item_gen
 
 async def persist_structural_plan(
     generation_id: str,
