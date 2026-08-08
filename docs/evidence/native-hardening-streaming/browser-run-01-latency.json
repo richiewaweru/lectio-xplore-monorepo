@@ -1,0 +1,17 @@
+{
+  "run_id": "browser-run-01-deferred",
+  "status": "blocked",
+  "blocker": "Docker Desktop engine not running (npipe dockerDesktopLinuxEngine missing)",
+  "planned_measurements": [
+    "path_to_prepare_ms",
+    "teacher_approval_to_first_section_snapshot_ms",
+    "first_snapshot_to_awaiting_visuals_ms",
+    "visual_dispatch_to_ready_ms",
+    "pdf_export_ms"
+  ],
+  "related_prior_evidence": [
+    "docs/evidence/whole-lesson-runs/browser-smoke-two-lessons-rerun/",
+    "docs/evidence/whole-lesson-runs/run-01-diagnostic/"
+  ],
+  "notes": "Re-run Phase 07 live gate when Docker Postgres + backend + configured LLM/visual providers are up. Deterministic suites for phases 01-06 are green."
+}

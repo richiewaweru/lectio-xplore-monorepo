@@ -37,6 +37,11 @@ Before decomposing lessons, establish:
                  A real exclusion is useful; a fabricated exclusion
                  (e.g. "advanced material", "out-of-grade content",
                  "other concepts") is worse than [].
+  terminology    student-facing domain vocabulary the unit requires
+                 (exact terms/phrases learners must meet). Not prose,
+                 definitions, objectives, or phrases like
+                 "students understand...". Use [] only when the unit
+                 genuinely has no domain terminology.
 
 The same topic at different grades must produce materially different conceptual
 ceilings, not the same ideas with easier vocabulary.
@@ -111,7 +116,8 @@ Emit JSON only. No prose before or after.
 {
   "scope": {
     "must_cover": [string],
-    "do_not_cover": [string]
+    "do_not_cover": [string],
+    "terminology": [string]
   },
   "lessons": [
     {

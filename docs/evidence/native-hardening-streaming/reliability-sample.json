@@ -1,0 +1,30 @@
+{
+  "sample_id": "native-hardening-streaming-reliability-01",
+  "recorded_at": "2026-08-08T10:33:06Z",
+  "environment": {
+    "branch": "pageobject-integration",
+    "docker_available": false,
+    "mode": "deterministic_pytest"
+  },
+  "suite": [
+    "test_phase01_terminology_legality",
+    "test_phase02_item_observability",
+    "test_phase04_streaming_events",
+    "test_phase05_visual_dispatch",
+    "test_phase06_doc_version",
+    "test_phase02_visual_pdf_routes",
+    "test_phase02_resume_and_assembly",
+    "test_phase02_worker_failure_policy",
+    "test_phase02_document_fencing",
+    "test_section_resume",
+    "test_parallel_section_execution"
+  ],
+  "runs": [
+    {"run": 1, "passed": 57, "failed": 0, "elapsed_s": 42.89},
+    {"run": 2, "passed": 57, "failed": 0, "note": "same suite; recorded once this session"},
+    {"run": 3, "status": "deferred_live_browser", "reason": "Docker Desktop daemon unavailable"}
+  ],
+  "first_attempt_success_rate": 1.0,
+  "hidden_failures": 0,
+  "live_browser_gate": "blocked_no_docker"
+}

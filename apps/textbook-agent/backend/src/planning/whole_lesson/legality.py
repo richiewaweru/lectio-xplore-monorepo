@@ -242,3 +242,36 @@ def snapshot_as_teaching_sets(
             for slot_id, values in legality.typical_by_slot.items()
         },
     )
+
+
+_DEPARTURE_RULE = (
+    "A permitted non-typical intent requires a specific departure_reason. "
+    "Excluded intents are never legal."
+)
+
+
+def project_slot_intent_policy(
+    snapshot: LessonLegalitySnapshot,
+) -> dict[str, Any]:
+    """Deterministic prompt policy projected from the persisted legality snapshot.
+
+    Validator and prompt must derive from this same snapshot/hash. Do not invent
+    a second persisted legal_intents contract.
+    """
+    permitted = set(snapshot.permitted_intents)
+    excluded = set(snapshot.excluded_intents)
+    legal = permitted - excluded
+    policy: dict[str, Any] = {}
+    for slot_id in sorted(snapshot.typical_by_slot.keys()):
+        typical = list(snapshot.typical_by_slot.get(slot_id) or [])
+        typical_set = set(typical)
+        policy[slot_id] = {
+            "typical_intents": typical,
+            "permitted_departures": sorted(legal - typical_set),
+            "departure_rule": _DEPARTURE_RULE,
+        }
+    return {
+        "slot_intent_policy": policy,
+        "catalogue_hash": snapshot.catalogue_hash,
+        "catalogue_version": snapshot.catalogue_version,
+    }

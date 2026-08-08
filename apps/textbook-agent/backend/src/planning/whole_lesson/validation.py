@@ -66,6 +66,26 @@ def _word_count(text: str) -> int:
     return len(re.findall(r"[A-Za-z0-9']+", text))
 
 
+_ANCHOR_STOPWORDS = frozenset(
+    """a an and are as at be been but by for from has have how in into is it its of on
+    or over so than that the their them then there these they this to under until up
+    was were what when where which while who why with without would you your""".split()
+)
+
+
+def anchor_terms(description: str) -> set[str]:
+    """Significant words from the anchor description, for grounding checks.
+
+    The teaching prompt asks writers to name the anchor *by name* in prose ("the
+    sunflower on the windowsill"), and routes machine ids to ``evidence_refs``
+    instead — the sibling OBJECT_LEAK rule actively forbids ids inside briefs.
+    So a brief is grounded in the anchor when it reuses the anchor's own
+    vocabulary, not when it quotes a synthetic id like ``anchor-1``.
+    """
+    words = re.findall(r"[A-Za-z][A-Za-z'-]{2,}", description.lower())
+    return {w for w in words if w not in _ANCHOR_STOPWORDS}
+
+
 def _contains_object_id(text: str) -> str | None:
     """Detect page-object catalogue leaks without flagging ordinary English.
 
@@ -113,6 +133,14 @@ def validate_teaching_plan(
     approved_ids = set(packet.approved_item_ids())
     misconception_ids = {item.id for item in packet.misconceptions}
     terminology = {term.lower() for term in packet.scope.terminology}
+    anchor_vocabulary = anchor_terms(packet.anchor.description or "")
+    if not terminology:
+        # Empty terminology is allowed when the unit genuinely has none.
+        # For brief grounding, fall back to must_establish tokens so briefs that
+        # correctly cite owned outcomes are not rejected solely for missing vocab.
+        terminology = set().union(
+            *(anchor_terms(entry.statement) for entry in packet.scope.must_establish)
+        ) if packet.scope.must_establish else set()
     excluded_terms = {
         entry.statement.lower() for entry in packet.scope.must_not_introduce
     }
@@ -187,8 +215,10 @@ def validate_teaching_plan(
                     )
                 )
             brief_l = block.brief.lower()
-            if packet.anchor.id not in block.brief and not any(
-                term and term in brief_l for term in terminology
+            if (
+                packet.anchor.id not in block.brief
+                and not any(word in brief_l for word in anchor_vocabulary)
+                and not any(term and term in brief_l for term in terminology)
             ):
                 issues.append(
                     ValidationIssue(

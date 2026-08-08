@@ -127,7 +127,8 @@ async def persist_path_plan(
     existing_scope.must_not_introduce = list(plan.scope.do_not_cover)
     existing_scope.may_include = []
     existing_scope.assumed_prerequisites = []
-    existing_scope.terminology = []
+    # Persist planner-owned terminology; never wipe to [] on every path rewrite.
+    existing_scope.terminology = list(plan.scope.terminology)
     existing_scope.notation = None
 
     prior_by_slug: dict[str, PathLessonModel] = {}
@@ -277,9 +278,14 @@ async def canonical_plan_from_version(
         if scope and scope.must_not_introduce
         else []
     )
+    terminology = list(scope.terminology or []) if scope else []
 
     return CanonicalPathPlan(
-        scope=CanonicalPathScope(must_cover=must_cover, do_not_cover=do_not_cover),
+        scope=CanonicalPathScope(
+            must_cover=must_cover,
+            do_not_cover=do_not_cover,
+            terminology=terminology,
+        ),
         lessons=[
             CanonicalPathLesson(
                 key=id_to_key[lesson.id],

@@ -19,6 +19,7 @@ from planning.llm_contract_errors import is_transport_error, structured_output_e
 from planning.whole_lesson.legality import (
     LessonLegalitySnapshot,
     build_lesson_legality_snapshot,
+    project_slot_intent_policy,
     snapshot_as_teaching_sets,
 )
 from planning.whole_lesson.packet import ImmutableLessonPacket
@@ -125,10 +126,13 @@ async def run_lesson_approach_planner(
         permitted_intent_ids=permitted,
         excluded_intents={key: "excluded" for key in excluded},
     )
+    slot_intent_policy = project_slot_intent_policy(snapshot)
     prompt = render_teaching_prompt(packet, teaching_guidance, resource_id=packet.resource_id)
     user_payload = {
         "fixed_input": packet.planner_payload(),
         "teaching_guidance": teaching_guidance.to_dict(),
+        "slot_intent_policy": slot_intent_policy["slot_intent_policy"],
+        "legality_catalogue_hash": slot_intent_policy["catalogue_hash"],
     }
     attempts: list[TeachingPlanAttempt] = []
     last_error: str | None = None
@@ -148,10 +152,13 @@ async def run_lesson_approach_planner(
                     "repair": {
                         "instruction": (
                             "Return the complete corrected TeachingPlan JSON. "
-                            "Change only fields required to satisfy these errors."
+                            "Change only fields required to satisfy these errors. "
+                            "Use only intents listed under slot_intent_policy for each slot."
                         ),
                         "previous_output": previous_output,
                         "validation_errors": repair_errors,
+                        "slot_intent_policy": slot_intent_policy["slot_intent_policy"],
+                        "legality_catalogue_hash": slot_intent_policy["catalogue_hash"],
                     },
                 }
             plan, raw_response = await _call_teaching_model(

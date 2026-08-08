@@ -190,6 +190,18 @@ def normalize_path_plan_draft(draft: PathPlanDraft) -> CanonicalPathPlan:
     do_not_cover = [
         item.strip() for item in draft.scope.do_not_cover if item and item.strip()
     ]
+    # Preserve first spelling/casing; dedupe case-insensitively.
+    terminology: list[str] = []
+    seen_terms: set[str] = set()
+    for item in draft.scope.terminology or []:
+        if not item or not str(item).strip():
+            continue
+        value = str(item).strip()
+        key = value.casefold()
+        if key in seen_terms:
+            continue
+        seen_terms.add(key)
+        terminology.append(value)
     if not must_cover:
         _raise("empty_must_cover", "scope.must_cover must contain at least one item")
 
@@ -265,7 +277,11 @@ def normalize_path_plan_draft(draft: PathPlanDraft) -> CanonicalPathPlan:
         )
 
     plan = CanonicalPathPlan(
-        scope=CanonicalPathScope(must_cover=must_cover, do_not_cover=do_not_cover),
+        scope=CanonicalPathScope(
+            must_cover=must_cover,
+            do_not_cover=do_not_cover,
+            terminology=terminology,
+        ),
         lessons=lessons,
     )
     errors = validate_canonical_path_plan(plan)

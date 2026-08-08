@@ -185,6 +185,7 @@ def project_native_status(
         "generation_id": generation_id,
         "stage": stage or str(state.get("stage") or "unknown"),
         "document_version": document_version,
+        "document_revision": int(page.get("document_revision") or 0),
         "document_exists": document_exists,
         "sections_total": sections_total,
         "sections_ready": sections_ready,

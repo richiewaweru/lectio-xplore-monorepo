@@ -81,6 +81,7 @@ def four_lesson_draft(**overrides: object) -> PathPlanDraft:
         "scope": {
             "must_cover": ["heart", "blood vessels", "blood movement"],
             "do_not_cover": ["advanced cardiac electrophysiology"],
+            "terminology": ["heart", "artery", "vein", "capillary", "circulation"],
         },
         "lessons": [
             {

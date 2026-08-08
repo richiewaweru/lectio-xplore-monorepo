@@ -454,6 +454,17 @@ async def write_form_blocks(
             pending.append((index, block))
 
         if not pending:
+            try:
+                await publish_streaming_snapshot(
+                    generation_id=generation_id,
+                    packet=packet,
+                    form_plan=form_plan,
+                    teaching_plan=teaching_plan,
+                    variant_id=variant_id,
+                    lease=lease,
+                )
+            except Exception:  # noqa: BLE001
+                pass
             return []
 
         block_semaphore = asyncio.Semaphore(MAX_WRITER_CONCURRENCY)
@@ -478,7 +489,23 @@ async def write_form_blocks(
                 )
 
         async with section_semaphore:
-            return list(await asyncio.gather(*[_run(item) for item in pending]))
+            batch = list(await asyncio.gather(*[_run(item) for item in pending]))
+        # Section-ready durable streaming: re-read DB and persist valid partial V2.
+        try:
+            await publish_streaming_snapshot(
+                generation_id=generation_id,
+                packet=packet,
+                form_plan=form_plan,
+                teaching_plan=teaching_plan,
+                variant_id=variant_id,
+                lease=lease,
+            )
+        except LeaseLostError:
+            return [{"execution_key": "lease", "status": "lease_lost"}]
+        except Exception:  # noqa: BLE001
+            # Streaming must not abort writer progress; final assembly still fences.
+            pass
+        return batch
 
     section_results = await asyncio.gather(
         *[_write_section(section) for section in resolved.sections]
@@ -500,6 +527,101 @@ def _writer_result_from_outcome(outcome: dict[str, Any]) -> WriterOutcome:
         request_id=outcome.get("request_id"),
         answer_entries=answer_entries,
     )
+
+
+async def publish_streaming_snapshot(
+    *,
+    generation_id: str,
+    packet: ImmutableLessonPacket,
+    form_plan: FormPlan,
+    teaching_plan: TeachingPlan,
+    variant_id: str = DEFAULT_VARIANT_ID,
+    lease: ExecutionLease | None = None,
+) -> dict[str, Any] | None:
+    """Re-read DB and persist a valid partial LectioDocumentV2 for ready sections."""
+    resolved = resolve_block_plans(teaching_plan, form_plan)
+    async with async_session_factory() as session:
+        repo = PageDocumentRepository(session, generation_id)
+        stored = await repo.load_block_results()
+        generation = await session.get(GenerationModel, generation_id)
+        stable_document_id = f"doc-{generation_id}"
+        if generation is not None:
+            try:
+                existing = reload_document(generation.document_json or {})
+                prior_id = str(existing.get("id") or "").strip()
+                if prior_id:
+                    stable_document_id = prior_id
+            except Exception:  # noqa: BLE001
+                pass
+
+        section_plans = resolved.to_section_block_plans()
+        sections_out = []
+        answer_entries: list[dict[str, Any]] = []
+        writer_results: list[WriterOutcome] = []
+        ready_section_ids: list[str] = []
+        for section in resolved.sections:
+            keys = [
+                execution_key(section.slot_id, block.id, variant_id)
+                for block in section.blocks
+            ]
+            if not keys:
+                continue
+            outcomes = [stored.get(key) for key in keys]
+            if any(not isinstance(item, dict) for item in outcomes):
+                continue
+            statuses = [str(item.get("status") or "") for item in outcomes]  # type: ignore[union-attr]
+            if not all(status in {"ready", "visual_pending"} for status in statuses):
+                continue
+            ordered: list[WriterOutcome] = []
+            for block, outcome in zip(section.blocks, outcomes, strict=True):
+                assert isinstance(outcome, dict)
+                result = _writer_result_from_outcome({**outcome, "block_id": block.id})
+                ordered.append(result)
+                writer_results.append(result)
+                for entry in result.answer_entries:
+                    answer_entries.append(dict(entry))
+            sections_out.append(
+                assemble_section(
+                    section_id=section.slot_id,
+                    title=_section_title(section, teaching_plan=teaching_plan),
+                    plan=section_plans[section.slot_id],
+                    writer_results=ordered,
+                )
+            )
+            ready_section_ids.append(section.slot_id)
+
+        if not sections_out:
+            return None
+
+        document = assemble_document_v2(
+            title=packet.lesson.objective[:80],
+            sections=sections_out,
+            metadata={
+                "catalogue_version": "1.1.0",
+                "resource_type": "lesson",
+                "objective": packet.lesson.objective,
+                "subject": packet.lesson.subject,
+                "grade_level": packet.lesson.grade_level,
+                "knowledge_type": packet.lesson.knowledge_type,
+                "lesson_mode": packet.lesson.lesson_mode,
+                "native_whole_lesson": True,
+                "streaming_partial": True,
+            },
+            answer_entries=answer_entries or None,
+            writer_results=writer_results if not answer_entries else None,
+            document_id=stable_document_id,
+        )
+        errors = validate_document(document)
+        if errors:
+            raise AssemblyError(f"streaming snapshot invalid: {errors[:5]}")
+        digest = canonical_document_sha256(document)
+        return await repo.persist_streaming_snapshot(
+            document,
+            document_sha256=digest,
+            section_ids=ready_section_ids,
+            worker_id=lease.worker_id if lease else None,
+            lease_token=lease.lease_token if lease else None,
+        )
 
 
 def _section_title(
@@ -593,6 +715,16 @@ async def assemble_from_db(
                 writer_results=ordered,
             )
         )
+    stable_document_id = f"doc-{generation_id}"
+    generation_row = await session.get(GenerationModel, generation_id)
+    if generation_row is not None:
+        try:
+            existing = reload_document(generation_row.document_json or {})
+            prior_id = str(existing.get("id") or "").strip()
+            if prior_id:
+                stable_document_id = prior_id
+        except Exception:  # noqa: BLE001
+            pass
     document = assemble_document_v2(
         title=packet.lesson.objective[:80],
         sections=sections_out,
@@ -608,6 +740,7 @@ async def assemble_from_db(
         },
         answer_entries=answer_entries or None,
         writer_results=writer_results if not answer_entries else None,
+        document_id=stable_document_id,
     )
     before_hash = canonical_document_sha256(document)
     await repo.persist_document_candidate(
@@ -951,14 +1084,30 @@ async def execute_after_teaching_approval(
             teaching_plan=teaching_plan,
             lease=lease,
         )
+        visual_dispatch = None
+        terminal = assembled["terminal"]
+        if terminal == "awaiting_visuals":
+            from planning.whole_lesson.visual_dispatch import dispatch_and_patch_from_repo
+
+            try:
+                visual_dispatch = await dispatch_and_patch_from_repo(
+                    session=s,
+                    generation_id=generation_id,
+                )
+                gen_after = await s.get(GenerationModel, generation_id)
+                if gen_after is not None and gen_after.status:
+                    terminal = str(gen_after.status)
+            except Exception:  # noqa: BLE001
+                visual_dispatch = {"dispatched": 0, "error": "visual_dispatch_failed"}
         if lease is not None:
             await r.release_execution(
                 worker_id=lease.worker_id, lease_token=lease.lease_token
             )
         return {
-            "status": assembled["terminal"],
+            "status": terminal,
             "form_plan": form_plan.model_dump(mode="json"),
             "document": assembled["document"],
             "writer_count": assembled["writer_count"],
             "document_sha256": assembled.get("document_sha256"),
+            "visual_dispatch": visual_dispatch,
         }

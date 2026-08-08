@@ -165,7 +165,7 @@ class NativeExecutionWorker:
         target = "failed_recoverable" if recoverable else "failed_terminal"
         error = structured_error_from_exc(
             exc=exc,
-            stage="writing_sections",
+            stage=str(lease.stage or "writing_sections"),
             attempt=1,
         )
         try:

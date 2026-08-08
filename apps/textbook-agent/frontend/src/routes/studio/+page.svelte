@@ -251,6 +251,21 @@
 			await hydrateFromDocument(resolved.generation_id);
 			return;
 		}
+		if (resolved.stage === 'failed_recoverable' || resolved.stage === 'failed_terminal') {
+			// Keep last-good streamed/final document visible alongside the error.
+			disconnectActiveChunkedStream();
+			displayTitle = resolved.display_title ?? displayTitle;
+			await hydrateFromDocument(resolved.generation_id);
+			const detail =
+				typeof resolved.error === 'string' && resolved.error.trim()
+					? resolved.error
+					: 'Native generation failed';
+			v3Studio.error = detail;
+			if (v3Studio.stage !== 'edit') {
+				v3Studio.stage = 'generating';
+			}
+			return;
+		}
 		if (resolved.stage === 'assembly_blocked' || resolved.stage === 'stage2_error') {
 			disconnectActiveChunkedStream();
 			displayTitle = resolved.display_title ?? displayTitle;

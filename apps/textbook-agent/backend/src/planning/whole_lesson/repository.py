@@ -768,6 +768,76 @@ class PageDocumentRepository:
             mutation=_mut,
         )
 
+    async def persist_streaming_snapshot(
+        self,
+        document: dict[str, Any],
+        *,
+        document_sha256: str,
+        section_ids: list[str],
+        worker_id: str | None = None,
+        lease_token: int | None = None,
+    ) -> dict[str, Any]:
+        """Persist a non-terminal partial LectioDocumentV2; bump revision only on change.
+
+        Does not set final SHA/reload fence fields.
+        """
+        from generation.page_objects.document_assembly import persist_document_json
+
+        box: list[dict[str, Any]] = []
+
+        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
+            execution = dict(state.get("execution") or empty_execution_meta())
+            prior_hash = str(execution.get("streaming_document_sha256") or "")
+            revision = int(state.get("document_revision") or 0)
+            changed = prior_hash != document_sha256
+            if changed:
+                generation.document_json = persist_document_json(
+                    generation.document_json, document
+                )
+                revision += 1
+                state["document_revision"] = revision
+                execution["streaming_document_sha256"] = document_sha256
+                execution["streaming_section_ids"] = list(section_ids)
+                execution["streaming_updated_at"] = _now()
+                # Explicitly not final: never set document_sha256 / reload_verified here.
+                execution.pop("reload_verified", None)
+            state["execution"] = execution
+            if changed:
+                events = list(state.get("events") or [])
+                events.append(
+                    {
+                        **make_event(
+                            "section_ready",
+                            generation_id=self.generation_id,
+                            status="streaming",
+                            section_ids=section_ids,
+                            document_revision=revision,
+                        ),
+                        "at": _now(),
+                    }
+                )
+                state["events"] = events[-500:]
+            box.append(
+                {
+                    "changed": changed,
+                    "document_revision": revision,
+                    "document_sha256": document_sha256,
+                    "section_ids": list(section_ids),
+                }
+            )
+
+        await self.mutate_state(
+            worker_id=worker_id,
+            lease_token=lease_token,
+            mutation=_mut,
+        )
+        return box[0] if box else {
+            "changed": False,
+            "document_revision": 0,
+            "document_sha256": document_sha256,
+            "section_ids": list(section_ids),
+        }
+
     async def finalize_verified_document(
         self,
         *,
@@ -1031,6 +1101,17 @@ async def claim_next_native_job(
         state = await repo.load_page_generation_state()
         if not state.get("teaching_plan") or not state.get("lesson_packet"):
             continue
+        # Refuse pre-teaching / unapproved checkpoints — worker must not steal them.
+        review = state.get("teaching_review") if isinstance(state.get("teaching_review"), dict) else {}
+        review_status = str((review or {}).get("status") or "")
+        generation_status = str(generation.status or "")
+        if generation_status in CLAIMABLE_STATUSES | ACTIVE_STATUSES:
+            if review_status and review_status not in {"approved", "queued"}:
+                # Legacy paths may omit review; require approved when present.
+                if review_status in {"pending", "rejected"}:
+                    continue
+            if generation_status == "awaiting_teaching_approval":
+                continue
         lease = await repo.claim_execution(worker_id=worker_id, lease_seconds=lease_seconds)
         if lease is not None:
             return lease

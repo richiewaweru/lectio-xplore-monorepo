@@ -25,6 +25,7 @@ class TolerantModel(BaseModel):
 class PathScopeDraft(TolerantModel):
     must_cover: list[str] = Field(default_factory=list)
     do_not_cover: list[str] = Field(default_factory=list)
+    terminology: list[str] = Field(default_factory=list)
 
 
 class PathLessonDraft(TolerantModel):
@@ -44,6 +45,8 @@ class PathPlanDraft(TolerantModel):
 class CanonicalPathScope(StrictModel):
     must_cover: list[str] = Field(min_length=1)
     do_not_cover: list[str] = Field(default_factory=list)
+    # Student-facing domain vocabulary; empty only when the unit has none.
+    terminology: list[str] = Field(default_factory=list)
 
 
 class CanonicalPathLesson(StrictModel):

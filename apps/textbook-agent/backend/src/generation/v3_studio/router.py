@@ -356,6 +356,10 @@ def _normalize_chunked_status(
         generation_status=generation_status,
     )
     if native is not None:
+        # Prefer monotonic document_revision so pollers see streaming/visual patches.
+        revision = native.get("document_revision")
+        if revision is not None:
+            doc_version = f"rev:{int(revision)}"
         failed_sections = list(native.get("failed_section_ids") or full_state.failed_sections)
         return V3ChunkedStatusDTO(
             generation_id=generation_id,
@@ -1064,6 +1068,11 @@ async def _generate_shared_pack_items(
     plan: StructuralPlan,
 ) -> dict[str, Any]:
     """Generate the pack's single diagnostic set from approved cards alone."""
+    from v3_execution.executors.item_executor import (
+        ITEM_MAX_ATTEMPTS,
+        execute_items_with_diagnostics,
+    )
+
     async with async_session_factory() as session:
         generation = await session.get(GenerationModel, generation_id)
         if generation is None:
@@ -1095,21 +1104,40 @@ async def _generate_shared_pack_items(
 
     notation = plan.variant_spec().voice.notation
     pending_cards = [row for row in cards if row.id not in ready_card_ids]
-    results: list[ItemGenerationResult] = list(
-        await asyncio.gather(
-            *(
-                execute_items(
-                    _approved_card_for_items(
-                        row,
-                        subject=form.subject,
-                        level=form.grade_level,
-                        notation=notation,
-                    )
-                )
-                for row in pending_cards
-            )
+    results: list[ItemGenerationResult] = []
+    attempts_journal: list[dict[str, Any]] = []
+    failed_cards: list[dict[str, Any]] = []
+
+    async def _one(row: ConceptCardModel) -> None:
+        card = _approved_card_for_items(
+            row,
+            subject=form.subject,
+            level=form.grade_level,
+            notation=notation,
         )
-    ) if pending_cards else []
+        try:
+            run = await execute_items_with_diagnostics(
+                card,
+                generation_id=generation_id,
+                max_attempts=ITEM_MAX_ATTEMPTS,
+            )
+            results.append(run.result)
+            attempts_journal.extend(run.attempts)
+        except Exception as exc:  # noqa: BLE001
+            journal = list(getattr(exc, "item_attempts", []) or [])
+            attempts_journal.extend(journal)
+            failed_cards.append(
+                {
+                    "card_id": row.id,
+                    "correlation_id": getattr(exc, "item_correlation_id", None),
+                    "error": str(exc)[:500],
+                    "attempts": journal,
+                }
+            )
+            raise
+
+    if pending_cards:
+        await asyncio.gather(*(_one(row) for row in pending_cards))
 
     if results:
         await _persist_item_results(pack_id, results)
@@ -1128,6 +1156,9 @@ async def _generate_shared_pack_items(
         "generated_card_count": len(results),
         "generated_item_count": sum(len(result.items) for result in results),
         "review_cards": review_cards,
+        "attempts": attempts_journal,
+        "failed_cards": failed_cards,
+        "retry_budget": ITEM_MAX_ATTEMPTS,
     }
 
 
