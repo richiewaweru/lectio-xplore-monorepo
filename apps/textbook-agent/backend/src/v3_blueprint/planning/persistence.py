@@ -4,7 +4,7 @@ import asyncio
 import json
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, Mapping
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -202,6 +202,66 @@ def _attempt_key(record: dict[str, Any]) -> tuple[str, str, int]:
     )
 
 
+def _failed_card_key(record: dict[str, Any]) -> tuple[str, str]:
+    return (
+        str(record.get("card_id") or ""),
+        str(record.get("correlation_id") or ""),
+    )
+
+
+def merge_failed_card_records(
+    prior: list[Any],
+    incoming: list[Any] | None,
+) -> list[dict[str, Any]]:
+    """Append-only merge of failed_cards, deduped by (card_id, correlation_id)."""
+    merged = [dict(row) for row in prior if isinstance(row, dict)]
+    seen = {_failed_card_key(row) for row in merged}
+    for row in incoming or []:
+        if not isinstance(row, dict):
+            continue
+        key = _failed_card_key(row)
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(dict(row))
+    return merged
+
+
+def merge_item_generation_summary(
+    existing: Mapping[str, Any] | None,
+    summary: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Merge an item-generation summary without wiping attempt/failed_card journals."""
+    base = dict(existing or {})
+    incoming = dict(summary or {})
+    prior_attempts = [
+        dict(row) for row in (base.get("attempts") or []) if isinstance(row, dict)
+    ]
+    prior_failed = [
+        dict(row) for row in (base.get("failed_cards") or []) if isinstance(row, dict)
+    ]
+    base.update(incoming)
+    # Prefer existing journal when summary omits/empties it; still merge incoming rows.
+    summary_attempts = [
+        dict(row)
+        for row in (incoming.get("attempts") or [])
+        if isinstance(row, dict)
+    ]
+    seen = {_attempt_key(row) for row in prior_attempts}
+    for row in summary_attempts:
+        key = _attempt_key(row)
+        if key in seen:
+            continue
+        seen.add(key)
+        prior_attempts.append(row)
+    base["attempts"] = prior_attempts
+    base["failed_cards"] = merge_failed_card_records(
+        prior_failed,
+        list(incoming.get("failed_cards") or []),
+    )
+    return base
+
+
 async def append_item_attempt_records(
     generation_id: str,
     *,
@@ -212,7 +272,7 @@ async def append_item_attempt_records(
 ) -> dict[str, Any]:
     """Append-only merge of item-generation attempt journals into chunked state.
 
-    Never wipes prior attempts. Dedupes by (correlation_id, card_id, class, attempt).
+    Never wipes prior attempts. Dedupes by (correlation_id, card_id, attempt).
     """
     async with _session_scope(session) as (db, should_commit):
         current = await _read_chunked_state(generation_id, db)
@@ -235,24 +295,14 @@ async def append_item_attempt_records(
         if pack_id:
             item_gen["pack_id"] = pack_id
         if failed_cards:
-            prior_failed = [
-                dict(row)
-                for row in (item_gen.get("failed_cards") or [])
-                if isinstance(row, dict)
-            ]
-            prior_ids = {
-                (str(row.get("card_id") or ""), str(row.get("correlation_id") or ""))
-                for row in prior_failed
-            }
-            for row in failed_cards:
-                if not isinstance(row, dict):
-                    continue
-                key = (str(row.get("card_id") or ""), str(row.get("correlation_id") or ""))
-                if key in prior_ids:
-                    continue
-                prior_ids.add(key)
-                prior_failed.append(dict(row))
-            item_gen["failed_cards"] = prior_failed
+            item_gen["failed_cards"] = merge_failed_card_records(
+                [
+                    dict(row)
+                    for row in (item_gen.get("failed_cards") or [])
+                    if isinstance(row, dict)
+                ],
+                failed_cards,
+            )
         current["item_generation"] = item_gen
         await _write_chunked_state(generation_id, current, db)
         if should_commit:
@@ -561,7 +611,10 @@ async def resume_stage2(
 
 
 __all__ = [
+    "append_item_attempt_records",
     "load_chunked_state",
+    "merge_failed_card_records",
+    "merge_item_generation_summary",
     "persist_chunked_state",
     "persist_section_brief",
     "persist_structural_plan",

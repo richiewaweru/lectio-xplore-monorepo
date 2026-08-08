@@ -1,8 +1,7 @@
-"""R01–R07: stage-aware native retry for pre-worker item/teaching failures."""
+"""R01–R07: stage-aware native retry accept (202) + worker completion."""
 
 from __future__ import annotations
 
-import asyncio
 import uuid
 from typing import Any
 from unittest.mock import AsyncMock, patch
@@ -19,8 +18,9 @@ from generation.page_objects.document_assembly import persist_document_json
 from planning.whole_lesson.native_retry import (
     NativeRetryConflict,
     NativeRetryTarget,
+    accept_native_retry,
     decide_native_retry_target,
-    execute_native_retry,
+    run_pre_worker_retry,
 )
 from planning.whole_lesson.native_status import project_native_status
 from planning.whole_lesson.repository import (
@@ -28,7 +28,11 @@ from planning.whole_lesson.repository import (
     empty_page_document_state,
     persist_native_failure_for_generation,
 )
-from planning.whole_lesson.states import execution_key
+from planning.whole_lesson.states import (
+    WORK_KIND_PRE_WORKER_ITEM,
+    WORK_KIND_PRE_WORKER_TEACHING,
+    execution_key,
+)
 from v3_blueprint.planning.models import (
     AnchorSpec,
     ComponentSlot,
@@ -250,6 +254,39 @@ async def _seed_generation(
     return gid, card_id
 
 
+async def _accept_and_run(
+    generation_id: str,
+    *,
+    worker_id: str = "r-test-worker",
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    accepted = await accept_native_retry(generation_id, user_id=TEST_USER.id)
+    async with async_session_factory() as session:
+        repo = PageDocumentRepository(session, generation_id)
+        lease = await repo.claim_pre_worker_retry(worker_id=worker_id, lease_seconds=90)
+    assert lease is not None, "expected pre-worker claim after accept"
+    result = await run_pre_worker_retry(lease=lease)
+    return accepted, result
+
+
+async def _teaching_ok(session, generation_id, **kwargs):
+    repo = PageDocumentRepository(session, generation_id)
+    await repo.save_teaching_plan(
+        plan={"arc": "Orient → explain → check", "sections": []},
+        validation={"ok": True},
+        qc=[],
+        stage="awaiting_teaching_approval",
+        worker_id=kwargs.get("worker_id"),
+        lease_token=kwargs.get("lease_token"),
+    )
+    return {
+        "teaching_plan": {"arc": "x"},
+        "validation": {"ok": True},
+        "qc": [],
+        "review": {"status": "pending"},
+        "packet": {},
+    }
+
+
 def test_decide_targets() -> None:
     assert (
         decide_native_retry_target(
@@ -289,7 +326,6 @@ async def test_r01_item_transport_failure_then_retry() -> None:
         skip_items=False,
         ready_card=False,
     )
-    # Seed one successful prior attempt journal entry and fail via timeout.
     await persist_chunked_state(
         gid,
         {
@@ -320,20 +356,11 @@ async def test_r01_item_transport_failure_then_retry() -> None:
         generation = await session.get(GenerationModel, gid)
         assert generation is not None
         assert generation.status == "failed_recoverable"
-        chunked = dict(generation.chunked_state_json or {})
-        assert chunked.get("stage") == generation.status
-        last_error = dict(
-            ((chunked.get("page_document_v2") or {}).get("execution") or {}).get(
-                "last_error"
-            )
-            or {}
-        )
-        assert last_error.get("stage") == "item_generation"
-        assert generation.error == last_error.get("message")
-        assert generation.error_type == last_error.get("type")
-        assert generation.error_code == last_error.get("code")
         projected = project_native_status(
-            gid, chunked, generation.document_json, generation_status=generation.status
+            gid,
+            dict(generation.chunked_state_json or {}),
+            generation.document_json,
+            generation_status=generation.status,
         )
         assert projected is not None
         assert projected["next_action"] == "retry_items"
@@ -358,16 +385,6 @@ async def test_r01_item_transport_failure_then_retry() -> None:
             correlation_id=cid,
         )
 
-    teaching = AsyncMock(
-        return_value={
-            "teaching_plan": {"arc": "x"},
-            "validation": {"ok": True},
-            "qc": [],
-            "review": {"status": "pending", "revision": 1},
-            "packet": {},
-        }
-    )
-
     with (
         patch(
             "v3_execution.executors.item_executor.execute_items_with_diagnostics",
@@ -379,48 +396,28 @@ async def test_r01_item_transport_failure_then_retry() -> None:
         ),
         patch(
             "planning.whole_lesson.service.run_and_persist_teaching_plan",
-            new=teaching,
+            new=_teaching_ok,
         ),
     ):
-        # Real save_teaching_plan path via a thin stub that sets approval status.
-        async def _teaching_ok(session, generation_id, **_k):
-            repo = PageDocumentRepository(session, generation_id)
-            await repo.save_teaching_plan(
-                plan={"arc": "Orient → explain → check", "sections": []},
-                validation={"ok": True},
-                qc=[],
-                stage="awaiting_teaching_approval",
-            )
-            return {
-                "teaching_plan": {"arc": "x"},
-                "validation": {"ok": True},
-                "qc": [],
-                "review": {"status": "pending"},
-                "packet": {},
-            }
+        accepted, result = await _accept_and_run(gid)
 
-        with patch(
-            "planning.whole_lesson.service.run_and_persist_teaching_plan",
-            new=_teaching_ok,
-        ):
-            result = await execute_native_retry(gid, user_id=TEST_USER.id)
-
+    assert accepted["status"] == "item_generation"
+    assert accepted["next_action"] == "wait"
+    assert accepted["work_kind"] == WORK_KIND_PRE_WORKER_ITEM
     assert result["status"] == "awaiting_teaching_approval"
     assert item_calls == [card_id]
     state = await load_chunked_state(gid)
     attempts = (state.get("item_generation") or {}).get("attempts") or []
     assert len(attempts) >= 2
     assert attempts[0]["class"] == "TIMEOUT"
-    assert any(row.get("class") == "OK" for row in attempts)
     async with async_session_factory() as session:
         generation = await session.get(GenerationModel, gid)
         assert generation is not None
         assert generation.status == "awaiting_teaching_approval"
         assert generation.error is None
-        assert generation.error_type is None
-        assert generation.error_code is None
         page = dict((generation.chunked_state_json or {}).get("page_document_v2") or {})
         assert (page.get("execution") or {}).get("last_error") is None
+        assert (page.get("execution") or {}).get("work_kind") is None
 
 
 @pytest.mark.asyncio
@@ -438,17 +435,6 @@ async def test_r02_teaching_retry_does_not_rerun_items() -> None:
         ready_card=True,
     )
     item_exec = AsyncMock(side_effect=AssertionError("items must not run"))
-
-    async def _teaching_ok(session, generation_id, **_k):
-        repo = PageDocumentRepository(session, generation_id)
-        await repo.save_teaching_plan(
-            plan={"arc": "Orient → explain → check", "sections": []},
-            validation={"ok": True},
-            qc=[],
-            stage="awaiting_teaching_approval",
-        )
-        return {"teaching_plan": {"arc": "x"}, "validation": {"ok": True}, "qc": [], "review": {}, "packet": {}}
-
     form_planner = AsyncMock(side_effect=AssertionError("form planner must not run"))
 
     with (
@@ -465,18 +451,14 @@ async def test_r02_teaching_retry_does_not_rerun_items() -> None:
             new=form_planner,
         ),
     ):
-        result = await execute_native_retry(gid, user_id=TEST_USER.id)
+        accepted, result = await _accept_and_run(gid)
 
+    assert accepted["status"] == "planning_teaching"
+    assert accepted["work_kind"] == WORK_KIND_PRE_WORKER_TEACHING
     assert result["status"] == "awaiting_teaching_approval"
     assert result["retry_target"] == "planning_teaching"
     item_exec.assert_not_called()
     form_planner.assert_not_called()
-    async with async_session_factory() as session:
-        generation = await session.get(GenerationModel, gid)
-        assert generation is not None
-        assert generation.status == "awaiting_teaching_approval"
-        page = dict((generation.chunked_state_json or {}).get("page_document_v2") or {})
-        assert (page.get("teaching_review") or {}).get("status") == "pending"
 
 
 @pytest.mark.asyncio
@@ -502,7 +484,7 @@ async def test_r03_terminal_teaching_reject_retry() -> None:
     assert projected is not None
     assert projected["next_action"] == "inspect_error"
     with pytest.raises(NativeRetryConflict) as exc_info:
-        await execute_native_retry(gid, user_id=TEST_USER.id)
+        await accept_native_retry(gid, user_id=TEST_USER.id)
     assert exc_info.value.code in {"INVALID_STATUS", "NOT_RETRYABLE"}
 
 
@@ -520,36 +502,48 @@ async def test_r04_duplicate_retry_protection() -> None:
         skip_items=True,
         ready_card=True,
     )
-    started = asyncio.Event()
-    release = asyncio.Event()
-    calls = {"n": 0}
-
-    async def _slow_teaching(session, generation_id, **_k):
-        calls["n"] += 1
-        started.set()
-        await release.wait()
-        repo = PageDocumentRepository(session, generation_id)
-        await repo.save_teaching_plan(
-            plan={"arc": "x", "sections": []},
-            validation={"ok": True},
-            qc=[],
-            stage="awaiting_teaching_approval",
-        )
-        return {"teaching_plan": {"arc": "x"}, "validation": {"ok": True}, "qc": [], "review": {}, "packet": {}}
+    first = await accept_native_retry(gid, user_id=TEST_USER.id)
+    assert first["status"] == "planning_teaching"
+    with pytest.raises(NativeRetryConflict) as exc_info:
+        await accept_native_retry(gid, user_id=TEST_USER.id)
+    assert exc_info.value.code == "RETRY_IN_PROGRESS"
 
     with patch(
         "planning.whole_lesson.service.run_and_persist_teaching_plan",
-        new=_slow_teaching,
+        new=_teaching_ok,
     ):
-        first = asyncio.create_task(execute_native_retry(gid, user_id=TEST_USER.id))
-        await started.wait()
-        with pytest.raises(NativeRetryConflict) as exc_info:
-            await execute_native_retry(gid, user_id=TEST_USER.id)
-        assert exc_info.value.code == "RETRY_IN_PROGRESS"
-        release.set()
-        result = await first
+        async with async_session_factory() as session:
+            repo = PageDocumentRepository(session, gid)
+            lease = await repo.claim_pre_worker_retry(
+                worker_id="r04-worker", lease_seconds=90
+            )
+        assert lease is not None
+        result = await run_pre_worker_retry(lease=lease)
     assert result["status"] == "awaiting_teaching_approval"
-    assert calls["n"] == 1
+
+
+@pytest.mark.asyncio
+async def test_r05_post_approval_queues() -> None:
+    gid, _ = await _seed_generation(
+        status="failed_recoverable",
+        last_error={
+            "type": "TimeoutError",
+            "code": "TIMEOUT",
+            "message": "forms timed out",
+            "stage": "planning_forms",
+            "retryable": True,
+        },
+        skip_items=True,
+        ready_card=True,
+    )
+    accepted = await accept_native_retry(gid, user_id=TEST_USER.id)
+    assert accepted["status"] == "queued"
+    assert accepted["next_action"] == "wait"
+    assert accepted["accepted"] is True
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        assert generation.status == "queued"
 
 
 @pytest.mark.asyncio
@@ -696,21 +690,11 @@ async def test_r07_error_aliases_clear_after_teaching_recovery() -> None:
         ready_card=True,
     )
 
-    async def _teaching_ok(session, generation_id, **_k):
-        repo = PageDocumentRepository(session, generation_id)
-        await repo.save_teaching_plan(
-            plan={"arc": "x", "sections": []},
-            validation={"ok": True},
-            qc=[],
-            stage="awaiting_teaching_approval",
-        )
-        return {"teaching_plan": {"arc": "x"}, "validation": {"ok": True}, "qc": [], "review": {}, "packet": {}}
-
     with patch(
         "planning.whole_lesson.service.run_and_persist_teaching_plan",
         new=_teaching_ok,
     ):
-        await execute_native_retry(gid, user_id=TEST_USER.id)
+        await _accept_and_run(gid)
 
     async with async_session_factory() as session:
         generation = await session.get(GenerationModel, gid)

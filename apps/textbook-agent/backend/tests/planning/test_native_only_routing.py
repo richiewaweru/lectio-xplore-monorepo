@@ -85,7 +85,7 @@ async def test_native_retry_section_does_not_call_legacy_retry() -> None:
             new=AsyncMock(return_value=state),
         ),
         patch(
-            "planning.whole_lesson.native_retry.execute_native_retry",
+            "planning.whole_lesson.native_retry.accept_native_retry",
             new=AsyncMock(
                 side_effect=NativeRetryConflict(
                     "retry-native requires failed_recoverable",
@@ -154,13 +154,14 @@ async def test_native_retry_section_requeues_failed_recoverable() -> None:
             new=AsyncMock(side_effect=[state, queued_state]),
         ),
         patch(
-            "planning.whole_lesson.native_retry.execute_native_retry",
+            "planning.whole_lesson.native_retry.accept_native_retry",
             new=AsyncMock(
                 return_value={
                     "generation_id": "gen-native-2",
                     "status": "queued",
                     "retry_target": "post_approval_worker",
                     "next_action": "wait",
+                    "accepted": True,
                 }
             ),
         ) as execute_retry,

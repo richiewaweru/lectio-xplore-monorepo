@@ -79,6 +79,8 @@ CLAIMABLE_STATUSES = frozenset({"queued", "failed_recoverable"})
 ACTIVE_STATUSES = frozenset(
     {"planning_forms", "writing_sections", "writing_blocks", "assembling"}
 )
+# Pre-worker retry checkpoints are leased separately; never forced through planning_forms.
+PRE_WORKER_RETRY_STATUSES = frozenset({"item_generation", "planning_teaching"})
 WRITING_STATUSES = frozenset({"writing_sections", "writing_blocks"})
 TERMINAL_STATUSES = frozenset(
     {"ready", "completed", "failed_terminal", "cancelled", "rejected_by_teacher"}
@@ -99,6 +101,14 @@ NATIVE_STATUSES = frozenset(
         "failed_terminal",
         "rejected_by_teacher",
     }
+)
+
+# Durable work_kind values stored on page_document_v2.execution
+WORK_KIND_PRE_WORKER_ITEM = "pre_worker_item_retry"
+WORK_KIND_PRE_WORKER_TEACHING = "pre_worker_teaching_retry"
+WORK_KIND_POST_APPROVAL = "post_approval_execution"
+PRE_WORKER_WORK_KINDS = frozenset(
+    {WORK_KIND_PRE_WORKER_ITEM, WORK_KIND_PRE_WORKER_TEACHING}
 )
 
 DEFAULT_VARIANT_ID = "everyone"

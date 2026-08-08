@@ -16,6 +16,7 @@ from planning.whole_lesson.states import (
     DEFAULT_LEASE_SECONDS,
     DEFAULT_WORKER_POLL_SECONDS,
     HEARTBEAT_INTERVAL_SECONDS,
+    PRE_WORKER_WORK_KINDS,
     ExecutionLease,
     LeaseLostError,
 )
@@ -132,12 +133,35 @@ class NativeExecutionWorker:
 
     async def _run_job(self, lease: ExecutionLease) -> None:
         from planning.whole_lesson.executor import execute_after_teaching_approval
+        from planning.whole_lesson.native_retry import run_pre_worker_retry
+        from planning.whole_lesson.repository import empty_execution_meta
 
         heartbeat = asyncio.create_task(
             self._heartbeat_loop(lease),
             name=f"native-hb-{lease.generation_id[:8]}",
         )
         try:
+            async with async_session_factory() as session:
+                repo = PageDocumentRepository(session, lease.generation_id)
+                state = await repo.load_page_generation_state()
+                work_kind = (state.get("execution") or empty_execution_meta()).get(
+                    "work_kind"
+                )
+
+            if work_kind in PRE_WORKER_WORK_KINDS:
+                try:
+                    await run_pre_worker_retry(lease=lease)
+                except LeaseLostError:
+                    raise
+                except Exception:  # noqa: BLE001
+                    # Failure already persisted inside run_pre_worker_retry.
+                    logger.exception(
+                        "pre-worker retry failed generation_id=%s worker_id=%s",
+                        lease.generation_id,
+                        self.worker_id,
+                    )
+                return
+
             async with async_session_factory() as session:
                 await execute_after_teaching_approval(
                     session=session,

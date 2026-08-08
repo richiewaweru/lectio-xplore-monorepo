@@ -22,6 +22,9 @@ from planning.whole_lesson.states import (
     IllegalTransitionError,
     LEGAL_TRANSITIONS,
     LeaseLostError,
+    PRE_WORKER_RETRY_STATUSES,
+    PRE_WORKER_WORK_KINDS,
+    WORK_KIND_POST_APPROVAL,
     assert_legal_transition,
     execution_key,
 )
@@ -77,6 +80,7 @@ def empty_execution_meta() -> dict[str, Any]:
         "lease_seconds": DEFAULT_LEASE_SECONDS,
         "last_error": None,
         "pre_worker_retry_active": False,
+        "work_kind": None,
         "document_sha256": None,
         "reloaded_sha256": None,
         "reload_verified": False,
@@ -110,6 +114,7 @@ def clear_generation_error_state(
     execution = dict(state.get("execution") or empty_execution_meta())
     execution["last_error"] = None
     execution["pre_worker_retry_active"] = False
+    execution["work_kind"] = None
     state["execution"] = execution
     chunked = _coerce_chunked(generation.chunked_state_json)
     chunked.pop("error", None)
@@ -437,6 +442,9 @@ class PageDocumentRepository:
             execution["last_error"] = error
             execution["attempt"] = int(execution.get("attempt") or 0) + 1
             execution["pre_worker_retry_active"] = False
+            execution["work_kind"] = None
+            execution["worker_id"] = None
+            execution["claimed_at"] = None
             state["execution"] = execution
             apply_generation_error_aliases(generation, error)
             events = list(state.get("events") or [])
@@ -505,6 +513,7 @@ class PageDocumentRepository:
             execution["heartbeat_at"] = _now()
             execution["lease_seconds"] = lease_seconds
             execution["attempt"] = int(execution.get("attempt") or 0) + 1
+            execution["work_kind"] = WORK_KIND_POST_APPROVAL
             state["execution"] = execution
             events = list(state.get("events") or [])
             events.append(
@@ -526,6 +535,76 @@ class PageDocumentRepository:
                     worker_id=worker_id,
                     lease_token=new_token,
                     stage=target_stage,
+                )
+            )
+
+        try:
+            await self.mutate_state(mutation=_mut)
+        except _ClaimAbort:
+            await self.session.rollback()
+            return None
+        return lease_box[0] if lease_box else None
+
+    async def claim_pre_worker_retry(
+        self,
+        *,
+        worker_id: str,
+        lease_seconds: int = DEFAULT_LEASE_SECONDS,
+    ) -> ExecutionLease | None:
+        """Claim an unclaimed or stale pre-worker retry without forcing planning_forms."""
+        lease_box: list[ExecutionLease] = []
+
+        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
+            status = str(generation.status or "")
+            if status not in PRE_WORKER_RETRY_STATUSES:
+                raise _ClaimAbort()
+            execution = dict(state.get("execution") or empty_execution_meta())
+            work_kind = execution.get("work_kind")
+            if work_kind not in PRE_WORKER_WORK_KINDS:
+                raise _ClaimAbort()
+
+            now = datetime.now(timezone.utc)
+            heartbeat = _parse_iso(execution.get("heartbeat_at"))
+            lease = int(execution.get("lease_seconds") or lease_seconds)
+            stale = heartbeat is None or heartbeat + timedelta(seconds=lease) < now
+            current_owner = execution.get("worker_id")
+            if current_owner is not None and not stale:
+                raise _ClaimAbort()
+
+            new_token = int(execution.get("lease_token") or 0) + 1
+            event_name = (
+                "pre_worker_retry_reclaimed"
+                if current_owner is not None
+                else "pre_worker_retry_claimed"
+            )
+            execution["worker_id"] = worker_id
+            execution["lease_token"] = new_token
+            execution["claimed_at"] = _now()
+            execution["heartbeat_at"] = _now()
+            execution["lease_seconds"] = lease_seconds
+            execution["attempt"] = int(execution.get("attempt") or 0) + 1
+            state["execution"] = execution
+            events = list(state.get("events") or [])
+            events.append(
+                {
+                    **make_event(
+                        event_name,
+                        generation_id=self.generation_id,
+                        status=status,
+                        worker_id=worker_id,
+                        lease_token=new_token,
+                    ),
+                    "at": _now(),
+                    "work_kind": work_kind,
+                }
+            )
+            state["events"] = events[-500:]
+            lease_box.append(
+                ExecutionLease(
+                    generation_id=self.generation_id,
+                    worker_id=worker_id,
+                    lease_token=new_token,
+                    stage=status,
                 )
             )
 
@@ -682,10 +761,13 @@ class PageDocumentRepository:
         prompt: str | None = None,
         raw: str | None = None,
         stage: str = "awaiting_teaching_approval",
+        worker_id: str | None = None,
+        lease_token: int | None = None,
     ) -> dict[str, Any]:
         """Initialize teaching-plan artifacts and enter awaiting_teaching_approval.
 
         Direct status assignment is allowed only for this pre-state-machine init.
+        When worker_id/lease_token are provided, the write is lease-fenced.
         """
 
         def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
@@ -711,7 +793,11 @@ class PageDocumentRepository:
             if stage == "awaiting_teaching_approval":
                 clear_generation_error_state(generation, state)
 
-        return await self.mutate_state(mutation=_mut)
+        return await self.mutate_state(
+            worker_id=worker_id,
+            lease_token=lease_token,
+            mutation=_mut,
+        )
 
     async def save_teaching_review(
         self,
@@ -1441,9 +1527,27 @@ async def claim_next_native_job(
     worker_id: str,
     lease_seconds: int = DEFAULT_LEASE_SECONDS,
 ) -> ExecutionLease | None:
-    """Atomically claim the oldest queued/stale native generation."""
+    """Claim oldest pre-worker retry or post-approval native job."""
+    pre_result = await session.execute(
+        select(GenerationModel.id)
+        .where(GenerationModel.status.in_(sorted(PRE_WORKER_RETRY_STATUSES)))
+        .order_by(GenerationModel.created_at.asc())
+        .limit(20)
+    )
+    for generation_id in list(pre_result.scalars().all()):
+        repo = PageDocumentRepository(session, str(generation_id))
+        state = await repo.load_page_generation_state()
+        work_kind = (state.get("execution") or {}).get("work_kind")
+        if work_kind not in PRE_WORKER_WORK_KINDS:
+            continue
+        lease = await repo.claim_pre_worker_retry(
+            worker_id=worker_id, lease_seconds=lease_seconds
+        )
+        if lease is not None:
+            return lease
+
     result = await session.execute(
-        select(GenerationModel)
+        select(GenerationModel.id)
         .where(
             GenerationModel.status.in_(
                 sorted(CLAIMABLE_STATUSES | ACTIVE_STATUSES)
@@ -1452,15 +1556,18 @@ async def claim_next_native_job(
         .order_by(GenerationModel.created_at.asc())
         .limit(20)
     )
-    candidates = list(result.scalars().all())
-    for generation in candidates:
-        repo = PageDocumentRepository(session, generation.id)
+    for generation_id in list(result.scalars().all()):
+        gid = str(generation_id)
+        repo = PageDocumentRepository(session, gid)
         state = await repo.load_page_generation_state()
         if not state.get("teaching_plan") or not state.get("lesson_packet"):
             continue
         # Refuse pre-teaching / unapproved checkpoints — worker must not steal them.
         review = state.get("teaching_review") if isinstance(state.get("teaching_review"), dict) else {}
         review_status = str((review or {}).get("status") or "")
+        generation = await session.get(GenerationModel, gid)
+        if generation is None:
+            continue
         generation_status = str(generation.status or "")
         if generation_status in CLAIMABLE_STATUSES | ACTIVE_STATUSES:
             if review_status and review_status not in {"approved", "queued"}:

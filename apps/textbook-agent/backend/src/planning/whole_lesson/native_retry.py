@@ -1,4 +1,4 @@
-"""Stage-aware native retry: pre-worker item/teaching vs post-approval worker."""
+"""Stage-aware native retry: accept-only HTTP + leased pre-worker execution."""
 
 from __future__ import annotations
 
@@ -16,7 +16,16 @@ from planning.whole_lesson.repository import (
     clear_generation_error_state,
     empty_execution_meta,
 )
-from planning.whole_lesson.states import assert_legal_transition
+from planning.whole_lesson.states import (
+    PRE_WORKER_RETRY_STATUSES,
+    PRE_WORKER_WORK_KINDS,
+    WORK_KIND_POST_APPROVAL,
+    WORK_KIND_PRE_WORKER_ITEM,
+    WORK_KIND_PRE_WORKER_TEACHING,
+    ExecutionLease,
+    LeaseLostError,
+    assert_legal_transition,
+)
 
 
 class NativeRetryTarget(str, Enum):
@@ -105,7 +114,44 @@ def next_action_for_retry_target(target: NativeRetryTarget) -> str:
     return "inspect_error"
 
 
-async def _claim_native_retry(
+def _work_kind_for_target(target: NativeRetryTarget) -> str:
+    if target == NativeRetryTarget.ITEM_GENERATION:
+        return WORK_KIND_PRE_WORKER_ITEM
+    if target == NativeRetryTarget.TEACHING_PLAN:
+        return WORK_KIND_PRE_WORKER_TEACHING
+    return WORK_KIND_POST_APPROVAL
+
+
+async def accept_native_retry(
+    generation_id: str,
+    *,
+    user_id: str | None = None,
+) -> dict[str, Any]:
+    """Accept-only: persist durable checkpoint and return. Do not await LLM work."""
+    _ = user_id
+    async with async_session_factory() as session:
+        target, claim = await _accept_native_retry_locked(session, generation_id)
+
+    if target == NativeRetryTarget.POST_APPROVAL_WORKER:
+        return {
+            "generation_id": generation_id,
+            "status": "queued",
+            "retry_target": target.value,
+            "next_action": "wait",
+            "accepted": True,
+        }
+
+    return {
+        "generation_id": generation_id,
+        "status": claim["status"],
+        "retry_target": target.value,
+        "next_action": "wait",
+        "accepted": True,
+        "work_kind": claim.get("work_kind"),
+    }
+
+
+async def _accept_native_retry_locked(
     session: AsyncSession,
     generation_id: str,
 ) -> tuple[NativeRetryTarget, dict[str, Any]]:
@@ -117,21 +163,26 @@ async def _claim_native_retry(
         execution = dict(state.get("execution") or empty_execution_meta())
         last_error = execution.get("last_error")
         last_map = last_error if isinstance(last_error, dict) else None
-        target = decide_native_retry_target(current, last_map)
+        work_kind = execution.get("work_kind")
         stamp = _now()
 
-        if current in {"item_generation", "planning_teaching"} and bool(
-            execution.get("pre_worker_retry_active")
+        if (
+            current in PRE_WORKER_RETRY_STATUSES
+            and (
+                work_kind in PRE_WORKER_WORK_KINDS
+                or bool(execution.get("pre_worker_retry_active"))
+            )
         ):
             raise NativeRetryConflict(
                 "a pre-worker native retry is already active",
                 code="RETRY_IN_PROGRESS",
                 status=current,
-                target=decide_native_retry_target(
-                    "failed_recoverable",
-                    last_map,
-                ),
+                target=NativeRetryTarget.ITEM_GENERATION
+                if current == "item_generation"
+                else NativeRetryTarget.TEACHING_PLAN,
             )
+
+        target = decide_native_retry_target(current, last_map)
         if target == NativeRetryTarget.VISUALS:
             raise NativeRetryConflict(
                 "visual failures must use POST .../visuals/retry",
@@ -153,19 +204,11 @@ async def _claim_native_retry(
                 status=current,
                 target=target,
             )
-        if bool(execution.get("pre_worker_retry_active")) and target in {
-            NativeRetryTarget.ITEM_GENERATION,
-            NativeRetryTarget.TEACHING_PLAN,
-        }:
-            raise NativeRetryConflict(
-                "a pre-worker native retry is already active",
-                code="RETRY_IN_PROGRESS",
-                status=current,
-                target=target,
-            )
 
         execution["heartbeat_at"] = stamp
         execution["attempt"] = int(execution.get("attempt") or 0) + 1
+        execution["worker_id"] = None
+        execution["claimed_at"] = None
 
         if target == NativeRetryTarget.POST_APPROVAL_WORKER:
             assert_legal_transition(current, "queued")
@@ -173,22 +216,35 @@ async def _claim_native_retry(
             clear_generation_error_state(generation, state)
             execution = dict(state.get("execution") or empty_execution_meta())
             execution["heartbeat_at"] = stamp
+            execution["attempt"] = int(execution.get("attempt") or 0) + 1
             execution["pre_worker_retry_active"] = False
+            execution["work_kind"] = WORK_KIND_POST_APPROVAL
+            execution["worker_id"] = None
             state["execution"] = execution
             events = list(state.get("events") or [])
             events.append(
                 {
                     **make_event(
-                        "native_retry_requeued",
+                        "native_retry_accepted",
                         generation_id=generation_id,
                         status="queued",
                     ),
                     "at": stamp,
                     "retry_target": target.value,
+                    "work_kind": WORK_KIND_POST_APPROVAL,
                 }
             )
             state["events"] = events[-500:]
-            box.append((target, {"status": "queued", "retry_target": target.value}))
+            box.append(
+                (
+                    target,
+                    {
+                        "status": "queued",
+                        "retry_target": target.value,
+                        "work_kind": WORK_KIND_POST_APPROVAL,
+                    },
+                )
+            )
             return
 
         checkpoint = (
@@ -196,59 +252,67 @@ async def _claim_native_retry(
             if target == NativeRetryTarget.ITEM_GENERATION
             else "planning_teaching"
         )
+        kind = _work_kind_for_target(target)
         assert_legal_transition(current, checkpoint)
         generation.status = checkpoint
         execution["pre_worker_retry_active"] = True
+        execution["work_kind"] = kind
         state["execution"] = execution
         events = list(state.get("events") or [])
         events.append(
             {
                 **make_event(
-                    "native_retry_started",
+                    "native_retry_accepted",
                     generation_id=generation_id,
                     status=checkpoint,
                 ),
                 "at": stamp,
                 "retry_target": target.value,
+                "work_kind": kind,
                 "error_stage": str((last_map or {}).get("stage") or ""),
             }
         )
         state["events"] = events[-500:]
-        box.append((target, {"status": checkpoint, "retry_target": target.value}))
+        box.append(
+            (
+                target,
+                {
+                    "status": checkpoint,
+                    "retry_target": target.value,
+                    "work_kind": kind,
+                },
+            )
+        )
 
     await repo.mutate_state(mutation=_mut)
     if not box:
         raise NativeRetryConflict(
-            "retry claim produced no result",
-            code="RETRY_CLAIM_EMPTY",
+            "retry accept produced no result",
+            code="RETRY_ACCEPT_EMPTY",
         )
     return box[0]
 
 
-async def _clear_pre_worker_retry_flag(generation_id: str) -> None:
-    async with async_session_factory() as session:
-        repo = PageDocumentRepository(session, generation_id)
-
-        def _mut(_generation: GenerationModel, state: dict[str, Any]) -> None:
-            execution = dict(state.get("execution") or empty_execution_meta())
-            execution["pre_worker_retry_active"] = False
-            state["execution"] = execution
-
-        try:
-            await repo.mutate_state(mutation=_mut)
-        except Exception:  # noqa: BLE001
-            pass
-
-
-async def _run_items_then_teaching(generation_id: str, *, user_id: str) -> dict[str, Any]:
-    _ = user_id
+async def _run_items_under_lease(
+    generation_id: str,
+    lease: ExecutionLease,
+) -> dict[str, Any]:
     from generation.v3_studio.router import (
         _decode_chunked_context,
         _generate_shared_pack_items,
     )
-    from planning.whole_lesson.service import run_and_persist_teaching_plan
     from v3_blueprint.planning.models import VariantSpec, adapt_legacy_structural_plan
-    from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state
+    from v3_blueprint.planning.persistence import (
+        load_chunked_state,
+        merge_item_generation_summary,
+        persist_chunked_state,
+    )
+
+    async with async_session_factory() as session:
+        repo = PageDocumentRepository(session, generation_id)
+        await repo.assert_lease(
+            worker_id=lease.worker_id, lease_token=lease.lease_token
+        )
 
     state = await load_chunked_state(generation_id)
     plan_raw = state.get("structural_plan")
@@ -268,12 +332,18 @@ async def _run_items_then_teaching(generation_id: str, *, user_id: str) -> dict[
         form=form,
         plan=plan,
     )
-    # Preserve append-only attempt journals already flushed during generation.
+
+    async with async_session_factory() as session:
+        repo = PageDocumentRepository(session, generation_id)
+        await repo.assert_lease(
+            worker_id=lease.worker_id, lease_token=lease.lease_token
+        )
+
     current = await load_chunked_state(generation_id)
-    item_gen = dict(current.get("item_generation") or {})
-    attempts = list(item_gen.get("attempts") or item_summary.get("attempts") or [])
-    item_gen.update(item_summary)
-    item_gen["attempts"] = attempts
+    item_gen = merge_item_generation_summary(
+        dict(current.get("item_generation") or {}),
+        item_summary,
+    )
     await persist_chunked_state(
         generation_id,
         {"item_generation": item_gen, "stage": "item_generation"},
@@ -281,90 +351,155 @@ async def _run_items_then_teaching(generation_id: str, *, user_id: str) -> dict[
 
     async with async_session_factory() as session:
         repo = PageDocumentRepository(session, generation_id)
-        await repo.transition(
-            expected={"item_generation"},
-            target="planning_teaching",
-            event="native_retry_items_complete",
+
+        def _checkpoint(generation: GenerationModel, state: dict[str, Any]) -> None:
+            current_status = str(generation.status or "")
+            assert_legal_transition(current_status, "planning_teaching")
+            generation.status = "planning_teaching"
+            execution = dict(state.get("execution") or empty_execution_meta())
+            execution["work_kind"] = WORK_KIND_PRE_WORKER_TEACHING
+            execution["pre_worker_retry_active"] = True
+            execution["heartbeat_at"] = _now()
+            state["execution"] = execution
+            events = list(state.get("events") or [])
+            events.append(
+                {
+                    **make_event(
+                        "native_retry_items_complete",
+                        generation_id=generation_id,
+                        status="planning_teaching",
+                        worker_id=lease.worker_id,
+                        lease_token=lease.lease_token,
+                    ),
+                    "at": _now(),
+                    "work_kind": WORK_KIND_PRE_WORKER_TEACHING,
+                }
+            )
+            state["events"] = events[-500:]
+
+        await repo.mutate_state(
+            expected_statuses={"item_generation"},
+            worker_id=lease.worker_id,
+            lease_token=lease.lease_token,
+            mutation=_checkpoint,
         )
 
-    async with async_session_factory() as session:
-        teaching = await run_and_persist_teaching_plan(
-            session, generation_id, require_items=True
-        )
-    await persist_chunked_state(
-        generation_id,
-        {
-            "stage": "awaiting_teaching_approval",
-            "native_whole_lesson": True,
-            "skip_item_generation": False,
-        },
-    )
-    return {
-        "status": "awaiting_teaching_approval",
-        "retry_target": NativeRetryTarget.ITEM_GENERATION.value,
-        "item_generation": item_summary,
-        "teaching": teaching,
-    }
+    return item_summary
 
 
-async def _run_teaching_only(generation_id: str) -> dict[str, Any]:
+async def _run_teaching_under_lease(
+    generation_id: str,
+    lease: ExecutionLease,
+    *,
+    skip_item_generation: bool,
+) -> dict[str, Any]:
     from planning.whole_lesson.service import run_and_persist_teaching_plan
     from v3_blueprint.planning.persistence import persist_chunked_state
 
     async with async_session_factory() as session:
-        teaching = await run_and_persist_teaching_plan(
-            session, generation_id, require_items=True
+        repo = PageDocumentRepository(session, generation_id)
+        await repo.assert_lease(
+            worker_id=lease.worker_id, lease_token=lease.lease_token
         )
+        teaching = await run_and_persist_teaching_plan(
+            session,
+            generation_id,
+            require_items=True,
+            worker_id=lease.worker_id,
+            lease_token=lease.lease_token,
+        )
+
     await persist_chunked_state(
         generation_id,
         {
             "stage": "awaiting_teaching_approval",
             "native_whole_lesson": True,
-            "skip_item_generation": True,
+            "skip_item_generation": skip_item_generation,
         },
     )
-    return {
-        "status": "awaiting_teaching_approval",
-        "retry_target": NativeRetryTarget.TEACHING_PLAN.value,
-        "teaching": teaching,
-    }
 
-
-async def execute_native_retry(
-    generation_id: str,
-    *,
-    user_id: str | None = None,
-) -> dict[str, Any]:
-    """Claim retry target under lock, then run the matching checkpoint."""
     async with async_session_factory() as session:
-        target, _claim = await _claim_native_retry(session, generation_id)
+        repo = PageDocumentRepository(session, generation_id)
 
-    if target == NativeRetryTarget.POST_APPROVAL_WORKER:
-        return {
-            "generation_id": generation_id,
-            "status": "queued",
-            "retry_target": target.value,
-            "next_action": "wait",
-        }
+        def _release(_generation: GenerationModel, state: dict[str, Any]) -> None:
+            execution = dict(state.get("execution") or empty_execution_meta())
+            execution["work_kind"] = None
+            execution["pre_worker_retry_active"] = False
+            execution["worker_id"] = None
+            execution["claimed_at"] = None
+            execution["heartbeat_at"] = _now()
+            state["execution"] = execution
+
+        await repo.mutate_state(
+            expected_statuses={"awaiting_teaching_approval"},
+            worker_id=lease.worker_id,
+            lease_token=lease.lease_token,
+            mutation=_release,
+        )
+
+    return teaching
+
+
+async def run_pre_worker_retry(
+    *,
+    lease: ExecutionLease,
+) -> dict[str, Any]:
+    """Lease-fenced item and/or teaching recovery owned by the native worker."""
+    generation_id = lease.generation_id
+    async with async_session_factory() as session:
+        repo = PageDocumentRepository(session, generation_id)
+        state = await repo.load_page_generation_state()
+        execution = dict(state.get("execution") or empty_execution_meta())
+        work_kind = execution.get("work_kind")
+        await repo.assert_lease(
+            worker_id=lease.worker_id, lease_token=lease.lease_token
+        )
+
+    if work_kind not in PRE_WORKER_WORK_KINDS:
+        raise RuntimeError(
+            f"run_pre_worker_retry requires pre-worker work_kind, got {work_kind!r}"
+        )
 
     failure_stage = (
         "item_generation"
-        if target == NativeRetryTarget.ITEM_GENERATION
+        if work_kind == WORK_KIND_PRE_WORKER_ITEM
         else "planning_teaching"
     )
     try:
-        if target == NativeRetryTarget.ITEM_GENERATION:
-            result = await _run_items_then_teaching(
-                generation_id, user_id=user_id or "system"
+        item_summary: dict[str, Any] | None = None
+        if work_kind == WORK_KIND_PRE_WORKER_ITEM:
+            item_summary = await _run_items_under_lease(generation_id, lease)
+            # Lease stage may still say item_generation; refresh after checkpoint.
+            lease = ExecutionLease(
+                generation_id=lease.generation_id,
+                worker_id=lease.worker_id,
+                lease_token=lease.lease_token,
+                stage="planning_teaching",
             )
-        else:
-            result = await _run_teaching_only(generation_id)
-        await _clear_pre_worker_retry_flag(generation_id)
+            teaching = await _run_teaching_under_lease(
+                generation_id, lease, skip_item_generation=False
+            )
+            return {
+                "generation_id": generation_id,
+                "status": "awaiting_teaching_approval",
+                "retry_target": NativeRetryTarget.ITEM_GENERATION.value,
+                "item_generation": item_summary,
+                "teaching": teaching,
+                "next_action": "approve_teaching",
+            }
+
+        teaching = await _run_teaching_under_lease(
+            generation_id, lease, skip_item_generation=True
+        )
         return {
             "generation_id": generation_id,
+            "status": "awaiting_teaching_approval",
+            "retry_target": NativeRetryTarget.TEACHING_PLAN.value,
+            "teaching": teaching,
             "next_action": "approve_teaching",
-            **result,
         }
+    except LeaseLostError:
+        raise
     except Exception as exc:  # noqa: BLE001
         from planning.whole_lesson.repository import persist_native_failure_for_generation
 
@@ -376,20 +511,58 @@ async def execute_native_retry(
             if current in {"item_generation", "planning_teaching"}
             else failure_stage
         )
-        await persist_native_failure_for_generation(
-            generation_id,
-            exc=exc,
-            stage=stage,
-            event="native_retry_failure",
-        )
-        await _clear_pre_worker_retry_flag(generation_id)
+        try:
+            async with async_session_factory() as session:
+                repo = PageDocumentRepository(session, generation_id)
+                await repo.persist_native_failure(
+                    exc=exc,
+                    stage=stage,
+                    event="native_retry_failure",
+                    worker_id=lease.worker_id,
+                    lease_token=lease.lease_token,
+                    expected={stage, "item_generation", "planning_teaching"},
+                )
+        except LeaseLostError:
+            raise
+        except Exception:  # noqa: BLE001
+            await persist_native_failure_for_generation(
+                generation_id,
+                exc=exc,
+                stage=stage,
+                event="native_retry_failure",
+            )
         raise
+
+
+# Backward-compatible alias used by older call sites/tests.
+async def execute_native_retry(
+    generation_id: str,
+    *,
+    user_id: str | None = None,
+) -> dict[str, Any]:
+    """Accept retry then run pre-worker work if this generation can be claimed.
+
+    Prefer accept_native_retry (HTTP) + worker-owned run_pre_worker_retry in production.
+    """
+    accepted = await accept_native_retry(generation_id, user_id=user_id)
+    if accepted.get("status") == "queued":
+        return accepted
+
+    worker_id = f"sync-retry-{generation_id[:8]}"
+    async with async_session_factory() as session:
+        repo = PageDocumentRepository(session, generation_id)
+        lease = await repo.claim_pre_worker_retry(worker_id=worker_id, lease_seconds=90)
+    if lease is None:
+        return accepted
+    return await run_pre_worker_retry(lease=lease)
 
 
 __all__ = [
     "NativeRetryConflict",
     "NativeRetryTarget",
+    "accept_native_retry",
     "decide_native_retry_target",
     "execute_native_retry",
     "next_action_for_retry_target",
+    "run_pre_worker_retry",
 ]

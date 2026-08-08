@@ -142,6 +142,8 @@ async def run_and_persist_teaching_plan(
     generation_id: str,
     *,
     require_items: bool = True,
+    worker_id: str | None = None,
+    lease_token: int | None = None,
 ) -> dict[str, Any]:
     generation = await session.get(GenerationModel, generation_id)
     if generation is None:
@@ -177,6 +179,8 @@ async def run_and_persist_teaching_plan(
         prompt=result.prompt,
         raw=result.raw_response,
         stage="awaiting_teaching_approval",
+        worker_id=worker_id,
+        lease_token=lease_token,
     )
     await repo.append_event(
         make_event(

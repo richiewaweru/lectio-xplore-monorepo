@@ -2895,12 +2895,12 @@ async def post_chunked_retry_section(
     if generation_is_native_whole_lesson(state, model):
         from planning.whole_lesson.native_retry import (
             NativeRetryConflict,
-            execute_native_retry,
+            accept_native_retry,
         )
 
         status = str(model.status or state.get("stage") or "")
         try:
-            result = await execute_native_retry(
+            result = await accept_native_retry(
                 generation_id, user_id=current_user.id
             )
         except NativeRetryConflict as exc:
@@ -2921,7 +2921,7 @@ async def post_chunked_retry_section(
             {
                 **latest,
                 "stage": result.get("status") or latest.get("stage"),
-                "next_action": result.get("next_action"),
+                "next_action": result.get("next_action") or "wait",
             },
         )
 
@@ -4727,12 +4727,12 @@ async def post_visuals_retry(
 async def post_retry_native(
     generation_id: str,
     current_user: User = Depends(get_current_user),
-) -> dict[str, Any]:
-    """Stage-aware native retry for failed_recoverable generations.
+) -> JSONResponse:
+    """Accept-only native retry: durable checkpoint + worker-owned recovery.
 
     Routes by execution.last_error.stage:
-    - item_generation → retry missing/failed items then teaching
-    - planning_teaching → teaching only
+    - item_generation → checkpoint item_generation (work_kind pre_worker_item_retry)
+    - planning_teaching → checkpoint planning_teaching (work_kind pre_worker_teaching_retry)
     - post-approval stages → queued for worker reclaim
     Visual failures must use /visuals/retry.
     """
@@ -4740,7 +4740,7 @@ async def post_retry_native(
     from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
     from planning.whole_lesson.native_retry import (
         NativeRetryConflict,
-        execute_native_retry,
+        accept_native_retry,
     )
     from v3_blueprint.planning.persistence import load_chunked_state
 
@@ -4751,7 +4751,7 @@ async def post_retry_native(
             detail="retry-native is only available for native whole-lesson generations",
         )
     try:
-        result = await execute_native_retry(
+        result = await accept_native_retry(
             generation_id, user_id=current_user.id
         )
     except NativeRetryConflict as exc:
@@ -4766,10 +4766,4 @@ async def post_retry_native(
                 **(exc.detail or {}),
             },
         ) from exc
-    except Exception as exc:  # noqa: BLE001
-        logger.exception("native retry failed generation_id=%s", generation_id)
-        raise HTTPException(
-            status_code=502,
-            detail=f"native retry failed: {str(exc)[:400]}",
-        ) from exc
-    return result
+    return JSONResponse(status_code=202, content=result)
