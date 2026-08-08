@@ -538,23 +538,23 @@ async def publish_streaming_snapshot(
     variant_id: str = DEFAULT_VARIANT_ID,
     lease: ExecutionLease | None = None,
 ) -> dict[str, Any] | None:
-    """Re-read DB and persist a valid partial LectioDocumentV2 for ready sections."""
+    """Re-read block outcomes under lock and persist a monotonic partial document."""
     resolved = resolve_block_plans(teaching_plan, form_plan)
-    async with async_session_factory() as session:
-        repo = PageDocumentRepository(session, generation_id)
-        stored = await repo.load_block_results()
-        generation = await session.get(GenerationModel, generation_id)
-        stable_document_id = f"doc-{generation_id}"
-        if generation is not None:
-            try:
-                existing = reload_document(generation.document_json or {})
-                prior_id = str(existing.get("id") or "").strip()
-                if prior_id:
-                    stable_document_id = prior_id
-            except Exception:  # noqa: BLE001
-                pass
+    section_plans = resolved.to_section_block_plans()
 
-        section_plans = resolved.to_section_block_plans()
+    def _assemble(
+        generation: GenerationModel,
+        stored: dict[str, dict[str, Any]],
+    ) -> tuple[dict[str, Any], list[str], str] | None:
+        stable_document_id = f"doc-{generation_id}"
+        try:
+            existing = reload_document(generation.document_json or {})
+            prior_id = str(existing.get("id") or "").strip()
+            if prior_id:
+                stable_document_id = prior_id
+        except Exception:  # noqa: BLE001
+            pass
+
         sections_out = []
         answer_entries: list[dict[str, Any]] = []
         writer_results: list[WriterOutcome] = []
@@ -615,10 +615,12 @@ async def publish_streaming_snapshot(
         if errors:
             raise AssemblyError(f"streaming snapshot invalid: {errors[:5]}")
         digest = canonical_document_sha256(document)
-        return await repo.persist_streaming_snapshot(
-            document,
-            document_sha256=digest,
-            section_ids=ready_section_ids,
+        return document, ready_section_ids, digest
+
+    async with async_session_factory() as session:
+        repo = PageDocumentRepository(session, generation_id)
+        return await repo.assemble_and_persist_streaming_snapshot(
+            assemble=_assemble,
             worker_id=lease.worker_id if lease else None,
             lease_token=lease.lease_token if lease else None,
         )
@@ -1097,8 +1099,16 @@ async def execute_after_teaching_approval(
                 gen_after = await s.get(GenerationModel, generation_id)
                 if gen_after is not None and gen_after.status:
                     terminal = str(gen_after.status)
-            except Exception:  # noqa: BLE001
-                visual_dispatch = {"dispatched": 0, "error": "visual_dispatch_failed"}
+            except Exception as exc:  # noqa: BLE001
+                await r.persist_visual_dispatch_failure(exc=exc)
+                visual_dispatch = {
+                    "dispatched": 0,
+                    "failed": 1,
+                    "error": "visual_dispatch_failed",
+                    "retryable": True,
+                    "message": str(exc)[:500],
+                }
+                terminal = "awaiting_visuals"
         if lease is not None:
             await r.release_execution(
                 worker_id=lease.worker_id, lease_token=lease.lease_token

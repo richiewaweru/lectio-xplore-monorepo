@@ -13,7 +13,12 @@ def _page_state(state: Mapping[str, Any]) -> dict[str, Any]:
     return dict(raw) if isinstance(raw, Mapping) else {}
 
 
-def _native_next_action(stage: str) -> str | None:
+def _native_next_action(
+    stage: str,
+    *,
+    error_detail: Mapping[str, Any] | None = None,
+    has_failed_visuals: bool = False,
+) -> str | None:
     if stage == "awaiting_teaching_approval":
         return "approve_teaching"
     if stage in {
@@ -31,10 +36,39 @@ def _native_next_action(stage: str) -> str | None:
     if stage == "ready":
         return "done"
     if stage == "awaiting_visuals":
+        visual_error = False
+        if isinstance(error_detail, Mapping):
+            err_stage = str(error_detail.get("stage") or "")
+            if err_stage in {"awaiting_visuals", "visual_generation"}:
+                visual_error = True
+        if has_failed_visuals or visual_error:
+            return "retry_visuals"
         return "wait_visuals"
     if stage == "rejected_by_teacher":
         return "none"
     return None
+
+
+def _has_failed_visuals(page: Mapping[str, Any]) -> bool:
+    block_execution = page.get("block_execution")
+    if not isinstance(block_execution, Mapping):
+        return False
+    for outcome in block_execution.values():
+        if not isinstance(outcome, Mapping):
+            continue
+        if str(outcome.get("object") or "") != "figure":
+            continue
+        status = str(outcome.get("status") or "")
+        asset = {}
+        content = outcome.get("content")
+        if isinstance(content, Mapping):
+            raw_asset = content.get("asset")
+            if isinstance(raw_asset, Mapping):
+                asset = raw_asset
+        asset_status = str(asset.get("status") or "")
+        if status in {"failed_recoverable", "failed"} or asset_status == "failed":
+            return True
+    return False
 
 
 def _structured_error(
@@ -181,6 +215,13 @@ def project_native_status(
     elif isinstance(state.get("error"), str):
         error_message = state.get("error")
 
+    has_failed_visuals = _has_failed_visuals(page)
+    next_action = _native_next_action(
+        stage,
+        error_detail=error_detail if isinstance(error_detail, Mapping) else None,
+        has_failed_visuals=has_failed_visuals,
+    )
+
     return {
         "generation_id": generation_id,
         "stage": stage or str(state.get("stage") or "unknown"),
@@ -196,7 +237,7 @@ def project_native_status(
         "failed_section_ids": failed_section_ids,
         "failed_block_ids": failed_block_ids,
         "failed_sections": failed_section_ids,
-        "next_action": _native_next_action(stage),
+        "next_action": next_action,
         "error": error_message,
         "error_detail": error_detail,
         "error_type": (

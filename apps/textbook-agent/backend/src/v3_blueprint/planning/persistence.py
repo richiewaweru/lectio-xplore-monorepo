@@ -194,6 +194,71 @@ async def persist_chunked_state(
             await db.commit()
 
 
+def _attempt_key(record: dict[str, Any]) -> tuple[str, str, int]:
+    return (
+        str(record.get("correlation_id") or ""),
+        str(record.get("card_id") or ""),
+        int(record.get("attempt") or 0),
+    )
+
+
+async def append_item_attempt_records(
+    generation_id: str,
+    *,
+    attempts: list[dict[str, Any]],
+    failed_cards: list[dict[str, Any]] | None = None,
+    pack_id: str | None = None,
+    session: AsyncSession | None = None,
+) -> dict[str, Any]:
+    """Append-only merge of item-generation attempt journals into chunked state.
+
+    Never wipes prior attempts. Dedupes by (correlation_id, card_id, class, attempt).
+    """
+    async with _session_scope(session) as (db, should_commit):
+        current = await _read_chunked_state(generation_id, db)
+        item_gen = dict(current.get("item_generation") or {})
+        existing = [
+            dict(row)
+            for row in (item_gen.get("attempts") or [])
+            if isinstance(row, dict)
+        ]
+        seen = {_attempt_key(row) for row in existing}
+        for record in attempts:
+            if not isinstance(record, dict):
+                continue
+            key = _attempt_key(record)
+            if key in seen:
+                continue
+            seen.add(key)
+            existing.append(dict(record))
+        item_gen["attempts"] = existing
+        if pack_id:
+            item_gen["pack_id"] = pack_id
+        if failed_cards:
+            prior_failed = [
+                dict(row)
+                for row in (item_gen.get("failed_cards") or [])
+                if isinstance(row, dict)
+            ]
+            prior_ids = {
+                (str(row.get("card_id") or ""), str(row.get("correlation_id") or ""))
+                for row in prior_failed
+            }
+            for row in failed_cards:
+                if not isinstance(row, dict):
+                    continue
+                key = (str(row.get("card_id") or ""), str(row.get("correlation_id") or ""))
+                if key in prior_ids:
+                    continue
+                prior_ids.add(key)
+                prior_failed.append(dict(row))
+            item_gen["failed_cards"] = prior_failed
+        current["item_generation"] = item_gen
+        await _write_chunked_state(generation_id, current, db)
+        if should_commit:
+            await db.commit()
+        return item_gen
+
 async def persist_structural_plan(
     generation_id: str,
     plan: StructuralPlan,

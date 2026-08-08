@@ -10,7 +10,7 @@ from typing import Any
 
 from core.database.models import GenerationModel
 from core.database.session import async_session_factory
-from planning.whole_lesson.failure_policy import classify_failure, structured_error_from_exc
+from planning.whole_lesson.failure_policy import classify_failure
 from planning.whole_lesson.repository import PageDocumentRepository, claim_next_native_job
 from planning.whole_lesson.states import (
     DEFAULT_LEASE_SECONDS,
@@ -161,13 +161,6 @@ class NativeExecutionWorker:
         classification = classify_failure(exc)
         if classification.code in {"LEASE_LOST", "CANCELLED"}:
             return
-        recoverable = classification.code in {"TRANSPORT", "TIMEOUT", "RATE_LIMIT"}
-        target = "failed_recoverable" if recoverable else "failed_terminal"
-        error = structured_error_from_exc(
-            exc=exc,
-            stage=str(lease.stage or "writing_sections"),
-            attempt=1,
-        )
         try:
             async with async_session_factory() as session:
                 repo = PageDocumentRepository(session, lease.generation_id)
@@ -179,13 +172,14 @@ class NativeExecutionWorker:
                     "writing_blocks",
                     "assembling",
                 }:
-                    await repo.transition(
-                        expected={current},
-                        target=target,
+                    await repo.persist_native_failure(
+                        exc=exc,
+                        stage=str(lease.stage or current or "writing_sections"),
                         event="worker_failure",
-                        error=error,
+                        attempt=1,
                         worker_id=lease.worker_id,
                         lease_token=lease.lease_token,
+                        expected={current},
                     )
                     await repo.release_execution(
                         worker_id=lease.worker_id,

@@ -72,7 +72,12 @@ def collect_pending_figure_dispatches(
             continue
         if str(outcome.get("object") or "") != "figure":
             continue
-        if str(outcome.get("status") or "") not in {"visual_pending", "ready"}:
+        if str(outcome.get("status") or "") not in {
+            "visual_pending",
+            "ready",
+            "failed_recoverable",
+            "failed",
+        }:
             continue
         content = dict(outcome.get("content") or {})
         asset = dict(content.get("asset") or {})
@@ -123,39 +128,55 @@ async def dispatch_native_pending_visuals(
         block_execution=block_execution,
     )
     results: list[dict[str, Any]] = []
+    failures: list[dict[str, Any]] = []
     for block_id, request_id, order in dispatches:
-        blocks = await executor(
-            order,
-            emit,
-            trace_id=f"native-visual:{generation_id}:{request_id}",
-            generation_id=generation_id,
-        )
-        block = blocks[0] if blocks else None
-        src = None
-        status = "failed"
-        if block is not None:
-            src = getattr(block, "fallback_image_url", None) or getattr(
-                block, "image_url", None
+        asset_error: str | None = None
+        try:
+            blocks = await executor(
+                order,
+                emit,
+                trace_id=f"native-visual:{generation_id}:{request_id}",
+                generation_id=generation_id,
             )
-            block_status = str(getattr(block, "status", "") or "")
-            status = "ready" if block_status == "ready" and src else (
-                "ready" if block_status == "ready" else "failed"
+            block = blocks[0] if blocks else None
+            src = None
+            status = "failed"
+            if block is not None:
+                src = getattr(block, "fallback_image_url", None) or getattr(
+                    block, "image_url", None
+                )
+                block_status = str(getattr(block, "status", "") or "")
+                status = "ready" if block_status == "ready" and src else (
+                    "ready" if block_status == "ready" else "failed"
+                )
+                if status == "ready" and not src:
+                    # Simulation / placeholder-ready without URL still resolves text path.
+                    src = getattr(block, "html_content", None)
+            asset = {
+                "status": status if src or status == "failed" else "failed",
+                "request_id": request_id,
+                "kind": "image",
+                "src": src if isinstance(src, str) and src.startswith(("http", "data:", "/")) else (
+                    None if status != "ready" else src
+                ),
+            }
+            if status == "ready" and asset["src"] is None and isinstance(src, str):
+                # Non-URL ready content still marks asset ready for document patching.
+                asset["src"] = src
+                asset["kind"] = "image"
+        except Exception as exc:  # noqa: BLE001
+            asset_error = str(exc)[:500]
+            asset = {
+                "status": "failed",
+                "request_id": request_id,
+                "kind": "image",
+                "src": None,
+            }
+            logger.exception(
+                "native visual dispatch failed generation_id=%s request_id=%s",
+                generation_id,
+                request_id,
             )
-            if status == "ready" and not src:
-                # Simulation / placeholder-ready without URL still resolves text path.
-                src = getattr(block, "html_content", None)
-        asset = {
-            "status": status if src or status == "failed" else "failed",
-            "request_id": request_id,
-            "kind": "image",
-            "src": src if isinstance(src, str) and src.startswith(("http", "data:", "/")) else (
-                None if status != "ready" else src
-            ),
-        }
-        if status == "ready" and asset["src"] is None and isinstance(src, str):
-            # Non-URL ready content still marks asset ready for document patching.
-            asset["src"] = src
-            asset["kind"] = "image"
         completion = await apply_completion(
             request_id=request_id,
             asset=asset,
@@ -166,18 +187,23 @@ async def dispatch_native_pending_visuals(
             revision = getattr(completion, "document_revision", None)
             if revision is None and isinstance(completion, dict):
                 revision = completion.get("document_revision")
-        results.append(
-            {
-                "block_id": block_id,
-                "request_id": request_id,
-                "work_order_id": order.work_order_id,
-                "asset_status": asset["status"],
-                "document_revision": revision,
-            }
-        )
+        row = {
+            "block_id": block_id,
+            "request_id": request_id,
+            "work_order_id": order.work_order_id,
+            "asset_status": asset["status"],
+            "document_revision": revision,
+        }
+        if asset_error:
+            row["error"] = asset_error
+        if asset["status"] == "failed":
+            failures.append(row)
+        results.append(row)
     return {
         "dispatched": len(results),
         "results": results,
+        "failed": len(failures),
+        "failures": failures,
     }
 
 
@@ -193,9 +219,33 @@ async def dispatch_and_patch_from_repo(
     async def _apply(**kwargs: Any) -> Any:
         return await repo.apply_visual_completion(**kwargs)
 
-    return await dispatch_native_pending_visuals(
+    result = await dispatch_native_pending_visuals(
         generation_id=generation_id,
         block_execution=block_execution,
         apply_completion=_apply,
         execute_visual_fn=execute_visual_fn,
     )
+    failures = list(result.get("failures") or [])
+    if failures:
+        failed_ids = [
+            str(row.get("request_id") or "")
+            for row in failures
+            if row.get("request_id")
+        ]
+        message = "; ".join(
+            str(row.get("error") or row.get("asset_status") or "failed")
+            for row in failures[:3]
+        )
+        await repo.persist_visual_dispatch_failure(
+            message=message or "visual dispatch failed",
+            failed_request_ids=failed_ids,
+        )
+        result["error"] = "visual_dispatch_failed"
+        result["retryable"] = True
+    else:
+        # Successful redispath of pending figures — drop prior visual last_error.
+        try:
+            await repo.clear_visual_last_error()
+        except Exception:  # noqa: BLE001
+            pass
+    return result

@@ -20,6 +20,7 @@ from planning.whole_lesson.states import (
     DEFAULT_LEASE_SECONDS,
     ExecutionLease,
     IllegalTransitionError,
+    LEGAL_TRANSITIONS,
     LeaseLostError,
     assert_legal_transition,
     execution_key,
@@ -323,6 +324,102 @@ class PageDocumentRepository:
                 }
             )
             state["events"] = events[-500:]
+
+        return await self.mutate_state(
+            expected_statuses=expected,
+            worker_id=worker_id,
+            lease_token=lease_token,
+            mutation=_mut,
+        )
+
+    async def persist_native_failure(
+        self,
+        *,
+        exc: BaseException,
+        stage: str,
+        event: str = "native_failure",
+        attempt: int = 1,
+        worker_id: str | None = None,
+        lease_token: int | None = None,
+        expected: set[str] | None = None,
+    ) -> dict[str, Any]:
+        """Atomically persist a native failure across status, chunked stage, error, and event.
+
+        Ensures page_document_v2 exists, classifies the exception, and transitions to
+        failed_recoverable or failed_terminal. Clears legacy stage2_error as durable truth.
+        """
+        from planning.whole_lesson.failure_policy import (
+            classify_failure,
+            structured_error_from_exc,
+        )
+
+        classification = classify_failure(exc)
+        if classification.code in {"LEASE_LOST", "CANCELLED"}:
+            return await self.load_page_generation_state()
+
+        recoverable = classification.code in {"TRANSPORT", "TIMEOUT", "RATE_LIMIT"}
+        target = "failed_recoverable" if recoverable else "failed_terminal"
+        error = structured_error_from_exc(
+            exc=exc,
+            stage=stage,
+            attempt=attempt,
+        )
+
+        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
+            # Ensure page document scaffold exists even before teaching plan.
+            if not state or state.get("schema_version") is None:
+                base = empty_page_document_state()
+                base.update(state or {})
+                state.clear()
+                state.update(base)
+            for key, value in empty_page_document_state().items():
+                state.setdefault(key, deepcopy(value) if isinstance(value, (dict, list)) else value)
+            if not isinstance(state.get("execution"), dict):
+                state["execution"] = empty_execution_meta()
+            if not isinstance(state.get("events"), list):
+                state["events"] = []
+
+            current = str(generation.status or "").strip() or "pending"
+            # Normalize legacy chunked-only stage2_error onto a legal source status.
+            chunked = _coerce_chunked(generation.chunked_state_json)
+            chunked_stage = str(chunked.get("stage") or "")
+            if current not in LEGAL_TRANSITIONS and chunked_stage in LEGAL_TRANSITIONS:
+                current = chunked_stage
+                generation.status = current
+            if current not in LEGAL_TRANSITIONS:
+                current = "pending"
+                generation.status = current
+
+            assert_legal_transition(current, target)
+            generation.status = target
+            execution = dict(state.get("execution") or empty_execution_meta())
+            execution["heartbeat_at"] = _now()
+            execution["last_error"] = error
+            execution["attempt"] = int(execution.get("attempt") or 0) + 1
+            state["execution"] = execution
+            events = list(state.get("events") or [])
+            events.append(
+                {
+                    **make_event(
+                        event,
+                        generation_id=self.generation_id,
+                        status=target,
+                    ),
+                    "at": _now(),
+                    "error": error,
+                    "stage": stage,
+                }
+            )
+            state["events"] = events[-500:]
+            # Clear legacy stage2_error keys from the outer chunked blob after write
+            # by stamping authoritative stage via _write_page_state; also drop error
+            # aliases that would disagree with structured last_error.
+            chunked_out = _coerce_chunked(generation.chunked_state_json)
+            chunked_out.pop("error", None)
+            chunked_out.pop("error_type", None)
+            if chunked_out.get("stage") == "stage2_error":
+                chunked_out["stage"] = target
+            generation.chunked_state_json = chunked_out
 
         return await self.mutate_state(
             expected_statuses=expected,
@@ -779,16 +876,75 @@ class PageDocumentRepository:
     ) -> dict[str, Any]:
         """Persist a non-terminal partial LectioDocumentV2; bump revision only on change.
 
+        Rejects non-monotonic shrinkage of streaming_section_ids (no revision bump).
+        Does not set final SHA/reload fence fields.
+        """
+        return await self.assemble_and_persist_streaming_snapshot(
+            assemble=lambda _generation, _stored: (
+                document,
+                list(section_ids),
+                document_sha256,
+            ),
+            worker_id=worker_id,
+            lease_token=lease_token,
+        )
+
+    async def assemble_and_persist_streaming_snapshot(
+        self,
+        *,
+        assemble: Callable[
+            [GenerationModel, dict[str, dict[str, Any]]],
+            tuple[dict[str, Any], list[str], str] | None,
+        ],
+        worker_id: str | None = None,
+        lease_token: int | None = None,
+    ) -> dict[str, Any] | None:
+        """Lock → re-read block_execution → assemble → monotonic gate → persist.
+
+        Rejects if prior streaming_section_ids is not a subset of the new set.
+        No-op (no revision bump) on shrinkage or identical sha.
         Does not set final SHA/reload fence fields.
         """
         from generation.page_objects.document_assembly import persist_document_json
 
-        box: list[dict[str, Any]] = []
+        box: list[dict[str, Any] | None] = []
 
         def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
+            stored_raw = state.get("block_execution") or {}
+            stored = {
+                str(k): dict(v)
+                for k, v in stored_raw.items()
+                if isinstance(v, dict)
+            }
+            assembled = assemble(generation, stored)
+            if assembled is None:
+                box.append(None)
+                return
+            document, section_ids, document_sha256 = assembled
             execution = dict(state.get("execution") or empty_execution_meta())
-            prior_hash = str(execution.get("streaming_document_sha256") or "")
+            prior_ids = {
+                str(sid)
+                for sid in (execution.get("streaming_section_ids") or [])
+                if sid
+            }
+            new_ids = {str(sid) for sid in section_ids if sid}
             revision = int(state.get("document_revision") or 0)
+            prior_hash = str(execution.get("streaming_document_sha256") or "")
+
+            if prior_ids and not prior_ids.issubset(new_ids):
+                # Stale/partial assemble must not shrink a newer snapshot.
+                state["execution"] = execution
+                box.append(
+                    {
+                        "changed": False,
+                        "rejected": "non_monotonic_section_set",
+                        "document_revision": revision,
+                        "document_sha256": prior_hash,
+                        "section_ids": list(execution.get("streaming_section_ids") or []),
+                    }
+                )
+                return
+
             changed = prior_hash != document_sha256
             if changed:
                 generation.document_json = persist_document_json(
@@ -821,8 +977,10 @@ class PageDocumentRepository:
                 {
                     "changed": changed,
                     "document_revision": revision,
-                    "document_sha256": document_sha256,
-                    "section_ids": list(section_ids),
+                    "document_sha256": document_sha256 if changed else prior_hash or document_sha256,
+                    "section_ids": list(
+                        execution.get("streaming_section_ids") or section_ids
+                    ),
                 }
             )
 
@@ -831,12 +989,7 @@ class PageDocumentRepository:
             lease_token=lease_token,
             mutation=_mut,
         )
-        return box[0] if box else {
-            "changed": False,
-            "document_revision": 0,
-            "document_sha256": document_sha256,
-            "section_ids": list(section_ids),
-        }
+        return box[0] if box else None
 
     async def finalize_verified_document(
         self,
@@ -1077,6 +1230,162 @@ class PageDocumentRepository:
         await self.mutate_state(mutation=_mut)
         return box[0]
 
+    async def persist_visual_dispatch_failure(
+        self,
+        *,
+        exc: BaseException | None = None,
+        message: str | None = None,
+        failed_request_ids: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Record a retryable visual failure while remaining in awaiting_visuals.
+
+        Does not transition to failed_recoverable (which would requeue writers).
+        Marks unresolved figure assets as failed when request ids are provided or
+        when no ids are given (mark all unresolved pending/generating figures).
+        """
+        from generation.page_objects.document_assembly import (
+            persist_document_json,
+            reload_document,
+        )
+        from generation.page_objects.visual_completion import apply_figure_asset_update
+        from planning.whole_lesson.failure_policy import structured_error_from_exc
+
+        error_message = (message or (str(exc).strip() if exc else "") or "visual dispatch failed")[
+            :500
+        ]
+        if exc is not None:
+            error = structured_error_from_exc(
+                exc=exc,
+                stage="visual_generation",
+                attempt=1,
+            )
+            error["retryable"] = True
+            error["stage"] = "awaiting_visuals"
+            error["code"] = str(error.get("code") or "VISUAL_DISPATCH")
+            error["message"] = error_message
+        else:
+            error = {
+                "type": "VisualDispatchError",
+                "code": "VISUAL_DISPATCH",
+                "message": error_message,
+                "stage": "awaiting_visuals",
+                "retryable": True,
+                "repairable": False,
+                "recorded_at": _now(),
+            }
+
+        target_ids = {str(rid) for rid in (failed_request_ids or []) if rid}
+
+        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
+            current = str(generation.status or "")
+            if current != "awaiting_visuals":
+                raise IllegalTransitionError(
+                    f"visual dispatch failure requires awaiting_visuals, got {current!r}"
+                )
+
+            try:
+                document = reload_document(generation.document_json or {})
+            except Exception:  # noqa: BLE001
+                document = {}
+
+            revision = int(state.get("document_revision") or 0)
+            block_execution = dict(state.get("block_execution") or {})
+            touched = False
+
+            for section in list(document.get("sections") or []):
+                for block in list(section.get("blocks") or []):
+                    if block.get("object") != "figure":
+                        continue
+                    content = dict(block.get("content") or {})
+                    asset = dict(content.get("asset") or {})
+                    request_id = str(asset.get("request_id") or "")
+                    asset_status = str(asset.get("status") or "pending")
+                    if asset_status not in {"pending", "generating", "failed", ""}:
+                        continue
+                    if target_ids and request_id not in target_ids:
+                        continue
+                    if not request_id:
+                        continue
+                    failed_asset = {
+                        "status": "failed",
+                        "request_id": request_id,
+                        "kind": str(asset.get("kind") or "image"),
+                    }
+                    if asset.get("src"):
+                        failed_asset["src"] = asset.get("src")
+                    if asset.get("svg"):
+                        failed_asset["svg"] = asset.get("svg")
+                    document = apply_figure_asset_update(
+                        document,
+                        block_id=str(block.get("id") or ""),
+                        asset=failed_asset,
+                    )
+                    touched = True
+                    for key, outcome in list(block_execution.items()):
+                        if not isinstance(outcome, dict):
+                            continue
+                        if str(outcome.get("request_id") or "") != request_id:
+                            continue
+                        outcome_content = dict(outcome.get("content") or {})
+                        outcome_content["asset"] = failed_asset
+                        block_execution[key] = {
+                            **outcome,
+                            "status": "failed_recoverable",
+                            "content": outcome_content,
+                            "error": error,
+                        }
+
+            if touched:
+                generation.document_json = persist_document_json(
+                    generation.document_json, document
+                )
+                revision += 1
+                state["document_revision"] = revision
+                state["block_execution"] = block_execution
+
+            # Stay in awaiting_visuals — never requeue writers via failed_recoverable.
+            execution = dict(state.get("execution") or empty_execution_meta())
+            execution["last_error"] = error
+            execution["heartbeat_at"] = _now()
+            state["execution"] = execution
+            events = list(state.get("events") or [])
+            events.append(
+                {
+                    **make_event(
+                        "visual_dispatch_failed",
+                        generation_id=self.generation_id,
+                        status="awaiting_visuals",
+                        request_ids=sorted(target_ids) if target_ids else None,
+                    ),
+                    "at": _now(),
+                    "error": error,
+                }
+            )
+            state["events"] = events[-500:]
+
+        return await self.mutate_state(
+            expected_statuses={"awaiting_visuals"},
+            mutation=_mut,
+        )
+
+    async def clear_visual_last_error(self) -> dict[str, Any]:
+        """Clear execution.last_error after a successful visuals-only redispath."""
+
+        def _mut(_generation: GenerationModel, state: dict[str, Any]) -> None:
+            execution = dict(state.get("execution") or empty_execution_meta())
+            last = execution.get("last_error")
+            if isinstance(last, dict) and str(last.get("stage") or "") in {
+                "awaiting_visuals",
+                "visual_generation",
+            }:
+                execution["last_error"] = None
+            state["execution"] = execution
+
+        return await self.mutate_state(
+            expected_statuses={"awaiting_visuals", "ready"},
+            mutation=_mut,
+        )
+
 
 async def claim_next_native_job(
     session: AsyncSession,
@@ -1116,3 +1425,24 @@ async def claim_next_native_job(
         if lease is not None:
             return lease
     return None
+
+
+async def persist_native_failure_for_generation(
+    generation_id: str,
+    *,
+    exc: BaseException,
+    stage: str,
+    event: str = "pre_worker_failure",
+    attempt: int = 1,
+) -> dict[str, Any]:
+    """Session-scoped helper for pre-worker native failure sync (items/teaching)."""
+    from core.database.session import async_session_factory
+
+    async with async_session_factory() as session:
+        repo = PageDocumentRepository(session, generation_id)
+        return await repo.persist_native_failure(
+            exc=exc,
+            stage=stage,
+            event=event,
+            attempt=attempt,
+        )

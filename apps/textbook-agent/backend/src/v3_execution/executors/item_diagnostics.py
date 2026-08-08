@@ -58,6 +58,7 @@ def attempt_record(
     outcome_class: OutcomeClass,
     error: str | None = None,
     validation_errors: list[str] | None = None,
+    retryable: bool | None = None,
 ) -> dict[str, Any]:
     return {
         "correlation_id": correlation_id,
@@ -65,6 +66,7 @@ def attempt_record(
         "attempt": attempt,
         "latency_ms": round((time.perf_counter() - started_at) * 1000.0, 2),
         "class": outcome_class,
+        "retryable": bool(retryable) if retryable is not None else outcome_class != "OK",
         "error": error,
         "validation_errors": list(validation_errors or []),
         "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),

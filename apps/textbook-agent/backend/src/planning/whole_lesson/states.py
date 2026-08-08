@@ -11,9 +11,21 @@ _WRITING_TARGETS = frozenset(
     {"assembling", "failed_recoverable", "failed_terminal", "cancelled"}
 )
 
+_PRE_WORKER_FAIL_TARGETS = frozenset(
+    {"failed_recoverable", "failed_terminal", "cancelled"}
+)
+
 LEGAL_TRANSITIONS: dict[str, frozenset[str]] = {
-    "awaiting_teaching_approval": frozenset({"queued", "cancelled"}),
-    "queued": frozenset({"planning_forms", "cancelled", "failed_terminal"}),
+    # Pre-worker bootstrap statuses (items / teaching plan before teacher gate).
+    "pending": _PRE_WORKER_FAIL_TARGETS,
+    "stage2_running": _PRE_WORKER_FAIL_TARGETS,
+    "plan_ready": _PRE_WORKER_FAIL_TARGETS,
+    "awaiting_review": _PRE_WORKER_FAIL_TARGETS,
+    "stage2_error": frozenset({"failed_recoverable", "failed_terminal", "cancelled"}),
+    "awaiting_teaching_approval": frozenset(
+        {"queued", "cancelled", "failed_recoverable", "failed_terminal"}
+    ),
+    "queued": frozenset({"planning_forms", "cancelled", "failed_terminal", "failed_recoverable"}),
     "planning_forms": frozenset(
         {
             "writing_sections",

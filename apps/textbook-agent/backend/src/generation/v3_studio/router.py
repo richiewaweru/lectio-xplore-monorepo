@@ -45,6 +45,7 @@ from v3_blueprint.planning.models import (
     stage2_brief_preview_payload,
 )
 from v3_blueprint.planning.persistence import (
+    append_item_attempt_records,
     load_chunked_state,
     persist_chunked_state,
 )
@@ -1107,6 +1108,41 @@ async def _generate_shared_pack_items(
     results: list[ItemGenerationResult] = []
     attempts_journal: list[dict[str, Any]] = []
     failed_cards: list[dict[str, Any]] = []
+    flushed_attempt_keys: set[tuple[str, str, int]] = set()
+
+    async def _flush_attempts(
+        *,
+        new_attempts: list[dict[str, Any]] | None = None,
+        new_failed: list[dict[str, Any]] | None = None,
+    ) -> None:
+        batch = list(new_attempts or [])
+        pending = [
+            dict(row)
+            for row in attempts_journal
+            if (
+                str(row.get("correlation_id") or ""),
+                str(row.get("card_id") or ""),
+                int(row.get("attempt") or 0),
+            )
+            not in flushed_attempt_keys
+        ]
+        to_write = batch + pending
+        if not to_write and not new_failed:
+            return
+        await append_item_attempt_records(
+            generation_id,
+            attempts=to_write,
+            failed_cards=new_failed,
+            pack_id=pack_id,
+        )
+        for row in to_write:
+            flushed_attempt_keys.add(
+                (
+                    str(row.get("correlation_id") or ""),
+                    str(row.get("card_id") or ""),
+                    int(row.get("attempt") or 0),
+                )
+            )
 
     async def _one(row: ConceptCardModel) -> None:
         card = _approved_card_for_items(
@@ -1123,21 +1159,25 @@ async def _generate_shared_pack_items(
             )
             results.append(run.result)
             attempts_journal.extend(run.attempts)
+            await _flush_attempts(new_attempts=list(run.attempts))
         except Exception as exc:  # noqa: BLE001
             journal = list(getattr(exc, "item_attempts", []) or [])
             attempts_journal.extend(journal)
-            failed_cards.append(
-                {
-                    "card_id": row.id,
-                    "correlation_id": getattr(exc, "item_correlation_id", None),
-                    "error": str(exc)[:500],
-                    "attempts": journal,
-                }
-            )
+            failed_row = {
+                "card_id": row.id,
+                "correlation_id": getattr(exc, "item_correlation_id", None),
+                "error": str(exc)[:500],
+                "attempts": journal,
+            }
+            failed_cards.append(failed_row)
+            await _flush_attempts(new_attempts=journal, new_failed=[failed_row])
             raise
 
-    if pending_cards:
-        await asyncio.gather(*(_one(row) for row in pending_cards))
+    try:
+        if pending_cards:
+            await asyncio.gather(*(_one(row) for row in pending_cards))
+    finally:
+        await _flush_attempts()
 
     if results:
         await _persist_item_results(pack_id, results)
@@ -1268,6 +1308,7 @@ async def _run_chunked_stage2_pipeline(
         flush=True,
     )
     cache_token = None
+    native_failure_stage = "item_generation"
     try:
         from core.prompts import (
             bind_prompt_cache,
@@ -1337,13 +1378,14 @@ async def _run_chunked_stage2_pipeline(
 
         # Native whole-lesson path: items → teaching plan → halt for teacher approval.
         # Do not run legacy section briefs, assembly, or component writers.
-        native_whole_lesson = bool(
-            (state.get("context") or {}).get("native_whole_lesson")
-            or int(getattr(plan, "document_contract_version", 1) or 1) >= 2
-            or state.get("page_document_v2")
+        from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
+
+        native_whole_lesson = generation_is_native_whole_lesson(state) or (
+            int(getattr(plan, "document_contract_version", 1) or 1) >= 2
         )
         if native_whole_lesson:
             await _items_job()
+            native_failure_stage = "planning_teaching"
             from planning.whole_lesson.service import run_and_persist_teaching_plan
 
             async with async_session_factory() as session:
@@ -1414,23 +1456,54 @@ async def _run_chunked_stage2_pipeline(
             generation_id,
             str(exc)[:400],
         )
-        await persist_chunked_state(
-            generation_id,
-            {
-                "stage": "stage2_error",
-                "execution_started": False,
-                "error": str(exc)[:400],
-                "error_type": type(exc).__name__,
-            },
+        # Prefer native atomic failure sync when this generation is native whole-lesson.
+        failure_state: dict[str, Any] = {}
+        try:
+            failure_state = await load_chunked_state(generation_id)
+        except Exception:  # noqa: BLE001
+            failure_state = {}
+        from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
+        from planning.whole_lesson.repository import persist_native_failure_for_generation
+
+        is_native = generation_is_native_whole_lesson(failure_state) or bool(
+            failure_state.get("page_document_v2")
+            or (failure_state.get("context") or {}).get("native_whole_lesson")
         )
-        await _chunked_emit_event(
-            generation_id,
-            "generation_warning",
-            {
-                "generation_id": generation_id,
-                "message": "Chunked expansion failed. Retry a failed section or regenerate the plan.",
-            },
-        )
+        if is_native:
+            stage_name = native_failure_stage
+            await persist_native_failure_for_generation(
+                generation_id,
+                exc=exc,
+                stage=str(stage_name),
+                event="pre_worker_failure",
+            )
+            await _chunked_emit_event(
+                generation_id,
+                "native_failure",
+                {
+                    "generation_id": generation_id,
+                    "stage": str(stage_name),
+                    "message": str(exc)[:400],
+                },
+            )
+        else:
+            await persist_chunked_state(
+                generation_id,
+                {
+                    "stage": "stage2_error",
+                    "execution_started": False,
+                    "error": str(exc)[:400],
+                    "error_type": type(exc).__name__,
+                },
+            )
+            await _chunked_emit_event(
+                generation_id,
+                "generation_warning",
+                {
+                    "generation_id": generation_id,
+                    "message": "Chunked expansion failed. Retry a failed section or regenerate the plan.",
+                },
+            )
     finally:
         if cache_token is not None:
             from core.prompts import reset_prompt_cache
@@ -4593,4 +4666,65 @@ async def post_figure_visual_callback(
         "status": result.status,
         "document_revision": result.document_revision,
         "idempotent": result.idempotent,
+    }
+
+
+@v3_studio_router.post("/generations/{generation_id}/visuals/retry")
+async def post_visuals_retry(
+    generation_id: str,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Visuals-only redispath for native generations stuck in awaiting_visuals.
+
+    Never requeues writers, form planning, teaching, or item generation.
+    """
+    model = await _load_owned_generation(generation_id, current_user.id)
+    from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
+    from planning.whole_lesson.repository import PageDocumentRepository
+    from planning.whole_lesson.visual_dispatch import dispatch_and_patch_from_repo
+
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, generation_id)
+        if generation is None:
+            raise HTTPException(status_code=404, detail="Generation not found")
+        repo = PageDocumentRepository(session, generation_id)
+        state = await repo.load_page_generation_state()
+        chunked = dict(generation.chunked_state_json or {})
+        if not generation_is_native_whole_lesson(chunked, generation):
+            raise HTTPException(
+                status_code=409,
+                detail="visuals/retry is only available for native whole-lesson generations",
+            )
+        status = str(generation.status or "")
+        if status != "awaiting_visuals":
+            raise HTTPException(
+                status_code=409,
+                detail=f"visuals/retry requires awaiting_visuals, got {status!r}",
+            )
+        try:
+            dispatch = await dispatch_and_patch_from_repo(
+                session=session,
+                generation_id=generation_id,
+            )
+        except Exception as exc:  # noqa: BLE001
+            await repo.persist_visual_dispatch_failure(exc=exc)
+            raise HTTPException(
+                status_code=502,
+                detail=f"visual redispath failed: {str(exc)[:400]}",
+            ) from exc
+        generation = await session.get(GenerationModel, generation_id)
+        terminal = str(generation.status or status) if generation else status
+        page = await repo.load_page_generation_state()
+        last_error = (page.get("execution") or {}).get("last_error")
+    return {
+        "generation_id": generation_id,
+        "status": terminal,
+        "visual_dispatch": dispatch,
+        "next_action": (
+            "retry_visuals"
+            if terminal == "awaiting_visuals"
+            and (dispatch.get("failed") or last_error)
+            else ("done" if terminal == "ready" else "wait_visuals")
+        ),
+        "error_detail": last_error if isinstance(last_error, dict) else None,
     }

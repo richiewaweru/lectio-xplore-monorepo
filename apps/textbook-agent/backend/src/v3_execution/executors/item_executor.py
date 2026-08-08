@@ -156,6 +156,7 @@ async def execute_items_with_diagnostics(
                     attempt=attempt,
                     started_at=started,
                     outcome_class="OK",
+                    retryable=False,
                 )
             )
             return ItemGenerationRun(
@@ -175,6 +176,7 @@ async def execute_items_with_diagnostics(
                     outcome_class=outcome_class,
                     error=str(exc)[:500],
                     validation_errors=[str(exc)[:300]],
+                    retryable=retryable,
                 )
             )
             if not retryable or attempt >= budget:
