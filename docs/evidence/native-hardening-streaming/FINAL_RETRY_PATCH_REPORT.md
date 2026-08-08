@@ -6,7 +6,7 @@ Evidence date: 2026-08-08
 
 ## 1. Commit SHA
 
-Filled after commit on `pageobject-integration` (message includes retry-native / error sync).
+`ab7963304f1236c31693d7ef9f095ba02fa62ae9`
 
 ## 2. Changed files
 
