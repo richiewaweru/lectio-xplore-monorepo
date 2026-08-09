@@ -13,8 +13,12 @@ from core.database.models import Base
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+# Only take over logging for the standalone `alembic` CLI. When migrations run
+# in-process at app startup, fileConfig() would disable every logger created so far
+# and reset root to WARN, silently discarding all application logs — including
+# errors and tracebacks — for the life of the process. runner.py opts out.
+if config.config_file_name is not None and config.attributes.get("configure_logging", True):
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 

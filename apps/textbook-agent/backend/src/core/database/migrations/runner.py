@@ -18,6 +18,8 @@ def _alembic_config() -> Config:
         str(backend_root / "src" / "core" / "database" / "migrations"),
     )
     config.set_main_option("prepend_sys_path", str(backend_root / "src"))
+    # In-process migrations must not reconfigure the running app's logging.
+    config.attributes["configure_logging"] = False
     return config
 
 
