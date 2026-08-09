@@ -2,6 +2,15 @@
 
 import { cleanup, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const pageDocumentV2Fixture = JSON.parse(
+	readFileSync(
+		join(process.cwd(), '..', 'backend', 'tests', 'fixtures', 'lectio-page', 'valid-document.json'),
+		'utf8'
+	)
+);
 
 const { pageState, getV3GenerationDetail, fetchV3Document, downloadV3GenerationPdf } = vi.hoisted(() => ({
 	pageState: {
@@ -126,5 +135,16 @@ describe('completed V3 generation page', () => {
 		render(CompletedV3GenerationPage);
 
 		expect(await screen.findByText(/Document is not renderable yet\./i)).toBeTruthy();
+	});
+
+	it('enables final PDF export for a completed V2 page document', async () => {
+		fetchV3Document.mockResolvedValueOnce(pageDocumentV2Fixture);
+
+		render(CompletedV3GenerationPage);
+
+		expect(await screen.findByRole('button', { name: 'Download Final PDF' })).not.toHaveProperty(
+			'disabled',
+			true
+		);
 	});
 });

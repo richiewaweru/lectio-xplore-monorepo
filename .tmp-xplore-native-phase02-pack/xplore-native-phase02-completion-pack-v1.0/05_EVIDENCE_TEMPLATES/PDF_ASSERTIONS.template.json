@@ -1,0 +1,12 @@
+{
+  "generation_id": "",
+  "teacher_pdf": "",
+  "student_pdf": "",
+  "teacher_pages": 0,
+  "student_pages": 0,
+  "answer_phrase": "",
+  "teacher_contains_answer": false,
+  "student_contains_answer": false,
+  "files_differ": false,
+  "parser_errors": []
+}

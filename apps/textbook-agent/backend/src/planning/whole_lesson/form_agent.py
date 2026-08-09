@@ -155,7 +155,7 @@ async def run_form_planner(
     raw_response = ""
     previous_output: object | None = None
     repair_errors: list[str] = []
-    last_error = None
+    last_error: BaseException | str | None = None
 
     for attempt in (1, 2):
         try:
@@ -210,7 +210,7 @@ async def run_form_planner(
                 will_retry=attempt == 1,
             )
         except Exception as exc:
-            last_error = str(exc)
+            last_error = exc
             if is_transport_error(exc):
                 repair_errors = []
             else:
@@ -230,4 +230,6 @@ async def run_form_planner(
             )
             continue
 
+    if isinstance(last_error, BaseException):
+        raise last_error
     raise RuntimeError(f"form planner failed after 2 attempts: {last_error}")

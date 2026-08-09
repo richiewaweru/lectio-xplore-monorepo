@@ -27,7 +27,7 @@
 	let includeAnswers = $state(true);
 
 	const resolvedStatus = $derived.by<BookletStatus>(() => {
-		if (pageDocumentV2) return 'final';
+		if (pageDocumentV2) return 'final_ready';
 		if (pack?.status) return pack.status;
 		if (detail && isBookletStatus(detail.booklet_status)) {
 			return detail.booklet_status;

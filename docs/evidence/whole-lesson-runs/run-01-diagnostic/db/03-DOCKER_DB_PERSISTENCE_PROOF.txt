@@ -1,0 +1,8 @@
+-[ RECORD 1 ]-------------------------------------
+id          | 907b1dab-11fd-49fc-ac23-060d45b446b8
+title       | Why Plants Need Light
+subject     | Science
+grade_level | Grade 4
+status      | draft
+created_at  | 2026-08-07 15:14:07.685891
+

@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
 	fetchV3Document: vi.fn(),
 	getV3GenerationBlueprint: vi.fn(),
 	regenerateChunkedPlan: vi.fn(),
+	retryNativeGeneration: vi.fn(),
 	retryChunkedSection: vi.fn(),
 	startChunkedPlan: vi.fn()
 }));
@@ -46,6 +47,7 @@ vi.mock('$lib/api/v3', () => ({
 	fetchV3Document: mocks.fetchV3Document,
 	getV3GenerationBlueprint: mocks.getV3GenerationBlueprint,
 	regenerateChunkedPlan: mocks.regenerateChunkedPlan,
+	retryNativeGeneration: mocks.retryNativeGeneration,
 	retryChunkedSection: mocks.retryChunkedSection,
 	startChunkedPlan: mocks.startChunkedPlan
 }));
@@ -127,6 +129,7 @@ describe('studio chunked URL resume', () => {
 			lesson_mode_confidence: 'high'
 		});
 		mocks.getChunkedPlanStatus.mockReset();
+		mocks.retryNativeGeneration.mockReset();
 		mocks.fetchV3Document.mockReset();
 		mocks.getV3GenerationBlueprint.mockReset();
 		builderMocks.createBuilderLesson.mockReset();
@@ -453,6 +456,30 @@ describe('studio chunked URL resume', () => {
 		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-native-forms'));
 		await waitFor(() => expect(v3Studio.stage).toBe('generating'));
 		expect(await screen.findByText('Building your lesson…')).toBeTruthy();
+	});
+
+	it('shows the native item retry action and resumes only the failed checkpoint', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-native-item-failure');
+		const failedStatus = {
+			generation_id: 'gen-native-item-failure', stage: 'failed_recoverable', doc_version: null,
+			failed_sections: [], blueprint_id: null, execution_started: false,
+			next_action: 'retry_items', error: 'TimeoutError', error_type: 'TimeoutError'
+		};
+		mocks.getChunkedPlanStatus
+			.mockResolvedValueOnce(failedStatus)
+			.mockResolvedValue({ ...failedStatus, stage: 'item_generation', next_action: 'wait', error: null, error_type: null });
+		mocks.fetchV3Document.mockRejectedValue(Object.assign(new Error('Document not ready'), { status: 404 }));
+		mocks.retryNativeGeneration.mockResolvedValue(undefined);
+
+		render(StudioPage);
+
+		const retryButton = await screen.findByRole('button', { name: 'Retry lesson items' });
+		expect(screen.getByText('Generation paused')).toBeTruthy();
+		expect(screen.queryByText('Teaching plan approved.', { exact: false })).toBeNull();
+		await fireEvent.click(retryButton);
+
+		await waitFor(() => expect(mocks.retryNativeGeneration).toHaveBeenCalledWith('gen-native-item-failure'));
+		await waitFor(() => expect(v3Studio.chunkedState?.stage).toBe('item_generation'));
 	});
 
 	it('hands an awaiting-review structural plan to Builder without starting generation', async () => {

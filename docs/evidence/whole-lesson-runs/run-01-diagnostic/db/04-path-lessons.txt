@@ -1,0 +1,8 @@
+ position |                  id                  |             title             |    pkt     |                         objective                          
+----------+--------------------------------------+-------------------------------+------------+------------------------------------------------------------
+        0 | fc9e4f92-7a3e-495e-b4e7-d83052da222e | Plants as Producers           | conceptual | Recognize that plants are producers that make their own fo
+        1 | 1f20ba53-df85-4a1c-ba61-a4c2fae89f7a | Leaves and Chlorophyll        | factual    | Identify leaves as the site of food making and chlorophyll
+        2 | b664b50f-a2c0-4030-b8a1-a071f75accec | The Process of Photosynthesis | conceptual | Describe how plants use light, carbon dioxide, and water t
+        3 | 63cc7fec-05bb-4783-b27b-2cff75550b50 | Why Light is Essential        | conceptual | Explain why light is necessary for plants to make food
+(4 rows)
+

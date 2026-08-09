@@ -1,0 +1,4 @@
+[     506ms] [WARNING] %c[svelte] derived_inert
+%cReading a derived belonging to a now-destroyed effect may result in stale values
+https://svelte.dev/e/derived_inert font-weight: bold font-weight: normal @ http://127.0.0.1:5173/@fs/C:/Projects/lectio/node_modules/.pnpm/@sveltejs+kit@2.70.2_@svelt_3943896428ec1f1ecf833d5396b0611a/node_modules/@sveltejs/kit/src/runtime/client/client.js?v=0cc492a6:3440
+[     551ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/profile:0

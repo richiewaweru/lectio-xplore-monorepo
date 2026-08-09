@@ -1,0 +1,57 @@
+{
+  "user_id": "simplified-path-acceptance",
+  "base": "http://127.0.0.1:8000",
+  "steps": {
+    "constructor": {
+      "title": "Circulatory System",
+      "topic": "parts of the circulatory system and how blood moves around the body",
+      "destination_objective": "describe the main parts of the circulatory system (heart, blood vessels and blood) and explain how blood moves around the body",
+      "starting_knowledge": [
+        "the body is made of organs"
+      ]
+    },
+    "plan": {
+      "lesson_count": 5,
+      "open_assumptions": [],
+      "merge_critic_results": [],
+      "prerequisite_risks": [],
+      "lesson_titles": [
+        "The circulatory system as a transport system",
+        "The heart as a double pump",
+        "Blood vessels",
+        "Components of blood",
+        "Double circulation pathway"
+      ],
+      "concept_slugs": [
+        "science.the.circulatory.system.as.a.transport.system",
+        "science.the.heart.as.a.double.pump",
+        "science.blood.vessels",
+        "science.components.of.blood",
+        "science.double.circulation.pathway"
+      ],
+      "do_not_cover": null
+    },
+    "edit": {
+      "title": "The circulatory system as a transport system (edited)"
+    },
+    "approve": {
+      "status": "approved"
+    },
+    "prepare": {
+      "generation_id": "f7fd5f8d-63f1-4745-b9b6-c1cec05e66e4",
+      "status": "awaiting_review",
+      "skeleton_id": "conceptual.first_exposure",
+      "path_lesson_id": "5924a402-89f8-45b4-80f6-afbe330f576b"
+    }
+  },
+  "unit_id": "f2ac52fe-80c9-4fa4-86fb-39335e8c5a65",
+  "timings_s": {
+    "constructor": 7.12,
+    "create": 28.61,
+    "plan": 39.47,
+    "edit": 0.12,
+    "approve": 0.11,
+    "prepare": 49.12
+  },
+  "ok": true
+}

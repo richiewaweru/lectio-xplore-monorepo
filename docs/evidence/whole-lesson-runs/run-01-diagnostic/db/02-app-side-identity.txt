@@ -1,0 +1,10 @@
+resolved DATABASE_URL (redacted): postgresql+asyncpg://***:***@127.0.0.1:5432/textbook_agent
+engine url (redacted):           postgresql+asyncpg://***:***@127.0.0.1:5432/textbook_agent
+current_database: textbook_agent
+current_user:     textbook
+inet_server_addr: 172.20.0.4/32
+inet_server_port: 5432
+pg_backend_pid:   27390
+version:          PostgreSQL 16.9 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+app-side system_identifier: 7624095893609250850
+app-side postmaster_start: 2026-08-07 06:49:40.520061+00

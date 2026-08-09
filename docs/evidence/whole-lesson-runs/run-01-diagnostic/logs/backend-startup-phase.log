@@ -1,0 +1,20 @@
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [29528]
+INFO:     Waiting for application startup.
+{"timestamp": "2026-08-07T15:03:39.857269+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-08-07T15:03:40.091822+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-08-07T15:03:40.092348+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-08-07T15:03:40.877825+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-08-07T15:03:40.895692+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-08-07T15:03:40.914767+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-08-07T15:03:40.933175+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-08-07T15:03:40.946729+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-08-07T15:03:40.974116+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-08-07T15:03:41.000691+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-08-07T15:03:41.001691+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready: ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+INFO:     Runtime ready
+{"timestamp": "2026-08-07T15:03:41.141331+00:00", "level": "INFO", "logger": "planning.whole_lesson.worker", "message": "Native execution worker started worker_id=native-8e7a515660c3"}
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+{"timestamp": "2026-08-07T15:03:41.827664+00:00", "level": "INFO", "logger": "http", "message": "GET /health -> 200", "request_id": "9a18054a", "status_code": 200}

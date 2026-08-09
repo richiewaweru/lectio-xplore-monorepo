@@ -1,0 +1,22 @@
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [41788]
+INFO:     Waiting for application startup.
+{"timestamp": "2026-08-07T15:18:09.651712+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-08-07T15:18:09.727410+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-08-07T15:18:09.727410+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-08-07T15:18:10.305359+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-08-07T15:18:10.314074+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-08-07T15:18:10.318742+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-08-07T15:18:10.334509+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-08-07T15:18:10.344793+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-08-07T15:18:10.352074+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-08-07T15:18:10.365050+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-08-07T15:18:10.365050+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready: ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+INFO:     Runtime ready
+{"timestamp": "2026-08-07T15:18:10.401429+00:00", "level": "INFO", "logger": "planning.whole_lesson.worker", "message": "Native execution worker started worker_id=native-dccf7f7845a1"}
+INFO:     Application startup complete.
+ERROR:    [Errno 10048] error while attempting to bind on address ('127.0.0.1', 8000): only one usage of each socket address (protocol/network address/port) is normally permitted
+INFO:     Waiting for application shutdown.
+{"timestamp": "2026-08-07T15:18:10.413559+00:00", "level": "INFO", "logger": "planning.whole_lesson.worker", "message": "Native execution worker stopped worker_id=native-dccf7f7845a1"}
+INFO:     Application shutdown complete.

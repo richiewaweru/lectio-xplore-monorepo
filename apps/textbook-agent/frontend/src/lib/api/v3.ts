@@ -229,6 +229,14 @@ export async function getChunkedPlanStatus(generationId: string): Promise<V3Chun
 	return res.json() as Promise<V3ChunkedStatus>;
 }
 
+export async function retryNativeGeneration(generationId: string): Promise<void> {
+	const res = await apiFetch(
+		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/retry-native`,
+		{ method: 'POST', headers: bearerHeaders() }
+	);
+	await ensureOk(res, 'Could not retry the failed generation stage.');
+}
+
 export type V3VisualBlock = NonNullable<V3DraftPack['visual_blocks']>[number];
 
 export async function regenerateV3Visual(payload: {

@@ -1,0 +1,37 @@
+xplore_v2_enabled                      = True
+xplore_page_documents_enabled          = True
+xplore_page_document_scope             = all
+xplore_native_worker_enabled           = True
+xplore_page_sequential_planning        = True
+xplore_page_writer_retries             = 1
+db_echo                                = False
+app_env                                = development
+
+--- provider tier mapping (non-secret) ---
+--- page model tiers + timeouts ---
+page_model_standard                      = deepseek-v4-pro
+page_model_fast                          = deepseek-v4-flash
+page_lesson_plan_timeout_seconds         = 420
+page_form_plan_timeout_seconds           = 120
+page_standard_writer_timeout_seconds     = 180
+page_fast_writer_timeout_seconds         = 90
+page_planning_heartbeat_seconds          = 5
+
+--- provider api keys present (values never printed) ---
+DEEPSEEK_API_KEY             present=True len=35
+ANTHROPIC_API_KEY            present=True len=108
+OPENAI_API_KEY               present=True len=164
+GROQ_API_KEY                 present=False len=0
+XAI_API_KEY                  present=True len=84
+GOOGLE_CLOUD_NANO_API_KEY    present=True len=53
+
+--- v3 slot env (provider/model only) ---
+V3_FAST_BASE_URL             = https://api.deepseek.com
+V3_FAST_MODEL_NAME           = deepseek-v4-flash
+V3_FAST_PROVIDER             = openai_compatible
+V3_PREMIUM_BASE_URL          = https://api.deepseek.com
+V3_PREMIUM_MODEL_NAME        = deepseek-v4-pro
+V3_PREMIUM_PROVIDER          = openai_compatible
+V3_STANDARD_BASE_URL         = https://api.deepseek.com
+V3_STANDARD_MODEL_NAME       = deepseek-v4-pro
+V3_STANDARD_PROVIDER         = openai_compatible

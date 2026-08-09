@@ -1,0 +1,10 @@
+--- BEFORE fileConfig ---
+{"timestamp": "2026-08-07T15:01:05.143312+00:00", "level": "INFO", "logger": "uvicorn.error", "message": "A: uvicorn.error INFO before migrations"}
+{"timestamp": "2026-08-07T15:01:05.143312+00:00", "level": "INFO", "logger": "planning.whole_lesson.service", "message": "B: planning module INFO before migrations"}
+{"timestamp": "2026-08-07T15:01:05.143312+00:00", "level": "WARNING", "logger": "uvicorn.error", "message": "C: uvicorn.error WARNING before migrations"}
+--- AFTER fileConfig ---
+--- state after fileConfig ---
+root level: WARNING
+root handlers: [<StreamHandler <stderr> (NOTSET)>]
+uvicorn.error disabled: True
+planning module disabled: True

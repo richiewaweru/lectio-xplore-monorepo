@@ -779,6 +779,28 @@ async def test_explicit_empty_compatibility_skips_llm() -> None:
 
 
 @pytest.mark.asyncio
+async def test_form_planner_preserves_timeout_after_attempts_exhausted() -> None:
+    teaching, _ = teaching_and_form(
+        sections=[("orient", [("orient-b1", "orient", "prose")])]
+    )
+    legality = _make_snapshot(
+        permitted_intents=["orient"],
+        compatible_objects_by_intent={"orient": ["prose"]},
+    )
+
+    with patch(
+        "planning.whole_lesson.form_agent._call_form_model",
+        new=AsyncMock(side_effect=TimeoutError()),
+    ) as call:
+        with pytest.raises(TimeoutError):
+            await run_form_planner(
+                _packet(), teaching, legality=legality, generation_id=None
+            )
+
+    assert call.await_count == 2
+
+
+@pytest.mark.asyncio
 async def test_resume_uses_persisted_compatibility_not_live_catalogue() -> None:
     packet = _packet()
     teaching, plan = teaching_and_form(

@@ -1,0 +1,22 @@
+{
+  "generation_id": "",
+  "before_restart": {
+    "ready_keys": [],
+    "failed_keys": [],
+    "content_hashes": {},
+    "attempts": {}
+  },
+  "after_restart": {
+    "ready_keys": [],
+    "failed_keys": [],
+    "content_hashes": {},
+    "attempts": {}
+  },
+  "assertions": {
+    "ready_hashes_unchanged": false,
+    "ready_attempts_unchanged": false,
+    "failed_attempt_incremented": false,
+    "siblings_completed": false,
+    "assembly_from_db_succeeded": false
+  }
+}

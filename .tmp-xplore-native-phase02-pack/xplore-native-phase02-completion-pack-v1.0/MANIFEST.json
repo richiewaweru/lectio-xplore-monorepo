@@ -1,0 +1,84 @@
+{
+  "pack": "xplore-native-phase02-completion-pack-v1.0",
+  "version": "1.0",
+  "date": "2026-08-05",
+  "baseline_commit": "00cc3c7eea7c8d3bf5e56b4988f261e07aa247d6",
+  "browser_automation_required": false,
+  "files": [
+    {
+      "path": "00_READ_ME_FIRST.md",
+      "sha256": "77e1b2e514c93bee7170b257f4834f33d2bda965b5b67e1feeaf6f5cd69294a4",
+      "bytes": 2947
+    },
+    {
+      "path": "01_ARCHITECTURE/PHASE_02_RESOLVED_ARCHITECTURE.md",
+      "sha256": "40911819c7b402268858bb3eb1f72e9acf6e51d014d9228b89e2ec83e6fdc8e0",
+      "bytes": 5008
+    },
+    {
+      "path": "01_ARCHITECTURE/STATE_MACHINE_AND_WORKER_DESIGN.md",
+      "sha256": "1e4d75606d677b5eafd4fbdee68b56ea16767d649e6229325a2c97893c51ddf8",
+      "bytes": 3135
+    },
+    {
+      "path": "02_PATCH/PATCH_02_NATIVE_COMPLETION_AND_RESILIENCE.md",
+      "sha256": "cebd7179acd82c6c8f2e0eafdd21a642b1b71500628a38aebbbee57110d883a1",
+      "bytes": 4472
+    },
+    {
+      "path": "03_IMPLEMENTATION/CURSOR_PHASE_02_EXECUTION_PROMPT.md",
+      "sha256": "1aa6a2ccdb043da1b6e9040820d01c75adb3354c127cabf9251e966189084532",
+      "bytes": 6283
+    },
+    {
+      "path": "03_IMPLEMENTATION/IMPLEMENTATION_SEQUENCE.md",
+      "sha256": "726e13dd2ccc6377af60b70cad0636ceedae0c36632b8023922d26a4fa415303",
+      "bytes": 1796
+    },
+    {
+      "path": "04_VERIFICATION/FAILURE_INJECTION_MATRIX.md",
+      "sha256": "83097fe68a753dc546cae560e06a27b6877dc0be06eff30dfcba75249d9c7112",
+      "bytes": 1165
+    },
+    {
+      "path": "04_VERIFICATION/PHASE_02_CHECKLIST.md",
+      "sha256": "3afdb181b16a45751038066fbae1e0ed64276c3dc4ea550a683c36bf1aa830e9",
+      "bytes": 2548
+    },
+    {
+      "path": "04_VERIFICATION/PHASE_02_VERIFICATION_PROTOCOL.md",
+      "sha256": "238e71ee94646b0ae89232509e4f05aff98fed4f5c5ba23560e6e485e5012849",
+      "bytes": 3024
+    },
+    {
+      "path": "05_EVIDENCE_TEMPLATES/BLOCK_EXECUTION_REPORT.template.json",
+      "sha256": "76268112fc5e6e110bc050a7a4eb9a67bc56e62d96b2170ef8490b2769005696",
+      "bytes": 472
+    },
+    {
+      "path": "05_EVIDENCE_TEMPLATES/DB_VERIFICATION.template.json",
+      "sha256": "9476e58abd6958fc621d15e3261bd682593329f1e8ba405310eee4920680423b",
+      "bytes": 498
+    },
+    {
+      "path": "05_EVIDENCE_TEMPLATES/PDF_ASSERTIONS.template.json",
+      "sha256": "708a80c7e72d9f0043294466e19082087bfe8bcfb6fd9f459371c3f71b8c49d3",
+      "bytes": 255
+    },
+    {
+      "path": "05_EVIDENCE_TEMPLATES/PHASE_02_REPORT.template.md",
+      "sha256": "792e3877cc481aec91752e139fb0e8d60d85765e503b178d6cdba30bbbb9cd8d",
+      "bytes": 766
+    },
+    {
+      "path": "05_EVIDENCE_TEMPLATES/RUN_MANIFEST.template.md",
+      "sha256": "d667e9b4675af3868ff1ba1f878b1a3408c340d427e52a1bce6abcbee308e895",
+      "bytes": 661
+    },
+    {
+      "path": "06_HANDOFF/FINAL_ACCEPTANCE_GATE.md",
+      "sha256": "093186722c2716604c78cf2d1d75e522dc689ea465b381c5a9786983f16fb5d2",
+      "bytes": 1180
+    }
+  ]
+}

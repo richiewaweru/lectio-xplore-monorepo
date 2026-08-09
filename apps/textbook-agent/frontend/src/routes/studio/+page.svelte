@@ -25,6 +25,7 @@
 		getChunkedPlanStatus,
 		getV3GenerationBlueprint,
 		regenerateChunkedPlan,
+		retryNativeGeneration,
 		retryChunkedSection,
 		startChunkedPlan
 	} from '$lib/api/v3';
@@ -483,6 +484,24 @@
 			// Keep the current UI state if status polling fails.
 		} finally {
 			documentPollInFlight = false;
+		}
+	}
+
+	async function handleNativeRetry(): Promise<void> {
+		const generationId = v3Studio.generationId;
+		if (!generationId || recoveryBusy) return;
+		recoveryBusy = true;
+		v3Studio.error = null;
+		try {
+			await retryNativeGeneration(generationId);
+			const status = await getChunkedPlanStatus(generationId);
+			const merged = mergeChunkedStatus(status);
+			if (merged) await applyChunkedState(merged);
+			startGenerationPolling(generationId);
+		} catch (err) {
+			v3Studio.error = friendly(err);
+		} finally {
+			recoveryBusy = false;
 		}
 	}
 
@@ -1213,13 +1232,37 @@
 			/>
 	{:else if v3Studio.stage === 'generating'}
 			<section class="mx-auto max-w-3xl space-y-4 px-4 py-16 text-center">
-				<div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary" aria-hidden="true"></div>
-				<h2 class="text-xl font-semibold text-foreground">Building your lesson…</h2>
-				<p class="text-sm text-muted-foreground">
-					Teaching plan approved. Planning forms, writing each block, and assembling the printable
-					document. This can take several minutes — you can leave this page and return to
-					<code>/studio?generation_id={v3Studio.generationId}</code> or the lesson viewer.
-				</p>
+				{#if v3Studio.chunkedState?.stage === 'failed_recoverable'}
+					<h2 class="text-xl font-semibold text-foreground">Generation paused</h2>
+					<p class="text-sm text-muted-foreground">
+						A recoverable generation stage failed. Retry resumes only the failed stage from persisted work.
+					</p>
+					<button
+						type="button"
+						class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
+						disabled={recoveryBusy}
+						onclick={handleNativeRetry}
+					>
+						{recoveryBusy
+							? 'Retrying…'
+							: v3Studio.chunkedState.next_action === 'retry_teaching'
+								? 'Retry teaching plan'
+								: v3Studio.chunkedState.next_action === 'retry_visuals'
+									? 'Retry visuals'
+									: 'Retry lesson items'}
+					</button>
+				{:else if v3Studio.chunkedState?.stage === 'failed_terminal'}
+					<h2 class="text-xl font-semibold text-foreground">Generation failed</h2>
+					<p class="text-sm text-muted-foreground">This failure cannot be retried from the current checkpoint.</p>
+				{:else}
+					<div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary" aria-hidden="true"></div>
+					<h2 class="text-xl font-semibold text-foreground">Building your lesson…</h2>
+					<p class="text-sm text-muted-foreground">
+						Planning the current stage and assembling the printable document. This can take several
+						minutes — you can leave this page and return to
+						<code>/studio?generation_id={v3Studio.generationId}</code> or the lesson viewer.
+					</p>
+				{/if}
 			</section>
 		{:else if v3Studio.stage === 'edit'}
 		{#if v3Studio.activePack}

@@ -1,0 +1,43 @@
+
+  VITE v7.3.6  ready in 35924 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+
+[404] GET /favicon.ico
+
+[404] GET /favicon.ico
+
+[404] GET /favicon.ico
+
+[404] GET /favicon.ico
+8:31:07 AM [vite] (client) hmr update /src/app.css, /src/routes/lessons/+page.svelte, /src/routes/studio/+page.svelte, /src/lib/components/studio/V3BookletIssuesPanel.svelte, /src/lib/components/studio/V3InputSurface.svelte
+8:31:07 AM [vite] (ssr) page reload src/lib/api/v3.ts
+8:31:07 AM [vite] (client) hmr update /src/app.css, /src/routes/lessons/+page.svelte, /src/routes/studio/+page.svelte, /src/lib/components/studio/V3BookletIssuesPanel.svelte, /src/lib/components/studio/V3InputSurface.svelte
+8:31:07 AM [vite] (ssr) page reload src/lib/api/v3.ts
+8:32:57 AM [vite-plugin-svelte] src/routes/units/[id]/+page.svelte:557:26 Unused CSS selector "select"
+https://svelte.dev/e/css_unused_selector
+8:32:57 AM [vite-plugin-svelte] src/routes/units/[id]/+page.svelte:619:18 Unused CSS selector "select"
+https://svelte.dev/e/css_unused_selector
+
+[404] GET /favicon.ico
+8:35:45 AM [vite] (client) hmr update /src/app.css, /src/routes/lessons/+page.svelte, /src/routes/studio/+page.svelte, /src/lib/components/studio/V3BookletIssuesPanel.svelte, /src/lib/components/studio/V3InputSurface.svelte
+8:35:45 AM [vite] (ssr) page reload src/lib/api/v3.ts
+8:35:45 AM [vite] (client) hmr update /src/app.css, /src/routes/lessons/+page.svelte, /src/routes/studio/+page.svelte, /src/lib/components/studio/V3BookletIssuesPanel.svelte, /src/lib/components/studio/V3InputSurface.svelte
+8:35:45 AM [vite] (ssr) page reload src/lib/api/v3.ts
+8:40:48 AM [vite] (client) hmr update /src/app.css, /src/routes/lessons/+page.svelte, /src/routes/studio/+page.svelte, /src/lib/components/studio/V3BookletIssuesPanel.svelte, /src/lib/components/studio/V3InputSurface.svelte
+8:40:48 AM [vite] (ssr) page reload src/lib/api/v3.ts
+8:40:48 AM [vite] (client) hmr update /src/app.css, /src/routes/lessons/+page.svelte, /src/routes/studio/+page.svelte, /src/lib/components/studio/V3BookletIssuesPanel.svelte, /src/lib/components/studio/V3InputSurface.svelte
+8:40:48 AM [vite] (ssr) page reload src/lib/api/v3.ts
+
+[404] GET /favicon.ico
+
+[404] GET /favicon.ico
+
+[404] GET /favicon.ico
+
+[404] GET /favicon.ico
+8:45:53 AM [vite] (client) hmr update /src/app.css, /src/routes/lessons/+page.svelte, /src/routes/studio/+page.svelte, /src/lib/components/studio/V3BookletIssuesPanel.svelte, /src/lib/components/studio/V3InputSurface.svelte
+8:45:53 AM [vite] (ssr) page reload src/lib/api/v3.ts
+8:45:53 AM [vite] (client) hmr update /src/app.css, /src/routes/lessons/+page.svelte, /src/routes/studio/+page.svelte, /src/lib/components/studio/V3BookletIssuesPanel.svelte, /src/lib/components/studio/V3InputSurface.svelte
+8:45:53 AM [vite] (ssr) page reload src/lib/api/v3.ts

@@ -1,0 +1,8 @@
+-[ RECORD 1 ]----+----------------------------------------------------------------------------------------
+current_database | textbook_agent
+current_user     | textbook
+inet_server_addr | 127.0.0.1
+inet_server_port | 5432
+pg_backend_pid   | 27326
+version          | PostgreSQL 16.9 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+
