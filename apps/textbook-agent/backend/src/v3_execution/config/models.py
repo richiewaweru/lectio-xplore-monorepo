@@ -71,20 +71,20 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     V3_NARROW: "medium",
     V3_PROPOSE_INTENT: "medium",
     V3_STAGE1_PLANNER: "high",
-    V3_STAGE2_EXPANDER: "low",
-    V3_ITEM_EXECUTOR: "medium",
-    V3_BLUEPRINT_ADJUST: "medium",
-    V3_SECTION_WRITER: "low",
-    V3_QUESTION_WRITER: "low",
+    V3_STAGE2_EXPANDER: False,
+    V3_ITEM_EXECUTOR: False,
+    V3_BLUEPRINT_ADJUST: False,
+    V3_SECTION_WRITER: False,
+    V3_QUESTION_WRITER: False,
     V3_ANSWER_KEY_GENERATOR: False,
-    V3_ANSWER_KEY_GENERATOR_HEAVY: "low",
+    V3_ANSWER_KEY_GENERATOR_HEAVY: False,
     V3_VISUAL_QC: False,
     V3_CARD_QC: False,
     V3_KNOWLEDGE_TYPE_CLASSIFIER: False,
     V3_BLOCK_WRITER_FAST: False,
-    V3_BLOCK_WRITER_STANDARD: "low",
+    V3_BLOCK_WRITER_STANDARD: False,
     V2_PATH_PLANNER: "high",
-    V2_MERGE_CRITIC: "low",
+    V2_MERGE_CRITIC: False,
     V2_COMPONENT_SELECTOR: "medium",
     # Constrained-output nodes run without provider reasoning. On DeepSeek,
     # thinking mode returns reasoning-only assistant messages with empty
@@ -93,10 +93,10 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     # from the typed output schema plus their own outer repair attempt, not from
     # provider reasoning.
     V2_PATH_STRUCTURAL_PLANNER: False,
-    V2_PATH_CHAT_EDITOR: "medium",
+    V2_PATH_CHAT_EDITOR: False,
     V2_LESSON_APPROACH_PLANNER: "high",
     V2_FORM_PLANNER: False,
-    V3_CONSTRUCTOR: "medium",
+    V3_CONSTRUCTOR: False,
     V3_VISUAL_TOPOLOGY_PLANNER: False,
 }
 
@@ -218,7 +218,10 @@ def get_v3_model_settings(
 ) -> dict | None:
     settings: dict = {}
     spec = get_v3_spec(node_name)
-    reasoning = V3_NODE_REASONING.get(node_name, False)
+    reasoning = _reasoning_from_env(
+        node_name,
+        V3_NODE_REASONING.get(node_name, False),
+    )
 
     if (
         spec.family == ModelFamily.OPENAI_COMPATIBLE
@@ -234,6 +237,24 @@ def get_v3_model_settings(
     settings.setdefault("max_tokens", app_settings.v3_max_tokens_safety)
 
     return settings or None
+
+
+def _reasoning_from_env(
+    node_name: str,
+    default: V3NodeReasoningPolicy,
+) -> V3NodeReasoningPolicy:
+    raw = os.getenv(f"{node_name.upper()}_REASONING")
+    if raw is None or not raw.strip():
+        return default
+    value = raw.strip().lower()
+    if value in {"false", "off", "none", "0"}:
+        return False
+    if value in {"low", "medium", "high"}:
+        return value  # type: ignore[return-value]
+    raise ValueError(
+        f"Invalid reasoning policy '{raw}' for {node_name}; "
+        "expected false, low, medium, or high"
+    )
 
 
 def _merge_model_settings(defaults: dict, overrides: dict) -> dict:

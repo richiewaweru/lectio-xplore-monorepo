@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from v3_execution.runtime.lanes import LaneOutcome, resolved_lane_limits, run_lane
+from v3_execution.config.concurrency import make_semaphores
 
 
 @pytest.mark.asyncio
@@ -42,6 +43,7 @@ async def test_run_lane_prose_then_questions_in_order() -> None:
 
     assert order == ["prose", "questions"]
     assert outcome.failed_step is None
+    assert outcome.failure_kind is None
     assert outcome.part_id == "orient"
 
 
@@ -115,3 +117,9 @@ def test_stage2_parallel_false_forces_lane_concurrency_one(monkeypatch) -> None:
     monkeypatch.setenv("V3_CONCURRENCY_LANE_MAX", "6")
     limits = resolved_lane_limits()
     assert limits["lane"] == 1
+
+
+def test_answer_key_concurrency_is_configurable(monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.setenv("V3_CONCURRENCY_ANSWER_KEY_MAX", "3")
+    semaphores = make_semaphores()
+    assert semaphores["answer_key_generator"]._value == 3

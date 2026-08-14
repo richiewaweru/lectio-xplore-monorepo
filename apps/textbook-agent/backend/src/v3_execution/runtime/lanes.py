@@ -3,15 +3,20 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
+
+from pydantic import ValidationError
 
 from v3_blueprint.planning.persistence import insert_step, step_exists
 from v3_execution.config.concurrency import lane_budget_seconds, lane_concurrency_max
 
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
+logger = logging.getLogger(__name__)
+FailureKind = Literal["timeout", "validation", "provider", "persistence", "network", "unknown"]
 
 
 @dataclass
@@ -20,6 +25,7 @@ class LaneOutcome:
     component_blocks: list[Any] = field(default_factory=list)
     question_blocks: list[Any] = field(default_factory=list)
     failed_step: str | None = None
+    failure_kind: FailureKind | None = None
     warnings: list[str] = field(default_factory=list)
 
 
@@ -55,7 +61,12 @@ async def run_lane(
                 generation_id, part_id=part_id, step=step, variant_id=variant_id
             )
         except Exception:  # noqa: BLE001
-            return False
+            logger.warning(
+                "lane checkpoint lookup failed",
+                extra={"generation_id": generation_id, "part_id": part_id, "step": step},
+                exc_info=True,
+            )
+            raise
 
     async def _save(step: str, blocks: list[Any]) -> None:
         try:
@@ -73,8 +84,26 @@ async def run_lane(
                 },
             )
         except Exception:  # noqa: BLE001
-            # Unique conflict on resume, or missing generation in unit tests.
+            logger.warning(
+                "lane checkpoint save failed",
+                extra={"generation_id": generation_id, "part_id": part_id, "step": step},
+                exc_info=True,
+            )
+            raise
+
+    def _failure_kind(exc: BaseException) -> FailureKind:
+        if isinstance(exc, (asyncio.TimeoutError, TimeoutError)):
+            return "timeout"
+        if isinstance(exc, ValidationError):
+            return "validation"
+        try:
+            import httpx
+
+            if isinstance(exc, (httpx.TimeoutException, httpx.ConnectError, httpx.ReadError, httpx.WriteError, httpx.RemoteProtocolError)):
+                return "network"
+        except ImportError:
             pass
+        return "provider" if "model" in type(exc).__name__.lower() else "unknown"
 
     try:
         if not await _has_step("prose"):
@@ -108,11 +137,13 @@ async def run_lane(
                     )
     except TimeoutError:
         outcome.failed_step = "budget"
+        outcome.failure_kind = "timeout"
         outcome.warnings.append(
             f"lane:{part_id}:budget exhausted during {current_step}"
         )
     except Exception as exc:  # noqa: BLE001
         outcome.failed_step = current_step
+        outcome.failure_kind = _failure_kind(exc)
         outcome.warnings.append(
             f"lane:{part_id}:{current_step}: {type(exc).__name__}: {exc}"
         )
@@ -144,6 +175,7 @@ async def run_all_lanes(
                 return LaneOutcome(
                     part_id="unknown",
                     failed_step="budget",
+                    failure_kind="timeout",
                     warnings=[f"lane:budget exhausted ({budget}s)"],
                 )
 
@@ -160,6 +192,7 @@ async def run_all_lanes(
                 LaneOutcome(
                     part_id="unknown",
                     failed_step="prose",
+                    failure_kind="unknown",
                     warnings=[f"lane: {type(result).__name__}: {result}"],
                 )
             )

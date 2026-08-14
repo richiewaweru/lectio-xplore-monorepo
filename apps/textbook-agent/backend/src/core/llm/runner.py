@@ -111,6 +111,24 @@ def _retry_delay_seconds(
             )
         jitter = random.uniform(0.0, min(base_delay * 0.25, 0.5))
         return base_delay + jitter
+    try:
+        import httpx
+
+        network_error = isinstance(
+            exc,
+            (
+                httpx.TimeoutException,
+                httpx.ConnectError,
+                httpx.ReadError,
+                httpx.WriteError,
+                httpx.RemoteProtocolError,
+            ),
+        )
+    except ImportError:
+        network_error = False
+    if network_error:
+        base_delay = retry_policy.base_delay_seconds * (2 ** max(attempt - 1, 0))
+        return base_delay + random.uniform(0.0, min(base_delay * 0.25, 0.5))
     return retry_policy.base_delay_seconds * attempt
 
 
@@ -201,7 +219,7 @@ def _is_empty_output(result: Any) -> bool:
 
 
 def _is_retryable(exc: BaseException) -> bool:
-    if isinstance(exc, (UserError, ValidationError)):
+    if isinstance(exc, UserError):
         return False
     if isinstance(exc, ModelHTTPError):
         return exc.status_code in {408, 429} or exc.status_code >= 500
@@ -220,6 +238,8 @@ def _is_retryable(exc: BaseException) -> bool:
                 httpx.TimeoutException,
                 httpx.ConnectError,
                 httpx.ReadError,
+                httpx.WriteError,
+                httpx.RemoteProtocolError,
             ),
         )
     except ImportError:
@@ -241,6 +261,7 @@ async def run_llm(
     model_settings: dict | None = None,
     node: str | None = None,
     attempt_start: int = 1,
+    repair_attempts: int = 0,
 ) -> Any:
     retry_policy = retry_policy or RetryPolicy()
     slot = slot or ModelSlot.FAST
@@ -276,8 +297,11 @@ async def run_llm(
     if attempt_start < 1:
         raise ValueError("attempt_start must be at least 1")
 
+    current_prompt = user_prompt
+    remaining_repairs = max(0, repair_attempts)
+    repair_in_progress = False
     local_attempt = 0
-    while local_attempt < retry_policy.max_attempts:
+    while local_attempt < retry_policy.max_attempts or remaining_repairs > 0:
         local_attempt += 1
         event_attempt = attempt_start + local_attempt - 1
         started_at = time.perf_counter()
@@ -301,7 +325,7 @@ async def run_llm(
         try:
             result = await _run_agent_with_limits(
                 agent=agent,
-                user_prompt=user_prompt,
+                user_prompt=current_prompt,
                 retry_policy=retry_policy,
                 model_settings=effective_settings,
             )
@@ -351,6 +375,18 @@ async def run_llm(
                     cost_usd=cost_usd,
                 ),
             )
+            if repair_in_progress:
+                _publish_llm_event(
+                    trace_id,
+                    {
+                        "type": "repair_succeeded",
+                        "trace_id": trace_id,
+                        "generation_id": generation_id,
+                        "node": event_node,
+                        "attempt": event_attempt,
+                        "section_id": section_id,
+                    },
+                )
             return result
         except ValidationError as exc:
             latency_ms = (time.perf_counter() - started_at) * 1000.0
@@ -368,11 +404,34 @@ async def run_llm(
                     attempt=event_attempt,
                     section_id=section_id,
                     latency_ms=latency_ms,
-                    retryable=False,
+                    retryable=remaining_repairs > 0,
                     error=str(exc),
                     error_class=type(exc).__name__,
                 ),
             )
+            if remaining_repairs > 0:
+                remaining_repairs -= 1
+                repair_in_progress = True
+                current_prompt = (
+                    f"{user_prompt}\n\n"
+                    "Your previous response failed schema validation with these errors:\n"
+                    f"{exc}\n\n"
+                    "Return a corrected response that satisfies the schema exactly. "
+                    "Output only the JSON object, with no preamble or markdown fences."
+                )
+                _publish_llm_event(
+                    trace_id,
+                    {
+                        "type": "repair_attempted",
+                        "trace_id": trace_id,
+                        "generation_id": generation_id,
+                        "node": event_node,
+                        "attempt": event_attempt,
+                        "section_id": section_id,
+                    },
+                )
+                local_attempt -= 1
+                continue
             raise
         except Exception as exc:
             latency_ms = (time.perf_counter() - started_at) * 1000.0
@@ -399,6 +458,13 @@ async def run_llm(
             )
             if not can_retry:
                 raise
+            if isinstance(exc, TruncatedCompletionError):
+                effective_settings = dict(effective_settings or {})
+                current_max_tokens = int(effective_settings.get("max_tokens", 32000))
+                effective_settings["max_tokens"] = min(
+                    max(current_max_tokens + 1, int(current_max_tokens * 1.5)),
+                    32000,
+                )
             await asyncio.sleep(
                 _retry_delay_seconds(
                     exc=exc,

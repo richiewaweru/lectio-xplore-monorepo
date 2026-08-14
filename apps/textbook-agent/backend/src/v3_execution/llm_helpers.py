@@ -6,10 +6,18 @@ from typing import Any
 from pydantic_ai import Agent, PromptedOutput
 
 from core.llm import ModelFamily, ModelSpec
-from core.llm.runner import run_llm
+from core.llm.runner import RetryPolicy, run_llm
+from v3_execution.config.retries import V3_MAX_RETRIES
+from v3_execution.config.timeouts import V3_TIMEOUTS
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 
 _CALLER = "v3_execution"
+
+_NODE_TIMEOUT_KEYS = {
+    "v3_section_writer": "section_writer",
+    "v3_question_writer": "question_writer",
+    "v3_answer_key_generator": "answer_key_generator",
+}
 
 # Disables pydantic-ai's in-library structured-output retry.
 #
@@ -84,6 +92,13 @@ async def run_json_agent(
         section_id=None,
         node=node_name,
         model_settings=effective_model_settings,
+        retry_policy=RetryPolicy(
+            max_attempts=1 + V3_MAX_RETRIES.get(node_name.removeprefix("v3_"), 1),
+            call_timeout_seconds=float(
+                V3_TIMEOUTS.get(_NODE_TIMEOUT_KEYS.get(node_name, "generation_total"), 120)
+            ),
+        ),
+        repair_attempts=1,
     )
     raw = result.output
     if hasattr(raw, "model_dump"):

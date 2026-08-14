@@ -128,6 +128,45 @@ def test_constrained_planner_nodes_disable_provider_reasoning() -> None:
     assert V3_NODE_REASONING[V2_PATH_STRUCTURAL_PLANNER] is False
 
 
+def test_constrained_output_nodes_disable_provider_reasoning() -> None:
+    for node in (
+        "v3_section_writer",
+        "v3_question_writer",
+        "v3_item_executor",
+        "v3_constructor",
+        "v3_block_writer_standard",
+        "v3_answer_key_generator_heavy",
+        "v3_blueprint_adjust",
+        "v2_merge_critic",
+        "v2_path_chat_editor",
+        "v3_stage2_expander",
+    ):
+        assert V3_NODE_REASONING[node] is False
+
+
+def test_reasoning_policy_can_be_overridden_per_node(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("V3_SECTION_WRITER_REASONING", "medium")
+    monkeypatch.setenv("V3_STANDARD_PROVIDER", "openai_compatible")
+    monkeypatch.setenv("V3_STANDARD_MODEL_NAME", "deepseek-v4-pro")
+    monkeypatch.setenv("V3_STANDARD_BASE_URL", "https://api.deepseek.com")
+    monkeypatch.setenv("V3_STANDARD_API_KEY_ENV", "DEEPSEEK_API_KEY")
+
+    settings = get_v3_model_settings("v3_section_writer")
+
+    assert settings is not None
+    assert settings["openai_reasoning_effort"] == "medium"
+
+
+def test_invalid_reasoning_policy_is_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("V3_SECTION_WRITER_REASONING", "sometimes")
+    with pytest.raises(ValueError, match="Invalid reasoning policy"):
+        get_v3_model_settings("v3_section_writer")
+
+
 def test_constrained_planner_nodes_send_no_thinking_payload(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

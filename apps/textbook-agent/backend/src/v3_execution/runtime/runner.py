@@ -17,7 +17,10 @@ from v3_execution.booklet_status import (
 )
 from v3_execution.compile_orders import compile_execution_bundle
 from v3_execution.config import make_semaphores
-from v3_execution.config.concurrency import resolved_concurrency_limits
+from v3_execution.config.concurrency import (
+    log_lane_budget_diagnostic,
+    resolved_concurrency_limits,
+)
 from v3_execution.config.timeouts import V3_TIMEOUTS
 from v3_execution.executors.answer_key_generator import execute_answer_key
 from v3_execution.executors.question_writer import execute_questions
@@ -300,6 +303,7 @@ async def run_generation(
         sem = make_semaphores()
         concurrency_limits = resolved_concurrency_limits()
         lane_limits = resolved_lane_limits()
+        log_lane_budget_diagnostic()
         print(
             f"\n[V3 GENERATION START] generation_id={generation_id}"
             f" concurrency_lane={lane_limits['lane']}"

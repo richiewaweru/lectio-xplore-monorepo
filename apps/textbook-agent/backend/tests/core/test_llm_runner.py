@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from pydantic import ValidationError
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 
 import core.events as core_events
@@ -64,6 +65,20 @@ class _TimeoutThenSuccessAgent:
         self.calls += 1
         if self.calls == 1:
             raise TimeoutError("provider timed out")
+        return SimpleNamespace(output="ok")
+
+
+class _ValidationThenSuccessAgent:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def run(self, **kwargs):  # type: ignore[no-untyped-def]
+        self.calls += 1
+        if self.calls == 1:
+            raise ValidationError.from_exception_data(
+                "Output",
+                [{"type": "missing", "loc": ("answer",), "input": {}}],
+            )
         return SimpleNamespace(output="ok")
 
 
@@ -145,6 +160,23 @@ async def test_run_llm_raises_typed_error_for_length_truncation() -> None:
             node="v3_stage1_planner",
             model_settings={"max_tokens": 120000},
         )
+
+
+@pytest.mark.asyncio
+async def test_validation_error_uses_repair_prompt_when_enabled() -> None:
+    agent = _ValidationThenSuccessAgent()
+
+    result = await run_llm(
+        caller="writer",
+        trace_id="trace-repair",
+        agent=agent,
+        user_prompt="return json",
+        retry_policy=RetryPolicy(max_attempts=1),
+        repair_attempts=1,
+    )
+
+    assert result.output == "ok"
+    assert agent.calls == 2
 
 
 @pytest.mark.asyncio
