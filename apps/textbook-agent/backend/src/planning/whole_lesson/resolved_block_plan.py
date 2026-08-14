@@ -37,9 +37,9 @@ class ResolvedBlockPlan(BaseModel):
             evidence=self.evidence or "Resolved block.",
             brief=self.brief,
             placement=self.placement,
-            source_question_ids=(
-                list(self.source_question_ids) if self.object == "questions" else []
-            ),
+            # Never mask teaching-owned item IDs. PlannedBlock validation rejects
+            # an incompatible form decision instead of silently dropping ownership.
+            source_question_ids=list(self.source_question_ids),
         )
 
 

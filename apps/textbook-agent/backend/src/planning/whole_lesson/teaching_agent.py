@@ -11,6 +11,7 @@ from pydantic_ai import Agent
 
 from core.config import settings
 from core.llm.runner import RetryPolicy, run_llm
+from planning.approved_items import approved_item_kind
 from planning.catalogue_projections import (
     TeachingGuidanceProjection,
     project_teaching_guidance,
@@ -24,10 +25,15 @@ from planning.whole_lesson.legality import (
 )
 from planning.whole_lesson.packet import ImmutableLessonPacket
 from planning.whole_lesson.prompt_render import render_teaching_prompt
+from planning.whole_lesson.teaching_errors import (
+    TeachingPlanOutputInvalidError,
+    is_recognized_teaching_output_error,
+)
 from planning.whole_lesson.teaching_plan import TeachingPlan
 from planning.whole_lesson.validation import (
     ValidationReport,
     advisory_teaching_qc,
+    allowed_teaching_evidence_refs,
     validate_teaching_plan,
 )
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
@@ -61,12 +67,47 @@ class TeachingPlanResult:
     legality: LessonLegalitySnapshot
 
 
+def _assessment_source_policy(
+    packet: ImmutableLessonPacket,
+    snapshot: LessonLegalitySnapshot,
+) -> dict[str, Any]:
+    """Project validator-owned assessment facts into both planner attempts."""
+    assessment_intents = sorted(
+        intent_id
+        for intent_id, objects in snapshot.compatible_objects_by_intent.items()
+        if {"questions", "choices"} & set(objects)
+    )
+    approved_sources = [
+        {
+            "approved_item_id": item.id,
+            "kind": approved_item_kind(item),
+        }
+        for item in packet.approved_items
+    ]
+    return {
+        "eligible_intents": assessment_intents,
+        "approved_sources": approved_sources,
+        "rules": {
+            "selection_is_optional": True,
+            "multiple_choice_ids_per_block": "0_or_1",
+            "source_only_on_eligible_intent": True,
+            "reuse_across_blocks": "forbidden",
+            "item_kind_is_fixed_upstream": True,
+        },
+        "forbidden_terminology": [
+            entry.statement for entry in packet.scope.must_not_introduce
+        ],
+        "allowed_evidence_refs": sorted(allowed_teaching_evidence_refs(packet)),
+    }
+
+
 async def _call_teaching_model(
     *,
     prompt: str,
     user_payload: dict[str, Any],
     trace_id: str,
     generation_id: str | None,
+    attempt_start: int = 1,
 ) -> tuple[TeachingPlan, str]:
     model = get_v3_model(V2_LESSON_APPROACH_PLANNER)
     spec = get_v3_spec(V2_LESSON_APPROACH_PLANNER)
@@ -93,6 +134,7 @@ async def _call_teaching_model(
             max_attempts=1,
             call_timeout_seconds=float(settings.page_lesson_plan_timeout_seconds),
         ),
+        attempt_start=attempt_start,
     )
     raw = result.output
     raw_text = (
@@ -127,11 +169,13 @@ async def run_lesson_approach_planner(
         excluded_intents={key: "excluded" for key in excluded},
     )
     slot_intent_policy = project_slot_intent_policy(snapshot)
+    assessment_source_policy = _assessment_source_policy(packet, snapshot)
     prompt = render_teaching_prompt(packet, teaching_guidance, resource_id=packet.resource_id)
     user_payload = {
         "fixed_input": packet.planner_payload(),
         "teaching_guidance": teaching_guidance.to_dict(),
         "slot_intent_policy": slot_intent_policy["slot_intent_policy"],
+        "assessment_source_policy": assessment_source_policy,
         "legality_catalogue_hash": slot_intent_policy["catalogue_hash"],
     }
     attempts: list[TeachingPlanAttempt] = []
@@ -141,9 +185,12 @@ async def run_lesson_approach_planner(
     raw_response = ""
     previous_output: object | None = None
     repair_errors: list[str] = []
+    last_exception: Exception | None = None
+    output_invalid_details: list[str] = []
     tid = trace_id or str(uuid.uuid4())
 
     for attempt in (1, 2):
+        last_exception = None
         try:
             call_payload = user_payload
             if attempt == 2 and repair_errors:
@@ -154,11 +201,16 @@ async def run_lesson_approach_planner(
                             "Return the complete corrected TeachingPlan JSON. "
                             "Change only fields required to satisfy these errors. "
                             "Use only intents listed under slot_intent_policy for each slot."
+                            " For a multiple-choice assessment block, select zero or one "
+                            "approved item ID; never group IDs or reuse an ID. Attach it "
+                            "only to an assessment_source_policy eligible intent. Remove "
+                            "forbidden terminology and use only allowed_evidence_refs."
                         ),
                         "previous_output": previous_output,
                         "validation_errors": repair_errors,
                         "slot_intent_policy": slot_intent_policy["slot_intent_policy"],
                         "legality_catalogue_hash": slot_intent_policy["catalogue_hash"],
+                        "assessment_source_policy": assessment_source_policy,
                     },
                 }
             plan, raw_response = await _call_teaching_model(
@@ -166,6 +218,7 @@ async def run_lesson_approach_planner(
                 user_payload=call_payload,
                 trace_id=f"{tid}:attempt{attempt}",
                 generation_id=generation_id,
+                attempt_start=attempt,
             )
             previous_output = plan.model_dump(mode="json")
             validation = validate_teaching_plan(
@@ -174,6 +227,9 @@ async def run_lesson_approach_planner(
                 permitted_intents=permitted,
                 excluded_intents=excluded,
                 typical_by_slot=typical_by_slot,
+                assessment_intents=set(
+                    assessment_source_policy["eligible_intents"]
+                ),
             )
             qc = [finding.to_dict() for finding in advisory_teaching_qc(plan)]
             attempts.append(
@@ -204,7 +260,9 @@ async def run_lesson_approach_planner(
             repair_errors = [
                 f"{issue.code}: {issue.message}" for issue in validation.issues
             ]
+            output_invalid_details = repair_errors
         except Exception as exc:
+            last_exception = exc
             last_error = str(exc)
             attempts.append(
                 TeachingPlanAttempt(
@@ -221,7 +279,16 @@ async def run_lesson_approach_planner(
                 # Provider/backoff retry — do not invent contract repair context.
                 repair_errors = []
                 previous_output = previous_output
+            elif is_recognized_teaching_output_error(exc):
+                repair_errors = structured_output_errors(exc)
+                output_invalid_details = repair_errors
             else:
+                # Only teaching-output noncompliance owns the recoverable contract.
+                # Generic provider behavior and programming/input failures remain terminal.
+                from pydantic_ai.exceptions import UnexpectedModelBehavior
+
+                if isinstance(exc, UnexpectedModelBehavior):
+                    raise
                 repair_errors = structured_output_errors(exc)
                 if previous_output is None and raw_response:
                     try:
@@ -229,6 +296,22 @@ async def run_lesson_approach_planner(
                     except Exception:  # noqa: BLE001
                         previous_output = raw_response
             continue
+
+    if last_exception is not None and is_transport_error(last_exception):
+        last_exception.add_note(
+            "lesson approach planner exhausted "
+            f"{len(attempts)} provider attempts"
+        )
+        raise last_exception
+
+    if last_error == "validation_failed" or (
+        last_exception is not None
+        and is_recognized_teaching_output_error(last_exception)
+    ):
+        raise TeachingPlanOutputInvalidError(
+            attempt_count=len(attempts),
+            details=output_invalid_details,
+        ) from last_exception
 
     raise RuntimeError(
         f"lesson approach planner failed after {len(attempts)} attempts: {last_error}"

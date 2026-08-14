@@ -105,9 +105,9 @@ describe('root route session resume', () => {
 		});
 
 		await waitFor(() =>
-			expect(goto).toHaveBeenCalledWith('/lessons', { replaceState: true })
+			expect(goto).toHaveBeenCalledWith('/units', { replaceState: true })
 		);
-		expect(screen.getByRole('link', { name: 'Lectio' }).getAttribute('href')).toBe('/lessons');
+		expect(screen.getByRole('link', { name: 'Lectio' }).getAttribute('href')).toBe('/units');
 		expect(screen.getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe('/settings');
 		expect(screen.queryByRole('link', { name: 'Dashboard' })).toBeNull();
 		expect(screen.queryByRole('link', { name: 'Builder' })).toBeNull();

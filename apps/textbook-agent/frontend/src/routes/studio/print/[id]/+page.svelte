@@ -7,7 +7,7 @@
 	import { page } from '$app/state';
 	import { providePrintMode } from 'lectio';
 	import '$lib/styles/print.css';
-	import { buildApiUrl } from '$lib/api/client';
+	import { apiFetch, buildApiUrl } from '$lib/api/client';
 	import V3LectioPrintDocumentView from '$lib/components/studio/V3LectioPrintDocumentView.svelte';
 	import LectioPageDocumentView from '$lib/components/studio/LectioPageDocumentView.svelte';
 	import {
@@ -19,13 +19,43 @@
 	import { extractLectioDocumentV2 } from '$lib/studio/document-version';
 	import { forceEagerImages, waitForPrintImages, type PrintImageWaitResult } from '$lib/studio/print-readiness';
 	import type { GenerationDocument } from '$lib/types';
+	import type { V3GenerationDetail } from '$lib/types/v3';
 	import type { LectioDocument } from '@lectio/page/contract';
 
 	const generationId = $derived(page.params.id);
 	const token = $derived(page.url.searchParams.get('token'));
+	const edition = $derived(
+		page.url.searchParams.get('edition') === 'student' ? 'student' : 'teacher'
+	);
 	const debugPrint = $derived(page.url.searchParams.get('debugPrint') === 'true');
 	const includePackKey = $derived(page.url.searchParams.get('includePackKey') === 'true');
 	const showPrintDiagnostics = $derived(debugPrint);
+
+	function hasRetryableVisualQuality(value: unknown): boolean {
+		if (Array.isArray(value)) return value.length > 0;
+		if (!value || typeof value !== 'object') return false;
+		const summary = value as Record<string, unknown>;
+		return (
+			summary.retryable === true ||
+			(typeof summary.flagged_count === 'number' && summary.flagged_count > 0) ||
+			(Array.isArray(summary.flagged) && summary.flagged.length > 0) ||
+			(Array.isArray(summary.failed_request_ids) && summary.failed_request_ids.length > 0)
+		);
+	}
+
+	async function fetchNativeGenerationDetail(
+		id: string,
+		headers: Record<string, string>
+	): Promise<V3GenerationDetail> {
+		const detailRes = await apiFetch(
+			`/api/v1/v3/generations/${encodeURIComponent(id)}`,
+			{ headers }
+		);
+		if (!detailRes.ok) {
+			throw new Error(`Generation detail unavailable for print (${detailRes.status}).`);
+		}
+		return (await detailRes.json()) as V3GenerationDetail;
+	}
 
 	providePrintMode(() => page.url.searchParams.get('print') === 'true');
 
@@ -61,14 +91,13 @@
 
 			fetchStatus = 'fetching';
 
-			const endpoint = buildApiUrl(
-				`/api/v1/v3/generations/${encodeURIComponent(generationId)}/document`
-			);
-
 			const headers: Record<string, string> = {};
 			if (token) headers.Authorization = `Bearer ${token}`;
 
-			const res = await fetch(endpoint, { headers });
+			const res = await apiFetch(
+				`/api/v1/v3/generations/${encodeURIComponent(generationId)}/document`,
+				{ headers }
+			);
 			fetchStatus = `response-${res.status}`;
 
 			if (!res.ok) {
@@ -81,12 +110,33 @@
 			const data = (await res.json()) as V3PackDocument;
 			const v2 = extractLectioDocumentV2(data);
 			if (v2) {
+				// A native document can exist while its required visual work is still
+				// pending or flagged. Do not present that partial state as printable.
+				const detail = await fetchNativeGenerationDetail(generationId, headers);
+				const native = detail.native_whole_lesson === true || detail.document_contract_version === 2;
+				const nativeVisualsReady = detail.status === 'ready' || detail.status === 'completed';
+				if (native && (!nativeVisualsReady || hasRetryableVisualQuality(detail.visual_quality))) {
+					loadError = 'Native visuals are not ready for print. Retry visuals from Studio before exporting.';
+					dataReady = true;
+					captureReady = true;
+					return;
+				}
 				pageDocumentV2 = v2;
 				lectioDocument = null;
 				sectionCount = v2.sections.length;
 				templateId = 'lectio-page-v2';
 				subject = typeof v2.subject === 'string' ? v2.subject.trim() : v2.title;
 			} else {
+				const root = data as unknown as Record<string, unknown>;
+				const nested = root.lectio_document as Record<string, unknown> | undefined;
+				const nativeEnvelope =
+					root.document_version === 2 || nested?.document_version === 2;
+				if (nativeEnvelope) {
+					loadError = 'Native document contract error: LectioDocumentV2 is missing or malformed.';
+					dataReady = true;
+					captureReady = true;
+					return;
+				}
 				pageDocumentV2 = null;
 				const list = Array.isArray(data.sections) ? data.sections : [];
 				sectionCount = list.length;
@@ -187,7 +237,7 @@
 		{/if}
 
 		{#if pageDocumentV2}
-			<LectioPageDocumentView document={pageDocumentV2} edition="teacher" />
+			<LectioPageDocumentView document={pageDocumentV2} {edition} />
 		{:else if lectioDocument}
 			<V3LectioPrintDocumentView document={lectioDocument} />
 		{:else}

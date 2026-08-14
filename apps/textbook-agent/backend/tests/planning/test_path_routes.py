@@ -550,7 +550,7 @@ async def test_new_paths_expose_empty_open_assumptions(db_session_factory) -> No
             owner_id=TEST_USER.id,
             request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
         )
-        version = await persist_path_plan(session, unit=unit, plan=plan)
+        await persist_path_plan(session, unit=unit, plan=plan)
         unit_id = unit.id
         await session.commit()
 

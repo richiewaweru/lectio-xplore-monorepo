@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from pydantic_ai.exceptions import ModelAPIError
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
@@ -161,3 +161,35 @@ async def test_section_parallel_writes_six_sections() -> None:
         )
     assert len(outcomes) == 6
     assert all(o["status"] == "ready" for o in outcomes)
+
+
+@pytest.mark.asyncio
+async def test_exhausted_provider_connection_remains_recoverable() -> None:
+    teaching, plan = _plans(1)
+    gid = await _seed(teaching, plan)
+
+    async def _connection_failure(_ctx):  # noqa: ANN001
+        raise ModelAPIError(model_name="deepseek-v4", message="Connection error.")
+
+    with (
+        patch(
+            "planning.whole_lesson.executor.dispatch_writer_async",
+            new=AsyncMock(side_effect=_connection_failure),
+        ) as dispatch,
+        patch("planning.whole_lesson.executor.asyncio.sleep", new=AsyncMock()),
+    ):
+        outcomes = await write_form_blocks(
+            generation_id=gid,
+            form_plan=plan,
+            packet=_packet([s.slot_id for s in plan.sections]),
+            teaching_plan=teaching,
+        )
+
+    assert dispatch.await_count == 3
+    assert outcomes[0]["status"] == "failed_recoverable"
+    async with async_session_factory() as session:
+        stored = await PageDocumentRepository(session, gid).load_block_results()
+    outcome = stored[execution_key("section-1", "s1-b1")]
+    assert outcome["status"] == "failed_recoverable"
+    assert outcome["error"]["code"] == "TRANSPORT"
+    assert outcome["error"]["retryable"] is True

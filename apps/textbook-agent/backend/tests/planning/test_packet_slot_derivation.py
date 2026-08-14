@@ -9,7 +9,11 @@ from planning.whole_lesson.packet_builder import (
 from planning.whole_lesson.service import slot_ids_from_structural_plan
 
 
-def _packet_for_slots(slot_ids: tuple[str, ...]):
+def _packet_for_slots(
+    slot_ids: tuple[str, ...],
+    *,
+    visual_required_by_slot: dict[str, bool] | None = None,
+):
     return build_lesson_packet(
         path_lesson_id="lesson-1",
         subject="Science",
@@ -26,6 +30,7 @@ def _packet_for_slots(slot_ids: tuple[str, ...]):
         prior_established=[],
         approved_items=[],
         slot_ids=slot_ids,
+        visual_required_by_slot=visual_required_by_slot,
     )
 
 
@@ -96,3 +101,13 @@ def test_packet_slots_preserve_plan_order_not_alphabetical() -> None:
     expected = ("check", "orient", "guided", "organise", "independent")
     packet = _packet_for_slots(expected)
     assert [slot.slot_id for slot in packet.slots] == list(expected)
+
+
+def test_packet_slots_preserve_authoritative_visual_flags() -> None:
+    packet = _packet_for_slots(
+        ("orient", "recall", "model", "guided", "check"),
+        visual_required_by_slot={"model": True},
+    )
+    assert packet.required_visual_slots() == ("model",)
+    assert packet.planner_payload()["required_visual_slots"] == ["model"]
+    assert packet.slots[2].visual_required is True

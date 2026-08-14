@@ -7,7 +7,7 @@ from typing import Any, Mapping
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.database.models import ConceptCardModel, GenerationModel, PackItemModel
+from core.database.models import ConceptCardModel, GenerationModel
 from planning.approved_items import ItemPoolEmptyError, load_approved_item_records
 from planning.whole_lesson.events import make_event
 from planning.whole_lesson.legality import (
@@ -21,7 +21,6 @@ from planning.whole_lesson.packet_builder import (
 )
 from planning.whole_lesson.repository import PageDocumentRepository
 from planning.whole_lesson.teaching_agent import run_lesson_approach_planner
-from planning.whole_lesson.teaching_plan import TeachingPlan
 from v3_blueprint.planning.persistence import load_chunked_state
 
 
@@ -102,6 +101,11 @@ async def build_packet_for_generation(
 
     scope = context.get("scope_contract") or {}
     slot_ids = slot_ids_from_structural_plan(plan_raw if isinstance(plan_raw, dict) else {})
+    visual_required_by_slot = {
+        str(section.get("role") or section.get("id")): bool(section.get("visual_required"))
+        for section in (plan_raw.get("sections") or [])
+        if isinstance(section, dict) and (section.get("role") or section.get("id"))
+    }
     return build_lesson_packet(
         path_lesson_id=str(context.get("path_lesson_id") or generation.id),
         subject=str(generation.subject or context.get("subject") or "General"),
@@ -134,6 +138,7 @@ async def build_packet_for_generation(
         prior_established=list(context.get("prior_established") or plan_raw.get("prior_knowledge") or []),
         approved_items=items,
         slot_ids=slot_ids or CONCEPTUAL_FIRST_EXPOSURE_SLOTS,
+        visual_required_by_slot=visual_required_by_slot,
     )
 
 

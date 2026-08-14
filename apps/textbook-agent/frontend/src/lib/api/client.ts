@@ -11,7 +11,7 @@ export function buildApiUrl(path: string): string {
 export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
 	const token = getAuthToken();
 	const headers = new Headers(init?.headers);
-	if (token) {
+	if (token && !headers.has('Authorization')) {
 		headers.set('Authorization', `Bearer ${token}`);
 	}
 	return fetch(buildApiUrl(path), { ...init, headers });

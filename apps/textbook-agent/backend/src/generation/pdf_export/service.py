@@ -25,6 +25,8 @@ from generation.pdf_export.config import PDFExportConfig
 from generation.pdf_export.rendering.playwright import render_generation_pdf
 from generation.pdf_export.v3_pack_pipeline_document import build_pipeline_document_for_v3_pdf
 from contracts.document import PipelineDocument
+from contracts.lectio_page import validate_document
+from contracts.document import PipelineSectionManifestItem
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,7 @@ logger = logging.getLogger(__name__)
 class PDFExportOptions(BaseModel):
     include_toc: bool = True
     include_answers: bool = True
+    edition: str = "teacher"
 
 
 class PDFExportRequest(PDFExportOptions):
@@ -48,6 +51,73 @@ class PDFExportResult(BaseModel):
     generation_time_ms: int
     cleanup_paths: list[Path]
     print_page_debug: dict[str, Any] | None = None
+
+
+class NativeDocumentContractError(ValueError):
+    """Current/native generation is missing a valid LectioDocumentV2."""
+
+
+def _native_document_from_payload(
+    document_json: dict[str, Any],
+    *,
+    native_whole_lesson: bool = False,
+) -> dict[str, Any] | None:
+    """Return a validated V2 document, or ``None`` for historical V3 packs."""
+    root_version = document_json.get("document_version")
+    nested = document_json.get("lectio_document")
+    nested_version = nested.get("document_version") if isinstance(nested, dict) else None
+    is_native = native_whole_lesson or root_version == 2 or nested_version == 2
+    if not is_native:
+        return None
+    candidate = nested if isinstance(nested, dict) and nested_version == 2 else document_json
+    if not isinstance(candidate, dict) or candidate.get("document_version") != 2:
+        raise NativeDocumentContractError("native generation is missing LectioDocumentV2")
+    if not isinstance(candidate.get("id"), str) or not isinstance(candidate.get("title"), str):
+        raise NativeDocumentContractError("native LectioDocumentV2 is missing id/title")
+    if not isinstance(candidate.get("sections"), list):
+        raise NativeDocumentContractError("native LectioDocumentV2 is missing sections")
+    errors = validate_document(candidate)
+    if errors:
+        raise NativeDocumentContractError(
+            f"native LectioDocumentV2 validation failed: {errors[:5]}"
+        )
+    return candidate
+
+
+def _build_native_pipeline_document(
+    *,
+    generation_id: str,
+    title: str,
+    subject: str,
+    template_id: str,
+    document: dict[str, Any],
+) -> PipelineDocument:
+    manifest: list[PipelineSectionManifestItem] = []
+    for index, section in enumerate(document.get("sections") or []):
+        if not isinstance(section, dict):
+            continue
+        section_id = str(section.get("id") or f"section-{index + 1}")
+        section_title = str(section.get("title") or section_id.replace("_", " ").title())
+        manifest.append(
+            PipelineSectionManifestItem(
+                section_id=section_id,
+                title=section_title,
+                position=index + 1,
+            )
+        )
+    return PipelineDocument(
+        generation_id=generation_id,
+        subject=title or "Lesson",
+        context=subject or "",
+        mode="v3",
+        template_id=template_id,
+        preset_id="blue-classroom",
+        status="completed",
+        section_manifest=manifest,
+        # Native @lectio/page renders V2 directly. Never adapt its blocks to
+        # legacy SectionContent and never generate a second answer-key PDF.
+        sections=[],
+    )
 
 
 async def export_generation_pdf(
@@ -218,6 +288,7 @@ async def export_v3_studio_pdf(
     request: PDFExportRequest,
     settings: Settings,
     request_id: str | None = None,
+    native_whole_lesson: bool = False,
 ) -> PDFExportResult:
     """PDF export for v3 Studio: Playwright renders the dedicated SSR print route at `/studio/print/{generation_id}`."""
     generation = PDFGenerationContext(
@@ -230,13 +301,30 @@ async def export_v3_studio_pdf(
         requested_template_id=template_id,
         requested_preset_id="blue-classroom",
     )
-    document = build_pipeline_document_for_v3_pdf(
-        generation_id=generation_id,
-        title=title or "Lesson",
-        subject=subject or "",
-        template_id=template_id,
-        document_json=document_json,
+    native_document = _native_document_from_payload(
+        document_json,
+        native_whole_lesson=native_whole_lesson,
     )
+    if native_document is not None:
+        document = _build_native_pipeline_document(
+            generation_id=generation_id,
+            title=title or "Lesson",
+            subject=subject or "",
+            template_id=template_id,
+            document=native_document,
+        )
+        # V2's @lectio/page teacher edition owns the answer key. Appending the
+        # generic legacy answer-key PDF would duplicate it; student edition must
+        # hide it entirely.
+        request = request.model_copy(update={"include_answers": False})
+    else:
+        document = build_pipeline_document_for_v3_pdf(
+            generation_id=generation_id,
+            title=title or "Lesson",
+            subject=subject or "",
+            template_id=template_id,
+            document_json=document_json,
+        )
     v3_ak = document_json.get("answer_key")
     v3_ak_dict = v3_ak if isinstance(v3_ak, dict) else None
     return await export_generation_pdf(
@@ -246,7 +334,7 @@ async def export_v3_studio_pdf(
         request=request,
         settings=settings,
         request_id=request_id,
-        render_path=f"/studio/print/{generation_id}",
+        render_path=f"/studio/print/{generation_id}?edition={request.edition}",
         v3_answer_key=v3_ak_dict,
     )
 

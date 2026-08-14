@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
+import re
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -17,6 +18,44 @@ LessonMode = Literal[
 GroupProfile = Literal["support", "core", "extension"]
 
 _PROFILE_SUPPORT_LEVEL = {"support": "high", "core": "medium", "extension": "low"}
+_SPATIAL_VISUAL_SLOT_IDS = ("explain", "model", "organise")
+
+
+def objective_is_spatial_or_process(objective: str | None) -> bool:
+    """Return whether an objective explicitly needs a spatial/process visual.
+
+    This is intentionally narrow and deterministic. The skeleton modifier is
+    a safety net for explicit visual outcomes (for example, a labelled
+    diagram), not a general preference for decorating ordinary lessons.
+    """
+    if not isinstance(objective, str):
+        return False
+    text = " ".join(objective.casefold().split())
+    if "diagram" in text or "labelled figure" in text or "labeled figure" in text:
+        return True
+    return bool(
+        re.search(
+            r"\b(?:draw|drawing|construct|map|plot|trace|sequence|show)\b"
+            r"[^.]{0,80}\b(?:process|cycle|flow|movement|stages?|structure)\b",
+            text,
+        )
+        or re.search(
+            r"\b(?:process|cycle|flow|movement|stages?|structure)\b"
+            r"[^.]{0,80}\b(?:draw|drawing|construct|map|plot|trace|sequence|show)\b",
+            text,
+        )
+    )
+
+
+def _visual_slots_for_objective(
+    objective: str | None,
+    expanded_slots: list[str],
+) -> set[str]:
+    if not objective_is_spatial_or_process(objective):
+        return set()
+    return {
+        slot_id for slot_id in expanded_slots if slot_id in _SPATIAL_VISUAL_SLOT_IDS
+    }
 
 
 class SkeletonCatalogError(ValueError):
@@ -70,7 +109,7 @@ class SkeletonSlotPreview(BaseModel):
 class SkeletonDiffEntry(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    operation: Literal["add", "remove", "replace", "repeat", "reorder"]
+    operation: Literal["add", "remove", "replace", "repeat", "reorder", "set_flag"]
     slot_id: str
     replacement_slot: str | None = None
     toggle_id: str
@@ -221,6 +260,7 @@ class SkeletonCatalog:
                 profile=profile,
                 misconception_count=request.misconception_count,
                 approved_deviations=request.approved_deviations,
+                objective=request.objective,
             )
             for profile in request.group_profiles
         ]
@@ -240,6 +280,7 @@ class SkeletonCatalog:
         profile: GroupProfile = "core",
         misconception_count: int = 1,
         approved_deviations: list[DeviationRequest] | None = None,
+        objective: str | None = None,
     ) -> SkeletonVariantPreview:
         skeleton = self.skeletons.get(skeleton_id)
         if skeleton is None:
@@ -249,6 +290,7 @@ class SkeletonCatalog:
             profile=profile,
             misconception_count=misconception_count,
             approved_deviations=approved_deviations or [],
+            objective=objective,
         )
 
     def _preview_variant(
@@ -258,6 +300,7 @@ class SkeletonCatalog:
         profile: GroupProfile,
         misconception_count: int,
         approved_deviations: list[DeviationRequest],
+        objective: str | None = None,
     ) -> SkeletonVariantPreview:
         expanded, toggles, warnings, structural_diff, blocking_issues = self._expand_slots(
             skeleton,
@@ -265,6 +308,21 @@ class SkeletonCatalog:
             misconception_count=misconception_count,
             approved_deviations=approved_deviations,
         )
+        visual_slots = _visual_slots_for_objective(objective, expanded)
+        if visual_slots:
+            toggles.append("visual.spatial_objective")
+            for slot_id in visual_slots:
+                structural_diff.append(
+                    SkeletonDiffEntry(
+                        operation="set_flag",
+                        slot_id=slot_id,
+                        toggle_id="visual.spatial_objective",
+                        explanation=(
+                            "The objective explicitly requires a spatial or process "
+                            "representation, so this fixed teaching slot requires a visual."
+                        ),
+                    )
+                )
         slots = [
             SkeletonSlotPreview(
                 slot_id=slot_id,
@@ -272,7 +330,7 @@ class SkeletonCatalog:
                 purpose=str(self.slots[slot_id].get("purpose") or ""),
                 allowed_components=[str(item) for item in self.slots[slot_id]["allowed"]],
                 locked=self.slots[slot_id].get("locked") is True,
-                visual_required=False,
+                visual_required=slot_id in visual_slots,
             )
             for slot_id in expanded
         ]

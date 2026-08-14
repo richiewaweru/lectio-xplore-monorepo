@@ -15,6 +15,7 @@ from generation.page_objects import WriterOutcome
 from planning.catalogue_projections import build_form_candidate_map, project_form_guidance
 from planning.llm_contract_errors import structured_output_errors
 from planning.whole_lesson.executor import execute_after_teaching_approval
+from planning.whole_lesson.failure_policy import classify_failure
 from planning.whole_lesson.form_agent import NoLegalFormCandidatesError, run_form_planner
 from planning.whole_lesson.form_plan import FormDecision, FormPlan, FormPlanSection, coerce_form_plan
 from planning.whole_lesson.legality import (
@@ -25,6 +26,7 @@ from planning.whole_lesson.legality import (
     validate_legality_snapshot,
 )
 from planning.whole_lesson.packet import (
+    ApprovedItemRef,
     AnchorRecord,
     ImmutableLessonPacket,
     LessonIdentity,
@@ -34,8 +36,14 @@ from planning.whole_lesson.packet import (
 )
 from planning.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
 from planning.whole_lesson.teaching_agent import run_lesson_approach_planner
-from planning.whole_lesson.teaching_plan import TeachingPlan
-from planning.whole_lesson.validation import validate_form_plan
+from planning.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
+from planning.whole_lesson.teaching_plan import (
+    AnchorUsage,
+    TeachingPlan,
+    TeachingPlanBlock,
+    TeachingPlanSection,
+)
+from planning.whole_lesson.validation import validate_form_plan, validate_teaching_plan
 from tests.planning.contract_fixtures import teaching_and_form
 
 
@@ -109,6 +117,32 @@ def test_empty_candidate_set_fails() -> None:
     assert any(issue.code == "NO_LEGAL_OBJECT" for issue in report.issues)
 
 
+def test_required_visual_slot_requires_legal_figure_decision() -> None:
+    teaching, form = teaching_and_form(
+        sections=[
+            ("model", [("model-b1", "show-structure", "prose")]),
+        ]
+    )
+    candidates = {"model-b1": ("prose", "figure")}
+    report = validate_form_plan(
+        form,
+        teaching,
+        candidate_map=candidates,
+        required_visual_slots={"model"},
+    )
+    assert not report.ok
+    assert any(issue.code == "REQUIRED_VISUAL_FORM" for issue in report.issues)
+
+    form.sections[0].forms[0].object = "figure"
+    report = validate_form_plan(
+        form,
+        teaching,
+        candidate_map=candidates,
+        required_visual_slots={"model"},
+    )
+    assert report.ok
+
+
 def test_illegal_object_fails_when_candidate_set_empty() -> None:
     teaching, form = teaching_and_form(
         sections=[("orient", [("orient-b1", "orient", "table")])]
@@ -131,6 +165,7 @@ def test_form_uses_snapshot_compatibility_not_live_catalogue() -> None:
         compatible_objects_by_intent={
             "orient": ["prose"],
         },
+        approved_items=[],
     )
     assert candidates["orient-b1"] == ("prose",)
     wide = project_form_guidance()
@@ -139,6 +174,289 @@ def test_form_uses_snapshot_compatibility_not_live_catalogue() -> None:
     assert "table" not in candidates["orient-b1"]
     assert set(candidates["orient-b1"]).issubset({"prose"})
     assert not (live_orient - {"prose"}).issubset(set(candidates["orient-b1"]))
+
+
+def test_assessment_candidates_follow_approved_item_kind_and_keep_ownership() -> None:
+    teaching, _ = teaching_and_form(
+        sections=[
+            (
+                "check",
+                [
+                    ("check-none", "check-understanding", "prose"),
+                    ("check-open", "check-understanding", "prose"),
+                    ("check-mcq", "check-understanding", "prose"),
+                    ("check-many-mcq", "check-understanding", "prose"),
+                ],
+            )
+        ]
+    )
+    teaching.sections[0].blocks[1].source_question_ids = ["open-1", "open-2"]
+    teaching.sections[0].blocks[2].source_question_ids = ["mcq-1"]
+    teaching.sections[0].blocks[3].source_question_ids = ["mcq-1", "mcq-2"]
+
+    approved_items = [
+        ApprovedItemRef(id="open-1", card_id="card", stem="Explain one", options=[]),
+        ApprovedItemRef(id="open-2", card_id="card", stem="Explain two", options=[]),
+        ApprovedItemRef(
+            id="mcq-1",
+            card_id="card",
+            stem="Choose one",
+            options=[{"key": "A", "text": "A"}, {"key": "B", "text": "B"}],
+            correct_key="A",
+        ),
+        ApprovedItemRef(
+            id="mcq-2",
+            card_id="card",
+            stem="Choose two",
+            options=[{"key": "A", "text": "A"}, {"key": "B", "text": "B"}],
+            correct_key="B",
+        ),
+    ]
+
+    candidates = build_form_candidate_map(
+        teaching,
+        compatible_objects_by_intent={
+            "check-understanding": ["prose", "questions", "choices"],
+        },
+        approved_items=approved_items,
+    )
+
+    assert candidates["check-none"] == ("prose",)
+    assert candidates["check-open"] == ("questions",)
+    assert candidates["check-mcq"] == ("choices",)
+    assert candidates["check-many-mcq"] == ()
+
+
+def test_multiple_mcq_sources_are_rejected_by_teaching_validation() -> None:
+    teaching, _ = teaching_and_form(
+        sections=[("check", [("check-b1", "check-understanding", "prose")])]
+    )
+    teaching.sections[0].blocks[0].source_question_ids = ["mcq-1", "mcq-2"]
+    packet = _packet().model_copy(
+        update={
+            "approved_items": [
+                ApprovedItemRef(
+                    id=item_id,
+                    card_id="card",
+                    stem=f"Question {item_id}",
+                    options=[
+                        {"key": "A", "text": "A"},
+                        {"key": "B", "text": "B"},
+                    ],
+                    correct_key="A",
+                )
+                for item_id in ("mcq-1", "mcq-2")
+            ]
+        }
+    )
+
+    report = validate_teaching_plan(
+        teaching,
+        packet,
+        permitted_intents={"check-understanding"},
+        excluded_intents=set(),
+        typical_by_slot={"check": {"check-understanding"}},
+    )
+
+    assert any(issue.code == "MCQ_SOURCE_CARDINALITY" for issue in report.issues)
+
+
+def test_item_source_requires_assessment_intent_and_unique_block_owner() -> None:
+    teaching, _ = teaching_and_form(
+        sections=[
+            (
+                "check",
+                [
+                    ("check-b1", "check-understanding", "prose"),
+                    ("check-b2", "explain-cause", "prose"),
+                ],
+            )
+        ]
+    )
+    for block in teaching.sections[0].blocks:
+        block.source_question_ids = ["mcq-1"]
+    packet = _packet().model_copy(
+        update={
+            "approved_items": [
+                ApprovedItemRef(
+                    id="mcq-1",
+                    card_id="card",
+                    stem="Approved question",
+                    options=[
+                        {"key": "A", "text": "A"},
+                        {"key": "B", "text": "B"},
+                    ],
+                    correct_key="A",
+                )
+            ]
+        }
+    )
+
+    report = validate_teaching_plan(
+        teaching,
+        packet,
+        permitted_intents={"check-understanding", "explain-cause"},
+        excluded_intents=set(),
+        typical_by_slot={"check": {"check-understanding", "explain-cause"}},
+        assessment_intents={"check-understanding"},
+    )
+
+    codes = {issue.code for issue in report.issues}
+    assert "DUPLICATE_ITEM_SOURCE" in codes
+    assert "ASSESSMENT_SOURCE_INTENT" in codes
+
+
+def _five_item_check_packet() -> ImmutableLessonPacket:
+    return _packet().model_copy(
+        update={
+            "scope": ScopeContract(
+                terminology=["light"],
+                must_not_introduce=[
+                    {
+                        "id": "exclude-1",
+                        "statement": "cellular respiration",
+                    }
+                ],
+            ),
+            "approved_items": [
+                ApprovedItemRef(
+                    id=f"approved-mcq-{index}",
+                    card_id="card",
+                    stem=f"Approved question {index}",
+                    options=[
+                        {"key": "A", "text": "A"},
+                        {"key": "B", "text": "B"},
+                    ],
+                    correct_key="A",
+                )
+                for index in range(1, 6)
+            ],
+            "slots": [
+                SlotRecord(
+                    slot_id="check",
+                    purpose="Check whether the learner can explain the role of light.",
+                    typical_intents=["check-understanding"],
+                )
+            ],
+        }
+    )
+
+
+def _check_plan(*, source_ids: list[str], invalid_context: bool = False) -> TeachingPlan:
+    forbidden = " through cellular respiration" if invalid_context else ""
+    refs = ["approved_item_ids"] if invalid_context else ["lesson.objective"]
+    return TeachingPlan(
+        arc="Use the two plants to check whether learners can explain why light matters.",
+        anchor_usage=AnchorUsage(check="Return to the two plants."),
+        sections=[
+            TeachingPlanSection(
+                slot_id="check",
+                specific_purpose="Check causal understanding.",
+                blocks=[
+                    TeachingPlanBlock(
+                        id="check-b1",
+                        position=0,
+                        intent="check-understanding",
+                        brief=(
+                            "Return to the two plants and require learners to explain "
+                            f"why light changes the plant's ability to make food{forbidden}."
+                        ),
+                        evidence_refs=refs,
+                        evidence=(
+                            "The objective requires a causal explanation, so this check "
+                            "tests the role of light directly."
+                        ),
+                        source_question_ids=source_ids,
+                    )
+                ],
+            )
+        ],
+    )
+
+
+@pytest.mark.asyncio
+async def test_teaching_multi_source_draft_repairs_to_one_approved_mcq() -> None:
+    packet = _five_item_check_packet()
+    item_ids = packet.approved_item_ids()
+    legality = _make_snapshot(
+        permitted_intents=["check-understanding"],
+        typical_by_slot={"check": ["check-understanding"]},
+        permitted_objects=["choices"],
+        compatible_objects_by_intent={"check-understanding": ["choices"]},
+    )
+    invalid = _check_plan(source_ids=item_ids, invalid_context=True)
+    corrected = _check_plan(source_ids=[item_ids[2]])
+    payloads: list[dict[str, Any]] = []
+    logical_attempts: list[int] = []
+
+    async def _fake_call(  # noqa: ANN001
+        *, prompt, user_payload, trace_id, generation_id, attempt_start=1
+    ):
+        payloads.append(user_payload)
+        logical_attempts.append(attempt_start)
+        plan = invalid if len(payloads) == 1 else corrected
+        return plan, plan.model_dump_json()
+
+    with patch(
+        "planning.whole_lesson.teaching_agent._call_teaching_model",
+        new=AsyncMock(side_effect=_fake_call),
+    ):
+        result = await run_lesson_approach_planner(packet, legality=legality)
+
+    assert result.validation.ok
+    assert result.plan.sections[0].blocks[0].source_question_ids == [item_ids[2]]
+    assert len(result.attempts) == 2
+    assert logical_attempts == [1, 2]
+    first_codes = {issue.code for issue in result.attempts[0].validation.issues}
+    assert {"MCQ_SOURCE_CARDINALITY", "EXCLUDED_TERM", "EVIDENCE_REF"} <= first_codes
+
+    policy = payloads[0]["assessment_source_policy"]
+    assert policy["eligible_intents"] == ["check-understanding"]
+    assert policy["rules"]["multiple_choice_ids_per_block"] == "0_or_1"
+    assert policy["rules"]["selection_is_optional"] is True
+    assert [source["kind"] for source in policy["approved_sources"]] == [
+        "multiple_choice"
+    ] * 5
+    assert policy["forbidden_terminology"] == ["cellular respiration"]
+    assert "approved_item_ids" not in policy["allowed_evidence_refs"]
+
+    repair = payloads[1]["repair"]
+    assert repair["previous_output"]["sections"][0]["blocks"][0][
+        "source_question_ids"
+    ] == item_ids
+    assert any("MCQ_SOURCE_CARDINALITY" in error for error in repair["validation_errors"])
+    assert any("EXCLUDED_TERM" in error for error in repair["validation_errors"])
+    assert any("EVIDENCE_REF" in error for error in repair["validation_errors"])
+    assert repair["assessment_source_policy"] == policy
+
+
+@pytest.mark.asyncio
+async def test_teaching_multi_source_exhaustion_is_recoverable_output_failure() -> None:
+    packet = _five_item_check_packet()
+    invalid = _check_plan(source_ids=packet.approved_item_ids())
+    legality = _make_snapshot(
+        permitted_intents=["check-understanding"],
+        typical_by_slot={"check": ["check-understanding"]},
+        permitted_objects=["choices"],
+        compatible_objects_by_intent={"check-understanding": ["choices"]},
+    )
+    model_call = AsyncMock(return_value=(invalid, invalid.model_dump_json()))
+
+    with patch(
+        "planning.whole_lesson.teaching_agent._call_teaching_model",
+        new=model_call,
+    ):
+        with pytest.raises(
+            TeachingPlanOutputInvalidError, match="MCQ_SOURCE_CARDINALITY"
+        ) as raised:
+            await run_lesson_approach_planner(packet, legality=legality)
+
+    assert model_call.await_count == 2
+    assert raised.value.attempt_count == 2
+    assert any("MCQ_SOURCE_CARDINALITY" in detail for detail in raised.value.details)
+    classification = classify_failure(raised.value)
+    assert classification.code == "MODEL_OUTPUT_INVALID"
+    assert classification.retryable is True
 
 
 @pytest.mark.asyncio
@@ -201,12 +519,43 @@ async def test_form_planner_skips_llm_when_no_candidates() -> None:
 
 
 @pytest.mark.asyncio
+async def test_form_planner_skips_llm_when_required_visual_has_no_figure_candidate() -> None:
+    packet = _packet().model_copy(deep=True)
+    packet.slots[1].visual_required = True
+    teaching, _ = teaching_and_form(
+        sections=[("explain", [("explain-b1", "show-structure", "prose")])]
+    )
+    legality = _make_snapshot(
+        permitted_intents=["show-structure"],
+        typical_by_slot={"explain": ["show-structure"]},
+        permitted_objects=["prose"],
+        compatible_objects_by_intent={"show-structure": ["prose"]},
+    )
+    called = {"n": 0}
+
+    async def _boom(*_a, **_k):  # noqa: ANN001
+        called["n"] += 1
+        raise AssertionError("LLM must not be called")
+
+    with patch(
+        "planning.whole_lesson.form_agent._call_form_model",
+        new=AsyncMock(side_effect=_boom),
+    ):
+        with pytest.raises(NoLegalFormCandidatesError) as exc:
+            await run_form_planner(packet, teaching, legality=legality, generation_id=None)
+    assert called["n"] == 0
+    assert exc.value.block_ids == ["explain"]
+
+
+@pytest.mark.asyncio
 async def test_teaching_schema_failure_gets_informed_repair() -> None:
     packet = _packet()
     legality = build_lesson_legality_snapshot(packet)
     payloads: list[dict[str, Any]] = []
 
-    async def _fake_call(*, prompt, user_payload, trace_id, generation_id):  # noqa: ANN001
+    async def _fake_call(  # noqa: ANN001
+        *, prompt, user_payload, trace_id, generation_id, attempt_start=1
+    ):
         payloads.append(user_payload)
         if len(payloads) == 1:
             raise ValidationError.from_exception_data(
@@ -222,7 +571,6 @@ async def test_teaching_schema_failure_gets_informed_repair() -> None:
             )
         from planning.whole_lesson.teaching_plan import (
             AnchorUsage,
-            TeachingPlan,
             TeachingPlanBlock,
             TeachingPlanSection,
         )
@@ -298,9 +646,13 @@ async def test_form_schema_extra_intent_gets_informed_repair() -> None:
         },
     )
     payloads: list[dict[str, Any]] = []
+    logical_attempts: list[int] = []
 
-    async def _fake_call(*, prompt, user_payload, trace_id, generation_id):  # noqa: ANN001
+    async def _fake_call(  # noqa: ANN001
+        *, prompt, user_payload, trace_id, generation_id, attempt_start=1
+    ):
         payloads.append(user_payload)
+        logical_attempts.append(attempt_start)
         if len(payloads) == 1:
             # Extra teaching-owned field must fail schema.
             with pytest.raises(ValidationError) as raised:
@@ -332,6 +684,7 @@ async def test_form_schema_extra_intent_gets_informed_repair() -> None:
         )
     assert result.validation.ok
     assert len(payloads) == 2
+    assert logical_attempts == [1, 2]
     repair = payloads[1]["repair"]
     assert repair["validation_errors"]
     assert any("intent" in str(err).lower() for err in repair["validation_errors"])
@@ -447,7 +800,10 @@ async def test_resume_revalidates_legacy_fat_form_plan() -> None:
             qc=[],
             prompt="p",
             raw_response="{}",
-            form_guidance={},
+            form_guidance={
+                "catalogue_version": "test",
+                "projection_hash": "form-projection-test",
+            },
             candidate_map={"orient-b1": ("list",)},
             attempts=1,
         )
@@ -486,6 +842,15 @@ async def test_resume_revalidates_legacy_fat_form_plan() -> None:
             )
 
     assert form_calls["n"] == 1  # not silently reused
+    async with async_session_factory() as session:
+        persisted = await PageDocumentRepository(
+            session, gid
+        ).load_page_generation_state()
+    assert persisted["catalogue"]["version"] == "test"
+    assert (
+        persisted["catalogue"]["form_projection_hash"]
+        == "form-projection-test"
+    )
 
 
 @pytest.mark.asyncio
@@ -586,10 +951,11 @@ async def test_teaching_with_persisted_legality_does_not_reassemble() -> None:
         guidance_calls["n"] += 1
         raise AssertionError("assemble_lesson_guidance must not re-run")
 
-    async def _fake_call(*, prompt, user_payload, trace_id, generation_id):  # noqa: ANN001
+    async def _fake_call(  # noqa: ANN001
+        *, prompt, user_payload, trace_id, generation_id, attempt_start=1
+    ):
         from planning.whole_lesson.teaching_plan import (
             AnchorUsage,
-            TeachingPlan,
             TeachingPlanBlock,
             TeachingPlanSection,
         )

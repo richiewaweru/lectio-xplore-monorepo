@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from contracts.lectio_page import PAGE_OBJECT_IDS
+from planning.approved_items import approved_item_kind
 from planning.page_blocks import validate_intent_departure
 from planning.whole_lesson.form_plan import FormPlan
 from planning.whole_lesson.packet import ImmutableLessonPacket
@@ -22,6 +23,9 @@ BANNED_BRIEF_PHRASES = (
 )
 
 REQUIRED_SLOTS = ("orient", "explain", "confront", "check")
+SPATIAL_PROCESS_REPRESENTATION_INTENTS = frozenset(
+    {"show-structure", "trace-flow", "sequence", "name-parts"}
+)
 
 
 @dataclass
@@ -106,6 +110,24 @@ def _contains_object_id(text: str) -> str | None:
     return None
 
 
+def allowed_teaching_evidence_refs(packet: ImmutableLessonPacket) -> set[str]:
+    """Return the complete evidence namespace accepted for one lesson packet."""
+    refs = {"lesson.objective", f"anchor.{packet.anchor.id}"}
+    for index, entry in enumerate(packet.scope.must_establish):
+        refs.update(
+            {
+                entry.id,
+                f"scope.must_establish.{entry.id}",
+                f"scope.must_establish[{index}]",
+            }
+        )
+    refs.update(item.id for item in packet.misconceptions)
+    refs.update(item.id for item in packet.prior_established)
+    refs.update(f"slot.{slot.slot_id}.purpose" for slot in packet.slots)
+    refs.update(f"item.{item.id}" for item in packet.approved_items)
+    return refs
+
+
 def validate_teaching_plan(
     plan: TeachingPlan,
     packet: ImmutableLessonPacket,
@@ -113,6 +135,7 @@ def validate_teaching_plan(
     permitted_intents: set[str],
     excluded_intents: set[str],
     typical_by_slot: dict[str, set[str]],
+    assessment_intents: set[str] | None = None,
 ) -> ValidationReport:
     issues: list[ValidationIssue] = []
     slot_ids = [section.slot_id for section in plan.sections]
@@ -127,10 +150,13 @@ def validate_teaching_plan(
         )
 
     seen_block_ids: set[str] = set()
+    seen_source_question_ids: set[str] = set()
     total_blocks = 0
     must_ids = {entry.id for entry in packet.scope.must_establish}
     referenced_must: set[str] = set()
     approved_ids = set(packet.approved_item_ids())
+    approved_by_id = {item.id: item for item in packet.approved_items}
+    allowed_evidence_refs = allowed_teaching_evidence_refs(packet)
     misconception_ids = {item.id for item in packet.misconceptions}
     terminology = {term.lower() for term in packet.scope.terminology}
     anchor_vocabulary = anchor_terms(packet.anchor.description or "")
@@ -247,6 +273,15 @@ def validate_teaching_plan(
                     )
 
             for ref in block.evidence_refs:
+                if ref not in allowed_evidence_refs:
+                    issues.append(
+                        ValidationIssue(
+                            code="EVIDENCE_REF",
+                            message=f"unresolvable evidence_ref {ref!r}",
+                            path=f"{path}.evidence_refs",
+                        )
+                    )
+                    continue
                 if ref.startswith("scope.must_establish.") or ref.startswith("must-"):
                     mid = ref.split(".")[-1]
                     if mid in must_ids:
@@ -284,6 +319,83 @@ def validate_teaching_plan(
                             path=path,
                         )
                     )
+                if qid in seen_source_question_ids:
+                    issues.append(
+                        ValidationIssue(
+                            code="DUPLICATE_ITEM_SOURCE",
+                            message=(
+                                f"approved item {qid!r} is already owned by another "
+                                "teaching block"
+                            ),
+                            path=f"{path}.source_question_ids",
+                        )
+                    )
+                seen_source_question_ids.add(qid)
+            if (
+                block.source_question_ids
+                and assessment_intents is not None
+                and block.intent not in assessment_intents
+            ):
+                issues.append(
+                    ValidationIssue(
+                        code="ASSESSMENT_SOURCE_INTENT",
+                        message=(
+                            "source_question_ids may be owned only by an assessment "
+                            f"intent; got {block.intent!r}, eligible={sorted(assessment_intents)}"
+                        ),
+                        path=f"{path}.source_question_ids",
+                    )
+                )
+            known_sources = [
+                approved_by_id[qid]
+                for qid in block.source_question_ids
+                if qid in approved_by_id
+            ]
+            if known_sources and len(known_sources) == len(block.source_question_ids):
+                source_kinds = [approved_item_kind(item) for item in known_sources]
+                mcq_ids = [
+                    qid
+                    for qid, kind in zip(block.source_question_ids, source_kinds)
+                    if kind == "multiple_choice"
+                ]
+                open_ids = [
+                    qid
+                    for qid, kind in zip(block.source_question_ids, source_kinds)
+                    if kind == "open_response"
+                ]
+                if mcq_ids and open_ids:
+                    issues.append(
+                        ValidationIssue(
+                            code="ASSESSMENT_SOURCE_MIX",
+                            message=(
+                                "one teaching block cannot mix multiple-choice and "
+                                f"open-response sources; mcq={mcq_ids}, open={open_ids}"
+                            ),
+                            path=f"{path}.source_question_ids",
+                        )
+                    )
+                elif len(mcq_ids) > 1:
+                    issues.append(
+                        ValidationIssue(
+                            code="MCQ_SOURCE_CARDINALITY",
+                            message=(
+                                "a teaching block may own exactly one multiple-choice "
+                                f"source; select one of {mcq_ids} and remove the rest"
+                            ),
+                            path=f"{path}.source_question_ids",
+                        )
+                    )
+                elif len(open_ids) > 6:
+                    issues.append(
+                        ValidationIssue(
+                            code="OPEN_RESPONSE_SOURCE_LIMIT",
+                            message=(
+                                "a questions block may own 1..6 open-response sources; "
+                                f"got {len(open_ids)}"
+                            ),
+                            path=f"{path}.source_question_ids",
+                        )
+                    )
             # Question content must never appear as invented stems in planner output.
             if "correct_key" in block.brief.lower() or re.search(
                 r"\bA\)|\bB\)|\bC\)|\bD\)", block.brief
@@ -304,6 +416,28 @@ def validate_teaching_plan(
                 path="sections",
             )
         )
+
+    for slot in packet.slots:
+        if not slot.visual_required:
+            continue
+        section = next(
+            (candidate for candidate in plan.sections if candidate.slot_id == slot.slot_id),
+            None,
+        )
+        if section is None or not any(
+            block.intent in SPATIAL_PROCESS_REPRESENTATION_INTENTS
+            for block in section.blocks
+        ):
+            issues.append(
+                ValidationIssue(
+                    code="REQUIRED_VISUAL_INTENT",
+                    message=(
+                        f"required visual slot {slot.slot_id!r} must contain at least "
+                        "one spatial/process representation intent"
+                    ),
+                    path=f"sections.{slot.slot_id}",
+                )
+            )
 
     for focus_id in plan.misconception_focus_ids:
         if focus_id not in misconception_ids:
@@ -397,6 +531,7 @@ def validate_form_plan(
     *,
     candidate_map: dict[str, tuple[str, ...] | set[str]],
     compatible_objects: dict[str, set[str]] | None = None,
+    required_visual_slots: set[str] | frozenset[str] | None = None,
 ) -> ValidationReport:
     """Validate form-owned decisions against teaching identity + legal candidates.
 
@@ -521,6 +656,25 @@ def validate_form_plan(
                 path="sections",
             )
         )
+
+    for slot_id in sorted(required_visual_slots or ()):
+        decisions = [
+            decision
+            for section in form_plan.sections
+            if section.slot_id == slot_id
+            for decision in section.forms
+        ]
+        if not any(decision.object == "figure" for decision in decisions):
+            issues.append(
+                ValidationIssue(
+                    code="REQUIRED_VISUAL_FORM",
+                    message=(
+                        f"required visual slot {slot_id!r} must select at least one "
+                        "figure decision"
+                    ),
+                    path=f"sections.{slot_id}",
+                )
+            )
 
     blocking = [issue for issue in issues if issue.blocking]
     return ValidationReport(ok=not blocking, issues=issues)

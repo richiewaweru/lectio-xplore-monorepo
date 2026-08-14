@@ -274,6 +274,31 @@ export interface V3PlanningArtifact {
 	};
 }
 
+/** Persisted native visual-QC flag projected by the generation detail API. */
+export interface V3VisualQualityFlag {
+	request_id?: string | null;
+	status?: string | null;
+	visual_id?: string | null;
+	block_id?: string | null;
+	reasons?: string[];
+	correction_hint?: string | null;
+}
+
+/** Persisted native visual-QC summary projected by the generation detail API. */
+export interface V3VisualQualitySummary extends V3VisualQualityFlag {
+	flagged?: V3VisualQualityFlag[];
+	flagged_count?: number;
+	failed_request_ids?: string[];
+	retryable?: boolean;
+}
+
+export interface V3VisualRetryResult {
+	generation_id: string;
+	status: string;
+	next_action?: string | null;
+	error_detail?: Record<string, unknown> | null;
+}
+
 export interface V3GenerationDetail {
 	id: string;
 	subject: string;
@@ -288,6 +313,9 @@ export interface V3GenerationDetail {
 	planning_artifact?: V3PlanningArtifact | null;
 	created_at: string | null;
 	completed_at: string | null;
+	native_whole_lesson?: boolean;
+	document_contract_version?: number;
+	visual_quality?: V3VisualQualitySummary | V3VisualQualitySummary[] | null;
 }
 
 export type ComponentStatus = 'pending' | 'generating' | 'ready' | 'patched' | 'failed';

@@ -64,7 +64,10 @@ LEGAL_TRANSITIONS: dict[str, frozenset[str]] = {
         }
     ),
     "awaiting_visuals": frozenset({"ready", "cancelled", "failed_terminal"}),
-    "ready": frozenset(),
+    # A previously persisted QC-flagged visual may be narrowly reopened for a
+    # visuals-only retry. The repository fences this transition to that exact
+    # persisted marker; ordinary ready generations remain terminal.
+    "ready": frozenset({"awaiting_visuals"}),
     "failed_recoverable": frozenset(
         {"queued", "item_generation", "planning_teaching", "cancelled"}
     ),
@@ -75,7 +78,12 @@ LEGAL_TRANSITIONS: dict[str, frozenset[str]] = {
     "rejected_by_teacher": frozenset(),
 }
 
-CLAIMABLE_STATUSES = frozenset({"queued", "failed_recoverable"})
+# ``failed_recoverable`` is a parked, user-visible checkpoint.  Only an
+# explicit retry-native acceptance may transition it to one of the claimable
+# retry checkpoints (``queued`` for post-approval work, or a pre-worker retry
+# status with a matching work_kind).  Polling workers must never claim it
+# directly or a provider failure becomes an unbounded automatic retry loop.
+CLAIMABLE_STATUSES = frozenset({"queued"})
 ACTIVE_STATUSES = frozenset(
     {"planning_forms", "writing_sections", "writing_blocks", "assembling"}
 )

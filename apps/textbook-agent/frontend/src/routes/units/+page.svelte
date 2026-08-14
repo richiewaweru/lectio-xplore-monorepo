@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import { getCapabilities } from '$lib/api/capabilities';
 	import { constructorReadback, createUnit, listUnits, planUnitPath } from '$lib/api/units';
 	import type { ConstructorReadback, Unit } from '$lib/types/units';
 
@@ -12,6 +14,8 @@
 
 	let units = $state<Unit[]>([]);
 	let loading = $state(true);
+	let capabilityState = $state<'loading' | 'available' | 'unavailable'>('loading');
+	let capabilityError = $state<string | null>(null);
 	let error = $state<string | null>(null);
 
 	let showCreate = $state(false);
@@ -156,12 +160,41 @@
 		}
 	}
 
-	onMount(() => void load());
+	onMount(async () => {
+		try {
+			const capabilities = await getCapabilities();
+			if (!capabilities.xplore_v2) {
+				capabilityState = 'unavailable';
+				capabilityError = 'Native lesson planning is not enabled for this workspace. Ask your administrator to enable Xplore.';
+				loading = false;
+				return;
+			}
+			capabilityState = 'available';
+			await load();
+			if (page.url.searchParams.get('new') === '1') openCreate();
+		} catch (err) {
+			capabilityState = 'unavailable';
+			capabilityError = err instanceof Error
+				? `Native lesson planning is unavailable: ${err.message}`
+				: 'Native lesson planning is unavailable. Try again later or contact your administrator.';
+			loading = false;
+		}
+	});
 </script>
 
 <svelte:head><title>Units · Lectio</title></svelte:head>
 
 <div class="units-page">
+	{#if capabilityState === 'unavailable'}
+		<section class="capability-unavailable" role="alert" aria-live="polite">
+			<p class="eyebrow">Native workspace unavailable</p>
+			<h1>We can’t open the lesson workspace yet</h1>
+			<p>{capabilityError}</p>
+			<p>Please refresh after Xplore has been enabled for this workspace.</p>
+		</section>
+	{:else if capabilityState === 'loading'}
+		<p class="status" role="status">Checking native lesson capability…</p>
+	{:else}
 	<header class="page-head">
 		<div>
 			<p class="eyebrow">Curriculum workspace</p>
@@ -283,12 +316,16 @@
 			{/each}
 		</section>
 	{/if}
+	{/if}
 </div>
 
 <style>
 	.units-page { min-height: calc(100vh - 58px); padding: 54px 28px 80px; }
 	.page-head, .create-card, .unit-list, .empty, .status, .error { max-width: 960px; margin-inline: auto; }
 	.page-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 34px; }
+	.capability-unavailable { max-width: 680px; margin: 12vh auto 0; padding: 34px; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); }
+	.capability-unavailable h1 { margin-bottom: 12px; }
+	.capability-unavailable p:not(.eyebrow) { color: var(--ink-2); line-height: 1.6; }
 	.eyebrow { margin: 0 0 7px; color: var(--ink-3); font: 500 11px 'IBM Plex Mono', monospace; letter-spacing: .1em; text-transform: uppercase; }
 	h1 { margin: 0; font: 500 38px/1.1 Fraunces, Georgia, serif; letter-spacing: -.03em; }
 	.lede, .form-head p, .empty > p, .status { color: var(--ink-2); font-size: 14px; line-height: 1.6; }

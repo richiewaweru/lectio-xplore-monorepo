@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import io
 import logging
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from PIL import Image
 
 from contracts.lectio import get_section_field_for_component
 
@@ -29,6 +31,13 @@ from v3_execution.runtime.runner import run_generation
 from v3_review.models import CoherenceReport
 from v3_review.models import ReviewIssue
 from media.qc.visual_qc import VisualQCVerdict
+
+
+def _png_bytes(size: tuple[int, int] = (1024, 1024)) -> bytes:
+    image = Image.new("RGB", size, "#dbeafe")
+    output = io.BytesIO()
+    image.save(output, format="PNG")
+    return output.getvalue()
 
 
 @pytest.fixture(autouse=True)
@@ -842,6 +851,209 @@ async def test_execute_visual_qc_error_fails_open(
     assert len(blocks) == 1
     assert blocks[0].status == "ready"
     assert blocks[0].image_url == "https://cdn.example/vis-qc-error.png"
+
+
+@pytest.mark.asyncio
+async def test_diagram_precision_composes_before_qc_and_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("V3_IMAGE_CACHE_ENABLED", "true")
+    order = VisualGeneratorWorkOrder(
+        work_order_id="v-compose",
+        visual=VisualPlanItem(
+            id="vis-compose",
+            attaches_to="practice",
+            mode="diagram",
+            visual_style="diagram_precision",
+            labels_required=[" Evaporation ", "Condensation"],
+            purpose="show the cycle",
+        ),
+    )
+
+    base = _png_bytes()
+    captured: dict[str, bytes] = {}
+
+    class Client:
+        async def generate_image(self, *, prompt: str):
+            assert "NO visible text" in prompt
+            return SimpleNamespace(bytes=base, format="png", mime_type="image/png")
+
+    class Store:
+        def __init__(self) -> None:
+            self.generated: list[bytes] = []
+            self.cached: list[bytes] = []
+
+        async def image_exists(self, *, key: str) -> bool:
+            return False
+
+        async def store_image(self, image_bytes, *_args, **kwargs):
+            self.generated.append(image_bytes)
+            return f"https://cdn.example/{kwargs['filename']}"
+
+        async def store_image_key(self, *, key: str, image_bytes: bytes, content_type: str):
+            self.cached.append(image_bytes)
+
+    store = Store()
+
+    async def qc(**kwargs):
+        captured["qc"] = kwargs["image_bytes"]
+        return VisualQCVerdict(verdict="accept")
+
+    async def one_attempt(_label, attempt, max_retries):
+        _ = max_retries
+        return await attempt(False)
+
+    monkeypatch.setattr("v3_execution.executors.visual_executor.visual_qc_enabled", lambda: True)
+    monkeypatch.setattr("v3_execution.executors.visual_executor.evaluate_visual_quality", qc)
+    monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: Client())
+    monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: store)
+    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", one_attempt)
+    monkeypatch.setattr(
+        "v3_execution.executors.visual_executor.load_image_provider_spec",
+        lambda: SimpleNamespace(provider="stub", model_name="stub-model"),
+    )
+
+    async def emit(_event_type: str, _payload: dict) -> None:
+        return None
+
+    blocks = await execute_visual(order, emit, trace_id="trace", generation_id="gen")
+
+    assert blocks[0].status == "ready"
+    assert store.generated[0] == captured["qc"]
+    assert store.generated[0] != base
+    assert store.cached == [captured["qc"]]
+
+
+@pytest.mark.asyncio
+async def test_diagram_precision_flagged_upload_skips_shared_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("V3_IMAGE_CACHE_ENABLED", "true")
+    order = VisualGeneratorWorkOrder(
+        work_order_id="v-compose-flag",
+        visual=VisualPlanItem(
+            id="vis-compose-flag",
+            attaches_to="practice",
+            mode="diagram",
+            visual_style="diagram_precision",
+            labels_required=["A"],
+            purpose="show relation",
+        ),
+    )
+    base = _png_bytes()
+
+    class Store:
+        def __init__(self) -> None:
+            self.cached = 0
+            self.generated: list[bytes] = []
+
+        async def image_exists(self, *, key: str) -> bool:
+            return False
+
+        async def store_image(self, image_bytes, *_args, **kwargs):
+            self.generated.append(image_bytes)
+            return f"https://cdn.example/{kwargs['filename']}"
+
+        async def store_image_key(self, **_kwargs):
+            self.cached += 1
+
+    store = Store()
+
+    async def qc(**_kwargs):
+        return VisualQCVerdict(verdict="flag", reasons=["bad"], correction_hint="fix")
+
+    async def one_attempt(_label, attempt, max_retries):
+        _ = max_retries
+        return await attempt(False)
+
+    monkeypatch.setattr("v3_execution.executors.visual_executor.visual_qc_enabled", lambda: True)
+    monkeypatch.setattr("v3_execution.executors.visual_executor.evaluate_visual_quality", qc)
+    monkeypatch.setattr(
+        "v3_execution.executors.visual_executor.get_image_client",
+        lambda: SimpleNamespace(generate_image=lambda **_: None),
+    )
+
+    class Client:
+        async def generate_image(self, *, prompt: str):
+            return SimpleNamespace(bytes=base, format="png", mime_type="image/png")
+
+    monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: Client())
+    monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: store)
+    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", one_attempt)
+    monkeypatch.setattr(
+        "v3_execution.executors.visual_executor.load_image_provider_spec",
+        lambda: SimpleNamespace(provider="stub", model_name="stub-model"),
+    )
+
+    async def emit(_event_type: str, _payload: dict) -> None:
+        return None
+
+    blocks = await execute_visual(order, emit, trace_id="trace", generation_id="gen")
+    assert blocks[0].status == "flagged_quality"
+    assert store.generated and store.generated[0] != base
+    assert store.cached == 0
+
+
+@pytest.mark.asyncio
+async def test_diagram_precision_qc_exception_fails_closed_without_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("V3_IMAGE_CACHE_ENABLED", "true")
+    order = VisualGeneratorWorkOrder(
+        work_order_id="v-compose-qc-error",
+        visual=VisualPlanItem(
+            id="vis-compose-qc-error",
+            attaches_to="practice",
+            mode="diagram",
+            visual_style="diagram_precision",
+            labels_required=["A"],
+            purpose="show relation",
+        ),
+    )
+    base = _png_bytes()
+
+    class Client:
+        async def generate_image(self, *, prompt: str):
+            return SimpleNamespace(bytes=base, format="png", mime_type="image/png")
+
+    class Store:
+        def __init__(self) -> None:
+            self.generated: list[bytes] = []
+            self.cache_writes = 0
+
+        async def image_exists(self, *, key: str) -> bool:
+            return False
+
+        async def store_image(self, image_bytes, *_args, **kwargs):
+            self.generated.append(image_bytes)
+            return f"https://cdn.example/{kwargs['filename']}"
+
+        async def store_image_key(self, **_kwargs):
+            self.cache_writes += 1
+
+    store = Store()
+
+    async def qc_error(**_kwargs):
+        raise RuntimeError("qc service down")
+
+    async def one_attempt(_label, attempt, max_retries):
+        _ = max_retries
+        return await attempt(False)
+
+    monkeypatch.setattr("v3_execution.executors.visual_executor.visual_qc_enabled", lambda: True)
+    monkeypatch.setattr("v3_execution.executors.visual_executor.evaluate_visual_quality", qc_error)
+    monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: Client())
+    monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: store)
+    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", one_attempt)
+    monkeypatch.setattr(
+        "v3_execution.executors.visual_executor.load_image_provider_spec",
+        lambda: SimpleNamespace(provider="stub", model_name="stub-model"),
+    )
+
+    async def emit(_event_type: str, _payload: dict) -> None:
+        return None
+
+    blocks = await execute_visual(order, emit, trace_id="trace", generation_id="gen")
+    assert blocks[0].status == "flagged_quality"
+    assert "QC UNAVAILABLE" in (blocks[0].qc_reasons[0] if blocks[0].qc_reasons else "").upper()
+    assert store.generated and store.generated[0] != base
+    assert store.cache_writes == 0
 
 
 @pytest.mark.asyncio

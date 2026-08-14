@@ -48,7 +48,7 @@ describe('/settings', () => {
 
 	it('renders the existing profile summary and edit entry point', async () => {
 		render(SettingsPage);
-		expect(screen.getByRole('link', { name: '← Lessons' }).getAttribute('href')).toBe('/lessons');
+		expect(screen.getByRole('link', { name: '← Units' }).getAttribute('href')).toBe('/units');
 		expect(await screen.findByRole('heading', { name: 'Teacher Setup' })).toBeTruthy();
 		expect(screen.getByText('Year 10 mixed-ability maths')).toBeTruthy();
 		await fireEvent.click(screen.getByRole('button', { name: 'Edit Profile' }));

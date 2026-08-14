@@ -211,6 +211,11 @@ async def run_path_structural_planner(
         for slot in (fixed_context.get("slots") or [])
         if isinstance(slot, dict) and slot.get("slot_id")
     ]
+    expected_visual_required = {
+        str(slot["slot_id"]): bool(slot.get("visual_required"))
+        for slot in (fixed_context.get("slots") or [])
+        if isinstance(slot, dict) and slot.get("slot_id")
+    }
     tid = trace_id or str(uuid.uuid4())
     errors: list[str] = []
     previous_output: dict[str, Any] | None = None
@@ -227,6 +232,8 @@ async def run_path_structural_planner(
                         "errors name. Section ids and roles are fixed: do not "
                         "rename, add, remove, or reorder them, and preserve the "
                         "objective and concept id exactly."
+                        " Echo each supplied slot's visual_required flag exactly; "
+                        "do not clear an authoritative true flag."
                     ),
                     "previous_output": previous_output,
                     "validation_errors": errors,
@@ -259,7 +266,11 @@ async def run_path_structural_planner(
                 raise
             continue
 
-        errors = validate_path_structural_result(plan, expected_slots=expected_slots)
+        errors = validate_path_structural_result(
+            plan,
+            expected_slots=expected_slots,
+            expected_visual_required=expected_visual_required,
+        )
         if not errors:
             return plan
         previous_output = plan.model_dump(mode="json", exclude_none=True)

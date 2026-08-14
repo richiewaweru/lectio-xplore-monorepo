@@ -5,12 +5,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
 	listUnits: vi.fn(),
+	getCapabilities: vi.fn(),
 	createUnit: vi.fn(),
 	constructorReadback: vi.fn(),
 	planUnitPath: vi.fn(),
 	goto: vi.fn()
 }));
 vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
+const pageState = vi.hoisted(() => ({ url: new URL('http://localhost/units') }));
+vi.mock('$app/state', () => ({ page: pageState }));
+vi.mock('$lib/api/capabilities', () => ({ getCapabilities: mocks.getCapabilities }));
 vi.mock('$lib/api/units', () => ({
 	listUnits: mocks.listUnits,
 	createUnit: mocks.createUnit,
@@ -33,6 +37,8 @@ const readback = {
 describe('/units', () => {
 	beforeEach(() => {
 		Object.values(mocks).forEach((mock) => mock.mockReset());
+		pageState.url = new URL('http://localhost/units');
+		mocks.getCapabilities.mockResolvedValue({ xplore_v2: true });
 		mocks.listUnits.mockResolvedValue([]);
 	});
 	afterEach(cleanup);
@@ -42,6 +48,30 @@ describe('/units', () => {
 		await screen.findByText('No units yet');
 		expect(mocks.listUnits).toHaveBeenCalled();
 		expect(screen.queryByRole('heading', { name: 'Legacy one-lesson units' })).toBeNull();
+	});
+
+	it('opens the native creation flow when linked with the new lesson action', async () => {
+		pageState.url = new URL('http://localhost/units?new=1');
+		render(UnitsPage);
+		expect(await screen.findByRole('heading', { name: 'What are you teaching?' })).toBeTruthy();
+		expect(mocks.getCapabilities).toHaveBeenCalled();
+	});
+
+	it('fails closed with an explicit native capability message', async () => {
+		mocks.getCapabilities.mockResolvedValue({ xplore_v2: false });
+		render(UnitsPage);
+		expect(await screen.findByRole('heading', { name: /can’t open the lesson workspace yet/i })).toBeTruthy();
+		expect(screen.getByText(/Native lesson planning is not enabled/i)).toBeTruthy();
+		expect(mocks.listUnits).not.toHaveBeenCalled();
+		expect(mocks.goto).not.toHaveBeenCalled();
+	});
+
+	it('fails closed when capability discovery fails without redirecting to legacy UI', async () => {
+		mocks.getCapabilities.mockRejectedValue(new Error('capability endpoint unavailable'));
+		render(UnitsPage);
+		expect(await screen.findByRole('heading', { name: /can’t open the lesson workspace yet/i })).toBeTruthy();
+		expect(screen.getByText(/capability endpoint unavailable/i)).toBeTruthy();
+		expect(mocks.goto).not.toHaveBeenCalled();
 	});
 
 	it('shows the teacher-language empty state and opens the new-unit flow', async () => {

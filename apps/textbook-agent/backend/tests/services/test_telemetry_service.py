@@ -171,3 +171,143 @@ async def test_trace_registered_event_scopes_pre_generation_llm_events() -> None
     assert repo.saved[0]["trace_id"] == "studio-preflight-trace"
     assert repo.saved[0]["generation_id"] is None
     assert repo.saved[0]["node"] == "v3_narrow"
+
+
+async def test_registered_parent_trace_scopes_derived_planning_call() -> None:
+    repo = RecordingLLMCallRepo()
+    monitor = TelemetryMonitor()
+
+    async def load_llm_repo():
+        return repo
+
+    monitor.configure(llm_call_repository_factory=load_llm_repo)
+    await monitor._handle_event(  # noqa: SLF001
+        {
+            "type": "trace_registered",
+            "trace_id": "path-prepare:user-id:request-id",
+            "user_id": TEST_USER.id,
+            "source": "planning",
+        }
+    )
+    await monitor._handle_event(  # noqa: SLF001
+        {
+            "type": "llm_call_succeeded",
+            "trace_id": "path-prepare:user-id:request-id:structural1",
+            "generation_id": None,
+            "caller": "planner",
+            "node": "v2_structural_planner",
+            "slot": "standard",
+            "attempt": 1,
+        }
+    )
+
+    assert repo.saved[0]["user_id"] == TEST_USER.id
+    assert repo.saved[0]["trace_id"] == "path-prepare:user-id:request-id:structural1"
+    assert repo.saved[0]["generation_id"] is None
+
+
+async def test_failed_llm_event_persists_retryable_and_error_class_in_existing_fields() -> None:
+    repo = RecordingLLMCallRepo()
+    monitor = TelemetryMonitor()
+
+    async def load_llm_repo():
+        return repo
+
+    monitor.configure(llm_call_repository_factory=load_llm_repo)
+    await monitor._handle_event(  # noqa: SLF001
+        {
+            "type": "trace_registered",
+            "trace_id": "planning-trace-errors",
+            "user_id": TEST_USER.id,
+            "source": "planning",
+        }
+    )
+    await monitor._handle_event(  # noqa: SLF001
+        {
+            "type": "llm_call_failed",
+            "trace_id": "planning-trace-errors",
+            "generation_id": None,
+            "caller": "planner",
+            "node": "v2_path_planner",
+            "slot": "fast",
+            "attempt": 2,
+            "retryable": False,
+            "error": "provider rejected request",
+            "error_class": "ModelHTTPError",
+        }
+    )
+
+    assert repo.saved[0]["retryable"] is False
+    assert repo.saved[0]["error"] == "[ModelHTTPError] provider rejected request"
+
+
+async def test_failed_llm_event_persists_inherent_retryability_at_final_attempt() -> None:
+    repo = RecordingLLMCallRepo()
+    monitor = TelemetryMonitor()
+
+    async def load_llm_repo():
+        return repo
+
+    monitor.configure(llm_call_repository_factory=load_llm_repo)
+    await monitor._handle_event(  # noqa: SLF001
+        {
+            "type": "trace_registered",
+            "trace_id": "planning-trace-connection",
+            "user_id": TEST_USER.id,
+            "source": "planning",
+        }
+    )
+    await monitor._handle_event(  # noqa: SLF001
+        {
+            "type": "llm_call_failed",
+            "trace_id": "planning-trace-connection",
+            "generation_id": None,
+            "caller": "planner",
+            "node": "v2_form_planner",
+            "slot": "fast",
+            "attempt": 2,
+            # Retryable describes the error, not whether this local runner has
+            # another attempt left.
+            "retryable": True,
+            "error": "Connection error",
+            "error_class": "ModelAPIError",
+        }
+    )
+
+    assert repo.saved[0]["attempt"] == 2
+    assert repo.saved[0]["retryable"] is True
+    assert repo.saved[0]["error"] == "[ModelAPIError] Connection error"
+
+
+async def test_failed_llm_event_preserves_error_class_when_message_is_empty() -> None:
+    repo = RecordingLLMCallRepo()
+    monitor = TelemetryMonitor()
+
+    async def load_llm_repo():
+        return repo
+
+    monitor.configure(llm_call_repository_factory=load_llm_repo)
+    await monitor._handle_event(  # noqa: SLF001
+        {
+            "type": "trace_registered",
+            "trace_id": "native-timeout-trace",
+            "user_id": TEST_USER.id,
+            "source": "native_generation",
+        }
+    )
+    await monitor._handle_event(  # noqa: SLF001
+        {
+            "type": "llm_call_failed",
+            "trace_id": "native-timeout-trace",
+            "generation_id": "native-timeout-generation",
+            "caller": "v3_item_executor",
+            "node": "v3_item_executor",
+            "slot": "standard",
+            "attempt": 1,
+            "retryable": False,
+            "error": "",
+            "error_class": "TimeoutError",
+        }
+    )
+
+    assert repo.saved[0]["error"] == "[TimeoutError]"

@@ -10,6 +10,41 @@ lesson_title: ""
 objective: ""
 knowledge_type: conceptual
 lesson_mode: first_exposure
+native_whole_lesson: true
+contract_version: 2
+document_revision: 0
+document_sha256: ""
+reloaded_sha256: ""
+reload_verified: false
+hashes_equal: false
+viewer_has_visual: false
+pdfs:
+  teacher:
+    path: 35-teacher.pdf
+    sha256: ""
+    bytes: 0
+    page_count: 0
+    answer_key_count: 0
+  student:
+    path: 36-student.pdf
+    sha256: ""
+    bytes: 0
+    page_count: 0
+    answer_key_count: 0
+  generation_page:
+    path: 34-generation-page.png
+    sha256: ""
+telemetry:
+  call_count: 0
+  unattributed: 0
+legacy_audit:
+  zero_current_legacy: true
+  editable_lessons: []
+  builder_or_stage2_requests: []
+visual_qc:
+  required: 0
+  accepted: 0
+  flagged: 0
 skeleton:
   id: ""
   version: ""
@@ -23,7 +58,7 @@ contracts:
   lectio_page_contract_version: ""
   catalogue_version: ""
 prompts:
-  lesson_approach: lesson-approach-planner-v1
+  lesson_approach: lesson-approach-planner-v2
   form_planner: form-planner-v1
   writer_common: ""
 models:
@@ -54,3 +89,5 @@ counts:
 artifacts_complete: false
 legacy_path_used: false
 fixture_used: false
+missing: []
+fail_reasons: []

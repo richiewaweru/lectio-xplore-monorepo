@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { goto } from '$app/navigation';
+	import { goto, replaceState } from '$app/navigation';
 	import { onDestroy, onMount } from 'svelte';
 
-	import V3InputSurface from '$lib/components/studio/V3InputSurface.svelte';
 	import V3PlanningState from '$lib/components/studio/V3PlanningState.svelte';
 	import V3PlanPreview from '$lib/components/studio/V3PlanPreview.svelte';
 	import V3PlanActions from '$lib/components/studio/V3PlanActions.svelte';
@@ -19,23 +18,18 @@
 		connectV3ChunkedStream,
 		connectV3StudioGenerationStream,
 		downloadV3GenerationPdf,
-		extractSignals,
 		fetchV3Document,
 		getChunkedPlan,
 		getChunkedPlanStatus,
 		getV3GenerationBlueprint,
 		regenerateChunkedPlan,
 		retryNativeGeneration,
-		retryChunkedSection,
-		startChunkedPlan
+		retryNativeVisuals,
+		retryChunkedSection
 	} from '$lib/api/v3';
 	import { isApiError } from '$lib/api/errors';
 	import { createGenerationPoller } from '$lib/generation/generation-poller';
 	import { resetV3Studio, v3Studio } from '$lib/stores/v3-studio.svelte';
-	import { createBuilderLesson, listBuilderLessons } from '$lib/builder/api/lesson-crud';
-	import { v3PackToBuilderDocument } from '$lib/builder/adapters/from-generation';
-	import { v3StructuralPlanToBuilderDocument } from '$lib/builder/adapters/from-structural-plan';
-	import { saveDocument } from '$lib/builder/persistence/idb-store';
 	import {
 		buildCanvasSkeleton,
 		buildStructuralPlanCanvas,
@@ -46,15 +40,12 @@
 		getBookletPrintReadiness
 	} from '$lib/studio/v3-booklet';
 	import { coerceV3DocumentToPack } from '$lib/studio/v3-document';
-	import type { V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
 	import { mapPackSectionsToCanvas } from '$lib/studio/v3-print-canvas';
 	import type {
 		V3ChunkedPlan,
 		V3ChunkedPlanState,
 		V3ChunkedStatus,
-		V3DraftPack,
-		V3InputForm,
-		V3VariantSpec
+		V3DraftPack
 	} from '$lib/types/v3';
 
 	let pdfLoading = $state(false);
@@ -67,15 +58,16 @@
 	let teacherName = $state('');
 	let exportDate = $state('');
 	let includeAnswers = $state(true);
-	let builderLoading = $state(false);
-	let builderError = $state<string | null>(null);
-	let classLabel = $state<string | null>(null);
+	// Start closed on both SSR and browser so blank Studio never flashes a creation surface.
+	// A generation query is explicitly opened by onMount below.
+	let blankStudioRedirecting = $state(true);
+	let readyNavigationGenerationId: string | null = null;
 	let displayTitle = $state('');
 	const currentExportPolicy = $derived(getBookletExportPolicy(v3Studio.bookletStatus));
 	const currentPrintReadiness = $derived(
 		getBookletPrintReadiness(v3Studio.bookletStatus, v3Studio.activePack)
 	);
-	const builderSourcePack = $derived(v3Studio.activePack ?? v3Studio.finalPack ?? v3Studio.draftPack);
+	const currentNativeRetryAction = $derived(nativeRetryAction(v3Studio.chunkedState));
 	let stage2Progress = $state<{
 		completed: string[];
 		failed: string[];
@@ -113,12 +105,12 @@
 
 	function handleStartOver(): void {
 		disconnectActiveChunkedStream();
-		builderLoading = false;
-		builderError = null;
 		pdfOpen = false;
 		pdfError = null;
 		displayTitle = '';
 		resetV3Studio();
+		blankStudioRedirecting = true;
+		void goto('/units', { replaceState: true });
 	}
 
 	function setGenerationQuery(generationId: string | null): void {
@@ -131,7 +123,7 @@
 		}
 		const next = `${url.pathname}${url.search}${url.hash}`;
 		if (next !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
-			window.history.replaceState(window.history.state, '', next);
+			replaceState(next, window.history.state);
 		}
 	}
 
@@ -184,7 +176,6 @@
 		v3Studio.coherenceHint = null;
 		pdfOpen = false;
 		pdfError = null;
-		builderError = null;
 	}
 
 	async function applyChunkedState(
@@ -196,6 +187,9 @@
 		}: { resume?: boolean; hydrateComplete?: boolean; pollImmediately?: boolean } = {}
 	): Promise<void> {
 		const resolved = state;
+		if (resolved.generation_id !== readyNavigationGenerationId) {
+			readyNavigationGenerationId = null;
+		}
 
 		v3Studio.chunkedState = resolved;
 		v3Studio.generationId = resolved.generation_id;
@@ -247,9 +241,7 @@
 			return;
 		}
 		if (resolved.stage === 'ready') {
-			disconnectActiveChunkedStream();
-			displayTitle = resolved.display_title ?? displayTitle;
-			await hydrateFromDocument(resolved.generation_id);
+			await navigateToReadyViewer(resolved.generation_id);
 			return;
 		}
 		if (resolved.stage === 'failed_recoverable' || resolved.stage === 'failed_terminal') {
@@ -325,6 +317,16 @@
 				await hydrateFromDocument(resolved.generation_id);
 			}
 		}
+	}
+
+	async function navigateToReadyViewer(generationId: string): Promise<void> {
+		if (readyNavigationGenerationId === generationId) return;
+		readyNavigationGenerationId = generationId;
+		stopGenerationPolling();
+		disconnectActiveChunkedStream();
+		v3Studio.streamCancel?.();
+		v3Studio.streamCancel = null;
+		await goto(`/studio/generations/${encodeURIComponent(generationId)}`);
 	}
 
 	function stateFromPlanAndStatus(
@@ -468,16 +470,19 @@
 			if (merged) {
 				await applyChunkedState(merged, { hydrateComplete: false });
 			}
-			const versionChanged =
-				typeof status.doc_version === 'string' && status.doc_version !== lastDocumentVersion;
-			if (hydratedDocumentGenerationId !== generationId || versionChanged) {
-				const hydrated = await hydrateFromDocument(generationId);
-				if (hydrated) {
-					hydratedDocumentGenerationId = generationId;
-					lastDocumentVersion = status.doc_version;
+			const ready = status.stage === 'ready';
+			if (!ready) {
+				const versionChanged =
+					typeof status.doc_version === 'string' && status.doc_version !== lastDocumentVersion;
+				if (hydratedDocumentGenerationId !== generationId || versionChanged) {
+					const hydrated = await hydrateFromDocument(generationId);
+					if (hydrated) {
+						hydratedDocumentGenerationId = generationId;
+						lastDocumentVersion = status.doc_version;
+					}
 				}
 			}
-			if (status.stage === 'complete' || status.next_action === 'done') {
+			if (status.stage === 'complete' || status.next_action === 'done' || ready) {
 				stopGenerationPolling();
 			}
 		} catch {
@@ -489,11 +494,16 @@
 
 	async function handleNativeRetry(): Promise<void> {
 		const generationId = v3Studio.generationId;
-		if (!generationId || recoveryBusy) return;
+		const action = nativeRetryAction(v3Studio.chunkedState);
+		if (!generationId || !action || recoveryBusy) return;
 		recoveryBusy = true;
 		v3Studio.error = null;
 		try {
-			await retryNativeGeneration(generationId);
+			if (action === 'retry_visuals') {
+				await retryNativeVisuals(generationId);
+			} else {
+				await retryNativeGeneration(generationId);
+			}
 			const status = await getChunkedPlanStatus(generationId);
 			const merged = mergeChunkedStatus(status);
 			if (merged) await applyChunkedState(merged);
@@ -502,6 +512,40 @@
 			v3Studio.error = friendly(err);
 		} finally {
 			recoveryBusy = false;
+		}
+	}
+
+	type NativeRetryAction = 'retry_items' | 'retry_teaching' | 'retry_native' | 'retry_visuals';
+
+	function nativeRetryAction(state: V3ChunkedPlanState | null | undefined): NativeRetryAction | null {
+		if (!state) return null;
+		if (state.stage === 'awaiting_visuals') {
+			return state.next_action === 'retry_visuals' ? 'retry_visuals' : null;
+		}
+		if (state.stage !== 'failed_recoverable') return null;
+		switch (state.next_action) {
+			case 'retry_items':
+			case 'retry_teaching':
+			case 'retry_native':
+			case 'retry_visuals':
+				return state.next_action;
+			default:
+				return null;
+		}
+	}
+
+	function nativeRetryLabel(action: NativeRetryAction | null): string | null {
+		switch (action) {
+			case 'retry_items':
+				return 'Retry lesson items';
+			case 'retry_teaching':
+				return 'Retry teaching plan';
+			case 'retry_native':
+				return 'Retry generation';
+			case 'retry_visuals':
+				return 'Retry visuals';
+			default:
+				return null;
 		}
 	}
 
@@ -583,30 +627,6 @@
 			if (state) await applyChunkedState(state, { hydrateComplete: false });
 		} catch {
 			// Keep current UI state if status refresh fails.
-		}
-	}
-
-	async function handleInputSubmit(
-		form: V3InputForm,
-		submittedClassLabel: string | null,
-		variants: V3VariantSpec[]
-	) {
-		v3Studio.error = null;
-		builderError = null;
-		classLabel = submittedClassLabel;
-		v3Studio.form = form;
-		v3Studio.stage = 'fill';
-		try {
-			v3Studio.signals = await extractSignals(form);
-			const chunkedState = await startChunkedPlan({
-				signals: v3Studio.signals,
-				form,
-				variants
-			});
-			await applyChunkedState(chunkedState);
-		} catch (err) {
-			v3Studio.stage = 'intent';
-			v3Studio.error = friendly(err);
 		}
 	}
 
@@ -759,7 +779,6 @@
 		const generationId = chunked.generation_id;
 		v3Studio.generationId = generationId;
 		v3Studio.error = null;
-		builderError = null;
 		try {
 			const structuralPlan = chunked.structural_plan;
 			if (!structuralPlan) {
@@ -770,26 +789,9 @@
 				await continueChunkedStage2(next);
 				return;
 			}
-			const existing = (await listBuilderLessons()).find(
-				(lesson) => lesson.source_generation_id === generationId
+			throw new Error(
+				'Current lesson generation requires native document contract v2; legacy Builder conversion is unavailable.'
 			);
-			if (existing) {
-				await goto(`/builder/${existing.id}?generation_id=${generationId}`);
-				return;
-			}
-			const lesson = v3StructuralPlanToBuilderDocument(structuralPlan, {
-				generationId,
-				title: displayTitle
-			});
-			const created = await createBuilderLesson({
-				source_type: 'v3_generation',
-				source_generation_id: generationId,
-				title: lesson.title,
-				class_label: classLabel,
-				document: lesson
-			});
-			await saveDocument(created.document);
-			await goto(`/builder/${created.id}?generation_id=${generationId}`);
 		} catch (err) {
 			v3Studio.error = friendly(err);
 			v3Studio.stage = 'skeleton';
@@ -896,7 +898,6 @@
 		if (!chunked) return;
 		disconnectActiveChunkedStream();
 		v3Studio.error = null;
-		builderError = null;
 		v3Studio.stage = 'fill';
 		try {
 			const next = await retryChunkedSection({
@@ -948,7 +949,15 @@
 		v3Studio.streamCancel?.();
 	});
 
-	onMount(() => {
+		onMount(() => {
+		if (!browser) return;
+		const generationId = new URL(window.location.href).searchParams.get('generation_id');
+		if (!generationId) {
+			blankStudioRedirecting = true;
+			void goto('/units', { replaceState: true });
+			return;
+		}
+		blankStudioRedirecting = false;
 		void resumeChunkedFromQuery();
 	});
 
@@ -989,35 +998,6 @@
 		}
 	}
 
-	async function handleOpenInBuilder() {
-		const generationId = v3Studio.generationId;
-		const pack = builderSourcePack;
-		if (!generationId || !pack) {
-			builderError = 'A renderable lesson is required before opening Builder.';
-			return;
-		}
-		builderLoading = true;
-		builderError = null;
-		try {
-			const packSnapshot = $state.snapshot(pack) as V3PackDocument;
-			const lesson = v3PackToBuilderDocument(packSnapshot, {
-				routeGenerationId: generationId
-			});
-			const created = await createBuilderLesson({
-				source_type: 'v3_generation',
-				source_generation_id: generationId,
-				title: lesson.title,
-				class_label: classLabel,
-				document: lesson
-			});
-			await saveDocument(created.document);
-			await goto(`/builder/${created.id}`);
-		} catch (err) {
-			builderError = friendly(err);
-		} finally {
-			builderLoading = false;
-		}
-	}
 </script>
 
 <div class="min-h-screen bg-background pb-16">
@@ -1034,8 +1014,10 @@
 		</div>
 	</div>
 
-	{#if v3Studio.stage === 'intent'}
-		<V3InputSurface onSubmit={handleInputSubmit} />
+	{#if blankStudioRedirecting}
+		<section class="mx-auto max-w-3xl px-4 py-16 text-center" aria-live="polite">
+			<p class="text-sm text-muted-foreground">Opening the native lesson workspace…</p>
+		</section>
 	{:else if v3Studio.stage === 'fill'}
 		<div class="space-y-4">
 			<V3PlanningState
@@ -1232,7 +1214,7 @@
 			/>
 	{:else if v3Studio.stage === 'generating'}
 			<section class="mx-auto max-w-3xl space-y-4 px-4 py-16 text-center">
-				{#if v3Studio.chunkedState?.stage === 'failed_recoverable'}
+				{#if currentNativeRetryAction}
 					<h2 class="text-xl font-semibold text-foreground">Generation paused</h2>
 					<p class="text-sm text-muted-foreground">
 						A recoverable generation stage failed. Retry resumes only the failed stage from persisted work.
@@ -1243,17 +1225,13 @@
 						disabled={recoveryBusy}
 						onclick={handleNativeRetry}
 					>
-						{recoveryBusy
-							? 'Retrying…'
-							: v3Studio.chunkedState.next_action === 'retry_teaching'
-								? 'Retry teaching plan'
-								: v3Studio.chunkedState.next_action === 'retry_visuals'
-									? 'Retry visuals'
-									: 'Retry lesson items'}
+						{recoveryBusy ? 'Retrying…' : nativeRetryLabel(currentNativeRetryAction)}
 					</button>
-				{:else if v3Studio.chunkedState?.stage === 'failed_terminal'}
+				{:else if v3Studio.chunkedState?.stage === 'failed_terminal' || v3Studio.chunkedState?.stage === 'failed_recoverable'}
 					<h2 class="text-xl font-semibold text-foreground">Generation failed</h2>
-					<p class="text-sm text-muted-foreground">This failure cannot be retried from the current checkpoint.</p>
+					<p class="text-sm text-muted-foreground">
+						No supported recovery action is available for this generation state.
+					</p>
 				{:else}
 					<div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary" aria-hidden="true"></div>
 					<h2 class="text-xl font-semibold text-foreground">Building your lesson…</h2>
@@ -1290,14 +1268,6 @@
 				<div class="mt-3 flex flex-wrap justify-end gap-2">
 					<button
 						type="button"
-						class="rounded-md border border-input px-4 py-2 text-sm font-medium disabled:opacity-60"
-						onclick={handleOpenInBuilder}
-						disabled={!builderSourcePack || !v3Studio.generationId || builderLoading}
-					>
-						{builderLoading ? 'Opening Builder...' : 'Open in Builder'}
-					</button>
-					<button
-						type="button"
 						class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
 						onclick={() => (pdfOpen = !pdfOpen)}
 						disabled={!currentExportPolicy.enabled}
@@ -1305,9 +1275,6 @@
 						{currentExportPolicy.label}
 					</button>
 				</div>
-				{#if builderError}
-					<p class="mt-3 text-sm text-destructive" role="alert">{builderError}</p>
-				{/if}
 				{#if pdfOpen}
 					<div class="mt-3 rounded-lg border border-border/60 bg-card p-4 space-y-3">
 						<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">

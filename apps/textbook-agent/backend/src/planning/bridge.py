@@ -207,6 +207,7 @@ def _build_structural_plan(
     slots: list[str],
     selected_components: dict[str, list[str]],
     page_block_plans: dict[str, Any] | None = None,
+    visual_required_by_slot: dict[str, bool] | None = None,
 ) -> StructuralPlan:
     if generated.deviation_request is not None:
         raise PathPreparationBlocked("A skeleton deviation requires teacher approval")
@@ -238,6 +239,13 @@ def _build_structural_plan(
         # SectionPlan.components has no default, and exclude_none drops the key
         # when the planner omits it (the native prompt forbids components).
         section_payload.setdefault("components", [])
+        if visual_required_by_slot is not None:
+            # Skeleton-derived visual flags are authoritative. The structural
+            # model must echo them, but a direct/custom planner cannot clear a
+            # required visual by returning false.
+            section_payload["visual_required"] = bool(
+                visual_required_by_slot.get(generated_section.role or generated_section.id, False)
+            )
         title = section_payload.get("title")
         if isinstance(title, str):
             section_payload["title"] = _clip_advisory_text(title, limit=80)
@@ -420,6 +428,7 @@ async def prepare_path_lesson(
     component_selector: ComponentSelector = run_component_selector,
     regenerate: bool = False,
     regeneration_reason: str | None = None,
+    trace_id: str | None = None,
 ) -> tuple[PreparedLessonResponse, StructuralPlan]:
     if version.status != "approved":
         raise PathPreparationBlocked("Path must be approved before lesson preparation")
@@ -539,14 +548,12 @@ async def prepare_path_lesson(
         for slot in variant.slots
     }
     slots_by_id.update({slot.slot_id: slot for slot in preview.variants[0].slots})
-    from core.config import settings
-    from planning.page_blocks import page_document_scope_matches
-
-    use_page_docs = settings.xplore_page_documents_enabled and page_document_scope_matches(
-        knowledge_type=lesson.primary_knowledge_type,
-        lesson_mode=request.lesson_mode,
-        scope=settings.xplore_page_document_scope,
-    )
+    # Every current path-prepared lesson is native.  The feature flag and scope
+    # controls were useful during the rollout, but allowing them to select the
+    # component-selector branch means a normal product request can still create
+    # a contract-v1 generation.  Historical v1 records remain readable; new
+    # path preparation has one authoritative contract.
+    use_page_docs = True
     component_selections: dict[str, ComponentSelection] = {}
     page_block_plans = None
     if use_page_docs:
@@ -614,7 +621,10 @@ async def prepare_path_lesson(
             for variant in preparation_group_preview.variants
         ],
     }
-    generated = await structural_planner(fixed_context)
+    if trace_id is not None and structural_planner is run_path_structural_planner:
+        generated = await structural_planner(fixed_context, trace_id=trace_id)
+    else:
+        generated = await structural_planner(fixed_context)
     plan = _build_structural_plan(
         generated=generated,
         lesson=lesson,
@@ -626,6 +636,10 @@ async def prepare_path_lesson(
             for slot_id, selection in component_selections.items()
         },
         page_block_plans=page_block_plans,
+        visual_required_by_slot={
+            slot.slot_id: slot.visual_required
+            for slot in preview.variants[0].slots
+        },
     )
     misconception_count = min(len(plan.cards[0].misconceptions), 3)
     group_preview = catalog.preview(

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,6 +34,11 @@ class ApprovedItemRecord:
     correct_key: str
     diagnoses: dict[str, object]
 
+    @property
+    def item_kind(self) -> Literal["multiple_choice", "open_response"]:
+        """Derive the assessment form from the canonical stored metadata."""
+        return approved_item_kind(self)
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
@@ -44,6 +49,22 @@ class ApprovedItemRecord:
             "correct_key": self.correct_key,
             "diagnoses": dict(self.diagnoses),
         }
+
+
+def approved_item_kind(
+    item: Any,
+) -> Literal["multiple_choice", "open_response"]:
+    """Classify an approved item without inventing a second ownership field.
+
+    ``PackItemModel.options`` is the available canonical discriminator: a
+    non-empty option set is multiple choice; an empty set is open response.
+    The helper also accepts ``ApprovedItemRef`` so persisted lesson packets can
+    enforce the same rule during teaching/form validation.
+    """
+    options = getattr(item, "options", None)
+    if options is None and isinstance(item, dict):
+        options = item.get("options")
+    return "multiple_choice" if options else "open_response"
 
 
 async def load_approved_item_records(

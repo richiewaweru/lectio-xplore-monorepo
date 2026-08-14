@@ -4,6 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
+TOPOLOGY_STARTED = "topology_started"
+TOPOLOGY_VALIDATED = "topology_validated"
+TOPOLOGY_PERSISTED = "topology_persisted"
+TOPOLOGY_DETERMINISTIC_RENDERED = "topology_deterministic_rendered"
+TOPOLOGY_QC = "topology_qc"
+
 
 def make_event(
     event_type: str,

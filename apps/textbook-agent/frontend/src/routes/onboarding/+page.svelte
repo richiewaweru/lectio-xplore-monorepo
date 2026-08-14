@@ -103,7 +103,7 @@
 				}
 			}
 
-			goto('/lessons', { replaceState: true });
+			goto('/units', { replaceState: true });
 		} catch (err) {
 			if (isApiError(err) && err.status === 401) {
 				logout();

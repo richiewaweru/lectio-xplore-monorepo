@@ -98,6 +98,7 @@ class LLMCallFailedEvent(_LLMCallEvent):
     latency_ms: float | None = None
     retryable: bool = True
     error: str
+    error_class: str | None = None
 
 
 class TraceRegisteredEvent(BaseModel):

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 # --- Generated blocks (proposal 2 Step 1)
@@ -95,6 +95,7 @@ class ExecutorOutcome(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
     retried: bool = False
+    retryable: bool = True
 
 
 # --- Work orders consumed by executors
@@ -254,6 +255,21 @@ class VisualPlanItem(BaseModel):
     print_requirements: list[str] = Field(default_factory=list)
     frames: list[VisualFrameSpec] = Field(default_factory=list)
 
+    @model_validator(mode="after")
+    def normalize_closed_labels(self) -> "VisualPlanItem":
+        if self.visual_style != "diagram_precision":
+            return self
+        labels: list[str] = []
+        seen: set[str] = set()
+        for raw in self.labels_required:
+            label = str(raw).strip()
+            folded = label.casefold()
+            if label and folded not in seen:
+                labels.append(label)
+                seen.add(folded)
+        self.labels_required = labels
+        return self
+
     @field_validator("visual_style", mode="before")
     @classmethod
     def normalize_visual_style(cls, value: object) -> object:
@@ -275,6 +291,9 @@ class VisualGeneratorWorkOrder(BaseModel):
     dependency: VisualDependency = "blueprint_only"
     visual: VisualPlanItem
     source_of_truth: list[SourceOfTruthEntry] = Field(default_factory=list)
+    # Latest persisted QC correction to apply on the next attempt. This is
+    # prompt metadata only and must never be rendered inside the image.
+    qc_correction_hint: str | None = None
 
 
 class AnswerKeyPlanSpec(BaseModel):

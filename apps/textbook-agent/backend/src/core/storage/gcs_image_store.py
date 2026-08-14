@@ -110,6 +110,18 @@ class GCSImageStore:
         blob = self._bucket.blob(key)
         return await asyncio.to_thread(blob.exists)
 
+    async def download_with_key(self, *, key: str) -> bytes | None:
+        """Download object bytes by internal key; never resolves arbitrary URLs."""
+        if not self.enabled:
+            return None
+        clean = key.strip().replace("\\", "/").lstrip("/")
+        if not clean or "://" in clean or any(part in {".", ".."} for part in clean.split("/")):
+            raise ValueError("unsafe GCS image key")
+        blob = self._bucket.blob(clean)
+        if not await asyncio.to_thread(blob.exists):
+            return None
+        return await asyncio.to_thread(blob.download_as_bytes)
+
     async def copy(self, *, source_key: str, destination_key: str) -> str | None:
         if not self.enabled:
             return None

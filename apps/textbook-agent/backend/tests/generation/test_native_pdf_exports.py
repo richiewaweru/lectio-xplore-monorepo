@@ -44,7 +44,7 @@ def test_student_and_teacher_pdf_exports(tmp_path: Path) -> None:
 
     teacher_text = _pdf_text(teacher_path)
     student_text = _pdf_text(student_path)
-    assert "Answer key" in teacher_text
+    assert teacher_text.count("Answer key") == 1
     assert OPEN_ANSWER_SNIPPET in teacher_text.replace("\n", " ")
     # Student must not include answer-key content (open-response phrase).
     assert "Answer key" not in student_text

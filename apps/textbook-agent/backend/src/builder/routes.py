@@ -18,7 +18,7 @@ from starlette.background import BackgroundTask
 from core.auth.jwt_handler import JWTHandler
 from core.auth.middleware import get_current_user
 from core.dependencies import get_gcs_image_store, get_jwt_handler, get_settings
-from core.database.models import EditableLessonModel, GenerationModel
+from core.database.models import EditableLessonModel, GenerationModel, LessonProvenanceModel
 from core.database.session import get_async_session
 from core.entities.user import User
 from core.rate_limit import limiter
@@ -471,13 +471,68 @@ async def create_builder_lesson(
 
     if body.source_generation_id:
         generation_result = await session.execute(
-            select(GenerationModel.id).where(
+            select(GenerationModel).where(
                 GenerationModel.id == body.source_generation_id,
                 GenerationModel.user_id == current_user.id,
             )
         )
-        if generation_result.scalar_one_or_none() is None:
+        source_generation = generation_result.scalar_one_or_none()
+        if source_generation is None:
             raise HTTPException(status_code=404, detail="Source generation not found")
+
+        # Builder is historical compatibility only.  Immutable path provenance
+        # plus contract v2 is the primary proof that this source belongs to the
+        # current native product; the state checks are a defense for records
+        # produced before all provenance fields were stamped.
+        provenance = await session.get(
+            LessonProvenanceModel,
+            source_generation.id,
+        )
+        contract_version = 1
+        if isinstance(source_generation.planning_spec_json, str):
+            try:
+                planning_spec = json.loads(source_generation.planning_spec_json)
+            except (TypeError, ValueError):
+                planning_spec = None
+            if isinstance(planning_spec, dict):
+                try:
+                    contract_version = max(
+                        contract_version,
+                        int(planning_spec.get("document_contract_version") or 1),
+                    )
+                except (TypeError, ValueError):
+                    pass
+        chunked_state = source_generation.chunked_state_json
+        if isinstance(chunked_state, dict):
+            structural_plan = chunked_state.get("structural_plan")
+            if isinstance(structural_plan, dict):
+                try:
+                    contract_version = max(
+                        contract_version,
+                        int(structural_plan.get("document_contract_version") or 1),
+                    )
+                except (TypeError, ValueError):
+                    pass
+            context = chunked_state.get("context")
+            native_state = bool(
+                chunked_state.get("native_whole_lesson")
+                or (context.get("native_whole_lesson") if isinstance(context, dict) else False)
+                or chunked_state.get("page_document_v2")
+            )
+        else:
+            native_state = False
+        immutable_path_source = bool(
+            provenance is not None
+            and provenance.path_version_id
+            and provenance.path_lesson_id
+        )
+        if (immutable_path_source and contract_version >= 2) or (
+            native_state and contract_version >= 2
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="Native/current generations cannot be imported into Builder",
+            )
 
     _validate_lesson_document_shape(body.document)
 

@@ -27,6 +27,8 @@ objects, layouts, or question text.
 3. Give each fixed section a concise title and transition note.
 4. Preserve section IDs and roles exactly as supplied.
 5. Attach the canonical concept card ID where required.
+6. Echo each supplied slot's `visual_required` flag exactly. A true flag is
+   authoritative and must not be cleared or inferred away.
 
 ## PROHIBITIONS
 

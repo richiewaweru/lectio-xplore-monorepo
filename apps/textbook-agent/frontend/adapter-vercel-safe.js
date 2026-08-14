@@ -22,6 +22,21 @@ function resolveSymlinkSource(target, destination) {
 	return path.resolve(path.dirname(destination), target);
 }
 
+function resolveFromWorkspaceNodeModules(relativeWithinNodeModules) {
+	let current = process.cwd();
+	while (true) {
+		const candidate = path.join(current, 'node_modules', relativeWithinNodeModules);
+		if (fs.existsSync(candidate)) {
+			return candidate;
+		}
+		const parent = path.dirname(current);
+		if (parent === current) {
+			return null;
+		}
+		current = parent;
+	}
+}
+
 function resolveExistingSource(target, destination) {
 	const directSource = resolveSymlinkSource(target, destination);
 	if (fs.existsSync(directSource)) {
@@ -36,12 +51,8 @@ function resolveExistingSource(target, destination) {
 			nodeModulesIndex + nodeModulesMarker.length
 		);
 		const relativeWithinNodeModules = path.relative(bundleNodeModulesRoot, directSource);
-		const fromProjectBundle = path.join(
-			process.cwd(),
-			'node_modules',
-			relativeWithinNodeModules
-		);
-		if (fs.existsSync(fromProjectBundle)) {
+		const fromProjectBundle = resolveFromWorkspaceNodeModules(relativeWithinNodeModules);
+		if (fromProjectBundle && fs.existsSync(fromProjectBundle)) {
 			return fromProjectBundle;
 		}
 	}

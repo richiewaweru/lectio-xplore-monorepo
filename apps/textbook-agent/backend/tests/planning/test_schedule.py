@@ -16,7 +16,6 @@ from planning.models import (
     ScheduleSuggestRequest,
     ScheduleWriteRequest,
     TeachingPeriodInput,
-    UnitCreate,
     UnitGroupInput,
     UnitGroupsWriteRequest,
 )

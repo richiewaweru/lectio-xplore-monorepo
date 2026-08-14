@@ -78,6 +78,44 @@ def _has_failed_visuals(page: Mapping[str, Any]) -> bool:
     return False
 
 
+def visual_quality_summary(state: Mapping[str, Any]) -> dict[str, Any]:
+    """Expose the persisted visual QC markers needed by native viewers/retry UI."""
+    page = _page_state(state)
+    block_execution = page.get("block_execution")
+    flagged: list[dict[str, Any]] = []
+    failed: list[str] = []
+    if isinstance(block_execution, Mapping):
+        for outcome in block_execution.values():
+            if not isinstance(outcome, Mapping) or str(outcome.get("object") or "") != "figure":
+                continue
+            request_id = str(outcome.get("request_id") or "")
+            content = outcome.get("content") if isinstance(outcome.get("content"), Mapping) else {}
+            asset = content.get("asset") if isinstance(content, Mapping) and isinstance(content.get("asset"), Mapping) else {}
+            asset_status = str(asset.get("status") or "")
+            if asset_status == "failed" or str(outcome.get("status") or "") in {"failed", "failed_recoverable"}:
+                if request_id:
+                    failed.append(request_id)
+            qc = outcome.get("visual_qc")
+            if isinstance(qc, Mapping) and str(qc.get("status") or "") == "flagged_quality":
+                flagged.append(
+                    {
+                        "request_id": request_id,
+                        "block_id": str(outcome.get("block_id") or "") or None,
+                        "status": "flagged_quality",
+                        "asset_status": asset_status or str(outcome.get("status") or ""),
+                        "reasons": [str(item) for item in (qc.get("reasons") or []) if str(item).strip()],
+                        "correction_hint": str(qc.get("correction_hint") or "") or None,
+                    }
+                )
+    return {
+        "status": "flagged_quality" if flagged else ("failed" if failed else "ready"),
+        "flagged": flagged,
+        "flagged_count": len(flagged),
+        "failed_request_ids": sorted(set(failed)),
+        "retryable": bool(flagged or failed),
+    }
+
+
 def _structured_error(
     page: Mapping[str, Any],
     *,
@@ -247,6 +285,7 @@ def project_native_status(
         "next_action": next_action,
         "error": error_message,
         "error_detail": error_detail,
+        "visual_quality": visual_quality_summary(state),
         "error_type": (
             str(error_detail.get("code"))
             if isinstance(error_detail, Mapping) and error_detail.get("code")

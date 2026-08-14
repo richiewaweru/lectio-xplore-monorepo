@@ -2,13 +2,24 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 
-	import { downloadV3GenerationPdf, fetchV3Document, getV3GenerationDetail } from '$lib/api/v3';
+	import {
+		downloadV3GenerationPdf,
+		fetchV3Document,
+		getV3GenerationDetail,
+		retryNativeVisuals
+	} from '$lib/api/v3';
 	import { coerceV3DocumentToPack } from '$lib/studio/v3-document';
 	import { extractLectioDocumentV2 } from '$lib/studio/document-version';
 	import { getBookletExportPolicy, isBookletStatus } from '$lib/studio/v3-booklet';
 	import V3BookletPackView from '$lib/components/studio/V3BookletPackView.svelte';
 	import LectioPageDocumentView from '$lib/components/studio/LectioPageDocumentView.svelte';
-	import type { BookletStatus, V3DraftPack, V3GenerationDetail } from '$lib/types/v3';
+	import type {
+		BookletStatus,
+		V3DraftPack,
+		V3GenerationDetail,
+		V3VisualQualityFlag,
+		V3VisualQualitySummary
+	} from '$lib/types/v3';
 	import type { LectioDocument } from '@lectio/page/contract';
 
 	const generationId = $derived(page.params.id ?? '');
@@ -25,9 +36,44 @@
 	let teacherName = $state('');
 	let exportDate = $state('');
 	let includeAnswers = $state(true);
+	let visualRetrying = $state(false);
+	let visualRetryError = $state<string | null>(null);
+
+	function flaggedVisuals(
+		value: V3GenerationDetail['visual_quality']
+	): V3VisualQualityFlag[] {
+		if (!value) return [];
+		if (Array.isArray(value)) {
+			return value.filter(
+				(entry): entry is V3VisualQualityFlag => Boolean(entry) && entry.status === 'flagged_quality'
+			);
+		}
+		const summary = value as V3VisualQualitySummary;
+		const entries = Array.isArray(summary.flagged) ? summary.flagged : [summary];
+		return entries.filter((entry) => entry?.status === 'flagged_quality');
+	}
+
+	function visualRetryable(value: V3GenerationDetail['visual_quality']): boolean {
+		if (!value) return false;
+		if (Array.isArray(value)) return value.some((entry) => entry?.status === 'flagged_quality');
+		const summary = value as V3VisualQualitySummary;
+		return Boolean(
+			summary.retryable &&
+			((summary.flagged?.length ?? 0) > 0 || (summary.failed_request_ids?.length ?? 0) > 0)
+		);
+	}
+
+	const nativeGenerationReady = $derived(
+		pageDocumentV2 && (detail?.status === 'ready' || detail?.status === 'completed')
+	);
+	const nativeVisualRetryable = $derived(
+		Boolean(detail?.native_whole_lesson || detail?.document_contract_version === 2) &&
+		visualRetryable(detail?.visual_quality)
+	);
 
 	const resolvedStatus = $derived.by<BookletStatus>(() => {
-		if (pageDocumentV2) return 'final_ready';
+		if (pageDocumentV2 && nativeGenerationReady && !nativeVisualRetryable) return 'final_ready';
+		if (pageDocumentV2) return 'streaming_preview';
 		if (pack?.status) return pack.status;
 		if (detail && isBookletStatus(detail.booklet_status)) {
 			return detail.booklet_status;
@@ -35,6 +81,9 @@
 		return 'streaming_preview';
 	});
 	const exportPolicy = $derived(getBookletExportPolicy(resolvedStatus));
+	const flaggedVisualQuality = $derived(
+		nativeVisualRetryable ? flaggedVisuals(detail?.visual_quality) : []
+	);
 
 	const supplementLineage = $derived.by(() => {
 		const source = detail?.planning_artifact?.source;
@@ -47,6 +96,7 @@
 	async function loadGeneration(id: string): Promise<void> {
 		loading = true;
 		loadError = null;
+		visualRetryError = null;
 		detail = null;
 		pack = null;
 		pageDocumentV2 = null;
@@ -60,6 +110,9 @@
 			if (v2) {
 				pageDocumentV2 = v2;
 				return;
+			}
+			if (nextDetail.native_whole_lesson || nextDetail.document_contract_version === 2) {
+				throw new Error('Native document contract error: LectioDocumentV2 is missing or malformed.');
 			}
 			const nextPack = coerceV3DocumentToPack(id, document, {
 				templateId: nextDetail.template_id,
@@ -75,6 +128,20 @@
 			loadError = err instanceof Error ? err.message : 'Failed to load V3 generation.';
 		} finally {
 			loading = false;
+		}
+	}
+
+	async function handleRetryFlaggedVisuals(): Promise<void> {
+		if (!generationId || flaggedVisualQuality.length === 0 || visualRetrying) return;
+		visualRetrying = true;
+		visualRetryError = null;
+		try {
+			await retryNativeVisuals(generationId);
+			await loadGeneration(generationId);
+		} catch (err) {
+			visualRetryError = err instanceof Error ? err.message : 'Could not retry flagged visuals.';
+		} finally {
+			visualRetrying = false;
 		}
 	}
 
@@ -96,7 +163,8 @@
 				teacher_name: teacherName.trim(),
 				date: exportDate.trim() || null,
 				include_toc: false,
-				include_answers: includeAnswers
+				include_answers: includeAnswers,
+				edition: includeAnswers ? 'teacher' : 'student'
 			});
 			pdfOpen = false;
 		} catch (err) {
@@ -123,6 +191,32 @@
 		<p class="text-sm text-destructive" role="alert">{loadError}</p>
 	{:else if pageDocumentV2 || pack}
 		<div class="mb-4 rounded-lg border border-border/60 bg-card p-4">
+			{#if nativeVisualRetryable}
+				<div
+					class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-300/70 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+					data-testid="visual-quality-warning"
+				>
+					<p>
+						{flaggedVisualQuality.length === 1
+							? 'One visual was flagged for quality review.'
+							: flaggedVisualQuality.length > 1
+								? `${flaggedVisualQuality.length} visuals were flagged for quality review.`
+								: 'A required visual is still being processed.'}
+						The lesson is not final yet. Retry visuals without rebuilding upstream work.
+					</p>
+					<button
+						type="button"
+						class="rounded-md border border-amber-700/50 px-3 py-1.5 text-sm font-medium hover:bg-amber-100 disabled:opacity-60"
+						onclick={handleRetryFlaggedVisuals}
+						disabled={visualRetrying}
+					>
+						{visualRetrying ? 'Retrying visuals...' : 'Retry visuals'}
+					</button>
+				</div>
+			{/if}
+			{#if visualRetryError}
+				<p class="mb-3 text-sm text-destructive" role="alert">{visualRetryError}</p>
+			{/if}
 			<div class="flex flex-wrap items-center justify-between gap-3">
 				<div>
 					<p class="text-xs uppercase tracking-wide text-muted-foreground">

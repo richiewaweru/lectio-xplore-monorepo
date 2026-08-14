@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from generation.page_objects import (
     WriterContext,
     assemble_choices,
@@ -60,6 +62,7 @@ def test_mcq_bundle_uses_block_id_for_answer() -> None:
                 "object": "choices",
                 "evidence": "card",
                 "brief": "MCQ brief",
+                "source_question_ids": ["q-mcq-1"],
             }
         ),
         item_records=(
@@ -85,7 +88,7 @@ def test_mcq_bundle_uses_block_id_for_answer() -> None:
     assert bundle.answer_entries[0].answer == "B"
 
 
-def test_assemble_questions_does_not_enrich_options() -> None:
+def test_assemble_questions_rejects_multiple_choice_source() -> None:
     ctx = WriterContext(
         planned=PlannedBlock.model_validate(
             {
@@ -108,10 +111,8 @@ def test_assemble_questions_does_not_enrich_options() -> None:
             },
         ),
     )
-    result = assemble_questions(ctx)
-    assert "options" not in result.content["items"][0]
-    assert "correct_key" not in result.content["items"][0]
-    assert result.answer_entries[0]["answer"] == "Because light."
+    with pytest.raises(Exception, match="must be assembled as choices"):
+        assemble_questions(ctx)
 
 
 def test_assemble_choices_normalizes_key_to_letter() -> None:
@@ -124,6 +125,7 @@ def test_assemble_choices_normalizes_key_to_letter() -> None:
                 "object": "choices",
                 "evidence": "card",
                 "brief": "brief",
+                "source_question_ids": ["c1"],
             }
         ),
         item_records=(
@@ -141,3 +143,45 @@ def test_assemble_choices_normalizes_key_to_letter() -> None:
     result = assemble_choices(ctx)
     assert result.content["options"][0]["letter"] == "A"
     assert result.answer_entries[0]["question_id"] == "c1"
+
+
+def test_assemble_choices_uses_exact_source_question_among_many_records() -> None:
+    ctx = WriterContext(
+        planned=PlannedBlock.model_validate(
+            {
+                "id": "check-b1",
+                "position": 0,
+                "intent": "check-understanding",
+                "object": "choices",
+                "evidence": "card",
+                "brief": "brief",
+                "source_question_ids": ["q2"],
+            }
+        ),
+        item_records=(
+            {
+                "id": "q1",
+                "prompt": "First?",
+                "options": [
+                    {"key": "A", "text": "One"},
+                    {"key": "B", "text": "Two"},
+                ],
+                "correct_key": "A",
+            },
+            {
+                "id": "q2",
+                "prompt": "Second?",
+                "options": [
+                    {"key": "A", "text": "Three"},
+                    {"key": "B", "text": "Four"},
+                ],
+                "correct_key": "B",
+            },
+        ),
+    )
+
+    result = assemble_choices(ctx)
+
+    assert result.content["stem"] == "Second?"
+    assert result.answer_entries[0]["question_id"] == "check-b1"
+    assert result.answer_entries[0]["answer"] == "B"

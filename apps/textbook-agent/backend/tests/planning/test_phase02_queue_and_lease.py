@@ -10,6 +10,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import GenerationModel, UserModel
+from planning.whole_lesson.native_status import project_native_status
 from planning.whole_lesson.repository import (
     PageDocumentRepository,
     claim_next_native_job,
@@ -37,11 +38,12 @@ async def _seed_native_generation(
     state = empty_page_document_state()
     state["lesson_packet"] = {"lesson": {"objective": "Learn X"}}
     state["teaching_plan"] = {"arc": "test", "sections": []}
+    review_pending = status == "awaiting_teaching_approval"
     state["teaching_review"] = {
-        "status": "pending",
-        "reviewed_by": None,
-        "reviewed_at": None,
-        "revision": 1,
+        "status": "pending" if review_pending else "approved",
+        "reviewed_by": None if review_pending else "teacher",
+        "reviewed_at": None if review_pending else datetime.now(timezone.utc).isoformat(),
+        "revision": 1 if review_pending else 2,
         "teacher_note": None,
     }
     session.add(
@@ -158,6 +160,76 @@ async def test_two_workers_cannot_both_claim_queued(db_session_factory) -> None:
         state = await PageDocumentRepository(session, gid).load_page_generation_state()
         assert state["execution"]["worker_id"] in {"worker-a", "worker-b"}
         assert int(state["execution"]["lease_token"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_failed_recoverable_is_parked_across_concurrent_worker_polls(
+    db_session_factory,
+) -> None:
+    async with db_session_factory() as session:
+        gid = await _seed_native_generation(session, status="failed_recoverable")
+        repo = PageDocumentRepository(session, gid)
+
+        def _parked(_generation, state):
+            execution = dict(state["execution"])
+            execution.update(
+                {
+                    "worker_id": None,
+                    "lease_token": 7,
+                    "attempt": 3,
+                    "heartbeat_at": (
+                        datetime.now(timezone.utc) - timedelta(minutes=10)
+                    ).isoformat(),
+                    "lease_seconds": 30,
+                    "last_error": {
+                        "type": "TimeoutError",
+                        "code": "TIMEOUT",
+                        "message": "form planning timed out",
+                        "stage": "planning_forms",
+                        "retryable": True,
+                    },
+                }
+            )
+            state["execution"] = execution
+
+        await repo.mutate_state(mutation=_parked)
+
+    async def _poll(worker_id: str) -> list[ExecutionLease | None]:
+        claims: list[ExecutionLease | None] = []
+        for _ in range(5):
+            async with db_session_factory() as session:
+                claims.append(
+                    await claim_next_native_job(
+                        session,
+                        worker_id=worker_id,
+                        lease_seconds=30,
+                    )
+                )
+        return claims
+
+    worker_a, worker_b = await asyncio.gather(_poll("worker-a"), _poll("worker-b"))
+    assert all(claim is None for claim in worker_a + worker_b)
+
+    async with db_session_factory() as session:
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        assert generation.status == "failed_recoverable"
+        state = await PageDocumentRepository(session, gid).load_page_generation_state()
+        assert state["execution"]["lease_token"] == 7
+        assert state["execution"]["attempt"] == 3
+        assert not any(
+            event.get("event") in {"execution_claimed", "execution_reclaimed"}
+            for event in state["events"]
+        )
+        projected = project_native_status(
+            gid,
+            generation.chunked_state_json,
+            None,
+            generation_status=generation.status,
+        )
+        assert projected is not None
+        assert projected["stage"] == "failed_recoverable"
+        assert projected["next_action"] == "retry_native"
 
 
 @pytest.mark.asyncio

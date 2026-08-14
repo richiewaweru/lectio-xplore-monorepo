@@ -57,4 +57,4 @@ APPROVED CARD
     ]
 
 
-__all__ = ["ITEM_SYSTEM_PROMPT", "build_item_messages", "get_item_system_prompt"]
+__all__ = ["build_item_messages", "get_item_system_prompt"]

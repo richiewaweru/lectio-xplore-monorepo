@@ -21,7 +21,7 @@
 <svelte:head><title>Settings · Lectio</title></svelte:head>
 
 <div class="settings-page">
-	<a class="back-link" href="/lessons">← Lessons</a>
+	<a class="back-link" href="/units">← Units</a>
 	<header>
 		<p class="eyebrow">Settings</p>
 		<h1>Teacher profile</h1>

@@ -85,10 +85,12 @@ class PlannedBlock(BaseModel):
     def first_slice_rules(self) -> PlannedBlock:
         if self.object == "heading":
             raise ValueError("section.title owns the generated section heading")
-        if self.object == "questions" and not self.source_question_ids:
-            raise ValueError("questions block requires source_question_ids")
-        if self.object != "questions" and self.source_question_ids:
-            raise ValueError("source_question_ids belong only to questions blocks")
+        if self.object == "questions" and not 1 <= len(self.source_question_ids) <= 6:
+            raise ValueError("questions block requires 1..6 source_question_ids")
+        if self.object == "choices" and len(self.source_question_ids) != 1:
+            raise ValueError("choices block requires exactly one source_question_id")
+        if self.object not in {"questions", "choices"} and self.source_question_ids:
+            raise ValueError("source_question_ids belong only to assessment blocks")
         return self
 
 

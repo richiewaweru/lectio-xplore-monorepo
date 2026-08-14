@@ -1,0 +1,8 @@
+Fonts are © 2003–2023 The DejaVu fonts team.
+
+The DejaVu fonts are distributed under the Bitstream Vera and Arev font
+licenses. The full license text is available at:
+https://dejavu-fonts.github.io/License.html
+
+This bundled DejaVu Sans font is used under those licenses. No modification to
+the font software is made by Lectio.

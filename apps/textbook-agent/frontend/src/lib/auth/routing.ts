@@ -1,12 +1,12 @@
 import { isApiError } from '$lib/api/errors';
 import type { User } from '$lib/types';
 
-export function resolveLandingRoute(user: User | null): '/login' | '/onboarding' | '/lessons' {
+export function resolveLandingRoute(user: User | null): '/login' | '/onboarding' | '/units' {
 	if (!user) {
 		return '/login';
 	}
 
-	return user.has_profile ? '/lessons' : '/onboarding';
+	return user.has_profile ? '/units' : '/onboarding';
 }
 
 export function getOnboardingRoute(options: { edit?: boolean } = {}): string {
@@ -23,7 +23,7 @@ export function resolveOnboardingGuard(user: User | null, editMode: boolean): st
 	}
 
 	if (user.has_profile && !editMode) {
-		return '/lessons';
+		return '/units';
 	}
 
 	return null;

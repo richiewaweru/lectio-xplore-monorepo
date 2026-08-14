@@ -9,7 +9,7 @@ import time
 from typing import Any, Mapping
 
 from pydantic import ValidationError
-from pydantic_ai.exceptions import ModelHTTPError, UserError
+from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError, UserError
 
 import core.events as core_events
 from core.llm.cost import compute_cost_usd, extract_thinking_tokens, extract_usage
@@ -204,7 +204,11 @@ def _is_retryable(exc: BaseException) -> bool:
     if isinstance(exc, (UserError, ValidationError)):
         return False
     if isinstance(exc, ModelHTTPError):
-        return exc.status_code in {408, 429, 500, 502, 503, 504}
+        return exc.status_code in {408, 429} or exc.status_code >= 500
+    # ModelHTTPError is a ModelAPIError subclass, so the status-sensitive
+    # branch must stay above this provider connection-error classification.
+    if isinstance(exc, ModelAPIError):
+        return True
     if isinstance(exc, (asyncio.TimeoutError, TimeoutError)):
         return True
     try:
@@ -236,10 +240,10 @@ async def run_llm(
     spec: ModelSpec | None = None,
     model_settings: dict | None = None,
     node: str | None = None,
+    attempt_start: int = 1,
 ) -> Any:
     retry_policy = retry_policy or RetryPolicy()
     slot = slot or ModelSlot.FAST
-    generation_id = generation_id or trace_id
     event_node = node if node is not None else caller
 
     catalog_spec = spec or ModelSpec(family=ModelFamily.TEST, model_name="unknown")
@@ -269,9 +273,13 @@ async def run_llm(
             },
         )
 
-    attempt = 0
-    while attempt < retry_policy.max_attempts:
-        attempt += 1
+    if attempt_start < 1:
+        raise ValueError("attempt_start must be at least 1")
+
+    local_attempt = 0
+    while local_attempt < retry_policy.max_attempts:
+        local_attempt += 1
+        event_attempt = attempt_start + local_attempt - 1
         started_at = time.perf_counter()
 
         _publish_llm_event(
@@ -285,7 +293,7 @@ async def run_llm(
                 family=effective_spec.family.value,
                 model_name=effective_spec.model_name,
                 endpoint_host=effective_endpoint_host,
-                attempt=attempt,
+                attempt=event_attempt,
                 section_id=section_id,
             ),
         )
@@ -332,7 +340,7 @@ async def run_llm(
                     family=effective_spec.family.value,
                     model_name=effective_spec.model_name,
                     endpoint_host=effective_endpoint_host,
-                    attempt=attempt,
+                    attempt=event_attempt,
                     section_id=section_id,
                     latency_ms=latency_ms,
                     tokens_in=usage.tokens_in,
@@ -357,17 +365,19 @@ async def run_llm(
                     family=effective_spec.family.value,
                     model_name=effective_spec.model_name,
                     endpoint_host=effective_endpoint_host,
-                    attempt=attempt,
+                    attempt=event_attempt,
                     section_id=section_id,
                     latency_ms=latency_ms,
                     retryable=False,
                     error=str(exc),
+                    error_class=type(exc).__name__,
                 ),
             )
             raise
         except Exception as exc:
             latency_ms = (time.perf_counter() - started_at) * 1000.0
-            can_retry = _is_retryable(exc) and attempt < retry_policy.max_attempts
+            retryable = _is_retryable(exc)
+            can_retry = retryable and local_attempt < retry_policy.max_attempts
             _publish_llm_event(
                 trace_id,
                 core_events.LLMCallFailedEvent(
@@ -379,11 +389,12 @@ async def run_llm(
                     family=effective_spec.family.value,
                     model_name=effective_spec.model_name,
                     endpoint_host=effective_endpoint_host,
-                    attempt=attempt,
+                    attempt=event_attempt,
                     section_id=section_id,
                     latency_ms=latency_ms,
-                    retryable=can_retry,
+                    retryable=retryable,
                     error=str(exc),
+                    error_class=type(exc).__name__,
                 ),
             )
             if not can_retry:
@@ -391,7 +402,7 @@ async def run_llm(
             await asyncio.sleep(
                 _retry_delay_seconds(
                     exc=exc,
-                    attempt=attempt,
+                    attempt=local_attempt,
                     retry_policy=retry_policy,
                 )
             )

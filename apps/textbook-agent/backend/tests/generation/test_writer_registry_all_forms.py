@@ -45,7 +45,7 @@ def test_dispatch_all_eight_forms() -> None:
         ("aside", "warn", {}),
         ("worked-example", "demonstrate", {}),
         ("questions", "check-understanding", {"source_question_ids": ["i1"]}),
-        ("choices", "diagnose-misconception", {}),
+        ("choices", "diagnose-misconception", {"source_question_ids": ["mcq-1"]}),
     ]
     assert {s[0] for s in specs} == set(GENERATED_FORM_IDS)
     for index, (obj, intent, extra) in enumerate(specs):

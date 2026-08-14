@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import select
@@ -15,7 +16,7 @@ from core.database.models import (
     UserModel,
 )
 from generation.path_preparation import enforce_path_owned_card_objective
-from planning.bridge import PathPreparationBlocked, prepare_path_lesson
+from planning.bridge import prepare_path_lesson
 from planning.models import (
     ComponentSelection,
     GroupVoice,
@@ -25,7 +26,6 @@ from planning.models import (
     PrepareLessonRequest,
     SelectedComponent,
     ShapeDeviationCreateRequest,
-    UnitCreate,
     UnitGroupInput,
     UnitGroupsWriteRequest,
 )
@@ -36,6 +36,57 @@ from planning.shapes import decide_shape_deviation, request_shape_deviation
 from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 from v3_blueprint.planning.objective_ownership import hash_path_objective
 from v3_blueprint.planning.persistence import load_chunked_state
+
+
+@pytest.mark.asyncio
+async def test_prepare_path_is_native_even_when_capability_flags_are_disabled(
+    db_session, monkeypatch
+) -> None:
+    """Current path preparation cannot create a contract-v1 fallback."""
+    from core.config import settings
+
+    monkeypatch.setattr(settings, "xplore_page_documents_enabled", False)
+    monkeypatch.setattr(settings, "xplore_page_document_scope", "none")
+
+    user = UserModel(id="bridge-native-flags-off", email="native-flags-off@example.invalid", name="Native")
+    db_session.add(user)
+    plan = load_canonical_plan("grade4-photosynthesis-path.json")
+    unit = await create_unit(
+        db_session,
+        owner_id=user.id,
+        request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
+    )
+    version = await persist_path_plan(db_session, unit=unit, plan=plan)
+    await approve_path(db_session, version)
+    lesson = await db_session.scalar(
+        select(PathLessonModel)
+        .where(PathLessonModel.path_version_id == version.id)
+        .order_by(PathLessonModel.position)
+    )
+    assert lesson is not None
+    selector = AsyncMock(side_effect=AssertionError("native path used component selector"))
+
+    response, structural_plan = await prepare_path_lesson(
+        db_session,
+        unit=unit,
+        version=version,
+        lesson=lesson,
+        request=PrepareLessonRequest(lesson_mode="first_exposure"),
+        structural_planner=_fake_structural_planner,
+        component_selector=selector,
+    )
+
+    assert structural_plan.document_contract_version == 2
+    generation = await db_session.get(GenerationModel, response.generation_id)
+    assert generation is not None
+    assert json.loads(generation.planning_spec_json)["document_contract_version"] == 2
+    state = await load_chunked_state(response.generation_id, db_session)
+    assert state["native_whole_lesson"] is True
+    provenance = await db_session.get(LessonProvenanceModel, response.generation_id)
+    assert provenance is not None
+    assert provenance.path_version_id == version.id
+    assert provenance.path_lesson_id == lesson.id
+    selector.assert_not_awaited()
 
 
 def test_normalize_page_concept_card_payload_strips_planner_extras():
@@ -121,6 +172,56 @@ def test_normalize_page_concept_card_payload_drops_empty_misconceptions():
     assert out["misconceptions"] == []
     assert out["no_known_misconceptions"] is True
     ConceptCard.model_validate(out)
+
+
+def test_bridge_preserves_authoritative_visual_flag_when_planner_clears_it() -> None:
+    from types import SimpleNamespace
+
+    from planning.bridge import _build_structural_plan
+
+    slots = ["orient", "model", "check"]
+    generated = PathStructuralPlan.model_validate(
+        {
+            "anchor": {"description": "a water-cycle exhibit", "source": "new"},
+            "cards": [
+                {
+                    "id": "c-water",
+                    "title": "Water Cycle",
+                    "objective": "Create a labelled water-cycle diagram.",
+                    "misconceptions": [],
+                }
+            ],
+            "sections": [
+                {
+                    "id": slot,
+                    "role": slot,
+                    "title": slot.title(),
+                    "card_id": None if slot != "model" else "c-water",
+                    "visual_required": False,
+                    "transition_note": None,
+                }
+                for slot in slots
+            ],
+        }
+    )
+    lesson = SimpleNamespace(
+        concept_id="c-water",
+        objective="Create a labelled water-cycle diagram.",
+        title="Water Cycle",
+    )
+
+    plan = _build_structural_plan(
+        generated=generated,
+        lesson=lesson,
+        lesson_mode="first_exposure",
+        prior_knowledge=[],
+        slots=slots,
+        selected_components={},
+        page_block_plans={},
+        visual_required_by_slot={"orient": False, "model": True, "check": False},
+    )
+
+    assert [section.visual_required for section in plan.sections] == [False, True, False]
 
 
 @pytest.mark.parametrize(

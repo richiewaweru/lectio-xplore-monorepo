@@ -5,11 +5,12 @@ from __future__ import annotations
 import asyncio
 
 import httpx
-import pytest
 from pydantic import BaseModel, ValidationError
+from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 
 from planning.whole_lesson.failure_policy import classify_failure, structured_error_from_exc
 from planning.whole_lesson.states import LeaseLostError, ResumeDecision, decide_resume
+from planning.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
 
 
 def test_transport_timeout_rate_limit_retryable() -> None:
@@ -23,6 +24,26 @@ def test_transport_timeout_rate_limit_retryable() -> None:
     )
 
 
+def test_pydantic_ai_provider_failures_are_typed() -> None:
+    connection = classify_failure(
+        ModelAPIError(model_name="deepseek-v4", message="Connection error.")
+    )
+    assert connection.code == "TRANSPORT"
+    assert connection.retryable is True
+
+    rate_limit = classify_failure(
+        ModelHTTPError(status_code=429, model_name="deepseek-v4", body=None)
+    )
+    assert rate_limit.code == "RATE_LIMIT"
+    assert rate_limit.retryable is True
+
+    bad_request = classify_failure(
+        ModelHTTPError(status_code=400, model_name="deepseek-v4", body=None)
+    )
+    assert bad_request.code == "UNKNOWN"
+    assert bad_request.retryable is False
+
+
 def test_content_validation_error_not_executor_repairable() -> None:
     from generation.page_objects import ContentValidationError
 
@@ -32,6 +53,18 @@ def test_content_validation_error_not_executor_repairable() -> None:
     )
     c = classify_failure(exc)
     assert c.code == "VALIDATION"
+    assert c.retryable is True
+    assert c.repairable is False
+
+
+def test_teaching_output_invalid_has_dedicated_recoverable_code() -> None:
+    c = classify_failure(
+        TeachingPlanOutputInvalidError(
+            attempt_count=2,
+            details=["SLOT_ORDER: sections are invalid"],
+        )
+    )
+    assert c.code == "MODEL_OUTPUT_INVALID"
     assert c.retryable is True
     assert c.repairable is False
 

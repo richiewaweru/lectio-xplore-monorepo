@@ -1,7 +1,6 @@
 from generation.page_objects import (
     WriterContext,
     WriterError,
-    WriterResult,
     assemble_questions,
     dispatch_writer,
 )

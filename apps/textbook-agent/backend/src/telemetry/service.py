@@ -32,8 +32,15 @@ class _TraceRegistry:
         self._items.pop(trace_id, None)
 
     def user_id_for(self, trace_id: str) -> str | None:
-        registration = self._items.get(trace_id)
-        return registration.user_id if registration is not None else None
+        candidate = trace_id
+        while candidate:
+            registration = self._items.get(candidate)
+            if registration is not None:
+                return registration.user_id
+            candidate, separator, _child = candidate.rpartition(":")
+            if not separator:
+                break
+        return None
 
 
 class TelemetryMonitor:
@@ -121,12 +128,17 @@ class TelemetryMonitor:
                     attempt=payload.get("attempt", 1),
                     section_id=payload.get("section_id"),
                     status="succeeded" if event_type == "llm_call_succeeded" else "failed",
+                    retryable=payload.get("retryable"),
                     latency_ms=payload.get("latency_ms"),
                     tokens_in=payload.get("tokens_in"),
                     tokens_out=payload.get("tokens_out"),
                     thinking_tokens=payload.get("thinking_tokens"),
                     cost_usd=payload.get("cost_usd"),
-                    error=payload.get("error"),
+                    error=(
+                        f"[{payload['error_class']}] {payload.get('error') or ''}".rstrip()
+                        if payload.get("error_class")
+                        else payload.get("error")
+                    ),
                     node=payload.get("node"),
                 )
             except Exception:

@@ -49,7 +49,7 @@ describe('workspace shell styling contract', () => {
 		const literalColor = /#[0-9a-f]{3,8}\b|rgba?\(/i;
 		expect(settings).not.toMatch(literalColor);
 		expect(profileSummary).not.toMatch(literalColor);
-		expect(settings).toContain('href="/lessons"');
+		expect(settings).toContain('href="/units"');
 	});
 
 	it('preserves both print-shell exclusions', () => {

@@ -140,6 +140,7 @@ async def execute_items_with_diagnostics(
                 model_settings=get_v3_model_settings(node),
                 # Outer loop owns the attempt journal; do not hide retries here.
                 retry_policy=RetryPolicy(max_attempts=1),
+                attempt_start=attempt,
             )
             raw = result.output
             if isinstance(raw, ItemGenerationResult):

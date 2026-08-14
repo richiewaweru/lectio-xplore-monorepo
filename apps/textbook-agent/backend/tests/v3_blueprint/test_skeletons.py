@@ -84,6 +84,42 @@ def test_structural_diff_explains_declared_profile_changes() -> None:
     assert "confusion" in extra.explanation
 
 
+def test_spatial_objective_sets_visual_flag_on_fixed_model_slot() -> None:
+    preview = load_skeleton_catalog().preview_skeleton_by_id(
+        "procedural.first_exposure",
+        profile="core",
+        misconception_count=0,
+        objective=(
+            "Create a clear labelled diagram showing the stages and movement "
+            "through the water cycle."
+        ),
+    )
+
+    flags = {slot.slot_id: slot.visual_required for slot in preview.slots}
+    assert flags["model"] is True
+    assert flags["orient"] is False
+    assert flags["guided"] is False
+    assert "visual.spatial_objective" in preview.toggles_applied
+    visual_diff = [
+        item
+        for item in preview.structural_diff
+        if item.toggle_id == "visual.spatial_objective"
+    ]
+    assert [item.slot_id for item in visual_diff] == ["model"]
+    assert visual_diff[0].operation == "set_flag"
+
+
+def test_nonvisual_objective_keeps_visual_flags_clear() -> None:
+    preview = load_skeleton_catalog().preview_skeleton_by_id(
+        "procedural.first_exposure",
+        profile="core",
+        misconception_count=0,
+        objective="Explain how to check a bicycle tyre before riding.",
+    )
+    assert all(not slot.visual_required for slot in preview.slots)
+    assert "visual.spatial_objective" not in preview.toggles_applied
+
+
 def test_approved_deviation_is_explicit_and_preserves_locked_check() -> None:
     deviation = DeviationRequest(
         id="deviation-1",
@@ -165,17 +201,16 @@ def test_preview_classifier_returns_valid_enum_for_all_three_path_fixtures() -> 
         "grade8-unreachable-destination-path.json",
     ):
         fixture = json.loads((fixture_dir / filename).read_text(encoding="utf-8"))
-        for module in fixture["modules"]:
-            for lesson in module["lessons"]:
-                assert classify_for_preview(lesson["objective"]) in valid
-                result = KnowledgeTypeClassification(
-                    primary_knowledge_type=lesson["primary_knowledge_type"],
-                    secondary_demand=lesson.get("secondary_demand"),
-                    confidence="high",
-                    success_test="Fixture classification contract",
-                    note=None,
-                )
-                assert result.primary_knowledge_type in valid
+        for lesson in fixture["lessons"]:
+            assert classify_for_preview(lesson["objective"]) in valid
+            result = KnowledgeTypeClassification(
+                primary_knowledge_type=lesson["knowledge_type"],
+                secondary_demand=None,
+                confidence="high",
+                success_test="Fixture classification contract",
+                note=None,
+            )
+            assert result.primary_knowledge_type in valid
 
 
 @pytest.mark.asyncio

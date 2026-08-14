@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import inspect
 from typing import Literal
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
@@ -16,10 +18,10 @@ from core.database.models import (
     ResourceCompositionModel,
     UnitGroupModel,
     UnitModel,
-    UnitScopeContractModel,
 )
 from core.dependencies import get_async_session
 from core.entities.user import User
+from core.events import TraceClosedEvent, TraceRegisteredEvent, event_bus
 from core.rate_limit import limiter
 from planning.agents import (
     run_constructor,
@@ -122,6 +124,35 @@ router = APIRouter(
     tags=["units", "paths"],
     dependencies=[Depends(require_xplore_v2)],
 )
+
+
+def _planning_trace_id(prefix: str, user_id: str) -> str:
+    """Return a unique request-scoped trace for pre-generation planning calls."""
+
+    return f"{prefix}:{user_id}:{uuid4().hex}"
+
+
+def _register_planning_trace(trace_id: str, user_id: str) -> None:
+    event_bus.publish(
+        trace_id,
+        TraceRegisteredEvent(trace_id=trace_id, user_id=str(user_id), source="planning"),
+    )
+
+
+def _close_planning_trace(trace_id: str) -> None:
+    event_bus.publish(trace_id, TraceClosedEvent(trace_id=trace_id, source="planning"))
+
+
+async def _prepare_with_trace(*args, trace_id: str, **kwargs):
+    """Call the bridge while keeping lightweight route-test doubles compatible."""
+
+    try:
+        accepts_trace = "trace_id" in inspect.signature(prepare_path_lesson).parameters
+    except (TypeError, ValueError):
+        accepts_trace = False
+    if accepts_trace:
+        kwargs["trace_id"] = trace_id
+    return await prepare_path_lesson(*args, **kwargs)
 
 
 def _unit_payload(unit: UnitModel) -> dict[str, object]:
@@ -263,6 +294,8 @@ async def post_constructor_readback(
 
     prompt_texts, _prompt_hashes = await resolve_all_prompts(current_user.id, session)
     cache_token = bind_prompt_cache(prompt_texts)
+    trace_id = _planning_trace_id("constructor", str(current_user.id))
+    _register_planning_trace(trace_id, str(current_user.id))
     try:
         result = await run_constructor(
             body.subject,
@@ -270,10 +303,11 @@ async def post_constructor_readback(
             body.raw_text,
             correction=body.correction,
             clarifying_answer=body.clarifying_answer,
-            trace_id=f"constructor:{current_user.id}",
+            trace_id=trace_id,
         )
     finally:
         reset_prompt_cache(cache_token)
+        _close_planning_trace(trace_id)
     return result.model_dump(mode="json")
 
 
@@ -367,10 +401,13 @@ async def _plan_or_replan(
 
         prompt_texts, _prompt_hashes = await resolve_all_prompts(current_user.id, session)
         cache_token = bind_prompt_cache(prompt_texts)
+        trace_id = _planning_trace_id("path", str(current_user.id))
+        _register_planning_trace(trace_id, str(current_user.id))
         try:
-            plan = await run_path_planner(planner_request, trace_id=f"unit:{unit.id}")
+            plan = await run_path_planner(planner_request, trace_id=trace_id)
         finally:
             reset_prompt_cache(cache_token)
+            _close_planning_trace(trace_id)
         version = await persist_path_plan(
             session,
             unit=unit,
@@ -445,6 +482,8 @@ async def post_path_chat_edit(
 
         prompt_texts, _prompt_hashes = await resolve_all_prompts(current_user.id, session)
         cache_token = bind_prompt_cache(prompt_texts)
+        trace_id = _planning_trace_id("path-edit", str(current_user.id))
+        _register_planning_trace(trace_id, str(current_user.id))
         try:
             edited_plan = await run_plan_chat_edit(
                 current_plan,
@@ -458,10 +497,11 @@ async def post_path_chat_edit(
                     "curriculum_context": unit.curriculum_context,
                     "class_notes": unit.class_notes,
                 },
-                trace_id=f"unit:{unit.id}:chat-edit",
+                trace_id=trace_id,
             )
         finally:
             reset_prompt_cache(cache_token)
+            _close_planning_trace(trace_id)
 
         new_version = await persist_path_plan(
             session,
@@ -1111,16 +1151,22 @@ async def post_path_lesson_prepare(
             path_revision=body.path_revision,
         )
         assert_lesson_mutation_fresh(lesson, lesson_revision=body.lesson_revision)
-        response, _plan = await prepare_path_lesson(
-            session,
-            unit=unit,
-            version=version,
-            lesson=lesson,
-            request=PrepareLessonRequest(
-                group_ids=body.group_ids,
-                lesson_mode=body.lesson_mode,
-            ),
-        )
+        trace_id = _planning_trace_id("path-prepare", str(current_user.id))
+        _register_planning_trace(trace_id, str(current_user.id))
+        try:
+            response, _plan = await _prepare_with_trace(
+                session,
+                unit=unit,
+                version=version,
+                lesson=lesson,
+                request=PrepareLessonRequest(
+                    group_ids=body.group_ids,
+                    lesson_mode=body.lesson_mode,
+                ),
+                trace_id=trace_id,
+            )
+        finally:
+            _close_planning_trace(trace_id)
         await session.commit()
         return response.model_dump(mode="json")
     except Exception as exc:
@@ -1148,18 +1194,24 @@ async def post_path_lesson_regenerate(
             path_revision=body.path_revision,
         )
         assert_lesson_mutation_fresh(lesson, lesson_revision=body.lesson_revision)
-        response, _plan = await prepare_path_lesson(
-            session,
-            unit=unit,
-            version=version,
-            lesson=lesson,
-            request=PrepareLessonRequest(
-                group_ids=body.group_ids,
-                lesson_mode=body.lesson_mode,
-            ),
-            regenerate=True,
-            regeneration_reason=body.reason,
-        )
+        trace_id = _planning_trace_id("path-regenerate", str(current_user.id))
+        _register_planning_trace(trace_id, str(current_user.id))
+        try:
+            response, _plan = await _prepare_with_trace(
+                session,
+                unit=unit,
+                version=version,
+                lesson=lesson,
+                request=PrepareLessonRequest(
+                    group_ids=body.group_ids,
+                    lesson_mode=body.lesson_mode,
+                ),
+                regenerate=True,
+                regeneration_reason=body.reason,
+                trace_id=trace_id,
+            )
+        finally:
+            _close_planning_trace(trace_id)
         await session.commit()
         return {**response.model_dump(mode="json"), "regeneration_reason": body.reason}
     except Exception as exc:

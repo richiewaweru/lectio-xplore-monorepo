@@ -15,7 +15,13 @@ class TeachingPlanBlock(BaseModel):
     evidence_refs: list[str] = Field(default_factory=list)
     evidence: str = Field(min_length=1)
     departure_reason: str | None = None
-    source_question_ids: list[str] = Field(default_factory=list)
+    source_question_ids: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Approved assessment-item ownership. Leave empty for a non-assessment "
+            "block. A multiple-choice source must be the only ID in this array."
+        ),
+    )
 
     @model_validator(mode="after")
     def _normalize_departure(self) -> TeachingPlanBlock:

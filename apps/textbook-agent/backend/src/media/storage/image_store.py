@@ -38,6 +38,21 @@ class ImageStore(ABC):
     async def image_exists(self, *, key: str) -> bool:
         ...
 
+    async def read_image_key(self, *, key: str) -> bytes:
+        """Read an object by its internal key.
+
+        Implementations deliberately do not accept URLs.  This method is not
+        abstract for backwards compatibility with lightweight test stores; a
+        store that does not support reads fails explicitly at call time.
+        """
+
+        raise NotImplementedError("image-store key reads are not supported")
+
+    async def read_image(self, *, key: str) -> bytes:
+        """Compatibility alias for deterministic key reads."""
+
+        return await self.read_image_key(key=key)
+
     async def copy_image(self, *, source_key: str, destination_key: str) -> str | None:
         ...
 
@@ -88,7 +103,34 @@ class LocalImageStore(ImageStore):
         return f"{self.base_url}/{url_key}"
 
     async def image_exists(self, *, key: str) -> bool:
-        return (self.base_path / key.strip("/")).exists()
+        return self._path_for_key(key).exists()
+
+    @staticmethod
+    def _validate_key(key: str) -> str:
+        if not isinstance(key, str) or not key.strip():
+            raise ValueError("image key must be a non-empty string")
+        clean = key.strip().replace("\\", "/").lstrip("/")
+        if "://" in clean or clean.startswith(("http:", "https:")):
+            raise ValueError("image key must be an internal object key, not a URL")
+        parts = [part for part in clean.split("/") if part]
+        if not parts or any(part in {".", ".."} for part in parts):
+            raise ValueError("image key contains an unsafe path segment")
+        return "/".join(parts)
+
+    def _path_for_key(self, key: str) -> Path:
+        clean = self._validate_key(key)
+        path = (self.base_path / clean).resolve()
+        base = self.base_path.resolve()
+        if path != base and base not in path.parents:
+            raise ValueError("image key escapes the image store")
+        return path
+
+    async def read_image_key(self, *, key: str) -> bytes:
+        path = self._path_for_key(key)
+        try:
+            return path.read_bytes()
+        except FileNotFoundError as exc:
+            raise FileNotFoundError(f"image asset key not found: {key}") from exc
 
     async def copy_image(self, *, source_key: str, destination_key: str) -> str | None:
         source = self.base_path / source_key.strip("/")
@@ -209,6 +251,17 @@ class GCSImageStore(ImageStore):
 
     async def image_exists(self, *, key: str) -> bool:
         return await self._core_store.exists(key=key)
+
+    async def read_image_key(self, *, key: str) -> bytes:
+        if "://" in key or key.strip().startswith(("http:", "https:")):
+            raise ValueError("image key must be an internal object key, not a URL")
+        reader = getattr(self._core_store, "download_with_key", None)
+        if reader is None:
+            raise NotImplementedError("GCS object reads are not available")
+        content = await reader(key=key)
+        if content is None:
+            raise FileNotFoundError(f"image asset key not found: {key}")
+        return bytes(content)
 
     async def copy_image(self, *, source_key: str, destination_key: str) -> str | None:
         return await self._core_store.copy(

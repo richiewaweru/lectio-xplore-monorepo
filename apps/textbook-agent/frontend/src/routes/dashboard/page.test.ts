@@ -15,8 +15,8 @@ describe('/dashboard compatibility route', () => {
 		goto.mockReset();
 	});
 
-	it('replaces the legacy route with the lessons workspace', async () => {
+	it('replaces the compatibility route with the native units workspace', async () => {
 		render(DashboardRedirect);
-		await waitFor(() => expect(goto).toHaveBeenCalledWith('/lessons', { replaceState: true }));
+		await waitFor(() => expect(goto).toHaveBeenCalledWith('/units', { replaceState: true }));
 	});
 });

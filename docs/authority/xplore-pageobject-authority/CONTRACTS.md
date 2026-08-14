@@ -43,10 +43,12 @@ class PlannedBlock(BaseModel):
     def page_rules(self) -> "PlannedBlock":
         if self.object == "heading":
             raise ValueError("Generated first-slice plans do not emit heading blocks")
-        if self.object == "questions" and not self.source_question_ids:
-            raise ValueError("Questions blocks require source_question_ids")
-        if self.object != "questions" and self.source_question_ids:
-            raise ValueError("Only questions blocks carry source_question_ids")
+        if self.object == "questions" and not 1 <= len(self.source_question_ids) <= 6:
+            raise ValueError("Questions blocks require 1..6 source_question_ids")
+        if self.object == "choices" and len(self.source_question_ids) != 1:
+            raise ValueError("Choices blocks require exactly one source_question_id")
+        if self.object not in {"questions", "choices"} and self.source_question_ids:
+            raise ValueError("Only assessment blocks carry source_question_ids")
         return self
 ```
 
@@ -108,6 +110,18 @@ The planner should not receive independent lists that permit illegal cross-produ
 
 Every emitted pair must exactly match one candidate entry.
 
+Assessment candidates are ownership-driven, using the approved item record's
+canonical `options` metadata as the discriminator:
+
+- no `source_question_ids` means neither `questions` nor `choices` is legal;
+- 1..6 open-response records (empty `options`) mean only `questions` is legal;
+- exactly one multiple-choice record (non-empty `options`) means only `choices`
+  is legal;
+- mixed sources, more than six open responses, or multiple MCQs must repair the
+  teaching plan before form planning;
+- a block carrying `source_question_ids` never receives a non-assessment
+  candidate, and adapters must never mask or discard those IDs.
+
 ## 4. Resource prompt context
 
 This is assembled at runtime and is not persisted as a stance model:
@@ -160,7 +174,10 @@ Use generated canonical document models. The first-slice writer outputs correspo
 - `FigureContent.asset`, `caption`, `alt_text`, `width`
 - `QuestionsContent.instructions`, `items`
 
-For questions, no LLM writer output is accepted. The assembler converts existing item records to `QuestionsContent`.
+For assessment objects, no LLM writer output is accepted. The assembler converts
+the exact referenced approved item records to `QuestionsContent` or
+`ChoicesContent`. MCQ options and the correct answer remain owned by the approved
+record. A `choices` answer-key entry uses the block ID as `question_id`.
 
 ## 7. Stable IDs
 

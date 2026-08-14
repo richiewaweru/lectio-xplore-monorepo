@@ -16,6 +16,7 @@ import importlib.util
 from pathlib import Path
 
 import pytest
+from planning.prompts import LESSON_APPROACH_PROMPT_V2_SHA256
 
 
 def _load_capture_module():
@@ -86,3 +87,82 @@ def test_argparse_rejects_a_traversal_slug() -> None:
     parser.add_argument("--run", required=True, type=CAPTURE.run_slug)
     with pytest.raises(SystemExit):
         parser.parse_args(["--run", "../outside"])
+
+
+def test_manifest_records_active_prompt_v2_and_frozen_form() -> None:
+    assert CAPTURE.PROMPT_RESOURCES == (
+        Path(__file__).resolve().parents[1] / "resources"
+    )
+    assert CAPTURE.PROMPT_MANIFEST["lesson_approach"] == {
+        "id": "lesson-approach-planner",
+        "file": "lesson-approach-planner-v2.txt",
+        "version": 2,
+    }
+    assert CAPTURE.PROMPT_MANIFEST["form_planner"]["file"] == "form-planner-v1.txt"
+    assert CAPTURE._prompt_sha256("lesson-approach-planner-v2.txt") == (
+        LESSON_APPROACH_PROMPT_V2_SHA256
+    )
+
+
+def test_cli_accepts_browser_artifact_paths() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("generation_id")
+    parser.add_argument("--run", required=True, type=CAPTURE.run_slug)
+    parser.add_argument("--generation-page", type=Path, default=None)
+    parser.add_argument("--teacher-pdf", type=Path, default=None)
+    parser.add_argument("--student-pdf", type=Path, default=None)
+    args = parser.parse_args(
+        [
+            "gen-1",
+            "--run",
+            "run-01-science",
+            "--generation-page",
+            "page.png",
+            "--teacher-pdf",
+            "teacher.pdf",
+            "--student-pdf",
+            "student.pdf",
+        ]
+    )
+    assert args.generation_page == Path("page.png")
+    assert args.teacher_pdf == Path("teacher.pdf")
+    assert args.student_pdf == Path("student.pdf")
+
+
+def test_sanitize_redacts_secrets_and_tokens() -> None:
+    payload = CAPTURE.sanitize(
+        {
+            "generation_id": "g1",
+            "access_token": "secret-token",
+            "api_key": "sk-live",
+            "nested": {"authorization": "Bearer abc", "stage": "ready"},
+        }
+    )
+    assert payload["generation_id"] == "g1"
+    assert payload["access_token"] == "[redacted]"
+    assert payload["api_key"] == "[redacted]"
+    assert payload["nested"]["authorization"] == "[redacted]"
+    assert payload["nested"]["stage"] == "ready"
+
+
+def test_ingest_browser_artifact_copies_and_hashes(tmp_path: Path) -> None:
+    source = tmp_path / "shot.png"
+    source.write_bytes(
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+        b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde"
+        b"\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05"
+        b"\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    dest = tmp_path / "run" / "34-generation-page.png"
+    info = CAPTURE.ingest_browser_artifact(source, dest, expected_suffix=".png")
+    assert info is not None
+    assert dest.is_file()
+    assert info["sha256"] == CAPTURE._sha256_file(source)
+    assert CAPTURE.ingest_browser_artifact(None, dest, expected_suffix=".png") is None
+
+
+def test_ingest_missing_browser_artifact_does_not_fabricate(tmp_path: Path) -> None:
+    dest = tmp_path / "35-teacher.pdf"
+    with pytest.raises(FileNotFoundError):
+        CAPTURE.ingest_browser_artifact(tmp_path / "missing.pdf", dest, expected_suffix=".pdf")
+    assert not dest.exists()

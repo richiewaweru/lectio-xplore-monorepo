@@ -1,0 +1,15 @@
+
+> frontend@1.0.0-beta.1 dev C:\Projects\lectio\apps\textbook-agent\frontend
+> vite dev "--host" "127.0.0.1" "--port" "5173"
+
+
+  VITE v7.3.6  ready in 26038 ms
+
+  ➜  Local:   http://127.0.0.1:5173/
+  ➜  press h + enter to show help
+2:31:46 PM [vite-plugin-svelte] src/routes/units/[id]/+page.svelte:697:1 Unused CSS selector ".view-tabs span"
+https://svelte.dev/e/css_unused_selector
+2:31:46 PM [vite-plugin-svelte] src/routes/units/[id]/+page.svelte:747:1 Unused CSS selector ".two"
+https://svelte.dev/e/css_unused_selector
+2:31:46 PM [vite-plugin-svelte] src/routes/units/[id]/+page.svelte:774:271 Unused CSS selector ".two"
+https://svelte.dev/e/css_unused_selector

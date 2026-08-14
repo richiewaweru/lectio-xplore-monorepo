@@ -46,6 +46,7 @@ def _plan(section_ids: list[str] | None = None, cards: list[dict] | None = None)
                     "id": sid,
                     "role": sid,
                     "title": f"{sid} section",
+                    "visual_required": False,
                     "transition_note": None if index == 0 else "follows",
                 }
                 for index, sid in enumerate(ids)

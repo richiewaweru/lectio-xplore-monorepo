@@ -6,10 +6,19 @@ import logging
 import os
 import traceback
 import uuid
+import time
 from collections.abc import Awaitable, Callable
 from typing import Any, Literal
 
+import core.events as core_events
 from media.qc.visual_qc import evaluate_visual_quality, visual_qc_enabled
+from media.diagram_compositor import (
+    COMPOSITOR_VERSION,
+    FONT_VERSION,
+    LAYOUT_VERSION,
+    compose_diagram_precision,
+    preflight_diagram_labels,
+)
 from media.providers.registry import get_image_client, load_image_provider_spec
 
 from v3_execution.models import ExecutorOutcome, GeneratedVisualBlock, VisualGeneratorWorkOrder
@@ -21,6 +30,7 @@ from v3_execution.runtime.validation import validate_visual_block
 
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
 logger = logging.getLogger(__name__)
+VISUAL_QC_CONTRACT_VERSION = "visual-qc/2"
 
 
 def _image_cache_enabled() -> bool:
@@ -44,6 +54,20 @@ def _cache_key_for_visual(
         "model_name": model_name,
         "must_show": order.visual.must_show,
         "must_not_show": order.visual.must_not_show,
+        "labels_required": order.visual.labels_required,
+        "purpose": order.visual.purpose,
+        "qc_correction_hint": order.qc_correction_hint,
+        "source_of_truth": [
+            {"key": item.key, "text": item.text}
+            for item in order.source_of_truth
+        ],
+        # Cache entries contain the final (possibly composed) raster.  Bump the
+        # contract whenever compositor/QC semantics change so stale provider
+        # bytes can never masquerade as accepted output.
+        "compositor_version": COMPOSITOR_VERSION,
+        "font_version": FONT_VERSION,
+        "layout_version": LAYOUT_VERSION,
+        "visual_qc_contract_version": VISUAL_QC_CONTRACT_VERSION,
     }
     encoded = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()[:32]
@@ -120,6 +144,9 @@ async def _render_frame(
     parent_visual_id: str | None = None,
     model_name: str,
     bypass_cache_read: bool = False,
+    provider_name: str = "image",
+    provider_attempt_counter: list[int] | None = None,
+    provider_failure_retryable: bool = True,
 ) -> GeneratedVisualBlock:
     from media.storage.image_store import get_image_store
 
@@ -128,6 +155,25 @@ async def _render_frame(
     cache_key = _cache_key_for_visual(prompt=prompt, order=order, model_name=model_name)
     cache_object_key = f"images/cache/{cache_key}.png"
     destination_key = f"{generation_id}/{order.visual.attaches_to or 'visuals'}/{visual_id}.png"
+
+    is_diagram_precision = getattr(order.visual, "visual_style", None) == "diagram_precision"
+    # Fail before touching the provider (and before accepting a cache entry) if
+    # the deterministic label band cannot fit at print-safe font size.
+    if is_diagram_precision:
+        try:
+            canonical_labels = preflight_diagram_labels(
+                (1024, 1024), order.visual.labels_required
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise VisualStageError.from_exception(
+                stage="diagram_compositor_preflight",
+                exc=exc,
+            ) from exc
+        else:
+            # The model validator normally canonicalizes this already; retain
+            # the preflight result only to prove deterministic capacity before
+            # provider execution.
+            _ = canonical_labels
 
     try:
         store = get_image_store()
@@ -238,13 +284,69 @@ async def _render_frame(
             target_section=order.visual.attaches_to,
         ),
     )
+    attempt_counter = provider_attempt_counter if provider_attempt_counter is not None else [0]
+    attempt_counter[0] += 1
+    provider_attempt = attempt_counter[0]
+    event_trace_id = trace_id or generation_id
+    core_events.event_bus.publish(
+        event_trace_id,
+        core_events.LLMCallStartedEvent(
+            trace_id=event_trace_id,
+            generation_id=generation_id,
+            caller="visual_provider",
+            node="visual_executor",
+            slot="visual",
+            family=provider_name,
+            model_name=model_name,
+            endpoint_host=None,
+            attempt=provider_attempt,
+            section_id=order.visual.attaches_to,
+        ),
+    )
+    provider_started = time.perf_counter()
     try:
         image = await client.generate_image(prompt=prompt)
     except Exception as exc:  # noqa: BLE001
+        core_events.event_bus.publish(
+            event_trace_id,
+            core_events.LLMCallFailedEvent(
+                trace_id=event_trace_id,
+                generation_id=generation_id,
+                caller="visual_provider",
+                node="visual_executor",
+                slot="visual",
+                family=provider_name,
+                model_name=model_name,
+                endpoint_host=None,
+                attempt=provider_attempt,
+                section_id=order.visual.attaches_to,
+                latency_ms=(time.perf_counter() - provider_started) * 1000.0,
+                retryable=provider_failure_retryable,
+                error=str(exc),
+                error_class=type(exc).__name__,
+            ),
+        )
         raise VisualStageError.from_exception(
             stage="image_generation_api_call",
             exc=exc,
         ) from exc
+
+    core_events.event_bus.publish(
+        event_trace_id,
+        core_events.LLMCallSucceededEvent(
+            trace_id=event_trace_id,
+            generation_id=generation_id,
+            caller="visual_provider",
+            node="visual_executor",
+            slot="visual",
+            family=provider_name,
+            model_name=model_name,
+            endpoint_host=None,
+            attempt=provider_attempt,
+            section_id=order.visual.attaches_to,
+            latency_ms=(time.perf_counter() - provider_started) * 1000.0,
+        ),
+    )
 
     logger.info(
         "v3 visual image bytes received",
@@ -257,8 +359,44 @@ async def _render_frame(
             parent_visual_id=parent_visual_id,
             byte_count=len(image.bytes),
             content_type=image.mime_type,
+            base_sha256=hashlib.sha256(image.bytes).hexdigest(),
+            provider_name=provider_name,
+            model_name=model_name,
         ),
     )
+
+    base_bytes = image.bytes
+    composed_bytes = base_bytes
+    composed_mime_type = image.mime_type
+    composition_metadata: dict[str, Any] | None = None
+    if is_diagram_precision:
+        try:
+            composed = compose_diagram_precision(
+                base_bytes,
+                order.visual.labels_required,
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise VisualStageError.from_exception(
+                stage="diagram_compositor",
+                exc=exc,
+            ) from exc
+        composed_bytes = composed.png_bytes
+        composed_mime_type = "image/png"
+        composition_metadata = composed.metadata.as_dict()
+        logger.info(
+            "v3 visual diagram composed",
+            extra=_visual_log_extra(
+                order=order,
+                generation_id=generation_id,
+                visual_id=visual_id,
+                frame_index=frame_index,
+                component_id=component_id,
+                parent_visual_id=parent_visual_id,
+                provider_name=provider_name,
+                model_name=model_name,
+                **composition_metadata,
+            ),
+        )
 
     qc_status: Literal["ready", "flagged_quality"] = "ready"
     qc_reasons: list[str] = []
@@ -266,15 +404,15 @@ async def _render_frame(
     if visual_qc_enabled() and order.visual.mode != "simulation":
         try:
             verdict = await evaluate_visual_quality(
-                image_bytes=image.bytes,
-                mime_type=image.mime_type,
+                image_bytes=composed_bytes,
+                mime_type=composed_mime_type,
                 order=order,
                 trace_id=trace_id,
                 generation_id=generation_id,
             )
         except Exception as exc:  # noqa: BLE001
             logger.warning(
-                "v3 visual qc failed open",
+                "v3 visual qc failed",
                 extra=_visual_log_extra(
                     order=order,
                     generation_id=generation_id,
@@ -286,6 +424,15 @@ async def _render_frame(
                     error_message=str(exc),
                 ),
             )
+            if is_diagram_precision:
+                # Precision visuals are closed-label outputs.  Without QC we
+                # cannot establish that the provider artwork contains no text
+                # or that the deterministic band is correct, so fail closed:
+                # retain the composed raster for generation-specific review,
+                # but mark it retryable and keep it out of the shared cache.
+                qc_status = "flagged_quality"
+                qc_reasons = [f"visual QC unavailable: {type(exc).__name__}: {exc}"]
+                qc_correction_hint = "rerun visual quality review"
         else:
             if verdict.verdict == "reject":
                 return GeneratedVisualBlock(
@@ -309,18 +456,21 @@ async def _render_frame(
 
     try:
         url = await store.store_image(
-            image.bytes,
+            composed_bytes,
             generation_id=generation_id,
             section_id=order.visual.attaches_to or "visuals",
             filename=f"{visual_id}.png",
-            format=image.format,
+            format="png" if is_diagram_precision else image.format,
         )
-        if cache_enabled:
+        # Only accepted output is eligible for shared cache.  Flagged output
+        # remains available on the generation for review/retry but must never
+        # poison future requests.
+        if cache_enabled and qc_status == "ready":
             try:
                 await store.store_image_key(
                     key=cache_object_key,
-                    image_bytes=image.bytes,
-                    content_type=image.mime_type,
+                    image_bytes=composed_bytes,
+                    content_type=composed_mime_type,
                 )
                 logger.info(
                     "v3 visual cache write complete",
@@ -332,6 +482,7 @@ async def _render_frame(
                         component_id=component_id,
                         parent_visual_id=parent_visual_id,
                         cache_key=cache_key,
+                        **(composition_metadata or {}),
                     ),
                 )
             except Exception as exc:  # noqa: BLE001
@@ -391,9 +542,15 @@ async def execute_visual(
     gid = generation_id or str(uuid.uuid4())
     spec = load_image_provider_spec()
     last_failure: VisualStageError | None = None
+    provider_attempt_counter = [0]
+    executor_attempt_number = 0
 
     async def _attempt(_: bool) -> ExecutorOutcome:
-        nonlocal last_failure
+        nonlocal executor_attempt_number, last_failure
+        executor_attempt_number += 1
+        provider_failure_retryable = executor_attempt_number < (
+            1 + V3_MAX_RETRIES["visual_executor_frame"]
+        )
         await emit_event(
             "visual_generation_started",
             {
@@ -443,6 +600,9 @@ async def execute_visual(
                         parent_visual_id=parent_id,
                         model_name=spec.model_name,
                         bypass_cache_read=bypass_cache_read,
+                        provider_name=spec.provider,
+                        provider_attempt_counter=provider_attempt_counter,
+                        provider_failure_retryable=provider_failure_retryable,
                     )
                     blocks.append(block)
                     previous = frame.description
@@ -459,6 +619,9 @@ async def execute_visual(
                     parent_visual_id=None,
                     model_name=spec.model_name,
                     bypass_cache_read=bypass_cache_read,
+                    provider_name=spec.provider,
+                    provider_attempt_counter=provider_attempt_counter,
+                    provider_failure_retryable=provider_failure_retryable,
                 )
                 blocks.append(block)
 
@@ -486,6 +649,14 @@ async def execute_visual(
                 stage="visual_executor",
                 exc=exc,
             )
+            original = last_failure.original_exception
+            response = getattr(original, "response", None)
+            status_code = getattr(response, "status_code", None)
+            if status_code is None:
+                status_code = getattr(original, "status_code", None)
+            non_retryable = int(status_code or 0) == 400 or last_failure.stage.startswith(
+                "diagram_compositor"
+            )
             logger.error(
                 "v3 visual execution failed",
                 extra=_visual_log_extra(
@@ -504,6 +675,7 @@ async def execute_visual(
             return ExecutorOutcome(
                 ok=False,
                 errors=[last_failure.to_error_message()],
+                retryable=not non_retryable,
             )
 
     outcome = await run_with_retries(

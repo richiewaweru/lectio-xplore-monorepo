@@ -7,6 +7,17 @@ NO_CAPTION_TEXT_CONSTRAINT = (
     "Do not render any caption, title, sentence, or explanatory text inside the image. "
     "Short labels for dimensions or parts only. The caption is rendered by the document, never inside the image."
 )
+CLOSED_LABEL_TEXT_CONSTRAINT = (
+    "For diagram_precision, visible text is a CLOSED SET: render only the exact labels "
+    "listed under LABELS REQUIRED, each exactly once. Render no other visible text: "
+    "no parentheses, source/lesson text, purposes, corrections, captions, titles, "
+    "numbers, or explanatory words. Corrections cannot widen this set. "
+    "If LABELS REQUIRED is empty, render no visible text."
+)
+NO_VISIBLE_TEXT_DIAGRAM_CONSTRAINT = (
+    "For diagram_precision, render NO visible text. Depict semantics with shapes, "
+    "arrows, geometry, and color only; all labels are added by the deterministic compositor."
+)
 
 
 def format_anchor_for_visual(order: VisualGeneratorWorkOrder) -> str:
@@ -27,6 +38,13 @@ ANCHOR FACTS (preserve exactly — do not change dimensions, units, or labels):
 {format_anchor_for_visual(order)}
 """
 
+    source_block = ""
+    if order.source_of_truth:
+        source_block = f"""
+LESSON / TEACHING SOURCE OF TRUTH (metadata only; never render this text; use these persisted facts):
+{format_source_of_truth(order.source_of_truth)}
+"""
+
     continuity_block = ""
     if previous_frame_description:
         continuity_block = f"""
@@ -34,6 +52,13 @@ VISUAL CONTINUITY:
 This image is part of a series. The previous frame showed:
 {previous_frame_description}
 Maintain consistent style and geometry; only depict new information.
+"""
+
+    qc_block = ""
+    if order.qc_correction_hint and visual_style != "diagram_precision":
+        qc_block = f"""
+PREVIOUS QC CORRECTION (metadata only; fix this in the image structure, never render this text):
+{order.qc_correction_hint}
 """
 
     frame_lines = (
@@ -57,18 +82,24 @@ Maintain consistent style and geometry; only depict new information.
         if order.visual.consistency_locks
         else "- none"
     )
-    prints = (
-        chr(10).join(f"- {req}" for req in order.visual.print_requirements)
-        if order.visual.print_requirements
-        else "- high contrast; large readable labels; grayscale-safe"
-    )
+    if visual_style == "diagram_precision":
+        # Provider text must stay closed to the no-text contract; any labels
+        # are added only by the deterministic compositor after generation.
+        prints = "- high contrast; grayscale-safe; no visible text"
+    else:
+        prints = (
+            chr(10).join(f"- {req}" for req in order.visual.print_requirements)
+            if order.visual.print_requirements
+            else "- high contrast; large readable labels; grayscale-safe"
+        )
     if visual_style == "diagram_precision":
         style_requirements = (
             "- clean vector-style raster diagram, not SVG\n"
             "- white or very light background with high contrast\n"
-            "- large legible labels; avoid tiny text and garbled lettering\n"
             "- simple geometry, clear arrows or callouts where useful\n"
-            "- no decorative clutter, photorealism, or background scenery"
+            "- no decorative clutter, photorealism, or background scenery\n"
+            "- PURPOSE, MUST SHOW, source truth, and QC corrections are semantic metadata only; never render their words\n"
+            f"- {NO_VISIBLE_TEXT_DIAGRAM_CONSTRAINT}"
         )
     else:
         style_requirements = (
@@ -85,7 +116,7 @@ VISUAL STYLE: {visual_style}
 
 STYLE REQUIREMENTS:
 {style_requirements}
-{NO_CAPTION_TEXT_CONSTRAINT}
+{'' if visual_style == 'diagram_precision' else NO_CAPTION_TEXT_CONSTRAINT}
 
 PURPOSE: {order.visual.purpose}
 
@@ -95,9 +126,9 @@ MUST SHOW:
 MUST NOT SHOW:
 {must_not_block}
 
-LABELS REQUIRED: {', '.join(order.visual.labels_required) or 'none'}
+{('LABELS REQUIRED: ' + ', '.join(order.visual.labels_required)) if visual_style != 'diagram_precision' else ''}
 {frame_lines}
-{anchor_block}{continuity_block}
+{source_block}{anchor_block}{qc_block}{continuity_block}
 
 CONSISTENCY LOCKS:
 {locks}
@@ -109,4 +140,10 @@ RESOURCE TYPE: {order.resource_type}
 """
 
 
-__all__ = ["NO_CAPTION_TEXT_CONSTRAINT", "build_visual_prompt", "format_anchor_for_visual"]
+__all__ = [
+    "CLOSED_LABEL_TEXT_CONSTRAINT",
+    "NO_VISIBLE_TEXT_DIAGRAM_CONSTRAINT",
+    "NO_CAPTION_TEXT_CONSTRAINT",
+    "build_visual_prompt",
+    "format_anchor_for_visual",
+]

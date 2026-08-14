@@ -1,0 +1,745 @@
+10:00:26 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:00:30 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:00:34 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:00:38 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:00:42 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:00:46 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:00:50 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:00:54 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:00:58 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:01:02 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:01:06 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:01:10 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:01:14 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:01:18 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:01:22 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:01:26 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:01:30 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:01:34 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:01:38 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:01:42 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:01:46 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:01:50 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:01:54 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:01:58 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:02:02 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:02:06 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:02:10 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:02:14 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:02:18 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:02:22 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:02:26 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:02:30 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:08:06 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:08:10 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:08:14 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:08:18 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:08:22 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:08:26 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:08:30 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:08:34 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:08:38 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:08:42 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:08:46 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:08:50 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:08:54 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:08:58 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:09:02 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:09:06 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:09:10 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:09:14 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+10:09:18 PM [vite] http proxy error: /api/v1/v3/chunked/5c254377-4d7f-40bd-a599-d9a9dd3e0bab/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:55:58 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:56:02 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:56:06 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:56:10 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:56:14 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:56:18 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:56:22 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:56:28 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:56:30 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:56:34 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:56:38 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:56:42 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:56:46 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:56:50 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:56:54 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:56:58 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:57:02 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:57:06 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:57:10 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:57:14 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:57:18 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:57:22 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:57:26 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:57:30 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:57:34 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:57:38 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:57:42 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:57:46 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:57:50 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:57:54 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:57:58 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:58:02 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:58:06 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:58:10 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:58:14 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:58:18 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:58:22 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:58:26 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:58:30 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:58:34 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:58:38 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:58:42 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:58:49 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:58:50 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:58:54 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:58:58 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:59:02 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:59:06 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:59:10 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:59:14 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:59:18 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:59:22 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:59:26 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:59:30 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:59:34 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:59:38 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:59:42 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:59:46 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:59:50 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:59:54 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+7:59:58 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:00:02 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:00:06 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:00:10 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:00:14 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:00:18 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:00:22 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:00:26 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:00:30 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:00:34 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:00:38 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:00:42 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:00:46 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:00:50 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:00:54 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:00:58 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:01:02 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:01:06 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:01:10 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:01:14 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:01:18 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:01:22 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:01:26 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:01:30 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:01:34 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:01:38 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:01:42 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:01:46 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:01:50 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:01:54 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:04:26 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:04:30 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:04:34 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:04:38 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:04:42 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:04:46 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:04:50 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+8:04:54 AM [vite] http proxy error: /api/v1/v3/chunked/5c1407d3-9125-40f1-9b15-531fcee88a3f/status
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)

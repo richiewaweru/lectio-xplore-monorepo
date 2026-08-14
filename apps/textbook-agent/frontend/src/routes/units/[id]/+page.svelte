@@ -111,6 +111,14 @@
 	const selected = $derived(path?.lessons.find((lesson) => lesson.id === selectedId) ?? null);
 	const canLockIn = $derived(Boolean(path && path.lessons.length > 0 && path.status !== 'approved'));
 	const planningFailed = $derived(Boolean(unit && !unit.active_path_version_id && !path));
+	const canStartFresh = $derived(
+		Boolean(
+			preparation &&
+				!preparation.stale &&
+				preparation.workflow_stage === 'failed_terminal' &&
+				preparation.can_regenerate
+		)
+	);
 
 	function lines(value: string): string[] {
 		return value.split('\n').map((item) => item.trim()).filter(Boolean);
@@ -214,7 +222,11 @@
 	async function ensurePreparationStatus(): Promise<void> {
 		if (!selected) return;
 		try {
-			preparation = await getPreparedLessonStatus(unitId, selected.id);
+			const next = await getPreparedLessonStatus(unitId, selected.id);
+			preparation = next;
+			if (!next.stale && next.workflow_stage === 'failed_terminal') {
+				regenerationReason = 'The previous generation did not finish.';
+			}
 		} catch (err) {
 			preparation = null;
 			error = err instanceof Error ? err.message : 'Could not load preparation status.';
@@ -585,6 +597,12 @@
 									<label><span>What changed</span><input bind:value={regenerationReason} minlength="3" maxlength="500" required /></label>
 									<button class="primary" type="submit" disabled={busy !== null || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Making it again…' : 'Make it again'}</button>
 								</form>
+							{:else if canStartFresh}
+								<form class="regenerate" onsubmit={(event) => { event.preventDefault(); void regenerate(); }}>
+									<p>The previous generation cannot be retried. Start fresh to keep it as failure history and create a new generation.</p>
+									<label><span>Why start fresh</span><input bind:value={regenerationReason} minlength="3" maxlength="500" required /></label>
+									<button class="primary" type="submit" disabled={busy !== null || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Starting fresh…' : 'Start fresh'}</button>
+								</form>
 							{:else if preparation?.generation_id}
 								<div class="ready-actions">
 									<a class="primary link" href={`/studio?generation_id=${encodeURIComponent(preparation.generation_id)}`}>Open review</a>
@@ -694,7 +712,6 @@
 	.view-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); margin-bottom: 22px; }
 	.view-tabs button { border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ink-3); cursor: pointer; padding: 10px 13px; font-size: 12px; font-weight: 600; }
 	.view-tabs button.active { border-bottom-color: var(--accent); color: var(--accent); }
-	.view-tabs span { display: inline-grid; place-items: center; min-width: 17px; height: 17px; border-radius: 999px; background: var(--paper); margin-left: 4px; font-size: 9px; }
 	.lock-in-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); margin-bottom: 18px; padding: 16px 18px; }
 	.suggestions { max-width: 1180px; margin: 0 auto 18px; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); padding: 16px 18px; }
 	.suggestions ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
@@ -744,7 +761,6 @@
 	label small { color: var(--ink-3); font-weight: 400; }
 	input, textarea, select { box-sizing: border-box; width: 100%; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); color: var(--ink); font-size: 13px; padding: 9px 10px; }
 	textarea { min-height: 70px; resize: vertical; }
-	.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 	.editor > button { justify-self: start; }
 	.dependencies { border-top: 1px solid var(--rule); margin-top: 24px; padding-top: 20px; }
 	.dependencies ul { margin: 10px 0 0; padding-left: 17px; }
@@ -771,5 +787,5 @@
 	.confirm-dialog > p:not(.eyebrow) { color: var(--ink-2); font-size: 13px; line-height: 1.5; }
 	.confirm-dialog > div { display: flex; justify-content: end; gap: 8px; margin-top: 18px; }
 	@media (max-width: 840px) { .workspace { grid-template-columns: 1fr; } .path-list { position: static; } .path-list ol { grid-template-columns: repeat(2, 1fr); } }
-	@media (max-width: 640px) { .unit-page { padding: 28px 16px 60px; } .unit-head, .head-actions, .inspector-head, .section-head, .prepare, .lock-in-bar { align-items: stretch; flex-direction: column; } .history-panel .section-head > p { text-align: left; } .path-list ol, .two { grid-template-columns: 1fr; } .inspector { padding: 18px; } .chat-edit form { flex-direction: column; } }
+	@media (max-width: 640px) { .unit-page { padding: 28px 16px 60px; } .unit-head, .head-actions, .inspector-head, .section-head, .prepare, .lock-in-bar { align-items: stretch; flex-direction: column; } .history-panel .section-head > p { text-align: left; } .path-list ol { grid-template-columns: 1fr; } .inspector { padding: 18px; } .chat-edit form { flex-direction: column; } }
 </style>

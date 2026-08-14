@@ -57,6 +57,7 @@ def build_lesson_packet(
     prior_established: list[Any] | None,
     approved_items: tuple[ApprovedItemRecord, ...] | list[ApprovedItemRecord],
     slot_ids: tuple[str, ...] = CONCEPTUAL_FIRST_EXPOSURE_SLOTS,
+    visual_required_by_slot: Mapping[str, bool] | None = None,
 ) -> ImmutableLessonPacket:
     catalog = load_skeleton_catalog()
     slots: list[SlotRecord] = []
@@ -80,6 +81,7 @@ def build_lesson_packet(
                 typical_intents=list(dict.fromkeys(typical)),
                 min_blocks=int(raw.get("min_blocks") or 1),
                 max_blocks=int(raw.get("max_blocks") or 3),
+                visual_required=bool((visual_required_by_slot or {}).get(slot_id, False)),
             )
         )
 

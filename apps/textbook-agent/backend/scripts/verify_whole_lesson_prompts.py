@@ -28,11 +28,14 @@ def sha256(path: Path) -> str:
 
 
 def main() -> int:
-    lesson = RESOURCES / "lesson-approach-planner-v1.txt"
+    lesson_v1 = RESOURCES / "lesson-approach-planner-v1.txt"
+    lesson_v2 = RESOURCES / "lesson-approach-planner-v2.txt"
     form = RESOURCES / "form-planner-v1.txt"
-    expected_lesson = "475b8b178f74c1397742b12002a324e18ae3e39a4fffd9e7a4c199713780a9cd"
+    expected_lesson_v1 = "475b8b178f74c1397742b12002a324e18ae3e39a4fffd9e7a4c199713780a9cd"
+    expected_lesson_v2 = "2ccc4c7b1a36000040d74930ce5d8ada55de1a2279b0df0c08ae286650032004"
     expected_form = "b1990a00f0b5bf75a7dec02babf7c567b12b36a336419da029c233790fd78316"
-    assert sha256(lesson) == expected_lesson, "lesson-approach prompt hash mismatch"
+    assert sha256(lesson_v1) == expected_lesson_v1, "lesson-approach v1 prompt hash mismatch"
+    assert sha256(lesson_v2) == expected_lesson_v2, "lesson-approach v2 prompt hash mismatch"
     assert sha256(form) == expected_form, "form planner prompt hash mismatch"
     assert not (RESOURCES / "section-block-planner-v1.txt").exists()
     selector = (RESOURCES / "component-selector-v1.txt").read_text(encoding="utf-8")
@@ -57,6 +60,8 @@ def main() -> int:
                 encoding="utf-8",
             )
     print("prompt_checksums=ok")
+    print("active_lesson_approach_prompt=lesson-approach-planner-v2")
+    print(f"active_lesson_approach_sha256={expected_lesson_v2}")
     print(f"evidence_root={EVIDENCE}")
     return 0
 

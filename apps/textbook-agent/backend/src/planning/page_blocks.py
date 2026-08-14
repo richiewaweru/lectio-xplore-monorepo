@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from resource_specs.candidates import (
     IntentCandidate,
@@ -17,7 +17,7 @@ from resource_specs.candidates import (
     resolve_block_candidates,
 )
 from resource_specs.loader import get_spec
-from v3_blueprint.planning.models import PlannedBlock, SectionBlockPlan
+from v3_blueprint.planning.models import SectionBlockPlan
 from v3_blueprint.skeletons import load_skeleton_catalog
 
 FIRST_SLICE_OBJECTS = frozenset(

@@ -244,6 +244,7 @@ class V3ChunkedStatusDTO(BaseModel):
     failed_section_ids: list[str] = Field(default_factory=list)
     failed_block_ids: list[str] = Field(default_factory=list)
     error_detail: dict[str, Any] | None = None
+    visual_quality: dict[str, Any] = Field(default_factory=dict)
 
 
 class V3CardMisconceptionDTO(BaseModel):
@@ -398,7 +399,7 @@ class V3PdfExportRequest(BaseModel):
     date: str | None = None
     include_toc: bool = True
     include_answers: bool = True
-    edition: str | None = None
+    edition: Literal["teacher", "student"] | None = None
     allow_placeholders: bool = False
 
 
@@ -433,6 +434,9 @@ class V3GenerationDetailDTO(BaseModel):
     planning_artifact: dict[str, Any] | None = None
     created_at: str | None = None
     completed_at: str | None = None
+    native_whole_lesson: bool = False
+    document_contract_version: int = 1
+    visual_quality: dict[str, Any] = Field(default_factory=dict)
 
 
 class ProductionBlueprintEnvelope(BaseModel):

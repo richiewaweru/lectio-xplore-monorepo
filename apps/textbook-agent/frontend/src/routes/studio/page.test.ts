@@ -4,7 +4,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/sv
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const navigationMocks = vi.hoisted(() => ({
-	goto: vi.fn()
+	goto: vi.fn(),
+	replaceState: vi.fn()
 }));
 
 const mocks = vi.hoisted(() => ({
@@ -15,24 +16,17 @@ const mocks = vi.hoisted(() => ({
 	getChunkedPlan: vi.fn(),
 	getChunkedPlanStatus: vi.fn(),
 	downloadV3GenerationPdf: vi.fn(),
-	extractSignals: vi.fn(),
 	fetchV3Document: vi.fn(),
 	getV3GenerationBlueprint: vi.fn(),
 	regenerateChunkedPlan: vi.fn(),
 	retryNativeGeneration: vi.fn(),
-	retryChunkedSection: vi.fn(),
-	startChunkedPlan: vi.fn()
-}));
-
-const builderMocks = vi.hoisted(() => ({
-	createBuilderLesson: vi.fn(),
-	listBuilderLessons: vi.fn(),
-	saveDocument: vi.fn(),
-	v3PackToBuilderDocument: vi.fn()
+	retryNativeVisuals: vi.fn(),
+	retryChunkedSection: vi.fn()
 }));
 
 vi.mock('$app/navigation', () => ({
-	goto: navigationMocks.goto
+	goto: navigationMocks.goto,
+	replaceState: navigationMocks.replaceState
 }));
 
 vi.mock('$lib/api/v3', () => ({
@@ -43,31 +37,14 @@ vi.mock('$lib/api/v3', () => ({
 	getChunkedPlan: mocks.getChunkedPlan,
 	getChunkedPlanStatus: mocks.getChunkedPlanStatus,
 	downloadV3GenerationPdf: mocks.downloadV3GenerationPdf,
-	extractSignals: mocks.extractSignals,
 	fetchV3Document: mocks.fetchV3Document,
 	getV3GenerationBlueprint: mocks.getV3GenerationBlueprint,
 	regenerateChunkedPlan: mocks.regenerateChunkedPlan,
 	retryNativeGeneration: mocks.retryNativeGeneration,
-	retryChunkedSection: mocks.retryChunkedSection,
-	startChunkedPlan: mocks.startChunkedPlan
+	retryNativeVisuals: mocks.retryNativeVisuals,
+	retryChunkedSection: mocks.retryChunkedSection
 }));
 
-vi.mock('$lib/builder/api/lesson-crud', () => ({
-	createBuilderLesson: builderMocks.createBuilderLesson,
-	listBuilderLessons: builderMocks.listBuilderLessons
-}));
-
-vi.mock('$lib/builder/persistence/idb-store', () => ({
-	saveDocument: builderMocks.saveDocument
-}));
-
-vi.mock('$lib/builder/adapters/from-generation', () => ({
-	v3PackToBuilderDocument: builderMocks.v3PackToBuilderDocument
-}));
-
-vi.mock('$lib/components/studio/V3InputSurface.svelte', async () => ({
-	default: (await import('./__fixtures__/MockGeneric.svelte')).default
-}));
 vi.mock('$lib/components/studio/V3PlanningState.svelte', async () => ({
 	default: (await import('./__fixtures__/MockGeneric.svelte')).default
 }));
@@ -109,6 +86,7 @@ describe('studio chunked URL resume', () => {
 		resetV3Studio();
 		localStorage.clear();
 		navigationMocks.goto.mockReset();
+		navigationMocks.replaceState.mockReset();
 		mocks.approveChunkedPlan.mockReset();
 		mocks.connectV3ChunkedStream.mockReset();
 		mocks.connectV3ChunkedStream.mockImplementation(() => vi.fn());
@@ -130,19 +108,24 @@ describe('studio chunked URL resume', () => {
 		});
 		mocks.getChunkedPlanStatus.mockReset();
 		mocks.retryNativeGeneration.mockReset();
+		mocks.retryNativeVisuals.mockReset();
 		mocks.fetchV3Document.mockReset();
 		mocks.getV3GenerationBlueprint.mockReset();
-		builderMocks.createBuilderLesson.mockReset();
-		builderMocks.listBuilderLessons.mockReset();
-		builderMocks.listBuilderLessons.mockResolvedValue([]);
-		builderMocks.saveDocument.mockReset();
-		builderMocks.v3PackToBuilderDocument.mockReset();
 		window.history.replaceState({}, '', '/studio');
 	});
 
 	afterEach(() => {
 		cleanup();
 		vi.useRealTimers();
+	});
+
+	it('redirects blank Studio to the native workspace without starting a plan', async () => {
+		render(StudioPage);
+
+		await waitFor(() => expect(navigationMocks.goto).toHaveBeenCalledWith('/units', { replaceState: true }));
+		expect(mocks.getChunkedPlan).not.toHaveBeenCalled();
+		expect(mocks.getChunkedPlanStatus).not.toHaveBeenCalled();
+		expect(screen.queryByText('Open in Builder')).toBeNull();
 	});
 
 	it('hydrates plan review from generation_id query when plan is ready', async () => {
@@ -340,49 +323,6 @@ describe('studio chunked URL resume', () => {
 		await waitFor(() => expect(mocks.fetchV3Document).toHaveBeenCalledWith('gen-legacy-blocked'));
 	});
 
-	it('creates an empty builder lesson and redirects to concept review before approval', async () => {
-		window.history.replaceState({}, '', '/studio?generation_id=gen-builder-stream');
-		const structuralPlan = {
-			lesson_mode: 'first_exposure',
-			lesson_intent: { goal: 'Fraction lesson', structure_rationale: 'Build gradually' },
-			anchor: { example: 'Pizza', reuse_scope: 'all sections' },
-			sections: [
-				{ id: 'intro', title: 'Meet fractions', role: 'intro', visual_required: false, transition_note: null, components: [] }
-			],
-			question_plan: []
-		};
-		mocks.getChunkedPlanStatus.mockResolvedValue({
-			generation_id: 'gen-builder-stream', stage: 'plan_ready', structural_plan: structuralPlan,
-			section_briefs: {}, failed_sections: [], blueprint_id: null, execution_started: false,
-			next_action: 'approve_or_regenerate'
-		});
-		mocks.approveChunkedPlan.mockResolvedValue({
-			generation_id: 'gen-builder-stream', stage: 'stage2_running', structural_plan: structuralPlan,
-			section_briefs: {}, failed_sections: [], blueprint_id: null, execution_started: true,
-			next_action: 'wait_for_stage2'
-		});
-		builderMocks.createBuilderLesson.mockImplementation(async (request) => ({
-			id: 'builder-stream-1', source_generation_id: 'gen-builder-stream', source_type: 'v3_generation',
-			title: request.title, created_at: '', updated_at: '', document: request.document
-		}));
-		builderMocks.saveDocument.mockResolvedValue(undefined);
-
-		render(StudioPage);
-		await fireEvent.click(await screen.findByRole('button', { name: 'Review concepts' }));
-
-		await waitFor(() => expect(builderMocks.createBuilderLesson).toHaveBeenCalledWith(
-			expect.objectContaining({
-				source_type: 'v3_generation', source_generation_id: 'gen-builder-stream',
-				class_label: null,
-				document: expect.objectContaining({ sections: [] })
-			})
-		));
-		expect(builderMocks.saveDocument).toHaveBeenCalled();
-		expect(navigationMocks.goto).toHaveBeenCalledWith('/builder/builder-stream-1?generation_id=gen-builder-stream');
-		expect(mocks.approveChunkedPlan).not.toHaveBeenCalled();
-		expect(mocks.connectV3ChunkedStream).not.toHaveBeenCalled();
-	});
-
 	it('approves a native (document_contract_version=2) plan through the chunked teaching gate, not Builder', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-native');
 		const nativePlan = {
@@ -419,7 +359,6 @@ describe('studio chunked URL resume', () => {
 		await waitFor(() =>
 			expect(mocks.connectV3ChunkedStream).toHaveBeenCalledWith('gen-native', expect.any(Object))
 		);
-		expect(builderMocks.createBuilderLesson).not.toHaveBeenCalled();
 		expect(navigationMocks.goto).not.toHaveBeenCalled();
 	});
 
@@ -482,7 +421,135 @@ describe('studio chunked URL resume', () => {
 		await waitFor(() => expect(v3Studio.chunkedState?.stage).toBe('item_generation'));
 	});
 
-	it('hands an awaiting-review structural plan to Builder without starting generation', async () => {
+	it.each([
+		['retry_items', 'Retry lesson items'],
+		['retry_teaching', 'Retry teaching plan'],
+		['retry_native', 'Retry generation']
+	] as const)('maps %s to its exact recovery action', async (nextAction, label) => {
+		const generationId = `gen-${nextAction}`;
+		window.history.replaceState({}, '', `/studio?generation_id=${generationId}`);
+		const failedStatus = {
+			generation_id: generationId,
+			stage: 'failed_recoverable' as const,
+			doc_version: null,
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: false,
+			next_action: nextAction,
+			error: 'provider timeout',
+			error_type: 'TimeoutError'
+		};
+		mocks.getChunkedPlanStatus.mockResolvedValue(failedStatus);
+		mocks.fetchV3Document.mockRejectedValue(Object.assign(new Error('Document not ready'), { status: 404 }));
+		mocks.retryNativeGeneration.mockResolvedValue(undefined);
+		mocks.retryNativeVisuals.mockResolvedValue(undefined);
+
+		render(StudioPage);
+		const retryButton = await screen.findByRole('button', { name: label });
+		await fireEvent.click(retryButton);
+
+		await waitFor(() => expect(mocks.retryNativeGeneration).toHaveBeenCalledWith(generationId));
+		expect(mocks.retryNativeVisuals).not.toHaveBeenCalled();
+	});
+
+	it('offers visual recovery for the awaiting_visuals and retry_visuals status pairing', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-visual-retry');
+		const visualRetryStatus = {
+			generation_id: 'gen-visual-retry',
+			stage: 'awaiting_visuals' as const,
+			doc_version: null,
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: true,
+			next_action: 'retry_visuals',
+			error: 'visual provider timeout',
+			error_type: 'TimeoutError'
+		};
+		mocks.getChunkedPlanStatus.mockResolvedValue(visualRetryStatus);
+		mocks.fetchV3Document.mockRejectedValue(Object.assign(new Error('Document not ready'), { status: 404 }));
+		mocks.retryNativeVisuals.mockResolvedValue(undefined);
+
+		render(StudioPage);
+
+		const retryButton = await screen.findByRole('button', { name: 'Retry visuals' });
+		expect(screen.getByText('Generation paused')).toBeTruthy();
+		await fireEvent.click(retryButton);
+
+		await waitFor(() => expect(mocks.retryNativeVisuals).toHaveBeenCalledWith('gen-visual-retry'));
+		expect(mocks.retryNativeGeneration).not.toHaveBeenCalled();
+	});
+
+	it('keeps awaiting_visuals and wait_visuals as a non-actionable wait state', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-visual-wait');
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-visual-wait',
+			stage: 'awaiting_visuals',
+			doc_version: null,
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: true,
+			next_action: 'wait_visuals'
+		});
+		mocks.fetchV3Document.mockRejectedValue(Object.assign(new Error('Document not ready'), { status: 404 }));
+
+		render(StudioPage);
+
+		expect(await screen.findByText('Building your lesson…')).toBeTruthy();
+		expect(screen.queryByText('Generation paused')).toBeNull();
+		expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
+		expect(mocks.retryNativeGeneration).not.toHaveBeenCalled();
+		expect(mocks.retryNativeVisuals).not.toHaveBeenCalled();
+	});
+
+	it('does not offer a retry for unknown or terminal recovery actions', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-unknown-retry');
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-unknown-retry',
+			stage: 'failed_recoverable',
+			doc_version: null,
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: false,
+			next_action: 'retry_something_new',
+			error: 'provider timeout',
+			error_type: 'TimeoutError'
+		});
+		mocks.fetchV3Document.mockRejectedValue(Object.assign(new Error('Document not ready'), { status: 404 }));
+
+		render(StudioPage);
+		await waitFor(() => expect(v3Studio.stage).toBe('generating'));
+		expect(screen.getByText('No supported recovery action is available for this generation state.')).toBeTruthy();
+		expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
+		expect(mocks.retryNativeGeneration).not.toHaveBeenCalled();
+		expect(mocks.retryNativeVisuals).not.toHaveBeenCalled();
+	});
+
+	it('navigates to the native viewer exactly once when status becomes ready', async () => {
+		vi.useFakeTimers();
+		window.history.replaceState({}, '', '/studio?generation_id=gen-ready-once');
+		const runningStatus = {
+			generation_id: 'gen-ready-once',
+			stage: 'planning_forms' as const,
+			doc_version: null,
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: false,
+			next_action: 'wait_for_generation'
+		};
+		const readyStatus = { ...runningStatus, stage: 'ready' as const, next_action: 'done' };
+		mocks.getChunkedPlanStatus.mockResolvedValueOnce(runningStatus).mockResolvedValue(readyStatus);
+		mocks.fetchV3Document.mockRejectedValue(Object.assign(new Error('Document not ready'), { status: 404 }));
+
+		render(StudioPage);
+		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-ready-once'));
+		mocks.fetchV3Document.mockClear();
+		await vi.advanceTimersByTimeAsync(4000);
+		await waitFor(() => expect(navigationMocks.goto).toHaveBeenCalledWith('/studio/generations/gen-ready-once'));
+		await vi.advanceTimersByTimeAsync(8000);
+		expect(navigationMocks.goto).toHaveBeenCalledTimes(1);
+	});
+
+	it('rejects a contract-v1 structural plan without Builder fallback or approval', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-approve-blocked');
 		mocks.getChunkedPlanStatus.mockResolvedValue({
 			generation_id: 'gen-approve-blocked',
@@ -500,32 +567,6 @@ describe('studio chunked URL resume', () => {
 			execution_started: false,
 			next_action: 'approve_or_regenerate'
 		});
-		mocks.approveChunkedPlan.mockResolvedValue({
-			generation_id: 'gen-approve-blocked',
-			stage: 'assembly_blocked',
-			structural_plan: {
-				lesson_mode: 'first_exposure',
-				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
-				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
-				sections: [],
-				question_plan: []
-			},
-			section_briefs: {},
-			failed_sections: ['intro'],
-			blueprint_id: null,
-			execution_started: false,
-			next_action: 'retry_failed_sections'
-		});
-		builderMocks.createBuilderLesson.mockImplementation(async (request) => ({
-			id: 'builder-blocked-1',
-			source_generation_id: 'gen-approve-blocked',
-			source_type: 'v3_generation',
-			title: request.title,
-			created_at: '',
-			updated_at: '',
-			document: request.document
-		}));
-		builderMocks.saveDocument.mockResolvedValue(undefined);
 
 		render(StudioPage);
 		await waitFor(() =>
@@ -535,11 +576,8 @@ describe('studio chunked URL resume', () => {
 		await fireEvent.click(await screen.findByRole('button', { name: 'Review concepts' }));
 
 		expect(mocks.approveChunkedPlan).not.toHaveBeenCalled();
-		await waitFor(() =>
-			expect(navigationMocks.goto).toHaveBeenCalledWith(
-				'/builder/builder-blocked-1?generation_id=gen-approve-blocked'
-			)
-		);
+		expect((await screen.findByRole('alert')).textContent).toMatch(/requires native document contract v2/i);
+		expect(navigationMocks.goto).not.toHaveBeenCalledWith(expect.stringContaining('/builder/'));
 		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
 		expect(mocks.connectV3ChunkedStream).not.toHaveBeenCalled();
 	});
@@ -840,56 +878,6 @@ describe('studio chunked URL resume', () => {
 		expect(v3Studio.stage).toBe('fill');
 	});
 
-	it('opens Builder concept review without painting generation output', async () => {
-		window.history.replaceState({}, '', '/studio?generation_id=gen-canvas');
-		mocks.getChunkedPlanStatus.mockResolvedValue({
-			generation_id: 'gen-canvas',
-			stage: 'plan_ready',
-			structural_plan: {
-				lesson_mode: 'first_exposure',
-				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
-				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
-				sections: [
-					{
-						id: 'orient',
-						title: 'Orient',
-						role: 'orient',
-						visual_required: true,
-						transition_note: null,
-						components: [{ slug: 'hook-hero', purpose: 'Open the lesson' }]
-					}
-				],
-				question_plan: [{ question_id: 'q1', section_id: 'orient', temperature: 'warm', diagram_required: false }]
-			},
-			section_briefs: {},
-			failed_sections: [],
-			blueprint_id: null,
-			execution_started: false,
-			next_action: 'approve_or_regenerate'
-		});
-		builderMocks.createBuilderLesson.mockImplementation(async (request) => ({
-			id: 'builder-canvas',
-			source_generation_id: 'gen-canvas',
-			source_type: 'v3_generation',
-			title: request.title,
-			created_at: '',
-			updated_at: '',
-			document: request.document
-		}));
-		builderMocks.saveDocument.mockResolvedValue(undefined);
-
-		render(StudioPage);
-		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-canvas'));
-		await fireEvent.click(await screen.findByRole('button', { name: 'Review concepts' }));
-
-		await waitFor(() =>
-			expect(navigationMocks.goto).toHaveBeenCalledWith(
-				'/builder/builder-canvas?generation_id=gen-canvas'
-			)
-		);
-		expect(mocks.approveChunkedPlan).not.toHaveBeenCalled();
-	});
-
 	it('repaints the canvas from polled draft snapshots during generation', async () => {
 		window.history.replaceState({}, '', '/studio?generation_id=gen-snapshot');
 		mocks.getChunkedPlanStatus.mockResolvedValue({
@@ -1148,89 +1136,50 @@ describe('studio chunked URL resume', () => {
 		expect(v3Studio.canvas[0]?.diagnosticWarnings).toContain('provider timeout');
 	});
 
-	it('opens the current studio pack in Builder from the edit stage', async () => {
+	it('does not expose a Builder action for a native rendered pack', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-native-rendered');
+		mocks.getChunkedPlan.mockResolvedValue({
+			generation_id: 'gen-native-rendered',
+			structural_plan: {
+				document_contract_version: 2,
+				lesson_mode: 'first_exposure',
+				lesson_intent: { goal: 'Goal', structure_rationale: 'Why' },
+				anchor: { example: 'Anchor', reuse_scope: 'Reuse' },
+				sections: [],
+				question_plan: []
+			},
+			display_title: 'Goal',
+			inferred_lesson_mode: 'first_exposure',
+			lesson_mode_confidence: 'high'
+		});
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-native-rendered',
+			stage: 'completed',
+			doc_version: null,
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: false,
+			next_action: 'done'
+		});
+		mocks.fetchV3Document.mockRejectedValue(new Error('document already hydrated in test state'));
 		v3Studio.stage = 'edit';
-		v3Studio.generationId = 'gen-builder';
+		v3Studio.generationId = 'gen-native-rendered';
 		v3Studio.bookletStatus = 'final_ready';
 		v3Studio.activePack = {
-			generation_id: 'gen-builder',
+			generation_id: 'gen-native-rendered',
 			blueprint_id: 'bp-1',
 			template_id: 'guided-concept-path',
 			subject: 'Mathematics',
 			status: 'final_ready',
-			sections: [{ section_id: 'intro', header: { title: 'Quadratic review' } }],
+			sections: [{ section_id: 'intro', header: { title: 'Native lesson' } }],
 			warnings: [],
 			section_diagnostics: [],
 			booklet_issues: []
 		};
-		builderMocks.v3PackToBuilderDocument.mockImplementation((pack) => {
-			structuredClone(pack);
-			return {
-			id: 'lesson-doc-1',
-			title: 'Quadratic review',
-			subject: 'Mathematics',
-			sections: [],
-			blocks: {},
-			media: {},
-			version: 1,
-			preset_id: 'blue-classroom',
-			source: 'generated',
-			created_at: '2026-06-22T00:00:00Z',
-			updated_at: '2026-06-22T00:00:00Z'
-			};
-		});
-		builderMocks.createBuilderLesson.mockResolvedValue({
-			id: 'builder-1',
-			source_generation_id: 'gen-builder',
-			source_type: 'v3_generation',
-			title: 'Quadratic review',
-			created_at: '2026-06-22T00:00:00Z',
-			updated_at: '2026-06-22T00:00:00Z',
-			document: { id: 'lesson-doc-1' }
-		});
-		builderMocks.saveDocument.mockResolvedValue(undefined);
 
 		render(StudioPage);
-
-		await fireEvent.click(await screen.findByRole('button', { name: 'Open in Builder' }));
-
-		expect(builderMocks.v3PackToBuilderDocument).toHaveBeenCalledWith(
-			expect.objectContaining({ generation_id: 'gen-builder' }),
-			{ routeGenerationId: 'gen-builder' }
-		);
-		expect(builderMocks.createBuilderLesson).toHaveBeenCalledWith(
-			expect.objectContaining({
-				source_type: 'v3_generation',
-				source_generation_id: 'gen-builder',
-				title: 'Quadratic review'
-			})
-		);
-		expect(builderMocks.saveDocument).toHaveBeenCalled();
-		await waitFor(() => expect(navigationMocks.goto).toHaveBeenCalledWith('/builder/builder-1'));
-	});
-
-	it('shows review flags in the active studio edit surface', async () => {
-		v3Studio.stage = 'edit';
-		v3Studio.generationId = 'gen-issues';
-		v3Studio.bookletStatus = 'draft_needs_review';
-		v3Studio.activePack = {
-			generation_id: 'gen-issues',
-			blueprint_id: 'bp-1',
-			template_id: 'guided-concept-path',
-			subject: 'Mathematics',
-			status: 'draft_needs_review',
-			sections: [{ section_id: 'practice', header: { title: 'Practice' } }],
-			warnings: [],
-			section_diagnostics: [],
-			booklet_issues: [{ message: 'Check worked example wording.', section_id: 'practice', category: 'clarity' }]
-		};
-		v3Studio.bookletIssues = v3Studio.activePack.booklet_issues;
-
-		render(StudioPage);
-
-		expect(await screen.findByText('Review flags')).toBeTruthy();
-		expect(screen.getByText('Check worked example wording.')).toBeTruthy();
-		expect(screen.getByText('practice - clarity')).toBeTruthy();
+		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-native-rendered'));
+		expect(screen.queryByRole('button', { name: /open in builder/i })).toBeNull();
 	});
 
 	it('clears stale rendered booklet state before chunked regenerate resolves', async () => {

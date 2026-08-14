@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from planning.whole_lesson.states import LeaseLostError
+from planning.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
 
 try:
     import httpx
@@ -17,6 +18,12 @@ try:
     from pydantic import ValidationError as PydanticValidationError
 except ImportError:  # pragma: no cover
     PydanticValidationError = None  # type: ignore[misc, assignment]
+
+try:
+    from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
+except ImportError:  # pragma: no cover
+    ModelAPIError = None  # type: ignore[misc, assignment]
+    ModelHTTPError = None  # type: ignore[misc, assignment]
 
 
 @dataclass(frozen=True)
@@ -36,6 +43,10 @@ def classify_failure(exc: BaseException) -> FailureClassification:
 
     if ContentValidationError is not None and isinstance(exc, ContentValidationError):
         return FailureClassification(code="VALIDATION", retryable=True, repairable=False)
+    if isinstance(exc, TeachingPlanOutputInvalidError):
+        return FailureClassification(
+            code="MODEL_OUTPUT_INVALID", retryable=True, repairable=False
+        )
     if isinstance(exc, LeaseLostError):
         return FailureClassification(code="LEASE_LOST", retryable=False, repairable=False)
     if isinstance(exc, asyncio.CancelledError):
@@ -67,6 +78,18 @@ def classify_failure(exc: BaseException) -> FailureClassification:
             return FailureClassification(code="TRANSPORT", retryable=True, repairable=False)
         if isinstance(exc, httpx.HTTPError):
             return FailureClassification(code="TRANSPORT", retryable=True, repairable=False)
+
+    # Pydantic AI wraps provider network failures in ModelAPIError. HTTP failures
+    # retain their status in the narrower ModelHTTPError subtype.
+    if ModelHTTPError is not None and isinstance(exc, ModelHTTPError):
+        status = int(getattr(exc, "status_code", 0) or 0)
+        if status == 429:
+            return FailureClassification(code="RATE_LIMIT", retryable=True, repairable=False)
+        if status >= 500:
+            return FailureClassification(code="TRANSPORT", retryable=True, repairable=False)
+        return FailureClassification(code="UNKNOWN", retryable=False, repairable=False)
+    if ModelAPIError is not None and isinstance(exc, ModelAPIError):
+        return FailureClassification(code="TRANSPORT", retryable=True, repairable=False)
 
     # Connection-family OS errors (still typed, not message-primary).
     if isinstance(exc, (ConnectionError, TimeoutError, OSError)):

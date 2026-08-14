@@ -206,7 +206,8 @@ async def _accept_native_retry_locked(
             )
 
         execution["heartbeat_at"] = stamp
-        execution["attempt"] = int(execution.get("attempt") or 0) + 1
+        # A retry request only makes work claimable. The worker claim below owns
+        # attempt accounting so accepted-but-never-claimed work is not a run.
         execution["worker_id"] = None
         execution["claimed_at"] = None
 
@@ -216,7 +217,6 @@ async def _accept_native_retry_locked(
             clear_generation_error_state(generation, state)
             execution = dict(state.get("execution") or empty_execution_meta())
             execution["heartbeat_at"] = stamp
-            execution["attempt"] = int(execution.get("attempt") or 0) + 1
             execution["pre_worker_retry_active"] = False
             execution["work_kind"] = WORK_KIND_POST_APPROVAL
             execution["worker_id"] = None

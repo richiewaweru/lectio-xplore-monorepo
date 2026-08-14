@@ -94,12 +94,7 @@ async def test_native_retry_section_does_not_call_legacy_retry() -> None:
                     target=NativeRetryTarget.NOT_RETRYABLE,
                 )
             ),
-        ),
-        patch.object(
-            studio_router,
-            "retry_failed_section",
-            new=AsyncMock(side_effect=AssertionError("legacy retry must not run")),
-        ) as legacy_retry,
+        ) as execute_retry,
     ):
         with pytest.raises(HTTPException) as exc_info:
             await studio_router.post_chunked_retry_section(
@@ -111,7 +106,7 @@ async def test_native_retry_section_does_not_call_legacy_retry() -> None:
         detail = exc_info.value.detail
         assert isinstance(detail, dict)
         assert detail["error_type"] == "INVALID_STATUS"
-        legacy_retry.assert_not_called()
+        execute_retry.assert_awaited_once_with("gen-native-1", user_id="user-1")
 
 
 @pytest.mark.asyncio
@@ -167,11 +162,6 @@ async def test_native_retry_section_requeues_failed_recoverable() -> None:
         ) as execute_retry,
         patch.object(
             studio_router,
-            "retry_failed_section",
-            new=AsyncMock(side_effect=AssertionError("legacy retry must not run")),
-        ) as legacy_retry,
-        patch.object(
-            studio_router,
             "_normalize_chunked_state",
             return_value=MagicMock(stage="queued", next_action="wait"),
         ) as normalize,
@@ -183,5 +173,4 @@ async def test_native_retry_section_requeues_failed_recoverable() -> None:
         )
         assert result.stage == "queued"
         execute_retry.assert_awaited_once()
-        legacy_retry.assert_not_called()
         normalize.assert_called()

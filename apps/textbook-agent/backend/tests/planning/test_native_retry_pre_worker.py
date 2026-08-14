@@ -425,9 +425,9 @@ async def test_r02_teaching_retry_does_not_rerun_items() -> None:
     gid, _card_id = await _seed_generation(
         status="failed_recoverable",
         last_error={
-            "type": "TimeoutError",
-            "code": "TIMEOUT",
-            "message": "teaching timed out",
+            "type": "TeachingPlanOutputInvalidError",
+            "code": "MODEL_OUTPUT_INVALID",
+            "message": "teaching output stayed invalid after repair",
             "stage": "planning_teaching",
             "retryable": True,
         },
@@ -544,6 +544,13 @@ async def test_r05_post_approval_queues() -> None:
         generation = await session.get(GenerationModel, gid)
         assert generation is not None
         assert generation.status == "queued"
+        repo = PageDocumentRepository(session, gid)
+        lease = await repo.claim_execution(worker_id="r05-worker")
+        assert lease is not None
+        assert lease.stage == "planning_forms"
+        assert lease.lease_token == 1
+        # The accepted retry is claimable exactly once while its lease is fresh.
+        assert await repo.claim_execution(worker_id="r05-other-worker") is None
 
 
 @pytest.mark.asyncio
@@ -705,3 +712,100 @@ async def test_r07_error_aliases_clear_after_teaching_recovery() -> None:
         assert generation.error_code is None
         page = dict((generation.chunked_state_json or {}).get("page_document_v2") or {})
         assert (page.get("execution") or {}).get("last_error") is None
+
+
+@pytest.mark.asyncio
+async def test_injected_form_timeout_retry_resumes_at_planning_forms() -> None:
+    from planning.whole_lesson.executor import execute_after_teaching_approval
+    from planning.whole_lesson.failure_injection import (
+        configure_failure_injection,
+        reset_failure_injection,
+    )
+    from planning.whole_lesson.legality import build_lesson_legality_snapshot
+    from planning.whole_lesson.packet import (
+        AnchorRecord,
+        ImmutableLessonPacket,
+        LessonIdentity,
+        LessonLimits,
+        ScopeContract,
+        SlotRecord,
+    )
+    from planning.whole_lesson.worker import NativeExecutionWorker
+    from tests.planning.contract_fixtures import teaching_and_form
+
+    packet = ImmutableLessonPacket(
+        lesson=LessonIdentity(
+            path_lesson_id="lesson-form-timeout",
+            subject="Science",
+            grade_level="Grade 4",
+            objective="Explain why plants need light.",
+            knowledge_type="conceptual",
+            lesson_mode="first_exposure",
+        ),
+        scope=ScopeContract(terminology=["light"]),
+        anchor=AnchorRecord(id="a1", description="Two plants."),
+        slots=[SlotRecord(slot_id="orient", typical_intents=["orient"])],
+        limits=LessonLimits(),
+    )
+    teaching, _form = teaching_and_form(
+        sections=[("orient", [("orient-b1", "orient", "prose")])]
+    )
+    gid, _ = await _seed_generation(
+        status="planning_forms",
+        last_error=None,
+        skip_items=True,
+        ready_card=True,
+    )
+    async with async_session_factory() as session:
+        repo = PageDocumentRepository(session, gid)
+
+        def _prep(_generation, state):
+            state["lesson_packet"] = packet.model_dump(mode="json")
+            state["lesson_legality"] = build_lesson_legality_snapshot(packet).model_dump(
+                mode="json"
+            )
+            state["teaching_plan"] = teaching.model_dump(mode="json")
+            state["teaching_raw"] = "unchanged-teaching"
+            state["form_plan"] = None
+
+        await repo.mutate_state(mutation=_prep)
+
+    configure_failure_injection(
+        enabled=True, generation_id=gid, node="planning_forms", fail_once=True
+    )
+    form_calls = {"n": 0}
+
+    async def _form_boom(*_a, **_k):
+        form_calls["n"] += 1
+        raise AssertionError("form provider must not run")
+
+    try:
+        async with async_session_factory() as session:
+            lease = await PageDocumentRepository(session, gid).claim_execution(
+                worker_id="form-retry-worker"
+            )
+            assert lease is not None
+        with patch("planning.whole_lesson.executor.run_form_planner", new=_form_boom):
+            async with async_session_factory() as session:
+                with pytest.raises(TimeoutError):
+                    await execute_after_teaching_approval(
+                        session=session, generation_id=gid, lease=lease
+                    )
+        await NativeExecutionWorker(worker_id="form-retry-worker")._persist_failure(
+            lease, TimeoutError("injected form planner timeout")
+        )
+        accepted = await accept_native_retry(gid, user_id=TEST_USER.id)
+        assert accepted["status"] == "queued"
+        async with async_session_factory() as session:
+            repo = PageDocumentRepository(session, gid)
+            claimed = await repo.claim_execution(worker_id="form-retry-worker-2")
+            assert claimed is not None
+            assert claimed.stage == "planning_forms"
+            assert await repo.claim_execution(worker_id="form-retry-other") is None
+            state = await repo.load_page_generation_state()
+            assert state.get("teaching_raw") == "unchanged-teaching"
+            assert state.get("teaching_plan") is not None
+            assert state.get("form_plan") is None
+    finally:
+        reset_failure_injection()
+    assert form_calls["n"] == 0

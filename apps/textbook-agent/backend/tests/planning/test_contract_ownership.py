@@ -25,12 +25,6 @@ from planning.whole_lesson.packet import (
 from planning.whole_lesson.legality import build_lesson_legality_snapshot
 from planning.whole_lesson.prompt_render import build_form_planner_payload
 from planning.whole_lesson.resolved_block_plan import resolve_block_plans
-from planning.whole_lesson.teaching_plan import (
-    AnchorUsage,
-    TeachingPlan,
-    TeachingPlanBlock,
-    TeachingPlanSection,
-)
 from planning.whole_lesson.validation import validate_form_plan
 from tests.planning.contract_fixtures import teaching_and_form
 from v3_blueprint.planning.models import PlannedBlock
@@ -129,7 +123,7 @@ def test_validate_form_plan_uses_shared_candidate_map() -> None:
         sections=[("orient", [("orient-b1", "orient", "prose")])]
     )
     candidates = build_form_candidate_map(
-        teaching, compatible_objects_by_intent=_compat()
+        teaching, compatible_objects_by_intent=_compat(), approved_items=[]
     )
     report = validate_form_plan(form, teaching, candidate_map=candidates)
     assert report.ok
@@ -160,7 +154,7 @@ def test_validate_form_plan_rejects_unknown_and_duplicate_blocks() -> None:
         sections=[("orient", [("orient-b1", "orient", "prose")])]
     )
     candidates = build_form_candidate_map(
-        teaching, compatible_objects_by_intent=_compat()
+        teaching, compatible_objects_by_intent=_compat(), approved_items=[]
     )
     unknown = FormPlan(
         sections=[
@@ -216,7 +210,7 @@ def test_form_planner_input_envelope_has_required_context() -> None:
     )
     guidance = project_form_guidance().to_dict()
     candidates = build_form_candidate_map(
-        teaching, compatible_objects_by_intent=_compat()
+        teaching, compatible_objects_by_intent=_compat(), approved_items=[]
     )
     payload = build_form_planner_payload(
         _packet(), teaching, guidance, candidate_map=candidates
@@ -227,6 +221,24 @@ def test_form_planner_input_envelope_has_required_context() -> None:
     assert block["brief"]
     assert isinstance(block["legal_object_candidates"], list)
     assert block["legal_object_candidates"]
+
+
+def test_form_planner_payload_carries_required_visual_slots() -> None:
+    teaching, _ = teaching_and_form(
+        sections=[("model", [("model-b1", "show-structure", "figure")])]
+    )
+    packet = _packet().model_copy(deep=True)
+    packet.slots.append(SlotRecord(slot_id="model", visual_required=True))
+    guidance = project_form_guidance().to_dict()
+    candidates = build_form_candidate_map(
+        teaching,
+        compatible_objects_by_intent={"show-structure": ["figure"]},
+        approved_items=[],
+    )
+    payload = build_form_planner_payload(
+        packet, teaching, guidance, candidate_map=candidates
+    )
+    assert payload["required_visual_slots"] == ["model"]
 
 
 def test_resolve_block_plans_joins_ownership() -> None:
@@ -245,6 +257,37 @@ def test_resolve_block_plans_joins_ownership() -> None:
     assert block.object == "table"
     assert block.placement == "main"
     assert block.reason == "table earns comparison"
+
+
+def test_resolved_choices_preserves_single_teaching_question_id() -> None:
+    teaching, form = teaching_and_form(
+        sections=[
+            ("check", [("check-b1", "check-understanding", "choices")]),
+        ]
+    )
+    teaching.sections[0].blocks[0].source_question_ids = ["item-1"]
+
+    block = resolve_block_plans(teaching, form).sections[0].blocks[0]
+    planned = block.to_planned_block()
+
+    assert planned.object == "choices"
+    assert planned.source_question_ids == ["item-1"]
+
+    block.source_question_ids = ["item-1", "item-2"]
+    with pytest.raises(ValidationError, match="exactly one"):
+        block.to_planned_block()
+
+
+def test_resolved_non_assessment_cannot_drop_teaching_item_ownership() -> None:
+    teaching, form = teaching_and_form(
+        sections=[("check", [("check-b1", "check-understanding", "prose")])]
+    )
+    teaching.sections[0].blocks[0].source_question_ids = ["item-1"]
+
+    block = resolve_block_plans(teaching, form).sections[0].blocks[0]
+
+    with pytest.raises(ValidationError, match="assessment blocks"):
+        block.to_planned_block()
 
 
 def test_writer_outcome_has_no_authoritative_object_intent() -> None:

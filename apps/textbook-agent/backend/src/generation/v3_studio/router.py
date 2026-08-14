@@ -23,6 +23,7 @@ from core.database.models import (
     ConceptCardModel,
     GenerationModel,
     LearningPackModel,
+    LessonProvenanceModel,
     PackItemModel,
 )
 from core.database.session import async_session_factory
@@ -43,7 +44,6 @@ from v3_blueprint.planning.models import (
     VariantSpec,
     adapt_legacy_structural_plan,
     core_variant_spec,
-    stage2_brief_preview_payload,
 )
 from v3_blueprint.planning.persistence import (
     append_item_attempt_records,
@@ -51,7 +51,6 @@ from v3_blueprint.planning.persistence import (
     persist_chunked_state,
 )
 from v3_blueprint.planning.retry import (
-    retry_failed_section,
     run_stage1_with_retry,
 )
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
@@ -77,7 +76,11 @@ from generation.v3_studio.agents import (
 )
 from generation.pdf_export.cleanup import cleanup_files
 from generation.pdf_export.rendering.playwright import PDFRenderError
-from generation.pdf_export.service import PDFExportRequest, export_v3_studio_pdf
+from generation.pdf_export.service import (
+    NativeDocumentContractError,
+    PDFExportRequest,
+    export_v3_studio_pdf,
+)
 from generation.pdf_export.components.answers_v3 import (
     build_diagnostic_answer_key_content,
 )
@@ -390,6 +393,9 @@ def _normalize_chunked_status(
             error_detail=native.get("error_detail")
             if isinstance(native.get("error_detail"), dict)
             else None,
+            visual_quality=native.get("visual_quality")
+            if isinstance(native.get("visual_quality"), dict)
+            else {},
         )
 
     return V3ChunkedStatusDTO(
@@ -594,6 +600,7 @@ async def _ensure_chunked_generation_row(
     pack_resource_id: str | None = None,
     pack_resource_label: str | None = None,
     variant: VariantSpec | None = None,
+    planning_spec_json: str | None = None,
 ) -> None:
     async with async_session_factory() as session:
         model = await session.get(GenerationModel, generation_id)
@@ -616,6 +623,7 @@ async def _ensure_chunked_generation_row(
                     pack_resource_label=pack_resource_label,
                     variant_label=variant.label if variant is not None else None,
                     variant_spec=variant.model_dump(mode="json") if variant is not None else None,
+                    planning_spec_json=planning_spec_json,
                 )
             )
         else:
@@ -639,6 +647,8 @@ async def _ensure_chunked_generation_row(
             if variant is not None:
                 model.variant_label = variant.label
                 model.variant_spec = variant.model_dump(mode="json")
+            if planning_spec_json is not None:
+                model.planning_spec_json = planning_spec_json
         await session.commit()
 
 
@@ -658,6 +668,73 @@ async def _load_owned_generation(
         if model is None or model.user_id != user_id:
             raise HTTPException(status_code=404, detail="Generation not found")
         return model
+
+
+def _contract_version_for_generation(
+    model: GenerationModel,
+    state: dict[str, Any],
+) -> int:
+    """Return the strongest persisted document contract declaration."""
+    versions: list[int] = []
+    plan = state.get("structural_plan")
+    if isinstance(plan, dict):
+        try:
+            versions.append(int(plan.get("document_contract_version") or 1))
+        except (TypeError, ValueError):
+            pass
+    if isinstance(model.planning_spec_json, str) and model.planning_spec_json.strip():
+        try:
+            spec = json.loads(model.planning_spec_json)
+        except (TypeError, ValueError):
+            spec = None
+        if isinstance(spec, dict):
+            try:
+                versions.append(int(spec.get("document_contract_version") or 1))
+            except (TypeError, ValueError):
+                pass
+    return max(versions, default=1)
+
+
+async def _require_current_native_generation(
+    generation_id: str,
+    user_id: str,
+    *,
+    state: dict[str, Any] | None = None,
+) -> tuple[GenerationModel, dict[str, Any], LessonProvenanceModel]:
+    """Authorize current path approval before any task/state mutation.
+
+    Current product approval is intentionally stricter than the historical
+    native-routing heuristic: the persisted contract must be v2, the state must
+    carry native provenance, and the immutable path provenance row must identify
+    both the path version and path lesson.  Older v1 records remain readable but
+    cannot enter new execution.
+    """
+    model = await _load_owned_generation(generation_id, user_id)
+    resolved_state = state if state is not None else await load_chunked_state(generation_id)
+    contract_version = _contract_version_for_generation(model, resolved_state)
+    context = resolved_state.get("context")
+    native_state = bool(
+        resolved_state.get("native_whole_lesson")
+        or (context.get("native_whole_lesson") if isinstance(context, dict) else False)
+        or resolved_state.get("page_document_v2")
+    )
+    async with async_session_factory() as session:
+        provenance = await session.get(LessonProvenanceModel, generation_id)
+    if (
+        contract_version < 2
+        or not native_state
+        or provenance is None
+        or not provenance.path_version_id
+        or not provenance.path_lesson_id
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Current lesson approval requires native document contract v2 "
+                "and immutable path provenance"
+            ),
+        )
+    return model, resolved_state, provenance
 
 
 async def _resolve_owned_card_scope(
@@ -1611,6 +1688,14 @@ async def _prepare_variant_generations(
     form = V3InputForm.model_validate(form_raw) if isinstance(form_raw, dict) else None
     if form is None:
         raise ValueError("Variant fan-out requires persisted form context")
+    native_variant = bool(
+        state.get("native_whole_lesson")
+        or (
+            state.get("context", {}).get("native_whole_lesson")
+            if isinstance(state.get("context"), dict)
+            else False
+        )
+    )
 
     for index, variant in enumerate(variants):
         generation_id = generation_ids.get(variant.label) or str(uuid.uuid4())
@@ -1630,6 +1715,11 @@ async def _prepare_variant_generations(
             pack_resource_id=resource_id,
             pack_resource_label=variant.label,
             variant=variant,
+            planning_spec_json=(
+                json.dumps(selected_plan, sort_keys=True)
+                if native_variant and isinstance(selected_plan, dict)
+                else None
+            ),
         )
         await persist_chunked_state(
             generation_id,
@@ -1646,6 +1736,7 @@ async def _prepare_variant_generations(
                 },
                 "failed_sections": [],
                 "context": deepcopy(state.get("context")),
+                "native_whole_lesson": native_variant,
                 "display_title": f"{form.topic} — {variant.label}",
                 "execution_started": False,
                 "skip_item_generation": True,
@@ -1740,6 +1831,17 @@ async def post_chunked_plan_start(
     body: V3ChunkedPlanStartRequest,
     current_user: User = Depends(get_current_user),
 ) -> V3ChunkedPlanStateDTO:
+    # This endpoint creates the historical contract-v1 workflow.  New lessons
+    # must originate from the approved unit/path flow, which persists immutable
+    # provenance and a native document contract before approval.  Keep the route
+    # explicit so direct callers cannot create orphaned legacy rows or state.
+    raise HTTPException(
+        status_code=410,
+        detail="Direct chunked plan start is retired; prepare a lesson from an approved path",
+    )
+
+    # Kept below the quarantine guard for historical source reference only.  It
+    # is intentionally unreachable for normal product requests.
     generation_id = str(uuid.uuid4())
     pack_id = str(uuid.uuid4())
     form = body.form
@@ -2772,8 +2874,12 @@ async def post_chunked_plan_approve(
     body: V3ChunkedApproveRequest | None = Body(default=None),
     current_user: User = Depends(get_current_user),
 ) -> V3ChunkedPlanStateDTO:
-    await _load_owned_generation(generation_id, current_user.id)
-    state = await load_chunked_state(generation_id)
+    # Validate immutable current/path provenance and contract v2 before any
+    # resume claim, stream registration, task scheduling, or state patch.
+    _model, state, _provenance = await _require_current_native_generation(
+        generation_id,
+        current_user.id,
+    )
     if not isinstance(state.get("structural_plan"), dict):
         raise HTTPException(status_code=409, detail="Structural plan is not ready yet")
     stage = str(state.get("stage") or "")
@@ -2851,79 +2957,13 @@ async def post_chunked_plan_regenerate(
     current_user: User = Depends(get_current_user),
 ) -> V3ChunkedPlanStateDTO:
     await _load_owned_generation(generation_id, current_user.id)
-    state = await load_chunked_state(generation_id)
-
-    signals, form, resource_spec = _decode_chunked_context(state)
-    if body.note.strip():
-        note_prefix = "Teacher adjustment note:"
-        existing = form.free_text.strip()
-        note = f"{note_prefix} {body.note.strip()}"
-        merged = f"{existing}\n\n{note}" if existing else note
-        form = form.model_copy(update={"free_text": merged})
-
-    running_task = _chunked_stage2_tasks.pop(generation_id, None)
-    if running_task is not None and not running_task.done():
-        running_task.cancel()
-
-    await _ensure_chunked_stream(
-        generation_id=generation_id,
-        user_id=current_user.id,
-        blueprint_id=f"chunked-plan-{generation_id}",
+    # Both current native generations and historical v1 records are read-only
+    # through this retired stage-1 handler.  Native recovery uses retry-native;
+    # old records remain available to view but cannot restart execution.
+    raise HTTPException(
+        status_code=409,
+        detail="Plan regeneration is retired; generation records are read-only",
     )
-    await persist_chunked_state(
-        generation_id,
-        {
-            "stage": "stage1_running",
-            "section_briefs": {},
-            "failed_sections": [],
-            "blueprint_id": None,
-            "execution_started": False,
-            "errors": [],
-        },
-    )
-
-    async def emit_event(event: str, payload: dict[str, Any]) -> None:
-        await _chunked_emit_event(generation_id, event, payload)
-
-    try:
-        await run_stage1_with_retry(
-            signals=signals,
-            form=form,
-            resource_spec=resource_spec,
-            emit_event=emit_event,
-            generation_id=generation_id,
-            trace_id=str(uuid.uuid4()),
-        )
-        await V3GenerationWriter(async_session_factory).mark_awaiting_review(
-            generation_id
-        )
-        await persist_chunked_state(
-            generation_id,
-            {
-                "stage": "awaiting_review",
-                "execution_started": False,
-            },
-        )
-    except Stage1PlanFailure as exc:
-        await persist_chunked_state(
-            generation_id,
-            {
-                "stage": "stage1_failed",
-                "errors": list(exc.errors),
-                "execution_started": False,
-            },
-        )
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "message": "Could not regenerate a valid lesson plan.",
-                "errors": exc.errors,
-            },
-        ) from exc
-
-    latest = await load_chunked_state(generation_id)
-    return _normalize_chunked_state(generation_id, latest)
-
 
 @v3_studio_router.post("/chunked/{generation_id}/retry-section", response_model=V3ChunkedPlanStateDTO)
 async def post_chunked_retry_section(
@@ -2935,7 +2975,6 @@ async def post_chunked_retry_section(
     state = await load_chunked_state(generation_id)
 
     from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
-    from planning.whole_lesson.repository import PageDocumentRepository
 
     if generation_is_native_whole_lesson(state, model):
         from planning.whole_lesson.native_retry import (
@@ -2970,114 +3009,12 @@ async def post_chunked_retry_section(
             },
         )
 
-    plan_raw = state.get("structural_plan")
-    if not isinstance(plan_raw, dict):
-        raise HTTPException(status_code=409, detail="No structural plan available.")
-    failed_sections = [
-        section for section in state.get("failed_sections", [])
-        if isinstance(section, str)
-    ]
-    if body.section_id not in failed_sections:
-        raise HTTPException(status_code=409, detail="Section is not marked as failed.")
-    if state.get("stage") == "assembly_blocked":
-        claimed = await V3GenerationWriter(async_session_factory).claim_resume_attempt(generation_id)
-        if not claimed:
-            latest = await load_chunked_state(generation_id)
-            return _normalize_chunked_state(generation_id, latest)
-
-    running_task = _chunked_stage2_tasks.get(generation_id)
-    if running_task is not None and not running_task.done():
-        raise HTTPException(status_code=409, detail="Stage 2 is already running for this generation.")
-
-    plan = adapt_legacy_structural_plan(
-        plan_raw,
-        source=f"generation:{generation_id}",
+    # Historical v1 retry-section is likewise read-only.  Keep the native branch
+    # above because it maps to the checkpointed native retry contract.
+    raise HTTPException(
+        status_code=409,
+        detail="Legacy section retry is retired; generation records are read-only",
     )
-    signals, form, resource_spec = _decode_chunked_context(state)
-    stored_briefs = _section_briefs_from_state(plan, state)
-
-    await _ensure_chunked_stream(
-        generation_id=generation_id,
-        user_id=current_user.id,
-        blueprint_id=str(state.get("blueprint_id") or f"chunked-plan-{generation_id}"),
-    )
-    await persist_chunked_state(
-        generation_id,
-        {
-            "stage": "stage2_running",
-            "execution_started": False,
-        },
-    )
-    await _chunked_emit_event(
-        generation_id,
-        "stage2_section_start",
-        {
-            "generation_id": generation_id,
-            "section_id": body.section_id,
-        },
-    )
-
-    async def emit_event(event: str, payload: dict[str, Any]) -> None:
-        await _chunked_emit_event(generation_id, event, payload)
-
-    updated_briefs = await retry_failed_section(
-        section_id=body.section_id,
-        plan=plan,
-        stored_briefs=stored_briefs,
-        signals=signals,
-        form=form,
-        resource_spec=resource_spec,
-        emit_event=emit_event,
-        generation_id=generation_id,
-        trace_id=str(uuid.uuid4()),
-    )
-    retried = next((brief for brief in updated_briefs if brief.section_id == body.section_id), None)
-    if retried is not None and getattr(retried, "_failed", False):
-        await _chunked_emit_event(
-            generation_id,
-            "stage2_section_failed",
-            {
-                "generation_id": generation_id,
-                "section_id": body.section_id,
-                "errors": getattr(retried, "_errors", []),
-            },
-        )
-    else:
-        await _chunked_emit_event(
-            generation_id,
-            "stage2_section_done",
-            {
-                "generation_id": generation_id,
-                "section_id": body.section_id,
-                "brief": stage2_brief_preview_payload(retried) if retried is not None else None,
-            },
-        )
-
-    failed_after_retry = [
-        brief.section_id
-        for brief in updated_briefs
-        if getattr(brief, "_failed", False)
-    ]
-    await _chunked_emit_event(
-        generation_id,
-        "stage2_complete",
-        {
-            "generation_id": generation_id,
-            "failed_sections": failed_after_retry,
-        },
-    )
-
-    await _attempt_chunked_assembly(
-        generation_id=generation_id,
-        user_id=current_user.id,
-        plan=plan,
-        briefs=updated_briefs,
-        form=form,
-        resource_spec=resource_spec,
-    )
-    latest = await load_chunked_state(generation_id)
-    return _normalize_chunked_state(generation_id, latest)
-
 
 @v3_studio_router.post("/blueprint/adjust", response_model=BlueprintPreviewDTO)
 async def post_blueprint_adjust(
@@ -3514,6 +3451,12 @@ async def get_v3_generation_detail(
         generation_id,
         current_user.id,
     )
+    from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
+    from planning.whole_lesson.native_status import visual_quality_summary
+
+    chunked = dict(model.chunked_state_json or {})
+    contract_version = _contract_version_for_generation(model, chunked)
+    native_whole_lesson = generation_is_native_whole_lesson(chunked, model) or contract_version >= 2
     return V3GenerationDetailDTO(
         id=model.id,
         subject=model.subject,
@@ -3528,6 +3471,9 @@ async def get_v3_generation_detail(
         planning_artifact=artifact,
         created_at=_iso(model.created_at),
         completed_at=_iso(model.completed_at),
+        native_whole_lesson=native_whole_lesson,
+        document_contract_version=contract_version,
+        visual_quality=visual_quality_summary(chunked),
     )
 
 
@@ -3661,6 +3607,14 @@ async def get_v3_generation_document(
             "sections": [],
         }
     document_json = await _with_shared_pack_assessment(model, document_json)
+    from planning.whole_lesson.native_status import visual_quality_summary
+    from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
+    chunked_state = dict(model.chunked_state_json or {})
+    if generation_is_native_whole_lesson(chunked_state, model):
+        document_json = {
+            **document_json,
+            "visual_quality": visual_quality_summary(chunked_state),
+        }
     sections = document_json.get("sections")
     if not isinstance(sections, list) or not sections:
         process_status = str(model.status or "running")
@@ -4317,8 +4271,21 @@ async def post_v3_export_pdf(
         model = result.scalar_one_or_none()
     if model is None or model.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Generation not found")
+    from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
+
+    native_whole_lesson = generation_is_native_whole_lesson(
+        dict(model.chunked_state_json or {}), model
+    )
     document_json = await generation_writer.get_document_json(generation_id, current_user.id)
     if document_json is None:
+        if native_whole_lesson:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "NATIVE_DOCUMENT_CONTRACT",
+                    "message": "Native generation is missing LectioDocumentV2.",
+                },
+            )
         raise HTTPException(status_code=404, detail="Document not found")
     document_json = await _with_shared_pack_assessment(model, document_json)
     # Strict print policy for native v2: pending/failed required figures block final export.
@@ -4344,14 +4311,14 @@ async def post_v3_export_pdf(
                 },
             )
     sections = document_json.get("sections")
-    if not isinstance(sections, list) or not sections:
+    if not native_whole_lesson and (not isinstance(sections, list) or not sections):
         # Native v2 may store only lectio_document; synthesize section list for legacy PDF path.
         if isinstance(lectio_doc, dict) and isinstance(lectio_doc.get("sections"), list):
             sections = lectio_doc["sections"]
             document_json = {**document_json, "sections": sections}
         else:
             raise HTTPException(status_code=404, detail="Document not found")
-    if not isinstance(sections, list) or not sections:
+    if not native_whole_lesson and (not isinstance(sections, list) or not sections):
         raise HTTPException(status_code=404, detail="Document not found")
     template_id = (
         model.resolved_template_id
@@ -4360,12 +4327,19 @@ async def post_v3_export_pdf(
     )
 
     auth_token = jwt_handler.create_access_token(current_user.id, current_user.email)
+    edition = body.edition or ("teacher" if body.include_answers else "student")
+    if edition not in {"teacher", "student"}:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "INVALID_EDITION", "message": "edition must be teacher or student"},
+        )
     pdf_request = PDFExportRequest(
         school_name=body.school_name,
         teacher_name=body.teacher_name,
         date=body.date,
         include_toc=body.include_toc,
-        include_answers=body.include_answers,
+        include_answers=edition == "teacher",
+        edition=edition,
     )
     try:
         result = await export_v3_studio_pdf(
@@ -4379,7 +4353,16 @@ async def post_v3_export_pdf(
             request=pdf_request,
             settings=get_settings(),
             request_id=getattr(request.state, "request_id", None),
+            native_whole_lesson=native_whole_lesson,
         )
+    except NativeDocumentContractError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "NATIVE_DOCUMENT_CONTRACT",
+                "message": str(exc),
+            },
+        ) from exc
     except Exception as exc:  # noqa: BLE001
         debug: dict[str, Any] = {}
         if isinstance(exc, PDFRenderError):
@@ -4716,7 +4699,7 @@ async def post_visuals_retry(
 
     Never requeues writers, form planning, teaching, or item generation.
     """
-    model = await _load_owned_generation(generation_id, current_user.id)
+    await _load_owned_generation(generation_id, current_user.id)
     from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
     from planning.whole_lesson.repository import PageDocumentRepository
     from planning.whole_lesson.visual_dispatch import dispatch_and_patch_from_repo
@@ -4726,7 +4709,6 @@ async def post_visuals_retry(
         if generation is None:
             raise HTTPException(status_code=404, detail="Generation not found")
         repo = PageDocumentRepository(session, generation_id)
-        state = await repo.load_page_generation_state()
         chunked = dict(generation.chunked_state_json or {})
         if not generation_is_native_whole_lesson(chunked, generation):
             raise HTTPException(
@@ -4734,6 +4716,19 @@ async def post_visuals_retry(
                 detail="visuals/retry is only available for native whole-lesson generations",
             )
         status = str(generation.status or "")
+        if status == "ready":
+            # Narrowly reopen only persisted QC-flagged visuals. The repository
+            # fences this transition and invalidates current revision proof.
+            try:
+                await repo.reopen_flagged_visuals()
+                generation = await session.get(GenerationModel, generation_id)
+                status = str(generation.status or "") if generation else status
+            except Exception as exc:  # noqa: BLE001
+                from planning.whole_lesson.repository import VisualCompletionStateError
+
+                if isinstance(exc, VisualCompletionStateError):
+                    raise HTTPException(status_code=409, detail=str(exc)) from exc
+                raise
         if status != "awaiting_visuals":
             raise HTTPException(
                 status_code=409,

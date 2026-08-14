@@ -5,11 +5,17 @@ from unittest.mock import patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 
 from app import app
 from core.auth.middleware import get_current_user
 from core.dependencies import get_gcs_image_store
-from core.database.models import GenerationModel, UserModel
+from core.database.models import (
+    EditableLessonModel,
+    GenerationModel,
+    LessonProvenanceModel,
+    UserModel,
+)
 from core.database.session import get_async_session
 from core.entities.user import User
 
@@ -344,6 +350,54 @@ class TestBuilderLessonRoutes:
                 },
             )
             assert denied_response.status_code == 404
+
+    async def test_create_from_native_path_generation_is_rejected(self, db_session_factory):
+        native_id = "gen-native-path-source"
+        async with db_session_factory() as session:
+            session.add(
+                GenerationModel(
+                    id=native_id,
+                    user_id=USER_A.id,
+                    subject="mathematics",
+                    context="Path lesson",
+                    requested_template_id="guided-concept-path",
+                    requested_preset_id="v3-studio",
+                    status="awaiting_review",
+                    planning_spec_json='{"document_contract_version": 2}',
+                    chunked_state_json={
+                        "stage": "awaiting_review",
+                        "native_whole_lesson": True,
+                        "structural_plan": {"document_contract_version": 2},
+                    },
+                )
+            )
+            session.add(
+                LessonProvenanceModel(
+                    pack_id=native_id,
+                    path_version_id="path-version-current",
+                    path_lesson_id="path-lesson-current",
+                )
+            )
+            await session.commit()
+
+        async with await _client() as client:
+            response = await client.post(
+                "/api/v1/builder/lessons",
+                json={
+                    "source_type": "v3_generation",
+                    "source_generation_id": native_id,
+                    "document": _minimal_lesson(),
+                },
+            )
+
+        assert response.status_code == 409
+        async with db_session_factory() as session:
+            created = await session.scalar(
+                select(EditableLessonModel).where(
+                    EditableLessonModel.source_generation_id == native_id,
+                )
+            )
+            assert created is None
 
     async def test_rejects_unknown_component_and_bad_section_references(self):
         invalid_component = _minimal_lesson()

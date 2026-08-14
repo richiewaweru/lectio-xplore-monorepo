@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest

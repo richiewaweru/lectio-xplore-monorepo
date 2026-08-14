@@ -80,6 +80,10 @@ def assemble_questions(ctx: WriterContext) -> WriterOutcome:
         record = by_id.get(qid)
         if record is None:
             raise WriterError(f"missing item record for question id {qid!r}")
+        if record.get("options"):
+            raise WriterError(
+                f"multiple-choice item {qid!r} must be assembled as choices"
+            )
         item: dict[str, Any] = {
             "id": qid,
             "prompt": record.get("prompt") or record.get("stem") or f"Question {qid}",
@@ -101,46 +105,28 @@ def assemble_questions(ctx: WriterContext) -> WriterOutcome:
 
 
 def assemble_choices(ctx: WriterContext) -> WriterOutcome:
-    """Assemble one MCQ choices block from item records (or brief stub)."""
+    """Assemble one MCQ choices block from its exact teaching-owned item."""
     _assert_fixed_object(ctx, "choices")
     by_id = _records_by_id(ctx)
-    record = by_id.get(ctx.planned.id)
+    source_ids = tuple(ctx.planned.source_question_ids or ())
+    if len(source_ids) != 1:
+        raise WriterError("choices block requires exactly one source_question_id")
+    record = by_id.get(source_ids[0])
     if record is None:
-        with_options = [
-            item
-            for item in ctx.item_records
-            if isinstance(item.get("options"), list) and item.get("options")
-        ]
-        if len(with_options) == 1:
-            record = with_options[0]
-        elif len(with_options) > 1:
-            raise WriterError(
-                "choices block requires a matching item record id or a single options record"
-            )
-
-    if record is not None:
-        stem = str(
-            record.get("stem") or record.get("prompt") or ctx.planned.brief
-        ).strip()
-        options = _normalize_choices_options(list(record.get("options") or []))
-        content: dict[str, Any] = {"stem": stem or ctx.planned.brief, "options": options}
-        if record.get("marks") is not None:
-            content["marks"] = record.get("marks")
-        if len(options) < 2:
-            raise WriterError("choices block requires at least two options")
-        entry = _answer_entry_from_record(question_id=ctx.planned.id, record=record)
-        answer_entries = (entry,) if entry is not None else ()
-    else:
-        # Deterministic stub when no item records are supplied.
-        brief = (ctx.planned.brief or "").strip() or "Choose the best answer."
-        content = {
-            "stem": brief,
-            "options": [
-                {"letter": "A", "text": "First option"},
-                {"letter": "B", "text": "Second option"},
-            ],
-        }
-        answer_entries = ()
+        raise WriterError(f"missing item record for question id {source_ids[0]!r}")
+    stem = str(record.get("stem") or record.get("prompt") or "").strip()
+    if not stem:
+        raise WriterError("choices item record requires a stem")
+    options = _normalize_choices_options(list(record.get("options") or []))
+    content: dict[str, Any] = {"stem": stem, "options": options}
+    if record.get("marks") is not None:
+        content["marks"] = record.get("marks")
+    if len(options) < 2:
+        raise WriterError("choices block requires at least two options")
+    entry = _answer_entry_from_record(question_id=ctx.planned.id, record=record)
+    if entry is None:
+        raise WriterError("choices item record requires a correct answer")
+    answer_entries = (entry,)
 
     return WriterOutcome(
         block_id=ctx.planned.id,

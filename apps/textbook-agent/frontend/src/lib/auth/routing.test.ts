@@ -28,12 +28,12 @@ describe('auth routing helpers', () => {
 	it('resolves the landing route from auth and profile state', () => {
 		expect(resolveLandingRoute(null)).toBe('/login');
 		expect(resolveLandingRoute(baseUser)).toBe('/onboarding');
-		expect(resolveLandingRoute({ ...baseUser, has_profile: true })).toBe('/lessons');
+		expect(resolveLandingRoute({ ...baseUser, has_profile: true })).toBe('/units');
 	});
 
 	it('guards onboarding access for anonymous and fully onboarded users', () => {
 		expect(resolveOnboardingGuard(null, false)).toBe('/login');
-		expect(resolveOnboardingGuard({ ...baseUser, has_profile: true }, false)).toBe('/lessons');
+		expect(resolveOnboardingGuard({ ...baseUser, has_profile: true }, false)).toBe('/units');
 		expect(resolveOnboardingGuard({ ...baseUser, has_profile: true }, true)).toBeNull();
 		expect(resolveOnboardingGuard(baseUser, false)).toBeNull();
 	});
@@ -49,7 +49,7 @@ describe('auth routing helpers', () => {
 	it('resolves the root route to the correct post-bootstrap destination', () => {
 		expect(resolveShellRedirect(null, '/')).toBe('/login');
 		expect(resolveShellRedirect(baseUser, '/')).toBe('/onboarding');
-		expect(resolveShellRedirect({ ...baseUser, has_profile: true }, '/')).toBe('/lessons');
+		expect(resolveShellRedirect({ ...baseUser, has_profile: true }, '/')).toBe('/units');
 	});
 
 	it('detects onboarding edit mode and builds the edit route', () => {
@@ -100,7 +100,7 @@ describe('auth routing helpers', () => {
 			}
 		);
 
-		expect(destination).toBe('/lessons');
-		expect(hardRedirectTarget).toBe('/lessons');
+		expect(destination).toBe('/units');
+		expect(hardRedirectTarget).toBe('/units');
 	});
 });

@@ -30,8 +30,17 @@ from planning.whole_lesson.states import (
 )
 
 PAGE_DOCUMENT_KEY = "page_document_v2"
+# Visual topology checkpoints deliberately live beside (not inside) the page
+# object.  A topology retry must never make an upstream page-object revision
+# look as though it was recomputed.
+VISUAL_TOPOLOGY_KEY = "visual_topology_v1"
 _PAGE_STATE_LOCKS: dict[str, asyncio.Lock] = {}
 _PAGE_STATE_LOCK_GUARD = asyncio.Lock()
+_NATIVE_RUNNING_STAGES = ACTIVE_STATUSES | PRE_WORKER_RETRY_STATUSES | {
+    "awaiting_teaching_approval",
+    "awaiting_visuals",
+    "queued",
+}
 
 
 async def _page_state_lock(generation_id: str) -> asyncio.Lock:
@@ -68,6 +77,27 @@ def _coerce_chunked(raw: Any) -> dict[str, Any]:
         except json.JSONDecodeError:
             return {}
     return {}
+
+
+def _project_native_report_status(generation: GenerationModel) -> None:
+    """Mirror native execution truth into the report without owning artifact state."""
+    native_stage = str(generation.status or "").strip()
+    if not native_stage:
+        return
+
+    report = (
+        dict(generation.report_json)
+        if isinstance(generation.report_json, dict)
+        else {}
+    )
+    report["native_stage"] = native_stage
+    if native_stage in {"failed_recoverable", "failed_terminal"}:
+        report["process_status"] = native_stage
+    elif native_stage == "ready":
+        report["process_status"] = "completed"
+    elif native_stage in _NATIVE_RUNNING_STAGES:
+        report["process_status"] = "running"
+    generation.report_json = report
 
 
 def empty_execution_meta() -> dict[str, Any]:
@@ -204,6 +234,28 @@ class VisualCompletionStateError(RuntimeError):
     """Visual callback received in an unrelated generation status."""
 
 
+class VisualTopologyConflict(RuntimeError):
+    """A request id was persisted with a different topology identity."""
+
+
+class VisualTopologyNotFound(LookupError):
+    """A requested topology checkpoint does not exist."""
+
+
+def _invalidate_reload_proof(execution: dict[str, Any]) -> None:
+    """Clear final document proof after any material visual mutation.
+
+    A visual patch changes the persisted document revision. Hashes from the prior
+    candidate therefore cannot authorize ``ready`` for the new document.
+    """
+    execution["document_sha256"] = None
+    execution["reloaded_sha256"] = None
+    execution["reload_verified"] = False
+    execution["candidate_document_sha256"] = None
+    execution["candidate_lease_token"] = None
+    execution["candidate_written_at"] = None
+
+
 _UNRESOLVED_ASSET_STATUSES = frozenset({"pending", "generating", "failed"})
 _VISUAL_CALLBACK_STATUSES = frozenset({"awaiting_visuals", "ready"})
 
@@ -267,6 +319,7 @@ class PageDocumentRepository:
         elif generation.status:
             chunked["stage"] = str(generation.status)
         generation.chunked_state_json = chunked
+        _project_native_report_status(generation)
         return state
 
     async def require_execution_lease(
@@ -347,6 +400,145 @@ class PageDocumentRepository:
             raise KeyError(f"generation {self.generation_id!r} not found")
         return self._page_state_from_generation(generation)
 
+    async def load_visual_topology_state(self) -> dict[str, Any]:
+        """Load the bounded topology checkpoint outside ``page_document_v2``."""
+        generation = await self.session.get(GenerationModel, self.generation_id)
+        if generation is None:
+            raise KeyError(f"generation {self.generation_id!r} not found")
+        chunked = _coerce_chunked(generation.chunked_state_json)
+        raw = chunked.get(VISUAL_TOPOLOGY_KEY)
+        if not isinstance(raw, dict):
+            return {"schema_version": "visual-topology/1", "requests": {}, "history": [], "events": []}
+        state = deepcopy(raw)
+        state.setdefault("schema_version", "visual-topology/1")
+        state.setdefault("requests", {})
+        state.setdefault("history", [])
+        state.setdefault("events", [])
+        return state
+
+    async def persist_visual_topology(
+        self,
+        *,
+        request_id: str,
+        record: dict[str, Any],
+        identity_digest: str,
+        history_limit: int = 20,
+    ) -> dict[str, Any]:
+        """Atomically persist one validated topology checkpoint.
+
+        The request identity is a fence: exact repeats are reused, while a
+        changed source/labels/version digest fails closed before rendering.
+        This mutation only changes the top-level chunked checkpoint and event
+        ledger; page-object JSON, revision, and upstream artifacts are untouched.
+        """
+        rid = str(request_id or "").strip()
+        if not rid:
+            raise ValueError("request_id is required")
+        digest = str(identity_digest or "").strip()
+        if not digest:
+            raise ValueError("identity_digest is required")
+        result_box: list[dict[str, Any]] = []
+
+        def _mut(generation: GenerationModel, _page: dict[str, Any]) -> None:
+            chunked = _coerce_chunked(generation.chunked_state_json)
+            topology = chunked.get(VISUAL_TOPOLOGY_KEY)
+            if not isinstance(topology, dict):
+                topology = {
+                    "schema_version": "visual-topology/1",
+                    "requests": {},
+                    "history": [],
+                    "events": [],
+                }
+            requests = topology.get("requests")
+            if not isinstance(requests, dict):
+                requests = {}
+            existing = requests.get(rid)
+            if isinstance(existing, dict):
+                existing_digest = str(existing.get("identity_digest") or "")
+                if existing_digest != digest:
+                    raise VisualTopologyConflict(
+                        f"topology request {rid!r} identity mismatch"
+                    )
+                result_box.append({"record": deepcopy(existing), "reused": True})
+                return
+
+            persisted = deepcopy(record)
+            persisted["request_id"] = rid
+            persisted["identity_digest"] = digest
+            requests[rid] = persisted
+            history = [
+                item for item in (topology.get("history") or []) if isinstance(item, dict)
+            ]
+            history.append(deepcopy(persisted))
+            topology["history"] = history[-max(1, int(history_limit)):]
+            topology["requests"] = requests
+            topology["schema_version"] = "visual-topology/1"
+            events = [
+                item for item in (topology.get("events") or []) if isinstance(item, dict)
+            ]
+            events.append(
+                {
+                    "type": "topology_persisted",
+                    "generation_id": self.generation_id,
+                    "request_id": rid,
+                    "identity_digest": digest,
+                    "topology_sha256": persisted.get("topology_sha256"),
+                    "at": _now(),
+                }
+            )
+            topology["events"] = events[-100:]
+            chunked[VISUAL_TOPOLOGY_KEY] = topology
+            generation.chunked_state_json = chunked
+            result_box.append({"record": deepcopy(persisted), "reused": False})
+
+        # ``mutate_state`` writes the page state back, so use the same row lock
+        # and transaction boundary while preserving the existing page object.
+        lock = await _page_state_lock(self.generation_id)
+        async with lock:
+            generation = await self._lock_generation()
+            page = self._page_state_from_generation(generation)
+            _mut(generation, page)
+            await self.session.commit()
+        return result_box[0]
+
+    async def append_visual_topology_event(
+        self,
+        *,
+        event_type: str,
+        request_id: str,
+        payload: Mapping[str, Any] | None = None,
+        event_limit: int = 100,
+    ) -> dict[str, Any]:
+        """Append a topology event without touching page-object state."""
+        event_payload = dict(payload or {})
+        event_payload.update(
+            {
+                "type": str(event_type),
+                "generation_id": self.generation_id,
+                "request_id": str(request_id),
+                "at": _now(),
+            }
+        )
+        lock = await _page_state_lock(self.generation_id)
+        async with lock:
+            generation = await self._lock_generation()
+            chunked = _coerce_chunked(generation.chunked_state_json)
+            topology = chunked.get(VISUAL_TOPOLOGY_KEY)
+            if not isinstance(topology, dict):
+                topology = {
+                    "schema_version": "visual-topology/1",
+                    "requests": {},
+                    "history": [],
+                    "events": [],
+                }
+            events = [item for item in (topology.get("events") or []) if isinstance(item, dict)]
+            events.append(event_payload)
+            topology["events"] = events[-max(1, int(event_limit)):]
+            chunked[VISUAL_TOPOLOGY_KEY] = topology
+            generation.chunked_state_json = chunked
+            await self.session.commit()
+        return event_payload
+
     async def transition(
         self,
         *,
@@ -418,7 +610,12 @@ class PageDocumentRepository:
         if classification.code in {"LEASE_LOST", "CANCELLED"}:
             return await self.load_page_generation_state()
 
-        recoverable = classification.code in {"TRANSPORT", "TIMEOUT", "RATE_LIMIT"}
+        recoverable = classification.code in {
+            "TRANSPORT",
+            "TIMEOUT",
+            "RATE_LIMIT",
+            "MODEL_OUTPUT_INVALID",
+        }
         target = "failed_recoverable" if recoverable else "failed_terminal"
         error = structured_error_from_exc(
             exc=exc,
@@ -508,10 +705,6 @@ class PageDocumentRepository:
             stale = heartbeat is None or heartbeat + timedelta(seconds=lease) < now
 
             if status in CLAIMABLE_STATUSES:
-                if status == "failed_recoverable":
-                    assert_legal_transition("failed_recoverable", "queued")
-                    generation.status = "queued"
-                    status = "queued"
                 assert_legal_transition(status, "planning_forms")
                 generation.status = "planning_forms"
                 target_stage = "planning_forms"
@@ -683,6 +876,16 @@ class PageDocumentRepository:
                 merged["created_at"] = previous.get("created_at") or _now()
             execution[key] = merged
             state["block_execution"] = execution
+            content = merged.get("content") or {}
+            asset = content.get("asset") if isinstance(content, dict) else None
+            asset_status = str(asset.get("status") or "") if isinstance(asset, dict) else ""
+            if str(merged.get("object") or "") == "figure" and (
+                str(merged.get("status") or "") == "visual_pending"
+                or asset_status in _UNRESOLVED_ASSET_STATUSES
+            ):
+                proof = dict(state.get("execution") or empty_execution_meta())
+                _invalidate_reload_proof(proof)
+                state["execution"] = proof
 
         return await self.mutate_state(
             worker_id=worker_id,
@@ -920,6 +1123,8 @@ class PageDocumentRepository:
         plan: dict[str, Any],
         validation: dict[str, Any],
         qc: list[dict[str, Any]],
+        catalogue_version: str | None = None,
+        form_projection_hash: str | None = None,
         prompt: str | None = None,
         raw: str | None = None,
         worker_id: str | None = None,
@@ -931,6 +1136,13 @@ class PageDocumentRepository:
             state["form_plan"] = plan
             state["form_validation"] = validation
             state["form_qc"] = qc
+            if catalogue_version is not None or form_projection_hash is not None:
+                catalogue = dict(state.get("catalogue") or {})
+                if catalogue_version is not None:
+                    catalogue["version"] = catalogue_version
+                if form_projection_hash is not None:
+                    catalogue["form_projection_hash"] = form_projection_hash
+                state["catalogue"] = catalogue
             if prompt is not None:
                 state["form_prompt"] = prompt
             if raw is not None:
@@ -1215,9 +1427,15 @@ class PageDocumentRepository:
             current = str(generation.status or "")
             assert_legal_transition(current, target)
             generation.status = target
-            execution["document_sha256"] = expected_document_sha256
-            execution["reloaded_sha256"] = reloaded_sha256
-            execution["reload_verified"] = True
+            if pending_visuals:
+                # The candidate still contains unresolved visual assets. Keep it
+                # non-terminal and require a fresh post-patch verification before
+                # exposing final hash proof or transitioning to ready.
+                _invalidate_reload_proof(execution)
+            else:
+                execution["document_sha256"] = expected_document_sha256
+                execution["reloaded_sha256"] = reloaded_sha256
+                execution["reload_verified"] = True
             execution["heartbeat_at"] = _now()
             state["execution"] = execution
             state["document_revision"] = int(state.get("document_revision") or 0) + 1
@@ -1241,12 +1459,108 @@ class PageDocumentRepository:
             mutation=_mut,
         )
 
+    async def finalize_visual_reload_proof(
+        self,
+        *,
+        expected_revision: int,
+    ) -> dict[str, Any]:
+        """Fresh-session verify and finalize a visual-patched document.
+
+        Visual callbacks commit their patch while remaining ``awaiting_visuals``.
+        Only this method may promote that generation to ``ready`` after reloading
+        the persisted document from a separate session and comparing canonical
+        hashes for the current document revision.
+        """
+        from core.database.session import async_session_factory
+        from generation.page_objects.document_assembly import (
+            canonical_document_sha256,
+            reload_document,
+        )
+        from contracts.lectio_page import validate_document
+
+        async with async_session_factory() as fresh:
+            generation = await fresh.get(GenerationModel, self.generation_id)
+            if generation is None:
+                raise KeyError(self.generation_id)
+            reloaded = reload_document(generation.document_json or {})
+            errors = validate_document(reloaded)
+            if errors:
+                raise DocumentFenceError(
+                    f"fresh-session validation failed after visual patch: {errors[:5]}"
+                )
+            digest = canonical_document_sha256(reloaded)
+
+        result: list[dict[str, Any]] = []
+
+        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
+            if str(generation.status or "") != "awaiting_visuals":
+                raise VisualCompletionStateError(
+                    f"visual reload finalization requires awaiting_visuals, got {generation.status!r}"
+                )
+            current_revision = int(state.get("document_revision") or 0)
+            if current_revision != int(expected_revision):
+                raise VisualCompletionConflict(
+                    f"visual revision changed during reload: have {current_revision}, want {expected_revision}"
+                )
+            persisted = reload_document(generation.document_json or {})
+            locked_digest = canonical_document_sha256(persisted)
+            if locked_digest != digest:
+                raise DocumentFenceError(
+                    f"visual reload hash mismatch: fresh {digest!r}, locked {locked_digest!r}"
+                )
+            assert_legal_transition("awaiting_visuals", "ready")
+            generation.status = "ready"
+            execution = dict(state.get("execution") or empty_execution_meta())
+            execution["document_sha256"] = digest
+            execution["reloaded_sha256"] = digest
+            execution["reload_verified"] = True
+            execution["heartbeat_at"] = _now()
+            state["execution"] = execution
+            # A successful replacement clears the active QC/retry warning;
+            # visual_qc_history on the block remains the audit trail.
+            clear_generation_error_state(generation, state)
+            execution = dict(state.get("execution") or empty_execution_meta())
+            execution["document_sha256"] = digest
+            execution["reloaded_sha256"] = digest
+            execution["reload_verified"] = True
+            execution["heartbeat_at"] = _now()
+            state["execution"] = execution
+            events = list(state.get("events") or [])
+            events.append(
+                {
+                    **make_event(
+                        "visual_document_ready",
+                        generation_id=self.generation_id,
+                        status="ready",
+                        document_revision=current_revision,
+                    ),
+                    "at": _now(),
+                }
+            )
+            state["events"] = events[-500:]
+            result.append(
+                {
+                    "status": "ready",
+                    "document_revision": current_revision,
+                    "document_sha256": digest,
+                    "reloaded_sha256": digest,
+                    "reload_verified": True,
+                }
+            )
+
+        await self.mutate_state(
+            expected_statuses={"awaiting_visuals"},
+            mutation=_mut,
+        )
+        return result[0]
+
     async def apply_visual_completion(
         self,
         *,
         request_id: str,
         asset: dict[str, Any],
         supplied_block_id: str | None = None,
+        visual_qc: dict[str, Any] | None = None,
     ) -> VisualCompletionResult:
         """Atomically apply figure asset completion keyed by request_id."""
         from generation.page_objects.document_assembly import (
@@ -1256,8 +1570,11 @@ class PageDocumentRepository:
         from generation.page_objects.visual_completion import apply_figure_asset_update
 
         box: list[VisualCompletionResult] = []
+        verify_after_mutation = False
+        verified_revision: list[int] = []
 
         def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
+            nonlocal verify_after_mutation
             current = str(generation.status or "")
             if current not in _VISUAL_CALLBACK_STATUSES:
                 raise VisualCompletionStateError(
@@ -1269,6 +1586,7 @@ class PageDocumentRepository:
             except Exception as exc:  # noqa: BLE001
                 raise VisualRequestNotFound("Document not found") from exc
 
+            block_execution = dict(state.get("block_execution") or {})
             target_block_id: str | None = None
             existing_asset: dict[str, Any] = {}
             for section in document.get("sections") or []:
@@ -1285,6 +1603,43 @@ class PageDocumentRepository:
                     break
 
             if not target_block_id:
+                # A restarted worker may reload a candidate envelope whose
+                # figure asset lost request_id while block_execution retained
+                # the authoritative mapping. Fence fallback by supplied block
+                # id (or the matching execution outcome) and restore the id
+                # during the atomic patch instead of dropping a successful
+                # provider result.
+                fallback_block_id = str(supplied_block_id or "")
+                if not fallback_block_id:
+                    for raw_outcome in block_execution.values():
+                        if (
+                            isinstance(raw_outcome, dict)
+                            and str(raw_outcome.get("request_id") or "") == request_id
+                        ):
+                            fallback_block_id = str(raw_outcome.get("block_id") or "")
+                            if fallback_block_id:
+                                break
+                if fallback_block_id:
+                    for section in document.get("sections") or []:
+                        for block in section.get("blocks") or []:
+                            if (
+                                block.get("object") == "figure"
+                                and str(block.get("id") or "") == fallback_block_id
+                            ):
+                                candidate_asset = dict(
+                                    (block.get("content") or {}).get("asset") or {}
+                                )
+                                if str(candidate_asset.get("request_id") or "") not in {
+                                    "",
+                                    request_id,
+                                }:
+                                    continue
+                                target_block_id = fallback_block_id
+                                existing_asset = candidate_asset
+                                break
+                        if target_block_id:
+                            break
+            if not target_block_id:
                 raise VisualRequestNotFound(f"figure request_id {request_id!r} not found")
 
             if supplied_block_id and str(supplied_block_id) != target_block_id:
@@ -1293,7 +1648,6 @@ class PageDocumentRepository:
                     f"found {target_block_id!r} for request_id {request_id!r}"
                 )
 
-            block_execution = dict(state.get("block_execution") or {})
             matched_key = None
             for key, outcome in list(block_execution.items()):
                 if not isinstance(outcome, dict):
@@ -1305,9 +1659,22 @@ class PageDocumentRepository:
                 raise VisualCompletionInvariantError(
                     f"no block_execution outcome for request_id {request_id!r}"
                 )
+            previous_outcome = dict(block_execution.get(matched_key) or {})
+            previous_qc = previous_outcome.get("visual_qc")
 
             asset_payload = dict(asset)
             asset_payload["request_id"] = request_id
+            for optional_key in ("src", "svg"):
+                if asset_payload.get(optional_key) is None:
+                    asset_payload.pop(optional_key, None)
+            visual_qc_payload = dict(visual_qc) if visual_qc is not None else None
+            if (
+                isinstance(visual_qc_payload, dict)
+                and str(visual_qc_payload.get("status") or "") == "flagged_quality"
+                and str(asset_payload.get("status") or "") == "ready"
+            ):
+                # QC-flagged output is retryable, never a ready/hash proof.
+                asset_payload["status"] = "failed"
             outcome_status = visual_outcome_status(
                 str(asset_payload.get("status") or "")
             )
@@ -1340,9 +1707,21 @@ class PageDocumentRepository:
                 revision += 1
                 state["document_revision"] = revision
 
-                outcome = dict(block_execution.get(matched_key) or {})
+                outcome = previous_outcome
                 content = dict(outcome.get("content") or {})
                 content["asset"] = asset_payload
+                history = [
+                    item
+                    for item in (outcome.get("visual_qc_history") or [])
+                    if isinstance(item, dict)
+                ]
+                if isinstance(previous_qc, dict):
+                    history.append({**previous_qc, "archived_at": _now()})
+                outcome["visual_qc_history"] = history[-5:]
+                if outcome_status == "ready":
+                    outcome.pop("visual_qc", None)
+                elif visual_qc_payload is not None:
+                    outcome["visual_qc"] = visual_qc_payload
                 block_execution[matched_key] = {
                     **outcome,
                     "status": outcome_status,
@@ -1351,6 +1730,19 @@ class PageDocumentRepository:
                     "content": content,
                 }
                 state["block_execution"] = block_execution
+                execution = dict(state.get("execution") or empty_execution_meta())
+                _invalidate_reload_proof(execution)
+                state["execution"] = execution
+            elif visual_qc_payload is not None:
+                outcome = previous_outcome
+                if outcome.get("visual_qc") != visual_qc_payload:
+                    outcome["visual_qc"] = visual_qc_payload
+                    block_execution[matched_key] = outcome
+                    state["block_execution"] = block_execution
+                if str(visual_qc_payload.get("status") or "") == "flagged_quality":
+                    execution = dict(state.get("execution") or empty_execution_meta())
+                    _invalidate_reload_proof(execution)
+                    state["execution"] = execution
 
             unresolved = False
             for section in document.get("sections") or []:
@@ -1368,12 +1760,11 @@ class PageDocumentRepository:
                     break
 
             terminal = current
-            if current == "ready":
-                terminal = "ready"
-            elif not unresolved and current == "awaiting_visuals":
-                assert_legal_transition(current, "ready")
-                generation.status = "ready"
-                terminal = "ready"
+            if current == "awaiting_visuals" and not unresolved:
+                # Do not transition directly to ready: the patched document must
+                # be reloaded in a fresh session and hashed before finalization.
+                verify_after_mutation = not already
+                verified_revision.append(revision)
 
             events = list(state.get("events") or [])
             events.append(
@@ -1402,6 +1793,131 @@ class PageDocumentRepository:
             )
 
         await self.mutate_state(mutation=_mut)
+        result = box[0]
+        if verify_after_mutation:
+            verified = await self.finalize_visual_reload_proof(
+                expected_revision=verified_revision[0],
+            )
+            return VisualCompletionResult(
+                generation_id=result.generation_id,
+                block_id=result.block_id,
+                request_id=result.request_id,
+                status=str(verified.get("status") or "ready"),
+                document_revision=result.document_revision,
+                idempotent=result.idempotent,
+            )
+        return result
+
+    async def reopen_flagged_visuals(self) -> dict[str, Any]:
+        """Reopen only a ready document carrying persisted QC-flagged visuals.
+
+        This is intentionally narrower than a general ready retry: the persisted
+        ``visual_qc.status=flagged_quality`` marker is the fence. Only affected
+        figure assets are changed to failed/retryable, the document revision and
+        reload proof are invalidated, and all upstream outcomes remain untouched.
+        """
+        from generation.page_objects.document_assembly import persist_document_json, reload_document
+        from generation.page_objects.visual_completion import apply_figure_asset_update
+
+        box: list[dict[str, Any]] = []
+
+        def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
+            if str(generation.status or "") != "ready":
+                raise VisualCompletionStateError(
+                    f"flagged visual reopen requires ready, got {generation.status!r}"
+                )
+            block_execution = dict(state.get("block_execution") or {})
+            flagged_ids: set[str] = set()
+            for outcome in block_execution.values():
+                if not isinstance(outcome, dict) or str(outcome.get("object") or "") != "figure":
+                    continue
+                qc = outcome.get("visual_qc")
+                if isinstance(qc, dict) and str(qc.get("status") or "") == "flagged_quality":
+                    request_id = str(outcome.get("request_id") or "")
+                    if request_id:
+                        flagged_ids.add(request_id)
+            if not flagged_ids:
+                raise VisualCompletionStateError(
+                    "ready generation has no persisted flagged_quality visual"
+                )
+
+            document = reload_document(generation.document_json or {})
+            touched_ids: list[str] = []
+            for section in list(document.get("sections") or []):
+                for block in list(section.get("blocks") or []):
+                    if block.get("object") != "figure":
+                        continue
+                    content = dict(block.get("content") or {})
+                    asset = dict(content.get("asset") or {})
+                    request_id = str(asset.get("request_id") or "")
+                    if request_id not in flagged_ids:
+                        continue
+                    failed_asset = {
+                        "status": "failed",
+                        "request_id": request_id,
+                        "kind": str(asset.get("kind") or "image"),
+                    }
+                    if asset.get("src"):
+                        failed_asset["src"] = asset["src"]
+                    if asset.get("svg"):
+                        failed_asset["svg"] = asset["svg"]
+                    document = apply_figure_asset_update(
+                        document, block_id=str(block.get("id") or ""), asset=failed_asset
+                    )
+                    touched_ids.append(request_id)
+                    for key, outcome in list(block_execution.items()):
+                        if not isinstance(outcome, dict) or str(outcome.get("request_id") or "") != request_id:
+                            continue
+                        updated = dict(outcome)
+                        updated["status"] = "failed_recoverable"
+                        updated_content = dict(updated.get("content") or {})
+                        updated_content["asset"] = failed_asset
+                        updated["content"] = updated_content
+                        block_execution[key] = updated
+            if not touched_ids:
+                raise VisualCompletionStateError(
+                    "persisted flagged visual request is missing from document"
+                )
+
+            assert_legal_transition("ready", "awaiting_visuals")
+            generation.status = "awaiting_visuals"
+            generation.document_json = persist_document_json(generation.document_json, document)
+            state["document_revision"] = int(state.get("document_revision") or 0) + 1
+            state["block_execution"] = block_execution
+            execution = dict(state.get("execution") or empty_execution_meta())
+            _invalidate_reload_proof(execution)
+            execution["last_error"] = {
+                "type": "VisualQualityFlagged",
+                "code": "VISUAL_QUALITY_FLAGGED",
+                "message": "Visual quality review flagged one or more images; retry visuals.",
+                "stage": "awaiting_visuals",
+                "retryable": True,
+                "repairable": True,
+                "request_ids": sorted(touched_ids),
+                "recorded_at": _now(),
+            }
+            state["execution"] = execution
+            apply_generation_error_aliases(generation, execution["last_error"])
+            events = list(state.get("events") or [])
+            events.append({
+                **make_event(
+                    "flagged_visuals_reopened",
+                    generation_id=self.generation_id,
+                    status="awaiting_visuals",
+                    request_ids=sorted(touched_ids),
+                    document_revision=state["document_revision"],
+                ),
+                "at": _now(),
+            })
+            state["events"] = events[-500:]
+            box.append({
+                "generation_id": self.generation_id,
+                "status": "awaiting_visuals",
+                "request_ids": sorted(touched_ids),
+                "document_revision": state["document_revision"],
+            })
+
+        await self.mutate_state(expected_statuses={"ready"}, mutation=_mut)
         return box[0]
 
     async def persist_visual_dispatch_failure(
@@ -1521,6 +2037,10 @@ class PageDocumentRepository:
             execution = dict(state.get("execution") or empty_execution_meta())
             execution["last_error"] = error
             execution["heartbeat_at"] = _now()
+            # A failed/retried visual mutation invalidates any proof for the
+            # previous document revision, even when the asset was already marked
+            # failed by a prior callback.
+            _invalidate_reload_proof(execution)
             state["execution"] = execution
             apply_generation_error_aliases(generation, error)
             events = list(state.get("events") or [])

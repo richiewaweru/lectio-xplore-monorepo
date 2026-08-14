@@ -3,10 +3,10 @@
 	import { goto } from '$app/navigation';
 
 	onMount(() => {
-		void goto('/lessons', { replaceState: true });
+		void goto('/units', { replaceState: true });
 	});
 </script>
 
-<svelte:head><title>Lessons · Lectio</title></svelte:head>
+<svelte:head><title>Units · Lectio</title></svelte:head>
 
-<p role="status">Redirecting to your lessons…</p>
+<p role="status">Redirecting to your units…</p>

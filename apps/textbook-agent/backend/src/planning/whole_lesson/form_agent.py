@@ -64,6 +64,7 @@ async def _call_form_model(
     user_payload: dict[str, Any],
     trace_id: str,
     generation_id: str | None,
+    attempt_start: int = 1,
 ) -> tuple[FormPlan, str]:
     model = get_v3_model(V2_FORM_PLANNER)
     spec = get_v3_spec(V2_FORM_PLANNER)
@@ -90,6 +91,7 @@ async def _call_form_model(
             max_attempts=1,
             call_timeout_seconds=float(settings.page_form_plan_timeout_seconds),
         ),
+        attempt_start=attempt_start,
     )
     raw = result.output
     raw_text = (
@@ -115,6 +117,7 @@ async def run_form_planner(
     candidate_map = build_form_candidate_map(
         teaching_plan,
         compatible_objects_by_intent=legality.compatible_objects_by_intent,
+        approved_items=packet.approved_items,
     )
     teaching_block_ids = [
         block.id for section in teaching_plan.sections for block in section.blocks
@@ -126,6 +129,18 @@ async def run_form_planner(
     ]
     if empty_candidates:
         raise NoLegalFormCandidatesError(sorted(empty_candidates))
+    required_visual_slots = set(packet.required_visual_slots())
+    missing_visual_candidates = [
+        section.slot_id
+        for section in teaching_plan.sections
+        if section.slot_id in required_visual_slots
+        and not any(
+            "figure" in set(candidate_map.get(block.id, ()))
+            for block in section.blocks
+        )
+    ]
+    if required_visual_slots and missing_visual_candidates:
+        raise NoLegalFormCandidatesError(sorted(missing_visual_candidates))
 
     # Descriptive guidance only for already-legal object IDs.
     legal_object_ids = {
@@ -180,11 +195,15 @@ async def run_form_planner(
                 user_payload=payload,
                 trace_id=f"{tid}:form{attempt}",
                 generation_id=generation_id,
+                attempt_start=attempt,
             )
             previous_output = plan.model_dump(mode="json")
 
             validation = validate_form_plan(
-                plan, teaching_plan, candidate_map=candidate_map
+                plan,
+                teaching_plan,
+                candidate_map=candidate_map,
+                required_visual_slots=required_visual_slots,
             )
             qc = [finding.to_dict() for finding in advisory_form_qc(plan)]
             if validation.ok:

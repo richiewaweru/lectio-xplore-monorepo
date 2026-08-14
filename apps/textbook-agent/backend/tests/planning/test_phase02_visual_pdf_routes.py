@@ -345,6 +345,27 @@ async def test_pdf_export_figures_not_ready_then_passes_gate(tmp_path) -> None:
     assert ok.headers.get("content-type", "").startswith("application/pdf")
 
 
+@pytest.mark.asyncio
+async def test_native_malformed_pdf_returns_explicit_contract_error() -> None:
+    gid = await _seed(status="ready")
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        generation.document_json = {
+            "document_version": 2,
+            "lectio_document": {"title": "Missing sections"},
+        }
+        await session.commit()
+
+    async with _client() as client:
+        response = await client.post(
+            f"/api/v1/v3/generations/{gid}/export/pdf",
+            json={"school_name": "School", "teacher_name": "Teacher", "edition": "teacher"},
+        )
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == "NATIVE_DOCUMENT_CONTRACT"
+
+
 async def _snapshot(gid: str) -> dict[str, Any]:
     async with async_session_factory() as session:
         generation = await session.get(GenerationModel, gid)

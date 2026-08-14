@@ -12,7 +12,6 @@ from generation.page_objects.models import (
     WriterContext,
     WriterError,
     WriterOutcome,
-    WriterResult,
 )
 from generation.page_objects.prompts import build_repair_prompt, build_writer_prompt
 from generation.page_objects.validation import (

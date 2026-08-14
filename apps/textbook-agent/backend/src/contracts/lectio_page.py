@@ -98,7 +98,6 @@ def validate_document(document: dict[str, Any]) -> list[str]:
     Returns a list of error strings; empty means valid.
     """
     try:
-        import jsonschema
         from jsonschema import Draft202012Validator
     except ImportError:  # pragma: no cover - optional dependency path
         return _structural_validate(document)

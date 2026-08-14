@@ -25,6 +25,9 @@ async def run_with_retries(
                 last.warnings.insert(0, f"{label}: succeeded after retry")
             last.retried = already_retried
             return last
+        if not last.retryable:
+            last.retried = already_retried
+            return last
     assert last is not None
     if total_attempts > 1:
         last.warnings.insert(0, f"{label}: failed after retry — flagged for coherence review")

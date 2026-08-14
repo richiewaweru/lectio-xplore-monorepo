@@ -253,7 +253,9 @@ def planned_block_from_form(block) -> Any:
         brief=block.brief,
         placement=block.placement,
         source_question_ids=(
-            list(block.source_question_ids) if block.object == "questions" else []
+            list(block.source_question_ids)
+            if block.object in {"questions", "choices"}
+            else []
         ),
     )
 
@@ -559,7 +561,7 @@ def has_llm_credentials() -> tuple[bool, list[str]]:
 def assert_no_legacy_imports_in_module() -> None:
     source = Path(__file__).read_text(encoding="utf-8")
     for name in _LEGACY_IMPORT_BLOCKLIST:
-        if f"import {name}" in source or f"from " in source and name in source:
+        if f"import {name}" in source or "from " in source and name in source:
             # Only fail on actual import usage, not this blocklist constant.
             for line in source.splitlines():
                 stripped = line.strip()

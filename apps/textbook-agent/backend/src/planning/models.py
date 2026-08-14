@@ -447,7 +447,12 @@ class PathStructuralSection(BaseModel):
         default=None,
         description="concept_id for teaching sections; null for plain sections.",
     )
-    visual_required: bool = False
+    visual_required: bool = Field(
+        description=(
+            "Echo the fixed slot's visual_required flag exactly. "
+            "A true flag is authoritative and must not be cleared."
+        )
+    )
     transition_note: str | None = Field(
         default=None,
         description=(

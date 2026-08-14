@@ -33,6 +33,7 @@ V2_PATH_CHAT_EDITOR = "v2_path_chat_editor"
 V2_LESSON_APPROACH_PLANNER = "v2_lesson_approach_planner"
 V2_FORM_PLANNER = "v2_form_planner"
 V3_CONSTRUCTOR = "v3_constructor"
+V3_VISUAL_TOPOLOGY_PLANNER = "v3_visual_topology_planner"
 
 V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V3_SIGNAL_EXTRACTOR: ModelSlot.FAST,
@@ -59,6 +60,7 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V2_LESSON_APPROACH_PLANNER: ModelSlot.STANDARD,
     V2_FORM_PLANNER: ModelSlot.FAST,
     V3_CONSTRUCTOR: ModelSlot.FAST,
+    V3_VISUAL_TOPOLOGY_PLANNER: ModelSlot.STANDARD,
 }
 
 V3ReasoningLevel = Literal["low", "medium", "high"]
@@ -95,6 +97,7 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     V2_LESSON_APPROACH_PLANNER: "high",
     V2_FORM_PLANNER: False,
     V3_CONSTRUCTOR: "medium",
+    V3_VISUAL_TOPOLOGY_PLANNER: False,
 }
 
 V3_DEFAULT_SPECS: dict[ModelSlot, ModelSpec] = {
@@ -295,6 +298,7 @@ __all__ = [
     "V3_ITEM_EXECUTOR",
     "V3_KNOWLEDGE_TYPE_CLASSIFIER",
     "V3_VISUAL_QC",
+    "V3_VISUAL_TOPOLOGY_PLANNER",
     "get_v3_model",
     "get_v3_model_settings",
     "get_v3_slot",

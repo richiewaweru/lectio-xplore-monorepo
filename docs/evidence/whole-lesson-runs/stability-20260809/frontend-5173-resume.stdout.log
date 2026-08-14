@@ -1,0 +1,10 @@
+
+> frontend@1.0.0-beta.1 dev C:\Projects\lectio\apps\textbook-agent\frontend
+> vite dev "--" "--host" "127.0.0.1" "--port" "5173"
+
+
+  VITE v7.3.6  ready in 56906 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help

@@ -3,13 +3,29 @@ from __future__ import annotations
 from pathlib import Path
 
 
+LESSON_APPROACH_PROMPT_V1 = "lesson-approach-planner-v1.txt"
+LESSON_APPROACH_PROMPT_V2 = "lesson-approach-planner-v2.txt"
+ACTIVE_LESSON_APPROACH_PROMPT = LESSON_APPROACH_PROMPT_V2
+ACTIVE_LESSON_APPROACH_PROMPT_VERSION = 2
+VISUAL_REQUIRED_INTENTS = frozenset(
+    {"show-structure", "trace-flow", "sequence", "name-parts"}
+)
+LESSON_APPROACH_PROMPT_V1_SHA256 = (
+    "475b8b178f74c1397742b12002a324e18ae3e39a4fffd9e7a4c199713780a9cd"
+)
+LESSON_APPROACH_PROMPT_V2_SHA256 = (
+    "2ccc4c7b1a36000040d74930ce5d8ada55de1a2279b0df0c08ae286650032004"
+)
+
+
 _PROMPT_NAMES = {
     "path-planner-v1.txt",
     "merge-critic-v1.txt",
     "component-selector-v1.txt",
     "path-structural-planner-v1.txt",
     "path-structural-planner-page-v1.txt",
-    "lesson-approach-planner-v1.txt",
+    LESSON_APPROACH_PROMPT_V1,
+    LESSON_APPROACH_PROMPT_V2,
     "form-planner-v1.txt",
     "page-writer-common-v1.txt",
     "prose-writer-v1.txt",
@@ -80,7 +96,12 @@ def path_structural_planner_page_prompt() -> str:
 
 
 def lesson_approach_planner_prompt() -> str:
-    return prompt_text("lesson-approach-planner-v1.txt")
+    return prompt_text(ACTIVE_LESSON_APPROACH_PROMPT)
+
+
+def lesson_approach_planner_v1_prompt() -> str:
+    """Return the frozen historical lesson-approach prompt body."""
+    return prompt_text(LESSON_APPROACH_PROMPT_V1)
 
 
 def form_planner_prompt() -> str:

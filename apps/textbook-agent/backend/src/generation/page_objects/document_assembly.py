@@ -9,7 +9,7 @@ from typing import Any
 from uuid import uuid4
 
 from contracts.lectio_page import validate_document
-from generation.page_objects.models import WriterContext, WriterOutcome, WriterResult
+from generation.page_objects.models import WriterContext, WriterOutcome
 from generation.page_objects.registry import dispatch_writer
 from generation.page_objects.validation import validate_answer_key_integrity
 from v3_blueprint.planning.models import SectionBlockPlan
@@ -195,7 +195,21 @@ def reload_document(envelope: dict[str, Any]) -> dict[str, Any]:
     sections = []
     for section in doc.get("sections", []):
         item = dict(section)
-        item["blocks"] = normalize_block_positions(list(item.get("blocks") or []))
+        normalized_blocks = normalize_block_positions(list(item.get("blocks") or []))
+        for block in normalized_blocks:
+            if block.get("object") != "figure":
+                continue
+            content = dict(block.get("content") or {})
+            asset = dict(content.get("asset") or {})
+            # Older visual failure callbacks persisted optional URL fields as
+            # JSON null. The contract permits omission, not null; normalize on
+            # reload so a restarted worker can attach the next success.
+            for optional_key in ("src", "svg"):
+                if asset.get(optional_key) is None:
+                    asset.pop(optional_key, None)
+            content["asset"] = asset
+            block["content"] = content
+        item["blocks"] = normalized_blocks
         sections.append(item)
     reloaded = dict(doc)
     reloaded["sections"] = sections

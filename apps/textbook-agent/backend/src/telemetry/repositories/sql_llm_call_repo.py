@@ -35,6 +35,7 @@ class SqlLLMCallRepository:
         cost_usd: float | None,
         error: str | None,
         node: str | None = None,
+        retryable: bool | None = None,
     ) -> None:
         async with self._session_factory() as session:
             session.add(
@@ -52,6 +53,7 @@ class SqlLLMCallRepository:
                     attempt=attempt,
                     section_id=section_id,
                     status=status,
+                    retryable=retryable,
                     latency_ms=latency_ms,
                     tokens_in=tokens_in,
                     tokens_out=tokens_out,

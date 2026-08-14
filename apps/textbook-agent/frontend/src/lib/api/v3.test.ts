@@ -48,7 +48,8 @@ import {
 	getChunkedPlanStatus,
 	getV3GenerationBlueprint,
 	getV3GenerationDetail,
-	getV3Generations
+	getV3Generations,
+	retryNativeVisuals
 } from './v3';
 
 describe('connectV3StudioGenerationStream', () => {
@@ -146,6 +147,30 @@ describe('connectV3StudioGenerationStream', () => {
 			headers: { 'Content-Type': 'application/json' }
 		});
 		expect(row.id).toBe('gen-1');
+	});
+
+	it('posts native visual retry and returns the authoritative status payload', async () => {
+		apiFetchMock.mockResolvedValue({
+			ok: true,
+			status: 200,
+			json: async () => ({
+				generation_id: 'gen-1',
+				status: 'awaiting_visuals',
+				next_action: 'wait_visuals'
+			})
+		});
+
+		const result = await retryNativeVisuals('gen-1');
+
+		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/generations/gen-1/visuals/retry', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' }
+		});
+		expect(result).toEqual({
+			generation_id: 'gen-1',
+			status: 'awaiting_visuals',
+			next_action: 'wait_visuals'
+		});
 	});
 
 	it('treats chunked events on the generation stream as poll pokes', () => {

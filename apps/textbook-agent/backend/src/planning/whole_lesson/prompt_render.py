@@ -74,6 +74,7 @@ def build_form_planner_payload(
     candidates = candidate_map
     return {
         "arc": teaching_plan.arc,
+        "required_visual_slots": list(packet.required_visual_slots()),
         "sections": [
             {
                 "slot_id": section.slot_id,

@@ -16,7 +16,8 @@ import type {
 	V3DraftPack,
 	V3SignalSummary,
 	V3VariantSpec,
-	V3XplorePack
+	V3XplorePack,
+	V3VisualRetryResult
 } from '$lib/types/v3';
 
 export interface V3SubtopicCandidate {
@@ -235,6 +236,16 @@ export async function retryNativeGeneration(generationId: string): Promise<void>
 		{ method: 'POST', headers: bearerHeaders() }
 	);
 	await ensureOk(res, 'Could not retry the failed generation stage.');
+}
+
+export async function retryNativeVisuals(generationId: string): Promise<V3VisualRetryResult | null> {
+	const res = await apiFetch(
+		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/visuals/retry`,
+		{ method: 'POST', headers: bearerHeaders() }
+	);
+	await ensureOk(res, 'Could not retry failed visuals.');
+	if (res.status === 204) return null;
+	return (await res.json()) as V3VisualRetryResult;
 }
 
 export type V3VisualBlock = NonNullable<V3DraftPack['visual_blocks']>[number];
@@ -500,6 +511,7 @@ export type V3PdfExportBody = {
 	date?: string | null;
 	include_toc: boolean;
 	include_answers: boolean;
+	edition?: 'teacher' | 'student';
 };
 
 export async function downloadV3GenerationPdf(

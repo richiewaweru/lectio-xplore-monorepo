@@ -157,6 +157,55 @@ async def test_d02_client_drop_after_202_worker_still_completes() -> None:
     assert result["status"] == "awaiting_teaching_approval"
 
 
+@pytest.mark.parametrize(
+    ("failure_stage", "accepted_status"),
+    [
+        ("planning_teaching", "planning_teaching"),
+        ("planning_forms", "queued"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_retry_accept_does_not_count_as_worker_attempt(
+    failure_stage: str,
+    accepted_status: str,
+) -> None:
+    gid, _ = await _seed_generation(
+        status="failed_recoverable",
+        last_error={
+            "type": "TimeoutError",
+            "code": "TIMEOUT",
+            "message": f"{failure_stage} timed out",
+            "stage": failure_stage,
+            "retryable": True,
+        },
+        skip_items=True,
+        ready_card=True,
+    )
+
+    accepted = await accept_native_retry(gid, user_id=TEST_USER.id)
+    assert accepted["status"] == accepted_status
+
+    async with async_session_factory() as session:
+        repo = PageDocumentRepository(session, gid)
+        state = await repo.load_page_generation_state()
+        execution = state["execution"]
+        assert execution["attempt"] == 0
+        assert execution["worker_id"] is None
+        assert execution["claimed_at"] is None
+
+        if accepted_status == "queued":
+            lease = await repo.claim_execution(worker_id="attempt-worker")
+        else:
+            lease = await repo.claim_pre_worker_retry(worker_id="attempt-worker")
+
+        assert lease is not None
+        state = await repo.load_page_generation_state()
+        execution = state["execution"]
+        assert execution["attempt"] == 1
+        assert execution["worker_id"] == "attempt-worker"
+        assert execution["claimed_at"] is not None
+
+
 @pytest.mark.asyncio
 async def test_d03_stale_lease_reclaim_old_token_blocked() -> None:
     gid, _ = await _seed_generation(
@@ -179,6 +228,9 @@ async def test_d03_stale_lease_reclaim_old_token_blocked() -> None:
         )
     assert lease1 is not None
     token1 = lease1.lease_token
+    async with async_session_factory() as session:
+        state = await PageDocumentRepository(session, gid).load_page_generation_state()
+        assert state["execution"]["attempt"] == 1
 
     # Simulate process death without cleanup.
     await _age_heartbeat(gid, seconds_ago=120)
@@ -191,6 +243,9 @@ async def test_d03_stale_lease_reclaim_old_token_blocked() -> None:
     assert lease2 is not None
     assert lease2.lease_token > token1
     assert lease2.worker_id == "d03-w2"
+    async with async_session_factory() as session:
+        state = await PageDocumentRepository(session, gid).load_page_generation_state()
+        assert state["execution"]["attempt"] == 2
 
     with patch(
         "planning.whole_lesson.service.run_and_persist_teaching_plan",

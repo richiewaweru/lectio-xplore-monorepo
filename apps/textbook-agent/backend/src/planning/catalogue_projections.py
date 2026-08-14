@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from typing import Any, Mapping, Sequence
 
 from contracts.lectio_page import (
@@ -339,6 +339,7 @@ def build_form_candidate_map(
     teaching_plan: Any,
     *,
     compatible_objects_by_intent: Mapping[str, Sequence[str]],
+    approved_items: Sequence[Any],
     implemented_objects: set[str] | frozenset[str] | None = None,
 ) -> dict[str, tuple[str, ...]]:
     """Per-block legal object set from a frozen snapshot compatibility map.
@@ -349,6 +350,11 @@ def build_form_candidate_map(
     implemented = set(implemented_objects or _IMPLEMENTED_FORM_OBJECTS)
     implemented -= set(_NEVER_SELECTABLE_OBJECTS)
 
+    from planning.approved_items import approved_item_kind
+
+    approved_by_id = {
+        str(getattr(item, "id", "") or ""): item for item in approved_items
+    }
     candidates: dict[str, tuple[str, ...]] = {}
     for section in teaching_plan.sections:
         for block in section.blocks:
@@ -360,8 +366,29 @@ def build_form_candidate_map(
             legal = sorted(
                 (frozen & implemented) - set(_NEVER_SELECTABLE_OBJECTS)
             )
-            # questions requires teaching-owned source_question_ids.
-            if not getattr(block, "source_question_ids", None):
-                legal = [object_id for object_id in legal if object_id != "questions"]
+            source_question_ids = tuple(getattr(block, "source_question_ids", ()) or ())
+            # Assessment forms bind deterministically to teaching-owned items.
+            # Once ownership is present, non-assessment objects are not legal:
+            # form planning may choose representation, never discard item IDs.
+            if not source_question_ids:
+                legal = [
+                    object_id
+                    for object_id in legal
+                    if object_id not in {"questions", "choices"}
+                ]
+            else:
+                selected = [approved_by_id.get(str(item_id)) for item_id in source_question_ids]
+                if any(item is None for item in selected):
+                    legal = []
+                else:
+                    kinds = [approved_item_kind(item) for item in selected]
+                    if len(kinds) == 1 and kinds[0] == "multiple_choice":
+                        legal = [object_id for object_id in legal if object_id == "choices"]
+                    elif 1 <= len(kinds) <= 6 and set(kinds) == {"open_response"}:
+                        legal = [object_id for object_id in legal if object_id == "questions"]
+                    else:
+                        # Mixed sources, >6 open responses, and multiple MCQs
+                        # are teaching-plan repair failures, not form choices.
+                        legal = []
             candidates[block.id] = tuple(legal)
     return candidates

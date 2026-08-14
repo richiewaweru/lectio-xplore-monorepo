@@ -262,3 +262,29 @@ def test_slot_order_exact_packet_order_passes_slot_check() -> None:
     packet = _slot_order_packet(expected)
     report = _slot_order_report(_slot_order_plan(expected), packet)
     assert not any(issue.code == "SLOT_ORDER" for issue in report.issues)
+
+
+def test_required_visual_slot_needs_spatial_process_intent() -> None:
+    slots = ("orient", "model")
+    packet = _slot_order_packet(slots, knowledge_type="procedural")
+    packet.slots[1].visual_required = True
+    plan = _slot_order_plan(slots)
+
+    report = validate_teaching_plan(
+        plan,
+        packet,
+        permitted_intents={"orient", "explain", "show-structure"},
+        excluded_intents=set(),
+        typical_by_slot={slot: {"orient", "explain"} for slot in slots},
+    )
+    assert any(issue.code == "REQUIRED_VISUAL_INTENT" for issue in report.issues)
+
+    plan.sections[1].blocks[0].intent = "show-structure"
+    report = validate_teaching_plan(
+        plan,
+        packet,
+        permitted_intents={"orient", "explain", "show-structure"},
+        excluded_intents=set(),
+        typical_by_slot={slot: {"orient", "explain"} for slot in slots},
+    )
+    assert not any(issue.code == "REQUIRED_VISUAL_INTENT" for issue in report.issues)

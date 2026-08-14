@@ -117,9 +117,10 @@ async def test_i05_failed_then_repaired_unchanged_budget() -> None:
             raise ValueError("Item 'q1' uses unknown misconception 'mx'")
         return SimpleNamespace(output=_valid_result())
 
+    llm_call = AsyncMock(side_effect=_flaky)
     with patch(
         "v3_execution.executors.item_executor.run_llm",
-        new=AsyncMock(side_effect=_flaky),
+        new=llm_call,
     ):
         run = await execute_items_with_diagnostics(
             _card(),
@@ -129,6 +130,7 @@ async def test_i05_failed_then_repaired_unchanged_budget() -> None:
     assert len(run.attempts) == 2
     assert run.attempts[0]["class"] == "SEMANTIC"
     assert run.attempts[1]["class"] == "OK"
+    assert [call.kwargs["attempt_start"] for call in llm_call.await_args_list] == [1, 2]
     assert ITEM_MAX_ATTEMPTS == 3
 
 

@@ -308,4 +308,49 @@ describe('/units/[id]', () => {
 		await waitFor(() => expect(mocks.getPreparedLessonStatus).toHaveBeenCalled());
 		expect(await screen.findByRole('link', { name: 'Print' })).toBeTruthy();
 	});
+
+	it('starts a fresh generation for a non-stale terminal native run', async () => {
+		const locationStub = { href: '' };
+		vi.stubGlobal('location', locationStub);
+		mocks.getPreparedLessonStatus.mockResolvedValue({
+			path_lesson_id: lessonOne.id, lesson_revision: 1, generation_id: 'generation-terminal',
+			generation_status: 'failed', workflow_stage: 'failed_terminal', objective_hash: 'hash-1',
+			stale: false, can_prepare: false, can_regenerate: true
+		});
+		mocks.regeneratePathLesson.mockResolvedValue({
+			generation_id: 'generation-fresh', path_lesson_id: lessonOne.id,
+			objective: lessonOne.objective, objective_hash: lessonOne.objective_hash,
+			skeleton_id: 'factual-core', skeleton_version: 1, slots: [], section_roles: [],
+			status: 'awaiting_review', reused: false,
+			regeneration_reason: 'The previous generation did not finish.'
+		});
+
+		render(UnitPage);
+		await fireEvent.click(await screen.findByRole('button', { name: 'Check preparation status' }));
+		const startFresh = await screen.findByRole('button', { name: 'Start fresh' });
+		expect(screen.getByText(/cannot be retried/)).toBeTruthy();
+		expect(screen.queryByRole('link', { name: 'Open review' })).toBeNull();
+		await fireEvent.click(startFresh);
+
+		await waitFor(() => expect(mocks.regeneratePathLesson).toHaveBeenCalledWith(
+			'unit-1', expect.objectContaining({ id: 'path-1' }), expect.objectContaining({ id: 'lesson-1' }),
+			'first_exposure', 'The previous generation did not finish.', []
+		));
+		expect(locationStub.href).toContain('generation-fresh');
+		vi.unstubAllGlobals();
+	});
+
+	it('does not offer start fresh when terminal regeneration is not permitted', async () => {
+		mocks.getPreparedLessonStatus.mockResolvedValue({
+			path_lesson_id: lessonOne.id, lesson_revision: 1, generation_id: 'generation-terminal',
+			generation_status: 'failed', workflow_stage: 'failed_terminal', objective_hash: 'hash-1',
+			stale: false, can_prepare: false, can_regenerate: false
+		});
+
+		render(UnitPage);
+		await fireEvent.click(await screen.findByRole('button', { name: 'Check preparation status' }));
+		await waitFor(() => expect(mocks.getPreparedLessonStatus).toHaveBeenCalled());
+		expect(screen.queryByRole('button', { name: 'Start fresh' })).toBeNull();
+		expect(screen.getByRole('link', { name: 'Open review' })).toBeTruthy();
+	});
 });

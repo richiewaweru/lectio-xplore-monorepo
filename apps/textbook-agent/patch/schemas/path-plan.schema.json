@@ -10,7 +10,7 @@
     "scope": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["must_cover", "do_not_cover"],
+      "required": ["must_cover", "do_not_cover", "terminology"],
       "properties": {
         "must_cover": {
           "type": "array",
@@ -18,6 +18,10 @@
           "items": { "type": "string", "minLength": 1 }
         },
         "do_not_cover": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "terminology": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         }

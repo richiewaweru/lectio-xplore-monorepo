@@ -336,7 +336,7 @@ async def _write_one_block(
                     delay = min(8.0, (2 ** (transport_attempts - 1)) + random.random())
                     await asyncio.sleep(delay)
                     continue
-                terminal_status = "failed_terminal"
+                terminal_status = "failed_recoverable"
             elif classification.code in {"VALIDATION", "CONTRACT"}:
                 # Informed repair already ran inside dispatch_writer_async.
                 terminal_status = (
@@ -348,7 +348,7 @@ async def _write_one_block(
                 transport_attempts += 1
                 if transport_attempts < max_transport:
                     continue
-                terminal_status = "failed_terminal"
+                terminal_status = "failed_recoverable"
             else:
                 terminal_status = "failed_terminal"
             async with async_session_factory() as session:
@@ -869,9 +869,13 @@ async def execute_after_teaching_approval(
             candidate_map = build_form_candidate_map(
                 teaching_plan,
                 compatible_objects_by_intent=legality.compatible_objects_by_intent,
+                approved_items=packet.approved_items,
             )
             revalidation = validate_form_plan(
-                candidate, teaching_plan, candidate_map=candidate_map
+                candidate,
+                teaching_plan,
+                candidate_map=candidate_map,
+                required_visual_slots=set(packet.required_visual_slots()),
             )
             if revalidation.ok:
                 form_plan = candidate
@@ -915,6 +919,20 @@ async def execute_after_teaching_approval(
                     worker_id=lease.worker_id, lease_token=lease.lease_token
                 )
             return {"status": "failed_terminal", "error": error}
+        injection = get_failure_injection()
+        if injection.should_fail_node(generation_id=generation_id, node="planning_forms"):
+            await repo.append_event(
+                make_event(
+                    "proof_fault_injected",
+                    generation_id=generation_id,
+                    status="injected",
+                    node="planning_forms",
+                    fault_class="TIMEOUT",
+                ),
+                worker_id=wid,
+                lease_token=ltok,
+            )
+            raise TimeoutError("injected form planner timeout")
         try:
             form_result = await run_form_planner(
                 packet,
@@ -971,6 +989,8 @@ async def execute_after_teaching_approval(
             plan=form_result.plan.model_dump(mode="json"),
             validation=form_result.validation.to_dict(),
             qc=form_result.qc,
+            catalogue_version=form_result.form_guidance["catalogue_version"],
+            form_projection_hash=form_result.form_guidance["projection_hash"],
             prompt=form_result.prompt,
             raw=form_result.raw_response,
             worker_id=wid,

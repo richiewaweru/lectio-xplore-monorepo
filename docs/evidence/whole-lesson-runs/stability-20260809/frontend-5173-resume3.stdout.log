@@ -1,0 +1,26 @@
+
+> frontend@1.0.0-beta.1 dev C:\Projects\lectio\apps\textbook-agent\frontend
+> vite dev "--host" "127.0.0.1" "--port" "5173"
+
+
+  VITE v7.3.6  ready in 17979 ms
+
+  ➜  Local:   http://127.0.0.1:5173/
+  ➜  press h + enter to show help
+9:23:04 PM [vite] (client) hmr update /src/app.css
+9:23:04 PM [vite] (ssr) page reload src/routes/units/[id]/page.test.ts
+9:23:04 PM [vite] (client) hmr update /src/routes/units/[id]/+page.svelte, /src/app.css
+9:23:04 PM [vite] (ssr) page reload src/routes/units/[id]/+page.svelte
+9:23:50 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/0.js
+9:23:50 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/1.js
+9:23:50 PM [vite] (client) page reload .svelte-kit/generated/client/app.js
+9:23:50 PM [vite] (ssr) page reload .svelte-kit/generated/shared/error-template.js
+9:23:50 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/16.js
+9:23:50 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/19.js
+9:23:50 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/21.js
+9:23:50 PM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+9:23:50 PM [vite] (client) page reload .svelte-kit/generated/client/matchers.js
+9:23:50 PM [vite] (client) page reload .svelte-kit/generated/root.js
+9:23:50 PM [vite] (ssr) page reload .svelte-kit/generated/root.js
+9:23:51 PM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
+ ELIFECYCLE  Command failed with exit code 4294967295.
