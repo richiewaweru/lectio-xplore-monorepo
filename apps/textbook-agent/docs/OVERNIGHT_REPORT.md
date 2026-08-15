@@ -42,8 +42,10 @@ Proven defects:
 Commits: `841f0d4`, `4e0fc0c`, `a0980d0`, `0603ba3`, `b0cb871`.
 
 Validation: architecture gate passed with no violations; backend Ruff passed; the
-full backend suite reached 1,156 passing tests with two stale token-policy
-assertions, which were updated and then passed in the focused rerun (10/10).
+full backend suite passes 1,158 tests (one existing warning about a Pydantic field
+name). The focused frontend recovery suite passes 36 tests. The complete frontend
+suite was not used as a gate because Vitest worker teardown stopped emitting; the
+focused suite completed cleanly.
 
 ## 4. Failure distribution
 
