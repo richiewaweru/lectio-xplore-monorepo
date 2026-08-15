@@ -36,7 +36,8 @@ Proven defects:
 - `backend/src/v3_execution/config/models.py`: reasoning disabled for constrained nodes and env-overridable per-node reasoning.
 - `backend/src/v3_execution/config/concurrency.py`: 420-second lane default, configurable answer-key concurrency, budget diagnostic.
 - `backend/src/v3_execution/runtime/lanes.py`: checkpoint hydration, independent stage completion, failure classification, loud persistence logging.
-- `backend/src/v3_execution/runtime/runner.py`: stage-aware completion and visual checkpoint logging.
+- `backend/src/v3_execution/runtime/runner.py`: stage-aware completion, visual checkpoint logging, and an explicit failed-lane/incomplete-section completion gate.
+- `backend/src/v3_execution/booklet_status.py` and `backend/src/core/config.py`: configurable `V3_MAX_FAILED_LANE_FRACTION` (default `0.0`) prevents partial or failed lane output from becoming a final-ready booklet.
 - `backend/src/v3_blueprint/planning/persistence.py`: single-step checkpoint payload loading.
 - `backend/src/core/config.py` and `.env.example`: 8k/16k/24k slot ceilings and 32k absolute fallback.
 - Frontend recovery paths were inspected; no additional UI change was required in this slice.
@@ -48,6 +49,8 @@ full backend suite passes 1,158 tests (one existing warning about a Pydantic fie
 name). The focused frontend recovery suite passes 36 tests. The complete frontend
 suite was not used as a gate because Vitest worker teardown stopped emitting; the
 focused suite completed cleanly.
+The completeness-gate status tests pass (11 tests), and the execution/config
+compatibility tests pass (44 tests, same existing warning).
 
 ## 4. Failure distribution
 
@@ -73,7 +76,7 @@ No new UI code in this slice. Existing Studio recovery tests pass: 36 focused te
 
 1. Authenticated browser access is unavailable in the current session, blocking real lesson creation and PDF inspection.
 2. The long-running backend health endpoint still reports Playwright degraded even though the same virtualenv passes the health check directly; process/runtime provenance needs investigation.
-3. Four-lesson acceptance evidence, provider telemetry, live resume kill tests, and worker reclaim evidence remain outstanding.
+3. Four-lesson acceptance evidence, provider telemetry, live resume kill tests, and worker reclaim evidence remain outstanding. The new completion gate is verified by unit/integration tests only until an authenticated run exercises it live.
 
 ## 10. Decisions needed
 

@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
 
 from core.events import event_bus
+from core.config import settings as app_settings
 from telemetry.v3_trace import event_types as trace_events
 from telemetry.v3_trace.writer import V3TraceWriter
 from v3_blueprint.models import ProductionBlueprint
@@ -422,6 +423,7 @@ async def run_generation(
         completed_visual_orders: set[str] = set()
         task_meta: dict[asyncio.Task[list[Any]], tuple[str, str, Any]] = {}
         lane_failure_kinds: dict[str, int] = {}
+        failed_lane_count = 0
 
         def _schedule_task(kind: str, section_id: str, label: str, coro: Awaitable[list[Any]], order: Any) -> None:
             task = asyncio.create_task(_guard(label, coro))
@@ -595,6 +597,7 @@ async def run_generation(
             )
             result.warnings.extend(outcome.warnings)
             if outcome.failure_kind is not None:
+                failed_lane_count += 1
                 lane_failure_kinds[outcome.failure_kind] = (
                     lane_failure_kinds.get(outcome.failure_kind, 0) + 1
                 )
@@ -767,6 +770,13 @@ async def run_generation(
             major_count=0,
             minor_count=0,
             fatal_issue_categories=set(),
+            failed_lane_count=failed_lane_count,
+            lane_count=len(lane_factories),
+            incomplete_section_count=sum(
+                diagnostic.status != "complete" for diagnostic in section_diagnostics
+            ),
+            planned_section_count=len(blueprint.sections),
+            max_failed_lane_fraction=app_settings.v3_max_failed_lane_fraction,
         )
         # Draft first without blocking on answer_key — ak overlaps coherence below.
         draft_pack = pack_builder.build(
@@ -919,6 +929,13 @@ async def run_generation(
                 major_count=coherence_report.major_count,
                 minor_count=coherence_report.minor_count,
                 fatal_issue_categories=fatal_categories,
+                failed_lane_count=failed_lane_count,
+                lane_count=len(lane_factories),
+                incomplete_section_count=sum(
+                    diagnostic.status != "complete" for diagnostic in section_diagnostics
+                ),
+                planned_section_count=len(blueprint.sections),
+                max_failed_lane_fraction=app_settings.v3_max_failed_lane_fraction,
             )  # type: ignore[assignment]
             draft_pack = draft_pack.model_copy(
                 update={

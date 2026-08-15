@@ -19,12 +19,24 @@ def derive_booklet_status(
     major_count: int,
     minor_count: int,
     fatal_issue_categories: set[str],
+    failed_lane_count: int = 0,
+    lane_count: int = 0,
+    incomplete_section_count: int = 0,
+    planned_section_count: int = 0,
+    max_failed_lane_fraction: float = 0.0,
 ) -> str:
     if draft_section_count == 0:
         return "failed_unusable"
     if not render_valid:
         return "failed_unusable"
     if fatal_issue_categories:
+        return "failed_unusable"
+    if lane_count > 0 and failed_lane_count / lane_count > max_failed_lane_fraction:
+        return "failed_unusable"
+    if (
+        planned_section_count > 0
+        and incomplete_section_count / planned_section_count > max_failed_lane_fraction
+    ):
         return "failed_unusable"
     if not review_done:
         return "draft_ready"

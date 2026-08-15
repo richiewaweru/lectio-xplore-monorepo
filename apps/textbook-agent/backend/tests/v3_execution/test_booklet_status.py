@@ -103,6 +103,55 @@ def test_fatal_categories_force_failed_unusable() -> None:
     assert status == "failed_unusable"
 
 
+def test_failed_lane_cannot_be_reported_as_final() -> None:
+    status = derive_booklet_status(
+        draft_section_count=2,
+        render_valid=True,
+        review_done=True,
+        finalised=True,
+        blocking_count=0,
+        major_count=0,
+        minor_count=0,
+        fatal_issue_categories=set(),
+        failed_lane_count=1,
+        lane_count=2,
+    )
+    assert status == "failed_unusable"
+
+
+def test_lane_failure_threshold_is_configurable() -> None:
+    status = derive_booklet_status(
+        draft_section_count=2,
+        render_valid=True,
+        review_done=True,
+        finalised=True,
+        blocking_count=0,
+        major_count=0,
+        minor_count=0,
+        fatal_issue_categories=set(),
+        failed_lane_count=1,
+        lane_count=2,
+        max_failed_lane_fraction=0.5,
+    )
+    assert status == "final_ready"
+
+
+def test_incomplete_section_cannot_be_reported_as_final() -> None:
+    status = derive_booklet_status(
+        draft_section_count=2,
+        render_valid=True,
+        review_done=True,
+        finalised=True,
+        blocking_count=0,
+        major_count=0,
+        minor_count=0,
+        fatal_issue_categories=set(),
+        incomplete_section_count=1,
+        planned_section_count=2,
+    )
+    assert status == "failed_unusable"
+
+
 def test_section_metadata_keys_do_not_create_schema_violations() -> None:
     pack = DraftPack(
         generation_id="gen-meta",
