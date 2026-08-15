@@ -63,7 +63,7 @@ Code-level proof added for prose/questions checkpoint hydration and independent 
 
 ## 7. PDF status
 
-PDF export tests pass: 24 tests covering service, telemetry, components, native exports, and health routes. Direct local Playwright launch succeeds after browser installation. Authenticated browser export for both presets is not yet proven.
+PDF export tests pass: 24 tests covering service, telemetry, components, native exports, and health routes. Direct local Playwright launch succeeds after browser installation. The native local render default is now `http://127.0.0.1:5173`. Authenticated browser export for both presets is not yet proven.
 
 ## 8. UI changes
 
