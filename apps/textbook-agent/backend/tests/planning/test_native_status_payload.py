@@ -80,6 +80,18 @@ def test_native_status_awaiting_visuals_is_not_active_execution() -> None:
     assert projected["execution_started"] is False
 
 
+def test_native_status_prefers_live_checkpoint_over_stale_generation_row() -> None:
+    projected = project_native_status(
+        "fixture-generation-running",
+        _native_state(stage="stage2_running"),
+        generation_status="awaiting_review",
+    )
+
+    assert projected is not None
+    assert projected["stage"] == "stage2_running"
+    assert projected["execution_started"] is False
+
+
 def test_native_status_recoverable_failure_has_structured_error() -> None:
     key_fail = execution_key("section-4", "s4-questions")
     state = _native_state(

@@ -335,16 +335,17 @@ describe('studio chunked URL resume', () => {
 			],
 			question_plan: []
 		};
-		mocks.getChunkedPlanStatus.mockResolvedValue({
-			generation_id: 'gen-native', stage: 'plan_ready', structural_plan: nativePlan,
-			section_briefs: {}, failed_sections: [], blueprint_id: null, execution_started: false,
-			next_action: 'approve_or_regenerate'
-		});
-		mocks.approveChunkedPlan.mockResolvedValue({
+		const nativeRunning = {
 			generation_id: 'gen-native', stage: 'stage2_running', structural_plan: nativePlan,
 			section_briefs: {}, failed_sections: [], blueprint_id: null, execution_started: true,
 			next_action: 'wait_for_stage2'
-		});
+		};
+		mocks.getChunkedPlanStatus.mockResolvedValueOnce({
+			generation_id: 'gen-native', stage: 'plan_ready', structural_plan: nativePlan,
+			section_briefs: {}, failed_sections: [], blueprint_id: null, execution_started: false,
+			next_action: 'approve_or_regenerate'
+		}).mockResolvedValue(nativeRunning);
+		mocks.approveChunkedPlan.mockResolvedValue(nativeRunning);
 
 		render(StudioPage);
 		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('gen-native'));
@@ -359,6 +360,7 @@ describe('studio chunked URL resume', () => {
 		await waitFor(() =>
 			expect(mocks.connectV3ChunkedStream).toHaveBeenCalledWith('gen-native', expect.any(Object))
 		);
+		expect(v3Studio.stage).toBe('fill');
 		expect(navigationMocks.goto).not.toHaveBeenCalled();
 	});
 

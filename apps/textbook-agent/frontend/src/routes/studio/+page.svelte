@@ -823,6 +823,10 @@
 		v3Studio.generationId = next.generation_id;
 		hydrateChunkedSectionState(next);
 		syncStage2Progress(next);
+		// Approval returns stage2_running for native v3 plans. Move the visible
+		// Studio stage at the same time as the stream/poller so the UI cannot
+		// remain on the structural review screen while execution is underway.
+		v3Studio.stage = 'fill';
 		startGenerationPolling(next.generation_id);
 		connectChunkedStage2Stream(next.generation_id);
 	}

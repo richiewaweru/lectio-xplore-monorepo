@@ -469,23 +469,39 @@ async def prepare_path_lesson(
                 raise PathPreparationBlocked(
                     "Existing preparation predates the resumable workflow; regenerate it explicitly"
                 ) from exc
-            plan = StructuralPlan.model_validate(state.get("structural_plan"))
-            slots = [section.role for section in plan.sections]
-            return (
-                PreparedLessonResponse(
-                    generation_id=generation.id,
-                    path_lesson_id=lesson.id,
-                    objective=lesson.objective,
-                    objective_hash=lesson.objective_hash,
-                    skeleton_id=provenance.skeleton_id or "",
-                    skeleton_version=provenance.skeleton_version or 0,
-                    slots=slots,
-                    section_roles=slots,
-                    status="awaiting_review",
-                    reused=True,
-                ),
-                plan,
+            # A failed pre-worker handoff can leave the lesson pointing at an
+            # `awaiting_visuals` row before execution ever started. Treat that
+            # empty row as stale so the normal Prepare action creates a fresh
+            # native run instead of reopening a document that can never make
+            # progress. A visual handoff with saved execution/document output
+            # remains reusable and can still take the targeted visual retry path.
+            stale_empty_visual_handoff = (
+                state.get("stage") == "awaiting_visuals"
+                and not bool(state.get("execution_started"))
+                and not (
+                    isinstance(generation.document_json, dict)
+                    and isinstance(generation.document_json.get("sections"), list)
+                    and generation.document_json.get("sections")
+                )
             )
+            if not stale_empty_visual_handoff:
+                plan = StructuralPlan.model_validate(state.get("structural_plan"))
+                slots = [section.role for section in plan.sections]
+                return (
+                    PreparedLessonResponse(
+                        generation_id=generation.id,
+                        path_lesson_id=lesson.id,
+                        objective=lesson.objective,
+                        objective_hash=lesson.objective_hash,
+                        skeleton_id=provenance.skeleton_id or "",
+                        skeleton_version=provenance.skeleton_version or 0,
+                        slots=slots,
+                        section_roles=slots,
+                        status="awaiting_review",
+                        reused=True,
+                    ),
+                    plan,
+                )
 
     scope_contract, prior_established, prerequisites, lesson_actuals = await _preparation_context(
         session,

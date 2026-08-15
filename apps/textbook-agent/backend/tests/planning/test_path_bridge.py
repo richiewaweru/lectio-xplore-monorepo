@@ -35,7 +35,7 @@ from planning.service import approve_path, create_unit, persist_path_plan
 from planning.shapes import decide_shape_deviation, request_shape_deviation
 from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 from v3_blueprint.planning.objective_ownership import hash_path_objective
-from v3_blueprint.planning.persistence import load_chunked_state
+from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state
 
 
 @pytest.mark.asyncio
@@ -469,6 +469,58 @@ async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None
     await db_session.refresh(provenance)
     assert provenance.invalidated_at is not None
     assert lesson.pack_id == regenerated.generation_id
+
+
+@pytest.mark.asyncio
+async def test_prepare_bridge_does_not_reuse_empty_preworker_visual_handoff(db_session) -> None:
+    user = UserModel(id="bridge-stale-visual", email="bridge-stale-visual@example.invalid", name="Stale")
+    db_session.add(user)
+    plan = load_canonical_plan("grade4-photosynthesis-path.json")
+    unit = await create_unit(
+        db_session,
+        owner_id=user.id,
+        request=unit_create_from_fixture("grade4-photosynthesis-path.json"),
+    )
+    version = await persist_path_plan(db_session, unit=unit, plan=plan)
+    await approve_path(db_session, version)
+    lesson = await db_session.scalar(
+        select(PathLessonModel)
+        .where(PathLessonModel.path_version_id == version.id)
+        .order_by(PathLessonModel.position)
+    )
+    assert lesson is not None
+
+    first, _ = await prepare_path_lesson(
+        db_session,
+        unit=unit,
+        version=version,
+        lesson=lesson,
+        request=PrepareLessonRequest(lesson_mode="first_exposure"),
+        structural_planner=_fake_structural_planner,
+        component_selector=_fake_component_selector,
+    )
+    generation = await db_session.get(GenerationModel, first.generation_id)
+    assert generation is not None
+    generation.status = "awaiting_visuals"
+    generation.document_json = {"sections": []}
+    await persist_chunked_state(
+        first.generation_id,
+        {"stage": "awaiting_visuals", "execution_started": False},
+        db_session,
+    )
+    await db_session.flush()
+
+    fresh, _ = await prepare_path_lesson(
+        db_session,
+        unit=unit,
+        version=version,
+        lesson=lesson,
+        request=PrepareLessonRequest(lesson_mode="first_exposure"),
+        structural_planner=_fake_structural_planner,
+        component_selector=_fake_component_selector,
+    )
+    assert fresh.reused is False
+    assert fresh.generation_id != first.generation_id
 
 
 async def test_later_preparation_receives_actuals_as_explicit_advisory_context(db_session) -> None:

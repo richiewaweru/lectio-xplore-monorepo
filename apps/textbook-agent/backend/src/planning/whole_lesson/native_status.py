@@ -172,10 +172,14 @@ def project_native_status(
             return None
 
     page = _page_state(state)
+    # The chunked checkpoint is the live execution source of truth. The
+    # top-level generation row can remain at `awaiting_review` while the
+    # approved worker advances through stage2; preferring that stale row makes
+    # clients reopen the structural screen and hide real progress.
     stage = str(
-        generation_status
-        or state.get("stage")
+        state.get("stage")
         or (page.get("execution") or {}).get("stage")
+        or generation_status
         or ""
     )
     form_plan = page.get("form_plan") if isinstance(page.get("form_plan"), Mapping) else {}
