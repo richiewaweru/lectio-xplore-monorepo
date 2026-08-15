@@ -173,6 +173,80 @@ def _coerce_raw_content(raw: object) -> object:
     raise WriterError(f"unexpected writer output type: {type(raw)!r}")
 
 
+def _rich_text_to_plain_text(value: object) -> object:
+    """Unwrap editor-document text when a scalar form field receives it."""
+    parsed = value
+    if isinstance(value, str):
+        text = value.strip()
+        if not text.startswith('{"type":"doc"'):
+            return value
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            return value
+    if not isinstance(parsed, dict) or parsed.get("type") != "doc":
+        return value
+
+    parts: list[str] = []
+
+    def visit(node: object) -> None:
+        if not isinstance(node, dict):
+            return
+        if node.get("type") == "text" and isinstance(node.get("text"), str):
+            parts.append(node["text"])
+            return
+        for child in node.get("content") or []:
+            visit(child)
+        if node.get("type") in {"paragraph", "heading", "listItem"}:
+            parts.append("\n")
+
+    visit(parsed)
+    return " ".join("".join(parts).split())
+
+
+def _normalize_scalar_rich_text(object_id: str, content: object) -> object:
+    if not isinstance(content, dict):
+        return content
+    normalized = dict(content)
+    scalar_fields = {"aside": ("body",), "list": ("lead_in",)}.get(object_id, ())
+    for field in scalar_fields:
+        if field in normalized:
+            normalized[field] = _rich_text_to_plain_text(normalized[field])
+    return normalized
+
+
+def normalize_persisted_document_json(document: object) -> object:
+    """Normalize rich-text scalar fields in a persisted V2 page document."""
+    if not isinstance(document, dict):
+        return document
+    normalized = dict(document)
+    page_document = normalized.get("lectio_document")
+    if not isinstance(page_document, dict):
+        return normalized
+    page_document = dict(page_document)
+    sections = []
+    for section in page_document.get("sections") or []:
+        if not isinstance(section, dict):
+            sections.append(section)
+            continue
+        section = dict(section)
+        blocks = []
+        for block in section.get("blocks") or []:
+            if not isinstance(block, dict):
+                blocks.append(block)
+                continue
+            block = dict(block)
+            block["content"] = _normalize_scalar_rich_text(
+                str(block.get("object") or ""), block.get("content")
+            )
+            blocks.append(block)
+        section["blocks"] = blocks
+        sections.append(section)
+    page_document["sections"] = sections
+    normalized["lectio_document"] = page_document
+    return normalized
+
+
 def _validation_errors_from_exc(exc: Exception) -> list[dict[str, Any]]:
     if isinstance(exc, ContentValidationError):
         return list(exc.errors)
@@ -333,6 +407,7 @@ async def _write_validated_llm(
     raw = await _call(1, prompt)
     try:
         coerced = _coerce_raw_content(raw)
+        coerced = _normalize_scalar_rich_text(object_id, coerced)
         content = validate_content(object_id, coerced)
     except (ContentValidationError, json.JSONDecodeError, WriterError) as first_exc:
         errors = _validation_errors_from_exc(first_exc)
@@ -350,6 +425,7 @@ async def _write_validated_llm(
         try:
             repaired_raw = await _call(2, repair_prompt)
             coerced = _coerce_raw_content(repaired_raw)
+            coerced = _normalize_scalar_rich_text(object_id, coerced)
             content = validate_content(object_id, coerced)
         except (ContentValidationError, json.JSONDecodeError, WriterError) as final_exc:
             if isinstance(final_exc, ContentValidationError):

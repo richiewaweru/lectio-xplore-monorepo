@@ -869,7 +869,9 @@ class V3GenerationWriter:
                 return None
             if not isinstance(model.document_json, dict):
                 return None
-            return deepcopy(model.document_json)
+            from generation.page_objects.registry import normalize_persisted_document_json
+
+            return normalize_persisted_document_json(deepcopy(model.document_json))
 
     async def list_by_user(
         self,

@@ -9,6 +9,7 @@ from generation.page_objects import (
     WriterContext,
     dispatch_writer_async,
 )
+from generation.page_objects.registry import normalize_persisted_document_json
 from generation.page_objects.scripted_provider import ScriptedWriterProvider
 from v3_blueprint.planning.models import PlannedBlock
 
@@ -28,6 +29,24 @@ def _prose_ctx() -> WriterContext:
         use_llm=True,
         section_id="section-1",
         generation_id="gen-repair-1",
+    )
+
+
+def _aside_ctx() -> WriterContext:
+    return WriterContext(
+        planned=PlannedBlock.model_validate(
+            {
+                "id": "s1-aside",
+                "position": 0,
+                "intent": "diagnose-misconception",
+                "object": "aside",
+                "evidence": "soil is not food",
+                "brief": "The roots take in water; the leaves make food.",
+            }
+        ),
+        use_llm=True,
+        section_id="section-1",
+        generation_id="gen-rich-text",
     )
 
 
@@ -83,6 +102,55 @@ async def test_invalid_json_then_valid_repairs() -> None:
     result = await dispatch_writer_async(_prose_ctx(), provider=provider)
     assert result.content["paragraphs"] == ["Repaired prose."]
     assert provider.call_count() == 2
+
+
+@pytest.mark.asyncio
+async def test_rich_text_document_is_unwrapped_for_plain_aside_body() -> None:
+    rich_body = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "paragraph",
+                "content": [{"type": "text", "text": "Roots take in water."}],
+            }
+        ],
+    }
+    provider = ScriptedWriterProvider(
+        scenarios={
+            "rich_text": {
+                "responses": {
+                    "s1-aside": [
+                        {"attempt": 1, "mode": "dict", "value": {"body": rich_body}},
+                    ]
+                }
+            }
+        },
+        scenario_name="rich_text",
+    )
+    result = await dispatch_writer_async(_aside_ctx(), provider=provider)
+    assert result.content["body"] == "Roots take in water."
+    assert provider.call_count() == 1
+
+
+def test_persisted_document_normalizes_rich_text_aside() -> None:
+    document = {
+        "lectio_document": {
+            "sections": [
+                {
+                    "blocks": [
+                        {
+                            "object": "aside",
+                            "content": {
+                                "body": '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Use the leaves."}]}]}'
+                            },
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+    normalized = normalize_persisted_document_json(document)
+    assert normalized["lectio_document"]["sections"][0]["blocks"][0]["content"]["body"] == "Use the leaves."
 
 
 @pytest.mark.asyncio
