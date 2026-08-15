@@ -15,6 +15,10 @@ def _dependency_by_name(payload: dict, name: str) -> dict:
     return next(dep for dep in payload["dependencies"] if dep["name"] == name)
 
 
+def test_exception_detail_falls_back_to_repr_for_empty_exception() -> None:
+    assert health_routes._exception_detail(RuntimeError()) == "RuntimeError()"
+
+
 class TestHealthRoutes:
     def test_liveness_always_200(self):
         with TestClient(create_app()) as client:

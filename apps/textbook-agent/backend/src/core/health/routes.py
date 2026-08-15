@@ -78,6 +78,11 @@ _additional_readiness_checks: list[ReadinessCheck] = []
 _image_probe_runner: ImageProbeRunner | None = None
 
 
+def _exception_detail(exc: Exception) -> str:
+    """Keep health responses actionable even for exceptions with empty text."""
+    return str(exc).strip() or repr(exc)
+
+
 def configure_health_extensions(
     *,
     readiness_checks: Sequence[ReadinessCheck] | None = None,
@@ -138,7 +143,7 @@ async def _check_playwright_runtime() -> DependencyStatus:
     try:
         from playwright.async_api import async_playwright
     except Exception as exc:  # pragma: no cover - exercised via tests
-        return DependencyStatus(name="playwright", status="degraded", detail=str(exc))
+        return DependencyStatus(name="playwright", status="degraded", detail=_exception_detail(exc))
 
     start = perf_counter()
     try:
@@ -147,7 +152,7 @@ async def _check_playwright_runtime() -> DependencyStatus:
             await browser.close()
     except Exception as exc:  # pragma: no cover - exercised via tests
         logger.warning("Playwright health check failed", exc_info=exc)
-        return DependencyStatus(name="playwright", status="degraded", detail=str(exc))
+        return DependencyStatus(name="playwright", status="degraded", detail=_exception_detail(exc))
 
     return DependencyStatus(
         name="playwright",
