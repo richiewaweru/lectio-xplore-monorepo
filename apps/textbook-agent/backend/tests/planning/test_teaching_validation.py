@@ -277,6 +277,7 @@ def test_required_visual_slot_needs_spatial_process_intent() -> None:
         excluded_intents=set(),
         typical_by_slot={slot: {"orient", "explain"} for slot in slots},
     )
+
     assert any(issue.code == "REQUIRED_VISUAL_INTENT" for issue in report.issues)
 
     plan.sections[1].blocks[0].intent = "show-structure"
@@ -288,3 +289,19 @@ def test_required_visual_slot_needs_spatial_process_intent() -> None:
         typical_by_slot={slot: {"orient", "explain"} for slot in slots},
     )
     assert not any(issue.code == "REQUIRED_VISUAL_INTENT" for issue in report.issues)
+
+
+def test_anchor_usage_accepts_active_contrast_slot() -> None:
+    plan = TeachingPlan.model_validate(
+        {
+            "arc": "Orient, explain, contrast, and check the idea.",
+            "anchor_usage": {
+                "orient": "Introduce the anchor.",
+                "explain": "Build the model.",
+                "contrast": "Set the case beside a near miss.",
+                "check": "Return to the objective.",
+            },
+        }
+    )
+
+    assert plan.anchor_usage.contrast == "Set the case beside a near miss."

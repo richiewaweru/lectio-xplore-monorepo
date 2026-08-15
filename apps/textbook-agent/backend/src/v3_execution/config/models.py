@@ -83,7 +83,10 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     V3_KNOWLEDGE_TYPE_CLASSIFIER: False,
     V3_BLOCK_WRITER_FAST: False,
     V3_BLOCK_WRITER_STANDARD: False,
-    V2_PATH_PLANNER: "high",
+    # Path planning is a constrained JSON route, not an open-ended reasoning
+    # task. DeepSeek thinking made this request hold the UI in planning for
+    # minutes and allowed overlapping retries before the first request settled.
+    V2_PATH_PLANNER: False,
     V2_MERGE_CRITIC: False,
     V2_COMPONENT_SELECTOR: "medium",
     # Constrained-output nodes run without provider reasoning. On DeepSeek,
@@ -94,7 +97,9 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     # provider reasoning.
     V2_PATH_STRUCTURAL_PLANNER: False,
     V2_PATH_CHAT_EDITOR: False,
-    V2_LESSON_APPROACH_PLANNER: "high",
+    # The teaching-plan schema and validation provide the correctness guard;
+    # provider reasoning adds latency without improving the persisted contract.
+    V2_LESSON_APPROACH_PLANNER: False,
     V2_FORM_PLANNER: False,
     V3_CONSTRUCTOR: False,
     V3_VISUAL_TOPOLOGY_PLANNER: False,

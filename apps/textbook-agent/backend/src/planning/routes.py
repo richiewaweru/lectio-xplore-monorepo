@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import inspect
 from typing import Literal
 from uuid import uuid4
@@ -124,6 +125,20 @@ router = APIRouter(
     tags=["units", "paths"],
     dependencies=[Depends(require_xplore_v2)],
 )
+
+# A browser retry can outlive its HTTP request while the provider is still
+# working. Serialize path planning per user/unit so a late first response
+# cannot overwrite a newer approval with a second draft path.
+_path_planning_locks: dict[tuple[str, str], asyncio.Lock] = {}
+
+
+def _path_planning_lock(user_id: str, unit_id: str) -> asyncio.Lock:
+    key = (str(user_id), str(unit_id))
+    lock = _path_planning_locks.get(key)
+    if lock is None:
+        lock = asyncio.Lock()
+        _path_planning_locks[key] = lock
+    return lock
 
 
 def _planning_trace_id(prefix: str, user_id: str) -> str:
@@ -377,7 +392,7 @@ def _planner_request_for_unit(unit: UnitModel, request: PathPlannerRequest) -> P
     )
 
 
-async def _plan_or_replan(
+async def _plan_or_replan_unlocked(
     *,
     unit_id: str,
     request: PathPlannerRequest | PathReplanRequest,
@@ -421,6 +436,33 @@ async def _plan_or_replan(
     except Exception as exc:
         await session.rollback()
         _raise_http(exc)
+
+
+async def _plan_or_replan(
+    *,
+    unit_id: str,
+    request: PathPlannerRequest | PathReplanRequest,
+    current_user: User,
+    session: AsyncSession,
+    replan: bool,
+) -> dict[str, object]:
+    async with _path_planning_lock(str(current_user.id), unit_id):
+        if not replan:
+            unit = await get_owned_unit(
+                session, unit_id=unit_id, owner_id=current_user.id
+            )
+            # If a retry arrived after the original request committed, return
+            # that authoritative path instead of creating a second draft.
+            if unit.active_path_version_id:
+                active = await _active_version(session, unit)
+                return await _path_payload(session, active)
+        return await _plan_or_replan_unlocked(
+            unit_id=unit_id,
+            request=request,
+            current_user=current_user,
+            session=session,
+            replan=replan,
+        )
 
 
 @router.post("/{unit_id}/path:plan", status_code=status.HTTP_201_CREATED)

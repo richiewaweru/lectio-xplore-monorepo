@@ -190,10 +190,10 @@ def test_constrained_planner_nodes_send_no_thinking_payload(
         assert settings["extra_body"] == {"thinking": {"type": "disabled"}}
 
 
-def test_reasoning_change_is_scoped_to_the_constrained_nodes(
+def test_planning_nodes_disable_provider_reasoning(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Nodes doing broad pedagogical reasoning must be unaffected."""
+    """DeepSeek planning calls must not enter the slow reasoning path."""
     monkeypatch.setenv("V3_STANDARD_PROVIDER", "openai_compatible")
     monkeypatch.setenv("V3_STANDARD_MODEL_NAME", "deepseek-v4-pro")
     monkeypatch.setenv("V3_STANDARD_BASE_URL", "https://api.deepseek.com")
@@ -201,8 +201,8 @@ def test_reasoning_change_is_scoped_to_the_constrained_nodes(
 
     for node in (V2_PATH_PLANNER, V2_LESSON_APPROACH_PLANNER):
         settings = get_v3_model_settings(node)
-        assert settings["openai_reasoning_effort"] == "high", node
-        assert settings["extra_body"] == {"thinking": {"type": "enabled"}}, node
+        assert "openai_reasoning_effort" not in settings, node
+        assert settings["extra_body"] == {"thinking": {"type": "disabled"}}, node
 
 
 def test_get_v3_model_settings_preserves_thinking_when_base_sets_extra_body(

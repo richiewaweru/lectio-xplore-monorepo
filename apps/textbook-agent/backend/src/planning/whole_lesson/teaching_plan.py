@@ -44,6 +44,8 @@ class AnchorUsage(BaseModel):
 
     orient: str = ""
     explain: str = ""
+    # The active conceptual first-exposure skeleton may use a contrast slot.
+    contrast: str = ""
     confront: str = ""
     check: str = ""
 

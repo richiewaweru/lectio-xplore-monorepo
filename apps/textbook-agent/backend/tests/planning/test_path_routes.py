@@ -12,6 +12,7 @@ from core.database.models import PathLessonModel, UserModel
 from core.dependencies import get_async_session
 from core.entities.user import User
 from planning.models import UnitCreate
+from planning.routes import _path_planning_lock
 from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 from planning.service import approve_path, create_unit, persist_path_plan
 
@@ -24,6 +25,18 @@ TEST_USER = User(
     updated_at="2026-07-31T00:00:00+00:00",
 )
 FIXTURES = Path(__file__).resolve().parents[3] / "handoff" / "fixtures"
+
+
+@pytest.mark.asyncio
+async def test_path_planning_lock_is_scoped_to_user_and_unit() -> None:
+    same_request = _path_planning_lock("user-1", "unit-1")
+    same_request_again = _path_planning_lock("user-1", "unit-1")
+    different_unit = _path_planning_lock("user-1", "unit-2")
+    different_user = _path_planning_lock("user-2", "unit-1")
+
+    assert same_request is same_request_again
+    assert same_request is not different_unit
+    assert same_request is not different_user
 
 
 @pytest.fixture(autouse=True)
