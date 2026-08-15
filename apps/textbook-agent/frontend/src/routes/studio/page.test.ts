@@ -487,14 +487,15 @@ describe('studio chunked URL resume', () => {
 			doc_version: null,
 			failed_sections: [],
 			blueprint_id: null,
-			execution_started: true,
+			execution_started: false,
 			next_action: 'wait_visuals'
 		});
 		mocks.fetchV3Document.mockRejectedValue(Object.assign(new Error('Document not ready'), { status: 404 }));
 
 		render(StudioPage);
 
-		expect(await screen.findByText('Building your lesson…')).toBeTruthy();
+		expect(await screen.findByText('Visual review pending')).toBeTruthy();
+		expect(screen.getByText(/not currently running/i)).toBeTruthy();
 		expect(screen.queryByText('Generation paused')).toBeNull();
 		expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
 		expect(mocks.retryNativeGeneration).not.toHaveBeenCalled();

@@ -68,6 +68,18 @@ def test_native_status_writing_projection() -> None:
     assert projected["error"] is None
 
 
+def test_native_status_awaiting_visuals_is_not_active_execution() -> None:
+    projected = project_native_status(
+        "fixture-generation-visual-review",
+        _native_state(stage="awaiting_visuals"),
+    )
+
+    assert projected is not None
+    assert projected["stage"] == "awaiting_visuals"
+    assert projected["next_action"] == "wait_visuals"
+    assert projected["execution_started"] is False
+
+
 def test_native_status_recoverable_failure_has_structured_error() -> None:
     key_fail = execution_key("section-4", "s4-questions")
     state = _native_state(

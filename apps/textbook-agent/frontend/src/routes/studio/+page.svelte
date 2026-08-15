@@ -227,8 +227,7 @@
 			resolved.stage === 'queued' ||
 			resolved.stage === 'writing_sections' ||
 			resolved.stage === 'writing_blocks' ||
-			resolved.stage === 'assembling' ||
-			resolved.stage === 'awaiting_visuals'
+			resolved.stage === 'assembling'
 		) {
 			// Native whole-lesson: teacher approved; form planner + writers run server-side and
 			// persist a LectioDocumentV2. Keep a generating state and poll until the document lands.
@@ -236,6 +235,18 @@
 			displayTitle = resolved.display_title ?? displayTitle;
 			const hydrated = await hydrateFromDocument(resolved.generation_id);
 			if (!hydrated && v3Studio.stage !== 'edit') {
+				v3Studio.stage = 'generating';
+			}
+			return;
+		}
+		if (resolved.stage === 'awaiting_visuals') {
+			// Visual generation is a persisted handoff, not an active worker phase.
+			// Hydrate whatever was saved, stop polling, and let the visual review UI
+			// describe the pending action truthfully.
+			disconnectActiveChunkedStream();
+			displayTitle = resolved.display_title ?? displayTitle;
+			await hydrateFromDocument(resolved.generation_id);
+			if (v3Studio.stage !== 'edit') {
 				v3Studio.stage = 'generating';
 			}
 			return;
@@ -444,8 +455,7 @@
 			state.stage === 'planning_forms' ||
 			state.stage === 'writing_sections' ||
 			state.stage === 'writing_blocks' ||
-			state.stage === 'assembling' ||
-			state.stage === 'awaiting_visuals'
+			state.stage === 'assembling'
 		) {
 			return true;
 		}
@@ -1231,6 +1241,11 @@
 					<h2 class="text-xl font-semibold text-foreground">Generation failed</h2>
 					<p class="text-sm text-muted-foreground">
 						No supported recovery action is available for this generation state.
+					</p>
+				{:else if v3Studio.chunkedState?.stage === 'awaiting_visuals'}
+					<h2 class="text-xl font-semibold text-foreground">Visual review pending</h2>
+					<p class="text-sm text-muted-foreground">
+						The lesson is not currently running. Its saved visual blocks need review or a targeted visual retry before the document can be finalized.
 					</p>
 				{:else}
 					<div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary" aria-hidden="true"></div>

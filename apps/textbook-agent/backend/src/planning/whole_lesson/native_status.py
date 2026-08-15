@@ -291,6 +291,9 @@ def project_native_status(
             if isinstance(error_detail, Mapping) and error_detail.get("code")
             else (state.get("error_type") if isinstance(state.get("error_type"), str) else None)
         ),
+        # Awaiting visuals is a persisted handoff to the visual-review/retry
+        # surface, not an active worker phase. Reporting it as started makes
+        # clients poll forever when no visual worker is running.
         "execution_started": stage
         in {
             "queued",
@@ -298,7 +301,6 @@ def project_native_status(
             "writing_sections",
             "writing_blocks",
             "assembling",
-            "awaiting_visuals",
             "ready",
             "failed_recoverable",
             "failed_terminal",
