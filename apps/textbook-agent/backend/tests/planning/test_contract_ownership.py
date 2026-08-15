@@ -23,6 +23,7 @@ from planning.whole_lesson.packet import (
     SlotRecord,
 )
 from planning.whole_lesson.legality import build_lesson_legality_snapshot
+from planning.whole_lesson.form_agent import _repair_form_section_ownership
 from planning.whole_lesson.prompt_render import build_form_planner_payload
 from planning.whole_lesson.resolved_block_plan import resolve_block_plans
 from planning.whole_lesson.validation import validate_form_plan
@@ -257,6 +258,28 @@ def test_resolve_block_plans_joins_ownership() -> None:
     assert block.object == "table"
     assert block.placement == "main"
     assert block.reason == "table earns comparison"
+
+
+def test_form_section_ownership_is_repaired_from_block_ids() -> None:
+    teaching, form = teaching_and_form(
+        sections=[
+            ("orient", [("orient-b1", "orient", "prose")]),
+            ("explain", [("explain-b1", "explain", "prose")]),
+        ]
+    )
+    form.sections[0].forms, form.sections[1].forms = (
+        form.sections[1].forms,
+        form.sections[0].forms,
+    )
+
+    repaired = _repair_form_section_ownership(form, teaching)
+
+    assert [section.slot_id for section in repaired.sections[:2]] == [
+        "orient",
+        "explain",
+    ]
+    assert repaired.sections[0].forms[0].block_id == "orient-b1"
+    assert repaired.sections[1].forms[0].block_id == "explain-b1"
 
 
 def test_resolved_choices_preserves_single_teaching_question_id() -> None:

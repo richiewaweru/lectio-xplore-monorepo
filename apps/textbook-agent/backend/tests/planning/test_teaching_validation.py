@@ -305,3 +305,22 @@ def test_anchor_usage_accepts_active_contrast_slot() -> None:
     )
 
     assert plan.anchor_usage.contrast == "Set the case beside a near miss."
+
+
+def test_assessment_intent_requires_approved_source_when_items_exist() -> None:
+    packet = _slot_order_packet(("orient", "check"))
+    plan = _slot_order_plan(("orient", "check"))
+    plan.sections[1].blocks[0].intent = "check-understanding"
+
+    report = validate_teaching_plan(
+        plan,
+        packet,
+        permitted_intents={"orient", "check-understanding"},
+        excluded_intents=set(),
+        typical_by_slot={"orient": {"orient"}, "check": {"check-understanding"}},
+        assessment_intents={"check-understanding"},
+    )
+
+    assert any(
+        issue.code == "ASSESSMENT_SOURCE_REQUIRED" for issue in report.issues
+    )

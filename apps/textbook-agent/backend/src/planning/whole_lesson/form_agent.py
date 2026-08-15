@@ -18,6 +18,7 @@ from planning.catalogue_projections import (
 from planning.llm_contract_errors import is_transport_error, structured_output_errors
 from planning.planner_diagnostics import log_planner_attempt_failed
 from planning.whole_lesson.form_plan import FormPlan
+from planning.whole_lesson.form_plan import FormPlanSection
 from planning.whole_lesson.legality import LessonLegalitySnapshot
 from planning.whole_lesson.packet import ImmutableLessonPacket
 from planning.whole_lesson.prompt_render import (
@@ -56,6 +57,35 @@ class FormPlanResult:
     form_guidance: dict[str, Any]
     candidate_map: dict[str, tuple[str, ...]]
     attempts: int
+
+
+def _repair_form_section_ownership(
+    form_plan: FormPlan,
+    teaching_plan: TeachingPlan,
+) -> FormPlan:
+    """Move valid decisions under their authoritative teaching sections."""
+    block_to_slot = {
+        block.id: section.slot_id
+        for section in teaching_plan.sections
+        for block in section.blocks
+    }
+    forms_by_slot: dict[str, list[Any]] = {
+        section.slot_id: [] for section in teaching_plan.sections
+    }
+    unknown: list[FormPlanSection] = []
+    for section in form_plan.sections:
+        for decision in section.forms:
+            slot_id = block_to_slot.get(decision.block_id)
+            if slot_id is None:
+                unknown.append(section.model_copy(update={"forms": [decision]}))
+            else:
+                forms_by_slot[slot_id].append(decision)
+    sections = [
+        FormPlanSection(slot_id=slot_id, forms=forms)
+        for slot_id, forms in forms_by_slot.items()
+    ]
+    sections.extend(unknown)
+    return FormPlan(sections=sections)
 
 
 async def _call_form_model(
@@ -197,6 +227,7 @@ async def run_form_planner(
                 generation_id=generation_id,
                 attempt_start=attempt,
             )
+            plan = _repair_form_section_ownership(plan, teaching_plan)
             previous_output = plan.model_dump(mode="json")
 
             validation = validate_form_plan(

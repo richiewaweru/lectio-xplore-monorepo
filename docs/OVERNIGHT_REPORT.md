@@ -4,7 +4,7 @@ Date: 2026-08-15
 
 ## Truthful current status
 
-The backend is healthy. PostgreSQL, the event bus, Playwright, and the PDF temp directory are healthy. Math is waiting on visual delivery and Economics has a terminal form-candidate failure; no generation is being silently reported as ready.
+The backend is healthy. PostgreSQL, the event bus, Playwright, and the PDF temp directory are healthy. No incomplete generation is being silently reported as ready.
 
 The authenticated UI run completed for one real lesson:
 
@@ -17,8 +17,8 @@ The authenticated UI run completed for one real lesson:
 This `ready` state is truthful for that generation. It must not be read as proof that the full four-lesson acceptance matrix is complete. The remaining required lessons have not yet been run and accepted:
 
 1. Grade 6 Mathematics — Equivalent Fractions — generation `6693c7bf-8b2f-409a-906d-9f542ec59b15`, currently `awaiting_visuals`; visual retries continue to fail, so it is not accepted.
-2. Grade 8 Economics — How Supply and Demand Affect Price — generation `516aa260-13c1-4841-9484-6b67a1fb14e8`, terminally failed with `no legal form candidates for blocks: ['check-b1']`.
-3. Grade 7 English — Distinguishing a Claim from Supporting Evidence
+2. Grade 8 Economics — How Supply and Demand Affect Price — original generation `516aa260-13c1-4841-9484-6b67a1fb14e8` terminally failed with `no legal form candidates for blocks: ['check-b1']`; fresh generation `442c8a5f-16f9-4140-ac3b-9230424ac159` reached `awaiting_visuals`, but visual dispatch still fails. It is not accepted.
+3. Grade 7 English — Distinguishing a Claim from Supporting Evidence — fresh generation `7dfa7b17-1516-41f7-9c36-fb54b2abae6a` terminally failed on an item `card_id` mismatch. It is not accepted.
 
 ## Reliability changes verified
 
@@ -31,10 +31,12 @@ This `ready` state is truthful for that generation. It must not be read as proof
 - `AnchorUsage` now explicitly accepts the active `contrast` slot.
 - Failed section blocks and visual blocks can be retried without discarding blocks that already succeeded.
 - Persisted/read/export document normalization unwraps rich-text values where scalar text is required.
+- Teaching-plan assessment-source and evidence-reference repairs prevent recoverable model omissions from becoming false terminal failures.
+- Form sections are repaired into authoritative teaching-block ownership before form validation; a regression test covers the prior cross-section mismatch.
 
 Relevant commits:
 
-`428e932`, `d68f07c`, `1fd7578`, `4d463e3`, `ef19d09` (plus current uncommitted planning/schema fixes)
+`428e932`, `d68f07c`, `1fd7578`, `4d463e3`, `ef19d09`, `5185cc8` (plus current uncommitted planning/schema fixes)
 
 ## Document and export truthfulness
 
@@ -49,4 +51,4 @@ The authenticated UI export flow was exercised for both variants before the late
 
 ## Remaining acceptance work
 
-Run and verify the remaining real lessons through the authenticated UI, repair the form-candidate contract, then repeat the teacher/student export checks and append their generation IDs, statuses, section counts, retry evidence, and PDF evidence here. Until that is done, the honest overall project status is **partial — one of four real lessons accepted; Math awaits visuals and Economics is failed**.
+Run and verify the remaining real lessons through the authenticated UI, resolve the English card-ID contract failure, and repeat the teacher/student export checks for every accepted generation. Until that is done, the honest overall project status is **partial — one of four real lessons accepted; Math and the fresh Economics run await visuals, and English is failed**.

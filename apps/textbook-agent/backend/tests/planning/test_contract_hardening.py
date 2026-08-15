@@ -408,7 +408,7 @@ async def test_teaching_multi_source_draft_repairs_to_one_approved_mcq() -> None
     assert len(result.attempts) == 2
     assert logical_attempts == [1, 2]
     first_codes = {issue.code for issue in result.attempts[0].validation.issues}
-    assert {"MCQ_SOURCE_CARDINALITY", "EXCLUDED_TERM", "EVIDENCE_REF"} <= first_codes
+    assert {"MCQ_SOURCE_CARDINALITY", "EXCLUDED_TERM"} <= first_codes
 
     policy = payloads[0]["assessment_source_policy"]
     assert policy["eligible_intents"] == ["check-understanding"]
@@ -426,8 +426,30 @@ async def test_teaching_multi_source_draft_repairs_to_one_approved_mcq() -> None
     ] == item_ids
     assert any("MCQ_SOURCE_CARDINALITY" in error for error in repair["validation_errors"])
     assert any("EXCLUDED_TERM" in error for error in repair["validation_errors"])
-    assert any("EVIDENCE_REF" in error for error in repair["validation_errors"])
     assert repair["assessment_source_policy"] == policy
+
+
+@pytest.mark.asyncio
+async def test_missing_assessment_source_is_repaired_before_validation() -> None:
+    packet = _five_item_check_packet()
+    legality = _make_snapshot(
+        permitted_intents=["check-understanding"],
+        typical_by_slot={"check": ["check-understanding"]},
+        permitted_objects=["choices"],
+        compatible_objects_by_intent={"check-understanding": ["choices"]},
+    )
+    plan = _check_plan(source_ids=[])
+
+    with patch(
+        "planning.whole_lesson.teaching_agent._call_teaching_model",
+        new=AsyncMock(return_value=(plan, plan.model_dump_json())),
+    ):
+        result = await run_lesson_approach_planner(packet, legality=legality)
+
+    assert result.validation.ok
+    assert result.plan.sections[0].blocks[0].source_question_ids == [
+        packet.approved_items[0].id
+    ]
 
 
 @pytest.mark.asyncio

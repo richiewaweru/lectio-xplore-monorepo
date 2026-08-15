@@ -67,6 +67,44 @@ class TeachingPlanResult:
     legality: LessonLegalitySnapshot
 
 
+def _repair_missing_assessment_sources(
+    plan: TeachingPlan,
+    packet: ImmutableLessonPacket,
+    assessment_intents: set[str],
+) -> None:
+    """Assign unused approved cards when a model omits assessment ownership."""
+    used = {
+        source_id
+        for section in plan.sections
+        for block in section.blocks
+        for source_id in block.source_question_ids
+    }
+    available = [
+        item.id for item in packet.approved_items if item.id not in used
+    ]
+    for section in plan.sections:
+        for block in section.blocks:
+            if (
+                block.intent == "check-understanding"
+                and not block.source_question_ids
+                and available
+            ):
+                block.source_question_ids = [available.pop(0)]
+
+
+def _repair_invalid_evidence_refs(
+    plan: TeachingPlan,
+    packet: ImmutableLessonPacket,
+) -> None:
+    """Drop only evidence references that cannot resolve in this packet."""
+    allowed = allowed_teaching_evidence_refs(packet)
+    for section in plan.sections:
+        for block in section.blocks:
+            block.evidence_refs = [
+                ref for ref in block.evidence_refs if ref in allowed
+            ]
+
+
 def _assessment_source_policy(
     packet: ImmutableLessonPacket,
     snapshot: LessonLegalitySnapshot,
@@ -201,7 +239,10 @@ async def run_lesson_approach_planner(
                             "Return the complete corrected TeachingPlan JSON. "
                             "Change only fields required to satisfy these errors. "
                             "Use only intents listed under slot_intent_policy for each slot."
-                            " For a multiple-choice assessment block, select zero or one "
+                            " For the check-understanding block, when approved "
+                            "items exist, include at least one approved "
+                            "source_question_id. For a "
+                            "multiple-choice assessment block, select exactly one "
                             "approved item ID; never group IDs or reuse an ID. Attach it "
                             "only to an assessment_source_policy eligible intent. Remove "
                             "forbidden terminology and use only allowed_evidence_refs."
@@ -221,6 +262,12 @@ async def run_lesson_approach_planner(
                 attempt_start=attempt,
             )
             previous_output = plan.model_dump(mode="json")
+            _repair_missing_assessment_sources(
+                plan,
+                packet,
+                set(assessment_source_policy["eligible_intents"]),
+            )
+            _repair_invalid_evidence_refs(plan, packet)
             validation = validate_teaching_plan(
                 plan,
                 packet,

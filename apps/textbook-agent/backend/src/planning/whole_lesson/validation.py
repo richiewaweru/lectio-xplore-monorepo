@@ -332,6 +332,21 @@ def validate_teaching_plan(
                     )
                 seen_source_question_ids.add(qid)
             if (
+                block.intent == "check-understanding"
+                and packet.approved_items
+                and not block.source_question_ids
+            ):
+                issues.append(
+                    ValidationIssue(
+                        code="ASSESSMENT_SOURCE_REQUIRED",
+                        message=(
+                            "an assessment intent with approved items must own one "
+                            "or more approved source_question_ids"
+                        ),
+                        path=f"{path}.source_question_ids",
+                    )
+                )
+            if (
                 block.source_question_ids
                 and assessment_intents is not None
                 and block.intent not in assessment_intents
