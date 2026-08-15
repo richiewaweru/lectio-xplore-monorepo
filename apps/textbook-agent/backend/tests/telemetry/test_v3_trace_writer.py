@@ -77,6 +77,7 @@ async def test_record_execution_summary_writes_payload(db_session_factory) -> No
         visuals_planned=2,
         visuals_delivered=1,
         warnings=["warn"],
+        failure_kinds={"network": 1},
     )
 
     full = await repo.get_full_trace("tw-trace-2")
@@ -86,6 +87,7 @@ async def test_record_execution_summary_writes_payload(db_session_factory) -> No
     )
     assert summary_event["payload"]["sections_attempted"] == 4
     assert summary_event["payload"]["visuals_delivered"] == 1
+    assert summary_event["payload"]["failure_kinds"] == {"network": 1}
 
 
 @pytest.mark.asyncio

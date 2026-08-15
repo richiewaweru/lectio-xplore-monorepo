@@ -51,7 +51,7 @@ focused suite completed cleanly.
 
 ## 4. Failure distribution
 
-No live lesson runs have been recorded in this continuation. Runtime categories now include timeout, validation, provider, persistence, network, and unknown; production distribution is pending attributable runs.
+No live lesson runs have been recorded in this continuation. Runtime categories now include timeout, validation, provider, persistence, network, and unknown. Lane failure-kind counts are now persisted in the trace execution summary; production distribution is pending attributable runs.
 
 ## 5. Latency
 

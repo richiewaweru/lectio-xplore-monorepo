@@ -139,6 +139,7 @@ class V3TraceWriter:
         visuals_planned: int,
         visuals_delivered: int,
         warnings: list[str],
+        failure_kinds: dict[str, int] | None = None,
     ) -> None:
         payload = {
             "sections_attempted": sections_attempted,
@@ -151,6 +152,7 @@ class V3TraceWriter:
             "visuals_planned": visuals_planned,
             "visuals_delivered": visuals_delivered,
             "warnings": warnings,
+            "failure_kinds": dict(failure_kinds or {}),
         }
         await self._record_event(
             phase="execution",

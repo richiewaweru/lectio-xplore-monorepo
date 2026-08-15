@@ -421,6 +421,7 @@ async def run_generation(
         scheduled_visual_orders: set[str] = set()
         completed_visual_orders: set[str] = set()
         task_meta: dict[asyncio.Task[list[Any]], tuple[str, str, Any]] = {}
+        lane_failure_kinds: dict[str, int] = {}
 
         def _schedule_task(kind: str, section_id: str, label: str, coro: Awaitable[list[Any]], order: Any) -> None:
             task = asyncio.create_task(_guard(label, coro))
@@ -593,6 +594,10 @@ async def run_generation(
                 if isinstance(b, (GeneratedQuestionBlock, dict))
             )
             result.warnings.extend(outcome.warnings)
+            if outcome.failure_kind is not None:
+                lane_failure_kinds[outcome.failure_kind] = (
+                    lane_failure_kinds.get(outcome.failure_kind, 0) + 1
+                )
             if outcome.prose_complete:
                 result.component_blocks = [
                     GeneratedComponentBlock.model_validate(block)
@@ -704,6 +709,7 @@ async def run_generation(
                 visuals_planned=len(bundle.visual_orders),
                 visuals_delivered=len(result.visual_blocks),
                 warnings=list(result.warnings),
+                failure_kinds=lane_failure_kinds,
             )
 
         await emit_event(events.ASSEMBLY_STARTED, {"generation_id": generation_id})
