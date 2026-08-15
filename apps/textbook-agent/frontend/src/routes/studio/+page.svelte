@@ -1336,6 +1336,7 @@
 				status={v3Studio.bookletStatus}
 				issues={v3Studio.bookletIssues}
 				showIssues={false}
+				onRetryIncomplete={currentNativeRetryAction ? handleNativeRetry : undefined}
 			/>
 			<details class="mx-auto max-w-4xl px-4 pb-6">
 				<summary class="cursor-pointer text-sm font-medium text-muted-foreground">Show generation progress</summary>

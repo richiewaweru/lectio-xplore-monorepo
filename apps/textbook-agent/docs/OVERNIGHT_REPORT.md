@@ -79,7 +79,12 @@ PDF export tests pass: 24 tests covering service, telemetry, components, native 
 
 ## 8. UI changes
 
-No new UI code in this slice. Existing Studio recovery tests pass: 36 focused tests covering chunked status/resume, recovery actions, and failed-section rendering.
+`frontend/src/lib/components/studio/V3BookletPackView.svelte` now displays
+incomplete/failed section diagnostics by section ID, including missing component
+and visual names, and exposes the existing checkpoint-aware native retry when it
+is available. Focused Studio recovery/booklet tests pass: 37 tests. The broad
+`svelte-check` and production build both stalled without diagnostics in this
+workspace and were terminated; they are not claimed as green.
 
 ## 9. Still broken / unverified
 
