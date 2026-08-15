@@ -11,7 +11,9 @@ Status: in progress. This report is intentionally incomplete until authenticated
 | Grade 8 Economics — How Supply and Demand Affect Price | Not run | Missing | Missing | Missing | — |
 | Grade 7 English — Distinguishing a Claim from Supporting Evidence | Not run | Missing | Missing | Missing | — |
 
-The local browser currently reaches the Google sign-in screen. No acceptance evidence has been manufactured.
+The local frontend is reachable at `http://127.0.0.1:5173`; the in-app browser
+currently reaches the Google sign-in screen and has no existing authenticated tab
+or session. No acceptance evidence has been manufactured.
 
 ## 2. What was broken
 
