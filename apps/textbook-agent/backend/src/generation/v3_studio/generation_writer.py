@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from core.config import settings as app_settings
 from core.database.models import GenerationModel
 from generation.v3_studio.planning_artifact import (
     parse_planning_artifact,
@@ -87,6 +88,23 @@ def _derive_persisted_booklet_status(
         except ValueError:
             coherence = None
     sections = _sections_from_document(document)
+    planned_ids = set(_planned_section_ids(document, {}))
+    rendered_ids = {
+        str(section.get("section_id"))
+        for section in sections
+        if isinstance(section.get("section_id"), str)
+    }
+    diagnostics = document.get("section_diagnostics")
+    incomplete_from_diagnostics = (
+        sum(
+            isinstance(item, dict) and item.get("status") != "complete"
+            for item in diagnostics
+        )
+        if isinstance(diagnostics, list)
+        else 0
+    )
+    incomplete_sections = max(len(planned_ids - rendered_ids), incomplete_from_diagnostics)
+    planned_section_count = max(len(planned_ids), len(sections))
     booklet_status = derive_booklet_status(
         draft_section_count=len(sections),
         render_valid=bool(sections),
@@ -99,6 +117,9 @@ def _derive_persisted_booklet_status(
         fatal_issue_categories=collect_fatal_issue_categories(coherence.issues)
         if coherence is not None
         else set(),
+        incomplete_section_count=incomplete_sections,
+        planned_section_count=planned_section_count,
+        max_failed_lane_fraction=app_settings.v3_max_failed_lane_fraction,
     )
     resource_status = coherence.status if coherence is not None else "failed"
     return booklet_status, _terminal_process_status(

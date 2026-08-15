@@ -9,6 +9,7 @@ from core.database.models import GenerationModel
 from core.database.session import async_session_factory
 from generation.v3_studio.dtos import V3InputForm
 from generation.v3_studio.generation_writer import V3GenerationWriter
+from generation.v3_studio.generation_writer import _derive_persisted_booklet_status
 from generation.v3_studio.router import _persist_regenerated_visual
 from generation.v3_studio.planning_artifact import (
     SCHEMA_VERSION,
@@ -224,6 +225,35 @@ async def test_v3_generation_writer_handles_resource_finalised_and_pdf_status() 
         assert model.report_json["pdf"]["last_debug"] == {"page_url": "https://example/print"}
     finally:
         await _cleanup_generation(generation_id)
+
+
+def test_persisted_status_keeps_incomplete_sections_unusable() -> None:
+    booklet_status, process_status = _derive_persisted_booklet_status(
+        {
+            "sections": [
+                {"section_id": "intro", "header": {"title": "Intro"}},
+                {"section_id": "practice", "header": {"title": "Practice"}},
+            ],
+            "section_diagnostics": [
+                {
+                    "section_id": "practice",
+                    "status": "incomplete",
+                }
+            ],
+        },
+        {
+            "coherence": {
+                "status": "passed",
+                "blocking_count": 0,
+                "major_count": 0,
+                "minor_count": 0,
+                "issues": [],
+            }
+        },
+    )
+
+    assert booklet_status == "failed_unusable"
+    assert process_status == "failed"
 
 
 def _example_bp(name: str) -> ProductionBlueprint:

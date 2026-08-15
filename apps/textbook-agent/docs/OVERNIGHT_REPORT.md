@@ -38,6 +38,7 @@ Proven defects:
 - `backend/src/v3_execution/runtime/lanes.py`: checkpoint hydration, independent stage completion, failure classification, loud persistence logging.
 - `backend/src/v3_execution/runtime/runner.py`: stage-aware completion, visual checkpoint logging, and an explicit failed-lane/incomplete-section completion gate.
 - `backend/src/v3_execution/booklet_status.py` and `backend/src/core/config.py`: configurable `V3_MAX_FAILED_LANE_FRACTION` (default `0.0`) prevents partial or failed lane output from becoming a final-ready booklet.
+- `backend/src/generation/v3_studio/generation_writer.py`: persisted/reloaded status derivation now applies the same incomplete-section gate, preventing a document reload from reviving an incomplete pack as final.
 - `backend/src/v3_blueprint/planning/persistence.py`: single-step checkpoint payload loading.
 - `backend/src/core/config.py` and `.env.example`: 8k/16k/24k slot ceilings and 32k absolute fallback.
 - Frontend recovery paths were inspected; no additional UI change was required in this slice.
@@ -51,6 +52,8 @@ suite was not used as a gate because Vitest worker teardown stopped emitting; th
 focused suite completed cleanly.
 The completeness-gate status tests pass (11 tests), and the execution/config
 compatibility tests pass (44 tests, same existing warning).
+Generation-writer persistence plus status tests pass (28 tests, same existing
+warning).
 
 ## 4. Failure distribution
 
