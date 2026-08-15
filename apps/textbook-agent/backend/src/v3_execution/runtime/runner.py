@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from copy import deepcopy
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
@@ -39,6 +40,8 @@ from v3_execution.runtime import events
 from v3_execution.runtime.lanes import resolved_lane_limits, run_lane
 from v3_blueprint.planning.persistence import insert_step
 from v3_review import coherence_report_to_generation_summary, run_coherence_review
+
+logger = logging.getLogger(__name__)
 
 
 def _summarize_status_reason(status: str) -> str:
@@ -576,14 +579,36 @@ async def run_generation(
                 continue
             part_id = outcome.part_id
             result.component_blocks.extend(
-                b for b in outcome.component_blocks if isinstance(b, GeneratedComponentBlock)
+                GeneratedComponentBlock.model_validate(b)
+                if isinstance(b, dict)
+                else b
+                for b in outcome.component_blocks
+                if isinstance(b, (GeneratedComponentBlock, dict))
             )
             result.question_blocks.extend(
-                b for b in outcome.question_blocks if isinstance(b, GeneratedQuestionBlock)
+                GeneratedQuestionBlock.model_validate(b)
+                if isinstance(b, dict)
+                else b
+                for b in outcome.question_blocks
+                if isinstance(b, (GeneratedQuestionBlock, dict))
             )
             result.warnings.extend(outcome.warnings)
-            section_done.add(part_id)
-            question_done.add(part_id)
+            if outcome.prose_complete:
+                result.component_blocks = [
+                    GeneratedComponentBlock.model_validate(block)
+                    if isinstance(block, dict)
+                    else block
+                    for block in result.component_blocks
+                ]
+                section_done.add(part_id)
+            if outcome.questions_complete:
+                result.question_blocks = [
+                    GeneratedQuestionBlock.model_validate(block)
+                    if isinstance(block, dict)
+                    else block
+                    for block in result.question_blocks
+                ]
+                question_done.add(part_id)
             await _emit_ready_sections()
 
         for order in bundle.visual_orders:
@@ -627,7 +652,16 @@ async def run_generation(
                                 },
                             )
                         except Exception:  # noqa: BLE001
-                            pass
+                            logger.warning(
+                                "visual checkpoint save failed",
+                                extra={
+                                    "generation_id": generation_id,
+                                    "part_id": part_id,
+                                    "step": "visual",
+                                    "work_order_id": order.work_order_id,
+                                },
+                                exc_info=True,
+                            )
 
         async def _answer_key_safe() -> Any:
             if bundle.answer_key_order is None:

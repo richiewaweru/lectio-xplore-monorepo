@@ -64,6 +64,10 @@ async def test_run_lane_skips_existing_prose_step() -> None:
             "v3_execution.runtime.lanes.step_exists",
             new=AsyncMock(side_effect=lambda *a, **kw: kw.get("step") == "prose"),
         ),
+        patch(
+            "v3_execution.runtime.lanes.load_step_payload",
+            new=AsyncMock(return_value={"blocks": []}),
+        ),
         patch("v3_execution.runtime.lanes.insert_step", new=AsyncMock()),
     ):
         await run_lane(
@@ -75,6 +79,50 @@ async def test_run_lane_skips_existing_prose_step() -> None:
         )
 
     assert called == ["questions"]
+
+
+@pytest.mark.asyncio
+async def test_run_lane_hydrates_existing_steps_and_marks_each_stage_complete() -> None:
+    prose = {
+        "block_id": "b1",
+        "section_id": "orient",
+        "component_id": "explanation",
+        "section_field": "body",
+        "position": 0,
+        "data": {"body": "saved"},
+        "source_work_order_id": "w1",
+    }
+    questions = {
+        "question_id": "q1",
+        "section_id": "orient",
+        "difficulty": "warm",
+        "data": {"prompt": "saved"},
+        "expected_answer": "yes",
+        "source_work_order_id": "qw1",
+    }
+
+    async def should_not_run() -> list:
+        raise AssertionError("completed checkpoint was regenerated")
+
+    with (
+        patch("v3_execution.runtime.lanes.step_exists", new=AsyncMock(return_value=True)),
+        patch(
+            "v3_execution.runtime.lanes.load_step_payload",
+            new=AsyncMock(side_effect=[{"blocks": [prose]}, {"blocks": [questions]}]),
+        ),
+    ):
+        outcome = await run_lane(
+            generation_id="g1",
+            part_id="orient",
+            variant_id="everyone",
+            prose_coro_factory=should_not_run,
+            questions_coro_factory=should_not_run,
+        )
+
+    assert outcome.prose_complete is True
+    assert outcome.questions_complete is True
+    assert outcome.component_blocks == [prose]
+    assert outcome.question_blocks == [questions]
 
 
 @pytest.mark.asyncio

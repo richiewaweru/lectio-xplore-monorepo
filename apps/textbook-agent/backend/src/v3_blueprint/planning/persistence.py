@@ -181,6 +181,31 @@ async def step_exists(
         return result.scalar_one_or_none() is not None
 
 
+async def load_step_payload(
+    generation_id: str,
+    *,
+    part_id: str,
+    step: str,
+    variant_id: str = DEFAULT_VARIANT_ID,
+    session: AsyncSession | None = None,
+) -> dict[str, Any] | None:
+    """Load one immutable checkpoint payload for a resumable execution step."""
+    async with _session_scope(session) as (db, _):
+        result = await db.execute(
+            select(GenerationStepModel.payload)
+            .where(
+                GenerationStepModel.generation_id == generation_id,
+                GenerationStepModel.part_id == part_id,
+                GenerationStepModel.variant_id == variant_id,
+                GenerationStepModel.step == step,
+            )
+            .order_by(GenerationStepModel.created_at.desc())
+            .limit(1)
+        )
+        payload = result.scalar_one_or_none()
+        return dict(payload) if isinstance(payload, Mapping) else None
+
+
 async def persist_chunked_state(
     generation_id: str,
     update: dict,

@@ -11,7 +11,11 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
-from v3_blueprint.planning.persistence import insert_step, step_exists
+from v3_blueprint.planning.persistence import (
+    insert_step,
+    load_step_payload,
+    step_exists,
+)
 from v3_execution.config.concurrency import lane_budget_seconds, lane_concurrency_max
 
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
@@ -26,6 +30,8 @@ class LaneOutcome:
     question_blocks: list[Any] = field(default_factory=list)
     failed_step: str | None = None
     failure_kind: FailureKind | None = None
+    prose_complete: bool = False
+    questions_complete: bool = False
     warnings: list[str] = field(default_factory=list)
 
 
@@ -55,11 +61,17 @@ async def run_lane(
     outcome = LaneOutcome(part_id=part_id)
     current_step = "prose"
 
-    async def _has_step(step: str) -> bool:
+    async def _load_step(step: str) -> list[Any] | None:
         try:
-            return await step_exists(
+            if not await step_exists(
+                generation_id, part_id=part_id, step=step, variant_id=variant_id
+            ):
+                return None
+            payload = await load_step_payload(
                 generation_id, part_id=part_id, step=step, variant_id=variant_id
             )
+            blocks = payload.get("blocks") if payload else None
+            return list(blocks) if isinstance(blocks, list) else []
         except Exception:  # noqa: BLE001
             logger.warning(
                 "lane checkpoint lookup failed",
@@ -106,11 +118,13 @@ async def run_lane(
         return "provider" if "model" in type(exc).__name__.lower() else "unknown"
 
     try:
-        if not await _has_step("prose"):
+        persisted_prose = await _load_step("prose")
+        if persisted_prose is None:
             current_step = "prose"
             blocks = await prose_coro_factory()
             outcome.component_blocks = list(blocks or [])
             await _save("prose", outcome.component_blocks)
+            outcome.prose_complete = True
             if emit_event:
                 await emit_event(
                     "lane_step_complete",
@@ -120,21 +134,31 @@ async def run_lane(
                         "step": "prose",
                     },
                 )
+        else:
+            outcome.component_blocks = persisted_prose
+            outcome.prose_complete = True
         if questions_coro_factory is not None:
-            if not await _has_step("questions"):
+            persisted_questions = await _load_step("questions")
+            if persisted_questions is None:
                 current_step = "questions"
                 qblocks = await questions_coro_factory()
                 outcome.question_blocks = list(qblocks or [])
                 await _save("questions", outcome.question_blocks)
+                outcome.questions_complete = True
                 if emit_event:
                     await emit_event(
                         "lane_step_complete",
                         {
                             "generation_id": generation_id,
                             "part_id": part_id,
-                            "step": "questions",
-                        },
-                    )
+                        "step": "questions",
+                    },
+                )
+            else:
+                outcome.question_blocks = persisted_questions
+                outcome.questions_complete = True
+        else:
+            outcome.questions_complete = True
     except TimeoutError:
         outcome.failed_step = "budget"
         outcome.failure_kind = "timeout"
