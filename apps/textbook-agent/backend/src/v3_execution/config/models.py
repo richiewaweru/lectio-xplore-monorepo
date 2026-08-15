@@ -226,10 +226,15 @@ def get_v3_model_settings(
     if (
         spec.family == ModelFamily.OPENAI_COMPATIBLE
         and spec.model_name.startswith("deepseek-")
-        and isinstance(reasoning, str)
     ):
-        settings["openai_reasoning_effort"] = reasoning
-        settings["extra_body"] = {"thinking": {"type": "enabled"}}
+        if isinstance(reasoning, str):
+            settings["openai_reasoning_effort"] = reasoning
+            settings["extra_body"] = {"thinking": {"type": "enabled"}}
+        else:
+            # DeepSeek V4 enables thinking by default when the field is
+            # omitted.  Explicitly disable it for constrained JSON nodes;
+            # omission is not equivalent to ``False`` at the transport layer.
+            settings["extra_body"] = {"thinking": {"type": "disabled"}}
 
     if base_settings:
         settings = _merge_model_settings(settings, base_settings)

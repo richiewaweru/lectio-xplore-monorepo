@@ -97,7 +97,10 @@ def test_get_v3_model_settings_omits_reasoning_for_fast_deepseek_nodes(
     monkeypatch.setenv("V3_FAST_BASE_URL", "https://api.deepseek.com")
     monkeypatch.setenv("V3_FAST_API_KEY_ENV", "DEEPSEEK_API_KEY")
 
-    assert get_v3_model_settings("v3_signal_extractor") == {"max_tokens": 8000}
+    assert get_v3_model_settings("v3_signal_extractor") == {
+        "extra_body": {"thinking": {"type": "disabled"}},
+        "max_tokens": 8000,
+    }
 
 
 def test_get_v3_model_settings_adds_deepseek_reasoning_for_standard_nodes(
@@ -179,9 +182,12 @@ def test_constrained_planner_nodes_send_no_thinking_payload(
 
     for node in (V2_FORM_PLANNER, V2_PATH_STRUCTURAL_PLANNER):
         settings = get_v3_model_settings(node)
-        assert settings == {"max_tokens": 8000 if node == V2_FORM_PLANNER else 16000}, node
+        assert settings == {
+            "extra_body": {"thinking": {"type": "disabled"}},
+            "max_tokens": 8000 if node == V2_FORM_PLANNER else 16000,
+        }, node
         assert "openai_reasoning_effort" not in settings
-        assert "extra_body" not in settings
+        assert settings["extra_body"] == {"thinking": {"type": "disabled"}}
 
 
 def test_reasoning_change_is_scoped_to_the_constrained_nodes(
