@@ -14,6 +14,9 @@ Status: in progress. This report is intentionally incomplete until authenticated
 The local frontend is reachable at `http://127.0.0.1:5173`; the in-app browser
 currently reaches the Google sign-in screen and has no existing authenticated tab
 or session. No acceptance evidence has been manufactured.
+The latest local audit still finds the required listeners on ports 8000 and 5173.
+`/health/ready` reports Postgres, event bus, and PDF temp storage healthy but
+Playwright degraded; a direct same-venv Playwright launch remains successful.
 
 ## 2. What was broken
 
@@ -78,7 +81,7 @@ No new UI code in this slice. Existing Studio recovery tests pass: 36 focused te
 ## 9. Still broken / unverified
 
 1. Authenticated browser access is unavailable in the current session, blocking real lesson creation and PDF inspection.
-2. The long-running backend health endpoint still reports Playwright degraded even though the same virtualenv passes the health check directly; process/runtime provenance needs investigation.
+2. The long-running backend health endpoint still reports Playwright degraded even though the same virtualenv passes the health check directly; process/runtime provenance needs investigation. The latest check reports 24 pending generations and zero completed/failed exports in the last hour.
 3. Four-lesson acceptance evidence, provider telemetry, live resume kill tests, and worker reclaim evidence remain outstanding. The new completion gate is verified by unit/integration tests only until an authenticated run exercises it live.
 
 ## 10. Decisions needed
