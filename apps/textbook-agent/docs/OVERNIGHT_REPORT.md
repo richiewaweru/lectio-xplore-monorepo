@@ -89,8 +89,9 @@ workspace and were terminated; they are not claimed as green.
 ## 9. Still broken / unverified
 
 1. Authenticated browser access is unavailable in the current session, blocking real lesson creation and PDF inspection.
-2. The long-running backend health endpoint still reports Playwright degraded even though the same virtualenv passes the health check directly; process/runtime provenance needs investigation. The latest check reports 24 pending generations and zero completed/failed exports in the last hour.
-3. Four-lesson acceptance evidence, provider telemetry, live resume kill tests, and worker reclaim evidence remain outstanding. The new completion gate is verified by unit/integration tests only until an authenticated run exercises it live.
+2. The in-app Google sign-in surface uses an isolated browser profile and does not share the external browser's Google session/popup state. The local CSP also incorrectly used `frame-src 'none'`, which blocked the Google GIS iframe; this is now fixed and the live response allows only `https://accounts.google.com`. A fresh in-app sign-in still requires manual completion in that browser surface.
+3. The long-running backend health endpoint previously reported Playwright degraded even though the same virtualenv passed the health check directly; restarting the orphaned workers resolved the stale runtime. The current readiness check is healthy.
+4. Four-lesson acceptance evidence, provider telemetry, live resume kill tests, and worker reclaim evidence remain outstanding. The new completion gate is verified by unit/integration tests only until an authenticated run exercises it live.
 
 ## 10. Decisions needed
 

@@ -142,8 +142,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' https://accounts.google.com; "
+            "connect-src 'self' https://accounts.google.com; "
             f"img-src 'self' data: {_csp_img_src_hosts()}; "
-            "frame-src 'none'; "
+            "frame-src https://accounts.google.com; "
             "object-src 'none'"
         )
         if settings.app_env in _PRODUCTION_LIKE_ENVS:

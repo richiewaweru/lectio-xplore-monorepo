@@ -47,6 +47,8 @@ class TestHealthRoutes:
         assert response.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
         csp = response.headers["Content-Security-Policy"]
         assert "img-src 'self' data:" in csp
+        assert "frame-src https://accounts.google.com" in csp
+        assert "connect-src 'self' https://accounts.google.com" in csp
         assert "https://storage.googleapis.com" in csp
 
     def test_deep_and_ready_share_health_shape_when_healthy(self, monkeypatch):
