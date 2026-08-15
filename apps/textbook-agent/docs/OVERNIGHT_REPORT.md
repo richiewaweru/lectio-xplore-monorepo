@@ -39,7 +39,11 @@ Proven defects:
 - `backend/src/core/config.py` and `.env.example`: 8k/16k/24k slot ceilings and 32k absolute fallback.
 - Frontend recovery paths were inspected; no additional UI change was required in this slice.
 
-Commits: `841f0d4`, `4e0fc0c`, `a0980d0`.
+Commits: `841f0d4`, `4e0fc0c`, `a0980d0`, `0603ba3`, `b0cb871`.
+
+Validation: architecture gate passed with no violations; backend Ruff passed; the
+full backend suite reached 1,156 passing tests with two stale token-policy
+assertions, which were updated and then passed in the focused rerun (10/10).
 
 ## 4. Failure distribution
 
