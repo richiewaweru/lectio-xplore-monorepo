@@ -16,6 +16,7 @@ from v3_execution.config import (
     get_v3_slot,
     get_v3_spec,
 )
+from v3_execution.config.timeouts import V3_TIMEOUTS
 from v3_execution.executors.item_diagnostics import (
     attempt_record,
     classify_item_failure,
@@ -139,7 +140,10 @@ async def execute_items_with_diagnostics(
                 node=node,
                 model_settings=get_v3_model_settings(node),
                 # Outer loop owns the attempt journal; do not hide retries here.
-                retry_policy=RetryPolicy(max_attempts=1),
+                retry_policy=RetryPolicy(
+                    max_attempts=1,
+                    call_timeout_seconds=float(V3_TIMEOUTS["item_executor"]),
+                ),
                 attempt_start=attempt,
             )
             raw = result.output

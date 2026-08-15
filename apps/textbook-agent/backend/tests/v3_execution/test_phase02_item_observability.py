@@ -76,6 +76,19 @@ async def test_i01_item_success_diagnostic() -> None:
 
 
 @pytest.mark.asyncio
+async def test_i01_item_executor_passes_explicit_timeout_policy() -> None:
+    llm_call = AsyncMock(return_value=SimpleNamespace(output=_valid_result()))
+    with patch(
+        "v3_execution.executors.item_executor.run_llm",
+        new=llm_call,
+    ):
+        await execute_items_with_diagnostics(_card(), generation_id="gen-1")
+
+    policy = llm_call.await_args.kwargs["retry_policy"]
+    assert policy.call_timeout_seconds == 90.0
+
+
+@pytest.mark.asyncio
 async def test_i02_item_timeout_diagnostic() -> None:
     with patch(
         "v3_execution.executors.item_executor.run_llm",
