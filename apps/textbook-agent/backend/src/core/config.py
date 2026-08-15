@@ -247,7 +247,7 @@ class Settings(BaseSettings):
     # Lesson Builder (share links point here)
     lesson_builder_public_url: str = "http://127.0.0.1:5173"
     pdf_export_enabled: bool = True
-    pdf_render_base_url: str = "http://localhost:5173"
+    pdf_render_base_url: str = "http://127.0.0.1:5173"
     pdf_export_timeout_ms: int = Field(default=45000, gt=0)
     playwright_timeout_ms: int = Field(default=45000, gt=0)
     pdf_max_file_size_mb: int = Field(default=50, gt=0)
@@ -304,4 +304,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
