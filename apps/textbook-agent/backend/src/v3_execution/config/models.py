@@ -234,7 +234,15 @@ def get_v3_model_settings(
     if base_settings:
         settings = _merge_model_settings(settings, base_settings)
 
-    settings.setdefault("max_tokens", app_settings.v3_max_tokens_safety)
+    slot_limits = {
+        ModelSlot.FAST: app_settings.v3_max_tokens_fast,
+        ModelSlot.STANDARD: app_settings.v3_max_tokens_standard,
+        ModelSlot.PREMIUM: app_settings.v3_max_tokens_premium,
+    }
+    settings.setdefault(
+        "max_tokens",
+        min(slot_limits[get_v3_slot(node_name)], app_settings.v3_max_tokens_safety),
+    )
 
     return settings or None
 

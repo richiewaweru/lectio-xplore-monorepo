@@ -140,7 +140,10 @@ class Settings(BaseSettings):
     learning_pack_max_resources: int = Field(default=7, ge=1)
     v3_timeout_stage1_seconds: int = Field(default=240, ge=1)
     v3_timeout_stage2_section_seconds: int = Field(default=100, ge=1)
-    v3_max_tokens_safety: int = Field(default=120000, ge=1)
+    v3_max_tokens_safety: int = Field(default=32000, ge=1)
+    v3_max_tokens_fast: int = Field(default=8000, ge=1)
+    v3_max_tokens_standard: int = Field(default=16000, ge=1)
+    v3_max_tokens_premium: int = Field(default=24000, ge=1)
     v2_skeleton_shadow_enabled: bool = True
     xplore_v2_enabled: bool = True
     xplore_v2_beta_users: str = ""
@@ -301,5 +304,4 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
 

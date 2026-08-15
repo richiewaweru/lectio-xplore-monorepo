@@ -301,7 +301,7 @@ def test_settings_v3_max_tokens_safety_default_and_env_override(monkeypatch) -> 
     monkeypatch.delenv("V3_MAX_TOKENS_SAFETY", raising=False)
 
     default_settings = Settings(_env_file=None)
-    assert default_settings.v3_max_tokens_safety == 120000
+    assert default_settings.v3_max_tokens_safety == 32000
 
     monkeypatch.setenv("V3_MAX_TOKENS_SAFETY", "150000")
     override_settings = Settings(_env_file=None)

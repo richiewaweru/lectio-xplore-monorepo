@@ -97,7 +97,7 @@ def test_get_v3_model_settings_omits_reasoning_for_fast_deepseek_nodes(
     monkeypatch.setenv("V3_FAST_BASE_URL", "https://api.deepseek.com")
     monkeypatch.setenv("V3_FAST_API_KEY_ENV", "DEEPSEEK_API_KEY")
 
-    assert get_v3_model_settings("v3_signal_extractor") == {"max_tokens": 120000}
+    assert get_v3_model_settings("v3_signal_extractor") == {"max_tokens": 8000}
 
 
 def test_get_v3_model_settings_adds_deepseek_reasoning_for_standard_nodes(
@@ -113,7 +113,7 @@ def test_get_v3_model_settings_adds_deepseek_reasoning_for_standard_nodes(
     assert settings == {
         "openai_reasoning_effort": "high",
         "extra_body": {"thinking": {"type": "enabled"}},
-        "max_tokens": 120000,
+        "max_tokens": 16000,
     }
 
 
@@ -179,7 +179,7 @@ def test_constrained_planner_nodes_send_no_thinking_payload(
 
     for node in (V2_FORM_PLANNER, V2_PATH_STRUCTURAL_PLANNER):
         settings = get_v3_model_settings(node)
-        assert settings == {"max_tokens": 120000}, node
+        assert settings == {"max_tokens": 8000 if node == V2_FORM_PLANNER else 16000}, node
         assert "openai_reasoning_effort" not in settings
         assert "extra_body" not in settings
 
@@ -220,7 +220,7 @@ def test_get_v3_model_settings_preserves_thinking_when_base_sets_extra_body(
             "thinking": {"type": "enabled"},
             "response_format": {"type": "json_object"},
         },
-        "max_tokens": 120000,
+        "max_tokens": 16000,
     }
 
 
@@ -231,14 +231,14 @@ def test_get_v3_model_settings_applies_safety_backstop_when_no_max_tokens(
     monkeypatch.setenv("V3_STANDARD_MODEL_NAME", "deepseek-v4-pro")
     monkeypatch.setenv("V3_STANDARD_BASE_URL", "https://api.deepseek.com")
     monkeypatch.setenv("V3_STANDARD_API_KEY_ENV", "DEEPSEEK_API_KEY")
-    monkeypatch.setenv("V3_MAX_TOKENS_SAFETY", "120000")
+    monkeypatch.setenv("V3_MAX_TOKENS_SAFETY", "32000")
 
     settings = get_v3_model_settings(
         "v3_stage1_planner",
         base_settings={"extra_body": {"response_format": {"type": "json_object"}}},
     )
 
-    assert settings["max_tokens"] == 120000
+    assert settings["max_tokens"] == 16000
 
 
 def test_build_model_sets_reasoning_content_profile_for_deepseek() -> None:
