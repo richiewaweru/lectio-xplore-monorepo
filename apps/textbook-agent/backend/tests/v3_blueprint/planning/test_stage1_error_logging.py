@@ -140,7 +140,7 @@ async def test_call_stage1_uses_shared_model_settings_helper() -> None:
     assert call_kwargs["model_settings"] == {
         "openai_reasoning_effort": "high",
         "extra_body": {"thinking": {"type": "enabled"}},
-        "max_tokens": 120000,
+        "max_tokens": 16000,
     }
 
 
