@@ -32,10 +32,11 @@ The older failed and repaired generations remain useful diagnostic history, but 
 - Consistent provider card-ID prefixes are repaired back to the authoritative card identity; mixed/inconsistent IDs still fail closed.
 - Visual topology recovery can derive safe local image keys, and its deterministic fallback produces label-complete topology when the model recovery path fails; completion/document validation remains fail-closed.
 - Visual QC is now fail-open for deliverable renders: `flag`, `reject`, and QC-unavailable results keep the uploaded image in the document/PDF as `ready_with_quality_warning`, while reasons, correction hints, and trace IDs remain durable. Missing/invalid sources and provider, upload, or attachment failures remain retryable hard failures with distinct diagnostics.
+- The definitive backend regression suite completed with `1184` tests, `0` failures, `0` errors, and `0` skips in `docs/evidence/backend-full-junit.xml` (507.672s). The frontend type check completed with zero errors and zero warnings; the Vitest runner executes the relevant assertions but does not terminate cleanly during teardown in this environment.
 
 Relevant commits:
 
-`428e932`, `d68f07c`, `1fd7578`, `4d463e3`, `ef19d09`, `5185cc8` (plus current uncommitted planning/schema and renderer fixes)
+`428e932`, `d68f07c`, `1fd7578`, `4d463e3`, `ef19d09`, `5185cc8`, `a8bf516`, `f0986e4`, `793326e`, `0d09f52`
 
 ## Document and export truthfulness
 
