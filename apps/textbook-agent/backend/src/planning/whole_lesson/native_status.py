@@ -115,6 +115,16 @@ def visual_quality_summary(state: Mapping[str, Any]) -> dict[str, Any]:
                 if request_id:
                     failed.append(request_id)
             qc = outcome.get("visual_qc")
+            if not isinstance(qc, Mapping):
+                # Older successful completions archived the active QC verdict
+                # instead of retaining it. Treat an archived flagged verdict
+                # as unresolved until a later accepted verdict is persisted.
+                history = outcome.get("visual_qc_history")
+                if isinstance(history, list):
+                    for candidate in reversed(history):
+                        if isinstance(candidate, Mapping):
+                            qc = candidate
+                            break
             if isinstance(qc, Mapping) and str(qc.get("status") or "") == "flagged_quality":
                 flagged.append(
                     {

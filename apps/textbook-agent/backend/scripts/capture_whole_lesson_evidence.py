@@ -324,6 +324,17 @@ def _visual_work_orders(block_execution: Mapping[str, Any], topology: Mapping[st
             continue
         content = outcome.get("content") if isinstance(outcome.get("content"), Mapping) else {}
         asset = content.get("asset") if isinstance(content.get("asset"), Mapping) else {}
+        visual_qc = outcome.get("visual_qc")
+        if not isinstance(visual_qc, Mapping):
+            # Older successful completions archived the accepted verdict while
+            # retaining the ready asset. Preserve that persisted latest verdict
+            # in evidence instead of falsely reporting QC as absent.
+            history = outcome.get("visual_qc_history")
+            if isinstance(history, list):
+                for candidate in reversed(history):
+                    if isinstance(candidate, Mapping):
+                        visual_qc = candidate
+                        break
         orders.append(
             {
                 "execution_key": key,
@@ -331,7 +342,7 @@ def _visual_work_orders(block_execution: Mapping[str, Any], topology: Mapping[st
                 "request_id": outcome.get("request_id") or asset.get("request_id"),
                 "status": outcome.get("status"),
                 "asset": dict(asset),
-                "visual_qc": outcome.get("visual_qc"),
+                "visual_qc": dict(visual_qc) if isinstance(visual_qc, Mapping) else None,
                 "visual_qc_history": outcome.get("visual_qc_history") or [],
             }
         )

@@ -24,6 +24,14 @@ def test_deterministic_topology_fallback_is_label_complete() -> None:
     assert all(edge["to_ref"] == "n0" for edge in plan["edges"])
 
 
+def test_deterministic_topology_fallback_supports_empty_closed_label_set() -> None:
+    plan = deterministic_topology_fallback([])
+
+    assert len(plan["nodes"]) == 2
+    assert plan["labels"] == []
+    assert plan["edges"]
+
+
 def test_topology_identity_and_cache_fences_include_all_versions() -> None:
     identity = topology_identity_digest(
         source_digest="source-a", labels=["A", "B"], topology_schema_version="schema/1", planner_version="planner/1"

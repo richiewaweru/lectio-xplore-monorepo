@@ -440,6 +440,13 @@ async def dispatch_and_patch_from_repo(
         if not isinstance(outcome, dict) or str(outcome.get("object") or "") != "figure":
             continue
         qc = outcome.get("visual_qc")
+        if not isinstance(qc, Mapping):
+            history = outcome.get("visual_qc_history")
+            if isinstance(history, list):
+                for candidate in reversed(history):
+                    if isinstance(candidate, Mapping):
+                        qc = candidate
+                        break
         asset = dict((outcome.get("content") or {}).get("asset") or {})
         visual_error = outcome.get("error")
         has_visual_error = isinstance(visual_error, Mapping) and str(
@@ -454,11 +461,11 @@ async def dispatch_and_patch_from_repo(
         ).strip()
         if not internal_key:
             internal_key = _local_image_key_from_src(asset.get("src")) or ""
-        if not internal_key or not (
-            bool(asset.get("topology_recovery"))
-            or str(asset.get("visual_style") or outcome.get("visual_style") or "")
-            == "diagram_precision"
-        ):
+        # Native figure work orders are diagram-precision work orders. The
+        # retry transition intentionally keeps only the renderable local src,
+        # so reconstruct the recovery route from that local image-store key
+        # when older persisted outcomes no longer retain visual_style metadata.
+        if not internal_key:
             continue
         request_id = str(outcome.get("request_id") or asset.get("request_id") or "").strip()
         if not request_id:

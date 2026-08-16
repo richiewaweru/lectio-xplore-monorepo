@@ -553,6 +553,23 @@ async def _seed_flagged_topology() -> str:
 
 
 @pytest.mark.asyncio
+async def test_topology_events_are_durable_in_json_column() -> None:
+    gid = await _seed_awaiting_visuals()
+
+    async with async_session_factory() as session:
+        repo = PageDocumentRepository(session, gid)
+        await repo.append_visual_topology_event(
+            event_type="topology_validated",
+            request_id="req-fig-1",
+            payload={"topology_sha256": "digest"},
+        )
+        state = await repo.load_visual_topology_state()
+
+    assert state["events"][-1]["type"] == "topology_validated"
+    assert state["events"][-1]["topology_sha256"] == "digest"
+
+
+@pytest.mark.asyncio
 async def test_flagged_topology_recovery_keeps_hashes_invalid_and_upstream_unchanged() -> None:
     from planning.whole_lesson.visual_topology_recovery import TopologyRecoveryError
 
@@ -627,6 +644,8 @@ async def test_accepted_topology_recovery_increments_revision_and_equal_hashes()
         assert generation is not None
         assert generation.status == "ready"
         state = await repo.load_page_generation_state()
+        figure = state["block_execution"][execution_key("explain", "fig-1")]
+        assert figure["visual_qc"] == {"status": "accepted", "reasons": []}
         document = reload_document(generation.document_json or {})
         digest = canonical_document_sha256(document)
         assert int(state["document_revision"]) == before_revision + 1

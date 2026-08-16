@@ -405,6 +405,8 @@ async def test_prepare_bridge_locks_slots_and_objective_hash(db_session) -> None
     assert state["stage"] == "awaiting_review"
     assert state["path_prepared"] is True
     assert state["structural_plan"]["cards"][0]["objective"] == lesson.objective
+    assert state["path_plan_raw"].lstrip().startswith("{")
+    assert '"sections"' in state["path_plan_raw"]
     card = await db_session.get(
         ConceptCardModel,
         f"{response.generation_id}:{lesson.concept_id}",

@@ -440,7 +440,10 @@ class PageDocumentRepository:
         result_box: list[dict[str, Any]] = []
 
         def _mut(generation: GenerationModel, _page: dict[str, Any]) -> None:
-            chunked = _coerce_chunked(generation.chunked_state_json)
+            # JSON columns are not mutable-tracked. Work on a fresh object so
+            # topology checkpoints cannot be lost when the ORM compares the
+            # pre-mutation value with the post-mutation value.
+            chunked = deepcopy(_coerce_chunked(generation.chunked_state_json))
             topology = chunked.get(VISUAL_TOPOLOGY_KEY)
             if not isinstance(topology, dict):
                 topology = {
@@ -522,7 +525,9 @@ class PageDocumentRepository:
         lock = await _page_state_lock(self.generation_id)
         async with lock:
             generation = await self._lock_generation()
-            chunked = _coerce_chunked(generation.chunked_state_json)
+            # See persist_visual_topology: nested JSON mutation must start from
+            # a detached copy to produce a durable column update.
+            chunked = deepcopy(_coerce_chunked(generation.chunked_state_json))
             topology = chunked.get(VISUAL_TOPOLOGY_KEY)
             if not isinstance(topology, dict):
                 topology = {
@@ -1719,7 +1724,17 @@ class PageDocumentRepository:
                     history.append({**previous_qc, "archived_at": _now()})
                 outcome["visual_qc_history"] = history[-5:]
                 if outcome_status == "ready":
-                    outcome.pop("visual_qc", None)
+                    # Keep an accepted QC verdict active on the current asset.
+                    # History is the audit trail for superseded verdicts; the
+                    # current field proves this ready asset passed its final gate.
+                    if (
+                        isinstance(visual_qc_payload, dict)
+                        and str(visual_qc_payload.get("status") or "")
+                        in {"accept", "accepted", "ready"}
+                    ):
+                        outcome["visual_qc"] = visual_qc_payload
+                    else:
+                        outcome.pop("visual_qc", None)
                     # A successful replacement/finalization clears the active
                     # retry error; the event and QC history remain the audit
                     # record of the earlier failed attempt.
@@ -1841,6 +1856,13 @@ class PageDocumentRepository:
                 if not isinstance(outcome, dict) or str(outcome.get("object") or "") != "figure":
                     continue
                 qc = outcome.get("visual_qc")
+                if not isinstance(qc, dict):
+                    history = outcome.get("visual_qc_history")
+                    if isinstance(history, list):
+                        for candidate in reversed(history):
+                            if isinstance(candidate, dict):
+                                qc = candidate
+                                break
                 error = outcome.get("error")
                 has_visual_error = isinstance(error, dict) and str(
                     error.get("code") or ""

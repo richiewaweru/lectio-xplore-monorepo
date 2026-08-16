@@ -107,6 +107,31 @@ def test_native_status_keeps_failed_visual_callback_retryable_after_ready_asset(
     assert projected["visual_quality"]["failed_request_ids"] == ["req-figure-1"]
 
 
+def test_native_status_surfaces_archived_flagged_qc_until_accepted_replacement() -> None:
+    key = execution_key("section-1", "figure-1")
+    projected = project_native_status(
+        "fixture-generation-archived-visual-qc",
+        _native_state(
+            stage="stage2_ready",
+            block_execution={
+                key: {
+                    "object": "figure",
+                    "status": "ready",
+                    "request_id": "req-figure-1",
+                    "content": {"asset": {"status": "ready", "src": "/images/a.png"}},
+                    "visual_qc_history": [
+                        {"status": "flagged_quality", "reasons": ["stale artwork"]}
+                    ],
+                }
+            },
+        ),
+    )
+
+    assert projected is not None
+    assert projected["visual_quality"]["retryable"] is True
+    assert projected["visual_quality"]["flagged_count"] == 1
+
+
 def test_native_status_prefers_live_checkpoint_over_stale_generation_row() -> None:
     projected = project_native_status(
         "fixture-generation-running",

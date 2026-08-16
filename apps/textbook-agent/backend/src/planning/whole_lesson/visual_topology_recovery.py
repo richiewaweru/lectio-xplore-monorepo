@@ -139,14 +139,13 @@ def _validated_topology(raw: Any, *, source: str) -> dict[str, Any]:
 
 
 def deterministic_topology_fallback(label_ids: list[str]) -> dict[str, Any]:
-    """Build a minimal label-complete topology without a provider call."""
+    """Build a minimal topology without a provider call.
+
+    A diagram may intentionally have an empty closed-label set. In that case
+    the fallback still needs a connected neutral graph; requiring a label made
+    provider-free recovery impossible for otherwise valid no-text diagrams.
+    """
     ids = [str(label_id).strip() for label_id in label_ids if str(label_id).strip()]
-    if not ids:
-        raise TopologyRecoveryError(
-            "TOPOLOGY_FALLBACK_UNAVAILABLE",
-            "deterministic topology fallback requires at least one label",
-            recoverable=False,
-        )
     nodes = [
         {"id": f"n{index}", "label_id": f"l{index}"}
         for index in range(len(ids))
@@ -154,7 +153,9 @@ def deterministic_topology_fallback(label_ids: list[str]) -> dict[str, Any]:
     # The topology contract requires a parts graph to contain at least two
     # nodes. Keep the single authoritative label complete and add one neutral
     # anchor node when the source contains only one label.
-    if len(nodes) == 1:
+    if len(nodes) == 0:
+        nodes = [{"id": "n0"}, {"id": "n1"}]
+    elif len(nodes) == 1:
         nodes.append({"id": "n1"})
     return {
         "version": "v1",

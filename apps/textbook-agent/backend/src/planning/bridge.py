@@ -796,6 +796,7 @@ async def prepare_path_lesson(
         variants=variants,
         variant_plans=variant_plans,
         native_whole_lesson=bool(use_page_docs),
+        path_plan_raw=generated.model_dump_json(indent=2),
     )
     lesson.pack_id = generation_id
     await session.flush()

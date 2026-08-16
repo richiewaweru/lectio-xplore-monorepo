@@ -32,6 +32,7 @@ Each `ready` state below is truthful for the persisted V2 document and authentic
 - `AnchorUsage` now explicitly accepts the active `contrast` slot.
 - Failed section blocks and visual blocks can be retried without discarding blocks that already succeeded.
 - Persisted/read/export document normalization unwraps rich-text values where scalar text is required.
+- The native print contract now converts legacy `<strong>`/`<em>` and `**markdown**` strings into typed inline nodes; browser DOM and a fresh PDF render now show emphasis without literal markup.
 - Teaching-plan assessment-source and evidence-reference repairs prevent recoverable model omissions from becoming false terminal failures.
 - Form sections are repaired into authoritative teaching-block ownership before form validation; a regression test covers the prior cross-section mismatch.
 - Consistent provider card-ID prefixes are repaired back to the authoritative card identity; mixed/inconsistent IDs still fail closed.
@@ -39,7 +40,7 @@ Each `ready` state below is truthful for the persisted V2 document and authentic
 
 Relevant commits:
 
-`428e932`, `d68f07c`, `1fd7578`, `4d463e3`, `ef19d09`, `5185cc8` (plus current uncommitted planning/schema fixes)
+`428e932`, `d68f07c`, `1fd7578`, `4d463e3`, `ef19d09`, `5185cc8` (plus current uncommitted planning/schema and renderer fixes)
 
 ## Document and export truthfulness
 
@@ -56,6 +57,8 @@ Fresh PDFs were captured from the browser-produced export responses into `C:\Pro
 
 All eight fresh PDFs contain no raw JSON markers. Poppler visual QA confirmed the Science teacher figure is visibly present on page 3. The in-app browser still does not materialize these fresh files in `C:\Users\richi\Downloads`; the newest file there is an older Science teacher PDF whose rendered pages contain no figure, so it is not used as current acceptance evidence.
 
+The English teacher export was re-run after rebuilding the linked `@lectio/page` package and restarting Vite. The final browser response is saved as `C:\Users\richi\Downloads\lesson-english-teacher-final-rebuilt.pdf`: 6 pages, 1 embedded image, 1 answer key, no literal `<strong>` tags, and no `**markdown**` markers. Visual inspection shows the diagram and bold emphasis intact.
+
 - Previously captured Science teacher PDF: 6 pages, includes the answer key.
 - Previously captured Science student PDF: 5 pages, omits the answer key and answer choices.
 - Both PDFs: no raw document JSON markers or stray braces in extracted text.
@@ -63,4 +66,6 @@ All eight fresh PDFs contain no raw JSON markers. Poppler visual QA confirmed th
 
 ## Remaining acceptance work
 
-The fresh PDF artifact gate is now complete. The remaining repository-level acceptance task is to run the final evidence verifier if the full protocol evidence folders are required; the current status is **all four real lessons are document-ready, teacher/student print routes are truthful, fresh browser-produced PDFs contain the expected images, and no content was dropped from the exported documents**.
+The fresh PDF artifact gate is complete and the rich-text rendering defect is fixed. The four evidence verifiers currently exit `2` for exactly one reason each: `03-path-plan-raw.txt` is absent. The original four generations were created before raw planner-response persistence existed, and their persisted state contains only the validated structural plan; the collector intentionally leaves the raw artifact empty rather than manufacturing it. New path-preparation runs now persist the validated planner response as `path_plan_raw`, covered by `tests/planning/test_path_bridge.py`.
+
+Therefore the truthful status is: **all four real lessons are document-ready, teacher/student print routes are truthful, the browser-produced PDFs retain their required images and answer-key separation, and the current code is ready to produce complete protocol evidence on new runs; the existing matrix is not yet verifier-complete because its four historical raw path-plan artifacts cannot be recovered from persisted state.**

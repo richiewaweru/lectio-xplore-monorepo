@@ -66,6 +66,7 @@ async def initialise_path_generation(
     variants: list[VariantSpec] | None = None,
     variant_plans: dict[str, StructuralPlan] | None = None,
     native_whole_lesson: bool = False,
+    path_plan_raw: str | None = None,
 ) -> None:
     signals = V3SignalSummary(
         topic=topic,
@@ -103,6 +104,11 @@ async def initialise_path_generation(
         "native_whole_lesson": bool(native_whole_lesson)
         or int(getattr(plan, "document_contract_version", 1) or 1) >= 2,
     }
+    if path_plan_raw:
+        # Preserve the validated planner response for protocol evidence and
+        # later audits. This is the canonical structured response, not a
+        # reconstructed plan manufactured by the evidence collector.
+        state["path_plan_raw"] = path_plan_raw
     # Merge into existing context from persist_structural_plan (do not clobber signals/form).
     existing = await _read_existing_context(session, generation.id)
     existing.update(
