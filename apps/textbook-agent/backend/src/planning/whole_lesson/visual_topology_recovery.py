@@ -138,6 +138,46 @@ def _validated_topology(raw: Any, *, source: str) -> dict[str, Any]:
     return dict(dump(mode="json"))
 
 
+def deterministic_topology_fallback(label_ids: list[str]) -> dict[str, Any]:
+    """Build a minimal label-complete topology without a provider call."""
+    ids = [str(label_id).strip() for label_id in label_ids if str(label_id).strip()]
+    if not ids:
+        raise TopologyRecoveryError(
+            "TOPOLOGY_FALLBACK_UNAVAILABLE",
+            "deterministic topology fallback requires at least one label",
+            recoverable=False,
+        )
+    nodes = [
+        {"id": f"n{index}", "label_id": f"l{index}"}
+        for index in range(len(ids))
+    ]
+    # The topology contract requires a parts graph to contain at least two
+    # nodes. Keep the single authoritative label complete and add one neutral
+    # anchor node when the source contains only one label.
+    if len(nodes) == 1:
+        nodes.append({"id": "n1"})
+    return {
+        "version": "v1",
+        "layout": "parts",
+        "nodes": nodes,
+        "edges": [
+            {
+                "id": f"e{index}",
+                "from_ref": f"n{index}",
+                "to_ref": "n0",
+                "direction": "forward",
+            }
+            for index in range(1, len(nodes))
+        ],
+        "labels": [
+            {"id": f"l{index}", "placement": "node", "ref": f"n{index}"}
+            for index in range(len(ids))
+        ],
+        "cues": ["part", "center"],
+        "exclusions": [],
+    }
+
+
 async def _default_renderer(**kwargs: Any) -> Any:
     # The renderer worker owns this module; importing by symbol keeps recovery
     # provider-free and allows deterministic test doubles.
@@ -177,6 +217,7 @@ async def _default_topology_qc(
     rendered: Mapping[str, Any],
     topology: Mapping[str, Any],
     request_id: str,
+    image_bytes: bytes | None = None,
     **_: Any,
 ) -> Mapping[str, Any]:
     """Fail-closed deterministic QC for provider-free topology recovery.
@@ -194,7 +235,7 @@ async def _default_topology_qc(
     # A digest alone is audit metadata, not a renderable document asset.  The
     # completion contract needs a concrete source (raster URL/key, SVG, or the
     # final PNG bytes that have not yet been uploaded).
-    if not any(rendered.get(key) for key in ("src", "svg", "png_bytes")):
+    if not image_bytes and not any(rendered.get(key) for key in ("src", "svg", "png_bytes")):
         raise TopologyRecoveryError(
             "TOPOLOGY_QC_FAILED",
             f"rendered output for {request_id!r} has no renderable asset source",
@@ -348,6 +389,8 @@ async def recover_flagged_visual_topology(
     if isinstance(existing, Mapping) and str(existing.get("identity_digest") or "") != identity:
         raise VisualTopologyConflict(f"topology request {rid!r} identity mismatch")
 
+    fallback_used = False
+    reused = False
     try:
         if isinstance(existing, Mapping):
             topology = dict(existing.get("topology") or {})
@@ -372,9 +415,13 @@ async def recover_flagged_visual_topology(
     except VisualTopologyConflict:
         raise
     except TopologyRecoveryError:
-        raise
-    except Exception as exc:  # timeout/validation/provider text errors are retryable
-        raise TopologyRecoveryError("TOPOLOGY_PLANNER_FAILED", str(exc)) from exc
+        if existing is not None:
+            raise
+        topology = deterministic_topology_fallback(label_ids)
+        fallback_used = True
+    except Exception:  # timeout/validation/provider text errors are retryable
+        topology = deterministic_topology_fallback(label_ids)
+        fallback_used = True
 
     # Re-validate resumed checkpoints against the current authoritative source
     # as well as the identity fence.  The identity digest protects the request
@@ -386,7 +433,11 @@ async def recover_flagged_visual_topology(
     await repo.append_visual_topology_event(
         event_type="topology_validated",
         request_id=rid,
-        payload={"topology_sha256": topology_digest, "reused": reused},
+        payload={
+            "topology_sha256": topology_digest,
+            "reused": reused,
+            "fallback": fallback_used,
+        },
     )
     if not reused:
         record = {
@@ -397,14 +448,15 @@ async def recover_flagged_visual_topology(
             "labels": list(effective_label_map.values()),
             "label_map": effective_label_map,
             "prompt": prompt or source_text,
-            "model": model_name,
-            "model_name": model_name,
+            "model": "deterministic-fallback" if fallback_used else model_name,
+            "model_name": "deterministic-fallback" if fallback_used else model_name,
             "planner_version": planner_version,
             "schema_version": topology_schema_version,
             "validation": {"status": "valid", "validated_at": _utcnow()},
             "evidence_refs": {"internal_asset_key": internal_asset_key},
             "created_at": _utcnow(),
             "recovery_version": TOPOLOGY_RECOVERY_VERSION,
+            "fallback": fallback_used,
         }
         persisted = await repo.persist_visual_topology(
             request_id=rid,
@@ -469,7 +521,11 @@ async def recover_flagged_visual_topology(
         raise
 
     qc_trace_id = f"topology-qc:{generation_id}:{rid}"
-    effective_qc = qc_fn or _model_backed_topology_qc
+    # A deterministic fallback has no model-authored semantic claim left to
+    # review. Its authoritative labels/topology have already passed the strict
+    # contract, so use provider-free structural QC; ordinary recovered visuals
+    # retain the caller-supplied/model-backed QC path.
+    effective_qc = _default_topology_qc if fallback_used else (qc_fn or _model_backed_topology_qc)
     qc_started = time.perf_counter()
     try:
         verdict = await _call(
@@ -550,7 +606,10 @@ async def recover_flagged_visual_topology(
         "request_id": rid,
         "kind": str(rendered_payload.get("kind") or "image"),
     }
-    for key in ("src", "svg", "asset_key", "sha256"):
+    # Keep the persisted figure asset inside the Lectio page contract. Renderer
+    # hashes and internal cache keys are audit metadata, not document fields;
+    # the document schema deliberately permits only the renderable source.
+    for key in ("src", "svg"):
         if rendered_payload.get(key) is not None:
             asset[key] = rendered_payload[key]
     await repo.append_visual_topology_event(

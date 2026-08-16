@@ -529,6 +529,17 @@
 
 	function nativeRetryAction(state: V3ChunkedPlanState | null | undefined): NativeRetryAction | null {
 		if (!state) return null;
+		// A restart can leave a ready document with an active visual callback
+		// error. The backend exposes that checkpoint as retryable visual quality;
+		// keep the visible repair action wired to the visuals-only endpoint.
+		if (
+			state.stage === 'ready' &&
+			state.visual_quality &&
+			!Array.isArray(state.visual_quality) &&
+			state.visual_quality.retryable
+		) {
+			return 'retry_visuals';
+		}
 		if (state.stage === 'awaiting_visuals') {
 			return state.next_action === 'retry_visuals' ? 'retry_visuals' : null;
 		}

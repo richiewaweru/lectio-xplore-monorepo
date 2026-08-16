@@ -1720,6 +1720,10 @@ class PageDocumentRepository:
                 outcome["visual_qc_history"] = history[-5:]
                 if outcome_status == "ready":
                     outcome.pop("visual_qc", None)
+                    # A successful replacement/finalization clears the active
+                    # retry error; the event and QC history remain the audit
+                    # record of the earlier failed attempt.
+                    outcome.pop("error", None)
                 elif visual_qc_payload is not None:
                     outcome["visual_qc"] = visual_qc_payload
                 block_execution[matched_key] = {
@@ -1763,7 +1767,12 @@ class PageDocumentRepository:
             if current == "awaiting_visuals" and not unresolved:
                 # Do not transition directly to ready: the patched document must
                 # be reloaded in a fresh session and hashed before finalization.
-                verify_after_mutation = not already
+                # Re-run the fresh-session fence even when the asset payload is
+                # byte-for-byte idempotent. A prior callback may have persisted
+                # the ready asset but failed during finalization; treating that
+                # retry as a no-op would strand the generation in
+                # `awaiting_visuals` forever.
+                verify_after_mutation = True
                 verified_revision.append(revision)
 
             events = list(state.get("events") or [])
@@ -1832,7 +1841,14 @@ class PageDocumentRepository:
                 if not isinstance(outcome, dict) or str(outcome.get("object") or "") != "figure":
                     continue
                 qc = outcome.get("visual_qc")
-                if isinstance(qc, dict) and str(qc.get("status") or "") == "flagged_quality":
+                error = outcome.get("error")
+                has_visual_error = isinstance(error, dict) and str(
+                    error.get("code") or ""
+                ) in {"VISUAL_DISPATCH", "VISUAL_COMPLETION"}
+                if (
+                    isinstance(qc, dict)
+                    and str(qc.get("status") or "") == "flagged_quality"
+                ) or has_visual_error:
                     request_id = str(outcome.get("request_id") or "")
                     if request_id:
                         flagged_ids.add(request_id)

@@ -201,12 +201,16 @@ def reload_document(envelope: dict[str, Any]) -> dict[str, Any]:
                 continue
             content = dict(block.get("content") or {})
             asset = dict(content.get("asset") or {})
-            # Older visual failure callbacks persisted optional URL fields as
-            # JSON null. The contract permits omission, not null; normalize on
+            # Older visual callbacks persisted optional URL fields as JSON null
+            # and topology recovery once persisted audit-only keys alongside
+            # the renderable asset. The page contract permits omission, not
+            # null or arbitrary metadata; normalize those legacy fields on
             # reload so a restarted worker can attach the next success.
-            for optional_key in ("src", "svg"):
+            for optional_key in ("src", "svg", "sha256", "asset_key"):
                 if asset.get(optional_key) is None:
                     asset.pop(optional_key, None)
+            for audit_key in ("sha256", "asset_key"):
+                asset.pop(audit_key, None)
             content["asset"] = asset
             block["content"] = content
         item["blocks"] = normalized_blocks

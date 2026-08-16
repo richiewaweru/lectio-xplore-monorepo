@@ -80,6 +80,33 @@ def test_native_status_awaiting_visuals_is_not_active_execution() -> None:
     assert projected["execution_started"] is False
 
 
+def test_native_status_keeps_failed_visual_callback_retryable_after_ready_asset() -> None:
+    key = execution_key("section-1", "figure-1")
+    projected = project_native_status(
+        "fixture-generation-visual-fence",
+        _native_state(
+            stage="awaiting_visuals",
+            block_execution={
+                key: {
+                    "object": "figure",
+                    "status": "ready",
+                    "request_id": "req-figure-1",
+                    "content": {"asset": {"status": "ready", "src": "/images/a.png"}},
+                    "error": {
+                        "code": "VISUAL_DISPATCH",
+                        "message": "fresh-session validation failed after visual patch",
+                    },
+                }
+            },
+        ),
+    )
+
+    assert projected is not None
+    assert projected["next_action"] == "retry_visuals"
+    assert projected["visual_quality"]["retryable"] is True
+    assert projected["visual_quality"]["failed_request_ids"] == ["req-figure-1"]
+
+
 def test_native_status_prefers_live_checkpoint_over_stale_generation_row() -> None:
     projected = project_native_status(
         "fixture-generation-running",

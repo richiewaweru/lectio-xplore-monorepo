@@ -8,6 +8,7 @@ from typing import Any, Awaitable, Callable
 import hashlib
 import json
 import time
+from urllib.parse import urlsplit
 
 from planning.whole_lesson.figure_ids import stable_figure_request_id
 from planning.whole_lesson.repository import PageDocumentRepository
@@ -18,6 +19,27 @@ from v3_execution.models import VisualGeneratorWorkOrder, VisualPlanItem
 logger = logging.getLogger(__name__)
 
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
+
+
+def _local_image_key_from_src(src: Any) -> str | None:
+    """Derive a safe local image-store key from the native image route only."""
+    raw = str(src or "").strip()
+    if not raw:
+        return None
+    parsed = urlsplit(raw)
+    path = parsed.path if parsed.scheme or parsed.netloc else raw.split("?", 1)[0]
+    prefix = "/images/"
+    if not path.startswith(prefix):
+        return None
+    key = path[len(prefix) :].strip("/")
+    parts = [part for part in key.split("/") if part]
+    if not parts or any(part in {".", ".."} for part in parts):
+        return None
+    # Only the app's own local image route may be converted. Never turn an
+    # arbitrary remote URL into an internal store key.
+    if parsed.scheme and parsed.hostname not in {"localhost", "127.0.0.1"}:
+        return None
+    return "/".join(parts)
 
 
 def figure_work_order_from_pending(
@@ -419,11 +441,19 @@ async def dispatch_and_patch_from_repo(
             continue
         qc = outcome.get("visual_qc")
         asset = dict((outcome.get("content") or {}).get("asset") or {})
-        if not isinstance(qc, Mapping) or str(qc.get("status") or "") != "flagged_quality":
+        visual_error = outcome.get("error")
+        has_visual_error = isinstance(visual_error, Mapping) and str(
+            visual_error.get("code") or ""
+        ) in {"VISUAL_DISPATCH", "VISUAL_COMPLETION"}
+        if not (
+            isinstance(qc, Mapping) and str(qc.get("status") or "") == "flagged_quality"
+        ) and not has_visual_error:
             continue
         internal_key = str(
             asset.get("internal_asset_key") or asset.get("internal_key") or ""
         ).strip()
+        if not internal_key:
+            internal_key = _local_image_key_from_src(asset.get("src")) or ""
         if not internal_key or not (
             bool(asset.get("topology_recovery"))
             or str(asset.get("visual_style") or outcome.get("visual_style") or "")
@@ -540,11 +570,11 @@ async def dispatch_and_patch_from_repo(
             "work_order": work_order,
         }
         if topology_recovery_fn is None:
-            recover_kwargs["qc_fn"] = _topology_qc_adapter(
-                work_order,
-                generation_id=generation_id,
-                request_id=request_id,
-            )
+            # This branch is already provider-free topology recovery. Its
+            # compositor has a closed label/topology contract, so use the
+            # deterministic raster preflight here; model-backed visual QC is
+            # still used for ordinary provider-generated visual dispatch.
+            recover_kwargs["qc_fn"] = topology_recovery._default_topology_qc
         try:
             recovered = await recover(**recover_kwargs)
             topology_results.append({"request_id": request_id, **recovered})
@@ -590,6 +620,24 @@ async def dispatch_and_patch_from_repo(
         result.setdefault("failures", []).extend(topology_failures)
     failures = list(result.get("failures") or [])
     if failures:
+        # A topology callback can finalize the document while a sibling
+        # dispatch result is still being assembled. Do not overwrite the
+        # truthful ready state (or raise an internal error) after that fence
+        # has succeeded; the ready document is the authoritative outcome.
+        from core.database.models import GenerationModel
+
+        get_generation = getattr(getattr(repo, "session", None), "get", None)
+        current_generation = (
+            await get_generation(GenerationModel, generation_id)
+            if callable(get_generation)
+            else None
+        )
+        if current_generation is not None and str(current_generation.status or "") == "ready":
+            result["failures"] = []
+            result["failed"] = 0
+            result.pop("error", None)
+            result["retryable"] = False
+            return result
         failed_ids = [
             str(row.get("request_id") or "")
             for row in failures

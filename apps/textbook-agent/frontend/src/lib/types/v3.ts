@@ -133,6 +133,7 @@ export interface V3ChunkedPlanState {
 	display_title?: string | null;
 	error?: string | null;
 	error_type?: string | null;
+	visual_quality?: V3VisualQualitySummary | V3VisualQualitySummary[] | null;
 	inferred_lesson_mode: V3SignalSummary['inferred_lesson_mode'] | null;
 	lesson_mode_confidence: V3SignalSummary['lesson_mode_confidence'] | null;
 	variants?: V3VariantSpec[];

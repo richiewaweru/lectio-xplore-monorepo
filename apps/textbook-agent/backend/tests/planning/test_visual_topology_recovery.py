@@ -9,10 +9,19 @@ import pytest
 from planning.whole_lesson.repository import VisualTopologyConflict
 from planning.whole_lesson.visual_topology_recovery import (
     TopologyRecoveryError,
+    deterministic_topology_fallback,
     recover_flagged_visual_topology,
     topology_cache_key,
     topology_identity_digest,
 )
+
+
+def test_deterministic_topology_fallback_is_label_complete() -> None:
+    plan = deterministic_topology_fallback(["l0", "l1", "l2", "l3"])
+
+    assert plan["layout"] == "parts"
+    assert [label["id"] for label in plan["labels"]] == ["l0", "l1", "l2", "l3"]
+    assert all(edge["to_ref"] == "n0" for edge in plan["edges"])
 
 
 def test_topology_identity_and_cache_fences_include_all_versions() -> None:
@@ -134,29 +143,28 @@ async def test_recovery_success_reuses_topology_and_never_calls_provider(monkeyp
 
 
 @pytest.mark.asyncio
-async def test_planner_failure_does_not_persist_or_render(monkeypatch):
+async def test_planner_failure_uses_deterministic_fallback(monkeypatch):
     from planning.whole_lesson import visual_topology_recovery as mod
 
     _reset_repo()
     monkeypatch.setattr(mod, "PageDocumentRepository", _FakeRepo)
-    rendered = False
-
     async def planner(**_):
         raise TimeoutError("planner timeout")
 
-    async def renderer(**_):
-        nonlocal rendered
-        rendered = True
+    async def reader(**_):
+        return b"internal-image"
 
-    with pytest.raises(TopologyRecoveryError) as exc:
-        await recover_flagged_visual_topology(
-            session=object(), generation_id="g1", request_id="r-timeout", source_text="x",
-            source_digest="src", labels=[], internal_asset_key="k",
-            planner_fn=planner, renderer_fn=renderer,
-        )
-    assert exc.value.code == "TOPOLOGY_PLANNER_FAILED"
-    assert _FakeRepo.records == {}
-    assert rendered is False
+    async def renderer(**_):
+        return {"src": "/images/fallback.png"}
+
+    result = await recover_flagged_visual_topology(
+        session=object(), generation_id="g1", request_id="r-timeout", source_text="x",
+        source_digest="src", labels=["claim"], internal_asset_key="k",
+        planner_fn=planner, reader_fn=reader, renderer_fn=renderer,
+    )
+    assert result["status"] == "ready"
+    assert _FakeRepo.records["r-timeout"]["fallback"] is True
+    assert _FakeRepo.completions[0]["asset"]["src"] == "/images/fallback.png"
 
 
 @pytest.mark.asyncio
@@ -535,6 +543,7 @@ async def test_final_raster_bytes_are_qc_reviewed_before_upload(monkeypatch):
     assert result["asset"]["src"] == "/images/r-raster.png"
     assert len(_FakeRepo.completions) == 1
     assert _FakeRepo.completions[0]["asset"]["src"] == "/images/r-raster.png"
+    assert "sha256" not in _FakeRepo.completions[0]["asset"]
     assert _FakeRepo.completions[0]["visual_qc"]["status"] == "accepted"
 
 

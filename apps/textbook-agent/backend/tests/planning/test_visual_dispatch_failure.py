@@ -423,6 +423,34 @@ async def test_successful_qc_replacement_archives_history_and_clears_active_warn
 
 
 @pytest.mark.asyncio
+async def test_idempotent_ready_callback_can_finalize_stale_visual_checkpoint() -> None:
+    gid = await _seed_awaiting_visuals()
+    asset = {
+        "status": "ready",
+        "kind": "image",
+        "src": "https://example.test/idempotent.png",
+    }
+    async with async_session_factory() as session:
+        repo = PageDocumentRepository(session, gid)
+        first = await repo.apply_visual_completion(
+            request_id="req-fig-1", supplied_block_id="fig-1", asset=asset
+        )
+        assert first.status == "ready"
+
+        # Simulate a restart after the asset patch but before the final
+        # transition was durably observed by the caller.
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        generation.status = "awaiting_visuals"
+        await session.commit()
+
+        second = await repo.apply_visual_completion(
+            request_id="req-fig-1", supplied_block_id="fig-1", asset=asset
+        )
+        assert second.status == "ready"
+
+
+@pytest.mark.asyncio
 async def test_visual_completion_recovers_missing_document_request_id_after_restart() -> None:
     gid = await _seed_awaiting_visuals()
     async with async_session_factory() as session:

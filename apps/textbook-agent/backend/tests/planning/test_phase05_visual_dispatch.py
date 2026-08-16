@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from planning.whole_lesson import visual_dispatch
 from planning.whole_lesson.visual_dispatch import (
     collect_pending_figure_dispatches,
     dispatch_native_pending_visuals,
@@ -287,7 +288,6 @@ async def test_flagged_quality_with_url_is_failed_and_retryable() -> None:
 async def test_product_dispatch_injects_topology_qc_adapter_and_returns_awaiting_visuals_on_flag(
     monkeypatch,
 ) -> None:
-    from planning.whole_lesson import visual_dispatch
     from planning.whole_lesson.visual_dispatch import dispatch_and_patch_from_repo
     from planning.whole_lesson.visual_topology_recovery import TopologyRecoveryError
 
@@ -352,3 +352,13 @@ async def test_product_dispatch_injects_topology_qc_adapter_and_returns_awaiting
     assert captured.get("work_order") is not None
     assert result["failed"] >= 1
     assert result["topology_recovery"][0]["status"] == "awaiting_visuals"
+def test_local_image_key_from_src_accepts_only_app_image_routes() -> None:
+    assert (
+        visual_dispatch._local_image_key_from_src(
+            "http://127.0.0.1:8000/images/gen/explain/figure.png"
+        )
+        == "gen/explain/figure.png"
+    )
+    assert visual_dispatch._local_image_key_from_src("/images/gen/figure.png") == "gen/figure.png"
+    assert visual_dispatch._local_image_key_from_src("https://example.com/images/gen/figure.png") is None
+    assert visual_dispatch._local_image_key_from_src("http://127.0.0.1:8000/images/../secret.png") is None

@@ -94,6 +94,39 @@ def validate_item_result(
     return validated
 
 
+def repair_item_result_identity(
+    result: ItemGenerationResult,
+    card: ConceptCard,
+) -> ItemGenerationResult:
+    """Repair a provider's consistent identity echo using the approved card.
+
+    The executor is called for exactly one authoritative card. Some providers
+    occasionally mutate the opaque card-id prefix while preserving every item
+    suffix. That is a transport/echo defect, not a new card. Repair only this
+    narrow, self-consistent shape; mixed or unrelated ids still fail closed in
+    ``validate_item_result``.
+    """
+    if result.card_id == card.id:
+        return result
+    prefix = f"{result.card_id}."
+    if not result.items or not all(
+        item.question_id.startswith(prefix) for item in result.items
+    ):
+        return result
+    repaired_items = [
+        item.model_copy(
+            update={
+                "question_id": f"{card.id}.{item.question_id[len(prefix):]}"
+            }
+        )
+        for item in result.items
+    ]
+    return result.model_copy(
+        update={"card_id": card.id, "items": repaired_items},
+        deep=True,
+    )
+
+
 async def execute_items(card: ConceptCard) -> ItemGenerationResult:
     """Generate one shared diagnostic set from one approved card only."""
     run = await execute_items_with_diagnostics(card)
@@ -153,6 +186,7 @@ async def execute_items_with_diagnostics(
                 parsed = ItemGenerationResult.model_validate(raw.model_dump())
             else:
                 parsed = ItemGenerationResult.model_validate(raw)
+            parsed = repair_item_result_identity(parsed, card)
             validated = validate_item_result(parsed, card)
             attempts.append(
                 attempt_record(
@@ -201,5 +235,6 @@ __all__ = [
     "ItemGenerationRun",
     "execute_items",
     "execute_items_with_diagnostics",
+    "repair_item_result_identity",
     "validate_item_result",
 ]

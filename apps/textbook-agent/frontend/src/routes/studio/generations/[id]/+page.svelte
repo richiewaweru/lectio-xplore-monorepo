@@ -132,7 +132,7 @@
 	}
 
 	async function handleRetryFlaggedVisuals(): Promise<void> {
-		if (!generationId || flaggedVisualQuality.length === 0 || visualRetrying) return;
+		if (!generationId || !nativeVisualRetryable || visualRetrying) return;
 		visualRetrying = true;
 		visualRetryError = null;
 		try {

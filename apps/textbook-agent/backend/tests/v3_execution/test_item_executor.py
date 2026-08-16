@@ -13,6 +13,7 @@ from v3_blueprint.planning.models import (
 from v3_execution.executors.item_executor import (
     ItemGenerationResult,
     execute_items,
+    repair_item_result_identity,
     validate_item_result,
 )
 from v3_execution.prompts.item_prompt import build_item_messages
@@ -108,6 +109,49 @@ def test_item_validator_recomputes_coverage_and_unmapped_count() -> None:
     assert validated.coverage == {"M1": 2, "M2": 1}
     assert validated.unmapped_options == 12
     assert validated.needs_review is False
+
+
+def test_item_identity_repair_rewrites_only_a_consistent_provider_prefix() -> None:
+    result = ItemGenerationResult(
+        card_id="mutated-card-prefix",
+        items=[
+            _item(index, None).model_copy(
+                update={
+                    "question_id": f"mutated-card-prefix.i{index}",
+                }
+            )
+            for index in range(1, 6)
+        ],
+    )
+
+    repaired = repair_item_result_identity(result, _card())
+
+    assert repaired.card_id == _card().id
+    assert [item.question_id for item in repaired.items] == [
+        f"{_card().id}.i{index}" for index in range(1, 6)
+    ]
+
+
+def test_item_identity_repair_fails_closed_for_mixed_question_ids() -> None:
+    result = ItemGenerationResult(
+        card_id="mutated-card-prefix",
+        items=[
+            _item(index, None).model_copy(
+                update={
+                    "question_id": (
+                        f"mutated-card-prefix.i{index}"
+                        if index < 5
+                        else "unrelated.i5"
+                    ),
+                }
+            )
+            for index in range(1, 6)
+        ],
+    )
+
+    repaired = repair_item_result_identity(result, _card())
+
+    assert repaired is result
 
 
 def test_item_validator_rejects_unknown_misconception_id() -> None:

@@ -531,7 +531,14 @@ export async function downloadV3GenerationPdf(
 	const url = URL.createObjectURL(blob);
 	const a = document.createElement('a');
 	a.href = url;
-	a.download = `lesson-${generationId}.pdf`;
+	const edition = body.edition ?? (body.include_answers ? 'teacher' : 'student');
+	a.download = `lesson-${generationId}-${edition}.pdf`;
+	document.body.appendChild(a);
 	a.click();
-	URL.revokeObjectURL(url);
+	// Keep the blob alive long enough for embedded browsers to commit the
+	// download. Revoking synchronously can silently cancel the file save.
+	window.setTimeout(() => {
+		a.remove();
+		URL.revokeObjectURL(url);
+	}, 1_000);
 }

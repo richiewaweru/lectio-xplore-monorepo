@@ -75,6 +75,16 @@ def _has_failed_visuals(page: Mapping[str, Any]) -> bool:
         asset_status = str(asset.get("status") or "")
         if status in {"failed_recoverable", "failed"} or asset_status == "failed":
             return True
+        # A visual callback can leave a ready-looking asset behind when the
+        # subsequent document/reload fence rejects the patch. Preserve the
+        # retry affordance until that visual-block error is successfully
+        # finalized; otherwise the UI reports an inert `wait_visuals` state.
+        error = outcome.get("error")
+        if isinstance(error, Mapping) and str(error.get("code") or "") in {
+            "VISUAL_DISPATCH",
+            "VISUAL_COMPLETION",
+        }:
+            return True
     return False
 
 
@@ -92,7 +102,16 @@ def visual_quality_summary(state: Mapping[str, Any]) -> dict[str, Any]:
             content = outcome.get("content") if isinstance(outcome.get("content"), Mapping) else {}
             asset = content.get("asset") if isinstance(content, Mapping) and isinstance(content.get("asset"), Mapping) else {}
             asset_status = str(asset.get("status") or "")
-            if asset_status == "failed" or str(outcome.get("status") or "") in {"failed", "failed_recoverable"}:
+            error = outcome.get("error")
+            visual_error = isinstance(error, Mapping) and str(error.get("code") or "") in {
+                "VISUAL_DISPATCH",
+                "VISUAL_COMPLETION",
+            }
+            if (
+                asset_status == "failed"
+                or str(outcome.get("status") or "") in {"failed", "failed_recoverable"}
+                or visual_error
+            ):
                 if request_id:
                     failed.append(request_id)
             qc = outcome.get("visual_qc")
