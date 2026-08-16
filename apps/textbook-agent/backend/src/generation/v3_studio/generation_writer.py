@@ -774,7 +774,7 @@ class V3GenerationWriter:
         async with self._session_factory() as session:
             result = await session.execute(
                 select(GenerationModel).where(
-                    GenerationModel.status == "running",
+                    GenerationModel.status.in_({"running", "awaiting_review"}),
                     or_(
                         GenerationModel.mode == "v3",
                         GenerationModel.requested_preset_id == "v3-studio",
@@ -793,6 +793,15 @@ class V3GenerationWriter:
                     if isinstance(model.chunked_state_json, dict)
                     else json.loads(model.chunked_state_json or "{}")
                 )
+                # Stage 2 runs in-process after the structural review row is
+                # written. Older rows can therefore say awaiting_review at
+                # the top level while their durable checkpoint says the task
+                # was already stage2_running when the server died.
+                if (
+                    model.status != "running"
+                    and str(chunked_state.get("stage") or "") != "stage2_running"
+                ):
+                    continue
                 planned_ids = _planned_section_ids(document, chunked_state)
                 rendered_ids = {
                     section.get("section_id")
@@ -829,7 +838,7 @@ class V3GenerationWriter:
                         "execution_started": False,
                     }
                 else:
-                    model.status = "failed"
+                    model.status = "failed_recoverable"
                     model.quality_passed = False
                     model.error = "Generation was interrupted by a server restart."
                     model.error_type = "server_restart"

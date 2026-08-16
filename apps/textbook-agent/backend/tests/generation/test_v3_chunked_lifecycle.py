@@ -415,6 +415,10 @@ async def test_chunked_approve_accepts_native_path_generation() -> None:
 
     assert resp.status_code == 200
     assert resp.json()["stage"] == "stage2_running"
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, generation_id)
+    assert generation is not None
+    assert generation.status == "running"
     run_stage2.assert_awaited_once()
 
 

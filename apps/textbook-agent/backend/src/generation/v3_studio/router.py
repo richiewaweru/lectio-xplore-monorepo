@@ -2922,6 +2922,18 @@ async def post_chunked_plan_approve(
     }
     if body is not None and body.display_title and body.display_title.strip():
         patch["display_title"] = body.display_title.strip()
+    # Stage 2 is an in-process task. Mark the durable generation row as running
+    # before scheduling it so a server restart can reconcile the interrupted
+    # task instead of leaving the row at the pre-approval awaiting_review
+    # checkpoint while the chunked state says stage2_running.
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, generation_id)
+        if generation is not None:
+            generation.status = "running"
+            generation.error = None
+            generation.error_type = None
+            generation.error_code = None
+            await session.commit()
     if variants:
         generation_ids = await _prepare_variant_generations(
             coordinator_id=generation_id,

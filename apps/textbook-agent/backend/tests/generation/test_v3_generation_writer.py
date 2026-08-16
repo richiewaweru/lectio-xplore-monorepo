@@ -509,7 +509,7 @@ async def test_fail_stale_running_marks_terminal_failure() -> None:
         swept = await writer.fail_stale_running()
         assert swept >= 1
         model = await _load_generation(generation_id)
-        assert model.status == "failed"
+        assert model.status == "failed_recoverable"
         assert model.error_type == "server_restart"
         assert model.document_json["progress"]["stage"] == "failed"
         assert model.document_json["progress"]["sections"]["intro"] == "failed"
@@ -592,7 +592,7 @@ async def test_fail_stale_running_marks_partial_generation_resumable() -> None:
         await writer.fail_stale_running()
 
         model = await _load_generation(generation_id)
-        assert model.status == "failed"
+        assert model.status == "failed_recoverable"
         assert model.error_code == "v3_interrupted_by_restart"
         assert model.document_json["progress"]["stage"] == "interrupted"
         state = await load_chunked_state(generation_id)
