@@ -31,3 +31,13 @@ writer failure in the UI rather than leaving the lesson spinning. The UI
 `Retry generation` action resumed only that failed stage, and the generation
 reached top-level `ready` with four document sections. The ready viewer route
 and `Download Final PDF` control were present after reload.
+
+Finally, a second UI-created generation (`69d5ec98-03db-4d94-ba7f-49f6e77dca6a`)
+was used for the provider-call boundary. Backend logs showed a DeepSeek
+request body sent at `19:58:56.617Z`, response headers at `19:58:57.433Z`, and
+the response body still being received when the backend was killed at
+`2026-08-16T22:59:26.9146087+03:00` (PID `4124`). After restart, the worker
+reclaimed the teaching checkpoint: the old lease was replaced by lease token
+`2` under worker `native-6a6667614fd4`. The retry ultimately reached
+`awaiting_teaching_approval`, proving provider-call interruption recovery
+without losing the prior structural checkpoint.

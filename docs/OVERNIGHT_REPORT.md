@@ -84,7 +84,7 @@ The captured telemetry contains 79 successful provider calls and 3 non-terminal 
 
 Checkpoint persistence, retry targeting, stale-running recovery, and visual-only retry are covered by the backend regression suite and were exercised through visible UI retry actions. The recorded reclaim evidence is `docs/evidence/worker-reclaim-junit.xml`: 86 tests, 0 failures, including stale-worker fencing, two-worker contention, lease-token reclaim, and completed-section resume. Generation restart/durability evidence is `docs/evidence/generation-restart-junit.xml`: 34 tests, 0 failures, covering stale-running recovery, pump durability, stage resume, and missing-step reconstruction. The four fresh runs have no missing evidence artifacts and no duplicate final sections.
 
-A literal OS-level mid-provider process kill was not performed; both live kills occurred at persisted pipeline checkpoints, with the second followed by worker reclaim and a successful stage-targeted retry. Provider-call interruption remains covered by deterministic lease/checkpoint tests rather than a live credit-consuming kill.
+A literal OS-level mid-provider process kill is now also recorded: generation `69d5ec98-03db-4d94-ba7f-49f6e77dca6a` was killed while a DeepSeek response body was still being received, then reclaimed under a new lease token and resumed to `awaiting_teaching_approval`. The evidence file records the timestamps and worker-token transition.
 
 The UI fixes included truthful incomplete/awaiting-visual states, actionable retry controls, durable visual topology recovery, and corrected native rich-text rendering so exported content contains emphasis rather than literal markup.
 
@@ -92,4 +92,4 @@ The UI fixes included truthful incomplete/awaiting-visual states, actionable ret
 
 - The browser’s download handling does not place every intercepted in-app export into `C:\Users\richi\Downloads`; the authoritative fresh PDFs are retained under `C:\Projects\lectio\tmp\` and the English rebuilt export is also in Downloads.
 - English’s fresh path legitimately contains no visual work order, so its fresh PDFs have zero embedded images; Science, Mathematics, and Economics retain their available figures in both presets.
-- No decision is required for the accepted matrix. The remaining operational recommendation is a controlled provider-call kill if stronger network/provider interruption evidence is desired; the non-provider process-kill gate is now complete.
+- No decision is required for the accepted matrix. Both non-provider and provider-call process-restart gates now have live evidence; the remaining Downloads interception limitation does not affect the authoritative local PDF artifacts.
