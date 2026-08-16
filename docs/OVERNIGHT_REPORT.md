@@ -74,11 +74,15 @@ The fresh PDF artifact gate is complete, the rich-text rendering defect is fixed
 
 ## Failure distribution and latency
 
-The four accepted fresh runs recorded no terminal failures; recoverable UI retries were exercised during preparation/teaching/visual stages and preserved the completed upstream work. Fresh stage wall time was 443s, 295s, 276s, and 261s; cumulative provider time was 270s, 245s, 138s, and 197s respectively. Economics recorded 79s parallel-writer wall time. A complete historical failure-kind distribution is not available in the captured fresh telemetry, so it is not invented here.
+The four accepted fresh runs recorded no terminal failures; recoverable UI retries were exercised during preparation/teaching/visual stages and preserved the completed upstream work. Fresh stage wall time was 443s, 295s, 276s, and 261s; cumulative provider time was 270s, 245s, 138s, and 197s respectively. Economics recorded 79s parallel-writer wall time.
+
+The captured telemetry contains 79 successful provider calls and 3 non-terminal failed calls: 1 lesson-approach `UnexpectedModelBehavior` and 2 visual-topology-planner `UnexpectedModelBehavior` records. No network/transport failure was recorded in the accepted matrix, and all three failed calls were recovered without delivering an incomplete document. The repository’s explicit failure-kind/retry classification is covered by the worker and lane tests; the captured provider records predate the final aggregate projection and therefore retain the raw model error rather than a fabricated category.
 
 ## Resume and UI proof
 
-Checkpoint persistence, retry targeting, stale-running recovery, and visual-only retry are covered by the backend regression suite and were exercised through visible UI retry actions. The four fresh runs have no missing evidence artifacts and no duplicate final sections. A destructive mid-run process-kill proof was not performed during this acceptance pass; that remains the main unproven operational scenario.
+Checkpoint persistence, retry targeting, stale-running recovery, and visual-only retry are covered by the backend regression suite and were exercised through visible UI retry actions. The recorded reclaim evidence is `docs/evidence/worker-reclaim-junit.xml`: 86 tests, 0 failures, including stale-worker fencing, two-worker contention, lease-token reclaim, and completed-section resume. Generation restart/durability evidence is `docs/evidence/generation-restart-junit.xml`: 34 tests, 0 failures, covering stale-running recovery, pump durability, stage resume, and missing-step reconstruction. The four fresh runs have no missing evidence artifacts and no duplicate final sections.
+
+A literal OS-level mid-provider process kill followed by a new backend process was not performed against a credit-consuming live generation during this pass; the evidence above is deterministic restart/reclaim simulation rather than a claim that that destructive scenario was live-tested.
 
 The UI fixes included truthful incomplete/awaiting-visual states, actionable retry controls, durable visual topology recovery, and corrected native rich-text rendering so exported content contains emphasis rather than literal markup.
 
@@ -86,4 +90,4 @@ The UI fixes included truthful incomplete/awaiting-visual states, actionable ret
 
 - The browser’s download handling does not place every intercepted in-app export into `C:\Users\richi\Downloads`; the authoritative fresh PDFs are retained under `C:\Projects\lectio\tmp\` and the English rebuilt export is also in Downloads.
 - English’s fresh path legitimately contains no visual work order, so its fresh PDFs have zero embedded images; Science, Mathematics, and Economics retain their available figures in both presets.
-- No decision is required for the accepted matrix. The remaining recommendation is to add a controlled worker-kill/reclaim run and persist structured failure-kind aggregates for the next overnight pass.
+- No decision is required for the accepted matrix. The remaining operational recommendation is a controlled, non-provider worker-kill run to complement the deterministic reclaim evidence and to persist structured failure-kind aggregates directly in future acceptance bundles.

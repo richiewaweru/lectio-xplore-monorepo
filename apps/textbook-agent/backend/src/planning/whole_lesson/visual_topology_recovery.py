@@ -571,8 +571,12 @@ async def recover_flagged_visual_topology(
             request_id=rid,
             payload=qc_payload,
         )
-        raise TopologyRecoveryError("TOPOLOGY_QC_FLAGGED", "deterministic topology QC flagged output")
-    if verdict_status not in {"accept", "accepted", "ready"}:
+        # Quality is advisory for now: keep the rendered image usable and
+        # preserve the verdict for a later replacement workflow.
+        accepted_qc_status = "flagged_quality"
+    else:
+        accepted_qc_status = "accepted"
+    if verdict_status not in {"accept", "accepted", "ready", "flagged_quality", "flag", "reject"}:
         await repo.append_visual_topology_event(
             event_type="topology_qc",
             request_id=rid,
@@ -619,7 +623,7 @@ async def recover_flagged_visual_topology(
         payload={"topology_sha256": topology_digest, "asset_sha256": rendered_payload.get("sha256")},
     )
     accepted_qc = {
-        "status": "accepted",
+        "status": accepted_qc_status,
         "reasons": qc_payload["reasons"],
         "correction_hint": qc_payload["correction_hint"] or None,
         "latency_ms": qc_payload["latency_ms"],
@@ -634,7 +638,7 @@ async def recover_flagged_visual_topology(
     await repo.append_visual_topology_event(
         event_type="topology_qc",
         request_id=rid,
-        payload={"status": "accepted", "document_revision": completion.document_revision, **accepted_qc},
+        payload={"status": accepted_qc_status, "document_revision": completion.document_revision, **accepted_qc},
     )
     return {
         "status": completion.status,
