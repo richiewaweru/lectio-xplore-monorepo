@@ -22,3 +22,12 @@ advanced to `awaiting_teaching_approval` with no terminal error. This proves a
 literal process kill, startup reconciliation, user-visible recovery state, and
 checkpointed resume for this run. The run was interrupted before visual work;
 this is restart/resume evidence, not a visual-QC acceptance run.
+
+The same generation was then approved through the UI and reached native
+`writing_sections` with `work_kind=post_approval_execution`. The backend was
+terminated again at `2026-08-16T22:52:01.3195627+03:00` (PID `8396`). After
+restart, the worker reclaimed the checkpoint and surfaced the real retryable
+writer failure in the UI rather than leaving the lesson spinning. The UI
+`Retry generation` action resumed only that failed stage, and the generation
+reached top-level `ready` with four document sections. The ready viewer route
+and `Download Final PDF` control were present after reload.

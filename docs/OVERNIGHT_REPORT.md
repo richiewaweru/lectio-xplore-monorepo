@@ -33,7 +33,7 @@ The older failed and repaired generations remain useful diagnostic history, but 
 - Visual topology recovery can derive safe local image keys, and its deterministic fallback produces label-complete topology when the model recovery path fails; completion/document validation remains fail-closed.
 - Visual QC is now fail-open for deliverable renders: `flag`, `reject`, and QC-unavailable results keep the uploaded image in the document/PDF as `ready_with_quality_warning`, while reasons, correction hints, and trace IDs remain durable. Missing/invalid sources and provider, upload, or attachment failures remain retryable hard failures with distinct diagnostics.
 - The definitive backend regression suite completed with `1184` tests, `0` failures, `0` errors, and `0` skips in `docs/evidence/backend-full-junit.xml` (507.672s). The frontend type check completed with zero errors and zero warnings; the Vitest runner executes the relevant assertions but does not terminate cleanly during teardown in this environment.
-- A literal authenticated UI process-restart proof is now recorded in `docs/evidence/live-process-restart-proof.md`: generation `9d863b9a-360b-4aea-ba43-b7769e000fce` was killed during section writing, reconciled as `failed_recoverable`, then resumed through the UI to `awaiting_teaching_approval` after the backend restarted.
+- A literal authenticated UI process-restart proof is now recorded in `docs/evidence/live-process-restart-proof.md`: generation `9d863b9a-360b-4aea-ba43-b7769e000fce` was killed during section writing, reconciled as `failed_recoverable`, resumed through the UI to `awaiting_teaching_approval`, killed again during native `writing_sections`, reclaimed by the restarted worker, retried from the failed stage, and finally reached `ready` with four sections.
 
 Relevant commits:
 
@@ -84,7 +84,7 @@ The captured telemetry contains 79 successful provider calls and 3 non-terminal 
 
 Checkpoint persistence, retry targeting, stale-running recovery, and visual-only retry are covered by the backend regression suite and were exercised through visible UI retry actions. The recorded reclaim evidence is `docs/evidence/worker-reclaim-junit.xml`: 86 tests, 0 failures, including stale-worker fencing, two-worker contention, lease-token reclaim, and completed-section resume. Generation restart/durability evidence is `docs/evidence/generation-restart-junit.xml`: 34 tests, 0 failures, covering stale-running recovery, pump durability, stage resume, and missing-step reconstruction. The four fresh runs have no missing evidence artifacts and no duplicate final sections.
 
-A literal OS-level mid-provider process kill was not performed; the live proof killed the backend during the section-writing pipeline before a provider call was in flight, then resumed through the UI. Provider-call interruption remains covered by deterministic lease/checkpoint tests rather than a live credit-consuming kill.
+A literal OS-level mid-provider process kill was not performed; both live kills occurred at persisted pipeline checkpoints, with the second followed by worker reclaim and a successful stage-targeted retry. Provider-call interruption remains covered by deterministic lease/checkpoint tests rather than a live credit-consuming kill.
 
 The UI fixes included truthful incomplete/awaiting-visual states, actionable retry controls, durable visual topology recovery, and corrected native rich-text rendering so exported content contains emphasis rather than literal markup.
 
