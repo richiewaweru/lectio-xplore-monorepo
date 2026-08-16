@@ -45,7 +45,16 @@ Relevant commits:
 
 The final viewer for the completed generation no longer displays raw rich-text JSON in scalar content. The complementary explanation renders as normal prose, and the figure page renders cleanly.
 
-The authenticated UI export flow was exercised for teacher and student variants of all four ready generations. The prior process reported 4 successful exports and 0 failures; process-local counters reset after restart, so that telemetry is not treated as persisted evidence. The authoritative edition checks show that every student print route omits the answer key and every teacher print route includes it. The current print route also reports the required Science figure loaded at 1024x1056. However, the in-app browser did not create a fresh local PDF in `C:\Users\richi\Downloads` after the latest UI export attempts; the newest file there is an older Science teacher PDF and its rendered pages contain no figure. It is not used as current acceptance evidence.
+The authenticated UI export flow was exercised for teacher and student variants of all four ready generations. The prior process reported 4 successful exports and 0 failures; process-local counters reset after restart, so that telemetry is not treated as persisted evidence. The authoritative edition checks show that every student print route omits the answer key and every teacher print route includes it. The current print route also reports the required Science figure loaded at 1024x1056.
+
+Fresh PDFs were captured from the browser-produced export responses into `C:\Projects\lectio\tmp\browser-captured\` and verified with `pypdf`:
+
+- Science: teacher 5 pages / answer key 1 / embedded images 1; student 4 pages / answer key 0 / embedded images 1.
+- Mathematics: teacher 5 pages / answer key 1 / embedded images 2; student 4 pages / answer key 0 / embedded images 2.
+- Economics: teacher 5 pages / answer key 1 / embedded images 1; student 4 pages / answer key 0 / embedded images 1.
+- English: teacher 6 pages / answer key 1 / embedded images 1; student 5 pages / answer key 0 / embedded images 1.
+
+All eight fresh PDFs contain no raw JSON markers. Poppler visual QA confirmed the Science teacher figure is visibly present on page 3. The in-app browser still does not materialize these fresh files in `C:\Users\richi\Downloads`; the newest file there is an older Science teacher PDF whose rendered pages contain no figure, so it is not used as current acceptance evidence.
 
 - Previously captured Science teacher PDF: 6 pages, includes the answer key.
 - Previously captured Science student PDF: 5 pages, omits the answer key and answer choices.
@@ -54,4 +63,4 @@ The authenticated UI export flow was exercised for teacher and student variants 
 
 ## Remaining acceptance work
 
-The remaining evidence task is to capture fresh local teacher/student PDF files from the in-app browser (or resolve its download handoff) and run the final repository evidence verifier. The honest current project status is **all four real lessons are document-ready, their teacher/student print routes are truthful, and the live print route contains its figure; PDF file evidence is not yet complete because the in-app browser is not placing the fresh blob downloads in `C:\Users\richi\Downloads`**.
+The fresh PDF artifact gate is now complete. The remaining repository-level acceptance task is to run the final evidence verifier if the full protocol evidence folders are required; the current status is **all four real lessons are document-ready, teacher/student print routes are truthful, fresh browser-produced PDFs contain the expected images, and no content was dropped from the exported documents**.
