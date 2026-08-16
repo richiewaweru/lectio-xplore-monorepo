@@ -429,7 +429,7 @@ def check_visual_failures(
     """Flag visual blocks that failed to generate after all retries."""
     issues: list[ReviewIssue] = []
     for block in getattr(draft_pack, "visual_blocks", []):
-        if getattr(block, "status", "ready") == "flagged_quality":
+        if getattr(block, "status", "ready") in {"flagged_quality", "ready_with_quality_warning"}:
             reasons = "; ".join(getattr(block, "qc_reasons", [])) or "quality criteria need review"
             issues.append(
                 _issue(

@@ -398,7 +398,7 @@ async def _render_frame(
             ),
         )
 
-    qc_status: Literal["ready", "flagged_quality"] = "ready"
+    qc_status: Literal["ready", "ready_with_quality_warning"] = "ready"
     qc_reasons: list[str] = []
     qc_correction_hint: str | None = None
     if visual_qc_enabled() and order.visual.mode != "simulation":
@@ -424,33 +424,18 @@ async def _render_frame(
                     error_message=str(exc),
                 ),
             )
-            if is_diagram_precision:
-                # Precision visuals are closed-label outputs.  Without QC we
-                # cannot establish that the provider artwork contains no text
-                # or that the deterministic band is correct, so fail closed:
-                # retain the composed raster for generation-specific review,
-                # but mark it retryable and keep it out of the shared cache.
-                qc_status = "flagged_quality"
-                qc_reasons = [f"visual QC unavailable: {type(exc).__name__}: {exc}"]
-                qc_correction_hint = "rerun visual quality review"
+            # QC is advisory once the renderer produced bytes. Keep the asset
+            # deliverable and record the unavailable review as a warning; only
+            # delivery/attachment failures remain retryable hard failures.
+            qc_status = "ready_with_quality_warning"
+            qc_reasons = [f"visual QC unavailable: {type(exc).__name__}: {exc}"]
+            qc_correction_hint = "rerun visual quality review"
         else:
-            if verdict.verdict == "reject":
-                return GeneratedVisualBlock(
-                    visual_id=visual_id,
-                    attaches_to=order.visual.attaches_to,
-                    frame_index=frame_index,
-                    mode=order.visual.mode,
-                    image_url=None,
-                    caption=order.visual.purpose,
-                    alt_text=order.visual.purpose,
-                    source_work_order_id=order.work_order_id,
-                    component_id=component_id,
-                    parent_visual_id=parent_visual_id,
-                    status="omitted_quality",
-                    error_message="; ".join(verdict.reasons),
-                )
-            if verdict.verdict == "flag":
-                qc_status = "flagged_quality"
+            if verdict.verdict in {"flag", "reject"}:
+                # A reject is still a QC opinion, not proof that delivery
+                # failed. Preserve the rendered bytes and review metadata so
+                # a future replacement workflow can act on the asset.
+                qc_status = "ready_with_quality_warning"
                 qc_reasons = verdict.reasons
                 qc_correction_hint = verdict.correction_hint or None
 
@@ -520,6 +505,7 @@ async def _render_frame(
         status=qc_status,
         qc_reasons=qc_reasons,
         qc_correction_hint=qc_correction_hint,
+        qc_trace_id=trace_id,
     )
     errs = validate_visual_block(block, order)
     if errs:

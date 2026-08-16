@@ -137,7 +137,7 @@ def visual_quality_summary(state: Mapping[str, Any]) -> dict[str, Any]:
                     }
                 )
     return {
-        "status": "flagged_quality" if flagged else ("failed" if failed else "ready"),
+        "status": "ready_with_quality_warning" if flagged else ("failed" if failed else "ready"),
         "flagged": flagged,
         "flagged_count": len(flagged),
         "failed_request_ids": sorted(set(failed)),

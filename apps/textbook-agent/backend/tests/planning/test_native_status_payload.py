@@ -128,6 +128,7 @@ def test_native_status_surfaces_archived_flagged_qc_until_accepted_replacement()
     )
 
     assert projected is not None
+    assert projected["visual_quality"]["status"] == "ready_with_quality_warning"
     assert projected["visual_quality"]["retryable"] is True
     assert projected["visual_quality"]["flagged_count"] == 1
 

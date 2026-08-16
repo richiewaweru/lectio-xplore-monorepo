@@ -736,7 +736,7 @@ async def test_execute_visual_qc_flag_uploads_original_with_metadata_without_ret
     blocks = await execute_visual(order, emit, trace_id="trace", generation_id="gen")
 
     assert len(blocks) == 1
-    assert blocks[0].status == "flagged_quality"
+    assert blocks[0].status == "ready_with_quality_warning", blocks[0].error_message
     assert "image-1" in (blocks[0].image_url or "")
     assert blocks[0].qc_reasons == ["label garbled"]
     assert blocks[0].qc_correction_hint == "make label legible"
@@ -745,7 +745,7 @@ async def test_execute_visual_qc_flag_uploads_original_with_metadata_without_ret
 
 
 @pytest.mark.asyncio
-async def test_execute_visual_qc_reject_omits_without_retry_or_upload(
+async def test_execute_visual_qc_reject_keeps_rendered_asset_with_warning(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     order = VisualGeneratorWorkOrder(
@@ -766,8 +766,8 @@ async def test_execute_visual_qc_reject_omits_without_retry_or_upload(
             return SimpleNamespace(bytes=b"bad-image", format="png", mime_type="image/png")
 
     class StubStore:
-        async def store_image(self, *_args, **_kwargs):
-            raise AssertionError("quality-omitted images should not upload")
+        async def store_image(self, image_bytes, *_args, **kwargs):
+            return f"https://cdn.example/{image_bytes.decode()}-{kwargs['filename']}"
 
     qc_calls = 0
 
@@ -797,9 +797,10 @@ async def test_execute_visual_qc_reject_omits_without_retry_or_upload(
     blocks = await execute_visual(order, emit, trace_id="trace", generation_id="gen")
 
     assert len(blocks) == 1
-    assert blocks[0].status == "omitted_quality"
-    assert blocks[0].image_url is None
-    assert blocks[0].error_message == "unsafe content"
+    assert blocks[0].status == "ready_with_quality_warning", blocks[0].error_message
+    assert blocks[0].image_url is not None
+    assert blocks[0].qc_reasons == ["unsafe content"]
+    assert blocks[0].qc_correction_hint == "remove unsafe content"
     assert qc_calls == 1
 
 
@@ -849,7 +850,7 @@ async def test_execute_visual_qc_error_fails_open(
     blocks = await execute_visual(order, emit, trace_id="trace", generation_id="gen")
 
     assert len(blocks) == 1
-    assert blocks[0].status == "ready"
+    assert blocks[0].status == "ready_with_quality_warning"
     assert blocks[0].image_url == "https://cdn.example/vis-qc-error.png"
 
 
@@ -985,7 +986,7 @@ async def test_diagram_precision_flagged_upload_skips_shared_cache(monkeypatch: 
         return None
 
     blocks = await execute_visual(order, emit, trace_id="trace", generation_id="gen")
-    assert blocks[0].status == "flagged_quality"
+    assert blocks[0].status == "ready_with_quality_warning"
     assert store.generated and store.generated[0] != base
     assert store.cached == 0
 
@@ -1050,7 +1051,7 @@ async def test_diagram_precision_qc_exception_fails_closed_without_cache(
         return None
 
     blocks = await execute_visual(order, emit, trace_id="trace", generation_id="gen")
-    assert blocks[0].status == "flagged_quality"
+    assert blocks[0].status == "ready_with_quality_warning"
     assert "QC UNAVAILABLE" in (blocks[0].qc_reasons[0] if blocks[0].qc_reasons else "").upper()
     assert store.generated and store.generated[0] != base
     assert store.cache_writes == 0

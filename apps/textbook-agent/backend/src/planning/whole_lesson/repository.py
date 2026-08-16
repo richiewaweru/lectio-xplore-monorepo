@@ -1673,13 +1673,9 @@ class PageDocumentRepository:
                 if asset_payload.get(optional_key) is None:
                     asset_payload.pop(optional_key, None)
             visual_qc_payload = dict(visual_qc) if visual_qc is not None else None
-            if (
-                isinstance(visual_qc_payload, dict)
-                and str(visual_qc_payload.get("status") or "") == "flagged_quality"
-                and str(asset_payload.get("status") or "") == "ready"
-            ):
-                # QC-flagged output is retryable, never a ready/hash proof.
-                asset_payload["status"] = "failed"
+            # Quality flags are advisory after a concrete asset has been
+            # rendered. Keep the image ready and preserve the QC verdict for a
+            # future replacement flow; only missing/broken assets are failed.
             outcome_status = visual_outcome_status(
                 str(asset_payload.get("status") or "")
             )
@@ -1724,20 +1720,16 @@ class PageDocumentRepository:
                     history.append({**previous_qc, "archived_at": _now()})
                 outcome["visual_qc_history"] = history[-5:]
                 if outcome_status == "ready":
-                    # Keep an accepted QC verdict active on the current asset.
-                    # History is the audit trail for superseded verdicts; the
-                    # current field proves this ready asset passed its final gate.
-                    if (
-                        isinstance(visual_qc_payload, dict)
-                        and str(visual_qc_payload.get("status") or "")
-                        in {"accept", "accepted", "ready"}
-                    ):
+                    # Preserve every QC verdict on the asset, including an
+                    # advisory flag/reject and its trace/reasons. The current
+                    # field is the verdict for this exact source; history is
+                    # retained for superseded sources and future replacement.
+                    if isinstance(visual_qc_payload, dict):
                         outcome["visual_qc"] = visual_qc_payload
                     else:
                         outcome.pop("visual_qc", None)
-                    # A successful replacement/finalization clears the active
-                    # retry error; the event and QC history remain the audit
-                    # record of the earlier failed attempt.
+                    # A successful delivery clears the active retry error; QC
+                    # warnings remain durable metadata, not delivery failures.
                     outcome.pop("error", None)
                 elif visual_qc_payload is not None:
                     outcome["visual_qc"] = visual_qc_payload

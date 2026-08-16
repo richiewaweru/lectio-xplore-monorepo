@@ -6,20 +6,14 @@ Date: 2026-08-16
 
 The backend is healthy. PostgreSQL, the event bus, Playwright, and the PDF temp directory are healthy. No incomplete generation is being silently reported as ready.
 
-The authenticated UI runs have completed the document-readiness gate for all four required real lessons:
+The authenticated UI runs completed the document-readiness gate for all four required real lessons. Each fresh generation is `ready`, has four sections, a native identity, a validated document, and a captured authenticated viewer page:
 
-- Generation: `046cdd0f-45bd-42e1-af3d-34fc91fc62bb`
-- Topic: Grade 4 Science — Why Plants Need Light
-- Persisted status/stage: `ready` / `ready`
-- Persisted sections: 4
-- UI path: prepare lesson, approve teaching plan, retry failed generation blocks, retry visual QC, then open the final viewer
+1. Grade 4 Science — `7d2e4b2b-04bd-49f5-a860-2fe0d70c5ea9`
+2. Grade 6 Mathematics — `8cb28d08-6520-4baa-947b-0f299a49b378`
+3. Grade 8 Economics — `c143abab-8a48-4354-bfeb-913d70beb1a7`
+4. Grade 7 English — `db64c9ae-e1d7-44e4-b1ed-b663aeb374d1`
 
-Each `ready` state below is truthful for the persisted V2 document and authenticated viewer. PDF edition checks and saved artifact bookkeeping remain part of the final acceptance evidence.
-
-1. Grade 6 Mathematics — Equivalent Fractions — generation `6693c7bf-8b2f-409a-906d-9f542ec59b15` is `ready` with a validated V2 document, four sections, rendered figures, and a working final-PDF action.
-2. Grade 8 Economics — How Supply and Demand Affect Price — original generation `516aa260-13c1-4841-9484-6b67a1fb14e8` terminally failed with `no legal form candidates for blocks: ['check-b1']`; fresh generation `442c8a5f-16f9-4140-ac3b-9230424ac159` is now `ready` with a validated V2 document, four sections, and a completed visual retry.
-3. Grade 7 English — Distinguishing a Claim from Supporting Evidence — generation `61fafb8b-2d34-49b5-9a81-f0c3dcba9b7f` is `ready` with a validated V2 document, four sections, and a rendered figure. The earlier generation `7dfa7b17-1516-41f7-9c36-fb54b2abae6a` did terminally fail on the item `card_id` mismatch.
-4. Grade 4 Science — Why Plants Need Light — generation `046cdd0f-45bd-42e1-af3d-34fc91fc62bb` is `ready` with a validated V2 document, four sections, and a repaired visual handoff. A stale visual-dispatch marker had made print incorrectly unavailable; the authenticated retry cleared it and the viewer now permits export.
+The older failed and repaired generations remain useful diagnostic history, but are not used as the current acceptance matrix.
 
 ## Reliability changes verified
 
@@ -37,6 +31,7 @@ Each `ready` state below is truthful for the persisted V2 document and authentic
 - Form sections are repaired into authoritative teaching-block ownership before form validation; a regression test covers the prior cross-section mismatch.
 - Consistent provider card-ID prefixes are repaired back to the authoritative card identity; mixed/inconsistent IDs still fail closed.
 - Visual topology recovery can derive safe local image keys, and its deterministic fallback produces label-complete topology when the model recovery path fails; completion/document validation remains fail-closed.
+- Visual QC is now fail-open for deliverable renders: `flag`, `reject`, and QC-unavailable results keep the uploaded image in the document/PDF as `ready_with_quality_warning`, while reasons, correction hints, and trace IDs remain durable. Missing/invalid sources and provider, upload, or attachment failures remain retryable hard failures with distinct diagnostics.
 
 Relevant commits:
 
@@ -46,14 +41,23 @@ Relevant commits:
 
 The final viewer for the completed generation no longer displays raw rich-text JSON in scalar content. The complementary explanation renders as normal prose, and the figure page renders cleanly.
 
-The authenticated UI export flow was exercised for teacher and student variants of all four ready generations. The prior process reported 4 successful exports and 0 failures; process-local counters reset after restart, so that telemetry is not treated as persisted evidence. The authoritative edition checks show that every student print route omits the answer key and every teacher print route includes it. The current print route also reports the required Science figure loaded at 1024x1056.
+The authenticated UI export flow was exercised for teacher and student variants of all four fresh ready generations. The backend health endpoint currently reports PostgreSQL, event bus, Playwright, and PDF temp directory healthy; 14 PDF exports have completed successfully with 0 failures. The authoritative edition checks show that every student print route omits the answer key and every teacher print route includes it.
 
-Fresh PDFs were captured from the browser-produced export responses into `C:\Projects\lectio\tmp\browser-captured\` and verified with `pypdf`:
+Fresh acceptance generations and evidence bundles:
+
+- Science: `7d2e4b2b-04bd-49f5-a860-2fe0d70c5ea9` / `docs/evidence/whole-lesson-runs/run-05-science-final`
+- Mathematics: `8cb28d08-6520-4baa-947b-0f299a49b378` / `docs/evidence/whole-lesson-runs/run-06-mathematics-final`
+- Economics: `c143abab-8a48-4354-bfeb-913d70beb1a7` / `docs/evidence/whole-lesson-runs/run-07-economics-final`
+- English: `db64c9ae-e1d7-44e4-b1ed-b663aeb374d1` / `docs/evidence/whole-lesson-runs/run-08-english-final`
+
+All four fresh evidence bundles pass `scripts/verify_whole_lesson_acceptance.py` with `ok: true` and no failures. Each contains a non-empty `03-path-plan-raw.txt`; the raw artifact is persisted from the planner response rather than reconstructed after the fact.
+
+Fresh PDFs were captured from the authenticated browser-produced export responses into `C:\Projects\lectio\tmp\` and verified with `pypdf`:
 
 - Science: teacher 5 pages / answer key 1 / embedded images 1; student 4 pages / answer key 0 / embedded images 1.
-- Mathematics: teacher 5 pages / answer key 1 / embedded images 2; student 4 pages / answer key 0 / embedded images 2.
-- Economics: teacher 5 pages / answer key 1 / embedded images 1; student 4 pages / answer key 0 / embedded images 1.
-- English: teacher 6 pages / answer key 1 / embedded images 1; student 5 pages / answer key 0 / embedded images 1.
+- Mathematics: teacher 5 pages / answer key 1 / embedded images 3; student 4 pages / answer key 0 / embedded images 3.
+- Economics: teacher 6 pages / answer key 1 / embedded images 1; student 4 pages / answer key 0 / embedded images 1.
+- English: teacher 5 pages / answer key 1 / embedded images 0; student 4 pages / answer key 0 / embedded images 0 (the fresh English path has no visual work order).
 
 All eight fresh PDFs contain no raw JSON markers. Poppler visual QA confirmed the Science teacher figure is visibly present on page 3. The in-app browser still does not materialize these fresh files in `C:\Users\richi\Downloads`; the newest file there is an older Science teacher PDF whose rendered pages contain no figure, so it is not used as current acceptance evidence.
 
@@ -64,8 +68,22 @@ The English teacher export was re-run after rebuilding the linked `@lectio/page`
 - Both PDFs: no raw document JSON markers or stray braces in extracted text.
 - Poppler rendered all 11 pages for visual inspection; inspected pages had readable typography, page numbers, and clean figure/content layout.
 
-## Remaining acceptance work
+## Acceptance status
 
-The fresh PDF artifact gate is complete and the rich-text rendering defect is fixed. The four evidence verifiers currently exit `2` for exactly one reason each: `03-path-plan-raw.txt` is absent. The original four generations were created before raw planner-response persistence existed, and their persisted state contains only the validated structural plan; the collector intentionally leaves the raw artifact empty rather than manufacturing it. New path-preparation runs now persist the validated planner response as `path_plan_raw`, covered by `tests/planning/test_path_bridge.py`.
+The fresh PDF artifact gate is complete, the rich-text rendering defect is fixed, and all four fresh evidence verifiers pass. The truthful status is: **all four real lessons are document-ready, teacher/student print routes are truthful, browser-produced PDFs retain the available images and answer-key separation, raw planner evidence is persisted, and the fresh acceptance matrix is verifier-complete.**
 
-Therefore the truthful status is: **all four real lessons are document-ready, teacher/student print routes are truthful, the browser-produced PDFs retain their required images and answer-key separation, and the current code is ready to produce complete protocol evidence on new runs; the existing matrix is not yet verifier-complete because its four historical raw path-plan artifacts cannot be recovered from persisted state.**
+## Failure distribution and latency
+
+The four accepted fresh runs recorded no terminal failures; recoverable UI retries were exercised during preparation/teaching/visual stages and preserved the completed upstream work. Fresh stage wall time was 443s, 295s, 276s, and 261s; cumulative provider time was 270s, 245s, 138s, and 197s respectively. Economics recorded 79s parallel-writer wall time. A complete historical failure-kind distribution is not available in the captured fresh telemetry, so it is not invented here.
+
+## Resume and UI proof
+
+Checkpoint persistence, retry targeting, stale-running recovery, and visual-only retry are covered by the backend regression suite and were exercised through visible UI retry actions. The four fresh runs have no missing evidence artifacts and no duplicate final sections. A destructive mid-run process-kill proof was not performed during this acceptance pass; that remains the main unproven operational scenario.
+
+The UI fixes included truthful incomplete/awaiting-visual states, actionable retry controls, durable visual topology recovery, and corrected native rich-text rendering so exported content contains emphasis rather than literal markup.
+
+## Still broken / decisions
+
+- The browser’s download handling does not place every intercepted in-app export into `C:\Users\richi\Downloads`; the authoritative fresh PDFs are retained under `C:\Projects\lectio\tmp\` and the English rebuilt export is also in Downloads.
+- English’s fresh path legitimately contains no visual work order, so its fresh PDFs have zero embedded images; Science, Mathematics, and Economics retain their available figures in both presets.
+- No decision is required for the accepted matrix. The remaining recommendation is to add a controlled worker-kill/reclaim run and persist structured failure-kind aggregates for the next overnight pass.

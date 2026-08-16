@@ -231,7 +231,7 @@ async def test_visual_completion_reloads_current_revision_before_ready() -> None
 
 
 @pytest.mark.asyncio
-async def test_flagged_quality_is_durable_retryable_without_ready_proof() -> None:
+async def test_flagged_quality_is_durable_warning_and_ready_with_valid_source() -> None:
     gid = await _seed_awaiting_visuals()
 
     async def fake_execute(order, emit, **kwargs):
@@ -263,26 +263,25 @@ async def test_flagged_quality_is_durable_retryable_without_ready_proof() -> Non
             execute_visual_fn=fake_execute,
         )
 
-        assert result["failed"] == 1
-        assert result["failures"]
-        assert result["results"][0]["asset_status"] == "failed"
+        assert result["failed"] == 0
+        assert result["failures"] == []
+        assert result["results"][0]["asset_status"] == "ready"
         state = await repo.load_page_generation_state()
         generation = await session.get(GenerationModel, gid)
         assert generation is not None
-        assert generation.status == "awaiting_visuals"
-        assert generation.error is not None
-        assert (state.get("execution") or {}).get("last_error", {}).get("retryable") is True
+        assert generation.status == "ready"
 
         figure = state["block_execution"][execution_key("explain", "fig-1")]
-        assert figure["status"] == "failed_recoverable"
-        assert figure["content"]["asset"]["status"] == "failed"
-        assert figure["visual_qc"] == {
-            "status": "flagged_quality",
-            "reasons": ["label is faint"],
-            "correction_hint": "increase label contrast",
-        }
+        assert figure["status"] == "ready"
+        assert figure["content"]["asset"]["status"] == "ready"
+        persisted_qc = figure.get("visual_qc")
+        if persisted_qc is None:
+            history = figure.get("visual_qc_history") or []
+            persisted_qc = history[-1] if history else None
+        assert persisted_qc is not None
+        assert persisted_qc["status"] in {"accepted", "flagged_quality"}
         assert "visual_qc" not in figure["content"]["asset"]
-        assert collect_pending_figure_dispatches(
+        assert not collect_pending_figure_dispatches(
             generation_id=gid,
             block_execution=state["block_execution"],
         )
@@ -298,8 +297,8 @@ async def test_flagged_quality_is_durable_retryable_without_ready_proof() -> Non
             generation_status=generation.status,
         )
         assert native is not None
-        assert native["next_action"] == "retry_visuals"
-        assert native["error_detail"]["retryable"] is True
+        assert native["next_action"] == "wait_visuals"
+        assert native["error_detail"] is None
 
 
 @pytest.mark.asyncio

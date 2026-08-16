@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 _TEST_DB_DIR = Path(tempfile.gettempdir()) / "textbook-agent-pytest"
 _TEST_DB_DIR.mkdir(parents=True, exist_ok=True)
-_TEST_DB_PATH = _TEST_DB_DIR / "app-runtime.db"
+_TEST_DB_PATH = _TEST_DB_DIR / f"app-runtime-{os.getpid()}.db"
 _BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
 if _TEST_DB_PATH.exists():

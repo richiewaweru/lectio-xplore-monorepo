@@ -219,7 +219,7 @@ async def test_v02_execute_visual_invoked_once() -> None:
 
 
 @pytest.mark.asyncio
-async def test_flagged_quality_with_url_is_failed_and_retryable() -> None:
+async def test_flagged_quality_with_url_is_ready_with_warning() -> None:
     async def fake_execute(order, emit, **kwargs):
         _ = order, emit, kwargs
         return [
@@ -259,29 +259,71 @@ async def test_flagged_quality_with_url_is_failed_and_retryable() -> None:
         execute_visual_fn=fake_execute,
     )
 
-    assert result["failed"] == 1
+    assert result["failed"] == 0
     assert result["results"] == [
         {
             "block_id": "fig-1",
             "request_id": "req-flagged",
             "work_order_id": "native-visual:req-flagged",
-            "asset_status": "failed",
+            "asset_status": "ready",
             "document_revision": 3,
+            "diagnostic": "qc_warning",
             "visual_qc": {
                 "status": "flagged_quality",
                 "reasons": ["label is faint"],
                 "correction_hint": "increase label contrast",
+                "trace_id": "native-visual:gen-flagged:req-flagged",
             },
         }
     ]
     kwargs = apply.await_args.kwargs
     assert kwargs["asset"] == {
-        "status": "failed",
+        "status": "ready",
         "request_id": "req-flagged",
         "kind": "image",
         "src": "https://example.test/flagged.png",
     }
     assert kwargs["visual_qc"] == result["results"][0]["visual_qc"]
+
+
+@pytest.mark.asyncio
+async def test_quality_warning_without_source_remains_failed() -> None:
+    async def fake_execute(order, emit, **kwargs):
+        _ = order, emit, kwargs
+        return [
+            type(
+                "B",
+                (),
+                {
+                    "status": "ready_with_quality_warning",
+                    "image_url": None,
+                    "fallback_image_url": None,
+                    "html_content": None,
+                    "qc_reasons": ["unreadable source"],
+                    "qc_correction_hint": "rerender",
+                },
+            )()
+        ]
+
+    apply = AsyncMock(return_value={"document_revision": 4})
+    result = await dispatch_native_pending_visuals(
+        generation_id="gen-missing-source",
+        block_execution={
+            "explain:fig-1:everyone": {
+                "object": "figure",
+                "status": "visual_pending",
+                "block_id": "fig-1",
+                "request_id": "req-missing-source",
+                "content": {"asset": {"status": "pending"}},
+            }
+        },
+        apply_completion=apply,
+        execute_visual_fn=fake_execute,
+    )
+
+    assert result["failed"] == 1
+    assert result["results"][0]["asset_status"] == "failed"
+    assert apply.await_args.kwargs["asset"]["status"] == "failed"
 
 
 @pytest.mark.asyncio

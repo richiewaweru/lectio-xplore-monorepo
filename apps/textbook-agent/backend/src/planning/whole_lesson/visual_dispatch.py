@@ -42,6 +42,32 @@ def _local_image_key_from_src(src: Any) -> str | None:
     return "/".join(parts)
 
 
+def _rendered_source_valid(src: Any) -> bool:
+    """Accept only a source the document renderer can actually resolve."""
+    raw = str(src or "").strip()
+    if not raw:
+        return False
+    parsed = urlsplit(raw)
+    if parsed.scheme in {"http", "https"}:
+        return bool(parsed.netloc)
+    if raw.startswith("data:image/"):
+        return True
+    return bool(_local_image_key_from_src(raw))
+
+
+def _visual_failure_kind(message: str) -> str:
+    text = str(message or "").lower()
+    if "upload" in text or "gcs" in text:
+        return "upload_failure"
+    if "attach" in text or "document" in text:
+        return "attachment_failure"
+    if "source" in text or "image_url" in text or "asset" in text:
+        return "missing_asset"
+    if "provider" in text or "generation_api" in text or "image_generation" in text:
+        return "provider_failure"
+    return "delivery_failure"
+
+
 def figure_work_order_from_pending(
     *,
     generation_id: str,
@@ -315,6 +341,7 @@ async def dispatch_native_pending_visuals(
             or str(outcome.get("status") or "") == "failed_recoverable"
         )
         asset_error: str | None = None
+        block_error: str | None = None
         visual_qc: dict[str, Any] | None = None
         try:
             blocks = await executor(
@@ -332,16 +359,22 @@ async def dispatch_native_pending_visuals(
                     block, "image_url", None
                 )
                 block_status = str(getattr(block, "status", "") or "")
-                # A QC-flagged image is not a successful visual delivery. Keep
-                # the asset retryable and generation in awaiting_visuals; never
-                # promote a flagged result to ready/hash proof.
-                status = "ready" if block_status == "ready" and src else "failed"
+                block_error = str(getattr(block, "error_message", "") or "").strip() or None
+                # A QC flag is advisory once a concrete image source exists.
+                # Deliver the image now and retain the QC payload so a later
+                # replacement workflow can find it.
+                source_valid = _rendered_source_valid(src)
+                status = "ready" if block_status in {"ready", "ready_with_quality_warning"} and source_valid else "failed"
+                if block_status in {"flagged_quality", "ready_with_quality_warning"} and source_valid:
+                    status = "ready"
                 if status == "ready" and not src:
                     # Simulation / placeholder-ready without URL still resolves text path.
                     src = getattr(block, "html_content", None)
-                if block_status == "flagged_quality":
+                if block_status in {"flagged_quality", "ready_with_quality_warning"}:
                     visual_qc = {
                         "status": "flagged_quality",
+                        "trace_id": getattr(block, "qc_trace_id", None)
+                        or f"native-visual:{generation_id}:{request_id}",
                         "reasons": [
                             str(reason)
                             for reason in (getattr(block, "qc_reasons", None) or [])
@@ -356,7 +389,7 @@ async def dispatch_native_pending_visuals(
                 "request_id": request_id,
                 "kind": "image",
             }
-            if isinstance(src, str) and src.startswith(("http", "data:", "/")):
+            if _rendered_source_valid(src):
                 asset["src"] = src
             if status == "ready" and asset["src"] is None and isinstance(src, str):
                 # Non-URL ready content still marks asset ready for document patching.
@@ -395,9 +428,15 @@ async def dispatch_native_pending_visuals(
         }
         if visual_qc is not None:
             row["visual_qc"] = visual_qc
+            row["diagnostic"] = "qc_warning"
         if asset_error:
             row["error"] = asset_error
+        if block_error:
+            row["error"] = block_error
         if asset["status"] == "failed":
+            row["failure_kind"] = _visual_failure_kind(
+                block_error or asset_error or "missing visual asset source"
+            )
             failures.append(row)
         results.append(row)
     return {
