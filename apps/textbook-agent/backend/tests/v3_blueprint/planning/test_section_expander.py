@@ -177,5 +177,8 @@ async def test_call_stage2_section_omits_extended_cache_beta_header(monkeypatch:
 
     assert result == brief
     call_kwargs = mock_run_llm.await_args.kwargs
-    assert call_kwargs["model_settings"] == {"max_tokens": 16000}
+    assert call_kwargs["model_settings"] == {
+        "max_tokens": 16000,
+        "extra_body": {"thinking": {"type": "disabled"}},
+    }
     assert len(call_kwargs["user_prompt"]) == 5

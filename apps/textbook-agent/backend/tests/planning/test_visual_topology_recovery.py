@@ -302,12 +302,13 @@ async def test_resumed_topology_is_revalidated_before_renderer(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_injected_qc_flag_never_completes_visual(monkeypatch):
+async def test_injected_qc_flag_keeps_rendered_visual_with_warning(monkeypatch):
     from planning.whole_lesson import visual_topology_recovery as mod
 
     _reset_repo()
     monkeypatch.setattr(mod, "PageDocumentRepository", _FakeRepo)
     completed = False
+    captured: dict[str, object] = {}
 
     async def planner(**_):
         return {
@@ -326,19 +327,22 @@ async def test_injected_qc_flag_never_completes_visual(monkeypatch):
     async def qc(**_):
         return {"status": "flagged_quality", "reasons": ["bad geometry"]}
 
-    async def completion(**_):
+    async def completion(self, **_):
         nonlocal completed
         completed = True
+        captured.update(_)
+        return SimpleNamespace(document_revision=5, status="ready")
 
     monkeypatch.setattr(_FakeRepo, "apply_visual_completion", completion)
-    with pytest.raises(TopologyRecoveryError) as exc:
-        await recover_flagged_visual_topology(
-            session=object(), generation_id="g1", request_id="r-flag",
-            source_text="x", source_digest="src", labels=[], internal_asset_key="k",
-            planner_fn=planner, reader_fn=reader, renderer_fn=renderer, qc_fn=qc,
-        )
-    assert exc.value.code == "TOPOLOGY_QC_FLAGGED"
-    assert completed is False
+    result = await recover_flagged_visual_topology(
+        session=object(), generation_id="g1", request_id="r-flag",
+        source_text="x", source_digest="src", labels=[], internal_asset_key="k",
+        planner_fn=planner, reader_fn=reader, renderer_fn=renderer, qc_fn=qc,
+    )
+    assert result["status"] == "ready"
+    assert completed is True
+    assert captured["asset"]["src"] == "/images/recovered.png"
+    assert captured["visual_qc"]["status"] == "flagged_quality"
 
 
 @pytest.mark.asyncio
@@ -557,7 +561,7 @@ async def test_final_raster_bytes_are_qc_reviewed_before_upload(monkeypatch):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("verdict", ["flag", "reject", "flagged_quality"])
-async def test_qc_flag_or_reject_never_uploads_or_completes(monkeypatch, verdict):
+async def test_qc_flag_or_reject_keeps_rendered_asset_with_warning(monkeypatch, verdict):
     from planning.whole_lesson import visual_topology_recovery as mod
 
     _reset_repo()
@@ -579,16 +583,17 @@ async def test_qc_flag_or_reject_never_uploads_or_completes(monkeypatch, verdict
     async def qc(**_):
         return {"status": verdict, "reasons": ["bad labels"]}
 
-    with pytest.raises(TopologyRecoveryError) as exc:
-        await recover_flagged_visual_topology(
-            session=object(), generation_id="g1", request_id="r-flag-bytes",
-            source_text="x", source_digest="src", labels=[], internal_asset_key="k",
-            planner_fn=planner, reader_fn=reader, renderer_fn=renderer, qc_fn=qc,
-            image_store=store,
-        )
-    assert exc.value.code == "TOPOLOGY_QC_FLAGGED"
-    assert store.uploads == []
-    assert _FakeRepo.completions == []
+    result = await recover_flagged_visual_topology(
+        session=object(), generation_id="g1", request_id="r-flag-bytes",
+        source_text="x", source_digest="src", labels=[], internal_asset_key="k",
+        planner_fn=planner, reader_fn=reader, renderer_fn=renderer, qc_fn=qc,
+        image_store=store,
+    )
+    assert result["status"] == "ready"
+    assert len(store.uploads) == 1
+    assert len(_FakeRepo.completions) == 1
+    assert _FakeRepo.completions[0]["asset"]["status"] == "ready"
+    assert _FakeRepo.completions[0]["visual_qc"]["status"] == "flagged_quality"
 
 
 @pytest.mark.asyncio
