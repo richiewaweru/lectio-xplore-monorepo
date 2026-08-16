@@ -228,7 +228,7 @@ async def lifespan(app: FastAPI):
         stale_generations = await V3GenerationWriter(async_session_factory).fail_stale_running()
         if stale_generations:
             logger.warning(
-                "Marked %d stale running v3 generation(s) as failed after restart",
+                "Reconciled %d stale v3 generation(s) after restart",
                 stale_generations,
             )
     except Exception:  # noqa: BLE001
