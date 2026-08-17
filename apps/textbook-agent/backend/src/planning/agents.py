@@ -41,7 +41,10 @@ from v3_execution.config.models import (
     V2_PATH_STRUCTURAL_PLANNER,
     V3_CONSTRUCTOR,
 )
-from v3_execution.llm_helpers import NO_OUTPUT_RETRY, structured_output_type_for_model
+from v3_execution.llm_helpers import (
+    NO_OUTPUT_RETRY,
+    prepare_structured_agent,
+)
 
 
 OutputT = TypeVar("OutputT", bound=BaseModel)
@@ -56,12 +59,14 @@ async def _run_structured(
     user_payload: dict[str, Any],
     trace_id: str | None,
 ) -> OutputT:
-    model = get_v3_model(node)
-    spec = get_v3_spec(node)
+    model, provider_output, structured_context, spec, _source = prepare_structured_agent(
+        node_name=node,
+        output_type=output_type,
+    )
     slot = get_v3_slot(node)
     agent = Agent(
         model=model,
-        output_type=structured_output_type_for_model(output_type, spec=spec),
+        output_type=provider_output,
         system_prompt=system_prompt,
         # Repair is owned by the caller's outer attempt loop (see
         # run_path_structural_planner). pydantic-ai's in-library output retry
@@ -85,6 +90,7 @@ async def _run_structured(
             max_attempts=1,
             call_timeout_seconds=float(settings.v3_timeout_stage1_seconds),
         ),
+        structured_context=structured_context,
     )
     raw = result.output
     if isinstance(raw, output_type):

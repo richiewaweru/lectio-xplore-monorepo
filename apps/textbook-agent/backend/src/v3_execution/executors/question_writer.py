@@ -3,8 +3,13 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from v3_execution.llm_helpers import run_json_agent
-from v3_execution.models import ExecutorOutcome, GeneratedQuestionBlock, QuestionWriterWorkOrder
+from v3_execution.llm_helpers import run_structured_agent
+from v3_execution.models import (
+    ExecutorOutcome,
+    GeneratedQuestionBlock,
+    QuestionWriterOutput,
+    QuestionWriterWorkOrder,
+)
 from v3_execution.prompts.question_writer import build_question_writer_prompt
 from v3_execution.config.retries import V3_MAX_RETRIES
 from v3_execution.runtime.retry_runner import run_with_retries
@@ -35,14 +40,18 @@ async def execute_questions(
 
     async def _attempt(_: bool) -> ExecutorOutcome:
         prompt = build_question_writer_prompt(order)
-        response = await run_json_agent(
+        response_model = await run_structured_agent(
             node_name="v3_question_writer",
             trace_id=trace_id,
             generation_id=generation_id,
             system_prompt="You output JSON only.",
             user_prompt=prompt,
+            output_type=QuestionWriterOutput,
             model_overrides=model_overrides,
+            repair_attempts=0,
+            retries={"output": 1},
         )
+        response = response_model.model_dump(mode="json")
         bucket = _items_map(response)
         blocks: list[GeneratedQuestionBlock] = []
         errors: list[str] = []

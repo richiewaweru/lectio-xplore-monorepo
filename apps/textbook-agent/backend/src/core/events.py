@@ -62,6 +62,10 @@ class _LLMCallEvent(BaseModel):
     endpoint_host: str | None = None
     attempt: int
     section_id: str | None = None
+    structured_mode: str | None = None
+    schema_source_kind: str | None = None
+    schema_fingerprint: str | None = None
+    strict_fallback: bool | None = None
 
     @model_validator(mode="after")
     def _mirror_trace_and_legacy_fields(self) -> Self:

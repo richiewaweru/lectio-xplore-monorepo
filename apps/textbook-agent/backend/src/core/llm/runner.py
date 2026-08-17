@@ -262,6 +262,7 @@ async def run_llm(
     node: str | None = None,
     attempt_start: int = 1,
     repair_attempts: int = 0,
+    structured_context: Any | None = None,
 ) -> Any:
     retry_policy = retry_policy or RetryPolicy()
     slot = slot or ModelSlot.FAST
@@ -282,6 +283,15 @@ async def run_llm(
         effective_settings.setdefault("anthropic_cache_tool_definitions", True)
     elif model_settings:
         effective_settings = model_settings
+
+    structured_fields: dict[str, Any] = {}
+    if structured_context is not None:
+        structured_fields = {
+            "structured_mode": getattr(structured_context, "structured_mode", None),
+            "schema_source_kind": getattr(structured_context, "schema_source_kind", None),
+            "schema_fingerprint": getattr(structured_context, "schema_fingerprint", None),
+            "strict_fallback": getattr(structured_context, "strict_fallback", None),
+        }
 
     publish = _should_publish_events(trace_id)
     if not publish:
@@ -319,6 +329,7 @@ async def run_llm(
                 endpoint_host=effective_endpoint_host,
                 attempt=event_attempt,
                 section_id=section_id,
+                **structured_fields,
             ),
         )
 
@@ -373,6 +384,7 @@ async def run_llm(
                     prompt_cache_miss_tokens=usage.prompt_cache_miss_tokens,
                     thinking_tokens=thinking_tokens,
                     cost_usd=cost_usd,
+                    **structured_fields,
                 ),
             )
             if repair_in_progress:
@@ -407,6 +419,7 @@ async def run_llm(
                     retryable=remaining_repairs > 0,
                     error=str(exc),
                     error_class=type(exc).__name__,
+                    **structured_fields,
                 ),
             )
             if remaining_repairs > 0:
@@ -454,6 +467,7 @@ async def run_llm(
                     retryable=retryable,
                     error=str(exc),
                     error_class=type(exc).__name__,
+                    **structured_fields,
                 ),
             )
             if not can_retry:

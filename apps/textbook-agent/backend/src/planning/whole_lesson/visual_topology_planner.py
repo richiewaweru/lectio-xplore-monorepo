@@ -18,7 +18,7 @@ from planning.whole_lesson.visual_topology import (
 )
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.models import V3_VISUAL_TOPOLOGY_PLANNER
-from v3_execution.llm_helpers import NO_OUTPUT_RETRY, structured_output_type_for_model
+from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 
 
 class TopologyPlannerRecoverableError(RuntimeError):
@@ -83,11 +83,13 @@ async def run_visual_topology_planner(
     source_json = _canonical_source(persisted_source)
     source_sha = hashlib.sha256(source_json.encode("utf-8")).hexdigest()
     effective_trace = trace_id or f"native-visual:{generation_id}:{request_id}:topology:v1"
-    model = get_v3_model(node)
-    spec = get_v3_spec(node)
+    model, provider_output, structured_context, spec, _source = prepare_structured_agent(
+        node_name=node,
+        output_type=TopologyPlanV1,
+    )
     agent = Agent(
         model=model,
-        output_type=structured_output_type_for_model(TopologyPlanV1, spec=spec),
+        output_type=provider_output,
         system_prompt=(
             "Return only a TopologyPlanV1 JSON object. No renderable free text. "
             "Use closed enums and persisted IDs only."
@@ -107,6 +109,7 @@ async def run_visual_topology_planner(
             node=node,
             model_settings=get_v3_model_settings(node),
             retry_policy=RetryPolicy(max_attempts=1, call_timeout_seconds=60.0),
+            structured_context=structured_context,
         )
         output = result.output
         raw_text = (

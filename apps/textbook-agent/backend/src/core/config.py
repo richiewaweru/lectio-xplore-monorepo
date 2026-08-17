@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import secrets
+from typing import Literal
 from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
@@ -216,6 +217,13 @@ class Settings(BaseSettings):
         ),
     )
     allow_paid_llm_tests: bool = False
+    deepseek_structured_mode: Literal["strict_tool", "prompted_json"] = Field(
+        default="prompted_json",
+        validation_alias=AliasChoices(
+            "DEEPSEEK_STRUCTURED_MODE",
+            "deepseek_structured_mode",
+        ),
+    )
 
     # Output
     report_output_dir: str = "outputs/reports"

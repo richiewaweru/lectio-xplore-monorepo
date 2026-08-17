@@ -10,7 +10,11 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.models.test import TestModel
 from pydantic_ai.profiles.openai import OpenAIModelProfile
 
+from core.llm.deepseek_schema import DeepSeekJsonSchemaTransformer
 from core.llm.types import ModelFamily, ModelSpec
+
+DEEPSEEK_BETA_BASE_URL = "https://api.deepseek.com/beta"
+StructuredMode = str  # "strict_tool" | "prompted_json"
 
 _OPENAI_COMPATIBLE_SYSTEMS = {
     "openai",
@@ -86,13 +90,48 @@ def _build_google_model(spec: ModelSpec):
     return GoogleModel(spec.model_name, provider=provider)
 
 
-def _build_openai_compatible_model(spec: ModelSpec):
+def is_deepseek_spec(spec: ModelSpec) -> bool:
+    return (
+        spec.family == ModelFamily.OPENAI_COMPATIBLE
+        and spec.model_name.startswith("deepseek-")
+    )
+
+
+def structured_base_url(spec: ModelSpec, *, structured_mode: StructuredMode) -> str | None:
+    if is_deepseek_spec(spec) and structured_mode == "strict_tool":
+        return DEEPSEEK_BETA_BASE_URL
+    return spec.base_url
+
+
+def _deepseek_profile(*, structured_mode: StructuredMode) -> OpenAIModelProfile:
+    if structured_mode == "strict_tool":
+        return OpenAIModelProfile(
+            openai_chat_thinking_field="reasoning_content",
+            json_schema_transformer=DeepSeekJsonSchemaTransformer,
+            supports_json_schema_output=True,
+        )
+    return OpenAIModelProfile(openai_chat_thinking_field="reasoning_content")
+
+
+def _build_openai_compatible_model(
+    spec: ModelSpec,
+    *,
+    structured_mode: StructuredMode | None = None,
+):
     from pydantic_ai.providers.openai import OpenAIProvider
 
-    api_key = _read_api_key(spec)
-    if spec.base_url is not None:
+    base_url = structured_base_url(spec, structured_mode=structured_mode or "prompted_json")
+    effective_spec = ModelSpec(
+        family=spec.family,
+        model_name=spec.model_name,
+        base_url=base_url,
+        api_key_env=spec.api_key_env,
+    )
+
+    api_key = _read_api_key(effective_spec)
+    if effective_spec.base_url is not None:
         provider = OpenAIProvider(
-            base_url=spec.base_url,
+            base_url=effective_spec.base_url,
             api_key=api_key or "api-key-not-set",
         )
     elif api_key is not None:
@@ -102,9 +141,22 @@ def _build_openai_compatible_model(spec: ModelSpec):
 
     profile = None
     if spec.model_name.startswith("deepseek-"):
-        profile = OpenAIModelProfile(openai_chat_thinking_field="reasoning_content")
+        profile = _deepseek_profile(structured_mode=structured_mode or "prompted_json")
 
     return OpenAIChatModel(spec.model_name, provider=provider, profile=profile)
+
+
+def build_structured_model(spec: ModelSpec, *, structured_mode: StructuredMode):
+    """Build a model for structured DeepSeek calls (Beta endpoint when strict)."""
+    if spec.family == ModelFamily.ANTHROPIC:
+        return _build_anthropic_model(spec)
+    if spec.family == ModelFamily.GOOGLE:
+        return _build_google_model(spec)
+    if spec.family == ModelFamily.OPENAI_COMPATIBLE:
+        return _build_openai_compatible_model(spec, structured_mode=structured_mode)
+    if spec.family == ModelFamily.TEST:
+        return TestModel()
+    raise NotImplementedError(f"Text family '{spec.family.value}' is not wired for use.")
 
 
 def build_model(spec: ModelSpec):
@@ -113,7 +165,7 @@ def build_model(spec: ModelSpec):
     if spec.family == ModelFamily.GOOGLE:
         return _build_google_model(spec)
     if spec.family == ModelFamily.OPENAI_COMPATIBLE:
-        return _build_openai_compatible_model(spec)
+        return _build_openai_compatible_model(spec, structured_mode="prompted_json")
     if spec.family == ModelFamily.TEST:
         return TestModel()
     raise NotImplementedError(f"Text family '{spec.family.value}' is not wired for use.")

@@ -15,7 +15,7 @@ from v3_execution.config import (
     get_v3_slot,
     get_v3_spec,
 )
-from v3_execution.llm_helpers import structured_output_type_for_model
+from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 
 CARD_QC_SYSTEM_PROMPT = """You check one generated concept-card section against its approved specification.
 You are not judging writing quality in general. For every required check, return PASS or FAIL
@@ -89,13 +89,16 @@ async def review_card_content(
     generation_id: str,
 ) -> CardQCResult:
     node = V3_CARD_QC
-    model = get_v3_model(node)
-    spec = get_v3_spec(node)
+    model, provider_output, structured_context, spec, _source = prepare_structured_agent(
+        node_name=node,
+        output_type=CardQCResult,
+    )
     slot = get_v3_slot(node)
     agent = Agent(
         model=model,
-        output_type=structured_output_type_for_model(CardQCResult, spec=spec),
+        output_type=provider_output,
         system_prompt=CARD_QC_SYSTEM_PROMPT,
+        retries=NO_OUTPUT_RETRY,
     )
     prompt = json.dumps(
         {
@@ -121,6 +124,7 @@ async def review_card_content(
         section_id=card.card_id,
         node=node,
         model_settings=get_v3_model_settings(node),
+        structured_context=structured_context,
     )
     raw = response.output
     if isinstance(raw, CardQCResult):

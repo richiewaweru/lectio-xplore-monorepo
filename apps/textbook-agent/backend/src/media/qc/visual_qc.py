@@ -8,8 +8,9 @@ from pydantic_ai import Agent
 from pydantic_ai.messages import BinaryContent
 
 from core.llm.runner import RetryPolicy, run_llm
-from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
+from v3_execution.config import get_v3_model_settings, get_v3_slot
 from v3_execution.config.models import V3_VISUAL_QC
+from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 from v3_execution.models import VisualGeneratorWorkOrder
 
 
@@ -116,16 +117,19 @@ async def evaluate_visual_quality(
     generation_id: str | None,
     topology_raster: bool = False,
 ) -> VisualQCVerdict:
-    model = get_v3_model(V3_VISUAL_QC)
-    spec = get_v3_spec(V3_VISUAL_QC)
+    model, provider_output, structured_context, spec, _source = prepare_structured_agent(
+        node_name=V3_VISUAL_QC,
+        output_type=VisualQCVerdict,
+    )
     slot = get_v3_slot(V3_VISUAL_QC)
     agent = Agent(
         model=model,
-        output_type=VisualQCVerdict,
+        output_type=provider_output,
         system_prompt=(
             "You are a strict but practical image quality reviewer for educational materials. "
             "Return only the requested verdict."
         ),
+        retries=NO_OUTPUT_RETRY,
     )
     result = await run_llm(
         trace_id=trace_id or generation_id or "visual-qc",
@@ -142,6 +146,7 @@ async def evaluate_visual_quality(
         retry_policy=RetryPolicy(max_attempts=1, call_timeout_seconds=60.0),
         node=V3_VISUAL_QC,
         model_settings=get_v3_model_settings(V3_VISUAL_QC, base_settings={"max_tokens": 512}),
+        structured_context=structured_context,
     )
     raw = result.output
     if isinstance(raw, VisualQCVerdict):

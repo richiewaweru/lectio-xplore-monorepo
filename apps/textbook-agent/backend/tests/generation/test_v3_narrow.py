@@ -12,6 +12,7 @@ from core.auth.middleware import get_current_user
 from core.entities.user import User
 from core.llm import ModelFamily, ModelSpec
 from generation.v3_studio.router import V3SubtopicCandidate
+from v3_execution.llm_helpers import StructuredCallContext
 
 TEST_USER = User(
     id="narrow-test-user", email="test@lectio.app", name="Test",
@@ -131,14 +132,24 @@ async def test_narrow_uses_prompted_output_for_deepseek_models():
 
     with (
         patch("generation.v3_studio.router.Agent", FakeAgent),
-        patch("generation.v3_studio.router.get_v3_model", return_value="deepseek-model"),
         patch(
-            "generation.v3_studio.router.get_v3_spec",
-            return_value=ModelSpec(
-                family=ModelFamily.OPENAI_COMPATIBLE,
-                model_name="deepseek-v4-flash",
-                base_url="https://api.deepseek.com",
-                api_key_env="DEEPSEEK_API_KEY",
+            "generation.v3_studio.router.prepare_structured_agent",
+            return_value=(
+                "deepseek-model",
+                PromptedOutput(list, template="{schema}"),
+                StructuredCallContext(
+                    structured_mode="prompted_json",
+                    schema_source_kind="pydantic",
+                    schema_fingerprint="abc",
+                    strict_fallback=True,
+                ),
+                ModelSpec(
+                    family=ModelFamily.OPENAI_COMPATIBLE,
+                    model_name="deepseek-v4-flash",
+                    base_url="https://api.deepseek.com",
+                    api_key_env="DEEPSEEK_API_KEY",
+                ),
+                None,
             ),
         ),
         patch("generation.v3_studio.router.get_v3_slot", return_value="fast"),

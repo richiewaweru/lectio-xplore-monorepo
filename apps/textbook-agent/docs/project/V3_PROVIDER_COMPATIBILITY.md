@@ -13,25 +13,23 @@ the V3 pipeline and block-generation surfaces.
 ## Structured output policy
 
 - Anthropic keeps the normal structured-output path used by `pydantic_ai`.
-- DeepSeek thinking models must avoid `tool_choice` structured output.
-- For DeepSeek-style OpenAI-compatible thinking nodes, V3 uses prompted JSON instead
-  of tool/native structured output.
-
-The central decision point is
-`backend/src/v3_execution/llm_helpers.py::structured_output_type_for_model(...)`.
+- DeepSeek structured calls use one canonical schema and a shared helper:
+  `backend/src/v3_execution/llm_helpers.py::structured_output_for_model(...)`.
+- `DEEPSEEK_STRUCTURED_MODE=strict_tool` uses DeepSeek Beta (`/beta`) with strict
+  `ToolOutput` and a DeepSeek-specific JSON Schema projection.
+- `DEEPSEEK_STRUCTURED_MODE=prompted_json` keeps the legacy prompted JSON fallback.
+- Downstream Pydantic/Lectio validation and outer repair remain authoritative.
 
 ## Where the policy applies today
 
-- V3 Studio helpers: `signals`, `narrow`, `blueprint_adjust`
-- V3 planning: `stage1_planner`, `stage2_expander`
-- Block generation paths that use structured schema output
+- Whole-lesson planners, native page-object writers, V3 Studio helpers, blueprint
+  planners, block generation, item/question/section writers, and QC nodes.
 
-When adding a new structured-output node, route it through the shared helper instead
-of adding provider-specific branching in the route or prompt.
+When adding a new structured-output node, route it through `prepare_structured_agent`
+or `run_structured_agent` instead of adding provider-specific branching locally.
 
 ## Operational guidance
 
 - To keep Anthropic as the deployment baseline, leave `V3_*` slot overrides unset.
 - To run DeepSeek, set the `V3_*` slot overrides plus `DEEPSEEK_API_KEY`.
-- If a new OpenAI-compatible provider is introduced later, add its compatibility
-  behavior in the shared helper rather than forking individual node code.
+- Roll back strict mode with `DEEPSEEK_STRUCTURED_MODE=prompted_json`.

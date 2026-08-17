@@ -285,13 +285,17 @@ async def _llm_write(ctx: WriterContext, *, prompt: str | None = None) -> object
     from core.llm.runner import RetryPolicy, run_llm
     from planning.model_tiers import tier_for_object_writer
     from planning.prompts import page_writer_common_prompt, prompt_text
-    from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
+    from v3_execution.config import get_v3_model_settings, get_v3_slot
     from v3_execution.config.models import V3_BLOCK_WRITER_FAST, V3_BLOCK_WRITER_STANDARD
+    from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 
     tier = tier_for_object_writer(ctx.planned.object) or "FAST"
     node = V3_BLOCK_WRITER_STANDARD if tier == "STANDARD" else V3_BLOCK_WRITER_FAST
-    model = get_v3_model(node)
-    spec = get_v3_spec(node)
+    output_model = FORM_OUTPUTS[ctx.planned.object]
+    model, provider_output, structured_context, spec, _source = prepare_structured_agent(
+        node_name=node,
+        output_type=output_model,
+    )
     slot = get_v3_slot(node)
 
     if prompt is None:
@@ -328,7 +332,12 @@ async def _llm_write(ctx: WriterContext, *, prompt: str | None = None) -> object
         }
         prompt = f"{common}\n\n{specific}\n\n## INPUT JSON\n{json.dumps(payload, indent=2, sort_keys=True)}"
 
-    agent = Agent(model=model, system_prompt=prompt)
+    agent = Agent(
+        model=model,
+        output_type=provider_output,
+        system_prompt=prompt,
+        retries=NO_OUTPUT_RETRY,
+    )
     result = await run_llm(
         trace_id=str(uuid.uuid4()),
         caller=f"v3_block_writer_{ctx.planned.object}",
@@ -348,6 +357,7 @@ async def _llm_write(ctx: WriterContext, *, prompt: str | None = None) -> object
                 else settings.page_fast_writer_timeout_seconds
             ),
         ),
+        structured_context=structured_context,
     )
     return result.output
 

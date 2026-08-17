@@ -22,7 +22,7 @@ from v3_execution.executors.item_diagnostics import (
     classify_item_failure,
     new_item_correlation_id,
 )
-from v3_execution.llm_helpers import structured_output_type_for_model
+from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 from v3_execution.prompts.item_prompt import build_item_messages, get_item_system_prompt
 
 ITEM_NODE = "v3_item_executor"
@@ -142,13 +142,16 @@ async def execute_items_with_diagnostics(
 ) -> ItemGenerationRun:
     """Same as execute_items, but every provider attempt is correlated and classified."""
     node = ITEM_NODE
-    model = get_v3_model(node)
-    spec = get_v3_spec(node)
+    model, provider_output, structured_context, spec, _source = prepare_structured_agent(
+        node_name=node,
+        output_type=ItemGenerationResult,
+    )
     slot = get_v3_slot(node)
     agent = Agent(
         model=model,
-        output_type=structured_output_type_for_model(ItemGenerationResult, spec=spec),
+        output_type=provider_output,
         system_prompt=get_item_system_prompt(),
+        retries=NO_OUTPUT_RETRY,
     )
     cid = correlation_id or new_item_correlation_id(
         generation_id=generation_id, card_id=card.id
@@ -178,6 +181,7 @@ async def execute_items_with_diagnostics(
                     call_timeout_seconds=float(V3_TIMEOUTS["item_executor"]),
                 ),
                 attempt_start=attempt,
+                structured_context=structured_context,
             )
             raw = result.output
             if isinstance(raw, ItemGenerationResult):

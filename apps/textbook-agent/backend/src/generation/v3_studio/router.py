@@ -127,7 +127,7 @@ from telemetry.service import telemetry_monitor
 from telemetry.v3_trace.repository import V3TraceRepository
 from telemetry.v3_trace.writer import V3TraceWriter
 from core.events import TraceClosedEvent, TraceRegisteredEvent, event_bus
-from v3_execution.llm_helpers import structured_output_type_for_model
+from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 from v3_review.card_reviewer import review_card_content
 
 logger = logging.getLogger(__name__)
@@ -473,8 +473,10 @@ async def post_v3_narrow(
         )
 
     node = "v3_narrow"
-    model = get_v3_model(node)
-    spec = get_v3_spec(node)
+    model, provider_output, structured_context, spec, _source = prepare_structured_agent(
+        node_name=node,
+        output_type=NarrowEnvelope,
+    )
     slot = get_v3_slot(node)
 
     system = (
@@ -498,8 +500,9 @@ async def post_v3_narrow(
 
     agent = Agent(
         model=model,
-        output_type=structured_output_type_for_model(NarrowEnvelope, spec=spec),
+        output_type=provider_output,
         system_prompt=system,
+        retries=NO_OUTPUT_RETRY,
     )
 
     trace_id = str(uuid.uuid4())
@@ -523,6 +526,7 @@ async def post_v3_narrow(
                     V3_TIMEOUTS["narrow"]
                 )
             ),
+            structured_context=structured_context,
         )
         raw = result.output
         if isinstance(raw, NarrowEnvelope):
@@ -555,13 +559,16 @@ async def post_v3_propose_intent(
     current_user: User = Depends(get_current_user),
 ) -> V3ProposeIntentResponse:
     node = "v3_propose_intent"
-    model = get_v3_model(node)
-    spec = get_v3_spec(node)
+    model, provider_output, structured_context, spec, _source = prepare_structured_agent(
+        node_name=node,
+        output_type=V3ProposeIntentResponse,
+    )
     slot = get_v3_slot(node)
     agent = Agent(
         model=model,
-        output_type=structured_output_type_for_model(V3ProposeIntentResponse, spec=spec),
+        output_type=provider_output,
         system_prompt=PROPOSE_INTENT_SYSTEM,
+        retries=NO_OUTPUT_RETRY,
     )
     user_prompt = build_propose_intent_user_prompt(**body.model_dump())
     trace_id = str(uuid.uuid4())
@@ -580,6 +587,7 @@ async def post_v3_propose_intent(
             node=node,
             model_settings=get_v3_model_settings(node),
             retry_policy=RetryPolicy(call_timeout_seconds=float(V3_TIMEOUTS["propose_intent"])),
+            structured_context=structured_context,
         )
         return V3ProposeIntentResponse.model_validate(result.output)
     except Exception as exc:

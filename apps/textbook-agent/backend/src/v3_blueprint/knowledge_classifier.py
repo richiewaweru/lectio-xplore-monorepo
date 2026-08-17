@@ -11,7 +11,7 @@ from core.config import settings
 from core.llm.runner import RetryPolicy, run_llm
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.models import V3_KNOWLEDGE_TYPE_CLASSIFIER
-from v3_execution.llm_helpers import structured_output_type_for_model
+from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 
 
 class KnowledgeTypeClassification(BaseModel):
@@ -42,13 +42,16 @@ async def classify_knowledge_type(
     if not objective.strip():
         raise ValueError("Objective must not be empty")
     node = V3_KNOWLEDGE_TYPE_CLASSIFIER
-    model = get_v3_model(node)
-    spec = get_v3_spec(node)
+    model, provider_output, structured_context, spec, _source = prepare_structured_agent(
+        node_name=node,
+        output_type=KnowledgeTypeClassification,
+    )
     slot = get_v3_slot(node)
     agent = Agent(
         model=model,
-        output_type=structured_output_type_for_model(KnowledgeTypeClassification, spec=spec),
+        output_type=provider_output,
         system_prompt=classifier_prompt(),
+        retries=NO_OUTPUT_RETRY,
     )
     result = await run_llm(
         trace_id=trace_id or generation_id or str(uuid.uuid4()),
@@ -65,6 +68,7 @@ async def classify_knowledge_type(
             max_attempts=1,
             call_timeout_seconds=float(settings.v3_timeout_stage1_seconds),
         ),
+        structured_context=structured_context,
     )
     if isinstance(result.output, KnowledgeTypeClassification):
         return result.output

@@ -33,7 +33,7 @@ from planning.whole_lesson.validation import (
 )
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.models import V2_FORM_PLANNER
-from v3_execution.llm_helpers import NO_OUTPUT_RETRY, structured_output_type_for_model
+from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 
 
 class NoLegalFormCandidatesError(RuntimeError):
@@ -96,13 +96,15 @@ async def _call_form_model(
     generation_id: str | None,
     attempt_start: int = 1,
 ) -> tuple[FormPlan, str]:
-    model = get_v3_model(V2_FORM_PLANNER)
-    spec = get_v3_spec(V2_FORM_PLANNER)
+    model, provider_output, structured_context, spec, _source = prepare_structured_agent(
+        node_name=V2_FORM_PLANNER,
+        output_type=FormPlan,
+    )
     slot = get_v3_slot(V2_FORM_PLANNER)
     system_prompt, _, _ = prompt.partition("\n\n## USER INPUT\n\n")
     agent = Agent(
         model=model,
-        output_type=structured_output_type_for_model(FormPlan, spec=spec),
+        output_type=provider_output,
         system_prompt=system_prompt or prompt,
         retries=NO_OUTPUT_RETRY,
     )
@@ -122,6 +124,7 @@ async def _call_form_model(
             call_timeout_seconds=float(settings.page_form_plan_timeout_seconds),
         ),
         attempt_start=attempt_start,
+        structured_context=structured_context,
     )
     raw = result.output
     raw_text = (

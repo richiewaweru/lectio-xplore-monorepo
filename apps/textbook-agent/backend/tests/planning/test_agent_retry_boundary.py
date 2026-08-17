@@ -44,11 +44,11 @@ def test_constrained_planner_modules_import_the_shared_constant() -> None:
         assert module.NO_OUTPUT_RETRY is llm_helpers.NO_OUTPUT_RETRY
 
 
-def test_run_json_agent_keeps_the_library_default() -> None:
-    """It owns no outer repair loop, so removing its retry would be a regression."""
+def test_run_json_agent_delegates_to_structured_agent_with_output_retry() -> None:
+    """Outer repair is owned by run_llm; pydantic-ai output retry stays enabled."""
     source = inspect.getsource(llm_helpers.run_json_agent)
-    assert "NO_OUTPUT_RETRY" not in source
-    assert "retries=" not in source
+    assert "run_structured_agent" in source
+    assert 'retries={"output": 1}' in source
 
 
 async def _assert_agent_disables_output_retry(module: object, call: object) -> None:

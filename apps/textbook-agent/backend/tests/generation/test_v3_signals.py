@@ -12,6 +12,8 @@ from core.entities.user import User
 from core.events import TraceClosedEvent, TraceRegisteredEvent
 from core.llm import ModelFamily, ModelSpec
 from generation.v3_studio.agents import extract_signals
+from generation.v3_studio.dtos import V3SignalSummary
+from v3_execution.llm_helpers import StructuredCallContext
 
 TEST_USER = User(
     id="signals-test-user",
@@ -88,6 +90,13 @@ async def test_signals_registers_and_closes_trace_for_telemetry():
 @pytest.mark.asyncio
 async def test_extract_signals_uses_prompted_output_for_deepseek_models() -> None:
     captured: dict[str, object] = {}
+    spec = ModelSpec(
+        family=ModelFamily.OPENAI_COMPATIBLE,
+        model_name="deepseek-v4-flash",
+        base_url="https://api.deepseek.com",
+        api_key_env="DEEPSEEK_API_KEY",
+    )
+    provider_output = PromptedOutput(V3SignalSummary, template="{schema}")
 
     class FakeAgent:
         def __init__(self, **kwargs):
@@ -97,14 +106,19 @@ async def test_extract_signals_uses_prompted_output_for_deepseek_models() -> Non
 
     with (
         patch("generation.v3_studio.agents.Agent", FakeAgent),
-        patch("generation.v3_studio.agents.get_v3_model", return_value="deepseek-model"),
         patch(
-            "generation.v3_studio.agents.get_v3_spec",
-            return_value=ModelSpec(
-                family=ModelFamily.OPENAI_COMPATIBLE,
-                model_name="deepseek-v4-flash",
-                base_url="https://api.deepseek.com",
-                api_key_env="DEEPSEEK_API_KEY",
+            "generation.v3_studio.agents.prepare_structured_agent",
+            return_value=(
+                "deepseek-model",
+                provider_output,
+                StructuredCallContext(
+                    structured_mode="prompted_json",
+                    schema_source_kind="pydantic",
+                    schema_fingerprint="abc",
+                    strict_fallback=True,
+                ),
+                spec,
+                None,
             ),
         ),
         patch("generation.v3_studio.agents.get_v3_slot", return_value="fast"),

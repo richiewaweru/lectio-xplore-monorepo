@@ -23,7 +23,7 @@ from generation.block_generate_prompts import (
     build_block_user_prompt,
     output_model_for_component,
 )
-from v3_execution.llm_helpers import structured_output_type_for_model
+from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 from v3_execution.config.models import (
     V3_BLOCK_WRITER_FAST,
     V3_BLOCK_WRITER_STANDARD,
@@ -86,7 +86,10 @@ async def run_block_generation(
     slot = _slot_for_tier(body.model_tier)
     node = V3_BLOCK_WRITER_STANDARD if slot == ModelSlot.STANDARD else V3_BLOCK_WRITER_FAST
     spec = get_v3_spec(node)
-    model = get_v3_model(node)
+    model, provider_output, structured_context, spec, _source = prepare_structured_agent(
+        node_name=node,
+        output_type=output_model_for_component(body.component_id),
+    )
 
     trace_id = uuid.uuid4().hex
     core_events.event_bus.publish(
@@ -119,8 +122,9 @@ async def run_block_generation(
 
         agent = Agent(
             model=model,
-            output_type=structured_output_type_for_model(output_type, spec=spec),
+            output_type=provider_output,
             system_prompt=system_prompt,
+            retries=NO_OUTPUT_RETRY,
         )
 
         result = await run_llm(
@@ -135,6 +139,7 @@ async def run_block_generation(
             section_id=None,
             node=node,
             model_settings=get_v3_model_settings(node),
+            structured_context=structured_context,
         )
 
         raw = result.output

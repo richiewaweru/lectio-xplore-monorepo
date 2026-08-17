@@ -7,6 +7,7 @@ from typing import Any
 from contracts.lectio import get_section_field_for_component
 
 from v3_execution.llm_helpers import run_json_agent
+from v3_execution.runtime.writer_schema import build_section_writer_output_schema
 from v3_execution.models import ExecutorOutcome, GeneratedComponentBlock
 from v3_execution.prompts.section_writer import (
     build_section_writer_prompt,
@@ -52,6 +53,7 @@ async def execute_section(
                 prompt = build_section_writer_retry_prompt(order, _prior_errors)
             else:
                 prompt = build_section_writer_prompt(order)
+            output_schema = build_section_writer_output_schema(order)
             response = await run_json_agent(
                 node_name="v3_section_writer",
                 trace_id=trace_id,
@@ -59,6 +61,7 @@ async def execute_section(
                 system_prompt="Return compact JSON matching the user's contract.",
                 user_prompt=prompt,
                 model_overrides=model_overrides,
+                output_schema=output_schema,
             )
             fields = _extract_fields(response)
             blocks: list[GeneratedComponentBlock] = []

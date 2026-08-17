@@ -11,7 +11,7 @@ from v3_blueprint.compiler import BlueprintCompiler
 from v3_blueprint.models import ProductionBlueprint
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.timeouts import V3_TIMEOUTS
-from v3_execution.llm_helpers import structured_output_type_for_model
+from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 
 _CALLER = "v3_studio"
 
@@ -41,13 +41,16 @@ def _validate_blueprint(bp: ProductionBlueprint) -> None:
 async def extract_signals(form: V3InputForm, *, trace_id: str | None = None) -> V3SignalSummary:
     node = "v3_signal_extractor"
     tid = trace_id or str(uuid.uuid4())
-    model = get_v3_model(node)
-    spec = get_v3_spec(node)
+    model, provider_output, structured_context, spec, _source = prepare_structured_agent(
+        node_name=node,
+        output_type=V3SignalSummary,
+    )
     slot = get_v3_slot(node)
     agent = Agent(
         model=model,
-        output_type=structured_output_type_for_model(V3SignalSummary, spec=spec),
+        output_type=provider_output,
         system_prompt=SIGNAL_SYSTEM,
+        retries=NO_OUTPUT_RETRY,
     )
     user = (
         f"Grade level: {form.grade_level}\n"
@@ -79,6 +82,7 @@ async def extract_signals(form: V3InputForm, *, trace_id: str | None = None) -> 
         node=node,
         model_settings=get_v3_model_settings(node),
         retry_policy=RetryPolicy(call_timeout_seconds=float(V3_TIMEOUTS["signal_extractor"])),
+        structured_context=structured_context,
     )
     raw = result.output
     if isinstance(raw, V3SignalSummary):
@@ -94,13 +98,16 @@ async def adjust_production_blueprint(
 ) -> ProductionBlueprint:
     node = "v3_blueprint_adjust"
     tid = trace_id or str(uuid.uuid4())
-    model = get_v3_model(node)
-    spec = get_v3_spec(node)
+    model, provider_output, structured_context, spec, _source = prepare_structured_agent(
+        node_name=node,
+        output_type=ProductionBlueprintEnvelope,
+    )
     slot = get_v3_slot(node)
     agent = Agent(
         model=model,
-        output_type=structured_output_type_for_model(ProductionBlueprintEnvelope, spec=spec),
+        output_type=provider_output,
         system_prompt=ADJUST_SYSTEM,
+        retries=NO_OUTPUT_RETRY,
     )
     user = (
         "Current blueprint JSON:\n"
@@ -119,6 +126,7 @@ async def adjust_production_blueprint(
         section_id=None,
         node=node,
         model_settings=get_v3_model_settings(node),
+        structured_context=structured_context,
     )
     raw = result.output
     envelope = raw if isinstance(raw, ProductionBlueprintEnvelope) else None

@@ -34,6 +34,14 @@ class GeneratedQuestionBlock(BaseModel):
     source_work_order_id: str
 
 
+class QuestionStemEntry(BaseModel):
+    stem: str = Field(min_length=1)
+
+
+class QuestionWriterOutput(BaseModel):
+    items: dict[str, QuestionStemEntry]
+
+
 VisualMode = Literal["diagram", "diagram_series", "diagram_compare", "image", "simulation"]
 VisualStyle = Literal["diagram_precision", "illustration"]
 _VISUAL_STYLES = {"diagram_precision", "illustration"}

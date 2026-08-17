@@ -13,6 +13,7 @@ from core.entities.user import User
 from core.events import TraceClosedEvent, TraceRegisteredEvent
 from core.llm import ModelFamily, ModelSpec
 from generation.v3_studio.dtos import V3ProposeIntentResponse
+from v3_execution.llm_helpers import StructuredCallContext
 
 TEST_USER = User(
     id="propose-intent-test-user", email="test@lectio.app", name="Test", picture_url=None,
@@ -103,8 +104,26 @@ async def test_propose_intent_uses_prompted_output_for_deepseek() -> None:
 
     with (
         patch("generation.v3_studio.router.Agent", FakeAgent),
-        patch("generation.v3_studio.router.get_v3_model", return_value="deepseek-model"),
-        patch("generation.v3_studio.router.get_v3_spec", return_value=ModelSpec(family=ModelFamily.OPENAI_COMPATIBLE, model_name="deepseek-v4-pro", base_url="https://api.deepseek.com", api_key_env="DEEPSEEK_API_KEY")),
+        patch(
+            "generation.v3_studio.router.prepare_structured_agent",
+            return_value=(
+                "deepseek-model",
+                PromptedOutput(V3ProposeIntentResponse, template="{schema}"),
+                StructuredCallContext(
+                    structured_mode="prompted_json",
+                    schema_source_kind="pydantic",
+                    schema_fingerprint="abc",
+                    strict_fallback=True,
+                ),
+                ModelSpec(
+                    family=ModelFamily.OPENAI_COMPATIBLE,
+                    model_name="deepseek-v4-pro",
+                    base_url="https://api.deepseek.com",
+                    api_key_env="DEEPSEEK_API_KEY",
+                ),
+                None,
+            ),
+        ),
         patch("generation.v3_studio.router.run_llm", new=AsyncMock(return_value=SimpleNamespace(output=_drafts()))),
     ):
         async with _client() as client:

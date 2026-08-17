@@ -16,7 +16,7 @@ from generation.v3_studio.prompts import build_v3_shared_prefix
 from generation.v3_studio.signal_map import summarise_form_supports
 from v3_blueprint.planning.models import SectionBrief, SectionPlan, StructuralPlan
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
-from v3_execution.llm_helpers import structured_output_type_for_model
+from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 
 _CALLER = "v3_chunked_architect"
 STAGE2_NODE = "v3_stage2_expander"
@@ -177,13 +177,16 @@ async def _call_stage2_section(
 
     node = STAGE2_NODE
     tid = trace_id or generation_id or str(uuid.uuid4())
-    model = get_v3_model(node)
-    spec = get_v3_spec(node)
+    model, provider_output, structured_context, spec, _source = prepare_structured_agent(
+        node_name=node,
+        output_type=SectionBrief,
+    )
     slot = get_v3_slot(node)
     agent = Agent(
         model=model,
-        output_type=structured_output_type_for_model(SectionBrief, spec=spec),
+        output_type=provider_output,
         system_prompt=build_stage2_system_prompt(),
+        retries=NO_OUTPUT_RETRY,
     )
     section_message = build_stage2_user_message(
         plan=plan,
@@ -235,6 +238,7 @@ async def _call_stage2_section(
                 max_attempts=1,
                 call_timeout_seconds=float(settings.v3_timeout_stage2_section_seconds),
             ),
+            structured_context=structured_context,
         )
     except Exception as exc:
         elapsed = round(time.perf_counter() - t0, 1)
