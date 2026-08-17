@@ -197,6 +197,8 @@
 		syncStage2Progress(resolved);
 		if (shouldPollForChunkedState(resolved)) {
 			startGenerationPolling(resolved.generation_id, { immediate: pollImmediately });
+		} else if (generationPoller.isRunning()) {
+			stopGenerationPolling();
 		}
 
 		if (resolved.stage === 'awaiting_review' || resolved.stage === 'plan_ready') {
@@ -492,7 +494,13 @@
 					}
 				}
 			}
-			if (status.stage === 'complete' || status.next_action === 'done' || ready) {
+			if (
+				status.stage === 'complete' ||
+				status.stage === 'failed_recoverable' ||
+				status.stage === 'failed_terminal' ||
+				status.next_action === 'done' ||
+				ready
+			) {
 				stopGenerationPolling();
 			}
 		} catch {

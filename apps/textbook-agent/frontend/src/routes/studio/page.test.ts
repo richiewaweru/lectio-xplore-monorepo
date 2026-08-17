@@ -527,6 +527,141 @@ describe('studio chunked URL resume', () => {
 		expect(mocks.retryNativeVisuals).not.toHaveBeenCalled();
 	});
 
+	it('stops polling when the backend reports failed_recoverable', async () => {
+		vi.useFakeTimers();
+		window.history.replaceState({}, '', '/studio?generation_id=gen-poll-stops');
+
+		const runningStatus = {
+			generation_id: 'gen-poll-stops',
+			stage: 'writing_sections',
+			doc_version: 'rev:1',
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: true,
+			next_action: 'generation_running',
+			error: null,
+			error_type: null
+		};
+		const failedStatus = {
+			...runningStatus,
+			stage: 'failed_recoverable',
+			next_action: 'retry_native',
+			error: "retryable failures: ['independent:independent-b1:everyone']",
+			error_type: 'RETRYABLE_BLOCK_FAILURE'
+		};
+
+		mocks.getChunkedPlanStatus
+			.mockResolvedValueOnce(runningStatus)
+			.mockResolvedValueOnce(runningStatus)
+			.mockResolvedValue(failedStatus);
+		mocks.fetchV3Document.mockRejectedValue(Object.assign(new Error('not ready'), { status: 404 }));
+
+		render(StudioPage);
+
+		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledTimes(1));
+		await vi.advanceTimersByTimeAsync(4000);
+		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledTimes(2));
+		await vi.advanceTimersByTimeAsync(4000);
+		await waitFor(() => expect(v3Studio.chunkedState?.stage).toBe('failed_recoverable'));
+
+		const statusCallsAfterFailure = mocks.getChunkedPlanStatus.mock.calls.length;
+		const documentCallsAfterFailure = mocks.fetchV3Document.mock.calls.length;
+		await vi.advanceTimersByTimeAsync(12000);
+
+		expect(mocks.getChunkedPlanStatus.mock.calls.length).toBe(statusCallsAfterFailure);
+		expect(mocks.fetchV3Document.mock.calls.length).toBe(documentCallsAfterFailure);
+		expect(screen.getByText('Generation paused')).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Retry generation' })).toBeTruthy();
+	});
+
+	it('restarts polling after a successful retry from failed_recoverable', async () => {
+		vi.useFakeTimers();
+		window.history.replaceState({}, '', '/studio?generation_id=gen-retry-resumes');
+
+		const failedStatus = {
+			generation_id: 'gen-retry-resumes',
+			stage: 'failed_recoverable',
+			doc_version: null,
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: false,
+			next_action: 'retry_native',
+			error: 'block failure',
+			error_type: 'RETRYABLE_BLOCK_FAILURE'
+		};
+		const resumedStatus = {
+			...failedStatus,
+			stage: 'writing_sections',
+			next_action: 'generation_running',
+			execution_started: true,
+			error: null,
+			error_type: null
+		};
+
+		mocks.getChunkedPlanStatus
+			.mockResolvedValueOnce(failedStatus)
+			.mockResolvedValueOnce(resumedStatus)
+			.mockResolvedValue(resumedStatus);
+		mocks.fetchV3Document.mockRejectedValue(Object.assign(new Error('not ready'), { status: 404 }));
+		mocks.retryNativeGeneration.mockResolvedValue(undefined);
+
+		render(StudioPage);
+
+		const retryButton = await screen.findByRole('button', { name: 'Retry generation' });
+		const callsBeforeRetry = mocks.getChunkedPlanStatus.mock.calls.length;
+		await fireEvent.click(retryButton);
+
+		await waitFor(() => expect(mocks.retryNativeGeneration).toHaveBeenCalledWith('gen-retry-resumes'));
+		await vi.advanceTimersByTimeAsync(8000);
+
+		expect(mocks.getChunkedPlanStatus.mock.calls.length).toBeGreaterThan(callsBeforeRetry + 1);
+	});
+
+	it('stops polling when the backend reports failed_terminal', async () => {
+		vi.useFakeTimers();
+		window.history.replaceState({}, '', '/studio?generation_id=gen-terminal-stops');
+
+		const runningStatus = {
+			generation_id: 'gen-terminal-stops',
+			stage: 'writing_sections',
+			doc_version: 'rev:1',
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: true,
+			next_action: 'generation_running',
+			error: null,
+			error_type: null
+		};
+		const failedStatus = {
+			...runningStatus,
+			stage: 'failed_terminal',
+			next_action: 'fail',
+			error: 'permanent generation failure',
+			error_type: 'TERMINAL_GENERATION_FAILURE'
+		};
+
+		mocks.getChunkedPlanStatus
+			.mockResolvedValueOnce(runningStatus)
+			.mockResolvedValueOnce(runningStatus)
+			.mockResolvedValue(failedStatus);
+		mocks.fetchV3Document.mockRejectedValue(Object.assign(new Error('not ready'), { status: 404 }));
+
+		render(StudioPage);
+
+		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledTimes(1));
+		await vi.advanceTimersByTimeAsync(4000);
+		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledTimes(2));
+		await vi.advanceTimersByTimeAsync(4000);
+		await waitFor(() => expect(v3Studio.chunkedState?.stage).toBe('failed_terminal'));
+
+		const callsAfterFailure = mocks.getChunkedPlanStatus.mock.calls.length;
+		await vi.advanceTimersByTimeAsync(12000);
+
+		expect(mocks.getChunkedPlanStatus.mock.calls.length).toBe(callsAfterFailure);
+		expect(screen.getByText('Generation failed')).toBeTruthy();
+		expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
+	});
+
 	it('navigates to the native viewer exactly once when status becomes ready', async () => {
 		vi.useFakeTimers();
 		window.history.replaceState({}, '', '/studio?generation_id=gen-ready-once');
