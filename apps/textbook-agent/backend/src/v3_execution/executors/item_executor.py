@@ -31,7 +31,28 @@ ITEM_MAX_ATTEMPTS = 3
 
 
 class ItemGenerationResult(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    @staticmethod
+    def _provider_schema(schema: dict[str, Any]) -> None:
+        """Keep derived observability fields out of the provider contract.
+
+        DeepSeek strict tools reject unconstrained ``dict`` objects. Coverage
+        and unmapped-option counts are recomputed from the returned items by
+        ``validate_item_result`` anyway, so they are not LLM-owned output.
+        """
+        properties = schema.get("properties")
+        if isinstance(properties, dict):
+            properties.pop("coverage", None)
+            properties.pop("unmapped_options", None)
+        required = schema.get("required")
+        if isinstance(required, list):
+            schema["required"] = [
+                name for name in required if name not in {"coverage", "unmapped_options"}
+            ]
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra=_provider_schema,
+    )
 
     card_id: str
     items: list[QuestionBrief] = Field(min_length=5, max_length=5)
@@ -151,7 +172,10 @@ async def execute_items_with_diagnostics(
         model=model,
         output_type=provider_output,
         system_prompt=get_item_system_prompt(),
-        retries=NO_OUTPUT_RETRY,
+        # DeepSeek can occasionally omit one required item field from an
+        # otherwise valid strict-tool payload. Allow one provider-side
+        # validation retry before the executor's outer attempt journal fails.
+        retries={**NO_OUTPUT_RETRY, "output": 1},
     )
     cid = correlation_id or new_item_correlation_id(
         generation_id=generation_id, card_id=card.id

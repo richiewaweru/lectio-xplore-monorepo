@@ -36,7 +36,7 @@ def build_item_messages(card: ConceptCard) -> list[str]:
 Use only named misconception ids or null in diagnoses. Follow the notation
 constraint when it is present.
 
-Required shape:
+Required shape (coverage and unmapped-option counts are computed downstream):
 {
   "card_id": "the supplied card id",
   "items": [{
@@ -46,9 +46,7 @@ Required shape:
       {"key": "a", "text": "option", "correct": false, "diagnoses": "M1 or null"}
     ],
     "expected_answer": "correct answer with a concise explanation"
-  }],
-  "coverage": {"M1": 1},
-  "unmapped_options": 0
+  }]
 }
 
 APPROVED CARD

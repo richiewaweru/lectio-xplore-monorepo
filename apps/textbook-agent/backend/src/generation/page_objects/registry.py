@@ -466,11 +466,12 @@ async def dispatch_writer_async(
     if ctx.planned.object in {"questions", "choices"} or not ctx.use_llm:
         return dispatch_writer(ctx)
 
-    if ctx.planned.object == "figure":
+    if ctx.planned.object in {"figure", "table"}:
         try:
             return await _write_validated_llm(ctx)
         except Exception:
-            # Deterministic pending fallback when figure LLM path fails.
+            # Deterministic fallback keeps the typed document renderable when
+            # a provider cannot satisfy a visual or dynamic-cell contract.
             return dispatch_writer(ctx)
 
     return await _write_validated_llm(ctx)

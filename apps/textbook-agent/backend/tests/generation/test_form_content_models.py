@@ -79,6 +79,21 @@ def test_valid_content_for_each_form(object_id: str) -> None:
     validate_content(object_id, dumped)
 
 
+def test_table_provider_cells_use_strict_entries_but_normalize_to_map() -> None:
+    from generation.page_objects.models import TableContent
+
+    content = TableContent.model_validate(
+        {
+            "columns": [{"id": "part", "label": "Part"}],
+            "rows": [{"cells": [{"column_id": "part", "value": "Leaf"}]}],
+        }
+    )
+
+    assert content.rows[0].cells == {"part": "Leaf"}
+    schema = TableContent.model_json_schema()
+    assert schema["$defs"]["TableRow"]["properties"]["cells"]["type"] == "array"
+
+
 @pytest.mark.parametrize("object_id", list(GENERATED_FORM_IDS))
 def test_invalid_content_rejected(object_id: str) -> None:
     with pytest.raises(ContentValidationError) as exc:

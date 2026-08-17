@@ -25,6 +25,8 @@ objects, layouts, or question text.
 2. Reuse the carried anchor when it fits. Otherwise choose one concrete anchor
    and state why it is new.
 3. Give each fixed section a concise title and transition note.
+   The first section's transition_note must be null; only later sections
+   may explain how they follow the preceding section.
 4. Preserve section IDs and roles exactly as supplied.
 5. Attach the canonical concept card ID where required.
 6. Echo each supplied slot's `visual_required` flag exactly. A true flag is
@@ -52,7 +54,7 @@ JSON only, matching the supplied output schema.
 
 The output contains:
 
-- anchor
+- anchor as {"description": str, "source": "carried"|"new"}
 - one concept card
 - sections with id, title, role, card_id, visual_required, transition_note
 - deviation_request or null

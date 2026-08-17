@@ -346,6 +346,11 @@ class ComponentSelection(StrictModel):
 
 
 class PathAnchor(StrictModel):
+    # The structural planner is prompt-facing and may emit legacy descriptive
+    # anchor metadata. Preserve the canonical fields while tolerating those
+    # harmless extra keys, like the other nested structural draft models.
+    model_config = ConfigDict(extra="ignore")
+
     description: str
     source: Literal["carried", "new"]
 

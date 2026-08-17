@@ -17,6 +17,7 @@ from v3_execution.executors.item_executor import (
     validate_item_result,
 )
 from v3_execution.prompts.item_prompt import build_item_messages
+from core.llm.deepseek_schema import to_deepseek_strict_schema
 
 
 def _card() -> ConceptCard:
@@ -88,6 +89,14 @@ def test_item_prompt_contains_only_approved_card_fields() -> None:
         "section_brief",
     ):
         assert forbidden not in message
+
+
+def test_item_provider_schema_omits_derived_unconstrained_objects() -> None:
+    schema = ItemGenerationResult.model_json_schema()
+    assert "coverage" not in schema["properties"]
+    assert "unmapped_options" not in schema["properties"]
+    projected = to_deepseek_strict_schema(schema)
+    assert "coverage" not in projected["properties"]
 
 
 def test_item_validator_recomputes_coverage_and_unmapped_count() -> None:

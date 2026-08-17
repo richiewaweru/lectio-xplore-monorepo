@@ -9,8 +9,10 @@ from pydantic import BaseModel, Field
 from core.llm.deepseek_schema import (
     DeepSeekStrictSchemaError,
     to_deepseek_strict_schema,
+    validate_deepseek_projection,
 )
 from core.llm.schema import SchemaSource, schema_fingerprint
+from planning.models import PathAnchor, PathStructuralPlan
 
 
 class Color(str, Enum):
@@ -145,8 +147,6 @@ def test_a9_deterministic_fingerprint() -> None:
 
 
 def test_validate_projection_rejects_unsupported_survivors() -> None:
-    from core.llm.deepseek_schema import validate_deepseek_projection
-
     with pytest.raises(DeepSeekStrictSchemaError):
         validate_deepseek_projection(
             {
@@ -156,3 +156,46 @@ def test_validate_projection_rejects_unsupported_survivors() -> None:
                 "additionalProperties": False,
             }
         )
+
+
+def test_nullable_nested_refs_are_inlined_for_deepseek_anyof() -> None:
+    schema = PathStructuralPlan.model_json_schema(mode="validation")
+    projected = to_deepseek_strict_schema(schema)
+    deviation = projected["properties"]["deviation_request"]
+
+    assert deviation["anyOf"][0]["type"] == "object"
+    assert "$ref" not in deviation["anyOf"][0]
+    assert deviation["anyOf"][1] == {"type": "null"}
+
+
+def test_validate_projection_rejects_ref_anyof_branch() -> None:
+    with pytest.raises(DeepSeekStrictSchemaError, match="anyOf branch"):
+        validate_deepseek_projection(
+            {
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "anyOf": [{"$ref": "#/$defs/Value"}, {"type": "null"}]
+                    }
+                },
+                "required": ["value"],
+                "additionalProperties": False,
+                "$defs": {"Value": {"type": "string"}},
+            }
+        )
+
+
+def test_path_anchor_tolerates_legacy_metadata() -> None:
+    anchor = PathAnchor.model_validate(
+        {
+            "description": "a leafy plant in a sunny window",
+            "source": "new",
+            "anchor_term": "leafy plant",
+            "purpose": "make the producer idea concrete",
+            "reuse_carried": False,
+            "new_anchor_reason": "no carried anchor fits",
+        }
+    )
+
+    assert anchor.description == "a leafy plant in a sunny window"
+    assert anchor.source == "new"

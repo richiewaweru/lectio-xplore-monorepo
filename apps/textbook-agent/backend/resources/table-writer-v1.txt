@@ -16,7 +16,10 @@ Output:
 
 {
   "columns": [{"id": "...", "label": "..."}],
-  "rows": [{"cells": {"column-id": "..."}}],
+  "rows": [{"cells": [{"column_id": "...", "value": "..."}]}],
   "caption": "optional or null",
   "presentation": "standard|comparison|timeline"
 }
+
+For each row, include one cell entry for every declared column. The
+column_id values must match the column ids exactly.

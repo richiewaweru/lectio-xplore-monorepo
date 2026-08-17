@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 if TYPE_CHECKING:
     from v3_blueprint.planning.models import PlannedBlock
@@ -68,7 +68,46 @@ class TableColumn(_ForbidModel):
 
 
 class TableRow(_ForbidModel):
+    @staticmethod
+    def _provider_schema(schema: dict[str, Any]) -> None:
+        """Expose dynamic table cells as a strict provider-safe list."""
+        properties = schema.get("properties")
+        if isinstance(properties, dict) and "cells" in properties:
+            properties["cells"] = {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "column_id": {"type": "string"},
+                        "value": {"type": "string"},
+                    },
+                    "required": ["column_id", "value"],
+                },
+            }
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra=_provider_schema,
+    )
+
     cells: dict[str, str]
+
+    @field_validator("cells", mode="before")
+    @classmethod
+    def _normalize_provider_cells(cls, value: object) -> object:
+        if not isinstance(value, list):
+            return value
+        normalized: dict[str, str] = {}
+        for cell in value:
+            if not isinstance(cell, dict):
+                return value
+            column_id = cell.get("column_id")
+            cell_value = cell.get("value")
+            if not isinstance(column_id, str) or not isinstance(cell_value, str):
+                return value
+            normalized[column_id] = cell_value
+        return normalized
 
 
 class TableContent(_ForbidModel):
