@@ -176,6 +176,22 @@ def item_records_from_assessment(bundle: dict[str, Any]) -> tuple[dict[str, Any]
     return tuple(records)
 
 
+_FIGURE_RUNTIME_ASSET_FIELDS = ("request_id", "status", "src", "svg")
+
+
+def _provider_facing_content(object_id: str, content: dict[str, Any]) -> dict[str, Any]:
+    """Strip code-owned figure delivery fields from provider-facing defaults."""
+    payload = deepcopy(content)
+    if object_id != "figure":
+        return payload
+    asset = payload.get("asset")
+    if isinstance(asset, dict):
+        for field in _FIGURE_RUNTIME_ASSET_FIELDS:
+            asset.pop(field, None)
+        payload["asset"] = asset
+    return payload
+
+
 def default_valid_from_expected(doc: dict[str, Any]) -> dict[str, Any]:
     by_object: dict[str, Any] = {}
     by_block: dict[str, Any] = {}
@@ -188,8 +204,9 @@ def default_valid_from_expected(doc: dict[str, Any]) -> dict[str, Any]:
             object_id = str(block.get("object") or "")
             content = block.get("content")
             if object_id and isinstance(content, dict):
-                by_object[object_id] = deepcopy(content)
-                by_block[str(block.get("id"))] = deepcopy(content)
+                provider_content = _provider_facing_content(object_id, content)
+                by_object[object_id] = deepcopy(provider_content)
+                by_block[str(block.get("id"))] = deepcopy(provider_content)
     by_object["__by_block__"] = by_block
     return by_object
 
@@ -289,9 +306,12 @@ class BlockAwareScriptedProvider:
 
         object_id = kwargs.get("object_id")
         block_id = str(kwargs.get("block_id") or "")
+        dumped = result
+        if hasattr(result, "model_dump") and not isinstance(result, dict):
+            dumped = result.model_dump(mode="json", exclude_none=True)
         # When mode produced a generic valid payload, prefer fixture content.
         if (
-            isinstance(result, dict)
+            isinstance(dumped, dict)
             and block_id in self._by_block
             and object_id not in {"questions", "choices"}
             and self._inner.calls
@@ -300,7 +320,7 @@ class BlockAwareScriptedProvider:
             preferred = deepcopy(self._by_block[block_id])
             self._inner.calls[-1].raw_result = preferred
             return preferred
-        return result
+        return dumped if dumped is not result else result
 
 
 def build_provider(

@@ -7,10 +7,16 @@ import json
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 import yaml
 
 from contracts.lectio_page import validate_document
-from generation.page_objects import ContentValidationError, WriterContext, dispatch_writer_async
+from generation.page_objects import (
+    WRITER_PROVIDER_OUTPUTS,
+    ContentValidationError,
+    WriterContext,
+    dispatch_writer_async,
+)
 from generation.page_objects.document_assembly import (
     canonical_document_sha256,
     persist_document_json,
@@ -18,6 +24,7 @@ from generation.page_objects.document_assembly import (
 )
 from generation.page_objects.scripted_provider import ScriptedWriterProvider
 from generation.page_objects.views import student_document, teacher_document
+from planning.whole_lesson.figure_ids import stable_figure_request_id
 from v3_blueprint.planning.models import PlannedBlock
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
@@ -200,7 +207,7 @@ async def test_figure_missing_alt_then_valid() -> None:
         scenario_name="figure_missing_alt_then_valid",
         default_valid={
             "figure": {
-                "asset": {"kind": "image", "status": "pending", "request_id": "fig-ok"},
+                "asset": {"kind": "image"},
                 "alt_text": "A pending figure of a leaf",
                 "caption": "Caption",
             }
@@ -223,9 +230,48 @@ async def test_figure_missing_alt_then_valid() -> None:
         generation_id="gate9-figure",
     )
     result = await dispatch_writer_async(ctx, provider=provider)
+    expected_request_id = stable_figure_request_id(
+        generation_id="gate9-figure",
+        block_id="s2-figure",
+    )
     assert result.content["alt_text"]
     assert result.content["asset"]["status"] == "pending"
+    assert result.request_id == expected_request_id
+    assert result.content["asset"]["request_id"] == expected_request_id
     assert provider.call_count() == 2
+    provider_output = provider.calls[-1].raw_result
+    assert hasattr(provider_output, "model_dump")
+    provider_payload = provider_output.model_dump(mode="json", exclude_none=True)
+    assert set(provider_payload["asset"]) == {"kind"}
+    assert "request_id" not in provider_payload["asset"]
+    assert "status" not in provider_payload["asset"]
+
+
+@pytest.mark.asyncio
+async def test_scripted_valid_mode_rejects_provider_owned_figure_identity() -> None:
+    provider = ScriptedWriterProvider(
+        default_valid={
+            "figure": {
+                "asset": {
+                    "kind": "image",
+                    "request_id": "evil-provider-id",
+                    "status": "ready",
+                },
+                "alt_text": "A leaf",
+                "caption": "Leaf",
+            }
+        }
+    )
+
+    with pytest.raises(ValidationError):
+        await provider.write(
+            object_id="figure",
+            section_id="section-1",
+            block_id="figure-b1",
+            attempt=1,
+            prompt="test",
+            output_model=WRITER_PROVIDER_OUTPUTS["figure"],
+        )
 
 
 def test_e2e_helper_path_does_not_import_legacy_resume() -> None:

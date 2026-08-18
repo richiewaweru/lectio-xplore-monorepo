@@ -9,8 +9,10 @@ from generation.page_objects import (
     WriterContext,
     dispatch_writer_async,
 )
+from generation.page_objects.prompts import build_repair_prompt, build_writer_prompt
 from generation.page_objects.registry import normalize_persisted_document_json
 from generation.page_objects.scripted_provider import ScriptedWriterProvider
+from planning.catalogue_projections import project_writer_contract
 from v3_blueprint.planning.models import PlannedBlock
 
 
@@ -48,6 +50,43 @@ def _aside_ctx() -> WriterContext:
         section_id="section-1",
         generation_id="gen-rich-text",
     )
+
+
+def _figure_ctx() -> WriterContext:
+    return WriterContext(
+        planned=PlannedBlock.model_validate(
+            {
+                "id": "s1-figure",
+                "position": 0,
+                "intent": "show-structure",
+                "object": "figure",
+                "evidence": "need diagram",
+                "brief": "Show sunlight reaching a leaf.",
+                "placement": "spanning",
+            }
+        ),
+        use_llm=True,
+        section_id="section-1",
+        generation_id="gen-figure-prompt",
+    )
+
+
+def test_figure_writer_and_repair_prompts_state_runtime_identity_ownership() -> None:
+    ctx = _figure_ctx()
+    contract = project_writer_contract("figure")
+
+    first = build_writer_prompt(ctx, contract)
+    repair = build_repair_prompt(
+        ctx,
+        previous_output={"asset": {"request_id": "evil"}},
+        validation_errors=[{"path": "asset.request_id", "message": "extra field"}],
+        contract=contract,
+    )
+
+    for prompt in (first, repair):
+        assert "OBJECT-SPECIFIC RULES" in prompt
+        assert "Do not output `request_id`" in prompt
+        assert "backend owns runtime asset identity" in prompt
 
 
 @pytest.mark.asyncio

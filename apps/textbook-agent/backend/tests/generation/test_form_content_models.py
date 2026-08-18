@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
+from core.llm.deepseek_schema import to_deepseek_strict_schema
 from generation.page_objects import (
     FORM_OUTPUTS,
     WRITER_PROVIDER_OUTPUTS,
@@ -70,6 +72,31 @@ INVALID_FIXTURES: dict[str, dict] = {
 def test_generated_form_ids_cover_eight_forms() -> None:
     assert set(GENERATED_FORM_IDS) == set(FORM_OUTPUTS)
     assert len(GENERATED_FORM_IDS) == 8
+
+
+def test_figure_provider_schema_excludes_runtime_owned_asset_fields() -> None:
+    model = WRITER_PROVIDER_OUTPUTS["figure"]
+    schema = model.model_json_schema()
+    asset_props = schema["$defs"]["FigureWriterAsset"]["properties"]
+    assert set(asset_props) == {"kind"}
+
+    projected = to_deepseek_strict_schema(schema)
+    projected_asset_props = projected["$defs"]["FigureWriterAsset"]["properties"]
+    assert set(projected_asset_props) == {"kind"}
+
+    with pytest.raises(ValidationError):
+        model.model_validate(
+            {
+                "asset": {
+                    "kind": "image",
+                    "request_id": "evil-provider-id",
+                    "status": "ready",
+                    "src": "https://example.invalid/evil.png",
+                },
+                "alt_text": "A leaf diagram",
+                "caption": "Leaf",
+            }
+        )
 
 
 @pytest.mark.parametrize("object_id", list(GENERATED_FORM_IDS))

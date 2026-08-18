@@ -16,8 +16,6 @@ import pytest
 from pydantic import ValidationError
 
 from core.llm.deepseek_schema import to_deepseek_strict_schema
-
-from core.llm.deepseek_schema import to_deepseek_strict_schema
 from planning.models import (
     PathStructuralCard,
     PathStructuralPageCard,

@@ -40,6 +40,28 @@ Return the complete corrected JSON content object only.
 Fix every listed validation error while preserving correct content from the previous response. Do not add properties outside the schema. Do not include markdown fences or commentary.
 """
 
+_OBJECT_SPECIFIC_PROMPT_RESOURCES = {
+    "figure": "figure-brief-writer-v1.txt",
+}
+
+
+def _object_specific_instructions(object_id: str) -> str:
+    resource_name = _OBJECT_SPECIFIC_PROMPT_RESOURCES.get(object_id)
+    if resource_name is None:
+        return ""
+    # Import lazily to keep page-object prompt construction independent at
+    # module import time while reusing the canonical prompt resource.
+    from planning.prompts import prompt_text
+
+    return prompt_text(resource_name).strip()
+
+
+def _with_object_specific_rules(base: str, object_id: str) -> str:
+    specific = _object_specific_instructions(object_id)
+    if not specific:
+        return base
+    return f"{base}\n\n## OBJECT-SPECIFIC RULES\n\n{specific}"
+
 
 def _contract_payload(contract: Any) -> dict[str, Any]:
     if contract is None:
@@ -69,8 +91,9 @@ def build_writer_prompt(ctx: WriterContext, contract: Any) -> str:
         "writer_contract": _contract_payload(contract),
         "terminology": list(ctx.terminology),
     }
+    system = _with_object_specific_rules(_WRITER_SYSTEM, ctx.planned.object)
     return (
-        f"{_WRITER_SYSTEM}\n\n## INPUT JSON\n"
+        f"{system}\n\n## INPUT JSON\n"
         f"{json.dumps(payload, indent=2, sort_keys=True)}"
     )
 
@@ -93,7 +116,8 @@ def build_repair_prompt(
             for err in validation_errors
         ],
     }
+    system = _with_object_specific_rules(_REPAIR_SYSTEM, ctx.planned.object)
     return (
-        f"{_REPAIR_SYSTEM}\n\n## REPAIR PAYLOAD\n"
+        f"{system}\n\n## REPAIR PAYLOAD\n"
         f"{json.dumps(payload, indent=2, sort_keys=True, default=str)}"
     )

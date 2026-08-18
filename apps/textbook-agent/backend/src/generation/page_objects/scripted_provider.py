@@ -114,7 +114,7 @@ class ScriptedWriterProvider:
                 "rows": [{"cells": {"a": "1", "b": "2"}}],
             },
             "figure": {
-                "asset": {"kind": "image", "status": "pending", "request_id": "fig-x"},
+                "asset": {"kind": "image"},
                 "alt_text": "A pending figure",
                 "caption": "Caption",
             },
@@ -147,7 +147,6 @@ class ScriptedWriterProvider:
         prompt: str,
         output_model: type[BaseModel],
     ) -> object:
-        del output_model  # interface parity; validation happens outside
         if self.max_calls is not None and len(self.calls) >= self.max_calls:
             raise RuntimeError(f"exceeded max_calls={self.max_calls}")
 
@@ -179,7 +178,13 @@ class ScriptedWriterProvider:
                 result = (step or {}).get("value") or {}
                 result_kind = "dict"
             else:
-                result = self._valid_for(object_id)
+                # "valid" emulates a successful structured-provider response:
+                # it must pass the exact provider-facing model the real LLM sees.
+                #
+                # "dict" and "raw" intentionally bypass this validation so tests
+                # can still inject malformed model output and exercise the
+                # application's validation/repair boundary.
+                result = output_model.model_validate(self._valid_for(object_id))
                 result_kind = "valid"
             self.calls.append(
                 ScriptedCallRecord(
