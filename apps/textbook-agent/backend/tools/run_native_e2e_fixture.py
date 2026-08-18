@@ -71,7 +71,7 @@ def load_form_plan(path: Path):
     from planning.whole_lesson.form_plan import coerce_form_plan
     from planning.whole_lesson.resolved_block_plan import resolve_block_plans
     from planning.whole_lesson.teaching_plan import (
-        AnchorUsage,
+        AnchorUsageEntry,
         TeachingPlan,
         TeachingPlanBlock,
         TeachingPlanSection,
@@ -109,7 +109,10 @@ def load_form_plan(path: Path):
         )
     teaching = TeachingPlan(
         arc="Fixture teaching arc",
-        anchor_usage=AnchorUsage(),
+        anchor_usage=[
+            AnchorUsageEntry(slot_id=section.slot_id, usage="")
+            for section in teaching_sections
+        ],
         sections=teaching_sections,
     )
     form = coerce_form_plan(raw)

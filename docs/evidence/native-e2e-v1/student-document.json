@@ -84,7 +84,7 @@
           "id": "s2-figure",
           "intent": "show-structure",
           "layout": {
-            "placement": "spanning"
+            "placement": "main"
           },
           "object": "figure",
           "position": 1

@@ -39,24 +39,33 @@ class TeachingPlanSection(BaseModel):
     blocks: list[TeachingPlanBlock] = Field(default_factory=list)
 
 
-class AnchorUsage(BaseModel):
+class AnchorUsageEntry(BaseModel):
+    """Provider-authored mapping of one packet slot_id to its anchor usage."""
+
     model_config = ConfigDict(extra="forbid")
 
-    orient: str = ""
-    explain: str = ""
-    # The active conceptual first-exposure skeleton may use a contrast slot.
-    contrast: str = ""
-    confront: str = ""
-    check: str = ""
+    slot_id: str = Field(min_length=1)
+    usage: str = ""
+
+
+def _reject_duplicate_anchor_usages(entries: list[AnchorUsageEntry]) -> None:
+    slot_ids = [e.slot_id for e in entries]
+    if len(slot_ids) != len(set(slot_ids)):
+        raise ValueError("anchor_usage slot_id values must be unique")
 
 
 class TeachingPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     arc: str = Field(min_length=1)
-    anchor_usage: AnchorUsage
+    anchor_usage: list[AnchorUsageEntry] = Field(default_factory=list)
     misconception_focus_ids: list[str] = Field(default_factory=list)
     sections: list[TeachingPlanSection] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_anchor_usages(self) -> TeachingPlan:
+        _reject_duplicate_anchor_usages(self.anchor_usage)
+        return self
 
 
 class TeachingPlanDraftBlock(BaseModel):
@@ -90,7 +99,7 @@ class TeachingPlanDraft(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     arc: str = Field(min_length=1)
-    anchor_usage: AnchorUsage
+    anchor_usage: list[AnchorUsageEntry] = Field(default_factory=list)
     misconception_focus_ids: list[str] = Field(default_factory=list)
     sections: list[TeachingPlanDraftSection] = Field(default_factory=list)
 

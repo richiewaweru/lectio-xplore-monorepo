@@ -218,7 +218,7 @@ class Settings(BaseSettings):
     )
     allow_paid_llm_tests: bool = False
     deepseek_structured_mode: Literal["strict_tool", "prompted_json"] = Field(
-        default="prompted_json",
+        default="strict_tool",
         validation_alias=AliasChoices(
             "DEEPSEEK_STRUCTURED_MODE",
             "deepseek_structured_mode",

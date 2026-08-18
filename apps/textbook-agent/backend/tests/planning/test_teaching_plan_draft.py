@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 from core.llm.deepseek_schema import to_deepseek_strict_schema
 from planning.whole_lesson.teaching_plan import (
-    AnchorUsage,
+    AnchorUsageEntry,
     TeachingPlanDraft,
     TeachingPlanDraftBlock,
     TeachingPlanDraftSection,
@@ -29,11 +29,10 @@ def _draft_block(**overrides: object) -> TeachingPlanDraftBlock:
 def _draft(**overrides: object) -> TeachingPlanDraft:
     payload = {
         "arc": "Open on two plants, explain the changed condition, and check understanding.",
-        "anchor_usage": AnchorUsage(
-            orient="Introduce the two plants.",
-            explain="Use the plants to isolate light.",
-            check="Return to the plants.",
-        ),
+        "anchor_usage": [
+            AnchorUsageEntry(slot_id="orient", usage="Introduce the two plants."),
+            AnchorUsageEntry(slot_id="check", usage="Return to the plants."),
+        ],
         "misconception_focus_ids": [],
         "sections": [
             TeachingPlanDraftSection(

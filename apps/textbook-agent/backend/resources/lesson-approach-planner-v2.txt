@@ -283,7 +283,10 @@ JSON only. No preamble, no code fences, no commentary.
 
 {
   "arc": str,
-  "anchor_usage": { "<slot_id>": str, ... },
+  "anchor_usage": [
+    { "slot_id": "<exact supplied slot id>", "usage": str },
+    ...
+  ],
   "misconception_focus_ids": [str],
   "sections": [
     {
@@ -306,6 +309,9 @@ JSON only. No preamble, no code fences, no commentary.
 Sections appear in skeleton order, one output section per supplied slot. Do not
 output slot_id, block id, or position. The backend attaches the fixed slot id and
 mints `{slot_id}-b{n}` / 0-based positions from array order after your response.
+
+`anchor_usage` follows packet slot order with one entry per supplied slot. Do not
+invent, rename, omit, reorder, or add slots.
 
 `transition` is null for the first section. For every other section, say in
 one sentence what the previous section left the learner ready for.

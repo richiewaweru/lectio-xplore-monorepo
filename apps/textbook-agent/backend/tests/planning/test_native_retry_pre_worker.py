@@ -44,6 +44,7 @@ from v3_blueprint.planning.models import (
 from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state
 from v3_execution.executors.item_diagnostics import attempt_record
 from v3_execution.executors.item_executor import ItemGenerationResult, ItemGenerationRun
+from v3_execution.executors.item_errors import ItemGenerationOutputInvalidError
 from v3_blueprint.planning.models import ItemOption, QuestionBrief
 
 
@@ -418,6 +419,77 @@ async def test_r01_item_transport_failure_then_retry() -> None:
         page = dict((generation.chunked_state_json or {}).get("page_document_v2") or {})
         assert (page.get("execution") or {}).get("last_error") is None
         assert (page.get("execution") or {}).get("work_kind") is None
+
+
+@pytest.mark.asyncio
+async def test_r08_item_output_invalid_becomes_recoverable() -> None:
+    gid, _card_id = await _seed_generation(
+        status="pending",
+        last_error=None,
+        skip_items=False,
+        ready_card=False,
+    )
+
+    await persist_native_failure_for_generation(
+        gid,
+        exc=ItemGenerationOutputInvalidError(
+            attempt_count=3, details=["items[0].options: semantic invalid"]
+        ),
+        stage="item_generation",
+        event="pre_worker_failure",
+    )
+
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        assert generation.status == "failed_recoverable"
+
+        state = await load_chunked_state(gid)
+        page = dict((state.get("page_document_v2") or {}).copy())
+        last_error = dict((page.get("execution") or {}).get("last_error") or {})
+        assert last_error.get("type") == "ItemGenerationOutputInvalidError"
+        assert last_error.get("code") == "MODEL_OUTPUT_INVALID"
+        assert last_error.get("stage") == "item_generation"
+
+        projected = project_native_status(
+            gid,
+            dict(generation.chunked_state_json or {}),
+            generation.document_json,
+            generation_status=generation.status,
+        )
+        assert projected is not None
+        assert projected["next_action"] == "retry_items"
+
+
+@pytest.mark.asyncio
+async def test_r09_item_programming_failure_remains_terminal() -> None:
+    gid, _card_id = await _seed_generation(
+        status="pending",
+        last_error=None,
+        skip_items=False,
+        ready_card=False,
+    )
+
+    await persist_native_failure_for_generation(
+        gid,
+        exc=TypeError("programming failure: item executor bug"),
+        stage="item_generation",
+        event="pre_worker_failure",
+    )
+
+    projected = project_native_status(
+        gid,
+        await load_chunked_state(gid),
+        None,
+        generation_status="failed_terminal",
+    )
+    assert projected is not None
+    assert projected["next_action"] == "inspect_error"
+
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        assert generation.status == "failed_terminal"
 
 
 @pytest.mark.asyncio

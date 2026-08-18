@@ -1,2 +1,3 @@
-Official procedure: see docs/authority/whole-lesson-e2e-pack-v1.2/04_PROOF_RUNS/FOUR_RUN_PROOF_PROTOCOL.md
-Capture helper: apps/textbook-agent/backend/scripts/capture_whole_lesson_evidence.py
+captured_at=2026-08-16T16:42:20.598528+00:00
+generation_id=61fafb8b-2d34-49b5-9a81-f0c3dcba9b7f
+missing=['03-path-plan-raw.txt']

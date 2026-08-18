@@ -6,6 +6,7 @@
       "blocks_ready": 8,
       "blocks_total": 8,
       "document_exists": false,
+      "document_revision": 0,
       "document_version": 2,
       "error": null,
       "error_detail": null,
@@ -19,7 +20,14 @@
       "sections_failed": 0,
       "sections_ready": 4,
       "sections_total": 4,
-      "stage": "writing_sections"
+      "stage": "writing_sections",
+      "visual_quality": {
+        "failed_request_ids": [],
+        "flagged": [],
+        "flagged_count": 0,
+        "retryable": false,
+        "status": "ready"
+      }
     }
   },
   {
@@ -29,6 +37,7 @@
       "blocks_ready": 8,
       "blocks_total": 8,
       "document_exists": false,
+      "document_revision": 0,
       "document_version": 2,
       "error": null,
       "error_detail": null,
@@ -42,7 +51,14 @@
       "sections_failed": 0,
       "sections_ready": 4,
       "sections_total": 4,
-      "stage": "assembling"
+      "stage": "assembling",
+      "visual_quality": {
+        "failed_request_ids": [],
+        "flagged": [],
+        "flagged_count": 0,
+        "retryable": false,
+        "status": "ready"
+      }
     }
   },
   {
@@ -52,6 +68,7 @@
       "blocks_ready": 8,
       "blocks_total": 8,
       "document_exists": true,
+      "document_revision": 0,
       "document_version": 2,
       "error": null,
       "error_detail": null,
@@ -65,7 +82,14 @@
       "sections_failed": 0,
       "sections_ready": 4,
       "sections_total": 4,
-      "stage": "ready"
+      "stage": "ready",
+      "visual_quality": {
+        "failed_request_ids": [],
+        "flagged": [],
+        "flagged_count": 0,
+        "retryable": false,
+        "status": "ready"
+      }
     }
   }
 ]

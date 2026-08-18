@@ -1,10 +1,6 @@
-﻿# run-01-science conclusion
+# Capture conclusion
 
-Subject: Science
-Concept: Why plants need light to make food
-
-## Gate status
-BLOCKED — local backend has no .env with LLM API keys or DATABASE_URL, so the official live UI/API proof cannot be executed without substituting fixtures (forbidden by protocol).
-
-## Implementation readiness
-Native whole-lesson path is implemented on branch `whole-lesson-native-e2e`. When credentials are available, run through Xplore and capture with `scripts/capture_whole_lesson_evidence.py`.
+- generation_id: `046cdd0f-45bd-42e1-af3d-34fc91fc62bb`
+- status: `ready`
+- native_whole_lesson: `True`
+- missing artifacts: ['03-path-plan-raw.txt']

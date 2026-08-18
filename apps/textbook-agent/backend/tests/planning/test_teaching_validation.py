@@ -16,7 +16,7 @@ from planning.whole_lesson.packet import (
     SlotRecord,
 )
 from planning.whole_lesson.teaching_plan import (
-    AnchorUsage,
+    AnchorUsageEntry,
     TeachingPlan,
     TeachingPlanBlock,
     TeachingPlanSection,
@@ -113,12 +113,12 @@ def test_generic_brief_fails_validation() -> None:
     )
     plan = TeachingPlan(
         arc="Opens on two plants, isolates light, confronts soil-food belief, checks with a new case.",
-        anchor_usage=AnchorUsage(
-            orient="show plants",
-            explain="reuse plants",
-            confront="test soil belief",
-            check="new case",
-        ),
+        anchor_usage=[
+            AnchorUsageEntry(slot_id="orient", usage="show plants"),
+            AnchorUsageEntry(slot_id="explain", usage="reuse plants"),
+            AnchorUsageEntry(slot_id="confront", usage="test soil belief"),
+            AnchorUsageEntry(slot_id="check", usage="new case"),
+        ],
         sections=[
             TeachingPlanSection(
                 slot_id=slot,
@@ -179,12 +179,10 @@ def _slot_order_packet(slots: tuple[str, ...], *, knowledge_type: str = "concept
 def _slot_order_plan(slots: tuple[str, ...]) -> TeachingPlan:
     return TeachingPlan(
         arc="Uses the window plants to establish light, then checks transfer on a new case.",
-        anchor_usage=AnchorUsage(
-            orient="show plants",
-            explain="reuse plants",
-            confront="test soil belief",
-            check="new case",
-        ),
+        anchor_usage=[
+            AnchorUsageEntry(slot_id=slot, usage="" if slot not in {"orient", "explain"} else "use")
+            for slot in slots
+        ],
         sections=[
             TeachingPlanSection(
                 slot_id=slot,
@@ -292,19 +290,68 @@ def test_required_visual_slot_needs_spatial_process_intent() -> None:
 
 
 def test_anchor_usage_accepts_active_contrast_slot() -> None:
-    plan = TeachingPlan.model_validate(
-        {
-            "arc": "Orient, explain, contrast, and check the idea.",
-            "anchor_usage": {
-                "orient": "Introduce the anchor.",
-                "explain": "Build the model.",
-                "contrast": "Set the case beside a near miss.",
-                "check": "Return to the objective.",
-            },
-        }
+    packet = _slot_order_packet(("orient", "explain", "contrast", "confront", "check"))
+    plan = TeachingPlan(
+        arc="Orient, explain, contrast, confront, and check the idea.",
+        anchor_usage=[
+            AnchorUsageEntry(slot_id="orient", usage="Introduce the anchor."),
+            AnchorUsageEntry(slot_id="explain", usage="Build the model."),
+            AnchorUsageEntry(
+                slot_id="contrast", usage="Set the case beside a near miss."
+            ),
+            AnchorUsageEntry(slot_id="confront", usage=""),
+            AnchorUsageEntry(slot_id="check", usage="Return to the objective."),
+        ],
+        sections=[
+            TeachingPlanSection(
+                slot_id=slot,
+                blocks=[
+                    TeachingPlanBlock(
+                        id=f"{slot}-b1",
+                        position=0,
+                        intent="orient" if slot == "orient" else "explain",
+                        brief="Brief for test",
+                        evidence_refs=["lesson.objective"],
+                        evidence="Evidence",
+                    )
+                ],
+            )
+            for slot in ("orient", "explain", "contrast", "confront", "check")
+        ],
     )
 
-    assert plan.anchor_usage.contrast == "Set the case beside a near miss."
+    report = validate_teaching_plan(
+        plan,
+        packet,
+        permitted_intents={"orient", "explain"},
+        excluded_intents=set(),
+        typical_by_slot={slot.slot_id: {"orient", "explain"} for slot in packet.slots},
+    )
+
+    assert not any(issue.code == "ANCHOR_USAGE_SLOT_MISMATCH" for issue in report.issues)
+
+
+def test_anchor_usage_slot_mismatch_rejected() -> None:
+    expected = ("orient", "explain", "confront", "check")
+    packet = _slot_order_packet(expected)
+    plan = _slot_order_plan(expected)
+    # Swap two anchor entries; sections stay correct, so this isolates the
+    # anchor_usage slot identity/order validator.
+    plan.anchor_usage = [
+        plan.anchor_usage[0],
+        plan.anchor_usage[1],
+        plan.anchor_usage[3],
+        plan.anchor_usage[2],
+    ]
+
+    report = validate_teaching_plan(
+        plan,
+        packet,
+        permitted_intents={"orient", "explain"},
+        excluded_intents=set(),
+        typical_by_slot={slot: {"orient", "explain"} for slot in expected},
+    )
+    assert any(issue.code == "ANCHOR_USAGE_SLOT_MISMATCH" for issue in report.issues)
 
 
 def test_assessment_intent_requires_approved_source_when_items_exist() -> None:

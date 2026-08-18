@@ -75,12 +75,19 @@
 				raw_text: rawText.trim()
 			});
 			readback = result;
-			step = result.clarifying_question ? 'clarify' : 'readback';
+			step = hasClarifyingQuestion(result.clarifying_question) ? 'clarify' : 'readback';
 		} catch (err) {
 			error = err instanceof Error ? err.message : "Could not read that back — let's try again.";
 		} finally {
 			thinking = false;
 		}
+	}
+
+	function hasClarifyingQuestion(value: string | null | undefined): boolean {
+		const q = value?.trim();
+		if (!q) return false;
+		const lowered = q.toLowerCase();
+		return lowered !== 'null' && lowered !== 'none';
 	}
 
 	async function answerClarifyingQuestion(event: SubmitEvent): Promise<void> {
@@ -247,10 +254,10 @@
 						</button>
 					</div>
 				</form>
-			{:else if step === 'clarify' && readback?.clarifying_question}
+			{:else if step === 'clarify' && hasClarifyingQuestion(readback?.clarifying_question)}
 				<form class="ask-form" onsubmit={answerClarifyingQuestion}>
 					<div class="form-head">
-						<div><p class="eyebrow">One quick question</p><h2>{readback.clarifying_question}</h2></div>
+						<div><p class="eyebrow">One quick question</p><h2>{readback.clarifying_question?.trim()}</h2></div>
 					</div>
 					<label class="wide"><span>Your answer</span><input bind:value={clarifyingAnswer} required /></label>
 					<div class="form-actions">

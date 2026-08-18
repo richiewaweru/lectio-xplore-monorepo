@@ -1,10 +1,6 @@
-﻿# run-03-economics conclusion
+# Capture conclusion
 
-Subject: Economics
-Concept: How supply and demand affect price
-
-## Gate status
-BLOCKED — local backend has no .env with LLM API keys or DATABASE_URL, so the official live UI/API proof cannot be executed without substituting fixtures (forbidden by protocol).
-
-## Implementation readiness
-Native whole-lesson path is implemented on branch `whole-lesson-native-e2e`. When credentials are available, run through Xplore and capture with `scripts/capture_whole_lesson_evidence.py`.
+- generation_id: `442c8a5f-16f9-4140-ac3b-9230424ac159`
+- status: `ready`
+- native_whole_lesson: `True`
+- missing artifacts: ['03-path-plan-raw.txt']

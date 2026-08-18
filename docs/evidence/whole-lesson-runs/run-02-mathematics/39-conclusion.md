@@ -1,10 +1,6 @@
-﻿# run-02-mathematics conclusion
+# Capture conclusion
 
-Subject: Mathematics
-Concept: Equivalent fractions
-
-## Gate status
-BLOCKED — local backend has no .env with LLM API keys or DATABASE_URL, so the official live UI/API proof cannot be executed without substituting fixtures (forbidden by protocol).
-
-## Implementation readiness
-Native whole-lesson path is implemented on branch `whole-lesson-native-e2e`. When credentials are available, run through Xplore and capture with `scripts/capture_whole_lesson_evidence.py`.
+- generation_id: `6693c7bf-8b2f-409a-906d-9f542ec59b15`
+- status: `ready`
+- native_whole_lesson: `True`
+- missing artifacts: ['03-path-plan-raw.txt']

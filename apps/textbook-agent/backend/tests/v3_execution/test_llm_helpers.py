@@ -59,6 +59,6 @@ def test_non_deepseek_models_keep_native_output_type() -> None:
     assert unchanged is _ExampleModel
 
 
-def test_get_structured_mode_defaults_to_prompted_json(monkeypatch) -> None:
-    monkeypatch.setattr(settings, "deepseek_structured_mode", "prompted_json")
-    assert get_structured_mode() == "prompted_json"
+def test_get_structured_mode_defaults_to_strict_tool(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "deepseek_structured_mode", "strict_tool")
+    assert get_structured_mode() == "strict_tool"

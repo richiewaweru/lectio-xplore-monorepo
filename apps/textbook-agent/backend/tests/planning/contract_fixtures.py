@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from planning.whole_lesson.form_plan import FormDecision, FormPlan, FormPlanSection
 from planning.whole_lesson.teaching_plan import (
-    AnchorUsage,
     TeachingPlan,
     TeachingPlanBlock,
     TeachingPlanSection,
+    AnchorUsageEntry,
 )
 
 
@@ -53,12 +53,10 @@ def teaching_and_form(
         form_sections.append(FormPlanSection(slot_id=slot_id, forms=forms))
     teaching = TeachingPlan(
         arc="Orient → explain → check",
-        anchor_usage=AnchorUsage(
-            orient="use anchor",
-            explain="develop",
-            confront="",
-            check="check",
-        ),
+        anchor_usage=[
+            AnchorUsageEntry(slot_id=slot_id, usage="")
+            for slot_id, _blocks in sections
+        ],
         sections=teaching_sections,
     )
     return teaching, FormPlan(sections=form_sections)

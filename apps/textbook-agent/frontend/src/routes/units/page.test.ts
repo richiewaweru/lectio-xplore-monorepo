@@ -147,4 +147,28 @@ describe('/units', () => {
 
 		expect(await screen.findByRole('heading', { name: 'Plant Cells' })).toBeTruthy();
 	});
+
+	it('does not ask clarification when clarifying_question is the sentinel "null"', async () => {
+		mocks.constructorReadback.mockResolvedValueOnce({
+			...readback,
+			title: 'Photosynthesis',
+			topic: 'how plants make food',
+			destination_objective: 'explain how plants make food',
+			starting_knowledge: ['plants are living things'],
+			clarifying_question: 'null'
+		});
+
+		render(UnitsPage);
+		await fireEvent.click(await screen.findByRole('button', { name: '+ New unit' }));
+		await fireEvent.change(screen.getByLabelText('Subject'), { target: { value: 'Science' } });
+		await fireEvent.change(screen.getByLabelText('Grade level'), { target: { value: 'Grade 8' } });
+		await fireEvent.input(
+			screen.getByLabelText('What are you teaching? Anything I should know about this class?'),
+			{ target: { value: 'Cells' } }
+		);
+		await fireEvent.click(screen.getByRole('button', { name: 'Plan it' }));
+
+		expect(screen.queryByText('One quick question')).toBeNull();
+		expect(await screen.findByRole('heading', { name: 'Photosynthesis' })).toBeTruthy();
+	});
 });

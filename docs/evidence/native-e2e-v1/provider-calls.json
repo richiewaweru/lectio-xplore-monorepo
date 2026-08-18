@@ -34,7 +34,7 @@
     "block_id": "s2-figure",
     "exception": null,
     "object": "figure",
-    "prompt_hash": "68faaa3cce786b69be37dc6cd3c61749edf0d7be5413c19c345f733db06235fe",
+    "prompt_hash": "30a0f179436b8d6ef34e72ded7a4a4d1f004c4c77937bcbeb5914cd6db65f6ea",
     "result_kind": "valid",
     "scenario": "all_valid_out_of_order",
     "section_id": "section-2"

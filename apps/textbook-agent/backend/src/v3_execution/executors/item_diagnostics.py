@@ -9,6 +9,7 @@ from typing import Any, Literal
 from planning.llm_contract_errors import is_transport_error, structured_output_errors
 from planning.whole_lesson.failure_policy import classify_failure
 from pydantic import ValidationError
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 OutcomeClass = Literal["OK", "TRANSPORT", "TIMEOUT", "RATE_LIMIT", "CONTRACT", "SEMANTIC", "UNKNOWN"]
 
@@ -39,7 +40,19 @@ def classify_item_failure(exc: BaseException) -> tuple[OutcomeClass, bool]:
         return "RATE_LIMIT", True
     if classification.code == "TRANSPORT" or is_transport_error(exc):
         return "TRANSPORT", True
-    if classification.code in {"VALIDATION", "CONTRACT"} or structured_output_errors(exc):
+    extracted = structured_output_errors(exc)
+    # Structured-output failures are often wrapped by UnexpectedModelBehavior.
+    # If the extraction is just the fallback (type+message), do not treat it as
+    # an automatic repair candidate; otherwise we would loop on programming
+    # errors until exhaustion.
+    if isinstance(exc, UnexpectedModelBehavior):
+        only_fallback = (
+            len(extracted) == 1
+            and extracted[0].startswith(f"{type(exc).__name__}:")
+        )
+        if not only_fallback:
+            return "CONTRACT", True
+    if classification.code in {"VALIDATION", "CONTRACT"}:
         return "CONTRACT", classification.retryable
     return "UNKNOWN", classification.retryable
 

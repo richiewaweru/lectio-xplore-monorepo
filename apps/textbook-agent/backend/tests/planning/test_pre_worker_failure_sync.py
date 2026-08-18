@@ -22,7 +22,7 @@ from planning.whole_lesson.packet import (
     SlotRecord,
 )
 from planning.whole_lesson.teaching_agent import run_lesson_approach_planner
-from planning.whole_lesson.teaching_plan import AnchorUsage, TeachingPlan
+from planning.whole_lesson.teaching_plan import TeachingPlan
 from v3_blueprint.planning.models import (
     AnchorSpec,
     ComponentSlot,
@@ -369,7 +369,7 @@ async def test_teaching_boundary_persists_semantic_exhaustion_as_recoverable() -
     gid, user_id = await _seed_native_pre_worker()
     invalid = TeachingPlan(
         arc="Invalid empty lesson",
-        anchor_usage=AnchorUsage(),
+        anchor_usage=[],
         sections=[],
     )
     model_call = AsyncMock(return_value=(invalid, invalid.model_dump_json()))

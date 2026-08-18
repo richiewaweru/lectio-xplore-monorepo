@@ -8,6 +8,7 @@ from typing import Any
 
 from planning.whole_lesson.states import LeaseLostError
 from planning.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
+from v3_execution.executors.item_errors import ItemGenerationOutputInvalidError
 
 try:
     import httpx
@@ -44,6 +45,10 @@ def classify_failure(exc: BaseException) -> FailureClassification:
     if ContentValidationError is not None and isinstance(exc, ContentValidationError):
         return FailureClassification(code="VALIDATION", retryable=True, repairable=False)
     if isinstance(exc, TeachingPlanOutputInvalidError):
+        return FailureClassification(
+            code="MODEL_OUTPUT_INVALID", retryable=True, repairable=False
+        )
+    if isinstance(exc, ItemGenerationOutputInvalidError):
         return FailureClassification(
             code="MODEL_OUTPUT_INVALID", retryable=True, repairable=False
         )
@@ -111,7 +116,7 @@ def structured_error_from_exc(
 
     classification = classify_failure(exc)
     message = str(exc).strip()[:500] or type(exc).__name__
-    return {
+    payload: dict[str, Any] = {
         "type": type(exc).__name__,
         "code": classification.code,
         "message": message,
@@ -124,3 +129,8 @@ def structured_error_from_exc(
         "repairable": classification.repairable,
         "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
+
+    if (details := getattr(exc, "details", None)) is not None:
+        payload["details"] = list(details)
+
+    return payload

@@ -1113,7 +1113,7 @@
 				{#if lessonApproach.teaching_plan}
 					{@const plan = lessonApproach.teaching_plan as {
 						arc?: string;
-						anchor_usage?: Record<string, string>;
+						anchor_usage?: Array<{ slot_id: string; usage: string }>;
 						misconception_focus_ids?: string[];
 						sections?: Array<{
 							slot_id: string;
@@ -1136,8 +1136,10 @@
 						<div class="rounded-xl border border-border/70 bg-card p-4">
 							<h3 class="text-sm font-semibold">Anchor usage</h3>
 							<ul class="mt-2 space-y-1 text-sm text-muted-foreground">
-								{#each Object.entries(plan.anchor_usage) as [slot, usage]}
-									<li><span class="font-medium text-foreground">{slot}:</span> {usage}</li>
+								{#each plan.anchor_usage as entry (entry.slot_id)}
+									<li>
+										<span class="font-medium text-foreground">{entry.slot_id}:</span> {entry.usage}
+									</li>
 								{/each}
 							</ul>
 						</div>

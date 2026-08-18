@@ -38,7 +38,7 @@ from planning.whole_lesson.repository import PageDocumentRepository, empty_page_
 from planning.whole_lesson.teaching_agent import run_lesson_approach_planner
 from planning.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
 from planning.whole_lesson.teaching_plan import (
-    AnchorUsage,
+    AnchorUsageEntry,
     TeachingPlan,
     TeachingPlanBlock,
     TeachingPlanSection,
@@ -347,7 +347,7 @@ def _check_plan(*, source_ids: list[str], invalid_context: bool = False) -> Teac
     refs = ["approved_item_ids"] if invalid_context else ["lesson.objective"]
     return TeachingPlan(
         arc="Use the two plants to check whether learners can explain why light matters.",
-        anchor_usage=AnchorUsage(check="Return to the two plants."),
+        anchor_usage=[AnchorUsageEntry(slot_id="check", usage="Return to the two plants.")],
         sections=[
             TeachingPlanSection(
                 slot_id="check",
@@ -592,14 +592,17 @@ async def test_teaching_schema_failure_gets_informed_repair() -> None:
                 ],
             )
         from planning.whole_lesson.teaching_plan import (
-            AnchorUsage,
+            AnchorUsageEntry,
             TeachingPlanBlock,
             TeachingPlanSection,
         )
 
         plan = TeachingPlan(
             arc="Orient then explain",
-            anchor_usage=AnchorUsage(orient="use", explain="dev", confront="", check=""),
+            anchor_usage=[
+                AnchorUsageEntry(slot_id="orient", usage="use"),
+                AnchorUsageEntry(slot_id="explain", usage="dev"),
+            ],
             sections=[
                 TeachingPlanSection(
                     slot_id="orient",
@@ -977,14 +980,17 @@ async def test_teaching_with_persisted_legality_does_not_reassemble() -> None:
         *, prompt, user_payload, trace_id, generation_id, attempt_start=1
     ):
         from planning.whole_lesson.teaching_plan import (
-            AnchorUsage,
+            AnchorUsageEntry,
             TeachingPlanBlock,
             TeachingPlanSection,
         )
 
         plan = TeachingPlan(
             arc="Orient then explain using the plant contrast.",
-            anchor_usage=AnchorUsage(orient="use", explain="dev", confront="", check=""),
+            anchor_usage=[
+                AnchorUsageEntry(slot_id="orient", usage="use"),
+                AnchorUsageEntry(slot_id="explain", usage="dev"),
+            ],
             sections=[
                 TeachingPlanSection(
                     slot_id="orient",

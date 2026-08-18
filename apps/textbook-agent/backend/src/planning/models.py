@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 KnowledgeType = Literal["procedural", "conceptual", "factual", "evaluative"]
@@ -93,6 +93,23 @@ class ConstructorOutput(StrictModel):
     curriculum_context: str | None = None
     class_notes: str | None = None
     clarifying_question: str | None = None
+
+    @field_validator("clarifying_question", mode="before")
+    @classmethod
+    def _normalize_clarifying_question_sentinels(
+        cls, value: str | None,
+    ) -> str | None:
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            return value
+        text = value.strip()
+        if not text:
+            return None
+        lowered = text.lower()
+        if lowered in {"null", "none", "n/a"}:
+            return None
+        return text
 
 
 class ConstructorReadbackRequest(StrictModel):

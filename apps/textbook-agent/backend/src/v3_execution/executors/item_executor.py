@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 from pydantic_ai import Agent
 
 from core.llm.runner import RetryPolicy, run_llm
+from planning.llm_contract_errors import structured_output_errors
 from v3_blueprint.planning.models import ConceptCard, ItemOption, QuestionBrief
 from v3_execution.config import (
     get_v3_model,
@@ -24,6 +25,7 @@ from v3_execution.executors.item_diagnostics import (
 )
 from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 from v3_execution.prompts.item_prompt import build_item_messages, get_item_system_prompt
+from v3_execution.executors.item_errors import ItemGenerationOutputInvalidError
 
 ITEM_NODE = "v3_item_executor"
 # Transport + contract repair budget owned here (not raised for pass-rate gaming).
@@ -49,6 +51,11 @@ class ItemGenerationResult(BaseModel):
 
     card_id: str
     items: list[QuestionBrief] = Field(min_length=5, max_length=5)
+    # Deterministic provider normalization observability.
+    # DeepSeek strict outputs may include `diagnoses` on `correct=true` options.
+    # Canonical item semantics prohibit diagnoses on the correct option, but the
+    # application knows the unique repair value: set diagnoses -> null.
+    normalized_correct_diagnoses_cleared: int = Field(ge=0, default=0)
     coverage: dict[str, int] = Field(default_factory=dict)
     unmapped_options: int = Field(ge=0, default=0)
     _missing_misconceptions: tuple[str, ...] = PrivateAttr(default=())
@@ -112,17 +119,26 @@ def materialize_item_result(
     draft: ItemGenerationDraft,
     card: ConceptCard,
 ) -> ItemGenerationResult:
-    return ItemGenerationResult(
-        card_id=card.id,
-        items=[
+    cleared = 0
+    normalized_items: list[QuestionBrief] = []
+    for index, item in enumerate(draft.items, start=1):
+        payload = item.model_dump(mode="json")
+        for option in payload.get("options") or []:
+            if option.get("correct") is True and option.get("diagnoses") is not None:
+                option["diagnoses"] = None
+                cleared += 1
+        normalized_items.append(
             QuestionBrief.model_validate(
                 {
                     "question_id": f"{card.id}.i{index}",
-                    **item.model_dump(mode="json"),
+                    **payload,
                 }
             )
-            for index, item in enumerate(draft.items, start=1)
-        ],
+        )
+    return ItemGenerationResult(
+        card_id=card.id,
+        items=normalized_items,
+        normalized_correct_diagnoses_cleared=cleared,
     )
 
 
@@ -150,10 +166,9 @@ async def execute_items_with_diagnostics(
         model=model,
         output_type=provider_output,
         system_prompt=get_item_system_prompt(),
-        # DeepSeek can occasionally omit one required item field from an
-        # otherwise valid strict-tool payload. Allow one provider-side
-        # validation retry before the executor's outer attempt journal fails.
-        retries={**NO_OUTPUT_RETRY, "output": 1},
+        # Outer loop owns repair/retries for item-generation. Disable the
+        # in-library structured-output retry so we don't hide attempts.
+        retries=NO_OUTPUT_RETRY,
     )
     cid = correlation_id or new_item_correlation_id(
         generation_id=generation_id, card_id=card.id
@@ -162,22 +177,38 @@ async def execute_items_with_diagnostics(
     last_exc: BaseException | None = None
     budget = max(1, int(max_attempts))
 
+    allowed_misconception_ids = [row.id for row in card.misconceptions]
+    previous_output: object | None = None
+    repair_errors: list[str] = []
+    output_invalid_details: list[str] = []
+
+    last_outcome_class: OutcomeClass | None = None
+    last_retryable: bool = False
+
     for attempt in range(1, budget + 1):
         started = time.perf_counter()
         try:
+            user_prompt = build_item_messages(card)
+            if attempt >= 2 and repair_errors:
+                user_prompt = build_item_messages(
+                    card,
+                    repair_errors=repair_errors,
+                    allowed_misconception_ids=allowed_misconception_ids,
+                    previous_output=previous_output,
+                )
+
             result = await run_llm(
                 trace_id=f"{cid}:attempt{attempt}",
                 caller="v3_item_executor",
                 generation_id=generation_id,
                 agent=agent,
-                user_prompt=build_item_messages(card),  # type: ignore[arg-type]
+                user_prompt=user_prompt,  # type: ignore[arg-type]
                 model=model,
                 slot=slot,
                 spec=spec,
                 section_id=None,
                 node=node,
                 model_settings=get_v3_model_settings(node),
-                # Outer loop owns the attempt journal; do not hide retries here.
                 retry_policy=RetryPolicy(
                     max_attempts=1,
                     call_timeout_seconds=float(V3_TIMEOUTS["item_executor"]),
@@ -185,15 +216,25 @@ async def execute_items_with_diagnostics(
                 attempt_start=attempt,
                 structured_context=structured_context,
             )
+
             raw = result.output
+            previous_output = raw.model_dump(mode="json") if hasattr(raw, "model_dump") else raw
+
             if isinstance(raw, ItemGenerationDraft):
                 draft = raw
+                parsed = materialize_item_result(draft, card)
+                validated = validate_item_result(parsed, card)
+            elif isinstance(raw, ItemGenerationResult):
+                validated = validate_item_result(raw, card)
             elif hasattr(raw, "model_dump"):
                 draft = ItemGenerationDraft.model_validate(raw.model_dump())
+                parsed = materialize_item_result(draft, card)
+                validated = validate_item_result(parsed, card)
             else:
                 draft = ItemGenerationDraft.model_validate(raw)
-            parsed = materialize_item_result(draft, card)
-            validated = validate_item_result(parsed, card)
+                parsed = materialize_item_result(draft, card)
+                validated = validate_item_result(parsed, card)
+
             attempts.append(
                 attempt_record(
                     correlation_id=cid,
@@ -212,6 +253,22 @@ async def execute_items_with_diagnostics(
         except Exception as exc:  # noqa: BLE001
             last_exc = exc
             outcome_class, retryable = classify_item_failure(exc)
+            last_outcome_class = outcome_class
+            last_retryable = retryable
+
+            # Transport failures are not contract repair targets.
+            if outcome_class == "TRANSPORT":
+                repair_errors = []
+            else:
+                if outcome_class == "CONTRACT":
+                    repair_errors = structured_output_errors(exc)
+                elif outcome_class == "SEMANTIC":
+                    repair_errors = [str(exc)]
+                else:
+                    repair_errors = []
+
+            output_invalid_details = repair_errors or [str(exc)]
+
             attempts.append(
                 attempt_record(
                     correlation_id=cid,
@@ -220,10 +277,11 @@ async def execute_items_with_diagnostics(
                     started_at=started,
                     outcome_class=outcome_class,
                     error=str(exc)[:500],
-                    validation_errors=[str(exc)[:300]],
+                    validation_errors=output_invalid_details,
                     retryable=retryable,
                 )
             )
+
             if not retryable or attempt >= budget:
                 break
 
@@ -231,6 +289,17 @@ async def execute_items_with_diagnostics(
     # Attach attempt journal on the exception for callers that catch and persist.
     setattr(last_exc, "item_attempts", attempts)
     setattr(last_exc, "item_correlation_id", cid)
+
+    exhausted = last_retryable and last_outcome_class in {"CONTRACT", "SEMANTIC"} and len(attempts) >= budget
+    if exhausted:
+        typed = ItemGenerationOutputInvalidError(
+            attempt_count=len(attempts),
+            details=output_invalid_details or [str(last_exc)],
+        )
+        setattr(typed, "item_attempts", attempts)
+        setattr(typed, "item_correlation_id", cid)
+        raise typed from last_exc
+
     raise last_exc
 
 

@@ -149,6 +149,19 @@ def validate_teaching_plan(
             )
         )
 
+    anchor_slot_ids = [entry.slot_id for entry in plan.anchor_usage]
+    if anchor_slot_ids != expected_slots:
+        issues.append(
+            ValidationIssue(
+                code="ANCHOR_USAGE_SLOT_MISMATCH",
+                message=(
+                    "anchor_usage must follow packet.slots in exact order; "
+                    f"expected {expected_slots}; got {anchor_slot_ids}"
+                ),
+                path="anchor_usage",
+            )
+        )
+
     seen_block_ids: set[str] = set()
     seen_source_question_ids: set[str] = set()
     total_blocks = 0

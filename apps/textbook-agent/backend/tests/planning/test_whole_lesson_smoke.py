@@ -19,7 +19,7 @@ from planning.whole_lesson.packet import (
 )
 from planning.whole_lesson.prompt_render import render_teaching_prompt
 from planning.whole_lesson.teaching_plan import (
-    AnchorUsage,
+    AnchorUsageEntry,
     TeachingPlan,
     TeachingPlanBlock,
     TeachingPlanSection,
@@ -129,12 +129,16 @@ def _valid_plan() -> TeachingPlan:
             "difference to isolate light, confronts the soil-food belief, and closes by "
             "asking the learner to explain a new covered-leaf case."
         ),
-        anchor_usage=AnchorUsage(
-            orient="Introduce the two plants.",
-            explain="Reuse them to isolate light.",
-            confront="Use covered plant against soil belief.",
-            check="Transfer to a new covered-leaf case.",
-        ),
+        anchor_usage=[
+            AnchorUsageEntry(slot_id="orient", usage="Introduce the two plants."),
+            AnchorUsageEntry(slot_id="explain", usage="Reuse them to isolate light."),
+            AnchorUsageEntry(
+                slot_id="confront", usage="Use covered plant against soil belief."
+            ),
+            AnchorUsageEntry(
+                slot_id="check", usage="Transfer to a new covered-leaf case."
+            ),
+        ],
         misconception_focus_ids=["misconception-1"],
         sections=sections,
     )

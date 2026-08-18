@@ -17,7 +17,7 @@ from planning.whole_lesson.validation import SPATIAL_PROCESS_REPRESENTATION_INTE
 
 
 V1_SHA256 = "475b8b178f74c1397742b12002a324e18ae3e39a4fffd9e7a4c199713780a9cd"
-V2_SHA256 = "860b3ad454c157df0f7969c194685f87230ae32818e257868f0cc39bdaf688ee"
+V2_SHA256 = "d94ba4db88aaff85a33f5ff96032fc5eea5e0ecbc08b3112b27639f38386d4d5"
 
 
 def _sha256(text: str) -> str:

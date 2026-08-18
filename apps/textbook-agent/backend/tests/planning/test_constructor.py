@@ -106,6 +106,35 @@ def test_constructor_output_rejects_multiple_clarifying_questions() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "sentinel",
+    [
+        "null",
+        " NULL ",
+        "none",
+        " none ",
+        "N/A",
+        " n/a ",
+        "",
+        "   ",
+    ],
+)
+def test_constructor_output_normalizes_clarifying_question_sentinels_to_none(
+    sentinel: str,
+) -> None:
+    out = ConstructorOutput.model_validate(
+        _fake_readback(clarifying_question=sentinel)
+    )
+    assert out.clarifying_question is None
+
+
+def test_constructor_output_trims_real_clarifying_question() -> None:
+    out = ConstructorOutput.model_validate(
+        _fake_readback(clarifying_question="  Do you mean unlike denominators?  ")
+    )
+    assert out.clarifying_question == "Do you mean unlike denominators?"
+
+
 async def test_constructor_prompt_overlay_and_default_both_load(db_session_factory) -> None:
     async with db_session_factory() as session:
         default_text, default_hash = await loader.resolve_prompt(
