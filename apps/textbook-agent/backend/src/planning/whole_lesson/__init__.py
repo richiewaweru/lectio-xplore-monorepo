@@ -23,7 +23,11 @@ from planning.whole_lesson.resolved_block_plan import (
 from planning.whole_lesson.teaching_plan import (
     TeachingPlan,
     TeachingPlanBlock,
+    TeachingPlanDraft,
+    TeachingPlanDraftBlock,
+    TeachingPlanDraftSection,
     TeachingPlanSection,
+    materialize_teaching_plan,
 )
 
 __all__ = [
@@ -38,9 +42,13 @@ __all__ = [
     "ResolvedSectionPlan",
     "TeachingPlan",
     "TeachingPlanBlock",
+    "TeachingPlanDraft",
+    "TeachingPlanDraftBlock",
+    "TeachingPlanDraftSection",
     "TeachingPlanSection",
     "build_lesson_legality_snapshot",
     "coerce_form_plan",
+    "materialize_teaching_plan",
     "project_slot_intent_policy",
     "resolve_block_plans",
     "validate_legality_snapshot",

@@ -25,6 +25,7 @@ from generation.path_preparation import initialise_path_generation
 from planning.agents import run_component_selector, run_path_structural_planner
 from planning.models import (
     ComponentSelection,
+    PathStructuralPagePlan,
     PathStructuralPlan,
     PrepareLessonRequest,
     PreparedLessonResponse,
@@ -60,7 +61,9 @@ class PathPreparationBlocked(ValueError):
     pass
 
 
-StructuralPlanner = Callable[[dict[str, Any]], Awaitable[PathStructuralPlan]]
+StructuralPlanner = Callable[
+    [dict[str, Any]], Awaitable[PathStructuralPlan | PathStructuralPagePlan]
+]
 ComponentSelector = Callable[[dict[str, Any]], Awaitable[ComponentSelection]]
 
 
@@ -200,7 +203,7 @@ def _normalize_page_concept_card_payload(
 
 def _build_structural_plan(
     *,
-    generated: PathStructuralPlan,
+    generated: PathStructuralPlan | PathStructuralPagePlan,
     lesson: PathLessonModel,
     lesson_mode: str,
     prior_knowledge: list[str],
@@ -239,7 +242,23 @@ def _build_structural_plan(
         # SectionPlan.components has no default, and exclude_none drops the key
         # when the planner omits it (the native prompt forbids components).
         section_payload.setdefault("components", [])
-        if visual_required_by_slot is not None:
+        canonical_slot_id = slots[index] if index < len(slots) else None
+        if page_block_plans is not None:
+            if canonical_slot_id is None:
+                raise PathPreparationBlocked(
+                    "Native structural planner returned more sections than fixed skeleton slots"
+                )
+            # Native identity is application-owned. Provider output contains only
+            # the semantic section payload.
+            section_payload["id"] = canonical_slot_id
+            section_payload["role"] = canonical_slot_id
+            section_payload["visual_required"] = bool(
+                (visual_required_by_slot or {}).get(canonical_slot_id, False)
+            )
+            section_payload["card_id"] = (
+                None if canonical_slot_id in {"orient", "close"} else lesson.concept_id
+            )
+        elif visual_required_by_slot is not None:
             # Skeleton-derived visual flags are authoritative. The structural
             # model must echo them, but a direct/custom planner cannot clear a
             # required visual by returning false.
@@ -259,7 +278,7 @@ def _build_structural_plan(
             )
         # The path layer owns concept identity. Coerce rather than validate, for
         # the same reason the card's id and objective are assigned above.
-        if section_payload.get("card_id") is not None:
+        if page_block_plans is None and section_payload.get("card_id") is not None:
             section_payload["card_id"] = lesson.concept_id
         components = section_payload.get("components")
         if isinstance(components, list):
@@ -272,7 +291,7 @@ def _build_structural_plan(
         if page_block_plans is not None:
             # Native v2 path: structural planner may still emit legacy component
             # shapes; whole-lesson teaching/form planners own block selection.
-            plan_for_slot = page_block_plans.get(generated_section.role or generated_section.id)
+            plan_for_slot = page_block_plans.get(canonical_slot_id)
             section_payload["components"] = []
             section_payload["blocks"] = list(getattr(plan_for_slot, "blocks", []) or [])
         section_payloads.append(section_payload)

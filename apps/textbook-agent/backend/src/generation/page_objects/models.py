@@ -132,6 +132,19 @@ class FigureContent(_ForbidModel):
     width: Literal["main", "span"] | None = None
 
 
+class FigureWriterAsset(_ForbidModel):
+    """LLM-facing figure asset recommendation; runtime delivery state is code-owned."""
+
+    kind: Literal["image", "svg"] | None = None
+
+
+class FigureWriterContent(_ForbidModel):
+    asset: FigureWriterAsset
+    alt_text: str = Field(min_length=1)
+    caption: str | None = None
+    width: Literal["main", "span"] | None = None
+
+
 class AsideContent(_ForbidModel):
     body: str
     label: str | None = None
@@ -209,5 +222,10 @@ FORM_OUTPUTS: dict[str, type[BaseModel]] = {
     "worked-example": WorkedExampleContent,
     "questions": QuestionsContent,
     "choices": ChoicesContent,
+}
+
+WRITER_PROVIDER_OUTPUTS: dict[str, type[BaseModel]] = {
+    **FORM_OUTPUTS,
+    "figure": FigureWriterContent,
 }
 

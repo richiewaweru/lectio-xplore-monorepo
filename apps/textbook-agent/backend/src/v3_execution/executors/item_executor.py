@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 from pydantic_ai import Agent
 
 from core.llm.runner import RetryPolicy, run_llm
-from v3_blueprint.planning.models import ConceptCard, QuestionBrief
+from v3_blueprint.planning.models import ConceptCard, ItemOption, QuestionBrief
 from v3_execution.config import (
     get_v3_model,
     get_v3_model_settings,
@@ -30,29 +30,22 @@ ITEM_NODE = "v3_item_executor"
 ITEM_MAX_ATTEMPTS = 3
 
 
+class ItemQuestionDraft(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    prompt_text: str = Field(min_length=1)
+    options: list[ItemOption] = Field(min_length=2)
+    expected_answer: str = Field(min_length=1)
+
+
+class ItemGenerationDraft(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[ItemQuestionDraft] = Field(min_length=5, max_length=5)
+
+
 class ItemGenerationResult(BaseModel):
-    @staticmethod
-    def _provider_schema(schema: dict[str, Any]) -> None:
-        """Keep derived observability fields out of the provider contract.
-
-        DeepSeek strict tools reject unconstrained ``dict`` objects. Coverage
-        and unmapped-option counts are recomputed from the returned items by
-        ``validate_item_result`` anyway, so they are not LLM-owned output.
-        """
-        properties = schema.get("properties")
-        if isinstance(properties, dict):
-            properties.pop("coverage", None)
-            properties.pop("unmapped_options", None)
-        required = schema.get("required")
-        if isinstance(required, list):
-            schema["required"] = [
-                name for name in required if name not in {"coverage", "unmapped_options"}
-            ]
-
-    model_config = ConfigDict(
-        extra="forbid",
-        json_schema_extra=_provider_schema,
-    )
+    model_config = ConfigDict(extra="forbid")
 
     card_id: str
     items: list[QuestionBrief] = Field(min_length=5, max_length=5)
@@ -115,36 +108,21 @@ def validate_item_result(
     return validated
 
 
-def repair_item_result_identity(
-    result: ItemGenerationResult,
+def materialize_item_result(
+    draft: ItemGenerationDraft,
     card: ConceptCard,
 ) -> ItemGenerationResult:
-    """Repair a provider's consistent identity echo using the approved card.
-
-    The executor is called for exactly one authoritative card. Some providers
-    occasionally mutate the opaque card-id prefix while preserving every item
-    suffix. That is a transport/echo defect, not a new card. Repair only this
-    narrow, self-consistent shape; mixed or unrelated ids still fail closed in
-    ``validate_item_result``.
-    """
-    if result.card_id == card.id:
-        return result
-    prefix = f"{result.card_id}."
-    if not result.items or not all(
-        item.question_id.startswith(prefix) for item in result.items
-    ):
-        return result
-    repaired_items = [
-        item.model_copy(
-            update={
-                "question_id": f"{card.id}.{item.question_id[len(prefix):]}"
-            }
-        )
-        for item in result.items
-    ]
-    return result.model_copy(
-        update={"card_id": card.id, "items": repaired_items},
-        deep=True,
+    return ItemGenerationResult(
+        card_id=card.id,
+        items=[
+            QuestionBrief.model_validate(
+                {
+                    "question_id": f"{card.id}.i{index}",
+                    **item.model_dump(mode="json"),
+                }
+            )
+            for index, item in enumerate(draft.items, start=1)
+        ],
     )
 
 
@@ -165,7 +143,7 @@ async def execute_items_with_diagnostics(
     node = ITEM_NODE
     model, provider_output, structured_context, spec, _source = prepare_structured_agent(
         node_name=node,
-        output_type=ItemGenerationResult,
+        output_type=ItemGenerationDraft,
     )
     slot = get_v3_slot(node)
     agent = Agent(
@@ -208,13 +186,13 @@ async def execute_items_with_diagnostics(
                 structured_context=structured_context,
             )
             raw = result.output
-            if isinstance(raw, ItemGenerationResult):
-                parsed = raw
+            if isinstance(raw, ItemGenerationDraft):
+                draft = raw
             elif hasattr(raw, "model_dump"):
-                parsed = ItemGenerationResult.model_validate(raw.model_dump())
+                draft = ItemGenerationDraft.model_validate(raw.model_dump())
             else:
-                parsed = ItemGenerationResult.model_validate(raw)
-            parsed = repair_item_result_identity(parsed, card)
+                draft = ItemGenerationDraft.model_validate(raw)
+            parsed = materialize_item_result(draft, card)
             validated = validate_item_result(parsed, card)
             attempts.append(
                 attempt_record(
@@ -259,10 +237,12 @@ async def execute_items_with_diagnostics(
 __all__ = [
     "ITEM_MAX_ATTEMPTS",
     "ITEM_NODE",
+    "ItemGenerationDraft",
     "ItemGenerationResult",
     "ItemGenerationRun",
+    "ItemQuestionDraft",
     "execute_items",
     "execute_items_with_diagnostics",
-    "repair_item_result_identity",
+    "materialize_item_result",
     "validate_item_result",
 ]

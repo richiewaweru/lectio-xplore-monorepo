@@ -15,13 +15,12 @@ Provide:
 - connection to the anchor;
 - accessible alt text describing the educational information;
 - a concise caption that interprets rather than merely names;
-- image/svg kind recommendation consistent with existing visual routing;
-- pending asset with a supplied request_id.
+- image/svg kind recommendation consistent with existing visual routing.
 
 Do not put essential teaching only in decorative imagery. Do not include text
 that contradicts the unit terminology.
 
-Output content must match the canonical FigureContent schema, with asset status
-`pending` and the supplied request_id. Emit the media brief in the execution
-metadata channel/schema established by the backend, not as extra document
-fields.
+Output only semantic figure content. Do not output `request_id`, asset `status`,
+`src`, or `svg`; the backend owns runtime asset identity and delivery state.
+Emit the media brief in the execution metadata channel/schema established by
+the backend, not as extra document fields.

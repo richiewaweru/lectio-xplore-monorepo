@@ -287,13 +287,10 @@ JSON only. No preamble, no code fences, no commentary.
   "misconception_focus_ids": [str],
   "sections": [
     {
-      "slot_id": str,
       "specific_purpose": str,
       "transition": str | null,
       "blocks": [
         {
-          "id": str,
-          "position": int,
           "intent": str,
           "brief": str,
           "evidence_refs": [str],
@@ -306,8 +303,9 @@ JSON only. No preamble, no code fences, no commentary.
   ]
 }
 
-Block IDs follow `{slot_id}-b{n}`, starting at 1. Positions are 0-based and
-contiguous within each section. Sections appear in skeleton order.
+Sections appear in skeleton order, one output section per supplied slot. Do not
+output slot_id, block id, or position. The backend attaches the fixed slot id and
+mints `{slot_id}-b{n}` / 0-based positions from array order after your response.
 
 `transition` is null for the first section. For every other section, say in
 one sentence what the previous section left the learner ready for.

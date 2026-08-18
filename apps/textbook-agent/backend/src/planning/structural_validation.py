@@ -13,13 +13,17 @@ Scope note: this validator does NOT check the concept card's ``id`` or
 (see ``_normalize_page_concept_card_payload``) precisely so drift is impossible;
 re-validating the raw model output would convert cases the bridge silently
 corrects today into hard preparation failures.
+
+Native page plans (``PathStructuralPagePlan``) omit identity entirely. This
+validator then only checks semantic payload shape: card count, section count,
+titles, and the first transition note.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 
-from planning.models import PathStructuralPlan
+from planning.models import PathStructuralPagePlan, PathStructuralPlan
 
 
 class PathStructuralContextError(ValueError):
@@ -34,17 +38,17 @@ class PathStructuralContextError(ValueError):
 
 
 def validate_path_structural_result(
-    plan: PathStructuralPlan,
+    plan: PathStructuralPlan | PathStructuralPagePlan,
     *,
     expected_slots: list[str],
     expected_visual_required: Mapping[str, bool] | None = None,
 ) -> list[str]:
     """Return contract violations. An empty list means the plan is usable.
 
-    ``expected_slots`` is the ordered list of fixed skeleton slot ids. Section
-    ``id`` and ``role`` must both equal the slot id at the same position — that
-    is what ``planning.bridge`` enforces downstream, so disagreeing here would
-    only move the failure.
+    ``expected_slots`` is the ordered list of fixed skeleton slot ids. On the
+    legacy prompt-facing contract, section ``id`` and ``role`` must both equal
+    the slot id at the same position. Native page plans omit those fields;
+    application code stamps them after validation.
     """
     # The planner's escape hatches are legitimate answers, not contract
     # violations. They belong to the bridge, which turns them into a readable
@@ -58,6 +62,19 @@ def validate_path_structural_result(
         errors.append(
             f"cards: expected exactly 1 concept card, got {len(plan.cards)}"
         )
+
+    if isinstance(plan, PathStructuralPagePlan):
+        if len(plan.sections) != len(expected_slots):
+            errors.append(
+                f"sections: expected {len(expected_slots)} semantic section payloads "
+                f"for {expected_slots}, got {len(plan.sections)}"
+            )
+        for index, section in enumerate(plan.sections):
+            if not (section.title or "").strip():
+                errors.append(f"sections[{index}].title: must not be blank")
+        if plan.sections and (plan.sections[0].transition_note or "").strip():
+            errors.append("sections[0].transition_note: must be null for the first section")
+        return errors
 
     section_ids = [section.id for section in plan.sections]
     section_roles = [section.role for section in plan.sections]

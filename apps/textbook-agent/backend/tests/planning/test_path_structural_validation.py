@@ -7,7 +7,7 @@ values the bridge assigns, or it turns silent corrections into failures.
 
 from __future__ import annotations
 
-from planning.models import PathStructuralPlan
+from planning.models import PathStructuralPagePlan, PathStructuralPlan
 from planning.structural_validation import (
     PathStructuralContextError,
     validate_path_structural_result,
@@ -172,3 +172,54 @@ def test_context_error_carries_structured_errors() -> None:
     error = PathStructuralContextError(["a: bad", "b: worse"])
     assert error.errors == ["a: bad", "b: worse"]
     assert "a: bad" in str(error)
+
+
+def _page_plan(sections: list[dict] | None = None, **overrides: object) -> PathStructuralPagePlan:
+    if sections is None:
+        sections = [
+            {
+                "title": f"{slot} section",
+                "transition_note": None if index == 0 else f"follows {SLOTS[index - 1]}",
+            }
+            for index, slot in enumerate(SLOTS)
+        ]
+    payload: dict = {
+        "anchor": {"description": "two basil plants", "source": "new"},
+        "cards": [{"title": "Light"}],
+        "sections": sections,
+        "deviation_request": None,
+        "objective_concern": None,
+    }
+    payload.update(overrides)
+    return PathStructuralPagePlan.model_validate(payload)
+
+
+def test_page_plan_well_formed_has_no_violations() -> None:
+    assert validate_path_structural_result(_page_plan(), expected_slots=SLOTS) == []
+
+
+def test_page_plan_rejects_section_count_mismatch() -> None:
+    sections = [{"title": "orient section", "transition_note": None}]
+    errors = validate_path_structural_result(_page_plan(sections), expected_slots=SLOTS)
+    assert any("semantic section payloads" in error for error in errors)
+
+
+def test_page_plan_rejects_blank_title() -> None:
+    sections = [
+        {
+            "title": "   " if index == 2 else slot,
+            "transition_note": None if index == 0 else "x",
+        }
+        for index, slot in enumerate(SLOTS)
+    ]
+    errors = validate_path_structural_result(_page_plan(sections), expected_slots=SLOTS)
+    assert any("title" in error for error in errors)
+
+
+def test_page_plan_rejects_non_null_first_transition_note() -> None:
+    sections = [
+        {"title": slot, "transition_note": "always set"}
+        for slot in SLOTS
+    ]
+    errors = validate_path_structural_result(_page_plan(sections), expected_slots=SLOTS)
+    assert any("transition_note" in error for error in errors)

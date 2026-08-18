@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 
 import pytest
+from pydantic import ValidationError
 
 from v3_blueprint.planning.models import (
     ConceptCard,
@@ -11,9 +12,11 @@ from v3_blueprint.planning.models import (
     QuestionBrief,
 )
 from v3_execution.executors.item_executor import (
+    ItemGenerationDraft,
     ItemGenerationResult,
+    ItemQuestionDraft,
     execute_items,
-    repair_item_result_identity,
+    materialize_item_result,
     validate_item_result,
 )
 from v3_execution.prompts.item_prompt import build_item_messages
@@ -61,6 +64,24 @@ def _item(index: int, diagnosis: str | None) -> QuestionBrief:
     )
 
 
+def _draft_item(index: int, diagnosis: str | None) -> ItemQuestionDraft:
+    return ItemQuestionDraft(
+        prompt_text=f"Fresh transfer scenario {index}",
+        options=[
+            ItemOption(key="a", text="Correct response", correct=True),
+            ItemOption(
+                key="b",
+                text="Diagnostic response",
+                correct=False,
+                diagnoses=diagnosis,
+            ),
+            ItemOption(key="c", text="Other response", correct=False),
+            ItemOption(key="d", text="Another response", correct=False),
+        ],
+        expected_answer="Correct response, because the objective applies.",
+    )
+
+
 def test_item_executor_public_signature_accepts_only_card() -> None:
     assert list(inspect.signature(execute_items).parameters) == ["card"]
 
@@ -91,12 +112,44 @@ def test_item_prompt_contains_only_approved_card_fields() -> None:
         assert forbidden not in message
 
 
-def test_item_provider_schema_omits_derived_unconstrained_objects() -> None:
-    schema = ItemGenerationResult.model_json_schema()
-    assert "coverage" not in schema["properties"]
-    assert "unmapped_options" not in schema["properties"]
+def test_item_provider_schema_has_only_items_and_no_question_id() -> None:
+    schema = ItemGenerationDraft.model_json_schema()
+    assert set(schema["properties"]) == {"items"}
+    item_props = schema["$defs"]["ItemQuestionDraft"]["properties"]
+    assert "question_id" not in item_props
     projected = to_deepseek_strict_schema(schema)
-    assert "coverage" not in projected["properties"]
+    assert set(projected["properties"]) == {"items"}
+    assert "question_id" not in projected["$defs"]["ItemQuestionDraft"]["properties"]
+
+
+def test_item_draft_rejects_upstream_identity_fields() -> None:
+    with pytest.raises(ValidationError):
+        ItemGenerationDraft.model_validate(
+            {
+                "card_id": "biology.photosynthesis.inputs",
+                "items": [_draft_item(1, "M1").model_dump()],
+            }
+        )
+    with pytest.raises(ValidationError):
+        ItemQuestionDraft.model_validate(
+            {
+                "question_id": "biology.photosynthesis.inputs.i1",
+                **_draft_item(1, "M1").model_dump(),
+            }
+        )
+
+
+def test_materialize_item_result_stamps_card_and_question_ids() -> None:
+    draft = ItemGenerationDraft(
+        items=[_draft_item(index, None) for index in range(1, 6)]
+    )
+
+    result = materialize_item_result(draft, _card())
+
+    assert result.card_id == _card().id
+    assert [item.question_id for item in result.items] == [
+        f"{_card().id}.i{index}" for index in range(1, 6)
+    ]
 
 
 def test_item_validator_recomputes_coverage_and_unmapped_count() -> None:
@@ -118,49 +171,6 @@ def test_item_validator_recomputes_coverage_and_unmapped_count() -> None:
     assert validated.coverage == {"M1": 2, "M2": 1}
     assert validated.unmapped_options == 12
     assert validated.needs_review is False
-
-
-def test_item_identity_repair_rewrites_only_a_consistent_provider_prefix() -> None:
-    result = ItemGenerationResult(
-        card_id="mutated-card-prefix",
-        items=[
-            _item(index, None).model_copy(
-                update={
-                    "question_id": f"mutated-card-prefix.i{index}",
-                }
-            )
-            for index in range(1, 6)
-        ],
-    )
-
-    repaired = repair_item_result_identity(result, _card())
-
-    assert repaired.card_id == _card().id
-    assert [item.question_id for item in repaired.items] == [
-        f"{_card().id}.i{index}" for index in range(1, 6)
-    ]
-
-
-def test_item_identity_repair_fails_closed_for_mixed_question_ids() -> None:
-    result = ItemGenerationResult(
-        card_id="mutated-card-prefix",
-        items=[
-            _item(index, None).model_copy(
-                update={
-                    "question_id": (
-                        f"mutated-card-prefix.i{index}"
-                        if index < 5
-                        else "unrelated.i5"
-                    ),
-                }
-            )
-            for index in range(1, 6)
-        ],
-    )
-
-    repaired = repair_item_result_identity(result, _card())
-
-    assert repaired is result
 
 
 def test_item_validator_rejects_unknown_misconception_id() -> None:

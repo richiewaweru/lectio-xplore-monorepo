@@ -415,6 +415,28 @@ class PathStructuralMisconception(BaseModel):
         return value
 
 
+# Native page-path provider contract. Upstream identity is intentionally absent.
+class PathStructuralPageCard(StrictModel):
+    title: str | None = None
+    prereqs: list[str] = Field(default_factory=list)
+    misconceptions: list[PathStructuralMisconception] = Field(default_factory=list)
+    no_known_misconceptions: bool = False
+    opens_by: str | None = None
+
+
+class PathStructuralPageSection(StrictModel):
+    title: str
+    transition_note: str | None = None
+
+
+class PathStructuralPagePlan(StrictModel):
+    anchor: PathAnchor
+    cards: list[PathStructuralPageCard] = Field(default_factory=list, max_length=1)
+    sections: list[PathStructuralPageSection] = Field(default_factory=list)
+    deviation_request: PathDeviationRequest | None = None
+    objective_concern: str | None = None
+
+
 class PathStructuralCard(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -469,6 +491,8 @@ class PathStructuralSection(BaseModel):
 
 
 class PathStructuralPlan(StrictModel):
+    """Legacy/readback prompt-facing contract; native page path uses PathStructuralPagePlan."""
+
     anchor: PathAnchor
     # max_length only. The lower bound lives in
     # planning.structural_validation.validate_path_structural_result, which runs

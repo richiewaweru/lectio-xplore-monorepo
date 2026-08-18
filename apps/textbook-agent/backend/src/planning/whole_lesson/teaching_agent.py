@@ -29,7 +29,11 @@ from planning.whole_lesson.teaching_errors import (
     TeachingPlanOutputInvalidError,
     is_recognized_teaching_output_error,
 )
-from planning.whole_lesson.teaching_plan import TeachingPlan
+from planning.whole_lesson.teaching_plan import (
+    TeachingPlan,
+    TeachingPlanDraft,
+    materialize_teaching_plan,
+)
 from planning.whole_lesson.validation import (
     ValidationReport,
     advisory_teaching_qc,
@@ -146,10 +150,10 @@ async def _call_teaching_model(
     trace_id: str,
     generation_id: str | None,
     attempt_start: int = 1,
-) -> tuple[TeachingPlan, str]:
+) -> tuple[TeachingPlanDraft, str]:
     model, provider_output, structured_context, spec, _source = prepare_structured_agent(
         node_name=V2_LESSON_APPROACH_PLANNER,
-        output_type=TeachingPlan,
+        output_type=TeachingPlanDraft,
     )
     slot = get_v3_slot(V2_LESSON_APPROACH_PLANNER)
     system_prompt, _, _user = prompt.partition("\n\n## USER INPUT\n\n")
@@ -183,11 +187,11 @@ async def _call_teaching_model(
         if hasattr(raw, "model_dump_json")
         else json.dumps(raw, default=str)
     )
-    if isinstance(raw, TeachingPlan):
+    if isinstance(raw, TeachingPlanDraft):
         return raw, raw_text
     if hasattr(raw, "model_dump"):
-        return TeachingPlan.model_validate(raw.model_dump()), raw_text
-    return TeachingPlan.model_validate(raw), raw_text
+        return TeachingPlanDraft.model_validate(raw.model_dump()), raw_text
+    return TeachingPlanDraft.model_validate(raw), raw_text
 
 
 async def run_lesson_approach_planner(
@@ -257,14 +261,35 @@ async def run_lesson_approach_planner(
                         "assessment_source_policy": assessment_source_policy,
                     },
                 }
-            plan, raw_response = await _call_teaching_model(
+            draft, raw_response = await _call_teaching_model(
                 prompt=prompt,
                 user_payload=call_payload,
                 trace_id=f"{tid}:attempt{attempt}",
                 generation_id=generation_id,
                 attempt_start=attempt,
             )
-            previous_output = plan.model_dump(mode="json")
+            previous_output = draft.model_dump(mode="json")
+            try:
+                plan = materialize_teaching_plan(
+                    draft,
+                    slot_ids=[slot.slot_id for slot in packet.slots],
+                )
+            except ValueError as exc:
+                last_error = "validation_failed"
+                repair_errors = [str(exc)]
+                output_invalid_details = repair_errors
+                attempts.append(
+                    TeachingPlanAttempt(
+                        prompt=prompt,
+                        raw_response=raw_response,
+                        plan=None,
+                        validation=ValidationReport(ok=False, issues=[]),
+                        qc=[],
+                        attempt=attempt,
+                        error=str(exc),
+                    )
+                )
+                continue
             _repair_missing_assessment_sources(
                 plan,
                 packet,

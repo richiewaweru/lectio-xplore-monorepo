@@ -38,9 +38,7 @@ constraint when it is present.
 
 Required shape (coverage and unmapped-option counts are computed downstream):
 {
-  "card_id": "the supplied card id",
   "items": [{
-    "question_id": "stable card id plus .i1 through .i5",
     "prompt_text": "student-facing stem",
     "options": [
       {"key": "a", "text": "option", "correct": false, "diagnoses": "M1 or null"}
@@ -48,6 +46,9 @@ Required shape (coverage and unmapped-option counts are computed downstream):
     "expected_answer": "correct answer with a concise explanation"
   }]
 }
+
+Do not output any stable identity fields. The backend owns item identity
+and assigns stable ids from the approved card and item order.
 
 APPROVED CARD
 """

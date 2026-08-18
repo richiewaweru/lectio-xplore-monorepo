@@ -14,6 +14,7 @@ from generation.page_objects.assessment import (
 from generation.page_objects.models import (
     FORM_OUTPUTS,
     GENERATED_FORM_IDS,
+    WRITER_PROVIDER_OUTPUTS,
     AnswerEntry,
     AsideContent,
     AssessmentBundle,
@@ -21,6 +22,8 @@ from generation.page_objects.models import (
     ChoicesOption,
     FigureAsset,
     FigureContent,
+    FigureWriterAsset,
+    FigureWriterContent,
     ListContent,
     ProseContent,
     QuestionsContent,
@@ -54,6 +57,7 @@ from generation.page_objects.validation import (
 __all__ = [
     "FORM_OUTPUTS",
     "GENERATED_FORM_IDS",
+    "WRITER_PROVIDER_OUTPUTS",
     "AnswerEntry",
     "AnswerKeyIntegrityError",
     "AsideContent",
@@ -63,6 +67,8 @@ __all__ = [
     "ContentValidationError",
     "FigureAsset",
     "FigureContent",
+    "FigureWriterAsset",
+    "FigureWriterContent",
     "ListContent",
     "ProseContent",
     "QuestionsContent",

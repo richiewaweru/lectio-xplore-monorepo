@@ -9,6 +9,7 @@ from typing import Any, Protocol
 from generation.page_objects.assessment import assemble_choices, assemble_questions
 from generation.page_objects.models import (
     FORM_OUTPUTS,
+    WRITER_PROVIDER_OUTPUTS,
     WriterContext,
     WriterError,
     WriterOutcome,
@@ -291,7 +292,7 @@ async def _llm_write(ctx: WriterContext, *, prompt: str | None = None) -> object
 
     tier = tier_for_object_writer(ctx.planned.object) or "FAST"
     node = V3_BLOCK_WRITER_STANDARD if tier == "STANDARD" else V3_BLOCK_WRITER_FAST
-    output_model = FORM_OUTPUTS[ctx.planned.object]
+    output_model = WRITER_PROVIDER_OUTPUTS[ctx.planned.object]
     model, provider_output, structured_context, spec, _source = prepare_structured_agent(
         node_name=node,
         output_type=output_model,
@@ -400,7 +401,7 @@ async def _write_validated_llm(
         raise UnsupportedObject(object_id)
     contract = _writer_contract(object_id)
     prompt = build_writer_prompt(ctx, contract)
-    output_model = FORM_OUTPUTS[object_id]
+    output_model = WRITER_PROVIDER_OUTPUTS[object_id]
 
     async def _call(attempt: int, call_prompt: str) -> object:
         if provider is not None:

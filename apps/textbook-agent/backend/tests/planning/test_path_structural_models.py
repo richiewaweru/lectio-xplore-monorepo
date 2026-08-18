@@ -15,7 +15,16 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from planning.models import PathStructuralCard, PathStructuralPlan, PathStructuralSection
+from core.llm.deepseek_schema import to_deepseek_strict_schema
+
+from core.llm.deepseek_schema import to_deepseek_strict_schema
+from planning.models import (
+    PathStructuralCard,
+    PathStructuralPageCard,
+    PathStructuralPagePlan,
+    PathStructuralPlan,
+    PathStructuralSection,
+)
 
 
 def _section(**overrides: object) -> dict:
@@ -190,3 +199,44 @@ def test_schema_descriptions_steer_away_from_slot_id() -> None:
     section_props = defs["PathStructuralSection"]["properties"]
     assert "slot_id" in section_props["id"]["description"]
     assert "slot_id" in section_props["role"]["description"]
+
+
+def test_page_plan_schema_omits_upstream_identity_fields() -> None:
+    schema = PathStructuralPagePlan.model_json_schema()
+    defs = schema.get("$defs", {})
+    card_props = defs["PathStructuralPageCard"]["properties"]
+    section_props = defs["PathStructuralPageSection"]["properties"]
+    assert "id" not in card_props
+    assert "objective" not in card_props
+    assert set(section_props) == {"title", "transition_note"}
+    projected = to_deepseek_strict_schema(schema)
+    projected_defs = projected.get("$defs", {})
+    assert "id" not in projected_defs["PathStructuralPageCard"]["properties"]
+    assert "objective" not in projected_defs["PathStructuralPageCard"]["properties"]
+    assert set(projected_defs["PathStructuralPageSection"]["properties"]) == {
+        "title",
+        "transition_note",
+    }
+
+
+def test_page_plan_rejects_upstream_identity_fields() -> None:
+    with pytest.raises(ValidationError):
+        PathStructuralPageCard.model_validate(
+            {"title": "Light", "id": "concept-1", "objective": "Explain why."}
+        )
+    with pytest.raises(ValidationError):
+        PathStructuralPagePlan.model_validate(
+            {
+                "anchor": {"description": "basil", "source": "new"},
+                "cards": [{"title": "Light"}],
+                "sections": [
+                    {
+                        "id": "orient",
+                        "role": "orient",
+                        "title": "Opening",
+                        "card_id": None,
+                        "visual_required": False,
+                    }
+                ],
+            }
+        )

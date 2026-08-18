@@ -16,6 +16,7 @@ from planning.models import (
     ConstructorOutput,
     PathPlanDraft,
     PathPlannerRequest,
+    PathStructuralPagePlan,
     PathStructuralPlan,
 )
 from planning.prompts import (
@@ -192,7 +193,7 @@ async def run_path_structural_planner(
     fixed_context: dict[str, Any],
     *,
     trace_id: str | None = None,
-) -> PathStructuralPlan:
+) -> PathStructuralPlan | PathStructuralPagePlan:
     """Plan lesson structure, with one targeted repair attempt.
 
     The typed output schema is the primary protection. This loop is the net
@@ -207,6 +208,7 @@ async def run_path_structural_planner(
     )
 
     use_page = bool(fixed_context.get("native_whole_lesson"))
+    output_type = PathStructuralPagePlan if use_page else PathStructuralPlan
     system_prompt = (
         path_structural_planner_page_prompt()
         if use_page
@@ -229,18 +231,29 @@ async def run_path_structural_planner(
     for attempt in (1, 2):
         payload = fixed_context
         if attempt == 2:
+            if use_page:
+                repair_instruction = (
+                    "Your previous output violated the fixed contract. Return "
+                    "the complete corrected JSON. Change only what the listed "
+                    "errors name. Return one semantic section payload for each "
+                    "supplied slot, in the supplied order. Do not add or remove "
+                    "sections. Do not output objective, concept/card identity, "
+                    "slot identity, card_id, or visual_required; code owns those fields."
+                )
+            else:
+                repair_instruction = (
+                    "Your previous output violated the fixed contract. Return "
+                    "the complete corrected JSON. Change only what the listed "
+                    "errors name. Section ids and roles are fixed: do not "
+                    "rename, add, remove, or reorder them, and preserve the "
+                    "objective and concept id exactly."
+                    " Echo each supplied slot's visual_required flag exactly; "
+                    "do not clear an authoritative true flag."
+                )
             payload = {
                 **fixed_context,
                 "repair": {
-                    "instruction": (
-                        "Your previous output violated the fixed contract. Return "
-                        "the complete corrected JSON. Change only what the listed "
-                        "errors name. Section ids and roles are fixed: do not "
-                        "rename, add, remove, or reorder them, and preserve the "
-                        "objective and concept id exactly."
-                        " Echo each supplied slot's visual_required flag exactly; "
-                        "do not clear an authoritative true flag."
-                    ),
+                    "instruction": repair_instruction,
                     "previous_output": previous_output,
                     "validation_errors": errors,
                 },
@@ -249,7 +262,7 @@ async def run_path_structural_planner(
             plan = await _run_structured(
                 node=V2_PATH_STRUCTURAL_PLANNER,
                 caller="v2_path_structural_planner",
-                output_type=PathStructuralPlan,
+                output_type=output_type,
                 system_prompt=system_prompt,
                 user_payload=payload,
                 trace_id=f"{tid}:structural{attempt}",

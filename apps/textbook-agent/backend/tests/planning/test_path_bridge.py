@@ -22,6 +22,7 @@ from planning.models import (
     GroupVoice,
     LessonActualWriteRequest,
     PathAnchor,
+    PathStructuralPagePlan,
     PathStructuralPlan,
     PrepareLessonRequest,
     SelectedComponent,
@@ -222,6 +223,49 @@ def test_bridge_preserves_authoritative_visual_flag_when_planner_clears_it() -> 
     )
 
     assert [section.visual_required for section in plan.sections] == [False, True, False]
+
+
+def test_native_page_plan_bridge_stamps_fixed_identities() -> None:
+    from types import SimpleNamespace
+
+    from planning.bridge import _build_structural_plan
+
+    slots = ["orient", "explain", "check"]
+    generated = PathStructuralPagePlan.model_validate(
+        {
+            "anchor": {"description": "a water-cycle exhibit", "source": "new"},
+            "cards": [{"title": "Water Cycle"}],
+            "sections": [
+                {
+                    "title": slot.title(),
+                    "transition_note": None if index == 0 else "follows",
+                }
+                for index, slot in enumerate(slots)
+            ],
+        }
+    )
+    lesson = SimpleNamespace(
+        concept_id="c-water",
+        objective="Create a labelled water-cycle diagram.",
+        title="Water Cycle",
+    )
+
+    plan = _build_structural_plan(
+        generated=generated,
+        lesson=lesson,
+        lesson_mode="first_exposure",
+        prior_knowledge=[],
+        slots=slots,
+        selected_components={},
+        page_block_plans={},
+        visual_required_by_slot={"orient": False, "explain": True, "check": False},
+    )
+
+    assert [section.id for section in plan.sections] == slots
+    assert [section.role for section in plan.sections] == slots
+    assert [section.card_id for section in plan.sections] == [None, "c-water", "c-water"]
+    assert plan.cards[0].id == "c-water"
+    assert plan.cards[0].objective == lesson.objective
 
 
 @pytest.mark.parametrize(
