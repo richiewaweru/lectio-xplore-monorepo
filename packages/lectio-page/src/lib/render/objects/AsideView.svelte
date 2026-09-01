@@ -3,10 +3,10 @@
 	import { asRichText } from '$lib/normalize/inline';
 	import InlineView from '../InlineView.svelte';
 
-	let { content }: { content: AsideContent } = $props();
+	let { content, inMargin = false }: { content: AsideContent; inMargin?: boolean } = $props();
 </script>
 
-<aside class="lectio-aside">
+<aside class={['lectio-aside', inMargin && 'lectio-block--margin']}>
 	{#if content.label}
 		<strong>{content.label}</strong><br />
 	{/if}
