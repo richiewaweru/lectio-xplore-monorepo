@@ -1,0 +1,123 @@
+{
+  "document_version": 2,
+  "contract_version": "1.0.0",
+  "id": "margin-stress-fixture",
+  "title": "Margin Placement Stress Cases",
+  "language": "en",
+  "subject": "Fixture · Stress",
+  "metadata": {},
+  "sections": [
+    {
+      "id": "section-1",
+      "title": "Adjacent asides",
+      "blocks": [
+        {
+          "id": "s1-heading",
+          "object": "heading",
+          "position": 0,
+          "content": {
+            "level": 2,
+            "text": "Adjacent asides",
+            "number": "1"
+          }
+        },
+        {
+          "id": "s1-prose",
+          "object": "prose",
+          "intent": "orient",
+          "position": 1,
+          "content": {
+            "paragraphs": [
+              "This section places two margin asides back to back with no prose between them, to confirm the second float clears the first instead of overlapping it and that neither float overlaps the body text beside it."
+            ]
+          }
+        },
+        {
+          "id": "s1-aside-a",
+          "object": "aside",
+          "intent": "warn",
+          "position": 2,
+          "content": {
+            "label": "First aside",
+            "body": "This is the first of two adjacent margin asides. It should float at the top of this run of text."
+          }
+        },
+        {
+          "id": "s1-aside-b",
+          "object": "aside",
+          "intent": "memory-aid",
+          "position": 3,
+          "content": {
+            "label": "Second aside",
+            "body": "This is the second adjacent aside. clear:right on .lectio-block--margin should stack it below the first, not beside or overlapping it."
+          }
+        },
+        {
+          "id": "s1-prose-2",
+          "object": "prose",
+          "intent": "explain",
+          "position": 4,
+          "content": {
+            "paragraphs": [
+              "Body text continues here after both asides. If the float-wrap mechanism is working, the line boxes level with the asides above are narrowed to the measure minus the aside width and gap, and lines below both asides return to the full 158mm measure once the taller of the two floats has cleared."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "section-2",
+      "title": "Aside near a page break",
+      "blocks": [
+        {
+          "id": "s2-heading",
+          "object": "heading",
+          "position": 0,
+          "content": {
+            "level": 2,
+            "text": "Aside near a page break",
+            "number": "2"
+          }
+        },
+        {
+          "id": "s2-filler-1",
+          "object": "prose",
+          "intent": "orient",
+          "position": 1,
+          "content": {
+            "paragraphs": [
+              "The following paragraphs exist only to consume vertical space so that a later aside lands close to a page boundary. Each paragraph restates similar filler content because the actual wording does not matter for this fixture, only the accumulated block height does. A4 usable height at 26mm top and bottom margins is roughly 245mm, and at 12pt body type with 16pt line height that is on the order of fifteen lines of text per page before front matter or headings are accounted for.",
+              "This is the second filler paragraph in the run. It exists purely to add another few lines of accumulated height ahead of the page-break-adjacent aside placed later in this section, so that the float has to negotiate fragmentation near the bottom of a physical page rather than comfortably mid-page.",
+              "This is the third filler paragraph in the run, continuing to add height. Photosynthesis converts light energy into chemical energy stored in glucose; chloroplasts are the site of that conversion, and both carbon dioxide and water are required as raw inputs alongside light itself.",
+              "This is the fourth filler paragraph. Respiration is the reverse-flavoured process that releases stored chemical energy for use by the cell, consuming glucose and oxygen while producing carbon dioxide and water as by-products, and it runs continuously whether or not light is available.",
+              "This is the fifth filler paragraph, still building height ahead of the stress case. Word equations and symbol equations both describe the same net transformation of matter, and a balanced symbol equation must have equal counts of each element on both sides of the arrow.",
+              "This is the sixth filler paragraph. Chlorophyll absorbs particular wavelengths of light most strongly in the blue and red portions of the visible spectrum, which is part of why healthy leaves appear green: green wavelengths are reflected rather than absorbed and used.",
+              "This is the seventh filler paragraph, the last one before the page-break-adjacent aside. By this point the running height of the section should be close to a full page, so the aside immediately below this paragraph is the actual stress case under test."
+            ]
+          }
+        },
+        {
+          "id": "s2-aside-break",
+          "object": "aside",
+          "intent": "warn",
+          "position": 2,
+          "content": {
+            "label": "Page-break case",
+            "body": "This aside is deliberately positioned after a long run of filler prose so that it starts close to where Chromium will insert a page break. It should either move whole to the next page or fragment cleanly without overlapping the body text beside or below it."
+          }
+        },
+        {
+          "id": "s2-after",
+          "object": "prose",
+          "intent": "explain",
+          "position": 3,
+          "content": {
+            "paragraphs": [
+              "This closing paragraph follows the page-break-adjacent aside. It exists so there is body text both beside and below the aside to check for overlap once the page has actually broken."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -123,9 +123,11 @@ async function assertObjectCoverage(page: Page, requireAnswerKey: boolean): Prom
 
 async function writeEditionPdfs(
 	page: Page,
-	edition: 'teacher' | 'student'
+	fixtureId: string,
+	edition: 'teacher' | 'student',
+	requireFullCoverage: boolean
 ): Promise<{ pages: number; files: string[] }> {
-	const url = `${BASE}/fixtures/photosynthesis-ref?print=1&edition=${edition}`;
+	const url = `${BASE}/fixtures/${fixtureId}?print=1&edition=${edition}`;
 	console.log(`Navigating to ${url}`);
 	await page.goto(url, { waitUntil: 'networkidle' });
 
@@ -134,7 +136,9 @@ async function writeEditionPdfs(
 		fail('Fixture route did not render .lectio-document from LectioDocumentView');
 	}
 
-	await assertObjectCoverage(page, edition === 'teacher');
+	if (requireFullCoverage) {
+		await assertObjectCoverage(page, edition === 'teacher');
+	}
 
 	const reviewChrome = await page.locator('.lectio-review-chrome').count();
 	if (reviewChrome > 0) {
@@ -144,10 +148,10 @@ async function writeEditionPdfs(
 	const targets =
 		edition === 'teacher'
 			? [
-					{ background: true, name: 'photosynthesis-ref-bg-on.pdf' },
-					{ background: false, name: 'photosynthesis-ref-bg-off.pdf' }
+					{ background: true, name: `${fixtureId}-bg-on.pdf` },
+					{ background: false, name: `${fixtureId}-bg-off.pdf` }
 				]
-			: [{ background: true, name: 'photosynthesis-ref-student.pdf' }];
+			: [{ background: true, name: `${fixtureId}-student.pdf` }];
 
 	const pageCounts: number[] = [];
 	const files: string[] = [];
@@ -183,6 +187,15 @@ async function writeEditionPdfs(
 	return { pages: pageCounts[0], files };
 }
 
+// photosynthesis-ref is the full-catalogue gate: it must exercise all ten page
+// objects and the teacher-only answer key. margin-stress is a geometry-only
+// fixture (adjacent asides, an aside near a page break) and does not carry an
+// answer_key or every object type, so it skips that coverage assertion.
+const FIXTURES: Array<{ id: string; requireFullCoverage: boolean; editions: Array<'teacher' | 'student'> }> = [
+	{ id: 'photosynthesis-ref', requireFullCoverage: true, editions: ['teacher', 'student'] },
+	{ id: 'margin-stress', requireFullCoverage: false, editions: ['teacher'] }
+];
+
 async function main(): Promise<void> {
 	// Fail fast before the expensive build if Chromium is missing.
 	const probe = await ensureChromium();
@@ -197,20 +210,18 @@ async function main(): Promise<void> {
 
 	try {
 		const page = await browser.newPage();
-		const teacher = await writeEditionPdfs(page, 'teacher');
-		const student = await writeEditionPdfs(page, 'student');
+		const report: Record<string, unknown> = {};
 
-		const report = {
-			teacher_pages: teacher.pages,
-			student_pages: student.pages,
-			teacher_files: teacher.files,
-			student_files: student.files,
-			bg_on_off_page_counts_equal: true,
-			ten_objects_in_teacher_dom: true,
-			answer_key_teacher_only: true
-		};
+		for (const fixture of FIXTURES) {
+			for (const edition of fixture.editions) {
+				const result = await writeEditionPdfs(page, fixture.id, edition, fixture.requireFullCoverage);
+				report[`${fixture.id}_${edition}_pages`] = result.pages;
+				report[`${fixture.id}_${edition}_files`] = result.files;
+			}
+		}
+
 		writeFileSync(join(outDir, 'pdf-fixture-report.json'), JSON.stringify(report, null, 2));
-		console.log('PDF gate OK — teacher (bg on/off) + student; AnswerKeyView on teacher only');
+		console.log('PDF gate OK — all fixtures rendered');
 		console.log(JSON.stringify(report));
 	} finally {
 		await browser.close();

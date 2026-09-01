@@ -3,26 +3,31 @@
 ## Governing geometry
 
 ```text
-A4 page, 18mm outer page margin
+A4 page, 26mm outer page margin
 
 ┌──────────────────────────────────────────┐
-│ main text: 112mm │ 6mm gap │ margin 56mm│
-│ ~65–75 chars     │         │ asides      │
-│ prose/tables/Qs  │         │ captions    │
-│ figures may span main + gap + margin      │
+│ full measure: 158mm · ~75 chars           │
+│                                            │
+│ text text text  6mm │ ┌────────────────┐  │
+│ text text text      │ │ aside 46mm     │  │
+│ text text text      │ └────────────────┘  │
+│ text text text text text text text        │ ← returns to full measure
 └──────────────────────────────────────────┘
 ```
 
-The margin implementation uses the proven float recipe:
+There is no reserved gutter. One 158mm measure runs the whole document; a
+margin-placed object (`aside` or `list`, via `layout.placement: "margin"`)
+floats inside that measure and displaces the line boxes beside it — the
+pull-quote pattern, giving ~106mm (~50 chars) on lines actually level with a
+float, before returning to the full measure below it. The margin
+implementation uses the float recipe:
 
 ```css
-.lectio-page-flow { padding-right: 62mm; }
-
-.lectio-aside--margin {
+.lectio-block--margin {
   float: right;
   clear: right;
-  width: 56mm;
-  margin-right: -62mm;
+  width: var(--aside-width); /* 46mm */
+  margin: 0 0 var(--line) var(--aside-gap); /* 6mm gap */
 }
 ```
 
@@ -31,8 +36,8 @@ CSS grid is rejected for page flow because margin items claim grid rows and crea
 ## Global rules
 
 - Root carries `lang`.
-- Baseline rhythm uses 15pt as the base line.
-- Main measure is 112mm and approximately 68 characters.
+- Baseline rhythm uses 16pt as the base line.
+- Measure is 158mm and approximately 75 characters (down to ~50 beside a margin float).
 - Four type sizes only: body, caption, subheading, heading.
 - One accent color maximum.
 - Meaning must survive black-and-white photocopy.

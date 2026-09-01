@@ -5,93 +5,106 @@
 @page { size: A4; margin: var(--page-margin, 18mm); }
 
 /* ── Page geometry ───────────────────────────────────────────
-   Everything derives from --page-width, --page-margin and --gutter.
-   Change --gutter in a preset and the whole two-track layout follows.
-   Nothing below may hardcode a millimetre value that depends on these. */
+   One measure for the whole document. Margin objects float inside it and
+   displace the line boxes beside them; text below returns to full measure.
+   There is no reserved gutter — --aside-width is the float's own width, not
+   page geometry. Nothing below may hardcode a millimetre value that depends
+   on these. */
 .lectio-document {
   --page-width: 210mm;
-  --page-margin: 18mm;
-  --content: calc(var(--page-width) - (2 * var(--page-margin)));  /* 174mm */
-  --gutter: 62mm;
-  --main: calc(var(--content) - var(--gutter));                   /* 112mm */
+  --page-margin: 26mm;
+  --measure: calc(var(--page-width) - (2 * var(--page-margin)));  /* 158mm */
+  --aside-width: 46mm;
   --aside-gap: 6mm;
-  --aside-width: calc(var(--gutter) - var(--aside-gap));          /* 56mm */
-  --line: 15pt;
+  --line: 16pt;
 }
 
 html { font-family: var(--lectio-body, sans-serif); }
 body {
   margin: 0; color: #111;
-  font-size: 10.5pt; line-height: var(--line, 15pt);
+  font-size: 12pt; line-height: var(--line, 16pt);
   orphans: 3; widows: 3; hyphens: auto;
 }
 
-.lectio-page-flow { padding-right: var(--gutter); }
-.lectio-main { max-width: var(--main); }
+/* flow-root so a trailing margin float cannot escape the document body. */
+.lectio-main { max-width: var(--measure); display: flow-root; }
 
 /* ── Front matter (FIX 1) ────────────────────────────────────
    Cover, contents and running head are renderer furniture, not authored
    page objects. They are derived from document metadata + section titles. */
 .lectio-cover { break-after: page; }
-.lectio-cover-title { font-size: 30pt; line-height: 36pt; margin: 0 0 var(--line); }
+.lectio-cover-title { font-size: 32pt; line-height: 40pt; margin: 0 0 var(--line); }
 .lectio-section-title {
-  font-size: 15pt;
-  line-height: 22.5pt;
+  font-size: 17pt;
+  line-height: 24pt;
   margin-top: calc(var(--line) * 2);
-  margin-bottom: 7.5pt;
+  margin-bottom: 8pt;
   break-after: avoid;
+  clear: right;
 }
-.lectio-cover-subtitle { font-size: 13pt; line-height: 18pt; margin: 0 0 calc(var(--line) * 2); }
-.lectio-cover-fields { max-width: var(--main); }
+.lectio-cover-subtitle { font-size: 14pt; line-height: 20pt; margin: 0 0 calc(var(--line) * 2); }
+.lectio-cover-fields { max-width: var(--measure); }
 .lectio-cover-field { border-bottom: .5pt solid #777; height: 22pt; margin-bottom: var(--line); }
 
-.lectio-contents { break-after: page; max-width: var(--main); }
-.lectio-contents-entry { display: flex; justify-content: space-between; margin-bottom: 7.5pt; }
+.lectio-contents { break-after: page; max-width: var(--measure); }
+.lectio-contents-entry { display: flex; justify-content: space-between; margin-bottom: 8pt; }
 
 /* ── Headings ────────────────────────────────────────────────
    break-after:avoid does NOT chain in Chromium — it protects only the
    immediately next element. .lectio-heading-binding is the real mechanism:
    wrap heading + first following block in it. */
-h1, h2, h3 { break-after: avoid; margin: 0; color: inherit; }
-h1 { font-size: 24pt;   line-height: 30pt;   margin-bottom: var(--line); }
-h2 { font-size: 15pt;   line-height: 22.5pt; margin-top: calc(var(--line) * 2); margin-bottom: 7.5pt; }
-h3 { font-size: 11.5pt; line-height: var(--line); margin-top: calc(var(--line) * 1.5); margin-bottom: 7.5pt; }
+h1, h2, h3 { break-after: avoid; margin: 0; color: inherit; clear: right; }
+h1 { font-size: 26pt; line-height: 32pt; margin-bottom: var(--line); }
+h2 { font-size: 17pt; line-height: 24pt; margin-top: calc(var(--line) * 2); margin-bottom: 8pt; }
+h3 { font-size: 13pt; line-height: var(--line); margin-top: calc(var(--line) * 1.5); margin-bottom: 8pt; }
 .lectio-heading-binding { break-inside: avoid; }
 
 /* ── Prose ───────────────────────────────────────────────────*/
-p { max-width: var(--main); margin: 0 0 var(--line); }
+p { margin: 0 0 var(--line); }
 
-/* ── Aside — only pedagogical border; technical hairlines OK elsewhere ─*/
-.lectio-aside {
+/* ── Margin placement ────────────────────────────────────────
+   Placement, not object identity. object-catalogue.v1.json permits margin
+   placement for `aside` and `list`; this class serves both. The float sits
+   inside the measure and displaces the line boxes beside it. */
+.lectio-block--margin {
   float: right; clear: right;
   width: var(--aside-width);
-  margin: 0 calc(-1 * var(--gutter)) var(--line) var(--aside-gap);
-  padding-left: 3mm;
-  border-left: .75pt solid currentColor;
-  font-size: 9pt; line-height: 13pt;
+  margin: 0 0 var(--line) var(--aside-gap);
   break-inside: avoid;
 }
 
+/* ── Aside — only pedagogical border; technical hairlines OK elsewhere ─
+   Aside carries its rule and type size at either placement. */
+.lectio-aside {
+  padding-left: 3mm;
+  border-left: .75pt solid currentColor;
+  font-size: 10pt; line-height: 14pt;
+}
+
 /* ── List ────────────────────────────────────────────────────*/
-.lectio-list { max-width: var(--main); margin: 0 0 var(--line); padding-left: 9mm; }
-.lectio-list > li { margin-bottom: 7.5pt; break-inside: avoid; }
+.lectio-list { margin: 0 0 var(--line); padding-left: 9mm; }
+.lectio-list > li { margin-bottom: 8pt; break-inside: avoid; }
 
 /* ── Table (FIX 4: span modifier) ────────────────────────────*/
 .lectio-table {
-  border-collapse: collapse; width: var(--main);
-  margin: 0 0 var(--line); font-size: 9.5pt;
+  border-collapse: collapse; width: 100%; clear: right;
+  margin: 0 0 var(--line); font-size: 10.5pt;
 }
-.lectio-table--span { width: var(--content); }
+/* --span is inert under a single measure. The authored intent
+   ("wider than body text") no longer has a referent. Resemanticising it as
+   "clears all floats" waits on the Placement reconciliation — see commit 5. */
 .lectio-table thead { display: table-header-group; }
 .lectio-table th, .lectio-table td { text-align: left; padding: 3pt 4pt; border-bottom: .5pt solid #777; }
-.lectio-table th { font-size: 8pt; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1pt solid #111; }
+.lectio-table th { font-size: 9pt; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1pt solid #111; }
 .lectio-table tr { break-inside: avoid; }
 
 /* ── Figure (FIX 3: span derives from geometry) ──────────────*/
-.lectio-figure { width: var(--main); margin: 0 0 var(--line); break-inside: avoid; }
-.lectio-figure--span { width: var(--content); }
+.lectio-figure { width: 100%; clear: right; margin: 0 0 var(--line); break-inside: avoid; }
+/* --span is inert under a single measure. The authored intent
+   ("wider than body text") no longer has a referent. Resemanticising it as
+   "clears all floats" waits on the Placement reconciliation — see commit 5. */
 .lectio-figure img, .lectio-figure svg { display: block; max-width: 100%; height: auto; }
-.lectio-caption { margin-top: 4pt; font-size: 9pt; line-height: 13pt; }
+.lectio-caption { margin-top: 4pt; font-size: 10pt; line-height: 14pt; }
 
 /* ── Worked example ──────────────────────────────────────────*/
 .lectio-step { position: relative; padding-left: 12mm; margin-bottom: var(--line); }
@@ -104,14 +117,15 @@ p { max-width: var(--main); margin: 0 0 var(--line); }
    Borders always render. Emit one .lectio-answer-line per required line. */
 .lectio-question { position: relative; padding-left: 9mm; margin-bottom: var(--line); break-inside: avoid; }
 .lectio-question-number { position: absolute; left: 0; font-weight: 700; }
-.lectio-question-marks { float: right; font-size: 9pt; }
-.lectio-answer-lines { margin-top: 7.5pt; }
-.lectio-answer-line { height: 16pt; border-bottom: .5pt solid #999; }
+.lectio-question-marks { float: right; font-size: 10pt; }
+/* flow-root: without a BFC the full-width rules draw under a margin float. */
+.lectio-answer-lines { margin-top: 8pt; display: flow-root; }
+.lectio-answer-line { height: 18pt; border-bottom: .5pt solid #999; }
 
 /* ── Choices ─────────────────────────────────────────────────*/
-.lectio-choice { position: relative; padding-left: 9mm; margin-bottom: 7.5pt; break-inside: avoid; }
+.lectio-choice { position: relative; padding-left: 9mm; margin-bottom: 8pt; break-inside: avoid; }
 .lectio-choice-letter { position: absolute; left: 0; font-weight: 700; }
 
 /* ── Answer key ──────────────────────────────────────────────*/
-.lectio-answer-key { break-before: page; max-width: var(--main); font-size: 9.5pt; line-height: 13pt; }
+.lectio-answer-key { break-before: page; clear: both; max-width: var(--measure); font-size: 10.5pt; line-height: 15pt; }
 .lectio-answer-key-entry { margin-bottom: var(--line); break-inside: avoid; }

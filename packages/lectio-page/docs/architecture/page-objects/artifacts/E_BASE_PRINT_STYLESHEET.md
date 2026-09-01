@@ -75,7 +75,7 @@ They may not create different color systems or surface styles.
 
 ## Growth rule
 
-The base stylesheet is expected to remain under roughly 60 formatted lines. Minified line count is irrelevant; track rule count and selector count.
+The base stylesheet is expected to remain under roughly 135 formatted lines (it was already past the originally stated 60 before this note was corrected). Minified line count is irrelevant; track rule count and selector count.
 
 Any new rule must answer:
 
