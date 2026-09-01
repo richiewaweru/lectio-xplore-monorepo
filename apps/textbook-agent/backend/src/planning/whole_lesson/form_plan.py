@@ -6,11 +6,20 @@ Code joins the two into ResolvedBlockPlan for writers and assembly.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-Placement = Literal["main", "margin"]
+logger = logging.getLogger(__name__)
+
+# Three-value literal for parity with v3_blueprint.planning.models.Placement and
+# the @lectio/page contract (document.ts). validate_form_plan's PLACEMENT check
+# is the actual enforcement point: whole-lesson form decisions are restricted to
+# main/margin — spanning is rejected there, not by narrowing this type, so the
+# rejection produces an observable ValidationIssue instead of a bare parse
+# failure or a silent downgrade.
+Placement = Literal["main", "margin", "spanning"]
 
 
 class FormDecision(BaseModel):
@@ -87,6 +96,11 @@ def section_decisions_raw(section: dict[str, Any]) -> list[dict[str, Any]]:
             continue
         placement = block.get("placement") or "main"
         if placement == "spanning":
+            logger.warning(
+                "form_plan.legacy_spanning_downgrade block_id=%s object=%s",
+                block.get("block_id") or block.get("id"),
+                block.get("object"),
+            )
             placement = "main"
         out.append(
             {
