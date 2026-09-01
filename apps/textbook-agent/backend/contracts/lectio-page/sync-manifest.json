@@ -19,9 +19,14 @@
       "sha256": "1813a43e1bb492b7594b016989db79cf48dceb8a8f3780dcb5dfebff82ce5729",
       "bytes": 8637
     },
+    "base-print.css": {
+      "path": "base-print.css",
+      "sha256": "108fa8f677a182ea5947546d844bf639f71d2745cd0d190ebb62eaa7e707c3bd",
+      "bytes": 6607
+    },
     "manifest.json": {
       "path": "manifest.json",
-      "sha256": "c2a9de79ca7166bf592897b018ed132749401a6d75f7fc33712938f0bb0718c9",
+      "sha256": "5f1077a0cce73793c2449936d4337d262be6388289121c78b58c9510ef5b266e",
       "bytes": 791
     }
   }

@@ -2,7 +2,7 @@
   "manifest_version": "1.0.0",
   "package": "@lectio/page",
   "contract_version": "1.0.0",
-  "generated_at": "2026-08-04T20:10:35.271Z",
+  "generated_at": "2026-09-01T08:59:11.648Z",
   "files": [
     {
       "path": "lectio-document-v2.schema.json",
@@ -21,8 +21,8 @@
     },
     {
       "path": "base-print.css",
-      "sha256": "fa7afd1a71fefc35d68ec8ae0f9bb6c912de39318ad72ced3a658811cd92b322",
-      "bytes": 6459
+      "sha256": "108fa8f677a182ea5947546d844bf639f71d2745cd0d190ebb62eaa7e707c3bd",
+      "bytes": 6607
     }
   ]
 }

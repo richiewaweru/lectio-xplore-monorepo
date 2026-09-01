@@ -38,6 +38,7 @@ def test_synced_files_match_package_sources() -> None:
         "lectio-document-v2.schema.json",
         "intent-catalogue.v1.json",
         "object-catalogue.v1.json",
+        "base-print.css",
         "manifest.json",
     ):
         source = PAGE_CONTRACTS / name

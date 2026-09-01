@@ -16,6 +16,7 @@ SYNC_FILES = (
     "lectio-document-v2.schema.json",
     "intent-catalogue.v1.json",
     "object-catalogue.v1.json",
+    "base-print.css",
     "manifest.json",
 )
 

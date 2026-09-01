@@ -16,6 +16,14 @@ const files = [
 
 mkdirSync(outDir, { recursive: true });
 
+// base-print.css source of truth is src/lib/print/ — that is the path exported
+// from package.json. Sync it into contracts/ before hashing so manifest.json
+// attests to the file consumers actually load.
+copyFileSync(
+	join(root, 'src/lib/print/base-print.css'),
+	join(contractsDir, 'base-print.css')
+);
+
 const entries = files.map((name) => {
 	const path = join(contractsDir, name);
 	const bytes = readFileSync(path);
@@ -40,6 +48,10 @@ writeFileSync(join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2) +
 copyFileSync(
 	join(contractsDir, 'lectio-document-v2.schema.json'),
 	join(root, 'docs/architecture/page-objects/contracts/lectio-document-v2.schema.json')
+);
+copyFileSync(
+	join(contractsDir, 'base-print.css'),
+	join(root, 'docs/architecture/page-objects/contracts/base-print.css')
 );
 
 console.log('Exported contracts + manifest.json');
