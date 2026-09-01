@@ -1,8 +1,7 @@
 @media print {
-	@page {
-		size: A4;
-		margin: 16mm 14mm 18mm;
-	}
+	/* Page geometry belongs to @lectio/page's base-print.css. Do not declare
+	   @page here — two same-specificity @page rules resolve by bundler emit
+	   order, which is not pinned. See E_BASE_PRINT_STYLESHEET.md. */
 
 	html,
 	body {
