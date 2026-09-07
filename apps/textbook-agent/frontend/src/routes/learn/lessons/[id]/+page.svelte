@@ -21,7 +21,7 @@
 			ready = true;
 		} catch (err) {
 			if (isApiError(err)) {
-				error = `${err.title}: ${err.detail}`;
+				error = `${err.name}: ${err.detail}`;
 			} else {
 				error = err instanceof Error ? err.message : 'Failed to load lesson';
 			}

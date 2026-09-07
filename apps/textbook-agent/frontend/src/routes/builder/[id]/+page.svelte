@@ -8,7 +8,7 @@
 	import ConceptCardReview from '$lib/learn/authoring/builder/components/ConceptCardReview.svelte';
 	import { createDocumentStore } from '$lib/learn/authoring/builder/stores/document.svelte';
 	import { loadBuilderLessonWithFallback } from '$lib/learn/authoring/builder/persistence/server-sync';
-	import { logout } from '$lib/stores/shared/auth';
+	import { logout } from '$lib/shared/stores/auth';
 	import { fetchV3Document, getChunkedPlan, getChunkedPlanStatus } from '$lib/api/v3';
 	import type { V3VisualBlock } from '$lib/api/v3';
 	import {
@@ -16,13 +16,13 @@
 		v3PackToBuilderDocument
 	} from '$lib/learn/authoring/builder/adapters/from-generation';
 	import type { BuilderIssue } from '$lib/learn/authoring/builder/issues';
-	import type { V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
-	import { getBookletStatusSummary, isBookletStatus } from '$lib/studio/v3-booklet';
+	import type { V3PackDocument } from '$lib/print/studio/v3-pack-to-lectio-document';
+	import { getBookletStatusSummary, isBookletStatus } from '$lib/print/studio/v3-booklet';
 	import {
 		isTerminalGenerationDocument,
 		pendingPlanFromStructuralPlan,
 		type PendingPlanSection
-	} from '$lib/learn/authoring/builder/streaming/print/generation-stream';
+	} from '$lib/learn/authoring/builder/streaming/generation-stream';
 	import {
 		isDeleteOrBackspace,
 		isModifierD,

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { CanvasComponent } from '$lib/types/v3';
-	import V3PatchIndicator from '$lib/components/studio/V3PatchIndicator.svelte';
+	import V3PatchIndicator from '$lib/print/components/studio/V3PatchIndicator.svelte';
 
 	interface Props {
 		component: CanvasComponent;

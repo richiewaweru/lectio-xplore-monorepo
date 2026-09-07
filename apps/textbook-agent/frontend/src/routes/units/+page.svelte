@@ -254,7 +254,7 @@
 						</button>
 					</div>
 				</form>
-			{:else if step === 'clarify' && hasClarifyingQuestion(readback?.clarifying_question)}
+			{:else if step === 'clarify' && readback && hasClarifyingQuestion(readback.clarifying_question)}
 				<form class="ask-form" onsubmit={answerClarifyingQuestion}>
 					<div class="form-head">
 						<div><p class="eyebrow">One quick question</p><h2>{readback.clarifying_question?.trim()}</h2></div>

@@ -7,7 +7,7 @@
 	import AddSectionControl from './AddSectionControl.svelte';
 	import BlockCard from './BlockCard.svelte';
 	import SectionDivider from './SectionDivider.svelte';
-	import type { PendingPlanSection } from '$lib/learn/authoring/builder/streaming/print/generation-stream';
+	import type { PendingPlanSection } from '$lib/learn/authoring/builder/streaming/generation-stream';
 	import { issuesForSection } from '$lib/learn/authoring/builder/issues';
 	import type { BuilderIssue } from '$lib/learn/authoring/builder/issues';
 	import type { V3VisualBlock } from '$lib/api/v3';

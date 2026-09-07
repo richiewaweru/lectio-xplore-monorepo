@@ -1,0 +1,76 @@
+{
+  "pack_version": "1.0",
+  "reviewed_sha": "5d1563903a22d6d40e12a86dcc4d9021ca8202a3",
+  "implementation_branch": "feat/unit-print-learn",
+  "implementation_head": null,
+  "current_phase": "P01",
+  "phases": {
+    "P00": {
+      "status": "PASS",
+      "report": "docs/unit-native-program/reports/P00_PHASE_REPORT.md",
+      "evidence": [
+        ".tmp/fe-build3.txt",
+        ".tmp/fe-test3.txt",
+        "docs/unit-native-program/CAPABILITY_INVENTORY.json"
+      ],
+      "blockers": []
+    },
+    "P01": {
+      "status": "NOT_STARTED",
+      "report": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "P02": {
+      "status": "NOT_STARTED",
+      "report": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "P03": {
+      "status": "NOT_STARTED",
+      "report": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "P04": {
+      "status": "NOT_STARTED",
+      "report": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "P05": {
+      "status": "NOT_STARTED",
+      "report": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "P06": {
+      "status": "NOT_STARTED",
+      "report": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "P07": {
+      "status": "NOT_STARTED",
+      "report": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "P08": {
+      "status": "NOT_STARTED",
+      "report": null,
+      "evidence": [],
+      "blockers": []
+    },
+    "P09": {
+      "status": "NOT_STARTED",
+      "report": null,
+      "evidence": [],
+      "blockers": []
+    }
+  },
+  "core_dual_path_acceptance": "NOT_RUN",
+  "full_catalogue_acceptance": "NOT_RUN",
+  "next_action": "Execute P01: create @lectio/contracts vocabulary and complete Print/Learn capability catalogues with generated views."
+}

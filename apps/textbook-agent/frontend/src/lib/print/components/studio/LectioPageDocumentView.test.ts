@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { documentRenderVersion, extractLectioDocumentV2 } from '$lib/studio/document-version';
+import { documentRenderVersion, extractLectioDocumentV2 } from '$lib/print/studio/document-version';
 import type { LectioDocument } from '@lectio/page/contract';
 
 const fixture = JSON.parse(

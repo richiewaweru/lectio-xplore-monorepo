@@ -45,19 +45,19 @@ vi.mock('$lib/api/v3', () => ({
 	retryChunkedSection: mocks.retryChunkedSection
 }));
 
-vi.mock('$lib/components/studio/V3PlanningState.svelte', async () => ({
+vi.mock('$lib/print/components/studio/V3PlanningState.svelte', async () => ({
 	default: (await import('./__fixtures__/MockGeneric.svelte')).default
 }));
-vi.mock('$lib/components/studio/V3SignalConfirmation.svelte', async () => ({
+vi.mock('$lib/print/components/studio/V3SignalConfirmation.svelte', async () => ({
 	default: (await import('./__fixtures__/MockGeneric.svelte')).default
 }));
-vi.mock('$lib/components/studio/V3BlueprintPreview.svelte', async () => ({
+vi.mock('$lib/print/components/studio/V3BlueprintPreview.svelte', async () => ({
 	default: (await import('./__fixtures__/MockGeneric.svelte')).default
 }));
-vi.mock('$lib/components/studio/V3Canvas.svelte', async () => ({
+vi.mock('$lib/print/components/studio/V3Canvas.svelte', async () => ({
 	default: (await import('./__fixtures__/MockGeneric.svelte')).default
 }));
-vi.mock('$lib/components/studio/V3BookletPackView.svelte', async () => ({
+vi.mock('$lib/print/components/studio/V3BookletPackView.svelte', async () => ({
 	default: (await import('./__fixtures__/MockGeneric.svelte')).default
 }));
 import StudioPage from './+page.svelte';

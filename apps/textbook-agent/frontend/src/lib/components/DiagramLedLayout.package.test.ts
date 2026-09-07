@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const require = createRequire(import.meta.url);
-const LECTIO_ENTRY = require.resolve('lectio');
+const LECTIO_ENTRY = require.resolve('@lectio/learn');
 const LECTIO_ROOT = resolve(dirname(LECTIO_ENTRY), '..');
 const DIAGRAM_LED_LAYOUT = resolve(LECTIO_ROOT, 'dist/templates/diagram-led/layout.svelte');
 

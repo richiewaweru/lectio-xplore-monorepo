@@ -8,7 +8,7 @@
 	import { isApiError } from '$lib/api/errors';
 	import { getOnboardingRoute, isOnboardingEditMode, resolveOnboardingGuard } from '$lib/shared/auth/routing';
 	import { createProfile, getProfile, updateProfile } from '$lib/api/profile';
-	import { authUser, logout, updateUser } from '$lib/stores/shared/auth';
+	import { authUser, logout, updateUser } from '$lib/shared/stores/auth';
 	import type { TeacherProfile, TeacherProfileUpsertRequest } from '$lib/types';
 
 	let saving = $state(false);

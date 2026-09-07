@@ -6,7 +6,7 @@ const { authTokenMock, fetchMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('svelte/store', () => ({ get: vi.fn(() => 'stored-token') }));
-vi.mock('$lib/stores/shared/auth', () => ({ authToken: authTokenMock }));
+vi.mock('$lib/shared/stores/auth', () => ({ authToken: authTokenMock }));
 vi.stubGlobal('fetch', fetchMock);
 
 import { apiFetch } from './client';

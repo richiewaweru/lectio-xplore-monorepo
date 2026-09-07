@@ -1,6 +1,6 @@
 import { get } from 'svelte/store';
-import { authToken } from '$lib/stores/shared/auth';
-import { resolveClientApiBase, type ApiEnvironment } from './shared/config';
+import { authToken } from '$lib/shared/stores/auth';
+import { resolveClientApiBase, type ApiEnvironment } from '$lib/api/config';
 
 const API_BASE = resolveClientApiBase(import.meta.env as ApiEnvironment);
 

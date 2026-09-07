@@ -3,13 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { vi } from 'vitest';
 
 vi.mock('./V3CanvasComponent.svelte', async () => ({
-	default: (await import('../../../routes/studio/__fixtures__/MockGeneric.svelte')).default
+	default: (await import('../../../../routes/studio/__fixtures__/MockGeneric.svelte')).default
 }));
 vi.mock('./V3CanvasVisual.svelte', async () => ({
-	default: (await import('../../../routes/studio/__fixtures__/MockGeneric.svelte')).default
+	default: (await import('../../../../routes/studio/__fixtures__/MockGeneric.svelte')).default
 }));
 vi.mock('./V3LectioSectionEmbed.svelte', async () => ({
-	default: (await import('../../../routes/studio/__fixtures__/MockGeneric.svelte')).default
+	default: (await import('../../../../routes/studio/__fixtures__/MockGeneric.svelte')).default
 }));
 
 import V3CanvasSection from './V3CanvasSection.svelte';

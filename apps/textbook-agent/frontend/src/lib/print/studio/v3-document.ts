@@ -1,4 +1,4 @@
-import { isBookletStatus } from '$lib/studio/v3-booklet';
+import { isBookletStatus } from '$lib/print/studio/v3-booklet';
 import type { BookletStatus, V3DraftPack } from '$lib/types/v3';
 
 function toStringArray(raw: unknown): string[] {

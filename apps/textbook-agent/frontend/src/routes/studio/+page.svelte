@@ -3,12 +3,12 @@
 	import { goto, replaceState } from '$app/navigation';
 	import { onDestroy, onMount } from 'svelte';
 
-	import V3PlanningState from '$lib/components/studio/V3PlanningState.svelte';
-	import V3PlanPreview from '$lib/components/studio/V3PlanPreview.svelte';
-	import V3PlanActions from '$lib/components/studio/V3PlanActions.svelte';
-	import V3Canvas from '$lib/components/studio/V3Canvas.svelte';
-	import V3BookletPackView from '$lib/components/studio/V3BookletPackView.svelte';
-	import V3BookletIssuesPanel from '$lib/components/studio/V3BookletIssuesPanel.svelte';
+	import V3PlanningState from '$lib/print/components/studio/V3PlanningState.svelte';
+	import V3PlanPreview from '$lib/print/components/studio/V3PlanPreview.svelte';
+	import V3PlanActions from '$lib/print/components/studio/V3PlanActions.svelte';
+	import V3Canvas from '$lib/print/components/studio/V3Canvas.svelte';
+	import V3BookletPackView from '$lib/print/components/studio/V3BookletPackView.svelte';
+	import V3BookletIssuesPanel from '$lib/print/components/studio/V3BookletIssuesPanel.svelte';
 
 	import {
 		approveChunkedPlan,
@@ -28,19 +28,19 @@
 		retryChunkedSection
 	} from '$lib/api/v3';
 	import { isApiError } from '$lib/api/errors';
-	import { createGenerationPoller } from '$lib/print/generation/print/generation-poller';
+	import { createGenerationPoller } from '$lib/print/generation/generation-poller';
 	import { resetV3Studio, v3Studio } from '$lib/print/stores/v3-studio.svelte';
 	import {
 		buildCanvasSkeleton,
 		buildStructuralPlanCanvas,
 		patchCanvasSection
-	} from '$lib/studio/v3-canvas';
+	} from '$lib/print/studio/v3-canvas';
 	import {
 		getBookletExportPolicy,
 		getBookletPrintReadiness
-	} from '$lib/studio/v3-booklet';
-	import { coerceV3DocumentToPack } from '$lib/studio/v3-document';
-	import { mapPackSectionsToCanvas } from '$lib/studio/v3-print-canvas';
+	} from '$lib/print/studio/v3-booklet';
+	import { coerceV3DocumentToPack } from '$lib/print/studio/v3-document';
+	import { mapPackSectionsToCanvas } from '$lib/print/studio/v3-print-canvas';
 	import type {
 		V3ChunkedPlan,
 		V3ChunkedPlanState,

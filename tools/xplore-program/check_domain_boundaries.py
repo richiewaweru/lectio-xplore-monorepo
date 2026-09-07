@@ -89,15 +89,20 @@ def _scan(
     return violations
 
 
-# Leftover ownership-prefixed paths that must not reappear in the app frontend.
+# Leftover ownership-prefixed residuals that must not reappear in the app frontend.
+# Note: `$lib/print/studio` is the legitimate Print owner path; do not ban it.
+# Ban wrong nesting (`$lib/components/print/studio`) and retired URL prefixes.
 FRONTEND_FORBIDDEN_SUBSTRINGS = (
     "$lib/learn/shared/",
     "$lib/components/print/studio",
-    "/print/studio",
+    "'/print/studio",
+    '"/print/studio',
+    "`/print/studio",
     "/learn/shared/authoring",
     "/api/v1/learn/shared/authoring",
     "/api/v1/shared/auth",
 )
+
 
 
 def _scan_frontend_path_residuals(root: Path) -> list[Violation]:

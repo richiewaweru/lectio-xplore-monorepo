@@ -56,7 +56,7 @@ vi.mock('$app/navigation', () => ({
 	goto
 }));
 
-vi.mock('$lib/stores/shared/auth', () => ({
+vi.mock('$lib/shared/stores/auth', () => ({
 	logout
 }));
 
@@ -326,7 +326,7 @@ describe('builder lesson route', () => {
 		render(BuilderLessonPage);
 		await waitFor(() => expect(fetchV3Document).toHaveBeenCalledTimes(1));
 
-		expect(screen.queryByText(/print/generation update delayed/i)).toBeNull();
+		expect(screen.queryByText(/generation update delayed/i)).toBeNull();
 	});
 
 	it('stops on blocked execution and links recovery to Studio', async () => {

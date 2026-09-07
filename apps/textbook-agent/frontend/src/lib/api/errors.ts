@@ -68,7 +68,10 @@ function formatStructuredDetail(
 	return `${msg}${suffix}`;
 }
 
-export async function ensureOk(response: Response, fallbackMessage: string): Promise<Response> {
+export async function ensureOk(
+	response: Response,
+	fallbackMessage = 'Request failed.'
+): Promise<Response> {
 	if (response.ok) {
 		return response;
 	}

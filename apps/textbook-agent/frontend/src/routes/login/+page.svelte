@@ -11,7 +11,7 @@
 		resolveGoogleClientId,
 		type FrontendEnvironment
 	} from '$lib/shared/config/environment';
-	import { authUser, setAuth } from '$lib/stores/shared/auth';
+	import { authUser, setAuth } from '$lib/shared/stores/auth';
 	import type { User } from '$lib/types';
 
 	let errorMessage: string | null = $state(null);

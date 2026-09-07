@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 describe('builder generation chrome print isolation', () => {
 	it('keeps progress and issue text behind the print-hidden class', () => {
 		const canvas = readFileSync(
-			join(process.cwd(), 'src/lib/builder/components/canvas/BlockCanvas.svelte'),
+			join(process.cwd(), 'src/lib/learn/authoring/builder/components/canvas/BlockCanvas.svelte'),
 			'utf8'
 		);
 		const printCss = readFileSync(join(process.cwd(), 'src/app.css'), 'utf8');

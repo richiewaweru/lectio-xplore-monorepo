@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { LessonDocument } from '@lectio/learn';
 
-vi.mock('lectio', () => ({
+vi.mock('@lectio/learn', () => ({
 	getEmptyContent: () => ({}),
 	getTemplateById: () => null
 }));

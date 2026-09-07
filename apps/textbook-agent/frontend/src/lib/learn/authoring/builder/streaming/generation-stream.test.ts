@@ -5,7 +5,7 @@ import {
 	appendAbsentGenerationSections,
 	isTerminalGenerationDocument,
 	isTerminalPackStatus
-} from './print/generation-stream';
+} from './generation-stream';
 
 function document(sections: LessonDocument['sections'], blocks: LessonDocument['blocks'] = {}): LessonDocument {
 	return {

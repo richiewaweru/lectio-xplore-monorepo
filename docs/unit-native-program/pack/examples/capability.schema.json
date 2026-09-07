@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "IllustrativeCapabilityRecord",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "native_path",
+    "kind",
+    "contract_version",
+    "purpose",
+    "supported_intents",
+    "supported_actions",
+    "choose_when",
+    "reject_when",
+    "requires",
+    "payload_schema_ref",
+    "renderer_ref",
+    "evaluation",
+    "readiness"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "native_path": {
+      "enum": [
+        "print",
+        "learn"
+      ]
+    },
+    "kind": {
+      "enum": [
+        "page_form",
+        "content",
+        "interaction"
+      ]
+    },
+    "contract_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1
+    },
+    "supported_intents": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "supported_actions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "choose_when": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reject_when": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requires": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "payload_schema_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "renderer_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "contract_ref"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "none",
+            "auto-score",
+            "teacher-review"
+          ]
+        },
+        "contract_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "readiness": {
+      "enum": [
+        "planned",
+        "manual-only",
+        "generation-ready"
+      ]
+    }
+  }
+}

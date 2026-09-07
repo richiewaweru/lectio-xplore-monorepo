@@ -44,7 +44,7 @@ vi.mock('$lib/shared/auth/routing', () => ({
 	navigateToLanding: vi.fn()
 }));
 
-vi.mock('$lib/stores/shared/auth', () => ({
+vi.mock('$lib/shared/stores/auth', () => ({
 	authUser: authStore,
 	setAuth: vi.fn()
 }));

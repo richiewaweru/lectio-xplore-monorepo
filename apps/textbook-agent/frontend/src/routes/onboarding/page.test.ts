@@ -72,7 +72,7 @@ vi.mock('$lib/shared/auth/routing', async () => {
 	return actual;
 });
 
-vi.mock('$lib/stores/shared/auth', () => ({
+vi.mock('$lib/shared/stores/auth', () => ({
 	authUser: authStore,
 	logout: vi.fn(),
 	updateUser: vi.fn()

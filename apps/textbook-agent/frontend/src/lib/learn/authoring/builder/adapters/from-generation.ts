@@ -5,12 +5,12 @@ import {
 	adaptV3PackToLectioDocument,
 	type AdaptV3PackOptions,
 	type V3PackDocument
-} from '$lib/studio/v3-pack-to-lectio-document';
+} from '$lib/print/studio/v3-pack-to-lectio-document';
 import type { IssueSection } from '$lib/learn/authoring/builder/issues';
-import { partitionGenerationIssues } from '$lib/learn/authoring/builder/print/generation-issues';
+import { partitionGenerationIssues } from '$lib/learn/authoring/builder/generation-issues';
 
-export { partitionGenerationIssues } from '$lib/learn/authoring/builder/print/generation-issues';
-export type { GenerationIssuePartition } from '$lib/learn/authoring/builder/print/generation-issues';
+export { partitionGenerationIssues } from '$lib/learn/authoring/builder/generation-issues';
+export type { GenerationIssuePartition } from '$lib/learn/authoring/builder/generation-issues';
 
 export function v3PackToBuilderDocument(
 	pack: V3PackDocument,

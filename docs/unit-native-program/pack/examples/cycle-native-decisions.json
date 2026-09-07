@@ -1,0 +1,42 @@
+{
+  "example_only": true,
+  "note": "Proposed capability IDs must be resolved against actual package catalogue. These are selection examples, not production payloads.",
+  "teaching_revision": "example-r1",
+  "print": [
+    {
+      "block_id": "b1",
+      "capability": "prose"
+    },
+    {
+      "block_id": "b2",
+      "capability": "prose"
+    },
+    {
+      "block_id": "b3",
+      "capability": "questions"
+    },
+    {
+      "block_id": "b4",
+      "capability": "questions",
+      "presentation": "number shuffled stages; answer in teacher key"
+    }
+  ],
+  "learn": [
+    {
+      "block_id": "b1",
+      "capability": "explanation-block"
+    },
+    {
+      "block_id": "b2",
+      "capability": "explanation-block"
+    },
+    {
+      "block_id": "b3",
+      "capability": "fill-blank"
+    },
+    {
+      "block_id": "b4",
+      "capability": "sequence"
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "example_only": true,
+  "objective": "Order the four stages of a butterfly life cycle, beginning with the egg.",
+  "scope": {
+    "facts": [
+      "egg → larva → pupa → adult",
+      "adults lay eggs, beginning the cycle again"
+    ],
+    "exclusions": [
+      "internal biological changes"
+    ]
+  },
+  "arc": "Establish the stages, model following the cycle, practise with support, then reconstruct the order independently.",
+  "slots": [
+    {
+      "id": "orient-1",
+      "role": "orient",
+      "blocks": [
+        {
+          "id": "b1",
+          "intent": "orient",
+          "brief": "Introduce the butterfly as an animal that changes form through a repeating life cycle.",
+          "learner_action": null
+        }
+      ]
+    },
+    {
+      "id": "explain-1",
+      "role": "explain",
+      "blocks": [
+        {
+          "id": "b2",
+          "intent": "sequence",
+          "brief": "Establish egg, larva, pupa, adult in order; explain the return to eggs.",
+          "learner_action": null
+        }
+      ]
+    },
+    {
+      "id": "guided-1",
+      "role": "guided",
+      "blocks": [
+        {
+          "id": "b3",
+          "intent": "practise-guided",
+          "brief": "Complete two missing stage names with the established sequence available.",
+          "learner_action": {
+            "action": "complete-missing-values",
+            "support": "guided",
+            "evidence": "Identify missing stages within a supported sequence"
+          }
+        }
+      ]
+    },
+    {
+      "id": "check-1",
+      "role": "check",
+      "blocks": [
+        {
+          "id": "b4",
+          "intent": "check-understanding",
+          "brief": "Reconstruct all four stages beginning with egg, without the ordered answer displayed inside the task.",
+          "learner_action": {
+            "action": "order-items",
+            "support": "independent",
+            "evidence": "Correct complete order"
+          },
+          "source_item_ids": []
+        }
+      ]
+    }
+  ]
+}

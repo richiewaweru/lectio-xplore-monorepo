@@ -433,4 +433,4 @@ export type V3Stage =
 	| 'fill'
 	| 'edit';
 
-export type { V3PackAdapterDiagnostic, V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
+export type { V3PackAdapterDiagnostic, V3PackDocument } from '$lib/print/studio/v3-pack-to-lectio-document';

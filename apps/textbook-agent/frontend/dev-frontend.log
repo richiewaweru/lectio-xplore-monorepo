@@ -1,0 +1,10 @@
+
+> frontend@1.0.0-beta.1 dev C:\Projects\lectio\apps\textbook-agent\frontend
+> vite dev "--host" "127.0.0.1" "--port" "3000"
+
+
+  VITE v7.3.6  ready in 44758 ms
+
+  ➜  Local:   http://127.0.0.1:3000/
+  ➜  press h + enter to show help
+ ELIFECYCLE  Command failed with exit code 4294967295.

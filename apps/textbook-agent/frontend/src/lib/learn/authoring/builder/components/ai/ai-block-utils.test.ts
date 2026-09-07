@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('lectio', () => ({
+vi.mock('@lectio/learn', () => ({
 	getEmptyContent: vi.fn(() => ({ body: '' })),
 	getEditSchema: vi.fn(() => ({
 		component_id: 'explanation-block',

@@ -1,0 +1,5 @@
+Resume the Lectio implementation program. Read prompts/CASA_MASTER_PROMPT.md, tracking/STATE.json, the latest phase report, GATE_RESULTS.csv and current git status. Confirm branch and contract versions. Preserve unrelated edits.
+
+Determine the first incomplete eligible phase from tracking/phase-plan.json. Reuse prior passing evidence unless changed code invalidates it. Do not restart the project or rewrite the proposal. Continue implementation, repair failing gates, update evidence, then proceed to the next eligible phase.
+
+If earlier completion claims relied on mocks or fixture-plan substitution, retain those as limited integration evidence and finish the real handoff/live gates. Report external blockers precisely; do not turn skipped tests into PASS.

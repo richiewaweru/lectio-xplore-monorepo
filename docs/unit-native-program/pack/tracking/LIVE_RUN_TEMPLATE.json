@@ -1,0 +1,44 @@
+{
+  "case_id": null,
+  "status": "NOT_RUN",
+  "commit": null,
+  "provider": null,
+  "model": null,
+  "started_at": null,
+  "finished_at": null,
+  "unit_id": null,
+  "path_lesson_id": null,
+  "teaching_plan_id": null,
+  "teaching_revision": null,
+  "teaching_hash": null,
+  "contracts": {
+    "print": null,
+    "learn": null,
+    "vocabulary": null
+  },
+  "print": {
+    "realization_id": null,
+    "generation_id": null,
+    "student_pdf": null,
+    "teacher_pdf": null,
+    "inspection": null
+  },
+  "learn": {
+    "realization_id": null,
+    "generation_id": null,
+    "builder_id": null,
+    "release_id": null,
+    "assignment_id": null,
+    "instance_id": null,
+    "attempt_evidence": null,
+    "refresh_evidence": null
+  },
+  "stage_timings_ms": {},
+  "failure_recovery": null,
+  "rubric": {
+    "print": null,
+    "learn": null
+  },
+  "evidence_paths": [],
+  "limitations": []
+}

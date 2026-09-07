@@ -7,7 +7,7 @@ import type { LessonDocument } from '@lectio/learn';
 const generateBlock = vi.hoisted(() => vi.fn());
 
 vi.mock('$lib/learn/authoring/builder/api/ai-client', () => ({ generateBlock }));
-vi.mock('$lib/stores/shared/auth', () => ({ getToken: () => 'token' }));
+vi.mock('$lib/shared/stores/auth', () => ({ getToken: () => 'token' }));
 vi.mock('$lib/learn/authoring/builder/stores/connectivity.svelte', () => ({
 	connectivityStore: { online: true }
 }));
@@ -35,7 +35,7 @@ import type { IssueSection } from '$lib/learn/authoring/builder/issues';
 function regressionDocument(): LessonDocument {
 	const fixture = JSON.parse(
 		readFileSync(
-			join(process.cwd(), 'src/lib/builder/fixtures/block-ai-regression.json'),
+			join(process.cwd(), 'src/lib/learn/authoring/builder/fixtures/block-ai-regression.json'),
 			'utf8'
 		)
 	) as { lesson: LessonDocument };

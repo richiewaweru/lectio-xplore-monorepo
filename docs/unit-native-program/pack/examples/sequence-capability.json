@@ -1,0 +1,28 @@
+{
+  "id": "sequence",
+  "native_path": "learn",
+  "kind": "interaction",
+  "contract_version": "1.0.0",
+  "purpose": "Let a learner reconstruct a defensible order.",
+  "supported_intents": [
+    "practise-guided",
+    "check-understanding"
+  ],
+  "supported_actions": [
+    "order-items"
+  ],
+  "choose_when": "The task requires ordering distinct stages with a validated expected order.",
+  "reject_when": "Multiple orders are valid but the configured evaluator accepts only one.",
+  "requires": [
+    "unique item IDs",
+    "expected order covering every item",
+    "keyboard-operable response"
+  ],
+  "payload_schema_ref": "PROPOSED: generated sequence payload schema",
+  "renderer_ref": "PROPOSED: registered sequence renderer",
+  "evaluation": {
+    "mode": "auto-score",
+    "contract_ref": "PROPOSED: versioned sequence evaluator"
+  },
+  "readiness": "planned"
+}

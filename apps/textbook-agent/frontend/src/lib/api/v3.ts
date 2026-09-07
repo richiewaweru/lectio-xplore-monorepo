@@ -3,7 +3,7 @@ import { get } from 'svelte/store';
 
 import { ensureOk } from '$lib/api/errors';
 import { apiFetch, buildApiUrl } from '$lib/api/client';
-import { authToken } from '$lib/stores/shared/auth';
+import { authToken } from '$lib/shared/stores/auth';
 import type {
 	BlueprintPreviewDTO,
 	V3ChunkedPlan,

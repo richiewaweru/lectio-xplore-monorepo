@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('lectio', () => ({
+vi.mock('@lectio/learn', () => ({
 	fromSectionContents: (
 		sections: Array<Record<string, unknown>>,
 		metadata: { title: string; subject: string; preset_id: string; source_generation_id?: string }
@@ -74,6 +74,9 @@ describe('v3PackToBuilderDocument', () => {
 		expect(lesson.source_generation_id).toBe('composition-1');
 		expect(lesson.sections).toHaveLength(1);
 		expect(Object.keys(lesson.blocks)).toContain('header-0');
+		expect(lesson.blocks['header-0']?.content).toEqual(
+			expect.objectContaining({ title: 'Plant revision' })
+		);
 	});
 
 	it('maps incomplete diagnostics into unresolved section issues', () => {

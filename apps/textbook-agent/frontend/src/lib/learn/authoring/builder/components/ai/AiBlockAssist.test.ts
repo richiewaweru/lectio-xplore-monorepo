@@ -10,7 +10,7 @@ vi.mock('$lib/learn/authoring/builder/stores/connectivity.svelte', () => ({
 vi.mock('$lib/learn/authoring/builder/utils/ai-rate-limit', () => ({
 	tryBeginAiCall: () => ({ ok: true, finish: vi.fn() })
 }));
-vi.mock('lectio', () => ({
+vi.mock('@lectio/learn', () => ({
 	getEmptyContent: () => ({ body: '' })
 }));
 

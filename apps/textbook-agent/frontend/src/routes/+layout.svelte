@@ -5,7 +5,7 @@
 	import { fromStore } from 'svelte/store';
 	import { resolveShellRedirect } from '$lib/shared/auth/routing';
 	import { fetchCurrentUser } from '$lib/api/shared/auth';
-	import { authInitialized, authIsAuthenticated, authUser, bootstrapAuth } from '$lib/stores/shared/auth';
+	import { authInitialized, authIsAuthenticated, authUser, bootstrapAuth } from '$lib/shared/stores/auth';
 
 	let { children } = $props();
 	const initialized = fromStore(authInitialized);

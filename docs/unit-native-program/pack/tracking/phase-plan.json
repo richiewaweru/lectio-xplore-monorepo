@@ -1,0 +1,163 @@
+{
+  "version": "1.0",
+  "phases": [
+    {
+      "id": "P00",
+      "title": "Establish executable baseline",
+      "depends_on": [],
+      "document": "phases/P00_BASELINE.md",
+      "gates": [
+        "P00-B01",
+        "P00-B02",
+        "P00-B03",
+        "P00-B04",
+        "P00-B05"
+      ]
+    },
+    {
+      "id": "P01",
+      "title": "Publish authoritative capability catalogues",
+      "depends_on": [
+        "P00"
+      ],
+      "document": "phases/P01_PACKAGES.md",
+      "gates": [
+        "P01-K01",
+        "P01-K02",
+        "P01-K03",
+        "P01-K04",
+        "P01-K05",
+        "P01-K06"
+      ]
+    },
+    {
+      "id": "P02",
+      "title": "Implement shared preparation and teaching",
+      "depends_on": [
+        "P01"
+      ],
+      "document": "phases/P02_SHARED_PLAN.md",
+      "gates": [
+        "P02-S01",
+        "P02-S02",
+        "P02-S03",
+        "P02-S04",
+        "P02-S05",
+        "P02-S06"
+      ]
+    },
+    {
+      "id": "P03",
+      "title": "Separate native output identity and state",
+      "depends_on": [
+        "P02"
+      ],
+      "document": "phases/P03_REALIZATIONS.md",
+      "gates": [
+        "P03-R01",
+        "P03-R02",
+        "P03-R03",
+        "P03-R04",
+        "P03-R05",
+        "P03-R06"
+      ]
+    },
+    {
+      "id": "P04",
+      "title": "Connect closed native selectors and writer plans",
+      "depends_on": [
+        "P03"
+      ],
+      "document": "phases/P04_NATIVE_SELECTION.md",
+      "gates": [
+        "P04-N01",
+        "P04-N02",
+        "P04-N03",
+        "P04-N04",
+        "P04-N05",
+        "P04-N06"
+      ]
+    },
+    {
+      "id": "P05",
+      "title": "Complete Print from shared teaching to real PDF",
+      "depends_on": [
+        "P04"
+      ],
+      "document": "phases/P05_PRINT_PRODUCTION.md",
+      "gates": [
+        "P05-P01",
+        "P05-P02",
+        "P05-P03",
+        "P05-P04",
+        "P05-P05",
+        "P05-P06"
+      ]
+    },
+    {
+      "id": "P06",
+      "title": "Complete Learn generation, ordered rendering and publishing",
+      "depends_on": [
+        "P04"
+      ],
+      "document": "phases/P06_LEARN_AUTHORING.md",
+      "gates": [
+        "P06-L01",
+        "P06-L02",
+        "P06-L03",
+        "P06-L04",
+        "P06-L05",
+        "P06-L06"
+      ]
+    },
+    {
+      "id": "P07",
+      "title": "Finish learner responses, evidence and completion",
+      "depends_on": [
+        "P06"
+      ],
+      "document": "phases/P07_LEARN_RUNTIME.md",
+      "gates": [
+        "P07-U01",
+        "P07-U02",
+        "P07-U03",
+        "P07-U04",
+        "P07-U05",
+        "P07-U06"
+      ]
+    },
+    {
+      "id": "P08",
+      "title": "Prove uninterrupted flows and recovery",
+      "depends_on": [
+        "P05",
+        "P07"
+      ],
+      "document": "phases/P08_INTEGRATION.md",
+      "gates": [
+        "P08-I01",
+        "P08-I02",
+        "P08-I03",
+        "P08-I04",
+        "P08-I05",
+        "P08-I06"
+      ]
+    },
+    {
+      "id": "P09",
+      "title": "Run and inspect both product paths live",
+      "depends_on": [
+        "P08"
+      ],
+      "document": "phases/P09_LIVE_PROOF.md",
+      "gates": [
+        "P09-V01",
+        "P09-V02",
+        "P09-V03",
+        "P09-V04",
+        "P09-V05",
+        "P09-V06"
+      ]
+    }
+  ]
+}

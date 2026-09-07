@@ -1,6 +1,6 @@
 import type { CanvasSection } from '$lib/types/v3';
 
-import { mergeComponentField } from '$lib/studio/v3-canvas';
+import { mergeComponentField } from '$lib/print/studio/v3-canvas';
 
 type StreamApplyResult = {
 	canvas: CanvasSection[];

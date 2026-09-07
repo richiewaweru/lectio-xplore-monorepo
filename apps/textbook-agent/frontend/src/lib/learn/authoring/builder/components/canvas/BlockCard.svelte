@@ -11,7 +11,7 @@
 	import AiBlockAssist from '$lib/learn/authoring/builder/components/ai/AiBlockAssist.svelte';
 	import { isAiGeneratableComponent } from '$lib/learn/authoring/builder/components/ai/ai-block-utils';
 	import type { BlockAiRepairRequest } from '$lib/learn/authoring/builder/issues';
-	import { getToken } from '$lib/stores/shared/auth';
+	import { getToken } from '$lib/shared/stores/auth';
 	import { saveVersionSnapshot } from '$lib/learn/authoring/builder/persistence/idb-store';
 	import { validationWarningsForBlock } from '$lib/learn/authoring/builder/utils/section-validation';
 	import { isTextEditingTarget } from '$lib/learn/authoring/builder/utils/shortcuts';

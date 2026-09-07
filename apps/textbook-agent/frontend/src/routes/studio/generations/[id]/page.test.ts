@@ -40,7 +40,7 @@ vi.mock('$lib/api/v3', () => ({
 	retryNativeVisuals
 }));
 
-vi.mock('$lib/components/studio/V3BookletPackView.svelte', async () => ({
+vi.mock('$lib/print/components/studio/V3BookletPackView.svelte', async () => ({
 	default: (await import('./__fixtures__/MockV3BookletPackView.svelte')).default
 }));
 

@@ -2,11 +2,11 @@
 	import { LectioThemeSurface, basePresetMap, templateRegistryMap } from '@lectio/learn';
 	import type { SectionContent } from '@lectio/learn';
 	import type { BookletStatus, V3DraftPack } from '$lib/types/v3';
-	import V3BookletIssuesPanel from '$lib/components/studio/V3BookletIssuesPanel.svelte';
+	import V3BookletIssuesPanel from '$lib/print/components/studio/V3BookletIssuesPanel.svelte';
 	import {
 		getBookletPrintReadiness,
 		getBookletStatusSummary
-	} from '$lib/studio/v3-booklet';
+	} from '$lib/print/studio/v3-booklet';
 
 	interface Props {
 		pack: V3DraftPack;

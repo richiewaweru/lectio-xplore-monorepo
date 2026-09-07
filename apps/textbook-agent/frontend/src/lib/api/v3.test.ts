@@ -30,7 +30,7 @@ vi.mock('$lib/api/errors', () => ({
 	}
 }));
 
-vi.mock('$lib/stores/shared/auth', () => ({
+vi.mock('$lib/shared/stores/auth', () => ({
 	authToken: {
 		subscribe(callback: (value: string | null) => void) {
 			callback(null);

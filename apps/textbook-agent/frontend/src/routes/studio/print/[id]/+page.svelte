@@ -8,16 +8,16 @@
 	import { providePrintMode } from '@lectio/learn';
 	import '$lib/print/styles/print.css';
 	import { apiFetch, buildApiUrl } from '$lib/api/client';
-	import V3LectioPrintDocumentView from '$lib/components/studio/V3LectioPrintDocumentView.svelte';
-	import LectioPageDocumentView from '$lib/components/studio/LectioPageDocumentView.svelte';
+	import V3LectioPrintDocumentView from '$lib/print/components/studio/V3LectioPrintDocumentView.svelte';
+	import LectioPageDocumentView from '$lib/print/components/studio/LectioPageDocumentView.svelte';
 	import {
 		adaptV3PackToLectioDocument,
 		adaptV3PackToLectioDocumentWithDiagnostics,
 		type V3PackAdapterDiagnostic,
 		type V3PackDocument
-	} from '$lib/studio/v3-pack-to-lectio-document';
-	import { extractLectioDocumentV2 } from '$lib/studio/document-version';
-	import { forceEagerImages, waitForPrintImages, type PrintImageWaitResult } from '$lib/studio/print-readiness';
+	} from '$lib/print/studio/v3-pack-to-lectio-document';
+	import { extractLectioDocumentV2 } from '$lib/print/studio/document-version';
+	import { forceEagerImages, waitForPrintImages, type PrintImageWaitResult } from '$lib/print/studio/print-readiness';
 	import type { GenerationDocument } from '$lib/types';
 	import type { V3GenerationDetail } from '$lib/types/v3';
 	import type { LectioDocument } from '@lectio/page/contract';

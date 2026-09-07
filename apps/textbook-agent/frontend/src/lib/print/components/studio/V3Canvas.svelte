@@ -1,5 +1,5 @@
 <script lang="ts">
-	import V3CanvasSection from '$lib/components/studio/V3CanvasSection.svelte';
+	import V3CanvasSection from '$lib/print/components/studio/V3CanvasSection.svelte';
 	import type { CanvasSection, V3Stage } from '$lib/types/v3';
 
 	interface Props {

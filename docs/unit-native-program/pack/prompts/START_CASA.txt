@@ -1,0 +1,7 @@
+Read this entire extracted Lectio implementation pack, beginning with 00_START_HERE.md and prompts/CASA_MASTER_PROMPT.md. Implement it in richiewaweru/lectio-xplore-monorepo on top of refactor/domain-ownership, preserving current work and inspecting changes since reviewed commit 5d15639.
+
+The scope includes BOTH packages and their centralized capability exports, shared Unit preparation and teaching, native Print/Learn selection and writing, output identity, Builder/publishing, Learn runtime/evidence and actual PDF export. Do not assume the new interaction shells are already generation-ready.
+
+Execute P00–P09 in gated phase chunks. Track each gate with executable evidence and maintain STATE.json, GATE_RESULTS.csv and phase reports. Fix failures rather than bypassing them. Continue across passing phases without routine confirmation.
+
+Finish with real Unit-to-Print and Unit-to-Learn browser campaigns using configured live providers and designated test data. Mocked tests must be labelled as such. Never substitute a compatible fixture plan for the real preparation handoff to claim success. Report honest PASS/FAIL/BLOCKED status and distinguish core dual-path readiness from full interaction-catalogue readiness.

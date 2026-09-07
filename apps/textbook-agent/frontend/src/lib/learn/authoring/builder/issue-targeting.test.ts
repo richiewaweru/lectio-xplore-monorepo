@@ -3,7 +3,7 @@ import type { LessonDocument } from '@lectio/learn';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-vi.mock('lectio', () => ({
+vi.mock('@lectio/learn', () => ({
 	getEditSchema: (componentId: string) => componentId === 'unknown' ? null : { component_id: componentId, fields: [] },
 	getEmptyContent: () => ({}),
 	getFieldComponentMap: () => ({
@@ -124,7 +124,7 @@ describe('Builder issue targeting', () => {
 
 	it('keeps the checked-in regression fixture wired to repair and advisory behavior', () => {
 		const fixture = JSON.parse(readFileSync(
-			join(process.cwd(), 'src/lib/builder/fixtures/block-ai-regression.json'),
+			join(process.cwd(), 'src/lib/learn/authoring/builder/fixtures/block-ai-regression.json'),
 			'utf8'
 		)) as {
 			lesson: LessonDocument;

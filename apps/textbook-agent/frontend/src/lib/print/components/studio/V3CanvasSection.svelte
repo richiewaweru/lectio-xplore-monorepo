@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { CanvasSection } from '$lib/types/v3';
-	import V3CanvasComponent from '$lib/components/studio/V3CanvasComponent.svelte';
-	import V3CanvasVisual from '$lib/components/studio/V3CanvasVisual.svelte';
-	import V3LectioSectionEmbed from '$lib/components/studio/V3LectioSectionEmbed.svelte';
+	import V3CanvasComponent from '$lib/print/components/studio/V3CanvasComponent.svelte';
+	import V3CanvasVisual from '$lib/print/components/studio/V3CanvasVisual.svelte';
+	import V3LectioSectionEmbed from '$lib/print/components/studio/V3LectioSectionEmbed.svelte';
 
 	interface Props {
 		section: CanvasSection;

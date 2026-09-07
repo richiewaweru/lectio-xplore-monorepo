@@ -3,8 +3,8 @@
 	import { page } from '$app/state';
 	import { providePrintMode } from '@lectio/learn';
 	import { getUnitResource } from '$lib/api/units';
-	import V3LectioPrintDocumentView from '$lib/components/studio/V3LectioPrintDocumentView.svelte';
-	import { adaptV3PackToLectioDocument, type V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
+	import V3LectioPrintDocumentView from '$lib/print/components/studio/V3LectioPrintDocumentView.svelte';
+	import { adaptV3PackToLectioDocument, type V3PackDocument } from '$lib/print/studio/v3-pack-to-lectio-document';
 	import type { GenerationDocument } from '$lib/types';
 	import type { ResourceComposition } from '$lib/types/units';
 	import '$lib/print/styles/print.css';

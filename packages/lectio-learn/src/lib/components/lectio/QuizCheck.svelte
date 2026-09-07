@@ -74,11 +74,12 @@
 			<p class="text-base leading-7 text-foreground/84">{@html renderInlineMarkdown(content.question)}</p>
 		</div>
 
-		<div class="space-y-2">
+		<div class="space-y-2" role="group" aria-label="Quiz options">
 			{#each content.options as option, i}
 				{@const isSelected = selected === i}
 				{@const showResult = submitted && isSelected}
 				<button
+					type="button"
 					class="w-full cursor-pointer rounded-[1rem] border bg-white/80 p-4 text-left text-sm transition-colors
 						{submitted
 							? isSelected
@@ -91,8 +92,7 @@
 							: 'border-border/70 hover:border-emerald-200 hover:bg-emerald-50/40'}"
 					onclick={() => select(i)}
 					disabled={submitted}
-					role="radio"
-					aria-checked={isSelected}
+					aria-pressed={isSelected}
 					aria-label={option.text}
 				>
 					<div class="flex items-start rh-gap-cluster">

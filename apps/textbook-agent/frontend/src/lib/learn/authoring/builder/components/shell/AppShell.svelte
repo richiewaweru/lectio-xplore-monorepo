@@ -15,7 +15,7 @@
 	import { saveVersionSnapshot } from '$lib/learn/authoring/builder/persistence/idb-store';
 	import { publishLearnRelease } from '$lib/learn/student/api/releases';
 	import type { DocumentStore } from '$lib/learn/authoring/builder/stores/document.svelte';
-	import type { PendingPlanSection } from '$lib/learn/authoring/builder/streaming/print/generation-stream';
+	import type { PendingPlanSection } from '$lib/learn/authoring/builder/streaming/generation-stream';
 	import type { BuilderIssue } from '$lib/learn/authoring/builder/issues';
 	import type { V3VisualBlock } from '$lib/api/v3';
 

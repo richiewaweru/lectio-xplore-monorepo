@@ -8,11 +8,11 @@
 		getV3GenerationDetail,
 		retryNativeVisuals
 	} from '$lib/api/v3';
-	import { coerceV3DocumentToPack } from '$lib/studio/v3-document';
-	import { extractLectioDocumentV2 } from '$lib/studio/document-version';
-	import { getBookletExportPolicy, isBookletStatus } from '$lib/studio/v3-booklet';
-	import V3BookletPackView from '$lib/components/studio/V3BookletPackView.svelte';
-	import LectioPageDocumentView from '$lib/components/studio/LectioPageDocumentView.svelte';
+	import { coerceV3DocumentToPack } from '$lib/print/studio/v3-document';
+	import { extractLectioDocumentV2 } from '$lib/print/studio/document-version';
+	import { getBookletExportPolicy, isBookletStatus } from '$lib/print/studio/v3-booklet';
+	import V3BookletPackView from '$lib/print/components/studio/V3BookletPackView.svelte';
+	import LectioPageDocumentView from '$lib/print/components/studio/LectioPageDocumentView.svelte';
 	import type {
 		BookletStatus,
 		V3DraftPack,

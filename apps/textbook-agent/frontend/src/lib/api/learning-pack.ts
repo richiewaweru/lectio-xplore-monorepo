@@ -1,10 +1,12 @@
 /** D3: /api/v1/packs retired. */
 
-export async function getPackStatus(_packId: string): Promise<never> {
+import type { PackStatusResponse } from '$lib/types/learning-pack';
+
+export async function getPackStatus(_packId: string): Promise<PackStatusResponse> {
 	throw new Error('packs API retired (D3)');
 }
 
-export async function listPacks(): Promise<never> {
+export async function listPacks(): Promise<never[]> {
 	throw new Error('packs API retired (D3)');
 }
 

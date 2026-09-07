@@ -1,44 +1,62 @@
 # Project Config
 
-AI-powered shell + pipeline system that generates personalized Lectio-native textbooks from learner profiles.
-Monorepo: `backend/` (FastAPI + Python) and `frontend/` (SvelteKit + TypeScript).
+AI-powered Unit → Print + Learn system that generates Lectio-native instructional materials from curriculum units and learner context.
+Monorepo app: `backend/` (FastAPI + Python) and `frontend/` (SvelteKit + TypeScript), plus packages `@lectio/page` and `@lectio/learn`.
 
 ## Architecture Rules
 
-The backend uses a `Core + Generation + Planning + Telemetry + Pipeline` architecture:
+Canonical lesson creation is the **Unit path** only (see `docs/architecture/CURRENT_SYSTEM.md`):
 
-- `backend/src/core/` holds shared infrastructure: config, auth primitives, database, error handling, event bus, and generic LLM utilities.
-- `backend/src/generation/` owns generation HTTP, persistence, and orchestration.
-- `backend/src/telemetry/` owns report persistence, telemetry routes, and usage queries; it may depend on `core/` and `pipeline.reporting`, but must not import `generation/` or `planning/`.
-- `backend/src/planning/` holds planning-specific models and services that may depend on `core/`, and may hand committed specs to generation, but not on `pipeline/` LLM internals.
-- `backend/src/pipeline/` is the standalone generation engine.
-- `backend/src/app.py` assembles the FastAPI application.
+```text
+Unit → Concepts → PathLesson → approved instructional meaning
+                         ├→ PRINT → whole_lesson / page objects / @lectio/page → PDF
+                         └→ LEARN → component_lectio → Builder → Preview → LearnRelease
+                                                   → Runtime / Distribution / Insight
+```
 
-The shell is flattened into top-level packages:
+### Backend layout (`backend/src/`)
 
-| Package group | Typical contents |
+| Package | Role |
 | --- | --- |
-| `entities/`, `value_objects/`, `ports/` | Shell domain model and repository contracts |
-| `dtos/`, `services/`, `routes/`, `repositories/` | Shell application and HTTP wiring |
-| `middleware/`, `dependencies.py`, `app.py` | Shell composition layer |
+| `application/` | Thin cross-domain orchestration (`unit_lesson`, `builder_print`) |
+| `curriculum/` | Units, path planning, schedules, shapes, shared instructional meaning |
+| `print/` | Print generation, rendering, resources, contracts, `http/v3_studio` |
+| `learn/` | Authoring, generation, publishing, runtime, analytics, distribution, evidence |
+| `infra/` | Auth helpers, DB, LLM, telemetry, health, config |
+| `app.py` | Composition root |
+
+Historical shims (`planning/`, `generation/`, `core/`, `learning/`, …) may remain for call-site migration; they are not the canonical API.
 
 Critical invariants:
-- `core/` must not import from `generation`, `planning`, `telemetry`, or `pipeline`
-- `generation/` may import `core/`, `planning/`, `telemetry/`, and `pipeline/`
-- `telemetry/` may import `core/` and `pipeline.reporting`, but must not import `generation/` or `planning/`
-- `planning/` may import `core/` and selected `generation/` bridge types, but must not import `pipeline` LLM internals
-- `pipeline/` may import `core/`, but must never import `generation`, `planning`, or `telemetry`
-- Entities, value objects, and ports stay framework-light and reusable
-- All live generation goes through the pipeline engine
-- The canonical artifact is a structured JSON document, not HTML
+- `print/` must not import `learn/` product modules (and inverse) except through documented application orchestration
+- `curriculum/` owns instructional truth; native domains realize it
+- `application/` stays thin: admission, status, cross-domain handoff only
+- `infra/` owns DB/provider/auth primitives; not product pedagogy
+- The Print canonical artifact is a structured Lectio page document; Learn uses `LessonDocument` / release snapshots
+
+### Frontend layout (`frontend/src/lib/`)
+
+| Owner | Typical contents |
+| --- | --- |
+| `shared/` | Auth stores, settings, cross-cutting UI |
+| `curriculum/` | Units UI |
+| `print/` | Studio, print canvas, PDF preview |
+| `learn/` | Builder, student shell, distribution, insight |
+| `api/` | HTTP clients |
+
+Product routes: `/units`, `/studio*`, `/builder*`, `/learn*`, `/packs*`, `/settings*`, `/login`, `/onboarding`.
 
 ## Validation Commands
 
-See `CLAUDE.md` for the full command reference. Quick alternative:
+See `CLAUDE.md` and monorepo root `package.json`. Quick alternatives:
 
 ```bash
-python tools/agent/validate_repo.py --scope all       # Runs everything
-python tools/agent/check_architecture.py --format text # Shell + pipeline boundary check
+pnpm page:test / page:check
+pnpm app:test / app:check
+pnpm program:domain-guards
+# Backend (from apps/textbook-agent/backend)
+uv run python tools/agent/validate_repo.py --scope backend
+uv run python ../tools/agent/check_architecture.py --format text
 ```
 
 ## Conventions
@@ -46,11 +64,11 @@ python tools/agent/check_architecture.py --format text # Shell + pipeline bounda
 - **Commits**: `type(scope): summary` -- types: feat, fix, refactor, docs, test, chore, ci, build
 - **Branches**: `feat/<slug>`, `fix/<slug>`, `docs/<slug>`, `chore/<slug>`
 - **Protected branches**: `main`
-- **Package managers**: `uv` (backend), `npm` (frontend)
+- **Package managers**: `uv` (backend), `pnpm`/`npm` (frontend/packages)
 
 ## Key Entities
 
-- `StudentProfile` -- persistent learner data (age, education, interests, goals). Stored in DB.
-- `Generation` -- stored generation metadata plus document and failure state.
-- `GenerationRequest` -- per-request DTO (`subject`, `context`, `template_id`, `preset_id`, optional `section_count`).
-- `PipelineDocument` -- canonical saved output used by the frontend viewer.
+- `Unit` / `PathLesson` -- curriculum identity and approved instructional meaning
+- `Generation` -- stored generation metadata plus native document/state
+- `LessonDocument` / `LearnRelease` -- Learn authoring and immutable release
+- Page document v2 -- Print native artifact used for reload and PDF

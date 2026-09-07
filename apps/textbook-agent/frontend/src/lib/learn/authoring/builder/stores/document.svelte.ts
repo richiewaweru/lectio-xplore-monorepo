@@ -7,7 +7,7 @@ import {
 	saveLessonToServer
 } from '$lib/learn/authoring/builder/persistence/server-sync';
 import { createHistoryStore } from './history.svelte';
-import { appendAbsentGenerationSections, type PendingPlanSection } from '$lib/learn/authoring/builder/streaming/print/generation-stream';
+import { appendAbsentGenerationSections, type PendingPlanSection } from '$lib/learn/authoring/builder/streaming/generation-stream';
 import { issuesForSection, type IssueSection } from '$lib/learn/authoring/builder/issues';
 
 const FIELD_HISTORY_IDLE_MS = 1000;

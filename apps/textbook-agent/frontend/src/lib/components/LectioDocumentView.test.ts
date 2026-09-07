@@ -3,7 +3,7 @@
 import { cleanup, render, screen, fireEvent } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('lectio', async () => {
+vi.mock('@lectio/learn', async () => {
 	const MockLectioThemeSurface = (
 		await import('./__fixtures__/MockLectioThemeSurface.svelte')
 	).default;

@@ -4,12 +4,12 @@
 	import { providePrintMode, type LessonDocument } from '@lectio/learn';
 	import { buildApiUrl } from '$lib/api/client';
 	import LessonReadOnlyView from '$lib/learn/authoring/builder/components/canvas/LessonReadOnlyView.svelte';
-	import '$lib/learn/authoring/builder/print/styles/print.css';
+	import '$lib/learn/authoring/builder/styles/print.css';
 	import {
 		forceEagerImages,
 		waitForPrintImages,
 		type PrintImageWaitResult
-	} from '$lib/studio/print-readiness';
+	} from '$lib/print/studio/print-readiness';
 
 	const lessonId = $derived(page.params.id);
 	const token = $derived(page.url.searchParams.get('token'));
