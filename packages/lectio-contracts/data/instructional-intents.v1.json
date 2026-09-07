@@ -1,0 +1,312 @@
+{
+	"vocabulary_version": "1.0.0",
+	"note": "Canonical instructional intent identifiers. Projected from the Print intent catalogue by scripts/export-contracts.ts — edit the source catalogue, never this file. Native inventory (valid_objects, generation guidance) is deliberately dropped.",
+	"source": {
+		"package": "@lectio/page",
+		"file": "contracts/intent-catalogue.v1.json",
+		"catalogue_version": "1.1.0"
+	},
+	"intents": {
+		"orient": {
+			"label": "Orient",
+			"pedagogical_role": "Open attention and establish a reason to learn",
+			"cognitive_job": "activate curiosity and situational framing",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"activate-prior-knowledge": {
+			"label": "Recall what you know",
+			"pedagogical_role": "Surface prerequisite knowledge",
+			"cognitive_job": "retrieve relevant prior knowledge",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"state-goal": {
+			"label": "Learning goal",
+			"pedagogical_role": "Clarify the expected learning outcome",
+			"cognitive_job": "metacognitive goal setting",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"define": {
+			"label": "Define",
+			"pedagogical_role": "Establish precise meaning",
+			"cognitive_job": "concept formation and vocabulary encoding",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"name-parts": {
+			"label": "Name the parts",
+			"pedagogical_role": "Identify constituent elements",
+			"cognitive_job": "decomposition and labeling",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"classify": {
+			"label": "Classify",
+			"pedagogical_role": "Organize examples into categories",
+			"cognitive_job": "categorical reasoning",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"compare": {
+			"label": "Compare",
+			"pedagogical_role": "Expose similarities and differences",
+			"cognitive_job": "relational comparison",
+			"choose_when": "Two or more named things must be told apart, and the same criteria apply to each.",
+			"boundaries": {
+				"classify": "instances are being sorted by a rule rather than two things contrasted",
+				"diagnose-misconception": "one side is a wrong belief, not a legitimate alternative",
+				"evaluate": "one option must be judged better, not merely distinguished"
+			},
+			"teaching_selectable": true
+		},
+		"sequence": {
+			"label": "Put in order",
+			"pedagogical_role": "Represent an ordered process",
+			"cognitive_job": "temporal and procedural ordering",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"explain": {
+			"label": "Explain",
+			"pedagogical_role": "Build a coherent mental model",
+			"cognitive_job": "causal and conceptual understanding",
+			"choose_when": "The learner must reason about instances they have not seen, and the difficulty is the idea itself — not its cause, its flow, its arrangement, or a representation of it.",
+			"boundaries": {
+				"explain-cause": "the objective asks WHY, and a mechanism links cause to result",
+				"trace-flow": "something is followed as it moves or changes through a system",
+				"show-structure": "the difficulty is arrangement, containment, or hierarchy",
+				"interpret": "a specific representation is on the page and must be read"
+			},
+			"teaching_selectable": true
+		},
+		"explain-cause": {
+			"label": "Explain cause and effect",
+			"pedagogical_role": "Connect causes, mechanisms, and outcomes",
+			"cognitive_job": "causal reasoning",
+			"choose_when": "The objective asks why, or what happens if, and there is a mechanism between cause and result that the learner must be able to state.",
+			"boundaries": {
+				"explain": "there is no cause-and-effect chain, only meaning or structure",
+				"trace-flow": "the emphasis is on what moves, not on what causes",
+				"sequence": "order matters but no causal mechanism does",
+				"derive": "the chain is logical rather than physical"
+			},
+			"teaching_selectable": true
+		},
+		"trace-flow": {
+			"label": "Trace the flow",
+			"pedagogical_role": "Follow matter, energy, information, or value",
+			"cognitive_job": "systems tracing",
+			"choose_when": "Something identifiable — matter, energy, information, money, data — enters, changes, moves, and leaves, and the learner must not lose track of it.",
+			"boundaries": {
+				"sequence": "the steps are actions taken, not a substance being followed",
+				"explain-cause": "the point is why it happens, not where it goes",
+				"show-structure": "the arrangement is static and nothing travels through it"
+			},
+			"teaching_selectable": true
+		},
+		"show-structure": {
+			"label": "Show the structure",
+			"pedagogical_role": "Reveal spatial or hierarchical organization",
+			"cognitive_job": "structural visualization",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"demonstrate": {
+			"label": "Worked demonstration",
+			"pedagogical_role": "Model a complete method",
+			"cognitive_job": "procedural modeling",
+			"choose_when": "The learner has not yet seen the method carried out end to end on a real instance, and the method is unambiguous once seen. If the learner has already seen it worked through in this lesson, this condition is no longer met.",
+			"boundaries": {
+				"model-thinking": "the difficulty is choosing between approaches, not executing one",
+				"derive": "the result must be justified from prior statements, not computed",
+				"practise-guided": "the learner is attempting the work, not watching it"
+			},
+			"teaching_selectable": true
+		},
+		"model-thinking": {
+			"label": "Think aloud",
+			"pedagogical_role": "Expose expert decision making",
+			"cognitive_job": "metacognitive strategy modeling",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"derive": {
+			"label": "Derive",
+			"pedagogical_role": "Build a result from prior statements",
+			"cognitive_job": "deductive reasoning",
+			"choose_when": "The result must be shown to FOLLOW from statements the learner already accepts, and each transformation needs a stated justification.",
+			"boundaries": {
+				"demonstrate": "the point is the procedure, not its justification",
+				"model-thinking": "steps are chosen from alternatives rather than compelled",
+				"explain-cause": "the chain is physical rather than logical"
+			},
+			"teaching_selectable": true
+		},
+		"interpret": {
+			"label": "Interpret",
+			"pedagogical_role": "Translate representation into meaning",
+			"cognitive_job": "representational fluency",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"apply": {
+			"label": "Apply",
+			"pedagogical_role": "Use knowledge in a familiar situation",
+			"cognitive_job": "near transfer",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"transfer": {
+			"label": "Transfer",
+			"pedagogical_role": "Use knowledge in a changed context",
+			"cognitive_job": "farther transfer and abstraction",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"practise-guided": {
+			"label": "Guided practice",
+			"pedagogical_role": "Rehearse with structured support",
+			"cognitive_job": "scaffolded retrieval and execution",
+			"choose_when": "The learner can begin the task but will stall without prompts, partial steps, or hints.",
+			"boundaries": {
+				"practise-independent": "support would now be a crutch",
+				"demonstrate": "the learner is watching rather than attempting",
+				"apply": "the point is first unaided use, not scaffolded rehearsal"
+			},
+			"teaching_selectable": true
+		},
+		"practise-independent": {
+			"label": "Independent practice",
+			"pedagogical_role": "Rehearse without scaffolding",
+			"cognitive_job": "independent retrieval and execution",
+			"choose_when": "The learner has already succeeded with support and must now perform unaided, with enough repetition for fluency.",
+			"boundaries": {
+				"practise-guided": "the learner has not yet succeeded with support",
+				"check-understanding": "the purpose is measurement, not rehearsal",
+				"transfer": "the context is deliberately changed"
+			},
+			"teaching_selectable": true
+		},
+		"check-understanding": {
+			"label": "Quick check",
+			"pedagogical_role": "Detect immediate misunderstanding",
+			"cognitive_job": "formative assessment",
+			"choose_when": "The teacher needs to know right now whether the objective landed, and correct-versus-incorrect is the signal being read.",
+			"boundaries": {
+				"diagnose-misconception": "wrong answers must identify WHICH wrong model the learner holds",
+				"practise-independent": "the purpose is rehearsal rather than measurement",
+				"reflect": "there is no correct answer"
+			},
+			"teaching_selectable": true
+		},
+		"diagnose-misconception": {
+			"label": "Diagnose misconception",
+			"pedagogical_role": "Distinguish a known wrong model from the target model",
+			"cognitive_job": "misconception diagnosis",
+			"choose_when": "A named, real misconception exists on the card, and a wrong answer can be written that only a learner holding it would confidently choose. One block per misconception the card declares — a misconception not on the card does not exist.",
+			"boundaries": {
+				"check-understanding": "no specific wrong model is known; the check only detects failure",
+				"warn": "the error is a slip or lapse, not a held belief",
+				"compare": "both sides are legitimate"
+			},
+			"teaching_selectable": true
+		},
+		"warn": {
+			"label": "Watch out",
+			"pedagogical_role": "Prevent a predictable error",
+			"cognitive_job": "error avoidance",
+			"choose_when": "A specific error is predictable at this exact point, and naming it before it happens prevents it.",
+			"boundaries": {
+				"diagnose-misconception": "the error is a held belief that must be surfaced and tested, not a slip to flag",
+				"emphasise": "the content is a positive statement to retain, not an error to avoid"
+			},
+			"teaching_selectable": true
+		},
+		"emphasise": {
+			"label": "Key idea",
+			"pedagogical_role": "Mark a high-value statement",
+			"cognitive_job": "selective attention and encoding",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"memory-aid": {
+			"label": "Memory aid",
+			"pedagogical_role": "Support recall with a compact cue",
+			"cognitive_job": "mnemonic encoding",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"summarise": {
+			"label": "Summarise",
+			"pedagogical_role": "Compress the lesson into essential relationships",
+			"cognitive_job": "schema consolidation",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"connect-forward": {
+			"label": "What comes next",
+			"pedagogical_role": "Bridge current learning to the next idea",
+			"cognitive_job": "curricular coherence",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"connect-back": {
+			"label": "Use what came before",
+			"pedagogical_role": "Make prerequisite dependence explicit",
+			"cognitive_job": "knowledge integration",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"reflect": {
+			"label": "Reflect",
+			"pedagogical_role": "Prompt learners to examine their understanding",
+			"cognitive_job": "metacognitive monitoring",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"investigate": {
+			"label": "Investigate",
+			"pedagogical_role": "Structure an inquiry or practical",
+			"cognitive_job": "scientific and empirical reasoning",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"evaluate": {
+			"label": "Evaluate",
+			"pedagogical_role": "Judge a claim, method, or evidence",
+			"cognitive_job": "critical evaluation",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": true
+		},
+		"answer-key": {
+			"label": "Teacher guidance",
+			"pedagogical_role": "Provide checking and marking guidance",
+			"cognitive_job": "assessment interpretation",
+			"choose_when": null,
+			"boundaries": {},
+			"teaching_selectable": false
+		}
+	}
+}

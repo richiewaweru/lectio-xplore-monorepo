@@ -1,0 +1,101 @@
+{
+	"vocabulary_version": "1.0.0",
+	"note": "Neutral learner-action vocabulary. Describes what the learner is asked to DO, never which native component or page object realises it. Print may satisfy an action on paper; Learn may satisfy it interactively. An action with requires_response=false is satisfied by passive content.",
+	"actions": {
+		"order-items": {
+			"label": "Put items in order",
+			"learner_does": "Arrange a set of distinct items into a defensible order.",
+			"requires_response": true,
+			"response_shape": "ordered list of item identifiers",
+			"cardinality": "every item placed exactly once"
+		},
+		"complete-missing-values": {
+			"label": "Complete what is missing",
+			"learner_does": "Supply the missing words, terms or values inside a given structure.",
+			"requires_response": true,
+			"response_shape": "one value per declared gap identifier",
+			"cardinality": "one response per gap"
+		},
+		"select-one": {
+			"label": "Choose one",
+			"learner_does": "Choose exactly one option from a closed set.",
+			"requires_response": true,
+			"response_shape": "single option identifier",
+			"cardinality": "exactly one"
+		},
+		"select-many": {
+			"label": "Choose all that apply",
+			"learner_does": "Choose every option that satisfies the prompt from a closed set.",
+			"requires_response": true,
+			"response_shape": "set of distinct option identifiers",
+			"cardinality": "zero or more, no duplicates"
+		},
+		"match-pairs": {
+			"label": "Match the pairs",
+			"learner_does": "Connect each item on one side to its counterpart on the other.",
+			"requires_response": true,
+			"response_shape": "set of source-identifier to target-identifier links",
+			"cardinality": "each source used at most once"
+		},
+		"classify-items": {
+			"label": "Sort into categories",
+			"learner_does": "Assign each item to a named category using a membership rule.",
+			"requires_response": true,
+			"response_shape": "set of item-identifier to category-identifier assignments",
+			"cardinality": "declared per capability as one or multiple categories per item"
+		},
+		"enter-number": {
+			"label": "Give a numeric answer",
+			"learner_does": "Produce a numeric value, optionally with a unit.",
+			"requires_response": true,
+			"response_shape": "finite number, optional unit string",
+			"cardinality": "exactly one value"
+		},
+		"enter-text": {
+			"label": "Answer in words",
+			"learner_does": "Produce a short written answer in the learner's own words.",
+			"requires_response": true,
+			"response_shape": "free text",
+			"cardinality": "exactly one response",
+			"note": "Automatic scoring is only legitimate against a declared accepted-answer set. Open reasoning is teacher-reviewed."
+		},
+		"identify-region": {
+			"label": "Point to the right place",
+			"learner_does": "Identify the correct region of a given visual.",
+			"requires_response": true,
+			"response_shape": "single region identifier",
+			"cardinality": "exactly one region",
+			"requires_spatial_authoring": true
+		},
+		"place-labels": {
+			"label": "Place the labels",
+			"learner_does": "Attach each label to its correct target on a given visual.",
+			"requires_response": true,
+			"response_shape": "set of label-identifier to target-identifier links",
+			"cardinality": "each label placed at most once",
+			"requires_spatial_authoring": true
+		},
+		"compare-without-response": {
+			"label": "Study the comparison",
+			"learner_does": "Read and compare presented material without producing a response.",
+			"requires_response": false,
+			"response_shape": "none",
+			"cardinality": "none"
+		},
+		"read-explanation": {
+			"label": "Read the explanation",
+			"learner_does": "Read presented exposition without producing a response.",
+			"requires_response": false,
+			"response_shape": "none",
+			"cardinality": "none"
+		},
+		"produce-extended-response": {
+			"label": "Write an extended answer",
+			"learner_does": "Produce reasoning, justification or working that a teacher judges.",
+			"requires_response": true,
+			"response_shape": "free text or captured working",
+			"cardinality": "exactly one response",
+			"note": "Never auto-scored. Requires teacher review or a rubric."
+		}
+	}
+}

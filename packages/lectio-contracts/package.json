@@ -1,0 +1,54 @@
+{
+	"name": "@lectio/contracts",
+	"description": "Neutral instructional vocabulary shared by Lectio Print and Learn — intents, learner actions and the generated teaching view",
+	"author": "Richie Waweru",
+	"license": "UNLICENSED",
+	"private": true,
+	"version": "0.1.0",
+	"packageManager": "pnpm@10.14.0",
+	"type": "module",
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"default": "./src/index.ts"
+		},
+		"./data/*.json": "./data/*.json",
+		"./generated/*.json": "./generated/*.json"
+	},
+	"files": [
+		"dist",
+		"data",
+		"generated",
+		"README.md"
+	],
+	"publishConfig": {
+		"exports": {
+			".": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			},
+			"./data/*.json": "./data/*.json",
+			"./generated/*.json": "./generated/*.json"
+		}
+	},
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"check": "tsc -p tsconfig.json --noEmit",
+		"test": "vitest run",
+		"export-contracts": "tsx scripts/export-contracts.ts"
+	},
+	"keywords": [
+		"education",
+		"instructional-intent",
+		"vocabulary",
+		"contracts"
+	],
+	"devDependencies": {
+		"@types/node": "^24.12.2",
+		"tsx": "^4.21.0",
+		"typescript": "^5.9.3",
+		"vitest": "^3.2.4"
+	}
+}

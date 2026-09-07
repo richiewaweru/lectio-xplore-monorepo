@@ -2,6 +2,12 @@
   "name": "lectio-xplore-monorepo",
   "private": true,
   "scripts": {
+    "contracts:test": "pnpm --filter @lectio/contracts test",
+    "contracts:check": "pnpm --filter @lectio/contracts check",
+    "contracts:export": "pnpm --filter @lectio/contracts export-contracts",
+    "learn:test": "pnpm --filter @lectio/learn test",
+    "learn:export": "pnpm --filter @lectio/learn export-contracts",
+    "page:export": "pnpm --filter @lectio/page export-contracts",
     "page:test": "pnpm --filter @lectio/page test",
     "page:check": "pnpm --filter @lectio/page check",
     "page:pdf": "pnpm --filter @lectio/page pdf:fixture",

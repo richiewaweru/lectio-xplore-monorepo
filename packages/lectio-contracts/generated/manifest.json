@@ -1,0 +1,26 @@
+{
+	"manifest_version": "1.0.0",
+	"package": "@lectio/contracts",
+	"intent_vocabulary_version": "1.0.0",
+	"action_vocabulary_version": "1.0.0",
+	"teaching_view_version": "1.0.0",
+	"intent_source_catalogue_version": "1.1.0",
+	"generated_at": "2026-09-07T21:35:00.794Z",
+	"files": [
+		{
+			"path": "data/instructional-intents.v1.json",
+			"sha256": "b1de6571b0918a5729158f578db973871d079b98a643e471a38c8fcb7c275510",
+			"bytes": 12236
+		},
+		{
+			"path": "data/learner-actions.v1.json",
+			"sha256": "ed816e0a8c631da9b8d6f71eef6c73096b72eca40ecf3edf5aafdf5a73ce1f78",
+			"bytes": 4160
+		},
+		{
+			"path": "generated/teaching-view.v1.json",
+			"sha256": "d4edff54b31a07867e40273c994a5cae2e92a6be81ecdbbc36c538cd1943c54b",
+			"bytes": 14603
+		}
+	]
+}
