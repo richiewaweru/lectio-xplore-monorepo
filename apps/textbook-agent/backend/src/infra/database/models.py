@@ -1021,3 +1021,52 @@ class LearnAssignmentRecipientModel(Base):
     completed_at = Column(DateTime, nullable=True)
     overdue_at = Column(DateTime, nullable=True)
     excused = Column(Boolean, nullable=False, default=False, server_default="false")
+
+
+class NativeRealizationModel(Base):
+    """Independent Print/Learn output identity pinned to a shared teaching revision.
+
+    pack_id is retained only as a legacy link; path + teaching revision + policy
+    hashes are the authoritative discriminator (P03).
+    """
+
+    __tablename__ = "native_realizations"
+    __table_args__ = (
+        UniqueConstraint(
+            "path_lesson_id",
+            "path",
+            "teaching_plan_revision",
+            "variant_id",
+            "native_policy_hash",
+            "package_contract_hash",
+            name="uq_native_realization_identity",
+        ),
+        Index("ix_native_realizations_path_lesson_id", "path_lesson_id"),
+        Index("ix_native_realizations_path", "path"),
+        Index("ix_native_realizations_output_id", "output_id"),
+        Index("ix_native_realizations_status", "status"),
+        Index("ix_native_realizations_teaching_plan_id", "teaching_plan_id"),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    path_lesson_id = Column(
+        String, ForeignKey("path_lessons.id", ondelete="CASCADE"), nullable=False
+    )
+    path = Column(String, nullable=False)  # print | learn — persisted at admission
+    teaching_plan_id = Column(String, nullable=False)
+    teaching_plan_revision = Column(Integer, nullable=False)
+    teaching_plan_hash = Column(String, nullable=False)
+    variant_id = Column(String, nullable=False, default="everyone", server_default="everyone")
+    native_policy_version = Column(String, nullable=False)
+    native_policy_hash = Column(String, nullable=False)
+    package_contract_version = Column(String, nullable=False)
+    package_contract_hash = Column(String, nullable=False)
+    realization_revision = Column(Integer, nullable=False, default=1, server_default="1")
+    status = Column(String, nullable=False, default="queued", server_default="queued")
+    output_id = Column(String, nullable=True)  # generation / release artifact id
+    error_summary = Column(Text, nullable=True)
+    # Legacy link only — never the Print/Learn discriminator.
+    pack_id = Column(String, nullable=True)
+    preparation_generation_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
