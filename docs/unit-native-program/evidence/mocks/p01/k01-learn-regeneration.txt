@@ -1,0 +1,15 @@
+# command: pnpm exec vitest run scripts/export-capabilities.test.ts
+# cwd: C:\Projects\lectio\packages\lectio-learn
+
+ RUN  v3.2.7 C:/Projects/lectio/packages/lectio-learn
+
+ G£ô scripts/export-capabilities.test.ts (3 tests) 10377ms
+   G£ô learn capability export (P01-K01) > is reproducible: a second run produces identical artefacts  2303ms
+   G£ô learn capability export (P01-K01) > propagates a deliberate source change into the generated views  5469ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  01:37:09
+   Duration  13.15s (transform 694ms, setup 2.19s, collect 37ms, tests 10.38s, environment 0ms, prepare 235ms)
+
+exit_code=0

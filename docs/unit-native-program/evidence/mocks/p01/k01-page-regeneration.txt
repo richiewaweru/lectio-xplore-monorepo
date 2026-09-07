@@ -1,0 +1,17 @@
+# command: pnpm exec vitest run src/lib/catalogue/regeneration.test.ts
+# cwd: C:\Projects\lectio\packages\lectio-page
+
+ RUN  v3.2.7 C:/Projects/lectio/packages/lectio-page
+
+ Gｔ src/lib/catalogue/regeneration.test.ts (5 tests) 2502ms
+   Gｔ P01-K01 G현 the Print contract exporter regenerates reproducibly > reproduces byte-identical output apart from the timestamp  566ms
+   Gｔ P01-K01 G현 the Print contract exporter regenerates reproducibly > propagates a deliberate choose_when and capacity change into the selection view  427ms
+   Gｔ P01-K01 G현 the Print contract exporter regenerates reproducibly > propagates a deliberate writer-guidance change into the writer view  417ms
+   Gｔ P01-K01 G현 the Print contract exporter regenerates reproducibly > drops a form from the selection view when the source marks it unselectable  445ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  01:36:58
+   Duration  9.29s (transform 1.73s, setup 4.62s, collect 62ms, tests 2.50s, environment 1.52s, prepare 282ms)
+
+exit_code=0

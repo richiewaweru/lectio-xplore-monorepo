@@ -1,0 +1,13 @@
+# command: pnpm exec vitest run tests/teaching-view.test.ts
+# cwd: C:\Projects\lectio\packages\lectio-contracts
+
+ RUN  v3.2.7 C:/Projects/lectio/packages/lectio-contracts
+
+ G£ô tests/teaching-view.test.ts (9 tests) 19ms
+
+ Test Files  1 passed (1)
+      Tests  9 passed (9)
+   Start at  01:38:42
+   Duration  931ms (transform 142ms, setup 0ms, collect 265ms, tests 19ms, environment 0ms, prepare 282ms)
+
+exit_code=0

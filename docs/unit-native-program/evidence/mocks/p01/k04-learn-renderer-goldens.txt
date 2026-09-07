@@ -1,0 +1,13 @@
+# command: pnpm exec vitest run src/lib/learn/interaction-shells.keyboard.test.ts
+# cwd: C:\Projects\lectio\packages\lectio-learn
+
+ RUN  v3.2.7 C:/Projects/lectio/packages/lectio-learn
+
+ G£ô src/lib/learn/interaction-shells.keyboard.test.ts (12 tests) 412ms
+
+ Test Files  1 passed (1)
+      Tests  12 passed (12)
+   Start at  01:38:21
+   Duration  7.36s (transform 2.11s, setup 4.16s, collect 881ms, tests 412ms, environment 1.11s, prepare 249ms)
+
+exit_code=0

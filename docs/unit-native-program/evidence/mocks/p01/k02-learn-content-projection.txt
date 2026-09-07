@@ -1,0 +1,13 @@
+# command: pnpm exec vitest run src/lib/learn/capabilities/content.test.ts
+# cwd: C:\Projects\lectio\packages\lectio-learn
+
+ RUN  v3.2.7 C:/Projects/lectio/packages/lectio-learn
+
+ G£ô src/lib/learn/capabilities/content.test.ts (6 tests) 56ms
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  01:37:56
+   Duration  6.67s (transform 2.40s, setup 2.26s, collect 3.82s, tests 56ms, environment 0ms, prepare 231ms)
+
+exit_code=0

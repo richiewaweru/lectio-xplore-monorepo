@@ -1,0 +1,15 @@
+# command: pnpm exec vitest run tests/regeneration.test.ts
+# cwd: C:\Projects\lectio\packages\lectio-contracts
+
+ RUN  v3.2.7 C:/Projects/lectio/packages/lectio-contracts
+
+ G£ô tests/regeneration.test.ts (4 tests) 1406ms
+   G£ô P01-K01 GÇö the shared vocabulary exporter regenerates reproducibly > reproduces byte-identical output apart from the timestamp  1030ms
+   G£ô P01-K01 GÇö the shared vocabulary exporter regenerates reproducibly > propagates a deliberate source-field change into the generated teaching view  354ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  01:36:53
+   Duration  2.16s (transform 95ms, setup 0ms, collect 239ms, tests 1.41s, environment 0ms, prepare 224ms)
+
+exit_code=0

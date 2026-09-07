@@ -1,0 +1,14 @@
+# command: pnpm exec vitest run src/lib/learn/capabilities/golden.test.ts src/lib/learn/interaction-contract.test.ts
+# cwd: C:\Projects\lectio\packages\lectio-learn
+
+ RUN  v3.2.7 C:/Projects/lectio/packages/lectio-learn
+
+ G£ô src/lib/learn/interaction-contract.test.ts (5 tests) 104ms
+ G£ô src/lib/learn/capabilities/golden.test.ts (38 tests) 153ms
+
+ Test Files  2 passed (2)
+      Tests  43 passed (43)
+   Start at  01:38:06
+   Duration  11.08s (transform 6.86s, setup 8.77s, collect 6.66s, tests 257ms, environment 1.82s, prepare 593ms)
+
+exit_code=0

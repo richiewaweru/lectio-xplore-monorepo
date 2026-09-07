@@ -2,8 +2,8 @@
   "pack_version": "1.0",
   "reviewed_sha": "5d1563903a22d6d40e12a86dcc4d9021ca8202a3",
   "implementation_branch": "feat/unit-print-learn",
-  "implementation_head": null,
-  "current_phase": "P01",
+  "implementation_head": "5a73e31cb6913518bb76a4972599b0dcd8d9413b",
+  "current_phase": "P02",
   "phases": {
     "P00": {
       "status": "PASS",
@@ -16,10 +16,27 @@
       "blockers": []
     },
     "P01": {
-      "status": "NOT_STARTED",
-      "report": null,
-      "evidence": [],
-      "blockers": []
+      "status": "PASS",
+      "report": "docs/unit-native-program/reports/P01_PHASE_REPORT.md",
+      "evidence": [
+        "docs/unit-native-program/evidence/mocks/p01/k01-contracts-regeneration.txt",
+        "docs/unit-native-program/evidence/mocks/p01/k01-page-regeneration.txt",
+        "docs/unit-native-program/evidence/mocks/p01/k01-learn-regeneration.txt",
+        "docs/unit-native-program/evidence/mocks/p01/k02-page-views.txt",
+        "docs/unit-native-program/evidence/mocks/p01/k02-contracts-vocabulary.txt",
+        "docs/unit-native-program/evidence/mocks/p01/k02-learn-content-projection.txt",
+        "docs/unit-native-program/evidence/mocks/p01/k03-k04-learn-golden.txt",
+        "docs/unit-native-program/evidence/mocks/p01/k04-learn-renderer-goldens.txt",
+        "docs/unit-native-program/evidence/mocks/p01/k05-learn-consumer-fixture.txt",
+        "docs/unit-native-program/evidence/mocks/p01/k06-contracts-teaching-view.txt",
+        "docs/unit-native-program/evidence/mocks/p01/k06-learn-view-separation.txt",
+        "packages/lectio-contracts/generated/manifest.json",
+        "packages/lectio-page/contracts/manifest.json",
+        "packages/lectio-learn/contracts/learn-capability-manifest.json"
+      ],
+      "blockers": [
+        "Full backend pytest suite cannot collect in this environment: pydantic_ai is not installed. Pre-existing and unrelated to P01; the contract-parity tests collect and pass. Install the backend dependency set before P02 gates."
+      ]
     },
     "P02": {
       "status": "NOT_STARTED",
@@ -72,5 +89,5 @@
   },
   "core_dual_path_acceptance": "NOT_RUN",
   "full_catalogue_acceptance": "NOT_RUN",
-  "next_action": "Execute P01: create @lectio/contracts vocabulary and complete Print/Learn capability catalogues with generated views."
+  "next_action": "Execute P02: shared teaching preparation against the published teaching view at 5a73e31."
 }

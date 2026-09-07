@@ -1,0 +1,13 @@
+# command: pnpm exec vitest run src/lib/catalogue/views.test.ts
+# cwd: C:\Projects\lectio\packages\lectio-page
+
+ RUN  v3.2.7 C:/Projects/lectio/packages/lectio-page
+
+ G£ô src/lib/catalogue/views.test.ts (17 tests) 281ms
+
+ Test Files  1 passed (1)
+      Tests  17 passed (17)
+   Start at  01:37:43
+   Duration  8.82s (transform 1.55s, setup 3.48s, collect 3.85s, tests 281ms, environment 727ms, prepare 240ms)
+
+exit_code=0

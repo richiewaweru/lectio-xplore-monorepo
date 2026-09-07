@@ -1,0 +1,13 @@
+# command: pnpm exec vitest run tests/vocabulary.test.ts
+# cwd: C:\Projects\lectio\packages\lectio-contracts
+
+ RUN  v3.2.7 C:/Projects/lectio/packages/lectio-contracts
+
+ G£ô tests/vocabulary.test.ts (7 tests) 11ms
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  01:37:53
+   Duration  610ms (transform 60ms, setup 0ms, collect 114ms, tests 11ms, environment 0ms, prepare 208ms)
+
+exit_code=0

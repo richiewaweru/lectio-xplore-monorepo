@@ -1,0 +1,13 @@
+# command: pnpm exec vitest run src/lib/learn/capabilities/consumer-fixture.test.ts
+# cwd: C:\Projects\lectio\packages\lectio-learn
+
+ RUN  v3.2.7 C:/Projects/lectio/packages/lectio-learn
+
+ G£ô src/lib/learn/capabilities/consumer-fixture.test.ts (7 tests) 443ms
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  01:38:32
+   Duration  8.67s (transform 3.39s, setup 3.26s, collect 4.32s, tests 443ms, environment 0ms, prepare 325ms)
+
+exit_code=0
