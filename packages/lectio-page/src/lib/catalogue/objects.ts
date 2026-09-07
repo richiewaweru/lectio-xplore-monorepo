@@ -19,6 +19,39 @@ export interface ObjectRecord {
 
 	/** Print-derived limits. Flat numeric keys; Min/Max suffixes for ranges. */
 	capacity?: CapacityLimits;
+
+	/** JSON pointer into `lectio-document-v2.schema.json` for the exact payload. */
+	payload_schema_ref?: string;
+
+	/** Canonical learner actions this form can satisfy on paper. Empty for chrome. */
+	supported_actions?: string[];
+
+	/** Why the action list stops where it does, when that needs saying. */
+	supported_actions_note?: string;
+
+	/** False for document chrome and derived teacher content a selector never picks. */
+	form_selectable?: boolean;
+
+	/** Required when `form_selectable` is false. */
+	not_form_selectable_because?: string;
+
+	/** Per-field authoring guidance. One entry per `content_schema` field. */
+	writer_guidance?: Record<string, string>;
+
+	/** Authoring shapes that must be rejected. Guidance, not executable validation. */
+	negative_cases?: string[];
+
+	/** True when the form cannot render without a resolved asset reference. */
+	requires_asset?: boolean;
+
+	/** Asset kinds and identity rules for asset-bearing forms. */
+	asset_requirements?: { kinds: string[]; identity: string };
+
+	/** True when the teacher edition derives answer-key entries from this form. */
+	produces_answer_key?: boolean;
+
+	/** True for content that must never reach the student edition. */
+	teacher_edition_only?: boolean;
 }
 
 const objects = objectCatalogue.objects as Record<string, ObjectRecord>;

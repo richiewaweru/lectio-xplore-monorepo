@@ -63,6 +63,7 @@
 		"svelte"
 	],
 	"devDependencies": {
+		"@lectio/contracts": "workspace:*",
 		"@sveltejs/adapter-auto": "^7.0.1",
 		"@sveltejs/kit": "^2.59.1",
 		"@sveltejs/package": "^2.5.7",

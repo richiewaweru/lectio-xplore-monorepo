@@ -1,5 +1,5 @@
 {
-  "catalogue_version": "1.1.0",
+  "catalogue_version": "1.2.0",
   "objects": {
     "heading": {
       "holds": "Heading text, hierarchy level, optional numbering.",
@@ -8,19 +8,38 @@
         "text": "string",
         "number": "string|null"
       },
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/heading-content",
+      "supported_actions": [],
+      "form_selectable": false,
+      "not_form_selectable_because": "Structural chrome. The document builder emits headings from section hierarchy; a form selector never chooses one for an intent.",
       "placement": [
         "main",
         "spanning"
       ],
       "fragmentation": "Must be bound with the first following block in one break-inside:avoid wrapper. Never render alone.",
       "emphasis": "Type size, weight, rule, and spacing only. No box.",
-      "screen_layer": "Review wrapper may show selection and hierarchy controls outside the print subtree."
+      "screen_layer": "Review wrapper may show selection and hierarchy controls outside the print subtree.",
+      "writer_guidance": {
+        "level": "1 for the lesson title, 2 for a section, 3 for a subsection. Never skip a level.",
+        "text": "Name the content, not the pedagogy. No trailing punctuation.",
+        "number": "Only when the document numbers sections. Null otherwise — never invent numbering."
+      },
+      "negative_cases": [
+        "level 3 directly under level 1",
+        "heading as the final block of a section",
+        "heading text restating the sentence that follows it"
+      ]
     },
     "prose": {
       "holds": "Paragraphs and restrained inline nodes.",
       "content_schema": {
         "paragraphs": "RichParagraph[]"
       },
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/prose-content",
+      "supported_actions": [
+        "read-explanation"
+      ],
+      "form_selectable": true,
       "placement": [
         "main"
       ],
@@ -33,7 +52,15 @@
         "paragraphsMin": 1,
         "paragraphsMax": 4,
         "wordsPerParagraph": 120
-      }
+      },
+      "writer_guidance": {
+        "paragraphs": "One idea per paragraph, in reading order. Each paragraph is an array of inline nodes; use a term node for a defined term and a math node for notation. Do not emit an empty paragraph to create spacing."
+      },
+      "negative_cases": [
+        "a single-sentence paragraph that belongs in the previous paragraph",
+        "paragraphs used as disguised list items",
+        "an empty paragraph emitted for vertical spacing"
+      ]
     },
     "list": {
       "holds": "Ordered or unordered items with optional lead-in.",
@@ -42,6 +69,11 @@
         "lead_in": "RichText|null",
         "items": "ListItem[]"
       },
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/list-content",
+      "supported_actions": [
+        "read-explanation"
+      ],
+      "form_selectable": true,
       "placement": [
         "main",
         "margin"
@@ -56,7 +88,18 @@
         "itemsMax": 8,
         "wordsPerItem": 25,
         "leadInMaxWords": 20
-      }
+      },
+      "writer_guidance": {
+        "style": "ordered or steps when position carries meaning, unordered when it does not, glossary for term/definition pairs.",
+        "lead_in": "One clause naming what the items have in common. Null when the preceding prose already says it.",
+        "items": "Parallel grammatical form across every item. Keep each item within wordsPerItem; an item needing a sentence of explanation belongs in prose."
+      },
+      "negative_cases": [
+        "two items",
+        "items of mixed grammatical form",
+        "an item whose text is a full explanatory paragraph",
+        "style: ordered where order is arbitrary"
+      ]
     },
     "table": {
       "holds": "Columns, rows, header, caption, and semantic presentation hint.",
@@ -66,6 +109,12 @@
         "caption": "string|null",
         "presentation": "standard|comparison|timeline"
       },
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/table-content",
+      "supported_actions": [
+        "compare-without-response",
+        "read-explanation"
+      ],
+      "form_selectable": true,
       "placement": [
         "main",
         "spanning"
@@ -82,7 +131,19 @@
         "rowsMax": 8,
         "wordsPerCell": 12,
         "captionMaxWords": 20
-      }
+      },
+      "writer_guidance": {
+        "columns": "First column is the row label. Every other column header names one criterion applied identically down the column.",
+        "rows": "Cell values keyed by column id. Every cell must be fillable with a comparable value — never 'n/a'.",
+        "caption": "States what the reader should notice. Null when the surrounding prose already does.",
+        "presentation": "comparison when the columns are the things compared, timeline when the first column is time, standard otherwise."
+      },
+      "negative_cases": [
+        "a single value column",
+        "a cell containing a full sentence",
+        "an empty or 'n/a' cell",
+        "row keys that do not match declared column ids"
+      ]
     },
     "figure": {
       "holds": "Image or SVG asset, caption, alt text, width hint.",
@@ -91,6 +152,19 @@
         "caption": "string|null",
         "alt_text": "string",
         "width": "main|span"
+      },
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/figure-content",
+      "supported_actions": [
+        "read-explanation"
+      ],
+      "form_selectable": true,
+      "requires_asset": true,
+      "asset_requirements": {
+        "kinds": [
+          "image",
+          "svg"
+        ],
+        "identity": "Asset reference must already exist. A figure with an unresolved asset is a tracked dependency, not a rendered blank."
       },
       "placement": [
         "main",
@@ -104,7 +178,19 @@
       "capacity": {
         "captionMaxWords": 30,
         "altTextMaxWords": 40
-      }
+      },
+      "writer_guidance": {
+        "asset": "Reference an existing asset by identity. Never invent a path or describe an image that has not been produced.",
+        "caption": "Say what the reader should take from the figure, not what it depicts. Null when the prose already says it.",
+        "alt_text": "Describe the information the figure carries for a reader who cannot see it. Required even when a caption exists.",
+        "width": "span only when detail is lost at main-column width."
+      },
+      "negative_cases": [
+        "asset reference that does not resolve",
+        "alt_text repeating the caption verbatim",
+        "decorative image with no informational content",
+        "caption restating the preceding paragraph"
+      ]
     },
     "aside": {
       "holds": "Short set-apart note with optional student-facing label.",
@@ -112,6 +198,11 @@
         "label": "string|null",
         "body": "RichText"
       },
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/aside-content",
+      "supported_actions": [
+        "read-explanation"
+      ],
+      "form_selectable": true,
       "placement": [
         "margin",
         "main"
@@ -125,7 +216,17 @@
         "bodyMaxWords": 40,
         "labelMaxWords": 4,
         "maxPerSection": 2
-      }
+      },
+      "writer_guidance": {
+        "label": "A short student-facing cue such as the teacher label for the intent. Null when the body speaks for itself.",
+        "body": "One point, self-contained, readable out of sequence. Stay inside bodyMaxWords — an aside that overflows is prose."
+      },
+      "negative_cases": [
+        "body longer than bodyMaxWords",
+        "more than maxPerSection asides in one section",
+        "content the reader must read in order to follow the main flow",
+        "label longer than labelMaxWords"
+      ]
     },
     "worked-example": {
       "holds": "Problem/setup, ordered reasoning steps, final answer, optional checks.",
@@ -136,6 +237,11 @@
         "answer": "RichText",
         "check": "RichText|null"
       },
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/worked-example-content",
+      "supported_actions": [
+        "read-explanation"
+      ],
+      "form_selectable": true,
       "placement": [
         "main",
         "spanning"
@@ -150,7 +256,20 @@
         "stepsMax": 7,
         "wordsPerStep": 40,
         "problemMaxWords": 60
-      }
+      },
+      "writer_guidance": {
+        "title": "Names the method being demonstrated. Null when the problem statement is self-explanatory.",
+        "problem": "A concrete instance with every value the learner needs. Stay inside problemMaxWords.",
+        "steps": "Each step states what is done and why. No step may be left for the learner to supply — that is guided practice, not a demonstration.",
+        "answer": "The final result, stated plainly. Required; a worked example without an answer is rejected.",
+        "check": "How the reader verifies the answer is reasonable. Null when no cheap check exists."
+      },
+      "negative_cases": [
+        "missing answer",
+        "a step whose working is elided for the learner to complete",
+        "fewer than stepsMin steps",
+        "steps that state what is done without why"
+      ]
     },
     "questions": {
       "holds": "Open prompts, marks, response guidance, answer-space specification.",
@@ -158,6 +277,15 @@
         "items": "QuestionItem[]",
         "instructions": "RichText|null"
       },
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/questions-content",
+      "supported_actions": [
+        "enter-text",
+        "enter-number",
+        "produce-extended-response"
+      ],
+      "supported_actions_note": "An open paper prompt collects a written response. Structured paper tasks such as ordering or sorting are not claimed: the form has no per-item response structure to validate them against.",
+      "form_selectable": true,
+      "produces_answer_key": true,
       "placement": [
         "main",
         "spanning"
@@ -171,7 +299,17 @@
         "itemsMin": 1,
         "itemsMax": 6,
         "stemMaxWords": 45
-      }
+      },
+      "writer_guidance": {
+        "items": "One prompt per item, within stemMaxWords. Set answer space from the expected response length, and marks only where the document awards them. Expected answers belong in the teacher edition, never in the student prompt.",
+        "instructions": "How to respond, when it is not obvious. Null otherwise."
+      },
+      "negative_cases": [
+        "a prompt whose answer is a fixed choice from a closed set",
+        "an item with no question in it",
+        "expected answer text placed in the student-visible prompt",
+        "answer space too small for the expected response"
+      ]
     },
     "choices": {
       "holds": "Stem, lettered options, optional marks.",
@@ -180,6 +318,12 @@
         "options": "ChoiceOption[]",
         "marks": "number|null"
       },
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/choices-content",
+      "supported_actions": [
+        "select-one"
+      ],
+      "form_selectable": true,
+      "produces_answer_key": true,
       "placement": [
         "main"
       ],
@@ -193,20 +337,45 @@
         "optionsMax": 4,
         "stemMaxWords": 40,
         "optionMaxWords": 15
-      }
+      },
+      "writer_guidance": {
+        "stem": "One question, answerable without reading the options first. Stay inside stemMaxWords.",
+        "options": "Between optionsMin and optionsMax options with stable ids and parallel form. Every wrong option must be one a real learner would pick, and for what reason. Correctness is carried in the teacher edition, not printed beside the option.",
+        "marks": "Only when the document awards marks. Null otherwise."
+      },
+      "negative_cases": [
+        "a filler distractor no learner would choose",
+        "'all of the above' or 'none of the above'",
+        "options of unequal length that signal the answer",
+        "the correct option marked in student-visible content"
+      ]
     },
     "answer-key": {
       "holds": "Question references, expected answers, alternatives, working, rubric and misconceptions.",
       "content_schema": {
         "groups": "AnswerGroup[]"
       },
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/answer-key-content",
+      "supported_actions": [],
+      "form_selectable": false,
+      "not_form_selectable_because": "Derived teacher-edition content. Print builds it from the questions and selection forms already in the document; a form selector never chooses it for an intent.",
+      "teacher_edition_only": true,
       "placement": [
         "main",
         "spanning"
       ],
       "fragmentation": "Split between entries. Entry keeps question reference with first answer line.",
       "emphasis": "Heading hierarchy, compact typography, rules. No card.",
-      "screen_layer": "Teacher-only visibility control outside document content."
+      "screen_layer": "Teacher-only visibility control outside document content.",
+      "writer_guidance": {
+        "groups": "One group per source block, in document order. Each entry references the question it answers, gives the expected answer plus acceptable alternatives, and names the misconception a wrong answer reveals where the source block declared one. Never introduce an answer for a question that is not in the document."
+      },
+      "negative_cases": [
+        "an entry referencing a question id that is not in the document",
+        "answer-key content appearing in the student edition",
+        "an entry with no expected answer",
+        "alternatives that contradict the expected answer"
+      ]
     }
   }
 }

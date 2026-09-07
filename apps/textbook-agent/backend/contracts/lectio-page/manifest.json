@@ -1,8 +1,10 @@
 {
-  "manifest_version": "1.0.0",
+  "manifest_version": "1.1.0",
   "package": "@lectio/page",
-  "contract_version": "1.0.0",
-  "generated_at": "2026-09-01T09:08:34.933Z",
+  "contract_version": "1.1.0",
+  "intent_catalogue_version": "1.1.0",
+  "object_catalogue_version": "1.2.0",
+  "generated_at": "2026-09-07T21:42:52.844Z",
   "files": [
     {
       "path": "lectio-document-v2.schema.json",
@@ -11,8 +13,8 @@
     },
     {
       "path": "object-catalogue.v1.json",
-      "sha256": "1813a43e1bb492b7594b016989db79cf48dceb8a8f3780dcb5dfebff82ce5729",
-      "bytes": 8637
+      "sha256": "2e57f9bc8369f089886349527fe54fdece2d2e586e208ef096a92f8a60ca4c73",
+      "bytes": 17970
     },
     {
       "path": "intent-catalogue.v1.json",
@@ -23,6 +25,21 @@
       "path": "base-print.css",
       "sha256": "b62e788d5186ff654f7c60d3aa24928f354d4f89e6df2b90845b4b5b43f8b060",
       "bytes": 7482
+    },
+    {
+      "path": "generated/form-selection-view.v1.json",
+      "sha256": "69cd25809c6f860429d78348f48ccebf4434e835d9601af695609508d1f61c42",
+      "bytes": 8023
+    },
+    {
+      "path": "generated/form-writer-view.v1.json",
+      "sha256": "94194f3973040a414a2e884d644c55cfee0f62cef4b9dfd9a066d870e653ab1c",
+      "bytes": 25839
+    },
+    {
+      "path": "generated/intent-object-map.v1.json",
+      "sha256": "d536470d724a36a35c9fb8c92167d8925ad314416adbdfcf38c8e2e09c15f723",
+      "bytes": 6923
     }
   ]
 }

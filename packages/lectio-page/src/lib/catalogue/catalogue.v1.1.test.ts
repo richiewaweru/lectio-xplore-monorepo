@@ -53,9 +53,11 @@ function hasDensity(value: unknown): boolean {
 }
 
 describe('catalogue v1.1 discrimination fields', () => {
-	it('bumps both catalogues to 1.1.0', () => {
+	it('keeps the intent catalogue at 1.1.0 and carries the object catalogue to 1.2.0', () => {
 		expect(intentCatalogue.catalogue_version).toBe('1.1.0');
-		expect(objectCatalogue.catalogue_version).toBe('1.1.0');
+		// 1.2.0 adds selectability, payload refs, learner actions and writer
+		// guidance. Additive metadata only — no payload shape changed.
+		expect(objectCatalogue.catalogue_version).toBe('1.2.0');
 	});
 
 	it('adds earn/reject/capacity on eight selectable objects only', () => {

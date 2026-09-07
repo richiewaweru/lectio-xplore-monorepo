@@ -1,0 +1,796 @@
+{
+  "view": "writer",
+  "view_version": "1.0.0",
+  "object_catalogue_version": "1.2.0",
+  "document_schema_ref": "lectio-document-v2.schema.json",
+  "forms": {
+    "heading": {
+      "id": "heading",
+      "purpose": "Heading text, hierarchy level, optional numbering.",
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/heading-content",
+      "payload_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "level",
+          "text"
+        ],
+        "properties": {
+          "level": {
+            "enum": [
+              1,
+              2,
+              3,
+              "1",
+              "2",
+              "3"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "content_schema": {
+        "level": "1|2|3",
+        "text": "string",
+        "number": "string|null"
+      },
+      "writer_guidance": {
+        "level": "1 for the lesson title, 2 for a section, 3 for a subsection. Never skip a level.",
+        "text": "Name the content, not the pedagogy. No trailing punctuation.",
+        "number": "Only when the document numbers sections. Null otherwise — never invent numbering."
+      },
+      "negative_cases": [
+        "level 3 directly under level 1",
+        "heading as the final block of a section",
+        "heading text restating the sentence that follows it"
+      ],
+      "capacity": {},
+      "fragmentation": "Must be bound with the first following block in one break-inside:avoid wrapper. Never render alone.",
+      "emphasis": "Type size, weight, rule, and spacing only. No box.",
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "source_refs": [
+        "object-catalogue.v1.json#/objects/heading",
+        "lectio-document-v2.schema.json#/$defs/heading-content"
+      ]
+    },
+    "prose": {
+      "id": "prose",
+      "purpose": "Paragraphs and restrained inline nodes.",
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/prose-content",
+      "payload_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "paragraphs"
+        ],
+        "properties": {
+          "paragraphs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/rich-paragraph"
+            }
+          }
+        }
+      },
+      "content_schema": {
+        "paragraphs": "RichParagraph[]"
+      },
+      "writer_guidance": {
+        "paragraphs": "One idea per paragraph, in reading order. Each paragraph is an array of inline nodes; use a term node for a defined term and a math node for notation. Do not emit an empty paragraph to create spacing."
+      },
+      "negative_cases": [
+        "a single-sentence paragraph that belongs in the previous paragraph",
+        "paragraphs used as disguised list items",
+        "an empty paragraph emitted for vertical spacing"
+      ],
+      "capacity": {
+        "paragraphsMin": 1,
+        "paragraphsMax": 4,
+        "wordsPerParagraph": 120
+      },
+      "fragmentation": "Splits freely with widows/orphans. Paragraphs may split.",
+      "emphasis": "Inline weight, italic, small caps, and whitespace. No background or border.",
+      "placement": [
+        "main"
+      ],
+      "source_refs": [
+        "object-catalogue.v1.json#/objects/prose",
+        "lectio-document-v2.schema.json#/$defs/prose-content"
+      ]
+    },
+    "list": {
+      "id": "list",
+      "purpose": "Ordered or unordered items with optional lead-in.",
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/list-content",
+      "payload_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "style",
+          "items"
+        ],
+        "properties": {
+          "style": {
+            "enum": [
+              "ordered",
+              "unordered",
+              "steps",
+              "glossary"
+            ]
+          },
+          "lead_in": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/rich-text"
+              }
+            ]
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "text"
+              ],
+              "properties": {
+                "text": {
+                  "$ref": "#/$defs/rich-text"
+                }
+              }
+            }
+          }
+        }
+      },
+      "content_schema": {
+        "style": "ordered|unordered|steps|glossary",
+        "lead_in": "RichText|null",
+        "items": "ListItem[]"
+      },
+      "writer_guidance": {
+        "style": "ordered or steps when position carries meaning, unordered when it does not, glossary for term/definition pairs.",
+        "lead_in": "One clause naming what the items have in common. Null when the preceding prose already says it.",
+        "items": "Parallel grammatical form across every item. Keep each item within wordsPerItem; an item needing a sentence of explanation belongs in prose."
+      },
+      "negative_cases": [
+        "two items",
+        "items of mixed grammatical form",
+        "an item whose text is a full explanatory paragraph",
+        "style: ordered where order is arbitrary"
+      ],
+      "capacity": {
+        "itemsMin": 3,
+        "itemsMax": 8,
+        "wordsPerItem": 25,
+        "leadInMaxWords": 20
+      },
+      "fragmentation": "List may split between items; individual item avoids splitting when practical.",
+      "emphasis": "Markers, hanging indent, weight, and spacing. No box.",
+      "placement": [
+        "main",
+        "margin"
+      ],
+      "source_refs": [
+        "object-catalogue.v1.json#/objects/list",
+        "lectio-document-v2.schema.json#/$defs/list-content"
+      ]
+    },
+    "table": {
+      "id": "table",
+      "purpose": "Columns, rows, header, caption, and semantic presentation hint.",
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/table-content",
+      "payload_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "columns",
+          "rows"
+        ],
+        "properties": {
+          "columns": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "label"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "label": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "rows": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "cells"
+              ],
+              "properties": {
+                "cells": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/$defs/rich-text"
+                  }
+                }
+              }
+            }
+          },
+          "caption": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "presentation": {
+            "enum": [
+              "standard",
+              "comparison",
+              "timeline"
+            ]
+          }
+        }
+      },
+      "content_schema": {
+        "columns": "TableColumn[]",
+        "rows": "TableRow[]",
+        "caption": "string|null",
+        "presentation": "standard|comparison|timeline"
+      },
+      "writer_guidance": {
+        "columns": "First column is the row label. Every other column header names one criterion applied identically down the column.",
+        "rows": "Cell values keyed by column id. Every cell must be fillable with a comparable value — never 'n/a'.",
+        "caption": "States what the reader should notice. Null when the surrounding prose already does.",
+        "presentation": "comparison when the columns are the things compared, timeline when the first column is time, standard otherwise."
+      },
+      "negative_cases": [
+        "a single value column",
+        "a cell containing a full sentence",
+        "an empty or 'n/a' cell",
+        "row keys that do not match declared column ids"
+      ],
+      "capacity": {
+        "columnsMin": 2,
+        "columnsMax": 4,
+        "rowsMin": 2,
+        "rowsMax": 8,
+        "wordsPerCell": 12,
+        "captionMaxWords": 20
+      },
+      "fragmentation": "May split across pages. thead repeats. Rows avoid splitting.",
+      "emphasis": "Rules, alignment, weight, and sparse header tint only when photocopy-safe. No enclosing box.",
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "source_refs": [
+        "object-catalogue.v1.json#/objects/table",
+        "lectio-document-v2.schema.json#/$defs/table-content"
+      ]
+    },
+    "figure": {
+      "id": "figure",
+      "purpose": "Image or SVG asset, caption, alt text, width hint.",
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/figure-content",
+      "payload_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "asset",
+          "alt_text"
+        ],
+        "properties": {
+          "asset": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "image",
+                  "svg"
+                ]
+              },
+              "src": {
+                "type": "string"
+              },
+              "svg": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "ready",
+                  "pending",
+                  "failed"
+                ]
+              },
+              "request_id": {
+                "type": "string"
+              }
+            }
+          },
+          "caption": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "alt_text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "width": {
+            "enum": [
+              "main",
+              "span"
+            ]
+          }
+        }
+      },
+      "content_schema": {
+        "asset": "FigureAsset",
+        "caption": "string|null",
+        "alt_text": "string",
+        "width": "main|span"
+      },
+      "writer_guidance": {
+        "asset": "Reference an existing asset by identity. Never invent a path or describe an image that has not been produced.",
+        "caption": "Say what the reader should take from the figure, not what it depicts. Null when the prose already says it.",
+        "alt_text": "Describe the information the figure carries for a reader who cannot see it. Required even when a caption exists.",
+        "width": "span only when detail is lost at main-column width."
+      },
+      "negative_cases": [
+        "asset reference that does not resolve",
+        "alt_text repeating the caption verbatim",
+        "decorative image with no informational content",
+        "caption restating the preceding paragraph"
+      ],
+      "capacity": {
+        "captionMaxWords": 30,
+        "altTextMaxWords": 40
+      },
+      "fragmentation": "Figure and caption are atomic. May move to next page.",
+      "emphasis": "Scale, whitespace, caption typography, and optional hairline around the plate only—not a card.",
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "source_refs": [
+        "object-catalogue.v1.json#/objects/figure",
+        "lectio-document-v2.schema.json#/$defs/figure-content"
+      ]
+    },
+    "aside": {
+      "id": "aside",
+      "purpose": "Short set-apart note with optional student-facing label.",
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/aside-content",
+      "payload_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "body"
+        ],
+        "properties": {
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "body": {
+            "$ref": "#/$defs/rich-text"
+          }
+        }
+      },
+      "content_schema": {
+        "label": "string|null",
+        "body": "RichText"
+      },
+      "writer_guidance": {
+        "label": "A short student-facing cue such as the teacher label for the intent. Null when the body speaks for itself.",
+        "body": "One point, self-contained, readable out of sequence. Stay inside bodyMaxWords — an aside that overflows is prose."
+      },
+      "negative_cases": [
+        "body longer than bodyMaxWords",
+        "more than maxPerSection asides in one section",
+        "content the reader must read in order to follow the main flow",
+        "label longer than labelMaxWords"
+      ],
+      "capacity": {
+        "bodyMaxWords": 40,
+        "labelMaxWords": 4,
+        "maxPerSection": 2
+      },
+      "fragmentation": "Atomic. Margin placement uses float, clear:right, and negative margin. Move cleanly if it does not fit.",
+      "emphasis": "The only object allowed a border or background. Default is a single vertical rule with restrained label.",
+      "placement": [
+        "margin",
+        "main"
+      ],
+      "source_refs": [
+        "object-catalogue.v1.json#/objects/aside",
+        "lectio-document-v2.schema.json#/$defs/aside-content"
+      ]
+    },
+    "worked-example": {
+      "id": "worked-example",
+      "purpose": "Problem/setup, ordered reasoning steps, final answer, optional checks.",
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/worked-example-content",
+      "payload_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "problem",
+          "steps",
+          "answer"
+        ],
+        "properties": {
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "problem": {
+            "$ref": "#/$defs/rich-text"
+          },
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "text"
+              ],
+              "properties": {
+                "text": {
+                  "$ref": "#/$defs/rich-text"
+                }
+              }
+            }
+          },
+          "answer": {
+            "$ref": "#/$defs/rich-text"
+          },
+          "check": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/rich-text"
+              }
+            ]
+          }
+        }
+      },
+      "content_schema": {
+        "title": "string|null",
+        "problem": "RichText",
+        "steps": "WorkedStep[]",
+        "answer": "RichText",
+        "check": "RichText|null"
+      },
+      "writer_guidance": {
+        "title": "Names the method being demonstrated. Null when the problem statement is self-explanatory.",
+        "problem": "A concrete instance with every value the learner needs. Stay inside problemMaxWords.",
+        "steps": "Each step states what is done and why. No step may be left for the learner to supply — that is guided practice, not a demonstration.",
+        "answer": "The final result, stated plainly. Required; a worked example without an answer is rejected.",
+        "check": "How the reader verifies the answer is reasonable. Null when no cheap check exists."
+      },
+      "negative_cases": [
+        "missing answer",
+        "a step whose working is elided for the learner to complete",
+        "fewer than stepsMin steps",
+        "steps that state what is done without why"
+      ],
+      "capacity": {
+        "stepsMin": 3,
+        "stepsMax": 7,
+        "wordsPerStep": 40,
+        "problemMaxWords": 60
+      },
+      "fragmentation": "May split between steps. A step avoids internal split where practical. Final step and answer stay together.",
+      "emphasis": "Numbered steps, hanging labels, indentation, and rules. No enclosing box.",
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "source_refs": [
+        "object-catalogue.v1.json#/objects/worked-example",
+        "lectio-document-v2.schema.json#/$defs/worked-example-content"
+      ]
+    },
+    "questions": {
+      "id": "questions",
+      "purpose": "Open prompts, marks, response guidance, answer-space specification.",
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/questions-content",
+      "payload_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "instructions": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/rich-text"
+              }
+            ]
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "prompt"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "prompt": {
+                  "$ref": "#/$defs/rich-text"
+                },
+                "marks": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "answer_lines": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      },
+      "content_schema": {
+        "items": "QuestionItem[]",
+        "instructions": "RichText|null"
+      },
+      "writer_guidance": {
+        "items": "One prompt per item, within stemMaxWords. Set answer space from the expected response length, and marks only where the document awards them. Expected answers belong in the teacher edition, never in the student prompt.",
+        "instructions": "How to respond, when it is not obvious. Null otherwise."
+      },
+      "negative_cases": [
+        "a prompt whose answer is a fixed choice from a closed set",
+        "an item with no question in it",
+        "expected answer text placed in the student-visible prompt",
+        "answer space too small for the expected response"
+      ],
+      "capacity": {
+        "itemsMin": 1,
+        "itemsMax": 6,
+        "stemMaxWords": 45
+      },
+      "fragmentation": "Split between questions, never inside a question. Prompt stays with minimum answer space.",
+      "emphasis": "Hanging numbers, marks aligned to edge, ruled answer space. No cards.",
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "source_refs": [
+        "object-catalogue.v1.json#/objects/questions",
+        "lectio-document-v2.schema.json#/$defs/questions-content"
+      ]
+    },
+    "choices": {
+      "id": "choices",
+      "purpose": "Stem, lettered options, optional marks.",
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/choices-content",
+      "payload_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "stem",
+          "options"
+        ],
+        "properties": {
+          "stem": {
+            "$ref": "#/$defs/rich-text"
+          },
+          "options": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "letter",
+                "text"
+              ],
+              "properties": {
+                "letter": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "text": {
+                  "$ref": "#/$defs/rich-text"
+                }
+              }
+            }
+          },
+          "marks": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      },
+      "content_schema": {
+        "stem": "RichText",
+        "options": "ChoiceOption[]",
+        "marks": "number|null"
+      },
+      "writer_guidance": {
+        "stem": "One question, answerable without reading the options first. Stay inside stemMaxWords.",
+        "options": "Between optionsMin and optionsMax options with stable ids and parallel form. Every wrong option must be one a real learner would pick, and for what reason. Correctness is carried in the teacher edition, not printed beside the option.",
+        "marks": "Only when the document awards marks. Null otherwise."
+      },
+      "negative_cases": [
+        "a filler distractor no learner would choose",
+        "'all of the above' or 'none of the above'",
+        "options of unequal length that signal the answer",
+        "the correct option marked in student-visible content"
+      ],
+      "capacity": {
+        "optionsMin": 3,
+        "optionsMax": 4,
+        "stemMaxWords": 40,
+        "optionMaxWords": 15
+      },
+      "fragmentation": "Atomic when it fits; otherwise keep stem with at least two options and split only between options.",
+      "emphasis": "Letters A/B/C/D, hanging indent, whitespace. Never radio controls.",
+      "placement": [
+        "main"
+      ],
+      "source_refs": [
+        "object-catalogue.v1.json#/objects/choices",
+        "lectio-document-v2.schema.json#/$defs/choices-content"
+      ]
+    },
+    "answer-key": {
+      "id": "answer-key",
+      "purpose": "Question references, expected answers, alternatives, working, rubric and misconceptions.",
+      "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/answer-key-content",
+      "payload_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "groups"
+        ],
+        "properties": {
+          "groups": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "entries"
+              ],
+              "properties": {
+                "title": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "entries": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "question_id",
+                      "answer"
+                    ],
+                    "properties": {
+                      "question_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "answer": {
+                        "$ref": "#/$defs/rich-text"
+                      },
+                      "alternatives": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/$defs/rich-text"
+                        }
+                      },
+                      "working": {
+                        "oneOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "$ref": "#/$defs/rich-text"
+                          }
+                        ]
+                      },
+                      "rubric": {
+                        "oneOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "$ref": "#/$defs/rich-text"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "content_schema": {
+        "groups": "AnswerGroup[]"
+      },
+      "writer_guidance": {
+        "groups": "One group per source block, in document order. Each entry references the question it answers, gives the expected answer plus acceptable alternatives, and names the misconception a wrong answer reveals where the source block declared one. Never introduce an answer for a question that is not in the document."
+      },
+      "negative_cases": [
+        "an entry referencing a question id that is not in the document",
+        "answer-key content appearing in the student edition",
+        "an entry with no expected answer",
+        "alternatives that contradict the expected answer"
+      ],
+      "capacity": {},
+      "fragmentation": "Split between entries. Entry keeps question reference with first answer line.",
+      "emphasis": "Heading hierarchy, compact typography, rules. No card.",
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "source_refs": [
+        "object-catalogue.v1.json#/objects/answer-key",
+        "lectio-document-v2.schema.json#/$defs/answer-key-content"
+      ]
+    }
+  }
+}

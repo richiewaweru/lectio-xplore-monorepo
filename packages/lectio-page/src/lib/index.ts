@@ -16,6 +16,20 @@ export {
 	validateStructure
 } from './contract';
 export { listIntents, listObjects, isCompatible, getIntent, getObject } from './catalogue';
+export {
+	buildIntentObjectMap,
+	buildSelectionView,
+	buildWriterRecord,
+	buildWriterView,
+	catalogueSource
+} from './catalogue';
+export type {
+	FormSelectionRecord,
+	FormSelectionView,
+	FormWriterRecord,
+	FormWriterView,
+	IntentObjectMap
+} from './catalogue';
 export { normalizeDocument, buildRenderUnits, NormalizeError } from './normalize/document';
 export type { RenderUnit, SubstantiveBlock } from './normalize/document';
 export { default as LectioDocumentView } from './render/LectioDocumentView.svelte';

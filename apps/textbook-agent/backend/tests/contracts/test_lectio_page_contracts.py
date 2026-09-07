@@ -23,7 +23,9 @@ SYNCED = BACKEND_ROOT / "contracts" / "lectio-page"
 
 
 def test_catalogue_version_and_objects() -> None:
-    assert CATALOGUE_VERSION == "1.1.0"
+    # Object catalogue 1.2.0 adds form selectability, payload schema refs,
+    # supported learner actions and per-field writer guidance. Additive only.
+    assert CATALOGUE_VERSION == "1.2.0"
     assert "prose" in PAGE_OBJECT_IDS
     assert "heading" in PAGE_OBJECT_IDS
     assert len(PAGE_OBJECT_IDS) == 10

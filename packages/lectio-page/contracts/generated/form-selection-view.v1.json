@@ -1,0 +1,288 @@
+{
+  "view": "selection",
+  "view_version": "1.0.0",
+  "intent_catalogue_version": "1.1.0",
+  "object_catalogue_version": "1.2.0",
+  "forms": [
+    {
+      "id": "prose",
+      "purpose": "Paragraphs and restrained inline nodes.",
+      "supported_intents": [
+        "orient",
+        "activate-prior-knowledge",
+        "state-goal",
+        "define",
+        "compare",
+        "explain",
+        "explain-cause",
+        "trace-flow",
+        "model-thinking",
+        "derive",
+        "interpret",
+        "warn",
+        "emphasise",
+        "summarise",
+        "connect-forward",
+        "connect-back",
+        "reflect",
+        "evaluate"
+      ],
+      "supported_actions": [
+        "read-explanation"
+      ],
+      "choose_when": "Default. Use unless another object earns its place against it.",
+      "reject_when": "Never rejected. Prose is the fallback.",
+      "capacity": {
+        "paragraphsMin": 1,
+        "paragraphsMax": 4,
+        "wordsPerParagraph": 120
+      },
+      "placement": [
+        "main"
+      ],
+      "requires_asset": false,
+      "produces_answer_key": false
+    },
+    {
+      "id": "list",
+      "purpose": "Ordered or unordered items with optional lead-in.",
+      "supported_intents": [
+        "activate-prior-knowledge",
+        "state-goal",
+        "name-parts",
+        "classify",
+        "sequence",
+        "trace-flow",
+        "show-structure",
+        "memory-aid",
+        "summarise",
+        "connect-forward",
+        "connect-back",
+        "investigate"
+      ],
+      "supported_actions": [
+        "read-explanation"
+      ],
+      "choose_when": "Three or more genuinely parallel items that lose nothing when the connective prose between them is removed.",
+      "reject_when": "Fewer than three items, or items that need explaining to one another. Two bullets is a sentence.",
+      "capacity": {
+        "itemsMin": 3,
+        "itemsMax": 8,
+        "wordsPerItem": 25,
+        "leadInMaxWords": 20
+      },
+      "placement": [
+        "main",
+        "margin"
+      ],
+      "requires_asset": false,
+      "produces_answer_key": false
+    },
+    {
+      "id": "table",
+      "purpose": "Columns, rows, header, caption, and semantic presentation hint.",
+      "supported_intents": [
+        "define",
+        "name-parts",
+        "classify",
+        "compare",
+        "sequence",
+        "explain",
+        "explain-cause",
+        "trace-flow",
+        "show-structure",
+        "derive",
+        "interpret",
+        "apply",
+        "summarise",
+        "investigate",
+        "evaluate"
+      ],
+      "supported_actions": [
+        "compare-without-response",
+        "read-explanation"
+      ],
+      "choose_when": "Two or more columns of comparable values AND two or more rows, with every cell fillable.",
+      "reject_when": "One column of values, or any cell that would be empty, 'n/a', or a full sentence.",
+      "capacity": {
+        "columnsMin": 2,
+        "columnsMax": 4,
+        "rowsMin": 2,
+        "rowsMax": 8,
+        "wordsPerCell": 12,
+        "captionMaxWords": 20
+      },
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "requires_asset": false,
+      "produces_answer_key": false
+    },
+    {
+      "id": "figure",
+      "purpose": "Image or SVG asset, caption, alt text, width hint.",
+      "supported_intents": [
+        "orient",
+        "name-parts",
+        "sequence",
+        "explain",
+        "explain-cause",
+        "trace-flow",
+        "show-structure",
+        "demonstrate",
+        "interpret",
+        "investigate"
+      ],
+      "supported_actions": [
+        "read-explanation"
+      ],
+      "choose_when": "Spatial, sequential, or structural content the reader would otherwise have to construct mentally.",
+      "reject_when": "Decorative, or the caption would restate the surrounding prose.",
+      "capacity": {
+        "captionMaxWords": 30,
+        "altTextMaxWords": 40
+      },
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "requires_asset": true,
+      "produces_answer_key": false
+    },
+    {
+      "id": "aside",
+      "purpose": "Short set-apart note with optional student-facing label.",
+      "supported_intents": [
+        "define",
+        "diagnose-misconception",
+        "warn",
+        "emphasise",
+        "memory-aid"
+      ],
+      "supported_actions": [
+        "read-explanation"
+      ],
+      "choose_when": "One short point that must sit outside the reading line without breaking it.",
+      "reject_when": "Longer than the margin column holds, or the point belongs in the flow. If it will not fit in 40 words it is prose.",
+      "capacity": {
+        "bodyMaxWords": 40,
+        "labelMaxWords": 4,
+        "maxPerSection": 2
+      },
+      "placement": [
+        "margin",
+        "main"
+      ],
+      "requires_asset": false,
+      "produces_answer_key": false
+    },
+    {
+      "id": "worked-example",
+      "purpose": "Problem/setup, ordered reasoning steps, final answer, optional checks.",
+      "supported_intents": [
+        "demonstrate",
+        "model-thinking",
+        "derive",
+        "apply",
+        "transfer",
+        "practise-guided"
+      ],
+      "supported_actions": [
+        "read-explanation"
+      ],
+      "choose_when": "A complete instance from setup to answer, with every step visible.",
+      "reject_when": "No final answer, or steps the learner is meant to supply themselves.",
+      "capacity": {
+        "stepsMin": 3,
+        "stepsMax": 7,
+        "wordsPerStep": 40,
+        "problemMaxWords": 60
+      },
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "requires_asset": false,
+      "produces_answer_key": false
+    },
+    {
+      "id": "questions",
+      "purpose": "Open prompts, marks, response guidance, answer-space specification.",
+      "supported_intents": [
+        "activate-prior-knowledge",
+        "classify",
+        "compare",
+        "sequence",
+        "explain-cause",
+        "interpret",
+        "apply",
+        "transfer",
+        "practise-guided",
+        "practise-independent",
+        "check-understanding",
+        "diagnose-misconception",
+        "connect-back",
+        "reflect",
+        "investigate",
+        "evaluate"
+      ],
+      "supported_actions": [
+        "enter-text",
+        "enter-number",
+        "produce-extended-response"
+      ],
+      "choose_when": "The learner must produce something in their own words or working.",
+      "reject_when": "Fixed options exist — use choices. Or nothing is actually being asked.",
+      "capacity": {
+        "itemsMin": 1,
+        "itemsMax": 6,
+        "stemMaxWords": 45
+      },
+      "placement": [
+        "main",
+        "spanning"
+      ],
+      "requires_asset": false,
+      "produces_answer_key": true
+    },
+    {
+      "id": "choices",
+      "purpose": "Stem, lettered options, optional marks.",
+      "supported_intents": [
+        "orient",
+        "activate-prior-knowledge",
+        "classify",
+        "practise-independent",
+        "check-understanding",
+        "diagnose-misconception"
+      ],
+      "supported_actions": [
+        "select-one"
+      ],
+      "choose_when": "Selection is the response AND every wrong option carries diagnostic meaning.",
+      "reject_when": "Distractors are filler, or the answer cannot be reduced to a selectable option.",
+      "capacity": {
+        "optionsMin": 3,
+        "optionsMax": 4,
+        "stemMaxWords": 40,
+        "optionMaxWords": 15
+      },
+      "placement": [
+        "main"
+      ],
+      "requires_asset": false,
+      "produces_answer_key": true
+    }
+  ],
+  "excluded_forms": [
+    {
+      "id": "heading",
+      "reason": "Structural chrome. The document builder emits headings from section hierarchy; a form selector never chooses one for an intent."
+    },
+    {
+      "id": "answer-key",
+      "reason": "Derived teacher-edition content. Print builds it from the questions and selection forms already in the document; a form selector never chooses it for an intent."
+    }
+  ]
+}
