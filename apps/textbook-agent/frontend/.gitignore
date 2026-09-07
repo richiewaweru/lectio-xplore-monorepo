@@ -21,3 +21,10 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# local run logs
+dev-frontend*.log
+dev-frontend*.err.log
+live-run-frontend*.log
+live-run-frontend*.err.log
+
