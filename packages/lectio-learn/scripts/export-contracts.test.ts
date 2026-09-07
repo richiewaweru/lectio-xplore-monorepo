@@ -126,6 +126,30 @@ describe('contract exports', () => {
 			const explanationBlock = componentCards['explanation-block'] as Record<string, JsonObject>;
 			expect(explanationBlock.writer_excluded).toBe(false);
 
+			// `teaching_intent` and the web hints are authored on every module but
+			// used to be dropped on export, leaving a consumer unable to see what a
+			// component is *for* or how a learner engages with it.
+			for (const [id, card] of Object.entries(componentCards)) {
+				const record = card as Record<string, unknown>;
+				expect(typeof record.teaching_intent, `component ${id} teaching_intent`).toBe('string');
+				expect(record, `component ${id} web`).toHaveProperty('web');
+			}
+			const quizCheck = componentCards['quiz-check'] as Record<string, unknown>;
+			expect(quizCheck.teaching_intent).toBe('practice');
+			expect(quizCheck.web).toMatchObject({
+				interaction: 'choice',
+				responseEvaluation: 'auto-score'
+			});
+			// A component with no authored hints reports null rather than omitting
+			// the key, so a consumer can tell "no hint" from "not exported".
+			expect((componentCards['section-divider'] as Record<string, unknown>).web).toBeNull();
+
+			const intentMap = (plannerIndex.intent_map ?? {}) as Record<string, string[]>;
+			expect(Object.keys(intentMap).length).toBeGreaterThan(0);
+			expect(intentMap.practice).toContain('quiz-check');
+			const indexedIds = Object.values(intentMap).flat();
+			expect(new Set(indexedIds).size).toBe(indexedIds.length);
+
 			const excluded = (unified.excluded_components ?? {}) as Record<string, JsonObject>;
 			expect(excluded['image-block']).toBeTruthy();
 			expect(excluded['video-embed']).toBeTruthy();

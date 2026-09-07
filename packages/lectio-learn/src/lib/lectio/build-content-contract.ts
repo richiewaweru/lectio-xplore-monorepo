@@ -29,9 +29,18 @@ function toComponentCard(module: LectioContentModule, sectionProps: JsonObject):
 		section_field: module.metadata.sectionField,
 		role: module.metadata.role,
 		cognitive_job: module.metadata.cognitiveJob,
+		/**
+		 * `teaching_intent` and `web` are authored on every module but were dropped
+		 * on the way out, so a consumer could see what a component *is* but not what
+		 * it is *for* or how a learner engages with it. Both are exported now:
+		 * planning alignment needs the intent, and Learn-native selection needs the
+		 * interaction / evaluation / narration hints.
+		 */
+		teaching_intent: module.metadata.teachingIntent,
 		subjects: module.metadata.subjects,
 		capacity: module.metadata.capacity,
 		capabilities: module.metadata.capabilities,
+		web: module.web ?? null,
 		writer_excluded: module.metadata.capabilities.isMedia,
 		status: module.metadata.status,
 		schema_summary: sectionProps[sectionField] ?? null,
@@ -63,9 +72,17 @@ function buildPlannerIndex(modules: readonly LectioContentModule[]): JsonObject 
 		};
 	}
 
+	/** Generated reverse index so a planner can ask by intent, not only by phase. */
+	const intentMap: Record<string, string[]> = {};
+	for (const module of exportableModules) {
+		const intent = module.metadata.teachingIntent;
+		(intentMap[intent] ??= []).push(module.metadata.id);
+	}
+
 	return {
 		component_ids: exportableModules.map((module) => module.metadata.id),
-		phase_map: phaseMap
+		phase_map: phaseMap,
+		intent_map: intentMap
 	};
 }
 

@@ -16,6 +16,69 @@ export interface LectioComponentValidationIssue {
 	readonly severity?: 'error' | 'warn';
 }
 
+const BREAK_BEHAVIORS = new Set(['atomic', 'itemized', 'table', 'prose']);
+const PREFERRED_WIDTHS = new Set(['full', 'half', 'third', 'content-fit', 'inline', 'aside']);
+const MEDIA_CONSTRAINTS = new Set(['constrain-height', 'constrain-width', 'fit-cell']);
+
+function validatePrintSpec(
+	print: NonNullable<ValidatableModule['print']>,
+	prefix: string
+): LectioComponentValidationIssue[] {
+	const issues: LectioComponentValidationIssue[] = [];
+
+	if (!BREAK_BEHAVIORS.has(print.breakBehavior)) {
+		issues.push({
+			path: 'print.breakBehavior',
+			message: `${prefix} print.breakBehavior must be atomic|itemized|table|prose`
+		});
+	}
+
+	if (!PREFERRED_WIDTHS.has(print.preferredWidth)) {
+		issues.push({
+			path: 'print.preferredWidth',
+			message: `${prefix} print.preferredWidth must be full|half|third|content-fit|inline|aside`
+		});
+	}
+
+	if (!(typeof print.fallback === 'string' && print.fallback.trim().length > 0)) {
+		issues.push({ path: 'print.fallback', message: `${prefix} print.fallback missing` });
+	}
+
+	if (typeof print.hasMedia !== 'boolean') {
+		issues.push({ path: 'print.hasMedia', message: `${prefix} print.hasMedia must be boolean` });
+	}
+
+	if (typeof print.requiresColorReset !== 'boolean') {
+		issues.push({
+			path: 'print.requiresColorReset',
+			message: `${prefix} print.requiresColorReset must be boolean`
+		});
+	}
+
+	if (print.mediaConstraint !== undefined && !MEDIA_CONSTRAINTS.has(print.mediaConstraint)) {
+		issues.push({
+			path: 'print.mediaConstraint',
+			message: `${prefix} print.mediaConstraint must be constrain-height|constrain-width|fit-cell`
+		});
+	}
+
+	if (print.breakBehavior === 'itemized') {
+		if (!(typeof print.itemSelector === 'string' && print.itemSelector.trim().length > 0)) {
+			issues.push({
+				path: 'print.itemSelector',
+				message: `${prefix} print.itemSelector is required when breakBehavior is itemized`
+			});
+		} else if (!print.itemSelector.trim().startsWith('.')) {
+			issues.push({
+				path: 'print.itemSelector',
+				message: `${prefix} print.itemSelector should be a class selector starting with '.'`
+			});
+		}
+	}
+
+	return issues;
+}
+
 export function validateLectioContentModule(module: ValidatableModule): LectioComponentValidationIssue[] {
 	const issues: LectioComponentValidationIssue[] = [];
 	const m = module.metadata;
@@ -91,59 +154,10 @@ export function validateLectioContentModule(module: ValidatableModule): LectioCo
 		}
 	}
 
-	const print = module.print;
-	const breakBehaviors = new Set(['atomic', 'itemized', 'table', 'prose']);
-	const preferredWidths = new Set(['full', 'half', 'third', 'content-fit', 'inline', 'aside']);
-	const mediaConstraints = new Set(['constrain-height', 'constrain-width', 'fit-cell']);
-
-	if (!breakBehaviors.has(print.breakBehavior)) {
-		issues.push({
-			path: 'print.breakBehavior',
-			message: `${prefix} print.breakBehavior must be atomic|itemized|table|prose`
-		});
-	}
-
-	if (!preferredWidths.has(print.preferredWidth)) {
-		issues.push({
-			path: 'print.preferredWidth',
-			message: `${prefix} print.preferredWidth must be full|half|third|content-fit|inline|aside`
-		});
-	}
-
-	if (!(typeof print.fallback === 'string' && print.fallback.trim().length > 0)) {
-		issues.push({ path: 'print.fallback', message: `${prefix} print.fallback missing` });
-	}
-
-	if (typeof print.hasMedia !== 'boolean') {
-		issues.push({ path: 'print.hasMedia', message: `${prefix} print.hasMedia must be boolean` });
-	}
-
-	if (typeof print.requiresColorReset !== 'boolean') {
-		issues.push({
-			path: 'print.requiresColorReset',
-			message: `${prefix} print.requiresColorReset must be boolean`
-		});
-	}
-
-	if (print.mediaConstraint !== undefined && !mediaConstraints.has(print.mediaConstraint)) {
-		issues.push({
-			path: 'print.mediaConstraint',
-			message: `${prefix} print.mediaConstraint must be constrain-height|constrain-width|fit-cell`
-		});
-	}
-
-	if (print.breakBehavior === 'itemized') {
-		if (!(typeof print.itemSelector === 'string' && print.itemSelector.trim().length > 0)) {
-			issues.push({
-				path: 'print.itemSelector',
-				message: `${prefix} print.itemSelector is required when breakBehavior is itemized`
-			});
-		} else if (!print.itemSelector.trim().startsWith('.')) {
-			issues.push({
-				path: 'print.itemSelector',
-				message: `${prefix} print.itemSelector should be a class selector starting with '.'`
-			});
-		}
+	// `print` is optional and deprecated: Print layout is owned by `@lectio/page`.
+	// A module without it is valid, so these checks apply only when it is present.
+	if (module.print) {
+		issues.push(...validatePrintSpec(module.print, prefix));
 	}
 
 	if (!(module.schema && typeof module.schema === 'object' && 'safeParse' in module.schema)) {

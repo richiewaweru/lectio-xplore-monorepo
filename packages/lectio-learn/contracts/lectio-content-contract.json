@@ -1,5 +1,5 @@
 {
-  "version": "0.6.0",
+  "version": "0.7.0",
   "source": "lectio",
   "print_surface": {
     "assumed_page": "A4",
@@ -220,6 +220,56 @@
           "simulation-block"
         ]
       }
+    },
+    "intent_map": {
+      "structure": [
+        "section-header",
+        "prerequisite-strip",
+        "what-next-bridge",
+        "summary-block",
+        "section-divider"
+      ],
+      "engage": [
+        "hook-hero",
+        "comparison-grid",
+        "simulation-block"
+      ],
+      "explain": [
+        "explanation-block",
+        "callout-block",
+        "insight-strip",
+        "key-fact"
+      ],
+      "reflect": [
+        "interview-anchor",
+        "reflection-prompt",
+        "student-textbox"
+      ],
+      "define": [
+        "definition-card",
+        "definition-family",
+        "glossary-rail"
+      ],
+      "show-how": [
+        "worked-example-card",
+        "process-steps"
+      ],
+      "practice": [
+        "practice-stack",
+        "quiz-check",
+        "short-answer",
+        "fill-in-blank",
+        "answer-key"
+      ],
+      "warn": [
+        "pitfall-alert"
+      ],
+      "visualize": [
+        "diagram-block",
+        "diagram-compare",
+        "diagram-series",
+        "timeline-block"
+      ]
     }
   },
   "component_cards": {
@@ -228,6 +278,7 @@
       "section_field": "header",
       "role": "Opens a section with title, subject, objective, and level indicators",
       "cognitive_job": "Orient the learner",
+      "teaching_intent": "structure",
       "subjects": [
         "universal"
       ],
@@ -243,6 +294,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -314,6 +366,7 @@
       "section_field": "hook",
       "role": "Creates felt need before explanation arrives",
       "cognitive_job": "Create felt need",
+      "teaching_intent": "engage",
       "subjects": [
         "universal"
       ],
@@ -328,6 +381,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -428,6 +482,7 @@
       "section_field": "explanation",
       "role": "Sustained prose that builds a mental model",
       "cognitive_job": "Build understanding",
+      "teaching_intent": "explain",
       "subjects": [
         "universal"
       ],
@@ -442,6 +497,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -500,6 +556,7 @@
       "section_field": "prerequisites",
       "role": "Lists assumed knowledge with optional refresher pop-ups",
       "cognitive_job": "Activate prior knowledge",
+      "teaching_intent": "structure",
       "subjects": [
         "universal"
       ],
@@ -513,6 +570,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -567,6 +625,7 @@
       "section_field": "what_next",
       "role": "Connects the section forward to what the concept enables",
       "cognitive_job": "Connect forward",
+      "teaching_intent": "structure",
       "subjects": [
         "universal"
       ],
@@ -582,6 +641,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -639,6 +699,7 @@
       "section_field": "interview",
       "role": "Makes knowledge speakable - rehearse explaining the concept",
       "cognitive_job": "Make knowledge speakable",
+      "teaching_intent": "reflect",
       "subjects": [
         "universal"
       ],
@@ -654,6 +715,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -705,6 +767,7 @@
       "section_field": "callout",
       "role": "Standalone highlighted callout ΓÇö tip, warning, info, or exam note",
       "cognitive_job": "Flag what matters",
+      "teaching_intent": "explain",
       "subjects": [
         "universal"
       ],
@@ -719,6 +782,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -770,6 +834,7 @@
       "section_field": "summary",
       "role": "Lists what this section covered ΓÇö key takeaways as bullets",
       "cognitive_job": "Consolidate and close",
+      "teaching_intent": "structure",
       "subjects": [
         "universal"
       ],
@@ -786,6 +851,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -843,6 +909,7 @@
       "section_field": "divider",
       "role": "Named visual break between parts within a section",
       "cognitive_job": "Signal a phase change",
+      "teaching_intent": "structure",
       "subjects": [
         "universal"
       ],
@@ -856,6 +923,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -896,6 +964,7 @@
       "section_field": "definition",
       "role": "Anchors a formal term with formal and plain versions",
       "cognitive_job": "Anchor formal knowledge",
+      "teaching_intent": "define",
       "subjects": [
         "universal"
       ],
@@ -911,6 +980,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -992,6 +1062,7 @@
       "section_field": "definition_family",
       "role": "Groups related terms that belong together conceptually",
       "cognitive_job": "Distinguish related concepts",
+      "teaching_intent": "define",
       "subjects": [
         "universal"
       ],
@@ -1006,6 +1077,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -1063,6 +1135,7 @@
       "section_field": "glossary",
       "role": "Vocabulary visible in peripheral field, updates by section",
       "cognitive_job": "Retrieve meaning without losing place",
+      "teaching_intent": "define",
       "subjects": [
         "universal"
       ],
@@ -1078,6 +1151,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -1143,6 +1217,7 @@
       "section_field": "insight_strip",
       "role": "Side-by-side comparison of 2-3 related values or concepts",
       "cognitive_job": "Compare values simultaneously",
+      "teaching_intent": "explain",
       "subjects": [
         "universal"
       ],
@@ -1158,6 +1233,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -1222,6 +1298,7 @@
       "section_field": "key_fact",
       "role": "Visually prominent stat, formula, or date that anchors the section",
       "cognitive_job": "Anchor a critical fact",
+      "teaching_intent": "explain",
       "subjects": [
         "universal"
       ],
@@ -1236,6 +1313,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -1300,6 +1378,7 @@
       "section_field": "comparison_grid",
       "role": "Holds multiple concepts in view so distinctions become structural",
       "cognitive_job": "Compare and classify in parallel",
+      "teaching_intent": "engage",
       "subjects": [
         "universal"
       ],
@@ -1317,6 +1396,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -1422,6 +1502,7 @@
       "section_field": "worked_example",
       "role": "Shows reasoning in action step by step, each step justified",
       "cognitive_job": "Watch reasoning in action",
+      "teaching_intent": "show-how",
       "subjects": [
         "universal"
       ],
@@ -1438,6 +1519,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -1532,6 +1614,7 @@
       "section_field": "process",
       "role": "A repeatable procedure where order is non-negotiable",
       "cognitive_job": "Follow a procedure",
+      "teaching_intent": "show-how",
       "subjects": [
         "universal"
       ],
@@ -1547,6 +1630,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -1634,6 +1718,7 @@
       "section_field": "practice",
       "role": "Problems at calibrated difficulty with progressive hints and optional solutions",
       "cognitive_job": "Apply understanding under calibrated difficulty",
+      "teaching_intent": "practice",
       "subjects": [
         "universal"
       ],
@@ -1650,6 +1735,13 @@
         "producesAnswerKey": true,
         "interactive": false,
         "isMedia": false
+      },
+      "web": {
+        "interaction": "input",
+        "responseEvaluation": "self-check",
+        "narration": "optional",
+        "learnerBand": "core",
+        "accessibilityNotes": "Provide keyboard-accessible hint reveal and solution toggle."
       },
       "writer_excluded": false,
       "status": "stable",
@@ -1752,6 +1844,7 @@
       "section_field": "quiz",
       "role": "Quick concept check with immediate feedback mid-section",
       "cognitive_job": "Verify understanding immediately",
+      "teaching_intent": "practice",
       "subjects": [
         "universal"
       ],
@@ -1767,6 +1860,13 @@
         "producesAnswerKey": true,
         "interactive": false,
         "isMedia": false
+      },
+      "web": {
+        "interaction": "choice",
+        "responseEvaluation": "auto-score",
+        "narration": "optional",
+        "learnerBand": "core",
+        "accessibilityNotes": "Expose option labels to assistive tech; announce correctness feedback."
       },
       "writer_excluded": false,
       "status": "stable",
@@ -1863,6 +1963,7 @@
       "section_field": "reflection",
       "role": "Pauses forward motion and turns attention inward",
       "cognitive_job": "Pause and consolidate",
+      "teaching_intent": "reflect",
       "subjects": [
         "universal"
       ],
@@ -1877,6 +1978,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -1947,6 +2049,7 @@
       "section_field": "student_textbox",
       "role": "Simple write-in box for student responses ΓÇö no framing beyond a prompt",
       "cognitive_job": "Record thinking",
+      "teaching_intent": "reflect",
       "subjects": [
         "universal"
       ],
@@ -1961,6 +2064,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -2011,6 +2115,7 @@
       "section_field": "short_answer",
       "role": "Open question with write-in space and optional mark scheme",
       "cognitive_job": "Recall and explain in own words",
+      "teaching_intent": "practice",
       "subjects": [
         "universal"
       ],
@@ -2026,6 +2131,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -2081,6 +2187,7 @@
       "section_field": "fill_in_blank",
       "role": "Cloze passage with student-completed blanks ΓÇö tests recall not recognition",
       "cognitive_job": "Retrieve and complete",
+      "teaching_intent": "practice",
       "subjects": [
         "universal"
       ],
@@ -2095,6 +2202,13 @@
         "producesAnswerKey": true,
         "interactive": false,
         "isMedia": false
+      },
+      "web": {
+        "interaction": "input",
+        "responseEvaluation": "auto-score",
+        "narration": "optional",
+        "learnerBand": "support",
+        "accessibilityNotes": "Blanks must be reachable by keyboard; word bank items labeled."
       },
       "writer_excluded": false,
       "status": "stable",
@@ -2170,6 +2284,7 @@
       "section_field": "pitfall",
       "role": "Names a specific misconception before the learner makes it",
       "cognitive_job": "Inoculate against error",
+      "teaching_intent": "warn",
       "subjects": [
         "universal"
       ],
@@ -2185,6 +2300,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
@@ -2264,6 +2380,7 @@
       "section_field": "diagram",
       "role": "Makes spatial or relational structure visible",
       "cognitive_job": "See the structure",
+      "teaching_intent": "visualize",
       "subjects": [
         "universal"
       ],
@@ -2278,6 +2395,7 @@
         "interactive": false,
         "isMedia": true
       },
+      "web": null,
       "writer_excluded": true,
       "status": "stable",
       "schema_summary": {
@@ -2384,6 +2502,7 @@
       "section_field": "diagram_compare",
       "role": "Before and after comparison with a drag slider",
       "cognitive_job": "See transformation",
+      "teaching_intent": "visualize",
       "subjects": [
         "history",
         "science",
@@ -2400,6 +2519,7 @@
         "interactive": false,
         "isMedia": true
       },
+      "web": null,
       "writer_excluded": true,
       "status": "stable",
       "schema_summary": {
@@ -2491,6 +2611,7 @@
       "section_field": "diagram_series",
       "role": "A progression of diagrams that tells a sequence",
       "cognitive_job": "Follow a visual progression",
+      "teaching_intent": "visualize",
       "subjects": [
         "universal"
       ],
@@ -2504,6 +2625,7 @@
         "interactive": false,
         "isMedia": true
       },
+      "web": null,
       "writer_excluded": true,
       "status": "stable",
       "schema_summary": {
@@ -2576,6 +2698,7 @@
       "section_field": "timeline",
       "role": "Turns chronology into a readable instructional spine",
       "cognitive_job": "Follow cause and sequence over time",
+      "teaching_intent": "visualize",
       "subjects": [
         "history",
         "science",
@@ -2594,6 +2717,7 @@
         "interactive": false,
         "isMedia": true
       },
+      "web": null,
       "writer_excluded": true,
       "status": "stable",
       "schema_summary": {
@@ -2690,6 +2814,7 @@
       "section_field": "simulation",
       "role": "Manipulate a variable and discover the concept through observation",
       "cognitive_job": "Manipulate and discover",
+      "teaching_intent": "engage",
       "subjects": [
         "mathematics",
         "physics",
@@ -2705,6 +2830,13 @@
         "producesAnswerKey": false,
         "interactive": true,
         "isMedia": true
+      },
+      "web": {
+        "interaction": "manipulation",
+        "responseEvaluation": "none",
+        "narration": "recommended",
+        "learnerBand": "extend",
+        "accessibilityNotes": "Provide non-interactive fallback description when simulation controls are unavailable."
       },
       "writer_excluded": true,
       "status": "beta",
@@ -2804,6 +2936,7 @@
       "section_field": "answer_key",
       "role": "Provides correct answers with misconception evidence for each diagnostic distractor",
       "cognitive_job": "Support diagnostic marking",
+      "teaching_intent": "practice",
       "subjects": [
         "universal"
       ],
@@ -2818,6 +2951,7 @@
         "interactive": false,
         "isMedia": false
       },
+      "web": null,
       "writer_excluded": false,
       "status": "stable",
       "schema_summary": {
