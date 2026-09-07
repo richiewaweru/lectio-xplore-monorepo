@@ -209,7 +209,7 @@ async def api_submit_attempt(
             )
         )
         if recipient is not None and recipient.status == "assigned":
-            from learn.runtime_service import _utcnow
+            from learn.runtime.runtime_service import _utcnow
 
             recipient.status = "started"
             recipient.started_at = _utcnow()
@@ -324,7 +324,7 @@ async def api_complete_instance(
             )
         )
         if recipient is not None:
-            from learn.runtime_service import _utcnow
+            from learn.runtime.runtime_service import _utcnow
 
             recipient.status = "completed"
             recipient.completed_at = _utcnow()

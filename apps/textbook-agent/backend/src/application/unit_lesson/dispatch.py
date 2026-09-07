@@ -19,7 +19,11 @@ from resource_specs.loader import get_spec
 from resource_specs.renderer import render_spec_for_prompt
 from v3_blueprint.planning.models import StructuralPlan, VariantSpec
 from v3_blueprint.planning.objective_ownership import hash_path_objective
-from v3_blueprint.planning.persistence import persist_chunked_state, persist_structural_plan
+from v3_blueprint.planning.persistence import (
+    load_chunked_state,
+    persist_chunked_state,
+    persist_structural_plan,
+)
 
 
 def _path_resource_spec() -> dict[str, Any]:
@@ -107,12 +111,12 @@ async def initialise_path_generation(
         **build_control_patch(select_default_pipeline()),
     }
     if native_whole_lesson:
-        # Print Unit path: native approve gate reads this from chunked state.
+        # Print Unit path: native approve gate reads these from chunked state.
+        # Do not write state["context"] here — persist_structural_plan already
+        # stored form/signals/resource_spec under context; a shallow
+        # persist_chunked_state update would clobber them and break Learn launch.
         state["native_whole_lesson"] = True
         state["page_document_v2"] = True
-        context = state.setdefault("context", {})
-        if isinstance(context, dict):
-            context["native_whole_lesson"] = True
     if path_plan_raw:
         state["path_plan_raw"] = path_plan_raw
     if variants:
@@ -131,6 +135,17 @@ async def initialise_path_generation(
         state,
         session,
     )
+    if native_whole_lesson:
+        # Merge the Print flag into the preserved Learn/Print context blob.
+        current = await load_chunked_state(generation.id, session)
+        ctx = dict(current.get("context") or {})
+        if ctx.get("native_whole_lesson") is not True:
+            ctx["native_whole_lesson"] = True
+            await persist_chunked_state(
+                generation.id,
+                {"context": ctx},
+                session,
+            )
     generation.status = "awaiting_review"
     card = await session.scalar(
         select(ConceptCardModel).where(
