@@ -9,12 +9,12 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app import app
-from core.auth.middleware import get_current_user
+from infra.auth.middleware import get_current_user
 from core.database.models import LearnReleaseModel, UserModel
-from core.database.session import get_async_session
+from infra.database.session import get_async_session
 from core.entities.user import User
-from learning.runtime_models import LearnerAttemptModel, LearningInstanceModel
-from learning.runtime_service import classify_concept, rebuild_progress
+from learn.runtime_models import LearnerAttemptModel, LearningInstanceModel
+from learn.runtime_service import classify_concept, rebuild_progress
 
 
 def _now() -> datetime:

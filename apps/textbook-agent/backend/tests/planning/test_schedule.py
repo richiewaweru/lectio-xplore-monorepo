@@ -11,7 +11,7 @@ from core.database.models import (
     UnitGroupModel,
     UserModel,
 )
-from planning.models import (
+from curriculum.path_models import (
     GroupVoice,
     ScheduleSuggestRequest,
     ScheduleWriteRequest,
@@ -19,14 +19,14 @@ from planning.models import (
     UnitGroupInput,
     UnitGroupsWriteRequest,
 )
-from planning.schedule import (
+from curriculum.schedule import (
     groups_payload,
     selected_unit_groups,
     suggest_schedule,
     write_groups,
     write_schedule,
 )
-from planning.service import (
+from curriculum.service import (
     StalePathMutationError,
     approve_path,
     create_unit,

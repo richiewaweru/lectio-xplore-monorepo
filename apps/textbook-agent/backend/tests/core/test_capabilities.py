@@ -3,9 +3,9 @@ from __future__ import annotations
 from httpx import ASGITransport, AsyncClient
 
 from app import app
-from core.auth.middleware import get_current_user
+from infra.auth.middleware import get_current_user
 from core.capabilities import xplore_v2_enabled_for
-from core.config import settings
+from infra.config import settings
 from core.entities.user import User
 
 
@@ -38,7 +38,7 @@ def test_capability_supports_global_and_principal_scoped_rollout(monkeypatch) ->
     assert xplore_v2_enabled_for(TEST_USER) is False
 
 
-async def test_rollback_hides_v2_without_disabling_legacy(monkeypatch) -> None:
+async def test_rollback_hides_v2_and_retired_legacy_surfaces(monkeypatch) -> None:
     monkeypatch.setattr(settings, "xplore_v2_enabled", False)
     monkeypatch.setattr(settings, "xplore_v2_beta_users", "")
     app.dependency_overrides[get_current_user] = _current_user
@@ -46,12 +46,19 @@ async def test_rollback_hides_v2_without_disabling_legacy(monkeypatch) -> None:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             capabilities = await client.get("/api/v1/capabilities")
             units = await client.get("/api/v1/units")
-            legacy = await client.get("/api/v1/packs")
+            packs = await client.get("/api/v1/packs")
+            legacy_units = await client.get("/api/v1/legacy-units")
+            skeletons = await client.post("/api/v1/skeletons:preview", json={})
+            blocks = await client.post("/api/v1/blocks/generate", json={})
     finally:
         app.dependency_overrides.clear()
 
     assert capabilities.status_code == 200
     assert capabilities.json() == {"xplore_v2": False}
     assert units.status_code == 404
-    assert legacy.status_code == 200
+    # D3: non-Unit surfaces unmounted
+    assert packs.status_code == 404
+    assert legacy_units.status_code == 404
+    assert skeletons.status_code == 404
+    assert blocks.status_code == 404
 

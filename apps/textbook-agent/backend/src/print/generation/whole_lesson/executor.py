@@ -19,7 +19,7 @@ from print.rendering.page_objects.document_assembly import (
     canonical_document_sha256,
     reload_document,
 )
-from planning.approved_items import ApprovedItemRecord, approved_items_as_writer_records
+from curriculum.approved_items import ApprovedItemRecord, approved_items_as_writer_records
 from print.generation.whole_lesson.events import make_event
 from print.generation.whole_lesson.failure_injection import get_failure_injection
 from print.generation.whole_lesson.failure_policy import (

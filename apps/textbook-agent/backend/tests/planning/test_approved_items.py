@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from planning.approved_items import ApprovedItemRecord, approved_items_as_writer_records
+from curriculum.approved_items import ApprovedItemRecord, approved_items_as_writer_records
 
 
 def test_approved_item_to_writer_record() -> None:

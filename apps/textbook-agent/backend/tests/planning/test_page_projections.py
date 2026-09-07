@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from planning.page_projections import (
+from print.generation.page_projections import (
     qc_committed_document,
     project_blocks_by_intent,
     project_student_blocks,

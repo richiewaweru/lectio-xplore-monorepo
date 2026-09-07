@@ -1,4 +1,4 @@
-﻿"""Build a `PipelineDocument` from a saved V3 booklet pack for PDF assembly (TOC, answer key)."""
+"""Build a `PipelineDocument` from a saved V3 booklet pack for PDF assembly (TOC, answer key)."""
 
 from __future__ import annotations
 

@@ -8,9 +8,9 @@ import httpx
 from pydantic import BaseModel, ValidationError
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 
-from planning.whole_lesson.failure_policy import classify_failure, structured_error_from_exc
-from planning.whole_lesson.states import LeaseLostError, ResumeDecision, decide_resume
-from planning.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
+from print.generation.whole_lesson.failure_policy import classify_failure, structured_error_from_exc
+from print.generation.whole_lesson.states import LeaseLostError, ResumeDecision, decide_resume
+from print.generation.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
 
 
 def test_transport_timeout_rate_limit_retryable() -> None:
@@ -45,7 +45,7 @@ def test_pydantic_ai_provider_failures_are_typed() -> None:
 
 
 def test_content_validation_error_not_executor_repairable() -> None:
-    from generation.page_objects import ContentValidationError
+    from print.rendering.page_objects import ContentValidationError
 
     exc = ContentValidationError(
         "questions",

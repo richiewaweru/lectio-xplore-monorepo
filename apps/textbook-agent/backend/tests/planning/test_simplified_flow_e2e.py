@@ -10,8 +10,8 @@ from core.auth.middleware import get_current_user
 from core.database.models import UserModel
 from core.dependencies import get_async_session
 from core.entities.user import User
-from planning.models import ConstructorOutput, PreparedLessonResponse
-from planning.validation import PathPlanningError
+from curriculum.path_models import ConstructorOutput, PreparedLessonResponse
+from curriculum.validation import PathPlanningError
 from tests.planning.path_helpers import sample_canonical_plan
 
 
@@ -69,9 +69,9 @@ async def test_create_plan_approve_prepare_smoke(db_session_factory, monkeypatch
             None,
         )
 
-    monkeypatch.setattr("planning.routes.run_constructor", fake_constructor)
-    monkeypatch.setattr("planning.routes.run_path_planner", fake_planner)
-    monkeypatch.setattr("planning.routes.prepare_path_lesson", fake_prepare)
+    monkeypatch.setattr("curriculum.routes.run_constructor", fake_constructor)
+    monkeypatch.setattr("curriculum.routes.run_path_planner", fake_planner)
+    monkeypatch.setattr("curriculum.routes.prepare_path_lesson", fake_prepare)
 
     async def override_user() -> User:
         return TEST_USER
@@ -190,7 +190,7 @@ async def test_recoverable_planning_failure_retries_same_unit(db_session_factory
             raise PathPlanningError(["forward dependency on L9"])
         return good
 
-    monkeypatch.setattr("planning.routes.run_path_planner", flaky_planner)
+    monkeypatch.setattr("curriculum.routes.run_path_planner", flaky_planner)
 
     async def override_user() -> User:
         return TEST_USER

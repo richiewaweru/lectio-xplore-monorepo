@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from generation.pdf_export.components.answers_v3 import generate_v3_answer_key_pdf
+from print.rendering.pdf.components.answers_v3 import generate_v3_answer_key_pdf
 
 
 def test_generate_v3_answer_key_pdf_none_when_missing(tmp_path: Path) -> None:

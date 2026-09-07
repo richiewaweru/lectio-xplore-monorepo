@@ -6,7 +6,7 @@ import asyncio
 import logging
 from typing import Any
 
-from generation.pipeline_dispatch import resolve_generation_pipeline
+from learn.generation.pipeline_dispatch import resolve_generation_pipeline
 from learn.generation.component_lectio.launcher import launch_component_lectio
 from learn.generation.component_lectio.service import (
     persist_component_lectio_failure,

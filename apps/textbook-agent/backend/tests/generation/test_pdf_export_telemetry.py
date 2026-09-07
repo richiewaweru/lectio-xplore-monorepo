@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from generation.pdf_export.telemetry import PDFExportTelemetry
+from print.rendering.pdf.telemetry import PDFExportTelemetry
 
 
 def test_pdf_export_telemetry_tracks_stage_and_export_stats() -> None:

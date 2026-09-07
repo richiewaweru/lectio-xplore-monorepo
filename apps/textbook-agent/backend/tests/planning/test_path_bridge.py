@@ -15,9 +15,8 @@ from core.database.models import (
     PathLessonModel,
     UserModel,
 )
-from generation.path_preparation import enforce_path_owned_card_objective
-from planning.bridge import prepare_path_lesson
-from planning.models import (
+from application.unit_lesson import enforce_path_owned_card_objective, prepare_path_lesson
+from curriculum.path_models import (
     ComponentSelection,
     GroupVoice,
     LessonActualWriteRequest,
@@ -30,10 +29,10 @@ from planning.models import (
     UnitGroupInput,
     UnitGroupsWriteRequest,
 )
-from planning.outcomes import record_lesson_actual
-from planning.schedule import write_groups
-from planning.service import approve_path, create_unit, persist_path_plan
-from planning.shapes import decide_shape_deviation, request_shape_deviation
+from curriculum.outcomes import record_lesson_actual
+from curriculum.schedule import write_groups
+from curriculum.service import approve_path, create_unit, persist_path_plan
+from curriculum.shapes import decide_shape_deviation, request_shape_deviation
 from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 from v3_blueprint.planning.objective_ownership import hash_path_objective
 from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state
@@ -96,7 +95,7 @@ def test_normalize_page_concept_card_payload_strips_planner_extras():
     them so prepare does not 422."""
     from types import SimpleNamespace
 
-    from planning.bridge import _normalize_page_concept_card_payload
+    from application.unit_lesson.prepare import _normalize_page_concept_card_payload
     from v3_blueprint.planning.models import ConceptCard
 
     lesson = SimpleNamespace(
@@ -154,7 +153,7 @@ def test_normalize_page_concept_card_payload_strips_planner_extras():
 def test_normalize_page_concept_card_payload_drops_empty_misconceptions():
     from types import SimpleNamespace
 
-    from planning.bridge import _normalize_page_concept_card_payload
+    from application.unit_lesson.prepare import _normalize_page_concept_card_payload
     from v3_blueprint.planning.models import ConceptCard
 
     lesson = SimpleNamespace(
@@ -178,7 +177,7 @@ def test_normalize_page_concept_card_payload_drops_empty_misconceptions():
 def test_bridge_preserves_authoritative_visual_flag_when_planner_clears_it() -> None:
     from types import SimpleNamespace
 
-    from planning.bridge import _build_structural_plan
+    from application.unit_lesson.prepare import _build_structural_plan
 
     slots = ["orient", "model", "check"]
     generated = PathStructuralPlan.model_validate(
@@ -228,7 +227,7 @@ def test_bridge_preserves_authoritative_visual_flag_when_planner_clears_it() -> 
 def test_native_page_plan_bridge_stamps_fixed_identities() -> None:
     from types import SimpleNamespace
 
-    from planning.bridge import _build_structural_plan
+    from application.unit_lesson.prepare import _build_structural_plan
 
     slots = ["orient", "explain", "check"]
     generated = PathStructuralPagePlan.model_validate(
@@ -281,7 +280,7 @@ def test_normalize_page_concept_card_payload_forces_approved_objective(raw_overr
     """Path objective ownership is unconditional; planner text cannot replace it."""
     from types import SimpleNamespace
 
-    from planning.bridge import _normalize_page_concept_card_payload
+    from application.unit_lesson.prepare import _normalize_page_concept_card_payload
     from v3_blueprint.planning.models import ConceptCard
 
     lesson = SimpleNamespace(

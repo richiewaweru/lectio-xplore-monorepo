@@ -1,5 +1,4 @@
 import type { GradeBand } from '@lectio/learn';
-import { apiBaseUrl } from './public-env';
 
 export type BlockGenerateModelTier = 'FAST' | 'STANDARD';
 
@@ -26,38 +25,10 @@ export interface BlockGenerateResponse {
 	content: Record<string, unknown>;
 }
 
+/** D3: /api/v1/blocks/generate retired. */
 export async function generateBlock(
-	request: BlockGenerateRequest,
-	token: string
+	_request: BlockGenerateRequest,
+	_token: string
 ): Promise<BlockGenerateResponse> {
-	const base = apiBaseUrl();
-	if (!base) {
-		throw new Error('API URL is not configured (PUBLIC_API_URL).');
-	}
-
-	const response = await fetch(`${base}/api/v1/blocks/generate`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify(request)
-	});
-
-	if (!response.ok) {
-		let detail: string | undefined;
-		try {
-			const body = (await response.json()) as { detail?: unknown };
-			if (typeof body?.detail === 'string') {
-				detail = body.detail;
-			} else if (Array.isArray(body?.detail)) {
-				detail = JSON.stringify(body.detail);
-			}
-		} catch {
-			/* ignore */
-		}
-		throw new Error(detail || `Generation failed (${response.status})`);
-	}
-
-	return response.json() as Promise<BlockGenerateResponse>;
+	throw new Error('Block AI assist was retired with the non-Unit blocks/generate API (D3).');
 }

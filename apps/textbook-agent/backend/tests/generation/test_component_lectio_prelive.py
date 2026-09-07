@@ -8,16 +8,16 @@ import pytest
 
 from contracts.lesson_document import LessonDocumentValidationError, validate_lesson_document
 from core.database.models import GenerationModel, UserModel
-from generation.component_lectio.errors import WorkOrderIdentityError
-from generation.component_lectio.fixtures import valid_content_for
-from generation.component_lectio.lane_dispatch import resolve_exact_order
-from generation.component_lectio.service import (
+from learn.generation.component_lectio.errors import WorkOrderIdentityError
+from learn.generation.component_lectio.fixtures import valid_content_for
+from learn.generation.component_lectio.lane_dispatch import resolve_exact_order
+from learn.generation.component_lectio.service import (
     DEFAULT_PRODUCTION_SELECTOR,
     READY_STEP,
     run_component_lectio_execution,
 )
-from generation.pipeline_dispatch import build_control_patch
-from generation.contracts import GenerationInputForm as V3InputForm
+from learn.generation.pipeline_dispatch import build_control_patch
+from learn.generation.contracts import GenerationInputForm as V3InputForm
 from resource_specs.component_candidates import resolve_role_candidates
 from tests.v3_blueprint.planning.test_intent_plan import SUBJECT_FIXTURES, _intent_plan_for_subject
 from v3_blueprint.planning.canonical_plan import (
@@ -729,7 +729,7 @@ async def test_phase7_architecture_integration() -> None:
     )
     kinds = {order.lane for order in lanes}
     assert {"content", "items", "visual"} <= kinds
-    from generation.component_lectio.service import reconstruct_checkpoint_store
+    from learn.generation.component_lectio.service import reconstruct_checkpoint_store
 
     canonical, _ = build_canonical_execution_plan(plan, selector=_forced_selector(), generation_id=gen_id)
     store = await reconstruct_checkpoint_store(
@@ -808,7 +808,7 @@ async def test_phase8_failure_injection_then_unrecoverable() -> None:
             title="unrecoverable",
             **_exec_kwargs(section_executor=terminal_content),
         )
-    from generation.pipeline_dispatch import resolve_generation_pipeline
+    from learn.generation.pipeline_dispatch import resolve_generation_pipeline
     from v3_blueprint.planning.persistence import load_chunked_state
 
     state = await load_chunked_state(gen_fail)

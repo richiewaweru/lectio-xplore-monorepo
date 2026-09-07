@@ -297,7 +297,7 @@ async def _run_items_under_lease(
     generation_id: str,
     lease: ExecutionLease,
 ) -> dict[str, Any]:
-    from generation.v3_studio.router import (
+    from print.http.v3_studio.router import (
         _decode_chunked_context,
         _generate_shared_pack_items,
     )

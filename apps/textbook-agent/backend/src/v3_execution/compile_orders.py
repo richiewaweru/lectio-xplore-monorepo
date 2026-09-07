@@ -26,7 +26,7 @@ from v3_execution.models import (
     WriterSection,
     WriterSectionComponent,
 )
-from generation.signal_map import derive_support_adaptations
+from print.http.v3_studio.signal_map import derive_support_adaptations
 
 logger = logging.getLogger(__name__)
 

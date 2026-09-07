@@ -8,7 +8,7 @@ import uuid
 import pytest
 
 from core.database.models import GenerationModel, UserModel
-from planning.whole_lesson.repository import (
+from print.generation.whole_lesson.repository import (
     PageDocumentRepository,
     empty_page_document_state,
 )

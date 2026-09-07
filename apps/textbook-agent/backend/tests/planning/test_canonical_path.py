@@ -9,8 +9,8 @@ from pathlib import Path
 import jsonschema
 import pytest
 
-from planning.models import PathPlanDraft, PathPlannerRequest
-from planning.validation import (
+from curriculum.path_models import PathPlanDraft, PathPlannerRequest
+from curriculum.validation import (
     PathValidationError,
     concept_slug_for,
     normalize_constructor_fields,

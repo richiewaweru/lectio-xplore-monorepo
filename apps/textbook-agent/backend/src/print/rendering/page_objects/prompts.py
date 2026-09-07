@@ -51,7 +51,7 @@ def _object_specific_instructions(object_id: str) -> str:
         return ""
     # Import lazily to keep page-object prompt construction independent at
     # module import time while reusing the canonical prompt resource.
-    from planning.prompts import prompt_text
+    from print.generation.prompts import prompt_text
 
     return prompt_text(resource_name).strip()
 

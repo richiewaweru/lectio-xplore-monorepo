@@ -1,0 +1,833 @@
+{
+  "version": 1,
+  "baseline_sha": "2aa7bdee9f3a36483c99920b3a2ea243153ccb3f",
+  "branch": "refactor/domain-ownership",
+  "dirty_state": "untracked .tmp scratch, backend data/, frontend/backend *.log only; no product-code edits for D0",
+  "prior_programs": {
+    "refactor": "docs/refactor-program (R0–R8 PASS)",
+    "cleanup": "docs/cleanup-program (C0–C5 PASS)",
+    "note": "C0 mount table is stale: app.py now imports curriculum.routes and infra.telemetry directly"
+  },
+  "supported_creation_path": "Unit → Concepts → PathLesson → approved meaning → PRINT (print/) or LEARN (learn/)",
+  "canonical_backend_shape": [
+    "apps/textbook-agent/backend/src/app.py",
+    "apps/textbook-agent/backend/src/application/",
+    "apps/textbook-agent/backend/src/curriculum/",
+    "apps/textbook-agent/backend/src/print/",
+    "apps/textbook-agent/backend/src/learn/",
+    "apps/textbook-agent/backend/src/infra/"
+  ],
+  "retirement_order_summary": [
+    "D1: move planning.bridge/path-prep ownership into application/unit_lesson (real impl, not re-export)",
+    "D2: evacuate MIGRATE_AND_DELETE live consumers (generation, builder.routes, core residuals, resource_specs, media, contracts hub, v3_* seams, FE studio/packs/legacy)",
+    "D3: unmount unsupported routes/jobs/telemetry/config (skeletons, blocks/generate, legacy-units, packs, studio UX beyond Unit hops)",
+    "D4: migration-backed DB retirement for legacy-only tables/data",
+    "D5: delete proven-retired trees + legacy-only tests/docs; add zero-legacy guards"
+  ],
+  "subsystems": [
+    {
+      "name": "app_composition_root",
+      "classification": "KEEP_CANONICAL",
+      "paths": ["apps/textbook-agent/backend/src/app.py"],
+      "inbound_imports": [],
+      "outbound_imports": [
+        "infra.*",
+        "core.routes.*",
+        "builder.routes",
+        "application.builder_print.routes",
+        "learn.*",
+        "generation.routes",
+        "generation.skeleton_routes",
+        "generation.units_routes",
+        "curriculum.routes",
+        "curriculum.compatibility",
+        "print.http.v3_studio.generation_writer",
+        "print.generation.whole_lesson.worker",
+        "resource_specs.loader",
+        "v3_blueprint.skeletons",
+        "media.diagnostics"
+      ],
+      "mounted_routes": [
+        "/health",
+        "/api/v1/auth",
+        "/api/v1/capabilities",
+        "/api/v1/builder",
+        "/api/v1/learn",
+        "/api/v1/packs",
+        "/api/v1/v3/*",
+        "/api/v1/blocks/generate",
+        "/api/v1/skeletons",
+        "/api/v1/units",
+        "/api/v1/legacy-units",
+        "/api/v1/telemetry",
+        "/images"
+      ],
+      "frontend_consumers": ["apps/textbook-agent/frontend"],
+      "workers_startup": [
+        "upgrade_database",
+        "V3GenerationWriter.fail_stale_running",
+        "initialize_resource_registry",
+        "initialize_skeleton_catalog",
+        "telemetry_monitor.start",
+        "cleanup_stale_pdf_exports",
+        "print.generation.whole_lesson.worker (if xplore_native_worker_enabled)"
+      ],
+      "database_dependencies": ["infra.database.migrations via settings.run_migrations_on_startup"],
+      "telemetry_dependencies": ["infra.telemetry.service.telemetry_monitor"],
+      "config_dependencies": ["infra.config.settings"],
+      "tests": [],
+      "docs": ["docs/architecture/CURRENT_SYSTEM.md"],
+      "target_owners": ["app.py"],
+      "retirement_order": 0,
+      "blockers": []
+    },
+    {
+      "name": "application",
+      "classification": "KEEP_CANONICAL",
+      "paths": [
+        "apps/textbook-agent/backend/src/application/unit_lesson/",
+        "apps/textbook-agent/backend/src/application/builder_print/"
+      ],
+      "inbound_imports": [
+        "curriculum.routes → application.unit_lesson",
+        "app.py → application.builder_print.routes"
+      ],
+      "outbound_imports": [
+        "application.unit_lesson currently re-exports planning.bridge",
+        "application.builder_print → builder.routes, core.*, contracts.document, print PDF stack"
+      ],
+      "mounted_routes": ["/api/v1/builder (builder_print PDF/preflight edges)"],
+      "frontend_consumers": [
+        "routes/builder/print/[id]",
+        "lib/learn/authoring/builder"
+      ],
+      "workers_startup": [],
+      "database_dependencies": [],
+      "telemetry_dependencies": [],
+      "config_dependencies": [],
+      "tests": [],
+      "docs": ["docs/cleanup-program/reports/C1", "docs/cleanup-program/reports/C2"],
+      "target_owners": ["application/"],
+      "retirement_order": 0,
+      "blockers": [
+        "unit_lesson is re-export only; D1 must move real prepare/dispatch ownership out of planning.bridge"
+      ]
+    },
+    {
+      "name": "curriculum",
+      "classification": "KEEP_CANONICAL",
+      "paths": ["apps/textbook-agent/backend/src/curriculum/"],
+      "inbound_imports": ["app.py mounts curriculum.routes as planning_router"],
+      "outbound_imports": [
+        "application.unit_lesson",
+        "planning.agents",
+        "planning.projections",
+        "planning.validation",
+        "core.database.models",
+        "v3_blueprint.planning.persistence",
+        "v3_blueprint.skeletons"
+      ],
+      "mounted_routes": ["/api/v1/units"],
+      "frontend_consumers": [
+        "routes/units/+page.svelte",
+        "routes/units/[id]/+page.svelte",
+        "lib/api/units.ts"
+      ],
+      "workers_startup": [],
+      "database_dependencies": [
+        "units",
+        "unit_scope_contracts",
+        "path_versions",
+        "path_lessons",
+        "path_lesson_prerequisites",
+        "path_lesson_deviations",
+        "teaching_periods",
+        "teaching_period_lessons",
+        "unit_groups",
+        "resource_compositions",
+        "lesson_actuals",
+        "marks_entries",
+        "concepts",
+        "concept_cards"
+      ],
+      "telemetry_dependencies": [],
+      "config_dependencies": ["xplore_v2_enabled", "xplore_v2_beta_users"],
+      "tests": [
+        "tests/planning/test_path_routes.py",
+        "tests/planning/test_path_bridge.py"
+      ],
+      "docs": ["docs/architecture/CURRENT_SYSTEM.md"],
+      "target_owners": ["curriculum/"],
+      "retirement_order": 0,
+      "blockers": [
+        "still imports planning.* real modules for agents/validation/projections until D1/D2"
+      ]
+    },
+    {
+      "name": "print",
+      "classification": "KEEP_CANONICAL",
+      "paths": ["apps/textbook-agent/backend/src/print/"],
+      "inbound_imports": [
+        "app.py lifespan worker + PDF cleanup",
+        "generation.routes mounts print.http.v3_studio",
+        "Unit Print approve/PDF hops"
+      ],
+      "outbound_imports": [
+        "planning.* helpers",
+        "v3_blueprint",
+        "v3_execution",
+        "v3_review",
+        "resource_specs",
+        "core.*",
+        "telemetry (shim) from v3_studio router",
+        "generation.pdf_export shim from v3_studio router"
+      ],
+      "mounted_routes": [
+        "/api/v1/v3/* (via generation.routes → print.http.v3_studio)",
+        "Unit Print approve/PDF subset is supported hop"
+      ],
+      "frontend_consumers": [
+        "lib/api/v3.ts (approve/PDF + studio)",
+        "routes/studio/*",
+        "routes/units/[id] → studio generation review"
+      ],
+      "workers_startup": ["print.generation.whole_lesson.worker"],
+      "database_dependencies": ["generations", "generation_steps", "v3_trace_*"],
+      "telemetry_dependencies": ["infra.telemetry / telemetry shim via v3_studio"],
+      "config_dependencies": [
+        "xplore_native_worker_enabled",
+        "xplore_page_documents_enabled",
+        "PAGE_MODEL_*",
+        "V3_* timeouts/tokens",
+        "PDF_EXPORT_*"
+      ],
+      "tests": [
+        "tests/generation/test_page_object_writers.py",
+        "tests/planning/test_whole_lesson_smoke.py",
+        "tests/generation/test_v3_*"
+      ],
+      "docs": ["docs/cleanup-program/REACHABILITY_MANIFEST.json"],
+      "target_owners": ["print/"],
+      "retirement_order": 0,
+      "blockers": [
+        "v3_studio HTTP still hosts both Unit Print hops and unsupported studio UX; split in D2/D3"
+      ]
+    },
+    {
+      "name": "learn",
+      "classification": "KEEP_CANONICAL",
+      "paths": ["apps/textbook-agent/backend/src/learn/"],
+      "inbound_imports": [
+        "app.py mounts learn.publishing/runtime/analytics + learn.routes",
+        "generation.units_dispatch shim → learn.generation.units_dispatch",
+        "builder.service shim → learn.authoring.builder.service"
+      ],
+      "outbound_imports": [
+        "v3_blueprint",
+        "v3_execution",
+        "generation.contracts",
+        "contracts.lectio",
+        "core.database.models",
+        "resource_specs"
+      ],
+      "mounted_routes": [
+        "/api/v1/learn/*",
+        "/api/v1/builder (via builder.routes + learn.authoring)",
+        "/api/v1/packs (learn.routes — non-Unit listing)"
+      ],
+      "frontend_consumers": [
+        "routes/builder/*",
+        "routes/learn/*",
+        "lib/learn/**"
+      ],
+      "workers_startup": [],
+      "database_dependencies": [
+        "editable_lessons",
+        "learn_releases",
+        "generations (component_lectio)",
+        "learning_packs (packs API)"
+      ],
+      "telemetry_dependencies": [],
+      "config_dependencies": ["generation_pipeline_default=component_lectio"],
+      "tests": [
+        "tests/routes/test_builder_lessons.py",
+        "tests/routes/test_learn_releases.py",
+        "tests/routes/test_learn_runtime.py",
+        "tests/generation/test_component_lectio_*"
+      ],
+      "docs": ["docs/architecture/CURRENT_SYSTEM.md"],
+      "target_owners": ["learn/"],
+      "retirement_order": 0,
+      "blockers": [
+        "top-level learn/*.py shims still present",
+        "learn.routes packs listing is non-Unit (see learn_packs_api)"
+      ]
+    },
+    {
+      "name": "infra",
+      "classification": "KEEP_CANONICAL",
+      "paths": ["apps/textbook-agent/backend/src/infra/"],
+      "inbound_imports": ["app.py", "many modules via intended infra.* and residual core.* shims"],
+      "outbound_imports": ["core.database.models (Base/ORM still owned under core)", "core.entities/ports/repositories in places"],
+      "mounted_routes": ["/health", "/api/v1/telemetry"],
+      "frontend_consumers": [],
+      "workers_startup": ["telemetry_monitor", "upgrade_database"],
+      "database_dependencies": ["all Alembic heads under infra/database/migrations"],
+      "telemetry_dependencies": ["infra.telemetry.*"],
+      "config_dependencies": ["infra.config.settings"],
+      "tests": ["tools/xplore-program/tests/*", "tests/config/test_settings_bootstrap.py"],
+      "docs": ["docs/refactor-program/reports/R3"],
+      "target_owners": ["infra/"],
+      "retirement_order": 0,
+      "blockers": [
+        "ORM Base remains in core.database.models; Alembic env imports it"
+      ]
+    },
+    {
+      "name": "planning",
+      "classification": "MIGRATE_AND_DELETE",
+      "paths": ["apps/textbook-agent/backend/src/planning/"],
+      "inbound_imports": [
+        "application/unit_lesson/__init__.py → planning.bridge",
+        "curriculum/routes.py → planning.agents/projections/validation",
+        "curriculum/service.py → planning.validation",
+        "print/generation/whole_lesson/* → planning.prompts/approved_items/llm_contract_errors/planner_diagnostics",
+        "generation/units_routes.py",
+        "print/http/v3_studio/router.py",
+        "v3_blueprint/planning/*",
+        "v3_execution/executors/item_*"
+      ],
+      "outbound_imports": [
+        "generation.path_preparation",
+        "core.database.models",
+        "v3_blueprint.*",
+        "curriculum shims via planning.models/routes/service (shim files)"
+      ],
+      "mounted_routes": [],
+      "frontend_consumers": [],
+      "workers_startup": [],
+      "database_dependencies": ["path_*", "units", "generations via prepare"],
+      "telemetry_dependencies": [],
+      "config_dependencies": [],
+      "tests": [
+        "tests/planning/test_path_bridge.py",
+        "tests/planning/test_path_routes.py",
+        "tests/planning/test_agent_retry_boundary.py",
+        "tests/planning/test_constructor.py"
+      ],
+      "docs": ["docs/cleanup-program/CLEANUP_STATE.md"],
+      "target_owners": [
+        "application/unit_lesson (bridge/prepare/dispatch/status/contracts)",
+        "curriculum (validation/projections already partially there)",
+        "print (prompts/approved_items used by whole_lesson)"
+      ],
+      "retirement_order": 1,
+      "blockers": [
+        "Real impl still in planning.bridge/agents/validation/prompts; package mixes shims + live Unit orchestration"
+      ]
+    },
+    {
+      "name": "generation",
+      "classification": "MIGRATE_AND_DELETE",
+      "paths": ["apps/textbook-agent/backend/src/generation/"],
+      "inbound_imports": [
+        "app.py mounts generation.routes, skeleton_routes, units_routes",
+        "planning.bridge → generation.path_preparation",
+        "learn.generation.component_lectio → generation.contracts",
+        "print.http.v3_studio → generation.pdf_export shim"
+      ],
+      "outbound_imports": [
+        "print.http.v3_studio (routes.py)",
+        "learn.generation.units_dispatch (units_dispatch shim)",
+        "print.rendering.pdf / page_objects (pdf_export/page_objects shims)",
+        "v3_blueprint",
+        "resource_specs",
+        "core.*"
+      ],
+      "mounted_routes": [
+        "/api/v1/v3/*",
+        "/api/v1/blocks/generate",
+        "/api/v1/skeletons",
+        "/api/v1/skeletons:preview",
+        "/api/v1/units/.../generation:approve (units_routes)"
+      ],
+      "frontend_consumers": [
+        "lib/api/v3.ts",
+        "lib/api/units.ts (skeletons:preview)",
+        "lib/learn/authoring/builder/api/ai-client.ts (blocks/generate)"
+      ],
+      "workers_startup": [],
+      "database_dependencies": ["generations", "chunked_state_json", "skeleton_shadow_records"],
+      "telemetry_dependencies": [],
+      "config_dependencies": [
+        "generation_pipeline_default",
+        "v2_skeleton_shadow_enabled",
+        "V3_*"
+      ],
+      "tests": [
+        "tests/generation/*",
+        "tests/routes/test_blocks_generate.py",
+        "tests/v3_blueprint/test_skeletons.py"
+      ],
+      "docs": ["docs/cleanup-program/reports/C3"],
+      "target_owners": [
+        "print/http (v3 Unit hops)",
+        "print/generation (path_preparation print side)",
+        "learn/generation (units approve + component_lectio contracts)",
+        "application (prepare/dispatch orchestration)"
+      ],
+      "retirement_order": 2,
+      "blockers": [
+        "Umbrella package still owns live Unit Learn approve + Print mount + unsupported studio/blocks/skeletons"
+      ]
+    },
+    {
+      "name": "builder",
+      "classification": "MIGRATE_AND_DELETE",
+      "paths": [
+        "apps/textbook-agent/backend/src/builder/routes.py",
+        "apps/textbook-agent/backend/src/builder/service.py"
+      ],
+      "inbound_imports": [
+        "app.py",
+        "application.builder_print.routes",
+        "generation.units_routes"
+      ],
+      "outbound_imports": [
+        "builder.service → learn.authoring.builder.service (shim)",
+        "core.*",
+        "contracts.lectio"
+      ],
+      "mounted_routes": ["/api/v1/builder"],
+      "frontend_consumers": [
+        "lib/learn/authoring/builder/api/lesson-crud.ts",
+        "routes/builder/[id]",
+        "routes/builder/new"
+      ],
+      "workers_startup": [],
+      "database_dependencies": ["editable_lessons", "generations"],
+      "telemetry_dependencies": [],
+      "config_dependencies": [],
+      "tests": ["tests/routes/test_builder_lessons.py"],
+      "docs": ["docs/refactor-program/OWNERSHIP_MANIFEST.json"],
+      "target_owners": ["learn/authoring/builder"],
+      "retirement_order": 3,
+      "blockers": [
+        "routes.py still mounted under builder.*; service already shimmed"
+      ]
+    },
+    {
+      "name": "learning_shim_package",
+      "classification": "DELETE_NOW",
+      "paths": ["apps/textbook-agent/backend/src/learning/"],
+      "inbound_imports": [],
+      "outbound_imports": ["learn.* (entire package is shim)"],
+      "mounted_routes": [],
+      "frontend_consumers": [],
+      "workers_startup": [],
+      "database_dependencies": [],
+      "telemetry_dependencies": [],
+      "config_dependencies": [],
+      "tests": [
+        "tests/routes/test_learn_*.py still mention learning string in places — not a keep reason"
+      ],
+      "docs": [],
+      "target_owners": ["learn/"],
+      "retirement_order": 10,
+      "blockers": [
+        "Still listed in backend pyproject.toml packages=; remove from package exports when deleting (D5)",
+        "No production src importers found in D0 census"
+      ]
+    },
+    {
+      "name": "telemetry_shim_package",
+      "classification": "MIGRATE_AND_DELETE",
+      "paths": ["apps/textbook-agent/backend/src/telemetry/"],
+      "inbound_imports": [
+        "print/http/v3_studio/router.py",
+        "v3_execution/runtime/runner.py",
+        "generation/ports/generation_report_repository.py"
+      ],
+      "outbound_imports": ["sys.modules redirect → infra.telemetry"],
+      "mounted_routes": [],
+      "frontend_consumers": [],
+      "workers_startup": [],
+      "database_dependencies": [],
+      "telemetry_dependencies": ["infra.telemetry"],
+      "config_dependencies": [],
+      "tests": ["tests/telemetry/*", "tests/services/test_telemetry_service.py"],
+      "docs": [],
+      "target_owners": ["infra/telemetry"],
+      "retirement_order": 4,
+      "blockers": ["3 production importers still use telemetry.* name"]
+    },
+    {
+      "name": "core_residual",
+      "classification": "MIGRATE_AND_DELETE",
+      "paths": ["apps/textbook-agent/backend/src/core/"],
+      "inbound_imports": [
+        "app.py (auth/capabilities/profile/prompts/shares routers)",
+        "78+ modules still import core.*"
+      ],
+      "outbound_imports": [
+        "Many files are shims → infra.*",
+        "Real residual: core.routes.*, core.database.models, core.entities, core.repositories, core.ports, core.capabilities, core.prompts, core.value_objects"
+      ],
+      "mounted_routes": [
+        "/api/v1/auth",
+        "/api/v1/capabilities",
+        "/api/v1/profile",
+        "/api/v1/prompts",
+        "/api/v1/shares"
+      ],
+      "frontend_consumers": [
+        "lib/api/auth.ts",
+        "lib/api/capabilities.ts",
+        "lib/api/profile.ts",
+        "lib/api/prompts.ts"
+      ],
+      "workers_startup": [],
+      "database_dependencies": ["core.database.models owns ORM metadata Base"],
+      "telemetry_dependencies": [],
+      "config_dependencies": ["core.config shim → infra.config"],
+      "tests": ["tests/core/*"],
+      "docs": ["docs/refactor-program/reports/R3"],
+      "target_owners": ["infra/"],
+      "retirement_order": 5,
+      "blockers": [
+        "Broad call-site surface; historical Alembic copies under core/database/migrations must not delete migration history (prefer infra heads)"
+      ]
+    },
+    {
+      "name": "resource_specs",
+      "classification": "MIGRATE_AND_DELETE",
+      "paths": ["apps/textbook-agent/backend/src/resource_specs/"],
+      "inbound_imports": [
+        "app.py initialize_resource_registry",
+        "generation.path_preparation",
+        "print.generation.page_blocks",
+        "print.generation.whole_lesson.*",
+        "print.http.v3_studio.router",
+        "learn.generation.component_lectio.coverage_audit",
+        "v3_blueprint.planning.*"
+      ],
+      "outbound_imports": [
+        "candidates.py → print.resources.candidates (shim)",
+        "component_candidates.py → learn.resources.component_candidates (shim)",
+        "loader/renderer/schema real"
+      ],
+      "mounted_routes": [],
+      "frontend_consumers": [],
+      "workers_startup": ["initialize_resource_registry at startup"],
+      "database_dependencies": [],
+      "telemetry_dependencies": [],
+      "config_dependencies": [],
+      "tests": ["tests/resource_specs/test_page_candidates.py"],
+      "docs": [],
+      "target_owners": ["print/resources", "learn/resources"],
+      "retirement_order": 6,
+      "blockers": ["Shared loader still startup-critical for Unit Print and Learn"]
+    },
+    {
+      "name": "contracts_hub",
+      "classification": "MIGRATE_AND_DELETE",
+      "paths": ["apps/textbook-agent/backend/src/contracts/"],
+      "inbound_imports": [
+        "builder.routes",
+        "application.builder_print",
+        "learn.*",
+        "print.*",
+        "generation.*",
+        "planning.bridge",
+        "v3_*"
+      ],
+      "outbound_imports": [
+        "lectio.py / lectio_page.py / lesson_document.py shims → learn/print contracts",
+        "document.py / generation_manifest.py / section_content*.py still shared real"
+      ],
+      "mounted_routes": [],
+      "frontend_consumers": [],
+      "workers_startup": [],
+      "database_dependencies": [],
+      "telemetry_dependencies": [],
+      "config_dependencies": [],
+      "tests": ["tests/contracts/test_lectio_page_contracts.py"],
+      "docs": [],
+      "target_owners": ["print/contracts", "learn/contracts"],
+      "retirement_order": 7,
+      "blockers": ["Cross-domain shared contracts need owner split without print↔learn imports"]
+    },
+    {
+      "name": "media",
+      "classification": "MIGRATE_AND_DELETE",
+      "paths": ["apps/textbook-agent/backend/src/media/"],
+      "inbound_imports": [
+        "app.py health image probes",
+        "print.generation.whole_lesson.visual_dispatch",
+        "print.generation.whole_lesson.visual_topology_recovery",
+        "v3_execution.executors.visual_executor"
+      ],
+      "outbound_imports": ["v3_execution config in diagnostics/qc"],
+      "mounted_routes": [],
+      "frontend_consumers": [],
+      "workers_startup": ["health image probe uses media.diagnostics"],
+      "database_dependencies": [],
+      "telemetry_dependencies": [],
+      "config_dependencies": ["GCS_IMAGE_BASE_URL", "gcs_bucket_name"],
+      "tests": ["tests/media/*"],
+      "docs": [],
+      "target_owners": ["infra/media or print visual stack"],
+      "retirement_order": 8,
+      "blockers": ["Not in target backend tree; still on Unit Print visual path"]
+    },
+    {
+      "name": "v3_blueprint",
+      "classification": "MIGRATE_AND_DELETE",
+      "paths": ["apps/textbook-agent/backend/src/v3_blueprint/"],
+      "inbound_imports": [
+        "app.py initialize_skeleton_catalog",
+        "curriculum.*",
+        "generation.*",
+        "learn.generation.component_lectio.*",
+        "planning.bridge",
+        "print.http.v3_studio.*",
+        "print.generation.*"
+      ],
+      "outbound_imports": ["v3_execution", "resource_specs", "contracts"],
+      "mounted_routes": ["indirect via /api/v1/v3 and /api/v1/skeletons"],
+      "frontend_consumers": ["lib/api/v3.ts", "lib/api/units.ts skeletons:preview"],
+      "workers_startup": ["initialize_skeleton_catalog"],
+      "database_dependencies": ["generations.chunked_state", "skeleton_shadow_records"],
+      "telemetry_dependencies": [],
+      "config_dependencies": ["v2_skeleton_shadow_enabled", "V3_*"],
+      "tests": ["tests/v3_blueprint/*"],
+      "docs": [],
+      "target_owners": ["print/", "learn/generation", "curriculum shapes"],
+      "retirement_order": 9,
+      "blockers": [
+        "Shared by Unit Print, Unit Learn, and unsupported studio/skeleton UX — extract seams before delete"
+      ]
+    },
+    {
+      "name": "v3_execution",
+      "classification": "MIGRATE_AND_DELETE",
+      "paths": ["apps/textbook-agent/backend/src/v3_execution/"],
+      "inbound_imports": [
+        "print.http.v3_studio.*",
+        "print.generation.whole_lesson.*",
+        "learn.generation.component_lectio.*",
+        "planning.agents",
+        "media.*",
+        "v3_review",
+        "v3_blueprint"
+      ],
+      "outbound_imports": ["telemetry shim", "contracts", "core.llm via callers"],
+      "mounted_routes": ["indirect via /api/v1/v3"],
+      "frontend_consumers": [],
+      "workers_startup": [],
+      "database_dependencies": ["generations"],
+      "telemetry_dependencies": ["telemetry.v3_trace via runner"],
+      "config_dependencies": ["V3_* model/timeout/token settings"],
+      "tests": ["tests/v3_execution/*"],
+      "docs": [],
+      "target_owners": ["print/generation", "learn/generation"],
+      "retirement_order": 9,
+      "blockers": ["Unit Learn component_lectio and Unit Print whole_lesson still depend on executors/runtime"]
+    },
+    {
+      "name": "v3_review",
+      "classification": "MIGRATE_AND_DELETE",
+      "paths": ["apps/textbook-agent/backend/src/v3_review/"],
+      "inbound_imports": [
+        "print.http.v3_studio.generation_writer",
+        "print.http.v3_studio.router",
+        "v3_execution.runtime.runner"
+      ],
+      "outbound_imports": ["v3_execution"],
+      "mounted_routes": ["indirect via /api/v1/v3"],
+      "frontend_consumers": [],
+      "workers_startup": [],
+      "database_dependencies": [],
+      "telemetry_dependencies": [],
+      "config_dependencies": [],
+      "tests": [],
+      "docs": [],
+      "target_owners": ["print/"],
+      "retirement_order": 9,
+      "blockers": ["Used by studio/generation writer path; confirm Unit Print necessity before drop"]
+    },
+    {
+      "name": "curriculum_compatibility_legacy_units",
+      "classification": "MIGRATE_AND_DELETE",
+      "paths": ["apps/textbook-agent/backend/src/curriculum/compatibility.py"],
+      "inbound_imports": ["app.py mounts compatibility_router"],
+      "outbound_imports": ["core.database.models GenerationModel LearningPackModel"],
+      "mounted_routes": ["/api/v1/legacy-units"],
+      "frontend_consumers": [
+        "lib/api/units.ts",
+        "routes/units/legacy/[pack_id]/+page.svelte"
+      ],
+      "workers_startup": [],
+      "database_dependencies": ["learning_packs", "generations"],
+      "telemetry_dependencies": [],
+      "config_dependencies": ["xplore_v2 capability gate"],
+      "tests": ["tests/planning/test_legacy_compatibility.py"],
+      "docs": ["docs/cleanup-program/CLEANUP_STATE.md"],
+      "target_owners": ["none — retire after FE evacuation"],
+      "retirement_order": 11,
+      "blockers": ["Frontend still calls legacy-units; data may need D4"]
+    },
+    {
+      "name": "learn_packs_api",
+      "classification": "MIGRATE_AND_DELETE",
+      "paths": [
+        "apps/textbook-agent/backend/src/learn/routes.py",
+        "apps/textbook-agent/backend/src/learn/pack_repository.py",
+        "apps/textbook-agent/backend/src/learn/models.py"
+      ],
+      "inbound_imports": ["app.py mounts learn.routes as learning_router"],
+      "outbound_imports": ["core.database.models", "generation.*"],
+      "mounted_routes": ["/api/v1/packs"],
+      "frontend_consumers": [
+        "lib/api/learning-pack.ts",
+        "routes/packs/*"
+      ],
+      "workers_startup": [],
+      "database_dependencies": ["learning_packs", "pack_items"],
+      "telemetry_dependencies": [],
+      "config_dependencies": [
+        "learning_pack_max_active_per_user",
+        "learning_pack_max_active_resources_per_pack",
+        "learning_pack_max_resources"
+      ],
+      "tests": ["tests/generation/test_xplore_contracts.py", "tests/generation/test_xplore_fixture.py"],
+      "docs": [],
+      "target_owners": ["none — not Builder→LearnRelease path"],
+      "retirement_order": 11,
+      "blockers": ["Live FE packs UX; DB tables need D4 classification"]
+    },
+    {
+      "name": "frontend_non_unit_surfaces",
+      "classification": "MIGRATE_AND_DELETE",
+      "paths": [
+        "apps/textbook-agent/frontend/src/routes/studio/",
+        "apps/textbook-agent/frontend/src/routes/packs/",
+        "apps/textbook-agent/frontend/src/routes/units/legacy/",
+        "apps/textbook-agent/frontend/src/routes/builder/new/",
+        "apps/textbook-agent/frontend/src/lib/api/v3.ts",
+        "apps/textbook-agent/frontend/src/lib/api/learning-pack.ts",
+        "apps/textbook-agent/frontend/src/lib/print/studio/",
+        "apps/textbook-agent/frontend/src/lib/print/components/studio/"
+      ],
+      "inbound_imports": [
+        "units/[id] links into studio for Print review",
+        "builder pack-items/ai-client hit v3 packs + blocks/generate"
+      ],
+      "outbound_imports": [
+        "/api/v1/v3/*",
+        "/api/v1/packs",
+        "/api/v1/legacy-units",
+        "/api/v1/blocks/generate",
+        "/api/v1/skeletons:preview"
+      ],
+      "mounted_routes": [
+        "/studio",
+        "/studio/generations/[id]",
+        "/studio/print/[id]",
+        "/packs/*",
+        "/units/legacy/[pack_id]",
+        "/builder/new"
+      ],
+      "frontend_consumers": ["self"],
+      "workers_startup": [],
+      "database_dependencies": [],
+      "telemetry_dependencies": [],
+      "config_dependencies": [
+        "xplore_v2 capability",
+        "localStorage NEW_AI_BLOCK_ASSIST_KEY"
+      ],
+      "tests": [
+        "frontend routes/studio/*.test.ts",
+        "frontend routes/units/legacy/*/page.test.ts",
+        "lib/api/v3.test.ts",
+        "lib/print/studio/*.test.ts",
+        "lib/learn/authoring/builder/api/pack-items.test.ts",
+        "AiBlockAssist.test.ts"
+      ],
+      "docs": ["docs/cleanup-program/REACHABILITY_MANIFEST.json"],
+      "target_owners": [
+        "keep Unit→Print review UX under units + print lib",
+        "delete standalone studio/packs/legacy creation entrypoints after API unmount"
+      ],
+      "retirement_order": 11,
+      "blockers": [
+        "Unit Print review currently deep-links into /studio?generation_id=… — migrate that hop before deleting studio routes"
+      ]
+    },
+    {
+      "name": "legacy_database_objects",
+      "classification": "DATA_RETIREMENT_REQUIRED",
+      "paths": [
+        "apps/textbook-agent/backend/src/core/database/models.py",
+        "apps/textbook-agent/backend/src/infra/database/migrations/versions/"
+      ],
+      "inbound_imports": ["Alembic env + almost all domain services"],
+      "outbound_imports": [],
+      "mounted_routes": [],
+      "frontend_consumers": [],
+      "workers_startup": ["upgrade_database"],
+      "database_dependencies": [
+        "ACTIVE candidates: users, student_profiles, units*, path_*, concepts*, editable_lessons, learn_releases, learn_assignments*, learn_classes*, learner_*, learning_instances, lesson_progress, concept_evidence/states, generations (Unit), llm_calls, lesson_shares, prompt_overrides, v2_audit_events, teaching_*, resource_compositions, lesson_actuals, marks_entries",
+        "HISTORICAL / legacy-adjacent candidates for D4: learning_packs, pack_items, skeleton_shadow_records, generation_steps (verify), v3_trace_runs/events (verify Unit vs studio-only)",
+        "ORM Base.metadata loads 42 tables; ownership still via core.database.models import graph; Alembic head 20260906_0039"
+      ],
+      "telemetry_dependencies": ["llm_calls", "v3_trace_*"],
+      "config_dependencies": ["database_url", "run_migrations_on_startup"],
+      "tests": [],
+      "docs": ["docs/cleanup-program/reports/C5"],
+      "target_owners": ["infra/database"],
+      "retirement_order": 12,
+      "blockers": [
+        "D4 must classify ACTIVE vs HISTORICAL_DATA_ONLY vs MIGRATE_DATA_THEN_DROP vs DROP_SAFE with explicit migrations; preserve migration history"
+      ]
+    },
+    {
+      "name": "packages_lectio_page",
+      "classification": "KEEP_CANONICAL",
+      "paths": ["packages/lectio-page"],
+      "inbound_imports": ["print rendering / @lectio/page"],
+      "outbound_imports": [],
+      "mounted_routes": [],
+      "frontend_consumers": ["print PDF chrome"],
+      "workers_startup": [],
+      "database_dependencies": [],
+      "telemetry_dependencies": [],
+      "config_dependencies": [],
+      "tests": ["pnpm page:test"],
+      "docs": ["docs/architecture/CURRENT_SYSTEM.md"],
+      "target_owners": ["print / @lectio/page"],
+      "retirement_order": 0,
+      "blockers": []
+    },
+    {
+      "name": "packages_lectio_learn",
+      "classification": "KEEP_CANONICAL",
+      "paths": ["packages/lectio-learn"],
+      "inbound_imports": ["learn runtime / @lectio/learn"],
+      "outbound_imports": [],
+      "mounted_routes": [],
+      "frontend_consumers": ["routes/learn/*", "builder preview"],
+      "workers_startup": [],
+      "database_dependencies": [],
+      "telemetry_dependencies": [],
+      "config_dependencies": [],
+      "tests": [
+        "pnpm --dir packages/lectio-learn test (1 pre-existing quiz evaluate failure — deferred product)"
+      ],
+      "docs": ["docs/architecture/CURRENT_SYSTEM.md"],
+      "target_owners": ["learn / @lectio/learn"],
+      "retirement_order": 0,
+      "blockers": []
+    }
+  ]
+}

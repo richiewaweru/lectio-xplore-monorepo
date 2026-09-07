@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from planning.models import (
+from curriculum.path_models import (
     CanonicalPathPlan,
     PathPlanDraft,
     UnitCreate,
 )
-from planning.validation import normalize_path_plan_draft
+from curriculum.validation import normalize_path_plan_draft
 
 FIXTURES = Path(__file__).resolve().parents[3] / "handoff" / "fixtures"
 

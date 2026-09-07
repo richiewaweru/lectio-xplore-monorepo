@@ -11,12 +11,12 @@ from pydantic_ai import Agent
 
 from core.config import settings
 from core.llm.runner import RetryPolicy, run_llm
-from planning.approved_items import approved_item_kind
+from curriculum.approved_items import approved_item_kind
 from print.generation.catalogue_projections import (
     TeachingGuidanceProjection,
     project_teaching_guidance,
 )
-from planning.llm_contract_errors import is_transport_error, structured_output_errors
+from curriculum.llm_contract_errors import is_transport_error, structured_output_errors
 from print.generation.whole_lesson.legality import (
     LessonLegalitySnapshot,
     build_lesson_legality_snapshot,
@@ -203,7 +203,7 @@ async def run_lesson_approach_planner(
     require_items: bool = True,
 ) -> TeachingPlanResult:
     if require_items and not packet.approved_items:
-        from planning.approved_items import ItemPoolEmptyError
+        from curriculum.approved_items import ItemPoolEmptyError
 
         raise ItemPoolEmptyError(card_id="unknown", pack_id=None)
 

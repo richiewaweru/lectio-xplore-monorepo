@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from generation.page_objects import (
+from print.rendering.page_objects import (
     GENERATED_FORM_IDS,
     WriterContext,
     WriterError,
@@ -12,7 +12,7 @@ from generation.page_objects import (
     write_aside,
     write_prose,
 )
-from planning.model_tiers import tier_for_object_writer
+from print.generation.model_tiers import tier_for_object_writer
 from v3_blueprint.planning.models import PlannedBlock
 
 

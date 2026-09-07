@@ -11,9 +11,9 @@ from core.auth.middleware import get_current_user
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
 from core.entities.user import User
-from generation.v3_studio import router as v3_router
-from generation.v3_studio.generation_writer import V3GenerationWriter
-from generation.v3_studio.router import _pump_sse_to_queue
+from print.http.v3_studio import router as v3_router
+from print.http.v3_studio.generation_writer import V3GenerationWriter
+from print.http.v3_studio.router import _pump_sse_to_queue
 from httpx import ASGITransport, AsyncClient
 
 TEST_USER = User(
@@ -103,7 +103,7 @@ async def _drain_background_tasks() -> None:
 
 async def _run_pump(generation_id: str, fake_stream) -> asyncio.Queue[str | None]:
     queue: asyncio.Queue[str | None] = asyncio.Queue()
-    with patch("generation.v3_studio.router.sse_event_stream", new=fake_stream):
+    with patch("print.http.v3_studio.router.sse_event_stream", new=fake_stream):
         await _pump_sse_to_queue(
             queue,
             blueprint=_example_bp(),
@@ -213,7 +213,7 @@ async def test_pump_cancellation_marks_failed_terminal_snapshot() -> None:
         yield ""  # pragma: no cover
 
     queue: asyncio.Queue[str | None] = asyncio.Queue()
-    with patch("generation.v3_studio.router.sse_event_stream", new=hanging_stream):
+    with patch("print.http.v3_studio.router.sse_event_stream", new=hanging_stream):
         task = asyncio.create_task(
             _pump_sse_to_queue(
                 queue,

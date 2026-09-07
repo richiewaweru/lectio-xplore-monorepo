@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from generation.v3_studio.agents import extract_signals
-from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
+from print.http.v3_studio.agents import extract_signals
+from print.http.v3_studio.dtos import V3InputForm, V3SignalSummary
 
 
 def _example_form(**overrides: Any) -> V3InputForm:
@@ -51,7 +51,7 @@ async def test_extract_signals_includes_structured_form_in_user_prompt(monkeypat
             },
         )()
 
-    monkeypatch.setattr("generation.v3_studio.agents.run_llm", fake_run_llm)
+    monkeypatch.setattr("print.http.v3_studio.agents.run_llm", fake_run_llm)
 
     form = _example_form()
     _ = await extract_signals(form, trace_id="tid-test")

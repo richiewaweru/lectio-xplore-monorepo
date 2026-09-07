@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from generation.v3_studio.router import _variant_plan_for_fanout
+from print.http.v3_studio.router import _variant_plan_for_fanout
 
 
 def test_fanout_uses_variant_sections_and_latest_approved_shared_cards() -> None:

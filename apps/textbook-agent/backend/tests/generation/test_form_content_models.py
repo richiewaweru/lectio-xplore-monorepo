@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from core.llm.deepseek_schema import to_deepseek_strict_schema
-from generation.page_objects import (
+from print.rendering.page_objects import (
     FORM_OUTPUTS,
     WRITER_PROVIDER_OUTPUTS,
     GENERATED_FORM_IDS,
@@ -108,7 +108,7 @@ def test_valid_content_for_each_form(object_id: str) -> None:
 
 
 def test_table_provider_cells_use_strict_entries_but_normalize_to_map() -> None:
-    from generation.page_objects.models import TableContent
+    from print.rendering.page_objects.models import TableContent
 
     content = TableContent.model_validate(
         {

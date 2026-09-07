@@ -9,9 +9,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi import HTTPException
 
-from generation.v3_studio import router as studio_router
-from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
-from planning.whole_lesson.native_retry import NativeRetryConflict, NativeRetryTarget
+from print.http.v3_studio import router as studio_router
+from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
+from print.generation.whole_lesson.native_retry import NativeRetryConflict, NativeRetryTarget
 
 
 def test_generation_is_native_from_context_flag() -> None:
@@ -85,7 +85,7 @@ async def test_native_retry_section_does_not_call_legacy_retry() -> None:
             new=AsyncMock(return_value=state),
         ),
         patch(
-            "planning.whole_lesson.native_retry.accept_native_retry",
+            "print.generation.whole_lesson.native_retry.accept_native_retry",
             new=AsyncMock(
                 side_effect=NativeRetryConflict(
                     "retry-native requires failed_recoverable",
@@ -149,7 +149,7 @@ async def test_native_retry_section_requeues_failed_recoverable() -> None:
             new=AsyncMock(side_effect=[state, queued_state]),
         ),
         patch(
-            "planning.whole_lesson.native_retry.accept_native_retry",
+            "print.generation.whole_lesson.native_retry.accept_native_retry",
             new=AsyncMock(
                 return_value={
                     "generation_id": "gen-native-2",

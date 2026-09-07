@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from planning.whole_lesson.events import make_event
+from print.generation.whole_lesson.events import make_event
 
 
 def test_d04_visual_pending_section_event_shape() -> None:

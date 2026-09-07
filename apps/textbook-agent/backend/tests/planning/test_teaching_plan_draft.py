@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from core.llm.deepseek_schema import to_deepseek_strict_schema
-from planning.whole_lesson.teaching_plan import (
+from print.generation.whole_lesson.teaching_plan import (
     AnchorUsageEntry,
     TeachingPlanDraft,
     TeachingPlanDraftBlock,

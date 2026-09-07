@@ -18,8 +18,8 @@ from core.database.models import (
     UnitModel,
     UserModel,
 )
-from planning.models import LessonActualWriteRequest, MarksWriteRequest
-from planning.outcomes import (
+from curriculum.path_models import LessonActualWriteRequest, MarksWriteRequest
+from curriculum.outcomes import (
     OutcomeValidationError,
     StaleOutcomeError,
     actual_context_for_lessons,

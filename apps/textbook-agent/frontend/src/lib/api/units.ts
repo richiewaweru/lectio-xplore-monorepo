@@ -43,11 +43,11 @@ export function listUnits(): Promise<Unit[]> {
 }
 
 export function listLegacyUnitWrappers(): Promise<LegacyUnitWrapper[]> {
-	return jsonRequest('/api/v1/legacy-units', 'Could not load legacy unit wrappers.');
+	return Promise.reject(new Error('legacy-units API retired (D3)'));
 }
 
-export function getLegacyUnitWrapper(packId: string): Promise<LegacyUnitWrapper> {
-	return jsonRequest(`/api/v1/legacy-units/${encodeURIComponent(packId)}`, 'Could not load this legacy unit.');
+export function getLegacyUnitWrapper(_packId: string): Promise<LegacyUnitWrapper> {
+	return Promise.reject(new Error('legacy-units API retired (D3)'));
 }
 
 export function getUnit(unitId: string): Promise<Unit> {
@@ -354,17 +354,8 @@ export function getPreparedLessonStatus(unitId: string, lessonId: string): Promi
 	);
 }
 
-export function previewSkeleton(objective: string, lessonMode: LessonMode): Promise<SkeletonPreview> {
-	return jsonRequest('/api/v1/skeletons:preview', 'Could not preview the lesson shape.', {
-		method: 'POST',
-		headers: jsonHeaders,
-		body: JSON.stringify({
-			objective,
-			lesson_mode: lessonMode,
-			misconception_count: 0,
-			group_profiles: ['support', 'core', 'extension']
-		})
-	});
+export function previewSkeleton(_objective: string, _lessonMode: LessonMode): Promise<SkeletonPreview> {
+	return Promise.reject(new Error('skeletons:preview API retired (D3)'));
 }
 
 export function getLessonShape(

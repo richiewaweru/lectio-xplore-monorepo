@@ -1,4 +1,4 @@
-from generation.pdf_export.v3_pack_pipeline_document import build_pipeline_document_for_v3_pdf
+from print.rendering.pdf.v3_pack_pipeline_document import build_pipeline_document_for_v3_pdf
 
 
 def test_build_pipeline_manifest_from_v3_sections() -> None:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from generation.v3_studio.prompts import build_v3_shared_prefix
+from print.http.v3_studio.prompts import build_v3_shared_prefix
 from core.prompts import effective_prompt_text
 from v3_execution.prompts.formatting import (
     format_consistency_rules,

@@ -1,4 +1,4 @@
-﻿"""
+"""
 contracts.lectio
 
 Deterministic boundary between pipeline code and exported Lectio contracts.

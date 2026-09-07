@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from generation.page_objects.document_assembly import (
+from print.rendering.page_objects.document_assembly import (
     assemble_document_v2,
     persist_document_json,
     reload_document,
@@ -69,7 +69,7 @@ def test_manual_lesson_persists_and_reloads_equal() -> None:
 
 
 def test_v2_path_does_not_import_section_content() -> None:
-    import generation.page_objects.document_assembly as mod
+    import print.rendering.page_objects.document_assembly as mod
 
     source = open(mod.__file__, encoding="utf-8").read()
     assert "SectionContent" not in source or "must not" in source

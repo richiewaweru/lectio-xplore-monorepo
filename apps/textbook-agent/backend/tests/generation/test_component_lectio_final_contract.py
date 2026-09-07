@@ -13,30 +13,30 @@ from contracts.lesson_document import validate_lesson_document
 from contracts.section_content import ReflectionType
 from core.database.models import EditableLessonModel, GenerationModel, UserModel
 from core.database.session import async_session_factory
-from generation.component_lectio.coverage_audit import (
+from learn.generation.component_lectio.coverage_audit import (
     coverage_gaps,
     production_selectable_components,
 )
-from generation.component_lectio.errors import AnswerKeyMappingError, WorkOrderIdentityError
-from generation.component_lectio.fixtures import valid_content_for
-from generation.component_lectio.payload_strategies import (
+from learn.generation.component_lectio.errors import AnswerKeyMappingError, WorkOrderIdentityError
+from learn.generation.component_lectio.fixtures import valid_content_for
+from learn.generation.component_lectio.payload_strategies import (
     SCHEMA_SUMMARIES,
     assemble_answer_key_content,
     assemble_items_content,
     assemble_visual_content,
 )
-from generation.component_lectio.payload_validation import (
+from learn.generation.component_lectio.payload_validation import (
     ExactPayloadValidationError,
     validate_exact_payload,
 )
-from generation.component_lectio.service import (
+from learn.generation.component_lectio.service import (
     FAILED_STEP,
     READY_STEP,
     _persist_component_lectio_success,
     reconstruct_checkpoint_store,
     run_component_lectio_execution,
 )
-from generation.contracts import GenerationInputForm as V3InputForm
+from learn.generation.contracts import GenerationInputForm as V3InputForm
 from tests.v3_blueprint.planning.test_intent_plan import SUBJECT_FIXTURES, _intent_plan_for_subject
 from v3_blueprint.planning.canonical_plan import (
     CanonicalExecutionPlan,

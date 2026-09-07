@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from planning.whole_lesson.form_plan import FormDecision, FormPlan, FormPlanSection
-from planning.whole_lesson.teaching_plan import (
+from print.generation.whole_lesson.form_plan import FormDecision, FormPlan, FormPlanSection
+from print.generation.whole_lesson.teaching_plan import (
     TeachingPlan,
     TeachingPlanBlock,
     TeachingPlanSection,

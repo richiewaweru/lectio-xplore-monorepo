@@ -1,4 +1,4 @@
-﻿"""
+"""
 contracts.template_contract
 
 The subset of Lectio's TemplateContract that the pipeline needs.

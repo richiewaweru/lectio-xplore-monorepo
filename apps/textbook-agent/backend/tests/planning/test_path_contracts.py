@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from planning.models import CanonicalPathPlan, PathPlannerRequest
-from planning.prompts import prompt_text
+from curriculum.path_models import CanonicalPathPlan, PathPlannerRequest
+from curriculum.prompts import prompt_text
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]

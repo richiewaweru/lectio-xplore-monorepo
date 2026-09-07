@@ -11,7 +11,7 @@ import pytest
 
 from core.database.models import GenerationModel
 from core.database.session import async_session_factory
-from generation.component_lectio.service import (
+from learn.generation.component_lectio.service import (
     FAILED_STEP,
     READY_STEP,
     load_ready_block_ids,

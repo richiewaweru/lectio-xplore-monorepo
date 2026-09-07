@@ -9,13 +9,13 @@ import pytest
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
-from generation.page_objects.document_assembly import (
+from print.rendering.page_objects.document_assembly import (
     canonical_document_sha256,
     persist_document_json,
 )
-from planning.whole_lesson.executor import AssemblyError, assemble_from_db
-from planning.whole_lesson.form_plan import FormPlan
-from planning.whole_lesson.packet import (
+from print.generation.whole_lesson.executor import AssemblyError, assemble_from_db
+from print.generation.whole_lesson.form_plan import FormPlan
+from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ImmutableLessonPacket,
     LessonIdentity,
@@ -23,13 +23,13 @@ from planning.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
-from planning.whole_lesson.repository import (
+from print.generation.whole_lesson.repository import (
     DocumentFenceError,
     PageDocumentRepository,
     empty_page_document_state,
 )
-from planning.whole_lesson.states import ExecutionLease, LeaseLostError, execution_key
-from planning.whole_lesson.teaching_plan import TeachingPlan
+from print.generation.whole_lesson.states import ExecutionLease, LeaseLostError, execution_key
+from print.generation.whole_lesson.teaching_plan import TeachingPlan
 from tests.planning.contract_fixtures import teaching_and_form
 
 

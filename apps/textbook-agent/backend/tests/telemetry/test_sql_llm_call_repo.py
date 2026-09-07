@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from core.database.models import UserModel
-from telemetry.repositories.sql_llm_call_repo import SqlLLMCallRepository
+from infra.telemetry.repositories.sql_llm_call_repo import SqlLLMCallRepository
 
 
 async def _seed_user(db_session_factory, user_id: str = "llm-usage-user") -> None:

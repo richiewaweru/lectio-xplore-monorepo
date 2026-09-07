@@ -12,12 +12,12 @@ from sqlalchemy import func, select
 
 from core.database.models import GenerationModel, PackItemModel
 from core.database.session import async_session_factory
-from planning.whole_lesson.native_retry import accept_native_retry, run_pre_worker_retry
-from planning.whole_lesson.repository import (
+from print.generation.whole_lesson.native_retry import accept_native_retry, run_pre_worker_retry
+from print.generation.whole_lesson.repository import (
     PageDocumentRepository,
     empty_execution_meta,
 )
-from planning.whole_lesson.states import LeaseLostError
+from print.generation.whole_lesson.states import LeaseLostError
 from tests.planning.test_native_retry_pre_worker import (
     TEST_USER,
     _seed_generation,
@@ -247,7 +247,7 @@ async def test_f02_stale_item_worker_cannot_overwrite_worker2_results() -> None:
                 new=_ok_w2,
             ),
             patch(
-                "planning.whole_lesson.service.run_and_persist_teaching_plan",
+                "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
                 new=_teaching_ok,
             ),
         ):
@@ -318,7 +318,7 @@ async def test_f03_stale_teaching_worker_cannot_persist_after_reclaim() -> None:
         return _FakeResult()
 
     with patch(
-        "planning.whole_lesson.service.run_lesson_approach_planner",
+        "print.generation.whole_lesson.service.run_lesson_approach_planner",
         new=_blocked_planner,
     ):
         task = asyncio.create_task(run_pre_worker_retry(lease=lease1))
@@ -415,7 +415,7 @@ async def test_f04_new_teaching_worker_wins_race() -> None:
         return _FakeResult2()
 
     with patch(
-        "planning.whole_lesson.service.run_lesson_approach_planner",
+        "print.generation.whole_lesson.service.run_lesson_approach_planner",
         new=_blocked_planner,
     ):
         task1 = asyncio.create_task(run_pre_worker_retry(lease=lease1))
@@ -429,7 +429,7 @@ async def test_f04_new_teaching_worker_wins_race() -> None:
         assert lease2 is not None
 
         with patch(
-            "planning.whole_lesson.service.run_lesson_approach_planner",
+            "print.generation.whole_lesson.service.run_lesson_approach_planner",
             new=_planner_w2,
         ):
             result2 = await run_pre_worker_retry(lease=lease2)
@@ -574,7 +574,7 @@ async def test_f06_healthy_worker_path_still_works() -> None:
             new=_ok_items,
         ),
         patch(
-            "planning.whole_lesson.service.run_and_persist_teaching_plan",
+            "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
             new=_teaching_ok,
         ),
     ):

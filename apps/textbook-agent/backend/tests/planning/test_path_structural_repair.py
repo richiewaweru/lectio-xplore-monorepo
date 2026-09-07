@@ -14,8 +14,8 @@ import pytest
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from planning import agents
-from planning.models import PathStructuralPagePlan, PathStructuralPlan
-from planning.structural_validation import PathStructuralContextError
+from curriculum.path_models import PathStructuralPagePlan, PathStructuralPlan
+from curriculum.structural_validation import PathStructuralContextError
 
 SLOTS = ["orient", "explain", "check"]
 

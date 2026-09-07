@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from generation.page_objects import (
+from print.rendering.page_objects import (
     AnswerKeyIntegrityError,
     validate_answer_key_integrity,
 )
-from generation.page_objects.document_assembly import (
+from print.rendering.page_objects.document_assembly import (
     DocumentAssemblyError,
     assemble_document_v2,
 )

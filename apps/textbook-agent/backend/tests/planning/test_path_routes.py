@@ -7,14 +7,14 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app import app, create_app
-from core.auth.middleware import get_current_user
+from infra.auth.middleware import get_current_user
 from core.database.models import PathLessonModel, UserModel
-from core.dependencies import get_async_session
+from infra.dependencies import get_async_session
 from core.entities.user import User
-from planning.models import UnitCreate
-from planning.routes import _path_planning_lock
+from curriculum.models import UnitCreate
+from curriculum.routes import _path_planning_lock
 from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
-from planning.service import approve_path, create_unit, persist_path_plan
+from curriculum.service import approve_path, create_unit, persist_path_plan
 
 
 TEST_USER = User(

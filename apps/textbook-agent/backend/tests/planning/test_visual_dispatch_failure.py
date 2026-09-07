@@ -14,15 +14,15 @@ from core.auth.middleware import get_current_user
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
 from core.entities.user import User
-from generation.page_objects.document_assembly import (
+from print.rendering.page_objects.document_assembly import (
     canonical_document_sha256,
     persist_document_json,
     reload_document,
 )
-from planning.whole_lesson.native_status import project_native_status
-from planning.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
-from planning.whole_lesson.states import execution_key
-from planning.whole_lesson.visual_dispatch import (
+from print.generation.whole_lesson.native_status import project_native_status
+from print.generation.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
+from print.generation.whole_lesson.states import execution_key
+from print.generation.whole_lesson.visual_dispatch import (
     collect_pending_figure_dispatches,
     dispatch_and_patch_from_repo,
 )
@@ -500,7 +500,7 @@ async def test_visuals_retry_only_redispatches_and_skips_ready_blocks() -> None:
                 failed_request_ids=["req-fig-1"],
             )
         with patch(
-            "planning.whole_lesson.visual_dispatch.execute_visual",
+            "print.generation.whole_lesson.visual_dispatch.execute_visual",
             new=fake_execute,
         ):
             async with _client() as client:
@@ -570,7 +570,7 @@ async def test_topology_events_are_durable_in_json_column() -> None:
 
 @pytest.mark.asyncio
 async def test_flagged_topology_recovery_keeps_hashes_invalid_and_upstream_unchanged() -> None:
-    from planning.whole_lesson.visual_topology_recovery import TopologyRecoveryError
+    from print.generation.whole_lesson.visual_topology_recovery import TopologyRecoveryError
 
     gid = await _seed_flagged_topology()
 

@@ -20,9 +20,9 @@ from core.database.models import (
     UnitModel,
     UserModel,
 )
-from generation.pdf_export.v3_pack_pipeline_document import build_pipeline_document_for_v3_pdf
-from planning.models import ResourceComposeRequest
-from planning.projections import build_composition_payload
+from print.rendering.pdf.v3_pack_pipeline_document import build_pipeline_document_for_v3_pdf
+from curriculum.path_models import ResourceComposeRequest
+from curriculum.projections import build_composition_payload
 
 
 async def _seed_projection_sources(db_session):

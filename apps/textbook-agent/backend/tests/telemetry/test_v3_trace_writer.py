@@ -3,9 +3,9 @@ from __future__ import annotations
 import pytest
 
 from core.database.models import UserModel
-from telemetry.v3_trace import event_types as et
-from telemetry.v3_trace.repository import V3TraceRepository
-from telemetry.v3_trace.writer import V3TraceWriter
+from infra.telemetry.v3_trace import event_types as et
+from infra.telemetry.v3_trace.repository import V3TraceRepository
+from infra.telemetry.v3_trace.writer import V3TraceWriter
 
 
 async def _seed_user(db_session_factory, user_id: str = "trace-writer-user") -> None:

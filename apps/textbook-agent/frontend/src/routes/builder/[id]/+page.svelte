@@ -341,7 +341,7 @@
 	{#if generationId}
 		<a
 			class="builder-print-hidden mb-3 inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-800"
-			href={`/packs/${encodeURIComponent(generationId)}/items`}
+			href={`/units`}
 		>
 			Review shared quiz · edit in pack
 		</a>

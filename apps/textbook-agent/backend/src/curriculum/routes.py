@@ -24,7 +24,7 @@ from infra.dependencies import get_async_session
 from core.entities.user import User
 from infra.events import TraceClosedEvent, TraceRegisteredEvent, event_bus
 from infra.rate_limit import limiter
-from planning.agents import (
+from curriculum.agents import (
     run_constructor,
     run_path_planner,
     run_plan_chat_edit,
@@ -75,7 +75,7 @@ from curriculum.schedule import (
     write_groups,
     write_schedule,
 )
-from planning.projections import (
+from application.projections import (
     ProjectionUnavailable,
     build_composition_payload,
     composition_payload,
@@ -111,7 +111,7 @@ from curriculum.service import (
     split_lesson,
     update_unit,
 )
-from planning.validation import (
+from curriculum.validation import (
     PathApprovalBlocked,
     PathPlanningError,
     PathValidationError,

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from planning.whole_lesson.packet_builder import (
+from print.generation.whole_lesson.packet_builder import (
     CONCEPTUAL_FIRST_EXPOSURE_SLOTS,
     build_lesson_packet,
 )
-from planning.whole_lesson.service import slot_ids_from_structural_plan
+from print.generation.whole_lesson.service import slot_ids_from_structural_plan
 
 
 def _packet_for_slots(

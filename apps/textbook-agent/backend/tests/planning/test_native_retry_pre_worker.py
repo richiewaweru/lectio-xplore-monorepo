@@ -14,21 +14,21 @@ from core.auth.middleware import get_current_user
 from core.database.models import ConceptCardModel, GenerationModel, PackItemModel, UserModel
 from core.database.session import async_session_factory
 from core.entities.user import User
-from generation.page_objects.document_assembly import persist_document_json
-from planning.whole_lesson.native_retry import (
+from print.rendering.page_objects.document_assembly import persist_document_json
+from print.generation.whole_lesson.native_retry import (
     NativeRetryConflict,
     NativeRetryTarget,
     accept_native_retry,
     decide_native_retry_target,
     run_pre_worker_retry,
 )
-from planning.whole_lesson.native_status import project_native_status
-from planning.whole_lesson.repository import (
+from print.generation.whole_lesson.native_status import project_native_status
+from print.generation.whole_lesson.repository import (
     PageDocumentRepository,
     empty_page_document_state,
     persist_native_failure_for_generation,
 )
-from planning.whole_lesson.states import (
+from print.generation.whole_lesson.states import (
     WORK_KIND_PRE_WORKER_ITEM,
     WORK_KIND_PRE_WORKER_TEACHING,
     execution_key,
@@ -392,11 +392,11 @@ async def test_r01_item_transport_failure_then_retry() -> None:
             new=_ok_items,
         ),
         patch(
-            "generation.v3_studio.router._persist_item_results",
+            "print.http.v3_studio.router._persist_item_results",
             new=AsyncMock(),
         ),
         patch(
-            "planning.whole_lesson.service.run_and_persist_teaching_plan",
+            "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
             new=_teaching_ok,
         ),
     ):
@@ -515,11 +515,11 @@ async def test_r02_teaching_retry_does_not_rerun_items() -> None:
             new=item_exec,
         ),
         patch(
-            "planning.whole_lesson.service.run_and_persist_teaching_plan",
+            "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
             new=_teaching_ok,
         ),
         patch(
-            "planning.whole_lesson.executor.run_form_planner",
+            "print.generation.whole_lesson.executor.run_form_planner",
             new=form_planner,
         ),
     ):
@@ -581,7 +581,7 @@ async def test_r04_duplicate_retry_protection() -> None:
     assert exc_info.value.code == "RETRY_IN_PROGRESS"
 
     with patch(
-        "planning.whole_lesson.service.run_and_persist_teaching_plan",
+        "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
         new=_teaching_ok,
     ):
         async with async_session_factory() as session:
@@ -731,19 +731,19 @@ async def test_r06_visual_failure_not_owned_by_retry_native() -> None:
 
             with (
                 patch(
-                    "planning.whole_lesson.visual_dispatch.execute_visual",
+                    "print.generation.whole_lesson.visual_dispatch.execute_visual",
                     new=fake_execute,
                 ),
                 patch(
-                    "generation.v3_studio.router._generate_shared_pack_items",
+                    "print.http.v3_studio.router._generate_shared_pack_items",
                     new=AsyncMock(side_effect=AssertionError("items")),
                 ),
                 patch(
-                    "planning.whole_lesson.service.run_and_persist_teaching_plan",
+                    "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
                     new=AsyncMock(side_effect=AssertionError("teaching")),
                 ),
                 patch(
-                    "planning.whole_lesson.executor.run_form_planner",
+                    "print.generation.whole_lesson.executor.run_form_planner",
                     new=AsyncMock(side_effect=AssertionError("forms")),
                 ),
             ):
@@ -770,7 +770,7 @@ async def test_r07_error_aliases_clear_after_teaching_recovery() -> None:
     )
 
     with patch(
-        "planning.whole_lesson.service.run_and_persist_teaching_plan",
+        "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
         new=_teaching_ok,
     ):
         await _accept_and_run(gid)
@@ -788,13 +788,13 @@ async def test_r07_error_aliases_clear_after_teaching_recovery() -> None:
 
 @pytest.mark.asyncio
 async def test_injected_form_timeout_retry_resumes_at_planning_forms() -> None:
-    from planning.whole_lesson.executor import execute_after_teaching_approval
-    from planning.whole_lesson.failure_injection import (
+    from print.generation.whole_lesson.executor import execute_after_teaching_approval
+    from print.generation.whole_lesson.failure_injection import (
         configure_failure_injection,
         reset_failure_injection,
     )
-    from planning.whole_lesson.legality import build_lesson_legality_snapshot
-    from planning.whole_lesson.packet import (
+    from print.generation.whole_lesson.legality import build_lesson_legality_snapshot
+    from print.generation.whole_lesson.packet import (
         AnchorRecord,
         ImmutableLessonPacket,
         LessonIdentity,
@@ -802,7 +802,7 @@ async def test_injected_form_timeout_retry_resumes_at_planning_forms() -> None:
         ScopeContract,
         SlotRecord,
     )
-    from planning.whole_lesson.worker import NativeExecutionWorker
+    from print.generation.whole_lesson.worker import NativeExecutionWorker
     from tests.planning.contract_fixtures import teaching_and_form
 
     packet = ImmutableLessonPacket(
@@ -857,7 +857,7 @@ async def test_injected_form_timeout_retry_resumes_at_planning_forms() -> None:
                 worker_id="form-retry-worker"
             )
             assert lease is not None
-        with patch("planning.whole_lesson.executor.run_form_planner", new=_form_boom):
+        with patch("print.generation.whole_lesson.executor.run_form_planner", new=_form_boom):
             async with async_session_factory() as session:
                 with pytest.raises(TimeoutError):
                     await execute_after_teaching_approval(

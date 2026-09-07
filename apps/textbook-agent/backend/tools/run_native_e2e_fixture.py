@@ -291,7 +291,7 @@ class BlockAwareScriptedProvider:
         return getattr(self._inner, name)
 
     async def write(self, **kwargs: Any) -> object:
-        from generation.page_objects.scripted_provider import TransportError
+        from print.rendering.page_objects.scripted_provider import TransportError
 
         attempt = int(kwargs.get("attempt") or 1)
         try:
@@ -329,7 +329,7 @@ def build_provider(
     scenario_name: str,
     default_valid: dict[str, Any],
 ):
-    from generation.page_objects.scripted_provider import ScriptedWriterProvider
+    from print.rendering.page_objects.scripted_provider import ScriptedWriterProvider
 
     defaults = dict(default_valid)
     by_block = dict(defaults.pop("__by_block__", {}) or {})
@@ -351,8 +351,8 @@ async def write_section_blocks(
     generation_id: str,
     use_llm: bool,
 ) -> list[Any]:
-    from generation.page_objects.models import WriterContext
-    from generation.page_objects.registry import dispatch_writer, dispatch_writer_async
+    from print.rendering.page_objects.models import WriterContext
+    from print.rendering.page_objects.registry import dispatch_writer, dispatch_writer_async
     from v3_blueprint.planning.models import SectionBlockPlan
 
     results = []
@@ -380,7 +380,7 @@ async def write_section_blocks(
 
 
 def collect_entries_from_results(results: list[Any]) -> list[dict[str, Any]]:
-    from generation.page_objects.document_assembly import collect_answer_entries
+    from print.rendering.page_objects.document_assembly import collect_answer_entries
 
     return collect_answer_entries(results)
 
@@ -392,7 +392,7 @@ def assemble_from_results(
     section_results: dict[str, list[Any]],
     answer_entries: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    from generation.page_objects.document_assembly import (
+    from print.rendering.page_objects.document_assembly import (
         assemble_document_v2,
         assemble_section,
     )
@@ -605,13 +605,13 @@ async def run_mock_scenario(
     expected: dict[str, Any],
     scenarios_payload: dict[str, Any],
 ) -> tuple[ScenarioRunResult, dict[str, Any] | None, list[dict[str, Any]], Any]:
-    from generation.page_objects.document_assembly import (
+    from print.rendering.page_objects.document_assembly import (
         DocumentAssemblyError,
         canonical_document_sha256,
         persist_document_json,
         reload_document,
     )
-    from generation.page_objects.validation import ContentValidationError
+    from print.rendering.page_objects.validation import ContentValidationError
 
     scenario = scenario_by_name(scenarios_payload, name)
     mutated = apply_assessment_mutation(assessment, scenario.get("assessment_mutation"))
@@ -781,7 +781,7 @@ async def run_mock_scenario(
 
 
 def write_render_artifacts(document: dict[str, Any], output_dir: Path) -> dict[str, str]:
-    from generation.page_objects.views import (
+    from print.rendering.page_objects.views import (
         render_document_html,
         render_document_pdf,
         student_document,
@@ -818,7 +818,7 @@ def persist_primary_document(
     document: dict[str, Any],
     output_dir: Path,
 ) -> dict[str, Any]:
-    from generation.page_objects.document_assembly import (
+    from print.rendering.page_objects.document_assembly import (
         persist_document_json,
         reload_document,
     )
@@ -869,12 +869,12 @@ async def run_real_smoke(
         )
         return report
 
-    from generation.page_objects.document_assembly import (
+    from print.rendering.page_objects.document_assembly import (
         persist_document_json,
         reload_document,
     )
-    from generation.page_objects.models import WriterContext
-    from generation.page_objects.registry import dispatch_writer, dispatch_writer_async
+    from print.rendering.page_objects.models import WriterContext
+    from print.rendering.page_objects.registry import dispatch_writer, dispatch_writer_async
 
     item_records = item_records_from_assessment(assessment)
     generation_id = "native-e2e-real-smoke"

@@ -10,6 +10,6 @@
     "contracts:sync": "python apps/textbook-agent/tools/update_lectio_page_contracts.py",
     "verify:phase": "powershell -ExecutionPolicy Bypass -File scripts/verify-phase.ps1",
     "program:phase00": "python -m pytest tools/xplore-program/tests -q && python tools/xplore-program/check_domain_boundaries.py --format text",
-    "program:domain-guards": "python tools/xplore-program/check_domain_boundaries.py --format text && python tools/xplore-program/check_backend_domain_boundaries.py --format text && python -m pytest tools/xplore-program/tests/test_backend_domain_boundaries.py tools/xplore-program/tests/test_phase00_baseline.py -q"
+    "program:domain-guards": "python tools/xplore-program/check_domain_boundaries.py --format text && python tools/xplore-program/check_backend_domain_boundaries.py --format text && python tools/xplore-program/check_zero_legacy.py && python -m pytest tools/xplore-program/tests/test_backend_domain_boundaries.py tools/xplore-program/tests/test_phase00_baseline.py -q"
   }
 }

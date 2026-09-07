@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from core.auth.middleware import get_current_user
+from infra.auth.middleware import get_current_user
 from core.capabilities import xplore_v2_enabled_for
 from core.entities.user import User
 

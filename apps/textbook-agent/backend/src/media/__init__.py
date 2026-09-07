@@ -1,2 +1,2 @@
-﻿"""Shared media providers and storage for V3."""
+"""Shared media providers and storage for V3."""
 

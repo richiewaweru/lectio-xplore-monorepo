@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
-from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
+from print.http.v3_studio.dtos import V3InputForm, V3SignalSummary
 from v3_blueprint.planning import retry
 from v3_blueprint.planning.models import (
     AnchorSpec,
@@ -135,32 +135,6 @@ async def test_run_stage1_retries_current_output_validation_exhaustion(
         "Exceeded maximum retries (1) for output validation"
     ]
     persist_plan.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_shadow_failure_never_blocks_generation(
-    monkeypatch: pytest.MonkeyPatch,
-    caplog,
-) -> None:
-    plan = _plan()
-    monkeypatch.setattr(retry, "_call_stage1", AsyncMock(return_value=plan))
-    monkeypatch.setattr(retry, "persist_structural_plan", AsyncMock())
-    monkeypatch.setattr(
-        retry,
-        "record_skeleton_shadow",
-        AsyncMock(side_effect=RuntimeError("shadow provider unavailable")),
-    )
-    monkeypatch.setattr(retry.settings, "v2_skeleton_shadow_enabled", True)
-
-    result = await retry.run_stage1_with_retry(
-        _signals(),
-        _form(),
-        {},
-        generation_id="generation-shadow-failure",
-    )
-
-    assert result == plan
-    assert "Skeleton shadow recording failed; generation continues" in caplog.text
 
 
 @pytest.mark.asyncio

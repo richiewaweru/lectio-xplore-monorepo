@@ -1,13 +1,13 @@
-﻿import logging
+import logging
 
-from generation.pdf_export.rendering import playwright as playwright_module
-from generation.pdf_export.rendering.playwright import _log_print_snapshot
+from print.rendering.pdf.rendering import playwright as playwright_module
+from print.rendering.pdf.rendering.playwright import _log_print_snapshot
 
 
 def _enable_playwright_logging(caplog) -> None:
     playwright_module.logger.disabled = False
     playwright_module.logger.propagate = True
-    caplog.set_level(logging.INFO, logger="generation.pdf_export.rendering.playwright")
+    caplog.set_level(logging.INFO, logger="print.rendering.pdf.rendering.playwright")
 
 
 def test_log_print_snapshot_emits_diagnostics_and_failures(caplog) -> None:

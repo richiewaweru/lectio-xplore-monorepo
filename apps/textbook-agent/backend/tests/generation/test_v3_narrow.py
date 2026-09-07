@@ -11,7 +11,7 @@ from core.events import TraceClosedEvent, TraceRegisteredEvent
 from core.auth.middleware import get_current_user
 from core.entities.user import User
 from core.llm import ModelFamily, ModelSpec
-from generation.v3_studio.router import V3SubtopicCandidate
+from print.http.v3_studio.router import V3SubtopicCandidate
 from v3_execution.llm_helpers import StructuredCallContext
 
 TEST_USER = User(
@@ -46,7 +46,7 @@ def _mock_candidates():
 
 @pytest.mark.asyncio
 async def test_narrow_returns_candidates():
-    with patch("generation.v3_studio.router.run_llm",
+    with patch("print.http.v3_studio.router.run_llm",
         new=AsyncMock(return_value=type("R", (), {
             "output": type("E", (), {"candidates": _mock_candidates()})()
         })())):
@@ -71,7 +71,7 @@ async def test_narrow_requires_auth():
 
 @pytest.mark.asyncio
 async def test_narrow_returns_empty_on_llm_failure():
-    with patch("generation.v3_studio.router.run_llm",
+    with patch("print.http.v3_studio.router.run_llm",
         new=AsyncMock(side_effect=RuntimeError("LLM down"))):
         async with _client() as client:
             resp = await client.post("/api/v1/v3/narrow", json=PAYLOAD)
@@ -87,9 +87,9 @@ async def test_narrow_registers_and_closes_trace_for_telemetry():
         published.append((trace_id, event))
 
     with (
-        patch("generation.v3_studio.router.event_bus.publish", side_effect=capture),
+        patch("print.http.v3_studio.router.event_bus.publish", side_effect=capture),
         patch(
-            "generation.v3_studio.router.run_llm",
+            "print.http.v3_studio.router.run_llm",
             new=AsyncMock(
                 return_value=type(
                     "R",
@@ -131,9 +131,9 @@ async def test_narrow_uses_prompted_output_for_deepseek_models():
             captured.update(kwargs)
 
     with (
-        patch("generation.v3_studio.router.Agent", FakeAgent),
+        patch("print.http.v3_studio.router.Agent", FakeAgent),
         patch(
-            "generation.v3_studio.router.prepare_structured_agent",
+            "print.http.v3_studio.router.prepare_structured_agent",
             return_value=(
                 "deepseek-model",
                 PromptedOutput(list, template="{schema}"),
@@ -152,9 +152,9 @@ async def test_narrow_uses_prompted_output_for_deepseek_models():
                 None,
             ),
         ),
-        patch("generation.v3_studio.router.get_v3_slot", return_value="fast"),
+        patch("print.http.v3_studio.router.get_v3_slot", return_value="fast"),
         patch(
-            "generation.v3_studio.router.run_llm",
+            "print.http.v3_studio.router.run_llm",
             new=AsyncMock(
                 return_value=type(
                     "R",
@@ -184,8 +184,8 @@ async def test_narrow_prompt_requires_self_contained_candidates():
         return type("R", (), {"output": type("E", (), {"candidates": _mock_candidates()})()})()
 
     with (
-        patch("generation.v3_studio.router.Agent", FakeAgent),
-        patch("generation.v3_studio.router.run_llm", new=fake_run_llm),
+        patch("print.http.v3_studio.router.Agent", FakeAgent),
+        patch("print.http.v3_studio.router.run_llm", new=fake_run_llm),
     ):
         async with _client() as client:
             response = await client.post(

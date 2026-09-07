@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from generation.page_objects import WriterContext, assemble_questions, dispatch_writer
-from generation.page_objects.visual_completion import apply_figure_asset_update
+from print.rendering.page_objects import WriterContext, assemble_questions, dispatch_writer
+from print.rendering.page_objects.visual_completion import apply_figure_asset_update
 from v3_blueprint.planning.models import PlannedBlock
 
 

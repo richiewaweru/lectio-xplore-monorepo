@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 from pydantic_ai import Agent
 
 from core.llm.runner import RetryPolicy, run_llm
-from planning.llm_contract_errors import structured_output_errors
+from curriculum.llm_contract_errors import structured_output_errors
 from v3_blueprint.planning.models import ConceptCard, ItemOption, QuestionBrief
 from v3_execution.config import (
     get_v3_model,

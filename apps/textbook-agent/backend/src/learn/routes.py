@@ -1,14 +1,14 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from core.auth.middleware import get_current_user
+from infra.auth.middleware import get_current_user
 from core.database.models import LearningPackModel
-from core.database.session import async_session_factory
+from infra.database.session import async_session_factory
 from core.entities.user import User
-from generation.canonical import canonical_document
+from learn.generation.canonical import canonical_document
 from learn.models import (
     CanonicalPackDocumentResponse,
     CanonicalPackResourceDocument,

@@ -1,4 +1,4 @@
-from generation.page_objects import (
+from print.rendering.page_objects import (
     WriterContext,
     WriterError,
     assemble_questions,
@@ -42,7 +42,7 @@ def test_writer_cannot_change_object() -> None:
         )
     )
     # Calling prose writer directly must fail
-    from generation.page_objects import write_prose
+    from print.rendering.page_objects import write_prose
 
     try:
         write_prose(ctx)

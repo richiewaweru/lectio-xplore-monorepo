@@ -1,20 +1,20 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from pathlib import Path
 
 from pypdf import PdfReader
 
-from generation.pdf_export.cleanup import cleanup_files, ensure_temp_dir
-from generation.pdf_export.components.answers import (
+from print.rendering.pdf.cleanup import cleanup_files, ensure_temp_dir
+from print.rendering.pdf.components.answers import (
     extract_answer_entries,
     generate_answer_key_pdf,
 )
-from generation.pdf_export.components.cover import (
+from print.rendering.pdf.components.cover import (
     clean_cover_title,
     format_cover_date,
     generate_cover_pdf,
 )
-from generation.pdf_export.components.toc import generate_toc_pdf
+from print.rendering.pdf.components.toc import generate_toc_pdf
 from contracts.document import PipelineSectionManifestItem
 from contracts.section_content import (
     ExplanationContent,

@@ -11,9 +11,9 @@ from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
-from generation.v3_studio.router import _run_chunked_stage2_pipeline
-from planning.whole_lesson.native_status import project_native_status
-from planning.whole_lesson.packet import (
+from print.http.v3_studio.router import _run_chunked_stage2_pipeline
+from print.generation.whole_lesson.native_status import project_native_status
+from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ImmutableLessonPacket,
     LessonIdentity,
@@ -21,8 +21,8 @@ from planning.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
-from planning.whole_lesson.teaching_agent import run_lesson_approach_planner
-from planning.whole_lesson.teaching_plan import TeachingPlan
+from print.generation.whole_lesson.teaching_agent import run_lesson_approach_planner
+from print.generation.whole_lesson.teaching_plan import TeachingPlan
 from v3_blueprint.planning.models import (
     AnchorSpec,
     ComponentSlot,
@@ -174,11 +174,11 @@ async def test_teaching_planner_failure_syncs_all_status_sources() -> None:
 
     with (
         patch(
-            "planning.whole_lesson.service.run_and_persist_teaching_plan",
+            "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
             new=AsyncMock(side_effect=RuntimeError("teaching planner boom")),
         ),
         patch(
-            "generation.v3_studio.router._chunked_emit_event",
+            "print.http.v3_studio.router._chunked_emit_event",
             new=AsyncMock(),
         ),
     ):
@@ -225,11 +225,11 @@ async def test_recoverable_teaching_failure_syncs_generation_error_aliases() -> 
 
     with (
         patch(
-            "planning.whole_lesson.service.run_and_persist_teaching_plan",
+            "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
             new=AsyncMock(side_effect=TimeoutError("provider timed out")),
         ),
         patch(
-            "generation.v3_studio.router._chunked_emit_event",
+            "print.http.v3_studio.router._chunked_emit_event",
             new=AsyncMock(),
         ),
     ):
@@ -278,15 +278,15 @@ async def test_teaching_boundary_preserves_recoverable_provider_failure(
 
     with (
         patch(
-            "planning.whole_lesson.teaching_agent._call_teaching_model",
+            "print.generation.whole_lesson.teaching_agent._call_teaching_model",
             new=model_call,
         ),
         patch(
-            "planning.whole_lesson.service.run_and_persist_teaching_plan",
+            "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
             new=_run_through_teaching_boundary,
         ),
         patch(
-            "generation.v3_studio.router._chunked_emit_event",
+            "print.http.v3_studio.router._chunked_emit_event",
             new=AsyncMock(),
         ),
     ):
@@ -325,15 +325,15 @@ async def test_teaching_boundary_persists_schema_exhaustion_as_recoverable() -> 
 
     with (
         patch(
-            "planning.whole_lesson.teaching_agent._call_teaching_model",
+            "print.generation.whole_lesson.teaching_agent._call_teaching_model",
             new=model_call,
         ),
         patch(
-            "planning.whole_lesson.service.run_and_persist_teaching_plan",
+            "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
             new=_run_through_teaching_boundary,
         ),
         patch(
-            "generation.v3_studio.router._chunked_emit_event",
+            "print.http.v3_studio.router._chunked_emit_event",
             new=AsyncMock(),
         ),
     ):
@@ -376,15 +376,15 @@ async def test_teaching_boundary_persists_semantic_exhaustion_as_recoverable() -
 
     with (
         patch(
-            "planning.whole_lesson.teaching_agent._call_teaching_model",
+            "print.generation.whole_lesson.teaching_agent._call_teaching_model",
             new=model_call,
         ),
         patch(
-            "planning.whole_lesson.service.run_and_persist_teaching_plan",
+            "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
             new=_run_through_teaching_boundary,
         ),
         patch(
-            "generation.v3_studio.router._chunked_emit_event",
+            "print.http.v3_studio.router._chunked_emit_event",
             new=AsyncMock(),
         ),
     ):
@@ -420,15 +420,15 @@ async def test_generic_unexpected_model_behavior_remains_terminal() -> None:
 
     with (
         patch(
-            "planning.whole_lesson.teaching_agent._call_teaching_model",
+            "print.generation.whole_lesson.teaching_agent._call_teaching_model",
             new=model_call,
         ),
         patch(
-            "planning.whole_lesson.service.run_and_persist_teaching_plan",
+            "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
             new=_run_through_teaching_boundary,
         ),
         patch(
-            "generation.v3_studio.router._chunked_emit_event",
+            "print.http.v3_studio.router._chunked_emit_event",
             new=AsyncMock(),
         ),
     ):
@@ -455,15 +455,15 @@ async def test_deterministic_teaching_input_failure_is_terminal_without_provider
 
     with (
         patch(
-            "planning.whole_lesson.teaching_agent._call_teaching_model",
+            "print.generation.whole_lesson.teaching_agent._call_teaching_model",
             new=model_call,
         ),
         patch(
-            "planning.whole_lesson.service.run_and_persist_teaching_plan",
+            "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
             new=_run_deterministic_input_boundary,
         ),
         patch(
-            "generation.v3_studio.router._chunked_emit_event",
+            "print.http.v3_studio.router._chunked_emit_event",
             new=AsyncMock(),
         ),
     ):
@@ -483,8 +483,8 @@ async def test_deterministic_teaching_input_failure_is_terminal_without_provider
 
 
 async def _seed_planning_forms_without_form_plan() -> str:
-    from planning.whole_lesson.legality import build_lesson_legality_snapshot
-    from planning.whole_lesson.repository import empty_page_document_state
+    from print.generation.whole_lesson.legality import build_lesson_legality_snapshot
+    from print.generation.whole_lesson.repository import empty_page_document_state
     from tests.planning.contract_fixtures import teaching_and_form
 
     gid = str(uuid.uuid4())
@@ -522,13 +522,13 @@ async def _seed_planning_forms_without_form_plan() -> str:
 
 @pytest.mark.asyncio
 async def test_injected_form_timeout_persists_through_worker_boundary() -> None:
-    from planning.whole_lesson.executor import execute_after_teaching_approval
-    from planning.whole_lesson.failure_injection import (
+    from print.generation.whole_lesson.executor import execute_after_teaching_approval
+    from print.generation.whole_lesson.failure_injection import (
         configure_failure_injection,
         reset_failure_injection,
     )
-    from planning.whole_lesson.repository import PageDocumentRepository
-    from planning.whole_lesson.worker import NativeExecutionWorker
+    from print.generation.whole_lesson.repository import PageDocumentRepository
+    from print.generation.whole_lesson.worker import NativeExecutionWorker
 
     gid = await _seed_planning_forms_without_form_plan()
     configure_failure_injection(
@@ -550,7 +550,7 @@ async def test_injected_form_timeout_persists_through_worker_boundary() -> None:
             )
             assert lease is not None
         with patch(
-            "planning.whole_lesson.executor.run_form_planner",
+            "print.generation.whole_lesson.executor.run_form_planner",
             new=_form_boom,
         ):
             async with async_session_factory() as session:
@@ -584,7 +584,7 @@ async def test_injected_form_timeout_persists_through_worker_boundary() -> None:
 
 @pytest.mark.asyncio
 async def test_form_timeout_injection_is_exact_generation_one_shot(monkeypatch) -> None:
-    from planning.whole_lesson.failure_injection import (
+    from print.generation.whole_lesson.failure_injection import (
         configure_failure_injection,
         get_failure_injection,
         load_failure_injection_from_env,

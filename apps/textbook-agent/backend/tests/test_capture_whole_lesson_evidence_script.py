@@ -16,7 +16,7 @@ import importlib.util
 from pathlib import Path
 
 import pytest
-from planning.prompts import LESSON_APPROACH_PROMPT_V2_SHA256
+from curriculum.prompts import LESSON_APPROACH_PROMPT_V2_SHA256
 
 
 def _load_capture_module():

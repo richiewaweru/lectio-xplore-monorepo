@@ -16,17 +16,17 @@ from core.events import TraceClosedEvent, TraceRegisteredEvent
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
 from core.entities.user import User
-from generation.v3_studio import router as v3_router
-from generation.v3_studio.dtos import V3InputForm
-from generation.v3_studio.planning_artifact import (
+from print.http.v3_studio import router as v3_router
+from print.http.v3_studio.dtos import V3InputForm
+from print.http.v3_studio.planning_artifact import (
     SCHEMA_VERSION,
     build_planning_artifact,
     parse_planning_artifact,
 )
-from generation.v3_studio.session_store import v3_studio_store
-from generation.v3_studio.router import _pump_sse_to_queue
-from telemetry.v3_trace import event_types as trace_events
-from telemetry.v3_trace.repository import V3TraceRepository
+from print.http.v3_studio.session_store import v3_studio_store
+from print.http.v3_studio.router import _pump_sse_to_queue
+from infra.telemetry.v3_trace import event_types as trace_events
+from infra.telemetry.v3_trace.repository import V3TraceRepository
 
 TEST_USER_A = User(
     id="v3-studio-user-a",
@@ -159,7 +159,7 @@ async def test_v3_generate_start_returns_json_and_sse_stream_closes() -> None:
         await queue.put("event: component_ready\ndata: {}\n\n")
         await queue.put(None)
 
-    with patch("generation.v3_studio.router._pump_sse_to_queue", new=fake_pump):
+    with patch("print.http.v3_studio.router._pump_sse_to_queue", new=fake_pump):
         async with _client() as client:
             post = await client.post(
                 "/api/v1/v3/generate/start",
@@ -238,7 +238,7 @@ async def test_v3_generate_start_conflict_when_generation_id_reused() -> None:
     async def fake_pump(queue, **_kwargs):
         await queue.put(None)
 
-    with patch("generation.v3_studio.router._pump_sse_to_queue", new=fake_pump):
+    with patch("print.http.v3_studio.router._pump_sse_to_queue", new=fake_pump):
         async with _client() as client:
             first = await client.post(
                 "/api/v1/v3/generate/start",
@@ -272,7 +272,7 @@ async def test_v3_generation_events_forbidden_for_other_user() -> None:
     async def fake_pump(queue, **_kwargs):
         await queue.put(None)
 
-    with patch("generation.v3_studio.router._pump_sse_to_queue", new=fake_pump):
+    with patch("print.http.v3_studio.router._pump_sse_to_queue", new=fake_pump):
         async with _client() as client:
             await client.post(
                 "/api/v1/v3/generate/start",
@@ -302,7 +302,7 @@ async def test_v3_generate_start_creates_trace_before_stream_open() -> None:
     async def fake_pump(queue, **_kwargs):
         await queue.put(None)
 
-    with patch("generation.v3_studio.router._pump_sse_to_queue", new=fake_pump):
+    with patch("print.http.v3_studio.router._pump_sse_to_queue", new=fake_pump):
         async with _client() as client:
             post = await client.post(
                 "/api/v1/v3/generate/start",
@@ -334,7 +334,7 @@ async def test_v3_generate_start_fails_when_trace_initialization_fails() -> None
     await v3_studio_store.put_blueprint(TEST_USER_A.id, blueprint_id, bp, "guided-concept-path")
 
     with patch(
-        "generation.v3_studio.router.V3TraceWriter.start_run",
+        "print.http.v3_studio.router.V3TraceWriter.start_run",
         side_effect=RuntimeError("trace down"),
     ):
         async with _client() as client:
@@ -366,7 +366,7 @@ async def test_v3_trace_endpoints_are_user_scoped() -> None:
     async def fake_pump(queue, **_kwargs):
         await queue.put(None)
 
-    with patch("generation.v3_studio.router._pump_sse_to_queue", new=fake_pump):
+    with patch("print.http.v3_studio.router._pump_sse_to_queue", new=fake_pump):
         async with _client() as client:
             post = await client.post(
                 "/api/v1/v3/generate/start",
@@ -631,7 +631,7 @@ async def test_v3_visual_regenerate_replaces_visual_block_and_section_diagram() 
             )
         ]
 
-    with patch("generation.v3_studio.router.execute_visual", side_effect=fake_execute_visual):
+    with patch("print.http.v3_studio.router.execute_visual", side_effect=fake_execute_visual):
         async with _client() as client:
             resp = await client.post(
                 f"/api/v1/v3/generations/{generation_id}/visuals/{order.visual.id}/regenerate",
@@ -689,7 +689,7 @@ async def test_v3_component_patch_replaces_document_component_without_retry() ->
         )]
 
     ref = f"{component.component_id}@{order.section.id}"
-    with patch("generation.v3_studio.router.execute_section", side_effect=fake_execute_section):
+    with patch("print.http.v3_studio.router.execute_section", side_effect=fake_execute_section):
         async with _client() as client:
             resp = await client.post(
                 f"/api/v1/v3/generations/{generation_id}/components/{ref}/patch",
@@ -919,7 +919,7 @@ async def test_v3_pdf_export_surfaces_actionable_error_detail() -> None:
     )
 
     with patch(
-        "generation.v3_studio.router.export_v3_studio_pdf",
+        "print.http.v3_studio.router.export_v3_studio_pdf",
         side_effect=RuntimeError("playwright timed out while rendering print page"),
     ):
         async with _client() as client:
@@ -981,7 +981,7 @@ async def test_pump_sse_parses_events_and_dispatches_generation_writer() -> None
             'data: {"generation_id":"gen-1","status":"passed","booklet_status":"final_ready"}\n\n'
         )
 
-    with patch("generation.v3_studio.router.sse_event_stream", new=fake_stream):
+    with patch("print.http.v3_studio.router.sse_event_stream", new=fake_stream):
         await _pump_sse_to_queue(
             queue,
             blueprint=bp,
@@ -1045,7 +1045,7 @@ async def test_v3_generate_start_persists_planning_artifact_before_stream() -> N
     async def fake_pump(queue, **_kwargs):
         await queue.put(None)
 
-    with patch("generation.v3_studio.router._pump_sse_to_queue", new=fake_pump):
+    with patch("print.http.v3_studio.router._pump_sse_to_queue", new=fake_pump):
         async with _client() as client:
             post = await client.post(
                 "/api/v1/v3/generate/start",
@@ -1252,10 +1252,10 @@ async def test_blueprint_adjust_preserves_planning_source() -> None:
     )
 
     with patch(
-        "generation.v3_studio.router.adjust_production_blueprint",
+        "print.http.v3_studio.router.adjust_production_blueprint",
         new=AsyncMock(return_value=bp),
     ), patch(
-        "generation.v3_studio.router.blueprint_to_preview_dto",
+        "print.http.v3_studio.router.blueprint_to_preview_dto",
         return_value={
             "blueprint_id": blueprint_id,
             "resource_type": "lesson",
@@ -1303,13 +1303,13 @@ async def test_blueprint_adjust_registers_and_closes_trace_for_telemetry() -> No
         published.append((trace_id, event))
 
     with (
-        patch("generation.v3_studio.router.event_bus.publish", side_effect=capture),
+        patch("print.http.v3_studio.router.event_bus.publish", side_effect=capture),
         patch(
-            "generation.v3_studio.router.adjust_production_blueprint",
+            "print.http.v3_studio.router.adjust_production_blueprint",
             new=AsyncMock(return_value=bp),
         ),
         patch(
-            "generation.v3_studio.router.blueprint_to_preview_dto",
+            "print.http.v3_studio.router.blueprint_to_preview_dto",
             return_value={
                 "blueprint_id": blueprint_id,
                 "resource_type": "lesson",
@@ -1366,7 +1366,7 @@ async def test_v3_generate_start_persists_supplement_planning_source() -> None:
     async def fake_pump(queue, **_kwargs):
         await queue.put(None)
 
-    with patch("generation.v3_studio.router._pump_sse_to_queue", new=fake_pump):
+    with patch("print.http.v3_studio.router._pump_sse_to_queue", new=fake_pump):
         async with _client() as client:
             post = await client.post(
                 "/api/v1/v3/generate/start",
@@ -1416,7 +1416,7 @@ async def test_supplement_adjust_then_start_persists_lineage_in_db() -> None:
     )
 
     with patch(
-        "generation.v3_studio.router.adjust_production_blueprint",
+        "print.http.v3_studio.router.adjust_production_blueprint",
         new=AsyncMock(return_value=bp),
     ):
         async with _client() as client:
@@ -1432,7 +1432,7 @@ async def test_supplement_adjust_then_start_persists_lineage_in_db() -> None:
     async def fake_pump(queue, **_kwargs):
         await queue.put(None)
 
-    with patch("generation.v3_studio.router._pump_sse_to_queue", new=fake_pump):
+    with patch("print.http.v3_studio.router._pump_sse_to_queue", new=fake_pump):
         async with _client() as client:
             post = await client.post(
                 "/api/v1/v3/generate/start",

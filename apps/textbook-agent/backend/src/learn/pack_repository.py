@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from core.database.models import GenerationModel, LearningPackModel
-from generation.canonical import canonical_marker_clause
+from learn.generation.canonical import canonical_marker_clause
 
 TERMINAL_GENERATION_STATUSES = {"completed", "partial", "failed"}
 

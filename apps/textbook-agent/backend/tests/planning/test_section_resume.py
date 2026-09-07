@@ -10,9 +10,9 @@ import pytest
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
-from generation.page_objects import WriterOutcome
-from planning.whole_lesson.executor import write_form_blocks
-from planning.whole_lesson.packet import (
+from print.rendering.page_objects import WriterOutcome
+from print.generation.whole_lesson.executor import write_form_blocks
+from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ImmutableLessonPacket,
     LessonIdentity,
@@ -20,8 +20,8 @@ from planning.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
-from planning.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
-from planning.whole_lesson.states import execution_key
+from print.generation.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
+from print.generation.whole_lesson.states import execution_key
 from tests.planning.contract_fixtures import teaching_and_form
 
 
@@ -124,7 +124,7 @@ async def test_resume_skips_completed_sections() -> None:
         )
 
     with patch(
-        "planning.whole_lesson.executor.dispatch_writer_async",
+        "print.generation.whole_lesson.executor.dispatch_writer_async",
         new=AsyncMock(side_effect=_fake_dispatch),
     ):
         await write_form_blocks(

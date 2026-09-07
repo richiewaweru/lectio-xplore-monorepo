@@ -12,7 +12,7 @@ from core.auth.middleware import get_current_user
 from core.entities.user import User
 from core.events import TraceClosedEvent, TraceRegisteredEvent
 from core.llm import ModelFamily, ModelSpec
-from generation.v3_studio.dtos import V3ProposeIntentResponse
+from print.http.v3_studio.dtos import V3ProposeIntentResponse
 from v3_execution.llm_helpers import StructuredCallContext
 
 TEST_USER = User(
@@ -43,7 +43,7 @@ def _drafts() -> V3ProposeIntentResponse:
 
 @pytest.mark.asyncio
 async def test_propose_intent_returns_three_teacher_editable_drafts() -> None:
-    with patch("generation.v3_studio.router.run_llm", new=AsyncMock(return_value=SimpleNamespace(output=_drafts()))):
+    with patch("print.http.v3_studio.router.run_llm", new=AsyncMock(return_value=SimpleNamespace(output=_drafts()))):
         async with _client() as client:
             response = await client.post("/api/v1/v3/propose-intent", json=PAYLOAD)
 
@@ -61,7 +61,7 @@ async def test_propose_intent_scopes_empty_subtopics_to_topic() -> None:
         captured.update(kwargs)
         return SimpleNamespace(output=_drafts())
 
-    with patch("generation.v3_studio.router.run_llm", new=fake_run_llm):
+    with patch("print.http.v3_studio.router.run_llm", new=fake_run_llm):
         async with _client() as client:
             response = await client.post("/api/v1/v3/propose-intent", json={**PAYLOAD, "subtopics": []})
 
@@ -74,8 +74,8 @@ async def test_propose_intent_scopes_empty_subtopics_to_topic() -> None:
 async def test_propose_intent_registers_and_closes_trace() -> None:
     published: list[tuple[str, object]] = []
     with (
-        patch("generation.v3_studio.router.event_bus.publish", side_effect=lambda trace_id, event: published.append((trace_id, event))),
-        patch("generation.v3_studio.router.run_llm", new=AsyncMock(return_value=SimpleNamespace(output=_drafts()))),
+        patch("print.http.v3_studio.router.event_bus.publish", side_effect=lambda trace_id, event: published.append((trace_id, event))),
+        patch("print.http.v3_studio.router.run_llm", new=AsyncMock(return_value=SimpleNamespace(output=_drafts()))),
     ):
         async with _client() as client:
             response = await client.post("/api/v1/v3/propose-intent", json=PAYLOAD)
@@ -103,9 +103,9 @@ async def test_propose_intent_uses_prompted_output_for_deepseek() -> None:
             captured.update(kwargs)
 
     with (
-        patch("generation.v3_studio.router.Agent", FakeAgent),
+        patch("print.http.v3_studio.router.Agent", FakeAgent),
         patch(
-            "generation.v3_studio.router.prepare_structured_agent",
+            "print.http.v3_studio.router.prepare_structured_agent",
             return_value=(
                 "deepseek-model",
                 PromptedOutput(V3ProposeIntentResponse, template="{schema}"),
@@ -124,7 +124,7 @@ async def test_propose_intent_uses_prompted_output_for_deepseek() -> None:
                 None,
             ),
         ),
-        patch("generation.v3_studio.router.run_llm", new=AsyncMock(return_value=SimpleNamespace(output=_drafts()))),
+        patch("print.http.v3_studio.router.run_llm", new=AsyncMock(return_value=SimpleNamespace(output=_drafts()))),
     ):
         async with _client() as client:
             response = await client.post("/api/v1/v3/propose-intent", json=PAYLOAD)
@@ -141,7 +141,7 @@ async def test_propose_intent_prompt_conditions_on_class_shape() -> None:
         captured.update(kwargs)
         return SimpleNamespace(output=_drafts())
 
-    with patch("generation.v3_studio.router.run_llm", new=fake_run_llm):
+    with patch("print.http.v3_studio.router.run_llm", new=fake_run_llm):
         async with _client() as client:
             response = await client.post("/api/v1/v3/propose-intent", json=PAYLOAD)
 

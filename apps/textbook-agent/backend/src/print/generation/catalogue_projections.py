@@ -350,7 +350,7 @@ def build_form_candidate_map(
     implemented = set(implemented_objects or _IMPLEMENTED_FORM_OBJECTS)
     implemented -= set(_NEVER_SELECTABLE_OBJECTS)
 
-    from planning.approved_items import approved_item_kind
+    from curriculum.approved_items import approved_item_kind
 
     approved_by_id = {
         str(getattr(item, "id", "") or ""): item for item in approved_items

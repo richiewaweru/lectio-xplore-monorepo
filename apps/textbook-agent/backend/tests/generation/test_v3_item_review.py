@@ -12,7 +12,7 @@ from core.auth.middleware import get_current_user
 from core.database.models import ConceptCardModel, PackItemModel, UserModel
 from core.database.session import async_session_factory
 from core.entities.user import User
-from generation.v3_studio.router import _ensure_chunked_generation_row
+from print.http.v3_studio.router import _ensure_chunked_generation_row
 from v3_blueprint.planning.persistence import persist_chunked_state
 from v3_execution.executors.item_executor import ItemGenerationResult
 
@@ -252,7 +252,7 @@ async def test_regenerate_preserves_teacher_item_and_marks_it_stale() -> None:
     )
 
     with patch(
-        "generation.v3_studio.router.execute_items",
+        "print.http.v3_studio.router.execute_items",
         new=AsyncMock(return_value=generated),
     ):
         async with _client() as client:

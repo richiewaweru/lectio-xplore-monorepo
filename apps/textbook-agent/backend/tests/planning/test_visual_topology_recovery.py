@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from planning.whole_lesson.repository import VisualTopologyConflict
-from planning.whole_lesson.visual_topology_recovery import (
+from print.generation.whole_lesson.repository import VisualTopologyConflict
+from print.generation.whole_lesson.visual_topology_recovery import (
     TopologyRecoveryError,
     deterministic_topology_fallback,
     recover_flagged_visual_topology,
@@ -110,7 +110,7 @@ def _valid_topology() -> dict:
 
 @pytest.mark.asyncio
 async def test_recovery_success_reuses_topology_and_never_calls_provider(monkeypatch):
-    from planning.whole_lesson import visual_topology_recovery as mod
+    from print.generation.whole_lesson import visual_topology_recovery as mod
 
     _reset_repo()
     monkeypatch.setattr(mod, "PageDocumentRepository", _FakeRepo)
@@ -152,7 +152,7 @@ async def test_recovery_success_reuses_topology_and_never_calls_provider(monkeyp
 
 @pytest.mark.asyncio
 async def test_planner_failure_uses_deterministic_fallback(monkeypatch):
-    from planning.whole_lesson import visual_topology_recovery as mod
+    from print.generation.whole_lesson import visual_topology_recovery as mod
 
     _reset_repo()
     monkeypatch.setattr(mod, "PageDocumentRepository", _FakeRepo)
@@ -177,7 +177,7 @@ async def test_planner_failure_uses_deterministic_fallback(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_default_topology_qc_rejects_unidentified_render_output(monkeypatch):
-    from planning.whole_lesson import visual_topology_recovery as mod
+    from print.generation.whole_lesson import visual_topology_recovery as mod
 
     _reset_repo()
     monkeypatch.setattr(mod, "PageDocumentRepository", _FakeRepo)
@@ -208,7 +208,7 @@ async def test_default_topology_qc_rejects_unidentified_render_output(monkeypatc
 
 @pytest.mark.asyncio
 async def test_default_topology_qc_rejects_hash_only_render_output(monkeypatch):
-    from planning.whole_lesson import visual_topology_recovery as mod
+    from print.generation.whole_lesson import visual_topology_recovery as mod
 
     _reset_repo()
     monkeypatch.setattr(mod, "PageDocumentRepository", _FakeRepo)
@@ -238,7 +238,7 @@ async def test_default_topology_qc_rejects_hash_only_render_output(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_identity_mismatch_fails_closed_before_renderer(monkeypatch):
-    from planning.whole_lesson import visual_topology_recovery as mod
+    from print.generation.whole_lesson import visual_topology_recovery as mod
 
     _FakeRepo.records = {
         "r1": {"identity_digest": "old", "topology": {"nodes": []}, "topology_sha256": "x"}
@@ -261,7 +261,7 @@ async def test_identity_mismatch_fails_closed_before_renderer(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_resumed_topology_is_revalidated_before_renderer(monkeypatch):
-    from planning.whole_lesson import visual_topology_recovery as mod
+    from print.generation.whole_lesson import visual_topology_recovery as mod
 
     _FakeRepo.records = {
         "r-corrupt": {
@@ -303,7 +303,7 @@ async def test_resumed_topology_is_revalidated_before_renderer(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_injected_qc_flag_keeps_rendered_visual_with_warning(monkeypatch):
-    from planning.whole_lesson import visual_topology_recovery as mod
+    from print.generation.whole_lesson import visual_topology_recovery as mod
 
     _reset_repo()
     monkeypatch.setattr(mod, "PageDocumentRepository", _FakeRepo)
@@ -347,7 +347,7 @@ async def test_injected_qc_flag_keeps_rendered_visual_with_warning(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_injected_qc_malformed_verdict_fails_closed(monkeypatch):
-    from planning.whole_lesson import visual_topology_recovery as mod
+    from print.generation.whole_lesson import visual_topology_recovery as mod
 
     _reset_repo()
     monkeypatch.setattr(mod, "PageDocumentRepository", _FakeRepo)
@@ -380,7 +380,7 @@ async def test_injected_qc_malformed_verdict_fails_closed(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_dispatch_routes_flagged_topology_without_visual_provider(monkeypatch):
-    from planning.whole_lesson import visual_dispatch
+    from print.generation.whole_lesson import visual_dispatch
 
     class Repo:
         def __init__(self, _session, _generation_id):
@@ -454,7 +454,7 @@ async def test_dispatch_routes_flagged_topology_without_visual_provider(monkeypa
 
 @pytest.mark.asyncio
 async def test_dispatch_filters_topology_block_when_request_id_is_asset_only(monkeypatch):
-    from planning.whole_lesson import visual_dispatch
+    from print.generation.whole_lesson import visual_dispatch
 
     class Repo:
         def __init__(self, _session, _generation_id):
@@ -513,7 +513,7 @@ async def test_dispatch_filters_topology_block_when_request_id_is_asset_only(mon
 
 @pytest.mark.asyncio
 async def test_final_raster_bytes_are_qc_reviewed_before_upload(monkeypatch):
-    from planning.whole_lesson import visual_topology_recovery as mod
+    from print.generation.whole_lesson import visual_topology_recovery as mod
 
     _reset_repo()
     monkeypatch.setattr(mod, "PageDocumentRepository", _FakeRepo)
@@ -562,7 +562,7 @@ async def test_final_raster_bytes_are_qc_reviewed_before_upload(monkeypatch):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("verdict", ["flag", "reject", "flagged_quality"])
 async def test_qc_flag_or_reject_keeps_rendered_asset_with_warning(monkeypatch, verdict):
-    from planning.whole_lesson import visual_topology_recovery as mod
+    from print.generation.whole_lesson import visual_topology_recovery as mod
 
     _reset_repo()
     monkeypatch.setattr(mod, "PageDocumentRepository", _FakeRepo)
@@ -598,7 +598,7 @@ async def test_qc_flag_or_reject_keeps_rendered_asset_with_warning(monkeypatch, 
 
 @pytest.mark.asyncio
 async def test_qc_error_and_malformed_verdict_fail_closed_before_upload(monkeypatch):
-    from planning.whole_lesson import visual_topology_recovery as mod
+    from print.generation.whole_lesson import visual_topology_recovery as mod
 
     _reset_repo()
     monkeypatch.setattr(mod, "PageDocumentRepository", _FakeRepo)
@@ -633,7 +633,7 @@ async def test_qc_error_and_malformed_verdict_fail_closed_before_upload(monkeypa
 
 @pytest.mark.asyncio
 async def test_resumed_topology_is_revalidated_and_qc_reviewed(monkeypatch):
-    from planning.whole_lesson import visual_topology_recovery as mod
+    from print.generation.whole_lesson import visual_topology_recovery as mod
 
     identity = topology_identity_digest(
         source_digest="src", labels=[],
@@ -676,8 +676,8 @@ async def test_resumed_topology_is_revalidated_and_qc_reviewed(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_dispatch_injects_qc_adapter_and_returns_awaiting_visuals_on_flag(monkeypatch):
-    from planning.whole_lesson import visual_dispatch
-    from planning.whole_lesson.visual_topology_recovery import TopologyRecoveryError
+    from print.generation.whole_lesson import visual_dispatch
+    from print.generation.whole_lesson.visual_topology_recovery import TopologyRecoveryError
 
     class Repo:
         def __init__(self, _session, _generation_id):

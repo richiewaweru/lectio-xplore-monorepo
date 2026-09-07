@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from generation.page_objects import (
+from print.rendering.page_objects import (
     ContentValidationError,
     WriterContext,
     dispatch_writer_async,
 )
-from generation.page_objects.prompts import build_repair_prompt, build_writer_prompt
-from generation.page_objects.registry import normalize_persisted_document_json
-from generation.page_objects.scripted_provider import ScriptedWriterProvider
-from planning.catalogue_projections import project_writer_contract
+from print.rendering.page_objects.prompts import build_repair_prompt, build_writer_prompt
+from print.rendering.page_objects.registry import normalize_persisted_document_json
+from print.rendering.page_objects.scripted_provider import ScriptedWriterProvider
+from print.generation.catalogue_projections import project_writer_contract
 from v3_blueprint.planning.models import PlannedBlock
 
 

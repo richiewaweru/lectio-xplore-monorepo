@@ -136,7 +136,7 @@ async def test_persist_section_brief_inserts_step_and_fold_loads(
 
 @pytest.mark.asyncio
 async def test_resume_rebuilds_only_missing_brief_steps(db_session) -> None:
-    from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
+    from print.http.v3_studio.dtos import V3InputForm, V3SignalSummary
     from v3_blueprint.planning.models import (
         AnchorSpec,
         ComponentSlot,

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from planning.page_blocks import PageBlockPlanError, validate_intent_departure
-from planning.whole_lesson.packet import (
+from print.generation.page_blocks import PageBlockPlanError, validate_intent_departure
+from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ApprovedItemRef,
     ImmutableLessonPacket,
@@ -15,13 +15,13 @@ from planning.whole_lesson.packet import (
     ScopeEntry,
     SlotRecord,
 )
-from planning.whole_lesson.teaching_plan import (
+from print.generation.whole_lesson.teaching_plan import (
     AnchorUsageEntry,
     TeachingPlan,
     TeachingPlanBlock,
     TeachingPlanSection,
 )
-from planning.whole_lesson.validation import validate_teaching_plan
+from print.generation.whole_lesson.validation import validate_teaching_plan
 
 
 def test_typical_intent_forbids_departure_reason() -> None:
@@ -54,7 +54,7 @@ def test_atypical_intent_requires_departure_reason() -> None:
 
 
 def test_object_leak_ignores_english_questions_in_prose() -> None:
-    from planning.whole_lesson.validation import _contains_object_id
+    from print.generation.whole_lesson.validation import _contains_object_id
 
     assert _contains_object_id("Ask retrieval questions about the cell wall.") is None
     assert _contains_object_id('{"brief":"Ask retrieval questions about cells."}') is None

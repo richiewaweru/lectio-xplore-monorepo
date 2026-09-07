@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from planning.catalogue_projections import project_teaching_guidance
-from planning.whole_lesson.packet import (
+from print.generation.catalogue_projections import project_teaching_guidance
+from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ApprovedItemRef,
     ImmutableLessonPacket,
@@ -13,7 +13,7 @@ from planning.whole_lesson.packet import (
     ScopeEntry,
     SlotRecord,
 )
-from planning.whole_lesson.prompt_render import render_teaching_prompt
+from print.generation.whole_lesson.prompt_render import render_teaching_prompt
 from resource_specs.loader import load_all_specs
 
 

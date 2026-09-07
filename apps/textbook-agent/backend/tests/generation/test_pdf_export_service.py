@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from core.config import Settings
-from generation.pdf_export.service import (
+from print.rendering.pdf.service import (
     NativeDocumentContractError,
     PDFExportRequest,
     export_v3_studio_pdf,
@@ -38,7 +38,7 @@ async def test_export_v3_studio_pdf_uses_lectio_only_print_route(tmp_path: Path)
     )
 
     with patch(
-        "generation.pdf_export.service.export_generation_pdf",
+        "print.rendering.pdf.service.export_generation_pdf",
         new=AsyncMock(
             return_value=SimpleNamespace(
                 pdf_path=exported_pdf,
@@ -108,10 +108,10 @@ async def test_native_v2_bypasses_legacy_adapter_and_duplicate_answer_pdf(tmp_pa
     envelope = {"document_version": 2, "lectio_document": _native_document()}
     settings = Settings.model_construct(PDF_EXPORT_ENABLED=True, PDF_RENDER_BASE_URL="http://localhost:5173")
     with patch(
-        "generation.pdf_export.service.build_pipeline_document_for_v3_pdf",
+        "print.rendering.pdf.service.build_pipeline_document_for_v3_pdf",
         side_effect=AssertionError("native document entered legacy adapter"),
     ), patch(
-        "generation.pdf_export.service.export_generation_pdf",
+        "print.rendering.pdf.service.export_generation_pdf",
         new=AsyncMock(
             return_value=SimpleNamespace(
                 pdf_path=exported_pdf,
@@ -148,7 +148,7 @@ async def test_native_v2_malformed_document_fails_closed_without_legacy_fallback
     request = PDFExportRequest(school_name="School", teacher_name="Teacher")
     settings = Settings.model_construct(PDF_EXPORT_ENABLED=True, PDF_RENDER_BASE_URL="http://localhost:5173")
     with patch(
-        "generation.pdf_export.service.build_pipeline_document_for_v3_pdf",
+        "print.rendering.pdf.service.build_pipeline_document_for_v3_pdf",
         side_effect=AssertionError("malformed native document entered legacy adapter"),
     ):
         with pytest.raises(NativeDocumentContractError, match="LectioDocumentV2"):

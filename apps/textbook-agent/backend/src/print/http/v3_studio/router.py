@@ -74,14 +74,14 @@ from print.http.v3_studio.agents import (
     adjust_production_blueprint,
     extract_signals,
 )
-from generation.pdf_export.cleanup import cleanup_files
-from generation.pdf_export.rendering.playwright import PDFRenderError
-from generation.pdf_export.service import (
+from print.rendering.pdf.cleanup import cleanup_files
+from print.rendering.pdf.rendering.playwright import PDFRenderError
+from print.rendering.pdf.service import (
     NativeDocumentContractError,
     PDFExportRequest,
     export_v3_studio_pdf,
 )
-from generation.pdf_export.components.answers_v3 import (
+from print.rendering.pdf.components.answers_v3 import (
     build_diagnostic_answer_key_content,
 )
 from print.http.v3_studio.dtos import (
@@ -115,17 +115,17 @@ from print.http.v3_studio.dtos import (
     V3SignalSummary,
 )
 from print.http.v3_studio.prompts import PROPOSE_INTENT_SYSTEM, build_propose_intent_user_prompt
-from generation.path_preparation import enforce_path_owned_card_objective
+from application.unit_lesson import enforce_path_owned_card_objective
 from resource_specs.loader import get_spec, list_spec_ids
 from resource_specs.renderer import render_spec_for_prompt
 from print.http.v3_studio.preview_mapper import blueprint_to_preview_dto
 from print.http.v3_studio.generation_writer import V3GenerationWriter, bump_document_version
 from print.http.v3_studio.planning_artifact import build_planning_artifact
 from print.http.v3_studio.session_store import v3_studio_store
-from telemetry.dependencies import get_v3_trace_repository
-from telemetry.service import telemetry_monitor
-from telemetry.v3_trace.repository import V3TraceRepository
-from telemetry.v3_trace.writer import V3TraceWriter
+from infra.telemetry.dependencies import get_v3_trace_repository
+from infra.telemetry.service import telemetry_monitor
+from infra.telemetry.v3_trace.repository import V3TraceRepository
+from infra.telemetry.v3_trace.writer import V3TraceWriter
 from core.events import TraceClosedEvent, TraceRegisteredEvent, event_bus
 from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 from v3_review.card_reviewer import review_card_content
@@ -345,7 +345,7 @@ def _normalize_chunked_status(
     *,
     generation_status: str | None = None,
 ) -> V3ChunkedStatusDTO:
-    from planning.whole_lesson.native_status import project_native_status
+    from print.generation.whole_lesson.native_status import project_native_status
 
     full_state = _normalize_chunked_state(generation_id, state)
     progress = document_json.get("progress") if isinstance(document_json, dict) else None
@@ -1346,7 +1346,7 @@ async def _persist_item_results(
 
     async with async_session_factory() as session:
         if leased:
-            from planning.whole_lesson.repository import (
+            from print.generation.whole_lesson.repository import (
                 PageDocumentRepository,
                 _page_state_lock,
             )
@@ -1508,7 +1508,7 @@ async def _run_chunked_stage2_pipeline(
 
         # Native whole-lesson path: items → teaching plan → halt for teacher approval.
         # Do not run legacy section briefs, assembly, or component writers.
-        from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
+        from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
 
         native_whole_lesson = generation_is_native_whole_lesson(state) or (
             int(getattr(plan, "document_contract_version", 1) or 1) >= 2
@@ -1516,7 +1516,7 @@ async def _run_chunked_stage2_pipeline(
         if native_whole_lesson:
             await _items_job()
             native_failure_stage = "planning_teaching"
-            from planning.whole_lesson.service import run_and_persist_teaching_plan
+            from print.generation.whole_lesson.service import run_and_persist_teaching_plan
 
             async with async_session_factory() as session:
                 teaching_summary = await run_and_persist_teaching_plan(
@@ -1592,8 +1592,8 @@ async def _run_chunked_stage2_pipeline(
             failure_state = await load_chunked_state(generation_id)
         except Exception:  # noqa: BLE001
             failure_state = {}
-        from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
-        from planning.whole_lesson.repository import persist_native_failure_for_generation
+        from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
+        from print.generation.whole_lesson.repository import persist_native_failure_for_generation
 
         is_native = generation_is_native_whole_lesson(failure_state) or bool(
             failure_state.get("page_document_v2")
@@ -2994,10 +2994,10 @@ async def post_chunked_retry_section(
     model = await _load_owned_generation(generation_id, current_user.id)
     state = await load_chunked_state(generation_id)
 
-    from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
+    from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
 
     if generation_is_native_whole_lesson(state, model):
-        from planning.whole_lesson.native_retry import (
+        from print.generation.whole_lesson.native_retry import (
             NativeRetryConflict,
             accept_native_retry,
         )
@@ -3471,8 +3471,8 @@ async def get_v3_generation_detail(
         generation_id,
         current_user.id,
     )
-    from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
-    from planning.whole_lesson.native_status import visual_quality_summary
+    from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
+    from print.generation.whole_lesson.native_status import visual_quality_summary
 
     chunked = dict(model.chunked_state_json or {})
     contract_version = _contract_version_for_generation(model, chunked)
@@ -3627,8 +3627,8 @@ async def get_v3_generation_document(
             "sections": [],
         }
     document_json = await _with_shared_pack_assessment(model, document_json)
-    from planning.whole_lesson.native_status import visual_quality_summary
-    from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
+    from print.generation.whole_lesson.native_status import visual_quality_summary
+    from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
     chunked_state = dict(model.chunked_state_json or {})
     if generation_is_native_whole_lesson(chunked_state, model):
         document_json = {
@@ -4291,7 +4291,7 @@ async def post_v3_export_pdf(
         model = result.scalar_one_or_none()
     if model is None or model.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Generation not found")
-    from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
+    from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
 
     native_whole_lesson = generation_is_native_whole_lesson(
         dict(model.chunked_state_json or {}), model
@@ -4525,7 +4525,7 @@ async def get_lesson_approach(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     await _load_owned_generation(generation_id, current_user.id)
-    from planning.whole_lesson.repository import PageDocumentRepository
+    from print.generation.whole_lesson.repository import PageDocumentRepository
 
     async with async_session_factory() as session:
         repo = PageDocumentRepository(session, generation_id)
@@ -4550,7 +4550,7 @@ async def post_lesson_approach_approve(
     current_user: User = Depends(get_current_user),
 ) -> JSONResponse:
     await _load_owned_generation(generation_id, current_user.id)
-    from planning.whole_lesson.service import approve_teaching_and_queue
+    from print.generation.whole_lesson.service import approve_teaching_and_queue
 
     async with async_session_factory() as session:
         try:
@@ -4583,7 +4583,7 @@ async def post_lesson_approach_reject(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     await _load_owned_generation(generation_id, current_user.id)
-    from planning.whole_lesson.repository import PageDocumentRepository
+    from print.generation.whole_lesson.repository import PageDocumentRepository
 
     async with async_session_factory() as session:
         repo = PageDocumentRepository(session, generation_id)
@@ -4607,9 +4607,9 @@ async def patch_page_block(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     await _load_owned_generation(generation_id, current_user.id)
-    from generation.page_objects.document_assembly import reload_document
-    from planning.whole_lesson.events import make_event
-    from planning.whole_lesson.repository import PageDocumentRepository
+    from print.rendering.page_objects.document_assembly import reload_document
+    from print.generation.whole_lesson.events import make_event
+    from print.generation.whole_lesson.repository import PageDocumentRepository
     from contracts.lectio_page import validate_document
 
     async with async_session_factory() as session:
@@ -4639,7 +4639,7 @@ async def patch_page_block(
         errors = validate_document(document)
         if errors:
             raise HTTPException(status_code=400, detail="; ".join(errors[:5]))
-        from generation.page_objects.document_assembly import persist_document_json
+        from print.rendering.page_objects.document_assembly import persist_document_json
 
         generation.document_json = persist_document_json(envelope, document)
         revision = await repo.bump_document_revision()
@@ -4663,7 +4663,7 @@ async def post_figure_visual_callback(
 ) -> dict[str, Any]:
     """Idempotent figure asset completion keyed by request_id."""
     await _load_owned_generation(generation_id, current_user.id)
-    from planning.whole_lesson.repository import (
+    from print.generation.whole_lesson.repository import (
         PageDocumentRepository,
         VisualCompletionConflict,
         VisualCompletionInvariantError,
@@ -4694,7 +4694,7 @@ async def post_figure_visual_callback(
         ) as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except Exception as exc:  # noqa: BLE001
-            from generation.page_objects.visual_completion import VisualCompletionError
+            from print.rendering.page_objects.visual_completion import VisualCompletionError
 
             if isinstance(exc, VisualCompletionError):
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -4720,9 +4720,9 @@ async def post_visuals_retry(
     Never requeues writers, form planning, teaching, or item generation.
     """
     await _load_owned_generation(generation_id, current_user.id)
-    from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
-    from planning.whole_lesson.repository import PageDocumentRepository
-    from planning.whole_lesson.visual_dispatch import dispatch_and_patch_from_repo
+    from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
+    from print.generation.whole_lesson.repository import PageDocumentRepository
+    from print.generation.whole_lesson.visual_dispatch import dispatch_and_patch_from_repo
 
     async with async_session_factory() as session:
         generation = await session.get(GenerationModel, generation_id)
@@ -4744,7 +4744,7 @@ async def post_visuals_retry(
                 generation = await session.get(GenerationModel, generation_id)
                 status = str(generation.status or "") if generation else status
             except Exception as exc:  # noqa: BLE001
-                from planning.whole_lesson.repository import VisualCompletionStateError
+                from print.generation.whole_lesson.repository import VisualCompletionStateError
 
                 if isinstance(exc, VisualCompletionStateError):
                     raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -4797,8 +4797,8 @@ async def post_retry_native(
     Visual failures must use /visuals/retry.
     """
     model = await _load_owned_generation(generation_id, current_user.id)
-    from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
-    from planning.whole_lesson.native_retry import (
+    from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
+    from print.generation.whole_lesson.native_retry import (
         NativeRetryConflict,
         accept_native_retry,
     )

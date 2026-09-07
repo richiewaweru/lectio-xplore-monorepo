@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import inspect
 
-from generation.v3_studio import router as studio_router
+from print.http.v3_studio import router as studio_router
 from v3_blueprint.planning import persistence as persistence_mod
 
 

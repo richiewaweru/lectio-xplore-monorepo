@@ -10,8 +10,8 @@ import pytest
 
 from core.database.models import ConceptCardModel, UserModel
 from core.database.session import async_session_factory
-from generation.v3_studio.dtos import V3InputForm
-from generation.v3_studio.router import (
+from print.http.v3_studio.dtos import V3InputForm
+from print.http.v3_studio.router import (
     _ensure_chunked_generation_row,
     _generate_shared_pack_items,
 )
@@ -161,7 +161,7 @@ async def test_semantic_fail_then_success_persists_both_attempts() -> None:
             new=_flaky,
         ),
         patch(
-            "generation.v3_studio.router._persist_item_results",
+            "print.http.v3_studio.router._persist_item_results",
             new=AsyncMock(),
         ),
     ):
@@ -298,7 +298,7 @@ async def test_first_attempt_success_one_record() -> None:
             new=_ok,
         ),
         patch(
-            "generation.v3_studio.router._persist_item_results",
+            "print.http.v3_studio.router._persist_item_results",
             new=AsyncMock(),
         ),
     ):

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from telemetry.v3_trace.event_types import (
+from infra.telemetry.v3_trace.event_types import (
     BLUEPRINT_GENERATED,
     COHERENCE_REVIEWED,
     GENERATION_FAILED,
@@ -8,7 +8,7 @@ from telemetry.v3_trace.event_types import (
     SECTION_FAILED,
     VISUAL_FAILED,
 )
-from telemetry.v3_trace.projector import project_report
+from infra.telemetry.v3_trace.projector import project_report
 
 
 def test_project_successful_generation() -> None:

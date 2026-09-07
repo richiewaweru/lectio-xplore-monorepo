@@ -8,10 +8,10 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app import app
-from core.auth.middleware import get_current_user
-from core.dependencies import get_gcs_image_store
+from infra.auth.middleware import get_current_user
+from infra.dependencies import get_gcs_image_store
 from core.database.models import EditableLessonModel, GenerationModel, UserModel
-from core.database.session import get_async_session
+from infra.database.session import get_async_session
 from core.entities.user import User
 
 

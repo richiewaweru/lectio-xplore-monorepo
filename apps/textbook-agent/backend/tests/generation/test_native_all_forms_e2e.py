@@ -11,20 +11,20 @@ from pydantic import ValidationError
 import yaml
 
 from contracts.lectio_page import validate_document
-from generation.page_objects import (
+from print.rendering.page_objects import (
     WRITER_PROVIDER_OUTPUTS,
     ContentValidationError,
     WriterContext,
     dispatch_writer_async,
 )
-from generation.page_objects.document_assembly import (
+from print.rendering.page_objects.document_assembly import (
     canonical_document_sha256,
     persist_document_json,
     reload_document,
 )
-from generation.page_objects.scripted_provider import ScriptedWriterProvider
-from generation.page_objects.views import student_document, teacher_document
-from planning.whole_lesson.figure_ids import stable_figure_request_id
+from print.rendering.page_objects.scripted_provider import ScriptedWriterProvider
+from print.rendering.page_objects.views import student_document, teacher_document
+from print.generation.whole_lesson.figure_ids import stable_figure_request_id
 from v3_blueprint.planning.models import PlannedBlock
 
 REPO_ROOT = Path(__file__).resolve().parents[5]

@@ -5,16 +5,16 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from generation.page_objects import WriterContext, WriterOutcome, dispatch_writer, validate_content
-from generation.page_objects.document_assembly import assemble_section, assemble_document_v2
-from planning.catalogue_projections import build_form_candidate_map, project_form_guidance
-from planning.whole_lesson.form_plan import (
+from print.rendering.page_objects import WriterContext, WriterOutcome, dispatch_writer, validate_content
+from print.rendering.page_objects.document_assembly import assemble_section, assemble_document_v2
+from print.generation.catalogue_projections import build_form_candidate_map, project_form_guidance
+from print.generation.whole_lesson.form_plan import (
     FormDecision,
     FormPlan,
     FormPlanSection,
     coerce_form_plan,
 )
-from planning.whole_lesson.packet import (
+from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ImmutableLessonPacket,
     LessonIdentity,
@@ -22,11 +22,11 @@ from planning.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
-from planning.whole_lesson.legality import build_lesson_legality_snapshot
-from planning.whole_lesson.form_agent import _repair_form_section_ownership
-from planning.whole_lesson.prompt_render import build_form_planner_payload
-from planning.whole_lesson.resolved_block_plan import resolve_block_plans
-from planning.whole_lesson.validation import validate_form_plan
+from print.generation.whole_lesson.legality import build_lesson_legality_snapshot
+from print.generation.whole_lesson.form_agent import _repair_form_section_ownership
+from print.generation.whole_lesson.prompt_render import build_form_planner_payload
+from print.generation.whole_lesson.resolved_block_plan import resolve_block_plans
+from print.generation.whole_lesson.validation import validate_form_plan
 from tests.planning.contract_fixtures import teaching_and_form
 from v3_blueprint.planning.models import PlannedBlock
 

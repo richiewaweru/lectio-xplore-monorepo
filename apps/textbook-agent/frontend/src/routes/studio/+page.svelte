@@ -286,7 +286,7 @@
 		}
 		if (resolved.stage === 'variants_running' && resolved.pack_id) {
 			disconnectActiveChunkedStream();
-			await goto(`/packs/${encodeURIComponent(resolved.pack_id)}`);
+			await goto('/units');
 			return;
 		}
 		if (resolved.stage === 'stage2_running') {
@@ -835,7 +835,7 @@
 		if (next.stage === 'variants_running' && next.pack_id) {
 			v3Studio.chunkedState = next;
 			v3Studio.generationId = next.generation_id;
-			await goto(`/packs/${encodeURIComponent(next.pack_id)}`);
+			await goto('/units');
 			return;
 		}
 		v3Studio.chunkedState = next;

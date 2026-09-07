@@ -10,16 +10,16 @@ import pytest
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
-from generation.page_objects import WriterOutcome
-from generation.page_objects.document_assembly import persist_document_json
-from generation.page_objects.visual_completion import apply_figure_asset_update
-from planning.whole_lesson.executor import execute_after_teaching_approval, write_form_blocks
-from planning.whole_lesson.failure_injection import (
+from print.rendering.page_objects import WriterOutcome
+from print.rendering.page_objects.document_assembly import persist_document_json
+from print.rendering.page_objects.visual_completion import apply_figure_asset_update
+from print.generation.whole_lesson.executor import execute_after_teaching_approval, write_form_blocks
+from print.generation.whole_lesson.failure_injection import (
     configure_failure_injection,
     reset_failure_injection,
 )
-from planning.whole_lesson.form_plan import FormPlan
-from planning.whole_lesson.packet import (
+from print.generation.whole_lesson.form_plan import FormPlan
+from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ImmutableLessonPacket,
     LessonIdentity,
@@ -27,10 +27,10 @@ from planning.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
-from planning.whole_lesson.legality import build_lesson_legality_snapshot
-from planning.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
-from planning.whole_lesson.states import execution_key
-from planning.whole_lesson.teaching_plan import TeachingPlan
+from print.generation.whole_lesson.legality import build_lesson_legality_snapshot
+from print.generation.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
+from print.generation.whole_lesson.states import execution_key
+from print.generation.whole_lesson.teaching_plan import TeachingPlan
 from tests.planning.contract_fixtures import teaching_and_form
 
 
@@ -221,7 +221,7 @@ async def test_conceptual_resilience_then_assemble() -> None:
         )
 
     with patch(
-        "planning.whole_lesson.executor.dispatch_writer_async",
+        "print.generation.whole_lesson.executor.dispatch_writer_async",
         new=AsyncMock(side_effect=_fake_dispatch),
     ):
         await write_form_blocks(
@@ -239,7 +239,7 @@ async def test_conceptual_resilience_then_assemble() -> None:
 
     reset_failure_injection()
     with patch(
-        "planning.whole_lesson.executor.dispatch_writer_async",
+        "print.generation.whole_lesson.executor.dispatch_writer_async",
         new=AsyncMock(side_effect=_fake_dispatch),
     ):
         async with async_session_factory() as session:

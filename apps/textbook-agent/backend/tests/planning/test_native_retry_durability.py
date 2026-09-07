@@ -15,20 +15,20 @@ from core.auth.middleware import get_current_user
 from core.database.models import GenerationModel
 from core.database.session import async_session_factory
 from core.entities.user import User
-from planning.whole_lesson.native_retry import (
+from print.generation.whole_lesson.native_retry import (
     accept_native_retry,
     run_pre_worker_retry,
 )
-from planning.whole_lesson.repository import (
+from print.generation.whole_lesson.repository import (
     PageDocumentRepository,
     claim_next_native_job,
     empty_execution_meta,
 )
-from planning.whole_lesson.states import (
+from print.generation.whole_lesson.states import (
     WORK_KIND_PRE_WORKER_TEACHING,
     LeaseLostError,
 )
-from planning.whole_lesson.worker import NativeExecutionWorker
+from print.generation.whole_lesson.worker import NativeExecutionWorker
 from tests.planning.test_native_retry_pre_worker import (
     TEST_USER,
     _seed_generation,
@@ -91,7 +91,7 @@ async def test_d01_http_202_while_teaching_blocked_then_worker_finishes() -> Non
     app.dependency_overrides[get_current_user] = _override_user
     try:
         with patch(
-            "planning.whole_lesson.service.run_and_persist_teaching_plan",
+            "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
             new=_blocked_teaching,
         ):
             async with _client() as client:
@@ -145,7 +145,7 @@ async def test_d02_client_drop_after_202_worker_still_completes() -> None:
     assert accepted["accepted"] is True
     # Simulate dropped client: no further HTTP; worker alone finishes.
     with patch(
-        "planning.whole_lesson.service.run_and_persist_teaching_plan",
+        "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
         new=_teaching_ok,
     ):
         async with async_session_factory() as session:
@@ -248,7 +248,7 @@ async def test_d03_stale_lease_reclaim_old_token_blocked() -> None:
         assert state["execution"]["attempt"] == 2
 
     with patch(
-        "planning.whole_lesson.service.run_and_persist_teaching_plan",
+        "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
         new=_teaching_ok,
     ):
         result = await run_pre_worker_retry(lease=lease2)
@@ -301,7 +301,7 @@ async def test_d04_item_checkpoint_then_teaching_only_reclaim() -> None:
         )
     assert lease1 is not None
 
-    from planning.whole_lesson.native_retry import _run_items_under_lease
+    from print.generation.whole_lesson.native_retry import _run_items_under_lease
 
     with (
         patch(
@@ -309,7 +309,7 @@ async def test_d04_item_checkpoint_then_teaching_only_reclaim() -> None:
             new=_ok_items,
         ),
         patch(
-            "generation.v3_studio.router._persist_item_results",
+            "print.http.v3_studio.router._persist_item_results",
             new=AsyncMock(),
         ),
     ):
@@ -336,7 +336,7 @@ async def test_d04_item_checkpoint_then_teaching_only_reclaim() -> None:
             new=AsyncMock(side_effect=AssertionError("items must not rerun")),
         ),
         patch(
-            "planning.whole_lesson.service.run_and_persist_teaching_plan",
+            "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
             new=_teach,
         ),
     ):
@@ -388,7 +388,7 @@ async def test_d05_concurrent_claim_single_winner() -> None:
         return await _teaching_ok(session, generation_id, **kwargs)
 
     with patch(
-        "planning.whole_lesson.service.run_and_persist_teaching_plan",
+        "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
         new=_teach,
     ):
         await run_pre_worker_retry(lease=winners[0])
@@ -454,7 +454,7 @@ async def test_d07_worker_poll_discovers_abandoned_teaching() -> None:
         await repo.mutate_state(mutation=_mut)
 
     with patch(
-        "planning.whole_lesson.service.run_and_persist_teaching_plan",
+        "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
         new=_teaching_ok,
     ):
         worker = NativeExecutionWorker(
@@ -553,7 +553,7 @@ async def test_i01_integrated_teaching_accept_crash_reclaim() -> None:
     assert lease1 is not None
 
     with patch(
-        "planning.whole_lesson.service.run_and_persist_teaching_plan",
+        "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
         new=AsyncMock(side_effect=TimeoutError("boom mid teaching")),
     ):
         with pytest.raises(TimeoutError):
@@ -569,7 +569,7 @@ async def test_i01_integrated_teaching_accept_crash_reclaim() -> None:
         )
     assert lease2 is not None
     with patch(
-        "planning.whole_lesson.service.run_and_persist_teaching_plan",
+        "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
         new=_teaching_ok,
     ):
         result = await run_pre_worker_retry(lease=lease2)
@@ -617,7 +617,7 @@ async def test_i02_integrated_item_checkpoint_items_once() -> None:
         )
     assert lease1 is not None
 
-    from planning.whole_lesson.native_retry import _run_items_under_lease
+    from print.generation.whole_lesson.native_retry import _run_items_under_lease
 
     with (
         patch(
@@ -625,7 +625,7 @@ async def test_i02_integrated_item_checkpoint_items_once() -> None:
             new=_ok_items,
         ),
         patch(
-            "generation.v3_studio.router._persist_item_results",
+            "print.http.v3_studio.router._persist_item_results",
             new=AsyncMock(),
         ),
     ):
@@ -653,7 +653,7 @@ async def test_i02_integrated_item_checkpoint_items_once() -> None:
             new=AsyncMock(side_effect=AssertionError("no item rerun")),
         ),
         patch(
-            "planning.whole_lesson.service.run_and_persist_teaching_plan",
+            "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
             new=_teaching_ok,
         ),
     ):

@@ -8,8 +8,8 @@ from typing import Any
 
 from core.events import event_bus
 from core.config import settings as app_settings
-from telemetry.v3_trace import event_types as trace_events
-from telemetry.v3_trace.writer import V3TraceWriter
+from infra.telemetry.v3_trace import event_types as trace_events
+from infra.telemetry.v3_trace.writer import V3TraceWriter
 from v3_blueprint.models import ProductionBlueprint
 from v3_execution.assembly.pack_builder import V3PackBuilder
 from v3_execution.assembly.section_builder import V3SectionBuilder

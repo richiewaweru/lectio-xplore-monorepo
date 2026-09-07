@@ -388,7 +388,7 @@ class PathDeviationRequest(StrictModel):
 #     text (see v3_execution.llm_helpers.structured_output_type_for_model), not
 #     enforced by constrained decoding, so ``extra="forbid"`` here would not stop
 #     the model emitting stray keys — it would only turn drift that
-#     planning.bridge._normalize_page_concept_card_payload already absorbs into
+#     application.unit_lesson._normalize_page_concept_card_payload already absorbs into
 #     hard failures. Hence ``extra="ignore"`` on every nested model.
 #   * The canonical ConceptCard is an execution/storage contract whose ``id`` and
 #     ``objective`` the bridge ASSIGNS rather than reads. The two must stay free
@@ -512,7 +512,7 @@ class PathStructuralPlan(StrictModel):
 
     anchor: PathAnchor
     # max_length only. The lower bound lives in
-    # planning.structural_validation.validate_path_structural_result, which runs
+    # curriculum.structural_validation.validate_path_structural_result, which runs
     # AFTER the deviation_request / objective_concern escape hatches — a
     # legitimate "this objective does not fit" response carries no cards, and
     # must keep its readable message instead of becoming a schema error.

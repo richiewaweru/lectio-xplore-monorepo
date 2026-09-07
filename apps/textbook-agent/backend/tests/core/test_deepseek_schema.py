@@ -12,7 +12,7 @@ from core.llm.deepseek_schema import (
     validate_deepseek_projection,
 )
 from core.llm.schema import SchemaSource, schema_fingerprint
-from planning.models import PathAnchor, PathStructuralPlan
+from curriculum.path_models import PathAnchor, PathStructuralPlan
 
 
 class Color(str, Enum):

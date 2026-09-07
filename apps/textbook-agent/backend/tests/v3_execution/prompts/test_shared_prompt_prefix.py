@@ -3,7 +3,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from contracts.lectio import get_component_card
-from generation.v3_studio.prompts import _planner_index_block, build_v3_shared_prefix
+from print.http.v3_studio.prompts import _planner_index_block, build_v3_shared_prefix
 from v3_blueprint.planning.section_expander import build_stage2_system_prompt
 from v3_blueprint.planning.structural_planner import build_stage1_system_prompt
 from v3_execution.models import (

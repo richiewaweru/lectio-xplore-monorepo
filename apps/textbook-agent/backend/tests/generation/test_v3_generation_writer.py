@@ -7,11 +7,11 @@ from sqlalchemy import delete, select
 
 from core.database.models import GenerationModel
 from core.database.session import async_session_factory
-from generation.v3_studio.dtos import V3InputForm
-from generation.v3_studio.generation_writer import V3GenerationWriter
-from generation.v3_studio.generation_writer import _derive_persisted_booklet_status
-from generation.v3_studio.router import _persist_regenerated_visual
-from generation.v3_studio.planning_artifact import (
+from print.http.v3_studio.dtos import V3InputForm
+from print.http.v3_studio.generation_writer import V3GenerationWriter
+from print.http.v3_studio.generation_writer import _derive_persisted_booklet_status
+from print.http.v3_studio.router import _persist_regenerated_visual
+from print.http.v3_studio.planning_artifact import (
     SCHEMA_VERSION,
     build_planning_artifact,
     parse_planning_artifact,

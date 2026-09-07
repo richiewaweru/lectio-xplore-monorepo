@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from planning.whole_lesson.visual_topology import (
+from print.generation.whole_lesson.visual_topology import (
     TopologyPlanV1,
     TopologyValidationError,
     validate_topology_plan,

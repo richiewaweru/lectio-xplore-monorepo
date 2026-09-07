@@ -14,7 +14,7 @@ from core.database.models import (
     UserModel,
 )
 from core.database.session import async_session_factory
-from generation.v3_studio.router import (
+from print.http.v3_studio.router import (
     _chunked_stage2_tasks,
     _ensure_chunked_generation_row,
     _run_pack_variant_pipeline,
@@ -138,19 +138,19 @@ async def test_variant_failure_is_isolated_from_siblings() -> None:
     )
     with (
         patch(
-            "generation.v3_studio.router.load_chunked_state",
+            "print.http.v3_studio.router.load_chunked_state",
             new=AsyncMock(return_value=state),
         ),
         patch(
-            "generation.v3_studio.router._generate_shared_pack_items",
+            "print.http.v3_studio.router._generate_shared_pack_items",
             new=AsyncMock(return_value={"pack_id": "pack-isolation"}),
         ),
         patch(
-            "generation.v3_studio.router._run_chunked_stage2_pipeline",
+            "print.http.v3_studio.router._run_chunked_stage2_pipeline",
             new=run_variant,
         ),
         patch(
-            "generation.v3_studio.router.persist_chunked_state",
+            "print.http.v3_studio.router.persist_chunked_state",
             new=persisted,
         ),
     ):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 
-from planning.prompts import (
+from curriculum.prompts import (
     ACTIVE_LESSON_APPROACH_PROMPT,
     LESSON_APPROACH_PROMPT_V1,
     LESSON_APPROACH_PROMPT_V1_SHA256,
@@ -13,7 +13,7 @@ from planning.prompts import (
     lesson_approach_planner_v1_prompt,
     prompt_text,
 )
-from planning.whole_lesson.validation import SPATIAL_PROCESS_REPRESENTATION_INTENTS
+from print.generation.whole_lesson.validation import SPATIAL_PROCESS_REPRESENTATION_INTENTS
 
 
 V1_SHA256 = "475b8b178f74c1397742b12002a324e18ae3e39a4fffd9e7a4c199713780a9cd"

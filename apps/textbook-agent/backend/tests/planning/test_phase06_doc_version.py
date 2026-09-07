@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from planning.whole_lesson.native_status import project_native_status
+from print.generation.whole_lesson.native_status import project_native_status
 
 
 def test_u01_native_status_exposes_document_revision() -> None:

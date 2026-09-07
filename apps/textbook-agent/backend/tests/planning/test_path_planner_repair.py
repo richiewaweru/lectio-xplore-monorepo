@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from planning.agents import run_path_planner
-from planning.models import PathPlanDraft, PathPlannerRequest
-from planning.validation import PathPlanningError, normalize_path_plan_draft
+from curriculum.agents import run_path_planner
+from curriculum.path_models import PathPlanDraft, PathPlannerRequest
+from curriculum.validation import PathPlanningError, normalize_path_plan_draft
 from tests.planning.path_helpers import four_lesson_draft
 
 
@@ -33,7 +33,7 @@ async def test_planner_repairs_invalid_forward_dependency(monkeypatch: pytest.Mo
             return PathPlanDraft.model_validate(invalid)
         return valid
 
-    monkeypatch.setattr("planning.agents._run_structured", fake_structured)
+    monkeypatch.setattr("curriculum.agents._run_structured", fake_structured)
 
     plan = await run_path_planner(_request(), trace_id="repair-ok")
     assert len(calls) == 2
@@ -53,7 +53,7 @@ async def test_planner_fails_recoverably_after_two_invalid_attempts(
         calls.append(1)
         return PathPlanDraft.model_validate(invalid)
 
-    monkeypatch.setattr("planning.agents._run_structured", fake_structured)
+    monkeypatch.setattr("curriculum.agents._run_structured", fake_structured)
 
     with pytest.raises(PathPlanningError) as exc_info:
         await run_path_planner(_request(), trace_id="repair-fail")
@@ -69,7 +69,7 @@ async def test_planner_succeeds_on_first_valid_attempt(monkeypatch: pytest.Monke
         calls.append(1)
         return four_lesson_draft()
 
-    monkeypatch.setattr("planning.agents._run_structured", fake_structured)
+    monkeypatch.setattr("curriculum.agents._run_structured", fake_structured)
 
     plan = await run_path_planner(_request(), trace_id="one-shot")
     assert len(calls) == 1

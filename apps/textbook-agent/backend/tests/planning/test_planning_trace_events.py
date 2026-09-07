@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from planning.routes import (
+from curriculum.routes import (
     _close_planning_trace,
     _register_planning_trace,
 )
@@ -15,7 +15,7 @@ def test_planning_trace_registration_and_close_publish_existing_events() -> None
         assert trace_id == "path:user-1:trace"
         captured.append(event.model_dump(mode="json"))
 
-    with patch("planning.routes.event_bus.publish", side_effect=capture):
+    with patch("curriculum.routes.event_bus.publish", side_effect=capture):
         _register_planning_trace("path:user-1:trace", "user-1")
         _close_planning_trace("path:user-1:trace")
 

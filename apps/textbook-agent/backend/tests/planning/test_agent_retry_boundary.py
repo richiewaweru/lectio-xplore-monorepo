@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from pydantic_ai import Agent
 
 from planning import agents
-from planning.whole_lesson import form_agent, teaching_agent
+from print.generation.whole_lesson import form_agent, teaching_agent
 from v3_execution import llm_helpers
 
 

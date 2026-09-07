@@ -25,7 +25,7 @@ from core.database.models import (
     LLMCallModel,
 )
 from core.database.session import async_session_factory
-from generation.page_objects.document_assembly import reload_document
+from print.rendering.page_objects.document_assembly import reload_document
 from planning.whole_lesson.native_routing import (
     _document_contract_version,
     generation_is_native_whole_lesson,

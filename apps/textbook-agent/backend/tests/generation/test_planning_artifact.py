@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from generation.v3_studio.dtos import V3InputForm
-from generation.v3_studio.planning_artifact import (
+from print.http.v3_studio.dtos import V3InputForm
+from print.http.v3_studio.planning_artifact import (
     SCHEMA_VERSION,
     build_planning_artifact,
     parse_planning_artifact,

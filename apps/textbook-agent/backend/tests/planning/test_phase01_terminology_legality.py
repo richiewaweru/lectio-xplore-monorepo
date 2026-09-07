@@ -5,16 +5,16 @@ from __future__ import annotations
 import pytest
 
 from core.database.models import UnitScopeContractModel, UserModel
-from planning.models import PathPlanDraft, PathScopeDraft
-from planning.page_blocks import PageBlockPlanError, validate_intent_departure
-from planning.service import canonical_plan_from_version, create_unit, persist_path_plan
-from planning.validation import normalize_path_plan_draft
-from planning.whole_lesson.legality import (
+from curriculum.path_models import PathPlanDraft, PathScopeDraft
+from print.generation.page_blocks import PageBlockPlanError, validate_intent_departure
+from curriculum.service import canonical_plan_from_version, create_unit, persist_path_plan
+from curriculum.validation import normalize_path_plan_draft
+from print.generation.whole_lesson.legality import (
     LessonLegalitySnapshot,
     legality_hash,
     project_slot_intent_policy,
 )
-from planning.whole_lesson.packet import (
+from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ImmutableLessonPacket,
     LessonIdentity,

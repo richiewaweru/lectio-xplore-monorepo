@@ -10,8 +10,8 @@ from core.auth.middleware import get_current_user
 from core.database.models import UserModel
 from core.dependencies import get_async_session
 from core.entities.user import User
-from planning.models import PreparedLessonResponse
-from planning.validation import adjacent_merge_hints
+from curriculum.path_models import PreparedLessonResponse
+from curriculum.validation import adjacent_merge_hints
 from tests.planning.path_helpers import overlapping_pair_plan, sample_canonical_plan
 
 
@@ -86,8 +86,8 @@ def _install_mocks(monkeypatch, *, plan, db_session_factory) -> None:
             None,
         )
 
-    monkeypatch.setattr("planning.routes.run_path_planner", fake_planner)
-    monkeypatch.setattr("planning.routes.prepare_path_lesson", fake_prepare)
+    monkeypatch.setattr("curriculum.routes.run_path_planner", fake_planner)
+    monkeypatch.setattr("curriculum.routes.prepare_path_lesson", fake_prepare)
 
     async def override_user() -> User:
         return TEST_USER

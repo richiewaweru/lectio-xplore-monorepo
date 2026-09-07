@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from planning.whole_lesson.native_status import project_native_status
-from planning.whole_lesson.states import execution_key
+from print.generation.whole_lesson.native_status import project_native_status
+from print.generation.whole_lesson.states import execution_key
 
 
 def _native_state(*, stage: str, block_execution: dict | None = None) -> dict:
@@ -251,7 +251,7 @@ def test_native_status_terminal_never_null_error() -> None:
 
 
 def test_normalize_chunked_status_uses_native_projector() -> None:
-    from generation.v3_studio.router import _normalize_chunked_status
+    from print.http.v3_studio.router import _normalize_chunked_status
 
     state = _native_state(stage="awaiting_teaching_approval")
     dto = _normalize_chunked_status(

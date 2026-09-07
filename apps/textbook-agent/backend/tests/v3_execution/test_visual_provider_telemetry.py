@@ -8,7 +8,7 @@ import pytest
 import core.events as core_events
 from v3_execution.executors.visual_executor import execute_visual
 from v3_execution.models import VisualGeneratorWorkOrder, VisualPlanItem
-from telemetry.service import TelemetryMonitor
+from infra.telemetry.service import TelemetryMonitor
 
 
 def _order() -> VisualGeneratorWorkOrder:

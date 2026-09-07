@@ -10,7 +10,7 @@ from typing import Any
 from pydantic_ai import Agent
 
 from core.llm.runner import RetryPolicy, run_llm
-from planning.llm_contract_errors import is_transport_error
+from curriculum.llm_contract_errors import is_transport_error
 from print.generation.whole_lesson.visual_topology import (
     TopologyPlanV1,
     TopologyValidationError,

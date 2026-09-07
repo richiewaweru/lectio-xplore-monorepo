@@ -10,14 +10,14 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import GenerationModel, UserModel
-from planning.whole_lesson.native_status import project_native_status
-from planning.whole_lesson.repository import (
+from print.generation.whole_lesson.native_status import project_native_status
+from print.generation.whole_lesson.repository import (
     PageDocumentRepository,
     claim_next_native_job,
     empty_page_document_state,
 )
-from planning.whole_lesson.service import approve_teaching_and_queue
-from planning.whole_lesson.states import (
+from print.generation.whole_lesson.service import approve_teaching_and_queue
+from print.generation.whole_lesson.states import (
     LEGAL_TRANSITIONS,
     ExecutionLease,
     IllegalTransitionError,

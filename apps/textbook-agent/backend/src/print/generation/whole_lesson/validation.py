@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from print.contracts.lectio_page import PAGE_OBJECT_IDS
-from planning.approved_items import approved_item_kind
+from curriculum.approved_items import approved_item_kind
 from print.generation.page_blocks import validate_intent_departure
 from print.generation.whole_lesson.form_plan import FormPlan
 from print.generation.whole_lesson.packet import ImmutableLessonPacket

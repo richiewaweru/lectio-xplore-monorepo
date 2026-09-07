@@ -7,8 +7,8 @@ values the bridge assigns, or it turns silent corrections into failures.
 
 from __future__ import annotations
 
-from planning.models import PathStructuralPagePlan, PathStructuralPlan
-from planning.structural_validation import (
+from curriculum.path_models import PathStructuralPagePlan, PathStructuralPlan
+from curriculum.structural_validation import (
     PathStructuralContextError,
     validate_path_structural_result,
 )

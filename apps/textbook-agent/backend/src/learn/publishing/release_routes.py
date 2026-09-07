@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.auth.middleware import get_current_user
+from infra.auth.middleware import get_current_user
 from core.database.models import (
     EditableLessonModel,
     GenerationModel,
@@ -21,7 +21,7 @@ from core.database.models import (
     LessonProvenanceModel,
     PathLessonModel,
 )
-from core.database.session import get_async_session
+from infra.database.session import get_async_session
 from core.entities.user import User
 
 router = APIRouter(prefix="/api/v1/learn", tags=["learn-releases"])

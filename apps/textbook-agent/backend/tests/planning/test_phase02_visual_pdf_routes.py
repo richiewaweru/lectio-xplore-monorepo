@@ -14,8 +14,8 @@ from core.auth.middleware import get_current_user
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
 from core.entities.user import User
-from generation.page_objects.document_assembly import persist_document_json
-from planning.whole_lesson.packet import (
+from print.rendering.page_objects.document_assembly import persist_document_json
+from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ImmutableLessonPacket,
     LessonIdentity,
@@ -23,7 +23,7 @@ from planning.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
-from planning.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
+from print.generation.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
 
 
 TEST_USER = User(
@@ -314,7 +314,7 @@ async def test_pdf_export_figures_not_ready_then_passes_gate(tmp_path) -> None:
     pdf_path.write_bytes(b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF")
 
     with patch(
-        "generation.v3_studio.router.export_v3_studio_pdf",
+        "print.http.v3_studio.router.export_v3_studio_pdf",
         new=AsyncMock(
             return_value=type(
                 "R",

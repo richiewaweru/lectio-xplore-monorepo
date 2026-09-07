@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -9,9 +9,9 @@ from app import app
 from core.auth.middleware import get_current_user
 from core.dependencies import get_jwt_handler
 from core.entities.user import User
-from telemetry.dependencies import get_llm_call_repository
-from telemetry.dtos.usage import LLMUsageBreakdownItem, LLMUsageResponse
-from telemetry.service import TelemetryMonitor
+from infra.telemetry.dependencies import get_llm_call_repository
+from infra.telemetry.dtos.usage import LLMUsageBreakdownItem, LLMUsageResponse
+from infra.telemetry.service import TelemetryMonitor
 
 
 def _now() -> datetime:

@@ -10,9 +10,9 @@ from core.auth.middleware import get_current_user
 from core.database.models import UserModel
 from core.dependencies import get_async_session
 from core.entities.user import User
-from planning.models import CanonicalPathPlan
-from planning.service import create_unit, persist_path_plan
-from planning.validation import PathPlanningError
+from curriculum.path_models import CanonicalPathPlan
+from curriculum.service import create_unit, persist_path_plan
+from curriculum.validation import PathPlanningError
 from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 
 
@@ -81,7 +81,7 @@ async def test_chat_edit_persists_valid_minimal_plan(db_session_factory, monkeyp
         called_with["current_plan"] = current_plan
         return edited
 
-    monkeypatch.setattr("planning.routes.run_plan_chat_edit", fake_edit)
+    monkeypatch.setattr("curriculum.routes.run_plan_chat_edit", fake_edit)
 
     app.dependency_overrides[get_current_user] = _override_user
     await _install_session(db_session_factory)
@@ -121,7 +121,7 @@ async def test_chat_edit_reports_validation_messages_without_persisting(
     async def fake_edit(current_plan, message, *, unit_context=None, trace_id=None):
         raise PathPlanningError(["L1: forward dependency on L2"])
 
-    monkeypatch.setattr("planning.routes.run_plan_chat_edit", fake_edit)
+    monkeypatch.setattr("curriculum.routes.run_plan_chat_edit", fake_edit)
 
     app.dependency_overrides[get_current_user] = _override_user
     await _install_session(db_session_factory)
@@ -149,7 +149,7 @@ async def test_chat_edit_rejects_stale_path_revision(db_session_factory, monkeyp
     async def fake_edit(current_plan, message, *, unit_context=None, trace_id=None):
         raise AssertionError("the LLM must not be called for a stale mutation")
 
-    monkeypatch.setattr("planning.routes.run_plan_chat_edit", fake_edit)
+    monkeypatch.setattr("curriculum.routes.run_plan_chat_edit", fake_edit)
 
     app.dependency_overrides[get_current_user] = _override_user
     await _install_session(db_session_factory)

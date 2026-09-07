@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import ConceptCardModel, GenerationModel
-from planning.approved_items import ItemPoolEmptyError, load_approved_item_records
+from curriculum.approved_items import ItemPoolEmptyError, load_approved_item_records
 from print.generation.whole_lesson.events import make_event
 from print.generation.whole_lesson.legality import (
     build_lesson_legality_snapshot,
@@ -279,7 +279,7 @@ def generation_is_native_whole_lesson(
     *,
     state: Mapping[str, Any] | None = None,
 ) -> bool:
-    """Delegate to planning.whole_lesson.native_routing (GenerationModel-first API)."""
+    """Delegate to print.generation.whole_lesson.native_routing (GenerationModel-first API)."""
     from print.generation.whole_lesson.native_routing import (
         generation_is_native_whole_lesson as _detect,
     )

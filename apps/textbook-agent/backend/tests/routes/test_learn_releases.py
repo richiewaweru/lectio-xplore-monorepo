@@ -9,11 +9,11 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app import app
-from core.auth.middleware import get_current_user
+from infra.auth.middleware import get_current_user
 from core.database.models import LearnReleaseModel, UserModel
-from core.database.session import get_async_session
+from infra.database.session import get_async_session
 from core.entities.user import User
-from learning.release_routes import document_hash
+from learn.release_routes import document_hash
 
 
 def _now() -> datetime:
@@ -247,7 +247,7 @@ async def test_unit_path_publish_requires_and_stores_provenance(db_session_facto
 @pytest.mark.asyncio
 async def test_preview_has_no_attempt_write_surface():
     """Preview is draft-lesson shell only; attempts require a LearningInstance route."""
-    from learning.runtime_routes import router as runtime_router
+    from learn.runtime_routes import router as runtime_router
 
     attempt_paths = [
         getattr(route, "path", "")

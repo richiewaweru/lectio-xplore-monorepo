@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import ConceptCardModel, GenerationModel, GenerationStepModel
 from core.database.session import async_session_factory
-from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
+from print.http.v3_studio.dtos import V3InputForm, V3SignalSummary
 from v3_blueprint.planning.models import (
     ConceptCard,
     Misconception,
@@ -309,7 +309,7 @@ async def append_item_attempt_records(
 
     async with _session_scope(session) as (db, should_commit):
         if leased:
-            from planning.whole_lesson.repository import (
+            from print.generation.whole_lesson.repository import (
                 PageDocumentRepository,
                 _page_state_lock,
             )

@@ -11,21 +11,21 @@ from pydantic import ValidationError
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
-from generation.page_objects import WriterOutcome
-from planning.catalogue_projections import build_form_candidate_map, project_form_guidance
-from planning.llm_contract_errors import structured_output_errors
-from planning.whole_lesson.executor import execute_after_teaching_approval
-from planning.whole_lesson.failure_policy import classify_failure
-from planning.whole_lesson.form_agent import NoLegalFormCandidatesError, run_form_planner
-from planning.whole_lesson.form_plan import FormDecision, FormPlan, FormPlanSection, coerce_form_plan
-from planning.whole_lesson.legality import (
+from print.rendering.page_objects import WriterOutcome
+from print.generation.catalogue_projections import build_form_candidate_map, project_form_guidance
+from curriculum.llm_contract_errors import structured_output_errors
+from print.generation.whole_lesson.executor import execute_after_teaching_approval
+from print.generation.whole_lesson.failure_policy import classify_failure
+from print.generation.whole_lesson.form_agent import NoLegalFormCandidatesError, run_form_planner
+from print.generation.whole_lesson.form_plan import FormDecision, FormPlan, FormPlanSection, coerce_form_plan
+from print.generation.whole_lesson.legality import (
     LessonLegalityError,
     LessonLegalitySnapshot,
     build_lesson_legality_snapshot,
     legality_hash,
     validate_legality_snapshot,
 )
-from planning.whole_lesson.packet import (
+from print.generation.whole_lesson.packet import (
     ApprovedItemRef,
     AnchorRecord,
     ImmutableLessonPacket,
@@ -34,16 +34,16 @@ from planning.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
-from planning.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
-from planning.whole_lesson.teaching_agent import run_lesson_approach_planner
-from planning.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
-from planning.whole_lesson.teaching_plan import (
+from print.generation.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
+from print.generation.whole_lesson.teaching_agent import run_lesson_approach_planner
+from print.generation.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
+from print.generation.whole_lesson.teaching_plan import (
     AnchorUsageEntry,
     TeachingPlan,
     TeachingPlanBlock,
     TeachingPlanSection,
 )
-from planning.whole_lesson.validation import validate_form_plan, validate_teaching_plan
+from print.generation.whole_lesson.validation import validate_form_plan, validate_teaching_plan
 from tests.planning.contract_fixtures import teaching_and_form
 
 
@@ -398,7 +398,7 @@ async def test_teaching_multi_source_draft_repairs_to_one_approved_mcq() -> None
         return plan, plan.model_dump_json()
 
     with patch(
-        "planning.whole_lesson.teaching_agent._call_teaching_model",
+        "print.generation.whole_lesson.teaching_agent._call_teaching_model",
         new=AsyncMock(side_effect=_fake_call),
     ):
         result = await run_lesson_approach_planner(packet, legality=legality)
@@ -441,7 +441,7 @@ async def test_missing_assessment_source_is_repaired_before_validation() -> None
     plan = _check_plan(source_ids=[])
 
     with patch(
-        "planning.whole_lesson.teaching_agent._call_teaching_model",
+        "print.generation.whole_lesson.teaching_agent._call_teaching_model",
         new=AsyncMock(return_value=(plan, plan.model_dump_json())),
     ):
         result = await run_lesson_approach_planner(packet, legality=legality)
@@ -465,7 +465,7 @@ async def test_teaching_multi_source_exhaustion_is_recoverable_output_failure() 
     model_call = AsyncMock(return_value=(invalid, invalid.model_dump_json()))
 
     with patch(
-        "planning.whole_lesson.teaching_agent._call_teaching_model",
+        "print.generation.whole_lesson.teaching_agent._call_teaching_model",
         new=model_call,
     ):
         with pytest.raises(
@@ -529,7 +529,7 @@ async def test_form_planner_skips_llm_when_no_candidates() -> None:
         raise AssertionError("LLM must not be called")
 
     with patch(
-        "planning.whole_lesson.form_agent._call_form_model",
+        "print.generation.whole_lesson.form_agent._call_form_model",
         new=AsyncMock(side_effect=_boom),
     ):
         with pytest.raises(NoLegalFormCandidatesError) as exc:
@@ -560,7 +560,7 @@ async def test_form_planner_skips_llm_when_required_visual_has_no_figure_candida
         raise AssertionError("LLM must not be called")
 
     with patch(
-        "planning.whole_lesson.form_agent._call_form_model",
+        "print.generation.whole_lesson.form_agent._call_form_model",
         new=AsyncMock(side_effect=_boom),
     ):
         with pytest.raises(NoLegalFormCandidatesError) as exc:
@@ -591,7 +591,7 @@ async def test_teaching_schema_failure_gets_informed_repair() -> None:
                     }
                 ],
             )
-        from planning.whole_lesson.teaching_plan import (
+        from print.generation.whole_lesson.teaching_plan import (
             AnchorUsageEntry,
             TeachingPlanBlock,
             TeachingPlanSection,
@@ -642,7 +642,7 @@ async def test_teaching_schema_failure_gets_informed_repair() -> None:
         return plan, plan.model_dump_json()
 
     with patch(
-        "planning.whole_lesson.teaching_agent._call_teaching_model",
+        "print.generation.whole_lesson.teaching_agent._call_teaching_model",
         new=AsyncMock(side_effect=_fake_call),
     ):
         result = await run_lesson_approach_planner(
@@ -701,7 +701,7 @@ async def test_form_schema_extra_intent_gets_informed_repair() -> None:
         return valid_form, valid_form.model_dump_json()
 
     with patch(
-        "planning.whole_lesson.form_agent._call_form_model",
+        "print.generation.whole_lesson.form_agent._call_form_model",
         new=AsyncMock(side_effect=_fake_call),
     ):
         result = await run_form_planner(
@@ -799,8 +799,8 @@ async def test_resume_revalidates_legacy_fat_form_plan() -> None:
 
     async def _fake_form(*_a, **_k):  # noqa: ANN001
         form_calls["n"] += 1
-        from planning.whole_lesson.form_agent import FormPlanResult
-        from planning.whole_lesson.validation import ValidationReport
+        from print.generation.whole_lesson.form_agent import FormPlanResult
+        from print.generation.whole_lesson.validation import ValidationReport
 
         # Return a legal list decision for the replan path.
         legal = FormPlan(
@@ -841,13 +841,13 @@ async def test_resume_revalidates_legacy_fat_form_plan() -> None:
         )
 
     with patch(
-        "planning.whole_lesson.executor.run_form_planner",
+        "print.generation.whole_lesson.executor.run_form_planner",
         new=AsyncMock(side_effect=_fake_form),
     ), patch(
-        "planning.whole_lesson.executor.dispatch_writer_async",
+        "print.generation.whole_lesson.executor.dispatch_writer_async",
         new=AsyncMock(side_effect=_fake_dispatch),
     ), patch(
-        "planning.whole_lesson.executor.assemble_from_db",
+        "print.generation.whole_lesson.executor.assemble_from_db",
         new=AsyncMock(
             return_value={
                 "document": {"document_version": 2},
@@ -935,16 +935,16 @@ async def test_assemble_lesson_guidance_not_recalled_on_form_resume() -> None:
         )
 
     with patch(
-        "planning.whole_lesson.legality.assemble_lesson_guidance",
+        "print.generation.whole_lesson.legality.assemble_lesson_guidance",
         side_effect=_counting,
     ), patch(
-        "planning.whole_lesson.executor.run_form_planner",
+        "print.generation.whole_lesson.executor.run_form_planner",
         new=AsyncMock(side_effect=AssertionError("must reuse form plan")),
     ), patch(
-        "planning.whole_lesson.executor.dispatch_writer_async",
+        "print.generation.whole_lesson.executor.dispatch_writer_async",
         new=AsyncMock(side_effect=_fake_dispatch),
     ), patch(
-        "planning.whole_lesson.executor.assemble_from_db",
+        "print.generation.whole_lesson.executor.assemble_from_db",
         new=AsyncMock(
             return_value={
                 "document": {"document_version": 2},
@@ -979,7 +979,7 @@ async def test_teaching_with_persisted_legality_does_not_reassemble() -> None:
     async def _fake_call(  # noqa: ANN001
         *, prompt, user_payload, trace_id, generation_id, attempt_start=1
     ):
-        from planning.whole_lesson.teaching_plan import (
+        from print.generation.whole_lesson.teaching_plan import (
             AnchorUsageEntry,
             TeachingPlanBlock,
             TeachingPlanSection,
@@ -1030,10 +1030,10 @@ async def test_teaching_with_persisted_legality_does_not_reassemble() -> None:
         return plan, plan.model_dump_json()
 
     with patch(
-        "planning.whole_lesson.legality.assemble_lesson_guidance",
+        "print.generation.whole_lesson.legality.assemble_lesson_guidance",
         side_effect=_counting,
     ), patch(
-        "planning.whole_lesson.teaching_agent._call_teaching_model",
+        "print.generation.whole_lesson.teaching_agent._call_teaching_model",
         new=AsyncMock(side_effect=_fake_call),
     ):
         result = await run_lesson_approach_planner(
@@ -1055,7 +1055,7 @@ def test_build_lesson_legality_snapshot_calls_assemble_once() -> None:
         return real(*args, **kwargs)
 
     with patch(
-        "planning.whole_lesson.legality.assemble_lesson_guidance",
+        "print.generation.whole_lesson.legality.assemble_lesson_guidance",
         side_effect=_counting,
     ):
         snap = build_lesson_legality_snapshot(packet)
@@ -1161,7 +1161,7 @@ async def test_explicit_empty_compatibility_skips_llm() -> None:
         raise AssertionError("LLM must not be called")
 
     with patch(
-        "planning.whole_lesson.form_agent._call_form_model",
+        "print.generation.whole_lesson.form_agent._call_form_model",
         new=AsyncMock(side_effect=_boom),
     ):
         with pytest.raises(NoLegalFormCandidatesError) as exc:
@@ -1183,7 +1183,7 @@ async def test_form_planner_preserves_timeout_after_attempts_exhausted() -> None
     )
 
     with patch(
-        "planning.whole_lesson.form_agent._call_form_model",
+        "print.generation.whole_lesson.form_agent._call_form_model",
         new=AsyncMock(side_effect=TimeoutError()),
     ) as call:
         with pytest.raises(TimeoutError):
@@ -1268,19 +1268,19 @@ async def test_resume_uses_persisted_compatibility_not_live_catalogue() -> None:
         )
 
     with patch(
-        "planning.whole_lesson.legality.assemble_lesson_guidance",
+        "print.generation.whole_lesson.legality.assemble_lesson_guidance",
         side_effect=_counting,
     ), patch(
-        "planning.whole_lesson.executor.build_form_candidate_map",
+        "print.generation.whole_lesson.executor.build_form_candidate_map",
         side_effect=_capture,
     ), patch(
-        "planning.whole_lesson.executor.run_form_planner",
+        "print.generation.whole_lesson.executor.run_form_planner",
         new=AsyncMock(side_effect=AssertionError("must reuse form plan")),
     ), patch(
-        "planning.whole_lesson.executor.dispatch_writer_async",
+        "print.generation.whole_lesson.executor.dispatch_writer_async",
         new=AsyncMock(side_effect=_fake_dispatch),
     ), patch(
-        "planning.whole_lesson.executor.assemble_from_db",
+        "print.generation.whole_lesson.executor.assemble_from_db",
         new=AsyncMock(
             return_value={
                 "document": {"document_version": 2},

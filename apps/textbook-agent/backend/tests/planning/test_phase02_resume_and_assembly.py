@@ -10,19 +10,19 @@ import pytest
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
-from generation.page_objects import WriterOutcome
-from planning.whole_lesson.executor import (
+from print.rendering.page_objects import WriterOutcome
+from print.generation.whole_lesson.executor import (
     AssemblyError,
     assemble_from_db,
     execute_after_teaching_approval,
     write_form_blocks,
 )
-from planning.whole_lesson.failure_injection import (
+from print.generation.whole_lesson.failure_injection import (
     configure_failure_injection,
     reset_failure_injection,
 )
-from planning.whole_lesson.form_plan import FormPlan
-from planning.whole_lesson.packet import (
+from print.generation.whole_lesson.form_plan import FormPlan
+from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ImmutableLessonPacket,
     LessonIdentity,
@@ -30,10 +30,10 @@ from planning.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
-from planning.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
-from planning.whole_lesson.states import ExecutionLease, execution_key
-from planning.whole_lesson.legality import build_lesson_legality_snapshot
-from planning.whole_lesson.teaching_plan import TeachingPlan
+from print.generation.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
+from print.generation.whole_lesson.states import ExecutionLease, execution_key
+from print.generation.whole_lesson.legality import build_lesson_legality_snapshot
+from print.generation.whole_lesson.teaching_plan import TeachingPlan
 from tests.planning.contract_fixtures import teaching_and_form
 
 
@@ -168,7 +168,7 @@ async def test_composite_execution_keys_and_skip_ready() -> None:
         )
 
     with patch(
-        "planning.whole_lesson.executor.dispatch_writer_async",
+        "print.generation.whole_lesson.executor.dispatch_writer_async",
         new=AsyncMock(side_effect=_fake_dispatch),
     ):
         await write_form_blocks(
@@ -205,7 +205,7 @@ async def test_middle_block_failure_does_not_stop_siblings() -> None:
         )
 
     with patch(
-        "planning.whole_lesson.executor.dispatch_writer_async",
+        "print.generation.whole_lesson.executor.dispatch_writer_async",
         new=AsyncMock(side_effect=_fake_dispatch),
     ):
         await write_form_blocks(
@@ -243,9 +243,9 @@ async def test_form_plan_reused_when_persisted() -> None:
         )
 
     with (
-        patch("planning.whole_lesson.executor.run_form_planner", new=_boom),
+        patch("print.generation.whole_lesson.executor.run_form_planner", new=_boom),
         patch(
-            "planning.whole_lesson.executor.dispatch_writer_async",
+            "print.generation.whole_lesson.executor.dispatch_writer_async",
             new=AsyncMock(side_effect=_fake_dispatch),
         ),
     ):
@@ -444,13 +444,13 @@ async def test_started_current_token_not_duplicated() -> None:
             status="ready",
         )
 
-    from planning.whole_lesson.states import ExecutionLease
+    from print.generation.whole_lesson.states import ExecutionLease
 
     lease = ExecutionLease(
         generation_id=gid, worker_id="w", lease_token=5, stage="writing_blocks"
     )
     with patch(
-        "planning.whole_lesson.executor.dispatch_writer_async",
+        "print.generation.whole_lesson.executor.dispatch_writer_async",
         new=AsyncMock(side_effect=_fake_dispatch),
     ):
         await write_form_blocks(

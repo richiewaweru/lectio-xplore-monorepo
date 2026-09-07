@@ -131,7 +131,7 @@ async def run_lectio_semantic_selector(
 
 
 async def _default_llm_choose(context: dict[str, Any]) -> SelectorChoice:
-    from planning.agents import run_component_selector
+    from curriculum.agents import run_component_selector
 
     trace_id = context.get("trace_id") if isinstance(context.get("trace_id"), str) else None
     payload = {key: value for key, value in context.items() if key != "trace_id"}

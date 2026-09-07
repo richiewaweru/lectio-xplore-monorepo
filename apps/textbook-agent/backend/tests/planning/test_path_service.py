@@ -13,7 +13,7 @@ from core.database.models import (
     UnitScopeContractModel,
     UserModel,
 )
-from planning.models import (
+from curriculum.path_models import (
     CanonicalLessonPart,
     MergePathLessonsRequest,
     PathLessonPatch,
@@ -21,7 +21,7 @@ from planning.models import (
     SplitPathLessonRequest,
     UnitCreate,
 )
-from planning.service import (
+from curriculum.service import (
     approve_path,
     canonical_plan_from_version,
     clone_path_version,
@@ -33,7 +33,7 @@ from planning.service import (
     skip_lesson,
     split_lesson,
 )
-from planning.validation import PathApprovalBlocked
+from curriculum.validation import PathApprovalBlocked
 from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 
 
@@ -364,7 +364,7 @@ async def test_persist_maps_scope_and_compat_fields(db_session, owner) -> None:
 
 
 async def test_canonical_plan_from_version_empty_exclusions(db_session, owner) -> None:
-    from planning.models import CanonicalPathPlan, CanonicalPathScope
+    from curriculum.path_models import CanonicalPathPlan, CanonicalPathScope
     from tests.planning.path_helpers import sample_canonical_plan
 
     plan = sample_canonical_plan()

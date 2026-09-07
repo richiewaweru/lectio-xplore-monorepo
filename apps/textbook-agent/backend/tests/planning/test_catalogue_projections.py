@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from contracts.lectio_page import PAGE_OBJECT_IDS
-from planning.catalogue_projections import (
+from print.generation.catalogue_projections import (
     assert_teaching_guidance_has_no_object_ids,
     project_form_guidance,
     project_teaching_guidance,

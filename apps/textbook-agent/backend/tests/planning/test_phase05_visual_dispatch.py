@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from planning.whole_lesson import visual_dispatch
-from planning.whole_lesson.visual_dispatch import (
+from print.generation.whole_lesson import visual_dispatch
+from print.generation.whole_lesson.visual_dispatch import (
     collect_pending_figure_dispatches,
     dispatch_native_pending_visuals,
     figure_work_order_from_pending,
@@ -330,8 +330,8 @@ async def test_quality_warning_without_source_remains_failed() -> None:
 async def test_product_dispatch_injects_topology_qc_adapter_and_returns_awaiting_visuals_on_flag(
     monkeypatch,
 ) -> None:
-    from planning.whole_lesson.visual_dispatch import dispatch_and_patch_from_repo
-    from planning.whole_lesson.visual_topology_recovery import TopologyRecoveryError
+    from print.generation.whole_lesson.visual_dispatch import dispatch_and_patch_from_repo
+    from print.generation.whole_lesson.visual_topology_recovery import TopologyRecoveryError
 
     class Repo:
         def __init__(self, _session, _generation_id):

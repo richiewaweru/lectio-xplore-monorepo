@@ -10,14 +10,14 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.background import BackgroundTask
 
-from builder import routes as builder_routes
+from learn.authoring.builder import routes as builder_routes
 from contracts.document import PipelineDocument, PipelineSectionManifestItem
-from core.auth.jwt_handler import JWTHandler
-from core.auth.middleware import get_current_user
-from core.dependencies import get_jwt_handler, get_settings
-from core.database.session import get_async_session
+from infra.auth.jwt_handler import JWTHandler
+from infra.auth.middleware import get_current_user
+from infra.dependencies import get_jwt_handler, get_settings
+from infra.database.session import get_async_session
 from core.entities.user import User
-from core.rate_limit import limiter
+from infra.rate_limit import limiter
 from print.rendering.pdf.cleanup import cleanup_files
 from print.rendering.pdf.config import PDFExportConfig
 from print.rendering.pdf.context import PDFGenerationContext

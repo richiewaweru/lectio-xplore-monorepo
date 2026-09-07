@@ -15,8 +15,8 @@ from print.generation.catalogue_projections import (
     build_form_candidate_map,
     project_form_guidance,
 )
-from planning.llm_contract_errors import is_transport_error, structured_output_errors
-from planning.planner_diagnostics import log_planner_attempt_failed
+from curriculum.llm_contract_errors import is_transport_error, structured_output_errors
+from curriculum.planner_diagnostics import log_planner_attempt_failed
 from print.generation.whole_lesson.form_plan import FormPlan
 from print.generation.whole_lesson.form_plan import FormPlanSection
 from print.generation.whole_lesson.legality import LessonLegalitySnapshot

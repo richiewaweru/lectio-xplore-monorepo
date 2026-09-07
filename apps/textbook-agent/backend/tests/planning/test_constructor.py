@@ -10,9 +10,9 @@ from core.database.models import UserModel
 from core.dependencies import get_async_session
 from core.entities.user import User
 from core.prompts import loader
-from planning.agents import run_constructor
-from planning.models import ConstructorOutput, UnitCreate
-from planning.service import create_unit
+from curriculum.agents import run_constructor
+from curriculum.path_models import ConstructorOutput, UnitCreate
+from curriculum.service import create_unit
 
 
 CONSTRUCTOR_PROMPT_ID = "constructor"
@@ -58,7 +58,7 @@ async def test_run_constructor_returns_at_most_one_clarifying_question(monkeypat
             )
         )
 
-    monkeypatch.setattr("planning.agents._run_structured", fake_run_structured)
+    monkeypatch.setattr("curriculum.agents._run_structured", fake_run_structured)
 
     result = await run_constructor(
         "Maths", "Grade 5", "teaching comparing fractions", trace_id="test-trace"
@@ -83,7 +83,7 @@ async def test_run_constructor_forwards_correction_and_clarifying_answer(monkeyp
         captured["payload"] = user_payload
         return output_type.model_validate(_fake_readback(clarifying_question=None))
 
-    monkeypatch.setattr("planning.agents._run_structured", fake_run_structured)
+    monkeypatch.setattr("curriculum.agents._run_structured", fake_run_structured)
 
     result = await run_constructor(
         "Maths",
@@ -226,7 +226,7 @@ async def test_constructor_readback_route_returns_llm_output(
         assert raw_text == "comparing fractions with unlike denominators"
         return ConstructorOutput.model_validate(_fake_readback())
 
-    monkeypatch.setattr("planning.routes.run_constructor", fake_run_constructor)
+    monkeypatch.setattr("curriculum.routes.run_constructor", fake_run_constructor)
 
     async def override_user() -> User:
         return TEST_USER

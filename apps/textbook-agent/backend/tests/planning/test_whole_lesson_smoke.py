@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from planning.catalogue_projections import (
+from print.generation.catalogue_projections import (
     assert_teaching_guidance_has_no_object_ids,
     project_teaching_guidance,
 )
-from planning.whole_lesson.packet import (
+from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ApprovedItemRef,
     ImmutableLessonPacket,
@@ -17,14 +17,14 @@ from planning.whole_lesson.packet import (
     ScopeEntry,
     SlotRecord,
 )
-from planning.whole_lesson.prompt_render import render_teaching_prompt
-from planning.whole_lesson.teaching_plan import (
+from print.generation.whole_lesson.prompt_render import render_teaching_prompt
+from print.generation.whole_lesson.teaching_plan import (
     AnchorUsageEntry,
     TeachingPlan,
     TeachingPlanBlock,
     TeachingPlanSection,
 )
-from planning.whole_lesson.validation import validate_teaching_plan
+from print.generation.whole_lesson.validation import validate_teaching_plan
 from resource_specs.loader import load_all_specs
 
 

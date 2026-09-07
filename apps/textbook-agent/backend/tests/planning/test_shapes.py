@@ -5,10 +5,10 @@ from pathlib import Path
 from sqlalchemy import select
 
 from core.database.models import PathLessonModel, UserModel
-from planning.models import ShapeDeviationCreateRequest
+from curriculum.path_models import ShapeDeviationCreateRequest
 from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
-from planning.service import approve_path, create_unit, persist_path_plan
-from planning.shapes import (
+from curriculum.service import approve_path, create_unit, persist_path_plan
+from curriculum.shapes import (
     decide_shape_deviation,
     lesson_shape_payload,
     request_shape_deviation,

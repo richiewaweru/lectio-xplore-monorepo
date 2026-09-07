@@ -12,8 +12,8 @@ import uuid
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from generation.contracts import GenerationInputForm as V3InputForm
-from generation.contracts import GenerationSignalSummary as V3SignalSummary
+from learn.generation.contracts import GenerationInputForm as V3InputForm
+from learn.generation.contracts import GenerationSignalSummary as V3SignalSummary
 from v3_blueprint.planning.assembler import assemble_blueprint
 from v3_blueprint.planning.models import SectionBrief, StructuralPlan
 from v3_blueprint.planning.persistence import (

@@ -35,24 +35,21 @@ from core.routes.profile import router as profile_router
 from core.routes.prompts import router as prompts_router
 from core.routes.shares import router as shares_router
 from infra.version import VERSION
-from builder.routes import router as builder_router
+from learn.authoring.builder.routes import router as builder_router
 from application.builder_print.routes import router as builder_print_router
 from learn.publishing.release_routes import router as learn_release_router
 from learn.runtime.runtime_routes import router as learn_runtime_router
 from learn.analytics.insight_service import router as learn_analytics_router
 from infra.database.session import async_session_factory
-from generation.routes import router as generation_router
-from generation.skeleton_routes import router as skeleton_router
-from generation.units_routes import router as units_generation_router
+from print.http.v3_studio.router import v3_studio_router
+from learn.generation.units_routes import router as units_generation_router
 from print.http.v3_studio.generation_writer import V3GenerationWriter
-from learn.routes import router as learning_router
 from media.diagnostics.v3_image_pipeline_diagnostic import (
     ProbeResult,
     run_gcs_probe,
     run_grok_probe,
 )
 from curriculum.routes import router as planning_router
-from curriculum.compatibility import router as compatibility_router
 from resource_specs.loader import initialize_registry as initialize_resource_registry
 from infra.telemetry import telemetry_router
 from infra.telemetry.dependencies import get_llm_call_repository
@@ -315,12 +312,12 @@ def create_app() -> FastAPI:
     app.include_router(shares_router)
     app.include_router(profile_router)
     app.include_router(prompts_router)
-    app.include_router(learning_router)
-    app.include_router(generation_router)
-    app.include_router(skeleton_router)
+    # D3: /api/v1/packs retired (non-Unit)
+    app.include_router(v3_studio_router, prefix="/api/v1")
+    # D3: /api/v1/skeletons* retired (non-Unit HTTP)
     app.include_router(planning_router)
     app.include_router(units_generation_router)
-    app.include_router(compatibility_router)
+    # D3: /api/v1/legacy-units retired
     app.include_router(telemetry_router)
 
     return app

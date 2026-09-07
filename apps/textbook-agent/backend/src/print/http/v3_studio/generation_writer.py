@@ -878,7 +878,7 @@ class V3GenerationWriter:
                 return None
             if not isinstance(model.document_json, dict):
                 return None
-            from generation.page_objects.registry import normalize_persisted_document_json
+            from print.rendering.page_objects.registry import normalize_persisted_document_json
 
             return normalize_persisted_document_json(deepcopy(model.document_json))
 

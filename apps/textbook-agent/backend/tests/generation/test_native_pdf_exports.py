@@ -8,7 +8,7 @@ from pathlib import Path
 from pypdf import PdfReader
 
 from contracts.lectio_page import validate_document
-from generation.page_objects.views import render_document_pdf, student_document, teacher_document
+from print.rendering.page_objects.views import render_document_pdf, student_document, teacher_document
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
 EXPECTED = (

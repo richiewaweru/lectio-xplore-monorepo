@@ -16,7 +16,7 @@ import pytest
 from pydantic import ValidationError
 
 from core.llm.deepseek_schema import to_deepseek_strict_schema
-from planning.models import (
+from curriculum.path_models import (
     PathStructuralCard,
     PathStructuralPageCard,
     PathStructuralPagePlan,
@@ -141,7 +141,7 @@ def test_bare_string_misconception_coerces_to_description() -> None:
 def test_statement_survives_the_dump_so_the_bridge_can_rename_it() -> None:
     """Regression guard for a silent-data-loss path.
 
-    ``planning.bridge._normalize_page_concept_card_payload`` renames ``statement``
+    ``application.unit_lesson._normalize_page_concept_card_payload`` renames ``statement``
     to ``description`` only when ``description`` is absent from the dict. If the
     dump emitted ``description: None`` the rename would never fire and the
     misconception would be dropped with no error at all. That makes

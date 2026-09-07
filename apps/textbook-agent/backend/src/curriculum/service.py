@@ -25,7 +25,7 @@ from curriculum.models import (
     UnitCreate,
     UnitUpdate,
 )
-from planning.validation import (
+from curriculum.validation import (
     PathApprovalBlocked,
     PathValidationError,
     adjacent_merge_hints,

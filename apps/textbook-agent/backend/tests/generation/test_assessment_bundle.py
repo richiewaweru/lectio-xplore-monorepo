@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from generation.page_objects import (
+from print.rendering.page_objects import (
     WriterContext,
     assemble_choices,
     assemble_questions,

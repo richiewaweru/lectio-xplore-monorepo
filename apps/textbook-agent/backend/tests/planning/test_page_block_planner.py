@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from planning.page_blocks import (
+from print.generation.page_blocks import (
     PageBlockPlanError,
     candidates_for_slot,
     guidance_for_slot,
@@ -79,7 +79,7 @@ def test_validate_plan_allows_atypical_with_reason() -> None:
     # PlannedBlock has no departure_reason field — attach via validate path using getattr
     object.__setattr__(plan.blocks[0], "__dict__", {**plan.blocks[0].__dict__, "departure_reason": "Needed for this concept."})
     # Pydantic model may not allow setattr of unknown field; use model_copy workaround via validation helper
-    from planning.page_blocks import validate_intent_departure
+    from print.generation.page_blocks import validate_intent_departure
 
     validate_intent_departure(
         intent=atypical,

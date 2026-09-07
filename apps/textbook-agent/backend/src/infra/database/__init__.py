@@ -1,4 +1,4 @@
-from core.database.models import (
+from infra.database.models import (
     Base,
     ConceptCardModel,
     GenerationModel,

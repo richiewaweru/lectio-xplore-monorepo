@@ -20,8 +20,8 @@ from core.database.models import (
 )
 from core.database.session import async_session_factory
 from core.entities.user import User
-from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
-from generation.v3_studio.session_store import v3_studio_store
+from print.http.v3_studio.dtos import V3InputForm, V3SignalSummary
+from print.http.v3_studio.session_store import v3_studio_store
 from v3_blueprint.planning.models import (
     AnchorSpec,
     ComponentBrief,
@@ -244,7 +244,7 @@ async def test_chunked_events_route_streams_planning_events_and_keeps_generation
     await _ensure_user(TEST_USER_A)
     generation_id = str(uuid.uuid4())
 
-    from generation.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream, _ensure_generation_stream
+    from print.http.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream, _ensure_generation_stream
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -283,7 +283,7 @@ async def test_generation_events_404_before_execution_queue_registration_for_chu
     await _ensure_user(TEST_USER_A)
     generation_id = str(uuid.uuid4())
 
-    from generation.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream
+    from print.http.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -332,7 +332,7 @@ async def test_chunked_approve_rejects_historical_v1_before_scheduling() -> None
     generation_id = str(uuid.uuid4())
     signals, form = _seed_context_models()
 
-    from generation.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream
+    from print.http.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -353,7 +353,7 @@ async def test_chunked_approve_rejects_historical_v1_before_scheduling() -> None
         resource_spec={"resource_type": "lesson", "depth": "standard", "spec": {}, "rendered": "x"},
     )
 
-    with patch("generation.v3_studio.router._run_chunked_stage2_pipeline", new=AsyncMock(return_value=None)) as run_stage2:
+    with patch("print.http.v3_studio.router._run_chunked_stage2_pipeline", new=AsyncMock(return_value=None)) as run_stage2:
         async with _client() as client:
             resp = await client.post(f"/api/v1/v3/chunked/{generation_id}/approve")
 
@@ -374,7 +374,7 @@ async def test_chunked_approve_accepts_native_path_generation() -> None:
     )
     signals, form = _seed_context_models()
 
-    from generation.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream
+    from print.http.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -409,7 +409,7 @@ async def test_chunked_approve_accepts_native_path_generation() -> None:
         )
         await session.commit()
 
-    with patch("generation.v3_studio.router._run_chunked_stage2_pipeline", new=AsyncMock(return_value=None)) as run_stage2:
+    with patch("print.http.v3_studio.router._run_chunked_stage2_pipeline", new=AsyncMock(return_value=None)) as run_stage2:
         async with _client() as client:
             resp = await client.post(f"/api/v1/v3/chunked/{generation_id}/approve")
 
@@ -424,8 +424,8 @@ async def test_chunked_approve_accepts_native_path_generation() -> None:
 
 @pytest.mark.asyncio
 async def test_variant_children_inherit_native_identity_before_scheduling(monkeypatch) -> None:
-    from generation.v3_studio import router
-    from generation.v3_studio.dtos import V3InputForm
+    from print.http.v3_studio import router
+    from print.http.v3_studio.dtos import V3InputForm
     from v3_blueprint.planning.models import core_variant_spec
 
     _signals, form = _seed_context_models()
@@ -476,8 +476,8 @@ async def test_historical_v1_regenerate_is_read_only_before_mutation() -> None:
     await _ensure_user(TEST_USER_A)
     generation_id = str(uuid.uuid4())
     signals, form = _seed_context_models()
-    from generation.v3_studio import router
-    from generation.v3_studio.router import _ensure_chunked_generation_row
+    from print.http.v3_studio import router
+    from print.http.v3_studio.router import _ensure_chunked_generation_row
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -519,8 +519,8 @@ async def test_historical_v1_retry_section_is_read_only_before_mutation() -> Non
     await _ensure_user(TEST_USER_A)
     generation_id = str(uuid.uuid4())
     signals, form = _seed_context_models()
-    from generation.v3_studio import router
-    from generation.v3_studio.router import _ensure_chunked_generation_row
+    from print.http.v3_studio import router
+    from print.http.v3_studio.router import _ensure_chunked_generation_row
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -569,7 +569,7 @@ async def test_chunked_approve_is_user_scoped() -> None:
     generation_id = str(uuid.uuid4())
     signals, form = _seed_context_models()
 
-    from generation.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream
+    from print.http.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -604,7 +604,7 @@ async def test_chunked_retry_section_rejects_non_failed_section() -> None:
     generation_id = str(uuid.uuid4())
     signals, form = _seed_context_models()
 
-    from generation.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream
+    from print.http.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -638,8 +638,8 @@ async def test_chunked_regenerate_is_read_only_for_historical_v1() -> None:
     app.dependency_overrides[get_current_user] = _override_user_a
     await _ensure_user(TEST_USER_A)
     generation_id = str(uuid.uuid4())
-    from generation.v3_studio import router
-    from generation.v3_studio.router import _ensure_chunked_generation_row
+    from print.http.v3_studio import router
+    from print.http.v3_studio.router import _ensure_chunked_generation_row
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -673,7 +673,7 @@ async def test_chunked_status_reports_next_action_by_stage() -> None:
     await _ensure_user(TEST_USER_A)
     generation_id = str(uuid.uuid4())
 
-    from generation.v3_studio.router import _ensure_chunked_generation_row
+    from print.http.v3_studio.router import _ensure_chunked_generation_row
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -727,7 +727,7 @@ async def test_chunked_status_derives_version_for_legacy_document_without_progre
     await _ensure_user(TEST_USER_A)
     generation_id = str(uuid.uuid4())
 
-    from generation.v3_studio.router import _ensure_chunked_generation_row
+    from print.http.v3_studio.router import _ensure_chunked_generation_row
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -759,7 +759,7 @@ async def test_chunked_plan_endpoint_returns_immutable_plan_metadata() -> None:
     generation_id = str(uuid.uuid4())
     signals, form = _seed_context_models()
 
-    from generation.v3_studio.router import _ensure_chunked_generation_row
+    from print.http.v3_studio.router import _ensure_chunked_generation_row
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -801,7 +801,7 @@ async def test_native_pipeline_timeout_persists_recoverable_error_state() -> Non
         update={"document_contract_version": 2}
     )
 
-    from generation.v3_studio.router import (
+    from print.http.v3_studio.router import (
         _ensure_chunked_generation_row,
         _run_chunked_stage2_pipeline,
     )
@@ -830,10 +830,10 @@ async def test_native_pipeline_timeout_persists_recoverable_error_state() -> Non
 
     with (
         patch(
-            "planning.whole_lesson.service.run_and_persist_teaching_plan",
+            "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
             new=AsyncMock(side_effect=TimeoutError("teaching provider timed out")),
         ),
-        patch("generation.v3_studio.router._chunked_emit_event", new=AsyncMock()),
+        patch("print.http.v3_studio.router._chunked_emit_event", new=AsyncMock()),
     ):
         await _run_chunked_stage2_pipeline(generation_id=generation_id, user_id=TEST_USER_A.id)
 
@@ -859,7 +859,7 @@ async def test_chunked_approve_resumes_stage2_error() -> None:
     generation_id = str(uuid.uuid4())
     signals, form = _seed_context_models()
 
-    from generation.v3_studio.router import _ensure_chunked_generation_row
+    from print.http.v3_studio.router import _ensure_chunked_generation_row
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -877,7 +877,7 @@ async def test_chunked_approve_resumes_stage2_error() -> None:
     await persist_chunked_state(generation_id, {"stage": "stage2_error", "error_type": "RuntimeError"})
 
     pipeline = AsyncMock(return_value=None)
-    with patch("generation.v3_studio.router._run_chunked_stage2_pipeline", new=pipeline):
+    with patch("print.http.v3_studio.router._run_chunked_stage2_pipeline", new=pipeline):
         async with _client() as client:
             response = await client.post(f"/api/v1/v3/chunked/{generation_id}/approve")
         await asyncio.sleep(0)
@@ -895,7 +895,7 @@ async def test_chunked_retry_section_is_read_only_for_historical_v1() -> None:
     generation_id = str(uuid.uuid4())
     signals, form = _seed_context_models()
 
-    from generation.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream
+    from print.http.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -925,7 +925,7 @@ async def test_chunked_retry_section_is_read_only_for_historical_v1() -> None:
         },
     )
 
-    from generation.v3_studio import router
+    from print.http.v3_studio import router
     persist = AsyncMock()
     stream = AsyncMock()
     claim = AsyncMock(return_value=True)
@@ -967,19 +967,19 @@ async def test_generation_8eca999f_starts_with_null_document() -> None:
     pump = MagicMock(return_value=pump_result)
 
     with (
-        patch("generation.v3_studio.router.V3GenerationWriter", return_value=generation_writer),
-        patch("generation.v3_studio.router.get_v3_trace_repository", return_value=MagicMock()),
-        patch("generation.v3_studio.router.V3TraceWriter", return_value=trace_writer),
+        patch("print.http.v3_studio.router.V3GenerationWriter", return_value=generation_writer),
+        patch("print.http.v3_studio.router.get_v3_trace_repository", return_value=MagicMock()),
+        patch("print.http.v3_studio.router.V3TraceWriter", return_value=trace_writer),
         patch(
-            "generation.v3_studio.router.telemetry_monitor.initialise_v3_recorder",
+            "print.http.v3_studio.router.telemetry_monitor.initialise_v3_recorder",
             new=AsyncMock(),
         ),
-        patch("generation.v3_studio.router.build_planning_artifact", return_value={}),
-        patch("generation.v3_studio.router._chunked_emit_event", new=AsyncMock()),
-        patch("generation.v3_studio.router._pump_sse_to_queue", new=pump),
-        patch("generation.v3_studio.router._spawn_background_task") as spawn,
+        patch("print.http.v3_studio.router.build_planning_artifact", return_value={}),
+        patch("print.http.v3_studio.router._chunked_emit_event", new=AsyncMock()),
+        patch("print.http.v3_studio.router._pump_sse_to_queue", new=pump),
+        patch("print.http.v3_studio.router._spawn_background_task") as spawn,
     ):
-        from generation.v3_studio.router import _start_generation_from_chunked_blueprint
+        from print.http.v3_studio.router import _start_generation_from_chunked_blueprint
 
         await _start_generation_from_chunked_blueprint(
             generation_id=generation_id,
@@ -1015,18 +1015,18 @@ async def test_attempt_chunked_assembly_logs_execution_handoff_success() -> None
     blueprint = MagicMock(name="blueprint")
 
     with (
-        patch("generation.v3_studio.router.assemble_blueprint", return_value=blueprint),
-        patch("generation.v3_studio.router._validate_blueprint"),
-        patch("generation.v3_studio.router.v3_studio_store.put_blueprint", new=AsyncMock()),
-        patch("generation.v3_studio.router._ensure_generation_stream", new=AsyncMock(return_value=queue)),
+        patch("print.http.v3_studio.router.assemble_blueprint", return_value=blueprint),
+        patch("print.http.v3_studio.router._validate_blueprint"),
+        patch("print.http.v3_studio.router.v3_studio_store.put_blueprint", new=AsyncMock()),
+        patch("print.http.v3_studio.router._ensure_generation_stream", new=AsyncMock(return_value=queue)),
         patch(
-            "generation.v3_studio.router._start_generation_from_chunked_blueprint",
+            "print.http.v3_studio.router._start_generation_from_chunked_blueprint",
             new=AsyncMock(),
         ),
-        patch("generation.v3_studio.router.persist_chunked_state", new=AsyncMock()),
+        patch("print.http.v3_studio.router.persist_chunked_state", new=AsyncMock()),
         patch("builtins.print") as mock_print,
     ):
-        from generation.v3_studio.router import _attempt_chunked_assembly
+        from print.http.v3_studio.router import _attempt_chunked_assembly
 
         await _attempt_chunked_assembly(
             generation_id=generation_id,
@@ -1063,7 +1063,7 @@ async def test_attempt_chunked_assembly_proceeds_with_partial_failed_sections() 
     generation_id = str(uuid.uuid4())
     _signals, form = _seed_context_models()
     queue = asyncio.Queue()
-    from generation.v3_studio.router import _ensure_chunked_generation_row
+    from print.http.v3_studio.router import _ensure_chunked_generation_row
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -1091,12 +1091,12 @@ async def test_attempt_chunked_assembly_proceeds_with_partial_failed_sections() 
     practice_failed._errors = ["retry exhausted"]
 
     with (
-        patch("generation.v3_studio.router._validate_blueprint"),
-        patch("generation.v3_studio.router.v3_studio_store.put_blueprint", new=AsyncMock()),
-        patch("generation.v3_studio.router._ensure_generation_stream", new=AsyncMock(return_value=queue)),
-        patch("generation.v3_studio.router._start_generation_from_chunked_blueprint", new=AsyncMock()),
+        patch("print.http.v3_studio.router._validate_blueprint"),
+        patch("print.http.v3_studio.router.v3_studio_store.put_blueprint", new=AsyncMock()),
+        patch("print.http.v3_studio.router._ensure_generation_stream", new=AsyncMock(return_value=queue)),
+        patch("print.http.v3_studio.router._start_generation_from_chunked_blueprint", new=AsyncMock()),
     ):
-        from generation.v3_studio.router import _attempt_chunked_assembly
+        from print.http.v3_studio.router import _attempt_chunked_assembly
 
         await _attempt_chunked_assembly(
             generation_id=generation_id,
@@ -1118,7 +1118,7 @@ async def test_attempt_chunked_assembly_blocks_only_when_no_sections_renderable(
     sample_plan = _two_section_structural_plan()
     generation_id = str(uuid.uuid4())
     _signals, form = _seed_context_models()
-    from generation.v3_studio.router import _ensure_chunked_generation_row
+    from print.http.v3_studio.router import _ensure_chunked_generation_row
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -1142,10 +1142,10 @@ async def test_attempt_chunked_assembly_blocks_only_when_no_sections_renderable(
     practice_failed._failed = True
 
     with (
-        patch("generation.v3_studio.router._chunked_emit_event", new=AsyncMock()),
-        patch("generation.v3_studio.router._start_generation_from_chunked_blueprint", new=AsyncMock()),
+        patch("print.http.v3_studio.router._chunked_emit_event", new=AsyncMock()),
+        patch("print.http.v3_studio.router._start_generation_from_chunked_blueprint", new=AsyncMock()),
     ):
-        from generation.v3_studio.router import _attempt_chunked_assembly
+        from print.http.v3_studio.router import _attempt_chunked_assembly
 
         await _attempt_chunked_assembly(
             generation_id=generation_id,
@@ -1182,18 +1182,18 @@ async def test_attempt_chunked_assembly_logs_execution_start_failure_and_reraise
     blueprint = MagicMock(name="blueprint")
 
     with (
-        patch("generation.v3_studio.router.assemble_blueprint", return_value=blueprint),
-        patch("generation.v3_studio.router._validate_blueprint"),
-        patch("generation.v3_studio.router.v3_studio_store.put_blueprint", new=AsyncMock()),
-        patch("generation.v3_studio.router._ensure_generation_stream", new=AsyncMock(return_value=queue)),
+        patch("print.http.v3_studio.router.assemble_blueprint", return_value=blueprint),
+        patch("print.http.v3_studio.router._validate_blueprint"),
+        patch("print.http.v3_studio.router.v3_studio_store.put_blueprint", new=AsyncMock()),
+        patch("print.http.v3_studio.router._ensure_generation_stream", new=AsyncMock(return_value=queue)),
         patch(
-            "generation.v3_studio.router._start_generation_from_chunked_blueprint",
+            "print.http.v3_studio.router._start_generation_from_chunked_blueprint",
             new=AsyncMock(side_effect=RuntimeError("executor boot failed")),
         ),
-        patch("generation.v3_studio.router.persist_chunked_state", new=AsyncMock()),
+        patch("print.http.v3_studio.router.persist_chunked_state", new=AsyncMock()),
         patch("builtins.print") as mock_print,
     ):
-        from generation.v3_studio.router import _attempt_chunked_assembly
+        from print.http.v3_studio.router import _attempt_chunked_assembly
 
         with pytest.raises(RuntimeError, match="executor boot failed"):
             await _attempt_chunked_assembly(
@@ -1221,7 +1221,7 @@ async def test_chunked_approve_emits_stage2_progress_events() -> None:
     generation_id = str(uuid.uuid4())
     signals, form = _seed_context_models()
 
-    from generation.v3_studio.router import _chunked_emit_event, _ensure_chunked_generation_row, _ensure_chunked_stream
+    from print.http.v3_studio.router import _chunked_emit_event, _ensure_chunked_generation_row, _ensure_chunked_stream
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -1264,7 +1264,7 @@ async def test_chunked_approve_emits_stage2_progress_events() -> None:
         await _chunked_emit_event(generation_id, "stage2_complete", {"generation_id": generation_id, "failed_sections": ["intro"]})
         await persist_chunked_state(generation_id, {"stage": "assembly_blocked", "failed_sections": ["intro"]})
 
-    with patch("generation.v3_studio.router._run_chunked_stage2_pipeline", new=AsyncMock(side_effect=fake_stage2_pipeline)) as stage2:
+    with patch("print.http.v3_studio.router._run_chunked_stage2_pipeline", new=AsyncMock(side_effect=fake_stage2_pipeline)) as stage2:
         async with _client() as client:
             approve = await client.post(f"/api/v1/v3/chunked/{generation_id}/approve")
             assert approve.status_code == 409

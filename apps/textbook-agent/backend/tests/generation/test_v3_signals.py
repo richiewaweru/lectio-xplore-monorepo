@@ -11,8 +11,8 @@ from core.auth.middleware import get_current_user
 from core.entities.user import User
 from core.events import TraceClosedEvent, TraceRegisteredEvent
 from core.llm import ModelFamily, ModelSpec
-from generation.v3_studio.agents import extract_signals
-from generation.v3_studio.dtos import V3SignalSummary
+from print.http.v3_studio.agents import extract_signals
+from print.http.v3_studio.dtos import V3SignalSummary
 from v3_execution.llm_helpers import StructuredCallContext
 
 TEST_USER = User(
@@ -66,9 +66,9 @@ async def test_signals_registers_and_closes_trace_for_telemetry():
     }
 
     with (
-        patch("generation.v3_studio.router.event_bus.publish", side_effect=capture),
+        patch("print.http.v3_studio.router.event_bus.publish", side_effect=capture),
         patch(
-            "generation.v3_studio.router.extract_signals",
+            "print.http.v3_studio.router.extract_signals",
             new=AsyncMock(return_value=fake_summary),
         ),
     ):
@@ -105,9 +105,9 @@ async def test_extract_signals_uses_prompted_output_for_deepseek_models() -> Non
     fake_result = type("R", (), {"output": type("S", (), {"topic": "Seeds, Pollination"})()})()
 
     with (
-        patch("generation.v3_studio.agents.Agent", FakeAgent),
+        patch("print.http.v3_studio.agents.Agent", FakeAgent),
         patch(
-            "generation.v3_studio.agents.prepare_structured_agent",
+            "print.http.v3_studio.agents.prepare_structured_agent",
             return_value=(
                 "deepseek-model",
                 provider_output,
@@ -121,8 +121,8 @@ async def test_extract_signals_uses_prompted_output_for_deepseek_models() -> Non
                 None,
             ),
         ),
-        patch("generation.v3_studio.agents.get_v3_slot", return_value="fast"),
-        patch("generation.v3_studio.agents.run_llm", new=AsyncMock(return_value=fake_result)),
+        patch("print.http.v3_studio.agents.get_v3_slot", return_value="fast"),
+        patch("print.http.v3_studio.agents.run_llm", new=AsyncMock(return_value=fake_result)),
     ):
         with pytest.raises(RuntimeError, match="unexpected output"):
             await extract_signals(type("Form", (), PAYLOAD)(), trace_id="signals-trace")

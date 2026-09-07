@@ -5,10 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from generation.v3_studio.dtos import V3InputForm
+from print.http.v3_studio.dtos import V3InputForm
 from v3_blueprint.models import ProductionBlueprint
 
-from generation.v3_studio.preview_mapper import blueprint_to_preview_dto
+from print.http.v3_studio.preview_mapper import blueprint_to_preview_dto
 
 
 def _example_bp(name: str) -> ProductionBlueprint:
@@ -74,6 +74,6 @@ def test_blueprint_to_preview_dto_includes_learner_context_when_form_provided() 
 
 @pytest.mark.asyncio
 async def test_v3_studio_router_import() -> None:
-    from generation.v3_studio.router import v3_studio_router
+    from print.http.v3_studio.router import v3_studio_router
 
     assert v3_studio_router.prefix == "/v3"

@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 
 from core.database.models import UserModel
-from telemetry.v3_trace.event_types import BLUEPRINT_GENERATED, GENERATION_COMPLETED
-from telemetry.v3_trace.repository import V3TraceRepository
+from infra.telemetry.v3_trace.event_types import BLUEPRINT_GENERATED, GENERATION_COMPLETED
+from infra.telemetry.v3_trace.repository import V3TraceRepository
 
 
 async def _seed_user(db_session_factory, user_id: str = "u-01") -> None:

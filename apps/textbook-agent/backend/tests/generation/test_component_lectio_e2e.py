@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from generation.component_lectio.pipeline import run_mocked_component_lectio_pipeline
+from learn.generation.component_lectio.pipeline import run_mocked_component_lectio_pipeline
 from tests.v3_blueprint.planning.test_intent_plan import SUBJECT_FIXTURES, _intent_plan_for_subject
 
 
@@ -40,7 +40,7 @@ def test_mocked_e2e_injects_validation_failure_and_repairs() -> None:
         if order.block_id == target and not getattr(flaky_writer, "_failed", False):
             flaky_writer._failed = True  # type: ignore[attr-defined]
             raise ValueError("lectio validation failed on comparison payload")
-        from generation.component_lectio.pipeline import mock_writer
+        from learn.generation.component_lectio.pipeline import mock_writer
 
         return mock_writer(order)
 
@@ -58,7 +58,7 @@ def test_mocked_e2e_injects_validation_failure_and_repairs() -> None:
 
 
 def test_phase09_canonical_path_does_not_import_studio_router() -> None:
-    import generation.component_lectio.pipeline as pipeline
+    import learn.generation.component_lectio.pipeline as pipeline
 
     source = open(pipeline.__file__, encoding="utf-8").read()
     assert "from_generation" not in source

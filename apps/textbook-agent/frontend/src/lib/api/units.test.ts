@@ -80,16 +80,11 @@ describe('unit API helpers', () => {
 		}));
 	});
 
-	it('previews all three declared group shapes without a generation call', async () => {
-		vi.mocked(apiFetch).mockImplementation(async () => ok({ variants: [] }));
-		await previewSkeleton('Explain photosynthesis.', 'first_exposure');
-
-		const [, init] = vi.mocked(apiFetch).mock.calls[0];
-		expect(JSON.parse(String((init as RequestInit).body)).group_profiles).toEqual([
-			'support',
-			'core',
-			'extension'
-		]);
+	it('rejects skeleton preview because the non-Unit skeletons API was retired', async () => {
+		await expect(previewSkeleton('Explain photosynthesis.', 'first_exposure')).rejects.toThrow(
+			/skeletons:preview API retired/
+		);
+		expect(vi.mocked(apiFetch)).not.toHaveBeenCalled();
 	});
 
 	it('loads and explicitly approves path-owned shape deviations', async () => {

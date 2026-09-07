@@ -6,8 +6,8 @@ import time
 import uuid
 from typing import Any, Literal
 
-from planning.llm_contract_errors import is_transport_error, structured_output_errors
-from planning.whole_lesson.failure_policy import classify_failure
+from curriculum.llm_contract_errors import is_transport_error, structured_output_errors
+from print.generation.whole_lesson.failure_policy import classify_failure
 from pydantic import ValidationError
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 

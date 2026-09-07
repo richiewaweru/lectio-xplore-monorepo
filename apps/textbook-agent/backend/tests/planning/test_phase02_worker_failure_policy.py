@@ -9,7 +9,7 @@ import pytest
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
-from planning.whole_lesson.packet import (
+from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ImmutableLessonPacket,
     LessonIdentity,
@@ -17,9 +17,9 @@ from planning.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
-from planning.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
-from planning.whole_lesson.states import LeaseLostError
-from planning.whole_lesson.worker import NativeExecutionWorker
+from print.generation.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
+from print.generation.whole_lesson.states import LeaseLostError
+from print.generation.whole_lesson.worker import NativeExecutionWorker
 from tests.planning.contract_fixtures import teaching_and_form
 
 
@@ -138,8 +138,8 @@ async def test_lease_lost_does_not_transition() -> None:
 
 @pytest.mark.asyncio
 async def test_normalize_writer_status_figure_pending() -> None:
-    from generation.page_objects import write_figure, WriterContext
-    from planning.whole_lesson.executor import normalize_writer_status
+    from print.rendering.page_objects import write_figure, WriterContext
+    from print.generation.whole_lesson.executor import normalize_writer_status
     from v3_blueprint.planning.models import PlannedBlock
 
     planned = PlannedBlock(

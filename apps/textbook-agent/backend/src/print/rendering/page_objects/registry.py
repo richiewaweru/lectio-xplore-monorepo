@@ -271,7 +271,7 @@ class WriterProvider(Protocol):
 
 def _writer_contract(object_id: str) -> Any:
     try:
-        from planning.catalogue_projections import project_writer_contract
+        from print.generation.catalogue_projections import project_writer_contract
 
         return project_writer_contract(object_id)
     except Exception:  # noqa: BLE001 — contract is advisory for prompts
@@ -284,8 +284,8 @@ async def _llm_write(ctx: WriterContext, *, prompt: str | None = None) -> object
     from contracts.lectio_page import get_intent_catalogue
     from core.config import settings
     from core.llm.runner import RetryPolicy, run_llm
-    from planning.model_tiers import tier_for_object_writer
-    from planning.prompts import page_writer_common_prompt, prompt_text
+    from print.generation.model_tiers import tier_for_object_writer
+    from print.generation.prompts import page_writer_common_prompt, prompt_text
     from v3_execution.config import get_v3_model_settings, get_v3_slot
     from v3_execution.config.models import V3_BLOCK_WRITER_FAST, V3_BLOCK_WRITER_STANDARD
     from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
