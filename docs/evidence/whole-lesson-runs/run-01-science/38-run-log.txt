@@ -1,3 +1,0 @@
-captured_at=2026-08-16T16:42:20.175656+00:00
-generation_id=046cdd0f-45bd-42e1-af3d-34fc91fc62bb
-missing=['03-path-plan-raw.txt']

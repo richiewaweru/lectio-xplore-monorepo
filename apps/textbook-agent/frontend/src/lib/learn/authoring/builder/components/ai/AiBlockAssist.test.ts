@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const generateBlock = vi.hoisted(() => vi.fn());
 
-vi.mock('$lib/builder/api/ai-client', () => ({ generateBlock }));
-vi.mock('$lib/builder/stores/connectivity.svelte', () => ({
+vi.mock('$lib/learn/authoring/builder/api/ai-client', () => ({ generateBlock }));
+vi.mock('$lib/learn/authoring/builder/stores/connectivity.svelte', () => ({
 	connectivityStore: { online: true }
 }));
-vi.mock('$lib/builder/utils/ai-rate-limit', () => ({
+vi.mock('$lib/learn/authoring/builder/utils/ai-rate-limit', () => ({
 	tryBeginAiCall: () => ({ ok: true, finish: vi.fn() })
 }));
 vi.mock('lectio', () => ({
@@ -15,7 +15,7 @@ vi.mock('lectio', () => ({
 }));
 
 import AiBlockAssist from './AiBlockAssist.svelte';
-import { NEW_AI_BLOCK_ASSIST_KEY } from '$lib/settings/flags';
+import { NEW_AI_BLOCK_ASSIST_KEY } from '$lib/shared/settings/flags';
 
 function renderAssist(overrides: Record<string, unknown> = {}) {
 	return render(AiBlockAssist, {

@@ -7,9 +7,9 @@ vi.mock('lectio', () => ({
 }));
 
 import { createDocumentStore } from './document.svelte';
-import type { IssueSection } from '$lib/builder/issues';
+import type { IssueSection } from '$lib/learn/authoring/builder/issues';
 
-vi.mock('$lib/builder/persistence/server-sync', () => ({
+vi.mock('$lib/learn/authoring/builder/persistence/server-sync', () => ({
 	ensureBuilderSyncAdapterRegistered: vi.fn(),
 	flushBuilderSyncQueue: vi.fn(async () => ({ synced: 0, failed: 0, errors: [] })),
 	saveLessonToServer: vi.fn(async () => {})

@@ -6,7 +6,7 @@ const { authTokenMock, fetchMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('svelte/store', () => ({ get: vi.fn(() => 'stored-token') }));
-vi.mock('$lib/stores/auth', () => ({ authToken: authTokenMock }));
+vi.mock('$lib/stores/shared/auth', () => ({ authToken: authTokenMock }));
 vi.stubGlobal('fetch', fetchMock);
 
 import { apiFetch } from './client';
@@ -17,7 +17,7 @@ describe('apiFetch authorization precedence', () => {
 	it('preserves an explicit token for tokenized print links', async () => {
 		fetchMock.mockResolvedValue(new Response('{}', { status: 200 }));
 
-		await apiFetch('/api/v1/v3/generations/g/document', {
+		await apiFetch('/api/v1/v3/print/generations/g/document', {
 			headers: { Authorization: 'Bearer explicit-token' }
 		});
 
@@ -28,7 +28,7 @@ describe('apiFetch authorization precedence', () => {
 	it('falls back to the stored session token when none is supplied', async () => {
 		fetchMock.mockResolvedValue(new Response('{}', { status: 200 }));
 
-		await apiFetch('/api/v1/v3/generations/g/document');
+		await apiFetch('/api/v1/v3/print/generations/g/document');
 
 		const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
 		expect(new Headers(init.headers).get('Authorization')).toBe('Bearer stored-token');

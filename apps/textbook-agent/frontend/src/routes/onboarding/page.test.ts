@@ -52,7 +52,7 @@ vi.mock('$app/state', () => ({
 	}
 }));
 
-vi.mock('$lib/api/auth', () => ({
+vi.mock('$lib/api/shared/auth', () => ({
 	fetchCurrentUser: vi.fn()
 }));
 
@@ -67,12 +67,12 @@ vi.mock('$lib/api/errors', async () => {
 	return actual;
 });
 
-vi.mock('$lib/auth/routing', async () => {
-	const actual = await vi.importActual<typeof import('$lib/auth/routing')>('$lib/auth/routing');
+vi.mock('$lib/shared/auth/routing', async () => {
+	const actual = await vi.importActual<typeof import('$lib/shared/auth/routing')>('$lib/shared/auth/routing');
 	return actual;
 });
 
-vi.mock('$lib/stores/auth', () => ({
+vi.mock('$lib/stores/shared/auth', () => ({
 	authUser: authStore,
 	logout: vi.fn(),
 	updateUser: vi.fn()

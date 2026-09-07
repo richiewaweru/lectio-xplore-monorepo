@@ -763,7 +763,7 @@ class LearnReleaseModel(Base):
 
 
 # Register Learn runtime tables on the shared Base metadata (Phases 06–09).
-from learning import runtime_models as _learn_runtime_models  # noqa: E402,F401
+from learn import runtime_models as _learn_runtime_models  # noqa: E402,F401
 
 
 class V3TraceRunModel(Base):

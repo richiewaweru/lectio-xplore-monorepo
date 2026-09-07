@@ -1,14 +1,14 @@
 <script lang="ts">
 	import type { LessonDocument } from '@lectio/learn';
-	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
+	import type { DocumentStore } from '$lib/learn/authoring/builder/stores/document.svelte';
 	import {
 		listVersions,
 		restoreVersionWithBackup,
 		saveVersionSnapshot,
 		type DocumentVersion
-	} from '$lib/builder/persistence/idb-store';
-	import { downloadLessonDocument } from '$lib/builder/utils/file-io';
-	import LessonReadOnlyView from '$lib/builder/components/canvas/LessonReadOnlyView.svelte';
+	} from '$lib/learn/authoring/builder/persistence/idb-store';
+	import { downloadLessonDocument } from '$lib/learn/authoring/builder/utils/file-io';
+	import LessonReadOnlyView from '$lib/learn/authoring/builder/components/canvas/LessonReadOnlyView.svelte';
 	import { History, X } from 'lucide-svelte';
 
 	let {

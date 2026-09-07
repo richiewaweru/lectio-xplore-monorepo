@@ -4,7 +4,7 @@
 Extend LessonDocument sections with learner-facing metadata and add a student lesson shell (tabs/stages) without replacing Builder or writing learner state into documents.
 
 ## Inspected facts
-- `LessonDocument` / `DocumentSection` in `packages/lectio/src/lib/teacher/document.ts` (version 1).
+- `LessonDocument` / `DocumentSection` in `packages/lectio-learn/src/lib/teacher/document.ts` (version 1).
 - Builder route: `frontend/src/routes/builder/[id]/+page.svelte`.
 - Render path: `LectioDocumentView` + templates from `@lectio/learn`.
 - Visual tokens: Fraunces/Inter + `--paper|--surface|--rule|--ink|--accent|--amber` in app + `@lectio/learn/theme.css`.

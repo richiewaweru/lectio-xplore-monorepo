@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.auth.middleware import get_current_user
+from infra.auth.middleware import get_current_user
 from core.capabilities import require_xplore_v2
 from core.database.models import (
     GenerationModel,
@@ -20,17 +20,17 @@ from core.database.models import (
     UnitGroupModel,
     UnitModel,
 )
-from core.dependencies import get_async_session
+from infra.dependencies import get_async_session
 from core.entities.user import User
-from core.events import TraceClosedEvent, TraceRegisteredEvent, event_bus
-from core.rate_limit import limiter
+from infra.events import TraceClosedEvent, TraceRegisteredEvent, event_bus
+from infra.rate_limit import limiter
 from planning.agents import (
     run_constructor,
     run_path_planner,
     run_plan_chat_edit,
 )
-from planning.bridge import PathPreparationBlocked, prepare_path_lesson
-from planning.models import (
+from application.unit_lesson import PathPreparationBlocked, prepare_path_lesson
+from curriculum.models import (
     ConstructorReadbackRequest,
     InsertFoundationLessonRequest,
     GuardedMergePathLessonsRequest,
@@ -59,7 +59,7 @@ from planning.models import (
     UnitGroupsWriteRequest,
     UnitUpdate,
 )
-from planning.outcomes import (
+from curriculum.outcomes import (
     OutcomeValidationError,
     StaleOutcomeError,
     actual_payload,
@@ -68,7 +68,7 @@ from planning.outcomes import (
     record_lesson_actual,
     record_marks,
 )
-from planning.schedule import (
+from curriculum.schedule import (
     groups_payload,
     schedule_payload,
     suggest_schedule,
@@ -80,13 +80,13 @@ from planning.projections import (
     build_composition_payload,
     composition_payload,
 )
-from planning.shapes import (
+from curriculum.shapes import (
     decide_shape_deviation,
     deviation_payload,
     lesson_shape_payload,
     request_shape_deviation,
 )
-from planning.service import (
+from curriculum.service import (
     ConceptResolutionError,
     PathNotFoundError,
     StalePathMutationError,

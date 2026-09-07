@@ -6,8 +6,8 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any
 
-from planning.whole_lesson.states import LeaseLostError
-from planning.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
+from print.generation.whole_lesson.states import LeaseLostError
+from print.generation.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
 from v3_execution.executors.item_errors import ItemGenerationOutputInvalidError
 
 try:
@@ -38,7 +38,7 @@ def classify_failure(exc: BaseException) -> FailureClassification:
     # ContentValidationError: repair already consumed inside dispatch_writer_async.
     # Surface VALIDATION as retryable (failed_recoverable) but not executor-repairable.
     try:
-        from generation.page_objects import ContentValidationError
+        from print.rendering.page_objects import ContentValidationError
     except ImportError:  # pragma: no cover
         ContentValidationError = None  # type: ignore[misc, assignment]
 

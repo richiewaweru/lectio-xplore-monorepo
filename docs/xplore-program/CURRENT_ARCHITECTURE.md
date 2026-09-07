@@ -12,7 +12,7 @@ Unit / concept / path authoring
    PRINT (monorepo)      LEARN (now co-located in monorepo)
    whole_lesson          component_lectio
    page_objects          Builder LessonDocument
-   @lectio/page          workspace packages/lectio (→ @lectio/learn in Phase 02)
+   @lectio/page          workspace packages/lectio-learn (→ @lectio/learn in Phase 02)
    PDF
 ```
 
@@ -61,7 +61,7 @@ Monorepo textbook-agent was historically imported from `ba677486`, **not** curre
 
 ### Component library
 
-- Workspace package `packages/lectio` (`lectio@0.6.0`, `workspace:*`)
+- Workspace package `packages/lectio-learn` (`lectio@0.6.0`, `workspace:*`)
 - Source imported from `lectio-legacy-20260805`
 - Next: Phase 02 rename/evolve to `@lectio/learn` + remove print-only exports
 

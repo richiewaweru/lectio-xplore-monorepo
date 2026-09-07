@@ -14,7 +14,7 @@ def main() -> None:
         database = Path(temporary) / "phase9.db"
         engine = create_engine(f"sqlite:///{database.as_posix()}")
         migration = import_module(
-            "core.database.migrations.versions.20260801_0024_add_teaching_schedule_and_groups"
+            "infra.database.migrations.versions.20260801_0024_add_teaching_schedule_and_groups"
         )
         try:
             with engine.begin() as connection:

@@ -61,6 +61,8 @@ async def initialise_path_generation(
     scope_contract: dict[str, Any],
     variants: list[VariantSpec] | None = None,
     variant_plans: dict[str, StructuralPlan] | None = None,
+    native_whole_lesson: bool = False,
+    path_plan_raw: str | None = None,
 ) -> None:
     signals = V3SignalSummary(
         topic=topic,
@@ -98,6 +100,15 @@ async def initialise_path_generation(
         # Units owns admission. Select once and persist before any later state merge.
         **build_control_patch(select_default_pipeline()),
     }
+    if native_whole_lesson:
+        # Print Unit path: native approve gate reads this from chunked state.
+        state["native_whole_lesson"] = True
+        state["page_document_v2"] = True
+        context = state.setdefault("context", {})
+        if isinstance(context, dict):
+            context["native_whole_lesson"] = True
+    if path_plan_raw:
+        state["path_plan_raw"] = path_plan_raw
     if variants:
         state.update(
             {

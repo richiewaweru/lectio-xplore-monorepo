@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from planning.whole_lesson.form_plan import FormDecision, FormPlan, Placement
-from planning.whole_lesson.teaching_plan import TeachingPlan, TeachingPlanBlock
+from print.generation.whole_lesson.form_plan import FormDecision, FormPlan, Placement
+from print.generation.whole_lesson.teaching_plan import TeachingPlan, TeachingPlanBlock
 from v3_blueprint.planning.models import PlannedBlock, SectionBlockPlan
 
 

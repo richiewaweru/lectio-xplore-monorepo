@@ -61,7 +61,7 @@ vi.mock('$lib/components/studio/V3BookletPackView.svelte', async () => ({
 	default: (await import('./__fixtures__/MockGeneric.svelte')).default
 }));
 import StudioPage from './+page.svelte';
-import { resetV3Studio, v3Studio } from '$lib/stores/v3-studio.svelte';
+import { resetV3Studio, v3Studio } from '$lib/print/stores/v3-studio.svelte';
 
 function deferred<T>() {
 	let resolve!: (value: T) => void;

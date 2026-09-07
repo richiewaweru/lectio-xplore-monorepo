@@ -1,18 +1,18 @@
 <script lang="ts">
 	import type { EditSchema, FieldSchema } from '@lectio/learn';
 	import type { Component } from 'svelte';
-	import { setDocumentStoreContext } from '$lib/builder/components/editor/document-store-context';
-	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
-	import FieldBoolean from '$lib/builder/components/editor/fields/FieldBoolean.svelte';
-	import FieldList from '$lib/builder/components/editor/fields/FieldList.svelte';
-	import FieldMedia from '$lib/builder/components/editor/fields/FieldMedia.svelte';
-	import FieldNumber from '$lib/builder/components/editor/fields/FieldNumber.svelte';
-	import FieldObjectList from '$lib/builder/components/editor/fields/FieldObjectList.svelte';
-	import FieldRichText from '$lib/builder/components/editor/fields/FieldRichText.svelte';
-	import FieldSelect from '$lib/builder/components/editor/fields/FieldSelect.svelte';
-	import FieldSvg from '$lib/builder/components/editor/fields/FieldSvg.svelte';
-	import FieldText from '$lib/builder/components/editor/fields/FieldText.svelte';
-	import FieldTextarea from '$lib/builder/components/editor/fields/FieldTextarea.svelte';
+	import { setDocumentStoreContext } from '$lib/learn/authoring/builder/components/editor/document-store-context';
+	import type { DocumentStore } from '$lib/learn/authoring/builder/stores/document.svelte';
+	import FieldBoolean from '$lib/learn/authoring/builder/components/editor/fields/FieldBoolean.svelte';
+	import FieldList from '$lib/learn/authoring/builder/components/editor/fields/FieldList.svelte';
+	import FieldMedia from '$lib/learn/authoring/builder/components/editor/fields/FieldMedia.svelte';
+	import FieldNumber from '$lib/learn/authoring/builder/components/editor/fields/FieldNumber.svelte';
+	import FieldObjectList from '$lib/learn/authoring/builder/components/editor/fields/FieldObjectList.svelte';
+	import FieldRichText from '$lib/learn/authoring/builder/components/editor/fields/FieldRichText.svelte';
+	import FieldSelect from '$lib/learn/authoring/builder/components/editor/fields/FieldSelect.svelte';
+	import FieldSvg from '$lib/learn/authoring/builder/components/editor/fields/FieldSvg.svelte';
+	import FieldText from '$lib/learn/authoring/builder/components/editor/fields/FieldText.svelte';
+	import FieldTextarea from '$lib/learn/authoring/builder/components/editor/fields/FieldTextarea.svelte';
 	import { isDiagramComponentId, svgFieldFor } from './diagram-media-fields';
 
 	let {

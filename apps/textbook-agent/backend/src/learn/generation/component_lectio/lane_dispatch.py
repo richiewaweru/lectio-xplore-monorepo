@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from contracts.lectio import get_component_card
-from generation.component_lectio.errors import WorkOrderIdentityError
-from generation.component_lectio.payload_strategies import (
+from learn.generation.component_lectio.errors import WorkOrderIdentityError
+from learn.generation.component_lectio.payload_strategies import (
     SCHEMA_SUMMARIES,
     assemble_answer_key_content,
     assemble_items_content,

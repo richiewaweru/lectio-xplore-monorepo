@@ -7,7 +7,7 @@
 	import { adaptV3PackToLectioDocument, type V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
 	import type { GenerationDocument } from '$lib/types';
 	import type { ResourceComposition } from '$lib/types/units';
-	import '$lib/styles/print.css';
+	import '$lib/print/styles/print.css';
 
 	const unitId = $derived(page.params.id ?? '');
 	const compositionId = $derived(page.params.compositionId ?? '');

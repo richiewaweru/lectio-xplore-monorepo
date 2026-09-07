@@ -11,7 +11,7 @@ Status: **PASS**
 
 ## What was implemented
 
-1. Renamed workspace package `lectio` → `@lectio/learn` (`packages/lectio/package.json`, version `0.7.0`).
+1. Renamed workspace package `lectio` → `@lectio/learn` (`packages/lectio-learn/package.json`, version `0.7.0`).
 2. Removed public `./print` package export and print utility re-exports from the package index (RuledLines/Checkboxes/etc.). Internal `$lib/print` still used by component renderers for transitional print-chrome.
 3. Made `printFallback` / module `print` optional and deprecated in public types; Learn API no longer requires print metadata.
 4. Added optional `WebLearnHints` (`interaction`, `responseEvaluation`, `narration`, `learnerBand`, `accessibilityNotes`) on `ComponentMeta` / `LectioContentModule`.
@@ -24,7 +24,7 @@ Status: **PASS**
 
 | System | Classification | Existing path | Action |
 |---|---|---|---|
-| Component modules/registry | EXTEND | `packages/lectio/src/lib/lectio/**` | Optional web hints; print optional |
+| Component modules/registry | EXTEND | `packages/lectio-learn/src/lib/lectio/**` | Optional web hints; print optional |
 | LessonDocument / Builder | REUSE_AS_IS | teacher/document + frontend builder | Import rename only |
 | `@lectio/page` | REUSE_AS_IS | packages/lectio-page | Untouched; stays green |
 | Print product | REUSE_AS_IS | whole_lesson / page_objects | Untouched |
@@ -38,7 +38,7 @@ Status: **PASS**
 
 ## Files changed
 
-- `packages/lectio/package.json`, `src/lib/index.ts`, `schema/component-meta.ts`, `lectio/core/types.ts`, `lectio/registry/build-legacy-registry.ts`, four interactive `module.ts` files, tests
+- `packages/lectio-learn/package.json`, `src/lib/index.ts`, `schema/component-meta.ts`, `lectio/core/types.ts`, `lectio/registry/build-legacy-registry.ts`, four interactive `module.ts` files, tests
 - Frontend: `package.json`, all `from 'lectio'` → `@lectio/learn`, `app.css`, theme guard test
 - Lockfile updated
 
@@ -50,7 +50,7 @@ Status: **PASS**
 
 | Command / flow | Result | Evidence |
 |---|---|---|
-| `pnpm test` in packages/lectio | PASS 110 | includes web-learn-metadata |
+| `pnpm test` in packages/lectio-learn | PASS 110 | includes web-learn-metadata |
 | `vitest run web-learn-metadata.test.ts` | PASS 2 | print not required; web hints present |
 | `pnpm --filter @lectio/page test` | PASS 41 | Page independent |
 | domain boundary check | PASS 0 | Print/Learn isolation |
@@ -67,7 +67,7 @@ Status: **PASS**
 
 ## Architecture deviations
 
-1. Package directory remains `packages/lectio` while npm name is `@lectio/learn` (less churn than folder move).
+1. Package directory remains `packages/lectio-learn` while npm name is `@lectio/learn` (less churn than folder move).
 2. Internal print helpers retained for component print-chrome; only public `./print` export removed.
 3. `providePrintMode` kept as web preview mode for transitional routes; Page Print remains `@lectio/page`.
 

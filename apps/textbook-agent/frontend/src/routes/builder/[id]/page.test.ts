@@ -56,26 +56,26 @@ vi.mock('$app/navigation', () => ({
 	goto
 }));
 
-vi.mock('$lib/stores/auth', () => ({
+vi.mock('$lib/stores/shared/auth', () => ({
 	logout
 }));
 
-vi.mock('$lib/builder/persistence/server-sync', () => ({
+vi.mock('$lib/learn/authoring/builder/persistence/server-sync', () => ({
 	loadBuilderLessonWithFallback
 }));
 
-vi.mock('$lib/builder/stores/document.svelte', () => ({
+vi.mock('$lib/learn/authoring/builder/stores/document.svelte', () => ({
 	createDocumentStore: () => mockStore
 }));
 
 vi.mock('$lib/api/v3', () => ({ fetchV3Document, getChunkedPlan, getChunkedPlanStatus }));
 
-vi.mock('$lib/builder/adapters/from-generation', () => ({
+vi.mock('$lib/learn/authoring/builder/adapters/from-generation', () => ({
 	v3PackToBuilderDocument,
 	partitionGenerationIssues
 }));
 
-vi.mock('$lib/builder/components/shell/AppShell.svelte', async () => ({
+vi.mock('$lib/learn/authoring/builder/components/shell/AppShell.svelte', async () => ({
 	default: (await import('./__fixtures__/MockAppShell.svelte')).default
 }));
 
@@ -326,7 +326,7 @@ describe('builder lesson route', () => {
 		render(BuilderLessonPage);
 		await waitFor(() => expect(fetchV3Document).toHaveBeenCalledTimes(1));
 
-		expect(screen.queryByText(/generation update delayed/i)).toBeNull();
+		expect(screen.queryByText(/print/generation update delayed/i)).toBeNull();
 	});
 
 	it('stops on blocked execution and links recovery to Studio', async () => {

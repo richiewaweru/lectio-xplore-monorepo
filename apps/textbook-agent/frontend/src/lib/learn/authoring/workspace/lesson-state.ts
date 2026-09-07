@@ -1,9 +1,9 @@
 import type { LessonDocument } from '@lectio/learn';
 
-import { partitionGenerationIssues } from '$lib/builder/generation-issues';
-import type { BuilderIssue, IssueSection } from '$lib/builder/issues';
-import { isTerminalGenerationDocument } from '$lib/builder/streaming/generation-stream';
-import type { BuilderLessonSummary } from '$lib/builder/api/lesson-crud';
+import { partitionGenerationIssues } from '$lib/learn/authoring/builder/print/generation-issues';
+import type { BuilderIssue, IssueSection } from '$lib/learn/authoring/builder/issues';
+import { isTerminalGenerationDocument } from '$lib/learn/authoring/builder/streaming/print/generation-stream';
+import type { BuilderLessonSummary } from '$lib/learn/authoring/builder/api/lesson-crud';
 import type { V3GenerationHistoryItem } from '$lib/types/v3';
 import type { V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
 

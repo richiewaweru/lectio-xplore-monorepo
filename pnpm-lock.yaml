@@ -12,7 +12,7 @@ importers:
     dependencies:
       '@lectio/learn':
         specifier: workspace:*
-        version: link:../../../packages/lectio
+        version: link:../../../packages/lectio-learn
       '@lectio/page':
         specifier: workspace:*
         version: link:../../../packages/lectio-page
@@ -108,7 +108,7 @@ importers:
         specifier: ^3.2.7
         version: 3.2.7(@types/node@24.13.3)(jiti@2.7.0)(jsdom@29.1.1)(lightningcss@1.32.0)(tsx@4.23.5)
 
-  packages/lectio:
+  packages/lectio-learn:
     dependencies:
       esm-env:
         specifier: ^1.2.2

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createGenerationPoller } from './generation-poller';
+import { createGenerationPoller } from './print/generation-poller';
 
 function visibilityTarget() {
 	let listener: (() => void) | null = null;

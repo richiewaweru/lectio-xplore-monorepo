@@ -7,8 +7,8 @@ import logging
 from typing import Any
 
 from generation.pipeline_dispatch import resolve_generation_pipeline
-from generation.component_lectio.launcher import launch_component_lectio
-from generation.component_lectio.service import (
+from learn.generation.component_lectio.launcher import launch_component_lectio
+from learn.generation.component_lectio.service import (
     persist_component_lectio_failure,
     persist_component_lectio_start,
 )

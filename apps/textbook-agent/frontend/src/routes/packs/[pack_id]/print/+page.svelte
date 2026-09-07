@@ -9,7 +9,7 @@
 		type V3PackDocument
 	} from '$lib/studio/v3-pack-to-lectio-document';
 	import type { GenerationDocument } from '$lib/types';
-	import '$lib/styles/print.css';
+	import '$lib/print/styles/print.css';
 
 	providePrintMode(() => true);
 

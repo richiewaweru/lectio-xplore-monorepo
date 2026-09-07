@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { parseVideoUrl } from '$lib/builder/utils/media-utils';
+	import { parseVideoUrl } from '$lib/learn/authoring/builder/utils/media-utils';
 
 	let {
 		onValidEmbed

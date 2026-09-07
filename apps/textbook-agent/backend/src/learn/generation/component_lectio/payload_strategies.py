@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any, Callable, get_args
 
 from contracts.section_content import ReflectionType
-from generation.component_lectio.errors import (
+from learn.generation.component_lectio.errors import (
     AnswerKeyMappingError,
     UnsupportedProductionComponent,
 )
@@ -239,7 +239,7 @@ def assemble_visual_content(
 
     for block in blocks:
         if block.component_id and block.component_id != order.locked_component_id:
-            from generation.component_lectio.errors import WorkOrderIdentityError
+            from learn.generation.component_lectio.errors import WorkOrderIdentityError
 
             raise WorkOrderIdentityError(
                 f"Visual writer changed component_id from '{order.locked_component_id}' "

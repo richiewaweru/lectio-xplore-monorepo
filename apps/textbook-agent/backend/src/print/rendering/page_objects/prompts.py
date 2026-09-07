@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from generation.page_objects.models import WriterContext
+from print.rendering.page_objects.models import WriterContext
 
 _WRITER_SYSTEM = """You write one already-planned educational page object.
 

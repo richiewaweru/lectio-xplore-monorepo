@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '$lib/api/errors';
 import type { User } from '$lib/types';
 
-import { bootstrapAuth, getToken, getUser, logout } from '$lib/stores/auth';
+import { bootstrapAuth, getToken, getUser, logout } from '$lib/stores/shared/auth';
 
 class MemoryStorage implements Storage {
 	private store = new Map<string, string>();

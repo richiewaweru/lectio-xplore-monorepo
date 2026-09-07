@@ -39,8 +39,8 @@ __all__ = [
 
 
 def _backend_root() -> Path:
-    # src/contracts/lectio_page.py → backend/
-    return Path(__file__).resolve().parents[2]
+    # src/print/contracts/lectio_page.py → backend/
+    return Path(__file__).resolve().parents[3]
 
 
 def lectio_page_contracts_dir() -> Path:

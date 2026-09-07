@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { FieldSchema } from '@lectio/learn';
-	import { sanitizeSvg } from '$lib/builder/utils/media-utils';
+	import { sanitizeSvg } from '$lib/learn/authoring/builder/utils/media-utils';
 
 	let {
 		schema,

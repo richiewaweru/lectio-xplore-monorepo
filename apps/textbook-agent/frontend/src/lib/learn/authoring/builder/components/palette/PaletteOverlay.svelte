@@ -11,7 +11,7 @@
 		TriangleAlert,
 		X
 	} from 'lucide-svelte';
-	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
+	import type { DocumentStore } from '$lib/learn/authoring/builder/stores/document.svelte';
 	import { filterPaletteGroups } from './palette-overlay';
 
 	let {

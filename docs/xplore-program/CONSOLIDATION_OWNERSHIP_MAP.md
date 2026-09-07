@@ -7,7 +7,7 @@ Classification key: keep = retain in monorepo; import = copied from source this 
 
 | Subsystem | Canonical owner path | Decision | Notes |
 |---|---|---|---|
-| Component library package | `packages/lectio` | import | From legacy `lectio@0.6.0`; frontend `workspace:*` |
+| Component library package | `packages/lectio-learn` | import | From legacy `lectio@0.6.0`; frontend `workspace:*` |
 | Page package | `packages/lectio-page` | keep | Print; must not import lectio |
 | Unit/path planning routes | `apps/.../planning/` | keep + import `linkage.py` | Shared authoring |
 | Print whole-lesson | `planning/whole_lesson/` | print-keep | Absent on xplore |
@@ -31,4 +31,4 @@ Classification key: keep = retain in monorepo; import = copied from source this 
 
 1. **`v3_studio` + `component_lectio`:** both exist. Live Learn traffic must use `component_lectio` via Units. `v3_studio` retained until a later cleanup phase so Print/studio evidence paths are not destroyed mid-consolidation.
 2. **`whole_lesson` vs Component Learn:** dual realization by design (Print vs Learn), not a duplicate subsystem.
-3. **npm vs workspace lectio:** resolved — only workspace `packages/lectio`.
+3. **npm vs workspace lectio:** resolved — only workspace `packages/lectio-learn`.

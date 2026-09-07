@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { uploadLessonMedia } from '$lib/builder/api/media-upload';
-	import { validateRasterImageFile } from '$lib/builder/utils/media-utils';
+	import { uploadLessonMedia } from '$lib/learn/authoring/builder/api/media-upload';
+	import { validateRasterImageFile } from '$lib/learn/authoring/builder/utils/media-utils';
 
 	let {
 		lessonId,

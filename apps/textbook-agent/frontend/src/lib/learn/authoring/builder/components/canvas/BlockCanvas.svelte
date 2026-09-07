@@ -2,23 +2,23 @@
 	import { browser } from '$app/environment';
 	import { dragHandleZone, type DndEvent } from 'svelte-dnd-action';
 	import type { BlockInstance } from '@lectio/learn';
-	import { mergeAiContentWithEditableFields } from '$lib/builder/components/ai/ai-block-utils';
-	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
+	import { mergeAiContentWithEditableFields } from '$lib/learn/authoring/builder/components/ai/ai-block-utils';
+	import type { DocumentStore } from '$lib/learn/authoring/builder/stores/document.svelte';
 	import AddSectionControl from './AddSectionControl.svelte';
 	import BlockCard from './BlockCard.svelte';
 	import SectionDivider from './SectionDivider.svelte';
-	import type { PendingPlanSection } from '$lib/builder/streaming/generation-stream';
-	import { issuesForSection } from '$lib/builder/issues';
-	import type { BuilderIssue } from '$lib/builder/issues';
+	import type { PendingPlanSection } from '$lib/learn/authoring/builder/streaming/print/generation-stream';
+	import { issuesForSection } from '$lib/learn/authoring/builder/issues';
+	import type { BuilderIssue } from '$lib/learn/authoring/builder/issues';
 	import type { V3VisualBlock } from '$lib/api/v3';
 	import BuilderVisualIssueAction from './BuilderVisualIssueAction.svelte';
 	import {
 		qcReasonToInstruction,
 		resolveTextIssueTarget,
 		resolveVisualIssueTarget
-	} from '$lib/builder/issue-targeting';
-	import type { BlockAiRepairRequest } from '$lib/builder/issues';
-	import { resolveBlockVisual } from '$lib/builder/visual-regeneration';
+	} from '$lib/learn/authoring/builder/issue-targeting';
+	import type { BlockAiRepairRequest } from '$lib/learn/authoring/builder/issues';
+	import { resolveBlockVisual } from '$lib/learn/authoring/builder/visual-regeneration';
 
 	let {
 		store,

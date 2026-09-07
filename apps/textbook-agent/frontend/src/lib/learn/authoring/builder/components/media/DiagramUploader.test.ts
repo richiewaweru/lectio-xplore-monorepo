@@ -7,7 +7,7 @@ const { uploadLessonMedia } = vi.hoisted(() => ({
 	uploadLessonMedia: vi.fn()
 }));
 
-vi.mock('$lib/builder/api/media-upload', () => ({
+vi.mock('$lib/learn/authoring/builder/api/media-upload', () => ({
 	uploadLessonMedia
 }));
 

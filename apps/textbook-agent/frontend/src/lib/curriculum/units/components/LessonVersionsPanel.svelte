@@ -1,5 +1,5 @@
 <script lang="ts">
-	import UnitGroupsPanel from '$lib/components/units/UnitGroupsPanel.svelte';
+	import UnitGroupsPanel from '$lib/curriculum/units/components/UnitGroupsPanel.svelte';
 	import type { UnitGroups } from '$lib/types/units';
 
 	let {

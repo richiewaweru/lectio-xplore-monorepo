@@ -3,22 +3,22 @@
 	import { cn } from '@lectio/learn';
 	import { getComponentById, getEditSchema } from '@lectio/learn';
 	import type { BlockInstance, LessonDocument } from '@lectio/learn';
-	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
+	import type { DocumentStore } from '$lib/learn/authoring/builder/stores/document.svelte';
 	import { ArrowDown, ArrowUp, Copy, GripVertical, Pencil, Trash2 } from 'lucide-svelte';
-	import type { BlockGenerateContextBlock } from '$lib/builder/api/ai-client';
+	import type { BlockGenerateContextBlock } from '$lib/learn/authoring/builder/api/ai-client';
 	import type { V3VisualBlock } from '$lib/api/v3';
-	import { apiBaseUrl } from '$lib/builder/api/public-env';
-	import AiBlockAssist from '$lib/builder/components/ai/AiBlockAssist.svelte';
-	import { isAiGeneratableComponent } from '$lib/builder/components/ai/ai-block-utils';
-	import type { BlockAiRepairRequest } from '$lib/builder/issues';
-	import { getToken } from '$lib/stores/auth';
-	import { saveVersionSnapshot } from '$lib/builder/persistence/idb-store';
-	import { validationWarningsForBlock } from '$lib/builder/utils/section-validation';
-	import { isTextEditingTarget } from '$lib/builder/utils/shortcuts';
+	import { apiBaseUrl } from '$lib/learn/authoring/builder/api/public-env';
+	import AiBlockAssist from '$lib/learn/authoring/builder/components/ai/AiBlockAssist.svelte';
+	import { isAiGeneratableComponent } from '$lib/learn/authoring/builder/components/ai/ai-block-utils';
+	import type { BlockAiRepairRequest } from '$lib/learn/authoring/builder/issues';
+	import { getToken } from '$lib/stores/shared/auth';
+	import { saveVersionSnapshot } from '$lib/learn/authoring/builder/persistence/idb-store';
+	import { validationWarningsForBlock } from '$lib/learn/authoring/builder/utils/section-validation';
+	import { isTextEditingTarget } from '$lib/learn/authoring/builder/utils/shortcuts';
 	import BlockEditor from './BlockEditor.svelte';
 	import BlockPreview from './BlockPreview.svelte';
 	import VisualRegeneratePopover from './VisualRegeneratePopover.svelte';
-	import { isSingleAssetVisualBlock } from '$lib/builder/visual-regeneration';
+	import { isSingleAssetVisualBlock } from '$lib/learn/authoring/builder/visual-regeneration';
 
 	let {
 		block,

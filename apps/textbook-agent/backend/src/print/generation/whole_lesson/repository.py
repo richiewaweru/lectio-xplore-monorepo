@@ -13,8 +13,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import GenerationModel
-from planning.whole_lesson.events import make_event
-from planning.whole_lesson.states import (
+from print.generation.whole_lesson.events import make_event
+from print.generation.whole_lesson.states import (
     ACTIVE_STATUSES,
     CLAIMABLE_STATUSES,
     DEFAULT_LEASE_SECONDS,
@@ -606,7 +606,7 @@ class PageDocumentRepository:
         Ensures page_document_v2 exists, classifies the exception, and transitions to
         failed_recoverable or failed_terminal. Clears legacy stage2_error as durable truth.
         """
-        from planning.whole_lesson.failure_policy import (
+        from print.generation.whole_lesson.failure_policy import (
             classify_failure,
             structured_error_from_exc,
         )
@@ -957,7 +957,7 @@ class PageDocumentRepository:
 
     async def load_lesson_legality(self) -> dict[str, Any]:
         """Fail closed: missing/invalid snapshot is an execution error."""
-        from planning.whole_lesson.legality import (
+        from print.generation.whole_lesson.legality import (
             LessonLegalityError,
             LessonLegalitySnapshot,
         )
@@ -1237,7 +1237,7 @@ class PageDocumentRepository:
         lease_token: int,
     ) -> dict[str, Any]:
         """Lease-fenced write of document_json as a non-terminal candidate."""
-        from generation.page_objects.document_assembly import persist_document_json
+        from print.rendering.page_objects.document_assembly import persist_document_json
 
         def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
             generation.document_json = persist_document_json(
@@ -1296,7 +1296,7 @@ class PageDocumentRepository:
         No-op (no revision bump) on shrinkage or identical sha.
         Does not set final SHA/reload fence fields.
         """
-        from generation.page_objects.document_assembly import persist_document_json
+        from print.rendering.page_objects.document_assembly import persist_document_json
 
         box: list[dict[str, Any] | None] = []
 
@@ -1392,7 +1392,7 @@ class PageDocumentRepository:
         lease_token: int,
     ) -> dict[str, Any]:
         """Atomic lease-fenced finalization after fresh-session hash verification."""
-        from generation.page_objects.document_assembly import (
+        from print.rendering.page_objects.document_assembly import (
             canonical_document_sha256,
             reload_document,
         )
@@ -1477,11 +1477,11 @@ class PageDocumentRepository:
         hashes for the current document revision.
         """
         from core.database.session import async_session_factory
-        from generation.page_objects.document_assembly import (
+        from print.rendering.page_objects.document_assembly import (
             canonical_document_sha256,
             reload_document,
         )
-        from contracts.lectio_page import validate_document
+        from print.contracts.lectio_page import validate_document
 
         async with async_session_factory() as fresh:
             generation = await fresh.get(GenerationModel, self.generation_id)
@@ -1568,11 +1568,11 @@ class PageDocumentRepository:
         visual_qc: dict[str, Any] | None = None,
     ) -> VisualCompletionResult:
         """Atomically apply figure asset completion keyed by request_id."""
-        from generation.page_objects.document_assembly import (
+        from print.rendering.page_objects.document_assembly import (
             persist_document_json,
             reload_document,
         )
-        from generation.page_objects.visual_completion import apply_figure_asset_update
+        from print.rendering.page_objects.visual_completion import apply_figure_asset_update
 
         box: list[VisualCompletionResult] = []
         verify_after_mutation = False
@@ -1832,8 +1832,8 @@ class PageDocumentRepository:
         figure assets are changed to failed/retryable, the document revision and
         reload proof are invalidated, and all upstream outcomes remain untouched.
         """
-        from generation.page_objects.document_assembly import persist_document_json, reload_document
-        from generation.page_objects.visual_completion import apply_figure_asset_update
+        from print.rendering.page_objects.document_assembly import persist_document_json, reload_document
+        from print.rendering.page_objects.visual_completion import apply_figure_asset_update
 
         box: list[dict[str, Any]] = []
 
@@ -1963,12 +1963,12 @@ class PageDocumentRepository:
         Marks unresolved figure assets as failed when request ids are provided or
         when no ids are given (mark all unresolved pending/generating figures).
         """
-        from generation.page_objects.document_assembly import (
+        from print.rendering.page_objects.document_assembly import (
             persist_document_json,
             reload_document,
         )
-        from generation.page_objects.visual_completion import apply_figure_asset_update
-        from planning.whole_lesson.failure_policy import structured_error_from_exc
+        from print.rendering.page_objects.visual_completion import apply_figure_asset_update
+        from print.generation.whole_lesson.failure_policy import structured_error_from_exc
 
         error_message = (message or (str(exc).strip() if exc else "") or "visual dispatch failed")[
             :500

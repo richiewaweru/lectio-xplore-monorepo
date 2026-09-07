@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from planning.approved_items import ApprovedItemRecord
-from planning.whole_lesson.packet import (
+from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ApprovedItemRef,
     ImmutableLessonPacket,

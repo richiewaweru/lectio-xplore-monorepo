@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { V3VisualBlock } from '$lib/api/v3';
-	import type { BuilderIssue } from '$lib/builder/issues';
+	import type { BuilderIssue } from '$lib/learn/authoring/builder/issues';
 	import VisualRegeneratePopover from './VisualRegeneratePopover.svelte';
 
 	let {

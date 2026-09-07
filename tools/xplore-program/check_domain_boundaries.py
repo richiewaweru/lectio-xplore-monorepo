@@ -89,6 +89,46 @@ def _scan(
     return violations
 
 
+# Leftover ownership-prefixed paths that must not reappear in the app frontend.
+FRONTEND_FORBIDDEN_SUBSTRINGS = (
+    "$lib/learn/shared/",
+    "$lib/components/print/studio",
+    "/print/studio",
+    "/learn/shared/authoring",
+    "/api/v1/learn/shared/authoring",
+    "/api/v1/shared/auth",
+)
+
+
+def _scan_frontend_path_residuals(root: Path) -> list[Violation]:
+    frontend = root / "apps" / "textbook-agent" / "frontend" / "src"
+    violations: list[Violation] = []
+    if not frontend.exists():
+        return violations
+    for path in _iter_source_files(frontend):
+        try:
+            text = path.read_text(encoding="utf-8-sig")
+        except OSError:
+            continue
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            for needle in FRONTEND_FORBIDDEN_SUBSTRINGS:
+                if needle in line:
+                    try:
+                        rel = str(path.relative_to(root)).replace("\\", "/")
+                    except ValueError:
+                        rel = str(path)
+                    violations.append(
+                        Violation(
+                            file_path=rel,
+                            line=lineno,
+                            rule="frontend-must-not-use-ownership-prefixed-paths",
+                            snippet=line.strip()[:200],
+                        )
+                    )
+                    break
+    return violations
+
+
 def find_violations(repo_root: Path | None = None) -> list[Violation]:
     root = repo_root or REPO_ROOT
     page = root / "packages" / "lectio-page"
@@ -104,6 +144,7 @@ def find_violations(repo_root: Path | None = None) -> list[Violation]:
         violations.extend(
             _scan(learn, LEARN_FORBIDDEN, "learn-must-not-import-page", display_root=root)
         )
+    violations.extend(_scan_frontend_path_residuals(root))
     return violations
 
 

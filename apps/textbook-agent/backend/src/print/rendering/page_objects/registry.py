@@ -6,21 +6,21 @@ import json
 import uuid
 from typing import Any, Protocol
 
-from generation.page_objects.assessment import assemble_choices, assemble_questions
-from generation.page_objects.models import (
+from print.rendering.page_objects.assessment import assemble_choices, assemble_questions
+from print.rendering.page_objects.models import (
     FORM_OUTPUTS,
     WRITER_PROVIDER_OUTPUTS,
     WriterContext,
     WriterError,
     WriterOutcome,
 )
-from generation.page_objects.prompts import build_repair_prompt, build_writer_prompt
-from generation.page_objects.validation import (
+from print.rendering.page_objects.prompts import build_repair_prompt, build_writer_prompt
+from print.rendering.page_objects.validation import (
     ContentValidationError,
     UnsupportedObject,
     validate_content,
 )
-from planning.whole_lesson.figure_ids import stable_figure_request_id
+from print.generation.whole_lesson.figure_ids import stable_figure_request_id
 
 
 def _assert_fixed_object(ctx: WriterContext, expected: str) -> None:

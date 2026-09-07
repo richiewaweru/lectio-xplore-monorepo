@@ -4,7 +4,7 @@ import {
 	deleteBuilderLesson,
 	getBuilderLesson,
 	updateBuilderLesson
-} from '$lib/builder/api/lesson-crud';
+} from '$lib/learn/authoring/builder/api/lesson-crud';
 import { getDocument, saveDocument } from './idb-store';
 import {
 	enqueueSync,

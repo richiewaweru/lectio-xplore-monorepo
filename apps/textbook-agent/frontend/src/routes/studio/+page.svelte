@@ -28,8 +28,8 @@
 		retryChunkedSection
 	} from '$lib/api/v3';
 	import { isApiError } from '$lib/api/errors';
-	import { createGenerationPoller } from '$lib/generation/generation-poller';
-	import { resetV3Studio, v3Studio } from '$lib/stores/v3-studio.svelte';
+	import { createGenerationPoller } from '$lib/print/generation/print/generation-poller';
+	import { resetV3Studio, v3Studio } from '$lib/print/stores/v3-studio.svelte';
 	import {
 		buildCanvasSkeleton,
 		buildStructuralPlanCanvas,

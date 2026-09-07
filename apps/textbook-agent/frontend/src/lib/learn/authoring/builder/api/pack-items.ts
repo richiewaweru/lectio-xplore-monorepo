@@ -1,6 +1,6 @@
 import { apiFetch } from '$lib/api/client';
 import { ensureOk } from '$lib/api/errors';
-import type { ConceptCardMisconception } from '$lib/builder/api/concept-cards';
+import type { ConceptCardMisconception } from '$lib/learn/authoring/builder/api/concept-cards';
 
 export type PackItemOption = {
 	key: string;

@@ -11,8 +11,8 @@ Status: **PASS**
 
 ## What was implemented
 
-1. Imported `lectio@0.6.0` from `lectio-legacy-20260805` → `packages/lectio` (package name remains `lectio`; rename deferred to Phase 02).
-2. Wired frontend dependency `"lectio": "workspace:*"`; resolved as `link:../../../packages/lectio`.
+1. Imported `lectio@0.6.0` from `lectio-legacy-20260805` → `packages/lectio-learn` (package name remains `lectio`; rename deferred to Phase 02).
+2. Wired frontend dependency `"lectio": "workspace:*"`; resolved as `link:../../../packages/lectio-learn`.
 3. Imported live Learn seams from Textbook agent `xplore` @ `d2cf2f27`:
    - `generation/component_lectio/**`
    - `units_dispatch.py`, `units_routes.py`, `pipeline_dispatch.py`
@@ -24,13 +24,13 @@ Status: **PASS**
 4. Replaced Learn-owned overlaps with xplore versions while preserving Print: `builder/routes.py`, `learning/*`, `path_preparation.py`.
 5. Extended `app.py` to keep Print `whole_lesson` worker and add `units_generation_router`.
 6. Merged shared models carefully so Print page planners/writers stay green (SectionBlockPlan/PlannedBlock retained; IntentPlan appended; work-order repair fields from xplore; Print `qc_correction_hint` kept; component vs page resource candidates split).
-7. Documented ownership in `CONSOLIDATION_OWNERSHIP_MAP.md`. Domain boundary checker already covers `packages/lectio`.
+7. Documented ownership in `CONSOLIDATION_OWNERSHIP_MAP.md`. Domain boundary checker already covers `packages/lectio-learn`.
 
 ## Existing systems reused
 
 | System | Classification | Existing path | Action |
 |---|---|---|---|
-| Component Lectio library | REFACTOR (import) | legacy → `packages/lectio` | Workspace package; no rename |
+| Component Lectio library | REFACTOR (import) | legacy → `packages/lectio-learn` | Workspace package; no rename |
 | Page Print package | REUSE_AS_IS | `packages/lectio-page` | Untouched |
 | whole_lesson / page_objects | REUSE_AS_IS | Print generation | Kept |
 | component_lectio generation | REUSE_AS_IS (import) | xplore → monorepo | Live Learn path |
@@ -42,13 +42,13 @@ Status: **PASS**
 
 | New area | Existing seam inspected | Why extension was insufficient |
 |---|---|---|
-| `packages/lectio` | npm `lectio@0.6.0` only | Need workspace source for Phase 02 `@lectio/learn` |
+| `packages/lectio-learn` | npm `lectio@0.6.0` only | Need workspace source for Phase 02 `@lectio/learn` |
 | `generation/component_lectio/` | Monorepo lacked live Learn | Import from xplore required |
 | migrations 0033–0035 | Absent | Required for Component Lectio builder uniqueness |
 
 ## Files changed
 
-Primary product paths (non-exhaustive): `packages/lectio/**`, backend Learn imports listed above, `app.py`, `core/config.py`, `core/database/models.py`, `v3_blueprint/planning/models.py` (+ IntentPlan merge), `v3_execution/models.py` (prior_validation_errors + Print qc_correction_hint), `resource_specs/component_candidates.py`, frontend `package.json` / lockfile, docs under `docs/xplore-program/`.
+Primary product paths (non-exhaustive): `packages/lectio-learn/**`, backend Learn imports listed above, `app.py`, `core/config.py`, `core/database/models.py`, `v3_blueprint/planning/models.py` (+ IntentPlan merge), `v3_execution/models.py` (prior_validation_errors + Print qc_correction_hint), `resource_specs/component_candidates.py`, frontend `package.json` / lockfile, docs under `docs/xplore-program/`.
 
 ## Schema/migrations
 
@@ -65,11 +65,11 @@ Primary product paths (non-exhaustive): `packages/lectio/**`, backend Learn impo
 | `pnpm --filter @lectio/page test` | PASS 41 | page package |
 | `pnpm --filter @lectio/page check` | PASS 0 errors | page package |
 | backend Component Lectio + Builder + page planners/writers | PASS 93 | lifecycle/final_contract/prelive/runtime + builder + page_block_planner + page_object_writers |
-| `packages/lectio` `pnpm test` | PASS 112 | includes previously timing-out export path now green in workspace |
+| `packages/lectio-learn` `pnpm test` | PASS 112 | includes previously timing-out export path now green in workspace |
 | frontend document-version + LectioPageDocumentView + builder store/toolbar | PASS 15 | focused Page+Builder |
 | `python tools/xplore-program/check_domain_boundaries.py` | PASS 0 violations | Print/Learn isolation |
 | `python -m pytest tools/xplore-program/tests -q` | PASS 5 | domain guard + manifest schema |
-| `pnpm why lectio` | `link:../../../packages/lectio` | workspace resolution |
+| `pnpm why lectio` | `link:../../../packages/lectio-learn` | workspace resolution |
 
 ## Acceptance gates
 

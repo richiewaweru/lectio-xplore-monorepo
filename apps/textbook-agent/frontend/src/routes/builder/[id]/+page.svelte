@@ -4,25 +4,25 @@
 	import { goto } from '$app/navigation';
 	import { onDestroy, onMount } from 'svelte';
 	import { isApiError } from '$lib/api/errors';
-	import AppShell from '$lib/builder/components/shell/AppShell.svelte';
-	import ConceptCardReview from '$lib/builder/components/ConceptCardReview.svelte';
-	import { createDocumentStore } from '$lib/builder/stores/document.svelte';
-	import { loadBuilderLessonWithFallback } from '$lib/builder/persistence/server-sync';
-	import { logout } from '$lib/stores/auth';
+	import AppShell from '$lib/learn/authoring/builder/components/shell/AppShell.svelte';
+	import ConceptCardReview from '$lib/learn/authoring/builder/components/ConceptCardReview.svelte';
+	import { createDocumentStore } from '$lib/learn/authoring/builder/stores/document.svelte';
+	import { loadBuilderLessonWithFallback } from '$lib/learn/authoring/builder/persistence/server-sync';
+	import { logout } from '$lib/stores/shared/auth';
 	import { fetchV3Document, getChunkedPlan, getChunkedPlanStatus } from '$lib/api/v3';
 	import type { V3VisualBlock } from '$lib/api/v3';
 	import {
 		partitionGenerationIssues,
 		v3PackToBuilderDocument
-	} from '$lib/builder/adapters/from-generation';
-	import type { BuilderIssue } from '$lib/builder/issues';
+	} from '$lib/learn/authoring/builder/adapters/from-generation';
+	import type { BuilderIssue } from '$lib/learn/authoring/builder/issues';
 	import type { V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
 	import { getBookletStatusSummary, isBookletStatus } from '$lib/studio/v3-booklet';
 	import {
 		isTerminalGenerationDocument,
 		pendingPlanFromStructuralPlan,
 		type PendingPlanSection
-	} from '$lib/builder/streaming/generation-stream';
+	} from '$lib/learn/authoring/builder/streaming/print/generation-stream';
 	import {
 		isDeleteOrBackspace,
 		isModifierD,
@@ -30,7 +30,7 @@
 		isModifierShiftZ,
 		isModifierZ,
 		isTextEditingTarget
-	} from '$lib/builder/utils/shortcuts';
+	} from '$lib/learn/authoring/builder/utils/shortcuts';
 
 	const store = createDocumentStore();
 	let ready = $state(false);

@@ -1,16 +1,16 @@
 import type { LessonDocument } from '@lectio/learn';
 
-import { exportToLessonDocument } from '$lib/generation/export-document';
+import { exportToLessonDocument } from '$lib/print/generation/export-document';
 import {
 	adaptV3PackToLectioDocument,
 	type AdaptV3PackOptions,
 	type V3PackDocument
 } from '$lib/studio/v3-pack-to-lectio-document';
-import type { IssueSection } from '$lib/builder/issues';
-import { partitionGenerationIssues } from '$lib/builder/generation-issues';
+import type { IssueSection } from '$lib/learn/authoring/builder/issues';
+import { partitionGenerationIssues } from '$lib/learn/authoring/builder/print/generation-issues';
 
-export { partitionGenerationIssues } from '$lib/builder/generation-issues';
-export type { GenerationIssuePartition } from '$lib/builder/generation-issues';
+export { partitionGenerationIssues } from '$lib/learn/authoring/builder/print/generation-issues';
+export type { GenerationIssuePartition } from '$lib/learn/authoring/builder/print/generation-issues';
 
 export function v3PackToBuilderDocument(
 	pack: V3PackDocument,

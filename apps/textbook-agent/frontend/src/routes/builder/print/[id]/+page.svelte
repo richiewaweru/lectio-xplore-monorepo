@@ -3,8 +3,8 @@
 	import { page } from '$app/state';
 	import { providePrintMode, type LessonDocument } from '@lectio/learn';
 	import { buildApiUrl } from '$lib/api/client';
-	import LessonReadOnlyView from '$lib/builder/components/canvas/LessonReadOnlyView.svelte';
-	import '$lib/builder/styles/print.css';
+	import LessonReadOnlyView from '$lib/learn/authoring/builder/components/canvas/LessonReadOnlyView.svelte';
+	import '$lib/learn/authoring/builder/print/styles/print.css';
 	import {
 		forceEagerImages,
 		waitForPrintImages,

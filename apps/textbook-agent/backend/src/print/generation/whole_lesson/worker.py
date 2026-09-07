@@ -9,9 +9,9 @@ from typing import Any
 
 from core.database.models import GenerationModel
 from core.database.session import async_session_factory
-from planning.whole_lesson.failure_policy import classify_failure
-from planning.whole_lesson.repository import PageDocumentRepository, claim_next_native_job
-from planning.whole_lesson.states import (
+from print.generation.whole_lesson.failure_policy import classify_failure
+from print.generation.whole_lesson.repository import PageDocumentRepository, claim_next_native_job
+from print.generation.whole_lesson.states import (
     DEFAULT_LEASE_SECONDS,
     DEFAULT_WORKER_POLL_SECONDS,
     HEARTBEAT_INTERVAL_SECONDS,
@@ -131,9 +131,9 @@ class NativeExecutionWorker:
                 )
 
     async def _run_job(self, lease: ExecutionLease) -> None:
-        from planning.whole_lesson.executor import execute_after_teaching_approval
-        from planning.whole_lesson.native_retry import run_pre_worker_retry
-        from planning.whole_lesson.repository import empty_execution_meta
+        from print.generation.whole_lesson.executor import execute_after_teaching_approval
+        from print.generation.whole_lesson.native_retry import run_pre_worker_retry
+        from print.generation.whole_lesson.repository import empty_execution_meta
 
         heartbeat = asyncio.create_task(
             self._heartbeat_loop(lease),

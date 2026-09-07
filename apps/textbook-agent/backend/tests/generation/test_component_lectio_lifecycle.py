@@ -182,7 +182,7 @@ async def test_repeated_failures_then_ready_use_newest_append_only_event() -> No
 def test_generation_step_constraint_migration_is_reversible() -> None:
     migration_path = (
         Path(__file__).resolve().parents[2]
-        / "src/core/database/migrations/versions"
+        / "src/infra/database/migrations/versions"
         / "20260904_0033_remove_generation_step_uniqueness.py"
     )
     spec = importlib.util.spec_from_file_location("generation_step_0033", migration_path)

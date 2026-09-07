@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from planning.whole_lesson.native_routing import generation_is_native_whole_lesson
-from planning.whole_lesson.states import DEFAULT_VARIANT_ID, NATIVE_STATUSES, execution_key
+from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
+from print.generation.whole_lesson.states import DEFAULT_VARIANT_ID, NATIVE_STATUSES, execution_key
 
 
 def _page_state(state: Mapping[str, Any]) -> dict[str, Any]:
@@ -19,7 +19,7 @@ def _native_next_action(
     error_detail: Mapping[str, Any] | None = None,
     has_failed_visuals: bool = False,
 ) -> str | None:
-    from planning.whole_lesson.native_retry import (
+    from print.generation.whole_lesson.native_retry import (
         NativeRetryTarget,
         decide_native_retry_target,
         next_action_for_retry_target,

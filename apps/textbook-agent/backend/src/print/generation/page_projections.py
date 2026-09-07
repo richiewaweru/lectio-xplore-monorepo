@@ -41,6 +41,6 @@ def project_student_blocks(document: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def qc_committed_document(document: dict[str, Any]) -> list[str]:
-    from contracts.lectio_page import validate_document
+    from print.contracts.lectio_page import validate_document
 
     return validate_document(document)

@@ -9,14 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import GenerationModel
 from core.database.session import async_session_factory
-from planning.whole_lesson.events import make_event
-from planning.whole_lesson.repository import (
+from print.generation.whole_lesson.events import make_event
+from print.generation.whole_lesson.repository import (
     PageDocumentRepository,
     _now,
     clear_generation_error_state,
     empty_execution_meta,
 )
-from planning.whole_lesson.states import (
+from print.generation.whole_lesson.states import (
     PRE_WORKER_RETRY_STATUSES,
     PRE_WORKER_WORK_KINDS,
     WORK_KIND_POST_APPROVAL,
@@ -381,7 +381,7 @@ async def _run_teaching_under_lease(
     *,
     skip_item_generation: bool,
 ) -> dict[str, Any]:
-    from planning.whole_lesson.service import run_and_persist_teaching_plan
+    from print.generation.whole_lesson.service import run_and_persist_teaching_plan
 
     async with async_session_factory() as session:
         teaching = await run_and_persist_teaching_plan(
@@ -482,7 +482,7 @@ async def run_pre_worker_retry(
     except LeaseLostError:
         raise
     except Exception as exc:  # noqa: BLE001
-        from planning.whole_lesson.repository import persist_native_failure_for_generation
+        from print.generation.whole_lesson.repository import persist_native_failure_for_generation
 
         async with async_session_factory() as session:
             generation = await session.get(GenerationModel, generation_id)

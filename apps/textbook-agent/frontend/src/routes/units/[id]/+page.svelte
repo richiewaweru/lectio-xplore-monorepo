@@ -21,12 +21,12 @@
 		regeneratePathLesson,
 		restorePathVersion
 	} from '$lib/api/units';
-	import TeachingSchedulePanel from '$lib/components/units/TeachingSchedulePanel.svelte';
-	import UnitGroupsPanel from '$lib/components/units/UnitGroupsPanel.svelte';
-	import LessonShapePanel from '$lib/components/units/LessonShapePanel.svelte';
-	import LessonVersionsPanel from '$lib/components/units/LessonVersionsPanel.svelte';
-	import LessonResultsPanel from '$lib/components/units/LessonResultsPanel.svelte';
-	import ResourceComposerPanel from '$lib/components/units/ResourceComposerPanel.svelte';
+	import TeachingSchedulePanel from '$lib/curriculum/units/components/TeachingSchedulePanel.svelte';
+	import UnitGroupsPanel from '$lib/curriculum/units/components/UnitGroupsPanel.svelte';
+	import LessonShapePanel from '$lib/curriculum/units/components/LessonShapePanel.svelte';
+	import LessonVersionsPanel from '$lib/curriculum/units/components/LessonVersionsPanel.svelte';
+	import LessonResultsPanel from '$lib/curriculum/units/components/LessonResultsPanel.svelte';
+	import ResourceComposerPanel from '$lib/curriculum/units/components/ResourceComposerPanel.svelte';
 	import type {
 		LessonMode,
 		KnowledgeType,

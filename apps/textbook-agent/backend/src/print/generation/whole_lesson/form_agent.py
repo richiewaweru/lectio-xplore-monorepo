@@ -11,22 +11,22 @@ from pydantic_ai import Agent
 
 from core.config import settings
 from core.llm.runner import RetryPolicy, run_llm
-from planning.catalogue_projections import (
+from print.generation.catalogue_projections import (
     build_form_candidate_map,
     project_form_guidance,
 )
 from planning.llm_contract_errors import is_transport_error, structured_output_errors
 from planning.planner_diagnostics import log_planner_attempt_failed
-from planning.whole_lesson.form_plan import FormPlan
-from planning.whole_lesson.form_plan import FormPlanSection
-from planning.whole_lesson.legality import LessonLegalitySnapshot
-from planning.whole_lesson.packet import ImmutableLessonPacket
-from planning.whole_lesson.prompt_render import (
+from print.generation.whole_lesson.form_plan import FormPlan
+from print.generation.whole_lesson.form_plan import FormPlanSection
+from print.generation.whole_lesson.legality import LessonLegalitySnapshot
+from print.generation.whole_lesson.packet import ImmutableLessonPacket
+from print.generation.whole_lesson.prompt_render import (
     build_form_planner_payload,
     render_form_prompt,
 )
-from planning.whole_lesson.teaching_plan import TeachingPlan
-from planning.whole_lesson.validation import (
+from print.generation.whole_lesson.teaching_plan import TeachingPlan
+from print.generation.whole_lesson.validation import (
     ValidationReport,
     advisory_form_qc,
     validate_form_plan,

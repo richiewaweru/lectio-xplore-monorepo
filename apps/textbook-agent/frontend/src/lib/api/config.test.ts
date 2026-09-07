@@ -5,7 +5,7 @@ import {
 	resolveClientApiBase,
 	resolveDevProxyTarget,
 	resolveGoogleClientId
-} from '$lib/config/environment';
+} from '$lib/shared/config/environment';
 
 describe('API config resolution', () => {
 	it('uses relative client paths when no API base is configured', () => {

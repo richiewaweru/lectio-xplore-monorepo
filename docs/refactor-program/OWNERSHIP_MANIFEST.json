@@ -1,0 +1,564 @@
+{
+  "version": 1,
+  "baseline_sha": "a5e68a2e79d370ddc34691099deb5e086eb75319",
+  "branch": "refactor/domain-ownership",
+  "items": [
+    {
+      "path": "apps/textbook-agent/backend/src/app.py",
+      "ownership": "PLATFORM",
+      "target": "apps/textbook-agent/backend/src/app.py",
+      "reason": "Application entrypoint and router composition; stays platform-owned",
+      "public_imports": [],
+      "risk": "low"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/builder",
+      "ownership": "LEARN",
+      "target": "apps/textbook-agent/backend/src/learn/authoring/builder",
+      "reason": "Learn authoring Builder API and persistence; interactive lesson authoring only",
+      "public_imports": [
+        "builder.routes",
+        "builder.service"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/learning",
+      "ownership": "LEARN",
+      "target": "apps/textbook-agent/backend/src/learn",
+      "reason": "Learn release, runtime, and distribution surface",
+      "public_imports": [
+        "learning.routes",
+        "learning.release_routes"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/planning",
+      "ownership": "NEEDS_SEAM_EXTRACTION",
+      "target": null,
+      "reason": "Mixed curriculum planning, print page-block planning, and shared bridge code; split by leaf before moving",
+      "public_imports": [
+        "planning.routes",
+        "planning.service",
+        "planning.models",
+        "planning.bridge"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/planning/whole_lesson",
+      "ownership": "PRINT",
+      "target": "apps/textbook-agent/backend/src/print/generation",
+      "reason": "Whole-lesson print planning, form agents, and page-block realization",
+      "public_imports": [
+        "planning.whole_lesson.service",
+        "planning.whole_lesson.executor"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/planning/service.py",
+      "ownership": "CURRICULUM",
+      "target": "apps/textbook-agent/backend/src/curriculum",
+      "reason": "Curriculum unit/path planning service independent of print/learn realization",
+      "public_imports": [
+        "planning.service"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/planning/routes.py",
+      "ownership": "CURRICULUM",
+      "target": "apps/textbook-agent/backend/src/curriculum",
+      "reason": "Curriculum planning HTTP routes; print-specific routes must be extracted later",
+      "public_imports": [
+        "planning.routes"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/planning/models.py",
+      "ownership": "CURRICULUM",
+      "target": "apps/textbook-agent/backend/src/curriculum",
+      "reason": "Curriculum planning domain models",
+      "public_imports": [
+        "planning.models"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/planning/schedule.py",
+      "ownership": "CURRICULUM",
+      "target": "apps/textbook-agent/backend/src/curriculum",
+      "reason": "Curriculum schedule projection for teaching plans",
+      "public_imports": [
+        "planning.schedule"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/planning/outcomes.py",
+      "ownership": "CURRICULUM",
+      "target": "apps/textbook-agent/backend/src/curriculum",
+      "reason": "Learning outcomes / objectives planning",
+      "public_imports": [
+        "planning.outcomes"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/planning/shapes.py",
+      "ownership": "CURRICULUM",
+      "target": "apps/textbook-agent/backend/src/curriculum",
+      "reason": "Curriculum shape contracts for unit/path planning",
+      "public_imports": [
+        "planning.shapes"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/generation",
+      "ownership": "NEEDS_SEAM_EXTRACTION",
+      "target": null,
+      "reason": "Hosts print page objects, PDF export, learn component_lectio, units dispatch, and studio HTTP; must split by leaf",
+      "public_imports": [
+        "generation.routes",
+        "generation.pipeline_dispatch",
+        "generation.canonical"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/generation/page_objects",
+      "ownership": "PRINT",
+      "target": "apps/textbook-agent/backend/src/print/rendering/page_objects",
+      "reason": "Print page-object writers, registry, and document assembly",
+      "public_imports": [
+        "generation.page_objects",
+        "generation.page_objects.registry",
+        "generation.page_objects.document_assembly"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/generation/pdf_export",
+      "ownership": "PRINT",
+      "target": "apps/textbook-agent/backend/src/print/rendering/pdf",
+      "reason": "PDF export service and Playwright print rendering",
+      "public_imports": [
+        "generation.pdf_export.service",
+        "generation.pdf_export.context",
+        "generation.pdf_export.config"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/generation/component_lectio",
+      "ownership": "LEARN",
+      "target": "apps/textbook-agent/backend/src/learn/generation",
+      "reason": "Interactive lesson realization only",
+      "public_imports": [
+        "generation.component_lectio",
+        "generation.component_lectio.service",
+        "generation.component_lectio.pipeline"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/generation/units_dispatch.py",
+      "ownership": "LEARN",
+      "target": "apps/textbook-agent/backend/src/learn/generation",
+      "reason": "Learn units generation dispatch into component_lectio pipeline",
+      "public_imports": [
+        "generation.units_dispatch"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/generation/units_routes.py",
+      "ownership": "LEARN",
+      "target": "apps/textbook-agent/backend/src/learn/api",
+      "reason": "Learn units generation HTTP routes",
+      "public_imports": [
+        "generation.units_routes"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/generation/v3_studio",
+      "ownership": "NEEDS_SEAM_EXTRACTION",
+      "target": null,
+      "reason": "Hosts Print HTTP among mixed studio orchestration; REMOVE_LATER after print API extract",
+      "public_imports": [
+        "generation.v3_studio"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/contracts",
+      "ownership": "NEEDS_SEAM_EXTRACTION",
+      "target": null,
+      "reason": "Shared contract package mixing print page contracts and learn lesson/component contracts",
+      "public_imports": [
+        "contracts.document",
+        "contracts.section_content"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/contracts/lectio_page.py",
+      "ownership": "PRINT",
+      "target": "apps/textbook-agent/backend/src/print/contracts",
+      "reason": "Print page object / section contract for @lectio/page",
+      "public_imports": [
+        "contracts.lectio_page"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/contracts/lectio.py",
+      "ownership": "LEARN",
+      "target": "apps/textbook-agent/backend/src/learn",
+      "reason": "Learn component registry and interactive Lectio document contracts",
+      "public_imports": [
+        "contracts.lectio"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/contracts/lesson_document.py",
+      "ownership": "LEARN",
+      "target": "apps/textbook-agent/backend/src/learn",
+      "reason": "Learn lesson document contract",
+      "public_imports": [
+        "contracts.lesson_document"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/resource_specs",
+      "ownership": "NEEDS_SEAM_EXTRACTION",
+      "target": null,
+      "reason": "Mixed print and learn resource candidate loaders/schema; split by leaf",
+      "public_imports": [
+        "resource_specs.loader",
+        "resource_specs.schema"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/resource_specs/candidates.py",
+      "ownership": "PRINT",
+      "target": "apps/textbook-agent/backend/src/print/resources",
+      "reason": "Print resource candidates for page figures/media",
+      "public_imports": [
+        "resource_specs.candidates"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/resource_specs/component_candidates.py",
+      "ownership": "LEARN",
+      "target": "apps/textbook-agent/backend/src/learn/resources",
+      "reason": "Learn component resource candidates",
+      "public_imports": [
+        "resource_specs.component_candidates"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/v3_blueprint",
+      "ownership": "NEEDS_SEAM_EXTRACTION",
+      "target": null,
+      "reason": "Cross-domain blueprint orchestration spanning curriculum, print, and learn",
+      "public_imports": [
+        "v3_blueprint"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/v3_execution",
+      "ownership": "NEEDS_SEAM_EXTRACTION",
+      "target": null,
+      "reason": "Cross-domain execution engine shared by print and learn pipelines",
+      "public_imports": [
+        "v3_execution"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/v3_review",
+      "ownership": "NEEDS_SEAM_EXTRACTION",
+      "target": null,
+      "reason": "Cross-domain review/QC orchestration; ownership unclear until consumers are split",
+      "public_imports": [
+        "v3_review"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/core",
+      "ownership": "PLATFORM",
+      "target": "apps/textbook-agent/backend/src/platform",
+      "reason": "Shared auth, DB session, LLM, storage, config, errors; models.py classified separately as NEEDS_SEAM_EXTRACTION",
+      "public_imports": [
+        "core.config",
+        "core.dependencies",
+        "core.database",
+        "core.errors",
+        "core.logging"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/core/database/models.py",
+      "ownership": "NEEDS_SEAM_EXTRACTION",
+      "target": null,
+      "reason": "Monolithic SQLAlchemy models spanning curriculum, print, learn, and platform; phased split with shims required",
+      "public_imports": [
+        "core.database.models"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/telemetry",
+      "ownership": "PLATFORM",
+      "target": "apps/textbook-agent/backend/src/platform/telemetry",
+      "reason": "Shared telemetry sink used by all domains",
+      "public_imports": [
+        "telemetry"
+      ],
+      "risk": "low"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/media",
+      "ownership": "NEEDS_SEAM_EXTRACTION",
+      "target": null,
+      "reason": "Mixes domain-specific diagram/topology rendering with shared providers/storage",
+      "public_imports": [
+        "media.diagram_compositor",
+        "media.topology_renderer"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/media/providers",
+      "ownership": "PLATFORM",
+      "target": "apps/textbook-agent/backend/src/platform/media",
+      "reason": "Shared media provider clients used by print and learn",
+      "public_imports": [
+        "media.providers"
+      ],
+      "risk": "low"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/media/storage",
+      "ownership": "PLATFORM",
+      "target": "apps/textbook-agent/backend/src/platform/storage",
+      "reason": "Shared blob/media storage primitives",
+      "public_imports": [
+        "media.storage"
+      ],
+      "risk": "low"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/builder",
+      "ownership": "LEARN",
+      "target": "apps/textbook-agent/frontend/src/lib/learn/authoring/builder",
+      "reason": "Learn Builder authoring client",
+      "public_imports": [
+        "$lib/builder"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/learn",
+      "ownership": "LEARN",
+      "target": "apps/textbook-agent/frontend/src/lib/learn",
+      "reason": "Learn student/runtime/distribution client surfaces",
+      "public_imports": [
+        "$lib/learn"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/studio",
+      "ownership": "PRINT",
+      "target": "apps/textbook-agent/frontend/src/lib/print",
+      "reason": "Print studio client for page preview/export workflows",
+      "public_imports": [
+        "$lib/studio"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/components",
+      "ownership": "NEEDS_SEAM_EXTRACTION",
+      "target": null,
+      "reason": "Mixed UI: units (curriculum), studio (print), document views, and shared forms",
+      "public_imports": [
+        "$lib/components"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/api",
+      "ownership": "NEEDS_SEAM_EXTRACTION",
+      "target": null,
+      "reason": "API client helpers spanning curriculum, print, and learn endpoints",
+      "public_imports": [
+        "$lib/api"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/auth",
+      "ownership": "PLATFORM",
+      "target": "apps/textbook-agent/frontend/src/lib/shared/auth",
+      "reason": "Shared authentication client",
+      "public_imports": [
+        "$lib/auth"
+      ],
+      "risk": "low"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/config",
+      "ownership": "PLATFORM",
+      "target": "apps/textbook-agent/frontend/src/lib/shared",
+      "reason": "Shared frontend config",
+      "public_imports": [
+        "$lib/config"
+      ],
+      "risk": "low"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/settings",
+      "ownership": "PLATFORM",
+      "target": "apps/textbook-agent/frontend/src/lib/shared",
+      "reason": "Shared user/app settings",
+      "public_imports": [
+        "$lib/settings"
+      ],
+      "risk": "low"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/generation",
+      "ownership": "PRINT",
+      "target": "apps/textbook-agent/frontend/src/lib/print",
+      "reason": "Print generation client and preview helpers",
+      "public_imports": [
+        "$lib/generation"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/stores",
+      "ownership": "NEEDS_SEAM_EXTRACTION",
+      "target": null,
+      "reason": "Cross-feature stores; split once domain folders are established",
+      "public_imports": [
+        "$lib/stores"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/types",
+      "ownership": "NEEDS_SEAM_EXTRACTION",
+      "target": null,
+      "reason": "Shared and domain types co-located; split by owning domain",
+      "public_imports": [
+        "$lib/types"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/workspace",
+      "ownership": "LEARN",
+      "target": "apps/textbook-agent/frontend/src/lib/learn",
+      "reason": "Learn workspace shell for authoring/student flows",
+      "public_imports": [
+        "$lib/workspace"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/styles",
+      "ownership": "PRINT",
+      "target": "apps/textbook-agent/frontend/src/lib/print",
+      "reason": "Print/page presentation styles tied to page rendering",
+      "public_imports": [
+        "$lib/styles"
+      ],
+      "risk": "low"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/components/units",
+      "ownership": "CURRICULUM",
+      "target": "apps/textbook-agent/frontend/src/lib/curriculum/units",
+      "reason": "Curriculum units UI",
+      "public_imports": [
+        "$lib/components/units"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/components/studio",
+      "ownership": "PRINT",
+      "target": "apps/textbook-agent/frontend/src/lib/print",
+      "reason": "Print studio UI components",
+      "public_imports": [
+        "$lib/components/studio"
+      ],
+      "risk": "medium"
+    },
+    {
+      "path": "packages/lectio-learn",
+      "ownership": "LEARN",
+      "target": "packages/lectio-learn",
+      "reason": "Interactive Lectio package; rename to lectio-learn in R6",
+      "public_imports": [
+        "@lectio/lectio",
+        "lectio"
+      ],
+      "risk": "high"
+    },
+    {
+      "path": "packages/lectio-page",
+      "ownership": "PRINT",
+      "target": "packages/lectio-page",
+      "reason": "Print page object package; remains @lectio/page",
+      "public_imports": [
+        "@lectio/page"
+      ],
+      "risk": "medium"
+    }
+  ],
+  "allowed_ownership": [
+    "CURRICULUM",
+    "PRINT",
+    "LEARN",
+    "PLATFORM",
+    "REMOVE_LATER",
+    "NEEDS_SEAM_EXTRACTION"
+  ],
+  "dependency_graph_notes": "Learn Builder (builder/routes.py) currently imports Print PDF export (generation.pdf_export.*) for preflight/export — the primary Learn→Print edge. planning/ and generation/ are mixed hubs: curriculum leaves (service/models/schedule/outcomes/shapes) sit beside print whole_lesson and page_objects/pdf_export, while learn owns component_lectio and units_*. contracts/ and resource_specs/ split cleanly at leaf files (lectio_page/candidates = PRINT; lectio/lesson_document/component_candidates = LEARN). v3_blueprint/execution/review and generation/v3_studio remain cross-domain seams hosting Print HTTP until extraction. core/ is platform except monolithic core/database/models.py. Frontend mirrors this: lib/builder+learn+workspace = LEARN; lib/studio+generation+styles+components/studio = PRINT; lib/components/units = CURRICULUM; auth/config/settings = PLATFORM→shared; components/api/stores/types need seam extraction. packages/lectio-learn → lectio-learn (R6); packages/lectio-page stays PRINT. No Print→Learn backend edges recorded at baseline.",
+  "print_learn_edges": {
+    "learn_to_print": [
+      "builder/routes.py → generation.pdf_export"
+    ],
+    "print_to_learn": []
+  },
+  "baseline_commands": {
+    "page_test": "pnpm --filter @lectio/page test",
+    "page_check": "pnpm --filter @lectio/page check",
+    "page_pdf_fixture": "pnpm --filter @lectio/page pdf:fixture",
+    "learn_package_test": "pnpm --dir packages/lectio-learn test",
+    "learn_package_build": "pnpm --dir packages/lectio-learn build",
+    "domain_boundaries": "python tools/xplore-program/check_domain_boundaries.py",
+    "backend_print": "uv run pytest tests/generation/test_page_object_writers.py tests/planning/test_page_block_planner.py tests/generation/test_pdf_export_service.py -q",
+    "backend_learn": "uv run pytest tests/generation/test_component_lectio_lifecycle.py tests/routes/test_builder_lessons.py tests/routes/test_learn_releases.py tests/routes/test_learn_runtime.py -q",
+    "frontend_builder": "pnpm --dir apps/textbook-agent/frontend exec vitest run src/lib/builder --reporter=dot",
+    "_cwd_backend_pytest": "apps/textbook-agent/backend"
+  }
+}

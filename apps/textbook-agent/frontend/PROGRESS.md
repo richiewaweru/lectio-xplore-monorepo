@@ -110,7 +110,7 @@ Goal: Fix all builder usability bugs across 5 ordered PRs, verifying each PR bef
 
 ### Verification Checklist
 - [x] Dashboard shows "Edit in Builder" on completed V3 generations
-- [x] Clicking it creates a builder lesson and navigates to /builder/{id}
+- [x] Clicking it creates a builder lesson and navigates to /learn/shared/authoring/builder/{id}
 - [x] Non-completed generations don't show the button
 - [x] Builder opens with correct blocks from the generation
 - [x] npm run check passes
@@ -147,7 +147,7 @@ Goal: Fix all builder usability bugs across 5 ordered PRs, verifying each PR bef
 - [x] npm test passes
 
 ### Validation Evidence
-- Frontend `npm run test -- src/lib/builder/utils/page-estimate.test.ts src/lib/builder/components/toolbar/DocumentToolbar.test.ts src/routes/dashboard/page.test.ts` passed: 3 files / 10 tests.
+- Frontend `npm run test -- src/lib/learn/shared/authoring/builder/utils/page-estimate.test.ts src/lib/learn/shared/authoring/builder/components/toolbar/DocumentToolbar.test.ts src/routes/dashboard/page.test.ts` passed: 3 files / 10 tests.
 - Frontend `npm run check` passed: svelte-check found 0 errors and 0 warnings.
 - Frontend `npm run build` passed.
 - Frontend full `npm run test` passed: 55 files / 191 tests.

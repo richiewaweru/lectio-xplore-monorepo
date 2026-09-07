@@ -6,19 +6,19 @@ import type { LessonDocument } from '@lectio/learn';
 
 const generateBlock = vi.hoisted(() => vi.fn());
 
-vi.mock('$lib/builder/api/ai-client', () => ({ generateBlock }));
-vi.mock('$lib/stores/auth', () => ({ getToken: () => 'token' }));
-vi.mock('$lib/builder/stores/connectivity.svelte', () => ({
+vi.mock('$lib/learn/authoring/builder/api/ai-client', () => ({ generateBlock }));
+vi.mock('$lib/stores/shared/auth', () => ({ getToken: () => 'token' }));
+vi.mock('$lib/learn/authoring/builder/stores/connectivity.svelte', () => ({
 	connectivityStore: { online: true }
 }));
-vi.mock('$lib/builder/utils/ai-rate-limit', () => ({
+vi.mock('$lib/learn/authoring/builder/utils/ai-rate-limit', () => ({
 	tryBeginAiCall: () => ({ ok: true, finish: vi.fn() })
 }));
-vi.mock('$lib/builder/persistence/idb-store', () => ({
+vi.mock('$lib/learn/authoring/builder/persistence/idb-store', () => ({
 	saveDocument: vi.fn(async () => {}),
 	saveVersionSnapshot: vi.fn(async () => {})
 }));
-vi.mock('$lib/builder/persistence/server-sync', () => ({
+vi.mock('$lib/learn/authoring/builder/persistence/server-sync', () => ({
 	ensureBuilderSyncAdapterRegistered: vi.fn(),
 	flushBuilderSyncQueue: vi.fn(async () => ({ synced: 0, failed: 0, errors: [] })),
 	saveLessonToServer: vi.fn(async () => {})
@@ -29,8 +29,8 @@ vi.mock('svelte-dnd-action', () => ({
 }));
 
 import BlockCanvas from './BlockCanvas.svelte';
-import { createDocumentStore } from '$lib/builder/stores/document.svelte';
-import type { IssueSection } from '$lib/builder/issues';
+import { createDocumentStore } from '$lib/learn/authoring/builder/stores/document.svelte';
+import type { IssueSection } from '$lib/learn/authoring/builder/issues';
 
 function regressionDocument(): LessonDocument {
 	const fixture = JSON.parse(

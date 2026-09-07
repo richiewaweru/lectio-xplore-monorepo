@@ -11,7 +11,7 @@ import json
 from dataclasses import asdict, dataclass
 from typing import Any, Mapping, Sequence
 
-from contracts.lectio_page import (
+from print.contracts.lectio_page import (
     PAGE_OBJECT_IDS,
     get_intent_catalogue,
     get_object_catalogue,

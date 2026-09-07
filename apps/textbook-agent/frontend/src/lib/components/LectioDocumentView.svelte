@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { LectioThemeSurface, basePresetMap, templateRegistryMap, usePrintMode } from '@lectio/learn';
-	import { buildSectionSlots, type ViewerSectionSlot } from '$lib/generation/viewer-state';
+	import { buildSectionSlots, type ViewerSectionSlot } from '$lib/print/generation/viewer-state';
 	import PrintSectionLink from '$lib/components/PrintSectionLink.svelte';
 	import type { GenerationDocument } from '$lib/types';
 

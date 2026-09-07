@@ -65,11 +65,11 @@ vi.mock('$app/state', () => ({
 	}
 }));
 
-vi.mock('$lib/api/auth', () => ({
+vi.mock('$lib/api/shared/auth', () => ({
 	fetchCurrentUser: vi.fn()
 }));
 
-vi.mock('$lib/stores/auth', () => ({
+vi.mock('$lib/stores/shared/auth', () => ({
 	authInitialized: initializedStore,
 	authIsAuthenticated: authedStore,
 	authUser: userStore,

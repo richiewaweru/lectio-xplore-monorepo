@@ -1,23 +1,23 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { LessonDocument } from '@lectio/learn';
-	import { connectivityStore } from '$lib/builder/stores/connectivity.svelte';
-	import { getStorageEstimate } from '$lib/builder/utils/storage-estimate';
+	import { connectivityStore } from '$lib/learn/authoring/builder/stores/connectivity.svelte';
+	import { getStorageEstimate } from '$lib/learn/authoring/builder/utils/storage-estimate';
 	import {
 		estimatePageCount,
 		pageWarningLevel,
 		pageWarningMessage
-	} from '$lib/builder/utils/page-estimate';
-	import { downloadLessonDocument } from '$lib/builder/utils/file-io';
+	} from '$lib/learn/authoring/builder/utils/page-estimate';
+	import { downloadLessonDocument } from '$lib/learn/authoring/builder/utils/file-io';
 	import {
 		checkBuilderLessonPrint,
 		downloadBuilderLessonPdf,
 		printDocument,
 		type BuilderPdfAudience,
 		type BuilderPrintPreflightResult
-	} from '$lib/builder/utils/pdf-export';
+	} from '$lib/learn/authoring/builder/utils/pdf-export';
 	import { CloudOff, Eye, EyeOff, History, Printer, Share2, UploadCloud } from 'lucide-svelte';
-	import { unresolvedIssues } from '$lib/builder/issues';
+	import { unresolvedIssues } from '$lib/learn/authoring/builder/issues';
 
 	let {
 		document,

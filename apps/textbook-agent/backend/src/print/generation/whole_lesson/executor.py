@@ -9,40 +9,40 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from contracts.lectio_page import get_intent_catalogue, validate_document
+from print.contracts.lectio_page import get_intent_catalogue, validate_document
 from core.database.models import GenerationModel
 from core.database.session import async_session_factory
-from generation.page_objects import WriterContext, WriterError, WriterOutcome, dispatch_writer_async
-from generation.page_objects.document_assembly import (
+from print.rendering.page_objects import WriterContext, WriterError, WriterOutcome, dispatch_writer_async
+from print.rendering.page_objects.document_assembly import (
     assemble_document_v2,
     assemble_section,
     canonical_document_sha256,
     reload_document,
 )
 from planning.approved_items import ApprovedItemRecord, approved_items_as_writer_records
-from planning.whole_lesson.events import make_event
-from planning.whole_lesson.failure_injection import get_failure_injection
-from planning.whole_lesson.failure_policy import (
+from print.generation.whole_lesson.events import make_event
+from print.generation.whole_lesson.failure_injection import get_failure_injection
+from print.generation.whole_lesson.failure_policy import (
     classify_failure,
     structured_error_from_exc,
 )
-from planning.whole_lesson.figure_ids import stable_figure_request_id
-from planning.whole_lesson.form_agent import NoLegalFormCandidatesError, run_form_planner
-from planning.whole_lesson.form_plan import FormPlan, coerce_form_plan
-from planning.whole_lesson.legality import (
+from print.generation.whole_lesson.figure_ids import stable_figure_request_id
+from print.generation.whole_lesson.form_agent import NoLegalFormCandidatesError, run_form_planner
+from print.generation.whole_lesson.form_plan import FormPlan, coerce_form_plan
+from print.generation.whole_lesson.legality import (
     LessonLegalityError,
     LessonLegalitySnapshot,
     validate_legality_snapshot,
 )
-from planning.whole_lesson.packet import ImmutableLessonPacket
-from planning.catalogue_projections import build_form_candidate_map
-from planning.whole_lesson.repository import PageDocumentRepository
-from planning.whole_lesson.resolved_block_plan import (
+from print.generation.whole_lesson.packet import ImmutableLessonPacket
+from print.generation.catalogue_projections import build_form_candidate_map
+from print.generation.whole_lesson.repository import PageDocumentRepository
+from print.generation.whole_lesson.resolved_block_plan import (
     ResolvedBlockPlan,
     resolve_block_plans,
 )
-from planning.whole_lesson.validation import validate_form_plan
-from planning.whole_lesson.states import (
+from print.generation.whole_lesson.validation import validate_form_plan
+from print.generation.whole_lesson.states import (
     DEFAULT_VARIANT_ID,
     MAX_SECTION_CONCURRENCY,
     MAX_WRITER_CONCURRENCY,
@@ -53,7 +53,7 @@ from planning.whole_lesson.states import (
     decide_resume,
     execution_key,
 )
-from planning.whole_lesson.teaching_plan import TeachingPlan
+from print.generation.whole_lesson.teaching_plan import TeachingPlan
 from v3_blueprint.planning.models import SectionBlockPlan
 
 
@@ -1109,7 +1109,7 @@ async def execute_after_teaching_approval(
         visual_dispatch = None
         terminal = assembled["terminal"]
         if terminal == "awaiting_visuals":
-            from planning.whole_lesson.visual_dispatch import dispatch_and_patch_from_repo
+            from print.generation.whole_lesson.visual_dispatch import dispatch_and_patch_from_repo
 
             try:
                 visual_dispatch = await dispatch_and_patch_from_repo(

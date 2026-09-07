@@ -25,7 +25,7 @@
 ## Current architecture facts
 - Target: `C:\Projects\lectio` only
 - Print: `@lectio/page` + `whole_lesson` (green; pdf fixture OK)
-- Learn package: `@lectio/learn` (`packages/lectio`) with full interaction shells
+- Learn package: `@lectio/learn` (`packages/lectio-learn`) with full interaction shells
 - Generation: Units → `component_lectio` → Builder → LearnRelease (+ path revision/objective_hash) → LearningInstance
 - Runtime: LearnerSession (`X-Learner-Session`), attempts, progress, concept bands
 - Distribution: multi-class targets + append-only recipients
@@ -33,7 +33,7 @@
 
 ## Accepted deviations
 - Live browser golden run excused for closeout
-- Package directory `packages/lectio` named `@lectio/learn`
+- Package directory `packages/lectio-learn` named `@lectio/learn`
 - `v3_studio` retained REMOVE-later
 - Teacher JWT fallback when learner session header absent
 

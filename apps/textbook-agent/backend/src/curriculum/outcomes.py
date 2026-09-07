@@ -19,7 +19,7 @@ from core.database.models import (
     UnitGroupModel,
     UnitModel,
 )
-from planning.models import LessonActualWriteRequest, MarksWriteRequest
+from curriculum.models import LessonActualWriteRequest, MarksWriteRequest
 
 
 class OutcomeValidationError(ValueError):

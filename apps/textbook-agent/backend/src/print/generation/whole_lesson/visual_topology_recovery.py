@@ -16,7 +16,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any, Callable, Mapping
 
-from planning.whole_lesson.repository import (
+from print.generation.whole_lesson.repository import (
     PageDocumentRepository,
     VisualTopologyConflict,
 )
@@ -110,7 +110,7 @@ async def _call(fn: Callable[..., Any], **kwargs: Any) -> Any:
 
 async def _default_planner(**kwargs: Any) -> Any:
     try:
-        from planning.whole_lesson.visual_topology_planner import run_visual_topology_planner
+        from print.generation.whole_lesson.visual_topology_planner import run_visual_topology_planner
     except Exception as exc:  # pragma: no cover - import contract guard
         raise TopologyRecoveryError("TOPOLOGY_PLANNER_UNAVAILABLE", str(exc)) from exc
     return await _call(run_visual_topology_planner, **kwargs)
@@ -119,7 +119,7 @@ async def _default_planner(**kwargs: Any) -> Any:
 def _validated_topology(raw: Any, *, source: str) -> dict[str, Any]:
     """Apply the planner-owned schema validator when available."""
     try:
-        from planning.whole_lesson.visual_topology import validate_topology_plan
+        from print.generation.whole_lesson.visual_topology import validate_topology_plan
     except Exception:
         validate_topology_plan = None
     if validate_topology_plan is None:

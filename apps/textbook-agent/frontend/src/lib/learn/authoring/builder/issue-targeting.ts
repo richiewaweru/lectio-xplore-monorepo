@@ -1,7 +1,7 @@
 import { getFieldComponentMap, type LessonDocument } from '@lectio/learn';
 
-import { isAiGeneratableComponent } from '$lib/builder/components/ai/ai-block-utils';
-import type { BuilderIssue } from '$lib/builder/issues';
+import { isAiGeneratableComponent } from '$lib/learn/authoring/builder/components/ai/ai-block-utils';
+import type { BuilderIssue } from '$lib/learn/authoring/builder/issues';
 
 const VISUAL_MISMATCH_QUESTION_INSTRUCTION =
 	'This question refers to a visual, but no diagram was planned for this section. Rewrite the question so it stands on its own without referring to a diagram.';

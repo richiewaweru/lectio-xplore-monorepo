@@ -1,3 +1,3 @@
-from telemetry.recorder import GenerationReportRecorder
-
-__all__ = ["GenerationReportRecorder"]
+from infra.telemetry.recorder import GenerationReportRecorder
+
+__all__ = ["GenerationReportRecorder"]

@@ -1,5 +1,12 @@
-"""V3 Studio HTTP helpers: teacher input → signals → blueprint → generation SSE."""
+"""Compatibility shim — use ``print.http.v3_studio``.
 
-from generation.v3_studio.preview_mapper import blueprint_to_preview_dto
+Temporary (C2). Remove when all call sites import the print path (C3).
+"""
 
-__all__ = ["blueprint_to_preview_dto"]
+from __future__ import annotations
+
+import sys
+from importlib import import_module
+
+_mod = import_module("print.http.v3_studio")
+sys.modules[__name__] = _mod

@@ -13,7 +13,7 @@ from core.database.models import (
     UnitModel,
     UnitScopeContractModel,
 )
-from planning.models import (
+from curriculum.models import (
     CanonicalPathLesson,
     CanonicalPathPlan,
     CanonicalPathScope,

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { MediaReference, VideoEmbedContent } from '@lectio/learn';
 	import { Film } from 'lucide-svelte';
-	import { connectivityStore } from '$lib/builder/stores/connectivity.svelte';
+	import { connectivityStore } from '$lib/learn/authoring/builder/stores/connectivity.svelte';
 	import {
 		CalloutBlock,
 		ComparisonGrid,

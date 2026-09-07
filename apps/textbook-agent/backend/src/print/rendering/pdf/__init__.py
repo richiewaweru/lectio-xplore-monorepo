@@ -1,6 +1,6 @@
 """PDF export utilities for completed generations."""
 
-from generation.pdf_export.service import (
+from print.rendering.pdf.service import (
     PDFExportOptions,
     PDFExportRequest,
     PDFExportResult,

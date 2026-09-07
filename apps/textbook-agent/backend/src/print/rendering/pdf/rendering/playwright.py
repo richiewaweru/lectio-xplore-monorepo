@@ -5,11 +5,11 @@ import math
 from pathlib import Path
 from typing import Any
 
-from core.pdf_export_runtime import pdf_render_semaphore
+from print.rendering.pdf.runtime import pdf_render_semaphore
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from playwright.async_api import async_playwright
 
-from generation.pdf_export.config import PDFExportConfig
+from print.rendering.pdf.config import PDFExportConfig
 
 logger = logging.getLogger(__name__)
 

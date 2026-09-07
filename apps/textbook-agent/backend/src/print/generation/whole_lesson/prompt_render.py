@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from contracts.lectio_page import PAGE_OBJECT_IDS
-from planning.catalogue_projections import TeachingGuidanceProjection
+from print.contracts.lectio_page import PAGE_OBJECT_IDS
+from print.generation.catalogue_projections import TeachingGuidanceProjection
 from planning.prompts import form_planner_prompt, lesson_approach_planner_prompt
-from planning.whole_lesson.packet import ImmutableLessonPacket
-from planning.whole_lesson.teaching_plan import TeachingPlan
+from print.generation.whole_lesson.packet import ImmutableLessonPacket
+from print.generation.whole_lesson.teaching_plan import TeachingPlan
 from resource_specs.loader import get_spec
 from resource_specs.renderer import render_resource_identity
 

@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import PathLessonDeviationModel, PathLessonModel
-from planning.models import ShapeDeviationCreateRequest
+from curriculum.models import ShapeDeviationCreateRequest
 from v3_blueprint.skeletons import (
     DeviationRequest,
     SkeletonPreviewRequest,

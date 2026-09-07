@@ -23,7 +23,7 @@
       "branch": "xplore",
       "sha": "f71e78cdbb06a2169c60b937213fa4db6996c69f",
       "dirty": true,
-      "notes": "Imported into monorepo packages/lectio in Phase 01. Dirty: src/lib/lectio/schemas/content-zod.ts (not copied as blocker)."
+      "notes": "Imported into monorepo packages/lectio-learn in Phase 01. Dirty: src/lib/lectio/schemas/content-zod.ts (not copied as blocker)."
     }
   ],
   "phase_01_completed_at": "2026-09-06T17:30:00+03:00",
@@ -73,11 +73,11 @@
     {
       "name": "component-lectio-library",
       "classification": "REFACTOR",
-      "canonical_path": "packages/lectio/",
+      "canonical_path": "packages/lectio-learn/",
       "alternate_paths": [
         "C:\\Projects\\lectio-legacy-20260805\\src\\lib\\lectio\\"
       ],
-      "evidence": "Workspace lectio@0.6.0; frontend workspace:* → link:../../../packages/lectio; 112 package tests green.",
+      "evidence": "Workspace lectio@0.6.0; frontend workspace:* → link:../../../packages/lectio-learn; 112 package tests green.",
       "notes": "Phase 02: rename/evolve to @lectio/learn; remove print-only exports."
     },
     {

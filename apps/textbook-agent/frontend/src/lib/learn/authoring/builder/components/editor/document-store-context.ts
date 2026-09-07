@@ -1,6 +1,6 @@
 import { getContext, setContext } from 'svelte';
 
-import type { DocumentStore } from '$lib/builder/stores/document.svelte';
+import type { DocumentStore } from '$lib/learn/authoring/builder/stores/document.svelte';
 
 const DOCUMENT_STORE_KEY = Symbol('lessonBuilderDocumentStore');
 

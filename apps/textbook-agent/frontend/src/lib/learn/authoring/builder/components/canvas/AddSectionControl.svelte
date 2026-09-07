@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { templateRegistry } from '@lectio/learn';
-	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
+	import type { DocumentStore } from '$lib/learn/authoring/builder/stores/document.svelte';
 
 	let {
 		store,

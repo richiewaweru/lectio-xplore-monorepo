@@ -28,7 +28,7 @@ vi.mock('$app/navigation', () => ({
 	goto: vi.fn()
 }));
 
-vi.mock('$lib/api/auth', () => ({
+vi.mock('$lib/api/shared/auth', () => ({
 	exchangeGoogleToken: vi.fn()
 }));
 
@@ -36,15 +36,15 @@ vi.mock('$lib/api/errors', () => ({
 	isApiError: () => false
 }));
 
-vi.mock('$lib/auth/google', () => ({
+vi.mock('$lib/shared/auth/google', () => ({
 	mountGoogleSignIn: vi.fn()
 }));
 
-vi.mock('$lib/auth/routing', () => ({
+vi.mock('$lib/shared/auth/routing', () => ({
 	navigateToLanding: vi.fn()
 }));
 
-vi.mock('$lib/stores/auth', () => ({
+vi.mock('$lib/stores/shared/auth', () => ({
 	authUser: authStore,
 	setAuth: vi.fn()
 }));

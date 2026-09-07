@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from generation.component_lectio.errors import WorkOrderIdentityError
+from learn.generation.component_lectio.errors import WorkOrderIdentityError
 from v3_blueprint.planning.work_orders import ExactWorkOrder
 from v3_execution.runtime.lectio_validation import validate_lectio_field_payload
 

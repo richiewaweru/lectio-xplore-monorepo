@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from generation.page_objects.models import FORM_OUTPUTS
+from print.rendering.page_objects.models import FORM_OUTPUTS
 
 
 class UnsupportedObject(ValueError):

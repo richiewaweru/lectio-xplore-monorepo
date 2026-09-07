@@ -8,7 +8,7 @@
 		updateConceptCard,
 		type CardLibraryItem,
 		type ConceptCard
-	} from '$lib/builder/api/concept-cards';
+	} from '$lib/learn/authoring/builder/api/concept-cards';
 
 	let {
 		packId,

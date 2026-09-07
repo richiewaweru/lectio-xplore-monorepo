@@ -2,16 +2,16 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { fromStore } from 'svelte/store';
-	import { exchangeGoogleToken } from '$lib/api/auth';
+	import { exchangeGoogleToken } from '$lib/api/shared/auth';
 	import { isApiError } from '$lib/api/errors';
-	import { mountGoogleSignIn } from '$lib/auth/google';
-	import { navigateToLanding } from '$lib/auth/routing';
+	import { mountGoogleSignIn } from '$lib/shared/auth/google';
+	import { navigateToLanding } from '$lib/shared/auth/routing';
 	import {
 		googleClientIdMissingMessage,
 		resolveGoogleClientId,
 		type FrontendEnvironment
-	} from '$lib/config/environment';
-	import { authUser, setAuth } from '$lib/stores/auth';
+	} from '$lib/shared/config/environment';
+	import { authUser, setAuth } from '$lib/stores/shared/auth';
 	import type { User } from '$lib/types';
 
 	let errorMessage: string | null = $state(null);

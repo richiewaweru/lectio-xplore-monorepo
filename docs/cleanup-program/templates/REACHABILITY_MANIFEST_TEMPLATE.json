@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "supported_entrypoints": {
+    "unit_print": [],
+    "unit_learn": []
+  },
+  "items": [
+    {
+      "path": "apps/textbook-agent/backend/src/example.py",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "PRINT",
+      "reachable_from": [
+        "unit_print"
+      ],
+      "reason": "example"
+    }
+  ],
+  "allowed_classifications": [
+    "ACTIVE_PRODUCT",
+    "ACTIVE_INFRA",
+    "ACTIVE_BUILD",
+    "ACTIVE_TEST",
+    "MIGRATION_HISTORY",
+    "AUTHORITATIVE_DOC",
+    "SPLIT_REQUIRED",
+    "LEGACY_REFERENCED",
+    "DEAD"
+  ],
+  "allowed_owners": [
+    "APPLICATION",
+    "CURRICULUM",
+    "PRINT",
+    "LEARN",
+    "INFRA",
+    "REPO"
+  ]
+}

@@ -15,47 +15,48 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from core.config import settings
-from core.rate_limit import limiter
-from core.database.migrations import upgrade_database
-from core.database.session import engine
-from core.errors import register_error_handlers
-from core.health.routes import (
+from infra.config import settings
+from infra.rate_limit import limiter
+from infra.database.migrations import upgrade_database
+from infra.database.session import engine
+from infra.errors import register_error_handlers
+from infra.health.routes import (
     DependencyStatus,
     configure_health_extensions,
     router as health_router,
 )
-from core.logging import configure_logging
-from core.middleware.request_id import RequestIdMiddleware
-from core.middleware.v2_audit import V2AuditMiddleware
-from core.pdf_export_runtime import cleanup_stale_pdf_exports
+from infra.logging import configure_logging
+from infra.middleware.request_id import RequestIdMiddleware
+from infra.middleware.v2_audit import V2AuditMiddleware
+from print.rendering.pdf.runtime import cleanup_stale_pdf_exports
 from core.routes.auth import router as auth_router
 from core.routes.capabilities import router as capabilities_router
 from core.routes.profile import router as profile_router
 from core.routes.prompts import router as prompts_router
 from core.routes.shares import router as shares_router
-from core.version import VERSION
+from infra.version import VERSION
 from builder.routes import router as builder_router
-from learning.release_routes import router as learn_release_router
-from learning.runtime_routes import router as learn_runtime_router
-from learning.insight_service import router as learn_analytics_router
-from core.database.session import async_session_factory
+from application.builder_print.routes import router as builder_print_router
+from learn.publishing.release_routes import router as learn_release_router
+from learn.runtime.runtime_routes import router as learn_runtime_router
+from learn.analytics.insight_service import router as learn_analytics_router
+from infra.database.session import async_session_factory
 from generation.routes import router as generation_router
 from generation.skeleton_routes import router as skeleton_router
 from generation.units_routes import router as units_generation_router
-from generation.v3_studio.generation_writer import V3GenerationWriter
-from learning.routes import router as learning_router
+from print.http.v3_studio.generation_writer import V3GenerationWriter
+from learn.routes import router as learning_router
 from media.diagnostics.v3_image_pipeline_diagnostic import (
     ProbeResult,
     run_gcs_probe,
     run_grok_probe,
 )
-from planning.routes import router as planning_router
-from planning.compatibility import router as compatibility_router
+from curriculum.routes import router as planning_router
+from curriculum.compatibility import router as compatibility_router
 from resource_specs.loader import initialize_registry as initialize_resource_registry
-from telemetry import telemetry_router
-from telemetry.dependencies import get_llm_call_repository
-from telemetry.service import telemetry_monitor
+from infra.telemetry import telemetry_router
+from infra.telemetry.dependencies import get_llm_call_repository
+from infra.telemetry.service import telemetry_monitor
 from v3_blueprint.skeletons import initialize_skeleton_catalog
 
 logger = logging.getLogger("uvicorn.error")
@@ -257,12 +258,12 @@ async def lifespan(app: FastAPI):
         },
     )
     if settings.xplore_native_worker_enabled:
-        from planning.whole_lesson.worker import start_native_worker
+        from print.generation.whole_lesson.worker import start_native_worker
 
         await start_native_worker()
     yield
     if settings.xplore_native_worker_enabled:
-        from planning.whole_lesson.worker import stop_native_worker
+        from print.generation.whole_lesson.worker import stop_native_worker
 
         await stop_native_worker(drain_seconds=5.0)
     await telemetry_monitor.stop()
@@ -307,6 +308,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(capabilities_router)
     app.include_router(builder_router)
+    app.include_router(builder_print_router)
     app.include_router(learn_release_router)
     app.include_router(learn_runtime_router)
     app.include_router(learn_analytics_router)

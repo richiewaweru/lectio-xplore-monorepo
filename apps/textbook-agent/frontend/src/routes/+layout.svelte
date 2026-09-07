@@ -3,9 +3,9 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { fromStore } from 'svelte/store';
-	import { resolveShellRedirect } from '$lib/auth/routing';
-	import { fetchCurrentUser } from '$lib/api/auth';
-	import { authInitialized, authIsAuthenticated, authUser, bootstrapAuth } from '$lib/stores/auth';
+	import { resolveShellRedirect } from '$lib/shared/auth/routing';
+	import { fetchCurrentUser } from '$lib/api/shared/auth';
+	import { authInitialized, authIsAuthenticated, authUser, bootstrapAuth } from '$lib/stores/shared/auth';
 
 	let { children } = $props();
 	const initialized = fromStore(authInitialized);

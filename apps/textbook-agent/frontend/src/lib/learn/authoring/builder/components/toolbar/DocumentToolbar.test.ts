@@ -18,15 +18,15 @@ const {
 	checkBuilderLessonPrint: vi.fn()
 }));
 
-vi.mock('$lib/builder/utils/storage-estimate', () => ({
+vi.mock('$lib/learn/authoring/builder/utils/storage-estimate', () => ({
 	getStorageEstimate
 }));
 
-vi.mock('$lib/builder/utils/file-io', () => ({
+vi.mock('$lib/learn/authoring/builder/utils/file-io', () => ({
 	downloadLessonDocument
 }));
 
-vi.mock('$lib/builder/utils/pdf-export', () => ({
+vi.mock('$lib/learn/authoring/builder/utils/pdf-export', () => ({
 	printDocument,
 	downloadBuilderLessonPdf,
 	checkBuilderLessonPrint

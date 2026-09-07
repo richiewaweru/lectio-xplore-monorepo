@@ -3,8 +3,8 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import type { LessonDocument } from '@lectio/learn';
-	import { loadBuilderLessonWithFallback } from '$lib/builder/persistence/server-sync';
-	import StudentLessonShell from '$lib/learn/StudentLessonShell.svelte';
+	import { loadBuilderLessonWithFallback } from '$lib/learn/authoring/builder/persistence/server-sync';
+	import StudentLessonShell from '$lib/learn/student/StudentLessonShell.svelte';
 	import { isApiError } from '$lib/api/errors';
 
 	let ready = $state(false);

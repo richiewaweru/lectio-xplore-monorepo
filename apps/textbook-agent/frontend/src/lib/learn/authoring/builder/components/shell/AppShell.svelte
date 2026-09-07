@@ -3,20 +3,20 @@
 	import { onMount, tick } from 'svelte';
 	import { basePresetMap, LectioThemeSurface } from '@lectio/learn';
 	import type { LessonDocument } from '@lectio/learn';
-	import BlockCanvas from '$lib/builder/components/canvas/BlockCanvas.svelte';
-	import CanvasOutline from '$lib/builder/components/canvas/CanvasOutline.svelte';
-	import PaletteOverlay from '$lib/builder/components/palette/PaletteOverlay.svelte';
-	import DocumentToolbar from '$lib/builder/components/toolbar/DocumentToolbar.svelte';
-	import MediaManager from '$lib/builder/components/media/MediaManager.svelte';
-	import VersionPanel from '$lib/builder/components/versions/VersionPanel.svelte';
-	import OfflineSyncHooks from '$lib/builder/components/shell/OfflineSyncHooks.svelte';
+	import BlockCanvas from '$lib/learn/authoring/builder/components/canvas/BlockCanvas.svelte';
+	import CanvasOutline from '$lib/learn/authoring/builder/components/canvas/CanvasOutline.svelte';
+	import PaletteOverlay from '$lib/learn/authoring/builder/components/palette/PaletteOverlay.svelte';
+	import DocumentToolbar from '$lib/learn/authoring/builder/components/toolbar/DocumentToolbar.svelte';
+	import MediaManager from '$lib/learn/authoring/builder/components/media/MediaManager.svelte';
+	import VersionPanel from '$lib/learn/authoring/builder/components/versions/VersionPanel.svelte';
+	import OfflineSyncHooks from '$lib/learn/authoring/builder/components/shell/OfflineSyncHooks.svelte';
 	import { Plus } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
-	import { saveVersionSnapshot } from '$lib/builder/persistence/idb-store';
-	import { publishLearnRelease } from '$lib/learn/api/releases';
-	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
-	import type { PendingPlanSection } from '$lib/builder/streaming/generation-stream';
-	import type { BuilderIssue } from '$lib/builder/issues';
+	import { saveVersionSnapshot } from '$lib/learn/authoring/builder/persistence/idb-store';
+	import { publishLearnRelease } from '$lib/learn/student/api/releases';
+	import type { DocumentStore } from '$lib/learn/authoring/builder/stores/document.svelte';
+	import type { PendingPlanSection } from '$lib/learn/authoring/builder/streaming/print/generation-stream';
+	import type { BuilderIssue } from '$lib/learn/authoring/builder/issues';
 	import type { V3VisualBlock } from '$lib/api/v3';
 
 	let {

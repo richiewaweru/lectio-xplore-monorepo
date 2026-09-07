@@ -724,7 +724,7 @@ class TestBuilderLessonRoutes:
                 }
 
             with patch(
-                "builder.routes.render_generation_print_preflight", side_effect=fake_preflight
+                "application.builder_print.routes.render_generation_print_preflight", side_effect=fake_preflight
             ):
                 response = await client.post(
                     f"/api/v1/builder/lessons/{lesson_id}/print-preflight",
@@ -771,7 +771,7 @@ class TestBuilderLessonRoutes:
                 )
 
             with patch(
-                "builder.routes.export_generation_pdf", side_effect=fake_export_generation_pdf
+                "application.builder_print.routes.export_generation_pdf", side_effect=fake_export_generation_pdf
             ):
                 response = await client.post(
                     f"/api/v1/builder/lessons/{lesson_id}/export/pdf",

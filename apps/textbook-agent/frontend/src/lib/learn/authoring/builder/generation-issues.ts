@@ -1,4 +1,4 @@
-import type { BuilderIssue } from '$lib/builder/issues';
+import type { BuilderIssue } from '$lib/learn/authoring/builder/issues';
 import type { V3PackDocument } from '$lib/studio/v3-pack-to-lectio-document';
 
 function record(value: unknown): Record<string, unknown> | null {

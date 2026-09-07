@@ -9,18 +9,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import ConceptCardModel, GenerationModel
 from planning.approved_items import ItemPoolEmptyError, load_approved_item_records
-from planning.whole_lesson.events import make_event
-from planning.whole_lesson.legality import (
+from print.generation.whole_lesson.events import make_event
+from print.generation.whole_lesson.legality import (
     build_lesson_legality_snapshot,
     validate_legality_snapshot,
 )
-from planning.whole_lesson.packet import ImmutableLessonPacket
-from planning.whole_lesson.packet_builder import (
+from print.generation.whole_lesson.packet import ImmutableLessonPacket
+from print.generation.whole_lesson.packet_builder import (
     CONCEPTUAL_FIRST_EXPOSURE_SLOTS,
     build_lesson_packet,
 )
-from planning.whole_lesson.repository import PageDocumentRepository
-from planning.whole_lesson.teaching_agent import run_lesson_approach_planner
+from print.generation.whole_lesson.repository import PageDocumentRepository
+from print.generation.whole_lesson.teaching_agent import run_lesson_approach_planner
 from v3_blueprint.planning.persistence import load_chunked_state
 
 
@@ -280,7 +280,7 @@ def generation_is_native_whole_lesson(
     state: Mapping[str, Any] | None = None,
 ) -> bool:
     """Delegate to planning.whole_lesson.native_routing (GenerationModel-first API)."""
-    from planning.whole_lesson.native_routing import (
+    from print.generation.whole_lesson.native_routing import (
         generation_is_native_whole_lesson as _detect,
     )
 

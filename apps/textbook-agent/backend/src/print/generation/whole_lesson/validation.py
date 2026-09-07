@@ -6,12 +6,12 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from contracts.lectio_page import PAGE_OBJECT_IDS
+from print.contracts.lectio_page import PAGE_OBJECT_IDS
 from planning.approved_items import approved_item_kind
-from planning.page_blocks import validate_intent_departure
-from planning.whole_lesson.form_plan import FormPlan
-from planning.whole_lesson.packet import ImmutableLessonPacket
-from planning.whole_lesson.teaching_plan import TeachingPlan
+from print.generation.page_blocks import validate_intent_departure
+from print.generation.whole_lesson.form_plan import FormPlan
+from print.generation.whole_lesson.packet import ImmutableLessonPacket
+from print.generation.whole_lesson.teaching_plan import TeachingPlan
 
 BANNED_BRIEF_PHRASES = (
     "explain the concept clearly",

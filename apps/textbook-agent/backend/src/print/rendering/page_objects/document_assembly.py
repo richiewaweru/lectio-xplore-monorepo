@@ -9,9 +9,9 @@ from typing import Any
 from uuid import uuid4
 
 from contracts.lectio_page import validate_document
-from generation.page_objects.models import WriterContext, WriterOutcome
-from generation.page_objects.registry import dispatch_writer
-from generation.page_objects.validation import validate_answer_key_integrity
+from print.rendering.page_objects.models import WriterContext, WriterOutcome
+from print.rendering.page_objects.registry import dispatch_writer
+from print.rendering.page_objects.validation import validate_answer_key_integrity
 from v3_blueprint.planning.models import SectionBlockPlan
 
 

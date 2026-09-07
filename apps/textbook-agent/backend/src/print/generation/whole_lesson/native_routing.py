@@ -6,7 +6,7 @@ import json
 from typing import Any, Mapping
 
 from core.database.models import GenerationModel
-from planning.whole_lesson.states import NATIVE_STATUSES
+from print.generation.whole_lesson.states import NATIVE_STATUSES
 
 
 def _as_mapping(raw: Any) -> dict[str, Any]:

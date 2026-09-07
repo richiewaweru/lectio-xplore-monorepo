@@ -12,13 +12,13 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from contracts.lectio_page import get_intent_catalogue, get_object_catalogue
-from planning.catalogue_projections import (
+from print.contracts.lectio_page import get_intent_catalogue, get_object_catalogue
+from print.generation.catalogue_projections import (
     _IMPLEMENTED_FORM_OBJECTS,
     _NEVER_SELECTABLE_OBJECTS,
 )
-from planning.whole_lesson.packet import ImmutableLessonPacket
-from resource_specs.candidates import assemble_lesson_guidance
+from print.generation.whole_lesson.packet import ImmutableLessonPacket
+from print.resources.candidates import assemble_lesson_guidance
 from resource_specs.loader import get_spec
 from v3_blueprint.skeletons import load_skeleton_catalog
 

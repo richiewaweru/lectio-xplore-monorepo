@@ -1,14 +1,14 @@
 import type { BlockInstance, DocumentSection, LessonDocument, MediaReference } from '@lectio/learn';
 import { getEmptyContent, getTemplateById } from '@lectio/learn';
-import { saveDocument } from '$lib/builder/persistence/idb-store';
+import { saveDocument } from '$lib/learn/authoring/builder/persistence/idb-store';
 import {
 	ensureBuilderSyncAdapterRegistered,
 	flushBuilderSyncQueue,
 	saveLessonToServer
-} from '$lib/builder/persistence/server-sync';
+} from '$lib/learn/authoring/builder/persistence/server-sync';
 import { createHistoryStore } from './history.svelte';
-import { appendAbsentGenerationSections, type PendingPlanSection } from '$lib/builder/streaming/generation-stream';
-import { issuesForSection, type IssueSection } from '$lib/builder/issues';
+import { appendAbsentGenerationSections, type PendingPlanSection } from '$lib/learn/authoring/builder/streaming/print/generation-stream';
+import { issuesForSection, type IssueSection } from '$lib/learn/authoring/builder/issues';
 
 const FIELD_HISTORY_IDLE_MS = 1000;
 const IDB_PERSIST_DEBOUNCE_MS = 300;

@@ -3,7 +3,7 @@ import { get } from 'svelte/store';
 
 import { ensureOk } from '$lib/api/errors';
 import { apiFetch, buildApiUrl } from '$lib/api/client';
-import { authToken } from '$lib/stores/auth';
+import { authToken } from '$lib/stores/shared/auth';
 import type {
 	BlueprintPreviewDTO,
 	V3ChunkedPlan,
@@ -141,7 +141,7 @@ export async function approveChunkedPlan(
 
 export async function getLessonApproach(generationId: string): Promise<Record<string, unknown>> {
 	const res = await apiFetch(
-		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/lesson-approach`,
+		`/api/v1/v3/print/generations/${encodeURIComponent(generationId)}/lesson-approach`,
 		{ headers: bearerHeaders() }
 	);
 	await ensureOk(res, 'Could not load the lesson approach.');
@@ -153,7 +153,7 @@ export async function approveLessonApproach(
 	payload: { expected_revision: number; teacher_note?: string }
 ): Promise<Record<string, unknown>> {
 	const res = await apiFetch(
-		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/lesson-approach/approve`,
+		`/api/v1/v3/print/generations/${encodeURIComponent(generationId)}/lesson-approach/approve`,
 		{
 			method: 'POST',
 			headers: bearerHeaders(),
@@ -169,7 +169,7 @@ export async function rejectLessonApproach(
 	payload: { expected_revision: number; teacher_note?: string }
 ): Promise<Record<string, unknown>> {
 	const res = await apiFetch(
-		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/lesson-approach/reject`,
+		`/api/v1/v3/print/generations/${encodeURIComponent(generationId)}/lesson-approach/reject`,
 		{
 			method: 'POST',
 			headers: bearerHeaders(),
@@ -232,7 +232,7 @@ export async function getChunkedPlanStatus(generationId: string): Promise<V3Chun
 
 export async function retryNativeGeneration(generationId: string): Promise<void> {
 	const res = await apiFetch(
-		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/retry-native`,
+		`/api/v1/v3/print/generations/${encodeURIComponent(generationId)}/retry-native`,
 		{ method: 'POST', headers: bearerHeaders() }
 	);
 	await ensureOk(res, 'Could not retry the failed generation stage.');
@@ -240,7 +240,7 @@ export async function retryNativeGeneration(generationId: string): Promise<void>
 
 export async function retryNativeVisuals(generationId: string): Promise<V3VisualRetryResult | null> {
 	const res = await apiFetch(
-		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/visuals/retry`,
+		`/api/v1/v3/print/generations/${encodeURIComponent(generationId)}/visuals/retry`,
 		{ method: 'POST', headers: bearerHeaders() }
 	);
 	await ensureOk(res, 'Could not retry failed visuals.');
@@ -256,7 +256,7 @@ export async function regenerateV3Visual(payload: {
 	teacher_hint?: string;
 }): Promise<V3VisualBlock> {
 	const res = await apiFetch(
-		`/api/v1/v3/generations/${encodeURIComponent(payload.generation_id)}/visuals/${encodeURIComponent(payload.visual_id)}/regenerate`,
+		`/api/v1/v3/print/generations/${encodeURIComponent(payload.generation_id)}/visuals/${encodeURIComponent(payload.visual_id)}/regenerate`,
 		{
 			method: 'POST',
 			headers: bearerHeaders(),
@@ -278,7 +278,7 @@ export async function repairV3Card(payload: {
 	verdict: 'pass' | 'repair' | 'unavailable';
 }> {
 	const res = await apiFetch(
-		`/api/v1/v3/generations/${encodeURIComponent(payload.generation_id)}/cards/${encodeURIComponent(payload.card_id)}/repair`,
+		`/api/v1/v3/print/generations/${encodeURIComponent(payload.generation_id)}/cards/${encodeURIComponent(payload.card_id)}/repair`,
 		{
 			method: 'POST',
 			headers: bearerHeaders(),
@@ -328,7 +328,7 @@ export interface V3ChunkedStreamHandlers {
 export type V3DocumentResponse = Record<string, unknown>;
 
 export async function fetchV3Document(generationId: string): Promise<V3DocumentResponse> {
-	const res = await apiFetch(`/api/v1/v3/generations/${encodeURIComponent(generationId)}/document`, {
+	const res = await apiFetch(`/api/v1/v3/print/generations/${encodeURIComponent(generationId)}/document`, {
 		method: 'GET',
 		headers: bearerHeaders()
 	});
@@ -337,7 +337,7 @@ export async function fetchV3Document(generationId: string): Promise<V3DocumentR
 }
 
 export async function getV3Generations(limit = 20, offset = 0): Promise<V3GenerationHistoryItem[]> {
-	const res = await apiFetch(`/api/v1/v3/generations?limit=${limit}&offset=${offset}`, {
+	const res = await apiFetch(`/api/v1/v3/print/generations?limit=${limit}&offset=${offset}`, {
 		method: 'GET',
 		headers: bearerHeaders()
 	});
@@ -346,7 +346,7 @@ export async function getV3Generations(limit = 20, offset = 0): Promise<V3Genera
 }
 
 export async function getV3GenerationDetail(generationId: string): Promise<V3GenerationDetail> {
-	const res = await apiFetch(`/api/v1/v3/generations/${encodeURIComponent(generationId)}`, {
+	const res = await apiFetch(`/api/v1/v3/print/generations/${encodeURIComponent(generationId)}`, {
 		method: 'GET',
 		headers: bearerHeaders()
 	});
@@ -355,7 +355,7 @@ export async function getV3GenerationDetail(generationId: string): Promise<V3Gen
 }
 
 export async function getV3GenerationBlueprint(generationId: string): Promise<BlueprintPreviewDTO> {
-	const res = await apiFetch(`/api/v1/v3/generations/${encodeURIComponent(generationId)}/blueprint`, {
+	const res = await apiFetch(`/api/v1/v3/print/generations/${encodeURIComponent(generationId)}/blueprint`, {
 		method: 'GET',
 		headers: bearerHeaders()
 	});
@@ -370,7 +370,7 @@ export function connectV3StudioGenerationStream(
 	const ctrl = new AbortController();
 	let lastPokeAt = 0;
 	let pokeTimer: ReturnType<typeof setTimeout> | null = null;
-	const url = buildApiUrl(`/api/v1/v3/generations/${encodeURIComponent(generationId)}/events`);
+	const url = buildApiUrl(`/api/v1/v3/print/generations/${encodeURIComponent(generationId)}/events`);
 	const headers: Record<string, string> = {};
 	const token = get(authToken);
 	if (token) headers.Authorization = `Bearer ${token}`;
@@ -519,7 +519,7 @@ export async function downloadV3GenerationPdf(
 	body: V3PdfExportBody
 ): Promise<void> {
 	const res = await apiFetch(
-		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/export/pdf`,
+		`/api/v1/v3/print/generations/${encodeURIComponent(generationId)}/export/pdf`,
 		{
 			method: 'POST',
 			headers: bearerHeaders(),

@@ -10,9 +10,9 @@ import json
 import time
 from urllib.parse import urlsplit
 
-from planning.whole_lesson.figure_ids import stable_figure_request_id
-from planning.whole_lesson.repository import PageDocumentRepository
-from planning.whole_lesson import visual_topology_recovery as topology_recovery
+from print.generation.whole_lesson.figure_ids import stable_figure_request_id
+from print.generation.whole_lesson.repository import PageDocumentRepository
+from print.generation.whole_lesson import visual_topology_recovery as topology_recovery
 from v3_execution.executors.visual_executor import execute_visual
 from v3_execution.models import VisualGeneratorWorkOrder, VisualPlanItem
 

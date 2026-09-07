@@ -5,13 +5,13 @@ from __future__ import annotations
 from typing import Any
 
 from contracts.lectio import get_component_card
-from generation.component_lectio.payload_strategies import (
+from learn.generation.component_lectio.payload_strategies import (
     EXACT_CONTRACT_TEST_MARKERS,
     ITEM_COMPONENT_IDS,
     VISUAL_COMPONENT_IDS,
     strategy_for,
 )
-from resource_specs.component_candidates import DEFAULT_TEMPLATE_ID, resolve_role_candidates
+from learn.resources.component_candidates import DEFAULT_TEMPLATE_ID, resolve_role_candidates
 from resource_specs.loader import get_spec
 
 

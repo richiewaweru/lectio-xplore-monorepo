@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from generation.page_objects.models import (
+from print.rendering.page_objects.models import (
     AnswerEntry,
     AssessmentBundle,
     WriterContext,

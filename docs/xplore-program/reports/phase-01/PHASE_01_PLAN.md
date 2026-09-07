@@ -4,7 +4,7 @@
 Co-locate Component Lectio package + live Learn generation seams into `C:\Projects\lectio` without breaking Print or Builder.
 
 ## Steps
-1. Import `lectio@0.6.0` source from `lectio-legacy-20260805` → `packages/lectio` (keep package name `lectio`; no `@lectio/learn` rename — Phase 02).
+1. Import `lectio@0.6.0` source from `lectio-legacy-20260805` → `packages/lectio-learn` (keep package name `lectio`; no `@lectio/learn` rename — Phase 02).
 2. Wire frontend `lectio: workspace:*`; pnpm install; prove local resolution.
 3. Copy missing Learn modules from Textbook agent `xplore` @ d2cf2f27 into monorepo additively:
    - `generation/component_lectio/**`

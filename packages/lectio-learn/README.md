@@ -1,6 +1,6 @@
-# Lectio
+# @lectio/learn
 
-Lectio is a Svelte 5 library for structured educational content and the canonical contract layer between AI generation systems, lesson editors, and rendered learning materials.
+`@lectio/learn` is a Svelte 5 library for structured educational content and the canonical contract layer between AI generation systems, lesson editors, and rendered learning materials.
 
 It provides:
 
@@ -9,7 +9,7 @@ It provides:
 - Registry-driven lesson templates (13 templates)
 - Exported JSON contracts for AI pipelines
 - Generated Python/Pydantic adapter for backend consumers
-- Published npm package: `lectio`
+- Published npm package: `@lectio/learn`
 
 ## Who This Is For
 

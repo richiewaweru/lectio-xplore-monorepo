@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { generateBlock } from '$lib/builder/api/ai-client';
-	import type { BlockGenerateContextBlock } from '$lib/builder/api/ai-client';
+	import { generateBlock } from '$lib/learn/authoring/builder/api/ai-client';
+	import type { BlockGenerateContextBlock } from '$lib/learn/authoring/builder/api/ai-client';
 	import { blockHasDistinctContent, resolveBackendMode } from './ai-block-utils';
-	import { getNewAiBlockAssist } from '$lib/settings/flags';
-	import { tryBeginAiCall } from '$lib/builder/utils/ai-rate-limit';
+	import { getNewAiBlockAssist } from '$lib/shared/settings/flags';
+	import { tryBeginAiCall } from '$lib/learn/authoring/builder/utils/ai-rate-limit';
 	import type { BlockInstance, GradeBand } from '@lectio/learn';
-	import { connectivityStore } from '$lib/builder/stores/connectivity.svelte';
-	import type { BlockAiRepairRequest } from '$lib/builder/issues';
+	import { connectivityStore } from '$lib/learn/authoring/builder/stores/connectivity.svelte';
+	import type { BlockAiRepairRequest } from '$lib/learn/authoring/builder/issues';
 	import { Sparkles } from 'lucide-svelte';
 
 	let {

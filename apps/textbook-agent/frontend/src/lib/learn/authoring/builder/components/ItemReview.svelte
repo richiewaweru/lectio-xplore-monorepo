@@ -6,7 +6,7 @@
 		updatePackItem,
 		type CardItemReview,
 		type PackItem
-	} from '$lib/builder/api/pack-items';
+	} from '$lib/learn/authoring/builder/api/pack-items';
 
 	let { packId }: { packId: string } = $props();
 

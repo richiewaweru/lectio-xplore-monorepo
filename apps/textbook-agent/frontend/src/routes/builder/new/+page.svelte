@@ -7,8 +7,8 @@
 		getTemplateById,
 		templateRegistry
 	} from '@lectio/learn';
-	import { createBuilderLesson } from '$lib/builder/api/lesson-crud';
-	import { saveDocument } from '$lib/builder/persistence/idb-store';
+	import { createBuilderLesson } from '$lib/learn/authoring/builder/api/lesson-crud';
+	import { saveDocument } from '$lib/learn/authoring/builder/persistence/idb-store';
 
 	let title = $state('');
 	let subject = $state('');

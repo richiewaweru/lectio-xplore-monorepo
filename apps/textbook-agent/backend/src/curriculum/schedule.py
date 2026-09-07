@@ -15,13 +15,13 @@ from core.database.models import (
     UnitGroupModel,
     UnitModel,
 )
-from planning.models import (
+from curriculum.models import (
     ScheduleSuggestRequest,
     ScheduleWriteRequest,
     TeachingPeriodInput,
     UnitGroupsWriteRequest,
 )
-from planning.service import StalePathMutationError
+from curriculum.service import StalePathMutationError
 
 
 GROUP_TOGGLE_PROFILES: dict[str, dict[str, Any]] = {

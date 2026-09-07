@@ -2,9 +2,9 @@
 	import { dragHandle, dragHandleZone, type DndEvent } from 'svelte-dnd-action';
 	import { getComponentById, getComponentsByGroup } from '@lectio/learn';
 	import { GripVertical } from 'lucide-svelte';
-	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
-	import type { DndRowItem } from '$lib/builder/stores/document.svelte';
-	import { isPaletteDndItem } from '$lib/builder/stores/document.svelte';
+	import type { DocumentStore } from '$lib/learn/authoring/builder/stores/document.svelte';
+	import type { DndRowItem } from '$lib/learn/authoring/builder/stores/document.svelte';
+	import { isPaletteDndItem } from '$lib/learn/authoring/builder/stores/document.svelte';
 	import PaletteItem from './PaletteItem.svelte';
 
 	let {

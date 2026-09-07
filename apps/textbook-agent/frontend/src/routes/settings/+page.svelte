@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { getProfile } from '$lib/api/profile';
-	import { getOnboardingRoute } from '$lib/auth/routing';
+	import { getOnboardingRoute } from '$lib/shared/auth/routing';
 	import ProfileSummary from '$lib/components/workspace/ProfileSummary.svelte';
 	import type { TeacherProfile } from '$lib/types';
 

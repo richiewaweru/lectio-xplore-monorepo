@@ -12,12 +12,12 @@ from typing import Any
 
 from sqlalchemy import update
 
-from builder.service import get_or_create_component_lectio_builder_lesson
+from learn.authoring.builder.service import get_or_create_component_lectio_builder_lesson
 from contracts.lesson_document import assert_valid_lesson_document
 from core.database.models import GenerationModel
 from core.database.session import async_session_factory
-from generation.component_lectio.errors import AnswerKeyMappingError, WorkOrderIdentityError
-from generation.component_lectio.lane_dispatch import (
+from learn.generation.component_lectio.errors import AnswerKeyMappingError, WorkOrderIdentityError
+from learn.generation.component_lectio.lane_dispatch import (
     adapt_answer_key_order,
     adapt_content_order,
     adapt_items_order,
@@ -31,7 +31,7 @@ from generation.component_lectio.lane_dispatch import (
     resolve_exact_order,
     stamp_component_block,
 )
-from generation.component_lectio.payload_validation import (
+from learn.generation.component_lectio.payload_validation import (
     ExactPayloadValidationError,
     validate_exact_payload,
 )

@@ -1,11 +1,11 @@
 <script lang="ts">
 	import type { FieldSchema, MediaReference } from '@lectio/learn';
-	import { isDiagramComponentId } from '$lib/builder/components/canvas/diagram-media-fields';
-	import { getDocumentStoreContext } from '$lib/builder/components/editor/document-store-context';
-	import DiagramUploader from '$lib/builder/components/media/DiagramUploader.svelte';
-	import ImageUploader from '$lib/builder/components/media/ImageUploader.svelte';
-	import MediaGrid from '$lib/builder/components/media/MediaGrid.svelte';
-	import VideoUrlInput from '$lib/builder/components/media/VideoUrlInput.svelte';
+	import { isDiagramComponentId } from '$lib/learn/authoring/builder/components/canvas/diagram-media-fields';
+	import { getDocumentStoreContext } from '$lib/learn/authoring/builder/components/editor/document-store-context';
+	import DiagramUploader from '$lib/learn/authoring/builder/components/media/DiagramUploader.svelte';
+	import ImageUploader from '$lib/learn/authoring/builder/components/media/ImageUploader.svelte';
+	import MediaGrid from '$lib/learn/authoring/builder/components/media/MediaGrid.svelte';
+	import VideoUrlInput from '$lib/learn/authoring/builder/components/media/VideoUrlInput.svelte';
 
 	let {
 		schema,

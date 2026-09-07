@@ -9,23 +9,23 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from core.config import Settings
-from core.pdf_export_runtime import pdf_export_telemetry
-from generation.pdf_export.context import PDFGenerationContext
-from generation.pdf_export.cleanup import cleanup_files, ensure_temp_dir
-from generation.pdf_export.components.answers import generate_answer_key_pdf
-from generation.pdf_export.components.answers_v3 import generate_v3_answer_key_pdf
-from generation.pdf_export.components.assembly import (
+from print.rendering.pdf.runtime import pdf_export_telemetry
+from print.rendering.pdf.context import PDFGenerationContext
+from print.rendering.pdf.cleanup import cleanup_files, ensure_temp_dir
+from print.rendering.pdf.components.answers import generate_answer_key_pdf
+from print.rendering.pdf.components.answers_v3 import generate_v3_answer_key_pdf
+from print.rendering.pdf.components.assembly import (
     add_metadata,
     add_page_numbers,
     merge_pdfs,
 )
-from generation.pdf_export.components.cover import clean_cover_title, generate_cover_pdf
-from generation.pdf_export.components.toc import generate_toc_pdf
-from generation.pdf_export.config import PDFExportConfig
-from generation.pdf_export.rendering.playwright import render_generation_pdf
-from generation.pdf_export.v3_pack_pipeline_document import build_pipeline_document_for_v3_pdf
+from print.rendering.pdf.components.cover import clean_cover_title, generate_cover_pdf
+from print.rendering.pdf.components.toc import generate_toc_pdf
+from print.rendering.pdf.config import PDFExportConfig
+from print.rendering.pdf.rendering.playwright import render_generation_pdf
+from print.rendering.pdf.v3_pack_pipeline_document import build_pipeline_document_for_v3_pdf
 from contracts.document import PipelineDocument
-from contracts.lectio_page import validate_document
+from print.contracts.lectio_page import validate_document
 from contracts.document import PipelineSectionManifestItem
 
 logger = logging.getLogger(__name__)

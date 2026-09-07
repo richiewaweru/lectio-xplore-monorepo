@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { flushSyncQueue } from '$lib/builder/persistence/sync-queue';
-	import { connectivityStore } from '$lib/builder/stores/connectivity.svelte';
+	import { flushSyncQueue } from '$lib/learn/authoring/builder/persistence/sync-queue';
+	import { connectivityStore } from '$lib/learn/authoring/builder/stores/connectivity.svelte';
 
 	let prevOnline = $state<boolean | null>(null);
 

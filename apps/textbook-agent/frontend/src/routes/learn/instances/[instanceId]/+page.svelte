@@ -4,7 +4,7 @@
 	import { browser } from '$app/environment';
 	import { apiFetch } from '$lib/api/client';
 	import { ensureOk } from '$lib/api/errors';
-	import StudentLessonShell from '$lib/learn/StudentLessonShell.svelte';
+	import StudentLessonShell from '$lib/learn/student/StudentLessonShell.svelte';
 	import type { LessonDocument } from '@lectio/learn';
 
 	let ready = $state(false);

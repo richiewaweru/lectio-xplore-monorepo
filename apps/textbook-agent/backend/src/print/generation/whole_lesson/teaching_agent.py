@@ -12,29 +12,29 @@ from pydantic_ai import Agent
 from core.config import settings
 from core.llm.runner import RetryPolicy, run_llm
 from planning.approved_items import approved_item_kind
-from planning.catalogue_projections import (
+from print.generation.catalogue_projections import (
     TeachingGuidanceProjection,
     project_teaching_guidance,
 )
 from planning.llm_contract_errors import is_transport_error, structured_output_errors
-from planning.whole_lesson.legality import (
+from print.generation.whole_lesson.legality import (
     LessonLegalitySnapshot,
     build_lesson_legality_snapshot,
     project_slot_intent_policy,
     snapshot_as_teaching_sets,
 )
-from planning.whole_lesson.packet import ImmutableLessonPacket
-from planning.whole_lesson.prompt_render import render_teaching_prompt
-from planning.whole_lesson.teaching_errors import (
+from print.generation.whole_lesson.packet import ImmutableLessonPacket
+from print.generation.whole_lesson.prompt_render import render_teaching_prompt
+from print.generation.whole_lesson.teaching_errors import (
     TeachingPlanOutputInvalidError,
     is_recognized_teaching_output_error,
 )
-from planning.whole_lesson.teaching_plan import (
+from print.generation.whole_lesson.teaching_plan import (
     TeachingPlan,
     TeachingPlanDraft,
     materialize_teaching_plan,
 )
-from planning.whole_lesson.validation import (
+from print.generation.whole_lesson.validation import (
     ValidationReport,
     advisory_teaching_qc,
     allowed_teaching_evidence_refs,

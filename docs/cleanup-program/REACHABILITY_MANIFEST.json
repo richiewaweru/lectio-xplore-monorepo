@@ -1,0 +1,583 @@
+{
+  "version": 1,
+  "baseline_sha": "25db4a70a6a28e72f189a5d67a9711bab44440c9",
+  "branch": "refactor/domain-ownership",
+  "dirty_state": "large uncommitted domain-refactor + residual frontend rewrite on refactor/domain-ownership",
+  "supported_entrypoints": {
+    "unit_print": [
+      "curriculum.routes:post_path_lesson_prepare (POST /api/v1/units/{unit_id}/path/lessons/{lesson_id}:prepare)",
+      "planning.bridge:prepare_path_lesson",
+      "generation.path_preparation:initialise_path_generation",
+      "generation.v3_studio.router:post_chunked_plan_approve (POST /api/v1/v3/chunked/{generation_id}/approve)",
+      "print.generation.whole_lesson.service:run_and_persist_teaching_plan",
+      "print.generation.whole_lesson.service:approve_teaching_and_queue",
+      "print.generation.whole_lesson.worker (lifespan native worker)",
+      "print.generation.whole_lesson.executor → print.rendering.page_objects.registry:dispatch_writer_async",
+      "generation.v3_studio.router:post_v3_export_pdf → print.rendering.pdf.service:export_v3_studio_pdf"
+    ],
+    "unit_learn": [
+      "curriculum.routes:post_path_lesson_prepare (POST /api/v1/units/{unit_id}/path/lessons/{lesson_id}:prepare)",
+      "planning.bridge:prepare_path_lesson",
+      "generation.path_preparation:initialise_path_generation (control.pipeline=component_lectio)",
+      "generation.units_routes:approve_units_generation (POST .../generation:approve)",
+      "learn.generation.units_dispatch:dispatch_units_generation",
+      "learn.generation.component_lectio.launcher:launch_component_lectio",
+      "learn.generation.component_lectio.service:run_component_lectio_execution",
+      "learn.authoring.builder.service:get_or_create_component_lectio_builder_lesson",
+      "builder.routes (/api/v1/builder/lessons...)",
+      "learn.release_routes:publish_learn_release (POST /api/v1/learn/lessons/{lesson_id}/releases)",
+      "learn.runtime_routes (/api/v1/learn sessions/instances/classes)"
+    ]
+  },
+  "frontend_product_routes": [
+    "/",
+    "/login",
+    "/onboarding",
+    "/dashboard → /units",
+    "/lessons → /units",
+    "/units",
+    "/units/[id]",
+    "/units/[id]/resources/[compositionId]",
+    "/units/legacy/[pack_id]",
+    "/studio",
+    "/studio/generations/[id]",
+    "/studio/print/[id]",
+    "/builder/new",
+    "/builder/[id]",
+    "/builder/print/[id]",
+    "/packs/[pack_id]",
+    "/packs/[pack_id]/items",
+    "/packs/[pack_id]/print",
+    "/settings",
+    "/settings/prompts",
+    "/learn/classes",
+    "/learn/classes/[classId]",
+    "/learn/classes/[classId]/insight",
+    "/learn/home/[learnerId]",
+    "/learn/home/[learnerId]/classes/[classId]",
+    "/learn/instances/[instanceId]",
+    "/learn/instances/[instanceId]/outcome",
+    "/learn/lessons/[id]"
+  ],
+  "mounted_fastapi_routers": [
+    {"import": "core.health.routes", "prefix": "/health*", "owner": "INFRA", "unit_path": false},
+    {"import": "core.routes.auth", "prefix": "/api/v1/auth", "owner": "INFRA", "unit_path": false},
+    {"import": "core.routes.capabilities", "prefix": "/api/v1/capabilities", "owner": "INFRA", "unit_path": false},
+    {"import": "builder.routes", "prefix": "/api/v1/builder", "owner": "LEARN", "unit_path": true, "note": "Learn CRUD + Print PDF edges"},
+    {"import": "learn.release_routes", "prefix": "/api/v1/learn", "owner": "LEARN", "unit_path": true},
+    {"import": "learn.runtime_routes", "prefix": "/api/v1/learn", "owner": "LEARN", "unit_path": true},
+    {"import": "learn.insight_service", "prefix": "/api/v1/learn/analytics", "owner": "LEARN", "unit_path": true},
+    {"import": "core.routes.shares", "prefix": "/api/v1/shares", "owner": "INFRA", "unit_path": false},
+    {"import": "core.routes.profile", "prefix": "/api/v1/profile", "owner": "INFRA", "unit_path": false},
+    {"import": "core.routes.prompts", "prefix": "/api/v1/prompts", "owner": "INFRA", "unit_path": false},
+    {"import": "learn.routes", "prefix": "/api/v1/packs", "owner": "LEARN", "unit_path": false, "note": "pack listing; not Builder→LearnRelease path"},
+    {"import": "generation.routes → v3_studio + block_generate", "prefix": "/api/v1/v3/* and /api/v1/blocks/generate", "owner": "PRINT", "unit_path": "partial", "note": "Print approve/PDF live here; studio UX is non-Unit"},
+    {"import": "generation.skeleton_routes", "prefix": "/api/v1/skeletons", "owner": "PRINT", "unit_path": false},
+    {"import": "planning.routes → curriculum.routes", "prefix": "/api/v1/units", "owner": "CURRICULUM", "unit_path": true},
+    {"import": "generation.units_routes", "prefix": "/api/v1/units", "owner": "LEARN", "unit_path": true},
+    {"import": "planning.compatibility → curriculum.compatibility", "prefix": "/api/v1/legacy-units", "owner": "CURRICULUM", "unit_path": false},
+    {"import": "telemetry → infra.telemetry.routes", "prefix": "/api/v1/telemetry", "owner": "INFRA", "unit_path": false}
+  ],
+  "lifespan_workers": [
+    "upgrade_database (optional via settings.run_migrations_on_startup)",
+    "V3GenerationWriter.fail_stale_running",
+    "initialize_resource_registry",
+    "initialize_skeleton_catalog",
+    "telemetry_monitor.start",
+    "cleanup_stale_pdf_exports",
+    "planning.whole_lesson.worker.start_native_worker → print.generation.whole_lesson.worker"
+  ],
+  "unmounted_modules": [
+    {
+      "path": "apps/textbook-agent/backend/src/generation/canonical_routes.py",
+      "classification": "DEAD",
+      "evidence": "No include_router and zero Python importers outside itself; generation.routes only mounts v3_studio + block_generate"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/generation/retirement.py",
+      "classification": "DEAD",
+      "evidence": "No include_router and zero Python importers; live /api/v1/v3 is v3_studio.router, not this 410 catch-all"
+    }
+  ],
+  "structural_residuals": [
+    {
+      "id": "frontend_path_rewrite_mismatch",
+      "severity": "high",
+      "summary": "Disk routes/libs are /studio, /builder, $lib/learn/authoring/builder, $lib/print/components/studio, API /api/v1/builder; many frontend strings use /print/studio, /learn/shared/authoring/builder, $lib/learn/shared/authoring, $lib/components/print/studio, /api/v1/learn/shared/authoring/builder",
+      "classification": "SPLIT_REQUIRED",
+      "c1_action": "Restore frontend hrefs/imports/API prefixes to match disk and backend reality"
+    },
+    {
+      "id": "unit_print_prepare_admission_drift",
+      "severity": "high",
+      "summary": "planning.bridge:prepare_path_lesson passes native_whole_lesson and path_plan_raw to initialise_path_generation, but generation.path_preparation:initialise_path_generation does not accept those kwargs; native approve gate also expects native_whole_lesson in chunked state",
+      "classification": "SPLIT_REQUIRED",
+      "c1_action": "Fix Unit→Print admission seam / introduce application/unit_lesson orchestration"
+    },
+    {
+      "id": "builder_pdf_cross_domain",
+      "severity": "medium",
+      "summary": "builder.routes print-document/export/pdf/print-preflight import generation.pdf_export → print.rendering.pdf",
+      "classification": "SPLIT_REQUIRED",
+      "c1_or_c2_action": "Extract PDF edges to composition/application root before hard Print/Learn isolation"
+    },
+    {
+      "id": "v3_studio_hosts_print_http",
+      "severity": "high",
+      "summary": "Print Unit realization still mounts through generation/v3_studio; non-Unit studio UX coexists on same router",
+      "classification": "LEGACY_REFERENCED",
+      "c1_action": "Stop treating v3 studio UX as canonical lesson creation; keep Print hops until extracted then delete in C3"
+    }
+  ],
+  "items": [
+    {
+      "path": "apps/textbook-agent/backend/src/app.py",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "APPLICATION",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "Composition root; mounts all routers and lifespan workers"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/application/",
+      "classification": "SPLIT_REQUIRED",
+      "owner": "APPLICATION",
+      "reachable_from": [],
+      "reason": "ABSENT — target home for thin unit_lesson orchestration in C1; not a deletion candidate"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/curriculum/",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "CURRICULUM",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "Authoritative Unit HTTP (routes.py) + curriculum services; mounted via planning.routes shim"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/print/",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "PRINT",
+      "reachable_from": ["unit_print"],
+      "reason": "whole_lesson generation, page_objects, PDF rendering, print resources/contracts"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/learn/",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "LEARN",
+      "reachable_from": ["unit_learn"],
+      "reason": "component_lectio, authoring builder service, releases, runtime, analytics, packs"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/infra/",
+      "classification": "ACTIVE_INFRA",
+      "owner": "INFRA",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "auth, database, llm, health, telemetry, middleware, config (target name platform/ blocked by stdlib)"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/infra/database/migrations/versions/",
+      "classification": "MIGRATION_HISTORY",
+      "owner": "INFRA",
+      "reachable_from": [],
+      "reason": "Alembic history through 0039; must not delete during cleanup"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/builder/",
+      "classification": "SPLIT_REQUIRED",
+      "owner": "LEARN",
+      "reachable_from": ["unit_learn"],
+      "reason": "routes.py is live Learn HTTP; service.py shims to learn.authoring.builder; PDF edges cross into Print"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/generation/",
+      "classification": "SPLIT_REQUIRED",
+      "owner": "APPLICATION",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "Units generation routes + path_preparation + pipeline_dispatch active; v3_studio hosts Print HTTP; many shims; unmounted canonical_routes/retirement are DEAD leaves"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/generation/canonical_routes.py",
+      "classification": "DEAD",
+      "owner": "LEARN",
+      "reachable_from": [],
+      "reason": "No mount, no importers; seven DEAD criteria hold for this leaf"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/generation/retirement.py",
+      "classification": "DEAD",
+      "owner": "PRINT",
+      "reachable_from": [],
+      "reason": "No mount, no importers; live /v3 is v3_studio"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/generation/v3_studio/",
+      "classification": "LEGACY_REFERENCED",
+      "owner": "PRINT",
+      "reachable_from": ["unit_print"],
+      "reason": "Still mounted; hosts Print Unit approve/PDF plus non-Unit studio UX; delete only after Print HTTP extract (C2/C3)"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/planning/",
+      "classification": "SPLIT_REQUIRED",
+      "owner": "CURRICULUM",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "bridge.py + agents.py active on Unit prepare; most other modules shim to curriculum/print"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/planning/bridge.py",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "APPLICATION",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "Active Unit prepare orchestrator; C1 candidate to move under application/unit_lesson"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/core/",
+      "classification": "SPLIT_REQUIRED",
+      "owner": "INFRA",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "Mostly shims to infra/print; core/database/models.py remains the ORM monolith"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/core/database/models.py",
+      "classification": "SPLIT_REQUIRED",
+      "owner": "INFRA",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "Shared ORM models for curriculum/print/learn; not a deletion candidate"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/learning/",
+      "classification": "LEGACY_REFERENCED",
+      "owner": "LEARN",
+      "reachable_from": [],
+      "reason": "Full shim package → learn.*; app mounts learn.* directly; keep until call sites migrate then delete in C3"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/telemetry/",
+      "classification": "LEGACY_REFERENCED",
+      "owner": "INFRA",
+      "reachable_from": [],
+      "reason": "Shim → infra.telemetry; app.py still imports this name"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/v3_blueprint/",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "CURRICULUM",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "Structural plans, persistence, skeletons, work orders used by prepare and generation"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/v3_execution/",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "APPLICATION",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "Execution helpers used by Learn component_lectio and Print paths"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/v3_review/",
+      "classification": "LEGACY_REFERENCED",
+      "owner": "PRINT",
+      "reachable_from": ["unit_print"],
+      "reason": "Still imported by v3_studio / v3_execution coherence; not standalone product path"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/resource_specs/",
+      "classification": "ACTIVE_INFRA",
+      "owner": "INFRA",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "Spec registry used by prepare, legality, Learn coverage"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/media/",
+      "classification": "ACTIVE_INFRA",
+      "owner": "INFRA",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "Image providers/QC and health probes; no own router"
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/contracts/",
+      "classification": "ACTIVE_INFRA",
+      "owner": "INFRA",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "Shared lectio/document contracts; also mirrored under print/contracts and learn/contracts"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/routes/units",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "CURRICULUM",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "Canonical Unit UI"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/routes/studio",
+      "classification": "LEGACY_REFERENCED",
+      "owner": "PRINT",
+      "reachable_from": ["unit_print"],
+      "reason": "On-disk Print studio UI; still reachable but not the sole supported lesson-creation entry once Unit is canonical"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/routes/builder",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "LEARN",
+      "reachable_from": ["unit_learn"],
+      "reason": "Learn authoring Builder UI (disk paths /builder*)"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/routes/learn",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "LEARN",
+      "reachable_from": ["unit_learn"],
+      "reason": "Student runtime, classes, insight, lesson preview"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/shared",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "INFRA",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "auth, config, settings, auth store"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/curriculum",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "CURRICULUM",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "Units panels"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/print",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "PRINT",
+      "reachable_from": ["unit_print"],
+      "reason": "studio components, generation stream, print styles/stores"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/learn",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "LEARN",
+      "reachable_from": ["unit_learn"],
+      "reason": "authoring/builder+workspace, student, distribution/insight placeholders"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/api",
+      "classification": "SPLIT_REQUIRED",
+      "owner": "APPLICATION",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "Mixed curriculum/print/learn clients; ownership not path-obvious"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/types",
+      "classification": "SPLIT_REQUIRED",
+      "owner": "APPLICATION",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "Mixed type surface"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/components",
+      "classification": "SPLIT_REQUIRED",
+      "owner": "APPLICATION",
+      "reachable_from": ["unit_print", "unit_learn"],
+      "reason": "Residual pack/workspace/profile components; imports incorrectly target components/print/studio"
+    },
+    {
+      "path": "packages/lectio-page",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "PRINT",
+      "reachable_from": ["unit_print"],
+      "reason": "npm @lectio/page print document engine"
+    },
+    {
+      "path": "packages/lectio-learn",
+      "classification": "ACTIVE_PRODUCT",
+      "owner": "LEARN",
+      "reachable_from": ["unit_learn"],
+      "reason": "npm @lectio/learn interactive components"
+    },
+    {
+      "path": "package.json",
+      "classification": "ACTIVE_BUILD",
+      "owner": "REPO",
+      "reachable_from": [],
+      "reason": "Production scripts: page:*, app:*, contracts:sync, verify:phase, program:domain-guards"
+    },
+    {
+      "path": "tools/xplore-program/",
+      "classification": "ACTIVE_BUILD",
+      "owner": "REPO",
+      "reachable_from": [],
+      "reason": "Domain boundary guards used by program:domain-guards"
+    },
+    {
+      "path": "docs/refactor-program/",
+      "classification": "AUTHORITATIVE_DOC",
+      "owner": "REPO",
+      "reachable_from": [],
+      "reason": "R0–R8 evidence for this cleanup; durable until C4 folds knowledge into docs/architecture"
+    },
+    {
+      "path": "docs/cleanup-program/",
+      "classification": "AUTHORITATIVE_DOC",
+      "owner": "REPO",
+      "reachable_from": [],
+      "reason": "This program's state, manifest, permanent docs, reports"
+    },
+    {
+      "path": "docs/xplore-program/",
+      "classification": "LEGACY_REFERENCED",
+      "owner": "REPO",
+      "reachable_from": [],
+      "reason": "Learn expansion history; paths partially stale vs R5/R8; fold then remove in C4"
+    },
+    {
+      "path": "docs/architecture/",
+      "classification": "AUTHORITATIVE_DOC",
+      "owner": "REPO",
+      "reachable_from": [],
+      "reason": "ABSENT — C4 target for current architecture docs"
+    },
+    {
+      "path": "docs/runbooks/",
+      "classification": "AUTHORITATIVE_DOC",
+      "owner": "REPO",
+      "reachable_from": [],
+      "reason": "ABSENT — C4 target if runbooks are retained"
+    },
+    {
+      "path": "docs/adr/",
+      "classification": "AUTHORITATIVE_DOC",
+      "owner": "REPO",
+      "reachable_from": [],
+      "reason": "ABSENT — C4 target if ADRs are retained"
+    },
+    {
+      "path": "docs/packs/",
+      "classification": "LEGACY_REFERENCED",
+      "owner": "REPO",
+      "reachable_from": [],
+      "reason": "Implementation packs; not required by active Unit flows; C4 deletion candidate after durable knowledge retained"
+    },
+    {
+      "path": "docs/implementation-runs/",
+      "classification": "LEGACY_REFERENCED",
+      "owner": "REPO",
+      "reachable_from": [],
+      "reason": "Historical page-object runs; superseded; C4 cleanup"
+    },
+    {
+      "path": "docs/authority/",
+      "classification": "LEGACY_REFERENCED",
+      "owner": "REPO",
+      "reachable_from": [],
+      "reason": "Authority packs; C4 cleanup after folding durable rules"
+    },
+    {
+      "path": "docs/evidence/",
+      "classification": "LEGACY_REFERENCED",
+      "owner": "REPO",
+      "reachable_from": [],
+      "reason": "Large run artifacts; not required by active tests/build; C4 cleanup"
+    },
+    {
+      "path": ".tmp/",
+      "classification": "DEAD",
+      "owner": "REPO",
+      "reachable_from": [],
+      "reason": "Local scratch + unzipped cursor programs; not imported by production, build, migrations, or authoritative tests. Keep program copy only if needed for phase prompts; else C4 delete"
+    },
+    {
+      "path": "apps/textbook-agent/backend/scripts/",
+      "classification": "LEGACY_REFERENCED",
+      "owner": "REPO",
+      "reachable_from": [],
+      "reason": "Evidence/acceptance/migration one-offs; not root package.json production scripts; triage in C4"
+    },
+    {
+      "path": "apps/textbook-agent/README.md",
+      "classification": "LEGACY_REFERENCED",
+      "owner": "REPO",
+      "reachable_from": [],
+      "reason": "Describes obsolete /textbook, npm lectio, pipeline/; rewrite in C4"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/lib/learn/authoring/builder (imports as $lib/learn/shared/authoring/builder)",
+      "classification": "SPLIT_REQUIRED",
+      "owner": "LEARN",
+      "reachable_from": ["unit_learn"],
+      "reason": "Files exist under learn/authoring/builder but ~136 import strings still use learn/shared/authoring; broken reachability residual for C1"
+    },
+    {
+      "path": "apps/textbook-agent/frontend/src/routes/studio (navigated as /print/studio)",
+      "classification": "SPLIT_REQUIRED",
+      "owner": "PRINT",
+      "reachable_from": ["unit_print"],
+      "reason": "~107 /print/studio string matches vs on-disk /studio routes; C1 restore"
+    }
+  ],
+  "allowed_classifications": [
+    "ACTIVE_PRODUCT",
+    "ACTIVE_INFRA",
+    "ACTIVE_BUILD",
+    "ACTIVE_TEST",
+    "MIGRATION_HISTORY",
+    "AUTHORITATIVE_DOC",
+    "SPLIT_REQUIRED",
+    "LEGACY_REFERENCED",
+    "DEAD"
+  ],
+  "allowed_owners": [
+    "APPLICATION",
+    "CURRICULUM",
+    "PRINT",
+    "LEARN",
+    "INFRA",
+    "REPO"
+  ],
+  "c1_wiring_list": [
+    "Fix prepare→initialise_path_generation kwargs drift (native_whole_lesson / path_plan_raw) or move orchestration to application/unit_lesson/",
+    "Ensure Unit→Print admission writes whatever native approve gate requires",
+    "Rewire app.py imports toward curriculum/print/learn/infra (reduce planning/generation/core shim entrypoints as canonical)",
+    "Restore frontend URLs to /studio, /builder, /settings (not ownership-prefixed URLs)",
+    "Restore $lib imports to $lib/learn/authoring/builder and $lib/print/components/studio",
+    "Restore API clients to /api/v1/builder and /api/v1/auth (not /api/v1/learn/shared/... or /api/v1/shared/auth)",
+    "Do not broadly delete v3_studio yet; stop treating it as canonical lesson creation",
+    "Keep API behavior stable"
+  ],
+  "deletion_candidates_for_c3": [
+    {
+      "path": "apps/textbook-agent/backend/src/generation/canonical_routes.py",
+      "status": "DEAD_CONFIRMED",
+      "coupled_tests": []
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/generation/retirement.py",
+      "status": "DEAD_CONFIRMED",
+      "coupled_tests": []
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/generation/v3_studio/",
+      "status": "AFTER_PRINT_HTTP_EXTRACT",
+      "coupled_tests": ["frontend studio routes/tests", "v3_studio backend tests"]
+    },
+    {
+      "path": "apps/textbook-agent/backend/src/learning/",
+      "status": "AFTER_CALLSITE_MIGRATION",
+      "coupled_tests": []
+    },
+    {
+      "path": "historical shim leaves under planning/, generation/, core/, telemetry/, contracts/",
+      "status": "AFTER_CALLSITE_MIGRATION",
+      "coupled_tests": []
+    },
+    {
+      "path": "/api/v1/legacy-units + frontend /units/legacy",
+      "status": "PRODUCT_DECISION_THEN_DELETE",
+      "coupled_tests": ["frontend units/legacy tests"]
+    },
+    {
+      "path": "/api/v1/skeletons HTTP + /api/v1/blocks/generate",
+      "status": "IF_PROVEN_NON_UNIT_ONLY",
+      "coupled_tests": ["skeleton/block generate tests"]
+    },
+    {
+      "path": "docs/packs, docs/implementation-runs, docs/authority, docs/evidence, .tmp (non-program)",
+      "status": "C4",
+      "coupled_tests": []
+    }
+  ]
+}

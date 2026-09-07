@@ -9,13 +9,13 @@ from core.database.models import LearningPackModel
 from core.database.session import async_session_factory
 from core.entities.user import User
 from generation.canonical import canonical_document
-from learning.models import (
+from learn.models import (
     CanonicalPackDocumentResponse,
     CanonicalPackResourceDocument,
     PackStatusResponse,
     ResourceStatus,
 )
-from learning.pack_repository import LearningPackRepository
+from learn.pack_repository import LearningPackRepository
 
 router = APIRouter(prefix="/api/v1/packs", tags=["learning-packs"])
 

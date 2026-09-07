@@ -44,7 +44,7 @@ def page_document_scope_matches(
 
 
 def _catalogues() -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
-    contracts = Path(__file__).resolve().parents[2] / "contracts" / "lectio-page"
+    contracts = Path(__file__).resolve().parents[3] / "contracts" / "lectio-page"
     intents = json.loads((contracts / "intent-catalogue.v1.json").read_text(encoding="utf-8"))[
         "intents"
     ]

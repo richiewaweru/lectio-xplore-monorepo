@@ -6,7 +6,7 @@
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/state';
 	import { providePrintMode } from '@lectio/learn';
-	import '$lib/styles/print.css';
+	import '$lib/print/styles/print.css';
 	import { apiFetch, buildApiUrl } from '$lib/api/client';
 	import V3LectioPrintDocumentView from '$lib/components/studio/V3LectioPrintDocumentView.svelte';
 	import LectioPageDocumentView from '$lib/components/studio/LectioPageDocumentView.svelte';
@@ -48,7 +48,7 @@
 		headers: Record<string, string>
 	): Promise<V3GenerationDetail> {
 		const detailRes = await apiFetch(
-			`/api/v1/v3/generations/${encodeURIComponent(id)}`,
+			`/api/v1/v3/print/generations/${encodeURIComponent(id)}`,
 			{ headers }
 		);
 		if (!detailRes.ok) {
@@ -95,7 +95,7 @@
 			if (token) headers.Authorization = `Bearer ${token}`;
 
 			const res = await apiFetch(
-				`/api/v1/v3/generations/${encodeURIComponent(generationId)}/document`,
+				`/api/v1/v3/print/generations/${encodeURIComponent(generationId)}/document`,
 				{ headers }
 			);
 			fetchStatus = `response-${res.status}`;

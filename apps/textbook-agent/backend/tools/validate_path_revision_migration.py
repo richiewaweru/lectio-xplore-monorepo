@@ -15,7 +15,7 @@ def main() -> None:
         database = Path(temporary) / "phase8.db"
         os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{database.as_posix()}"
         migration = import_module(
-            "core.database.migrations.versions.20260801_0023_add_path_version_revision"
+            "infra.database.migrations.versions.20260801_0023_add_path_version_revision"
         )
         engine = create_engine(f"sqlite:///{database.as_posix()}")
         try:

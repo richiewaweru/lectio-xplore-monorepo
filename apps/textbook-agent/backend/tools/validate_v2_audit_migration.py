@@ -14,7 +14,7 @@ def main() -> None:
         database = Path(temporary) / "phase13.db"
         engine = create_engine(f"sqlite:///{database.as_posix()}")
         migration = import_module(
-            "core.database.migrations.versions.20260801_0028_add_v2_audit_events"
+            "infra.database.migrations.versions.20260801_0028_add_v2_audit_events"
         )
         try:
             with engine.begin() as connection:
