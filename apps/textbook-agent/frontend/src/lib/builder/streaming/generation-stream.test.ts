@@ -1,4 +1,4 @@
-import type { LessonDocument } from 'lectio';
+import type { LessonDocument } from '@lectio/learn';
 import { describe, expect, it } from 'vitest';
 
 import {

@@ -8,6 +8,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     JSON,
     String,
@@ -161,18 +162,11 @@ class GenerationStepModel(Base):
 
     Key names are load-bearing: part_id / variant_id / step / kind — never section_id.
     payload is opaque JSON with no lesson-specific schema at the storage layer.
+    Repeated failure/recovery events for the same part are retained; the latest
+    event is authoritative (see migration 20260904_0033).
     """
 
     __tablename__ = "generation_steps"
-    __table_args__ = (
-        UniqueConstraint(
-            "generation_id",
-            "part_id",
-            "variant_id",
-            "step",
-            name="uq_generation_steps_part_variant_step",
-        ),
-    )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     generation_id = Column(
@@ -707,17 +701,69 @@ class EditableLessonModel(Base):
 
     __tablename__ = "editable_lessons"
 
+    __table_args__ = (
+        Index(
+            "uq_editable_lessons_component_generation",
+            "user_id",
+            "source_generation_id",
+            unique=True,
+            postgresql_where=(Column("source_type") == "component_lectio"),
+            sqlite_where=(Column("source_type") == "component_lectio"),
+        ),
+    )
+
     id = Column(String, primary_key=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     source_generation_id = Column(String, nullable=True)
     source_type = Column(String, nullable=False, default="manual", server_default="manual")
-    title = Column(String, nullable=False, default="Untitled lesson", server_default="Untitled lesson")
+    title = Column(
+        String, nullable=False, default="Untitled lesson", server_default="Untitled lesson"
+    )
     class_label = Column(String, nullable=True)
     document_json = Column(JSON_DOCUMENT_TYPE, nullable=False)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
     user = relationship("UserModel", back_populates="editable_lessons")
+
+
+class LearnReleaseModel(Base):
+    """Immutable published Learn snapshot (Phase 05). Distinct from LessonShare."""
+
+    __tablename__ = "learn_releases"
+    __table_args__ = (
+        UniqueConstraint(
+            "editable_lesson_id",
+            "release_number",
+            name="uq_learn_releases_lesson_number",
+        ),
+        Index("ix_learn_releases_lesson_id", "editable_lesson_id"),
+        Index("ix_learn_releases_owner_user_id", "owner_user_id"),
+    )
+
+    id = Column(String, primary_key=True)
+    editable_lesson_id = Column(
+        String, ForeignKey("editable_lessons.id", ondelete="CASCADE"), nullable=False
+    )
+    owner_user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    release_number = Column(Integer, nullable=False)
+    title = Column(String, nullable=False)
+    document_json = Column(JSON_DOCUMENT_TYPE, nullable=False)
+    document_hash = Column(String, nullable=False)
+    source_generation_id = Column(String, nullable=True)
+    path_lesson_id = Column(String, nullable=True)
+    path_lesson_revision = Column(Integer, nullable=True)
+    objective_hash = Column(String, nullable=True)
+    status = Column(String, nullable=False, default="published", server_default="published")
+    published_at = Column(DateTime, default=_utcnow, nullable=False)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    editable_lesson = relationship("EditableLessonModel")
+    owner = relationship("UserModel")
+
+
+# Register Learn runtime tables on the shared Base metadata (Phases 06–09).
+from learning import runtime_models as _learn_runtime_models  # noqa: E402,F401
 
 
 class V3TraceRunModel(Base):

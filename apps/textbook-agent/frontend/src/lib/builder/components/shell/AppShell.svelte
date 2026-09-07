@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { onMount, tick } from 'svelte';
-	import { basePresetMap, LectioThemeSurface } from 'lectio';
-	import type { LessonDocument } from 'lectio';
+	import { basePresetMap, LectioThemeSurface } from '@lectio/learn';
+	import type { LessonDocument } from '@lectio/learn';
 	import BlockCanvas from '$lib/builder/components/canvas/BlockCanvas.svelte';
 	import CanvasOutline from '$lib/builder/components/canvas/CanvasOutline.svelte';
 	import PaletteOverlay from '$lib/builder/components/palette/PaletteOverlay.svelte';
@@ -11,7 +11,9 @@
 	import VersionPanel from '$lib/builder/components/versions/VersionPanel.svelte';
 	import OfflineSyncHooks from '$lib/builder/components/shell/OfflineSyncHooks.svelte';
 	import { Plus } from 'lucide-svelte';
+	import { goto } from '$app/navigation';
 	import { saveVersionSnapshot } from '$lib/builder/persistence/idb-store';
+	import { publishLearnRelease } from '$lib/learn/api/releases';
 	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
 	import type { PendingPlanSection } from '$lib/builder/streaming/generation-stream';
 	import type { BuilderIssue } from '$lib/builder/issues';
@@ -20,6 +22,7 @@
 	let {
 		document,
 		store,
+		lessonId = null,
 		pendingPlan = [],
 		sectionProgress = {},
 		generationTerminal = false,
@@ -31,6 +34,7 @@
 	}: {
 		document: LessonDocument;
 		store: DocumentStore;
+		lessonId?: string | null;
 		pendingPlan?: PendingPlanSection[];
 		sectionProgress?: Record<string, string>;
 		generationTerminal?: boolean;
@@ -47,6 +51,7 @@
 	let mediaManagerOpen = $state(false);
 	let versionPanelOpen = $state(false);
 	let printPreviewActive = $state(false);
+	let publishStatus = $state<string | null>(null);
 
 	/** Mutable refs for 30-minute auto-version (avoid stale interval closure). */
 	const va = { docId: '', lastM: 0, lastA: 0 };
@@ -100,6 +105,25 @@
 	function scrollToNextIssue(): void {
 		globalThis.document.querySelector('[data-unresolved-issue]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 	}
+
+	function openStudentPreview(): void {
+		if (!lessonId) return;
+		void goto(`/learn/lessons/${lessonId}?preview=1`);
+	}
+
+	async function publishRelease(): Promise<void> {
+		if (!lessonId) return;
+		publishStatus = 'Publishing…';
+		try {
+			await store.flushSave();
+			const release = await publishLearnRelease(lessonId, {
+				title: store.document?.title ?? document.title
+			});
+			publishStatus = `Published v${release.release_number}`;
+		} catch (error) {
+			publishStatus = error instanceof Error ? error.message : 'Publish failed';
+		}
+	}
 </script>
 
 <div
@@ -112,12 +136,17 @@
 		saveStatus={store.saveStatus}
 		onOpenMedia={() => (mediaManagerOpen = true)}
 		onOpenHistory={() => (versionPanelOpen = true)}
-		lessonId={store.document?.id ?? document.id}
+		lessonId={lessonId ?? store.document?.id ?? document.id}
+		onStudentPreview={lessonId ? openStudentPreview : undefined}
+		onPublish={lessonId ? () => void publishRelease() : undefined}
 		printPreviewActive={printPreviewActive}
 		onTogglePrintPreview={() => (printPreviewActive = !printPreviewActive)}
 		onRetrySave={() => void store.flushSave()}
 		onNextIssue={scrollToNextIssue}
 	/>
+	{#if publishStatus}
+		<p class="builder-print-hidden px-4 py-2 text-sm text-slate-600" data-testid="publish-status">{publishStatus}</p>
+	{/if}
 	<div class="flex flex-1 overflow-hidden">
 		<main
 			class="builder-main min-w-0 flex-1 overflow-y-auto bg-gradient-to-b from-slate-100 via-slate-100 to-slate-200/70 p-4 sm:p-6"

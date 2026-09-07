@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import type { BlockInstance, LessonDocument } from 'lectio';
+	import type { BlockInstance, LessonDocument } from '@lectio/learn';
 	import {
 		basePresets,
 		getEmptyContent,
 		getTemplateById,
 		templateRegistry
-	} from 'lectio';
+	} from '@lectio/learn';
 	import { createBuilderLesson } from '$lib/builder/api/lesson-crud';
 	import { saveDocument } from '$lib/builder/persistence/idb-store';
 

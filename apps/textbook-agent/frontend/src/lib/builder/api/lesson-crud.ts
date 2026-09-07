@@ -1,6 +1,6 @@
 import { ensureOk } from '$lib/api/errors';
 import { apiFetch } from '$lib/api/client';
-import type { LessonDocument } from 'lectio';
+import type { LessonDocument } from '@lectio/learn';
 
 export type BuilderLessonSourceType = 'manual' | 'v3_generation' | 'template';
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { TemplatePreviewSurface } from 'lectio';
+	import { TemplatePreviewSurface } from '@lectio/learn';
 
 	interface Props {
 		open: boolean;

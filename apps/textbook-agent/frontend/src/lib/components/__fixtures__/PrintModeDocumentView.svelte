@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { providePrintMode } from 'lectio';
+	import { providePrintMode } from '@lectio/learn';
 	import LectioDocumentView from '../LectioDocumentView.svelte';
 	import type { GenerationDocument } from '$lib/types';
 

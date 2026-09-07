@@ -1,4 +1,4 @@
-import type { GradeBand } from 'lectio';
+import type { GradeBand } from '@lectio/learn';
 import { apiBaseUrl } from './public-env';
 
 export type BlockGenerateModelTier = 'FAST' | 'STANDARD';

@@ -1,4 +1,4 @@
-import { fromSectionContents, type LessonDocument } from 'lectio';
+import { fromSectionContents, type LessonDocument } from '@lectio/learn';
 
 import type { GenerationDocument } from '$lib/types';
 

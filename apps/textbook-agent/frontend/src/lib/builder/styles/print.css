@@ -1,6 +1,6 @@
 /**
  * Print / Save as PDF: hide builder chrome; keep Lectio lesson content.
- * Lectio component print rules come from lectio/theme.css.
+ * Lectio component print rules come from @lectio/learn/theme.css.
  */
 
 .builder-print-preview .canvas-outline,

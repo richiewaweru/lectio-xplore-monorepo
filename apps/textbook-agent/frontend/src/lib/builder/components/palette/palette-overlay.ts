@@ -1,4 +1,4 @@
-import { getComponentsByGroup, type ComponentMeta } from 'lectio';
+import { getComponentsByGroup, type ComponentMeta } from '@lectio/learn';
 
 export interface PaletteOverlayGroup {
 	group: {

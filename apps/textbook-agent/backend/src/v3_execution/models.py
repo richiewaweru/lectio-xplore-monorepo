@@ -214,6 +214,7 @@ class SectionWriterWorkOrder(BaseModel):
         ),
     )
     template_id: str
+    prior_validation_errors: list[str] = Field(default_factory=list)
 
 
 class WriterQuestion(BaseModel):
@@ -244,6 +245,11 @@ class QuestionWriterWorkOrder(BaseModel):
         serialization_alias="register",
     )
     consistency_rules: list[str] = Field(default_factory=list)
+    component_id: str | None = None
+    section_field: str | None = None
+    purpose: str | None = None
+    schema_summary: str | None = None
+    prior_validation_errors: list[str] = Field(default_factory=list)
 
 
 class VisualFrameSpec(BaseModel):
@@ -309,6 +315,7 @@ class VisualGeneratorWorkOrder(BaseModel):
     # Latest persisted QC correction to apply on the next attempt. This is
     # prompt metadata only and must never be rendered inside the image.
     qc_correction_hint: str | None = None
+    prior_validation_errors: list[str] = Field(default_factory=list)
 
 
 class AnswerKeyPlanSpec(BaseModel):

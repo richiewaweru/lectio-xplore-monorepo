@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { FieldSchema } from 'lectio';
+	import type { FieldSchema } from '@lectio/learn';
 
 	let {
 		schema,

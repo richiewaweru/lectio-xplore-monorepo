@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { LessonDocument } from 'lectio';
+	import type { LessonDocument } from '@lectio/learn';
 	import { connectivityStore } from '$lib/builder/stores/connectivity.svelte';
 	import { getStorageEstimate } from '$lib/builder/utils/storage-estimate';
 	import {
@@ -25,6 +25,8 @@
 		onOpenMedia,
 		onOpenHistory,
 		onOpenShare,
+		onStudentPreview,
+		onPublish,
 		onSaveToDrive,
 		lessonId,
 		printPreviewActive = false,
@@ -37,6 +39,8 @@
 		onOpenMedia?: () => void;
 		onOpenHistory?: () => void;
 		onOpenShare?: () => void;
+		onStudentPreview?: () => void;
+		onPublish?: () => void;
 		onSaveToDrive?: () => void;
 		lessonId?: string;
 		printPreviewActive?: boolean;
@@ -202,6 +206,30 @@
 			>
 				<Share2 size={16} aria-hidden="true" />
 				Share
+			</button>
+		{/if}
+		{#if onStudentPreview && lessonId}
+			<a
+				class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-50"
+				data-testid="toolbar-student-preview"
+				href={`/learn/lessons/${lessonId}?preview=1`}
+				onclick={(event) => {
+					event.preventDefault();
+					onStudentPreview();
+				}}
+			>
+				<Eye size={16} aria-hidden="true" />
+				Student preview
+			</a>
+		{/if}
+		{#if onPublish}
+			<button
+				type="button"
+				class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-600 bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+				data-testid="toolbar-publish"
+				onclick={onPublish}
+			>
+				Publish
 			</button>
 		{/if}
 		{#if onSaveToDrive}

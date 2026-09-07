@@ -52,6 +52,48 @@ def build_stage1_system_prompt(*, path_prepared: bool = False) -> str:
     )
 
 
+def _intent_resource_spec_payload(resource_spec: dict) -> dict:
+    """Strip component catalogues so Stage 1 cannot select components."""
+    payload = {
+        "resource_type": resource_spec.get("resource_type"),
+        "depth": resource_spec.get("depth"),
+        "rendered": resource_spec.get("rendered"),
+    }
+    raw_spec = resource_spec.get("spec")
+    if not isinstance(raw_spec, dict):
+        return payload
+
+    sections = raw_spec.get("sections") if isinstance(raw_spec.get("sections"), dict) else {}
+    stripped_sections: dict[str, list[dict]] = {}
+    for group_name in ("required", "optional"):
+        group = sections.get(group_name)
+        if not isinstance(group, list):
+            continue
+        cleaned: list[dict] = []
+        for section in group:
+            if not isinstance(section, dict):
+                continue
+            cleaned.append(
+                {
+                    "role": section.get("role"),
+                    "intent": section.get("intent"),
+                    "max_count": section.get("max_count", 1),
+                }
+            )
+        stripped_sections[group_name] = cleaned
+
+    payload["spec"] = {
+        "id": raw_spec.get("id"),
+        "label": raw_spec.get("label"),
+        "version": raw_spec.get("version"),
+        "intent": raw_spec.get("intent"),
+        "depth": raw_spec.get("depth"),
+        "sections": stripped_sections,
+        "validation": raw_spec.get("validation") or [],
+    }
+    return payload
+
+
 def build_stage1_user_message(
     *,
     signals: V3SignalSummary,

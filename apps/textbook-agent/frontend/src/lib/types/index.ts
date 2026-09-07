@@ -1,4 +1,4 @@
-import type { SectionContent } from 'lectio';
+import type { SectionContent } from '@lectio/learn';
 
 export type TeacherRole = 'teacher' | 'tutor' | 'homeschool' | 'instructor';
 export type GradeBand = 'primary' | 'middle' | 'high_school' | 'undergraduate' | 'adult';

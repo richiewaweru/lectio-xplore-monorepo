@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { FieldSchema } from 'lectio';
+	import type { FieldSchema } from '@lectio/learn';
 	import type { Component } from 'svelte';
 	import { emptyObjectFromItemSchema } from './field-empty';
 	import FieldBoolean from './FieldBoolean.svelte';

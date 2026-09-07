@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from core.database.models import GenerationModel, LearningPackModel
+from generation.canonical import canonical_marker_clause
 
 TERMINAL_GENERATION_STATUSES = {"completed", "partial", "failed"}
 
@@ -33,6 +34,29 @@ class LearningPackRepository:
             result = await session.execute(
                 select(LearningPackModel)
                 .where(LearningPackModel.user_id == user_id)
+                .order_by(LearningPackModel.created_at.desc(), LearningPackModel.id.desc())
+                .limit(limit)
+            )
+            return list(result.scalars().all())
+
+    async def list_component_lectio_by_user(
+        self, user_id: str, limit: int = 20
+    ) -> list[LearningPackModel]:
+        """List packs that have at least one explicitly canonical generation.
+
+        The marker predicate is applied in SQL so retired/unmarked generation
+        rows are not loaded and filtered in application code.
+        """
+        async with self._session_factory() as session:
+            result = await session.execute(
+                select(LearningPackModel)
+                .join(GenerationModel, GenerationModel.pack_id == LearningPackModel.id)
+                .where(
+                    LearningPackModel.user_id == user_id,
+                    GenerationModel.user_id == user_id,
+                    canonical_marker_clause(),
+                )
+                .distinct()
                 .order_by(LearningPackModel.created_at.desc(), LearningPackModel.id.desc())
                 .limit(limit)
             )
@@ -80,6 +104,19 @@ class LearningPackRepository:
             result = await session.execute(
                 select(GenerationModel)
                 .where(GenerationModel.pack_id == pack_id)
+                .order_by(GenerationModel.created_at, GenerationModel.id)
+            )
+            return list(result.scalars().all())
+
+    async def component_generations_for_pack(self, pack_id: str) -> list[GenerationModel]:
+        """Load only explicitly Component Lectio generations for a pack."""
+        async with self._session_factory() as session:
+            result = await session.execute(
+                select(GenerationModel)
+                .where(
+                    GenerationModel.pack_id == pack_id,
+                    canonical_marker_clause(),
+                )
                 .order_by(GenerationModel.created_at, GenerationModel.id)
             )
             return list(result.scalars().all())

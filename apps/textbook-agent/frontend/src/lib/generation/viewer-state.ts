@@ -1,4 +1,4 @@
-import type { SectionContent } from 'lectio';
+import type { SectionContent } from '@lectio/learn';
 
 import { parseIncomingSection } from '$lib/parse-section';
 import type {

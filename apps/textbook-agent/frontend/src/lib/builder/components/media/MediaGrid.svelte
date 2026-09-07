@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { MediaReference } from 'lectio';
+	import type { MediaReference } from '@lectio/learn';
 
 	let {
 		mediaList,

@@ -1,5 +1,5 @@
-import type { BlockInstance, DocumentSection, LessonDocument, MediaReference } from 'lectio';
-import { getEmptyContent, getTemplateById } from 'lectio';
+import type { BlockInstance, DocumentSection, LessonDocument, MediaReference } from '@lectio/learn';
+import { getEmptyContent, getTemplateById } from '@lectio/learn';
 import { saveDocument } from '$lib/builder/persistence/idb-store';
 import {
 	ensureBuilderSyncAdapterRegistered,

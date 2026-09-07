@@ -6,20 +6,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import ConceptCardModel, GenerationModel, LessonProvenanceModel
-from generation.v3_studio.dtos import V3InputForm, V3SignalSummary
+from generation.pipeline_dispatch import build_control_patch, select_default_pipeline
+from generation.contracts import GenerationInputForm as V3InputForm
+from generation.contracts import GenerationSignalSummary as V3SignalSummary
 from resource_specs.loader import get_spec
 from resource_specs.renderer import render_spec_for_prompt
 from v3_blueprint.planning.models import StructuralPlan, VariantSpec
 from v3_blueprint.planning.objective_ownership import hash_path_objective
 from v3_blueprint.planning.persistence import persist_chunked_state, persist_structural_plan
-
-
-async def _read_existing_context(session: AsyncSession, generation_id: str) -> dict[str, Any]:
-    from v3_blueprint.planning.persistence import load_chunked_state
-
-    state = await load_chunked_state(generation_id, session)
-    context = state.get("context")
-    return dict(context) if isinstance(context, dict) else {}
 
 
 def _path_resource_spec() -> dict[str, Any]:
@@ -41,7 +35,9 @@ def _scope_note(scope_contract: dict[str, Any]) -> str:
     terminology = [str(item) for item in scope_contract.get("terminology", [])]
     exclusions = [str(item) for item in scope_contract.get("must_not_introduce", [])]
     notation = scope_contract.get("notation")
-    lines = ["This lesson is owned by an approved unit path; preserve its exact objective and scope."]
+    lines = [
+        "This lesson is owned by an approved unit path; preserve its exact objective and scope."
+    ]
     if terminology:
         lines.append(f"Use unit terminology exactly: {', '.join(terminology)}.")
     if notation:
@@ -65,8 +61,6 @@ async def initialise_path_generation(
     scope_contract: dict[str, Any],
     variants: list[VariantSpec] | None = None,
     variant_plans: dict[str, StructuralPlan] | None = None,
-    native_whole_lesson: bool = False,
-    path_plan_raw: str | None = None,
 ) -> None:
     signals = V3SignalSummary(
         topic=topic,
@@ -101,27 +95,9 @@ async def initialise_path_generation(
         "display_title": plan.cards[0].title,
         "execution_started": False,
         "path_prepared": True,
-        "native_whole_lesson": bool(native_whole_lesson)
-        or int(getattr(plan, "document_contract_version", 1) or 1) >= 2,
+        # Units owns admission. Select once and persist before any later state merge.
+        **build_control_patch(select_default_pipeline()),
     }
-    if path_plan_raw:
-        # Preserve the validated planner response for protocol evidence and
-        # later audits. This is the canonical structured response, not a
-        # reconstructed plan manufactured by the evidence collector.
-        state["path_plan_raw"] = path_plan_raw
-    # Merge into existing context from persist_structural_plan (do not clobber signals/form).
-    existing = await _read_existing_context(session, generation.id)
-    existing.update(
-        {
-            "native_whole_lesson": state["native_whole_lesson"],
-            "lesson_mode": lesson_mode,
-            "grade_level": grade_level,
-            "subject": subject,
-            "scope_contract": scope_contract,
-            "prior_established": prior_established,
-        }
-    )
-    state["context"] = existing
     if variants:
         state.update(
             {

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/state';
-	import { providePrintMode, type LessonDocument } from 'lectio';
+	import { providePrintMode, type LessonDocument } from '@lectio/learn';
 	import { buildApiUrl } from '$lib/api/client';
 	import LessonReadOnlyView from '$lib/builder/components/canvas/LessonReadOnlyView.svelte';
 	import '$lib/builder/styles/print.css';

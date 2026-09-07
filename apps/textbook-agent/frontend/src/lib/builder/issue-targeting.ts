@@ -1,4 +1,4 @@
-import { getFieldComponentMap, type LessonDocument } from 'lectio';
+import { getFieldComponentMap, type LessonDocument } from '@lectio/learn';
 
 import { isAiGeneratableComponent } from '$lib/builder/components/ai/ai-block-utils';
 import type { BuilderIssue } from '$lib/builder/issues';

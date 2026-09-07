@@ -1,4 +1,4 @@
-import { getEditSchema, getEmptyContent } from 'lectio';
+import { getEditSchema, getEmptyContent } from '@lectio/learn';
 
 const MANUAL_ONLY_COMPONENT_IDS = new Set(['image-block', 'video-embed']);
 

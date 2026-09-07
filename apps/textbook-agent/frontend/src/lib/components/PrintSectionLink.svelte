@@ -1,6 +1,6 @@
 <script lang="ts">
 	import qrcode from 'qrcode-generator';
-	import type { SectionContent } from 'lectio';
+	import type { SectionContent } from '@lectio/learn';
 
 	interface Props {
 		generationId: string;

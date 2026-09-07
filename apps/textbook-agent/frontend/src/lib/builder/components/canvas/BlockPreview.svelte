@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { MediaReference, VideoEmbedContent } from 'lectio';
+	import type { MediaReference, VideoEmbedContent } from '@lectio/learn';
 	import { Film } from 'lucide-svelte';
 	import { connectivityStore } from '$lib/builder/stores/connectivity.svelte';
 	import {
@@ -34,7 +34,7 @@
 		TimelineBlock,
 		WhatNextBridge,
 		WorkedExampleCard
-	} from 'lectio';
+	} from '@lectio/learn';
 
 	let {
 		componentId,

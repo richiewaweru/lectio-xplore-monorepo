@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { LectioThemeSurface, basePresetMap, templateRegistryMap } from 'lectio';
-	import type { SectionContent } from 'lectio';
+	import { LectioThemeSurface, basePresetMap, templateRegistryMap } from '@lectio/learn';
+	import type { SectionContent } from '@lectio/learn';
 
 	function sanitizeMerged(fields: Record<string, unknown>): Record<string, unknown> {
 		const next = { ...fields };

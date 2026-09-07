@@ -1,4 +1,4 @@
-﻿"""Server persistence for teacher-owned Builder lessons (Phase 2)."""
+"""Server persistence for teacher-owned Builder lessons (Phase 2)."""
 
 from __future__ import annotations
 
@@ -18,11 +18,16 @@ from starlette.background import BackgroundTask
 from core.auth.jwt_handler import JWTHandler
 from core.auth.middleware import get_current_user
 from core.dependencies import get_gcs_image_store, get_jwt_handler, get_settings
-from core.database.models import EditableLessonModel, GenerationModel, LessonProvenanceModel
+from core.database.models import EditableLessonModel, GenerationModel
 from core.database.session import get_async_session
 from core.entities.user import User
 from core.rate_limit import limiter
 from core.storage.gcs_image_store import GCSImageStore
+from builder.service import (
+    ComponentLectioBuilderDocumentError,
+    ComponentLectioBuilderNotReadyError,
+    get_or_create_component_lectio_builder_lesson,
+)
 from generation.pdf_export.context import PDFGenerationContext
 from generation.pdf_export.cleanup import cleanup_files
 from generation.pdf_export.config import PDFExportConfig
@@ -34,7 +39,13 @@ from contracts.lectio import get_component_registry_entry
 router = APIRouter(prefix="/api/v1/builder", tags=["builder"])
 logger = logging.getLogger(__name__)
 
-_VALID_SOURCES = {"manual", "v3_generation", "template"}
+_VALID_SOURCES = {"manual", "v3_generation", "component_lectio", "template"}
+_ACTIVE_SOURCES = {"manual", "component_lectio", "template"}
+_RETIRED_SOURCES = {"v3_generation", "v3_studio", "legacy", "legacy_unit"}
+_LEGACY_PIPELINE_RETIRED = {
+    "code": "legacy_pipeline_retired",
+    "message": "The Legacy Studio pipeline has been retired. Use the Units workflow.",
+}
 _MAX_DOCUMENT_BYTES = 5 * 1024 * 1024
 _MAX_MEDIA_UPLOAD_BYTES = 10 * 1024 * 1024
 _ALLOWED_MEDIA_UPLOAD_MIME_TYPES: dict[str, str] = {
@@ -112,7 +123,9 @@ def _validate_lesson_document_shape(document: dict[str, Any]) -> None:
             raise HTTPException(status_code=422, detail="Section block_ids must be a list")
         for block_id in block_ids:
             if not isinstance(block_id, str) or not block_id.strip():
-                raise HTTPException(status_code=422, detail="Section block_ids must be non-empty strings")
+                raise HTTPException(
+                    status_code=422, detail="Section block_ids must be non-empty strings"
+                )
             if block_id not in known_block_ids:
                 raise HTTPException(
                     status_code=422,
@@ -143,7 +156,7 @@ class BuilderLessonCreateRequest(BaseModel):
     title: str | None = None
     class_label: str | None = None
     source_generation_id: str | None = None
-    source_type: Literal["manual", "v3_generation", "template"] = "manual"
+    source_type: Literal["manual", "v3_generation", "component_lectio", "template"] = "manual"
     document: dict[str, Any] = Field(..., description="LessonDocument JSON payload")
 
 
@@ -217,7 +230,9 @@ def _to_detail(model: EditableLessonModel) -> BuilderLessonDetailResponse:
     )
 
 
-def _resolved_title(explicit: str | None, document: dict[str, Any], default: str = "Untitled lesson") -> str:
+def _resolved_title(
+    explicit: str | None, document: dict[str, Any], default: str = "Untitled lesson"
+) -> str:
     title = (explicit or "").strip()
     if title:
         return title
@@ -248,6 +263,12 @@ async def _owned_lesson_or_404(
     )
     model = result.scalar_one_or_none()
     if model is None:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    if model.source_type in _RETIRED_SOURCES or str(model.source_type).startswith("legacy"):
+        raise HTTPException(status_code=410, detail=_LEGACY_PIPELINE_RETIRED)
+    if model.source_type not in _ACTIVE_SOURCES:
+        # Unknown source types are not enumerated through the active Builder
+        # surface, even if a stale row happens to be owned by this user.
         raise HTTPException(status_code=404, detail="Lesson not found")
     return model
 
@@ -289,7 +310,9 @@ def _section_manifest_from_document(document: dict[str, Any]) -> list[PipelineSe
         position = _safe_position(section.get("position"), index)
         manifest.append(
             PipelineSectionManifestItem(
-                section_id=section_id if isinstance(section_id, str) and section_id else f"section-{index}",
+                section_id=section_id
+                if isinstance(section_id, str) and section_id
+                else f"section-{index}",
                 title=title if isinstance(title, str) and title else f"Section {index}",
                 position=position,
             )
@@ -307,7 +330,9 @@ def _build_builder_pipeline_document(lesson_id: str, document: dict[str, Any]) -
         context=description if isinstance(description, str) else "",
         mode="v3",
         template_id=_first_section_template_id(document),
-        preset_id=preset_id if isinstance(preset_id, str) and preset_id.strip() else "blue-classroom",
+        preset_id=preset_id
+        if isinstance(preset_id, str) and preset_id.strip()
+        else "blue-classroom",
         status="completed",
         section_manifest=_section_manifest_from_document(document),
         sections=[],
@@ -334,8 +359,12 @@ def _builder_generation_from_document(
         status="completed",
         requested_template_id=template_id,
         resolved_template_id=template_id,
-        requested_preset_id=preset_id if isinstance(preset_id, str) and preset_id.strip() else "blue-classroom",
-        resolved_preset_id=preset_id if isinstance(preset_id, str) and preset_id.strip() else "blue-classroom",
+        requested_preset_id=preset_id
+        if isinstance(preset_id, str) and preset_id.strip()
+        else "blue-classroom",
+        resolved_preset_id=preset_id
+        if isinstance(preset_id, str) and preset_id.strip()
+        else "blue-classroom",
         quality_passed=True,
     )
 
@@ -457,7 +486,9 @@ def _log_builder_event(
     logger.info("builder_event", extra=payload)
 
 
-@router.post("/lessons", response_model=BuilderLessonDetailResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/lessons", response_model=BuilderLessonDetailResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_builder_lesson(
     body: BuilderLessonCreateRequest,
     request: Request,
@@ -466,73 +497,28 @@ async def create_builder_lesson(
 ) -> BuilderLessonDetailResponse:
     if body.source_type not in _VALID_SOURCES:
         raise HTTPException(status_code=422, detail=f"Unsupported source_type: {body.source_type}")
-    if body.source_type == "v3_generation" and not body.source_generation_id:
-        raise HTTPException(status_code=422, detail="source_generation_id is required for v3_generation")
+    if body.source_type == "v3_generation":
+        raise HTTPException(status_code=410, detail=_LEGACY_PIPELINE_RETIRED)
+    if body.source_type in {"v3_generation", "component_lectio"} and not body.source_generation_id:
+        raise HTTPException(
+            status_code=422,
+            detail=f"source_generation_id is required for {body.source_type}",
+        )
+    if body.source_type == "component_lectio":
+        raise HTTPException(
+            status_code=422,
+            detail="Use the Component Lectio open endpoint for component_lectio lessons",
+        )
 
     if body.source_generation_id:
         generation_result = await session.execute(
-            select(GenerationModel).where(
+            select(GenerationModel.id).where(
                 GenerationModel.id == body.source_generation_id,
                 GenerationModel.user_id == current_user.id,
             )
         )
-        source_generation = generation_result.scalar_one_or_none()
-        if source_generation is None:
+        if generation_result.scalar_one_or_none() is None:
             raise HTTPException(status_code=404, detail="Source generation not found")
-
-        # Builder is historical compatibility only.  Immutable path provenance
-        # plus contract v2 is the primary proof that this source belongs to the
-        # current native product; the state checks are a defense for records
-        # produced before all provenance fields were stamped.
-        provenance = await session.get(
-            LessonProvenanceModel,
-            source_generation.id,
-        )
-        contract_version = 1
-        if isinstance(source_generation.planning_spec_json, str):
-            try:
-                planning_spec = json.loads(source_generation.planning_spec_json)
-            except (TypeError, ValueError):
-                planning_spec = None
-            if isinstance(planning_spec, dict):
-                try:
-                    contract_version = max(
-                        contract_version,
-                        int(planning_spec.get("document_contract_version") or 1),
-                    )
-                except (TypeError, ValueError):
-                    pass
-        chunked_state = source_generation.chunked_state_json
-        if isinstance(chunked_state, dict):
-            structural_plan = chunked_state.get("structural_plan")
-            if isinstance(structural_plan, dict):
-                try:
-                    contract_version = max(
-                        contract_version,
-                        int(structural_plan.get("document_contract_version") or 1),
-                    )
-                except (TypeError, ValueError):
-                    pass
-            context = chunked_state.get("context")
-            native_state = bool(
-                chunked_state.get("native_whole_lesson")
-                or (context.get("native_whole_lesson") if isinstance(context, dict) else False)
-                or chunked_state.get("page_document_v2")
-            )
-        else:
-            native_state = False
-        immutable_path_source = bool(
-            provenance is not None
-            and provenance.path_version_id
-            and provenance.path_lesson_id
-        )
-        if (immutable_path_source and contract_version >= 2) or (
-            native_state and contract_version >= 2
-        ):
-            raise HTTPException(
-                status_code=409,
-                detail="Native/current generations cannot be imported into Builder",
-            )
 
     _validate_lesson_document_shape(body.document)
 
@@ -571,6 +557,51 @@ async def create_builder_lesson(
     return _to_detail(model)
 
 
+@router.post(
+    "/lessons/from-component-lectio/{generation_id}",
+    response_model=BuilderLessonDetailResponse,
+)
+async def open_component_lectio_builder_lesson(
+    generation_id: str,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> BuilderLessonDetailResponse:
+    generation_result = await session.execute(
+        select(GenerationModel).where(
+            GenerationModel.id == generation_id,
+            GenerationModel.user_id == current_user.id,
+        )
+    )
+    generation = generation_result.scalar_one_or_none()
+    if generation is None:
+        raise HTTPException(status_code=404, detail="Source generation not found")
+
+    try:
+        lesson = await get_or_create_component_lectio_builder_lesson(
+            session,
+            generation=generation,
+            user_id=current_user.id,
+        )
+        await session.commit()
+    except ComponentLectioBuilderNotReadyError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ComponentLectioBuilderDocumentError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    _log_builder_event(
+        "component_lectio_lesson_opened",
+        user_id=current_user.id,
+        lesson_id=lesson.id,
+        request=request,
+        source_type=lesson.source_type,
+        source_generation_id=generation_id,
+    )
+    return _to_detail(lesson)
+
+
 @router.get("/lessons", response_model=list[BuilderLessonListItem])
 async def list_builder_lessons(
     request: Request,
@@ -579,7 +610,10 @@ async def list_builder_lessons(
 ) -> list[BuilderLessonListItem]:
     result = await session.execute(
         select(EditableLessonModel)
-        .where(EditableLessonModel.user_id == current_user.id)
+        .where(
+            EditableLessonModel.user_id == current_user.id,
+            EditableLessonModel.source_type.in_(_ACTIVE_SOURCES),
+        )
         .order_by(EditableLessonModel.updated_at.desc())
     )
     items = [_to_list_item(model) for model in result.scalars().all()]
@@ -624,7 +658,9 @@ async def update_builder_lesson(
     now = _utc_naive_now()
     now_iso = now.isoformat()
     title = _resolved_title(body.title, body.document, default=model.title)
-    created_at_value = model.document_json.get("created_at") if isinstance(model.document_json, dict) else None
+    created_at_value = (
+        model.document_json.get("created_at") if isinstance(model.document_json, dict) else None
+    )
     document_json = _normalize_document_for_storage(
         body.document,
         lesson_id=lesson_id,
@@ -847,6 +883,3 @@ async def print_preflight_builder_lesson(
         warning_count=len(response.warnings),
     )
     return response
-
-
-

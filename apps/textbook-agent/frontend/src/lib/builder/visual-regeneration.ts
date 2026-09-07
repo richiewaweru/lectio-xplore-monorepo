@@ -1,4 +1,4 @@
-import type { BlockInstance, MediaReference } from 'lectio';
+import type { BlockInstance, MediaReference } from '@lectio/learn';
 import type { V3VisualBlock } from '$lib/api/v3';
 
 const REGENERATABLE_COMPONENT_IDS = new Set(['diagram-block', 'image-block']);

@@ -1,0 +1,218 @@
+{
+  "captured_at": "2026-09-06T16:25:00+03:00",
+  "repos": [
+    {
+      "name": "lectio-xplore-monorepo",
+      "path": "C:\\Projects\\lectio",
+      "branch": "main",
+      "sha": "bd19a9060b637b84f6d86c002cbf01513adf1e4b",
+      "dirty": true,
+      "notes": "Tracked tree clean; untracked evidence/logs/images only. Permanent program target."
+    },
+    {
+      "name": "text-book-generator",
+      "path": "C:\\Projects\\Textbook agent",
+      "branch": "xplore",
+      "sha": "d2cf2f27c1841591b804b115fc3dfe9b0fb23c9a",
+      "dirty": true,
+      "notes": "Historical live Component Learn source (Units → component_lectio → Builder). Imported into monorepo in Phase 01. 37 commits after program-charter SHA 8509233c."
+    },
+    {
+      "name": "lectio-component-library",
+      "path": "C:\\Projects\\lectio-legacy-20260805",
+      "branch": "xplore",
+      "sha": "f71e78cdbb06a2169c60b937213fa4db6996c69f",
+      "dirty": true,
+      "notes": "Imported into monorepo packages/lectio in Phase 01. Dirty: src/lib/lectio/schemas/content-zod.ts (not copied as blocker)."
+    }
+  ],
+  "phase_01_completed_at": "2026-09-06T17:30:00+03:00",
+  "subsystems": [
+    {
+      "name": "unit-concept-path-authoring",
+      "classification": "REUSE_AS_IS",
+      "canonical_path": "apps/textbook-agent/backend/src/planning/",
+      "alternate_paths": [
+        "C:\\Projects\\Textbook agent\\backend\\src\\planning\\"
+      ],
+      "evidence": "UnitModel/PathVersionModel/PathLessonModel/ConceptModel in core/database/models.py; routes under /api/v1/units; frontend routes/units/. Both trees share Unit path; xplore is ahead on cutover (component_lectio admission).",
+      "notes": "Phase 01 must reconcile planning/generation seams using ownership below — never latest-wins folder merge."
+    },
+    {
+      "name": "page-print-generation",
+      "classification": "REUSE_AS_IS",
+      "canonical_path": "apps/textbook-agent/backend/src/planning/whole_lesson/",
+      "alternate_paths": [
+        "apps/textbook-agent/backend/src/generation/page_objects/",
+        "packages/lectio-page/"
+      ],
+      "evidence": "whole_lesson/executor.py → page_objects writers → assemble_document_v2 → @lectio/page → pdf:fixture. Absent from standalone xplore.",
+      "notes": "Print lineage. Do not delete in Phase 00/01 while consolidating Learn."
+    },
+    {
+      "name": "lectio-page-package",
+      "classification": "REUSE_AS_IS",
+      "canonical_path": "packages/lectio-page/",
+      "alternate_paths": [],
+      "evidence": "Workspace package @lectio/page; frontend depends workspace:*; LectioPageDocumentView wraps LectioDocumentView.svelte.",
+      "notes": "Owns Print/PDF realization. Must not import lectio/@lectio/learn."
+    },
+    {
+      "name": "component-learn-generation",
+      "classification": "REUSE_AS_IS",
+      "canonical_path": "apps/textbook-agent/backend/src/generation/component_lectio/",
+      "alternate_paths": [
+        "C:\\Projects\\Textbook agent\\backend\\src\\generation\\component_lectio\\",
+        "apps/textbook-agent/backend/src/generation/units_dispatch.py",
+        "apps/textbook-agent/backend/src/generation/canonical.py",
+        "apps/textbook-agent/backend/src/builder/service.py"
+      ],
+      "evidence": "Phase 01 imported Units → prepare → approve → component_lectio → LessonDocument → Builder into monorepo. 93 focused backend tests green.",
+      "notes": "Live Learn generator. v3_studio remains REMOVE-later leftover."
+    },
+    {
+      "name": "component-lectio-library",
+      "classification": "REFACTOR",
+      "canonical_path": "packages/lectio/",
+      "alternate_paths": [
+        "C:\\Projects\\lectio-legacy-20260805\\src\\lib\\lectio\\"
+      ],
+      "evidence": "Workspace lectio@0.6.0; frontend workspace:* → link:../../../packages/lectio; 112 package tests green.",
+      "notes": "Phase 02: rename/evolve to @lectio/learn; remove print-only exports."
+    },
+    {
+      "name": "builder-editing-persistence",
+      "classification": "REUSE_AS_IS",
+      "canonical_path": "apps/textbook-agent/frontend/src/lib/builder/",
+      "alternate_paths": [
+        "apps/textbook-agent/backend/src/builder/routes.py",
+        "C:\\Projects\\Textbook agent\\frontend\\src\\lib\\builder\\",
+        "C:\\Projects\\Textbook agent\\backend\\src\\builder\\"
+      ],
+      "evidence": "document.svelte.ts + history.svelte.ts undo/redo; idb-store.ts + sync-queue.ts + server-sync.ts; lesson-crud.ts; /api/v1/builder/lessons. xplore adds builder/service.py for component_lectio materialization.",
+      "notes": "Learn authoring surface. Prefer monorepo Builder UI + import xplore builder/service.py and source-type cutover."
+    },
+    {
+      "name": "learning-pack-api",
+      "classification": "EXTEND",
+      "canonical_path": "C:\\Projects\\Textbook agent\\backend\\src\\learning\\",
+      "alternate_paths": [
+        "apps/textbook-agent/backend/src/learning/"
+      ],
+      "evidence": "xplore learning/routes.py filters component_lectio-only packs via canonical.py. Monorepo learning/routes.py is looser/pre-cutover.",
+      "notes": "Extend toward preview/publish in later phases; Phase 01 should prefer xplore canonical filtering."
+    },
+    {
+      "name": "ddd-architecture-guard",
+      "classification": "EXTEND",
+      "canonical_path": "apps/textbook-agent/tools/agent/check_architecture.py",
+      "alternate_paths": [
+        "tools/xplore-program/check_domain_boundaries.py"
+      ],
+      "evidence": "Existing forbidden-import-prefix DDD guard via context-summary.yaml. Phase 00 adds Print/Learn package domain guard.",
+      "notes": "Do not replace DDD guard; add domain-boundary checker."
+    },
+    {
+      "name": "xplore-visual-language",
+      "classification": "REUSE_AS_IS",
+      "canonical_path": "apps/textbook-agent/frontend/src/routes/+layout.svelte",
+      "alternate_paths": [
+        "C:\\Projects\\Textbook agent\\frontend\\src\\routes\\+layout.svelte",
+        "lectio/theme.css (npm)"
+      ],
+      "evidence": "Fraunces/Inter/IBM Plex Mono; --paper/--surface/--rule/--ink/--accent/--amber; bits-ui; lucide-svelte; Tailwind v4.",
+      "notes": "All new UI must extend this language."
+    },
+    {
+      "name": "monorepo-precutover-v3-studio-component-path",
+      "classification": "REMOVE",
+      "canonical_path": "apps/textbook-agent/backend/src/generation/v3_studio/",
+      "alternate_paths": [
+        "apps/textbook-agent/backend/src/v3_execution/assembly/section_builder.py",
+        "apps/textbook-agent/frontend/src/lib/components/studio/V3BookletPackView.svelte"
+      ],
+      "evidence": "Monorepo still hosts Studio/v3 Component assembly path. Standalone xplore retires /api/v1/v3 with HTTP 410 and routes live traffic to component_lectio only.",
+      "notes": "Do not restore as production Learn. Phase 01+ may retire after component_lectio is imported. Keep Print whole_lesson/page_objects."
+    },
+    {
+      "name": "units-legacy-pack-routes",
+      "classification": "REMOVE",
+      "canonical_path": "apps/textbook-agent/frontend/src/routes/units/legacy/",
+      "alternate_paths": [
+        "C:\\Projects\\Textbook agent\\frontend\\src\\routes\\units\\legacy\\"
+      ],
+      "evidence": "Legacy pack-era UI; xplore shows retirement pages for studio/legacy.",
+      "notes": "Do not revive as product path."
+    },
+    {
+      "name": "learn-release-runtime-distribution",
+      "classification": "NEW",
+      "canonical_path": "(not present)",
+      "alternate_paths": [],
+      "evidence": "No Class/Assignment/LearnRelease/LearningInstance models in either app checkout.",
+      "notes": "Phases 05–11. Do not invent in Phase 00–01."
+    }
+  ],
+  "golden_paths": [
+    {
+      "name": "component-learn-units-builder",
+      "steps": [
+        "/units → path:plan → path:approve → path/lessons/{id}:prepare",
+        "planning/bridge.py + generation/path_preparation.py (pipeline=component_lectio)",
+        "LessonGenerationReview → generation:approve",
+        "units_dispatch → component_lectio/launcher+service → v3_execution writers",
+        "assemble LessonDocument → builder/service get_or_create → /builder/{id}",
+        "edit + IndexedDB + server sync + undo/redo; packs/{id}/document"
+      ],
+      "commands": [
+        "cd \"C:\\Projects\\Textbook agent\\backend\" && uv run pytest tests/generation/test_component_lectio_lifecycle.py tests/generation/test_component_lectio_final_contract.py tests/generation/test_component_lectio_prelive.py tests/v3_execution/test_component_lectio_runtime.py tests/routes/test_builder_lessons.py -q",
+        "cd \"C:\\Projects\\Textbook agent\" && python tools/agent/check_architecture.py --format text"
+      ],
+      "status": "PASS (83 pytest focused Component Lectio + builder)"
+    },
+    {
+      "name": "page-print-whole-lesson",
+      "steps": [
+        "approved unit path lesson → planning/bridge + path_preparation",
+        "planning/whole_lesson executor / form planner",
+        "generation/page_objects writers + assemble_document_v2",
+        "contracts/lectio_page validate → GenerationModel.document_json",
+        "LectioPageDocumentView (@lectio/page) → pdf:fixture / studio print PDF"
+      ],
+      "commands": [
+        "cd C:\\Projects\\lectio && pnpm --filter @lectio/page test",
+        "cd C:\\Projects\\lectio && pnpm --filter @lectio/page check",
+        "cd C:\\Projects\\lectio && pnpm --filter @lectio/page pdf:fixture",
+        "cd C:\\Projects\\lectio\\apps\\textbook-agent\\backend && uv run pytest tests/planning/test_page_block_planner.py tests/planning/test_page_projections.py tests/generation/test_page_object_writers.py tests/resource_specs/test_page_candidates.py -q",
+        "cd C:\\Projects\\lectio && pnpm --dir apps/textbook-agent/frontend exec vitest run src/lib/studio/document-version.test.ts src/lib/components/studio/LectioPageDocumentView.test.ts"
+      ],
+      "status": "PASS (page 41 tests + check + pdf fixture teacher6/student5; backend page 33)"
+    },
+    {
+      "name": "builder-edit-persist-monorepo",
+      "steps": [
+        "Open /builder/{id}",
+        "Mutate block fields via document store",
+        "Undo/redo via history.svelte.ts",
+        "Persist via idb-store + server-sync → PUT /api/v1/builder/lessons/{id}",
+        "Reload from server"
+      ],
+      "commands": [
+        "cd C:\\Projects\\lectio && pnpm --dir apps/textbook-agent/frontend exec vitest run src/lib/builder/stores/document-store-ops.test.ts src/routes/builder/[id]/page.test.ts src/lib/builder/components/toolbar/DocumentToolbar.test.ts",
+        "cd C:\\Projects\\lectio\\apps\\textbook-agent\\backend && uv run pytest tests/routes/test_builder_lessons.py -q"
+      ],
+      "status": "PASS (frontend builder+page 27 vitest; backend builder included in 33)"
+    },
+    {
+      "name": "component-library-package",
+      "steps": [
+        "Build/test standalone lectio package source",
+        "Confirm version 0.6.0 matches frontend dependency"
+      ],
+      "commands": [
+        "cd C:\\Projects\\lectio-legacy-20260805 && pnpm test"
+      ],
+      "status": "PRE_EXISTING_PARTIAL (111 passed; 1 timed out export-contracts.test.ts)"
+    }
+  ]
+}

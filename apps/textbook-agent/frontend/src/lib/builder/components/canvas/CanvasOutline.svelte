@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { dragHandleZone, type DndEvent } from 'svelte-dnd-action';
-	import type { DocumentSection } from 'lectio';
+	import type { DocumentSection } from '@lectio/learn';
 	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
 
 	let { store }: { store: DocumentStore } = $props();

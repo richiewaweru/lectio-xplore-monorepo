@@ -1,4 +1,4 @@
-import type { LessonDocument } from 'lectio';
+import type { LessonDocument } from '@lectio/learn';
 
 import type { V3StructuralPlan } from '$lib/types/v3';
 

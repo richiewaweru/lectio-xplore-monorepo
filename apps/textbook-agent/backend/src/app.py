@@ -36,9 +36,13 @@ from core.routes.prompts import router as prompts_router
 from core.routes.shares import router as shares_router
 from core.version import VERSION
 from builder.routes import router as builder_router
+from learning.release_routes import router as learn_release_router
+from learning.runtime_routes import router as learn_runtime_router
+from learning.insight_service import router as learn_analytics_router
 from core.database.session import async_session_factory
 from generation.routes import router as generation_router
 from generation.skeleton_routes import router as skeleton_router
+from generation.units_routes import router as units_generation_router
 from generation.v3_studio.generation_writer import V3GenerationWriter
 from learning.routes import router as learning_router
 from media.diagnostics.v3_image_pipeline_diagnostic import (
@@ -303,6 +307,9 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(capabilities_router)
     app.include_router(builder_router)
+    app.include_router(learn_release_router)
+    app.include_router(learn_runtime_router)
+    app.include_router(learn_analytics_router)
     app.include_router(shares_router)
     app.include_router(profile_router)
     app.include_router(prompts_router)
@@ -310,6 +317,7 @@ def create_app() -> FastAPI:
     app.include_router(generation_router)
     app.include_router(skeleton_router)
     app.include_router(planning_router)
+    app.include_router(units_generation_router)
     app.include_router(compatibility_router)
     app.include_router(telemetry_router)
 

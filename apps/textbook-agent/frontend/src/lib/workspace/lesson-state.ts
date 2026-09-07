@@ -1,4 +1,4 @@
-import type { LessonDocument } from 'lectio';
+import type { LessonDocument } from '@lectio/learn';
 
 import { partitionGenerationIssues } from '$lib/builder/generation-issues';
 import type { BuilderIssue, IssueSection } from '$lib/builder/issues';

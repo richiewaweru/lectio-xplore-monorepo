@@ -1,4 +1,4 @@
-import type { LessonDocument } from 'lectio';
+import type { LessonDocument } from '@lectio/learn';
 
 function cloneDoc(doc: LessonDocument): LessonDocument {
 	return JSON.parse(JSON.stringify(doc)) as LessonDocument;

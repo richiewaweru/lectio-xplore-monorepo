@@ -3,7 +3,7 @@
 		basePresets,
 		templateRegistry,
 		type TemplateDefinition
-	} from 'lectio';
+	} from '@lectio/learn';
 	import TemplatePreviewOverlay from '$lib/components/TemplatePreviewOverlay.svelte';
 
 	type LegacyGenerationRequest = {

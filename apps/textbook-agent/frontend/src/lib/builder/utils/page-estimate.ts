@@ -1,4 +1,4 @@
-import type { BlockInstance } from 'lectio';
+import type { BlockInstance } from '@lectio/learn';
 
 const COMPONENT_HEIGHT_MM: Record<string, number> = {
 	'section-header': 35,

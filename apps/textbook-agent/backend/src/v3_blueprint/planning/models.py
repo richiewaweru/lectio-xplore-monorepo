@@ -120,6 +120,22 @@ class SectionPlan(BaseModel):
     id: str = Field(description="Unique section identifier slug e.g. 'orient', 'model'")
     title: str = Field(description="Section title. Aim for ~80 chars (advisory).")
     role: str = Field(description="Spec-vocabulary role string for this section.")
+    purpose: str = Field(
+        default="",
+        description=(
+            "Concept-specific purpose of this role in the teaching sequence. "
+            "Stage 1 owns this; component selection happens later."
+        ),
+        max_length=400,
+    )
+    must_establish: list[str] = Field(
+        default_factory=list,
+        description="Facts or capabilities this role must establish before the next role.",
+    )
+    misconception_focus: list[str] = Field(
+        default_factory=list,
+        description="Misconception ids from cards that this role confronts or repairs.",
+    )
     card_id: str | None = Field(
         default=None,
         description="Stable concept-card id for teaching sections; null for plain sections.",
@@ -132,7 +148,10 @@ class SectionPlan(BaseModel):
         "Null for first section only. Aim for ~120 chars (advisory).",
     )
     components: list[ComponentSlot] = Field(
-        description="Ordered component slots. Max 4 per section.",
+        default_factory=list,
+        description=(
+            "Ordered component slots. Stage 1 intent plans leave this empty. Max 4 per section."
+        ),
         max_length=4,
     )
     blocks: list[PlannedBlock] = Field(
@@ -484,3 +503,100 @@ class BlueprintAssemblyBlocked(Exception):
         super().__init__(
             f"Assembly blocked — sections failed: {failed_sections}"
         )
+
+
+class IntentSectionPlan(BaseModel):
+    """Stage 1 section: role purpose only — no Lectio component choice."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(description="Unique section identifier slug e.g. 'orient', 'model'")
+    title: str = Field(description="Section title. Max 80 chars.", max_length=80)
+    role: str = Field(description="Lesson-spec role string for this section.")
+    purpose: str = Field(
+        description=(
+            "Concept-specific purpose this role must accomplish. "
+            "Do not name Lectio components."
+        ),
+        min_length=1,
+        max_length=400,
+    )
+    must_establish: list[str] = Field(default_factory=list)
+    misconception_focus: list[str] = Field(default_factory=list)
+    card_id: str | None = Field(default=None)
+    visual_required: bool
+    transition_note: str | None = Field(default=None, max_length=120)
+
+
+class IntentPlan(BaseModel):
+    """Stage 1 teaching-sequence plan without component catalogue selection."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    lesson_mode: Literal[
+        "first_exposure", "consolidation", "repair", "retrieval", "transfer"
+    ]
+    lesson_intent: LessonIntent
+    anchor: AnchorSpec
+    prior_knowledge: list[str]
+    repair_focus: RepairFocus | None = None
+    cards: list[ConceptCard] = Field(default_factory=list)
+    sections: list[IntentSectionPlan] = Field(
+        description="Ordered role/intent sections. Max 6.",
+    )
+    question_plan: list[QPlanItem]
+    answer_key_style: Literal[
+        "brief_explanations", "full_working", "answers_only"
+    ]
+
+    @field_validator("sections")
+    @classmethod
+    def max_six_sections(cls, v: list[IntentSectionPlan]) -> list[IntentSectionPlan]:
+        if len(v) > 6:
+            raise ValueError("Max 6 sections")
+        return v
+
+    @model_validator(mode="after")
+    def first_section_no_transition(self) -> IntentPlan:
+        if self.sections and self.sections[0].transition_note is not None:
+            raise ValueError("First section must have transition_note=null")
+        return self
+
+    @model_validator(mode="after")
+    def repair_mode_requires_repair_focus(self) -> IntentPlan:
+        if self.lesson_mode == "repair" and self.repair_focus is None:
+            raise ValueError("lesson_mode=repair requires repair_focus")
+        return self
+
+
+def intent_plan_to_structural_plan(intent: IntentPlan) -> StructuralPlan:
+    """Persist Stage 1 as StructuralPlan with empty component slots (filled later)."""
+    sections = [
+        SectionPlan(
+            id=section.id,
+            title=section.title,
+            role=section.role,
+            purpose=section.purpose,
+            must_establish=list(section.must_establish),
+            misconception_focus=list(section.misconception_focus),
+            card_id=section.card_id,
+            visual_required=section.visual_required,
+            transition_note=section.transition_note,
+            components=[],
+        )
+        for section in intent.sections
+    ]
+    return StructuralPlan(
+        lesson_mode=intent.lesson_mode,
+        lesson_intent=intent.lesson_intent,
+        anchor=intent.anchor,
+        prior_knowledge=list(intent.prior_knowledge),
+        repair_focus=intent.repair_focus,
+        cards=list(intent.cards),
+        sections=sections,
+        question_plan=list(intent.question_plan),
+        answer_key_style=intent.answer_key_style,
+    )
+
+
+# ── Stage 1 error types ───────────────────────────────────────────────────

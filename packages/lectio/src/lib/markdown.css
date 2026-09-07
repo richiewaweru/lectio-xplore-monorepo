@@ -1,0 +1,68 @@
+.lectio-rich :is(p, ul, ol, blockquote, pre, table) {
+	margin-top: 0.6rem;
+}
+
+.lectio-rich :is(p, ul, ol, blockquote, pre, table):first-child {
+	margin-top: 0;
+}
+
+.lectio-rich ul {
+	list-style: disc;
+	padding-left: 1.25rem;
+	line-height: 1.75;
+}
+
+.lectio-rich ol {
+	list-style: decimal;
+	padding-left: 1.25rem;
+	line-height: 1.75;
+}
+
+.lectio-rich table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.95em;
+}
+
+.lectio-rich th {
+	background: var(--muted);
+	font-weight: 600;
+}
+
+.lectio-rich th,
+.lectio-rich td {
+	border-bottom: 1px solid var(--border);
+	padding: 0.5rem 0.65rem;
+	text-align: left;
+	vertical-align: top;
+}
+
+.lectio-rich blockquote {
+	border-left: 3px solid var(--border);
+	padding-left: 0.75rem;
+	color: var(--muted-foreground);
+}
+
+.lectio-rich pre {
+	overflow-x: auto;
+	border-radius: 0.75rem;
+	background: var(--muted);
+	padding: 0.85rem 1rem;
+}
+
+.lectio-rich code {
+	border-radius: 0.4rem;
+	background: var(--muted);
+	padding: 0.1rem 0.35rem;
+}
+
+.lectio-rich pre code {
+	background: transparent;
+	padding: 0;
+}
+
+.math-error {
+	color: var(--destructive);
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+		monospace;
+}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { FieldSchema } from 'lectio';
+	import type { FieldSchema } from '@lectio/learn';
 	import { countWords } from './word-count';
 
 	/** Baseline until Phase 4: same as textarea, labeled as rich text. */

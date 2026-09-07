@@ -1,0 +1,44 @@
+{
+	"label": "Answer key",
+	"entries": [
+		{
+			"question_number": 1,
+			"question": "A tree gains 50 kg of wood. Where did most of that mass come from?",
+			"correct_key": "a",
+			"correct_answer": "carbon dioxide from the air",
+			"diagnostics": [
+				{
+					"option_key": "b",
+					"option_text": "minerals from the soil",
+					"misconception_id": "M1",
+					"misconception_label": "mass comes from the soil"
+				},
+				{
+					"option_key": "d",
+					"option_text": "energy from sunlight",
+					"misconception_id": "M2",
+					"misconception_label": "light is the plant's food"
+				}
+			]
+		},
+		{
+			"question_number": 2,
+			"question": "Which gas decreases in a clear sealed box containing a healthy plant in bright light?",
+			"correct_key": "a",
+			"correct_answer": "carbon dioxide",
+			"diagnostics": []
+		},
+		{
+			"question_number": 3,
+			"question": "A gardener notices a plant gains substantial dry mass even though the measured mass of minerals removed from the soil is tiny. Which explanation best accounts for the difference over the full growing period?",
+			"correct_answer": "Most dry mass is built from carbon atoms fixed from atmospheric carbon dioxide.",
+			"diagnostics": [
+				{
+					"option_text": "The missing mass is entirely supplied by a very small quantity of concentrated mineral fertiliser that becomes much heavier after entering the roots.",
+					"misconception_id": "M1",
+					"misconception_label": "a plant's mass comes from the soil"
+				}
+			]
+		}
+	]
+}

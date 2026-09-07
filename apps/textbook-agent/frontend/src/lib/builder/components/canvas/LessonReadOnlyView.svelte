@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { basePresetMap, LectioThemeSurface } from 'lectio';
-	import type { LessonDocument } from 'lectio';
+	import { basePresetMap, LectioThemeSurface } from '@lectio/learn';
+	import type { LessonDocument } from '@lectio/learn';
 	import BlockPreview from './BlockPreview.svelte';
 
 	let { document: doc }: { document: LessonDocument } = $props();

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { FieldSchema } from 'lectio';
+	import type { FieldSchema } from '@lectio/learn';
 	import { sanitizeSvg } from '$lib/builder/utils/media-utils';
 
 	let {

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { templateRegistry } from 'lectio';
+	import { templateRegistry } from '@lectio/learn';
 	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
 
 	let {

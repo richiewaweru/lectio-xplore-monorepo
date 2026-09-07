@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { LessonDocument } from 'lectio';
+	import type { LessonDocument } from '@lectio/learn';
 	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
 	import {
 		listVersions,

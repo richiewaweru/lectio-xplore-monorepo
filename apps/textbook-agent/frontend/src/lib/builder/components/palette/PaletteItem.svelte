@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ComponentMeta } from 'lectio';
+	import type { ComponentMeta } from '@lectio/learn';
 
 	let {
 		meta,

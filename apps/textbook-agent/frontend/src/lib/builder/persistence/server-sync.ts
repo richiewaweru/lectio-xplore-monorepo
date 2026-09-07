@@ -1,4 +1,4 @@
-import type { LessonDocument } from 'lectio';
+import type { LessonDocument } from '@lectio/learn';
 import { isApiError } from '$lib/api/errors';
 import {
 	deleteBuilderLesson,

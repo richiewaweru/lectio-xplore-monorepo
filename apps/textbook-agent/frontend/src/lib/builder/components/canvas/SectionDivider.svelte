@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { DocumentSection } from 'lectio';
+	import type { DocumentSection } from '@lectio/learn';
 	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
 	import { issuesForSection } from '$lib/builder/issues';
 

@@ -367,6 +367,7 @@
 	<AppShell
 		document={store.document}
 		{store}
+		lessonId={id}
 		{pendingPlan}
 		{sectionProgress}
 		{generationTerminal}

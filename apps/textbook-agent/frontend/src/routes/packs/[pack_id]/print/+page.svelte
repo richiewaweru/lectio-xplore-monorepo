@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { providePrintMode } from 'lectio';
+	import { providePrintMode } from '@lectio/learn';
 	import { fetchV3Document, getXplorePack } from '$lib/api/v3';
 	import V3LectioPrintDocumentView from '$lib/components/studio/V3LectioPrintDocumentView.svelte';
 	import {

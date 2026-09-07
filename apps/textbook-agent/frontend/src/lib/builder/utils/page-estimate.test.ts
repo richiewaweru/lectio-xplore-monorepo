@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { BlockInstance } from 'lectio';
+import type { BlockInstance } from '@lectio/learn';
 import { estimatePageCount, pageWarningLevel, pageWarningMessage } from './page-estimate';
 
 function block(component_id: string): BlockInstance {

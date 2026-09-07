@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { BlockInstance, MediaReference } from 'lectio';
+import type { BlockInstance, MediaReference } from '@lectio/learn';
 import type { V3VisualBlock } from '$lib/api/v3';
 import {
 	currentBlockImageUrl,

@@ -1,0 +1,522 @@
+/**
+ * Lectio print surface — tokens, legibility, fragmentation (data-print-* + legacy hooks).
+ * Imported from theme.css so consuming apps bundle it with lectio/theme.css.
+ */
+
+@media print {
+	:root {
+		--rh-print-text: #111827;
+		--rh-print-text-muted: #374151;
+		--rh-print-accent: #1e3a5f;
+		--rh-print-border: #d1d5db;
+		--rh-print-bg: #ffffff;
+
+		--rh-pad-card: 0.3rem;
+		--rh-pad-card-tight: 0.15rem;
+		--rh-pad-shell: 0;
+		--rh-gap-section: 0.5rem;
+		--rh-gap-component: 0.3rem;
+		--rh-gap-component-tight: 0.2rem;
+		--rh-gap-cluster: 0.2rem;
+
+		--rh-body-size: 11pt;
+		--rh-eyebrow-size: 7.5pt;
+		--rh-heading-size: 16pt;
+		--rh-subheading-size: 13pt;
+
+		--rh-print-diagram-max-width: 65%;
+		--rh-print-series-frame-max-height: 180px;
+		--rh-print-image-max-width: 70%;
+	}
+
+	/* Prefer accurate colors for intentional print accents */
+	* {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+	}
+
+	body,
+	body * {
+		color: var(--rh-print-text) !important;
+	}
+
+	.eyebrow,
+	[class*='eyebrow'],
+	.diagram-step-label,
+	[data-print-role='label'] {
+		color: var(--rh-print-accent) !important;
+		letter-spacing: 0.05em !important;
+		font-size: var(--rh-eyebrow-size) !important;
+		margin-bottom: 0.1rem !important;
+	}
+
+	.text-muted-foreground,
+	[class*='text-muted'],
+	figcaption,
+	.caption {
+		color: var(--rh-print-text-muted) !important;
+	}
+
+	[class*='rounded-xl'],
+	[class*='rounded-lg'],
+	[class*='rounded-md'],
+	.card {
+		border-radius: 2px !important;
+		box-shadow: none !important;
+	}
+
+	[class*='bg-'],
+	[class*='surface'] {
+		background: var(--rh-print-bg) !important;
+		background-image: none !important;
+	}
+
+	[class*='border-l-4'],
+	[class*='border-l-2'] {
+		border-left-color: var(--rh-print-accent) !important;
+	}
+
+	/* Diagram blocks (legacy data-lectio-block) */
+	[data-lectio-block='diagram'] img {
+		max-width: var(--rh-print-diagram-max-width) !important;
+		margin: 0 auto !important;
+		display: block !important;
+	}
+
+	.diagram-series-print-media {
+		max-height: var(--rh-print-series-frame-max-height) !important;
+		width: 100% !important;
+		object-fit: contain !important;
+	}
+
+	h2,
+	h3,
+	h4 {
+		break-after: avoid;
+		page-break-after: avoid;
+	}
+
+	[data-lectio-block='section-header'] {
+		break-after: avoid;
+		page-break-after: avoid;
+	}
+
+	/* Interactive / expand controls */
+	[data-action='expand'],
+	[data-action='collapse'],
+	button[aria-expanded] {
+		display: none !important;
+	}
+
+	/* Attribute-driven fragmentation */
+	[data-print-container='itemized'] {
+		break-inside: auto;
+		page-break-inside: auto;
+	}
+
+	[data-print-container='atomic'],
+	[data-print-item] {
+		break-inside: avoid;
+		page-break-inside: avoid;
+	}
+
+	[data-print-container='prose'],
+	[data-print-container='table'] {
+		break-inside: auto;
+		page-break-inside: auto;
+	}
+
+	[data-print-color-reset='true'],
+	[data-print-color-reset='true'] * {
+		color: var(--rh-print-text) !important;
+		background: var(--rh-print-bg) !important;
+		background-image: none !important;
+	}
+
+	[data-print-color-reset='true'] .eyebrow,
+	[data-print-color-reset='true'] [class*='eyebrow'] {
+		color: var(--rh-print-accent) !important;
+	}
+
+	[data-print-oversized='true'] {
+		break-inside: auto !important;
+		page-break-inside: auto !important;
+	}
+
+	.worked-example-print-answer,
+	.worked-example-print-conclusion,
+	.practice-print-solution,
+	.timeline-print-takeaway {
+		break-before: avoid;
+		page-break-before: avoid;
+	}
+
+	/* --- Migrated from theme.css (block-specific print) --- */
+
+	.lectio-runtime,
+	.lectio-runtime[data-lectio-preset] {
+		background: #fff !important;
+		background-image: none !important;
+	}
+
+	.lesson-shell,
+	.glass-panel {
+		background: #fff !important;
+		background-image: none !important;
+		box-shadow: none !important;
+		backdrop-filter: none !important;
+		border: none !important;
+		border-radius: 0 !important;
+		padding: 0 !important;
+	}
+
+	.lesson-shell::before,
+	.glass-panel::before {
+		display: none !important;
+	}
+
+	.rh-pad-shell {
+		padding: 0 !important;
+	}
+
+	[data-schema-warning] {
+		display: none !important;
+	}
+
+	[data-lectio-block='section-header'] {
+		background: none !important;
+		background-color: transparent !important;
+		border: none !important;
+		border-bottom: 1.5pt solid var(--rh-print-accent) !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+		margin-bottom: 0.5rem !important;
+		padding-bottom: 0.35rem !important;
+		break-before: page;
+		page-break-before: always;
+	}
+
+	[data-lectio-block='section-header']:first-child {
+		break-before: auto;
+		page-break-before: auto;
+	}
+
+	[data-lectio-block='section-header'] [data-print-role='section-header-meta'],
+	[data-lectio-block='section-header'] [data-print-role='section-header-level-pills'] {
+		display: none !important;
+	}
+
+	[data-lectio-block='section-header'] :is(h1, h2, h3, p, li, span) {
+		color: var(--rh-print-accent) !important;
+	}
+
+	[data-lectio-block='hook'] {
+		background: none !important;
+		background-color: transparent !important;
+		border-radius: 0 !important;
+		border-left: 2pt solid var(--rh-print-accent) !important;
+		box-shadow: none !important;
+		color: var(--rh-print-text) !important;
+		padding-top: 0 !important;
+		padding-right: 0 !important;
+		padding-bottom: 0 !important;
+		padding-left: 0.6rem !important;
+	}
+
+	[data-lectio-block='hook'] * {
+		color: var(--rh-print-text) !important;
+	}
+
+	[data-lectio-block='hook'] [data-print-role='hook-watermark'],
+	[data-lectio-block='hook'] [data-print-role='hook-pill'],
+	[data-lectio-block='hook'] [data-print-role='hook-state-label'],
+	[data-lectio-block='hook'] [data-print-role='hook-tension'] {
+		display: none !important;
+	}
+
+	[data-lectio-block='hook'] [data-print-role='hook-anchor'] {
+		background: none !important;
+		border: none !important;
+		border-radius: 0 !important;
+		color: var(--rh-print-text-muted) !important;
+		font-size: 0.875rem !important;
+		font-style: italic;
+		padding: 0 !important;
+	}
+
+	[data-lectio-block='explanation'] {
+		background: none !important;
+		background-color: transparent !important;
+		border: none !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+		padding: 0 !important;
+		margin: 0 !important;
+	}
+
+	[data-lectio-block='explanation'] .eyebrow {
+		background: none !important;
+		color: var(--rh-print-text-muted) !important;
+		font-size: var(--rh-eyebrow-size) !important;
+		letter-spacing: 0.12em !important;
+		text-transform: uppercase !important;
+	}
+
+	[data-lectio-block='explanation'] [data-print-role='explanation-callout'] {
+		background: none !important;
+		background-color: transparent !important;
+		border-bottom: none !important;
+		border-left: 2px solid var(--rh-print-text-muted) !important;
+		border-radius: 0 !important;
+		border-right: none !important;
+		border-top: none !important;
+		padding: 0.15rem 0 0.15rem 0.6rem !important;
+		margin-top: 0.2rem !important;
+		margin-bottom: 0.2rem !important;
+		font-size: 11px !important;
+	}
+
+	[data-lectio-block='explanation'] [data-callout-type='sidenote'] {
+		border-left-color: #ccc !important;
+	}
+
+	[data-lectio-block='explanation'] [data-print-role='callout-icon'] {
+		display: none !important;
+	}
+
+	[data-lectio-block='definition'] {
+		background: none !important;
+		background-color: transparent !important;
+		border: none !important;
+		border-left: 2pt solid var(--rh-print-accent) !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+		padding: 0.15rem 0 0.15rem 0.5rem !important;
+		margin-bottom: 0.2rem !important;
+	}
+
+	.definition-family-print-item {
+		border: none !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+		background: none !important;
+		padding: 0 !important;
+	}
+
+	.definition-family-print-list {
+		gap: 0.25rem !important;
+	}
+
+	[data-lectio-block='definition'] [data-print-role='definition-toggle'],
+	[data-lectio-block='definition'] [data-print-role='definition-related-terms'] {
+		display: none !important;
+	}
+
+	[data-glossary-term] {
+		background: none !important;
+		background-color: transparent !important;
+		border: none !important;
+		border-radius: 0 !important;
+		color: inherit !important;
+		padding: 0 !important;
+		text-decoration: underline !important;
+		text-decoration-style: dotted !important;
+	}
+
+	[data-block-part='notation'] {
+		font-family: 'Georgia', 'Times New Roman', serif !important;
+		font-style: italic !important;
+		letter-spacing: 0.01em !important;
+		overflow-wrap: break-word !important;
+		white-space: normal !important;
+		word-spacing: 0.05em !important;
+	}
+
+	[data-lectio-block='practice'][data-print-show-inline-answers='false'] [data-print-role='inline-answer'] {
+		display: none !important;
+	}
+
+	[data-lectio-block='practice'] [data-print-role='answer-lines'] {
+		display: block !important;
+	}
+
+	[data-lectio-block='practice'] [data-print-item],
+	.practice-print-problem {
+		border: 0.5pt solid var(--rh-print-border) !important;
+		border-radius: 2px !important;
+		padding: 0.3rem 0.5rem !important;
+		margin-bottom: 0.25rem !important;
+		box-shadow: none !important;
+		background: none !important;
+	}
+
+	[data-lectio-block='practice'] [data-print-role='difficulty-badge'],
+	.practice-print-difficulty {
+		font-size: 7pt !important;
+		padding: 0.05rem 0.25rem !important;
+	}
+
+	[data-lectio-block='what-next'] {
+		background: none !important;
+		background-color: transparent !important;
+		border-left: 1.5pt solid #ccc !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+		padding-top: 0 !important;
+		padding-bottom: 0 !important;
+		padding-left: 0.5rem !important;
+	}
+
+	[data-lectio-block='what-next'] [data-print-role='what-next-label'],
+	[data-lectio-block='what-next'] [data-print-role='what-next-link'],
+	[data-lectio-block='what-next'] a {
+		display: none !important;
+	}
+
+	[data-lectio-block='pitfall'] [data-print-role='pitfall-nav-link'],
+	[data-lectio-block='pitfall'] a {
+		display: none !important;
+	}
+
+	[data-lectio-block='pitfall'] {
+		background-color: rgba(251, 191, 36, 0.08) !important;
+		border-left: 2pt solid #f59e0b !important;
+		padding: 0.2rem 0.5rem 0.2rem 0.6rem !important;
+	}
+
+	.worked-example-print-step,
+	[data-print-item='worked-step'] {
+		margin-bottom: 0.3rem !important;
+		padding: 0.2rem 0 !important;
+	}
+
+	.worked-example-print-setup,
+	.worked-example-print-conclusion,
+	.worked-example-print-answer {
+		margin-top: 0.2rem !important;
+		margin-bottom: 0.2rem !important;
+	}
+
+	/* Future-safe print block hooks + current markup hooks */
+	[data-lectio-block='summary'],
+	[data-print-color-reset='true'] {
+		background: none !important;
+		border: 0.5pt solid var(--rh-print-border) !important;
+		border-radius: 2px !important;
+		box-shadow: none !important;
+		padding: 0.3rem 0.5rem !important;
+	}
+
+	[data-lectio-block='callout'],
+	[data-print-container='atomic'][class*='border-blue-'],
+	[data-print-container='atomic'][class*='border-emerald-'],
+	[data-print-container='atomic'][class*='border-amber-'],
+	[data-print-container='atomic'][class*='border-violet-'],
+	[data-print-container='atomic'][class*='border-rose-'] {
+		background: none !important;
+		background-color: transparent !important;
+		border: none !important;
+		border-left: 2pt solid var(--rh-print-accent) !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+		padding: 0.15rem 0 0.15rem 0.6rem !important;
+	}
+
+	[data-lectio-block='key-fact'],
+	[data-print-container='atomic'][class*='bg-primary/4'] {
+		background: none !important;
+		border: 1pt solid var(--rh-print-border) !important;
+		border-radius: 2px !important;
+		box-shadow: none !important;
+		padding: 0.25rem 0.5rem !important;
+	}
+
+	[data-lectio-block='comparison-grid'],
+	.comparison-grid-print-table {
+		background: none !important;
+		box-shadow: none !important;
+		border-radius: 2px !important;
+		padding: 0.2rem !important;
+	}
+
+	[data-lectio-block='comparison-grid'] td,
+	[data-lectio-block='comparison-grid'] th,
+	[data-lectio-block='comparison-grid'] [data-print-role='grid-cell'],
+	.comparison-grid-print-th,
+	.comparison-grid-print-th-row,
+	.comparison-grid-print-td {
+		padding: 0.15rem 0.3rem !important;
+		font-size: 10pt !important;
+	}
+
+	[data-lectio-block='insight-strip'],
+	section[data-print-container='table'][data-print-color-reset='true'] {
+		padding: 0.2rem !important;
+		gap: 0.2rem !important;
+	}
+
+	[data-lectio-block='insight-strip'] [data-print-role='insight-cell'] {
+		padding: 0.15rem 0.3rem !important;
+	}
+
+	[data-lectio-block='timeline'] [data-print-item='timeline-event'],
+	.timeline-print-event {
+		margin-bottom: 0.25rem !important;
+		padding: 0.15rem 0 !important;
+	}
+
+	[data-lectio-block='prerequisites'],
+	div[data-print-container='atomic'][class*='border-teal-'] {
+		background: none !important;
+		border: none !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+		padding: 0.1rem 0 !important;
+		font-size: 10pt !important;
+	}
+
+	[data-lectio-block='glossary'] {
+		background: none !important;
+		background-color: transparent !important;
+		border: 0.5px solid #ccc !important;
+		border-radius: 4px !important;
+		box-shadow: none !important;
+		color: var(--rh-print-text) !important;
+	}
+
+	[data-lectio-block='glossary'] * {
+		color: var(--rh-print-text) !important;
+	}
+
+	[data-lectio-block='glossary'] [data-print-role='glossary-decorative-overlay'],
+	[data-lectio-block='glossary'] [data-print-role='glossary-grid-overlay'] {
+		display: none !important;
+	}
+
+	[data-lectio-block='diagram'] {
+		break-inside: avoid;
+		page-break-inside: avoid;
+		width: 100% !important;
+	}
+
+	[data-lectio-block='diagram'] .lectio-diagram-image,
+	[data-lectio-block='diagram'] [role='img'] > svg {
+		display: block !important;
+		height: auto !important;
+		margin: 0 auto !important;
+		max-width: var(--rh-print-diagram-max-width) !important;
+		width: var(--rh-print-diagram-max-width) !important;
+	}
+
+	[data-lectio-block='diagram'] [data-print-role='diagram-dot'],
+	[data-lectio-block='diagram'] [data-print-role='diagram-callout-trigger'],
+	[data-lectio-block='diagram'] [data-print-role='diagram-zoom-trigger'] {
+		display: none !important;
+	}
+
+	[data-lectio-block='diagram'] [role='img'] {
+		background: none !important;
+		border: 0.5px solid #ddd !important;
+		border-radius: 4px !important;
+	}
+}

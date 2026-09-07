@@ -5,7 +5,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/state';
-	import { providePrintMode } from 'lectio';
+	import { providePrintMode } from '@lectio/learn';
 	import '$lib/styles/print.css';
 	import { apiFetch, buildApiUrl } from '$lib/api/client';
 	import V3LectioPrintDocumentView from '$lib/components/studio/V3LectioPrintDocumentView.svelte';

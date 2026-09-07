@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { dragHandle } from 'svelte-dnd-action';
-	import { cn } from 'lectio';
-	import { getComponentById, getEditSchema } from 'lectio';
-	import type { BlockInstance, LessonDocument } from 'lectio';
+	import { cn } from '@lectio/learn';
+	import { getComponentById, getEditSchema } from '@lectio/learn';
+	import type { BlockInstance, LessonDocument } from '@lectio/learn';
 	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
 	import { ArrowDown, ArrowUp, Copy, GripVertical, Pencil, Trash2 } from 'lucide-svelte';
 	import type { BlockGenerateContextBlock } from '$lib/builder/api/ai-client';

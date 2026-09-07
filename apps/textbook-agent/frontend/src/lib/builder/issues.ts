@@ -1,4 +1,4 @@
-import type { DocumentSection, LessonDocument } from 'lectio';
+import type { DocumentSection, LessonDocument } from '@lectio/learn';
 
 export type BuilderIssue = {
 	id: string;

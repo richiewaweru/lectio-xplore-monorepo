@@ -1,4 +1,4 @@
-import { getComponentById, validateDocument, type LessonDocument } from 'lectio';
+import { getComponentById, validateDocument, type LessonDocument } from '@lectio/learn';
 
 function slugify(text: string): string {
 	return text

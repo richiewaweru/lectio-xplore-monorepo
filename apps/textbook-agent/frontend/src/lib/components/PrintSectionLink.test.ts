@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { SectionContent } from 'lectio';
+import type { SectionContent } from '@lectio/learn';
 
 vi.mock('qrcode-generator', () => ({
 	default: () => ({

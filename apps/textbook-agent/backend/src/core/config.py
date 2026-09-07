@@ -8,6 +8,9 @@ from dotenv import load_dotenv
 from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+GenerationPipeline = Literal["component_lectio"]
+_GENERATION_PIPELINES = frozenset({"component_lectio"})
+
 
 def _default_env_file() -> Path:
     """Prefer ``backend/.env``, then walk ancestors for a local ``.env``.
@@ -214,6 +217,14 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices(
             "XPLORE_NATIVE_WORKER_ENABLED",
             "xplore_native_worker_enabled",
+        ),
+    )
+    # Live Learn admission. Print (whole_lesson) remains a separate realization path.
+    generation_pipeline_default: GenerationPipeline = Field(
+        default="component_lectio",
+        validation_alias=AliasChoices(
+            "GENERATION_PIPELINE_DEFAULT",
+            "generation_pipeline_default",
         ),
     )
     allow_paid_llm_tests: bool = False

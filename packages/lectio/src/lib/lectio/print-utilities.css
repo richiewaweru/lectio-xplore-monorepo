@@ -1,0 +1,65 @@
+/* ── Zone Separator ─────────────────────────────────── */
+.zone-separator {
+	border: none;
+	border-top: 1px solid var(--border, var(--rh-print-border, #e2e2e2));
+	margin: 2rem 0;
+}
+
+/* ── Write-In Rules ─────────────────────────────────── */
+.write-in-rules {
+	border: 1.5px solid var(--border, var(--rh-print-border, #ccc));
+	border-radius: 2px;
+	min-height: 60px;
+	padding: 8px 12px 4px;
+	background: repeating-linear-gradient(
+		to bottom,
+		transparent,
+		transparent 27px,
+		var(--border, var(--rh-print-border, #ddd)) 27px,
+		var(--border, var(--rh-print-border, #ddd)) 28px
+	);
+}
+
+/* ── Accent Card ────────────────────────────────────── */
+.accent-card {
+	border: 1.5px solid var(--border, var(--rh-print-border, #e2e2e2));
+	border-left: 4px solid var(--accent, var(--rh-print-accent, #0ea5e9));
+	border-radius: 2px;
+	padding: 1rem 1.25rem;
+}
+
+.accent-card--top {
+	border-left: 1.5px solid var(--border, var(--rh-print-border, #e2e2e2));
+	border-top: 4px solid var(--accent, var(--rh-print-accent, #0ea5e9));
+}
+
+/* ── Figure Pair ────────────────────────────────────── */
+.figure-pair {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1.5rem;
+	align-items: start;
+}
+
+.figure-pair__image {
+	width: 100%;
+	max-height: 280px;
+	object-fit: contain;
+}
+
+.figure-pair__text {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+@media print {
+	.figure-pair {
+		gap: 1rem;
+		page-break-inside: avoid;
+	}
+
+	.figure-pair__image {
+		max-height: 220px;
+	}
+}

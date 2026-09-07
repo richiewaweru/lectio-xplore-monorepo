@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { LectioThemeSurface, basePresetMap, templateRegistryMap } from 'lectio';
-	import type { SectionContent } from 'lectio';
+	import { LectioThemeSurface, basePresetMap, templateRegistryMap } from '@lectio/learn';
+	import type { SectionContent } from '@lectio/learn';
 	import type { BookletStatus, V3DraftPack } from '$lib/types/v3';
 	import V3BookletIssuesPanel from '$lib/components/studio/V3BookletIssuesPanel.svelte';
 	import {

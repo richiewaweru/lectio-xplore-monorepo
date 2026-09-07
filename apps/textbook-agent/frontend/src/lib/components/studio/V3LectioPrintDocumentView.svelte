@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Production PDF content shell: Lectio template render only (no stream/slots).
-	import { LectioThemeSurface, basePresetMap, templateRegistryMap, usePrintMode } from 'lectio';
+	import { LectioThemeSurface, basePresetMap, templateRegistryMap, usePrintMode } from '@lectio/learn';
 	import type { GenerationDocument } from '$lib/types';
 
 	let { document }: { document: GenerationDocument } = $props();

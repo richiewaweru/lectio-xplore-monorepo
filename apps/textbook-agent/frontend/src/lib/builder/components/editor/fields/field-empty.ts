@@ -1,4 +1,4 @@
-import type { FieldSchema } from 'lectio';
+import type { FieldSchema } from '@lectio/learn';
 
 /** Default empty value for one row of an object-list from `itemSchema`. */
 export function emptyObjectFromItemSchema(fields: FieldSchema[]): Record<string, unknown> {

@@ -1,4 +1,4 @@
-import type { LessonDocument } from 'lectio';
+import type { LessonDocument } from '@lectio/learn';
 
 import { exportToLessonDocument } from '$lib/generation/export-document';
 import {

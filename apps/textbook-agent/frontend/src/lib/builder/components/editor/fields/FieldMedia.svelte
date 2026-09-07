@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { FieldSchema, MediaReference } from 'lectio';
+	import type { FieldSchema, MediaReference } from '@lectio/learn';
 	import { isDiagramComponentId } from '$lib/builder/components/canvas/diagram-media-fields';
 	import { getDocumentStoreContext } from '$lib/builder/components/editor/document-store-context';
 	import DiagramUploader from '$lib/builder/components/media/DiagramUploader.svelte';

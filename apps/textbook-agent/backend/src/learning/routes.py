@@ -8,7 +8,13 @@ from core.auth.middleware import get_current_user
 from core.database.models import LearningPackModel
 from core.database.session import async_session_factory
 from core.entities.user import User
-from learning.models import PackStatusResponse, ResourceStatus
+from generation.canonical import canonical_document
+from learning.models import (
+    CanonicalPackDocumentResponse,
+    CanonicalPackResourceDocument,
+    PackStatusResponse,
+    ResourceStatus,
+)
 from learning.pack_repository import LearningPackRepository
 
 router = APIRouter(prefix="/api/v1/packs", tags=["learning-packs"])
@@ -24,8 +30,11 @@ async def list_packs(
     pack_repo: LearningPackRepository = Depends(get_pack_repository),
     limit: int = 20,
 ) -> list[PackStatusResponse]:
-    packs = await pack_repo.list_by_user(current_user.id, limit=limit)
-    return [_pack_to_status(pack, []) for pack in packs]
+    packs = await pack_repo.list_component_lectio_by_user(current_user.id, limit=limit)
+    return [
+        _pack_to_status(pack, await pack_repo.component_generations_for_pack(pack.id))
+        for pack in packs
+    ]
 
 
 @router.get("/{pack_id}", response_model=PackStatusResponse)
@@ -37,8 +46,81 @@ async def get_pack_status(
     pack = await pack_repo.find_by_id(pack_id)
     if pack is None or pack.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Pack not found.")
-    generations = await pack_repo.generations_for_pack(pack_id)
+    generations = await pack_repo.component_generations_for_pack(pack_id)
+    if not generations:
+        # A pack containing only retired or unmarked generations is not part of
+        # the canonical product surface.
+        raise HTTPException(status_code=404, detail="Pack not found.")
     return _pack_to_status(pack, generations)
+
+
+@router.get("/{pack_id}/document", response_model=CanonicalPackDocumentResponse)
+async def get_pack_document(
+    pack_id: str,
+    current_user: User = Depends(get_current_user),
+    pack_repo: LearningPackRepository = Depends(get_pack_repository),
+) -> CanonicalPackDocumentResponse:
+    """Return active-pack resources as canonical LessonDocuments only."""
+    pack = await pack_repo.find_by_id(pack_id)
+    if pack is None or pack.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Pack not found.")
+    generations = await pack_repo.component_generations_for_pack(pack_id)
+    if not generations:
+        raise HTTPException(status_code=404, detail="Pack not found.")
+
+    plan_data = json.loads(pack.pack_plan_json)
+    labels = {
+        str(resource.get("id")): str(resource.get("label") or resource.get("id"))
+        for resource in plan_data.get("resources", [])
+        if isinstance(resource, dict) and resource.get("id")
+    }
+    generations_by_resource = {
+        generator.pack_resource_id: generator
+        for generator in generations
+        if generator.pack_resource_id
+    }
+    planned_resource_ids = {
+        str(raw_resource["id"])
+        for raw_resource in plan_data.get("resources", [])
+        if isinstance(raw_resource, dict) and raw_resource.get("id")
+    }
+    resources: list[CanonicalPackResourceDocument] = []
+    for raw_resource in plan_data.get("resources", []):
+        if not isinstance(raw_resource, dict) or not raw_resource.get("id"):
+            continue
+        resource_id = str(raw_resource["id"])
+        generator = generations_by_resource.get(resource_id)
+        resources.append(
+            CanonicalPackResourceDocument(
+                resource_id=resource_id,
+                generation_id=generator.id if generator else None,
+                label=str(raw_resource.get("label") or resource_id),
+                status=str(generator.status or "pending") if generator else "pending",
+                document=canonical_document(generator) if generator else None,
+            )
+        )
+
+    # Preserve a canonical generation even if an older pack plan omitted its
+    # resource id; it remains visible under its generation id rather than being
+    # silently dropped from the document projection.
+    resources.extend(
+        CanonicalPackResourceDocument(
+            resource_id=generator.id,
+            generation_id=generator.id,
+            label=generator.pack_resource_label or labels.get(generator.id, generator.id),
+            status=str(generator.status or "pending"),
+            document=canonical_document(generator),
+        )
+        for generator in generations
+        if not generator.pack_resource_id
+        or str(generator.pack_resource_id) not in planned_resource_ids
+    )
+    return CanonicalPackDocumentResponse(
+        pack_id=pack.id,
+        subject=pack.subject,
+        topic=pack.topic,
+        resources=resources,
+    )
 
 
 def _pack_to_status(pack: LearningPackModel, generations: list) -> PackStatusResponse:

@@ -12,7 +12,7 @@ vi.mock('lectio', () => ({
 	}))
 }));
 
-import { getEditSchema } from 'lectio';
+import { getEditSchema } from '@lectio/learn';
 import {
 	isAiGeneratableComponent,
 	mergeAiContentWithEditableFields,

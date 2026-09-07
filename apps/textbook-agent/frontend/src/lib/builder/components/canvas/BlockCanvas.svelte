@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { dragHandleZone, type DndEvent } from 'svelte-dnd-action';
-	import type { BlockInstance } from 'lectio';
+	import type { BlockInstance } from '@lectio/learn';
 	import { mergeAiContentWithEditableFields } from '$lib/builder/components/ai/ai-block-utils';
 	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
 	import AddSectionControl from './AddSectionControl.svelte';

@@ -39,3 +39,18 @@ class PackStatusResponse(BaseModel):
     resources: list[ResourceStatus] = Field(default_factory=list)
     created_at: str
     completed_at: str | None = None
+
+
+class CanonicalPackResourceDocument(BaseModel):
+    resource_id: str
+    generation_id: str | None = None
+    label: str
+    status: str
+    document: dict | None = None
+
+
+class CanonicalPackDocumentResponse(BaseModel):
+    pack_id: str
+    subject: str
+    topic: str
+    resources: list[CanonicalPackResourceDocument] = Field(default_factory=list)

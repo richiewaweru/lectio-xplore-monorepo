@@ -1,10 +1,10 @@
 @import 'tailwindcss';
 @import 'katex/dist/katex.min.css';
-@import 'lectio/theme.css';
+@import '@lectio/learn/theme.css';
 
 /**
  * Print / Save as PDF: hide builder chrome; keep Lectio lesson content.
- * Lectio component print rules come from lectio/theme.css.
+ * Lectio component print rules come from @lectio/learn/theme.css.
  */
 @media print {
 	.document-toolbar,

@@ -10,6 +10,7 @@ from resource_specs.schema import ResourceSpec
 logger = logging.getLogger(__name__)
 _SPECS_DIR = Path(__file__).parents[2] / "resources" / "specs"
 _REGISTRY: dict[str, ResourceSpec] = {}
+PRIMARY_RESOURCE_TYPE = "lesson"
 
 
 def load_all_specs(specs_dir: Path = _SPECS_DIR) -> dict[str, ResourceSpec]:
@@ -37,6 +38,11 @@ def get_spec(resource_type: str) -> ResourceSpec:
     return _REGISTRY[resource_type]
 
 
+def get_primary_spec() -> ResourceSpec:
+    """Return the production lesson grammar (PRIMARY_RESOURCE_TYPE)."""
+    return get_spec(PRIMARY_RESOURCE_TYPE)
+
+
 def list_spec_ids() -> list[str]:
     if not _REGISTRY:
         _REGISTRY.update(load_all_specs())
@@ -46,4 +52,12 @@ def list_spec_ids() -> list[str]:
 def initialize_registry() -> None:
     _REGISTRY.clear()
     _REGISTRY.update(load_all_specs())
-    logger.info("Resource spec registry ready: %s", list(_REGISTRY))
+    if PRIMARY_RESOURCE_TYPE not in _REGISTRY:
+        raise RuntimeError(
+            f"Primary resource spec '{PRIMARY_RESOURCE_TYPE}' missing from {_SPECS_DIR}"
+        )
+    logger.info(
+        "Resource spec registry ready (primary=%s): %s",
+        PRIMARY_RESOURCE_TYPE,
+        list(_REGISTRY),
+    )

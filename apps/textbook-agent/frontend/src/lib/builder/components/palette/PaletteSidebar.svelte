@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { dragHandle, dragHandleZone, type DndEvent } from 'svelte-dnd-action';
-	import { getComponentById, getComponentsByGroup } from 'lectio';
+	import { getComponentById, getComponentsByGroup } from '@lectio/learn';
 	import { GripVertical } from 'lucide-svelte';
 	import type { DocumentStore } from '$lib/builder/stores/document.svelte';
 	import type { DndRowItem } from '$lib/builder/stores/document.svelte';

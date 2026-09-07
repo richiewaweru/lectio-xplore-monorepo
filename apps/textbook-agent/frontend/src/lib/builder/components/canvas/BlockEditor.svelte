@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { EditSchema, FieldSchema } from 'lectio';
+	import type { EditSchema, FieldSchema } from '@lectio/learn';
 	import type { Component } from 'svelte';
 	import { setDocumentStoreContext } from '$lib/builder/components/editor/document-store-context';
 	import type { DocumentStore } from '$lib/builder/stores/document.svelte';

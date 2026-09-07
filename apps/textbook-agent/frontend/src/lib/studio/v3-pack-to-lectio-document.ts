@@ -1,4 +1,4 @@
-import type { SectionContent } from 'lectio';
+import type { SectionContent } from '@lectio/learn';
 import type { GenerationDocument } from '$lib/types';
 import { normalizeDocument } from '$lib/generation/viewer-state';
 

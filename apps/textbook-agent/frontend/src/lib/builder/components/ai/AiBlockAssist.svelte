@@ -5,7 +5,7 @@
 	import { blockHasDistinctContent, resolveBackendMode } from './ai-block-utils';
 	import { getNewAiBlockAssist } from '$lib/settings/flags';
 	import { tryBeginAiCall } from '$lib/builder/utils/ai-rate-limit';
-	import type { BlockInstance, GradeBand } from 'lectio';
+	import type { BlockInstance, GradeBand } from '@lectio/learn';
 	import { connectivityStore } from '$lib/builder/stores/connectivity.svelte';
 	import type { BlockAiRepairRequest } from '$lib/builder/issues';
 	import { Sparkles } from 'lucide-svelte';

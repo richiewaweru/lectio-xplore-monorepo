@@ -1,4 +1,4 @@
-import { toSectionContents, validateSection, type LessonDocument } from 'lectio';
+import { toSectionContents, validateSection, type LessonDocument } from '@lectio/learn';
 
 /** Warnings from `validateSection` for the section that contains `blockId`. */
 export function validationWarningsForBlock(doc: LessonDocument, blockId: string): string[] {

@@ -8,6 +8,7 @@
     "app:check": "pnpm --dir apps/textbook-agent/frontend check",
     "app:test": "pnpm --dir apps/textbook-agent/frontend test",
     "contracts:sync": "python apps/textbook-agent/tools/update_lectio_page_contracts.py",
-    "verify:phase": "powershell -ExecutionPolicy Bypass -File scripts/verify-phase.ps1"
+    "verify:phase": "powershell -ExecutionPolicy Bypass -File scripts/verify-phase.ps1",
+    "program:phase00": "python -m pytest tools/xplore-program/tests -q && python tools/xplore-program/check_domain_boundaries.py --format text"
   }
 }
