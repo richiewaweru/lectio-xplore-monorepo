@@ -21,6 +21,7 @@ from print.generation.whole_lesson.packet_builder import (
 )
 from print.generation.whole_lesson.repository import PageDocumentRepository
 from print.generation.whole_lesson.teaching_agent import run_lesson_approach_planner
+from curriculum.teaching_plan.service import plan_shared_teaching
 from v3_blueprint.planning.persistence import load_chunked_state
 
 
@@ -177,7 +178,7 @@ async def run_and_persist_teaching_plan(
         lease_token=lease_token,
     )
 
-    result = await run_lesson_approach_planner(
+    result = await plan_shared_teaching(
         packet,
         legality=legality,
         generation_id=generation_id,

@@ -1021,6 +1021,8 @@ class PageDocumentRepository:
         """
 
         def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
+            from curriculum.teaching_plan.revisions import TeachingRevisionStore
+
             state["teaching_plan"] = plan
             state["teaching_validation"] = validation
             state["teaching_qc"] = qc
@@ -1028,9 +1030,16 @@ class PageDocumentRepository:
                 state["teaching_prompt"] = prompt
             if raw is not None:
                 state["teaching_raw"] = raw
+            preparation_hash = str(
+                (state.get("lesson_packet") or {}).get("preparation_hash")
+                or (state.get("catalogue") or {}).get("teaching_projection_hash")
+                or "unhashed"
+            )
+            store = TeachingRevisionStore(state)
+            store.record_draft(plan, preparation_hash=preparation_hash)
             review = dict(state.get("teaching_review") or {})
             review["status"] = "pending"
-            review["revision"] = int(review.get("revision") or 1)
+            review.setdefault("revision", int(review.get("revision") or 1))
             state["teaching_review"] = review
             if not isinstance(state.get("execution"), dict):
                 state["execution"] = empty_execution_meta()
@@ -1071,6 +1080,8 @@ class PageDocumentRepository:
         boxed: list[dict[str, Any]] = []
 
         def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
+            from curriculum.teaching_plan.revisions import TeachingRevisionStore
+
             review = dict(state.get("teaching_review") or {})
             current_rev = int(review.get("revision") or 1)
             if expected_revision != current_rev:
@@ -1081,13 +1092,19 @@ class PageDocumentRepository:
             if status == "approved" and queue and gen_status in post_approval:
                 boxed.append(state)
                 return
-            review["status"] = status
-            review["reviewed_by"] = reviewed_by
-            review["reviewed_at"] = _now()
-            review["teacher_note"] = teacher_note
             if status == "approved":
-                review["revision"] = current_rev + 1
-            state["teaching_review"] = review
+                store = TeachingRevisionStore(state)
+                store.approve(
+                    expected_revision=expected_revision,
+                    reviewed_by=reviewed_by,
+                    teacher_note=teacher_note,
+                )
+            else:
+                review["status"] = status
+                review["reviewed_by"] = reviewed_by
+                review["reviewed_at"] = _now()
+                review["teacher_note"] = teacher_note
+                state["teaching_review"] = review
             if status == "approved" and queue:
                 current = str(generation.status or "")
                 assert_legal_transition(current, "queued")

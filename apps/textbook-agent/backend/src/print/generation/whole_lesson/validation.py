@@ -379,6 +379,33 @@ def validate_teaching_plan(
                 for qid in block.source_question_ids
                 if qid in approved_by_id
             ]
+            if (
+                block.learner_action is not None
+                and block.learner_action.source_item_ids
+            ):
+                from curriculum.teaching_plan.compatibility import (
+                    ActionSourceIncompatibleError,
+                    assert_action_compatible_with_sources,
+                )
+
+                action_sources = [
+                    approved_by_id[qid]
+                    for qid in block.learner_action.source_item_ids
+                    if qid in approved_by_id
+                ]
+                try:
+                    assert_action_compatible_with_sources(
+                        action=block.learner_action.action,
+                        source_items=action_sources,
+                    )
+                except ActionSourceIncompatibleError as exc:
+                    issues.append(
+                        ValidationIssue(
+                            code=exc.code,
+                            message=exc.message,
+                            path=f"{path}.learner_action",
+                        )
+                    )
             if known_sources and len(known_sources) == len(block.source_question_ids):
                 source_kinds = [approved_item_kind(item) for item in known_sources]
                 mcq_ids = [
