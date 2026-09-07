@@ -1,0 +1,180 @@
+{
+  "view": "teaching",
+  "view_version": "1.0.0",
+  "native_path": "learn",
+  "coverage": [
+    {
+      "intent": "activate-prior-knowledge",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "apply",
+      "supported_today": false,
+      "learner_actions": []
+    },
+    {
+      "intent": "check-understanding",
+      "supported_today": true,
+      "learner_actions": [
+        "enter-text",
+        "read-explanation",
+        "select-one"
+      ]
+    },
+    {
+      "intent": "classify",
+      "supported_today": false,
+      "learner_actions": []
+    },
+    {
+      "intent": "compare",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "define",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "demonstrate",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "diagnose-misconception",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "evaluate",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "explain",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "explain-cause",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "interpret",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "model-thinking",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "name-parts",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "orient",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "practise-guided",
+      "supported_today": true,
+      "learner_actions": [
+        "enter-text",
+        "read-explanation",
+        "select-one"
+      ]
+    },
+    {
+      "intent": "practise-independent",
+      "supported_today": true,
+      "learner_actions": [
+        "enter-text",
+        "read-explanation",
+        "select-one"
+      ]
+    },
+    {
+      "intent": "reflect",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "sequence",
+      "supported_today": false,
+      "learner_actions": []
+    },
+    {
+      "intent": "show-structure",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "state-goal",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "summarise",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "trace-flow",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    },
+    {
+      "intent": "warn",
+      "supported_today": true,
+      "learner_actions": [
+        "read-explanation"
+      ]
+    }
+  ],
+  "supported_actions": [
+    "enter-text",
+    "read-explanation",
+    "select-one"
+  ]
+}

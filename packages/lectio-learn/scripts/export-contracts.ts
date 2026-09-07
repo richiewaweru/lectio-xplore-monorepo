@@ -11,6 +11,12 @@
  * Output files:
  *   {out}/section-content-schema.json - full SectionContent JSON schema
  *   {out}/lectio-content-contract.json - unified consumer contract surface
+ *   {out}/learn-capabilities.v1.json - the capability catalogue (all records)
+ *   {out}/learn-teaching-view.v1.json - shared vocabulary coverage, no native ids
+ *   {out}/learn-selection-view.v1.json - selectable capabilities, no payloads
+ *   {out}/learn-writer-view.v1.json - payload schema + guidance per capability
+ *   {out}/learn-runtime-view.v1.json - response schema + evaluator per capability
+ *   {out}/learn-capability-manifest.json - versions and hashes of the above
  *
  * The pipeline reads these files. It never imports from src/.
  * Single source of truth stays here in TypeScript.
@@ -22,6 +28,27 @@ import { createGenerator } from 'ts-json-schema-generator';
 import { validateAllLectioContentModules } from '../src/lib/lectio/core/validate-component';
 import { lectioComponentModules } from '../src/lib/schema/registry';
 import { buildLectioContentContract } from '../src/lib/lectio/build-content-contract';
+import {
+	CAPABILITY_CATALOGUE_VERSION,
+	learnCapabilities,
+	validateCapabilityRecords
+} from '../src/lib/learn/capabilities';
+import {
+	buildRuntimeView,
+	buildSelectionView,
+	buildTeachingView,
+	buildWriterView,
+	RUNTIME_VIEW_VERSION,
+	SELECTION_VIEW_VERSION,
+	TEACHING_VIEW_VERSION,
+	WRITER_VIEW_VERSION
+} from '../src/lib/learn/capabilities/views';
+import {
+	MANIFEST_VERSION,
+	manifestEntry,
+	type CapabilityManifest,
+	type ManifestEntry
+} from '../src/lib/learn/capabilities/manifest';
 
 const outArgIndex = process.argv.indexOf('--out');
 const outFromArg = outArgIndex !== -1 ? process.argv[outArgIndex + 1] : null;
@@ -73,19 +100,123 @@ function resolveLocalRef(root: JsonObject, ref: string): JsonObject {
 	return (node ?? {}) as JsonObject;
 }
 
-function getSectionContentPropertyMap(schemaJson: JsonObject): JsonObject {
+function getSectionContentSchema(schemaJson: JsonObject): JsonObject {
 	const defs = ((schemaJson.$defs ?? schemaJson.definitions ?? {}) as JsonObject) ?? {};
-	const sectionSchema =
-		typeof schemaJson.$ref === 'string'
-			? resolveLocalRef(schemaJson, schemaJson.$ref as string)
-			: ((defs.SectionContent as JsonObject | undefined) ?? schemaJson);
-	return (sectionSchema.properties as JsonObject | undefined) ?? {};
+	return typeof schemaJson.$ref === 'string'
+		? resolveLocalRef(schemaJson, schemaJson.$ref as string)
+		: ((defs.SectionContent as JsonObject | undefined) ?? schemaJson);
 }
 
-const sectionProps = getSectionContentPropertyMap(sectionSchema as JsonObject);
+const sectionContentSchema = getSectionContentSchema(sectionSchema as JsonObject);
+const sectionProps = (sectionContentSchema.properties as JsonObject | undefined) ?? {};
 const unifiedContract = buildLectioContentContract(sectionProps, packageJson.version);
 writeFileSync(`${OUT}/lectio-content-contract.json`, JSON.stringify(unifiedContract, null, 2));
 
+// ── Capability catalogue and generated views ────────────────────────────────
+
+const capabilityErrors = validateCapabilityRecords(learnCapabilities);
+if (capabilityErrors.length > 0) {
+	// eslint-disable-next-line no-console
+	console.error('[Lectio] Capability catalogue validation failed:');
+	for (const error of capabilityErrors) {
+		// eslint-disable-next-line no-console
+		console.error(`- ${error}`);
+	}
+	process.exit(1);
+}
+
+/**
+ * A content capability names its payload by reference into the generated
+ * SectionContent schema. Resolving it here — rather than duplicating the schema
+ * into the record — keeps one source of truth for the payload shape.
+ */
+const capabilities = learnCapabilities.map((record) => {
+	const [file, pointer] = record.payload_schema_ref.split('#');
+	if (file !== 'section-content-schema.json' || !pointer) return record;
+	// Pointers are relative to the SectionContent subschema, which is where a
+	// section field actually lives; the file root is a `$ref` wrapper.
+	return {
+		...record,
+		payload_schema: resolveLocalRef(sectionContentSchema, `#${pointer}`)
+	};
+});
+
+// An offerable capability must have a real payload schema; a capability that is
+// already `unavailable` may legitimately have nothing to resolve yet, and says
+// so in its blocking reasons.
+const unresolved = capabilities.filter(
+	(record) =>
+		record.availability !== 'unavailable' && Object.keys(record.payload_schema).length === 0
+);
+if (unresolved.length > 0) {
+	// eslint-disable-next-line no-console
+	console.error('[Lectio] Offerable capabilities with an unresolved payload schema:');
+	for (const record of unresolved) {
+		// eslint-disable-next-line no-console
+		console.error(`- ${record.id} (${record.payload_schema_ref})`);
+	}
+	process.exit(1);
+}
+
+const artifacts: ManifestEntry[] = [];
+
+function writeView(file: string, view: string, version: string, payload: unknown): void {
+	const serialized = `${JSON.stringify(payload, null, 2)}\n`;
+	writeFileSync(`${OUT}/${file}`, serialized);
+	artifacts.push(manifestEntry(file, view, version, serialized));
+}
+
+writeView('learn-capabilities.v1.json', 'catalogue', CAPABILITY_CATALOGUE_VERSION, {
+	view: 'catalogue',
+	view_version: CAPABILITY_CATALOGUE_VERSION,
+	native_path: 'learn',
+	capabilities
+});
+writeView(
+	'learn-teaching-view.v1.json',
+	'teaching',
+	TEACHING_VIEW_VERSION,
+	buildTeachingView(capabilities)
+);
+writeView(
+	'learn-selection-view.v1.json',
+	'selection',
+	SELECTION_VIEW_VERSION,
+	buildSelectionView(capabilities)
+);
+writeView('learn-writer-view.v1.json', 'writer', WRITER_VIEW_VERSION, buildWriterView(capabilities));
+writeView(
+	'learn-runtime-view.v1.json',
+	'runtime',
+	RUNTIME_VIEW_VERSION,
+	buildRuntimeView(capabilities)
+);
+
+const counts: Record<string, number> = {
+	total: capabilities.length,
+	interaction: capabilities.filter((record) => record.kind === 'interaction').length,
+	content: capabilities.filter((record) => record.kind === 'content').length
+};
+for (const record of capabilities) {
+	counts[`readiness:${record.readiness}`] = (counts[`readiness:${record.readiness}`] ?? 0) + 1;
+	counts[`availability:${record.availability}`] =
+		(counts[`availability:${record.availability}`] ?? 0) + 1;
+}
+
+const manifest: CapabilityManifest = {
+	manifest_version: MANIFEST_VERSION,
+	catalogue_version: CAPABILITY_CATALOGUE_VERSION,
+	package_version: packageJson.version,
+	generated_at: new Date().toISOString(),
+	capability_counts: counts,
+	artifacts
+};
+writeFileSync(
+	`${OUT}/learn-capability-manifest.json`,
+	`${JSON.stringify(manifest, null, 2)}\n`
+);
+
 console.log('Exported SectionContent schema');
 console.log('Exported lectio-content-contract.json');
+console.log(`Exported ${artifacts.length} capability artifact(s) for ${capabilities.length} capabilities`);
 console.log(`Output: ${OUT}/`);
