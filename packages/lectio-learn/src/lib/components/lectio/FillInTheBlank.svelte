@@ -4,7 +4,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { usePrintMode } from '$lib/utils/printContext';
 	import {
-		evaluateFillBlank,
+		evaluateInteraction,
 		fillBlankContentToInteractionContract
 	} from '$lib/learn/interaction-contract';
 
@@ -24,13 +24,13 @@
 		}
 	});
 
+	// Routed through the shared evaluator on the generated contract so the classic
+	// component scores identically to the `fill-blank` interaction kind. The
+	// length guard keeps the render pass from evaluating a half-synced response,
+	// which the evaluator would (correctly) reject as a count mismatch.
 	const evaluation = $derived(
-		submitted
-			? evaluateFillBlank(
-					{ answers: contract.config.answers as string[] },
-					{ blanks },
-					contract.feedback
-				)
+		submitted && blanks.length === blankCount
+			? evaluateInteraction(contract, { blanks })
 			: null
 	);
 
@@ -86,7 +86,7 @@
 			<p class="text-sm font-medium leading-relaxed">{content.instruction}</p>
 		{/if}
 
-		<div class="mt-3 text-sm leading-loose" aria-label={contract.accessibility.aria_label}>
+		<div class="mt-3 text-sm leading-loose" aria-label={contract.accessibility?.aria_label}>
 			{#each content.segments as segment, segmentIndex}
 				{#if segment.is_blank}
 					{@const bi = blankIndexForSegment(segmentIndex)}

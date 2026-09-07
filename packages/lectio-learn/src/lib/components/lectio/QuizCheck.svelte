@@ -7,7 +7,7 @@
 	import AnswerMarker from '$lib/print/AnswerMarker.svelte';
 	import { renderInlineMarkdown } from '$lib/utils/markdown';
 	import {
-		evaluateChoice,
+		evaluateInteraction,
 		quizContentToInteractionContract
 	} from '$lib/learn/interaction-contract';
 
@@ -31,13 +31,12 @@
 		submitted = false;
 	}
 
+	// Routed through the shared evaluator on the generated contract, so the
+	// classic component scores identically to the `choice` interaction kind and
+	// inherits its option-membership checks.
 	const evaluation = $derived(
 		selected !== null && submitted
-			? evaluateChoice(
-					{ correct_option_id: String(contract.config.correct_option_id) },
-					{ selected_option_id: String(selected) },
-					contract.feedback
-				)
+			? evaluateInteraction(contract, { selected_option_id: String(selected) })
 			: null
 	);
 	const isCorrect = $derived(evaluation?.outcome === 'correct');
