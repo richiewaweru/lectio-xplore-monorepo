@@ -125,6 +125,9 @@ importers:
 
   packages/lectio-learn:
     dependencies:
+      '@lectio/contracts':
+        specifier: workspace:*
+        version: link:../lectio-contracts
       esm-env:
         specifier: ^1.2.2
         version: 1.2.2

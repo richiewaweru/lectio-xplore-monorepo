@@ -211,16 +211,20 @@ export type {
 	LearnerBand
 } from './schema/component-meta';
 
-// Learn interaction contracts (Phase 04)
+// Learn interaction contracts
 export type {
 	LearnInteractionContract,
 	InteractionKindId,
+	ChoicePresentation,
 	EvaluationResult,
 	EvaluationOutcome,
 	InteractionAttemptState,
 	AttemptPolicy,
 	FeedbackSpec,
-	CompletionRule
+	CompletionRule,
+	BlankAnswer,
+	ShortResponseConfig,
+	ShortResponseEvaluationMode
 } from './learn/interaction-contract';
 export {
 	evaluateInteraction,
@@ -228,6 +232,7 @@ export {
 	evaluateMultiSelect,
 	evaluateFillBlank,
 	evaluateNumeric,
+	evaluateShortResponse,
 	evaluateMatchPairs,
 	evaluateSequence,
 	validateInteractionContract,
@@ -235,11 +240,44 @@ export {
 	parseInteractionContract,
 	quizContentToInteractionContract,
 	fillBlankContentToInteractionContract,
+	shortResponseToInteractionContract,
 	createAttemptState,
 	recordAttempt,
 	completeLessonInMemory,
-	isComplete
+	isComplete,
+	InteractionConfigError,
+	InteractionResponseError
 } from './learn/interaction-contract';
+
+// Learn capability catalogue and its generated views (also available renderer-free
+// at `@lectio/learn/capabilities`, which is what a Node consumer should import).
+export type {
+	CapabilityAvailability,
+	CapabilityEvaluation,
+	CapabilityKind,
+	CapabilityReadiness,
+	CapabilityReadinessEvidence,
+	LearnCapabilityRecord,
+	LearnRuntimeView,
+	LearnSelectionRecord,
+	LearnSelectionView,
+	LearnTeachingView,
+	LearnWriterRecord,
+	LearnWriterView
+} from './learn/capabilities';
+export {
+	CAPABILITY_CATALOGUE_VERSION,
+	buildRuntimeView as buildLearnRuntimeView,
+	buildSelectionView as buildLearnSelectionView,
+	buildTeachingView as buildLearnTeachingView,
+	buildWriterView as buildLearnWriterView,
+	capabilityById,
+	contentCapabilities,
+	interactionCapabilities,
+	isSelectable,
+	learnCapabilities,
+	validateCapabilityRecords
+} from './learn/capabilities';
 
 // Learn interaction UI shells (Phase 04 closeout)
 export { default as MultiSelectInteraction } from './learn/MultiSelectInteraction.svelte';

@@ -18,6 +18,10 @@
 		"./theme.css": {
 			"default": "./dist/theme.css"
 		},
+		"./capabilities": {
+			"types": "./dist/learn/capabilities/index.d.ts",
+			"default": "./dist/learn/capabilities/index.js"
+		},
 		"./contracts/*": "./contracts/*",
 		"./generated/*": "./generated/*",
 		"./components/*": "./dist/components/*.js"
@@ -87,6 +91,7 @@
 		"zod": "^4.4.3"
 	},
 	"dependencies": {
+		"@lectio/contracts": "workspace:*",
 		"esm-env": "^1.2.2",
 		"isomorphic-dompurify": "2.26.0",
 		"katex": "^0.16.45",
