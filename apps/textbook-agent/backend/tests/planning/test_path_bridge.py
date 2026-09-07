@@ -39,10 +39,10 @@ from v3_blueprint.planning.persistence import load_chunked_state, persist_chunke
 
 
 @pytest.mark.asyncio
-async def test_prepare_path_is_native_even_when_capability_flags_are_disabled(
+async def test_prepare_path_is_shared_not_print_native(
     db_session, monkeypatch
 ) -> None:
-    """Current path preparation cannot create a contract-v1 fallback."""
+    """Fresh Unit preparation is shared meaning — no print-native contract claim."""
     from core.config import settings
 
     monkeypatch.setattr(settings, "xplore_page_documents_enabled", False)
@@ -64,7 +64,7 @@ async def test_prepare_path_is_native_even_when_capability_flags_are_disabled(
         .order_by(PathLessonModel.position)
     )
     assert lesson is not None
-    selector = AsyncMock(side_effect=AssertionError("native path used component selector"))
+    selector = AsyncMock(side_effect=AssertionError("shared prep used component selector"))
 
     response, structural_plan = await prepare_path_lesson(
         db_session,
@@ -76,12 +76,16 @@ async def test_prepare_path_is_native_even_when_capability_flags_are_disabled(
         component_selector=selector,
     )
 
-    assert structural_plan.document_contract_version == 2
+    assert structural_plan.document_contract_version == 1
+    assert all(section.components == [] for section in structural_plan.sections)
+    assert all(section.blocks == [] for section in structural_plan.sections)
     generation = await db_session.get(GenerationModel, response.generation_id)
     assert generation is not None
-    assert json.loads(generation.planning_spec_json)["document_contract_version"] == 2
+    assert json.loads(generation.planning_spec_json)["document_contract_version"] == 1
     state = await load_chunked_state(response.generation_id, db_session)
-    assert state["native_whole_lesson"] is True
+    assert state.get("shared_preparation") is True
+    assert state.get("native_whole_lesson") is not True
+    assert state.get("components_selected") is False
     provenance = await db_session.get(LessonProvenanceModel, response.generation_id)
     assert provenance is not None
     assert provenance.path_version_id == version.id
@@ -180,27 +184,16 @@ def test_bridge_preserves_authoritative_visual_flag_when_planner_clears_it() -> 
     from application.unit_lesson.prepare import _build_structural_plan
 
     slots = ["orient", "model", "check"]
-    generated = PathStructuralPlan.model_validate(
+    generated = PathStructuralPagePlan.model_validate(
         {
             "anchor": {"description": "a water-cycle exhibit", "source": "new"},
-            "cards": [
-                {
-                    "id": "c-water",
-                    "title": "Water Cycle",
-                    "objective": "Create a labelled water-cycle diagram.",
-                    "misconceptions": [],
-                }
-            ],
+            "cards": [{"title": "Water Cycle"}],
             "sections": [
                 {
-                    "id": slot,
-                    "role": slot,
                     "title": slot.title(),
-                    "card_id": None if slot != "model" else "c-water",
-                    "visual_required": False,
-                    "transition_note": None,
+                    "transition_note": None if index == 0 else "follows",
                 }
-                for slot in slots
+                for index, slot in enumerate(slots)
             ],
         }
     )
@@ -215,10 +208,11 @@ def test_bridge_preserves_authoritative_visual_flag_when_planner_clears_it() -> 
         lesson=lesson,
         lesson_mode="first_exposure",
         prior_knowledge=[],
-        slots=slots,
+        slot_roles=slots,
+        slot_instance_ids=slots,
         selected_components={},
-        page_block_plans={},
-        visual_required_by_slot={"orient": False, "model": True, "check": False},
+        shared_preparation=True,
+        visual_required_by_instance={"orient": False, "model": True, "check": False},
     )
 
     assert [section.visual_required for section in plan.sections] == [False, True, False]
@@ -254,10 +248,11 @@ def test_native_page_plan_bridge_stamps_fixed_identities() -> None:
         lesson=lesson,
         lesson_mode="first_exposure",
         prior_knowledge=[],
-        slots=slots,
+        slot_roles=slots,
+        slot_instance_ids=slots,
         selected_components={},
-        page_block_plans={},
-        visual_required_by_slot={"orient": False, "explain": True, "check": False},
+        shared_preparation=True,
+        visual_required_by_instance={"orient": False, "explain": True, "check": False},
     )
 
     assert [section.id for section in plan.sections] == slots
@@ -265,6 +260,8 @@ def test_native_page_plan_bridge_stamps_fixed_identities() -> None:
     assert [section.card_id for section in plan.sections] == [None, "c-water", "c-water"]
     assert plan.cards[0].id == "c-water"
     assert plan.cards[0].objective == lesson.objective
+    assert plan.document_contract_version == 1
+    assert all(section.components == [] for section in plan.sections)
 
 
 @pytest.mark.parametrize(
@@ -329,32 +326,22 @@ FIXTURE = (
 )
 
 
-async def _fake_structural_planner(context: dict) -> PathStructuralPlan:
+async def _fake_structural_planner(context: dict) -> PathStructuralPagePlan:
+    """Semantic-only planner output — no components or slot identity."""
     sections = []
-    for index, slot in enumerate(context["slots"]):
-        component = slot["allowed_components"][0]
+    for slot in context["slots"]:
+        role = slot.get("slot_id") or slot.get("role") or "slot"
         sections.append(
             {
-                "id": slot["slot_id"],
-                "title": f"{slot['purpose']} — an advisory explanation that may exceed the display limit",
-                "role": slot["slot_id"],
-                "card_id": None if slot["slot_id"] in {"orient", "close"} else context["concept_id"],
-                "visual_required": slot["visual_required"],
+                "title": f"{slot.get('purpose') or role} — an advisory explanation that may exceed the display limit",
                 "transition_note": (
                     "The model may provide a useful but overly detailed transition note that "
                     "explains how the prior section establishes knowledge for the next cognitive "
                     "move without changing the lesson structure or objective."
                 ),
-                "components": [
-                    {
-                        "slug": component,
-                        "purpose": f"Perform the {slot['slot_id']} cognitive job.",
-                        "reason": "The selector's advisory rationale is not persisted.",
-                    }
-                ],
             }
         )
-    return PathStructuralPlan(
+    return PathStructuralPagePlan(
         anchor=PathAnchor(
             description=(
                 "A leaf kept in bright light beside another leaf kept in darkness, with both "
@@ -364,18 +351,14 @@ async def _fake_structural_planner(context: dict) -> PathStructuralPlan:
         ),
         cards=[
             {
-                "id": context["concept_id"],
                 "title": context["title"],
-                "objective": context["objective"],
                 "prereqs": [],
                 "misconceptions": [],
                 "no_known_misconceptions": True,
-                "opens_by": None,
+                "opens_by": "",
             }
         ],
         sections=sections,
-        deviation_request=None,
-        objective_concern=None,
     )
 
 
@@ -841,23 +824,9 @@ async def test_prepare_bridge_forces_approved_objective_over_rewrite(
     )
     assert lesson is not None
 
-    async def rewriting_planner(context: dict) -> PathStructuralPlan:
-        # Rebuild through model_validate rather than mutating the parsed model:
-        # this is the shape a drifting planner actually returns, so the prompt
-        # -facing extras (body / must_establish / concept_id) travel the same
-        # extra="ignore" path they would in production.
-        generated = await _fake_structural_planner(context)
-        payload = generated.model_dump(mode="json", exclude_none=True)
-        payload["cards"] = [
-            {
-                **payload["cards"][0],
-                "objective": "A plausible but rewritten objective.",
-                "body": "Planner-only body that must be stripped.",
-                "must_establish": ["extra"],
-                "concept_id": "wrong-id",
-            }
-        ]
-        return PathStructuralPlan.model_validate(payload)
+    async def rewriting_planner(context: dict) -> PathStructuralPagePlan:
+        # Page cards cannot carry objective; code assigns the path-owned value.
+        return await _fake_structural_planner(context)
 
     response, structural_plan = await prepare_path_lesson(
         db_session,
@@ -870,11 +839,11 @@ async def test_prepare_bridge_forces_approved_objective_over_rewrite(
     )
     assert structural_plan.cards[0].objective == lesson.objective
     assert structural_plan.cards[0].id == lesson.concept_id
-    assert structural_plan.document_contract_version == 2
+    assert structural_plan.document_contract_version == 1
     assert response.generation_id
 
 
-async def test_prepare_bridge_routes_factual_to_native_under_scope_all(
+async def test_prepare_bridge_routes_factual_to_shared_under_scope_all(
     db_session, monkeypatch
 ) -> None:
     from core.config import settings
@@ -911,7 +880,8 @@ async def test_prepare_bridge_routes_factual_to_native_under_scope_all(
         structural_planner=_fake_structural_planner,
         component_selector=_fake_component_selector,
     )
-    assert structural_plan.document_contract_version == 2
+    assert structural_plan.document_contract_version == 1
+    assert all(section.components == [] for section in structural_plan.sections)
     assert [section.role for section in structural_plan.sections] != [
         "orient",
         "explain",
@@ -920,7 +890,7 @@ async def test_prepare_bridge_routes_factual_to_native_under_scope_all(
     ]
 
 
-async def test_native_sections_take_blocks_only_from_page_block_plans(
+async def test_shared_prep_strips_planner_chosen_components(
     db_session, monkeypatch
 ) -> None:
     """The structural planner must not be able to choose page objects.
@@ -966,12 +936,13 @@ async def test_native_sections_take_blocks_only_from_page_block_plans(
         component_selector=_fake_component_selector,
     )
 
-    assert structural_plan.document_contract_version == 2
+    assert structural_plan.document_contract_version == 1
     for section in structural_plan.sections:
         assert section.components == [], (
             f"section {section.id!r} kept planner-chosen components"
         )
-    # Section identity stays pinned to the fixed skeleton slots.
-    assert [section.id for section in structural_plan.sections] == [
-        section.role for section in structural_plan.sections
-    ]
+        assert section.blocks == []
+    # Unique roles keep instance id == role; repeats get role-N suffixes.
+    assert len({section.id for section in structural_plan.sections}) == len(
+        structural_plan.sections
+    )

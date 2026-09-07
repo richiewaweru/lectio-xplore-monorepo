@@ -31,14 +31,11 @@ from core.database.models import (
     UnitModel,
     UnitScopeContractModel,
 )
-from contracts.lectio import get_component_card
 from curriculum.models import (
-    ComponentSelection,
     PathStructuralPagePlan,
     PathStructuralPlan,
     PrepareLessonRequest,
     PreparedLessonResponse,
-    SelectedComponent,
 )
 from curriculum.outcomes import actual_context_for_lessons
 from curriculum.schedule import selected_unit_groups
@@ -48,9 +45,13 @@ from curriculum.shapes import (
     lesson_deviations,
 )
 from curriculum.agents import run_component_selector, run_path_structural_planner
+from curriculum.teaching_plan.instance_ids import (
+    assert_unique_instance_ids,
+    assign_slot_instance_ids,
+)
+from curriculum.teaching_plan.projections import project_shared_preparation_packet
 from v3_blueprint.planning.models import (
     AnchorSpec,
-    ComponentSlot,
     ConceptCard,
     LessonIntent,
     QPlanItem,
@@ -206,10 +207,11 @@ def _build_structural_plan(
     lesson: PathLessonModel,
     lesson_mode: str,
     prior_knowledge: list[str],
-    slots: list[str],
+    slot_roles: list[str],
+    slot_instance_ids: list[str],
     selected_components: dict[str, list[str]],
-    page_block_plans: dict[str, Any] | None = None,
-    visual_required_by_slot: dict[str, bool] | None = None,
+    shared_preparation: bool = True,
+    visual_required_by_instance: dict[str, bool] | None = None,
 ) -> StructuralPlan:
     if generated.deviation_request is not None:
         raise PathPreparationBlocked("A skeleton deviation requires teacher approval")
@@ -235,34 +237,38 @@ def _build_structural_plan(
     if card.id != lesson.concept_id:
         raise PathPreparationBlocked("Prepared card must retain the canonical concept ID")
 
+    if len(slot_roles) != len(slot_instance_ids):
+        raise PathPreparationBlocked("Slot roles and instance ids must be the same length")
+    assert_unique_instance_ids(slot_instance_ids)
+
     section_payloads: list[dict[str, Any]] = []
     for index, generated_section in enumerate(generated.sections):
         section_payload = generated_section.model_dump(mode="json", exclude_none=True)
-        # SectionPlan.components has no default, and exclude_none drops the key
-        # when the planner omits it (the native prompt forbids components).
+        # Shared preparation never selects components; empty list is required.
         section_payload.setdefault("components", [])
-        canonical_slot_id = slots[index] if index < len(slots) else None
-        if page_block_plans is not None:
-            if canonical_slot_id is None:
+        instance_id = slot_instance_ids[index] if index < len(slot_instance_ids) else None
+        role = slot_roles[index] if index < len(slot_roles) else None
+        if shared_preparation:
+            if instance_id is None or role is None:
                 raise PathPreparationBlocked(
-                    "Native structural planner returned more sections than fixed skeleton slots"
+                    "Shared structural planner returned more sections than fixed skeleton slots"
                 )
-            # Native identity is application-owned. Provider output contains only
-            # the semantic section payload.
-            section_payload["id"] = canonical_slot_id
-            section_payload["role"] = canonical_slot_id
+            # Instance id is code-owned; role is the pedagogical slot type.
+            section_payload["id"] = instance_id
+            section_payload["role"] = role
             section_payload["visual_required"] = bool(
-                (visual_required_by_slot or {}).get(canonical_slot_id, False)
+                (visual_required_by_instance or {}).get(instance_id, False)
             )
             section_payload["card_id"] = (
-                None if canonical_slot_id in {"orient", "close"} else lesson.concept_id
+                None if role in {"orient", "close"} else lesson.concept_id
             )
-        elif visual_required_by_slot is not None:
-            # Skeleton-derived visual flags are authoritative. The structural
-            # model must echo them, but a direct/custom planner cannot clear a
-            # required visual by returning false.
+            section_payload["components"] = []
+            section_payload["blocks"] = []
+        elif visual_required_by_instance is not None:
             section_payload["visual_required"] = bool(
-                visual_required_by_slot.get(generated_section.role or generated_section.id, False)
+                visual_required_by_instance.get(
+                    generated_section.role or generated_section.id, False
+                )
             )
         title = section_payload.get("title")
         if isinstance(title, str):
@@ -275,9 +281,7 @@ def _build_structural_plan(
                 transition_note,
                 limit=120,
             )
-        # The path layer owns concept identity. Coerce rather than validate, for
-        # the same reason the card's id and objective are assigned above.
-        if page_block_plans is None and section_payload.get("card_id") is not None:
+        if not shared_preparation and section_payload.get("card_id") is not None:
             section_payload["card_id"] = lesson.concept_id
         components = section_payload.get("components")
         if isinstance(components, list):
@@ -287,37 +291,33 @@ def _build_structural_plan(
                 else component
                 for component in components
             ]
-        if page_block_plans is not None:
-            # Native v2 path: structural planner may still emit legacy component
-            # shapes; whole-lesson teaching/form planners own block selection.
-            plan_for_slot = page_block_plans.get(canonical_slot_id)
-            section_payload["components"] = []
-            section_payload["blocks"] = list(getattr(plan_for_slot, "blocks", []) or [])
         section_payloads.append(section_payload)
     sections = [SectionPlan.model_validate(section) for section in section_payloads]
     roles = [section.role for section in sections]
-    if roles != slots:
+    if roles != slot_roles:
         raise PathPreparationBlocked(
-            f"Prepared section roles must match skeleton slots exactly: expected {slots}, got {roles}"
+            f"Prepared section roles must match skeleton slots exactly: expected {slot_roles}, got {roles}"
         )
-    if any(section.id != role for section, role in zip(sections, slots, strict=True)):
-        raise PathPreparationBlocked("Prepared section IDs must equal their fixed slot IDs")
+    ids = [section.id for section in sections]
+    if ids != slot_instance_ids:
+        raise PathPreparationBlocked(
+            f"Prepared section IDs must match slot instance ids: expected {slot_instance_ids}, got {ids}"
+        )
     for section in sections:
-        if page_block_plans is not None:
-            plan_for_slot = page_block_plans.get(section.role)
-            if plan_for_slot is not None:
-                section.components = []
-                section.blocks = list(plan_for_slot.blocks)
+        if shared_preparation:
+            section.components = []
+            section.blocks = []
             continue
         actual = [component.slug for component in section.components]
-        if actual != selected_components[section.role]:
+        if actual != selected_components.get(section.role, []):
             raise PathPreparationBlocked(
                 f"Section {section.role!r} components differ from the component selector output"
             )
 
     check = next(section for section in sections if section.role == "check")
+    # Shared meaning must not masquerade as a print-native document contract.
     plan = StructuralPlan(
-        document_contract_version=2 if page_block_plans is not None else 1,
+        document_contract_version=1,
         lesson_mode=lesson_mode,
         lesson_intent=LessonIntent(
             goal=lesson.objective,
@@ -361,56 +361,44 @@ def _materialize_variant_plan(
     *,
     base_plan: StructuralPlan,
     preview: SkeletonVariantPreview,
-    component_selections: dict[str, ComponentSelection],
 ) -> StructuralPlan:
+    """Materialize a differentiated shape as semantic slot instances only.
+
+    Does not select native components. Added variant slots get empty component
+    lists; repeated roles receive unique instance ids.
+    """
     base_by_role: dict[str, list[SectionPlan]] = {}
     for section in base_plan.sections:
         base_by_role.setdefault(section.role, []).append(section)
+    slot_roles = [slot.slot_id for slot in preview.slots]
+    instance_ids = assign_slot_instance_ids(slot_roles)
     occurrence: dict[str, int] = {}
     sections: list[SectionPlan] = []
-    for position, slot in enumerate(preview.slots):
+    for position, (slot, instance_id) in enumerate(
+        zip(preview.slots, instance_ids, strict=True)
+    ):
         occurrence[slot.slot_id] = occurrence.get(slot.slot_id, 0) + 1
         slot_occurrence = occurrence[slot.slot_id]
         existing = base_by_role.get(slot.slot_id, [])
         if slot_occurrence <= len(existing):
             section = existing[slot_occurrence - 1].model_copy(deep=True)
         else:
-            selection = component_selections.get(slot.slot_id)
-            if selection is None:
-                # Native whole-lesson prepare skips the legacy component selector.
-                # Variant shapes may still introduce slots absent from the base
-                # plan (e.g. support/extension toggles); synthesize a minimal
-                # legal selection from the skeleton slot so materialization does
-                # not invent content or fall back to legacy generation.
-                allowed = list(slot.allowed_components or [])
-                if not allowed:
-                    raise PathPreparationBlocked(
-                        f"Cannot materialize variant slot {slot.slot_id!r} without allowed components"
-                    )
-                selection = ComponentSelection(
-                    components=[
-                        SelectedComponent(
-                            slug=allowed[0],
-                            purpose=(slot.purpose or slot.slot_id).strip() or slot.slot_id,
-                            reason="Native path variant materialization",
-                        )
-                    ],
-                    budget_pressure=None,
-                )
+            # Semantic-only materialization: never synthesize a first-allowed
+            # component. Native selection happens after teaching approval.
             section = SectionPlan(
-                id=(slot.slot_id if slot_occurrence == 1 else f"{slot.slot_id}-{slot_occurrence}"),
+                id=instance_id,
                 title=(slot.purpose.strip() or slot.role.replace("_", " ").title())[:80],
                 role=slot.slot_id,
                 card_id=base_plan.cards[0].id,
                 visual_required=slot.visual_required,
                 transition_note=None,
-                components=[
-                    ComponentSlot(slug=component.slug, purpose=component.purpose)
-                    for component in selection.components
-                ],
+                components=[],
+                blocks=[],
             )
-        section.id = slot.slot_id if slot_occurrence == 1 else f"{slot.slot_id}-{slot_occurrence}"
+        section.id = instance_id
         section.role = slot.slot_id
+        section.components = []
+        section.blocks = []
         section.transition_note = (
             None
             if position == 0
@@ -420,9 +408,11 @@ def _materialize_variant_plan(
     check_sections = [section for section in sections if section.role == "check"]
     if len(check_sections) != 1:
         raise PathPreparationBlocked("Every differentiated shape must retain one shared check slot")
+    assert_unique_instance_ids(section.id for section in sections)
     return base_plan.model_copy(
         deep=True,
         update={
+            "document_contract_version": 1,
             "sections": sections,
             "question_plan": [
                 QPlanItem(
@@ -511,7 +501,8 @@ async def prepare_path_lesson(
     blocking = _blocking_shape_message(preview.variants)
     if blocking:
         raise PathPreparationBlocked(blocking)
-    slots = [slot.slot_id for slot in preview.variants[0].slots]
+    slot_roles = [slot.slot_id for slot in preview.variants[0].slots]
+    slot_instance_ids = assign_slot_instance_ids(slot_roles)
     possible_previews = [
         catalog.preview(
             SkeletonPreviewRequest(
@@ -526,49 +517,27 @@ async def prepare_path_lesson(
         for count in (0, 1, 2)
     ]
     preparation_group_preview = possible_previews[0]
-    slots_by_id = {
-        slot.slot_id: slot
-        for possible in possible_previews
-        for variant in possible.variants
-        for slot in variant.slots
-    }
-    slots_by_id.update({slot.slot_id: slot for slot in preview.variants[0].slots})
-    # Every current path-prepared lesson is native.  The feature flag and scope
-    # controls were useful during the rollout, but allowing them to select the
-    # component-selector branch means a normal product request can still create
-    # a contract-v1 generation.  Historical v1 records remain readable; new
-    # path preparation has one authoritative contract.
-    use_page_docs = True
-    component_selections: dict[str, ComponentSelection] = {}
-    page_block_plans = None
-    if use_page_docs:
-        # Native whole-lesson path: no per-slot fixture planner. Teaching plan
-        # runs after approved items exist (awaiting_teaching_approval gate).
-        page_block_plans = {}
-    else:
-        for slot in slots_by_id.values():
-            registry_cards = [
-                card
-                for component_id in slot.allowed_components
-                if (card := get_component_card(component_id)) is not None
-            ]
-            selection = await component_selector(
-                {
-                    "concept_id": lesson.concept_id,
-                    "objective": lesson.objective,
-                    "primary_knowledge_type": lesson.primary_knowledge_type,
-                    "slot": slot.model_dump(mode="json"),
-                    "component_registry_cards": registry_cards,
-                    "component_budget": min(4, len(slot.allowed_components)),
-                    "max_per_section": 4,
-                }
-            )
-            selected_slugs = [component.slug for component in selection.components]
-            if not selected_slugs or not set(selected_slugs).issubset(set(slot.allowed_components)):
-                raise PathPreparationBlocked(
-                    f"Component selector returned an invalid selection for slot {slot.slot_id!r}"
-                )
-            component_selections[slot.slot_id] = selection
+    # Fresh Unit preparation is shared instructional meaning only. Native
+    # forms/components and print document contracts are selected later by path
+    # consumers after teaching approval (P03+).
+    shared_preparation = True
+    projected_slots = []
+    for role, instance_id, slot in zip(
+        slot_roles,
+        slot_instance_ids,
+        preview.variants[0].slots,
+        strict=True,
+    ):
+        projected_slots.append(
+            {
+                "slot_id": role,
+                "instance_id": instance_id,
+                "role": slot.role,
+                "purpose": slot.purpose,
+                "locked": slot.locked,
+                "visual_required": slot.visual_required,
+            }
+        )
     fixed_context = {
         "concept_id": lesson.concept_id,
         "title": lesson.title,
@@ -576,12 +545,11 @@ async def prepare_path_lesson(
         "objective_hash": lesson.objective_hash,
         "primary_knowledge_type": lesson.primary_knowledge_type,
         "secondary_demand": lesson.secondary_demand,
-        "native_whole_lesson": bool(use_page_docs),
-        "slots": [slot.model_dump(mode="json") for slot in preview.variants[0].slots],
-        "component_selections": {
-            slot_id: selection.model_dump(mode="json")
-            for slot_id, selection in component_selections.items()
-        },
+        "shared_preparation": True,
+        # Keep the page structural planner (semantic-only) without claiming a
+        # print-native document contract as shared meaning.
+        "native_whole_lesson": True,
+        "slots": projected_slots,
         "scope_contract": scope_contract,
         "prior_established": prior_established,
         "prerequisites": prerequisites,
@@ -606,24 +574,29 @@ async def prepare_path_lesson(
             for variant in preparation_group_preview.variants
         ],
     }
+    # Provider packet is a typed projection — never forward component inventory.
+    provider_packet = project_shared_preparation_packet(fixed_context)
     if trace_id is not None and structural_planner is run_path_structural_planner:
-        generated = await structural_planner(fixed_context, trace_id=trace_id)
+        generated = await structural_planner(
+            {**fixed_context, **provider_packet},
+            trace_id=trace_id,
+        )
     else:
-        generated = await structural_planner(fixed_context)
+        generated = await structural_planner({**fixed_context, **provider_packet})
     plan = _build_structural_plan(
         generated=generated,
         lesson=lesson,
         lesson_mode=request.lesson_mode,
         prior_knowledge=prior_established,
-        slots=slots,
-        selected_components={
-            slot_id: [component.slug for component in selection.components]
-            for slot_id, selection in component_selections.items()
-        },
-        page_block_plans=page_block_plans,
-        visual_required_by_slot={
-            slot.slot_id: slot.visual_required
-            for slot in preview.variants[0].slots
+        slot_roles=slot_roles,
+        slot_instance_ids=slot_instance_ids,
+        selected_components={},
+        shared_preparation=shared_preparation,
+        visual_required_by_instance={
+            instance_id: slot.visual_required
+            for instance_id, slot in zip(
+                slot_instance_ids, preview.variants[0].slots, strict=True
+            )
         },
     )
     misconception_count = min(len(plan.cards[0].misconceptions), 3)
@@ -659,7 +632,6 @@ async def prepare_path_lesson(
             group.label: _materialize_variant_plan(
                 base_plan=plan,
                 preview=variant_preview,
-                component_selections=component_selections,
             )
             for group, variant_preview in zip(groups, group_preview.variants, strict=True)
         }
@@ -764,8 +736,11 @@ async def prepare_path_lesson(
         scope_contract=scope_contract,
         variants=variants,
         variant_plans=variant_plans,
-        native_whole_lesson=bool(use_page_docs),
+        # Shared prep does not claim a print-native realization yet.
+        native_whole_lesson=False,
+        shared_preparation=True,
         path_plan_raw=generated.model_dump_json(indent=2),
+        provider_packet=provider_packet,
     )
     lesson.pack_id = generation_id
     await session.flush()
@@ -778,7 +753,7 @@ async def prepare_path_lesson(
             objective_hash=lesson.objective_hash,
             skeleton_id=preview.skeleton_id,
             skeleton_version=preview.skeleton_version,
-            slots=slots,
+            slots=slot_instance_ids,
             section_roles=roles,
             status="awaiting_review",
             reused=False,

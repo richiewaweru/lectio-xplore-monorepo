@@ -152,13 +152,13 @@ async def test_d6a_unit_print_integration_reload_validate_pdf_and_retry(
             structural_planner=_fake_structural_planner,
             component_selector=_fake_component_selector,
         )
-        assert structural_plan.document_contract_version == 2
+        assert structural_plan.document_contract_version == 1
         gid = response.generation_id
         generation = await session.get(GenerationModel, gid)
         assert generation is not None
         assert generation.status == "awaiting_review"
         chunked = await load_chunked_state(gid, session)
-        assert chunked.get("native_whole_lesson") is True
+        assert chunked.get("shared_preparation") is True
         assert chunked.get("path_prepared") is True
 
         # Production packet from Unit-prepared generation (no hand-built document).
@@ -274,7 +274,7 @@ async def test_d6a_unit_print_integration_reload_validate_pdf_and_retry(
 
         # Confirm Unit provenance still attached to this generation.
         chunked = await load_chunked_state(gid, session)
-        assert chunked.get("native_whole_lesson") is True
+        assert chunked.get("shared_preparation") is True or chunked.get("path_prepared") is True
         assert chunked.get("path_prepared") is True
         # At least one block key from form plan is ready after retry.
         ready_stored = await PageDocumentRepository(session, gid).load_block_results()

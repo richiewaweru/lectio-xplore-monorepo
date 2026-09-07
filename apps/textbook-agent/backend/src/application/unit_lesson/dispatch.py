@@ -72,7 +72,9 @@ async def initialise_path_generation(
     variants: list[VariantSpec] | None = None,
     variant_plans: dict[str, StructuralPlan] | None = None,
     native_whole_lesson: bool = False,
+    shared_preparation: bool = False,
     path_plan_raw: str | None = None,
+    provider_packet: dict[str, Any] | None = None,
 ) -> None:
     signals = V3SignalSummary(
         topic=topic,
@@ -110,6 +112,10 @@ async def initialise_path_generation(
         # Units owns admission. Select once and persist before any later state merge.
         **build_control_patch(select_default_pipeline()),
     }
+    if shared_preparation:
+        state["shared_preparation"] = True
+        # UI/API handoff before native selection must not expose components.
+        state["components_selected"] = False
     if native_whole_lesson:
         # Print Unit path: native approve gate reads these from chunked state.
         # Do not write state["context"] here — persist_structural_plan already
@@ -119,6 +125,8 @@ async def initialise_path_generation(
         state["page_document_v2"] = True
     if path_plan_raw:
         state["path_plan_raw"] = path_plan_raw
+    if provider_packet is not None:
+        state["shared_preparation_packet"] = provider_packet
     if variants:
         state.update(
             {
@@ -146,6 +154,16 @@ async def initialise_path_generation(
                 {"context": ctx},
                 session,
             )
+    if shared_preparation:
+        current = await load_chunked_state(generation.id, session)
+        ctx = dict(current.get("context") or {})
+        ctx["shared_preparation"] = True
+        ctx.pop("native_whole_lesson", None)
+        await persist_chunked_state(
+            generation.id,
+            {"context": ctx},
+            session,
+        )
     generation.status = "awaiting_review"
     card = await session.scalar(
         select(ConceptCardModel).where(
