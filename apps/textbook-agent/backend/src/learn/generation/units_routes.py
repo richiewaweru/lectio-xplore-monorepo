@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +21,7 @@ from core.database.models import (
 )
 from infra.dependencies import get_async_session
 from core.entities.user import User
+from application.unit_lesson.realizations import get_realization, resolve_by_path, to_identity
 from learn.generation.units_dispatch import dispatch_units_generation, units_dispatch_task
 from learn.authoring.builder.service import (
     ComponentLectioBuilderDocumentError,
@@ -47,6 +48,9 @@ class UnitsGenerationStatus(BaseModel):
     builder_id: str | None = None
     display_title: str | None = None
     review_cards: list["UnitsReviewCard"] = Field(default_factory=list)
+    realization_id: str | None = None
+    path: Literal["print", "learn"] | None = None
+    open_href: str | None = None
 
 
 class UnitsReviewCard(BaseModel):
@@ -63,7 +67,9 @@ async def _generation_context(
     unit_id: str,
     lesson_id: str,
     user_id: str,
-) -> tuple[UnitModel, PathVersionModel, PathLessonModel, GenerationModel, dict[str, Any]]:
+    path: Literal["print", "learn"] | None = None,
+    realization_id: str | None = None,
+) -> tuple[UnitModel, PathVersionModel, PathLessonModel, GenerationModel, dict[str, Any], Any]:
     unit = await session.scalar(
         select(UnitModel).where(UnitModel.id == unit_id, UnitModel.owner_id == user_id)
     )
@@ -73,6 +79,66 @@ async def _generation_context(
     version = await session.get(PathVersionModel, lesson.path_version_id)
     if version is None or version.unit_id != unit.id:
         raise HTTPException(status_code=404, detail="Unit generation not found")
+
+    realization = None
+    generation_id: str | None = None
+    if realization_id:
+        realization = await get_realization(session, realization_id)
+        if realization is None or realization.path_lesson_id != lesson.id:
+            raise HTTPException(status_code=404, detail="Realization not found")
+        if realization.status == "read_only":
+            raise HTTPException(
+                status_code=409,
+                detail=realization.error_summary
+                or "Realization is read-only; regenerate with an explicit path",
+            )
+        generation_id = realization.output_id
+    elif path:
+        realization = await resolve_by_path(session, path_lesson_id=lesson.id, path=path)
+        if realization is None:
+            raise HTTPException(status_code=404, detail=f"No {path} realization for lesson")
+        if realization.status == "read_only":
+            raise HTTPException(
+                status_code=409,
+                detail=realization.error_summary
+                or "Realization is read-only; regenerate with an explicit path",
+            )
+        generation_id = realization.output_id
+
+    if generation_id:
+        generation = await session.get(GenerationModel, generation_id)
+        if generation is None:
+            # Realization may be queued before its native artifact exists; fall
+            # back to the shared preparation generation for status reads.
+            fallback_id = (
+                (realization.preparation_generation_id if realization is not None else None)
+                or lesson.pack_id
+            )
+            if fallback_id and fallback_id != generation_id:
+                generation = await session.get(GenerationModel, fallback_id)
+        if generation is None or generation.user_id != user_id:
+            raise HTTPException(status_code=404, detail="Unit generation not found")
+        try:
+            state = await load_chunked_state(generation.id, session)
+        except ValueError:
+            state = {}
+        return unit, version, lesson, generation, state, realization
+
+    if realization is not None:
+        # Queued realization without output yet — use shared preparation.
+        fallback_id = realization.preparation_generation_id or lesson.pack_id
+        if not fallback_id:
+            raise HTTPException(status_code=404, detail="Unit generation not found")
+        generation = await session.get(GenerationModel, fallback_id)
+        if generation is None or generation.user_id != user_id:
+            raise HTTPException(status_code=404, detail="Unit generation not found")
+        try:
+            state = await load_chunked_state(generation.id, session)
+        except ValueError:
+            state = {}
+        return unit, version, lesson, generation, state, realization
+
+    # Legacy fallback: single pack_id preparation link.
     if not lesson.pack_id:
         raise HTTPException(status_code=404, detail="Unit generation not found")
     provenance = await session.get(LessonProvenanceModel, lesson.pack_id)
@@ -86,7 +152,7 @@ async def _generation_context(
     generation = await session.get(GenerationModel, provenance.pack_id)
     if generation is None or generation.user_id != user_id:
         raise HTTPException(status_code=404, detail="Unit generation not found")
-    return unit, version, lesson, generation, await load_chunked_state(generation.id, session)
+    return unit, version, lesson, generation, await load_chunked_state(generation.id, session), None
 
 
 async def _builder_id(
@@ -104,7 +170,12 @@ async def _builder_id(
 
 
 async def _status(
-    session: AsyncSession | None, generation: GenerationModel, state: dict[str, Any], user_id: str
+    session: AsyncSession | None,
+    generation: GenerationModel,
+    state: dict[str, Any],
+    user_id: str,
+    *,
+    realization: Any = None,
 ) -> UnitsGenerationStatus:
     scalar_status = str(generation.status or "").casefold()
     has_document = isinstance(generation.document_json, dict)
@@ -140,8 +211,14 @@ async def _status(
                 misconception_descriptions=descriptions,
             )
         )
+    identity = to_identity(realization) if realization is not None else None
+    reported_id = (
+        identity.output_id
+        if identity is not None and identity.output_id
+        else generation.id
+    )
     return UnitsGenerationStatus(
-        generation_id=generation.id,
+        generation_id=reported_id,
         pipeline=str((state.get("control") or {}).get("pipeline") or "retired"),
         stage=stage,
         document_present=isinstance(generation.document_json, dict),
@@ -150,6 +227,9 @@ async def _status(
         builder_id=await _builder_id(session, generation, user_id),
         display_title=str(state.get("display_title")) if state.get("display_title") else None,
         review_cards=review_cards,
+        realization_id=identity.realization_id if identity else None,
+        path=identity.path if identity else None,
+        open_href=identity.open_href if identity else None,
     )
 
 
@@ -157,13 +237,20 @@ async def _status(
 async def get_units_generation_status(
     unit_id: str,
     lesson_id: str,
+    path: Literal["print", "learn"] | None = Query(default=None),
+    realization_id: str | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> UnitsGenerationStatus:
-    _unit, _version, _lesson, generation, state = await _generation_context(
-        session, unit_id=unit_id, lesson_id=lesson_id, user_id=current_user.id
+    _unit, _version, _lesson, generation, state, realization = await _generation_context(
+        session,
+        unit_id=unit_id,
+        lesson_id=lesson_id,
+        user_id=current_user.id,
+        path=path,
+        realization_id=realization_id,
     )
-    return await _status(session, generation, state, current_user.id)
+    return await _status(session, generation, state, current_user.id, realization=realization)
 
 
 @router.post(
@@ -173,19 +260,26 @@ async def review_units_generation(
     unit_id: str,
     lesson_id: str,
     body: PathVersionMutationRequest,
+    path: Literal["print", "learn"] | None = Query(default=None),
+    realization_id: str | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> UnitsGenerationStatus:
-    _unit, version, lesson, generation, state = await _generation_context(
-        session, unit_id=unit_id, lesson_id=lesson_id, user_id=current_user.id
+    _unit, version, lesson, generation, state, realization = await _generation_context(
+        session,
+        unit_id=unit_id,
+        lesson_id=lesson_id,
+        user_id=current_user.id,
+        path=path,
+        realization_id=realization_id,
     )
     if version.id != body.path_version_id or version.revision != body.path_revision:
         raise HTTPException(
             status_code=409, detail="The unit path changed; reload before continuing"
         )
-    if not lesson.pack_id or lesson.pack_id != generation.id:
+    if realization is None and (not lesson.pack_id or lesson.pack_id != generation.id):
         raise HTTPException(status_code=409, detail="Lesson generation linkage is stale")
-    return await _status(session, generation, state, current_user.id)
+    return await _status(session, generation, state, current_user.id, realization=realization)
 
 
 async def _dispatch(
@@ -196,26 +290,37 @@ async def _dispatch(
     session: AsyncSession,
     *,
     retry: bool = False,
+    path: Literal["print", "learn"] | None = None,
+    realization_id: str | None = None,
 ) -> UnitsGenerationStatus:
-    _unit, version, lesson, generation, state = await _generation_context(
-        session, unit_id=unit_id, lesson_id=lesson_id, user_id=current_user.id
+    _unit, version, lesson, generation, state, realization = await _generation_context(
+        session,
+        unit_id=unit_id,
+        lesson_id=lesson_id,
+        user_id=current_user.id,
+        path=path,
+        realization_id=realization_id,
     )
     if version.id != body.path_version_id or version.revision != body.path_revision:
         raise HTTPException(
             status_code=409, detail="The unit path changed; reload before continuing"
         )
-    if lesson.pack_id != generation.id:
+    if realization is None and lesson.pack_id != generation.id:
         raise HTTPException(status_code=409, detail="Lesson generation linkage is stale")
     stage = str(state.get("stage") or generation.status or "unknown")
     if not retry:
         if stage == "complete":
-            return await _status(session, generation, state, current_user.id)
+            return await _status(
+                session, generation, state, current_user.id, realization=realization
+            )
         if (
             stage == "component_lectio_running"
             and (task := units_dispatch_task(generation.id)) is not None
             and not task.done()
         ):
-            return await _status(session, generation, state, current_user.id)
+            return await _status(
+                session, generation, state, current_user.id, realization=realization
+            )
         if stage not in {"awaiting_review", "prepared", "plan_ready"}:
             raise HTTPException(status_code=409, detail="Generation is not awaiting approval")
     if retry and stage not in {
@@ -233,7 +338,7 @@ async def _dispatch(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     state = {**state, "stage": "component_lectio_running", "execution_started": True}
     generation.status = "running"
-    return await _status(session, generation, state, current_user.id)
+    return await _status(session, generation, state, current_user.id, realization=realization)
 
 
 @router.post(
@@ -243,10 +348,20 @@ async def approve_units_generation(
     unit_id: str,
     lesson_id: str,
     body: PathVersionMutationRequest,
+    path: Literal["print", "learn"] | None = Query(default=None),
+    realization_id: str | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> UnitsGenerationStatus:
-    return await _dispatch(unit_id, lesson_id, body, current_user, session)
+    return await _dispatch(
+        unit_id,
+        lesson_id,
+        body,
+        current_user,
+        session,
+        path=path,
+        realization_id=realization_id,
+    )
 
 
 @router.post(
@@ -256,10 +371,21 @@ async def retry_units_generation(
     unit_id: str,
     lesson_id: str,
     body: PathVersionMutationRequest,
+    path: Literal["print", "learn"] | None = Query(default=None),
+    realization_id: str | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> UnitsGenerationStatus:
-    return await _dispatch(unit_id, lesson_id, body, current_user, session, retry=True)
+    return await _dispatch(
+        unit_id,
+        lesson_id,
+        body,
+        current_user,
+        session,
+        retry=True,
+        path=path,
+        realization_id=realization_id,
+    )
 
 
 @router.post(
@@ -270,18 +396,27 @@ async def open_units_builder(
     unit_id: str,
     lesson_id: str,
     body: PathVersionMutationRequest,
+    path: Literal["print", "learn"] | None = Query(default="learn"),
+    realization_id: str | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> UnitsGenerationStatus:
-    _unit, version, lesson, generation, state = await _generation_context(
-        session, unit_id=unit_id, lesson_id=lesson_id, user_id=current_user.id
+    _unit, version, lesson, generation, state, realization = await _generation_context(
+        session,
+        unit_id=unit_id,
+        lesson_id=lesson_id,
+        user_id=current_user.id,
+        path=path,
+        realization_id=realization_id,
     )
     if version.id != body.path_version_id or version.revision != body.path_revision:
         raise HTTPException(
             status_code=409, detail="The unit path changed; reload before continuing"
         )
-    if lesson.pack_id != generation.id:
+    if realization is None and lesson.pack_id != generation.id:
         raise HTTPException(status_code=409, detail="Lesson generation linkage is stale")
+    if realization is not None and realization.path != "learn":
+        raise HTTPException(status_code=409, detail="Builder open requires a Learn realization")
     if str((state.get("control") or {}).get("pipeline") or "retired") != "component_lectio":
         raise HTTPException(status_code=409, detail="Generation is not marked as Component Lectio")
     try:
@@ -295,7 +430,7 @@ async def open_units_builder(
     except ComponentLectioBuilderDocumentError as exc:
         await session.rollback()
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return await _status(session, generation, state, current_user.id)
+    return await _status(session, generation, state, current_user.id, realization=realization)
 
 
 __all__ = ["router"]

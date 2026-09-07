@@ -177,6 +177,25 @@ export interface PreparedLesson {
 	regeneration_reason?: string;
 }
 
+export interface RealizationStatus {
+	realization_id: string;
+	path: 'print' | 'learn';
+	teaching_plan_id: string;
+	teaching_plan_revision: number;
+	teaching_plan_hash: string;
+	variant_id: string;
+	native_policy_version: string;
+	native_policy_hash: string;
+	package_contract_version: string;
+	package_contract_hash: string;
+	realization_revision: number;
+	status: string;
+	output_id: string | null;
+	error_summary: string | null;
+	pack_id?: string | null;
+	open_href: string | null;
+}
+
 export interface PreparedLessonStatus {
 	path_lesson_id: string;
 	lesson_revision: number;
@@ -187,6 +206,13 @@ export interface PreparedLessonStatus {
 	stale: boolean;
 	can_prepare: boolean;
 	can_regenerate: boolean;
+	realizations?: RealizationStatus[];
+	print_realization_id?: string | null;
+	learn_realization_id?: string | null;
+	print_output_id?: string | null;
+	learn_output_id?: string | null;
+	print_open_href?: string | null;
+	learn_open_href?: string | null;
 }
 
 export interface SkeletonSlotPreview {

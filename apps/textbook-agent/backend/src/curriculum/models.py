@@ -332,6 +332,25 @@ class PreparedLessonResponse(StrictModel):
     reused: bool
 
 
+class RealizationStatusDTO(StrictModel):
+    realization_id: str
+    path: Literal["print", "learn"]
+    teaching_plan_id: str
+    teaching_plan_revision: int
+    teaching_plan_hash: str
+    variant_id: str
+    native_policy_version: str
+    native_policy_hash: str
+    package_contract_version: str
+    package_contract_hash: str
+    realization_revision: int
+    status: str
+    output_id: str | None = None
+    error_summary: str | None = None
+    pack_id: str | None = None
+    open_href: str | None = None
+
+
 class PreparedLessonStatusResponse(StrictModel):
     path_lesson_id: str
     lesson_revision: int
@@ -342,6 +361,13 @@ class PreparedLessonStatusResponse(StrictModel):
     stale: bool
     can_prepare: bool
     can_regenerate: bool
+    realizations: list[RealizationStatusDTO] = Field(default_factory=list)
+    print_realization_id: str | None = None
+    learn_realization_id: str | None = None
+    print_output_id: str | None = None
+    learn_output_id: str | None = None
+    print_open_href: str | None = None
+    learn_open_href: str | None = None
 
 
 class MergeCriticResult(StrictModel):

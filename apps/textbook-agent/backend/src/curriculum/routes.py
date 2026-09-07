@@ -29,7 +29,23 @@ from curriculum.agents import (
     run_path_planner,
     run_plan_chat_edit,
 )
-from application.unit_lesson import PathPreparationBlocked, prepare_path_lesson
+from application.unit_lesson import (
+    PathPreparationBlocked,
+    list_realizations_for_lesson,
+    prepare_path_lesson,
+    request_outputs,
+    resolve_by_path,
+    retry_realization,
+    to_identity,
+)
+from application.unit_lesson.realization_contracts import (
+    RealizationRetryBody,
+    RequestOutputsBody,
+)
+from application.unit_lesson.realizations import (
+    RealizationAdmissionError,
+    RealizationReadOnlyError,
+)
 from curriculum.models import (
     ConstructorReadbackRequest,
     InsertFoundationLessonRequest,
@@ -48,6 +64,7 @@ from curriculum.models import (
     PathVersionMutationRequest,
     PrepareLessonRequest,
     PreparedLessonStatusResponse,
+    RealizationStatusDTO,
     RegenerateLessonRequest,
     ResourceComposeRequest,
     RestorePathVersionRequest,
@@ -271,6 +288,10 @@ async def _path_payload(session: AsyncSession, version) -> dict[str, object]:
 def _raise_http(exc: Exception) -> None:
     if isinstance(exc, PathNotFoundError):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if isinstance(exc, RealizationReadOnlyError):
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if isinstance(exc, RealizationAdmissionError):
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if isinstance(
         exc,
         (PathApprovalBlocked, PathPreparationBlocked, StalePathMutationError, StaleOutcomeError),
@@ -295,6 +316,30 @@ def _raise_http(exc: Exception) -> None:
     if isinstance(exc, (ConceptResolutionError, OutcomeValidationError, ValueError)):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     raise exc
+
+
+async def _realization_status_fields(
+    session: AsyncSession, *, path_lesson_id: str
+) -> dict[str, object]:
+    rows = await list_realizations_for_lesson(session, path_lesson_id=path_lesson_id)
+    identities = [to_identity(row) for row in rows]
+    dtos = [
+        RealizationStatusDTO(**identity.model_dump(exclude={"preparation_generation_id"}))
+        for identity in identities
+    ]
+    print_row = await resolve_by_path(session, path_lesson_id=path_lesson_id, path="print")
+    learn_row = await resolve_by_path(session, path_lesson_id=path_lesson_id, path="learn")
+    print_id = to_identity(print_row) if print_row else None
+    learn_id = to_identity(learn_row) if learn_row else None
+    return {
+        "realizations": dtos,
+        "print_realization_id": print_id.realization_id if print_id else None,
+        "learn_realization_id": learn_id.realization_id if learn_id else None,
+        "print_output_id": print_id.output_id if print_id else None,
+        "learn_output_id": learn_id.output_id if learn_id else None,
+        "print_open_href": print_id.open_href if print_id else None,
+        "learn_open_href": learn_id.open_href if learn_id else None,
+    }
 
 
 @router.post("/constructor/readback")
@@ -1272,6 +1317,9 @@ async def get_path_lesson_status(
         _unit, version, lesson = await _owned_version_and_lesson(
             session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
         )
+        realization_fields = await _realization_status_fields(
+            session, path_lesson_id=lesson.id
+        )
         if not lesson.pack_id:
             return PreparedLessonStatusResponse(
                 path_lesson_id=lesson.id,
@@ -1283,6 +1331,7 @@ async def get_path_lesson_status(
                 stale=False,
                 can_prepare=version.status == "approved" and not lesson.skipped,
                 can_regenerate=False,
+                **realization_fields,
             ).model_dump(mode="json")
         generation = await session.get(GenerationModel, lesson.pack_id)
         provenance = await session.get(LessonProvenanceModel, lesson.pack_id)
@@ -1299,18 +1348,102 @@ async def get_path_lesson_status(
             workflow_stage = str(chunked.get("stage") or generation.status or "unknown")
         except ValueError:
             workflow_stage = str(generation.status or "unknown")
+        # Prefer path-specific output when present; pack_id remains legacy prep link.
+        print_output = realization_fields.get("print_output_id")
+        learn_output = realization_fields.get("learn_output_id")
+        primary_generation_id = print_output or learn_output or generation.id
         return PreparedLessonStatusResponse(
             path_lesson_id=lesson.id,
             lesson_revision=lesson.revision,
-            generation_id=generation.id,
+            generation_id=str(primary_generation_id) if primary_generation_id else generation.id,
             generation_status=str(generation.status or "unknown"),
             workflow_stage="stale" if stale else workflow_stage,
             objective_hash=lesson.objective_hash,
             stale=stale,
             can_prepare=False,
             can_regenerate=version.status == "approved" and not lesson.skipped,
+            **realization_fields,
         ).model_dump(mode="json")
     except Exception as exc:
+        _raise_http(exc)
+
+
+@router.post("/{unit_id}/path/lessons/{lesson_id}/realizations")
+async def post_path_lesson_realizations(
+    unit_id: str,
+    lesson_id: str,
+    body: RequestOutputsBody,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    """Admit requested native outputs (Print and/or Learn) for one lesson."""
+    try:
+        _unit, version, lesson = await _owned_version_and_lesson(
+            session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
+        )
+        if version.id != body.path_version_id or version.revision != body.path_revision:
+            raise HTTPException(
+                status_code=409, detail="The unit path changed; reload before continuing"
+            )
+        created_flags: list[bool] = []
+        rows = []
+        for row, created in await request_outputs(
+            session,
+            path_lesson_id=lesson.id,
+            paths=body.paths,
+            teaching_plan_id=body.teaching_plan_id,
+            teaching_plan_revision=body.teaching_plan_revision,
+            teaching_plan_hash=body.teaching_plan_hash,
+            variant_id=body.variant_id,
+            preparation_generation_id=body.preparation_generation_id or lesson.pack_id,
+            pack_id=lesson.pack_id,
+            native_policy_version=body.native_policy_version,
+            native_policy_hash=body.native_policy_hash,
+            package_contract_version=body.package_contract_version,
+            package_contract_hash=body.package_contract_hash,
+        ):
+            rows.append(row)
+            created_flags.append(created)
+        await session.commit()
+        return {
+            "path_lesson_id": lesson.id,
+            "created": created_flags,
+            "realizations": [to_identity(row).model_dump(mode="json") for row in rows],
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        await session.rollback()
+        _raise_http(exc)
+
+
+@router.post("/{unit_id}/path/lessons/{lesson_id}/realizations/{realization_id}:retry")
+async def post_path_lesson_realization_retry(
+    unit_id: str,
+    lesson_id: str,
+    realization_id: str,
+    body: RealizationRetryBody,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    """Retry one native realization without mutating the sibling path or shared plan."""
+    try:
+        _unit, version, lesson = await _owned_version_and_lesson(
+            session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
+        )
+        if version.id != body.path_version_id or version.revision != body.path_revision:
+            raise HTTPException(
+                status_code=409, detail="The unit path changed; reload before continuing"
+            )
+        row = await retry_realization(session, realization_id=realization_id)
+        if row.path_lesson_id != lesson.id:
+            raise HTTPException(status_code=404, detail="Realization not found for lesson")
+        await session.commit()
+        return to_identity(row).model_dump(mode="json")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        await session.rollback()
         _raise_http(exc)
 
 
