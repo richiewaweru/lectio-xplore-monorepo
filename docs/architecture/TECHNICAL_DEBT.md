@@ -157,7 +157,7 @@ Status values: `open` | `asserted-as-is` | `fixed-in-d6` | `deferred`.
 - **Why deferred:** Process lifecycle fix separate from Unit path proof; D6A uses `render_document_pdf`.
 - **Dependencies:** none
 - **Acceptance criteria:** `export_v3_studio_pdf` (or successor) exits cleanly in CI within timeout after valid PDF bytes.
-- **Status:** open
+- **Status:** mitigated (P05) — `export_generation_pdf` applies `pdf_export_timeout_ms`; Playwright `browser.close()` is bounded with process kill; failures persist actionable `PDF_EXPORT_TIMEOUT` state. Live frontend hang still worth watching in P09.
 
 ---
 
