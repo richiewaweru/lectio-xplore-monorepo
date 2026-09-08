@@ -8,10 +8,10 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app import app
-from core.auth.middleware import get_current_user
 from core.database.models import UserModel
-from core.database.session import get_async_session
 from core.entities.user import User
+from infra.auth.middleware import get_current_user
+from infra.database.session import get_async_session
 from learn.release_routes import document_hash
 
 
@@ -63,13 +63,40 @@ def _doc(title: str = "Adv") -> dict:
                 "id": "b1",
                 "component_id": "explanation-block",
                 "position": 0,
-                "content": {"body": "Body"},
+                "content": {"body": "Body", "callouts": []},
             }
         },
         "media": {},
         "created_at": "2026-09-06T00:00:00Z",
         "updated_at": "2026-09-06T00:00:00Z",
     }
+
+
+def _sequence_doc(title: str = "AdvSeq") -> dict:
+    doc = _doc(title)
+    doc["id"] = "doc-adv-seq"
+    doc["blocks"]["b1"]["content"] = {"body": "Order", "callouts": [], "prompt": "Order"}
+    doc["blocks"]["b1"]["learn_interaction"] = {
+        "id": "ix-adv-seq",
+        "kind": "sequence",
+        "prompt": "Order",
+        "assessment_mode": "graded",
+        "attempt_policy": {
+            "max_attempts": None,
+            "show_feedback_after_submit": True,
+            "allow_retry_after_correct": True,
+        },
+        "feedback": {"correct": "ok", "incorrect": "no", "partial": "part"},
+        "completion": {"type": "submitted"},
+        "config": {
+            "order": ["x", "y"],
+            "items": [{"id": "x", "label": "X"}, {"id": "y", "label": "Y"}],
+        },
+        "accessibility": {"keyboard_operable": True},
+        "ai_config_rule": "config-only",
+        "concept_refs": [],
+    }
+    return doc
 
 
 @pytest.fixture(autouse=True)
@@ -109,6 +136,7 @@ async def test_post_publish_edit_does_not_mutate_release():
             "/api/v1/builder/lessons",
             json={"title": "Adv", "document": _doc()},
         )
+        assert created.status_code == 201, created.text
         lesson_id = created.json()["id"]
         pub = await client.post(f"/api/v1/learn/lessons/{lesson_id}/releases", json={})
         release = pub.json()
@@ -130,8 +158,9 @@ async def test_duplicate_submission_and_same_release_assigned_twice(_overrides):
     async with await _client() as client:
         created = await client.post(
             "/api/v1/builder/lessons",
-            json={"title": "Adv2", "document": _doc("Adv2")},
+            json={"title": "Adv2", "document": _sequence_doc("Adv2")},
         )
+        assert created.status_code == 201, created.text
         lesson_id = created.json()["id"]
         pub = await client.post(f"/api/v1/learn/lessons/{lesson_id}/releases", json={})
         release_id = pub.json()["id"]
@@ -145,17 +174,14 @@ async def test_duplicate_submission_and_same_release_assigned_twice(_overrides):
         instance_id = inst.json()["id"]
 
         payload = {
-            "interaction_id": "b1",
+            "interaction_id": "ix-adv-seq",
             "client_submission_id": "dup-1",
-            "response_json": {},
-            "outcome": "correct",
-            "score_earned": 1,
-            "score_possible": 1,
+            "response_json": {"order": ["x", "y"]},
             "section_id": "s1",
         }
         a1 = await client.post(f"/api/v1/learn/instances/{instance_id}/attempts", json=payload)
         a2 = await client.post(f"/api/v1/learn/instances/{instance_id}/attempts", json=payload)
-        assert a1.status_code == 200 and a2.status_code == 200
+        assert a1.status_code == 200 and a2.status_code == 200, a1.text
         assert a1.json()["id"] == a2.json()["id"]
 
         c1 = await client.post("/api/v1/learn/classes", json={"name": "C1"})
@@ -192,6 +218,7 @@ async def test_selected_learner_and_permission_probe(_overrides):
             "/api/v1/builder/lessons",
             json={"title": "Adv3", "document": _doc("Adv3")},
         )
+        assert created.status_code == 201, created.text
         pub = await client.post(
             f"/api/v1/learn/lessons/{created.json()['id']}/releases", json={}
         )

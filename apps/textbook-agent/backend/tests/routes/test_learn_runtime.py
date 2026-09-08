@@ -43,6 +43,7 @@ OTHER = User(
 
 
 def _doc() -> dict:
+    """Publishable lesson with a Sequence interaction for authoritative evaluation."""
     return {
         "version": 1,
         "id": "doc-rt",
@@ -62,9 +63,41 @@ def _doc() -> dict:
         "blocks": {
             "b1": {
                 "id": "b1",
-                "component_id": "quiz-check",
+                "component_id": "explanation-block",
                 "position": 0,
-                "content": {"question": "Q?", "options": []},
+                "content": {"prompt": "Order the stages", "body": "Order the stages", "callouts": []},
+                "learn_interaction": {
+                    "id": "ix-rt-sequence",
+                    "kind": "sequence",
+                    "prompt": "Order the stages",
+                    "assessment_mode": "graded",
+                    "attempt_policy": {
+                        "max_attempts": None,
+                        "show_feedback_after_submit": True,
+                        "allow_retry_after_correct": True,
+                    },
+                    "feedback": {
+                        "correct": "Correct",
+                        "incorrect": "Incorrect",
+                        "partial": "Partial",
+                    },
+                    "completion": {"type": "submitted"},
+                    "score_aggregation": "latest",
+                    "config": {
+                        "order": ["a", "b", "c"],
+                        "items": [
+                            {"id": "a", "label": "A"},
+                            {"id": "b", "label": "B"},
+                            {"id": "c", "label": "C"},
+                        ],
+                    },
+                    "accessibility": {"keyboard_operable": True},
+                    "ai_config_rule": "config-only",
+                    "concept_refs": [
+                        {"concept_id": "c-photo", "weight": 0.6, "unit_id": "u1", "path_lesson_id": "pl1"},
+                        {"concept_id": "c-carbon", "weight": 0.4, "unit_id": "u1"},
+                    ],
+                },
             }
         },
         "media": {},
@@ -138,51 +171,57 @@ async def test_runtime_attempts_idempotency_resume_and_evidence(db_session_facto
         assert i2.status_code == 200
         assert i2.json()["id"] != instance_id
 
-        for idx, outcome in enumerate(["incorrect", "incorrect", "correct"], start=1):
+        # Incorrect, incorrect, then correct — aggregation is latest (no score inflation).
+        responses = [
+            ["c", "b", "a"],
+            ["c", "b", "a"],
+            ["a", "b", "c"],
+        ]
+        for idx, order in enumerate(responses, start=1):
             resp = await client.post(
                 f"/api/v1/learn/instances/{instance_id}/attempts",
                 json={
-                    "interaction_id": "quiz-1",
+                    "interaction_id": "ix-rt-sequence",
                     "client_submission_id": f"sub-{idx}",
-                    "response_json": {"selected_option_id": str(idx)},
-                    "outcome": outcome,
-                    "score_earned": 1 if outcome == "correct" else 0,
-                    "score_possible": 1,
-                    "assessment_mode": "graded",
+                    "response_json": {"order": order},
                     "section_id": "s1",
-                    "concept_bindings": [
-                        {"concept_id": "c-photo", "weight": 0.6, "unit_id": "u1", "path_lesson_id": "pl1"},
-                        {"concept_id": "c-carbon", "weight": 0.4, "unit_id": "u1"},
-                    ],
-                    "misconception_id": "M1" if outcome == "incorrect" else None,
                 },
             )
             assert resp.status_code == 200, resp.text
 
-        # Duplicate submission id does not double-score
+        # Duplicate submission id with same response is idempotent.
         dup = await client.post(
             f"/api/v1/learn/instances/{instance_id}/attempts",
             json={
-                "interaction_id": "quiz-1",
+                "interaction_id": "ix-rt-sequence",
                 "client_submission_id": "sub-3",
-                "response_json": {"selected_option_id": "9"},
-                "outcome": "correct",
-                "score_earned": 1,
-                "score_possible": 1,
+                "response_json": {"order": ["a", "b", "c"]},
             },
         )
         assert dup.status_code == 200
+        assert dup.json()["idempotent_replay"] is True
+
+        # Same key / different response conflicts.
+        conflict = await client.post(
+            f"/api/v1/learn/instances/{instance_id}/attempts",
+            json={
+                "interaction_id": "ix-rt-sequence",
+                "client_submission_id": "sub-3",
+                "response_json": {"order": ["c", "b", "a"]},
+            },
+        )
+        assert conflict.status_code == 409
 
         detail = await client.get(f"/api/v1/learn/instances/{instance_id}")
         assert detail.status_code == 200
         body = detail.json()
         assert len(body["attempts"]) == 3
-        assert body["score_earned"] == 1
+        assert body["score_earned"] == 3
         assert body["score_possible"] == 3
 
         rebuilt = await client.post(f"/api/v1/learn/instances/{instance_id}/rebuild-progress")
         assert rebuilt.status_code == 200
-        assert rebuilt.json()["score_earned"] == 1
+        assert rebuilt.json()["score_earned"] == 3
 
         states = await client.post(f"/api/v1/learn/learners/{learner_id}/rebuild-concept-states")
         assert states.status_code == 200
@@ -335,13 +374,9 @@ async def test_learner_session_own_data_and_resume(_overrides):
         attempt = await client.post(
             f"/api/v1/learn/instances/{instance_id}/attempts",
             json={
-                "interaction_id": "b1",
+                "interaction_id": "ix-rt-sequence",
                 "client_submission_id": "s1",
-                "response_json": {},
-                "outcome": "correct",
-                "score_earned": 1,
-                "score_possible": 1,
-                "assessment_mode": "practice",
+                "response_json": {"order": ["a", "b", "c"]},
                 "section_id": "s1",
             },
             headers={"X-Learner-Session": token},
@@ -361,8 +396,8 @@ async def test_learner_session_own_data_and_resume(_overrides):
         assert detail.status_code == 200
         body = detail.json()
         assert body["current_section_id"] == "s1"
-        assert body["practice"]["attempts"] == 1
-        assert body["graded"]["attempts"] == 0
+        assert body["graded"]["attempts"] == 1
+        assert body["practice"]["attempts"] == 0
 
         done = await client.post(
             f"/api/v1/learn/instances/{instance_id}/complete",

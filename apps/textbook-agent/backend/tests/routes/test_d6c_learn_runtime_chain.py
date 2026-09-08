@@ -58,9 +58,36 @@ def _doc(doc_id: str = "d6c-doc") -> dict:
         "blocks": {
             "b1": {
                 "id": "b1",
-                "component_id": "quiz-check",
+                "component_id": "explanation-block",
                 "position": 0,
-                "content": {"question": "Q?", "options": []},
+                "content": {"prompt": "Order", "body": "Order", "callouts": []},
+                "learn_interaction": {
+                    "id": "quiz-1",
+                    "kind": "sequence",
+                    "prompt": "Order",
+                    "assessment_mode": "graded",
+                    "attempt_policy": {
+                        "max_attempts": None,
+                        "show_feedback_after_submit": True,
+                        "allow_retry_after_correct": True,
+                    },
+                    "feedback": {"correct": "ok", "incorrect": "no", "partial": "part"},
+                    "completion": {"type": "submitted"},
+                    "config": {
+                        "order": ["p", "q"],
+                        "items": [{"id": "p", "label": "P"}, {"id": "q", "label": "Q"}],
+                    },
+                    "accessibility": {"keyboard_operable": True},
+                    "ai_config_rule": "config-only",
+                    "concept_refs": [
+                        {
+                            "concept_id": "c-d6c",
+                            "weight": 1.0,
+                            "unit_id": "u-d6c",
+                            "path_lesson_id": "pl-d6c",
+                        }
+                    ],
+                },
             }
         },
         "media": {},
@@ -185,26 +212,14 @@ async def test_d6c_assignment_runtime_analytics_chain(db_session_factory):
         assert release_get.json()["document_hash"] == hash_a
         assert release_get.json()["id"] == release_a
 
-        # Attempt/progress via assignment-created instance.
+        # Attempt/progress via assignment-created instance (server-authoritative).
         attempt = await client.post(
             f"/api/v1/learn/instances/{instance_a}/attempts",
             json={
                 "interaction_id": "quiz-1",
                 "client_submission_id": "d6c-sub-1",
-                "response_json": {"selected_option_id": "1"},
-                "outcome": "correct",
-                "score_earned": 1,
-                "score_possible": 1,
-                "assessment_mode": "graded",
+                "response_json": {"order": ["p", "q"]},
                 "section_id": "s1",
-                "concept_bindings": [
-                    {
-                        "concept_id": "c-d6c",
-                        "weight": 1.0,
-                        "unit_id": "u-d6c",
-                        "path_lesson_id": "pl-d6c",
-                    }
-                ],
             },
         )
         assert attempt.status_code == 200, attempt.text
@@ -213,7 +228,7 @@ async def test_d6c_assignment_runtime_analytics_chain(db_session_factory):
         assert detail.status_code == 200
         body = detail.json()
         assert body["learn_release_id"] == release_a
-        assert body["score_earned"] == 1
+        assert body["score_earned"] == 2
         assert len(body["attempts"]) >= 1
 
         done = await client.post(f"/api/v1/learn/instances/{instance_a}/complete")
@@ -230,7 +245,7 @@ async def test_d6c_assignment_runtime_analytics_chain(db_session_factory):
             assert recipient is not None
             assert recipient.status in {"completed", "started", "assigned"}
 
-        # Analytics returns tested class data (current over-broad semantics).
+        # Analytics returns assignment-scoped class data (LRN-007 fixed in P07).
         overview = await client.get(
             f"/api/v1/learn/analytics/classes/{class_id}/overview"
         )
@@ -264,8 +279,8 @@ async def test_d6c_assignment_runtime_analytics_chain(db_session_factory):
         )
         assert denied.status_code == 403
 
-        # LRN-007 fixture: self-started instance for learner A on release B also
-        # appears in class overview aggregation under current semantics.
+        # Self-started instance for learner A on release B must NOT inflate
+        # assignment analytics (P07-U06 / LRN-007).
         self_started = await client.post(
             "/api/v1/learn/instances",
             json={"learner_id": learner_a, "learn_release_id": release_b},
@@ -277,8 +292,9 @@ async def test_d6c_assignment_runtime_analytics_chain(db_session_factory):
             f"/api/v1/learn/analytics/classes/{class_id}/overview"
         )
         assert overview2.status_code == 200
-        # Document current over-broad behavior: both assignment instance and
-        # self-started instance exist for a class learner.
+        # Only assignment-bound instances counted (learner B also has one assigned).
+        assert overview2.json()["completion"]["completed"] + overview2.json()["completion"]["active"] == 2
+
         async with db_session_factory() as session:
             instances = list(
                 (
