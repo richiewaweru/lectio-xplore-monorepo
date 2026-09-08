@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 import uuid
@@ -22,7 +23,7 @@ from print.rendering.pdf.components.assembly import (
 from print.rendering.pdf.components.cover import clean_cover_title, generate_cover_pdf
 from print.rendering.pdf.components.toc import generate_toc_pdf
 from print.rendering.pdf.config import PDFExportConfig
-from print.rendering.pdf.rendering.playwright import render_generation_pdf
+from print.rendering.pdf.rendering.playwright import PDFRenderError, render_generation_pdf
 from print.rendering.pdf.v3_pack_pipeline_document import build_pipeline_document_for_v3_pdf
 from contracts.document import PipelineDocument
 from print.contracts.lectio_page import validate_document
@@ -139,6 +140,66 @@ async def export_generation_pdf(
     temp_dir = ensure_temp_dir(config.temp_dir)
     cleanup_paths: list[Path] = []
     started = time.perf_counter()
+    timeout_s = max(0.001, float(config.export_timeout_ms) / 1000.0)
+
+    try:
+        return await asyncio.wait_for(
+            _export_generation_pdf_body(
+                generation=generation,
+                document=document,
+                auth_token=auth_token,
+                request=request,
+                config=config,
+                request_id=request_id,
+                render_path=render_path,
+                v3_answer_key=v3_answer_key,
+                export_id=export_id,
+                temp_dir=temp_dir,
+                cleanup_paths=cleanup_paths,
+                started=started,
+            ),
+            timeout=timeout_s,
+        )
+    except asyncio.TimeoutError as exc:
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        _log_stage(
+            "pdf_export",
+            "failed",
+            generation.id,
+            request_id,
+            duration_ms=duration_ms,
+        )
+        pdf_export_telemetry.record_export(duration_ms=duration_ms, status="failed")
+        cleanup_files(list(cleanup_paths))
+        raise PDFRenderError(
+            f"PDF export exceeded bounded timeout ({config.export_timeout_ms}ms)",
+            debug={
+                "code": "PDF_EXPORT_TIMEOUT",
+                "timeout_ms": config.export_timeout_ms,
+                "generation_id": generation.id,
+                "actionable": (
+                    "Retry export after confirming print route health; "
+                    "worker did not hang past the configured bound."
+                ),
+            },
+        ) from exc
+
+
+async def _export_generation_pdf_body(
+    *,
+    generation: PDFGenerationContext,
+    document: PipelineDocument,
+    auth_token: str,
+    request: PDFExportRequest,
+    config: PDFExportConfig,
+    request_id: str | None,
+    render_path: str | None,
+    v3_answer_key: dict[str, Any] | None,
+    export_id: str,
+    temp_dir: Path,
+    cleanup_paths: list[Path],
+    started: float,
+) -> PDFExportResult:
     print_page_debug: dict[str, Any] = {}
 
     cover_path = temp_dir / f"{generation.id}-{export_id}-cover.pdf"

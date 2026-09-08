@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import math
 from pathlib import Path
@@ -317,6 +318,7 @@ async def _render_print_route(
                     "page_url": page.url,
                     "title": None,
                     "html_sample": None,
+                    "code": "PDF_PLAYWRIGHT_TIMEOUT",
                 }
                 try:
                     html = await page.content()
@@ -339,6 +341,20 @@ async def _render_print_route(
                     debug=debug,
                 ) from exc
         finally:
-            await browser.close()
+            # PRINT-001: browser.close() can hang after a successful page.pdf.
+            # Bound the close; if it stalls, kill the Chromium process.
+            try:
+                await asyncio.wait_for(browser.close(), timeout=5.0)
+            except Exception:
+                logger.exception(
+                    "PDF browser.close timed out or failed; forcing kill",
+                    extra={"generation_id": generation_id},
+                )
+                try:
+                    proc = getattr(browser, "process", None)
+                    if proc is not None and getattr(proc, "pid", None):
+                        proc.kill()
+                except Exception:
+                    logger.exception("PDF browser process kill failed")
 
     return print_snapshot
