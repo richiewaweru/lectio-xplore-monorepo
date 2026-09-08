@@ -7,6 +7,8 @@
 	import { buildStudentStages, clampStageIndex } from './student-shell';
 	import StudentStageNav from './StudentStageNav.svelte';
 	import OrderedBlockList from './OrderedBlockList.svelte';
+	import type { AttemptSubmitHandler } from './OrderedBlockList.svelte';
+	import type { StoredAttempt } from './api/attempts';
 
 	interface Props {
 		document: LessonDocument;
@@ -14,13 +16,17 @@
 		onActiveIndexChange?: (index: number) => void;
 		/** Preview mode: same shell/interactions, never posts attempts. */
 		preview?: boolean;
+		attemptsByInteraction?: Map<string, StoredAttempt>;
+		onSubmitAttempt?: AttemptSubmitHandler;
 	}
 
 	let {
 		document,
 		activeIndex = undefined,
 		onActiveIndexChange = undefined,
-		preview = false
+		preview = false,
+		attemptsByInteraction = new Map(),
+		onSubmitAttempt = undefined
 	}: Props = $props();
 
 	const stages = $derived(buildStudentStages(document));
@@ -69,6 +75,8 @@
 							{document}
 							sectionId={activeStage.section.id}
 							{preview}
+							{attemptsByInteraction}
+							{onSubmitAttempt}
 						/>
 					</article>
 				</LectioThemeSurface>

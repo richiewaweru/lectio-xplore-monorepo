@@ -5,6 +5,12 @@
 	import { apiFetch } from '$lib/api/client';
 	import { ensureOk } from '$lib/api/errors';
 	import StudentLessonShell from '$lib/learn/student/StudentLessonShell.svelte';
+	import {
+		latestAttemptByInteraction,
+		newSubmissionId,
+		submitInstanceAttempt,
+		type StoredAttempt
+	} from '$lib/learn/student/api/attempts';
 	import type { LessonDocument } from '@lectio/learn';
 
 	let ready = $state(false);
@@ -14,21 +20,36 @@
 	let scoreLine = $state('');
 	let currentSectionId = $state<string | null>(null);
 	let activeIndex = $state(0);
+	let releaseId = $state<string | null>(null);
+	let attemptsByInteraction = $state(new Map<string, StoredAttempt>());
 
 	const instanceId = $derived(page.params.instanceId);
+
+	async function refreshInstance() {
+		if (!instanceId) return;
+		const headers: Record<string, string> = {};
+		const token = localStorage.getItem('x-learner-session');
+		if (token) headers['X-Learner-Session'] = token;
+		const response = await apiFetch(`/api/v1/learn/instances/${instanceId}`, { headers });
+		await ensureOk(response);
+		const instance = await response.json();
+		status = instance.status;
+		scoreLine = `graded ${instance.graded?.score_earned ?? instance.score_earned}/${instance.graded?.score_possible ?? instance.score_possible} · practice ${instance.practice?.score_earned ?? 0}/${instance.practice?.score_possible ?? 0}`;
+		currentSectionId = instance.current_section_id ?? null;
+		releaseId = instance.learn_release_id;
+		attemptsByInteraction = latestAttemptByInteraction(
+			(instance.attempts ?? []) as StoredAttempt[]
+		);
+		return instance;
+	}
 
 	onMount(async () => {
 		if (!browser || !instanceId) return;
 		try {
+			const instance = await refreshInstance();
 			const headers: Record<string, string> = {};
 			const token = localStorage.getItem('x-learner-session');
 			if (token) headers['X-Learner-Session'] = token;
-			const response = await apiFetch(`/api/v1/learn/instances/${instanceId}`, { headers });
-			await ensureOk(response);
-			const instance = await response.json();
-			status = instance.status;
-			scoreLine = `graded ${instance.graded?.score_earned ?? instance.score_earned}/${instance.graded?.score_possible ?? instance.score_possible} · practice ${instance.practice?.score_earned ?? 0}/${instance.practice?.score_possible ?? 0}`;
-			currentSectionId = instance.current_section_id ?? null;
 			const releaseResp = await apiFetch(`/api/v1/learn/releases/${instance.learn_release_id}`, {
 				headers
 			});
@@ -57,8 +78,30 @@
 		await apiFetch(`/api/v1/learn/instances/${instanceId}/resume`, {
 			method: 'POST',
 			headers,
-			body: JSON.stringify({ section_id: section.id })
+			body: JSON.stringify({ section_id: section.id, mark_visited: true })
 		});
+	}
+
+	async function onSubmitAttempt(args: {
+		interactionId: string;
+		sectionId: string;
+		response: Record<string, unknown>;
+	}) {
+		if (!instanceId) throw new Error('Missing instance');
+		const result = await submitInstanceAttempt(instanceId, {
+			interaction_id: args.interactionId,
+			client_submission_id: newSubmissionId('seq'),
+			response_json: args.response,
+			section_id: args.sectionId,
+			expected_release_id: releaseId ?? undefined
+		});
+		await refreshInstance();
+		return {
+			outcome: result.outcome,
+			feedback: result.feedback,
+			score_earned: result.score_earned,
+			score_possible: result.score_possible
+		};
 	}
 </script>
 
@@ -75,7 +118,13 @@
 	{:else if error}
 		<p class="lede error">{error}</p>
 	{:else if document}
-		<StudentLessonShell {document} {activeIndex} {onActiveIndexChange} />
+		<StudentLessonShell
+			{document}
+			{activeIndex}
+			{onActiveIndexChange}
+			{attemptsByInteraction}
+			{onSubmitAttempt}
+		/>
 	{/if}
 </main>
 

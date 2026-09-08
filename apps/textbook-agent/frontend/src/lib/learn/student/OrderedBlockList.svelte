@@ -1,7 +1,7 @@
 <script lang="ts">
 	/**
 	 * Ordered block renderer — walks authoritative block_ids (P06-L02).
-	 * Does not reconstruct SectionContent (lossy for repeats / interleaving).
+	 * Production mode posts attempts; preview keeps local-only evaluation.
 	 */
 	import {
 		LectioBlockRuntimeSurface,
@@ -12,6 +12,18 @@
 		type MediaReference
 	} from '@lectio/learn';
 	import { orderedBlocksInSection } from '@lectio/learn';
+	import type { StoredAttempt } from './api/attempts';
+
+	export type AttemptSubmitHandler = (args: {
+		interactionId: string;
+		sectionId: string;
+		response: Record<string, unknown>;
+	}) => Promise<{
+		outcome: string;
+		feedback: string;
+		score_earned?: number;
+		score_possible?: number;
+	}>;
 
 	interface Props {
 		document: LessonDocument;
@@ -19,9 +31,20 @@
 		/** Preview: interactions never persist production attempts. */
 		preview?: boolean;
 		onPreviewSubmit?: (interactionId: string) => void;
+		/** Latest persisted attempt per interaction_id (restore after refresh). */
+		attemptsByInteraction?: Map<string, StoredAttempt>;
+		/** Production submission bridge. */
+		onSubmitAttempt?: AttemptSubmitHandler;
 	}
 
-	let { document, sectionId, preview = false, onPreviewSubmit }: Props = $props();
+	let {
+		document,
+		sectionId,
+		preview = false,
+		onPreviewSubmit,
+		attemptsByInteraction = new Map(),
+		onSubmitAttempt
+	}: Props = $props();
 
 	const blocks = $derived(orderedBlocksInSection(document, sectionId));
 	const media = $derived(document.media ?? {});
@@ -38,6 +61,30 @@
 		const items = config.items ?? [];
 		if (items.length > 0) return items;
 		return (config.order ?? []).map((id) => ({ id, label: id }));
+	}
+
+	function restoredOrder(contract: LearnInteractionContract): string[] | undefined {
+		const attempt = attemptsByInteraction.get(contract.id);
+		const order = attempt?.response_json?.order;
+		return Array.isArray(order) ? order.map(String) : undefined;
+	}
+
+	function restoredEvaluation(contract: LearnInteractionContract) {
+		const attempt = attemptsByInteraction.get(contract.id);
+		if (!attempt) return null;
+		const fb = contract.feedback;
+		const feedback =
+			attempt.outcome === 'correct'
+				? fb.correct
+				: attempt.outcome === 'partial'
+					? (fb.partial ?? fb.incorrect)
+					: fb.incorrect;
+		return {
+			outcome: attempt.outcome,
+			feedback,
+			score_earned: attempt.score_earned,
+			score_possible: attempt.score_possible
+		};
 	}
 </script>
 
@@ -65,12 +112,26 @@
 					correctOrder={(contract.config.order as string[]) ?? []}
 					feedback={contract.feedback}
 					ariaLabel={contract.accessibility?.aria_label ?? contract.prompt}
+					initialOrder={restoredOrder(contract)}
+					initialEvaluation={restoredEvaluation(contract)}
+					onSubmit={
+						preview || !onSubmitAttempt
+							? undefined
+							: async (order) => {
+									const result = await onSubmitAttempt({
+										interactionId: contract.id,
+										sectionId,
+										response: { order }
+									});
+									onPreviewSubmit?.(contract.id);
+									return result;
+								}
+					}
 				/>
 				{#if preview}
 					<p class="preview-note" data-testid="preview-attempt-isolation">
 						Preview — attempts are not saved.
 					</p>
-					<!-- Intentionally no production attempt POST; local SequenceInteraction state only. -->
 					<span hidden data-preview-submit-hook={onPreviewSubmit ? 'ready' : 'unused'}></span>
 				{/if}
 			{:else if contract}

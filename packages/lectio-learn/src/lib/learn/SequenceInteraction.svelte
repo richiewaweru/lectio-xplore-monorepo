@@ -6,31 +6,80 @@
 		label: string;
 	}
 
+	export type ServerEvaluation = {
+		outcome: string;
+		feedback: string;
+		score_earned?: number;
+		score_possible?: number;
+	};
+
 	interface Props {
 		prompt: string;
 		steps: Step[];
 		correctOrder: string[];
 		feedback: FeedbackSpec;
 		ariaLabel?: string;
+		/** Restored order from a persisted attempt. */
+		initialOrder?: string[];
+		/** When set, UI shows authoritative feedback (server or prior attempt). */
+		initialEvaluation?: ServerEvaluation | null;
+		/**
+		 * Production bridge: persist via caller. Return value is authoritative —
+		 * local evaluateSequence is only used when this is omitted (preview).
+		 */
+		onSubmit?: (order: string[]) => Promise<ServerEvaluation>;
+		disabled?: boolean;
 	}
 
-	let { prompt, steps, correctOrder, feedback, ariaLabel = prompt }: Props = $props();
+	let {
+		prompt,
+		steps,
+		correctOrder,
+		feedback,
+		ariaLabel = prompt,
+		initialOrder = undefined,
+		initialEvaluation = null,
+		onSubmit = undefined,
+		disabled = false
+	}: Props = $props();
 
 	let order = $state<string[]>([]);
 	let submitted = $state(false);
+	let serverResult = $state<ServerEvaluation | null>(null);
+	let submitting = $state(false);
+	let error = $state<string | null>(null);
 
 	$effect(() => {
 		if (order.length === 0 && steps.length > 0) {
-			order = steps.map((s) => s.id);
+			order = initialOrder && initialOrder.length === steps.length
+				? [...initialOrder]
+				: steps.map((s) => s.id);
 		}
 	});
 
-	const result = $derived(
-		submitted ? evaluateSequence({ order: correctOrder }, { order }, feedback) : null
+	$effect(() => {
+		if (initialEvaluation) {
+			submitted = true;
+			serverResult = initialEvaluation;
+		}
+	});
+
+	const localResult = $derived(
+		submitted && !onSubmit && !serverResult
+			? evaluateSequence({ order: correctOrder }, { order }, feedback)
+			: null
+	);
+
+	const display = $derived(
+		serverResult
+			? { outcome: serverResult.outcome, feedback: serverResult.feedback }
+			: localResult
+				? { outcome: localResult.outcome, feedback: localResult.feedback }
+				: null
 	);
 
 	function move(index: number, dir: -1 | 1) {
-		if (submitted) return;
+		if (submitted || disabled || submitting) return;
 		const next = index + dir;
 		if (next < 0 || next >= order.length) return;
 		const copy = [...order];
@@ -40,6 +89,25 @@
 
 	function labelFor(id: string) {
 		return steps.find((s) => s.id === id)?.label ?? id;
+	}
+
+	async function handleCheck() {
+		if (submitted || disabled || submitting) return;
+		error = null;
+		if (onSubmit) {
+			submitting = true;
+			try {
+				const result = await onSubmit(order);
+				serverResult = result;
+				submitted = true;
+			} catch (err) {
+				error = err instanceof Error ? err.message : 'Submit failed';
+			} finally {
+				submitting = false;
+			}
+			return;
+		}
+		submitted = true;
 	}
 </script>
 
@@ -53,7 +121,7 @@
 					<button
 						type="button"
 						aria-label={`Move ${labelFor(id)} up`}
-						disabled={submitted || index === 0}
+						disabled={submitted || disabled || submitting || index === 0}
 						onclick={() => move(index, -1)}
 					>
 						↑
@@ -61,7 +129,7 @@
 					<button
 						type="button"
 						aria-label={`Move ${labelFor(id)} down`}
-						disabled={submitted || index === order.length - 1}
+						disabled={submitted || disabled || submitting || index === order.length - 1}
 						onclick={() => move(index, 1)}
 					>
 						↓
@@ -70,9 +138,20 @@
 			</li>
 		{/each}
 	</ol>
-	<button type="button" class="submit" disabled={submitted} onclick={() => (submitted = true)}>Check</button>
-	{#if result}
-		<p class="feedback" data-outcome={result.outcome} role="status">{result.feedback}</p>
+	<button
+		type="button"
+		class="submit"
+		disabled={submitted || disabled || submitting}
+		onclick={handleCheck}
+		data-testid="sequence-check"
+	>
+		{submitting ? 'Saving…' : 'Check'}
+	</button>
+	{#if error}
+		<p class="error" role="alert">{error}</p>
+	{/if}
+	{#if display}
+		<p class="feedback" data-outcome={display.outcome} role="status">{display.feedback}</p>
 	{/if}
 </div>
 
@@ -132,5 +211,10 @@
 	.feedback {
 		margin: 0;
 		font-size: 14px;
+	}
+	.error {
+		margin: 0;
+		font-size: 13px;
+		color: var(--amber, #b45309);
 	}
 </style>
