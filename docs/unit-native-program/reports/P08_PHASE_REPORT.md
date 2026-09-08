@@ -2,7 +2,7 @@
 
 Phase: P08 — Prove uninterrupted flows and recovery
 Status: PASS
-Starting commit: `e08ca4b` (P07 STATE head) / ending code commits: see implementation commits below.
+Starting commit: `e08ca4b` (P07 STATE head) / ending code commit: `b88904d` — last implementation/test commit every gate below was run against. Report/docs commit follows and changes no product code.
 Dirty files preserved: `.tmp/**`, `apps/textbook-agent/backend/.tmp/*.log`, `apps/textbook-agent/backend/data/` — none committed.
 
 Contract/spec/prompt versions:
