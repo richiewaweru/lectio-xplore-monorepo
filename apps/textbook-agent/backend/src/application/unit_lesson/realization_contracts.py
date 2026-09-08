@@ -8,6 +8,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from learn.resources.native_policy import LEARN_NATIVE_POLICY_BODY
+from print.resources.native_policy import PRINT_NATIVE_POLICY_BODY
+
 NativePath = Literal["print", "learn"]
 RealizationStatus = Literal[
     "queued",
@@ -30,18 +33,9 @@ DEFAULT_VARIANT_ID = "everyone"
 LEGACY_AMBIGUOUS_VARIANT = "legacy-ambiguous"
 
 # Versioned native admission policies. Hash changes invalidate only that path.
-PRINT_NATIVE_POLICY: dict[str, Any] = {
-    "version": "1",
-    "path": "print",
-    "selector": "page_forms",
-    "writer": "page_objects",
-}
-LEARN_NATIVE_POLICY: dict[str, Any] = {
-    "version": "1",
-    "path": "learn",
-    "selector": "content_interactions",
-    "writer": "learn_components",
-}
+# Bodies live with Print/Learn owners; this module re-exports for admission.
+PRINT_NATIVE_POLICY: dict[str, Any] = PRINT_NATIVE_POLICY_BODY
+LEARN_NATIVE_POLICY: dict[str, Any] = LEARN_NATIVE_POLICY_BODY
 
 PRINT_PACKAGE_CONTRACT: dict[str, Any] = {
     "package": "@lectio/page",
