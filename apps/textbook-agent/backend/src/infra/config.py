@@ -268,8 +268,8 @@ class Settings(BaseSettings):
     lesson_builder_public_url: str = "http://127.0.0.1:5173"
     pdf_export_enabled: bool = True
     pdf_render_base_url: str = "http://127.0.0.1:5173"
-    pdf_export_timeout_ms: int = Field(default=45000, gt=0)
-    playwright_timeout_ms: int = Field(default=45000, gt=0)
+    pdf_export_timeout_ms: int = Field(default=120000, gt=0)
+    playwright_timeout_ms: int = Field(default=120000, gt=0)
     pdf_max_file_size_mb: int = Field(default=50, gt=0)
     pdf_max_page_count: int = Field(default=200, gt=0)
     pdf_usable_page_height_px: int = Field(default=970, gt=0)

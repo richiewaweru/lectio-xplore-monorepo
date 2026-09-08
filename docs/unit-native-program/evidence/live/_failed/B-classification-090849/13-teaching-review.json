@@ -1,0 +1,547 @@
+{
+  "generation_id": "b4171b07-9f15-49d8-90f4-04cca4762197",
+  "teaching_plan": {
+    "arc": "A child asks whether a rock is alive, and the lesson holds that question against a fish, a toy robot, and a tree. By testing each object against four criteria \u2014 grow, energy, respond, reproduce \u2014 the learner sees that no single trait is enough: a robot moves but does not grow, a rock can grow by outside forces without living, and only the fish and tree satisfy all four. The lesson closes by asking the learner to sort new objects using the complete set of criteria, confronting the belief that movement or energy alone means alive.",
+    "revision": 1,
+    "sections": [
+      {
+        "blocks": [
+          {
+            "id": "orient-b1",
+            "brief": "Present the anchor situation: a child picks up a rock and asks, 'Is this alive?', and the same question now applies to a fish in a tank, a toy robot, and a tree in the playground. Make the learner feel the pull of the question without answering it: the rock and the fish both look solid, but one is clearly more like the tree than the other. Do not yet name grow, energy, respond, or reproduce.",
+            "intent": "orient",
+            "evidence": "The anchor's entire function is to make judging life feel concrete and uncertain before criteria exist, so orient must open on the exact question and delay the criteria.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.orient.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "orient",
+        "transition": null,
+        "specific_purpose": "Open on the child's question and make the learner feel that 'alive' is not as easy to judge as it looks by placing a rock beside creatures and a machine."
+      },
+      {
+        "blocks": [
+          {
+            "id": "organise-b1",
+            "brief": "Define the four criteria for life \u2014 grow, energy, respond, reproduce \u2014 as a complete set that something must satisfy all of to be living. For each criterion state a plain meaning: grow means becoming bigger or changing by the organism's own processes; energy means taking in and using energy; respond means noticing and reacting to the environment; reproduce means making more of the same kind. Do not claim any one criterion alone decides life. Use owned terms: picks, alive, robot, child.",
+            "intent": "define",
+            "evidence": "The objective is to define the criteria, so organise must first state the four terms and their meanings before any sorting can happen.",
+            "position": 0,
+            "evidence_refs": [
+              "lesson.objective",
+              "slot.organise.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": "Organise has no typical intents supplied, so the permitted define intent is chosen to establish the criteria the arc must then use.",
+            "source_question_ids": []
+          },
+          {
+            "id": "organise-b2",
+            "brief": "Apply the four criteria to the rock, fish, toy robot, and tree. Show that the fish and tree satisfy all four, that the rock can grow only when outside forces add to it and has no energy, response, or reproduction, and that the robot moves and uses energy but does not grow by its own processes, respond, or reproduce. Make the rule visible: a living thing must meet all four criteria, and missing any one means not living.",
+            "intent": "classify",
+            "evidence": "Organise must impose retrieval structure on the four criteria, and the anchor supplies exactly the test set needed to show that classification by the complete set \u2014 not one trait \u2014 does the work.",
+            "position": 1,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.organise.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": "Organise has no typical intents supplied, so the permitted classify intent is chosen to sort the anchor objects by the defined rule.",
+            "source_question_ids": [
+              "b4171b07-9f15-49d8-90f4-04cca4762197:b4171b07-9f15-49d8-90f4-04cca4762197:291f0261-0d59-4076-8dd3-7d8548b5ae48.i4"
+            ]
+          },
+          {
+            "id": "organise-b3",
+            "brief": "Mark the one statement to retain: something is living only if it satisfies all four criteria \u2014 grow, energy, respond, reproduce \u2014 together. A rock failing all but grow, or a robot seeming to move and use energy, is still not living because at least one criterion is absent.",
+            "intent": "emphasise",
+            "evidence": "The organising slot ends with the single rule learners must retain, so emphasise marks it after the anchor sorting has made it concrete rather than asserting it first.",
+            "position": 2,
+            "evidence_refs": [
+              "lesson.objective",
+              "slot.organise.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": "Organise has no typical intents supplied, so the permitted emphasise intent is chosen to mark the complete-set rule that every later section depends on.",
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "organise",
+        "transition": "The child's question now has four possible answers in front of us \u2014 the rock, the fish, the robot, and the tree \u2014 so the next step is to ask what all living things must do.",
+        "specific_purpose": "Give the learner the four criteria as a combinable set by testing each of the four anchor objects against them, so the criteria become a coherent test rather than four disconnected vocabulary words."
+      },
+      {
+        "blocks": [
+          {
+            "id": "guided-b1",
+            "brief": "Ask the learner to decide whether the toy robot is living. Present the robot's movement and battery energy as visible strengths, then ask which is right: living because it moves, not living because movement alone is not the test, or living because it uses energy. The wrong answer must reveal reliance on a single criterion. Then have the learner check the robot against grow, respond, and reproduce.",
+            "intent": "diagnose-misconception",
+            "evidence": "The robot is the anchor object that makes the movement and energy beliefs collision-testable, so guided practice must surface M1 and M3 here before the learner re-sorts the object.",
+            "position": 0,
+            "evidence_refs": [
+              "M1",
+              "M3",
+              "anchor.anchor-1",
+              "slot.guided.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": "Guided has no typical intents supplied, so the permitted diagnose-misconception intent is chosen because the card names two held beliefs and the robot is the exact object that lets a learner confidently hold them.",
+            "source_question_ids": [
+              "b4171b07-9f15-49d8-90f4-04cca4762197:b4171b07-9f15-49d8-90f4-04cca4762197:291f0261-0d59-4076-8dd3-7d8548b5ae48.i2"
+            ]
+          },
+          {
+            "id": "guided-b2",
+            "brief": "Walk the learner through checking the toy robot and the rock against all four criteria, keeping the four-criteria list visible. At each criterion ask: does the robot grow by its own processes? No. Does it respond? No. Does it reproduce? No. Therefore, despite movement and battery energy, it is not living. Do the same with the rock, letting the learner answer each criterion check with prompts.",
+            "intent": "practise-guided",
+            "evidence": "Guided practice must let the learner do the thinking while support stays, so the four-criteria list stays visible while the learner works through the two problem anchor objects criterion by criterion.",
+            "position": 1,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.guided.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": "Guided has no typical intents supplied, so the permitted practise-guided intent is chosen to give scaffolded rehearsal of the classify task.",
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "guided",
+        "transition": "With the four criteria now in place, the learner is ready to find out whether a rock or a robot can pass the full test, especially where one trait looks convincing on its own.",
+        "specific_purpose": "Test whether the learner can use the four-criteria test with support present, deliberately surfacing the three held beliefs that a single trait \u2014 movement, growth, energy \u2014 makes something alive."
+      },
+      {
+        "blocks": [
+          {
+            "id": "independent-b1",
+            "brief": "Ask the learner to decide unaided whether the rock is living. Give the fact that sand and minerals can add to a rock so it gets bigger over time, and ask the learner to check the rock against all four criteria independently. The learner must conclude that the rock's growth comes from outside forces and does not count, and that missing energy, response, and reproduction means the rock is not living.",
+            "intent": "practise-independent",
+            "evidence": "Independent practice must remove prompts, and the rock's growth-by-outside-forces is the exact case in which a learner holding M2 will fail unless they apply the complete criterion and reject outside growth.",
+            "position": 0,
+            "evidence_refs": [
+              "M2",
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.independent.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": "Independent has no typical intents supplied, so the permitted practise-independent intent is chosen to make the learner perform the four-criterion check without visible support.",
+            "source_question_ids": [
+              "b4171b07-9f15-49d8-90f4-04cca4762197:b4171b07-9f15-49d8-90f4-04cca4762197:291f0261-0d59-4076-8dd3-7d8548b5ae48.i3"
+            ]
+          },
+          {
+            "id": "independent-b2",
+            "brief": "Ask the learner to use the four-criteria rule on the fish and the tree to confirm each is living: the fish takes in energy from food, grows by its own processes, responds, and reproduces; the tree makes its own food, grows, responds to light and seasons, and reproduces by seeds or spores. Require the learner to state for each object that all four criteria are met before declaring it living.",
+            "intent": "apply",
+            "evidence": "The learner must confirm the rule works in both directions, so applying the four-criteria test to the fish and tree forces the learner to see all four satisfied before claiming life.",
+            "position": 1,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.independent.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": "Independent has no typical intents supplied, so the permitted apply intent is chosen to require selection and use of the learned idea without scaffolding.",
+            "source_question_ids": [
+              "b4171b07-9f15-49d8-90f4-04cca4762197:b4171b07-9f15-49d8-90f4-04cca4762197:291f0261-0d59-4076-8dd3-7d8548b5ae48.i5"
+            ]
+          }
+        ],
+        "slot_id": "independent",
+        "transition": "With support, the learner has now seen the robot and the rock fail individual criteria. The next task is to run the full test unaided, including the trap that a rock can appear to grow.",
+        "specific_purpose": "Remove the scaffolding and require the learner to apply all four criteria to anchor objects without prompts, including recovering from the belief that growth by outside forces makes a rock living."
+      },
+      {
+        "blocks": [
+          {
+            "id": "check-b1",
+            "brief": "Ask the learner to judge whether the rock is living and whether the toy robot is living, using only the four-criteria rule. The wrong answers must catch learners who rely on a single trait: the rock because it can get bigger, the robot because it moves and uses energy. Do not add any new object or new criterion.",
+            "intent": "check-understanding",
+            "evidence": "The check must answer whether the objective landed, and only a judgment of the two anchor objects against all four criteria reveals whether a learner has retained the complete rule or collapsed it into one trait.",
+            "position": 0,
+            "evidence_refs": [
+              "lesson.objective",
+              "slot.check.purpose",
+              "anchor.anchor-1"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [
+              "b4171b07-9f15-49d8-90f4-04cca4762197:b4171b07-9f15-49d8-90f4-04cca4762197:291f0261-0d59-4076-8dd3-7d8548b5ae48.i1"
+            ]
+          }
+        ],
+        "slot_id": "check",
+        "transition": "The learner has now sorted all four anchor objects with and without help, so the closing check asks the same question one more time: is the rock alive?",
+        "specific_purpose": "Share a diagnostic that measures whether the learner can correctly judge the rock and the toy robot as not living by using all four criteria, rather than any single trait."
+      }
+    ],
+    "anchor_usage": [
+      {
+        "usage": "Introduce the child's question about the rock and place it beside the fish, toy robot, and tree as four candidates to decide about.",
+        "slot_id": "orient"
+      },
+      {
+        "usage": "Test the four anchor objects against the four criteria, using each object to show that any single criterion fails as a test of life while all four together succeed.",
+        "slot_id": "organise"
+      },
+      {
+        "usage": "Return to the toy robot and the rock to test whether learners now see why a single trait like movement or growth by outside forces cannot make the robot or rock living.",
+        "slot_id": "guided"
+      },
+      {
+        "usage": "Apply the four-criteria test to the fish and tree alongside the rock and robot to confirm only the two organisms satisfy all four.",
+        "slot_id": "independent"
+      },
+      {
+        "usage": "Decide whether the rock and toy robot are living without prompting, testing whether the complete four-criteria rule is retained rather than a single criterion.",
+        "slot_id": "check"
+      }
+    ],
+    "approval_status": "pending",
+    "preparation_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870",
+    "teaching_plan_id": "374dcc51-8dfa-4ec2-bdb7-b8360e7a7a7c",
+    "misconception_focus_ids": [
+      "M1",
+      "M2",
+      "M3"
+    ]
+  },
+  "teaching_validation": {
+    "ok": true,
+    "issues": []
+  },
+  "teaching_qc": [],
+  "teaching_review": {
+    "status": "pending",
+    "revision": 1,
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "teacher_note": null
+  },
+  "lesson_packet": {
+    "scope": {
+      "terminology": [],
+      "must_establish": [],
+      "must_not_introduce": []
+    },
+    "slots": [
+      {
+        "purpose": "Give the learner a reason to care and a concrete situation to hold.",
+        "slot_id": "orient",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "orient",
+          "activate-prior-knowledge",
+          "emphasise"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "Impose a structure on the facts so they are retrievable, not just listed.",
+        "slot_id": "organise",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [],
+        "visual_required": false
+      },
+      {
+        "purpose": "Practice with scaffolding still present. Learner does the thinking, support stays.",
+        "slot_id": "guided",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [],
+        "visual_required": false
+      },
+      {
+        "purpose": "Practice with scaffolding removed.",
+        "slot_id": "independent",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [],
+        "visual_required": false
+      },
+      {
+        "purpose": "The shared diagnostic. Identical across every variant. Written from the card only, never from the prose above it.\n",
+        "slot_id": "check",
+        "max_blocks": 1,
+        "min_blocks": 1,
+        "typical_intents": [
+          "check-understanding",
+          "practise-independent",
+          "diagnose-misconception"
+        ],
+        "visual_required": false
+      }
+    ],
+    "anchor": {
+      "id": "anchor-1",
+      "description": "A child picks up a rock and asks, 'Is this alive?' A fish in a tank, a toy robot, and a tree in the\u2026"
+    },
+    "lesson": {
+      "subject": "Science",
+      "objective": "Define the criteria that determine if something is living: grow, energy, respond, and reproduce.",
+      "grade_level": "Grade",
+      "lesson_mode": "first_exposure",
+      "knowledge_type": "conceptual",
+      "path_lesson_id": "b4171b07-9f15-49d8-90f4-04cca4762197"
+    },
+    "limits": {
+      "max_sections": 4,
+      "max_total_blocks": 10,
+      "max_blocks_per_section": 3
+    },
+    "resource_id": "lesson",
+    "approved_items": [
+      {
+        "id": "b4171b07-9f15-49d8-90f4-04cca4762197:b4171b07-9f15-49d8-90f4-04cca4762197:291f0261-0d59-4076-8dd3-7d8548b5ae48.i1",
+        "stem": "A team discovers a new object on a distant planet. It can split into two smaller copies of itself. Which additional evidence would be MOST useful for deciding if it is living?",
+        "card_id": "b4171b07-9f15-49d8-90f4-04cca4762197:291f0261-0d59-4076-8dd3-7d8548b5ae48",
+        "options": [
+          {
+            "key": "a",
+            "text": "Whether it also grows, uses energy, and responds to its surroundings",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Whether it can move from one place to another on its own",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Whether it gets bigger when material is added from outside",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Whether it gives off heat or light while it is splitting",
+            "correct": false,
+            "diagnoses": "M3",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M1",
+          "c": "M2",
+          "d": "M3"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "b4171b07-9f15-49d8-90f4-04cca4762197:b4171b07-9f15-49d8-90f4-04cca4762197:291f0261-0d59-4076-8dd3-7d8548b5ae48.i2",
+        "stem": "A scientist observes a puddle that slowly becomes larger after each rain. A student says the puddle is living because it grows. Which explanation best evaluates the student's claim?",
+        "card_id": "b4171b07-9f15-49d8-90f4-04cca4762197:291f0261-0d59-4076-8dd3-7d8548b5ae48",
+        "options": [
+          {
+            "key": "a",
+            "text": "The puddle grows only when rain adds water, so the growth criterion is not met.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The puddle is not alive because it does not walk or run to a new location.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The puddle must be alive because becoming larger means it is growing.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The puddle must be alive because sunlight warms it, giving it energy.",
+            "correct": false,
+            "diagnoses": "M3",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M1",
+          "c": "M2",
+          "d": "M3"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "b4171b07-9f15-49d8-90f4-04cca4762197:b4171b07-9f15-49d8-90f4-04cca4762197:291f0261-0d59-4076-8dd3-7d8548b5ae48.i3",
+        "stem": "A student claims a toy car is living because it moves, and a fire is living because it grows. Which analysis correctly applies the four criteria?",
+        "card_id": "b4171b07-9f15-49d8-90f4-04cca4762197:291f0261-0d59-4076-8dd3-7d8548b5ae48",
+        "options": [
+          {
+            "key": "a",
+            "text": "Both claims are flawed because a single criterion cannot prove something is living.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The toy car is living, but the fire is not because fire cannot move on its own.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The fire is living because it grows, but the car is not because it does not grow.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The fire is living because it releases heat and light, but the car is not because it has batteries.",
+            "correct": false,
+            "diagnoses": "M3",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M1",
+          "c": "M2",
+          "d": "M3"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "b4171b07-9f15-49d8-90f4-04cca4762197:b4171b07-9f15-49d8-90f4-04cca4762197:291f0261-0d59-4076-8dd3-7d8548b5ae48.i4",
+        "stem": "A group is deciding whether a river that changes course over many years is living. Some students say the moving river must be alive. What should the group do?",
+        "card_id": "b4171b07-9f15-49d8-90f4-04cca4762197:291f0261-0d59-4076-8dd3-7d8548b5ae48",
+        "options": [
+          {
+            "key": "a",
+            "text": "Check whether the river also grows, uses energy, responds, and reproduces.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Conclude that the river is alive because flowing and changing course shows movement.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Conclude that the river is alive because it becomes wider when more water enters it.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Conclude that the river is alive because moving water can turn a water wheel.",
+            "correct": false,
+            "diagnoses": "M3",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M1",
+          "c": "M2",
+          "d": "M3"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "b4171b07-9f15-49d8-90f4-04cca4762197:b4171b07-9f15-49d8-90f4-04cca4762197:291f0261-0d59-4076-8dd3-7d8548b5ae48.i5",
+        "stem": "A scientist lists facts about an unknown thing: it becomes larger by absorbing material from outside, and it can change energy from one form to another. Which conclusion is supported by the four criteria?",
+        "card_id": "b4171b07-9f15-49d8-90f4-04cca4762197:291f0261-0d59-4076-8dd3-7d8548b5ae48",
+        "options": [
+          {
+            "key": "a",
+            "text": "It cannot yet be classified as living because evidence for responding and reproducing is missing.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "It is not living because no observation shows it moving from place to place.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "It is living because it grows larger, regardless of how the material is added.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "It is living because it changes energy, which means it uses energy.",
+            "correct": false,
+            "diagnoses": "M3",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M1",
+          "c": "M2",
+          "d": "M3"
+        },
+        "correct_key": "a"
+      }
+    ],
+    "misconceptions": [
+      {
+        "id": "M1",
+        "statement": "{'id': 'M1', 'description': 'If something moves, it must be living.', 'source': 'drafted'}"
+      },
+      {
+        "id": "M2",
+        "statement": "{'id': 'M2', 'description': 'If something grows, it is living, even if it grows by outside forces.', 'source': 'drafted'}"
+      },
+      {
+        "id": "M3",
+        "statement": "{'id': 'M3', 'description': 'If something uses energy, it must be living.', 'source': 'drafted'}"
+      }
+    ],
+    "prior_established": [
+      {
+        "id": "prior-1",
+        "statement": "there are many different kinds of objects and organisms in the world"
+      },
+      {
+        "id": "prior-2",
+        "statement": "some things are alive and some are not"
+      }
+    ]
+  },
+  "catalogue": {
+    "version": "1.1.0",
+    "form_projection_hash": null,
+    "teaching_projection_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870"
+  }
+}

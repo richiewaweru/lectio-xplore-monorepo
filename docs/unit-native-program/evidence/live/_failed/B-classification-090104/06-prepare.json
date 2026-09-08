@@ -1,0 +1,24 @@
+{
+  "generation_id": "518cbeab-5061-49ff-8f72-b4c86360553b",
+  "path_lesson_id": "d25cfaa6-2ab5-440d-b079-c26fbdafd444",
+  "objective": "State and describe the four criteria used to decide if something is living",
+  "objective_hash": "b359d6980b622caa27321cbdb7ece4533828f661a856669830b67b8107030c3e",
+  "skeleton_id": "factual.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "organise",
+    "guided",
+    "independent",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "organise",
+    "guided",
+    "independent",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

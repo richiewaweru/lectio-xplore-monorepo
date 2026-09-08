@@ -30,14 +30,17 @@ from print.generation.whole_lesson.teaching_errors import (
     is_recognized_teaching_output_error,
 )
 from print.generation.whole_lesson.teaching_plan import (
+    LearnerActionBrief,
     TeachingPlan,
     TeachingPlanDraft,
     materialize_teaching_plan,
 )
+from print.resources.selection import _form_cards
 from print.generation.whole_lesson.validation import (
     ValidationReport,
     advisory_teaching_qc,
     allowed_teaching_evidence_refs,
+    anchor_terms,
     validate_teaching_plan,
 )
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
@@ -71,6 +74,125 @@ class TeachingPlanResult:
     legality: LessonLegalitySnapshot
 
 
+def _assessment_forms_for_intent(intent: str) -> set[str]:
+    """Return questions/choices forms that declare support for this intent."""
+    cards = _form_cards()
+    out: set[str] = set()
+    for form_id in ("questions", "choices"):
+        intents = set((cards.get(form_id) or {}).get("supported_intents") or ())
+        if intent in intents:
+            out.add(form_id)
+    return out
+
+
+def _repair_missing_order_learner_actions(
+    plan: TeachingPlan,
+    packet: ImmutableLessonPacket,
+) -> None:
+    """Attach order-items when the objective is ordering and teaching omitted action.
+
+    Sequence is the only generation-ready Learn interaction writer. Ordering
+    objectives that land on sequence / practise-guided / check-understanding
+    without a learner_action otherwise produce content-only Learn surfaces.
+    """
+    objective = f"{packet.lesson.objective} {plan.arc}".lower()
+    if not any(
+        token in objective
+        for token in ("order", "sequence", "stages", "cycle", "procedure", "steps")
+    ):
+        return
+    if any(block.learner_action is not None for section in plan.sections for block in section.blocks):
+        return
+    preferred = ("sequence", "practise-guided", "check-understanding")
+    target = None
+    for intent_name in preferred:
+        for section in plan.sections:
+            for block in section.blocks:
+                if block.intent == intent_name and block.learner_action is None:
+                    target = block
+                    break
+            if target is not None:
+                break
+        if target is not None:
+            break
+    if target is None:
+        return
+    # Do not inherit assessment question ids — they are usually MC/open and
+    # break Sequence work-order compilation. Empty sources let the Sequence
+    # writer synthesize steps from the teaching block content.
+    target.learner_action = LearnerActionBrief(
+        action="order-items",
+        support_level="guided" if target.intent != "check-understanding" else "independent",
+        evidence=(
+            "Objective requires reconstructing an ordered sequence; "
+            "attach a Sequence interaction so the learner can respond."
+        ),
+        source_item_ids=[],
+    )
+
+
+def _repair_briefs_missing_anchor_grounding(
+    plan: TeachingPlan,
+    packet: ImmutableLessonPacket,
+) -> None:
+    """Append owned vocabulary when a brief fails BRIEF_NO_ANCHOR_OR_TERM.
+
+    Writers are steered to name the anchor in prose; models sometimes omit every
+    owned token. Prefer terminology / must_establish / anchor description words
+    over synthetic ids (ids remain a validator escape hatch, not the repair).
+    """
+    terminology = {term.lower() for term in packet.scope.terminology}
+    anchor_vocabulary = anchor_terms(packet.anchor.description or "")
+    if not terminology and packet.scope.must_establish:
+        terminology = set().union(
+            *(anchor_terms(entry.statement) for entry in packet.scope.must_establish)
+        )
+    tokens = sorted(terminology | anchor_vocabulary, key=len, reverse=True)
+    if not tokens:
+        return
+    ground = ", ".join(tokens[:4])
+    for section in plan.sections:
+        for block in section.blocks:
+            brief_l = block.brief.lower()
+            grounded = (
+                packet.anchor.id in block.brief
+                or any(word in brief_l for word in anchor_vocabulary)
+                or any(term and term in brief_l for term in terminology)
+            )
+            if grounded:
+                continue
+            block.brief = f"{block.brief.rstrip()} Use owned terms: {ground}."
+
+
+def _repair_incompatible_assessment_sources(
+    plan: TeachingPlan,
+    packet: ImmutableLessonPacket,
+) -> None:
+    """Drop source bindings that cannot survive closed Print selection.
+
+    MC items require ``choices``; open-response items require ``questions``.
+    When the intent does not support the matching form, clear sources so
+    non-assessment forms (e.g. worked-example) remain selectable.
+    """
+    by_id = {item.id: item for item in packet.approved_items}
+    for section in plan.sections:
+        for block in section.blocks:
+            if not block.source_question_ids:
+                continue
+            missing = [sid for sid in block.source_question_ids if sid not in by_id]
+            if missing:
+                block.source_question_ids = []
+                continue
+            kinds = {approved_item_kind(by_id[sid]) for sid in block.source_question_ids}
+            forms = _assessment_forms_for_intent(block.intent)
+            if kinds == {"multiple_choice"} and "choices" not in forms:
+                block.source_question_ids = []
+            elif kinds == {"open_response"} and "questions" not in forms:
+                block.source_question_ids = []
+            elif len(kinds) > 1:
+                block.source_question_ids = []
+
+
 def _repair_missing_assessment_sources(
     plan: TeachingPlan,
     packet: ImmutableLessonPacket,
@@ -81,6 +203,7 @@ def _repair_missing_assessment_sources(
     Print closed selection rejects questions/choices without sources. Only bind
     for intents whose primary job is assessment/practice — never for orient /
     explain content blocks that merely list choices as an optional form.
+    Kind must match forms legal for the intent (MC → choices; open → questions).
     """
     bind_intents = {
         "check-understanding",
@@ -99,9 +222,15 @@ def _repair_missing_assessment_sources(
         for block in section.blocks
         for source_id in block.source_question_ids
     }
-    available = [
-        item.id for item in packet.approved_items if item.id not in used
-    ]
+    available_by_kind: dict[str, list[str]] = {
+        "multiple_choice": [],
+        "open_response": [],
+    }
+    for item in packet.approved_items:
+        if item.id in used:
+            continue
+        available_by_kind[approved_item_kind(item)].append(item.id)
+
     priority = (
         "check-understanding",
         "diagnose-misconception",
@@ -129,11 +258,17 @@ def _repair_missing_assessment_sources(
                 ordered_blocks.append(block)
 
     for block in ordered_blocks:
-        if not available:
-            break
         if block.intent not in bind_intents:
             continue
-        block.source_question_ids = [available.pop(0)]
+        forms = _assessment_forms_for_intent(block.intent)
+        pool: list[str] = []
+        if "choices" in forms and available_by_kind["multiple_choice"]:
+            pool = available_by_kind["multiple_choice"]
+        elif "questions" in forms and available_by_kind["open_response"]:
+            pool = available_by_kind["open_response"]
+        if not pool:
+            continue
+        block.source_question_ids = [pool.pop(0)]
 
 
 def _repair_invalid_evidence_refs(
@@ -330,6 +465,9 @@ async def run_lesson_approach_planner(
                     )
                 )
                 continue
+            _repair_briefs_missing_anchor_grounding(plan, packet)
+            _repair_missing_order_learner_actions(plan, packet)
+            _repair_incompatible_assessment_sources(plan, packet)
             _repair_missing_assessment_sources(
                 plan,
                 packet,

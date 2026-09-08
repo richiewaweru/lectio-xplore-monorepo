@@ -1,0 +1,513 @@
+{
+  "status": "ready",
+  "output_id": "learn-out-ccd04ae62c17",
+  "editable_lesson_id": "6b7f1426-c374-41e1-947c-2b4e760c0db3",
+  "realization_id": "7d9059c1-6377-4db9-a12f-4644bcb95deb",
+  "realization_created": false,
+  "teaching_plan_hash": "34d5a63064929791721458f214d78334ff42ff397c7e0c66dba751d786cb2f3e",
+  "teaching_plan_revision": 1,
+  "selection_trace": {
+    "selection_snapshot": {
+      "path": "learn",
+      "teaching_plan_id": "dd1f937f-0fa1-43cc-8901-0de41fd712fc",
+      "teaching_plan_revision": 1,
+      "teaching_plan_hash": "34d5a63064929791721458f214d78334ff42ff397c7e0c66dba751d786cb2f3e",
+      "native_policy_hash": "7854dce52a24450b5a997e4f0a0f0bf7957abb3b69967862b8c10bd713bda416",
+      "package_contract_hash": "b4d031e6375f2bed031035ce510d1d8870ba77f2bf02237605e9360f7d95e8c0",
+      "candidate_map": {
+        "orient-b1": {
+          "content": [
+            "hook-hero",
+            "section-header",
+            "summary-block"
+          ],
+          "interaction": []
+        },
+        "orient-b2": {
+          "content": [
+            "hook-hero"
+          ],
+          "interaction": []
+        },
+        "explain-b1": {
+          "content": [
+            "definition-card"
+          ],
+          "interaction": []
+        },
+        "explain-b2": {
+          "content": [
+            "definition-card"
+          ],
+          "interaction": []
+        },
+        "contrast-b1": {
+          "content": [
+            "quiz-check"
+          ],
+          "interaction": []
+        },
+        "contrast-b2": {
+          "content": [
+            "quiz-check"
+          ],
+          "interaction": []
+        },
+        "contrast-b3": {
+          "content": [
+            "diagram-compare",
+            "timeline-block"
+          ],
+          "interaction": []
+        },
+        "check-b1": {
+          "content": [],
+          "interaction": [
+            "sequence"
+          ]
+        }
+      },
+      "decisions": [
+        {
+          "block_id": "orient-b1",
+          "content_id": "hook-hero",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [
+            "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i4"
+          ],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "orient-b2",
+          "content_id": "hook-hero",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [
+            "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i5"
+          ],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "explain-b1",
+          "content_id": "definition-card",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "explain-b2",
+          "content_id": "definition-card",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "contrast-b1",
+          "content_id": "quiz-check",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [
+            "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i2"
+          ],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "contrast-b2",
+          "content_id": "quiz-check",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [
+            "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i3"
+          ],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "contrast-b3",
+          "content_id": "diagram-compare",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "check-b1",
+          "content_id": null,
+          "interaction_id": "sequence",
+          "reason": "deterministic first-legal closed candidate",
+          "source_item_ids": [],
+          "dependency_ids": []
+        }
+      ],
+      "snapshot_hash": "01ce7bd769cd88cff03e602e85e475621b7da0c2dc77e6035bb70d300905409c"
+    },
+    "work_orders": [
+      {
+        "work_order_id": "learn::learn::orient-b1::hook-hero",
+        "block_id": "orient-b1",
+        "section_id": "orient",
+        "lane": "content",
+        "capability_id": "hook-hero",
+        "teaching_plan_id": "dd1f937f-0fa1-43cc-8901-0de41fd712fc",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "34d5a63064929791721458f214d78334ff42ff397c7e0c66dba751d786cb2f3e",
+        "capability_contract_hash": "ff14c279ad8b693f8f900294ccf223a43936f7ffa6df6facb2735636a906ed6b",
+        "source_refs": [
+          "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i4"
+        ],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/HookHeroContent"
+        },
+        "field_guidance": {
+          "headline": "Short attention-grabbing headline. Format: plain_text. Plain text heading.",
+          "body": "Primary hook narrative. Format: inline_markdown. Usually inline markdown. When type is quote, treat as plain quote text without markdown emphasis unless explicitly needed.",
+          "anchor": "Short anchor tying the hook to the lesson concept. Format: plain_text_short. Plain text snippet.",
+          "type": "Hook presentation mode (prose, quote, question, data-point). Format: enum.",
+          "question_options": "Optional multiple choice stems for question hooks. Format: structured_array. Plain text entries per option.",
+          "data_point": "Structured numeric or textual evidence for data-point hooks. Format: structured_object. Rendered as a compact fact card when present.",
+          "image": "Optional inline illustration with url and alt text. Format: structured_object. Rendered as an inline image when present.",
+          "svg_content": "Optional inline SVG markup. Format: plain_text. Sanitized SVG inserted when present.",
+          "quote_attribution": "Attribution line for quote hooks. Format: plain_text. Plain text."
+        },
+        "brief": "Present the anchor: a monarch butterfly fluttering near a milkweed plant, landing on a leaf to lay a tiny egg. Ask what the learner thinks that egg will become. Do not name any stages yet.",
+        "intent": "orient",
+        "action": null,
+        "evidence": "The anchor is a single observable event that begins the monarch life cycle, and the orient slot needs a concrete situation, not an explanation.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::orient-b2::hook-hero",
+        "block_id": "orient-b2",
+        "section_id": "orient",
+        "lane": "content",
+        "capability_id": "hook-hero",
+        "teaching_plan_id": "dd1f937f-0fa1-43cc-8901-0de41fd712fc",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "34d5a63064929791721458f214d78334ff42ff397c7e0c66dba751d786cb2f3e",
+        "capability_contract_hash": "ff14c279ad8b693f8f900294ccf223a43936f7ffa6df6facb2735636a906ed6b",
+        "source_refs": [
+          "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i5"
+        ],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/HookHeroContent"
+        },
+        "field_guidance": {
+          "headline": "Short attention-grabbing headline. Format: plain_text. Plain text heading.",
+          "body": "Primary hook narrative. Format: inline_markdown. Usually inline markdown. When type is quote, treat as plain quote text without markdown emphasis unless explicitly needed.",
+          "anchor": "Short anchor tying the hook to the lesson concept. Format: plain_text_short. Plain text snippet.",
+          "type": "Hook presentation mode (prose, quote, question, data-point). Format: enum.",
+          "question_options": "Optional multiple choice stems for question hooks. Format: structured_array. Plain text entries per option.",
+          "data_point": "Structured numeric or textual evidence for data-point hooks. Format: structured_object. Rendered as a compact fact card when present.",
+          "image": "Optional inline illustration with url and alt text. Format: structured_object. Rendered as an inline image when present.",
+          "svg_content": "Optional inline SVG markup. Format: plain_text. Sanitized SVG inserted when present.",
+          "quote_attribution": "Attribution line for quote hooks. Format: plain_text. Plain text."
+        },
+        "brief": "Quickly call up what the learner already knows: butterflies are insects, insects hatch from eggs, and a butterfly is the adult form that flies. Do not explain life cycle yet.",
+        "intent": "activate-prior-knowledge",
+        "action": null,
+        "evidence": "The learner already holds three facts that can be linked into the new idea, and the orient slot needs to surface those prerequisites briefly.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::explain-b1::definition-card",
+        "block_id": "explain-b1",
+        "section_id": "explain",
+        "lane": "content",
+        "capability_id": "definition-card",
+        "teaching_plan_id": "dd1f937f-0fa1-43cc-8901-0de41fd712fc",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "34d5a63064929791721458f214d78334ff42ff397c7e0c66dba751d786cb2f3e",
+        "capability_contract_hash": "cd6119f8a85ef12207f53b5dade35fbf1114d483e8981d39ec4502cdf6608682",
+        "source_refs": [],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/DefinitionContent"
+        },
+        "field_guidance": {
+          "term": "The defined term as a heading. Format: plain_text. Plain text heading.",
+          "plain": "Student-friendly definition in plain language. Format: inline_markdown. Inline markdown.",
+          "formal": "More precise or formal definition. Format: inline_markdown. Inline markdown.",
+          "notation": "Mathematical notation line when applicable. Format: latex_raw.",
+          "symbol": "Short symbol label when relevant. Format: plain_text. Plain text.",
+          "examples": "Short example strings illustrating usage. Format: structured_array. Rendered as plain example lines (no extra quotes added by contract).",
+          "related_terms": "Related vocabulary references. Format: structured_array. Plain text entries.",
+          "etymology": "Optional etymology note. Format: inline_markdown. Inline markdown."
+        },
+        "brief": "Identify the four main stages in the monarch life cycle: egg, caterpillar, chrysalis, butterfly. For each stage, say what the organism is doing in that stage: the egg holds the young, the caterpillar eats and grows, the chrysalis shelters the change, and the butterfly is the adult that can fly and lay eggs. Do not yet state that the series repeats.",
+        "intent": "name-parts",
+        "action": null,
+        "evidence": "The objective names a series of stages, and the anchor provides the concrete monarch example through which each stage can be named.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::explain-b2::definition-card",
+        "block_id": "explain-b2",
+        "section_id": "explain",
+        "lane": "content",
+        "capability_id": "definition-card",
+        "teaching_plan_id": "dd1f937f-0fa1-43cc-8901-0de41fd712fc",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "34d5a63064929791721458f214d78334ff42ff397c7e0c66dba751d786cb2f3e",
+        "capability_contract_hash": "cd6119f8a85ef12207f53b5dade35fbf1114d483e8981d39ec4502cdf6608682",
+        "source_refs": [],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/DefinitionContent"
+        },
+        "field_guidance": {
+          "term": "The defined term as a heading. Format: plain_text. Plain text heading.",
+          "plain": "Student-friendly definition in plain language. Format: inline_markdown. Inline markdown.",
+          "formal": "More precise or formal definition. Format: inline_markdown. Inline markdown.",
+          "notation": "Mathematical notation line when applicable. Format: latex_raw.",
+          "symbol": "Short symbol label when relevant. Format: plain_text. Plain text.",
+          "examples": "Short example strings illustrating usage. Format: structured_array. Rendered as plain example lines (no extra quotes added by contract).",
+          "related_terms": "Related vocabulary references. Format: structured_array. Plain text entries.",
+          "etymology": "Optional etymology note. Format: inline_markdown. Inline markdown."
+        },
+        "brief": "Define a life cycle as the series of stages an organism passes through from egg to adult, and state that a butterfly's life cycle repeats when an adult butterfly produces young that grow into new adults. Use the monarch from the anchor as the example organism.",
+        "intent": "define",
+        "action": null,
+        "evidence": "The objective requires the learner to state that a life cycle is a series of stages that repeats when adults produce young, and the anchor gives the concrete organism for that definition.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::contrast-b1::quiz-check",
+        "block_id": "contrast-b1",
+        "section_id": "contrast",
+        "lane": "content",
+        "capability_id": "quiz-check",
+        "teaching_plan_id": "dd1f937f-0fa1-43cc-8901-0de41fd712fc",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "34d5a63064929791721458f214d78334ff42ff397c7e0c66dba751d786cb2f3e",
+        "capability_contract_hash": "cb6ab769e4c9ab2233342b0c195ae481d672dcfbe6ee3ba508abad68d74a3e43",
+        "source_refs": [
+          "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i2"
+        ],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/QuizContent"
+        },
+        "field_guidance": {
+          "question": "The quiz stem. Format: inline_markdown. Inline markdown with optional math.",
+          "options[].text": "Visible option text shown to the learner. Format: inline_markdown. Inline markdown.",
+          "options[].explanation": "Per-option rationale after answering. Format: inline_markdown. Inline markdown.",
+          "options[].correct": "Whether this option is the correct answer. Format: boolean.",
+          "options[].diagnoses": "Optional caller-supplied misconception id revealed by this option. Format: plain_text. Metadata only; never rendered in the learner-facing quiz.",
+          "feedback_correct": "Short feedback when the learner is correct. Format: plain_text. Plain text.",
+          "feedback_incorrect": "Short feedback when the learner is incorrect. Format: plain_text. Plain text.",
+          "quiz_type": "Optional quiz mode discriminator (multiple-choice vs true-false). Format: enum."
+        },
+        "brief": "Surface the wrong belief that the egg, caterpillar, chrysalis, and butterfly are four different kinds of animals. Ask the learner to decide whether the four stages in the anchor are the same organism at different times or four separate organisms. Do not explain the correct answer in the same breath as the question.",
+        "intent": "diagnose-misconception",
+        "action": null,
+        "evidence": "The approved misconception says students treat the stages as four unrelated animals, and the contrast slot must test that wrong model against the anchor rather than restate it.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::contrast-b2::quiz-check",
+        "block_id": "contrast-b2",
+        "section_id": "contrast",
+        "lane": "content",
+        "capability_id": "quiz-check",
+        "teaching_plan_id": "dd1f937f-0fa1-43cc-8901-0de41fd712fc",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "34d5a63064929791721458f214d78334ff42ff397c7e0c66dba751d786cb2f3e",
+        "capability_contract_hash": "cb6ab769e4c9ab2233342b0c195ae481d672dcfbe6ee3ba508abad68d74a3e43",
+        "source_refs": [
+          "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i3"
+        ],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/QuizContent"
+        },
+        "field_guidance": {
+          "question": "The quiz stem. Format: inline_markdown. Inline markdown with optional math.",
+          "options[].text": "Visible option text shown to the learner. Format: inline_markdown. Inline markdown.",
+          "options[].explanation": "Per-option rationale after answering. Format: inline_markdown. Inline markdown.",
+          "options[].correct": "Whether this option is the correct answer. Format: boolean.",
+          "options[].diagnoses": "Optional caller-supplied misconception id revealed by this option. Format: plain_text. Metadata only; never rendered in the learner-facing quiz.",
+          "feedback_correct": "Short feedback when the learner is correct. Format: plain_text. Plain text.",
+          "feedback_incorrect": "Short feedback when the learner is incorrect. Format: plain_text. Plain text.",
+          "quiz_type": "Optional quiz mode discriminator (multiple-choice vs true-false). Format: enum."
+        },
+        "brief": "Surface the wrong belief that the life cycle only goes forward and then stops. Ask the learner to decide what must happen for a new egg to appear on a milkweed leaf. Do not yet state that the butterfly must lay the egg.",
+        "intent": "diagnose-misconception",
+        "action": null,
+        "evidence": "The approved misconception says students see the cycle as a line that ends at butterfly, and the contrast slot must test whether the learner can identify the missing return step.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::contrast-b3::diagram-compare",
+        "block_id": "contrast-b3",
+        "section_id": "contrast",
+        "lane": "content",
+        "capability_id": "diagram-compare",
+        "teaching_plan_id": "dd1f937f-0fa1-43cc-8901-0de41fd712fc",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "34d5a63064929791721458f214d78334ff42ff397c7e0c66dba751d786cb2f3e",
+        "capability_contract_hash": "fe239c29e230a0d8c6c38eb6aedea1756ac54021134ebadbe219358fc61f6b25",
+        "source_refs": [],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/DiagramCompareContent"
+        },
+        "field_guidance": {
+          "before_svg": "Optional SVG markup for the before panel. Format: plain_text. Sanitized SVG string.",
+          "after_svg": "Optional SVG markup for the after panel. Format: plain_text. Sanitized SVG string.",
+          "before_image_url": "Optional raster image URL for the before panel. Format: media_url. Rendered as <img> when provided.",
+          "after_image_url": "Optional raster image URL for the after panel. Format: media_url. Rendered as <img> when provided.",
+          "before_label": "Short label for the before column. Format: plain_text. Plain text.",
+          "after_label": "Short label for the after column. Format: plain_text. Plain text.",
+          "before_details": "Optional bullet strings elaborating the before state. Format: structured_array. Plain text entries.",
+          "after_details": "Optional bullet strings elaborating the after state. Format: structured_array. Plain text entries.",
+          "caption": "Shared caption for the compare figure. Format: plain_text. Plain text.",
+          "alt_text": "Accessibility description covering both panels. Format: accessibility_text. Plain text."
+        },
+        "brief": "Contrast a life cycle with a line that stops. Name a line that stops as one that goes egg, caterpillar, chrysalis, butterfly, then nothing. Then name a life cycle as the same four stages but with the butterfly producing a new egg. Do not introduce a new organism.",
+        "intent": "compare",
+        "action": null,
+        "evidence": "The objective asks for the idea that the cycle repeats, and the contrast slot needs a side-by-side comparison that separates the wrong linear model from the correct repeating one.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::check-b1::sequence",
+        "block_id": "check-b1",
+        "section_id": "check",
+        "lane": "interaction",
+        "capability_id": "sequence",
+        "teaching_plan_id": "dd1f937f-0fa1-43cc-8901-0de41fd712fc",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "34d5a63064929791721458f214d78334ff42ff397c7e0c66dba751d786cb2f3e",
+        "capability_contract_hash": "58feee22e27374e7d2c0cac97cd15ba07cc297e7fdce3fbf4b2b4e65b86e6211",
+        "source_refs": [],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$id": "learn/sequence/config.v1",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "order"
+          ],
+          "properties": {
+            "order": {
+              "type": "array",
+              "minItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "items": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "label"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "field_guidance": {
+          "order": "The one accepted order, as item ids. Alternative valid orders are not supported.",
+          "items": "Labels shown to the learner, keyed by the same ids used in `order`."
+        },
+        "brief": "Ask the learner to identify what an adult butterfly must do for the life cycle to continue.",
+        "intent": "check-understanding",
+        "action": "order-items",
+        "evidence": "Objective requires reconstructing an ordered sequence; attach a Sequence interaction so the learner can respond.",
+        "support_level": "independent",
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      }
+    ],
+    "work_order_ids": [
+      "learn::learn::orient-b1::hook-hero",
+      "learn::learn::orient-b2::hook-hero",
+      "learn::learn::explain-b1::definition-card",
+      "learn::learn::explain-b2::definition-card",
+      "learn::learn::contrast-b1::quiz-check",
+      "learn::learn::contrast-b2::quiz-check",
+      "learn::learn::contrast-b3::diagram-compare",
+      "learn::learn::check-b1::sequence"
+    ],
+    "form_prompt": "closed_learn_selection"
+  },
+  "content_hash": "34d5a63064929791721458f214d78334ff42ff397c7e0c66dba751d786cb2f3e",
+  "block_count": 0,
+  "order_action_repair": true,
+  "actions_after_repair": [
+    [
+      "orient-b1",
+      "orient",
+      null
+    ],
+    [
+      "orient-b2",
+      "activate-prior-knowledge",
+      null
+    ],
+    [
+      "explain-b1",
+      "name-parts",
+      null
+    ],
+    [
+      "explain-b2",
+      "define",
+      null
+    ],
+    [
+      "contrast-b1",
+      "diagnose-misconception",
+      null
+    ],
+    [
+      "contrast-b2",
+      "diagnose-misconception",
+      null
+    ],
+    [
+      "contrast-b3",
+      "compare",
+      null
+    ],
+    [
+      "check-b1",
+      "check-understanding",
+      "order-items"
+    ]
+  ]
+}

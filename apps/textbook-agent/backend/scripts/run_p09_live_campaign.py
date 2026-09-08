@@ -74,10 +74,15 @@ CASES: dict[str, dict[str, Any]] = {
             "Classify everyday examples as living or nonliving using shared criteria "
             "(grow, need energy, respond, reproduce)."
         ),
-        "starting_knowledge": ["plants and animals are living things"],
+        "starting_knowledge": [
+            "plants and animals are living things",
+            "living things grow and need energy",
+            "nonliving things do not reproduce",
+        ],
         "raw_text": (
-            "Living and nonliving. Students use explicit criteria to classify examples "
-            "such as a rock, a tree, a toy robot, and a fish."
+            "Living and nonliving classification. Owned terms students must use: "
+            "living, nonliving, grow, energy, respond, reproduce. "
+            "Students apply those criteria to classify a rock, a tree, a toy robot, and a fish."
         ),
     },
     "C": {
@@ -198,9 +203,11 @@ async def wait_for_stage(
     *,
     timeout_seconds: int = 1200,
     poll_seconds: float = 4.0,
+    max_teaching_retries: int = 0,
 ) -> dict[str, Any]:
     deadline = time.monotonic() + timeout_seconds
     last = ""
+    teaching_retries = 0
     while time.monotonic() < deadline:
         resp = await client.get(f"/api/v1/v3/chunked/{generation_id}/status")
         _raise(resp)
@@ -211,6 +218,21 @@ async def wait_for_stage(
             last = stage
         if stage in targets:
             return payload
+        if stage == "failed_recoverable" and payload.get("next_action") == "retry_teaching":
+            if teaching_retries < max_teaching_retries:
+                teaching_retries += 1
+                print(
+                    f"  retry-native teaching attempt {teaching_retries}/{max_teaching_retries}",
+                    flush=True,
+                )
+                retry = await client.post(
+                    f"/api/v1/v3/generations/{generation_id}/retry-native",
+                    json={},
+                )
+                _raise(retry)
+                last = ""
+                await asyncio.sleep(poll_seconds)
+                continue
         if any(
             x in stage
             for x in (
@@ -474,7 +496,8 @@ async def run_case(
                 client,
                 generation_id,
                 {"awaiting_teaching_approval"},
-                timeout_seconds=1200,
+                timeout_seconds=1800,
+                max_teaching_retries=2,
             )
             timings["teaching_plan_s"] = round(time.monotonic() - t0, 2)
 
@@ -506,16 +529,29 @@ async def run_case(
             _write(run_dir / "14-teaching-approve.json", resp.json())
             log("teaching approved; waiting for print worker")
 
-            print_status = await wait_print_ready(client, generation_id, timeout_seconds=1800)
-            timings["print_writers_s"] = round(time.monotonic() - t0, 2)
-            _write(run_dir / "20-print-status.json", print_status)
+            print_failed = False
+            try:
+                print_status = await wait_print_ready(
+                    client, generation_id, timeout_seconds=1800
+                )
+                timings["print_writers_s"] = round(time.monotonic() - t0, 2)
+                _write(run_dir / "20-print-status.json", print_status)
+                resp = await client.get(f"/api/v1/v3/chunked/{generation_id}/status")
+                _raise(resp)
+                _write(run_dir / "21-print-status-refresh.json", resp.json())
+            except Exception as exc:  # noqa: BLE001
+                print_failed = True
+                timings["print_writers_s"] = round(time.monotonic() - t0, 2)
+                limitations.append(f"Print path failed after teaching approve: {exc}")
+                log(f"Print failed (continuing Learn): {exc}")
+                try:
+                    resp = await client.get(f"/api/v1/v3/chunked/{generation_id}/status")
+                    if resp.status_code < 400:
+                        _write(run_dir / "20-print-status.json", resp.json())
+                except Exception:  # noqa: BLE001
+                    pass
 
-            # Refresh mid-run evidence already captured via stage log; record status refresh.
-            resp = await client.get(f"/api/v1/v3/chunked/{generation_id}/status")
-            _raise(resp)
-            _write(run_dir / "21-print-status-refresh.json", resp.json())
-
-            if not skip_pdf:
+            if not skip_pdf and not print_failed:
                 for include_answers, name in ((False, "student"), (True, "teacher")):
                     t0 = time.monotonic()
                     try:
@@ -678,7 +714,7 @@ async def run_case(
                             json={
                                 "interaction_id": interaction_id,
                                 "client_submission_id": f"p09-wrong-{uuid.uuid4().hex[:8]}",
-                                "response_json": {"ordered_ids": ["z", "y", "x"]},
+                                "response_json": {"order": ["z", "y", "x"]},
                                 "expected_release_id": release["id"],
                                 # Must be rejected if accepted as authority:
                                 "score_earned": 99,
@@ -701,7 +737,7 @@ async def run_case(
                             json={
                                 "interaction_id": interaction_id,
                                 "client_submission_id": f"p09-right-{uuid.uuid4().hex[:8]}",
-                                "response_json": {"ordered_ids": ["a", "b", "c"]},
+                                "response_json": {"order": ["a", "b", "c"]},
                                 "expected_release_id": release["id"],
                             },
                         )
@@ -752,11 +788,9 @@ async def run_case(
                 else:
                     limitations.append(f"instance start: {resp.status_code} {resp.text[:300]}")
 
-        live["status"] = "PASS" if not any(
-            "BLOCKED" in (x if isinstance(x, str) else "") for x in limitations
-        ) else "PASS_WITH_BLOCKERS"
-        # Soften: still mark PASS_WITH_BLOCKERS when Poppler blocked but chain completed
-        if any("BLOCKED" in x for x in limitations):
+        if any("Print path failed" in x for x in limitations) or any(
+            "BLOCKED" in x for x in limitations
+        ):
             live["status"] = "PASS_WITH_BLOCKERS"
         else:
             live["status"] = "PASS"

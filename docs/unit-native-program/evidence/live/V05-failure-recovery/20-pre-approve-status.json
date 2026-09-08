@@ -1,0 +1,31 @@
+{
+  "generation_id": "3b47668e-4917-4c73-8b7b-f5203182e61c",
+  "pack_id": null,
+  "stage": "awaiting_teaching_approval",
+  "doc_version": "rev:0",
+  "failed_sections": [],
+  "blueprint_id": null,
+  "execution_started": false,
+  "next_action": "approve_teaching",
+  "error": null,
+  "error_type": null,
+  "variant_generation_ids": {},
+  "document_version": 2,
+  "document_exists": false,
+  "sections_total": 0,
+  "sections_ready": 0,
+  "sections_failed": 0,
+  "blocks_total": 0,
+  "blocks_ready": 0,
+  "blocks_failed": 0,
+  "failed_section_ids": [],
+  "failed_block_ids": [],
+  "error_detail": null,
+  "visual_quality": {
+    "status": "ready",
+    "flagged": [],
+    "flagged_count": 0,
+    "failed_request_ids": [],
+    "retryable": false
+  }
+}

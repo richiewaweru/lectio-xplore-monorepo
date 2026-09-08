@@ -1,0 +1,70 @@
+{
+  "case_id": "C-procedure",
+  "status": "FAIL",
+  "commit": "a88c643",
+  "provider": "deepseek-v4-pro",
+  "model": {
+    "page_model_fast": "deepseek-v4-flash",
+    "page_model_standard": "deepseek-v4-pro",
+    "xplore_native_worker_enabled": true,
+    "anthropic_key_set": true,
+    "deepseek_key_set": true,
+    "openai_key_set": true
+  },
+  "started_at": "2026-09-08T05:36:33.820144+00:00",
+  "finished_at": "2026-09-08T05:38:43.346811+00:00",
+  "unit_id": "3b80906f-46b6-4d2d-8368-b62afaa7f70b",
+  "path_lesson_id": "5f96674c-318e-481f-835e-aeaabab5c447",
+  "teaching_plan_id": "5b0460c7-43d9-4753-adf9-6d492e905d2c",
+  "teaching_revision": 1,
+  "teaching_hash": null,
+  "contracts": {
+    "print": null,
+    "learn": null,
+    "vocabulary": null
+  },
+  "print": {
+    "realization_id": null,
+    "generation_id": "edc7cc26-98b0-4bf3-bd55-7287b5592ec0",
+    "student_pdf": null,
+    "teacher_pdf": null,
+    "inspection": null
+  },
+  "learn": {
+    "realization_id": null,
+    "generation_id": null,
+    "builder_id": null,
+    "release_id": null,
+    "assignment_id": null,
+    "instance_id": null,
+    "attempt_evidence": null,
+    "refresh_evidence": null
+  },
+  "stage_timings_ms": {
+    "constructor_s": 1770,
+    "create_unit_s": 60,
+    "path_plan_s": 9880,
+    "path_approve_s": 110,
+    "prepare_s": 12730,
+    "teaching_plan_s": 99880
+  },
+  "failure_recovery": null,
+  "rubric": {
+    "print": null,
+    "learn": null
+  },
+  "evidence_paths": [
+    "docs/unit-native-program/evidence/live/C-procedure/00-health.json",
+    "docs/unit-native-program/evidence/live/C-procedure/00-provider-snapshot.json",
+    "docs/unit-native-program/evidence/live/C-procedure/01-unit-input.json",
+    "docs/unit-native-program/evidence/live/C-procedure/03-path-plan.json",
+    "docs/unit-native-program/evidence/live/C-procedure/05-path-approval.json",
+    "docs/unit-native-program/evidence/live/C-procedure/06-prepare.json",
+    "docs/unit-native-program/evidence/live/C-procedure/13-teaching-review.json",
+    "docs/unit-native-program/evidence/live/C-procedure/14-teaching-approve.json"
+  ],
+  "limitations": [
+    "generation failed at stage=failed_terminal: {'generation_id': 'edc7cc26-98b0-4bf3-bd55-7287b5592ec0', 'pack_id': None, 'stage': 'failed_terminal', 'doc_version': 'rev:0', 'failed_sections': [], 'blueprint_id': None, 'execution_started': True, 'next_action': 'inspect_error', 'error': \"NO_COMPATIBLE_CAPABILITY block='guided-b1' intent='practise-guided' action=None: empty legal form set\", 'error_type': 'NO_COMPATIBLE_CAPABILITY', 'variant_generation_ids': {}, 'document_version': 2, 'document_exists': False, 'sections_total': 0, 'sections_ready': 0, 'sections_failed': 0, 'blocks_total': 0, 'blocks_ready': 0, 'blocks_failed': 0, 'failed_section_ids': [], 'failed_block_ids': [], 'error_detail': {'scope': 'generation', 'code': 'NO_COMPATIBLE_CAPABILITY', 'message': \"NO_COMPATIBLE_CAPABILITY block='guided-b1' intent='practise-guided' action=None: empty legal form set\", 'retryable': False, 'stage': 'planning_forms', 'type': 'NoCompatiblePrintCapabilityError'}, 'visual_quality': {'status': 'ready', 'flagged': [], 'flagged_count': 0, 'failed_request_ids': [], 'retryable': False}}"
+  ],
+  "error": "RuntimeError: generation failed at stage=failed_terminal: {'generation_id': 'edc7cc26-98b0-4bf3-bd55-7287b5592ec0', 'pack_id': None, 'stage': 'failed_terminal', 'doc_version': 'rev:0', 'failed_sections': [], 'blueprint_id': None, 'execution_started': True, 'next_action': 'inspect_error', 'error': \"NO_COMPATIBLE_CAPABILITY block='guided-b1' intent='practise-guided' action=None: empty legal form set\", 'error_type': 'NO_COMPATIBLE_CAPABILITY', 'variant_generation_ids': {}, 'document_version': 2, 'document_exists': False, 'sections_total': 0, 'sections_ready': 0, 'sections_failed': 0, 'blocks_total': 0, 'blocks_ready': 0, 'blocks_failed': 0, 'failed_section_ids': [], 'failed_block_ids': [], 'error_detail': {'scope': 'generation', 'code': 'NO_COMPATIBLE_CAPABILITY', 'message': \"NO_COMPATIBLE_CAPABILITY block='guided-b1' intent='practise-guided' action=None: empty legal form set\", 'retryable': False, 'stage': 'planning_forms', 'type': 'NoCompatiblePrintCapabilityError'}, 'visual_quality': {'status': 'ready', 'flagged': [], 'flagged_count': 0, 'failed_request_ids': [], 'retryable': False}}"
+}

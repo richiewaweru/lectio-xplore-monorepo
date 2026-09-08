@@ -1,0 +1,4 @@
+[2026-09-08T05:56:42.715726+00:00] unit_id=f81c5bac-33a0-4d02-9064-b0408024bd23
+[2026-09-08T05:57:00.993095+00:00] generation_id=4c4946f5-97af-4f0d-8be3-e3444ba602d7
+[2026-09-08T05:58:12.398084+00:00] teaching approved; waiting for print worker
+[2026-09-08T05:58:34.768015+00:00] learn_output=learn-out-c3bf8b46afdf

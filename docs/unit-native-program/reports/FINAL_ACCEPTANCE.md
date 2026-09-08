@@ -3,28 +3,20 @@
 Repository: `richiewaweru/lectio-xplore-monorepo` (local `C:\Projects\lectio`)  
 Branch: `feat/unit-print-learn`  
 Pack-reviewed base: `5d1563903a22d6d40e12a86dcc4d9021ca8202a3`  
-Implementation tip at P09 write-up: see `git log` / STATE `implementation_head`.
+Implementation tip at P09 write-up: `a88c643` + uncommitted P09 live repairs (see `P09_PHASE_REPORT.md`).
 
 ## Core dual-path acceptance
 
 **Result: NOT COMPLETE (PASS_WITH_BLOCKERS)**
 
-Achieved on live case A with real providers:
-
-- Unit constructor/path/prepare through product API
-- Shared teaching planned and approved (live LLM)
-- Print closed selection + writers to `ready` on the same teaching revision
-- Learn closed production + realization from that revision (`form_prompt=closed_learn_selection`)
-- Publish release v1 for `native_learn` + start learner instance
+Live cases A–D ran through product APIs with real providers. Student/teacher PDFs + pdftoppm page images exist for A–D. Case A demonstrated Sequence attempts (client-score reject + wrong/right). Controlled Print failure recovery (P09-V05) passed with sibling Learn release unchanged.
 
 Still blocking full core acceptance:
 
-- Only one of four LIVE_PROTOCOL cases completed
-- Product PDF export timed out (Playwright → frontend print route)
-- Poppler/`pdftoppm` missing for page-image inspection
-- Learner attempt persistence not demonstrated on case A (teaching plan had no Sequence-required action; content-only Learn surfaces)
-- Controlled failure recovery + release v2 not completed live
-- Google Sign-In browser path not automated
+- B/C/D lack live interaction attempts (teaching often omitted learner_action)
+- Case A Sequence steps are salvage-synthesized from the brief, not owned lifecycle stage labels
+- Spatial interactions remain unavailable (Case D text alternative)
+- Google Sign-In browser path not automated (JWT mint for API)
 
 ## Full-catalogue acceptance
 
@@ -32,31 +24,30 @@ Still blocking full core acceptance:
 
 | Capability | Status |
 |---|---|
-| Sequence | generation-ready; deterministic writer; used in P06–P08 proofs |
-| Choice / multi-select / fill-blank / numeric / short-response / match-pairs / classify | package shells exist; writers largely not generation-ready |
-| ImageHotspot / DragLabel | unavailable (denied) |
-| Print forms (prose, list, table, figure, questions, choices, …) | closed selection + writers on Unit path (live Print ready observed) |
+| Sequence | generation-ready; live attempt proven on Case A salvage |
+| Classify / Numeric / other | not observed with attempts on live B/C |
+| ImageHotspot / DragLabel | unavailable |
+| Print forms | closed selection + writers; live PDF export proven A–D |
 
 ## Phase / gate totals
 
 | Phase | Status |
 |---|---|
-| P00–P08 | PASS (see prior reports) |
+| P00–P08 | PASS |
 | P09 | PASS_WITH_BLOCKERS |
 
-Live evidence: `docs/unit-native-program/evidence/live/` (never under `evidence/mocks/`).
+| Gate | Status |
+|---|---|
+| P09-V01 | PASS_WITH_BLOCKERS |
+| P09-V02 | PASS |
+| P09-V03 | PASS_WITH_BLOCKERS |
+| P09-V04 | PASS_WITH_BLOCKERS |
+| P09-V05 | PASS |
+| P09-V06 | PASS |
 
-## Migrations
+## Evidence
 
-- `20260908_0041_add_native_realizations` applied on local Postgres `textbook_agent`.
-
-## How to resume live B–D
-
-1. Backend + frontend up; Poppler on PATH optional for images.
-2. `cd apps/textbook-agent/backend && uv run python scripts/run_p09_live_campaign.py --cases B,C,D`
-3. For PDF: confirm `http://127.0.0.1:5173/studio/print/{id}?print=true` loads with valid token before claiming V02.
-4. Prefer teaching plans that emit `sequence` + `order-items` (or learner_action) when proving attempt persistence.
-
-## Reproduce
-
-See `docs/unit-native-program/LIVE_READY_RUNBOOK.md` and `COMMAND_MAP.md`.
+- Live: `docs/unit-native-program/evidence/live/` (`SUMMARY.json`, A–D, `V05-failure-recovery/`)
+- Attempts: `A-cycle/47-attempts.json`
+- V05: `V05-failure-recovery/LIVE_RUN.json`
+- Decisions: D-033–D-044

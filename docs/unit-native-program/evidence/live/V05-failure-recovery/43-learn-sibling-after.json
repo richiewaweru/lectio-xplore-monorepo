@@ -1,0 +1,172 @@
+{
+  "id": "77d120c8-58f1-45b6-a481-13d86323c070",
+  "editable_lesson_id": "8f45235b-6027-4a10-9aa5-7d37b0f373a2",
+  "release_number": 1,
+  "title": "The lesson opens on a frog's life as a concrete case of something that changes size over time. The learner names that change as growth, links it to being alive, and then tests the boundary by seeing a nonliving thing appear bigger without truly growing. The close asks the learner to use that boundary to decide whether growth is evidence of life.",
+  "document_hash": "691cfd380770cb81794e0c68048adc3fb0dd635b26bb7f04e7be4f03b84e84a7",
+  "source_generation_id": "learn-out-fb54a3cc7257",
+  "path_lesson_id": null,
+  "path_lesson_revision": null,
+  "objective_hash": null,
+  "status": "published",
+  "published_at": "2026-09-08T06:12:03.352497",
+  "document": {
+    "id": "8f45235b-6027-4a10-9aa5-7d37b0f373a2",
+    "media": {},
+    "title": "The lesson opens on a frog's life as a concrete case of something that changes size over time. The learner names that change as growth, links it to being alive, and then tests the boundary by seeing a nonliving thing appear bigger without truly growing. The close asks the learner to use that boundary to decide whether growth is evidence of life. (P09 edit)",
+    "blocks": {
+      "blk-5bab50f55afa": {
+        "id": "blk-5bab50f55afa",
+        "content": {
+          "body": "Explain that the frog is alive, and growth is evidence of life because only living things grow in this way. State that the tadpole's change from a tiny hatchling to a full-sized frog is growth, and that this growth is a sign that the frog is alive. Do not claim that everything that gets bigger is alive."
+        },
+        "position": 1,
+        "component_id": "callout-block"
+      },
+      "blk-653259861f0b": {
+        "id": "blk-653259861f0b",
+        "content": {
+          "body": "Present the frog's life as a concrete case: a tiny tadpole hatches from an egg, sprouts legs, and becomes a full-sized frog. Ask the learner what they notice about how the frog has changed from the beginning to the end. Do not yet define growth or say why the change matters.",
+          "type": "prose",
+          "anchor": "orient-b1",
+          "headline": "Present the frog's life as a concrete case: a tiny tadpole hatches from an egg, "
+        },
+        "position": 0,
+        "component_id": "hook-hero"
+      },
+      "blk-83a3e2880230": {
+        "id": "blk-83a3e2880230",
+        "content": {
+          "body": "Define growth as the process by which a living thing gets bigger over time. Use the anchor: the tiny tadpole that hatches from the egg and becomes a full-sized frog shows real growth. Do not yet discuss nonliving things."
+        },
+        "position": 0,
+        "component_id": "definition-card"
+      },
+      "blk-8caf3a9fa161": {
+        "id": "blk-8caf3a9fa161",
+        "content": {
+          "body": "Present the wrong idea that if something gets bigger, it is alive, and the wrong idea that nonliving things can truly grow the way living things do. Use the balloon to show both fail: the balloon gets bigger but is not alive, so getting bigger alone is not evidence of life."
+        },
+        "position": 1,
+        "component_id": "quiz-check"
+      },
+      "blk-923654b83296": {
+        "id": "blk-923654b83296",
+        "content": {
+          "body": "Ask the learner to recall what they already know: some things are alive and some are not, and plants and animals are alive. Have them say whether the tadpole and the full-sized frog are alive. Do not introduce growth yet.",
+          "type": "prose",
+          "anchor": "orient-b2",
+          "headline": "Ask the learner to recall what they already know: some things are alive and some"
+        },
+        "position": 1,
+        "component_id": "hook-hero"
+      },
+      "blk-a3381ba2eec5": {
+        "id": "blk-a3381ba2eec5",
+        "content": {
+          "body": "Ask the learner to decide whether growth is evidence that something is alive, using the idea that growth is an increase in size in a living thing. Distinguish from the misconception that just getting bigger makes something alive. Do not teach new content here; only check what the learner now understands. Use owned terms: full-sized, tadpole, hatches, sprouts."
+        },
+        "position": 0,
+        "component_id": "fill-in-blank"
+      },
+      "blk-c617b8e131dc": {
+        "id": "blk-c617b8e131dc",
+        "content": {
+          "body": "Set apart this statement: growth is an increase in size in a living thing. Keep the anchor present as the clear example: the tadpole becoming a full-sized frog shows growth as evidence of life.",
+          "callouts": []
+        },
+        "position": 2,
+        "component_id": "explanation-block"
+      },
+      "blk-d49cf7ecce61": {
+        "id": "blk-d49cf7ecce61",
+        "content": {
+          "body": "Compare the tadpole becoming a full-sized frog with a nonliving thing that gets bigger in appearance, such as a balloon being filled with air. Set the two cases side by side: the frog grows because it is alive and its body grows, while the balloon only looks bigger because more air is pushed into it, not because it is alive. Do not say all change in size is growth."
+        },
+        "position": 0,
+        "component_id": "diagram-compare"
+      }
+    },
+    "source": "generated",
+    "subject": "science",
+    "version": 1,
+    "assembly": {
+      "ordered_by": "block_ids",
+      "selection_hash": "8e7c87fe7192326238f294a3a9a464914817783df5ddd22c5ea1019c93abbe34",
+      "teaching_plan_id": "b9ed285e-c92e-45b2-8dd0-a39053eaf15f",
+      "teaching_plan_hash": "d89cf7b7e182546938f63ecf7c500ae5c69fd5643021d379326777c80b213d73",
+      "teaching_plan_revision": 1
+    },
+    "sections": [
+      {
+        "id": "orient",
+        "title": "Raise the question of what it means to grow by showing a concrete case of a living thing that changes size over its life.",
+        "position": 0,
+        "required": true,
+        "block_ids": [
+          "blk-653259861f0b",
+          "blk-923654b83296"
+        ],
+        "template_id": "open-canvas",
+        "learner_label": "orient",
+        "learner_intent": "orient",
+        "assessment_mode": "practice",
+        "completion_policy": "submitted",
+        "navigation_policy": "linear"
+      },
+      {
+        "id": "explain",
+        "title": "Build the definition of growth and connect it to the idea that growing is something living things do, using the anchor to make the idea concrete.",
+        "position": 1,
+        "required": true,
+        "block_ids": [
+          "blk-83a3e2880230",
+          "blk-5bab50f55afa",
+          "blk-c617b8e131dc"
+        ],
+        "template_id": "open-canvas",
+        "learner_label": "explain",
+        "learner_intent": "explain",
+        "assessment_mode": "practice",
+        "completion_policy": "submitted",
+        "navigation_policy": "linear"
+      },
+      {
+        "id": "contrast",
+        "title": "Show the learner that not everything that appears bigger has grown. Put the anchor beside a near-miss nonliving case so the boundary of the idea is visible.",
+        "position": 2,
+        "required": true,
+        "block_ids": [
+          "blk-d49cf7ecce61",
+          "blk-8caf3a9fa161"
+        ],
+        "template_id": "open-canvas",
+        "learner_label": "contrast",
+        "learner_intent": "explain",
+        "assessment_mode": "practice",
+        "completion_policy": "submitted",
+        "navigation_policy": "linear"
+      },
+      {
+        "id": "check",
+        "title": "Check whether the learner can now use the concept to decide when growth is evidence of life, directly addressing the misconceptions the lesson confronted.",
+        "position": 3,
+        "required": true,
+        "block_ids": [
+          "blk-a3381ba2eec5"
+        ],
+        "template_id": "open-canvas",
+        "learner_label": "check",
+        "learner_intent": "check",
+        "assessment_mode": "practice",
+        "completion_policy": "submitted",
+        "navigation_policy": "linear"
+      }
+    ],
+    "preset_id": "blue-classroom",
+    "created_at": "2026-09-08T06:12:02.983838Z",
+    "updated_at": "2026-09-08T06:12:02.983838Z",
+    "source_generation_id": "learn-out-fb54a3cc7257"
+  },
+  "idempotent_replay": false
+}

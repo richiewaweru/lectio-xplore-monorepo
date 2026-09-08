@@ -1,0 +1,535 @@
+{
+  "generation_id": "3b47668e-4917-4c73-8b7b-f5203182e61c",
+  "teaching_plan": {
+    "arc": "The lesson opens with two everyday water events: a puddle shrinking in the sun and droplets forming on a cold drink outside. It uses those events to establish that heat drives water upward into invisible vapour while cold pulls vapour back into visible liquid, confronts the belief that the water vanishes or leaks, and closes by asking the learner to explain which side of that give-and-take a new case shows.",
+    "revision": 1,
+    "sections": [
+      {
+        "blocks": [
+          {
+            "id": "orient-b1",
+            "brief": "Present the two anchor situations with their key details: a puddle of liquid water gets smaller on a warm sunny day, and liquid water droplets collect on the outside of a cold drink that has been chilled. Ask the learner to notice what is the same in both: water appears to leave the puddle and water appears to arrive on the drink. Do not yet use the words evaporate, condense, water vapour, heat causes, or cooling causes.",
+            "intent": "orient",
+            "evidence": "The objective pairs heat turning water into vapour with cooling turning vapour into water, so the opening must set up two opposite-facing concrete cases that already contain that directional split without naming the mechanism.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.orient.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "orient-b2",
+            "brief": "Prompt recall that water can change form and that evaporation happens, by asking what the learner already knows about a wet patch drying or a puddle losing water. Do not ask for a full explanation and do not introduce condensation yet.",
+            "intent": "activate-prior-knowledge",
+            "evidence": "The lesson assumes prior-1 and prior-2 as established, and the orient slot's job is to make the learner feel the familiar change before the new causal pairing is supplied, so recalling the form-changing water is the right early move.",
+            "position": 1,
+            "evidence_refs": [
+              "prior-1",
+              "prior-2",
+              "slot.orient.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "orient",
+        "transition": null,
+        "specific_purpose": "Give Grade learners two concrete water events they can imagine and a reason to ask where the water has gone or come from. Establish the puddle shrank and the drink became wet without explaining either yet."
+      },
+      {
+        "blocks": [
+          {
+            "id": "explain-b1",
+            "brief": "Use the anchor puddle to state the first causal direction: heat from the warm sunny day causes the liquid water in the puddle to turn into water vapour, which is water as an invisible gas that moves into the air above the puddle. Name the three moving parts: heat, liquid water, water vapour. Do not say the water disappears or is gone.",
+            "intent": "explain-cause",
+            "evidence": "The objective is explicitly a causal mechanism: heat causes liquid water to turn into water vapour, so explain-cause is the only intent that states the mechanism rather than merely defining or arranging the terms.",
+            "position": 0,
+            "evidence_refs": [
+              "lesson.objective",
+              "anchor.anchor-1",
+              "slot.explain.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "explain-b2",
+            "brief": "Use the anchor cold drink to state the reverse causal direction: the cold surface cools the air around it, and that cooling causes water vapour in that air to turn back into liquid water, forming the droplets on the outside of the drink. Emphasise that the liquid water comes from water vapour in the surrounding air, not through the glass.",
+            "intent": "explain-cause",
+            "evidence": "The objective has two directionally opposite causal claims, and the second claim about cooling would remain unstated if the explanation section only treated the puddle, so a second explain-cause block is required to complete the target mechanism.",
+            "position": 1,
+            "evidence_refs": [
+              "lesson.objective",
+              "anchor.anchor-1",
+              "slot.explain.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "explain-b3",
+            "brief": "Connect the two anchor cases by saying the puddle and the cold drink are the same relationship running in opposite directions: heat changes liquid water into water vapour, and cooling changes water vapour back into liquid water. Use this to make explicit that the two prior ideas, water changing form and evaporation happening, are the starting points the learner is now expanding.",
+            "intent": "connect-back",
+            "evidence": "The prior input states that water changing form and evaporation happening are already known, so the explanation slot should say exactly how those two prior ideas are being widened into a reversible cause-and-effect pair rather than treating them as new.",
+            "position": 2,
+            "evidence_refs": [
+              "prior-1",
+              "prior-2",
+              "lesson.objective",
+              "slot.explain.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": "The slot's purpose requires joining the two causal directions into one reversible relationship, and connect-back is the only intent whose role is to make the dependence on prior form-changing ideas explicit.",
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "explain",
+        "transition": "The two anchor events have raised one shared question about water leaving and arriving; now the lesson names the cause behind each direction.",
+        "specific_purpose": "Build the two-way causal model using the anchor puddle and anchor cold drink as a matched pair. State that heat changes liquid water into water vapour and cooling changes water vapour back into liquid water, with each direction grounded in the concrete case."
+      },
+      {
+        "blocks": [
+          {
+            "id": "contrast-b1",
+            "brief": "Present the belief that the puddle water disappears or is gone, and test it against the target idea by asking the learner to decide what has happened to the liquid puddle water after heat turns it into water vapour. The wrong answer must stand for the belief that the water no longer exists. The correct route must identify invisible water vapour still present in the air.",
+            "intent": "diagnose-misconception",
+            "evidence": "M1 is a named held belief that water disappears when it evaporates, and the contrast slot's purpose is to force the learner to separate that belief from the target model, which says the water becomes water vapour rather than ceasing to exist.",
+            "position": 0,
+            "evidence_refs": [
+              "M1",
+              "lesson.objective",
+              "anchor.anchor-1",
+              "slot.contrast.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": "The contrast slot's purpose is to put a case and a near-miss side by side, and M1 is a named held belief that must be surfaced as a wrong model, not merely a slip to be flagged. Diagnose-misconception is the atypical move required to show the boundary of the idea.",
+            "source_question_ids": [
+              "3b47668e-4917-4c73-8b7b-f5203182e61c:3b47668e-4917-4c73-8b7b-f5203182e61c:e5aac363-0827-481e-b60b-0f512a489f11.i1"
+            ]
+          },
+          {
+            "id": "contrast-b2",
+            "brief": "Present the belief that the water on the outside of a cold glass leaked through the glass, and test it against the target idea by asking the learner to decide where those droplets come from when cooling acts on water vapour in the air. The wrong answer must stand for the belief that the water passed through the glass. The correct route must identify water vapour in the surrounding air turning back into liquid water.",
+            "intent": "diagnose-misconception",
+            "evidence": "M2 is a named held belief about the cold-glass droplets leaking through the glass, and the contrast slot's boundary work requires the learner to choose between that belief and the target claim that cooling turns airborne water vapour into liquid.",
+            "position": 1,
+            "evidence_refs": [
+              "M2",
+              "lesson.objective",
+              "anchor.anchor-1",
+              "slot.contrast.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": "The contrast slot's purpose is to put a case and a near-miss side by side, and M2 is a named held belief that must be surfaced as a wrong model, not merely a slip to be flagged. Diagnose-misconception is the atypical move required to show the boundary of the idea.",
+            "source_question_ids": [
+              "3b47668e-4917-4c73-8b7b-f5203182e61c:3b47668e-4917-4c73-8b7b-f5203182e61c:e5aac363-0827-481e-b60b-0f512a489f11.i2"
+            ]
+          },
+          {
+            "id": "contrast-b3",
+            "brief": "Name the predictable same error in both cases: treating water vapour as nothing rather than as water in an invisible gas form, or treating the drink droplets as if they had to come through the solid glass. Flag that both errors come from believing liquid water is the only real form of water. Do not introduce new examples beyond the two anchor cases.",
+            "intent": "warn",
+            "evidence": "Having surfaced each held belief separately, the contrast slot still owes the learner one shared warning, because both misconceptions fail through the same error of treating only visible liquid water as real water.",
+            "position": 2,
+            "evidence_refs": [
+              "M1",
+              "M2",
+              "slot.contrast.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "contrast",
+        "transition": "With the two causal directions now stated, the learner is ready to check the model against the places where water seems to vanish or leak.",
+        "specific_purpose": "Make the learner see where the target model separates from the two known wrong beliefs: the puddle water is present as invisible vapour, not gone; and the drink droplets entered from the outside air, not through the glass."
+      },
+      {
+        "blocks": [
+          {
+            "id": "check-b1",
+            "brief": "Check the lesson objective directly by asking the learner to identify whether a new everyday water change is caused by heat turning liquid water into water vapour or by cooling turning water vapour into liquid water. The check must require the learner to cite the cause and name the correct water form, and it must not recycle the puddle, the cold drink, or the two misconception cases.",
+            "intent": "check-understanding",
+            "evidence": "The check slot requires a single diagnostic signal of whether the objective landed, and the objective is precisely the two-way account of heat producing vapour and cooling producing liquid, so the check must measure recognition of that causal pair in a new case.",
+            "position": 0,
+            "evidence_refs": [
+              "lesson.objective",
+              "slot.check.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [
+              "3b47668e-4917-4c73-8b7b-f5203182e61c:3b47668e-4917-4c73-8b7b-f5203182e61c:e5aac363-0827-481e-b60b-0f512a489f11.i3"
+            ]
+          }
+        ],
+        "slot_id": "check",
+        "transition": "The learner has now separated the target model from both water-is-gone and water-leaked-through beliefs, so the lesson closes by asking them to use the causal pairing unaided.",
+        "specific_purpose": "Check whether the learner can transfer the two-way causal idea to a new everyday case by identifying whether heat producing vapour or cooling producing liquid is operating, without reusing the anchor cases or the contrast cases."
+      }
+    ],
+    "anchor_usage": [
+      {
+        "usage": "Introduce the two anchor cases side by side as everyday mysteries: water that seems to disappear from a warm puddle and water that appears on the outside of a cold drink. Use them to raise a single question about where the water has gone or come from, without yet naming evaporation or condensation.",
+        "slot_id": "orient"
+      },
+      {
+        "usage": "Return to the anchor puddle and anchor cold drink as two halves of the same reversible relationship. Name heat as the cause that turns liquid puddle water into water vapour and cooling as the cause that turns water vapour in the air into liquid droplets on the cold surface. The learner should see both anchor cases as instances of the same two-way rule.",
+        "slot_id": "explain"
+      },
+      {
+        "usage": "Use the anchor cases to mark exactly where each focused misconception fails: the puddle water is not gone but present as invisible vapour, and the drink droplets did not pass through the glass but came from vapour in the air around it. Place each belief next to the target account so the boundary of the idea is visible.",
+        "slot_id": "contrast"
+      },
+      {
+        "usage": "Ask the learner to decide which part of the reversible heat/cooling relationship a new everyday case shows, using language that requires them to name water vapour, liquid water, heat, or cooling rather than merely recognise the anchor again.",
+        "slot_id": "check"
+      }
+    ],
+    "approval_status": "pending",
+    "preparation_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870",
+    "teaching_plan_id": "9521c82d-5365-4b1a-87aa-652436e1d740",
+    "misconception_focus_ids": [
+      "M1",
+      "M2"
+    ]
+  },
+  "teaching_validation": {
+    "ok": true,
+    "issues": []
+  },
+  "teaching_qc": [],
+  "teaching_review": {
+    "status": "pending",
+    "revision": 1,
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "teacher_note": null
+  },
+  "lesson_packet": {
+    "scope": {
+      "terminology": [],
+      "must_establish": [],
+      "must_not_introduce": []
+    },
+    "slots": [
+      {
+        "purpose": "Give the learner a reason to care and a concrete situation to hold.",
+        "slot_id": "orient",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "orient",
+          "activate-prior-knowledge",
+          "emphasise"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "Build the idea itself. State it, ground it, make it usable.",
+        "slot_id": "explain",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [
+          "explain-cause",
+          "explain",
+          "define",
+          "show-structure",
+          "trace-flow",
+          "compare",
+          "name-parts"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "Put a case and a near-miss side by side. The learner must see the boundary of the idea, not just the idea.\n",
+        "slot_id": "contrast",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [
+          "compare",
+          "classify",
+          "explain",
+          "warn",
+          "show-structure"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "The shared diagnostic. Identical across every variant. Written from the card only, never from the prose above it.\n",
+        "slot_id": "check",
+        "max_blocks": 1,
+        "min_blocks": 1,
+        "typical_intents": [
+          "check-understanding",
+          "practise-independent",
+          "diagnose-misconception"
+        ],
+        "visual_required": false
+      }
+    ],
+    "anchor": {
+      "id": "anchor-1",
+      "description": "A puddle disappearing on a warm sunny day, and water droplets forming on the outside of a cold drin\u2026"
+    },
+    "lesson": {
+      "subject": "Science",
+      "objective": "Explain that heat causes liquid water to turn into water vapour and cooling causes water vapour to turn back into liquid water.",
+      "grade_level": "Grade",
+      "lesson_mode": "first_exposure",
+      "knowledge_type": "conceptual",
+      "path_lesson_id": "3b47668e-4917-4c73-8b7b-f5203182e61c"
+    },
+    "limits": {
+      "max_sections": 4,
+      "max_total_blocks": 10,
+      "max_blocks_per_section": 3
+    },
+    "resource_id": "lesson",
+    "approved_items": [
+      {
+        "id": "3b47668e-4917-4c73-8b7b-f5203182e61c:3b47668e-4917-4c73-8b7b-f5203182e61c:e5aac363-0827-481e-b60b-0f512a489f11.i1",
+        "stem": "After a rain shower, Sam notices a puddle on the warm pavement. By the afternoon, the puddle is much smaller even though no one swept it away. What happened to most of the water?",
+        "card_id": "3b47668e-4917-4c73-8b7b-f5203182e61c:e5aac363-0827-481e-b60b-0f512a489f11",
+        "options": [
+          {
+            "key": "a",
+            "text": "Heat caused the liquid water to become water vapour in the air.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The water is gone and no longer exists anywhere.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The water was absorbed only by tiny gaps left by evaporation.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The pavement became colder and pushed the water underground.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M1",
+          "c": null,
+          "d": null
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "3b47668e-4917-4c73-8b7b-f5203182e61c:3b47668e-4917-4c73-8b7b-f5203182e61c:e5aac363-0827-481e-b60b-0f512a489f11.i2",
+        "stem": "Mina pours equal amounts of water into two identical open dishes. She places one dish on a sunny windowsill and the other in a cool, shaded corner. After one day, the sunny dish has less water. Which statement best explains this difference?",
+        "card_id": "3b47668e-4917-4c73-8b7b-f5203182e61c:e5aac363-0827-481e-b60b-0f512a489f11",
+        "options": [
+          {
+            "key": "a",
+            "text": "The sunny dish receives more heat, so more liquid water turns into water vapour.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The water in the shaded dish turned into vapour faster than the sunny dish.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The sunny dish lost more water because sunlight makes water disappear completely.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The shaded dish is cooler, so its water turned into a solid instead of a gas.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": null,
+          "c": "M1",
+          "d": null
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "3b47668e-4917-4c73-8b7b-f5203182e61c:3b47668e-4917-4c73-8b7b-f5203182e61c:e5aac363-0827-481e-b60b-0f512a489f11.i3",
+        "stem": "On a humid day, Noah takes a chilled bottle of water out of the fridge. Soon, tiny drops of water form on the outside of the bottle. Where did these drops most likely come from?",
+        "card_id": "3b47668e-4917-4c73-8b7b-f5203182e61c:e5aac363-0827-481e-b60b-0f512a489f11",
+        "options": [
+          {
+            "key": "a",
+            "text": "Water leaked through tiny holes from inside the bottle.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Water vapour in the air cooled against the bottle and turned into liquid.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The bottle became warm enough for liquid to form on its surface from nothing.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Water moved directly from the inside of the bottle without the bottle opening.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": "M2",
+          "b": null,
+          "c": null,
+          "d": null
+        },
+        "correct_key": "b"
+      },
+      {
+        "id": "3b47668e-4917-4c73-8b7b-f5203182e61c:3b47668e-4917-4c73-8b7b-f5203182e61c:e5aac363-0827-481e-b60b-0f512a489f11.i4",
+        "stem": "A bathroom mirror becomes foggy while a warm shower is running. What change of state is mainly happening on the mirror surface?",
+        "card_id": "3b47668e-4917-4c73-8b7b-f5203182e61c:e5aac363-0827-481e-b60b-0f512a489f11",
+        "options": [
+          {
+            "key": "a",
+            "text": "Liquid water on the mirror is gaining heat and turning into water vapour.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Water vapour in the air loses heat and turns back into liquid water.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Tiny drops of water are passing through the mirror from the other side.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Warm air becomes water only after the mirror has dried completely.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": null,
+          "c": "M2",
+          "d": null
+        },
+        "correct_key": "b"
+      },
+      {
+        "id": "3b47668e-4917-4c73-8b7b-f5203182e61c:3b47668e-4917-4c73-8b7b-f5203182e61c:e5aac363-0827-481e-b60b-0f512a489f11.i5",
+        "stem": "A cook leaves a pot of soup uncovered on a hot stove. Steam rises from the pot, and later there is less liquid in the pot. Which statement best explains what is happening?",
+        "card_id": "3b47668e-4917-4c73-8b7b-f5203182e61c:e5aac363-0827-481e-b60b-0f512a489f11",
+        "options": [
+          {
+            "key": "a",
+            "text": "The heat changes some liquid into water vapour that escapes into the air.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The missing liquid has stopped existing because of the heat.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The water vapour in the air cools so suddenly that it disappears from the pot.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The soup leaked through the pot because the heat made tiny holes.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M1",
+          "c": null,
+          "d": "M2"
+        },
+        "correct_key": "a"
+      }
+    ],
+    "misconceptions": [
+      {
+        "id": "M1",
+        "statement": "{'id': 'M1', 'description': 'Water disappears or is gone when it evaporates.', 'source': 'drafted'}"
+      },
+      {
+        "id": "M2",
+        "statement": "{'id': 'M2', 'description': 'The water on the outside of a cold glass leaked through the glass.', 'source': 'drafted'}"
+      }
+    ],
+    "prior_established": [
+      {
+        "id": "prior-1",
+        "statement": "water can change form"
+      },
+      {
+        "id": "prior-2",
+        "statement": "evaporation happens"
+      }
+    ]
+  },
+  "catalogue": {
+    "version": "1.1.0",
+    "form_projection_hash": null,
+    "teaching_projection_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870"
+  }
+}

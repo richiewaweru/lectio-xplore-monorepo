@@ -1,0 +1,81 @@
+{
+  "case_id": "V05-failure-recovery",
+  "started_at": "2026-09-08T07:59:25.838651+00:00",
+  "generation_id": "3b47668e-4917-4c73-8b7b-f5203182e61c",
+  "injection": {
+    "XPLORE_NATIVE_FAILURE_INJECTION": "true",
+    "XPLORE_NATIVE_FAILURE_GENERATION_ID": "3b47668e-4917-4c73-8b7b-f5203182e61c",
+    "XPLORE_NATIVE_FAILURE_NODE": "planning_forms",
+    "XPLORE_NATIVE_FAILURE_ONCE": "true"
+  },
+  "print_failure": {
+    "status": "failed_recoverable",
+    "error": "injected form planner timeout",
+    "error_detail": {
+      "scope": "generation",
+      "code": "TIMEOUT",
+      "message": "injected form planner timeout",
+      "retryable": true,
+      "section_id": "",
+      "block_id": "",
+      "stage": "planning_forms",
+      "type": "TimeoutError"
+    },
+    "at": "2026-09-08T07:59:26.499503+00:00"
+  },
+  "print_retry": {
+    "http_status": 202,
+    "body": {
+      "generation_id": "3b47668e-4917-4c73-8b7b-f5203182e61c",
+      "status": "queued",
+      "retry_target": "post_approval_worker",
+      "next_action": "wait",
+      "accepted": true
+    },
+    "at": "2026-09-08T07:59:27.268012+00:00"
+  },
+  "print_ready": {
+    "status": "ready",
+    "at": "2026-09-08T07:59:48.745652+00:00"
+  },
+  "learn_sibling": {
+    "release_id": "77d120c8-58f1-45b6-a481-13d86323c070",
+    "note": "Case B v1 release used as opposite-path sibling (V05 Learn blocked on connect-back).",
+    "before": {
+      "id": "77d120c8-58f1-45b6-a481-13d86323c070",
+      "version": null,
+      "content_hash": null,
+      "document_hash": "691cfd380770cb81794e0c68048adc3fb0dd635b26bb7f04e7be4f03b84e84a7",
+      "immutable_hash": null,
+      "created_at": null,
+      "lesson_id": null
+    },
+    "after": {
+      "id": "77d120c8-58f1-45b6-a481-13d86323c070",
+      "version": null,
+      "content_hash": null,
+      "document_hash": "691cfd380770cb81794e0c68048adc3fb0dd635b26bb7f04e7be4f03b84e84a7",
+      "immutable_hash": null,
+      "created_at": null,
+      "lesson_id": null
+    }
+  },
+  "sibling_unchanged": true,
+  "status": "PASS",
+  "finished_at": "2026-09-08T07:59:48.785433+00:00",
+  "evidence_paths": [
+    "docs\\unit-native-program\\evidence\\live\\V05-failure-recovery\\01-unit.json",
+    "docs\\unit-native-program\\evidence\\live\\V05-failure-recovery\\03-path-plan.json",
+    "docs\\unit-native-program\\evidence\\live\\V05-failure-recovery\\05-path-approval.json",
+    "docs\\unit-native-program\\evidence\\live\\V05-failure-recovery\\06-prepare.json",
+    "docs\\unit-native-program\\evidence\\live\\V05-failure-recovery\\13-teaching-review.json",
+    "docs\\unit-native-program\\evidence\\live\\V05-failure-recovery\\14-teaching-approve.json",
+    "docs\\unit-native-program\\evidence\\live\\V05-failure-recovery\\20-pre-approve-status.json",
+    "docs\\unit-native-program\\evidence\\live\\V05-failure-recovery\\21-after-injection-status.json",
+    "docs\\unit-native-program\\evidence\\live\\V05-failure-recovery\\22-retry-native.json",
+    "docs\\unit-native-program\\evidence\\live\\V05-failure-recovery\\23-print-ready.json",
+    "docs\\unit-native-program\\evidence\\live\\V05-failure-recovery\\42-learn-sibling-before.json",
+    "docs\\unit-native-program\\evidence\\live\\V05-failure-recovery\\43-learn-sibling-after.json",
+    "docs\\unit-native-program\\evidence\\live\\V05-failure-recovery\\V05_PREPARE.json"
+  ]
+}

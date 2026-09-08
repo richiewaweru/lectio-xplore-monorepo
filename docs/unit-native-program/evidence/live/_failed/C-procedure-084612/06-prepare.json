@@ -1,0 +1,24 @@
+{
+  "generation_id": "edc7cc26-98b0-4bf3-bd55-7287b5592ec0",
+  "path_lesson_id": "5f96674c-318e-481f-835e-aeaabab5c447",
+  "objective": "Multiply a two-digit number by a one-digit number using place value and the standard procedure when no regrouping is required.",
+  "objective_hash": "97f05299f71d168ec3c4ddf881ed6f9413daaa7d2c002559029fafdda86542c4",
+  "skeleton_id": "procedural.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "recall",
+    "model",
+    "guided",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "recall",
+    "model",
+    "guided",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

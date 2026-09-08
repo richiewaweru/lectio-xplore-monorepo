@@ -8,98 +8,75 @@
     "P00": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P00_PHASE_REPORT.md",
-      "evidence": [
-        ".tmp/fe-build3.txt",
-        ".tmp/fe-test3.txt",
-        "docs/unit-native-program/CAPABILITY_INVENTORY.json"
-      ],
+      "evidence": [".tmp/fe-build3.txt", ".tmp/fe-test3.txt", "docs/unit-native-program/CAPABILITY_INVENTORY.json"],
       "blockers": []
     },
     "P01": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P01_PHASE_REPORT.md",
-      "evidence": [
-        "docs/unit-native-program/evidence/mocks/p01/"
-      ],
+      "evidence": ["docs/unit-native-program/evidence/mocks/p01/"],
       "blockers": []
     },
     "P02": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P02_PHASE_REPORT.md",
-      "evidence": [
-        "docs/unit-native-program/evidence/mocks/p02/"
-      ],
+      "evidence": ["docs/unit-native-program/evidence/mocks/p02/"],
       "blockers": []
     },
     "P03": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P03_PHASE_REPORT.md",
-      "evidence": [
-        "docs/unit-native-program/evidence/mocks/p03/"
-      ],
+      "evidence": ["docs/unit-native-program/evidence/mocks/p03/"],
       "blockers": []
     },
     "P04": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P04_PHASE_REPORT.md",
-      "evidence": [
-        "docs/unit-native-program/evidence/mocks/p04/"
-      ],
+      "evidence": ["docs/unit-native-program/evidence/mocks/p04/"],
       "blockers": []
     },
     "P05": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P05_PHASE_REPORT.md",
-      "evidence": [
-        "docs/unit-native-program/evidence/mocks/p05/"
-      ],
-      "blockers": [
-        "P05-P04 page-image inspection BLOCKED: pdftoppm (Poppler) not on PATH."
-      ]
+      "evidence": ["docs/unit-native-program/evidence/mocks/p05/"],
+      "blockers": []
     },
     "P06": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P06_PHASE_REPORT.md",
-      "evidence": [
-        "docs/unit-native-program/evidence/mocks/p06/"
-      ],
+      "evidence": ["docs/unit-native-program/evidence/mocks/p06/"],
       "blockers": []
     },
     "P07": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P07_PHASE_REPORT.md",
-      "evidence": [
-        "docs/unit-native-program/evidence/mocks/p07/"
-      ],
+      "evidence": ["docs/unit-native-program/evidence/mocks/p07/"],
       "blockers": []
     },
     "P08": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P08_PHASE_REPORT.md",
-      "evidence": [
-        "docs/unit-native-program/evidence/mocks/p08/",
-        "docs/unit-native-program/LIVE_READY_RUNBOOK.md"
-      ],
+      "evidence": ["docs/unit-native-program/evidence/mocks/p08/", "docs/unit-native-program/LIVE_READY_RUNBOOK.md"],
       "blockers": []
     },
     "P09": {
       "status": "PASS_WITH_BLOCKERS",
       "report": "docs/unit-native-program/reports/P09_PHASE_REPORT.md",
       "evidence": [
-        "docs/unit-native-program/evidence/live/A-cycle/",
+        "docs/unit-native-program/evidence/live/",
+        "docs/unit-native-program/evidence/live/V05-failure-recovery/",
         "docs/unit-native-program/reports/FINAL_ACCEPTANCE.md",
         "apps/textbook-agent/backend/scripts/run_p09_live_campaign.py"
       ],
       "blockers": [
-        "Cases B–D not run live",
-        "PDF export Playwright timeout; Poppler missing for page images",
-        "Case A Learn content-only (no Sequence interaction) → attempts empty",
-        "Controlled recovery / release v2 not completed live",
-        "Google Sign-In UI not automated"
+        "B/C/D live Learn surfaces still lack interaction attempts (Classify/Numeric not emitted without learner_action)",
+        "Case A Sequence attempt used order-items salvage; steps synthesized from brief (not owned stage labels)",
+        "Spatial ImageHotspot/DragLabel remain unavailable (Case D text alternative)",
+        "Google Sign-In UI not automated (JWT mint for API)"
       ]
     }
   },
   "core_dual_path_acceptance": "NOT_COMPLETE",
   "full_catalogue_acceptance": "NOT_COMPLETE",
-  "next_action": "Optional: run live cases B–D; install Poppler; fix frontend print-route PDF export; prefer teaching with sequence/order-items for attempt proof."
+  "next_action": "Improve teaching→learner_action for Classify/Numeric on B/C; strengthen Sequence step grounding for cycle objectives; keep spatial deferred. Core dual-path remains NOT_COMPLETE until B/C attempt evidence (and stronger A Sequence fidelity) land."
 }

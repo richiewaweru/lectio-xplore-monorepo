@@ -1,0 +1,561 @@
+{
+  "generation_id": "ff448429-6f39-4bf8-a72a-f0b851e80a00",
+  "teaching_plan": {
+    "arc": "The lesson opens on a familiar outdoor scene where one plant is visibly drooping and one is thriving, inviting the learner to wonder what an individual plant is made of and which parts matter for staying alive. Using a pulled sunflower anchor, the lesson locates and names roots, stem, and leaves, then confronts the beliefs that flowers matter more than roots and that leaves only provide shade. Practice first keeps the labelled structure present while the learner reasons, then removes it, and the lesson closes by checking whether the learner can identify and locate each part in an unlabelled context.",
+    "revision": 1,
+    "sections": [
+      {
+        "blocks": [
+          {
+            "id": "orient-b1",
+            "brief": "Present the pulled sunflower anchor as a plant whose parts are about to be examined. Invite the learner to name one plant part they already recognize and note that there are parts both above and below the soil.",
+            "intent": "orient",
+            "evidence": "The objective asks the learner to identify and locate roots, stem, and leaves, so the first contact must establish a need to attend to the anchor's parts rather than treating the plant as a whole object.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.orient.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "orient-b2",
+            "brief": "Recall that plants are living things and that they need water and light to grow. Ask which part the learner thinks reaches toward light and which part they think reaches water.",
+            "intent": "activate-prior-knowledge",
+            "evidence": "The learner will soon assign each plant part a job, and prior-1 and prior-2 supply the only available prior ideas about plant life needs without introducing new terminology.",
+            "position": 1,
+            "evidence_refs": [
+              "prior-1",
+              "prior-2",
+              "lesson.objective",
+              "slot.orient.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "orient",
+        "transition": null,
+        "specific_purpose": "Raise the question of why some plants thrive while others droop, and establish that a plant's parts can be examined through the pulled sunflower."
+      },
+      {
+        "blocks": [
+          {
+            "id": "organise-b1",
+            "brief": "Using the pulled sunflower anchor, identify roots as the below-soil parts, stem as the upright part, and leaves as the flat green parts. State one role for each: roots take in water, the stem holds the plant up, and the leaves take in light.",
+            "intent": "name-parts",
+            "evidence": "The objective requires locating roots, stem, and leaves on a labelled diagram, so the organise step must establish each part's exact position on the anchor before any practice occurs.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.organise.purpose",
+              "prior-2"
+            ],
+            "learner_action": null,
+            "departure_reason": "The organise slot has no typical intents, and the concept is a set of constituent plant parts, which makes name-parts the most direct route to the required labelled diagram.",
+            "source_question_ids": []
+          },
+          {
+            "id": "organise-b2",
+            "brief": "Reveal the spatial relationship among the three parts of the pulled sunflower: roots below the soil, stem rising upward from the roots, and leaves attached to the stem above the soil. The learner must see that roots and leaves are farthest apart and that the stem connects them.",
+            "intent": "show-structure",
+            "evidence": "The slot is visual_required for a locating objective, and the relationship the learner must hold is spatial, so show-structure must make the relative positions of the three parts directly visible.",
+            "position": 1,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.organise.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "organise-b3",
+            "brief": "Test the belief that the flower is the main part that keeps the plant alive by asking whether a sunflower with no roots but with leaves and stem could still take in water. Use the anchor's visible roots to show that no leaves or stem reach the soil water.",
+            "intent": "diagnose-misconception",
+            "evidence": "M1 denies the importance of roots, so it directly targets the lesson's required location knowledge: a learner who believes roots are unimportant will not value locating them correctly.",
+            "position": 2,
+            "evidence_refs": [
+              "M1",
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.organise.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [
+              "ff448429-6f39-4bf8-a72a-f0b851e80a00:ff448429-6f39-4bf8-a72a-f0b851e80a00:9252a39e-9ac5-4ddc-93ba-d65c1a5c44b0.i1"
+            ]
+          }
+        ],
+        "slot_id": "organise",
+        "transition": "The learner has considered that plant parts sit both below and above the soil, so they are ready to place each named part on the sunflower.",
+        "specific_purpose": "Impose the three-part structure on the anchor so that roots, stem, and leaves are located, not merely heard as names."
+      },
+      {
+        "blocks": [
+          {
+            "id": "guided-b1",
+            "brief": "With the labelled sunflower still visible, have the learner point to and name the part that matches each given location cue: below the soil, standing upright, and flat and green above the soil.",
+            "intent": "practise-guided",
+            "evidence": "The objective is identification and location, so guided practice must keep the labels present while the learner makes the first location-to-name decisions.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.guided.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": "The guided slot carries no typical intents, and the lesson objective is a locating task, making practise-guided the purpose-matched rehearsal intent.",
+            "source_question_ids": []
+          },
+          {
+            "id": "guided-b2",
+            "brief": "Ask the learner to decide whether a plant whose leaves were removed could still take in water, using the labelled anchor to see that roots are the part below the soil. If the learner points to above-soil parts as water takers, guide them back to the roots.",
+            "intent": "diagnose-misconception",
+            "evidence": "M2 implies leaves mainly shade and are not needed for growth, so this block tests whether the learner can hold the roots' job when the leaves are visually absent.",
+            "position": 1,
+            "evidence_refs": [
+              "M2",
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.guided.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [
+              "ff448429-6f39-4bf8-a72a-f0b851e80a00:ff448429-6f39-4bf8-a72a-f0b851e80a00:9252a39e-9ac5-4ddc-93ba-d65c1a5c44b0.i3"
+            ]
+          }
+        ],
+        "slot_id": "guided",
+        "transition": "The learner now knows where each part sits and what role it plays, so they can begin naming the parts themselves while the labelled structure remains visible.",
+        "specific_purpose": "Rehearse locating and naming the three parts on the anchor with location support still present."
+      },
+      {
+        "blocks": [
+          {
+            "id": "independent-b1",
+            "brief": "Present the pulled sunflower unlabelled and have the learner name roots, stem, and leaves from their positions. Require the learner to associate each name with its visible place without access to the earlier role cues.",
+            "intent": "practise-independent",
+            "evidence": "The lesson's instructional arc must end with unsupported identification, which is the exact performance named in the objective.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.independent.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": "The independent slot carries no typical intents, and the objective is a naming-and-locating performance, making practise-independent the direct rehearsal intent.",
+            "source_question_ids": [
+              "ff448429-6f39-4bf8-a72a-f0b851e80a00:ff448429-6f39-4bf8-a72a-f0b851e80a00:9252a39e-9ac5-4ddc-93ba-d65c1a5c44b0.i4"
+            ]
+          },
+          {
+            "id": "independent-b2",
+            "brief": "Have the learner respond to role-based prompts on the unlabelled sunflower: which part reaches light, which part takes in water, and which part holds the plant upright. No list of names is provided.",
+            "intent": "practise-independent",
+            "evidence": "Identifying by role forces the learner to hold the part's location and job together, which is the minimum complete model implied by the objective.",
+            "position": 1,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "prior-2"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [
+              "ff448429-6f39-4bf8-a72a-f0b851e80a00:ff448429-6f39-4bf8-a72a-f0b851e80a00:9252a39e-9ac5-4ddc-93ba-d65c1a5c44b0.i5"
+            ]
+          }
+        ],
+        "slot_id": "independent",
+        "transition": "The learner has matched location cues to the correct parts with support, so the labels and role prompts can now be removed.",
+        "specific_purpose": "Have the learner locate and name the three plant parts without the labelled cues."
+      },
+      {
+        "blocks": [
+          {
+            "id": "check-b1",
+            "brief": "Check that the learner can identify roots, stem, and leaves by name and location in an unlabelled plant context, using the already-approved item selected for this check.",
+            "intent": "check-understanding",
+            "evidence": "The check must measure the exact objective \u2014 naming and locating the three parts \u2014 rather than recalling roles alone or reasoning about a different plant system.",
+            "position": 0,
+            "evidence_refs": [
+              "lesson.objective",
+              "slot.check.purpose",
+              "anchor.anchor-1"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [
+              "ff448429-6f39-4bf8-a72a-f0b851e80a00:ff448429-6f39-4bf8-a72a-f0b851e80a00:9252a39e-9ac5-4ddc-93ba-d65c1a5c44b0.i2"
+            ]
+          }
+        ],
+        "slot_id": "check",
+        "transition": "Having named and located the parts on the unlabelled sunflower, the learner now faces a diagnostic check of the same three-part identification.",
+        "specific_purpose": "Check whether the learner can identify and locate the three plant parts without scaffolding."
+      }
+    ],
+    "anchor_usage": [
+      {
+        "usage": "The anchor is named as a sunflower that has been pulled from the soil and whose underground and above-ground parts are about to be examined.",
+        "slot_id": "orient"
+      },
+      {
+        "usage": "The anchor is the sole item being labelled. Roots, stem, and leaves are each located on the pulled sunflower, and each location is linked to the part's role in keeping the plant alive.",
+        "slot_id": "organise"
+      },
+      {
+        "usage": "The anchor remains the reference labelled diagram. The learner locates the same three parts on the anchor while given location cues and role prompts.",
+        "slot_id": "guided"
+      },
+      {
+        "usage": "The learner names and locates roots, stem, and leaves on the pulled sunflower without the labels or role prompts present.",
+        "slot_id": "independent"
+      },
+      {
+        "usage": "The anchor is referenced as the labelled plant the learner has just used, so the check asks them to identify a part from its location rather than from memory alone.",
+        "slot_id": "check"
+      }
+    ],
+    "approval_status": "pending",
+    "preparation_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870",
+    "teaching_plan_id": "5f59174f-b227-4eb4-bcfd-dca58ccd5735",
+    "misconception_focus_ids": [
+      "M1",
+      "M2"
+    ]
+  },
+  "teaching_validation": {
+    "ok": true,
+    "issues": []
+  },
+  "teaching_qc": [],
+  "teaching_review": {
+    "status": "pending",
+    "revision": 1,
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "teacher_note": null
+  },
+  "lesson_packet": {
+    "scope": {
+      "terminology": [],
+      "must_establish": [],
+      "must_not_introduce": []
+    },
+    "slots": [
+      {
+        "purpose": "Give the learner a reason to care and a concrete situation to hold.",
+        "slot_id": "orient",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "orient",
+          "activate-prior-knowledge",
+          "emphasise"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "Impose a structure on the facts so they are retrievable, not just listed.",
+        "slot_id": "organise",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [],
+        "visual_required": true
+      },
+      {
+        "purpose": "Practice with scaffolding still present. Learner does the thinking, support stays.",
+        "slot_id": "guided",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [],
+        "visual_required": false
+      },
+      {
+        "purpose": "Practice with scaffolding removed.",
+        "slot_id": "independent",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [],
+        "visual_required": false
+      },
+      {
+        "purpose": "The shared diagnostic. Identical across every variant. Written from the card only, never from the prose above it.\n",
+        "slot_id": "check",
+        "max_blocks": 1,
+        "min_blocks": 1,
+        "typical_intents": [
+          "check-understanding",
+          "practise-independent",
+          "diagnose-misconception"
+        ],
+        "visual_required": false
+      }
+    ],
+    "anchor": {
+      "id": "anchor-1",
+      "description": "A potted sunflower plant pulled gently from the soil, roots visible below, a green stem rising, and\u2026"
+    },
+    "lesson": {
+      "subject": "Science",
+      "objective": "Identify and locate roots, stem, and leaves on a labelled diagram of a plant.",
+      "grade_level": "Grade",
+      "lesson_mode": "first_exposure",
+      "knowledge_type": "conceptual",
+      "path_lesson_id": "ff448429-6f39-4bf8-a72a-f0b851e80a00"
+    },
+    "limits": {
+      "max_sections": 4,
+      "max_total_blocks": 10,
+      "max_blocks_per_section": 3
+    },
+    "resource_id": "lesson",
+    "approved_items": [
+      {
+        "id": "ff448429-6f39-4bf8-a72a-f0b851e80a00:ff448429-6f39-4bf8-a72a-f0b851e80a00:9252a39e-9ac5-4ddc-93ba-d65c1a5c44b0.i1",
+        "stem": "A gardener cuts a plant's stem so that only the roots and a small stump remain in the soil. What is most likely to happen to the plant?",
+        "card_id": "ff448429-6f39-4bf8-a72a-f0b851e80a00:9252a39e-9ac5-4ddc-93ba-d65c1a5c44b0",
+        "options": [
+          {
+            "key": "a",
+            "text": "The plant will die because it can no longer move water and nutrients to its upper parts.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The roots will keep the plant alive, so it will grow back just as well as before.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The plant will keep growing because the roots can make food for the whole plant.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The plant will lose only its shade, so it will continue growing normally in the sun.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M1",
+          "c": "M1",
+          "d": "M2"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "ff448429-6f39-4bf8-a72a-f0b851e80a00:ff448429-6f39-4bf8-a72a-f0b851e80a00:9252a39e-9ac5-4ddc-93ba-d65c1a5c44b0.i2",
+        "stem": "A student removes all the leaves from a healthy potted plant but leaves the roots and stem intact. What is the most likely result?",
+        "card_id": "ff448429-6f39-4bf8-a72a-f0b851e80a00:9252a39e-9ac5-4ddc-93ba-d65c1a5c44b0",
+        "options": [
+          {
+            "key": "a",
+            "text": "The plant will still grow well because leaves are only for shade and are not essential.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The plant will survive because the roots alone can keep the whole plant alive.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The plant will weaken because it cannot make enough food without leaves.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The plant will grow normally because the stem can make all the food the plant needs.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": "M2",
+          "b": "M1",
+          "c": null,
+          "d": null
+        },
+        "correct_key": "c"
+      },
+      {
+        "id": "ff448429-6f39-4bf8-a72a-f0b851e80a00:ff448429-6f39-4bf8-a72a-f0b851e80a00:9252a39e-9ac5-4ddc-93ba-d65c1a5c44b0.i3",
+        "stem": "A diagram shows a plant with an arrow pointing to the part that grows above the ground and supports the leaves. What is the name of the part the arrow points to?",
+        "card_id": "ff448429-6f39-4bf8-a72a-f0b851e80a00:9252a39e-9ac5-4ddc-93ba-d65c1a5c44b0",
+        "options": [
+          {
+            "key": "a",
+            "text": "Root",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Stem",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Flower",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Shade",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": "M1",
+          "b": null,
+          "c": "M1",
+          "d": "M2"
+        },
+        "correct_key": "b"
+      },
+      {
+        "id": "ff448429-6f39-4bf8-a72a-f0b851e80a00:ff448429-6f39-4bf8-a72a-f0b851e80a00:9252a39e-9ac5-4ddc-93ba-d65c1a5c44b0.i4",
+        "stem": "A plant is kept in a dark room without sunlight. Which part of the plant will have the most trouble doing its main job first?",
+        "card_id": "ff448429-6f39-4bf8-a72a-f0b851e80a00:9252a39e-9ac5-4ddc-93ba-d65c1a5c44b0",
+        "options": [
+          {
+            "key": "a",
+            "text": "The leaves, because they need light to make food.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The roots, because they need light to hold the plant in the soil.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The stem, because it needs light to grow upward.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The leaves, because their only job is to shade the plant from light.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M1",
+          "c": null,
+          "d": "M2"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "ff448429-6f39-4bf8-a72a-f0b851e80a00:ff448429-6f39-4bf8-a72a-f0b851e80a00:9252a39e-9ac5-4ddc-93ba-d65c1a5c44b0.i5",
+        "stem": "A diagram shows a plant with an arrow pointing to the part that holds the plant firmly in the soil. Which part is the arrow pointing to?",
+        "card_id": "ff448429-6f39-4bf8-a72a-f0b851e80a00:9252a39e-9ac5-4ddc-93ba-d65c1a5c44b0",
+        "options": [
+          {
+            "key": "a",
+            "text": "Stem",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Leaves",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Roots",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Flower",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M2",
+          "c": null,
+          "d": "M1"
+        },
+        "correct_key": "c"
+      }
+    ],
+    "misconceptions": [
+      {
+        "id": "M1",
+        "statement": "{'id': 'M1', 'description': 'The flower is the main part that keeps the plant alive, so roots are not important.', 'source': 'drafted'}"
+      },
+      {
+        "id": "M2",
+        "statement": "{'id': 'M2', 'description': 'Leaves only shade the plant, so a plant without leaves would still grow fine.', 'source': 'drafted'}"
+      }
+    ],
+    "prior_established": [
+      {
+        "id": "prior-1",
+        "statement": "plants are living things"
+      },
+      {
+        "id": "prior-2",
+        "statement": "plants need water and light to grow"
+      }
+    ]
+  },
+  "catalogue": {
+    "version": "1.1.0",
+    "form_projection_hash": null,
+    "teaching_projection_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870"
+  }
+}

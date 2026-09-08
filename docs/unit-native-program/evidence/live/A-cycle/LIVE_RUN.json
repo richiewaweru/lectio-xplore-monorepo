@@ -5,22 +5,138 @@
   "finished_at": "2026-09-08T05:18:01.601546+00:00",
   "print": {
     "generation_id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd",
-    "status": "ready"
+    "status": "ready",
+    "student_pdf": "docs/unit-native-program/evidence/live/A-cycle/35-student.pdf",
+    "teacher_pdf": "docs/unit-native-program/evidence/live/A-cycle/35-teacher.pdf",
+    "inspection": {
+      "status": "PASS",
+      "tool": "pdftoppm",
+      "student_pages": 5,
+      "teacher_pages": 6,
+      "image_paths": [
+        "docs/unit-native-program/evidence/live/A-cycle/page-images/student-1.png",
+        "docs/unit-native-program/evidence/live/A-cycle/page-images/student-2.png",
+        "docs/unit-native-program/evidence/live/A-cycle/page-images/student-3.png",
+        "docs/unit-native-program/evidence/live/A-cycle/page-images/student-4.png",
+        "docs/unit-native-program/evidence/live/A-cycle/page-images/student-5.png",
+        "docs/unit-native-program/evidence/live/A-cycle/page-images/teacher-1.png",
+        "docs/unit-native-program/evidence/live/A-cycle/page-images/teacher-2.png",
+        "docs/unit-native-program/evidence/live/A-cycle/page-images/teacher-3.png",
+        "docs/unit-native-program/evidence/live/A-cycle/page-images/teacher-4.png",
+        "docs/unit-native-program/evidence/live/A-cycle/page-images/teacher-5.png",
+        "docs/unit-native-program/evidence/live/A-cycle/page-images/teacher-6.png"
+      ]
+    }
   },
   "learn": {
-    "generation_id": "learn-out-fb767eb51b40",
-    "builder_id": "e2a95a72-b35c-4355-9064-640367a3dad0",
+    "generation_id": "learn-out-ccd04ae62c17",
+    "builder_id": "6b7f1426-c374-41e1-947c-2b4e760c0db3",
     "realization_id": "7d9059c1-6377-4db9-a12f-4644bcb95deb",
-    "release_id": "f18f0607-c4fd-47d6-84b2-9f8c9a3b3663",
-    "instance_id": "7c774717-1295-40c3-9600-d9a8915f75a2",
-    "attempt_evidence": {}
+    "release_id": "6577eaec-1cc6-4d67-b613-558ddfdf98da",
+    "instance_id": "8afd4790-22ee-4afd-9bad-5c0cc3e23375",
+    "attempt_evidence": {
+      "interaction_id": "ix-check-b1-sequence",
+      "correct_order": [
+        "ask-the-learner-to-identify",
+        "what-an-adult-butterfly-must",
+        "do-for-the-life-cycle-to-continue"
+      ],
+      "client_score_status": 422,
+      "client_score_body": {
+        "detail": {
+          "message": "Client score/outcome/evidence claims are rejected; server evaluates from release",
+          "rejected_fields": [
+            "outcome",
+            "score_earned"
+          ]
+        }
+      },
+      "wrong_status": 200,
+      "wrong_body": {
+        "id": "acc13fea-2b1d-436a-8518-799779c8a3a1",
+        "client_submission_id": "p09-wrong-5b754c16",
+        "interaction_id": "ix-check-b1-sequence",
+        "outcome": "partial",
+        "score_earned": 1.0,
+        "score_possible": 3.0,
+        "feedback": "Partly right \u2014 some steps are in the expected position.",
+        "completed": true,
+        "assessment_mode": "practice",
+        "idempotent_replay": false,
+        "response_json": {
+          "order": [
+            "do-for-the-life-cycle-to-continue",
+            "what-an-adult-butterfly-must",
+            "ask-the-learner-to-identify"
+          ]
+        }
+      },
+      "right_status": 200,
+      "right_body": {
+        "id": "5993dcd6-c9a9-46d3-9d09-b6c079042d91",
+        "client_submission_id": "p09-right-241fafed",
+        "interaction_id": "ix-check-b1-sequence",
+        "outcome": "correct",
+        "score_earned": 3.0,
+        "score_possible": 3.0,
+        "feedback": "Correct \u2014 the order matches the accepted sequence.",
+        "completed": true,
+        "assessment_mode": "practice",
+        "idempotent_replay": false,
+        "response_json": {
+          "order": [
+            "ask-the-learner-to-identify",
+            "what-an-adult-butterfly-must",
+            "do-for-the-life-cycle-to-continue"
+          ]
+        }
+      }
+    }
   },
   "teaching_hash": "5478751375d49a1ea2d7920418e6ff45969bb4c9cd6f0fddd5a7b79dfe49143f",
   "teaching_revision": 1,
   "limitations": [
-    "PDF export may be BLOCKED: Playwright print-route timeout / frontend print auth",
-    "Poppler pdftoppm not on PATH for page-image inspection",
     "Google Sign-In UI not automated; JWT mint used for product API authenticity",
-    "Publish path required native_learn in _ACTIVE_SOURCES"
+    "Publish path required native_learn in _ACTIVE_SOURCES",
+    "Attempt salvage applied deterministic order-items learner_action repair on approved teaching before Learn produce (D-043)."
+  ],
+  "evidence_paths": [
+    "docs/unit-native-program/evidence/live/A-cycle/00-health.json",
+    "docs/unit-native-program/evidence/live/A-cycle/00-provider-snapshot.json",
+    "docs/unit-native-program/evidence/live/A-cycle/01-unit-input.json",
+    "docs/unit-native-program/evidence/live/A-cycle/03-path-plan.json",
+    "docs/unit-native-program/evidence/live/A-cycle/05-path-approval.json",
+    "docs/unit-native-program/evidence/live/A-cycle/06-prepare.json",
+    "docs/unit-native-program/evidence/live/A-cycle/13-teaching-review.json",
+    "docs/unit-native-program/evidence/live/A-cycle/20-print-status.json",
+    "docs/unit-native-program/evidence/live/A-cycle/35-pdf-status.json",
+    "docs/unit-native-program/evidence/live/A-cycle/35-student-pdf-status.json",
+    "docs/unit-native-program/evidence/live/A-cycle/35-student.pdf",
+    "docs/unit-native-program/evidence/live/A-cycle/35-teacher-pdf-status.json",
+    "docs/unit-native-program/evidence/live/A-cycle/35-teacher.pdf",
+    "docs/unit-native-program/evidence/live/A-cycle/40-learn-production-attempt.json",
+    "docs/unit-native-program/evidence/live/A-cycle/40-learn-production.json",
+    "docs/unit-native-program/evidence/live/A-cycle/41-learn-edit.json",
+    "docs/unit-native-program/evidence/live/A-cycle/42-learn-release-attempt.json",
+    "docs/unit-native-program/evidence/live/A-cycle/42-learn-release-v1.json",
+    "docs/unit-native-program/evidence/live/A-cycle/43-learner-attempt.json",
+    "docs/unit-native-program/evidence/live/A-cycle/43-learner.json",
+    "docs/unit-native-program/evidence/live/A-cycle/44-assignment-attempt.json",
+    "docs/unit-native-program/evidence/live/A-cycle/45-learner-session-attempt.json",
+    "docs/unit-native-program/evidence/live/A-cycle/46-instance-attempt.json",
+    "docs/unit-native-program/evidence/live/A-cycle/46-instance.json",
+    "docs/unit-native-program/evidence/live/A-cycle/47-attempts.json",
+    "docs/unit-native-program/evidence/live/A-cycle/LIVE_RUN.json",
+    "docs/unit-native-program/evidence/live/A-cycle/page-images/student-1.png",
+    "docs/unit-native-program/evidence/live/A-cycle/page-images/student-2.png",
+    "docs/unit-native-program/evidence/live/A-cycle/page-images/student-3.png",
+    "docs/unit-native-program/evidence/live/A-cycle/page-images/student-4.png",
+    "docs/unit-native-program/evidence/live/A-cycle/page-images/student-5.png",
+    "docs/unit-native-program/evidence/live/A-cycle/page-images/teacher-1.png",
+    "docs/unit-native-program/evidence/live/A-cycle/page-images/teacher-2.png",
+    "docs/unit-native-program/evidence/live/A-cycle/page-images/teacher-3.png",
+    "docs/unit-native-program/evidence/live/A-cycle/page-images/teacher-4.png",
+    "docs/unit-native-program/evidence/live/A-cycle/page-images/teacher-5.png",
+    "docs/unit-native-program/evidence/live/A-cycle/page-images/teacher-6.png"
   ]
 }

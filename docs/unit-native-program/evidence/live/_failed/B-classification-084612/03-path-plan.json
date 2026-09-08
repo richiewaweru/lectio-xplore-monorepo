@@ -1,0 +1,99 @@
+{
+  "id": "1a24cf33-5e16-41ee-944f-ad8e5ca883b9",
+  "unit_id": "c96117ab-c712-4c06-b5a9-aee323d85813",
+  "version": 1,
+  "revision": 1,
+  "status": "draft",
+  "generated_by": "path_planner",
+  "merge_critic_results": [],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": null,
+  "created_at": "2026-09-08T05:34:38.083731",
+  "lessons": [
+    {
+      "id": "1e38cb10-c287-494d-8da3-d91b5ba2235a",
+      "concept_id": "86dde0db-ee29-46eb-8dee-eaf174b110a0",
+      "concept_slug": "science.identify.the.characteristics.of.living.things",
+      "title": "Identify the Characteristics of Living Things",
+      "objective": "List the observable characteristics used to determine if something is a living organism",
+      "objective_hash": "b4f8d8d88f2eed4f974e6c0c99b73e3333b54cd17529df8ebf1ff4beb25b2b56",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Living things grow and develop",
+        "Living things reproduce",
+        "Living things respond to stimuli in their environment",
+        "Living things use energy"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "3c54b100-6b82-417d-ad3b-91662d3b115f",
+      "concept_id": "edee0f67-9a56-4a7a-9e7c-bfbdd1c9267f",
+      "concept_slug": "science.distinguish.characteristics.from.nonessential.features",
+      "title": "Distinguish Characteristics from Nonessential Features",
+      "objective": "Distinguish between essential characteristics of life and nonessential features shared with nonliving things",
+      "objective_hash": "05b644064a95e1e0cf8357de5a5cc99b75ddc54211b680f816083496948a973e",
+      "prerequisites": [
+        "1e38cb10-c287-494d-8da3-d91b5ba2235a"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Nonliving things can share some characteristics with living things (e.g., fire uses energy, crystals grow)",
+        "A single characteristic is insufficient to classify something as living"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "ddb8a2ec-bdfe-4e1d-9bb5-4a78f57861f1",
+      "concept_id": "6de02e04-4cb7-4797-a9c7-64eb5318f6b4",
+      "concept_slug": "science.apply.criteria.to.classify.examples",
+      "title": "Apply Criteria to Classify Examples",
+      "objective": "Apply multiple criteria to classify unfamiliar examples as living or nonliving and justify the classification",
+      "objective_hash": "ae57bd23f30a0a4c96069b5fc3bca12c79dc0f779386808f575656cce7c0e192",
+      "prerequisites": [
+        "3c54b100-6b82-417d-ad3b-91662d3b115f"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Use a checklist of multiple criteria to make a classification decision",
+        "Explain why an example is living or nonliving based on the criteria"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "procedural",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}

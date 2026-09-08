@@ -1,0 +1,117 @@
+{
+  "case_id": "B-classification",
+  "status": "PASS_WITH_BLOCKERS",
+  "commit": "a88c643",
+  "provider": "deepseek-v4-pro",
+  "model": {
+    "page_model_fast": "deepseek-v4-flash",
+    "page_model_standard": "deepseek-v4-pro",
+    "xplore_native_worker_enabled": true,
+    "anthropic_key_set": true,
+    "deepseek_key_set": true,
+    "openai_key_set": true
+  },
+  "started_at": "2026-09-08T06:09:32.819066+00:00",
+  "finished_at": "2026-09-08T06:12:04.238656+00:00",
+  "unit_id": "a5715048-0bd7-434e-b5e8-11ffe64f91da",
+  "path_lesson_id": "da4b74ed-b55c-48a5-bac9-e9f9d9fa1d11",
+  "teaching_plan_id": "b9ed285e-c92e-45b2-8dd0-a39053eaf15f",
+  "teaching_revision": 1,
+  "teaching_hash": "d89cf7b7e182546938f63ecf7c500ae5c69fd5643021d379326777c80b213d73",
+  "contracts": {
+    "print": null,
+    "learn": null,
+    "vocabulary": null
+  },
+  "print": {
+    "realization_id": null,
+    "generation_id": "eb867328-9cdf-4af3-968d-d61c725cda11",
+    "student_pdf": "docs/unit-native-program/evidence/live/B-classification/35-student.pdf",
+    "teacher_pdf": "docs/unit-native-program/evidence/live/B-classification/35-teacher.pdf",
+    "inspection": {
+      "status": "PASS",
+      "tool": "pdftoppm",
+      "student_pages": 5,
+      "teacher_pages": 6,
+      "image_paths": [
+        "docs/unit-native-program/evidence/live/B-classification/page-images/student-1.png",
+        "docs/unit-native-program/evidence/live/B-classification/page-images/student-2.png",
+        "docs/unit-native-program/evidence/live/B-classification/page-images/student-3.png",
+        "docs/unit-native-program/evidence/live/B-classification/page-images/student-4.png",
+        "docs/unit-native-program/evidence/live/B-classification/page-images/student-5.png",
+        "docs/unit-native-program/evidence/live/B-classification/page-images/teacher-1.png",
+        "docs/unit-native-program/evidence/live/B-classification/page-images/teacher-2.png",
+        "docs/unit-native-program/evidence/live/B-classification/page-images/teacher-3.png",
+        "docs/unit-native-program/evidence/live/B-classification/page-images/teacher-4.png",
+        "docs/unit-native-program/evidence/live/B-classification/page-images/teacher-5.png",
+        "docs/unit-native-program/evidence/live/B-classification/page-images/teacher-6.png"
+      ]
+    }
+  },
+  "learn": {
+    "realization_id": "54f78f8b-dbc3-4c20-9da1-f9c6ce2f7b5e",
+    "generation_id": "learn-out-fb54a3cc7257",
+    "builder_id": "8f45235b-6027-4a10-9aa5-7d37b0f373a2",
+    "release_id": "77d120c8-58f1-45b6-a481-13d86323c070",
+    "assignment_id": "fd15ca14-96ca-4162-96e7-14f8d87a1e9a",
+    "instance_id": "26536104-3d9f-47e1-90b4-fe0aadaeaf64",
+    "attempt_evidence": null,
+    "refresh_evidence": null
+  },
+  "stage_timings_ms": {
+    "constructor_s": 4700,
+    "create_unit_s": 140,
+    "path_plan_s": 12410,
+    "path_approve_s": 110,
+    "prepare_s": 9420,
+    "teaching_plan_s": 86530,
+    "print_writers_s": 12920,
+    "learn_produce_s": 800,
+    "learn_publish_v1_s": 270
+  },
+  "failure_recovery": null,
+  "rubric": {
+    "print": null,
+    "learn": null
+  },
+  "evidence_paths": [
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\00-health.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\00-provider-snapshot.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\01-unit-input.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\03-path-plan.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\05-path-approval.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\06-prepare.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\13-teaching-review.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\14-teaching-approve.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\20-print-status.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\21-print-status-refresh.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\35-student-pdf-status.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\35-student.pdf",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\35-teacher-pdf-status.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\35-teacher.pdf",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\40-learn-production.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\41-learn-edit.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\42-learn-release-v1.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\43-learner.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\44-assignment.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\45-learner-session.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\46-instance.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\49-learn-release-v2.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\99-run-log.txt",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\LIVE_RUN.json",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\page-images\\student-1.png",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\page-images\\student-2.png",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\page-images\\student-3.png",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\page-images\\student-4.png",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\page-images\\student-5.png",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\page-images\\teacher-1.png",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\page-images\\teacher-2.png",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\page-images\\teacher-3.png",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\page-images\\teacher-4.png",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\page-images\\teacher-5.png",
+    "docs\\unit-native-program\\evidence\\live\\B-classification\\page-images\\teacher-6.png"
+  ],
+  "limitations": [
+    "No learn_interaction id found to submit attempts"
+  ]
+}

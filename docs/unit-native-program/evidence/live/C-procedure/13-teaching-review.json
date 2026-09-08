@@ -1,0 +1,491 @@
+{
+  "generation_id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7",
+  "teaching_plan": {
+    "arc": "The lesson opens on a baker who must total 3 boxes of 24 cookies, a problem that is too large for a known single-digit fact. It teaches the learner to split 24 into 20 and 4, multiply each part by 3, and name the two partial products 60 and 12. It then confronts the belief that 24 \u00d7 3 equals 6 \u00d7 12 by showing where that shortcut loses the tens, and it closes by checking that the learner can decompose a two-digit factor and state both partial products.",
+    "revision": 1,
+    "sections": [
+      {
+        "blocks": [
+          {
+            "id": "orient-b1",
+            "brief": "Open with the baker's problem from anchor.anchor-1: there are 3 boxes, each holding 24 cookies, and the total is needed for a bake sale order. Establish that no single memorised multiplication fact gives 24 \u00d7 3 directly, so the learner needs a way to work with a two-digit factor. Do not yet show how to split 24 or name any products.",
+            "intent": "orient",
+            "evidence": "The objective is to decompose a two-digit factor, and the anchor provides the exact concrete pressure that makes a new method necessary: 24 \u00d7 3 cannot be answered from a single known fact.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.orient.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "orient",
+        "transition": null,
+        "specific_purpose": "Make the learner feel the need for a method by facing a total they cannot get from one memorised fact, and fix the concrete case of 3 boxes of 24 cookies."
+      },
+      {
+        "blocks": [
+          {
+            "id": "explain-b1",
+            "brief": "Briefly surface the prerequisite place value idea that in 24 from anchor.anchor-1, the 2 means 2 tens, worth 20, and the 4 means 4 ones. Connect this to the prior understanding of multiplication as equal groups: 3 \u00d7 20 means 3 groups of 20, and 3 \u00d7 4 means 3 groups of 4. Do not carry out the multiplications yet.",
+            "intent": "activate-prior-knowledge",
+            "evidence": "The decomposition taught in the objective depends on reading the 2 in 24 as 20, which is exactly the place value knowledge prior-3 establishes; connecting it to prior-1 sets up the multiplication that follows, and the anchor's 24 makes the tens and ones concrete.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "prior-1",
+              "prior-2",
+              "prior-3",
+              "lesson.objective",
+              "slot.explain.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": "The explain slot's typical intents take for granted that the learner already reads the 2 in 24 as 20. This objective is first exposure to decomposition, so the prerequisite value of the tens digit must be surfaced before the structure can be built; activating prior knowledge is the necessary move before show-structure can do its work.",
+            "source_question_ids": []
+          },
+          {
+            "id": "explain-b2",
+            "brief": "Use anchor.anchor-1 to show the structure of decomposing 24 for the multiplication 24 \u00d7 3. Split 24 into 20 and 4, multiply each part by 3 to get the partial products 60 and 12, and state clearly that 24 \u00d7 3 has the two partial products 60 and 12. The learner must see the relationship: the total is the sum of the partial products. Do not add the partial products 60 and 12 to get 72, and do not compare with any wrong method yet.",
+            "intent": "show-structure",
+            "evidence": "The objective requires stating the two partial products, and show-structure is the exact fit because the idea's difficulty is how the two-digit factor decomposes into tens and ones that each multiply by 3.",
+            "position": 1,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.explain.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "explain",
+        "transition": "The baker's problem has created the need; now the learner sees the method that solves it.",
+        "specific_purpose": "Build the procedure: split the two-digit factor into tens and ones, multiply each part by the one-digit factor, and name the two partial products."
+      },
+      {
+        "blocks": [
+          {
+            "id": "contrast-b1",
+            "brief": "Compare the correct decomposition of 24 \u00d7 3 from anchor.anchor-1 with the tempting shortcut of multiplying 2 \u00d7 3 and 4 \u00d7 3 separately and writing 6 and 12. Use the anchor's 3 boxes of 24 cookies to make the failure concrete: 2 \u00d7 3 gives 6, but the 2 stood for 20, so the partial product must be 60, not 6. The near-miss differs only in the value of the tens part, but that difference changes the partial product from 6 to 60.",
+            "intent": "compare",
+            "evidence": "M1 holds that digits can be multiplied directly and the results written next to each other; the contrast slot exists to show the boundary where that belief fails against the correct partial products.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "M1",
+              "slot.contrast.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "contrast-b2",
+            "brief": "Isolate the second near-miss from M2 against anchor.anchor-1: treating the tens part as if it were ones, so 20 \u00d7 3 is treated as 2 \u00d7 3. Use the anchor to hold the tens value steady: in 24, the 2 is worth 20, and 20 \u00d7 3 means 3 groups of 20, which makes 60. State that splitting the factor does not change the value of its parts: the tens must stay tens. Do not introduce a new multiplication fact beyond the single-digit facts the learner already knows.",
+            "intent": "compare",
+            "evidence": "M2 holds that the tens part loses its value when split, and the contrast section is where the learner must see that the tens value is unchanged, because 20 \u00d7 3 must be 60 and not 2 \u00d7 3's 6.",
+            "position": 1,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "M2",
+              "slot.contrast.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "contrast",
+        "transition": "The learner has seen the decomposition; now the same case is used to show how a promising shortcut goes wrong.",
+        "specific_purpose": "Let the learner see the boundary of the method by contrasting it with two similar-looking shortcuts that fail because they lose the tens value."
+      },
+      {
+        "blocks": [
+          {
+            "id": "check-b1",
+            "brief": "Check whether the learner can decompose 24 \u00d7 3 from anchor.anchor-1 into the two partial products and name them. The learner must identify 60 and 12 as the partial products. Do not ask for the final sum 72, and do not ask the learner to explain a wrong method again.",
+            "intent": "check-understanding",
+            "evidence": "The objective ends at decomposing into tens and ones and stating the two partial products; the check tests exactly that on the anchor case, not the adjacent skill of adding partial products to reach the total.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.check.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [
+              "4c4946f5-97af-4f0d-8be3-e3444ba602d7:4c4946f5-97af-4f0d-8be3-e3444ba602d7:a31243f9-202e-48b6-ab1e-a55a0511de58.i5"
+            ]
+          }
+        ],
+        "slot_id": "check",
+        "transition": "The learner has seen the correct decomposition and two near-misses that lose the tens; the check now asks whether the target decomposition is actually held.",
+        "specific_purpose": "Check whether the learner can decompose a two-digit factor into tens and ones and state the two partial products for the anchor case itself."
+      }
+    ],
+    "anchor_usage": [
+      {
+        "usage": "Introduce the concrete situation: the baker has 3 boxes of 24 cookies and needs the total. Use it to create the need for a method beyond a memorised single-digit fact.",
+        "slot_id": "orient"
+      },
+      {
+        "usage": "Return to the baker's 3 boxes of 24 cookies as the case that is decomposed. Split 24 into 20 and 4, multiply each part by 3, and name 60 and 12 as the partial products.",
+        "slot_id": "explain"
+      },
+      {
+        "usage": "Use the same baker's 24 cookies per box to show the wrong shortcut: multiplying 2 and 4 separately by 3 gives 6 and 12, but 6 is not 60 because the 2 stood for 20. The near-miss looks similar but loses the tens.",
+        "slot_id": "contrast"
+      },
+      {
+        "usage": "Ask the learner to decompose 24 \u00d7 3 into the two partial products and name them, returning once more to the anchor so the check tests the objective itself.",
+        "slot_id": "check"
+      }
+    ],
+    "approval_status": "pending",
+    "preparation_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870",
+    "teaching_plan_id": "31677c25-5ad3-4f26-b11b-cba955f1838e",
+    "misconception_focus_ids": [
+      "M1",
+      "M2"
+    ]
+  },
+  "teaching_validation": {
+    "ok": true,
+    "issues": []
+  },
+  "teaching_qc": [],
+  "teaching_review": {
+    "status": "pending",
+    "revision": 1,
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "teacher_note": null
+  },
+  "lesson_packet": {
+    "scope": {
+      "terminology": [],
+      "must_establish": [],
+      "must_not_introduce": []
+    },
+    "slots": [
+      {
+        "purpose": "Give the learner a reason to care and a concrete situation to hold.",
+        "slot_id": "orient",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "orient",
+          "activate-prior-knowledge",
+          "emphasise"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "Build the idea itself. State it, ground it, make it usable.",
+        "slot_id": "explain",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [
+          "explain-cause",
+          "explain",
+          "define",
+          "show-structure",
+          "trace-flow",
+          "compare",
+          "name-parts"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "Put a case and a near-miss side by side. The learner must see the boundary of the idea, not just the idea.\n",
+        "slot_id": "contrast",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [
+          "compare",
+          "classify",
+          "explain",
+          "warn",
+          "show-structure"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "The shared diagnostic. Identical across every variant. Written from the card only, never from the prose above it.\n",
+        "slot_id": "check",
+        "max_blocks": 1,
+        "min_blocks": 1,
+        "typical_intents": [
+          "check-understanding",
+          "practise-independent",
+          "diagnose-misconception"
+        ],
+        "visual_required": false
+      }
+    ],
+    "anchor": {
+      "id": "anchor-1",
+      "description": "A baker uses 3 boxes of 24 cookies to plan a bake sale order."
+    },
+    "lesson": {
+      "subject": "Mathematics",
+      "objective": "Decompose a two-digit factor into tens and ones, multiply each part by a one-digit factor, and state the two partial products",
+      "grade_level": "Grade",
+      "lesson_mode": "first_exposure",
+      "knowledge_type": "conceptual",
+      "path_lesson_id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7"
+    },
+    "limits": {
+      "max_sections": 4,
+      "max_total_blocks": 10,
+      "max_blocks_per_section": 3
+    },
+    "resource_id": "lesson",
+    "approved_items": [
+      {
+        "id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7:4c4946f5-97af-4f0d-8be3-e3444ba602d7:a31243f9-202e-48b6-ab1e-a55a0511de58.i1",
+        "stem": "A baker has 34 boxes of muffins. Each box has 6 muffins. To find the total number of muffins, the baker works out tens and ones separately. Which shows the two correct partial products?",
+        "card_id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7:a31243f9-202e-48b6-ab1e-a55a0511de58",
+        "options": [
+          {
+            "key": "a",
+            "text": "30 \u00d7 6 and 4 \u00d7 6",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "3 \u00d7 6 and 4 \u00d7 6",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "3 \u00d7 6 tens and 4 \u00d7 6 ones",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "34 \u00d7 3 and 34 \u00d7 3",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M2",
+          "c": null,
+          "d": null
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7:4c4946f5-97af-4f0d-8be3-e3444ba602d7:a31243f9-202e-48b6-ab1e-a55a0511de58.i2",
+        "stem": "A shopkeeper sells 41 packets of pens. Each packet has 5 pens. She splits 41 into tens and ones. What are the two multiplication facts she should work out?",
+        "card_id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7:a31243f9-202e-48b6-ab1e-a55a0511de58",
+        "options": [
+          {
+            "key": "a",
+            "text": "4 \u00d7 5 and 1 \u00d7 5",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "45 \u00d7 1 and 45 \u00d7 0",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "4 \u00d7 5 ones and 1 \u00d7 5 ones",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "40 \u00d7 5 and 1 \u00d7 5",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": "M2",
+          "b": null,
+          "c": null,
+          "d": null
+        },
+        "correct_key": "d"
+      },
+      {
+        "id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7:4c4946f5-97af-4f0d-8be3-e3444ba602d7:a31243f9-202e-48b6-ab1e-a55a0511de58.i3",
+        "stem": "A farm has 52 rows of carrots. Each row has 7 carrots. The farmer writes two partial products using the tens and ones in 52. Which is correct?",
+        "card_id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7:a31243f9-202e-48b6-ab1e-a55a0511de58",
+        "options": [
+          {
+            "key": "a",
+            "text": "5 \u00d7 7 and 2 \u00d7 7",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "50 \u00d7 7 and 2 \u00d7 7",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "52 \u00d7 5 and 52 \u00d7 2",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "5 \u00d7 7 ones and 2 \u00d7 7 ones",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": "M2",
+          "b": null,
+          "c": null,
+          "d": null
+        },
+        "correct_key": "b"
+      },
+      {
+        "id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7:4c4946f5-97af-4f0d-8be3-e3444ba602d7:a31243f9-202e-48b6-ab1e-a55a0511de58.i4",
+        "stem": "To find 27 \u00d7 3, Mia writes '2 \u00d7 3 and 7 \u00d7 3' as the two partial products. What must she change to make the partial products correct?",
+        "card_id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7:a31243f9-202e-48b6-ab1e-a55a0511de58",
+        "options": [
+          {
+            "key": "a",
+            "text": "Write 20 \u00d7 3 and 7 \u00d7 3",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Write 2 \u00d7 3 only",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Write 3 \u00d7 2 and 3 \u00d7 7",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Write 27 \u00d7 2 and 27 \u00d7 1",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": null,
+          "c": null,
+          "d": null
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7:4c4946f5-97af-4f0d-8be3-e3444ba602d7:a31243f9-202e-48b6-ab1e-a55a0511de58.i5",
+        "stem": "A teacher asks for the partial products for 62 \u00d7 4 by splitting 62 into tens and ones. Which response is correct?",
+        "card_id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7:a31243f9-202e-48b6-ab1e-a55a0511de58",
+        "options": [
+          {
+            "key": "a",
+            "text": "60 \u00d7 4 and 2 \u00d7 4",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "6 \u00d7 4 and 2 \u00d7 4",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "6 \u00d7 4 and 2 \u00d7 4 each applied twice",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "62 \u00d7 2 and 62 \u00d7 2",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M2",
+          "c": null,
+          "d": null
+        },
+        "correct_key": "a"
+      }
+    ],
+    "misconceptions": [
+      {
+        "id": "M1",
+        "statement": "{'id': 'M1', 'description': 'When you multiply a two-digit number by a one-digit number, you can multiply the digits directly and write the result next to the other result.', 'source': 'drafted'}"
+      },
+      {
+        "id": "M2",
+        "statement": "{'id': 'M2', 'description': 'The tens part does not change value when it is split from the ones, so 20 \u00d7 3 is the same as 2 \u00d7 3.', 'source': 'drafted'}"
+      }
+    ],
+    "prior_established": [
+      {
+        "id": "prior-1",
+        "statement": "the concept of multiplication as repeated addition"
+      },
+      {
+        "id": "prior-2",
+        "statement": "single-digit multiplication facts"
+      },
+      {
+        "id": "prior-3",
+        "statement": "place value understanding of tens and ones"
+      }
+    ]
+  },
+  "catalogue": {
+    "version": "1.1.0",
+    "form_projection_hash": null,
+    "teaching_projection_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870"
+  }
+}

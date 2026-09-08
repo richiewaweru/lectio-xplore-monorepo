@@ -1,0 +1,17 @@
+{
+  "class": {
+    "id": "f432f3e9-c483-4648-8836-7c7470c2b28e",
+    "name": "P09 Attempt Class 6eb9ea",
+    "invite_code": "babb815c",
+    "role": "owner"
+  },
+  "assignment": {
+    "id": "d347bd8c-3777-4475-9e9e-7463caf8b6e8",
+    "mode": "rolling",
+    "learn_release_id": "6577eaec-1cc6-4d67-b613-558ddfdf98da",
+    "class_id": "f432f3e9-c483-4648-8836-7c7470c2b28e",
+    "class_ids": [
+      "f432f3e9-c483-4648-8836-7c7470c2b28e"
+    ]
+  }
+}

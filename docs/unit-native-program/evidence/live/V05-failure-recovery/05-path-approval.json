@@ -1,0 +1,153 @@
+{
+  "id": "1f603a28-a52b-4349-b14f-8c92ea6e8c73",
+  "unit_id": "e6adf9a5-eeaa-4887-8bc2-6b2943d78ac5",
+  "version": 1,
+  "revision": 2,
+  "status": "approved",
+  "generated_by": "path_planner",
+  "merge_critic_results": [],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": "2026-09-08T07:52:03.264702",
+  "created_at": "2026-09-08T07:52:02.908925",
+  "lessons": [
+    {
+      "id": "39bf6cae-450e-4334-abd8-0972d5e10298",
+      "concept_id": "e5aac363-0827-481e-b60b-0f512a489f11",
+      "concept_slug": "science.water.changes.state.between.liquid.and.gas",
+      "title": "Water changes state between liquid and gas",
+      "objective": "Explain that heat causes liquid water to turn into water vapour and cooling causes water vapour to turn back into liquid water.",
+      "objective_hash": "c63e7e9675994e977aa561a917537e43efc49f7f90e5e77ac4234b21d1939b48",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Liquid water turns into water vapour (a gas) when heated",
+        "Water vapour turns back into liquid water when cooled"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "a268c996-7240-4d59-9607-9c237a11d905",
+      "concept_id": "a4e5e4f8-d14c-4422-9c31-76862c35ebb6",
+      "concept_slug": "science.evaporation.and.condensation.in.the.water.cycle",
+      "title": "Evaporation and condensation in the water cycle",
+      "objective": "Identify evaporation as liquid water changing to water vapour and condensation as water vapour changing back to liquid water in the air.",
+      "objective_hash": "efdb0139e31fea73063a84fda3c492da13ed4f3381839f48a41cebfc5dabb251",
+      "prerequisites": [
+        "39bf6cae-450e-4334-abd8-0972d5e10298"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Evaporation is the process where liquid water becomes water vapour",
+        "Condensation is the process where water vapour becomes liquid water",
+        "Evaporation and condensation are opposite changes of state"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "241c93c1-8ad1-4c06-88c5-2f24e8fd19ce",
+      "concept_id": "f4b72237-7813-4c58-b1d9-5e63ec243791",
+      "concept_slug": "science.precipitation.and.collection.in.the.water.cycle",
+      "title": "Precipitation and collection in the water cycle",
+      "objective": "Explain that precipitation brings water back to Earth's surface and collection gathers it in bodies of water.",
+      "objective_hash": "e84900513ec9614397a3edcdd2fdae03ab3dfed5604a9c93019d09577f0d2752",
+      "prerequisites": [
+        "a268c996-7240-4d59-9607-9c237a11d905"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Precipitation is water falling from clouds as rain, snow, sleet or hail",
+        "Collection happens when precipitation gathers in oceans, lakes, rivers and on land",
+        "Runoff moves water from land into larger bodies of water"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "1a7f6b38-0bbc-4d5d-82b1-9517bdec1c0e",
+      "concept_id": "2680bbd2-592a-4f07-ae49-53c76dc4be2f",
+      "concept_slug": "science.order.the.stages.of.the.water.cycle",
+      "title": "Order the stages of the water cycle",
+      "objective": "Order evaporation, condensation, precipitation and collection in the correct sequence of the water cycle.",
+      "objective_hash": "ca1cf5c6d440aaea04fe0e2962da4e5fa10eff7bc0ca50127159bf84c7bdcd7c",
+      "prerequisites": [
+        "a268c996-7240-4d59-9607-9c237a11d905",
+        "241c93c1-8ad1-4c06-88c5-2f24e8fd19ce"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "The water cycle proceeds from evaporation to condensation to precipitation to collection"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 3,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "3a1e0586-43a1-4ca0-a0e5-b5fa46f8e819",
+      "concept_id": "461282b7-9b2d-45de-9dc9-0a76f3c3cc90",
+      "concept_slug": "science.why.the.water.cycle.continues",
+      "title": "Why the water cycle continues",
+      "objective": "Explain that the sun's heat drives evaporation and Earth's water supply is reused, so the water cycle repeats continuously.",
+      "objective_hash": "49063ce470d42d3ad3c0d0ffdc2f51b8e9672363e2b793735d0af47a7cb1345d",
+      "prerequisites": [
+        "1a7f6b38-0bbc-4d5d-82b1-9517bdec1c0e"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "The sun supplies the heat that powers evaporation",
+        "Water is not created or destroyed, so it cycles through the same stages repeatedly"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 4,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}

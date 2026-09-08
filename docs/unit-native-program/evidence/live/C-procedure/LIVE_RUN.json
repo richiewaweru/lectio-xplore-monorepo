@@ -1,0 +1,107 @@
+{
+  "case_id": "C-procedure",
+  "status": "PASS_WITH_BLOCKERS",
+  "commit": "a88c643",
+  "provider": "deepseek-v4-pro",
+  "model": {
+    "page_model_fast": "deepseek-v4-flash",
+    "page_model_standard": "deepseek-v4-pro",
+    "xplore_native_worker_enabled": true,
+    "anthropic_key_set": true,
+    "deepseek_key_set": true,
+    "openai_key_set": true
+  },
+  "started_at": "2026-09-08T05:56:40.444334+00:00",
+  "finished_at": "2026-09-08T05:58:36.110915+00:00",
+  "unit_id": "f81c5bac-33a0-4d02-9064-b0408024bd23",
+  "path_lesson_id": "261bb1b9-1ba1-4c27-9e78-4bd57326da72",
+  "teaching_plan_id": "31677c25-5ad3-4f26-b11b-cba955f1838e",
+  "teaching_revision": 1,
+  "teaching_hash": "1270598d38de83ac05ec4fb1f3c8c85cf77c5fe8f08c859159aa36fdbdb228fa",
+  "contracts": {
+    "print": null,
+    "learn": null,
+    "vocabulary": null
+  },
+  "print": {
+    "realization_id": null,
+    "generation_id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7",
+    "student_pdf": "docs/unit-native-program/evidence/live/C-procedure/35-student.pdf",
+    "teacher_pdf": "docs/unit-native-program/evidence/live/C-procedure/35-teacher.pdf",
+    "inspection": {
+      "status": "PASS",
+      "tool": "pdftoppm",
+      "student_pages": 3,
+      "teacher_pages": 3,
+      "image_paths": [
+        "docs/unit-native-program/evidence/live/C-procedure/page-images/student-1.png",
+        "docs/unit-native-program/evidence/live/C-procedure/page-images/student-2.png",
+        "docs/unit-native-program/evidence/live/C-procedure/page-images/student-3.png",
+        "docs/unit-native-program/evidence/live/C-procedure/page-images/teacher-1.png",
+        "docs/unit-native-program/evidence/live/C-procedure/page-images/teacher-2.png",
+        "docs/unit-native-program/evidence/live/C-procedure/page-images/teacher-3.png"
+      ]
+    }
+  },
+  "learn": {
+    "realization_id": "1f10f578-d07c-4a1d-840b-8b23fedc1162",
+    "generation_id": "learn-out-c3bf8b46afdf",
+    "builder_id": "d352fb6a-5696-4691-88e2-9304f4c77939",
+    "release_id": "28719d0a-16a2-4646-949e-ee8cd0c009c6",
+    "assignment_id": "0c344945-729e-4737-9d58-4f6f027ce7c5",
+    "instance_id": "0c7e4595-d7eb-4850-99b1-abb20d669358",
+    "attempt_evidence": null,
+    "refresh_evidence": null
+  },
+  "stage_timings_ms": {
+    "constructor_s": 1670,
+    "create_unit_s": 120,
+    "path_plan_s": 9330,
+    "path_approve_s": 110,
+    "prepare_s": 8830,
+    "teaching_plan_s": 70580,
+    "print_writers_s": 20940,
+    "learn_produce_s": 1530,
+    "learn_publish_v1_s": 440
+  },
+  "failure_recovery": null,
+  "rubric": {
+    "print": null,
+    "learn": null
+  },
+  "evidence_paths": [
+    "docs/unit-native-program/evidence/live/C-procedure/00-health.json",
+    "docs/unit-native-program/evidence/live/C-procedure/00-provider-snapshot.json",
+    "docs/unit-native-program/evidence/live/C-procedure/01-unit-input.json",
+    "docs/unit-native-program/evidence/live/C-procedure/03-path-plan.json",
+    "docs/unit-native-program/evidence/live/C-procedure/05-path-approval.json",
+    "docs/unit-native-program/evidence/live/C-procedure/06-prepare.json",
+    "docs/unit-native-program/evidence/live/C-procedure/13-teaching-review.json",
+    "docs/unit-native-program/evidence/live/C-procedure/14-teaching-approve.json",
+    "docs/unit-native-program/evidence/live/C-procedure/20-print-status.json",
+    "docs/unit-native-program/evidence/live/C-procedure/21-print-status-refresh.json",
+    "docs/unit-native-program/evidence/live/C-procedure/35-student-pdf-status.json",
+    "docs/unit-native-program/evidence/live/C-procedure/35-student.pdf",
+    "docs/unit-native-program/evidence/live/C-procedure/35-teacher-pdf-status.json",
+    "docs/unit-native-program/evidence/live/C-procedure/35-teacher.pdf",
+    "docs/unit-native-program/evidence/live/C-procedure/40-learn-production.json",
+    "docs/unit-native-program/evidence/live/C-procedure/41-learn-edit.json",
+    "docs/unit-native-program/evidence/live/C-procedure/42-learn-release-v1.json",
+    "docs/unit-native-program/evidence/live/C-procedure/43-learner.json",
+    "docs/unit-native-program/evidence/live/C-procedure/44-assignment.json",
+    "docs/unit-native-program/evidence/live/C-procedure/45-learner-session.json",
+    "docs/unit-native-program/evidence/live/C-procedure/46-instance.json",
+    "docs/unit-native-program/evidence/live/C-procedure/49-learn-release-v2.json",
+    "docs/unit-native-program/evidence/live/C-procedure/99-run-log.txt",
+    "docs/unit-native-program/evidence/live/C-procedure/LIVE_RUN.json",
+    "docs/unit-native-program/evidence/live/C-procedure/page-images/student-1.png",
+    "docs/unit-native-program/evidence/live/C-procedure/page-images/student-2.png",
+    "docs/unit-native-program/evidence/live/C-procedure/page-images/student-3.png",
+    "docs/unit-native-program/evidence/live/C-procedure/page-images/teacher-1.png",
+    "docs/unit-native-program/evidence/live/C-procedure/page-images/teacher-2.png",
+    "docs/unit-native-program/evidence/live/C-procedure/page-images/teacher-3.png"
+  ],
+  "limitations": [
+    "No learn_interaction id found to submit attempts"
+  ]
+}

@@ -1,0 +1,153 @@
+{
+  "id": "28719d0a-16a2-4646-949e-ee8cd0c009c6",
+  "editable_lesson_id": "d352fb6a-5696-4691-88e2-9304f4c77939",
+  "release_number": 1,
+  "title": "The lesson opens on a baker who must total 3 boxes of 24 cookies, a problem that is too large for a known single-digit fact. It teaches the learner to split 24 into 20 and 4, multiply each part by 3, and name the two partial products 60 and 12. It then confronts the belief that 24 \u00d7 3 equals 6 \u00d7 12 by showing where that shortcut loses the tens, and it closes by checking that the learner can decompose a two-digit factor and state both partial products.",
+  "document_hash": "2a5064f36b26758cc2c436d319dae45300ed409b95f5646c5d575090b4ced061",
+  "source_generation_id": "learn-out-c3bf8b46afdf",
+  "path_lesson_id": null,
+  "path_lesson_revision": null,
+  "objective_hash": null,
+  "status": "published",
+  "published_at": "2026-09-08T05:58:35.105914",
+  "document": {
+    "id": "d352fb6a-5696-4691-88e2-9304f4c77939",
+    "media": {},
+    "title": "The lesson opens on a baker who must total 3 boxes of 24 cookies, a problem that is too large for a known single-digit fact. It teaches the learner to split 24 into 20 and 4, multiply each part by 3, and name the two partial products 60 and 12. It then confronts the belief that 24 \u00d7 3 equals 6 \u00d7 12 by showing where that shortcut loses the tens, and it closes by checking that the learner can decompose a two-digit factor and state both partial products. (P09 edit)",
+    "blocks": {
+      "blk-032736d4c12f": {
+        "id": "blk-032736d4c12f",
+        "content": {
+          "body": "Use anchor.anchor-1 to show the structure of decomposing 24 for the multiplication 24 \u00d7 3. Split 24 into 20 and 4, multiply each part by 3 to get the partial products 60 and 12, and state clearly that 24 \u00d7 3 has the two partial products 60 and 12. The learner must see the relationship: the total is the sum of the partial products. Do not add the partial products 60 and 12 to get 72, and do not compare with any wrong method yet."
+        },
+        "position": 1,
+        "component_id": "diagram-compare"
+      },
+      "blk-05c6c248697c": {
+        "id": "blk-05c6c248697c",
+        "content": {
+          "body": "Compare the correct decomposition of 24 \u00d7 3 from anchor.anchor-1 with the tempting shortcut of multiplying 2 \u00d7 3 and 4 \u00d7 3 separately and writing 6 and 12. Use the anchor's 3 boxes of 24 cookies to make the failure concrete: 2 \u00d7 3 gives 6, but the 2 stood for 20, so the partial product must be 60, not 6. The near-miss differs only in the value of the tens part, but that difference changes the partial product from 6 to 60."
+        },
+        "position": 0,
+        "component_id": "diagram-compare"
+      },
+      "blk-bb5490751951": {
+        "id": "blk-bb5490751951",
+        "content": {
+          "body": "Open with the baker's problem from anchor.anchor-1: there are 3 boxes, each holding 24 cookies, and the total is needed for a bake sale order. Establish that no single memorised multiplication fact gives 24 \u00d7 3 directly, so the learner needs a way to work with a two-digit factor. Do not yet show how to split 24 or name any products.",
+          "type": "prose",
+          "anchor": "orient-b1",
+          "headline": "Open with the baker's problem from anchor.anchor-1: there are 3 boxes, each hold"
+        },
+        "position": 0,
+        "component_id": "hook-hero"
+      },
+      "blk-c2020f735d2a": {
+        "id": "blk-c2020f735d2a",
+        "content": {
+          "body": "Briefly surface the prerequisite place value idea that in 24 from anchor.anchor-1, the 2 means 2 tens, worth 20, and the 4 means 4 ones. Connect this to the prior understanding of multiplication as equal groups: 3 \u00d7 20 means 3 groups of 20, and 3 \u00d7 4 means 3 groups of 4. Do not carry out the multiplications yet.",
+          "type": "prose",
+          "anchor": "explain-b1",
+          "headline": "Briefly surface the prerequisite place value idea that in 24 from anchor.anchor-"
+        },
+        "position": 0,
+        "component_id": "hook-hero"
+      },
+      "blk-c3d1c38d062e": {
+        "id": "blk-c3d1c38d062e",
+        "content": {
+          "body": "Isolate the second near-miss from M2 against anchor.anchor-1: treating the tens part as if it were ones, so 20 \u00d7 3 is treated as 2 \u00d7 3. Use the anchor to hold the tens value steady: in 24, the 2 is worth 20, and 20 \u00d7 3 means 3 groups of 20, which makes 60. State that splitting the factor does not change the value of its parts: the tens must stay tens. Do not introduce a new multiplication fact beyond the single-digit facts the learner already knows."
+        },
+        "position": 1,
+        "component_id": "diagram-compare"
+      },
+      "blk-f3b29dc21498": {
+        "id": "blk-f3b29dc21498",
+        "content": {
+          "body": "Check whether the learner can decompose 24 \u00d7 3 from anchor.anchor-1 into the two partial products and name them. The learner must identify 60 and 12 as the partial products. Do not ask for the final sum 72, and do not ask the learner to explain a wrong method again."
+        },
+        "position": 0,
+        "component_id": "fill-in-blank"
+      }
+    },
+    "source": "generated",
+    "subject": "mathematics",
+    "version": 1,
+    "assembly": {
+      "ordered_by": "block_ids",
+      "selection_hash": "b237e4ec62b85d16f7e931c0826cdd6ca602d50228efdeccc2fa7fee0fc845d5",
+      "teaching_plan_id": "31677c25-5ad3-4f26-b11b-cba955f1838e",
+      "teaching_plan_hash": "1270598d38de83ac05ec4fb1f3c8c85cf77c5fe8f08c859159aa36fdbdb228fa",
+      "teaching_plan_revision": 1
+    },
+    "sections": [
+      {
+        "id": "orient",
+        "title": "Make the learner feel the need for a method by facing a total they cannot get from one memorised fact, and fix the concrete case of 3 boxes of 24 cookies.",
+        "position": 0,
+        "required": true,
+        "block_ids": [
+          "blk-bb5490751951"
+        ],
+        "template_id": "open-canvas",
+        "learner_label": "orient",
+        "learner_intent": "orient",
+        "assessment_mode": "practice",
+        "completion_policy": "submitted",
+        "navigation_policy": "linear"
+      },
+      {
+        "id": "explain",
+        "title": "Build the procedure: split the two-digit factor into tens and ones, multiply each part by the one-digit factor, and name the two partial products.",
+        "position": 1,
+        "required": true,
+        "block_ids": [
+          "blk-c2020f735d2a",
+          "blk-032736d4c12f"
+        ],
+        "template_id": "open-canvas",
+        "learner_label": "explain",
+        "learner_intent": "explain",
+        "assessment_mode": "practice",
+        "completion_policy": "submitted",
+        "navigation_policy": "linear"
+      },
+      {
+        "id": "contrast",
+        "title": "Let the learner see the boundary of the method by contrasting it with two similar-looking shortcuts that fail because they lose the tens value.",
+        "position": 2,
+        "required": true,
+        "block_ids": [
+          "blk-05c6c248697c",
+          "blk-c3d1c38d062e"
+        ],
+        "template_id": "open-canvas",
+        "learner_label": "contrast",
+        "learner_intent": "explain",
+        "assessment_mode": "practice",
+        "completion_policy": "submitted",
+        "navigation_policy": "linear"
+      },
+      {
+        "id": "check",
+        "title": "Check whether the learner can decompose a two-digit factor into tens and ones and state the two partial products for the anchor case itself.",
+        "position": 3,
+        "required": true,
+        "block_ids": [
+          "blk-f3b29dc21498"
+        ],
+        "template_id": "open-canvas",
+        "learner_label": "check",
+        "learner_intent": "check",
+        "assessment_mode": "practice",
+        "completion_policy": "submitted",
+        "navigation_policy": "linear"
+      }
+    ],
+    "preset_id": "blue-classroom",
+    "created_at": "2026-09-08T05:58:34.571169Z",
+    "updated_at": "2026-09-08T05:58:34.571169Z",
+    "source_generation_id": "learn-out-c3bf8b46afdf"
+  },
+  "idempotent_replay": false
+}

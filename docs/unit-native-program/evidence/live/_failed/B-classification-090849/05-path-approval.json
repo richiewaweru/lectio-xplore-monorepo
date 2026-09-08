@@ -1,0 +1,72 @@
+{
+  "id": "e59b8682-8e9a-47cf-8825-41bd72407408",
+  "unit_id": "676c51a7-0c20-467e-863a-1f83769a4c17",
+  "version": 1,
+  "revision": 2,
+  "status": "approved",
+  "generated_by": "path_planner",
+  "merge_critic_results": [],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": "2026-09-08T06:01:48.767215",
+  "created_at": "2026-09-08T06:01:48.522230",
+  "lessons": [
+    {
+      "id": "0d1eb1de-1303-4b78-824b-5ed5e60b0a0c",
+      "concept_id": "291f0261-0d59-4076-8dd3-7d8548b5ae48",
+      "concept_slug": "science.criteria.for.living.things",
+      "title": "Criteria for Living Things",
+      "objective": "Define the criteria that determine if something is living: grow, energy, respond, and reproduce.",
+      "objective_hash": "19cf85e3ffa7c47584c4af69b7916bac3e439de8bedec5fb05a4f23465f9bd38",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "The four criteria that define living things are grow, energy, respond, and reproduce."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "538c70ce-7b81-4541-9b6c-6fec9bceb287",
+      "concept_id": "f8762eda-e83d-4ad5-83f5-7049f70b1c73",
+      "concept_slug": "science.applying.criteria.to.classify",
+      "title": "Applying Criteria to Classify",
+      "objective": "Classify given examples as living or nonliving by evaluating them against all four criteria.",
+      "objective_hash": "b9fd6ba2aee69025ee1a646b660c387205e1ed6b421e8f8791a54b4cc84813d2",
+      "prerequisites": [
+        "0d1eb1de-1303-4b78-824b-5ed5e60b0a0c"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "To classify something as living, it must meet all four criteria.",
+        "A rock is classified as nonliving because it does not grow, use energy, respond, or reproduce.",
+        "A tree is classified as living because it grows, uses energy, responds, and reproduces.",
+        "A toy robot is classified as nonliving because it does not grow, use energy, respond, or reproduce.",
+        "A fish is classified as living because it grows, uses energy, responds, and reproduces."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}

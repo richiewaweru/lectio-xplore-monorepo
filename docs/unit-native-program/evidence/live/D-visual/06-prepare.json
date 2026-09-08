@@ -1,0 +1,24 @@
+{
+  "generation_id": "ff448429-6f39-4bf8-a72a-f0b851e80a00",
+  "path_lesson_id": "7e29c6a2-7e1e-4928-afce-9fb842a01545",
+  "objective": "Identify and locate roots, stem, and leaves on a labelled diagram of a plant.",
+  "objective_hash": "77564d93338073a54d0b6af1b9b989712df27095e09aa82856d786942c4e66e4",
+  "skeleton_id": "factual.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "organise",
+    "guided",
+    "independent",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "organise",
+    "guided",
+    "independent",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

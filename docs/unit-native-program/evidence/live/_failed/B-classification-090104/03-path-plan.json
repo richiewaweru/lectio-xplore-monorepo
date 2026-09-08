@@ -1,0 +1,151 @@
+{
+  "id": "e92dc73f-e895-465b-912d-d118d6dc5c77",
+  "unit_id": "62bcfaa0-a2db-4d92-ba11-4391ed6f5f2a",
+  "version": 1,
+  "revision": 1,
+  "status": "draft",
+  "generated_by": "path_planner",
+  "merge_critic_results": [],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": null,
+  "created_at": "2026-09-08T05:52:21.199029",
+  "lessons": [
+    {
+      "id": "d25cfaa6-2ab5-440d-b079-c26fbdafd444",
+      "concept_id": "02222b2a-731f-41e3-87d1-94bf377ac0fb",
+      "concept_slug": "science.the.four.criteria.of.life",
+      "title": "The Four Criteria of Life",
+      "objective": "State and describe the four criteria used to decide if something is living",
+      "objective_hash": "b359d6980b622caa27321cbdb7ece4533828f661a856669830b67b8107030c3e",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "The four criteria are grow, need energy, respond, and reproduce.",
+        "What each criterion means in simple terms."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "c4c46b91-657e-416e-90fd-18d6fa8880ee",
+      "concept_id": "362d0cff-31a1-4175-a7c3-c9f8214e683e",
+      "concept_slug": "science.applying.one.criterion.at.a.time",
+      "title": "Applying One Criterion At a Time",
+      "objective": "Use each criterion individually to judge whether a given example shows that characteristic",
+      "objective_hash": "d13888151c88fe84e773d70c4d65973ff7a6cf73b37b2a00eadf708f40f35bf4",
+      "prerequisites": [
+        "d25cfaa6-2ab5-440d-b079-c26fbdafd444"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "How to check an example against a single criterion.",
+        "How to say whether an example meets or fails a particular criterion."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "procedural",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "0c54e918-9704-46a9-ba7d-f2281f3fca86",
+      "concept_id": "9fd81017-b965-4688-93a6-02ff023ebf65",
+      "concept_slug": "science.classifying.using.the.full.set.of.criteria",
+      "title": "Classifying Using the Full Set of Criteria",
+      "objective": "Use the full set of four criteria together to classify an example as living or nonliving",
+      "objective_hash": "6dbdfdaf97ce69a6378ac137cdc5865cdf546ebc745e22c0b597ba6b3bc86623",
+      "prerequisites": [
+        "c4c46b91-657e-416e-90fd-18d6fa8880ee"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "An example is living only if it meets all four criteria.",
+        "An example is nonliving if it fails any one of the criteria."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "fa27a393-f716-46ce-ac16-5e1aa6c7906d",
+      "concept_id": "409e8901-1972-4d3c-a66a-899cb6a4b816",
+      "concept_slug": "science.classifying.familiar.examples.as.living.or.nonliving",
+      "title": "Classifying Familiar Examples as Living or Nonliving",
+      "objective": "Classify unseen familiar examples such as a butterfly, mushroom, river, or bicycle as living or nonliving using the four criteria",
+      "objective_hash": "b16b49de0394575e2a7d4c0422918c63ec329bf4cda5989ccf9d8820060694ad",
+      "prerequisites": [
+        "0c54e918-9704-46a9-ba7d-f2281f3fca86"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "How to gather evidence for each criterion from an example's description or picture.",
+        "How to produce a supported living/nonliving judgment for a familiar object or organism."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "procedural",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 3,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "f115f573-802b-42bf-8262-0c9484909093",
+      "concept_id": "a0eaf2a5-220a-4b6e-93f1-b6a0aeecb9fa",
+      "concept_slug": "science.explaining.nonliving.judgments",
+      "title": "Explaining Nonliving Judgments",
+      "objective": "Explain why a particular example is nonliving by identifying which of the four criteria it fails",
+      "objective_hash": "b35c15b6faa5a50f5cbdbcb6d75a1f8de21f8b4f2d35bfc96fe7f6de4604699e",
+      "prerequisites": [
+        "fa27a393-f716-46ce-ac16-5e1aa6c7906d"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "A nonliving judgment must be supported by at least one failed criterion.",
+        "Common reasons nonliving things fail the criteria (e.g. a rock does not grow, a toy robot does not reproduce)."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 4,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}

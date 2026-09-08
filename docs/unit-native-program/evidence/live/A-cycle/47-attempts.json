@@ -1,1 +1,58 @@
-{}
+{
+  "interaction_id": "ix-check-b1-sequence",
+  "correct_order": [
+    "ask-the-learner-to-identify",
+    "what-an-adult-butterfly-must",
+    "do-for-the-life-cycle-to-continue"
+  ],
+  "client_score_status": 422,
+  "client_score_body": {
+    "detail": {
+      "message": "Client score/outcome/evidence claims are rejected; server evaluates from release",
+      "rejected_fields": [
+        "outcome",
+        "score_earned"
+      ]
+    }
+  },
+  "wrong_status": 200,
+  "wrong_body": {
+    "id": "acc13fea-2b1d-436a-8518-799779c8a3a1",
+    "client_submission_id": "p09-wrong-5b754c16",
+    "interaction_id": "ix-check-b1-sequence",
+    "outcome": "partial",
+    "score_earned": 1.0,
+    "score_possible": 3.0,
+    "feedback": "Partly right \u2014 some steps are in the expected position.",
+    "completed": true,
+    "assessment_mode": "practice",
+    "idempotent_replay": false,
+    "response_json": {
+      "order": [
+        "do-for-the-life-cycle-to-continue",
+        "what-an-adult-butterfly-must",
+        "ask-the-learner-to-identify"
+      ]
+    }
+  },
+  "right_status": 200,
+  "right_body": {
+    "id": "5993dcd6-c9a9-46d3-9d09-b6c079042d91",
+    "client_submission_id": "p09-right-241fafed",
+    "interaction_id": "ix-check-b1-sequence",
+    "outcome": "correct",
+    "score_earned": 3.0,
+    "score_possible": 3.0,
+    "feedback": "Correct \u2014 the order matches the accepted sequence.",
+    "completed": true,
+    "assessment_mode": "practice",
+    "idempotent_replay": false,
+    "response_json": {
+      "order": [
+        "ask-the-learner-to-identify",
+        "what-an-adult-butterfly-must",
+        "do-for-the-life-cycle-to-continue"
+      ]
+    }
+  }
+}

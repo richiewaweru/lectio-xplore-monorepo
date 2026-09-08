@@ -131,7 +131,11 @@ def select_learn_deterministically(
             deps: list[str] = []
             if block.learner_action is not None:
                 deps = list(block.learner_action.dependencies or [])
-                if block.learner_action.source_item_ids:
+                # order-items must not inherit MC/open question ids from the
+                # block — Sequence authors new steps (empty sources allowed).
+                if block.learner_action.action == "order-items":
+                    source_ids = list(block.learner_action.source_item_ids or [])
+                elif block.learner_action.source_item_ids:
                     source_ids = list(block.learner_action.source_item_ids)
             if not content_id and not interaction_id:
                 raise NoCompatibleLearnCapabilityError(

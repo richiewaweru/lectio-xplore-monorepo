@@ -1,0 +1,423 @@
+{
+  "status": "ready",
+  "output_id": "learn-out-fb54a3cc7257",
+  "editable_lesson_id": "8f45235b-6027-4a10-9aa5-7d37b0f373a2",
+  "realization_id": "54f78f8b-dbc3-4c20-9da1-f9c6ce2f7b5e",
+  "realization_created": true,
+  "teaching_plan_hash": "d89cf7b7e182546938f63ecf7c500ae5c69fd5643021d379326777c80b213d73",
+  "teaching_plan_revision": 1,
+  "selection_trace": {
+    "selection_snapshot": {
+      "path": "learn",
+      "teaching_plan_id": "b9ed285e-c92e-45b2-8dd0-a39053eaf15f",
+      "teaching_plan_revision": 1,
+      "teaching_plan_hash": "d89cf7b7e182546938f63ecf7c500ae5c69fd5643021d379326777c80b213d73",
+      "native_policy_hash": "7854dce52a24450b5a997e4f0a0f0bf7957abb3b69967862b8c10bd713bda416",
+      "package_contract_hash": "b4d031e6375f2bed031035ce510d1d8870ba77f2bf02237605e9360f7d95e8c0",
+      "candidate_map": {
+        "orient-b1": {
+          "content": [
+            "hook-hero",
+            "section-header",
+            "summary-block"
+          ],
+          "interaction": []
+        },
+        "orient-b2": {
+          "content": [
+            "hook-hero"
+          ],
+          "interaction": []
+        },
+        "explain-b1": {
+          "content": [
+            "definition-card"
+          ],
+          "interaction": []
+        },
+        "explain-b2": {
+          "content": [
+            "callout-block",
+            "explanation-block",
+            "key-fact"
+          ],
+          "interaction": []
+        },
+        "explain-b3": {
+          "content": [
+            "explanation-block"
+          ],
+          "interaction": []
+        },
+        "contrast-b1": {
+          "content": [
+            "diagram-compare",
+            "timeline-block"
+          ],
+          "interaction": []
+        },
+        "contrast-b2": {
+          "content": [
+            "quiz-check"
+          ],
+          "interaction": []
+        },
+        "check-b1": {
+          "content": [
+            "fill-in-blank",
+            "quiz-check"
+          ],
+          "interaction": []
+        }
+      },
+      "decisions": [
+        {
+          "block_id": "orient-b1",
+          "content_id": "hook-hero",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "orient-b2",
+          "content_id": "hook-hero",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "explain-b1",
+          "content_id": "definition-card",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "explain-b2",
+          "content_id": "callout-block",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "explain-b3",
+          "content_id": "explanation-block",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "contrast-b1",
+          "content_id": "diagram-compare",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "contrast-b2",
+          "content_id": "quiz-check",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [
+            "eb867328-9cdf-4af3-968d-d61c725cda11:eb867328-9cdf-4af3-968d-d61c725cda11:1b6b6a15-b23b-45b3-87c5-f1a53c264f3b.i2"
+          ],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "check-b1",
+          "content_id": "fill-in-blank",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [
+            "eb867328-9cdf-4af3-968d-d61c725cda11:eb867328-9cdf-4af3-968d-d61c725cda11:1b6b6a15-b23b-45b3-87c5-f1a53c264f3b.i1"
+          ],
+          "dependency_ids": []
+        }
+      ],
+      "snapshot_hash": "8e7c87fe7192326238f294a3a9a464914817783df5ddd22c5ea1019c93abbe34"
+    },
+    "work_orders": [
+      {
+        "work_order_id": "learn::learn::orient-b1::hook-hero",
+        "block_id": "orient-b1",
+        "section_id": "orient",
+        "lane": "content",
+        "capability_id": "hook-hero",
+        "teaching_plan_id": "b9ed285e-c92e-45b2-8dd0-a39053eaf15f",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "d89cf7b7e182546938f63ecf7c500ae5c69fd5643021d379326777c80b213d73",
+        "capability_contract_hash": "ff14c279ad8b693f8f900294ccf223a43936f7ffa6df6facb2735636a906ed6b",
+        "source_refs": [],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/HookHeroContent"
+        },
+        "field_guidance": {
+          "headline": "Short attention-grabbing headline. Format: plain_text. Plain text heading.",
+          "body": "Primary hook narrative. Format: inline_markdown. Usually inline markdown. When type is quote, treat as plain quote text without markdown emphasis unless explicitly needed.",
+          "anchor": "Short anchor tying the hook to the lesson concept. Format: plain_text_short. Plain text snippet.",
+          "type": "Hook presentation mode (prose, quote, question, data-point). Format: enum.",
+          "question_options": "Optional multiple choice stems for question hooks. Format: structured_array. Plain text entries per option.",
+          "data_point": "Structured numeric or textual evidence for data-point hooks. Format: structured_object. Rendered as a compact fact card when present.",
+          "image": "Optional inline illustration with url and alt text. Format: structured_object. Rendered as an inline image when present.",
+          "svg_content": "Optional inline SVG markup. Format: plain_text. Sanitized SVG inserted when present.",
+          "quote_attribution": "Attribution line for quote hooks. Format: plain_text. Plain text."
+        },
+        "brief": "Present the frog's life as a concrete case: a tiny tadpole hatches from an egg, sprouts legs, and becomes a full-sized frog. Ask the learner what they notice about how the frog has changed from the beginning to the end. Do not yet define growth or say why the change matters.",
+        "intent": "orient",
+        "action": null,
+        "evidence": "The slot's job is to give a concrete situation and a reason to care, and the anchor is exactly the concrete case of size change the objective needs before the term 'growth' is attached to it.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::orient-b2::hook-hero",
+        "block_id": "orient-b2",
+        "section_id": "orient",
+        "lane": "content",
+        "capability_id": "hook-hero",
+        "teaching_plan_id": "b9ed285e-c92e-45b2-8dd0-a39053eaf15f",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "d89cf7b7e182546938f63ecf7c500ae5c69fd5643021d379326777c80b213d73",
+        "capability_contract_hash": "ff14c279ad8b693f8f900294ccf223a43936f7ffa6df6facb2735636a906ed6b",
+        "source_refs": [],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/HookHeroContent"
+        },
+        "field_guidance": {
+          "headline": "Short attention-grabbing headline. Format: plain_text. Plain text heading.",
+          "body": "Primary hook narrative. Format: inline_markdown. Usually inline markdown. When type is quote, treat as plain quote text without markdown emphasis unless explicitly needed.",
+          "anchor": "Short anchor tying the hook to the lesson concept. Format: plain_text_short. Plain text snippet.",
+          "type": "Hook presentation mode (prose, quote, question, data-point). Format: enum.",
+          "question_options": "Optional multiple choice stems for question hooks. Format: structured_array. Plain text entries per option.",
+          "data_point": "Structured numeric or textual evidence for data-point hooks. Format: structured_object. Rendered as a compact fact card when present.",
+          "image": "Optional inline illustration with url and alt text. Format: structured_object. Rendered as an inline image when present.",
+          "svg_content": "Optional inline SVG markup. Format: plain_text. Sanitized SVG inserted when present.",
+          "quote_attribution": "Attribution line for quote hooks. Format: plain_text. Plain text."
+        },
+        "brief": "Ask the learner to recall what they already know: some things are alive and some are not, and plants and animals are alive. Have them say whether the tadpole and the full-sized frog are alive. Do not introduce growth yet.",
+        "intent": "activate-prior-knowledge",
+        "action": null,
+        "evidence": "The learner cannot later say growth is evidence of life unless they first surface the prerequisite that the frog is a living thing, which is what the orientation must establish before explanation begins.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::explain-b1::definition-card",
+        "block_id": "explain-b1",
+        "section_id": "explain",
+        "lane": "content",
+        "capability_id": "definition-card",
+        "teaching_plan_id": "b9ed285e-c92e-45b2-8dd0-a39053eaf15f",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "d89cf7b7e182546938f63ecf7c500ae5c69fd5643021d379326777c80b213d73",
+        "capability_contract_hash": "cd6119f8a85ef12207f53b5dade35fbf1114d483e8981d39ec4502cdf6608682",
+        "source_refs": [],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/DefinitionContent"
+        },
+        "field_guidance": {
+          "term": "The defined term as a heading. Format: plain_text. Plain text heading.",
+          "plain": "Student-friendly definition in plain language. Format: inline_markdown. Inline markdown.",
+          "formal": "More precise or formal definition. Format: inline_markdown. Inline markdown.",
+          "notation": "Mathematical notation line when applicable. Format: latex_raw.",
+          "symbol": "Short symbol label when relevant. Format: plain_text. Plain text.",
+          "examples": "Short example strings illustrating usage. Format: structured_array. Rendered as plain example lines (no extra quotes added by contract).",
+          "related_terms": "Related vocabulary references. Format: structured_array. Plain text entries.",
+          "etymology": "Optional etymology note. Format: inline_markdown. Inline markdown."
+        },
+        "brief": "Define growth as the process by which a living thing gets bigger over time. Use the anchor: the tiny tadpole that hatches from the egg and becomes a full-sized frog shows real growth. Do not yet discuss nonliving things.",
+        "intent": "define",
+        "action": null,
+        "evidence": "The objective is to explain what growth means, so the learner needs a precise statement of what makes an increase in size in the frog count as growth.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::explain-b2::callout-block",
+        "block_id": "explain-b2",
+        "section_id": "explain",
+        "lane": "content",
+        "capability_id": "callout-block",
+        "teaching_plan_id": "b9ed285e-c92e-45b2-8dd0-a39053eaf15f",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "d89cf7b7e182546938f63ecf7c500ae5c69fd5643021d379326777c80b213d73",
+        "capability_contract_hash": "953d58ea8626cba630916cbc58d3c7126d55f7373b6a91f36a41fefc0a69e612",
+        "source_refs": [],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/CalloutBlockContent"
+        },
+        "field_guidance": {
+          "variant": "Callout tone (info, tip, warning, exam-tip, remember). Format: enum. Selects surface styling and iconography.",
+          "heading": "Optional short heading above the body. Format: plain_text. Plain text.",
+          "body": "Primary callout body text. Format: block_markdown. Block markdown with support for emphasis and short lists."
+        },
+        "brief": "Explain that the frog is alive, and growth is evidence of life because only living things grow in this way. State that the tadpole's change from a tiny hatchling to a full-sized frog is growth, and that this growth is a sign that the frog is alive. Do not claim that everything that gets bigger is alive.",
+        "intent": "explain",
+        "action": null,
+        "evidence": "The objective asks the learner to see growing as evidence of life, so after defining the term, this block must make the link between the anchor's growth and the fact that the frog is a living thing.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::explain-b3::explanation-block",
+        "block_id": "explain-b3",
+        "section_id": "explain",
+        "lane": "content",
+        "capability_id": "explanation-block",
+        "teaching_plan_id": "b9ed285e-c92e-45b2-8dd0-a39053eaf15f",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "d89cf7b7e182546938f63ecf7c500ae5c69fd5643021d379326777c80b213d73",
+        "capability_contract_hash": "c62b840b2bcb05562fcec9b9b9e2cd5f405c44b9e2c490efc3f7dcea62397732",
+        "source_refs": [],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/ExplanationContent"
+        },
+        "field_guidance": {
+          "body": "Main explanation text for the section. Format: block_markdown. Rendered as block markdown. Supports markdown and LaTeX math.",
+          "emphasis": "Phrases highlighted inside the explanation body. Format: plain_phrase_list. Lectio highlights matching phrases in the body.",
+          "callouts": "Optional sideline notes with a tone tag and text. Format: structured_array. Displayed as optional notes associated with the explanation block."
+        },
+        "brief": "Set apart this statement: growth is an increase in size in a living thing. Keep the anchor present as the clear example: the tadpole becoming a full-sized frog shows growth as evidence of life.",
+        "intent": "emphasise",
+        "action": null,
+        "evidence": "The lesson asks for one idea to retain, and this is the statement that supports the objective: growth belongs to living things and shows they are alive.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::contrast-b1::diagram-compare",
+        "block_id": "contrast-b1",
+        "section_id": "contrast",
+        "lane": "content",
+        "capability_id": "diagram-compare",
+        "teaching_plan_id": "b9ed285e-c92e-45b2-8dd0-a39053eaf15f",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "d89cf7b7e182546938f63ecf7c500ae5c69fd5643021d379326777c80b213d73",
+        "capability_contract_hash": "fe239c29e230a0d8c6c38eb6aedea1756ac54021134ebadbe219358fc61f6b25",
+        "source_refs": [],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/DiagramCompareContent"
+        },
+        "field_guidance": {
+          "before_svg": "Optional SVG markup for the before panel. Format: plain_text. Sanitized SVG string.",
+          "after_svg": "Optional SVG markup for the after panel. Format: plain_text. Sanitized SVG string.",
+          "before_image_url": "Optional raster image URL for the before panel. Format: media_url. Rendered as <img> when provided.",
+          "after_image_url": "Optional raster image URL for the after panel. Format: media_url. Rendered as <img> when provided.",
+          "before_label": "Short label for the before column. Format: plain_text. Plain text.",
+          "after_label": "Short label for the after column. Format: plain_text. Plain text.",
+          "before_details": "Optional bullet strings elaborating the before state. Format: structured_array. Plain text entries.",
+          "after_details": "Optional bullet strings elaborating the after state. Format: structured_array. Plain text entries.",
+          "caption": "Shared caption for the compare figure. Format: plain_text. Plain text.",
+          "alt_text": "Accessibility description covering both panels. Format: accessibility_text. Plain text."
+        },
+        "brief": "Compare the tadpole becoming a full-sized frog with a nonliving thing that gets bigger in appearance, such as a balloon being filled with air. Set the two cases side by side: the frog grows because it is alive and its body grows, while the balloon only looks bigger because more air is pushed into it, not because it is alive. Do not say all change in size is growth.",
+        "intent": "compare",
+        "action": null,
+        "evidence": "The objective asks the learner to identify growth as evidence of life, so the contrast must hold a real growth instance against a nonliving size increase to make the boundary between living and nonliving visible.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::contrast-b2::quiz-check",
+        "block_id": "contrast-b2",
+        "section_id": "contrast",
+        "lane": "content",
+        "capability_id": "quiz-check",
+        "teaching_plan_id": "b9ed285e-c92e-45b2-8dd0-a39053eaf15f",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "d89cf7b7e182546938f63ecf7c500ae5c69fd5643021d379326777c80b213d73",
+        "capability_contract_hash": "cb6ab769e4c9ab2233342b0c195ae481d672dcfbe6ee3ba508abad68d74a3e43",
+        "source_refs": [
+          "eb867328-9cdf-4af3-968d-d61c725cda11:eb867328-9cdf-4af3-968d-d61c725cda11:1b6b6a15-b23b-45b3-87c5-f1a53c264f3b.i2"
+        ],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/QuizContent"
+        },
+        "field_guidance": {
+          "question": "The quiz stem. Format: inline_markdown. Inline markdown with optional math.",
+          "options[].text": "Visible option text shown to the learner. Format: inline_markdown. Inline markdown.",
+          "options[].explanation": "Per-option rationale after answering. Format: inline_markdown. Inline markdown.",
+          "options[].correct": "Whether this option is the correct answer. Format: boolean.",
+          "options[].diagnoses": "Optional caller-supplied misconception id revealed by this option. Format: plain_text. Metadata only; never rendered in the learner-facing quiz.",
+          "feedback_correct": "Short feedback when the learner is correct. Format: plain_text. Plain text.",
+          "feedback_incorrect": "Short feedback when the learner is incorrect. Format: plain_text. Plain text.",
+          "quiz_type": "Optional quiz mode discriminator (multiple-choice vs true-false). Format: enum."
+        },
+        "brief": "Present the wrong idea that if something gets bigger, it is alive, and the wrong idea that nonliving things can truly grow the way living things do. Use the balloon to show both fail: the balloon gets bigger but is not alive, so getting bigger alone is not evidence of life.",
+        "intent": "diagnose-misconception",
+        "action": null,
+        "evidence": "The contrast section is the moment to confront the two approved misconceptions, because the learner has just seen a living and nonliving case side by side and can see why size change alone does not make something alive.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::check-b1::fill-in-blank",
+        "block_id": "check-b1",
+        "section_id": "check",
+        "lane": "content",
+        "capability_id": "fill-in-blank",
+        "teaching_plan_id": "b9ed285e-c92e-45b2-8dd0-a39053eaf15f",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "d89cf7b7e182546938f63ecf7c500ae5c69fd5643021d379326777c80b213d73",
+        "capability_contract_hash": "2c62b908899f660f09f0f97b38f3aa9d553d6ee776afc1944e61be531ed6e7d0",
+        "source_refs": [
+          "eb867328-9cdf-4af3-968d-d61c725cda11:eb867328-9cdf-4af3-968d-d61c725cda11:1b6b6a15-b23b-45b3-87c5-f1a53c264f3b.i1"
+        ],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/FillInBlankContent"
+        },
+        "field_guidance": {
+          "instruction": "Leading instruction for the activity. Format: plain_text. Plain text.",
+          "segments[].text": "Text chunk for a segment. Format: plain_text. Plain text segment content.",
+          "segments[].is_blank": "Whether this segment is rendered as a blank. Format: boolean. Controls blank UI for the segment.",
+          "segments[].answer": "Answer text when is_blank is true. Format: plain_text.",
+          "word_bank": "Optional word bank entries. Format: structured_array. Plain text entries; should cover blank answers when provided."
+        },
+        "brief": "Ask the learner to decide whether growth is evidence that something is alive, using the idea that growth is an increase in size in a living thing. Distinguish from the misconception that just getting bigger makes something alive. Do not teach new content here; only check what the learner now understands. Use owned terms: full-sized, tadpole, hatches, sprouts.",
+        "intent": "check-understanding",
+        "action": null,
+        "evidence": "The check must directly assess whether the learner can explain growth as evidence of life, which is the objective, and it must not re-teach the definition the explain section already built.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      }
+    ],
+    "work_order_ids": [
+      "learn::learn::orient-b1::hook-hero",
+      "learn::learn::orient-b2::hook-hero",
+      "learn::learn::explain-b1::definition-card",
+      "learn::learn::explain-b2::callout-block",
+      "learn::learn::explain-b3::explanation-block",
+      "learn::learn::contrast-b1::diagram-compare",
+      "learn::learn::contrast-b2::quiz-check",
+      "learn::learn::check-b1::fill-in-blank"
+    ],
+    "form_prompt": "closed_learn_selection"
+  },
+  "content_hash": "d89cf7b7e182546938f63ecf7c500ae5c69fd5643021d379326777c80b213d73",
+  "document_title": "The lesson opens on a frog's life as a concrete case of something that changes size over time. The learner names that change as growth, links it to being alive, and then tests the boundary by seeing a nonliving thing appear bigger without truly growing. The close asks the learner to use that boundary to decide whether growth is evidence of life.",
+  "block_count": 0,
+  "teaching_plan_id": "b9ed285e-c92e-45b2-8dd0-a39053eaf15f",
+  "teaching_revision": 1
+}

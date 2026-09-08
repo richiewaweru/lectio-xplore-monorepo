@@ -1,0 +1,24 @@
+{
+  "generation_id": "d9eefacf-e2fa-4dfc-9ec8-28d7f49321e2",
+  "path_lesson_id": "1e38cb10-c287-494d-8da3-d91b5ba2235a",
+  "objective": "List the observable characteristics used to determine if something is a living organism",
+  "objective_hash": "b4f8d8d88f2eed4f974e6c0c99b73e3333b54cd17529df8ebf1ff4beb25b2b56",
+  "skeleton_id": "factual.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "organise",
+    "guided",
+    "independent",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "organise",
+    "guided",
+    "independent",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

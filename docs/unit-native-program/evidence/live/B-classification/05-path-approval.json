@@ -1,0 +1,188 @@
+{
+  "id": "60f9ddf6-c90f-43f2-972a-0c25f4304c86",
+  "unit_id": "a5715048-0bd7-434e-b5e8-11ffe64f91da",
+  "version": 1,
+  "revision": 2,
+  "status": "approved",
+  "generated_by": "path_planner",
+  "merge_critic_results": [
+    {
+      "reason": "These adjacent lessons overlap in what they establish.",
+      "source": "deterministic",
+      "verdict": "review_suggested",
+      "lesson_a": "d39a0af2-53a4-4ef2-9516-654991709681",
+      "lesson_b": "0052f278-5f08-4ad9-a7a6-678fb47eeac3",
+      "diagnostic_cost": null,
+      "merged_objective": null
+    }
+  ],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": "2026-09-08T06:10:13.110163",
+  "created_at": "2026-09-08T06:10:12.797190",
+  "lessons": [
+    {
+      "id": "da4b74ed-b55c-48a5-bac9-e9f9d9fa1d11",
+      "concept_id": "1b6b6a15-b23b-45b3-87c5-f1a53c264f3b",
+      "concept_slug": "science.the.meaning.of.growth.in.living.things",
+      "title": "The Meaning of Growth in Living Things",
+      "objective": "explain what it means for something to grow and identify instances of growth as evidence of life",
+      "objective_hash": "0ccb227ead49a10629f3939228375b3a7155e87cdbf8ba32e4a8ec9a225418d0",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Growth means getting bigger or developing over time",
+        "Living things grow, but many nonliving things do not truly grow"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "d39a0af2-53a4-4ef2-9516-654991709681",
+      "concept_id": "f023ebb1-b0ad-4e0c-a604-75b122769449",
+      "concept_slug": "science.energy.use.as.a.sign.of.life",
+      "title": "Energy Use as a Sign of Life",
+      "objective": "describe how living things use energy and identify energy use as evidence of life",
+      "objective_hash": "54ba58edc300baa5c90e9724f86cd1fb7cee3f47df3cdf54d43f50c484fbfb94",
+      "prerequisites": [
+        "da4b74ed-b55c-48a5-bac9-e9f9d9fa1d11"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Living things take in and use energy",
+        "Nonliving things do not use energy in the sense of maintaining themselves"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "0052f278-5f08-4ad9-a7a6-678fb47eeac3",
+      "concept_id": "b08a65a8-e88e-4379-a7c1-8736b2bcbf89",
+      "concept_slug": "science.response.as.a.sign.of.life",
+      "title": "Response as a Sign of Life",
+      "objective": "describe how living things respond to their surroundings and identify response as evidence of life",
+      "objective_hash": "c7dc0aeabf2eb164d37abe3e6e3264a865c7449213c940df4f41031b9bf29de7",
+      "prerequisites": [
+        "d39a0af2-53a4-4ef2-9516-654991709681"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Living things sense and react to changes around them",
+        "Nonliving things can move, but only living things respond in a self-directed way"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "7317c968-3cef-433b-9d25-c5ce9483e09a",
+      "concept_id": "febef49f-45ca-4ca5-ae73-95197b67e44a",
+      "concept_slug": "science.reproduction.as.a.sign.of.life",
+      "title": "Reproduction as a Sign of Life",
+      "objective": "describe reproduction and identify reproduction as evidence of life",
+      "objective_hash": "46389086c025b90a1c47058bc95d6910bc8a3454277040a0b2a243241aa0e452",
+      "prerequisites": [
+        "0052f278-5f08-4ad9-a7a6-678fb47eeac3"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Living things make more of their own kind",
+        "Nonliving things cannot reproduce"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 3,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "220d8e25-c5cb-44bb-ac5d-730676b502dd",
+      "concept_id": "8e360c4e-ec26-4018-9459-52621e2fc3d1",
+      "concept_slug": "science.applying.the.four.life.criteria.to.classify",
+      "title": "Applying the Four Life Criteria to Classify",
+      "objective": "classify items as living or nonliving using growth, energy use, response, and reproduction as criteria",
+      "objective_hash": "3cff84913b6c9e28f3356d44b0ca2248d7fd2ddf7fa6747b6f788ce8c2be685b",
+      "prerequisites": [
+        "7317c968-3cef-433b-9d25-c5ce9483e09a"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "An item is classified as living when it shows the life criteria",
+        "An item is classified as nonliving when it does not show the life criteria"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "procedural",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 4,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "6966551d-b175-4a97-8fd7-28039e7026f4",
+      "concept_id": "6c53d071-52cc-4371-8ae0-32c142e120f5",
+      "concept_slug": "science.justifying.a.living.or.nonliving.classification",
+      "title": "Justifying a Living or Nonliving Classification",
+      "objective": "justify a classification as living or nonliving by citing evidence from the four life criteria",
+      "objective_hash": "bfa750647494e0f386ad905379775e21ced2b91fa21798c1631c000f79f3d224",
+      "prerequisites": [
+        "220d8e25-c5cb-44bb-ac5d-730676b502dd"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "A justified classification names which criteria the item shows or lacks",
+        "The terms living, nonliving, grow, energy, respond, and reproduce are used accurately when justifying"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "evaluative",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 5,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}

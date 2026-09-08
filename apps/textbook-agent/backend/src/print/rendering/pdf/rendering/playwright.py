@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -196,6 +197,53 @@ async def render_generation_print_preflight(
 
 
 async def _render_print_route(
+    *,
+    generation_id: str,
+    render_url: str,
+    config: PDFExportConfig,
+    output_path: Path | None,
+) -> dict[str, Any]:
+    """Render the print route.
+
+    On Windows, uvicorn often runs a SelectorEventLoop that cannot spawn
+    Playwright's Chromium subprocess (bare ``NotImplementedError``). Run the
+    renderer on a dedicated Proactor loop in a worker thread in that case.
+    """
+    if sys.platform == "win32":
+        return await asyncio.to_thread(
+            _render_print_route_in_proactor_loop,
+            generation_id=generation_id,
+            render_url=render_url,
+            config=config,
+            output_path=output_path,
+        )
+    return await _render_print_route_async(
+        generation_id=generation_id,
+        render_url=render_url,
+        config=config,
+        output_path=output_path,
+    )
+
+
+def _render_print_route_in_proactor_loop(
+    *,
+    generation_id: str,
+    render_url: str,
+    config: PDFExportConfig,
+    output_path: Path | None,
+) -> dict[str, Any]:
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    return asyncio.run(
+        _render_print_route_async(
+            generation_id=generation_id,
+            render_url=render_url,
+            config=config,
+            output_path=output_path,
+        )
+    )
+
+
+async def _render_print_route_async(
     *,
     generation_id: str,
     render_url: str,

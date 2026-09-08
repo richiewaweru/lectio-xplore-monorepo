@@ -1,0 +1,11 @@
+{
+  "http_status": 202,
+  "body": {
+    "generation_id": "3b47668e-4917-4c73-8b7b-f5203182e61c",
+    "status": "queued",
+    "retry_target": "post_approval_worker",
+    "next_action": "wait",
+    "accepted": true
+  },
+  "at": "2026-09-08T07:59:27.268012+00:00"
+}

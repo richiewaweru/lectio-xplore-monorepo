@@ -1,0 +1,67 @@
+{
+  "case_id": "B-classification",
+  "status": "FAIL",
+  "commit": "a88c643",
+  "provider": "deepseek-v4-pro",
+  "model": {
+    "page_model_fast": "deepseek-v4-flash",
+    "page_model_standard": "deepseek-v4-pro",
+    "xplore_native_worker_enabled": true,
+    "anthropic_key_set": true,
+    "deepseek_key_set": true,
+    "openai_key_set": true
+  },
+  "started_at": "2026-09-08T05:52:02.449102+00:00",
+  "finished_at": "2026-09-08T05:56:40.406285+00:00",
+  "unit_id": "62bcfaa0-a2db-4d92-ba11-4391ed6f5f2a",
+  "path_lesson_id": "d25cfaa6-2ab5-440d-b079-c26fbdafd444",
+  "teaching_plan_id": null,
+  "teaching_revision": null,
+  "teaching_hash": null,
+  "contracts": {
+    "print": null,
+    "learn": null,
+    "vocabulary": null
+  },
+  "print": {
+    "realization_id": null,
+    "generation_id": "518cbeab-5061-49ff-8f72-b4c86360553b",
+    "student_pdf": null,
+    "teacher_pdf": null,
+    "inspection": null
+  },
+  "learn": {
+    "realization_id": null,
+    "generation_id": null,
+    "builder_id": null,
+    "release_id": null,
+    "assignment_id": null,
+    "instance_id": null,
+    "attempt_evidence": null,
+    "refresh_evidence": null
+  },
+  "stage_timings_ms": {
+    "constructor_s": 6280,
+    "create_unit_s": 90,
+    "path_plan_s": 11480,
+    "path_approve_s": 160,
+    "prepare_s": 8380
+  },
+  "failure_recovery": null,
+  "rubric": {
+    "print": null,
+    "learn": null
+  },
+  "evidence_paths": [
+    "docs/unit-native-program/evidence/live/B-classification/00-health.json",
+    "docs/unit-native-program/evidence/live/B-classification/00-provider-snapshot.json",
+    "docs/unit-native-program/evidence/live/B-classification/01-unit-input.json",
+    "docs/unit-native-program/evidence/live/B-classification/03-path-plan.json",
+    "docs/unit-native-program/evidence/live/B-classification/05-path-approval.json",
+    "docs/unit-native-program/evidence/live/B-classification/06-prepare.json"
+  ],
+  "limitations": [
+    "generation failed at stage=failed_recoverable: {'generation_id': '518cbeab-5061-49ff-8f72-b4c86360553b', 'pack_id': None, 'stage': 'failed_recoverable', 'doc_version': 'rev:0', 'failed_sections': [], 'blueprint_id': None, 'execution_started': True, 'next_action': 'retry_teaching', 'error': 'lesson approach planner returned invalid output after 2 attempts: BRIEF_NO_ANCHOR_OR_TERM: brief must mention anchor id or approved terminology; BRIEF_NO_ANCHOR_OR_TERM: brief must mention anchor id or approved terminology; BRIEF_NO_ANCHOR_OR_TERM: brief must mention anchor id or approved terminology', 'error_type': 'MODEL_OUTPUT_INVALID', 'variant_generation_ids': {}, 'document_version': 2, 'document_exists': False, 'sections_total': 0, 'sections_ready': 0, 'sections_failed': 0, 'blocks_total': 0, 'blocks_ready': 0, 'blocks_failed': 0, 'failed_section_ids': [], 'failed_block_ids': [], 'error_detail': {'scope': 'generation', 'code': 'MODEL_OUTPUT_INVALID', 'message': 'lesson approach planner returned invalid output after 2 attempts: BRIEF_NO_ANCHOR_OR_TERM: brief must mention anchor id or approved terminology; BRIEF_NO_ANCHOR_OR_TERM: brief must mention anchor id or approved terminology; BRIEF_NO_ANCHOR_OR_TERM: brief must mention anchor id or approved terminology', 'retryable': True, 'section_id': '', 'block_id': '', 'stage': 'planning_teaching', 'type': 'TeachingPlanOutputInvalidError'}, 'visual_quality': {'status': 'ready', 'flagged': [], 'flagged_count': 0, 'failed_request_ids': [], 'retryable': False}}"
+  ],
+  "error": "RuntimeError: generation failed at stage=failed_recoverable: {'generation_id': '518cbeab-5061-49ff-8f72-b4c86360553b', 'pack_id': None, 'stage': 'failed_recoverable', 'doc_version': 'rev:0', 'failed_sections': [], 'blueprint_id': None, 'execution_started': True, 'next_action': 'retry_teaching', 'error': 'lesson approach planner returned invalid output after 2 attempts: BRIEF_NO_ANCHOR_OR_TERM: brief must mention anchor id or approved terminology; BRIEF_NO_ANCHOR_OR_TERM: brief must mention anchor id or approved terminology; BRIEF_NO_ANCHOR_OR_TERM: brief must mention anchor id or approved terminology', 'error_type': 'MODEL_OUTPUT_INVALID', 'variant_generation_ids': {}, 'document_version': 2, 'document_exists': False, 'sections_total': 0, 'sections_ready': 0, 'sections_failed': 0, 'blocks_total': 0, 'blocks_ready': 0, 'blocks_failed': 0, 'failed_section_ids': [], 'failed_block_ids': [], 'error_detail': {'scope': 'generation', 'code': 'MODEL_OUTPUT_INVALID', 'message': 'lesson approach planner returned invalid output after 2 attempts: BRIEF_NO_ANCHOR_OR_TERM: brief must mention anchor id or approved terminology; BRIEF_NO_ANCHOR_OR_TERM: brief must mention anchor id or approved terminology; BRIEF_NO_ANCHOR_OR_TERM: brief must mention anchor id or approved terminology', 'retryable': True, 'section_id': '', 'block_id': '', 'stage': 'planning_teaching', 'type': 'TeachingPlanOutputInvalidError'}, 'visual_quality': {'status': 'ready', 'flagged': [], 'flagged_count': 0, 'failed_request_ids': [], 'retryable': False}}"
+}

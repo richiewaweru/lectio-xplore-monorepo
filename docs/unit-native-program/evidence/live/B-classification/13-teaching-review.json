@@ -1,0 +1,518 @@
+{
+  "generation_id": "eb867328-9cdf-4af3-968d-d61c725cda11",
+  "teaching_plan": {
+    "arc": "The lesson opens on a frog's life as a concrete case of something that changes size over time. The learner names that change as growth, links it to being alive, and then tests the boundary by seeing a nonliving thing appear bigger without truly growing. The close asks the learner to use that boundary to decide whether growth is evidence of life.",
+    "revision": 1,
+    "sections": [
+      {
+        "blocks": [
+          {
+            "id": "orient-b1",
+            "brief": "Present the frog's life as a concrete case: a tiny tadpole hatches from an egg, sprouts legs, and becomes a full-sized frog. Ask the learner what they notice about how the frog has changed from the beginning to the end. Do not yet define growth or say why the change matters.",
+            "intent": "orient",
+            "evidence": "The slot's job is to give a concrete situation and a reason to care, and the anchor is exactly the concrete case of size change the objective needs before the term 'growth' is attached to it.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "slot.orient.purpose",
+              "lesson.objective"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "orient-b2",
+            "brief": "Ask the learner to recall what they already know: some things are alive and some are not, and plants and animals are alive. Have them say whether the tadpole and the full-sized frog are alive. Do not introduce growth yet.",
+            "intent": "activate-prior-knowledge",
+            "evidence": "The learner cannot later say growth is evidence of life unless they first surface the prerequisite that the frog is a living thing, which is what the orientation must establish before explanation begins.",
+            "position": 1,
+            "evidence_refs": [
+              "prior-1",
+              "prior-2",
+              "anchor.anchor-1",
+              "slot.orient.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "orient",
+        "transition": null,
+        "specific_purpose": "Raise the question of what it means to grow by showing a concrete case of a living thing that changes size over its life."
+      },
+      {
+        "blocks": [
+          {
+            "id": "explain-b1",
+            "brief": "Define growth as the process by which a living thing gets bigger over time. Use the anchor: the tiny tadpole that hatches from the egg and becomes a full-sized frog shows real growth. Do not yet discuss nonliving things.",
+            "intent": "define",
+            "evidence": "The objective is to explain what growth means, so the learner needs a precise statement of what makes an increase in size in the frog count as growth.",
+            "position": 0,
+            "evidence_refs": [
+              "lesson.objective",
+              "anchor.anchor-1",
+              "slot.explain.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "explain-b2",
+            "brief": "Explain that the frog is alive, and growth is evidence of life because only living things grow in this way. State that the tadpole's change from a tiny hatchling to a full-sized frog is growth, and that this growth is a sign that the frog is alive. Do not claim that everything that gets bigger is alive.",
+            "intent": "explain",
+            "evidence": "The objective asks the learner to see growing as evidence of life, so after defining the term, this block must make the link between the anchor's growth and the fact that the frog is a living thing.",
+            "position": 1,
+            "evidence_refs": [
+              "lesson.objective",
+              "anchor.anchor-1",
+              "slot.explain.purpose",
+              "prior-2"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "explain-b3",
+            "brief": "Set apart this statement: growth is an increase in size in a living thing. Keep the anchor present as the clear example: the tadpole becoming a full-sized frog shows growth as evidence of life.",
+            "intent": "emphasise",
+            "evidence": "The lesson asks for one idea to retain, and this is the statement that supports the objective: growth belongs to living things and shows they are alive.",
+            "position": 2,
+            "evidence_refs": [
+              "lesson.objective",
+              "anchor.anchor-1",
+              "slot.explain.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": "The learner needs one high-value statement to hold onto after the definition and explanation. Emphasising it keeps the core idea distinguishable from the surrounding explanation.",
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "explain",
+        "transition": "Now that the learner has seen the frog change and has recalled that the frog is alive, it is time to name that change.",
+        "specific_purpose": "Build the definition of growth and connect it to the idea that growing is something living things do, using the anchor to make the idea concrete."
+      },
+      {
+        "blocks": [
+          {
+            "id": "contrast-b1",
+            "brief": "Compare the tadpole becoming a full-sized frog with a nonliving thing that gets bigger in appearance, such as a balloon being filled with air. Set the two cases side by side: the frog grows because it is alive and its body grows, while the balloon only looks bigger because more air is pushed into it, not because it is alive. Do not say all change in size is growth.",
+            "intent": "compare",
+            "evidence": "The objective asks the learner to identify growth as evidence of life, so the contrast must hold a real growth instance against a nonliving size increase to make the boundary between living and nonliving visible.",
+            "position": 0,
+            "evidence_refs": [
+              "lesson.objective",
+              "anchor.anchor-1",
+              "slot.contrast.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "contrast-b2",
+            "brief": "Present the wrong idea that if something gets bigger, it is alive, and the wrong idea that nonliving things can truly grow the way living things do. Use the balloon to show both fail: the balloon gets bigger but is not alive, so getting bigger alone is not evidence of life.",
+            "intent": "diagnose-misconception",
+            "evidence": "The contrast section is the moment to confront the two approved misconceptions, because the learner has just seen a living and nonliving case side by side and can see why size change alone does not make something alive.",
+            "position": 1,
+            "evidence_refs": [
+              "M1",
+              "M2",
+              "slot.contrast.purpose",
+              "lesson.objective"
+            ],
+            "learner_action": null,
+            "departure_reason": "The slot's named near-miss is built specifically to expose the two approved misconceptions, and diagnose-misconception is the intent that turns those wrong models into a boundary test rather than leaving them as a simple comparison.",
+            "source_question_ids": [
+              "eb867328-9cdf-4af3-968d-d61c725cda11:eb867328-9cdf-4af3-968d-d61c725cda11:1b6b6a15-b23b-45b3-87c5-f1a53c264f3b.i2"
+            ]
+          }
+        ],
+        "slot_id": "contrast",
+        "transition": "The learner now knows growth means a living thing getting bigger. The next step is to see what does not count as growth.",
+        "specific_purpose": "Show the learner that not everything that appears bigger has grown. Put the anchor beside a near-miss nonliving case so the boundary of the idea is visible."
+      },
+      {
+        "blocks": [
+          {
+            "id": "check-b1",
+            "brief": "Ask the learner to decide whether growth is evidence that something is alive, using the idea that growth is an increase in size in a living thing. Distinguish from the misconception that just getting bigger makes something alive. Do not teach new content here; only check what the learner now understands. Use owned terms: full-sized, tadpole, hatches, sprouts.",
+            "intent": "check-understanding",
+            "evidence": "The check must directly assess whether the learner can explain growth as evidence of life, which is the objective, and it must not re-teach the definition the explain section already built.",
+            "position": 0,
+            "evidence_refs": [
+              "slot.check.purpose",
+              "lesson.objective"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [
+              "eb867328-9cdf-4af3-968d-d61c725cda11:eb867328-9cdf-4af3-968d-d61c725cda11:1b6b6a15-b23b-45b3-87c5-f1a53c264f3b.i1"
+            ]
+          }
+        ],
+        "slot_id": "check",
+        "transition": "Having seen that growth belongs to living things and that not everything bigger is alive, the learner should now decide for themselves.",
+        "specific_purpose": "Check whether the learner can now use the concept to decide when growth is evidence of life, directly addressing the misconceptions the lesson confronted."
+      }
+    ],
+    "anchor_usage": [
+      {
+        "usage": "Open with the frog's life as a concrete case: a tiny tadpole hatches from an egg, sprouts legs, and becomes a full-sized frog. Use it to raise the question of what this change should be called, without answering yet.",
+        "slot_id": "orient"
+      },
+      {
+        "usage": "Return to the tadpole and full-sized frog as the grounding example when defining growth as an increase in size in a living thing. Use the same anchor to state that this growth is evidence the frog is alive.",
+        "slot_id": "explain"
+      },
+      {
+        "usage": "Keep the tadpole-to-frog case as the clear instance of real growth while placing it beside a nonliving thing that appears to get bigger but does not truly grow.",
+        "slot_id": "contrast"
+      },
+      {
+        "usage": "The check does not need the anchor by name; it asks the learner to apply the boundary established with the anchor to decide whether growth signals life.",
+        "slot_id": "check"
+      }
+    ],
+    "approval_status": "pending",
+    "preparation_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870",
+    "teaching_plan_id": "b9ed285e-c92e-45b2-8dd0-a39053eaf15f",
+    "misconception_focus_ids": [
+      "M1",
+      "M2"
+    ]
+  },
+  "teaching_validation": {
+    "ok": true,
+    "issues": []
+  },
+  "teaching_qc": [],
+  "teaching_review": {
+    "status": "pending",
+    "revision": 1,
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "teacher_note": null
+  },
+  "lesson_packet": {
+    "scope": {
+      "terminology": [],
+      "must_establish": [],
+      "must_not_introduce": []
+    },
+    "slots": [
+      {
+        "purpose": "Give the learner a reason to care and a concrete situation to hold.",
+        "slot_id": "orient",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "orient",
+          "activate-prior-knowledge",
+          "emphasise"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "Build the idea itself. State it, ground it, make it usable.",
+        "slot_id": "explain",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [
+          "explain-cause",
+          "explain",
+          "define",
+          "show-structure",
+          "trace-flow",
+          "compare",
+          "name-parts"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "Put a case and a near-miss side by side. The learner must see the boundary of the idea, not just the idea.\n",
+        "slot_id": "contrast",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [
+          "compare",
+          "classify",
+          "explain",
+          "warn",
+          "show-structure"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "The shared diagnostic. Identical across every variant. Written from the card only, never from the prose above it.\n",
+        "slot_id": "check",
+        "max_blocks": 1,
+        "min_blocks": 1,
+        "typical_intents": [
+          "check-understanding",
+          "practise-independent",
+          "diagnose-misconception"
+        ],
+        "visual_required": false
+      }
+    ],
+    "anchor": {
+      "id": "anchor-1",
+      "description": "A frog's life: a tiny tadpole hatches from an egg, sprouts legs, and becomes a full-sized frog that\u2026"
+    },
+    "lesson": {
+      "subject": "Science",
+      "objective": "explain what it means for something to grow and identify instances of growth as evidence of life",
+      "grade_level": "Grade",
+      "lesson_mode": "first_exposure",
+      "knowledge_type": "conceptual",
+      "path_lesson_id": "eb867328-9cdf-4af3-968d-d61c725cda11"
+    },
+    "limits": {
+      "max_sections": 4,
+      "max_total_blocks": 10,
+      "max_blocks_per_section": 3
+    },
+    "resource_id": "lesson",
+    "approved_items": [
+      {
+        "id": "eb867328-9cdf-4af3-968d-d61c725cda11:eb867328-9cdf-4af3-968d-d61c725cda11:1b6b6a15-b23b-45b3-87c5-f1a53c264f3b.i1",
+        "stem": "A student watches a puddle form as ice melts on a warm sidewalk. Which observation would be evidence of growth in a living thing?",
+        "card_id": "eb867328-9cdf-4af3-968d-d61c725cda11:1b6b6a15-b23b-45b3-87c5-f1a53c264f3b",
+        "options": [
+          {
+            "key": "a",
+            "text": "The puddle spreads wider as more ice melts into water.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "A seedling nearby develops new leaves and a taller stem.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The sidewalk feels warmer in the afternoon sun.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The puddle gets bigger, so it must be growing.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": "M2",
+          "b": null,
+          "c": null,
+          "d": "M1"
+        },
+        "correct_key": "b"
+      },
+      {
+        "id": "eb867328-9cdf-4af3-968d-d61c725cda11:eb867328-9cdf-4af3-968d-d61c725cda11:1b6b6a15-b23b-45b3-87c5-f1a53c264f3b.i2",
+        "stem": "A student adds water to a bowl of dry beans. The beans swell and become larger. Which statement best explains whether this shows growth?",
+        "card_id": "eb867328-9cdf-4af3-968d-d61c725cda11:1b6b6a15-b23b-45b3-87c5-f1a53c264f3b",
+        "options": [
+          {
+            "key": "a",
+            "text": "It does not show growth, because the beans only absorb water and do not develop new cells or structures.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "It shows growth, because the beans get bigger, and getting bigger is always growth.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "It shows growth, because the beans are changing in a way that is the same as how living things grow.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "It does not show growth, because beans never change size.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M1",
+          "c": "M2",
+          "d": null
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "eb867328-9cdf-4af3-968d-d61c725cda11:eb867328-9cdf-4af3-968d-d61c725cda11:1b6b6a15-b23b-45b3-87c5-f1a53c264f3b.i3",
+        "stem": "A crystal forms in a jar of salt water overnight and is larger the next day. Which claim about the crystal is correct?",
+        "card_id": "eb867328-9cdf-4af3-968d-d61c725cda11:1b6b6a15-b23b-45b3-87c5-f1a53c264f3b",
+        "options": [
+          {
+            "key": "a",
+            "text": "The crystal grew because it became larger over time.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The crystal grew just like a living thing grows.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The crystal did not grow in the living sense because it gained material by deposition, not by its own life processes.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The crystal did not grow because nonliving things can never change in any way.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": "M1",
+          "b": "M2",
+          "c": null,
+          "d": null
+        },
+        "correct_key": "c"
+      },
+      {
+        "id": "eb867328-9cdf-4af3-968d-d61c725cda11:eb867328-9cdf-4af3-968d-d61c725cda11:1b6b6a15-b23b-45b3-87c5-f1a53c264f3b.i4",
+        "stem": "A balloon is inflated with air and becomes larger. A student says the balloon grew. What is the best evaluation of this claim?",
+        "card_id": "eb867328-9cdf-4af3-968d-d61c725cda11:1b6b6a15-b23b-45b3-87c5-f1a53c264f3b",
+        "options": [
+          {
+            "key": "a",
+            "text": "The claim is correct because getting bigger is the same as growing, so the balloon is alive.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The claim is correct because the balloon got bigger in the same way a living thing grows.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The claim is incorrect because the balloon did not become larger.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The claim is incorrect because the balloon only stretched when air was added; it did not develop new living material.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": "M1",
+          "b": "M2",
+          "c": null,
+          "d": null
+        },
+        "correct_key": "d"
+      },
+      {
+        "id": "eb867328-9cdf-4af3-968d-d61c725cda11:eb867328-9cdf-4af3-968d-d61c725cda11:1b6b6a15-b23b-45b3-87c5-f1a53c264f3b.i5",
+        "stem": "Over several weeks, a tadpole develops legs and its tail becomes smaller. Which statement best explains why this is growth?",
+        "card_id": "eb867328-9cdf-4af3-968d-d61c725cda11:1b6b6a15-b23b-45b3-87c5-f1a53c264f3b",
+        "options": [
+          {
+            "key": "a",
+            "text": "The tadpole changes because it develops new body structures as part of its life processes.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The tadpole changes because something outside it pushes its body into a new shape.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The tadpole is not growing because its tail becomes smaller.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The tadpole is growing because any change in size is growth, even losing the tail.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": null,
+          "c": null,
+          "d": "M1"
+        },
+        "correct_key": "a"
+      }
+    ],
+    "misconceptions": [
+      {
+        "id": "M1",
+        "statement": "{'id': 'M1', 'description': 'If something gets bigger, it is alive.', 'source': 'drafted'}"
+      },
+      {
+        "id": "M2",
+        "statement": "{'id': 'M2', 'description': 'Nonliving things can truly grow, because they can get bigger the way living things do.', 'source': 'drafted'}"
+      }
+    ],
+    "prior_established": [
+      {
+        "id": "prior-1",
+        "statement": "some things are alive and some are not"
+      },
+      {
+        "id": "prior-2",
+        "statement": "plants and animals are alive"
+      }
+    ]
+  },
+  "catalogue": {
+    "version": "1.1.0",
+    "form_projection_hash": null,
+    "teaching_projection_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870"
+  }
+}

@@ -1,0 +1,561 @@
+{
+  "generation_id": "edc7cc26-98b0-4bf3-bd55-7287b5592ec0",
+  "teaching_plan": {
+    "arc": "The lesson opens on a tray of 4 cookie boxes, each holding 23 cookies, and asks how many cookies there are altogether without counting one by one. It reactivates the basic facts and the tens-and-ones meaning of 23, then uses the tray to model multiplying the ones and tens separately before combining the results. Learners practise the same procedure with explicit place-value prompts, and the check asks them to spot the product that follows the place-value rule rather than one that ignores the tens.",
+    "revision": 1,
+    "sections": [
+      {
+        "blocks": [
+          {
+            "id": "orient-b1",
+            "brief": "Present anchor-1, the tray of 4 cookie boxes where each box holds 23 cookies. Ask how many cookies are in the tray altogether, and point out that counting them one by one would take a long time. Do not show any multiplication yet.",
+            "intent": "orient",
+            "evidence": "The objective requires multiplying a two-digit number by a one-digit number, so the opening must anchor that procedure in anchor-1's concrete situation where 4 \u00d7 23 answers a real question.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.orient.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "orient-b2",
+            "brief": "Point out that the same anchor-1 total 23 appears four times: there are 4 boxes, and each box holds 23 cookies. Mark this as the key fact to keep in mind, without doing any calculation yet.",
+            "intent": "emphasise",
+            "evidence": "Before the multiplication procedure can mean anything, the learner must see anchor-1 as a repeated collection, which is the concrete meaning of 4 \u00d7 23 in this objective.",
+            "position": 1,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "orient",
+        "transition": null,
+        "specific_purpose": "Open attention by presenting the cookie tray as a real counting problem that is too slow to solve by ones, and establish that the lesson will find a faster way."
+      },
+      {
+        "blocks": [
+          {
+            "id": "recall-b1",
+            "brief": "Prompt recall of the basic multiplication facts that will appear in anchor-1's calculation: 4 \u00d7 3 = 12 and 4 \u00d7 2 = 8. Keep these as single-digit facts only, and do not yet connect them to the boxes.",
+            "intent": "activate-prior-knowledge",
+            "evidence": "The anchor-1 calculation 4 \u00d7 23 uses the facts 4 \u00d7 3 and 4 \u00d7 2, so recalling these exact facts is the prerequisite work the recall slot exists for.",
+            "position": 0,
+            "evidence_refs": [
+              "prior-1",
+              "anchor.anchor-1",
+              "slot.recall.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "recall-b2",
+            "brief": "Ask what the digits in anchor-1's number 23 mean: 2 tens and 3 ones. Connect this to the tray: the 2 is not just 2 cookies, but 2 tens, and the 3 is 3 ones.",
+            "intent": "activate-prior-knowledge",
+            "evidence": "The objective requires multiplying by place value without regrouping, so the tens-and-ones meaning of 23 in anchor-1 must be reactivated before the model treats 2 and 3 differently.",
+            "position": 1,
+            "evidence_refs": [
+              "prior-2",
+              "anchor.anchor-1",
+              "lesson.objective"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "recall",
+        "transition": "With anchor-1's tray established as 4 boxes of 23 cookies, the next step is to bring back the number facts and place-value pieces needed to multiply efficiently.",
+        "specific_purpose": "Reactivate the two prerequisite building blocks: multiplication facts for single digits and the tens-and-ones meaning of a two-digit number as shown in anchor-1."
+      },
+      {
+        "blocks": [
+          {
+            "id": "model-b1",
+            "brief": "Model the complete method on anchor-1's tray for 4 \u00d7 23. Multiply the 3 ones by 4 to get 12, then multiply the 2 tens by 4 to get 80, showing that the 2 in 23 is worth 20. Add 12 and 80 to get 92 cookies. State each move as it is made.",
+            "intent": "demonstrate",
+            "evidence": "The learner has not yet seen the two-digit by one-digit method carried out end to end on a real instance, and anchor-1 supplies the concrete case the model slot requires.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "lesson.objective",
+              "slot.model.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "model-b2",
+            "brief": "Show the place-value structure of 4 \u00d7 23 using anchor-1's tray: 23 = 20 + 3, so 4 \u00d7 23 = 4 \u00d7 20 + 4 \u00d7 3 = 80 + 12 = 92. Show why each part belongs in its own place before combining the two results.",
+            "intent": "show-structure",
+            "evidence": "The central difficulty in the objective is place value, so the learner must see how the 2 tens and 3 ones in anchor-1 generate separate products before they are combined into 92.",
+            "position": 1,
+            "evidence_refs": [
+              "lesson.objective",
+              "prior-2",
+              "anchor.anchor-1"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "model-b3",
+            "brief": "Flag the specific error of treating the 2 in anchor-1's number 23 as 2 ones: multiplying 2 by 4 and getting 8 is not enough because the 2 is worth 20. Name the error as the learner sees the 80 appear in the model.",
+            "intent": "warn",
+            "evidence": "M3 names the predictable held belief that the tens digit is irrelevant, so naming the error at the exact moment the learner sees the 80 from anchor-1's 2 tens prevents it from taking hold.",
+            "position": 2,
+            "evidence_refs": [
+              "M3",
+              "lesson.objective",
+              "anchor.anchor-1"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "model",
+        "transition": "Now that the basic facts and the tens-and-ones meaning of 23 are ready, the full multiplication for anchor-1's tray can be carried out.",
+        "specific_purpose": "Model the complete two-digit by one-digit multiplication on anchor-1, making the two separate place-value products and their combination visible step by step."
+      },
+      {
+        "blocks": [
+          {
+            "id": "guided-b1",
+            "brief": "Guide the learner through 3 \u00d7 21, using anchor-1's tray as the reference for separating ones from tens. Ask what the digits in 21 mean, which basic fact multiplies the ones, which basic fact multiplies the tens, and what 3 \u00d7 20 equals. Prompt the learner to state each partial result and then combine them.",
+            "intent": "practise-guided",
+            "evidence": "The learner has seen anchor-1's 4 \u00d7 23 modelled but has not yet performed the procedure themselves, so a scaffolded parallel problem with the key place-value prompts is the right first attempt.",
+            "position": 0,
+            "evidence_refs": [
+              "lesson.objective",
+              "anchor.anchor-1",
+              "slot.guided.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [
+              "edc7cc26-98b0-4bf3-bd55-7287b5592ec0:edc7cc26-98b0-4bf3-bd55-7287b5592ec0:d0c95d03-b36c-4044-a9f9-11d0cf8bb901.i2"
+            ]
+          },
+          {
+            "id": "guided-b2",
+            "brief": "Set a second guided problem, 2 \u00d7 34, and have the learner identify 30 + 4, multiply each part by 2, and combine 60 and 8. Continue to supply the place-value breakdown as support, just as it was visible for anchor-1, but let the learner state the products.",
+            "intent": "practise-guided",
+            "evidence": "A second scaffolded case with different digits prevents the learner from copying anchor-1's numbers and builds the place-value procedure on new values before support is removed.",
+            "position": 1,
+            "evidence_refs": [
+              "lesson.objective",
+              "slot.guided.purpose",
+              "prior-2",
+              "anchor.anchor-1"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [
+              "edc7cc26-98b0-4bf3-bd55-7287b5592ec0:edc7cc26-98b0-4bf3-bd55-7287b5592ec0:d0c95d03-b36c-4044-a9f9-11d0cf8bb901.i3"
+            ]
+          }
+        ],
+        "slot_id": "guided",
+        "transition": "With the anchor-1 tray complete at 92 cookies, the same procedure can now be tried on fresh products, with the place-value support still present.",
+        "specific_purpose": "Have the learner carry out closely parallel multiplications with the scaffold of explicit place-value prompts still present."
+      },
+      {
+        "blocks": [
+          {
+            "id": "check-b1",
+            "brief": "Check whether the learner holds M3 through the approved checkpoint item. The wrong answer must be one a learner would choose only if they treated the tens digit as irrelevant, and the correct answer must follow anchor-1's rule of multiplying 2 tens, not ignoring the tens.",
+            "intent": "diagnose-misconception",
+            "evidence": "The check must detect the specific known wrong model M3, because the lesson's central risk after seeing anchor-1's 80 is that the learner ignores the value of the tens digit.",
+            "position": 0,
+            "evidence_refs": [
+              "M3",
+              "lesson.objective",
+              "slot.check.purpose",
+              "anchor.anchor-1"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [
+              "edc7cc26-98b0-4bf3-bd55-7287b5592ec0:edc7cc26-98b0-4bf3-bd55-7287b5592ec0:d0c95d03-b36c-4044-a9f9-11d0cf8bb901.i1"
+            ]
+          }
+        ],
+        "slot_id": "check",
+        "transition": "Having practised with support, the learner should now show they can keep the place-value rule from anchor-1's tray when they meet a new product, especially against the error of ignoring the tens.",
+        "specific_purpose": "Check that the learner can recognise a correct product for a two-digit by one-digit multiplication and detect the known error of ignoring the tens."
+      }
+    ],
+    "anchor_usage": [
+      {
+        "usage": "Introduce the tray of 4 cookie boxes, each holding 23 cookies, as the concrete situation the whole lesson will use. Establish the question, 'How many cookies altogether?', and stop before any multiplication is shown.",
+        "slot_id": "orient"
+      },
+      {
+        "usage": "Use anchor-1 only as the reference for why 4 \u00d7 3 and 4 \u00d7 2 matter and why the 2 in anchor-1's box of 23 means 2 tens, not 2 ones. Do not perform the tray multiplication yet.",
+        "slot_id": "recall"
+      },
+      {
+        "usage": "Return to anchor-1 and carry out 4 \u00d7 23 on the tray: multiply the 3 ones by 4 to get 12, multiply the 2 tens by 4 to get 80, then combine 12 and 80 to get 92 cookies. Keep every step tied to the meaning of the trays and boxes.",
+        "slot_id": "model"
+      },
+      {
+        "usage": "Keep anchor-1 as the reference for what each place-value part means while the learner works on a parallel problem. The tray stays visible as the concrete reminder that 2 tens and 3 ones become separate products.",
+        "slot_id": "guided"
+      },
+      {
+        "usage": "Use anchor-1 only as the source of the completed example 4 \u00d7 23 = 92. The check itself moves to a fresh product and asks the learner to apply the place-value rule without re-explaining the tray.",
+        "slot_id": "check"
+      }
+    ],
+    "approval_status": "pending",
+    "preparation_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870",
+    "teaching_plan_id": "5b0460c7-43d9-4753-adf9-6d492e905d2c",
+    "misconception_focus_ids": [
+      "M3"
+    ]
+  },
+  "teaching_validation": {
+    "ok": true,
+    "issues": []
+  },
+  "teaching_qc": [],
+  "teaching_review": {
+    "status": "pending",
+    "revision": 1,
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "teacher_note": null
+  },
+  "lesson_packet": {
+    "scope": {
+      "terminology": [],
+      "must_establish": [],
+      "must_not_introduce": []
+    },
+    "slots": [
+      {
+        "purpose": "Give the learner a reason to care and a concrete situation to hold.",
+        "slot_id": "orient",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "orient",
+          "activate-prior-knowledge",
+          "emphasise"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "Reactivate the specific prior knowledge this lesson depends on. Nothing else.",
+        "slot_id": "recall",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "activate-prior-knowledge",
+          "define",
+          "summarise"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "Show the method being carried out, with each step's reasoning visible.",
+        "slot_id": "model",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [],
+        "visual_required": false
+      },
+      {
+        "purpose": "Practice with scaffolding still present. Learner does the thinking, support stays.",
+        "slot_id": "guided",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [],
+        "visual_required": false
+      },
+      {
+        "purpose": "The shared diagnostic. Identical across every variant. Written from the card only, never from the prose above it.\n",
+        "slot_id": "check",
+        "max_blocks": 1,
+        "min_blocks": 1,
+        "typical_intents": [
+          "check-understanding",
+          "practise-independent",
+          "diagnose-misconception"
+        ],
+        "visual_required": false
+      }
+    ],
+    "anchor": {
+      "id": "anchor-1",
+      "description": "A tray of 4 cookie boxes, where each cookie box holds 23 cookies. This gives learners a concrete re\u2026"
+    },
+    "lesson": {
+      "subject": "Mathematics",
+      "objective": "Multiply a two-digit number by a one-digit number using place value and the standard procedure when no regrouping is required.",
+      "grade_level": "Grade",
+      "lesson_mode": "first_exposure",
+      "knowledge_type": "conceptual",
+      "path_lesson_id": "edc7cc26-98b0-4bf3-bd55-7287b5592ec0"
+    },
+    "limits": {
+      "max_sections": 4,
+      "max_total_blocks": 10,
+      "max_blocks_per_section": 3
+    },
+    "resource_id": "lesson",
+    "approved_items": [
+      {
+        "id": "edc7cc26-98b0-4bf3-bd55-7287b5592ec0:edc7cc26-98b0-4bf3-bd55-7287b5592ec0:d0c95d03-b36c-4044-a9f9-11d0cf8bb901.i1",
+        "stem": "A school has 3 boxes of pencils. Each box contains 21 pencils. How many pencils are there in all?",
+        "card_id": "edc7cc26-98b0-4bf3-bd55-7287b5592ec0:d0c95d03-b36c-4044-a9f9-11d0cf8bb901",
+        "options": [
+          {
+            "key": "a",
+            "text": "63 pencils",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "23 pencils",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "26 pencils",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "3 pencils",
+            "correct": false,
+            "diagnoses": "M3",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M1",
+          "c": "M2",
+          "d": "M3"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "edc7cc26-98b0-4bf3-bd55-7287b5592ec0:edc7cc26-98b0-4bf3-bd55-7287b5592ec0:d0c95d03-b36c-4044-a9f9-11d0cf8bb901.i2",
+        "stem": "Maya reads 42 pages each day for 2 days. How many pages does she read in total?",
+        "card_id": "edc7cc26-98b0-4bf3-bd55-7287b5592ec0:d0c95d03-b36c-4044-a9f9-11d0cf8bb901",
+        "options": [
+          {
+            "key": "a",
+            "text": "84 pages",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "82 pages",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "44 pages",
+            "correct": false,
+            "diagnoses": "M3",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "86 pages",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M1",
+          "c": "M3",
+          "d": null
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "edc7cc26-98b0-4bf3-bd55-7287b5592ec0:edc7cc26-98b0-4bf3-bd55-7287b5592ec0:d0c95d03-b36c-4044-a9f9-11d0cf8bb901.i3",
+        "stem": "A baker puts 32 strawberries on each of 3 cakes. How many strawberries are used altogether?",
+        "card_id": "edc7cc26-98b0-4bf3-bd55-7287b5592ec0:d0c95d03-b36c-4044-a9f9-11d0cf8bb901",
+        "options": [
+          {
+            "key": "a",
+            "text": "96 strawberries",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "62 strawberries",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "36 strawberries",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "2 strawberries",
+            "correct": false,
+            "diagnoses": "M3",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M2",
+          "c": null,
+          "d": "M3"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "edc7cc26-98b0-4bf3-bd55-7287b5592ec0:edc7cc26-98b0-4bf3-bd55-7287b5592ec0:d0c95d03-b36c-4044-a9f9-11d0cf8bb901.i4",
+        "stem": "A bus has 14 rows of seats. Each row has 2 seats. How many seats are on the bus?",
+        "card_id": "edc7cc26-98b0-4bf3-bd55-7287b5592ec0:d0c95d03-b36c-4044-a9f9-11d0cf8bb901",
+        "options": [
+          {
+            "key": "a",
+            "text": "28 seats",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "22 seats",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "14 seats",
+            "correct": false,
+            "diagnoses": "M3",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "26 seats",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M1",
+          "c": "M3",
+          "d": null
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "edc7cc26-98b0-4bf3-bd55-7287b5592ec0:edc7cc26-98b0-4bf3-bd55-7287b5592ec0:d0c95d03-b36c-4044-a9f9-11d0cf8bb901.i5",
+        "stem": "A farmer puts 23 apples into each of 3 baskets. How many apples does the farmer put into baskets in total?",
+        "card_id": "edc7cc26-98b0-4bf3-bd55-7287b5592ec0:d0c95d03-b36c-4044-a9f9-11d0cf8bb901",
+        "options": [
+          {
+            "key": "a",
+            "text": "69 apples",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "29 apples",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "62 apples",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "3 apples",
+            "correct": false,
+            "diagnoses": "M3",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M1",
+          "c": "M2",
+          "d": "M3"
+        },
+        "correct_key": "a"
+      }
+    ],
+    "misconceptions": [
+      {
+        "id": "M1",
+        "statement": "{'id': 'M1', 'description': 'Learner treats the two-digit factor as a pair of separate digits without considering place value, producing 2 \u00d7 4 as a single digit rather than 20 \u00d7 4.', 'source': 'drafted'}"
+      },
+      {
+        "id": "M2",
+        "statement": "{'id': 'M2', 'description': 'Learner multiplies ones correctly but writes the two-digit partial product 12 into the product as if both digits belonged in one place-value column.', 'source': 'drafted'}"
+      },
+      {
+        "id": "M3",
+        "statement": "{'id': 'M3', 'description': 'Learner believes the tens digit is irrelevant when the multiplier has only one digit, so they ignore the tens entirely.', 'source': 'drafted'}"
+      }
+    ],
+    "prior_established": [
+      {
+        "id": "prior-1",
+        "statement": "multiply basic facts (e.g., 3 \u00d7 4)"
+      },
+      {
+        "id": "prior-2",
+        "statement": "understand place value (tens and ones)"
+      }
+    ]
+  },
+  "catalogue": {
+    "version": "1.1.0",
+    "form_projection_hash": null,
+    "teaching_projection_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870"
+  }
+}

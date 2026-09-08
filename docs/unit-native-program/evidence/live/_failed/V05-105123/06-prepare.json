@@ -1,0 +1,24 @@
+{
+  "generation_id": "937d12ad-74b1-4457-98b2-749e84f40f41",
+  "path_lesson_id": "4c1ef903-5f30-485d-9c03-ae2f36c7298b",
+  "objective": "Name evaporation, condensation, precipitation, and collection as the four stages of the water cycle and recall their order.",
+  "objective_hash": "42a071676377a0c6b973ab88839706939441aa380b8fa6c853bc0f60824a195b",
+  "skeleton_id": "factual.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "organise",
+    "guided",
+    "independent",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "organise",
+    "guided",
+    "independent",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

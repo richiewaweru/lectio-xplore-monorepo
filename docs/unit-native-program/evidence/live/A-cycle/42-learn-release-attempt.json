@@ -1,0 +1,229 @@
+{
+  "id": "6577eaec-1cc6-4d67-b613-558ddfdf98da",
+  "editable_lesson_id": "6b7f1426-c374-41e1-947c-2b4e760c0db3",
+  "release_number": 1,
+  "title": "The lesson opens on a monarch butterfly landing on a milkweed leaf and laying an egg, then asks what will happen next. Using the anchor, students connect the egg to the caterpillar, chrysalis, and butterfly stages they already partly know, then come to see these as one repeating cycle rather than four separate animals or a line that stops. The lesson closes by asking the learner to tell what must happen for the cycle to begin again.",
+  "document_hash": "94dc8cb774161737032a643a0264423e6198f7c1f60dcf2ddbba73dacc482a98",
+  "source_generation_id": "learn-out-ccd04ae62c17",
+  "path_lesson_id": null,
+  "path_lesson_revision": null,
+  "objective_hash": null,
+  "status": "published",
+  "published_at": "2026-09-08T07:24:28.293470",
+  "document": {
+    "id": "6b7f1426-c374-41e1-947c-2b4e760c0db3",
+    "media": {},
+    "title": "The lesson opens on a monarch butterfly landing on a milkweed leaf and laying an egg, then asks what will happen next. Using the anchor, students connect the egg to the caterpillar, chrysalis, and butterfly stages they already partly know, then come to see these as one repeating cycle rather than four separate animals or a line that stops. The lesson closes by asking the learner to tell what must happen for the cycle to begin again. (P09 attempt salvage)",
+    "blocks": {
+      "blk-1c945bf7f827": {
+        "id": "blk-1c945bf7f827",
+        "content": {
+          "body": "Define a life cycle as the series of stages an organism passes through from egg to adult, and state that a butterfly's life cycle repeats when an adult butterfly produces young that grow into new adults. Use the monarch from the anchor as the example organism."
+        },
+        "position": 1,
+        "component_id": "definition-card"
+      },
+      "blk-3a70b77ce386": {
+        "id": "blk-3a70b77ce386",
+        "content": {
+          "body": "Contrast a life cycle with a line that stops. Name a line that stops as one that goes egg, caterpillar, chrysalis, butterfly, then nothing. Then name a life cycle as the same four stages but with the butterfly producing a new egg. Do not introduce a new organism."
+        },
+        "position": 2,
+        "component_id": "diagram-compare"
+      },
+      "blk-4d2a3c148fd3": {
+        "id": "blk-4d2a3c148fd3",
+        "content": {
+          "body": "Surface the wrong belief that the egg, caterpillar, chrysalis, and butterfly are four different kinds of animals. Ask the learner to decide whether the four stages in the anchor are the same organism at different times or four separate organisms. Do not explain the correct answer in the same breath as the question."
+        },
+        "position": 0,
+        "component_id": "quiz-check"
+      },
+      "blk-60fa3f2481d6": {
+        "id": "blk-60fa3f2481d6",
+        "content": {
+          "body": "Identify the four main stages in the monarch life cycle: egg, caterpillar, chrysalis, butterfly. For each stage, say what the organism is doing in that stage: the egg holds the young, the caterpillar eats and grows, the chrysalis shelters the change, and the butterfly is the adult that can fly and lay eggs. Do not yet state that the series repeats."
+        },
+        "position": 0,
+        "component_id": "definition-card"
+      },
+      "blk-68973e218ea3": {
+        "id": "blk-68973e218ea3",
+        "content": {
+          "body": "Surface the wrong belief that the life cycle only goes forward and then stops. Ask the learner to decide what must happen for a new egg to appear on a milkweed leaf. Do not yet state that the butterfly must lay the egg."
+        },
+        "position": 1,
+        "component_id": "quiz-check"
+      },
+      "blk-80267a53d490": {
+        "id": "blk-80267a53d490",
+        "content": {
+          "kind": "sequence",
+          "prompt": "Ask the learner to identify what an adult butterfly must do for the life cycle to continue."
+        },
+        "position": 0,
+        "component_id": "explanation-block",
+        "concept_refs": [],
+        "assessment_mode": "practice",
+        "learn_interaction": {
+          "id": "ix-check-b1-sequence",
+          "kind": "sequence",
+          "config": {
+            "items": [
+              {
+                "id": "ask-the-learner-to-identify",
+                "label": "Ask the learner to identify"
+              },
+              {
+                "id": "what-an-adult-butterfly-must",
+                "label": "what an adult butterfly must"
+              },
+              {
+                "id": "do-for-the-life-cycle-to-continue",
+                "label": "do for the life cycle to continue."
+              }
+            ],
+            "order": [
+              "ask-the-learner-to-identify",
+              "what-an-adult-butterfly-must",
+              "do-for-the-life-cycle-to-continue"
+            ]
+          },
+          "prompt": "Ask the learner to identify what an adult butterfly must do for the life cycle to continue.",
+          "feedback": {
+            "correct": "Correct \u2014 the order matches the accepted sequence.",
+            "partial": "Partly right \u2014 some steps are in the expected position.",
+            "incorrect": "Not yet \u2014 check the order of the steps."
+          },
+          "completion": {
+            "type": "submitted"
+          },
+          "provenance": {
+            "block_id": "check-b1",
+            "capability_id": "sequence",
+            "work_order_id": "learn::learn::check-b1::sequence",
+            "authoring_mode": "new",
+            "teaching_plan_hash": "34d5a63064929791721458f214d78334ff42ff397c7e0c66dba751d786cb2f3e",
+            "capability_contract_hash": "58feee22e27374e7d2c0cac97cd15ba07cc297e7fdce3fbf4b2b4e65b86e6211"
+          },
+          "concept_refs": [],
+          "accessibility": {
+            "narration": "optional",
+            "aria_label": "Ask the learner to identify what an adult butterfly must do for the life cycle to continue.",
+            "keyboard_operable": true
+          },
+          "ai_config_rule": "config-only",
+          "attempt_policy": {
+            "max_attempts": null,
+            "allow_retry_after_correct": true,
+            "show_feedback_after_submit": true
+          },
+          "assessment_mode": "practice"
+        }
+      },
+      "blk-c7ac65f20efc": {
+        "id": "blk-c7ac65f20efc",
+        "content": {
+          "body": "Quickly call up what the learner already knows: butterflies are insects, insects hatch from eggs, and a butterfly is the adult form that flies. Do not explain life cycle yet.",
+          "type": "prose",
+          "anchor": "orient-b2",
+          "headline": "Quickly call up what the learner already knows: butterflies are insects, insects"
+        },
+        "position": 1,
+        "component_id": "hook-hero"
+      },
+      "blk-f9023fb42def": {
+        "id": "blk-f9023fb42def",
+        "content": {
+          "body": "Present the anchor: a monarch butterfly fluttering near a milkweed plant, landing on a leaf to lay a tiny egg. Ask what the learner thinks that egg will become. Do not name any stages yet.",
+          "type": "prose",
+          "anchor": "orient-b1",
+          "headline": "Present the anchor: a monarch butterfly fluttering near a milkweed plant, landin"
+        },
+        "position": 0,
+        "component_id": "hook-hero"
+      }
+    },
+    "source": "generated",
+    "subject": "science",
+    "version": 1,
+    "assembly": {
+      "ordered_by": "block_ids",
+      "selection_hash": "01ce7bd769cd88cff03e602e85e475621b7da0c2dc77e6035bb70d300905409c",
+      "teaching_plan_id": "dd1f937f-0fa1-43cc-8901-0de41fd712fc",
+      "teaching_plan_hash": "34d5a63064929791721458f214d78334ff42ff397c7e0c66dba751d786cb2f3e",
+      "teaching_plan_revision": 1
+    },
+    "sections": [
+      {
+        "id": "orient",
+        "title": "Open on the anchor and get the learner curious about what will happen next. Activate the prior knowledge that butterflies come from eggs without yet naming the full cycle.",
+        "position": 0,
+        "required": true,
+        "block_ids": [
+          "blk-f9023fb42def",
+          "blk-c7ac65f20efc"
+        ],
+        "template_id": "open-canvas",
+        "learner_label": "orient",
+        "learner_intent": "orient",
+        "assessment_mode": "practice",
+        "completion_policy": "submitted",
+        "navigation_policy": "linear"
+      },
+      {
+        "id": "explain",
+        "title": "Build the core idea: the egg, caterpillar, chrysalis, and butterfly are stages of one organism's life cycle, and the cycle repeats when the adult butterfly produces young.",
+        "position": 1,
+        "required": true,
+        "block_ids": [
+          "blk-60fa3f2481d6",
+          "blk-1c945bf7f827"
+        ],
+        "template_id": "open-canvas",
+        "learner_label": "explain",
+        "learner_intent": "explain",
+        "assessment_mode": "practice",
+        "completion_policy": "submitted",
+        "navigation_policy": "linear"
+      },
+      {
+        "id": "contrast",
+        "title": "Confront the two false models: that the egg, caterpillar, chrysalis, and butterfly are four different kinds of animals, and that the cycle stops at the butterfly.",
+        "position": 2,
+        "required": true,
+        "block_ids": [
+          "blk-4d2a3c148fd3",
+          "blk-68973e218ea3",
+          "blk-3a70b77ce386"
+        ],
+        "template_id": "open-canvas",
+        "learner_label": "contrast",
+        "learner_intent": "explain",
+        "assessment_mode": "practice",
+        "completion_policy": "submitted",
+        "navigation_policy": "linear"
+      },
+      {
+        "id": "check",
+        "title": "Check whether the learner can use the idea of a repeating life cycle to say what must happen after the adult butterfly stage.",
+        "position": 3,
+        "required": true,
+        "block_ids": [
+          "blk-80267a53d490"
+        ],
+        "template_id": "open-canvas",
+        "learner_label": "check",
+        "learner_intent": "check",
+        "assessment_mode": "practice",
+        "completion_policy": "submitted",
+        "navigation_policy": "linear"
+      }
+    ],
+    "preset_id": "blue-classroom",
+    "created_at": "2026-09-08T07:24:27.272494Z",
+    "updated_at": "2026-09-08T07:24:27.272494Z",
+    "source_generation_id": "learn-out-ccd04ae62c17"
+  },
+  "idempotent_replay": false
+}

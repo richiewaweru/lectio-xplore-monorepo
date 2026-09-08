@@ -1,0 +1,337 @@
+{
+  "status": "ready",
+  "output_id": "learn-out-c3bf8b46afdf",
+  "editable_lesson_id": "d352fb6a-5696-4691-88e2-9304f4c77939",
+  "realization_id": "1f10f578-d07c-4a1d-840b-8b23fedc1162",
+  "realization_created": true,
+  "teaching_plan_hash": "1270598d38de83ac05ec4fb1f3c8c85cf77c5fe8f08c859159aa36fdbdb228fa",
+  "teaching_plan_revision": 1,
+  "selection_trace": {
+    "selection_snapshot": {
+      "path": "learn",
+      "teaching_plan_id": "31677c25-5ad3-4f26-b11b-cba955f1838e",
+      "teaching_plan_revision": 1,
+      "teaching_plan_hash": "1270598d38de83ac05ec4fb1f3c8c85cf77c5fe8f08c859159aa36fdbdb228fa",
+      "native_policy_hash": "7854dce52a24450b5a997e4f0a0f0bf7957abb3b69967862b8c10bd713bda416",
+      "package_contract_hash": "b4d031e6375f2bed031035ce510d1d8870ba77f2bf02237605e9360f7d95e8c0",
+      "candidate_map": {
+        "orient-b1": {
+          "content": [
+            "hook-hero",
+            "section-header",
+            "summary-block"
+          ],
+          "interaction": []
+        },
+        "explain-b1": {
+          "content": [
+            "hook-hero"
+          ],
+          "interaction": []
+        },
+        "explain-b2": {
+          "content": [
+            "diagram-compare",
+            "timeline-block"
+          ],
+          "interaction": []
+        },
+        "contrast-b1": {
+          "content": [
+            "diagram-compare",
+            "timeline-block"
+          ],
+          "interaction": []
+        },
+        "contrast-b2": {
+          "content": [
+            "diagram-compare",
+            "timeline-block"
+          ],
+          "interaction": []
+        },
+        "check-b1": {
+          "content": [
+            "fill-in-blank",
+            "quiz-check"
+          ],
+          "interaction": []
+        }
+      },
+      "decisions": [
+        {
+          "block_id": "orient-b1",
+          "content_id": "hook-hero",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "explain-b1",
+          "content_id": "hook-hero",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "explain-b2",
+          "content_id": "diagram-compare",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "contrast-b1",
+          "content_id": "diagram-compare",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "contrast-b2",
+          "content_id": "diagram-compare",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [],
+          "dependency_ids": []
+        },
+        {
+          "block_id": "check-b1",
+          "content_id": "fill-in-blank",
+          "interaction_id": null,
+          "reason": "passive content; interaction=none",
+          "source_item_ids": [
+            "4c4946f5-97af-4f0d-8be3-e3444ba602d7:4c4946f5-97af-4f0d-8be3-e3444ba602d7:a31243f9-202e-48b6-ab1e-a55a0511de58.i5"
+          ],
+          "dependency_ids": []
+        }
+      ],
+      "snapshot_hash": "b237e4ec62b85d16f7e931c0826cdd6ca602d50228efdeccc2fa7fee0fc845d5"
+    },
+    "work_orders": [
+      {
+        "work_order_id": "learn::learn::orient-b1::hook-hero",
+        "block_id": "orient-b1",
+        "section_id": "orient",
+        "lane": "content",
+        "capability_id": "hook-hero",
+        "teaching_plan_id": "31677c25-5ad3-4f26-b11b-cba955f1838e",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "1270598d38de83ac05ec4fb1f3c8c85cf77c5fe8f08c859159aa36fdbdb228fa",
+        "capability_contract_hash": "ff14c279ad8b693f8f900294ccf223a43936f7ffa6df6facb2735636a906ed6b",
+        "source_refs": [],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/HookHeroContent"
+        },
+        "field_guidance": {
+          "headline": "Short attention-grabbing headline. Format: plain_text. Plain text heading.",
+          "body": "Primary hook narrative. Format: inline_markdown. Usually inline markdown. When type is quote, treat as plain quote text without markdown emphasis unless explicitly needed.",
+          "anchor": "Short anchor tying the hook to the lesson concept. Format: plain_text_short. Plain text snippet.",
+          "type": "Hook presentation mode (prose, quote, question, data-point). Format: enum.",
+          "question_options": "Optional multiple choice stems for question hooks. Format: structured_array. Plain text entries per option.",
+          "data_point": "Structured numeric or textual evidence for data-point hooks. Format: structured_object. Rendered as a compact fact card when present.",
+          "image": "Optional inline illustration with url and alt text. Format: structured_object. Rendered as an inline image when present.",
+          "svg_content": "Optional inline SVG markup. Format: plain_text. Sanitized SVG inserted when present.",
+          "quote_attribution": "Attribution line for quote hooks. Format: plain_text. Plain text."
+        },
+        "brief": "Open with the baker's problem from anchor.anchor-1: there are 3 boxes, each holding 24 cookies, and the total is needed for a bake sale order. Establish that no single memorised multiplication fact gives 24 \u00d7 3 directly, so the learner needs a way to work with a two-digit factor. Do not yet show how to split 24 or name any products.",
+        "intent": "orient",
+        "action": null,
+        "evidence": "The objective is to decompose a two-digit factor, and the anchor provides the exact concrete pressure that makes a new method necessary: 24 \u00d7 3 cannot be answered from a single known fact.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::explain-b1::hook-hero",
+        "block_id": "explain-b1",
+        "section_id": "explain",
+        "lane": "content",
+        "capability_id": "hook-hero",
+        "teaching_plan_id": "31677c25-5ad3-4f26-b11b-cba955f1838e",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "1270598d38de83ac05ec4fb1f3c8c85cf77c5fe8f08c859159aa36fdbdb228fa",
+        "capability_contract_hash": "ff14c279ad8b693f8f900294ccf223a43936f7ffa6df6facb2735636a906ed6b",
+        "source_refs": [],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/HookHeroContent"
+        },
+        "field_guidance": {
+          "headline": "Short attention-grabbing headline. Format: plain_text. Plain text heading.",
+          "body": "Primary hook narrative. Format: inline_markdown. Usually inline markdown. When type is quote, treat as plain quote text without markdown emphasis unless explicitly needed.",
+          "anchor": "Short anchor tying the hook to the lesson concept. Format: plain_text_short. Plain text snippet.",
+          "type": "Hook presentation mode (prose, quote, question, data-point). Format: enum.",
+          "question_options": "Optional multiple choice stems for question hooks. Format: structured_array. Plain text entries per option.",
+          "data_point": "Structured numeric or textual evidence for data-point hooks. Format: structured_object. Rendered as a compact fact card when present.",
+          "image": "Optional inline illustration with url and alt text. Format: structured_object. Rendered as an inline image when present.",
+          "svg_content": "Optional inline SVG markup. Format: plain_text. Sanitized SVG inserted when present.",
+          "quote_attribution": "Attribution line for quote hooks. Format: plain_text. Plain text."
+        },
+        "brief": "Briefly surface the prerequisite place value idea that in 24 from anchor.anchor-1, the 2 means 2 tens, worth 20, and the 4 means 4 ones. Connect this to the prior understanding of multiplication as equal groups: 3 \u00d7 20 means 3 groups of 20, and 3 \u00d7 4 means 3 groups of 4. Do not carry out the multiplications yet.",
+        "intent": "activate-prior-knowledge",
+        "action": null,
+        "evidence": "The decomposition taught in the objective depends on reading the 2 in 24 as 20, which is exactly the place value knowledge prior-3 establishes; connecting it to prior-1 sets up the multiplication that follows, and the anchor's 24 makes the tens and ones concrete.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::explain-b2::diagram-compare",
+        "block_id": "explain-b2",
+        "section_id": "explain",
+        "lane": "content",
+        "capability_id": "diagram-compare",
+        "teaching_plan_id": "31677c25-5ad3-4f26-b11b-cba955f1838e",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "1270598d38de83ac05ec4fb1f3c8c85cf77c5fe8f08c859159aa36fdbdb228fa",
+        "capability_contract_hash": "fe239c29e230a0d8c6c38eb6aedea1756ac54021134ebadbe219358fc61f6b25",
+        "source_refs": [],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/DiagramCompareContent"
+        },
+        "field_guidance": {
+          "before_svg": "Optional SVG markup for the before panel. Format: plain_text. Sanitized SVG string.",
+          "after_svg": "Optional SVG markup for the after panel. Format: plain_text. Sanitized SVG string.",
+          "before_image_url": "Optional raster image URL for the before panel. Format: media_url. Rendered as <img> when provided.",
+          "after_image_url": "Optional raster image URL for the after panel. Format: media_url. Rendered as <img> when provided.",
+          "before_label": "Short label for the before column. Format: plain_text. Plain text.",
+          "after_label": "Short label for the after column. Format: plain_text. Plain text.",
+          "before_details": "Optional bullet strings elaborating the before state. Format: structured_array. Plain text entries.",
+          "after_details": "Optional bullet strings elaborating the after state. Format: structured_array. Plain text entries.",
+          "caption": "Shared caption for the compare figure. Format: plain_text. Plain text.",
+          "alt_text": "Accessibility description covering both panels. Format: accessibility_text. Plain text."
+        },
+        "brief": "Use anchor.anchor-1 to show the structure of decomposing 24 for the multiplication 24 \u00d7 3. Split 24 into 20 and 4, multiply each part by 3 to get the partial products 60 and 12, and state clearly that 24 \u00d7 3 has the two partial products 60 and 12. The learner must see the relationship: the total is the sum of the partial products. Do not add the partial products 60 and 12 to get 72, and do not compare with any wrong method yet.",
+        "intent": "show-structure",
+        "action": null,
+        "evidence": "The objective requires stating the two partial products, and show-structure is the exact fit because the idea's difficulty is how the two-digit factor decomposes into tens and ones that each multiply by 3.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::contrast-b1::diagram-compare",
+        "block_id": "contrast-b1",
+        "section_id": "contrast",
+        "lane": "content",
+        "capability_id": "diagram-compare",
+        "teaching_plan_id": "31677c25-5ad3-4f26-b11b-cba955f1838e",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "1270598d38de83ac05ec4fb1f3c8c85cf77c5fe8f08c859159aa36fdbdb228fa",
+        "capability_contract_hash": "fe239c29e230a0d8c6c38eb6aedea1756ac54021134ebadbe219358fc61f6b25",
+        "source_refs": [],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/DiagramCompareContent"
+        },
+        "field_guidance": {
+          "before_svg": "Optional SVG markup for the before panel. Format: plain_text. Sanitized SVG string.",
+          "after_svg": "Optional SVG markup for the after panel. Format: plain_text. Sanitized SVG string.",
+          "before_image_url": "Optional raster image URL for the before panel. Format: media_url. Rendered as <img> when provided.",
+          "after_image_url": "Optional raster image URL for the after panel. Format: media_url. Rendered as <img> when provided.",
+          "before_label": "Short label for the before column. Format: plain_text. Plain text.",
+          "after_label": "Short label for the after column. Format: plain_text. Plain text.",
+          "before_details": "Optional bullet strings elaborating the before state. Format: structured_array. Plain text entries.",
+          "after_details": "Optional bullet strings elaborating the after state. Format: structured_array. Plain text entries.",
+          "caption": "Shared caption for the compare figure. Format: plain_text. Plain text.",
+          "alt_text": "Accessibility description covering both panels. Format: accessibility_text. Plain text."
+        },
+        "brief": "Compare the correct decomposition of 24 \u00d7 3 from anchor.anchor-1 with the tempting shortcut of multiplying 2 \u00d7 3 and 4 \u00d7 3 separately and writing 6 and 12. Use the anchor's 3 boxes of 24 cookies to make the failure concrete: 2 \u00d7 3 gives 6, but the 2 stood for 20, so the partial product must be 60, not 6. The near-miss differs only in the value of the tens part, but that difference changes the partial product from 6 to 60.",
+        "intent": "compare",
+        "action": null,
+        "evidence": "M1 holds that digits can be multiplied directly and the results written next to each other; the contrast slot exists to show the boundary where that belief fails against the correct partial products.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::contrast-b2::diagram-compare",
+        "block_id": "contrast-b2",
+        "section_id": "contrast",
+        "lane": "content",
+        "capability_id": "diagram-compare",
+        "teaching_plan_id": "31677c25-5ad3-4f26-b11b-cba955f1838e",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "1270598d38de83ac05ec4fb1f3c8c85cf77c5fe8f08c859159aa36fdbdb228fa",
+        "capability_contract_hash": "fe239c29e230a0d8c6c38eb6aedea1756ac54021134ebadbe219358fc61f6b25",
+        "source_refs": [],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/DiagramCompareContent"
+        },
+        "field_guidance": {
+          "before_svg": "Optional SVG markup for the before panel. Format: plain_text. Sanitized SVG string.",
+          "after_svg": "Optional SVG markup for the after panel. Format: plain_text. Sanitized SVG string.",
+          "before_image_url": "Optional raster image URL for the before panel. Format: media_url. Rendered as <img> when provided.",
+          "after_image_url": "Optional raster image URL for the after panel. Format: media_url. Rendered as <img> when provided.",
+          "before_label": "Short label for the before column. Format: plain_text. Plain text.",
+          "after_label": "Short label for the after column. Format: plain_text. Plain text.",
+          "before_details": "Optional bullet strings elaborating the before state. Format: structured_array. Plain text entries.",
+          "after_details": "Optional bullet strings elaborating the after state. Format: structured_array. Plain text entries.",
+          "caption": "Shared caption for the compare figure. Format: plain_text. Plain text.",
+          "alt_text": "Accessibility description covering both panels. Format: accessibility_text. Plain text."
+        },
+        "brief": "Isolate the second near-miss from M2 against anchor.anchor-1: treating the tens part as if it were ones, so 20 \u00d7 3 is treated as 2 \u00d7 3. Use the anchor to hold the tens value steady: in 24, the 2 is worth 20, and 20 \u00d7 3 means 3 groups of 20, which makes 60. State that splitting the factor does not change the value of its parts: the tens must stay tens. Do not introduce a new multiplication fact beyond the single-digit facts the learner already knows.",
+        "intent": "compare",
+        "action": null,
+        "evidence": "M2 holds that the tens part loses its value when split, and the contrast section is where the learner must see that the tens value is unchanged, because 20 \u00d7 3 must be 60 and not 2 \u00d7 3's 6.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      },
+      {
+        "work_order_id": "learn::learn::check-b1::fill-in-blank",
+        "block_id": "check-b1",
+        "section_id": "check",
+        "lane": "content",
+        "capability_id": "fill-in-blank",
+        "teaching_plan_id": "31677c25-5ad3-4f26-b11b-cba955f1838e",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "1270598d38de83ac05ec4fb1f3c8c85cf77c5fe8f08c859159aa36fdbdb228fa",
+        "capability_contract_hash": "2c62b908899f660f09f0f97b38f3aa9d553d6ee776afc1944e61be531ed6e7d0",
+        "source_refs": [
+          "4c4946f5-97af-4f0d-8be3-e3444ba602d7:4c4946f5-97af-4f0d-8be3-e3444ba602d7:a31243f9-202e-48b6-ab1e-a55a0511de58.i5"
+        ],
+        "dependency_ids": [],
+        "expected_output_schema": {
+          "$ref": "#/definitions/FillInBlankContent"
+        },
+        "field_guidance": {
+          "instruction": "Leading instruction for the activity. Format: plain_text. Plain text.",
+          "segments[].text": "Text chunk for a segment. Format: plain_text. Plain text segment content.",
+          "segments[].is_blank": "Whether this segment is rendered as a blank. Format: boolean. Controls blank UI for the segment.",
+          "segments[].answer": "Answer text when is_blank is true. Format: plain_text.",
+          "word_bank": "Optional word bank entries. Format: structured_array. Plain text entries; should cover blank answers when provided."
+        },
+        "brief": "Check whether the learner can decompose 24 \u00d7 3 from anchor.anchor-1 into the two partial products and name them. The learner must identify 60 and 12 as the partial products. Do not ask for the final sum 72, and do not ask the learner to explain a wrong method again.",
+        "intent": "check-understanding",
+        "action": null,
+        "evidence": "The objective ends at decomposing into tens and ones and stating the two partial products; the check tests exactly that on the anchor case, not the adjacent skill of adding partial products to reach the total.",
+        "support_level": null,
+        "authoring_mode": "new",
+        "approved_item_ids": []
+      }
+    ],
+    "work_order_ids": [
+      "learn::learn::orient-b1::hook-hero",
+      "learn::learn::explain-b1::hook-hero",
+      "learn::learn::explain-b2::diagram-compare",
+      "learn::learn::contrast-b1::diagram-compare",
+      "learn::learn::contrast-b2::diagram-compare",
+      "learn::learn::check-b1::fill-in-blank"
+    ],
+    "form_prompt": "closed_learn_selection"
+  },
+  "content_hash": "1270598d38de83ac05ec4fb1f3c8c85cf77c5fe8f08c859159aa36fdbdb228fa",
+  "document_title": "The lesson opens on a baker who must total 3 boxes of 24 cookies, a problem that is too large for a known single-digit fact. It teaches the learner to split 24 into 20 and 4, multiply each part by 3, and name the two partial products 60 and 12. It then confronts the belief that 24 \u00d7 3 equals 6 \u00d7 12 by showing where that shortcut loses the tens, and it closes by checking that the learner can decompose a two-digit factor and state both partial products.",
+  "block_count": 0,
+  "teaching_plan_id": "31677c25-5ad3-4f26-b11b-cba955f1838e",
+  "teaching_revision": 1
+}

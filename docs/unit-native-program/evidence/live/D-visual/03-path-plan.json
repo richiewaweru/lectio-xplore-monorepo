@@ -1,0 +1,71 @@
+{
+  "id": "7640044a-1e30-471c-bb26-94d501bbaef5",
+  "unit_id": "ef8d2634-ea2a-48c3-842c-900887229a19",
+  "version": 1,
+  "revision": 1,
+  "status": "draft",
+  "generated_by": "path_planner",
+  "merge_critic_results": [],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": null,
+  "created_at": "2026-09-08T05:38:50.530042",
+  "lessons": [
+    {
+      "id": "7e29c6a2-7e1e-4928-afce-9fb842a01545",
+      "concept_id": "9252a39e-9ac5-4ddc-93ba-d65c1a5c44b0",
+      "concept_slug": "science.main.parts.of.a.plant",
+      "title": "Main parts of a plant",
+      "objective": "Identify and locate roots, stem, and leaves on a labelled diagram of a plant.",
+      "objective_hash": "77564d93338073a54d0b6af1b9b989712df27095e09aa82856d786942c4e66e4",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Parts of a plant: roots, stem, leaves",
+        "Where each part is located on a plant diagram"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "ebb34314-e1a3-41fb-bc22-58ec9c5bcdfa",
+      "concept_id": "39162e96-54bc-4038-8fa1-2dd0cd1827a2",
+      "concept_slug": "science.roles.of.roots.stem.and.leaves",
+      "title": "Roles of roots, stem, and leaves",
+      "objective": "Match roots to absorbing water, the stem to supporting the plant, and leaves to making food.",
+      "objective_hash": "e6f07d434c9a859b17419d19da7b05857ec4f431de6e2c97ba57dc31c8bdd150",
+      "prerequisites": [
+        "7e29c6a2-7e1e-4928-afce-9fb842a01545"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Roots absorb water",
+        "The stem supports the plant",
+        "Leaves make food"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}

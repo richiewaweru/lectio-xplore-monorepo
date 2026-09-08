@@ -96,7 +96,13 @@ def compile_learn_work_orders(
             support = block.learner_action.support_level
             evidence = block.learner_action.evidence or evidence
 
-        source_ids = list(decision.source_item_ids or block.source_question_ids or [])
+        # When a learner action is present, trust decision.source_item_ids
+        # including an empty list — empty means "author new", not "fall back
+        # to block assessment question ids" (those are often MC/open).
+        if action:
+            source_ids = list(decision.source_item_ids or [])
+        else:
+            source_ids = list(decision.source_item_ids or block.source_question_ids or [])
         if source_ids and action:
             sources = [approved_by_id[item_id] for item_id in source_ids if item_id in approved_by_id]
             if len(sources) != len(source_ids):

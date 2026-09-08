@@ -1,0 +1,31 @@
+{
+  "generation_id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7",
+  "pack_id": null,
+  "stage": "awaiting_visuals",
+  "doc_version": "rev:4",
+  "failed_sections": [],
+  "blueprint_id": null,
+  "execution_started": false,
+  "next_action": "wait_visuals",
+  "error": null,
+  "error_type": null,
+  "variant_generation_ids": {},
+  "document_version": 2,
+  "document_exists": true,
+  "sections_total": 4,
+  "sections_ready": 4,
+  "sections_failed": 0,
+  "blocks_total": 6,
+  "blocks_ready": 6,
+  "blocks_failed": 0,
+  "failed_section_ids": [],
+  "failed_block_ids": [],
+  "error_detail": null,
+  "visual_quality": {
+    "status": "ready",
+    "flagged": [],
+    "flagged_count": 0,
+    "failed_request_ids": [],
+    "retryable": false
+  }
+}

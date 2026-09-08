@@ -1,0 +1,13 @@
+{
+  "prepared_at": "2026-09-08T07:53:51.920502+00:00",
+  "generation_id": "3b47668e-4917-4c73-8b7b-f5203182e61c",
+  "unit_id": "e6adf9a5-eeaa-4887-8bc2-6b2943d78ac5",
+  "path_lesson_id": "39bf6cae-450e-4334-abd8-0972d5e10298",
+  "teaching_revision": 1,
+  "env_to_arm": {
+    "XPLORE_NATIVE_FAILURE_INJECTION": "true",
+    "XPLORE_NATIVE_FAILURE_GENERATION_ID": "3b47668e-4917-4c73-8b7b-f5203182e61c",
+    "XPLORE_NATIVE_FAILURE_NODE": "planning_forms",
+    "XPLORE_NATIVE_FAILURE_ONCE": "true"
+  }
+}

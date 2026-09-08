@@ -95,6 +95,10 @@ export default defineConfig(({ mode }) => {
 				'/health': apiTarget
 			}
 		},
+		ssr: {
+			// Workspace packages must be bundled so Node SSR does not load raw .ts.
+			noExternal: ['@lectio/contracts', '@lectio/page', '@lectio/learn']
+		},
 		/*build: {
 			rollupOptions: {
 				output: {

@@ -1,0 +1,109 @@
+{
+  "id": "eb099005-1dfa-4660-bd65-0601ea1accda",
+  "unit_id": "3b80906f-46b6-4d2d-8368-b62afaa7f70b",
+  "version": 1,
+  "revision": 1,
+  "status": "draft",
+  "generated_by": "path_planner",
+  "merge_critic_results": [
+    {
+      "lesson_a": "5f96674c-318e-481f-835e-aeaabab5c447",
+      "lesson_b": "4d03c1f5-b3e7-480d-8360-3e48ec4f6eb1",
+      "verdict": "review_suggested",
+      "reason": "These adjacent lessons overlap in what they establish.",
+      "merged_objective": null,
+      "diagnostic_cost": null,
+      "source": "deterministic"
+    }
+  ],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": null,
+  "created_at": "2026-09-08T05:36:45.931919",
+  "lessons": [
+    {
+      "id": "5f96674c-318e-481f-835e-aeaabab5c447",
+      "concept_id": "d0c95d03-b36c-4044-a9f9-11d0cf8bb901",
+      "concept_slug": "mathematics.multiply.a.two.digit.number.by.a.one.digit.number.without.regrouping",
+      "title": "Multiply a two-digit number by a one-digit number without regrouping",
+      "objective": "Multiply a two-digit number by a one-digit number using place value and the standard procedure when no regrouping is required.",
+      "objective_hash": "97f05299f71d168ec3c4ddf881ed6f9413daaa7d2c002559029fafdda86542c4",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Multiply the ones place value by the one-digit number",
+        "Multiply the tens place value by the one-digit number",
+        "Record the resulting two-digit product correctly in the standard algorithm layout"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "procedural",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "4d03c1f5-b3e7-480d-8360-3e48ec4f6eb1",
+      "concept_id": "1bc88276-49cf-48b4-b574-23a7cc3eda79",
+      "concept_slug": "mathematics.multiply.a.two.digit.number.by.a.one.digit.number.with.regrouping.in.the.ones.place",
+      "title": "Multiply a two-digit number by a one-digit number with regrouping in the ones place",
+      "objective": "Multiply a two-digit number by a one-digit number using the standard procedure when the product in the ones place is 10 or greater and regrouping to the tens place is required.",
+      "objective_hash": "15684efb4642296277e96bdec2dcdce604eff767c2ac79924121eae0f1d1a534",
+      "prerequisites": [
+        "5f96674c-318e-481f-835e-aeaabab5c447"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Identify when a product in the ones place requires regrouping",
+        "Regroup the tens value from the ones product into the tens place",
+        "Add the regrouped value to the product of the tens place"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "procedural",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "918a0c30-1683-4c01-a4ff-b3558eb7197b",
+      "concept_id": "a203d4eb-1309-4ab3-bbfd-ee7e6ce5de90",
+      "concept_slug": "mathematics.solve.two.digit.by.one.digit.multiplication.problems.using.the.standard.procedure",
+      "title": "Solve two-digit by one-digit multiplication problems using the standard procedure",
+      "objective": "Solve a two-digit by one-digit multiplication problem using the standard procedure, including cases with and without regrouping.",
+      "objective_hash": "ed61dfa5dfc32ec8fb9d4cbfc84b6d5998b99eab2925f795db3cf809dea981ed",
+      "prerequisites": [
+        "4d03c1f5-b3e7-480d-8360-3e48ec4f6eb1"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Apply the standard procedure consistently to problems with and without regrouping",
+        "Verify a multiplication result for reasonableness using estimation or place value"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "procedural",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}

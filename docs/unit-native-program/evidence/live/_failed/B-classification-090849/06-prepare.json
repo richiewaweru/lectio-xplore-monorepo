@@ -1,0 +1,24 @@
+{
+  "generation_id": "b4171b07-9f15-49d8-90f4-04cca4762197",
+  "path_lesson_id": "0d1eb1de-1303-4b78-824b-5ed5e60b0a0c",
+  "objective": "Define the criteria that determine if something is living: grow, energy, respond, and reproduce.",
+  "objective_hash": "19cf85e3ffa7c47584c4af69b7916bac3e439de8bedec5fb05a4f23465f9bd38",
+  "skeleton_id": "factual.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "organise",
+    "guided",
+    "independent",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "organise",
+    "guided",
+    "independent",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

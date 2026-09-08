@@ -1,0 +1,22 @@
+{
+  "generation_id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7",
+  "path_lesson_id": "261bb1b9-1ba1-4c27-9e78-4bd57326da72",
+  "objective": "Decompose a two-digit factor into tens and ones, multiply each part by a one-digit factor, and state the two partial products",
+  "objective_hash": "1ff42566ee15dcf6fd42a4d362c72f5a31876e53748bc6d3c16278b83ab86cca",
+  "skeleton_id": "conceptual.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "explain",
+    "contrast",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "explain",
+    "contrast",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

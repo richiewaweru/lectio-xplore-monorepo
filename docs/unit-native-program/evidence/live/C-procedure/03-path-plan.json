@@ -1,0 +1,107 @@
+{
+  "id": "b3792a6d-9178-4048-8543-58f084f34efb",
+  "unit_id": "f81c5bac-33a0-4d02-9064-b0408024bd23",
+  "version": 1,
+  "revision": 1,
+  "status": "draft",
+  "generated_by": "path_planner",
+  "merge_critic_results": [
+    {
+      "lesson_a": "60196aaf-1a3b-4e0e-baab-bf0aa0f1ceb5",
+      "lesson_b": "ee968f04-8912-45ef-a94c-79c746431a0a",
+      "verdict": "review_suggested",
+      "reason": "These adjacent lessons overlap in what they establish.",
+      "merged_objective": null,
+      "diagnostic_cost": null,
+      "source": "deterministic"
+    }
+  ],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": null,
+  "created_at": "2026-09-08T05:56:51.853269",
+  "lessons": [
+    {
+      "id": "261bb1b9-1ba1-4c27-9e78-4bd57326da72",
+      "concept_id": "a31243f9-202e-48b6-ab1e-a55a0511de58",
+      "concept_slug": "mathematics.multiply.tens.and.ones.separately",
+      "title": "Multiply tens and ones separately",
+      "objective": "Decompose a two-digit factor into tens and ones, multiply each part by a one-digit factor, and state the two partial products",
+      "objective_hash": "1ff42566ee15dcf6fd42a4d362c72f5a31876e53748bc6d3c16278b83ab86cca",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Two-digit numbers can be multiplied by one-digit numbers by multiplying the tens and the ones separately",
+        "A partial product is the product of one place-value part of a factor and the other factor"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "60196aaf-1a3b-4e0e-baab-bf0aa0f1ceb5",
+      "concept_id": "d0c95d03-b36c-4044-a9f9-11d0cf8bb901",
+      "concept_slug": "mathematics.multiply.a.two.digit.number.by.a.one.digit.number.without.regrouping",
+      "title": "Multiply a two-digit number by a one-digit number without regrouping",
+      "objective": "Use the standard procedure to multiply a two-digit number by a one-digit number when the product of the ones and the product of the tens each stay within a single place",
+      "objective_hash": "cbe26d1a33be853dd06f4ef3bf3199372e79eb765f768a3247be04a977e38bee",
+      "prerequisites": [
+        "261bb1b9-1ba1-4c27-9e78-4bd57326da72"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "The standard procedure records the partial products in a compact vertical form",
+        "The ones are multiplied first, then the tens"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "procedural",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "ee968f04-8912-45ef-a94c-79c746431a0a",
+      "concept_id": "439a72ab-d532-4d9a-85e4-85cd31ff1007",
+      "concept_slug": "mathematics.multiply.a.two.digit.number.by.a.one.digit.number.with.regrouping",
+      "title": "Multiply a two-digit number by a one-digit number with regrouping",
+      "objective": "Use the standard procedure to multiply a two-digit number by a one-digit number when the product of the ones requires regrouping into the tens place",
+      "objective_hash": "ddab4e4d9be02aaaa6bb5c71ea4efca69bc9f07a51e7040158547bd52be4cc63",
+      "prerequisites": [
+        "60196aaf-1a3b-4e0e-baab-bf0aa0f1ceb5"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "When the product of the ones place is ten or greater, the regrouped amount is recorded above the tens place",
+        "The regrouped amount is added to the product of the tens place"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "procedural",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}

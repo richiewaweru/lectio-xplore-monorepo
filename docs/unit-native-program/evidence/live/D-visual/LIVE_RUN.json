@@ -1,0 +1,108 @@
+{
+  "case_id": "D-visual",
+  "status": "PASS_WITH_BLOCKERS",
+  "commit": "a88c643",
+  "provider": "deepseek-v4-pro",
+  "model": {
+    "page_model_fast": "deepseek-v4-flash",
+    "page_model_standard": "deepseek-v4-pro",
+    "xplore_native_worker_enabled": true,
+    "anthropic_key_set": true,
+    "deepseek_key_set": true,
+    "openai_key_set": true
+  },
+  "started_at": "2026-09-08T05:38:43.362036+00:00",
+  "finished_at": "2026-09-08T05:40:11.177764+00:00",
+  "unit_id": "ef8d2634-ea2a-48c3-842c-900887229a19",
+  "path_lesson_id": "7e29c6a2-7e1e-4928-afce-9fb842a01545",
+  "teaching_plan_id": "5f59174f-b227-4eb4-bcfd-dca58ccd5735",
+  "teaching_revision": 1,
+  "teaching_hash": "a98e748a684e0f2e5eb99c2bc06b41682f02c81246b33c415b69a351f497b3b5",
+  "contracts": {
+    "print": null,
+    "learn": null,
+    "vocabulary": null
+  },
+  "print": {
+    "realization_id": null,
+    "generation_id": "ff448429-6f39-4bf8-a72a-f0b851e80a00",
+    "student_pdf": "docs/unit-native-program/evidence/live/D-visual/35-student.pdf",
+    "teacher_pdf": "docs/unit-native-program/evidence/live/D-visual/35-teacher.pdf",
+    "inspection": {
+      "status": "PASS",
+      "tool": "pdftoppm",
+      "student_pages": 3,
+      "teacher_pages": 3,
+      "image_paths": [
+        "docs/unit-native-program/evidence/live/D-visual/page-images/student-1.png",
+        "docs/unit-native-program/evidence/live/D-visual/page-images/student-2.png",
+        "docs/unit-native-program/evidence/live/D-visual/page-images/student-3.png",
+        "docs/unit-native-program/evidence/live/D-visual/page-images/teacher-1.png",
+        "docs/unit-native-program/evidence/live/D-visual/page-images/teacher-2.png",
+        "docs/unit-native-program/evidence/live/D-visual/page-images/teacher-3.png"
+      ]
+    }
+  },
+  "learn": {
+    "realization_id": "b44907b9-0932-4010-9cdb-a7fc8c641ee1",
+    "generation_id": "learn-out-71dffa5e0ca0",
+    "builder_id": "1da65c38-5019-43a7-b51c-b38347af26fd",
+    "release_id": "0ad593aa-cc93-4375-acd2-b28fd94abe36",
+    "assignment_id": "2f091517-09e4-4829-a3db-023901e71997",
+    "instance_id": "e95360fc-1fcf-4ae4-a2b7-b770de1af6bf",
+    "attempt_evidence": null,
+    "refresh_evidence": null
+  },
+  "stage_timings_ms": {
+    "constructor_s": 1840,
+    "create_unit_s": 90,
+    "path_plan_s": 5140,
+    "path_approve_s": 90,
+    "prepare_s": 8220,
+    "teaching_plan_s": 58060,
+    "print_writers_s": 12620,
+    "learn_produce_s": 550,
+    "learn_publish_v1_s": 140
+  },
+  "failure_recovery": null,
+  "rubric": {
+    "print": null,
+    "learn": null
+  },
+  "evidence_paths": [
+    "docs/unit-native-program/evidence/live/D-visual/00-health.json",
+    "docs/unit-native-program/evidence/live/D-visual/00-provider-snapshot.json",
+    "docs/unit-native-program/evidence/live/D-visual/01-unit-input.json",
+    "docs/unit-native-program/evidence/live/D-visual/03-path-plan.json",
+    "docs/unit-native-program/evidence/live/D-visual/05-path-approval.json",
+    "docs/unit-native-program/evidence/live/D-visual/06-prepare.json",
+    "docs/unit-native-program/evidence/live/D-visual/13-teaching-review.json",
+    "docs/unit-native-program/evidence/live/D-visual/14-teaching-approve.json",
+    "docs/unit-native-program/evidence/live/D-visual/20-print-status.json",
+    "docs/unit-native-program/evidence/live/D-visual/21-print-status-refresh.json",
+    "docs/unit-native-program/evidence/live/D-visual/35-student-pdf-status.json",
+    "docs/unit-native-program/evidence/live/D-visual/35-student.pdf",
+    "docs/unit-native-program/evidence/live/D-visual/35-teacher-pdf-status.json",
+    "docs/unit-native-program/evidence/live/D-visual/35-teacher.pdf",
+    "docs/unit-native-program/evidence/live/D-visual/40-learn-production.json",
+    "docs/unit-native-program/evidence/live/D-visual/41-learn-edit.json",
+    "docs/unit-native-program/evidence/live/D-visual/42-learn-release-v1.json",
+    "docs/unit-native-program/evidence/live/D-visual/43-learner.json",
+    "docs/unit-native-program/evidence/live/D-visual/44-assignment.json",
+    "docs/unit-native-program/evidence/live/D-visual/45-learner-session.json",
+    "docs/unit-native-program/evidence/live/D-visual/46-instance.json",
+    "docs/unit-native-program/evidence/live/D-visual/49-learn-release-v2.json",
+    "docs/unit-native-program/evidence/live/D-visual/99-run-log.txt",
+    "docs/unit-native-program/evidence/live/D-visual/LIVE_RUN.json",
+    "docs/unit-native-program/evidence/live/D-visual/page-images/student-1.png",
+    "docs/unit-native-program/evidence/live/D-visual/page-images/student-2.png",
+    "docs/unit-native-program/evidence/live/D-visual/page-images/student-3.png",
+    "docs/unit-native-program/evidence/live/D-visual/page-images/teacher-1.png",
+    "docs/unit-native-program/evidence/live/D-visual/page-images/teacher-2.png",
+    "docs/unit-native-program/evidence/live/D-visual/page-images/teacher-3.png"
+  ],
+  "limitations": [
+    "Spatial ImageHotspot/DragLabel unavailable; Learn may use ImageChoice or text-supported Sequence/classify alternative when spatial remains unavailable.",
+    "No learn_interaction id found to submit attempts"
+  ]
+}

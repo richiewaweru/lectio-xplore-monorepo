@@ -1,0 +1,22 @@
+{
+  "generation_id": "eb867328-9cdf-4af3-968d-d61c725cda11",
+  "path_lesson_id": "da4b74ed-b55c-48a5-bac9-e9f9d9fa1d11",
+  "objective": "explain what it means for something to grow and identify instances of growth as evidence of life",
+  "objective_hash": "0ccb227ead49a10629f3939228375b3a7155e87cdbf8ba32e4a8ec9a225418d0",
+  "skeleton_id": "conceptual.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "explain",
+    "contrast",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "explain",
+    "contrast",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

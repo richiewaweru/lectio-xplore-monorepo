@@ -1,0 +1,98 @@
+{
+  "id": "4dd507db-8f60-4508-8c5f-b850c03cb103",
+  "unit_id": "c454adf7-e2a6-4a45-8545-a5b96b128c78",
+  "version": 1,
+  "revision": 1,
+  "status": "draft",
+  "generated_by": "path_planner",
+  "merge_critic_results": [],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": null,
+  "created_at": "2026-09-08T07:30:43.322190",
+  "lessons": [
+    {
+      "id": "4c1ef903-5f30-485d-9c03-ae2f36c7298b",
+      "concept_id": "b6494024-725b-4c84-86e8-7c8bf29e5485",
+      "concept_slug": "science.name.the.water.cycle.stages.in.order",
+      "title": "Name the water cycle stages in order",
+      "objective": "Name evaporation, condensation, precipitation, and collection as the four stages of the water cycle and recall their order.",
+      "objective_hash": "42a071676377a0c6b973ab88839706939441aa380b8fa6c853bc0f60824a195b",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "The water cycle has four stages: evaporation, condensation, precipitation, and collection.",
+        "The stages repeat in the order: evaporation \u2192 condensation \u2192 precipitation \u2192 collection."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "1a57a334-4440-4f98-8090-26aadfc0bf80",
+      "concept_id": "fe1c54f3-b0c1-4ac3-b987-8c88ffc771ac",
+      "concept_slug": "science.describe.how.water.changes.state.to.move.between.stages",
+      "title": "Describe how water changes state to move between stages",
+      "objective": "Explain how liquid water changes to water vapor during evaporation and how water vapor changes back to liquid during condensation, connecting each change to the movement between stages.",
+      "objective_hash": "25f113ed9e4d155b0dff87813a467fab6f7b650c79b330afa1c91c4807461741",
+      "prerequisites": [
+        "4c1ef903-5f30-485d-9c03-ae2f36c7298b"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "During evaporation, liquid water turns into water vapor and rises into the air.",
+        "During condensation, water vapor cools and turns back into liquid droplets."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "972291cd-509a-4ab1-af5c-75bd1f067427",
+      "concept_id": "317eb355-422b-4263-97b9-f75c1f18d67c",
+      "concept_slug": "science.explain.why.the.water.cycle.keeps.going",
+      "title": "Explain why the water cycle keeps going",
+      "objective": "Explain how the sun\u2019s heat and gravity keep evaporation, condensation, precipitation, and collection repeating without stopping.",
+      "objective_hash": "dff9c0c413cc2672322d84e17abd6d09765873adf6323341ebb09451f9068ff3",
+      "prerequisites": [
+        "4c1ef903-5f30-485d-9c03-ae2f36c7298b",
+        "1a57a334-4440-4f98-8090-26aadfc0bf80"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "The sun provides the energy needed for evaporation to keep happening.",
+        "Gravity pulls precipitation down and moves collected water toward places where evaporation can happen again."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}

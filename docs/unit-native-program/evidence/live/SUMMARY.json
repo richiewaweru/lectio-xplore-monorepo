@@ -1,11 +1,58 @@
 {
-  "finished_at": "2026-09-08T04:48:43.868288+00:00",
+  "finished_at": "2026-09-08T08:00:00Z",
   "commit": "a88c643",
   "results": [
     {
       "case_id": "A-cycle",
-      "status": "FAIL",
-      "error": "NoCompatibleLearnCapabilityError: NO_COMPATIBLE_CAPABILITY block='explain-b1' intent='name-parts' action=None: empty content and interaction candidate sets"
+      "status": "PASS_WITH_BLOCKERS",
+      "print_generation_id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd",
+      "learn_generation_id": "learn-out-fb767eb51b40",
+      "teaching_hash": "5478751375d49a1ea2d7920418e6ff45969bb4c9cd6f0fddd5a7b79dfe49143f",
+      "student_pdf": "docs/unit-native-program/evidence/live/A-cycle/35-student.pdf",
+      "inspection": "PASS",
+      "attempts": "PASS (Sequence salvage: client-score reject 422; wrong partial; right correct)",
+      "limitations": "Attempt evidence via order-items salvage (D-043); Sequence steps synthesized from brief rather than owned lifecycle stage labels"
+    },
+    {
+      "case_id": "B-classification",
+      "status": "PASS_WITH_BLOCKERS",
+      "print_generation_id": "eb867328-9cdf-4af3-968d-d61c725cda11",
+      "learn_generation_id": "learn-out-fb54a3cc7257",
+      "teaching_hash": "d89cf7b7e182546938f63ecf7c500ae5c69fd5643021d379326777c80b213d73",
+      "student_pdf": "docs/unit-native-program/evidence/live/B-classification/35-student.pdf",
+      "inspection": "PASS",
+      "attempts": null,
+      "limitations": "No learn_interaction on original produce; Classify not forced when teaching omitted learner_action"
+    },
+    {
+      "case_id": "C-procedure",
+      "status": "PASS_WITH_BLOCKERS",
+      "print_generation_id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7",
+      "learn_generation_id": "learn-out-c3bf8b46afdf",
+      "teaching_hash": "1270598d38de83ac05ec4fb1f3c8c85cf77c5fe8f08c859159aa36fdbdb228fa",
+      "student_pdf": "docs/unit-native-program/evidence/live/C-procedure/35-student.pdf",
+      "inspection": "PASS",
+      "attempts": null,
+      "limitations": "No learn_interaction id found to submit attempts"
+    },
+    {
+      "case_id": "D-visual",
+      "status": "PASS_WITH_BLOCKERS",
+      "print_generation_id": "ff448429-6f39-4bf8-a72a-f0b851e80a00",
+      "learn_generation_id": "learn-out-71dffa5e0ca0",
+      "teaching_hash": "a98e748a684e0f2e5eb99c2bc06b41682f02c81246b33c415b69a351f497b3b5",
+      "student_pdf": "docs/unit-native-program/evidence/live/D-visual/35-student.pdf",
+      "inspection": "PASS",
+      "attempts": null,
+      "limitations": "Spatial ImageHotspot/DragLabel unavailable; text-supported alternative; no attempts"
+    },
+    {
+      "case_id": "V05-failure-recovery",
+      "status": "PASS",
+      "print_generation_id": "3b47668e-4917-4c73-8b7b-f5203182e61c",
+      "injection": "planning_forms once → injected form planner timeout → retry-native → ready",
+      "sibling_unchanged": true,
+      "sibling_release_id": "77d120c8-58f1-45b6-a481-13d86323c070"
     }
   ]
 }
