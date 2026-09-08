@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import random
 import time
 from typing import Any
@@ -27,6 +28,10 @@ from print.generation.whole_lesson.failure_policy import (
     structured_error_from_exc,
 )
 from print.generation.whole_lesson.figure_ids import stable_figure_request_id
+from print.generation.native_production import (
+    build_closed_print_production_plan,
+    selection_trace_payload,
+)
 from print.generation.whole_lesson.form_agent import NoLegalFormCandidatesError, run_form_planner
 from print.generation.whole_lesson.form_plan import FormPlan, coerce_form_plan
 from print.generation.whole_lesson.legality import (
@@ -37,11 +42,12 @@ from print.generation.whole_lesson.legality import (
 from print.generation.whole_lesson.packet import ImmutableLessonPacket
 from print.generation.catalogue_projections import build_form_candidate_map
 from print.generation.whole_lesson.repository import PageDocumentRepository
+from print.generation.whole_lesson.validation import validate_form_plan
+from print.resources.selection import NoCompatiblePrintCapabilityError
 from print.generation.whole_lesson.resolved_block_plan import (
     ResolvedBlockPlan,
     resolve_block_plans,
 )
-from print.generation.whole_lesson.validation import validate_form_plan
 from print.generation.whole_lesson.states import (
     DEFAULT_VARIANT_ID,
     MAX_SECTION_CONCURRENCY,
@@ -933,13 +939,51 @@ async def execute_after_teaching_approval(
                 lease_token=ltok,
             )
             raise TimeoutError("injected form planner timeout")
+        # Native Unit path: closed selection is authoritative (P04/P05). The LLM
+        # form planner remains available for studio/legacy callers of
+        # run_form_planner; post-approval execution must not invent a second plan.
         try:
-            form_result = await run_form_planner(
-                packet,
-                teaching_plan,
+            closed_plan, snapshot, orders = build_closed_print_production_plan(
+                teaching_plan=teaching_plan,
+                packet=packet,
                 legality=legality,
-                generation_id=generation_id,
             )
+            candidate_map = {
+                key: tuple(values) for key, values in snapshot.candidate_map.items()
+            }
+            validation = validate_form_plan(
+                closed_plan,
+                teaching_plan,
+                candidate_map=candidate_map,
+                required_visual_slots=set(packet.required_visual_slots()),
+            )
+            if not validation.ok:
+                raise NoLegalFormCandidatesError(
+                    sorted(d.block_id for d in snapshot.decisions)
+                )
+        except NoCompatiblePrintCapabilityError as exc:
+            error = {
+                "type": "NoCompatiblePrintCapabilityError",
+                "code": exc.code,
+                "message": str(exc),
+                "stage": "planning_forms",
+                "block_ids": [exc.block_id],
+                "retryable": False,
+                "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            }
+            await repo.transition(
+                expected={"planning_forms"},
+                target="failed_terminal",
+                event="form_plan_failed",
+                error=error,
+                worker_id=wid,
+                lease_token=ltok,
+            )
+            if lease is not None:
+                await repo.release_execution(
+                    worker_id=lease.worker_id, lease_token=lease.lease_token
+                )
+            return {"status": "failed_terminal", "error": error}
         except NoLegalFormCandidatesError as exc:
             error = {
                 "type": "NoLegalFormCandidatesError",
@@ -963,42 +1007,30 @@ async def execute_after_teaching_approval(
                     worker_id=lease.worker_id, lease_token=lease.lease_token
                 )
             return {"status": "failed_terminal", "error": error}
-        if not form_result.validation.ok:
-            error = {
-                "type": "ValidationError",
-                "code": "FORM_PLAN_INVALID",
-                "message": "form plan validation failed",
-                "stage": "planning_forms",
-                "retryable": True,
-                "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            }
-            await repo.transition(
-                expected={"planning_forms"},
-                target="failed_recoverable",
-                event="form_plan_failed",
-                error=error,
-                worker_id=wid,
-                lease_token=ltok,
-            )
-            if lease is not None:
-                await repo.release_execution(
-                    worker_id=lease.worker_id, lease_token=lease.lease_token
-                )
-            return {"status": "failed_recoverable", "error": error}
         await repo.save_form_plan(
-            plan=form_result.plan.model_dump(mode="json"),
-            validation=form_result.validation.to_dict(),
-            qc=form_result.qc,
-            catalogue_version=form_result.form_guidance["catalogue_version"],
-            form_projection_hash=form_result.form_guidance["projection_hash"],
-            prompt=form_result.prompt,
-            raw=form_result.raw_response,
+            plan=closed_plan.model_dump(mode="json"),
+            validation=validation.to_dict(),
+            qc=[],
+            catalogue_version=None,
+            form_projection_hash=snapshot.snapshot_hash,
+            prompt="closed_print_selection",
+            raw=json.dumps(
+                selection_trace_payload(snapshot, orders),
+                sort_keys=True,
+                default=str,
+            ),
             worker_id=wid,
             lease_token=ltok,
         )
-        form_plan = form_result.plan
+        form_plan = closed_plan
         await repo.append_event(
-            make_event("form_plan_ready", generation_id=generation_id, status="ready"),
+            make_event(
+                "form_plan_ready",
+                generation_id=generation_id,
+                status="ready",
+                selection="closed",
+                work_order_count=len(orders),
+            ),
             worker_id=wid,
             lease_token=ltok,
         )
