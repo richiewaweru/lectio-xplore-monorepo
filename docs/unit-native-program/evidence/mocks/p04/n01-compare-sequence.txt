@@ -1,0 +1,15 @@
+=== test_p04_n01_compare_without_response_and_sequence ===
+command: uv run pytest -q tests/print_learn/test_p04_native_selection_gates.py::test_p04_n01_compare_without_response_and_sequence --tb=short
+cwd: apps/textbook-agent/backend
+---
+.                                                                        [100%]
+============================== warnings summary ===============================
+src\contracts\generation_manifest.py:6
+  c:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+    class GenerationFieldContract(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1 passed, 1 warning in 0.28s
+
+---
+exit_code: 0

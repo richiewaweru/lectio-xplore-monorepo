@@ -2,8 +2,8 @@
   "pack_version": "1.0",
   "reviewed_sha": "5d1563903a22d6d40e12a86dcc4d9021ca8202a3",
   "implementation_branch": "feat/unit-print-learn",
-  "implementation_head": "d0f6e16",
-  "current_phase": "P04",
+  "implementation_head": "0a30c1b",
+  "current_phase": "P05",
   "phases": {
     "P00": {
       "status": "PASS",
@@ -67,9 +67,17 @@
       "blockers": []
     },
     "P04": {
-      "status": "NOT_STARTED",
-      "report": null,
-      "evidence": [],
+      "status": "PASS",
+      "report": "docs/unit-native-program/reports/P04_PHASE_REPORT.md",
+      "evidence": [
+        "docs/unit-native-program/evidence/mocks/p04/n01-compare-sequence.txt",
+        "docs/unit-native-program/evidence/mocks/p04/n02-selection-errors.txt",
+        "docs/unit-native-program/evidence/mocks/p04/n03-optional-required.txt",
+        "docs/unit-native-program/evidence/mocks/p04/n04-writer-schema-scope.txt",
+        "docs/unit-native-program/evidence/mocks/p04/n05-coverage-assets.txt",
+        "docs/unit-native-program/evidence/mocks/p04/n06-policy-change.txt",
+        "docs/unit-native-program/evidence/mocks/p04/n01-n06-pytest.txt"
+      ],
       "blockers": []
     },
     "P05": {
@@ -105,5 +113,5 @@
   },
   "core_dual_path_acceptance": "NOT_RUN",
   "full_catalogue_acceptance": "NOT_RUN",
-  "next_action": "Execute P04: native Print/Learn selection against admitted realization identities and the approved teaching revision."
+  "next_action": "P05 and P06 may proceed in parallel: Print production assembly/export and Learn authoring/Builder/publish against sealed native selections."
 }
