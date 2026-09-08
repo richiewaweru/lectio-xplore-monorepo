@@ -20,7 +20,9 @@ from learn.generation.native_selection import (
     LearnSelectionDecision,
     SelectionError as LearnSelectionError,
     build_learn_selection_snapshot,
+    rank_learn_interaction_candidates,
     select_learn_deterministically,
+    select_learn_first_legal,
     validate_learn_selection,
 )
 from learn.generation.work_orders import (
@@ -558,3 +560,167 @@ def test_p04_activity_authoring_rejects_incompatible_approved_type() -> None:
     assert interaction_orders
     plan_out = plan_activity_authoring(interaction_orders[0], approved_items=[])
     assert plan_out.mode == "new"
+
+
+# ---------------------------------------------------------------------------
+# Corrective round — no fabricated actions / no Sequence bias
+# ---------------------------------------------------------------------------
+
+
+def test_p04_omitted_learner_action_does_not_fabricate_order_items() -> None:
+    """Missing learner_action stays missing; no INTENT_ACTION_DEFAULTS invent order-items."""
+    block = _block("b-seq-no-action", intent="sequence")
+    derived = derive_learn_block_candidates(
+        block_id=block.id,
+        intent=block.intent,
+        action=None,
+    )
+    assert derived.action is None
+    assert derived.requires_response is False
+    assert derived.interaction_candidates == ()
+    assert "sequence" not in derived.interaction_candidates
+    # Do not invent an interaction; empty dual shortlist fails closed when selecting.
+    plan = _plan(block, plan_id="tp-seq-no-action")
+    with pytest.raises(NoCompatibleLearnCapabilityError):
+        select_learn_deterministically(plan)
+
+
+def test_p04_practise_guided_without_action_is_not_forced_onto_sequence() -> None:
+    block = _block("b-pg", intent="practise-guided")
+    plan = _plan(block, plan_id="tp-pg-no-action")
+    candidates, decisions = select_learn_deterministically(plan)
+    assert candidates["b-pg"].action is None
+    assert candidates["b-pg"].requires_response is False
+    assert decisions[0].interaction_id is None
+    assert decisions[0].content_id is not None
+    assert "sequence" not in candidates["b-pg"].interaction_candidates
+
+
+def test_p04_required_action_empty_interaction_set_fails_closed() -> None:
+    """Required response with empty interaction set cannot silently become content."""
+    required = _block(
+        "b-req-empty",
+        intent="sequence",
+        action="order-items",
+        support="independent",
+    )
+    plan = _plan(required, plan_id="tp-req-empty")
+    policy = default_learn_policy()
+    policy["offered_interactions"] = []
+    with pytest.raises(NoCompatibleLearnCapabilityError) as exc:
+        select_learn_deterministically(plan, policy=policy)
+    assert exc.value.code == "NO_COMPATIBLE_CAPABILITY"
+    # Even candidate derivation with fail_on_empty_required must not invent content-as-response.
+    derived = derive_learn_block_candidates(
+        block_id=required.id,
+        intent=required.intent,
+        action="order-items",
+        policy=policy,
+    )
+    assert derived.requires_response is True
+    assert derived.interaction_candidates == ()
+
+
+def test_p04_out_of_set_and_unavailable_ids_stay_excluded() -> None:
+    derived = derive_learn_block_candidates(
+        block_id="b-spatial",
+        intent="name-parts",
+        action="identify-region",
+    )
+    assert "image-hotspot" not in derived.interaction_candidates
+    assert "drag-label" not in derived.interaction_candidates
+    # Unavailable package ids remain excluded even if policy somehow lists them.
+    policy = default_learn_policy()
+    policy["offered_interactions"] = list(policy["offered_interactions"]) + [
+        "image-hotspot",
+        "drag-label",
+        "not-a-real-capability",
+    ]
+    again = derive_learn_block_candidates(
+        block_id="b-spatial-2",
+        intent="name-parts",
+        action="place-labels",
+        policy=policy,
+    )
+    assert "image-hotspot" not in again.interaction_candidates
+    assert "drag-label" not in again.interaction_candidates
+    assert "not-a-real-capability" not in again.interaction_candidates
+
+
+def test_p04_sequence_not_auto_preferred_when_choice_also_legal() -> None:
+    """When both choice and sequence are legal, Sequence is not writer-biased first."""
+    # Closed shortlist with both; brief matches Choice choose_when cues.
+    ranked = rank_learn_interaction_candidates(
+        ["choice", "sequence"],
+        brief="The response reduces to one option; pick the correct distractor set.",
+        intent="check-understanding",
+        action="select-one",
+    )
+    assert ranked[0] == "choice"
+    assert ranked[-1] == "sequence"
+
+    # Equal / weak guidance keeps shortlist order (choice before sequence) — no Sequence bump.
+    tied = rank_learn_interaction_candidates(
+        ["choice", "sequence"],
+        brief="Learner checks understanding of the topic.",
+        intent="check-understanding",
+        action=None,
+    )
+    assert tied[0] == "choice"
+
+    # first-legal helper also refuses Sequence bias.
+    order = _block(
+        "b-order",
+        intent="sequence",
+        action="order-items",
+        support="independent",
+    )
+    # Inject dual candidates via a synthetic shortlist ranking check already covers
+    # production; first-legal on a real order-items block still selects Sequence alone.
+    _, first_decisions = select_learn_first_legal(_plan(order, plan_id="tp-first-legal"))
+    assert first_decisions[0].interaction_id == "sequence"
+
+
+def test_p04_n01_still_holds_via_first_legal_and_ranked() -> None:
+    """N01: compare-without-response → content only; reconstruct-order can select Sequence."""
+    compare = _block(
+        "b-compare",
+        intent="compare",
+        brief="Compare before/after without answering",
+        action="compare-without-response",
+    )
+    order = _block(
+        "b-order",
+        intent="sequence",
+        brief="Put the stages in order; one defensible order of distinguishable stages.",
+        action="order-items",
+        support="independent",
+        position=1,
+    )
+    reconstruct = _block(
+        "b-reconstruct",
+        intent="sequence",
+        brief="Reconstruct the order",
+        action="reconstruct-order",
+        support="independent",
+        position=2,
+    )
+    plan = TeachingPlan(
+        arc="N01-corrective",
+        teaching_plan_id="tp-n01-c",
+        revision=1,
+        sections=[
+            TeachingPlanSection(slot_id="orient", specific_purpose="compare", blocks=[compare]),
+            TeachingPlanSection(slot_id="apply", specific_purpose="order", blocks=[order, reconstruct]),
+        ],
+    )
+    for selector in (select_learn_deterministically, select_learn_first_legal):
+        candidates, decisions = selector(plan)
+        by_id = {item.block_id: item for item in decisions}
+        assert candidates["b-compare"].requires_response is False
+        assert by_id["b-compare"].interaction_id is None
+        assert by_id["b-compare"].content_id is not None
+        assert "sequence" in candidates["b-order"].interaction_candidates
+        assert by_id["b-order"].interaction_id == "sequence"
+        assert "sequence" in candidates["b-reconstruct"].interaction_candidates
+        assert by_id["b-reconstruct"].interaction_id == "sequence"

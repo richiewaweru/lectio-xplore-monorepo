@@ -20,17 +20,9 @@ PASSIVE_ACTIONS = frozenset({"compare-without-response", "read-explanation"})
 ACTION_ALIASES = {
     "reconstruct-order": "order-items",
 }
-# When teaching omits learner_action, default a closed-set action for intents
-# that only have interaction coverage (or spatial-denied name-parts).
-# Only default actions that a generation-ready writer can honour today.
-# Sequence is the sole deterministic writer (P06); other interactions stay
-# content-only unless teaching already supplied a learner_action.
-INTENT_ACTION_DEFAULTS = {
-    "sequence": "order-items",
-    "practise-guided": "order-items",
-}
-# Intents with no/weak catalogue coverage still need a text content shell so
-# dual-path Learn production does not fail closed selection empty.
+# Content-only shells when teaching omitted a learner_action (or used a passive
+# action) and the closed shortlist is otherwise empty. Never used to paper over
+# a required interaction with an empty interaction set.
 INTENT_CONTENT_FALLBACKS = {
     "emphasise": ("explanation-block", "key-fact", "summary-block"),
     "define": ("definition-card", "explanation-block", "key-fact"),
@@ -155,10 +147,7 @@ def derive_learn_block_candidates(
     budgets = {str(k): int(v) for k, v in (remaining_budgets or {}).items()}
     index = _capability_index(capabilities)
     writers = writer_view if writer_view is not None else (load_learn_writer_view().get("capabilities") or {})
-    effective_action = action
-    if not action and intent in INTENT_ACTION_DEFAULTS:
-        effective_action = INTENT_ACTION_DEFAULTS[intent]
-    canonical_action = normalize_action(effective_action)
+    canonical_action = normalize_action(action)
 
     excluded: dict[str, str] = {}
     content: list[str] = []
@@ -223,7 +212,13 @@ def derive_learn_block_candidates(
         else:
             interactions.append(capability_id)
 
-    if not content and not interactions:
+    # Content fallback only for non-required-response blocks, and only when the
+    # fallback capability still matches package intent/action support.
+    if (
+        not requires_response
+        and not content
+        and not interactions
+    ):
         for fallback_id in INTENT_CONTENT_FALLBACKS.get(intent, ()):
             if fallback_id not in content_offered:
                 continue
@@ -231,6 +226,14 @@ def derive_learn_block_candidates(
             if not isinstance(record, dict):
                 continue
             if str(record.get("availability") or "") == "unavailable":
+                continue
+            intents = {str(item) for item in (record.get("supported_intents") or [])}
+            if intent not in intents:
+                continue
+            actions = [str(item) for item in (record.get("supported_actions") or [])]
+            if not _action_matches(
+                action=canonical_action, supported_actions=actions, kind="content"
+            ):
                 continue
             content.append(fallback_id)
             excluded.pop(fallback_id, None)

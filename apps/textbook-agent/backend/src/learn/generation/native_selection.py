@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from typing import Any, Literal, Mapping, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -13,6 +14,7 @@ from learn.resources.selection import (
     LearnBlockCandidates,
     NoCompatibleLearnCapabilityError,
     build_learn_candidate_map,
+    load_learn_selection_view,
 )
 
 SelectionErrorCode = Literal[
@@ -84,38 +86,77 @@ def candidate_map_payload(
     }
 
 
-def select_learn_deterministically(
-    teaching_plan: TeachingPlan,
-    *,
-    available_asset_ids: Sequence[str] | None = None,
-    policy: Mapping[str, Any] | None = None,
-) -> tuple[dict[str, LearnBlockCandidates], list[LearnSelectionDecision]]:
-    """Code-owned closed selection: first legal content + optional/required interaction.
+_TOKEN_RE = re.compile(r"[a-z0-9]+")
 
-    Semantic LLM selection may replace the choice among the closed set later; this
-    deterministic path is authoritative for eligibility gates and work-order compile.
+
+def _guidance_tokens(text: str) -> frozenset[str]:
+    return frozenset(tok for tok in _TOKEN_RE.findall(text.lower()) if len(tok) > 2)
+
+
+def rank_learn_interaction_candidates(
+    interaction_ids: Sequence[str],
+    *,
+    brief: str,
+    intent: str,
+    action: str | None,
+    selection_view: Mapping[str, Any] | None = None,
+) -> list[str]:
+    """Rank a closed interaction shortlist by package choose_when / reject_when.
+
+    Higher overlap between the block brief (plus intent/action) and choose_when
+    wins; reject_when overlap penalizes. Ties keep the input shortlist order —
+    never Sequence-because-writer and never first-id as product policy.
     """
-    candidates = build_learn_candidate_map(
-        teaching_plan,
-        available_asset_ids=available_asset_ids,
-        policy=policy,
-        fail_on_empty_required=True,
-    )
+    if not interaction_ids:
+        return []
+    view = selection_view if selection_view is not None else load_learn_selection_view()
+    by_id: dict[str, Mapping[str, Any]] = {}
+    for row in view.get("capabilities") or []:
+        if isinstance(row, Mapping) and row.get("id"):
+            by_id[str(row["id"])] = row
+    query = _guidance_tokens(f"{brief} {intent} {action or ''}")
+    scored: list[tuple[int, int, int, str]] = []
+    for index, capability_id in enumerate(interaction_ids):
+        record = by_id.get(capability_id) or {}
+        choose = _guidance_tokens(str(record.get("choose_when") or ""))
+        reject = _guidance_tokens(str(record.get("reject_when") or ""))
+        choose_hits = len(query & choose)
+        reject_hits = len(query & reject)
+        # Sort key: maximize choose overlap, minimize reject overlap, stable index.
+        scored.append((-choose_hits, reject_hits, index, capability_id))
+    scored.sort()
+    return [capability_id for _, _, _, capability_id in scored]
+
+
+def _source_and_deps_for_block(block: Any) -> tuple[list[str], list[str]]:
+    source_ids = list(block.source_question_ids or [])
+    deps: list[str] = []
+    if block.learner_action is not None:
+        deps = list(block.learner_action.dependencies or [])
+        # order-items must not inherit MC/open question ids from the
+        # block — Sequence authors new steps (empty sources allowed).
+        if block.learner_action.action == "order-items":
+            source_ids = list(block.learner_action.source_item_ids or [])
+        elif block.learner_action.source_item_ids:
+            source_ids = list(block.learner_action.source_item_ids)
+    return source_ids, deps
+
+
+def _decide_from_candidates(
+    teaching_plan: TeachingPlan,
+    candidates: Mapping[str, LearnBlockCandidates],
+    *,
+    pick_interaction: Any,
+    reason_with_interaction: str,
+) -> list[LearnSelectionDecision]:
     decisions: list[LearnSelectionDecision] = []
     for section in teaching_plan.sections:
         for block in section.blocks:
             row = candidates[block.id]
             content_id = row.content_candidates[0] if row.content_candidates else None
-            # Prefer Sequence among required interactions — sole generation-ready writer.
             interaction_id: str | None
             if row.requires_response:
-                ordered = []
-                if "sequence" in row.interaction_candidates:
-                    ordered.append("sequence")
-                ordered.extend(
-                    i for i in row.interaction_candidates if i != "sequence"
-                )
-                if not ordered:
+                if not row.interaction_candidates:
                     raise NoCompatibleLearnCapabilityError(
                         block_id=block.id,
                         intent=block.intent,
@@ -123,20 +164,11 @@ def select_learn_deterministically(
                         constraints={"interaction_candidates": []},
                         reason="required interaction set empty",
                     )
-                interaction_id = ordered[0]
+                interaction_id = pick_interaction(block, row)
             else:
                 # Optional interaction → explicit none (P04-N03).
                 interaction_id = None
-            source_ids = list(block.source_question_ids or [])
-            deps: list[str] = []
-            if block.learner_action is not None:
-                deps = list(block.learner_action.dependencies or [])
-                # order-items must not inherit MC/open question ids from the
-                # block — Sequence authors new steps (empty sources allowed).
-                if block.learner_action.action == "order-items":
-                    source_ids = list(block.learner_action.source_item_ids or [])
-                elif block.learner_action.source_item_ids:
-                    source_ids = list(block.learner_action.source_item_ids)
+            source_ids, deps = _source_and_deps_for_block(block)
             if not content_id and not interaction_id:
                 raise NoCompatibleLearnCapabilityError(
                     block_id=block.id,
@@ -151,7 +183,7 @@ def select_learn_deterministically(
                     content_id=content_id,
                     interaction_id=interaction_id,
                     reason=(
-                        "deterministic first-legal closed candidate"
+                        reason_with_interaction
                         if interaction_id
                         else "passive content; interaction=none"
                     ),
@@ -159,6 +191,73 @@ def select_learn_deterministically(
                     dependency_ids=deps,
                 )
             )
+    return decisions
+
+
+def select_learn_first_legal(
+    teaching_plan: TeachingPlan,
+    *,
+    available_asset_ids: Sequence[str] | None = None,
+    policy: Mapping[str, Any] | None = None,
+) -> tuple[dict[str, LearnBlockCandidates], list[LearnSelectionDecision]]:
+    """Test helper: first legal content + first legal interaction from the shortlist.
+
+    Production selection ranks with package choose_when / reject_when; gates that
+    need a stable first-legal pick should call this helper explicitly.
+    """
+    candidates = build_learn_candidate_map(
+        teaching_plan,
+        available_asset_ids=available_asset_ids,
+        policy=policy,
+        fail_on_empty_required=True,
+    )
+
+    def _first(_block: Any, row: LearnBlockCandidates) -> str:
+        return row.interaction_candidates[0]
+
+    decisions = _decide_from_candidates(
+        teaching_plan,
+        candidates,
+        pick_interaction=_first,
+        reason_with_interaction="deterministic first-legal closed candidate",
+    )
+    return candidates, decisions
+
+
+def select_learn_deterministically(
+    teaching_plan: TeachingPlan,
+    *,
+    available_asset_ids: Sequence[str] | None = None,
+    policy: Mapping[str, Any] | None = None,
+) -> tuple[dict[str, LearnBlockCandidates], list[LearnSelectionDecision]]:
+    """Production closed selection: first legal content + choose_when-ranked interaction.
+
+    Ranks the already-closed shortlist with package choose_when / reject_when
+    against the block brief. Does not invent actions or prefer Sequence for
+    writer readiness.
+    """
+    candidates = build_learn_candidate_map(
+        teaching_plan,
+        available_asset_ids=available_asset_ids,
+        policy=policy,
+        fail_on_empty_required=True,
+    )
+
+    def _ranked(block: Any, row: LearnBlockCandidates) -> str:
+        ranked = rank_learn_interaction_candidates(
+            row.interaction_candidates,
+            brief=str(getattr(block, "brief", "") or ""),
+            intent=block.intent,
+            action=row.action,
+        )
+        return ranked[0]
+
+    decisions = _decide_from_candidates(
+        teaching_plan,
+        candidates,
+        pick_interaction=_ranked,
+        reason_with_interaction="choose_when-ranked closed candidate",
+    )
     return candidates, decisions
 
 
@@ -307,6 +406,8 @@ __all__ = [
     "SelectionErrorCode",
     "build_learn_selection_snapshot",
     "candidate_map_payload",
+    "rank_learn_interaction_candidates",
     "select_learn_deterministically",
+    "select_learn_first_legal",
     "validate_learn_selection",
 ]
