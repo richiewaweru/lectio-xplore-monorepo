@@ -70,7 +70,11 @@ def build_form_planner_payload(
     *,
     candidate_map: dict[str, tuple[str, ...]],
 ) -> dict[str, Any]:
-    """Rich form-planner input envelope (narrow owned output elsewhere)."""
+    """Rich form-planner input envelope (narrow owned output elsewhere).
+
+    Compact learner-action briefs preserve whole-lesson rhythm without native
+    inventory beyond the closed per-block candidate set.
+    """
     candidates = candidate_map
     return {
         "arc": teaching_plan.arc,
@@ -84,6 +88,16 @@ def build_form_planner_payload(
                         "position": block.position,
                         "intent": block.intent,
                         "brief": block.brief,
+                        "evidence": block.evidence,
+                        "learner_action": (
+                            {
+                                "action": block.learner_action.action,
+                                "support_level": block.learner_action.support_level,
+                                "evidence": block.learner_action.evidence,
+                            }
+                            if block.learner_action is not None
+                            else None
+                        ),
                         "legal_object_candidates": list(
                             candidates.get(block.id, ())
                         ),

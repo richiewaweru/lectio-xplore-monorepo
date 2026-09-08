@@ -341,54 +341,22 @@ def build_form_candidate_map(
     compatible_objects_by_intent: Mapping[str, Sequence[str]],
     approved_items: Sequence[Any],
     implemented_objects: set[str] | frozenset[str] | None = None,
+    available_asset_ids: Sequence[str] | None = None,
+    policy: Mapping[str, Any] | None = None,
 ) -> dict[str, tuple[str, ...]]:
-    """Per-block legal object set from a frozen snapshot compatibility map.
+    """Per-block legal object set from package ∩ native policy ∩ teaching ∩ assets.
 
     Same map must feed the form prompt envelope and validate_form_plan.
     Live catalogue compatibility must not widen this set.
     """
-    implemented = set(implemented_objects or _IMPLEMENTED_FORM_OBJECTS)
-    implemented -= set(_NEVER_SELECTABLE_OBJECTS)
+    from print.resources.selection import build_print_candidate_map
 
-    from curriculum.approved_items import approved_item_kind
-
-    approved_by_id = {
-        str(getattr(item, "id", "") or ""): item for item in approved_items
-    }
-    candidates: dict[str, tuple[str, ...]] = {}
-    for section in teaching_plan.sections:
-        for block in section.blocks:
-            frozen = {
-                str(object_id)
-                for object_id in compatible_objects_by_intent.get(block.intent, ())
-                if object_id
-            }
-            legal = sorted(
-                (frozen & implemented) - set(_NEVER_SELECTABLE_OBJECTS)
-            )
-            source_question_ids = tuple(getattr(block, "source_question_ids", ()) or ())
-            # Assessment forms bind deterministically to teaching-owned items.
-            # Once ownership is present, non-assessment objects are not legal:
-            # form planning may choose representation, never discard item IDs.
-            if not source_question_ids:
-                legal = [
-                    object_id
-                    for object_id in legal
-                    if object_id not in {"questions", "choices"}
-                ]
-            else:
-                selected = [approved_by_id.get(str(item_id)) for item_id in source_question_ids]
-                if any(item is None for item in selected):
-                    legal = []
-                else:
-                    kinds = [approved_item_kind(item) for item in selected]
-                    if len(kinds) == 1 and kinds[0] == "multiple_choice":
-                        legal = [object_id for object_id in legal if object_id == "choices"]
-                    elif 1 <= len(kinds) <= 6 and set(kinds) == {"open_response"}:
-                        legal = [object_id for object_id in legal if object_id == "questions"]
-                    else:
-                        # Mixed sources, >6 open responses, and multiple MCQs
-                        # are teaching-plan repair failures, not form choices.
-                        legal = []
-            candidates[block.id] = tuple(legal)
-    return candidates
+    del implemented_objects  # Writer support is owned by print.resources.selection.
+    return build_print_candidate_map(
+        teaching_plan,
+        compatible_objects_by_intent=compatible_objects_by_intent,
+        available_asset_ids=available_asset_ids,
+        policy=policy,
+        approved_items=approved_items,
+        fail_on_empty_required=False,
+    )
