@@ -1,0 +1,5 @@
+{
+  "status": "BLOCKED",
+  "missing": "pdftoppm (Poppler)",
+  "note": "Install Poppler and ensure pdftoppm is on PATH to unblock visual page-image inspection for P05-P04."
+}
