@@ -2,8 +2,8 @@
   "pack_version": "1.0",
   "reviewed_sha": "5d1563903a22d6d40e12a86dcc4d9021ca8202a3",
   "implementation_branch": "feat/unit-print-learn",
-  "implementation_head": "c1ec28e",
-  "current_phase": "P05",
+  "implementation_head": "0282992",
+  "current_phase": "P06",
   "phases": {
     "P00": {
       "status": "PASS",
@@ -99,9 +99,19 @@
       ]
     },
     "P06": {
-      "status": "NOT_STARTED",
-      "report": null,
-      "evidence": [],
+      "status": "PASS",
+      "report": "docs/unit-native-program/reports/P06_PHASE_REPORT.md",
+      "evidence": [
+        "docs/unit-native-program/evidence/mocks/p06/l01-selector-writer.txt",
+        "docs/unit-native-program/evidence/mocks/p06/l02-ordered-blocks.txt",
+        "docs/unit-native-program/evidence/mocks/p06/l03-builder-publish-validation.txt",
+        "docs/unit-native-program/evidence/mocks/p06/l04-preview-isolation.txt",
+        "docs/unit-native-program/evidence/mocks/p06/l05-publish-immutable-idempotent.txt",
+        "docs/unit-native-program/evidence/mocks/p06/l06-pinned-provenance.txt",
+        "docs/unit-native-program/evidence/mocks/p06/l01-l06-pytest.txt",
+        "docs/unit-native-program/evidence/mocks/p06/sequence-readiness-vitest.txt",
+        "docs/unit-native-program/evidence/mocks/p06/export-contracts.txt"
+      ],
       "blockers": []
     },
     "P07": {
@@ -125,5 +135,5 @@
   },
   "core_dual_path_acceptance": "NOT_RUN",
   "full_catalogue_acceptance": "NOT_RUN",
-  "next_action": "P06 may continue in parallel (Learn authoring/Builder/publish). After P06 PASS, proceed to P07 or P08. Optional: install Poppler and re-run P05-P04 page images."
+  "next_action": "P07 Learn runtime is eligible after P06 PASS. Optional: install Poppler and re-run P05-P04 page images."
 }
