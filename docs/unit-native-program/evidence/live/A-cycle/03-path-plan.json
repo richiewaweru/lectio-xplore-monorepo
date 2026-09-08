@@ -1,0 +1,127 @@
+{
+  "id": "ca6b3474-0f85-4ab5-a7c5-28ebebe3543a",
+  "unit_id": "d86e784a-6b48-4163-9197-593e9d5581c1",
+  "version": 1,
+  "revision": 1,
+  "status": "draft",
+  "generated_by": "path_planner",
+  "merge_critic_results": [],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": null,
+  "created_at": "2026-09-08T04:57:06.679852",
+  "lessons": [
+    {
+      "id": "8ee16e5a-fab9-4e63-b731-a654e9504a6a",
+      "concept_id": "18e80f98-f503-4966-a52c-b5da8719e4cf",
+      "concept_slug": "science.what.makes.a.cycle",
+      "title": "What Makes a Cycle?",
+      "objective": "Explain that a life cycle is a repeated pattern of stages that a living thing goes through as it grows and reproduces.",
+      "objective_hash": "2fb7d842a2c20be36a813e7b02ea01bfafb665cb7cdcf96f0f44a055685e8bf6",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "A cycle is a sequence that repeats.",
+        "A life cycle is the repeated pattern of stages for a living thing.",
+        "Reproduction (making new living things) is part of continuing the cycle."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "15d7839a-60a8-4ddc-a271-fb2624bcb9c6",
+      "concept_id": "97d570d5-d158-420d-8498-d2e4764f3636",
+      "concept_slug": "science.the.four.stages.of.a.butterfly",
+      "title": "The Four Stages of a Butterfly",
+      "objective": "Name and observe the four stages of a butterfly life cycle: egg, larva, pupa, adult.",
+      "objective_hash": "b1b4acb849a61f11e0a572d37e6f5dab634a20c849b765ca5b4fc6bfbb156456",
+      "prerequisites": [
+        "8ee16e5a-fab9-4e63-b731-a654e9504a6a"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Butterflies go through four distinct stages.",
+        "The stages are egg, larva (caterpillar), pupa (chrysalis), and adult (butterfly).",
+        "Each stage has a different visible appearance."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "a8243788-f0f0-4b9f-b0a3-04178bada369",
+      "concept_id": "838a3ecc-1a28-4936-8157-9bc58c30c10d",
+      "concept_slug": "science.ordering.butterfly.stages",
+      "title": "Ordering Butterfly Stages",
+      "objective": "Arrange the four butterfly stages in the correct sequence and explain why the order cannot change.",
+      "objective_hash": "9a747cc8ee4f394da83e432a32c1e848d9dedc5eeffd3129dd93922526b4f1cb",
+      "prerequisites": [
+        "15d7839a-60a8-4ddc-a271-fb2624bcb9c6"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "The four stages follow a fixed order: egg \u2192 larva \u2192 pupa \u2192 adult.",
+        "The stages depend on each other; you cannot have one stage without the one before it."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "procedural",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "f0b7bbc9-0f07-4eda-a1db-9daf4135a106",
+      "concept_id": "8c8e8c24-5e32-4920-8a14-7b5d715f6828",
+      "concept_slug": "science.continuing.the.cycle",
+      "title": "Continuing the Cycle",
+      "objective": "Explain that adult butterflies lay eggs, which produces the next generation and restarts the life cycle.",
+      "objective_hash": "7101a320cc70724c8883bf724a722cfe2491eb433e295f0279a97d53b7ccdaa5",
+      "prerequisites": [
+        "a8243788-f0f0-4b9f-b0a3-04178bada369"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "After becoming an adult, a butterfly can lay eggs.",
+        "The eggs hatch into new larvae, continuing the same cycle.",
+        "If adults did not lay eggs, the cycle would stop."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 3,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}

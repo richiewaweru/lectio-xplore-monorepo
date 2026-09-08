@@ -1,0 +1,8 @@
+{
+  "page_model_fast": "deepseek-v4-flash",
+  "page_model_standard": "deepseek-v4-pro",
+  "xplore_native_worker_enabled": true,
+  "anthropic_key_set": true,
+  "deepseek_key_set": true,
+  "openai_key_set": true
+}

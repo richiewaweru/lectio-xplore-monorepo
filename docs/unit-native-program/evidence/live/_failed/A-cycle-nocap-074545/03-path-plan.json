@@ -1,0 +1,154 @@
+{
+  "id": "a61c63f6-fa5f-4f12-833f-e5049727f73f",
+  "unit_id": "5a40532b-4f29-4b1b-a935-1b19a58e98e5",
+  "version": 1,
+  "revision": 1,
+  "status": "draft",
+  "generated_by": "path_planner",
+  "merge_critic_results": [],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": null,
+  "created_at": "2026-09-08T04:39:14.841722",
+  "lessons": [
+    {
+      "id": "c2ce8cf4-c868-4122-b1d5-611f12a378fd",
+      "concept_id": "5850ed1d-e1c9-4425-bce3-7c5b37589ad0",
+      "concept_slug": "science.activating.knowledge.of.insects",
+      "title": "Activating Knowledge of Insects",
+      "objective": "Students will recall that insects are living things that grow and change, and identify examples of animals that go through different growth stages.",
+      "objective_hash": "6fba8591f1c78e3eb94ce3d525c6952e9f4afe01381e31d19cebd1678c0e4e29",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Insects are living organisms.",
+        "Growth and change are characteristic of living things."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "36dc5165-4c99-4475-9455-44ebf531ea83",
+      "concept_id": "df5d598b-91a1-4bcc-9f95-dca3e36a7d30",
+      "concept_slug": "science.introduction.to.the.butterfly.life.cycle",
+      "title": "Introduction to the Butterfly Life Cycle",
+      "objective": "Students will identify the four stages of the butterfly life cycle by name and recognize that these stages occur in a specific sequence.",
+      "objective_hash": "2e4b06eb6fb1f29a3c3748b7d88b86588ae397c5865700a4c22222c95aa19f9e",
+      "prerequisites": [
+        "c2ce8cf4-c868-4122-b1d5-611f12a378fd"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "The four stages are egg, larva, pupa, and adult.",
+        "The stages are ordered: egg, larva, pupa, adult."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "7a4a68e6-cdee-4431-8623-c7a7e7a4b611",
+      "concept_id": "c6fce788-7965-4c28-8e97-6e56564efe17",
+      "concept_slug": "science.identifying.egg.larva.pupa.and.adult",
+      "title": "Identifying Egg, Larva, Pupa, and Adult",
+      "objective": "Students will describe what each stage of the butterfly life cycle looks like using observable details.",
+      "objective_hash": "aaa4bb82be673c474f8dee40b97aac497e544abac71bbb27a98b001d9d3ce29d",
+      "prerequisites": [
+        "36dc5165-4c99-4475-9455-44ebf531ea83"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Eggs are small and round, often laid on leaves.",
+        "Larvae are caterpillars that eat and grow.",
+        "Pupae are chrysalises where metamorphosis occurs.",
+        "Adults are winged butterflies."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "507a2b21-d07c-4640-b291-a876ad224daf",
+      "concept_id": "77bed072-9e7b-4746-9a20-7b9fdca916c2",
+      "concept_slug": "science.ordering.the.stages.of.the.butterfly.life.cycle",
+      "title": "Ordering the Stages of the Butterfly Life Cycle",
+      "objective": "Students will correctly order pictures and labels of the butterfly life cycle stages from egg to adult.",
+      "objective_hash": "10619b304ed2ce7adb30ded08ee152b36f0c39763634c9bd2621bbf653ab6ab8",
+      "prerequisites": [
+        "7a4a68e6-cdee-4431-8623-c7a7e7a4b611"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "The correct sequence is egg, larva, pupa, adult.",
+        "Each stage follows the previous one in a fixed order."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "procedural",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 3,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "4f371b50-96f8-4dfb-98f5-d520baad4c8d",
+      "concept_id": "b615549c-0caa-4a4b-8e3e-3547f78173e5",
+      "concept_slug": "science.how.the.cycle.continues",
+      "title": "How the Cycle Continues",
+      "objective": "Students will explain that an adult butterfly lays eggs, which begins the life cycle again.",
+      "objective_hash": "42ba5f467dd074ad607e6cf33480ffad4dd821c9560717022cda10b0853a5ed1",
+      "prerequisites": [
+        "507a2b21-d07c-4640-b291-a876ad224daf"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Adult butterflies lay eggs.",
+        "The cycle repeats when an egg develops into a new butterfly.",
+        "This is why a butterfly life cycle is a continuous cycle."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 4,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}

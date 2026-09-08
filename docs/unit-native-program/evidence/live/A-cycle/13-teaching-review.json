@@ -1,0 +1,526 @@
+{
+  "generation_id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd",
+  "teaching_plan": {
+    "arc": "The lesson opens on a monarch butterfly landing on a milkweed leaf and laying an egg, then asks what will happen next. Using the anchor, students connect the egg to the caterpillar, chrysalis, and butterfly stages they already partly know, then come to see these as one repeating cycle rather than four separate animals or a line that stops. The lesson closes by asking the learner to tell what must happen for the cycle to begin again.",
+    "revision": 1,
+    "sections": [
+      {
+        "blocks": [
+          {
+            "id": "orient-b1",
+            "brief": "Present the anchor: a monarch butterfly fluttering near a milkweed plant, landing on a leaf to lay a tiny egg. Ask what the learner thinks that egg will become. Do not name any stages yet.",
+            "intent": "orient",
+            "evidence": "The anchor is a single observable event that begins the monarch life cycle, and the orient slot needs a concrete situation, not an explanation.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "slot.orient.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [
+              "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i4"
+            ]
+          },
+          {
+            "id": "orient-b2",
+            "brief": "Quickly call up what the learner already knows: butterflies are insects, insects hatch from eggs, and a butterfly is the adult form that flies. Do not explain life cycle yet.",
+            "intent": "activate-prior-knowledge",
+            "evidence": "The learner already holds three facts that can be linked into the new idea, and the orient slot needs to surface those prerequisites briefly.",
+            "position": 1,
+            "evidence_refs": [
+              "prior-1",
+              "prior-2",
+              "prior-3",
+              "slot.orient.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [
+              "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i5"
+            ]
+          }
+        ],
+        "slot_id": "orient",
+        "transition": null,
+        "specific_purpose": "Open on the anchor and get the learner curious about what will happen next. Activate the prior knowledge that butterflies come from eggs without yet naming the full cycle."
+      },
+      {
+        "blocks": [
+          {
+            "id": "explain-b1",
+            "brief": "Identify the four main stages in the monarch life cycle: egg, caterpillar, chrysalis, butterfly. For each stage, say what the organism is doing in that stage: the egg holds the young, the caterpillar eats and grows, the chrysalis shelters the change, and the butterfly is the adult that can fly and lay eggs. Do not yet state that the series repeats.",
+            "intent": "name-parts",
+            "evidence": "The objective names a series of stages, and the anchor provides the concrete monarch example through which each stage can be named.",
+            "position": 0,
+            "evidence_refs": [
+              "lesson.objective",
+              "anchor.anchor-1",
+              "prior-1",
+              "prior-2",
+              "prior-3"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "explain-b2",
+            "brief": "Define a life cycle as the series of stages an organism passes through from egg to adult, and state that a butterfly's life cycle repeats when an adult butterfly produces young that grow into new adults. Use the monarch from the anchor as the example organism.",
+            "intent": "define",
+            "evidence": "The objective requires the learner to state that a life cycle is a series of stages that repeats when adults produce young, and the anchor gives the concrete organism for that definition.",
+            "position": 1,
+            "evidence_refs": [
+              "lesson.objective",
+              "anchor.anchor-1"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "explain",
+        "transition": "With the egg on the leaf in mind, the learner is ready to see the sequence of changes it will undergo.",
+        "specific_purpose": "Build the core idea: the egg, caterpillar, chrysalis, and butterfly are stages of one organism's life cycle, and the cycle repeats when the adult butterfly produces young."
+      },
+      {
+        "blocks": [
+          {
+            "id": "contrast-b1",
+            "brief": "Surface the wrong belief that the egg, caterpillar, chrysalis, and butterfly are four different kinds of animals. Ask the learner to decide whether the four stages in the anchor are the same organism at different times or four separate organisms. Do not explain the correct answer in the same breath as the question.",
+            "intent": "diagnose-misconception",
+            "evidence": "The approved misconception says students treat the stages as four unrelated animals, and the contrast slot must test that wrong model against the anchor rather than restate it.",
+            "position": 0,
+            "evidence_refs": [
+              "misconception_four_unrelated_animals",
+              "anchor.anchor-1",
+              "slot.contrast.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": "The contrast slot's typical intents do not include diagnose-misconception, but this slot must surface and test the approved misconception that the stages are four different animals, which diagnose-misconception is designed to do.",
+            "source_question_ids": [
+              "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i2"
+            ]
+          },
+          {
+            "id": "contrast-b2",
+            "brief": "Surface the wrong belief that the life cycle only goes forward and then stops. Ask the learner to decide what must happen for a new egg to appear on a milkweed leaf. Do not yet state that the butterfly must lay the egg.",
+            "intent": "diagnose-misconception",
+            "evidence": "The approved misconception says students see the cycle as a line that ends at butterfly, and the contrast slot must test whether the learner can identify the missing return step.",
+            "position": 1,
+            "evidence_refs": [
+              "misconception_order_spins_forward",
+              "anchor.anchor-1",
+              "slot.contrast.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": "The contrast slot's typical intents do not include diagnose-misconception, but this slot must surface and test the approved misconception that the cycle stops at the butterfly, which diagnose-misconception is designed to do.",
+            "source_question_ids": [
+              "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i3"
+            ]
+          },
+          {
+            "id": "contrast-b3",
+            "brief": "Contrast a life cycle with a line that stops. Name a line that stops as one that goes egg, caterpillar, chrysalis, butterfly, then nothing. Then name a life cycle as the same four stages but with the butterfly producing a new egg. Do not introduce a new organism.",
+            "intent": "compare",
+            "evidence": "The objective asks for the idea that the cycle repeats, and the contrast slot needs a side-by-side comparison that separates the wrong linear model from the correct repeating one.",
+            "position": 2,
+            "evidence_refs": [
+              "lesson.objective",
+              "misconception_order_spins_forward",
+              "anchor.anchor-1"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "contrast",
+        "transition": "Now that the stages are named as one organism's changes, the learner is ready to test the tempting ideas that could still lurk beneath that description.",
+        "specific_purpose": "Confront the two false models: that the egg, caterpillar, chrysalis, and butterfly are four different kinds of animals, and that the cycle stops at the butterfly."
+      },
+      {
+        "blocks": [
+          {
+            "id": "check-b1",
+            "brief": "Ask the learner to identify what an adult butterfly must do for the life cycle to continue.",
+            "intent": "check-understanding",
+            "evidence": "The check must measure the objective directly, and the core requirement is that the learner can state the cycle repeats when the adult produces young.",
+            "position": 0,
+            "evidence_refs": [
+              "lesson.objective",
+              "slot.check.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [
+              "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i1"
+            ]
+          }
+        ],
+        "slot_id": "check",
+        "transition": "The learner has now seen the boundary between a one-way list of stages and a cycle that returns, and is ready to demonstrate the idea independently.",
+        "specific_purpose": "Check whether the learner can use the idea of a repeating life cycle to say what must happen after the adult butterfly stage."
+      }
+    ],
+    "anchor_usage": [
+      {
+        "usage": "Use the anchor as a concrete starting observation: a monarch butterfly fluttering near a milkweed plant, landing on a leaf to lay a tiny egg. Do not name stages yet.",
+        "slot_id": "orient"
+      },
+      {
+        "usage": "Trace the anchor forward: the egg on the leaf becomes the caterpillar that eats the milkweed, the caterpillar becomes the chrysalis, and the chrysalis becomes the butterfly. Then loop back: the butterfly is the same kind of organism that laid the egg.",
+        "slot_id": "explain"
+      },
+      {
+        "usage": "Put the anchor beside the false idea that a butterfly's life stops at the butterfly stage. The monarch must produce young for a new egg to exist, so the cycle repeats.",
+        "slot_id": "contrast"
+      },
+      {
+        "usage": "Assess whether the learner can use the anchor idea to identify what happens after the adult butterfly stage.",
+        "slot_id": "check"
+      }
+    ],
+    "approval_status": "pending",
+    "preparation_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870",
+    "teaching_plan_id": "dd1f937f-0fa1-43cc-8901-0de41fd712fc",
+    "misconception_focus_ids": [
+      "misconception_four_unrelated_animals",
+      "misconception_order_spins_forward"
+    ]
+  },
+  "teaching_validation": {
+    "ok": true,
+    "issues": []
+  },
+  "teaching_qc": [],
+  "teaching_review": {
+    "status": "pending",
+    "revision": 1,
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "teacher_note": null
+  },
+  "lesson_packet": {
+    "scope": {
+      "terminology": [],
+      "must_establish": [],
+      "must_not_introduce": []
+    },
+    "slots": [
+      {
+        "purpose": "Give the learner a reason to care and a concrete situation to hold.",
+        "slot_id": "orient",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "orient",
+          "activate-prior-knowledge",
+          "emphasise"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "Build the idea itself. State it, ground it, make it usable.",
+        "slot_id": "explain",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [
+          "explain-cause",
+          "explain",
+          "define",
+          "show-structure",
+          "trace-flow",
+          "compare",
+          "name-parts"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "Put a case and a near-miss side by side. The learner must see the boundary of the idea, not just the idea.\n",
+        "slot_id": "contrast",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [
+          "compare",
+          "classify",
+          "explain",
+          "warn",
+          "show-structure"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "The shared diagnostic. Identical across every variant. Written from the card only, never from the prose above it.\n",
+        "slot_id": "check",
+        "max_blocks": 1,
+        "min_blocks": 1,
+        "typical_intents": [
+          "check-understanding",
+          "practise-independent",
+          "diagnose-misconception"
+        ],
+        "visual_required": false
+      }
+    ],
+    "anchor": {
+      "id": "anchor-1",
+      "description": "A monarch butterfly fluttering near a milkweed plant, landing on a leaf to lay a tiny egg."
+    },
+    "lesson": {
+      "subject": "Science",
+      "objective": "Explain that a life cycle is the series of stages an organism passes through and that it repeats when adults produce young.",
+      "grade_level": "Grade",
+      "lesson_mode": "first_exposure",
+      "knowledge_type": "conceptual",
+      "path_lesson_id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd"
+    },
+    "limits": {
+      "max_sections": 4,
+      "max_total_blocks": 10,
+      "max_blocks_per_section": 3
+    },
+    "resource_id": "lesson",
+    "approved_items": [
+      {
+        "id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i1",
+        "stem": "A class watches a single monarch butterfly lay an egg on a milkweed leaf. They know the egg will hatch and grow. What will happen after the butterfly that eventually emerges from this process is an adult?",
+        "card_id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1",
+        "options": [
+          {
+            "key": "a",
+            "text": "It can lay eggs of its own, starting the series of stages again.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The cycle is complete, so the butterfly has no further role.",
+            "correct": false,
+            "diagnoses": "misconception_order_spins_forward",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "It will search for the egg, caterpillar, and chrysalis that grew beside it.",
+            "correct": false,
+            "diagnoses": "misconception_four_unrelated_animals",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "It will become a different kind of insect the following spring.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "misconception_order_spins_forward",
+          "c": "misconception_four_unrelated_animals",
+          "d": null
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i2",
+        "stem": "A gardener finds small eggs on a leaf. A few weeks later, she sees caterpillars on the same plant, and later still, chrysalises. She asks why she never sees the eggs, caterpillars, and chrysalises standing next to each other. Which statement best answers her question?",
+        "card_id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1",
+        "options": [
+          {
+            "key": "a",
+            "text": "They are one organism changing from stage to stage, so one stage is replaced by the next.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "Each kind of animal avoids the others so it can find its own food.",
+            "correct": false,
+            "diagnoses": "misconception_four_unrelated_animals",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "They do appear together, but only after the butterfly has stopped growing.",
+            "correct": false,
+            "diagnoses": "misconception_order_spins_forward",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Each stage hides underground until its turn in the life cycle arrives.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "misconception_four_unrelated_animals",
+          "c": "misconception_order_spins_forward",
+          "d": null
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i3",
+        "stem": "A student sees a caterpillar crawling on a stem. She says it must have been born a caterpillar and will have caterpillar babies. How would a correct understanding of a life cycle respond?",
+        "card_id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1",
+        "options": [
+          {
+            "key": "a",
+            "text": "The caterpillar is one stage in a repeating cycle of one organism's life.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "A caterpillar is a fully grown animal, so it cannot have babies of its own.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Caterpillars are the only stage that can reproduce without becoming a butterfly.",
+            "correct": false,
+            "diagnoses": "misconception_four_unrelated_animals",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The caterpillar will remain a caterpillar because the cycle moves only forward.",
+            "correct": false,
+            "diagnoses": "misconception_order_spins_forward",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": null,
+          "c": "misconception_four_unrelated_animals",
+          "d": "misconception_order_spins_forward"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i4",
+        "stem": "A nature center shows a time-lapse video of a monarch egg, caterpillar, chrysalis, and butterfly. The narrator says the video shows a life cycle. What does that mean?",
+        "card_id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1",
+        "options": [
+          {
+            "key": "a",
+            "text": "It shows stages an organism passes through, and adults can produce young again.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "It shows four animals competing for the same milkweed plant.",
+            "correct": false,
+            "diagnoses": "misconception_four_unrelated_animals",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "It shows one animal learning to grow larger without changing form.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "It shows a path that ends when the adult butterfly appears.",
+            "correct": false,
+            "diagnoses": "misconception_order_spins_forward",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "misconception_four_unrelated_animals",
+          "c": null,
+          "d": "misconception_order_spins_forward"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd:b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1.i5",
+        "stem": "A class raises painted lady butterflies. One student says the egg, caterpillar, chrysalis, and butterfly must be four different animals because they look nothing alike. Which response uses the idea of a repeating life cycle?",
+        "card_id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd:6d55ed9f-c2bd-4463-b5c1-b94b34afafa1",
+        "options": [
+          {
+            "key": "a",
+            "text": "They look different because they are stages of one organism's changing life.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "They are four animals that take turns using the same body parts.",
+            "correct": false,
+            "diagnoses": "misconception_four_unrelated_animals",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "They are four animals, but the adult butterfly makes them look alike later.",
+            "correct": false,
+            "diagnoses": "misconception_order_spins_forward",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "They are four animals that all come from eggs laid in the same place.",
+            "correct": false,
+            "diagnoses": "misconception_four_unrelated_animals",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "misconception_four_unrelated_animals",
+          "c": "misconception_order_spins_forward",
+          "d": "misconception_four_unrelated_animals"
+        },
+        "correct_key": "a"
+      }
+    ],
+    "misconceptions": [
+      {
+        "id": "misconception_order_spins_forward",
+        "statement": "{'id': 'misconception_order_spins_forward', 'description': 'The life cycle only goes forward: egg, caterpillar, chrysalis, butterfly, then it stops.', 'source': 'drafted'}"
+      },
+      {
+        "id": "misconception_four_unrelated_animals",
+        "statement": "{'id': 'misconception_four_unrelated_animals', 'description': 'The egg, caterpillar, chrysalis, and butterfly are four different kinds of animals.', 'source': 'drafted'}"
+      }
+    ],
+    "prior_established": [
+      {
+        "id": "prior-1",
+        "statement": "butterflies are insects"
+      },
+      {
+        "id": "prior-2",
+        "statement": "insects hatch from eggs"
+      },
+      {
+        "id": "prior-3",
+        "statement": "a butterfly is the adult form that flies"
+      }
+    ]
+  },
+  "catalogue": {
+    "version": "1.1.0",
+    "form_projection_hash": null,
+    "teaching_projection_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870"
+  }
+}

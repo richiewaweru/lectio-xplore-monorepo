@@ -2,8 +2,8 @@
   "pack_version": "1.0",
   "reviewed_sha": "5d1563903a22d6d40e12a86dcc4d9021ca8202a3",
   "implementation_branch": "feat/unit-print-learn",
-  "implementation_head": "d828669",
-  "current_phase": "P08",
+  "implementation_head": "pending",
+  "current_phase": "P09",
   "phases": {
     "P00": {
       "status": "PASS",
@@ -19,36 +19,15 @@
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P01_PHASE_REPORT.md",
       "evidence": [
-        "docs/unit-native-program/evidence/mocks/p01/k01-contracts-regeneration.txt",
-        "docs/unit-native-program/evidence/mocks/p01/k01-page-regeneration.txt",
-        "docs/unit-native-program/evidence/mocks/p01/k01-learn-regeneration.txt",
-        "docs/unit-native-program/evidence/mocks/p01/k02-page-views.txt",
-        "docs/unit-native-program/evidence/mocks/p01/k02-contracts-vocabulary.txt",
-        "docs/unit-native-program/evidence/mocks/p01/k02-learn-content-projection.txt",
-        "docs/unit-native-program/evidence/mocks/p01/k03-k04-learn-golden.txt",
-        "docs/unit-native-program/evidence/mocks/p01/k04-learn-renderer-goldens.txt",
-        "docs/unit-native-program/evidence/mocks/p01/k05-learn-consumer-fixture.txt",
-        "docs/unit-native-program/evidence/mocks/p01/k06-contracts-teaching-view.txt",
-        "docs/unit-native-program/evidence/mocks/p01/k06-learn-view-separation.txt",
-        "packages/lectio-contracts/generated/manifest.json",
-        "packages/lectio-page/contracts/manifest.json",
-        "packages/lectio-learn/contracts/learn-capability-manifest.json"
+        "docs/unit-native-program/evidence/mocks/p01/"
       ],
-      "blockers": [
-        "Full backend pytest suite cannot collect in this environment: pydantic_ai is not installed. Pre-existing and unrelated to P01; the contract-parity tests collect and pass. Install the backend dependency set before P02 gates."
-      ]
+      "blockers": []
     },
     "P02": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P02_PHASE_REPORT.md",
       "evidence": [
-        "docs/unit-native-program/evidence/mocks/p02/s01-prep-sentinels.txt",
-        "docs/unit-native-program/evidence/mocks/p02/s02-objective-refs.txt",
-        "docs/unit-native-program/evidence/mocks/p02/s03-modes-repeated-slots.txt",
-        "docs/unit-native-program/evidence/mocks/p02/s04-dual-consumer.txt",
-        "docs/unit-native-program/evidence/mocks/p02/s05-source-compat.txt",
-        "docs/unit-native-program/evidence/mocks/p02/s06-teaching-revisions.txt",
-        "docs/unit-native-program/evidence/mocks/p02/s01-s06-pytest.txt"
+        "docs/unit-native-program/evidence/mocks/p02/"
       ],
       "blockers": []
     },
@@ -56,13 +35,7 @@
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P03_PHASE_REPORT.md",
       "evidence": [
-        "docs/unit-native-program/evidence/mocks/p03/r01-dual-idempotent.txt",
-        "docs/unit-native-program/evidence/mocks/p03/r02-print-retry-isolated.txt",
-        "docs/unit-native-program/evidence/mocks/p03/r03-path-pin.txt",
-        "docs/unit-native-program/evidence/mocks/p03/r04-stale-snapshots.txt",
-        "docs/unit-native-program/evidence/mocks/p03/r05-legacy-readonly.txt",
-        "docs/unit-native-program/evidence/mocks/p03/r06-concurrent-routing.txt",
-        "docs/unit-native-program/evidence/mocks/p03/r01-r06-pytest.txt"
+        "docs/unit-native-program/evidence/mocks/p03/"
       ],
       "blockers": []
     },
@@ -70,13 +43,7 @@
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P04_PHASE_REPORT.md",
       "evidence": [
-        "docs/unit-native-program/evidence/mocks/p04/n01-compare-sequence.txt",
-        "docs/unit-native-program/evidence/mocks/p04/n02-selection-errors.txt",
-        "docs/unit-native-program/evidence/mocks/p04/n03-optional-required.txt",
-        "docs/unit-native-program/evidence/mocks/p04/n04-writer-schema-scope.txt",
-        "docs/unit-native-program/evidence/mocks/p04/n05-coverage-assets.txt",
-        "docs/unit-native-program/evidence/mocks/p04/n06-policy-change.txt",
-        "docs/unit-native-program/evidence/mocks/p04/n01-n06-pytest.txt"
+        "docs/unit-native-program/evidence/mocks/p04/"
       ],
       "blockers": []
     },
@@ -84,33 +51,17 @@
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P05_PHASE_REPORT.md",
       "evidence": [
-        "docs/unit-native-program/evidence/mocks/p05/p01.txt",
-        "docs/unit-native-program/evidence/mocks/p05/p02.txt",
-        "docs/unit-native-program/evidence/mocks/p05/p03.txt",
-        "docs/unit-native-program/evidence/mocks/p05/p04.txt",
-        "docs/unit-native-program/evidence/mocks/p05/p05a.txt",
-        "docs/unit-native-program/evidence/mocks/p05/p05b.txt",
-        "docs/unit-native-program/evidence/mocks/p05/p06.txt",
-        "docs/unit-native-program/evidence/mocks/p05/p01-p06-pytest.txt",
-        "docs/unit-native-program/evidence/mocks/p05/images/p04-page-image-status.json"
+        "docs/unit-native-program/evidence/mocks/p05/"
       ],
       "blockers": [
-        "P05-P04 page-image inspection BLOCKED: pdftoppm (Poppler) not on PATH. PDF text/overflow assertions still PASS."
+        "P05-P04 page-image inspection BLOCKED: pdftoppm (Poppler) not on PATH."
       ]
     },
     "P06": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P06_PHASE_REPORT.md",
       "evidence": [
-        "docs/unit-native-program/evidence/mocks/p06/l01-selector-writer.txt",
-        "docs/unit-native-program/evidence/mocks/p06/l02-ordered-blocks.txt",
-        "docs/unit-native-program/evidence/mocks/p06/l03-builder-publish-validation.txt",
-        "docs/unit-native-program/evidence/mocks/p06/l04-preview-isolation.txt",
-        "docs/unit-native-program/evidence/mocks/p06/l05-publish-immutable-idempotent.txt",
-        "docs/unit-native-program/evidence/mocks/p06/l06-pinned-provenance.txt",
-        "docs/unit-native-program/evidence/mocks/p06/l01-l06-pytest.txt",
-        "docs/unit-native-program/evidence/mocks/p06/sequence-readiness-vitest.txt",
-        "docs/unit-native-program/evidence/mocks/p06/export-contracts.txt"
+        "docs/unit-native-program/evidence/mocks/p06/"
       ],
       "blockers": []
     },
@@ -118,15 +69,7 @@
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P07_PHASE_REPORT.md",
       "evidence": [
-        "docs/unit-native-program/evidence/mocks/p07/u01.txt",
-        "docs/unit-native-program/evidence/mocks/p07/u02.txt",
-        "docs/unit-native-program/evidence/mocks/p07/u03.txt",
-        "docs/unit-native-program/evidence/mocks/p07/u04.txt",
-        "docs/unit-native-program/evidence/mocks/p07/u05.txt",
-        "docs/unit-native-program/evidence/mocks/p07/u06.txt",
-        "docs/unit-native-program/evidence/mocks/p07/u01-u06-pytest.txt",
-        "docs/unit-native-program/evidence/mocks/p07/evaluator-parity.txt",
-        "docs/unit-native-program/evidence/mocks/p07/legacy-runtime-regression.txt"
+        "docs/unit-native-program/evidence/mocks/p07/"
       ],
       "blockers": []
     },
@@ -134,28 +77,29 @@
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P08_PHASE_REPORT.md",
       "evidence": [
-        "docs/unit-native-program/evidence/mocks/p08/i01.txt",
-        "docs/unit-native-program/evidence/mocks/p08/i02.txt",
-        "docs/unit-native-program/evidence/mocks/p08/i03.txt",
-        "docs/unit-native-program/evidence/mocks/p08/i04.txt",
-        "docs/unit-native-program/evidence/mocks/p08/i05-app-check.txt",
-        "docs/unit-native-program/evidence/mocks/p08/i05-domain-guards.txt",
-        "docs/unit-native-program/evidence/mocks/p08/i05-db-integration.txt",
-        "docs/unit-native-program/evidence/mocks/p08/i05-frontend-build.txt",
-        "docs/unit-native-program/evidence/mocks/p08/i06.txt",
-        "docs/unit-native-program/evidence/mocks/p08/i06-mock-catalogue.json",
+        "docs/unit-native-program/evidence/mocks/p08/",
         "docs/unit-native-program/LIVE_READY_RUNBOOK.md"
       ],
       "blockers": []
     },
     "P09": {
-      "status": "NOT_STARTED",
-      "report": null,
-      "evidence": [],
-      "blockers": []
+      "status": "PASS_WITH_BLOCKERS",
+      "report": "docs/unit-native-program/reports/P09_PHASE_REPORT.md",
+      "evidence": [
+        "docs/unit-native-program/evidence/live/A-cycle/",
+        "docs/unit-native-program/reports/FINAL_ACCEPTANCE.md",
+        "apps/textbook-agent/backend/scripts/run_p09_live_campaign.py"
+      ],
+      "blockers": [
+        "Cases B–D not run live",
+        "PDF export Playwright timeout; Poppler missing for page images",
+        "Case A Learn content-only (no Sequence interaction) → attempts empty",
+        "Controlled recovery / release v2 not completed live",
+        "Google Sign-In UI not automated"
+      ]
     }
   },
-  "core_dual_path_acceptance": "NOT_RUN",
-  "full_catalogue_acceptance": "NOT_RUN",
-  "next_action": "P09 live proof is eligible after P08 PASS. Follow docs/unit-native-program/LIVE_READY_RUNBOOK.md and pack/verification/LIVE_PROTOCOL.md. Optional: install Poppler and re-run P05-P04 page images."
+  "core_dual_path_acceptance": "NOT_COMPLETE",
+  "full_catalogue_acceptance": "NOT_COMPLETE",
+  "next_action": "Optional: run live cases B–D; install Poppler; fix frontend print-route PDF export; prefer teaching with sequence/order-items for attempt proof."
 }

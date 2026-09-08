@@ -1,0 +1,67 @@
+{
+  "case_id": "A-cycle",
+  "status": "FAIL",
+  "commit": "a88c643",
+  "provider": "deepseek-v4-pro",
+  "model": {
+    "page_model_fast": "deepseek-v4-flash",
+    "page_model_standard": "deepseek-v4-pro",
+    "xplore_native_worker_enabled": true,
+    "anthropic_key_set": true,
+    "deepseek_key_set": true,
+    "openai_key_set": true
+  },
+  "started_at": "2026-09-08T04:30:29.797215+00:00",
+  "finished_at": "2026-09-08T04:31:36.105460+00:00",
+  "unit_id": "7ab0136b-982f-4f71-b43f-b68ad9351b6d",
+  "path_lesson_id": "8aa99b4a-3dc7-4273-8631-9360a4894df6",
+  "teaching_plan_id": null,
+  "teaching_revision": null,
+  "teaching_hash": null,
+  "contracts": {
+    "print": null,
+    "learn": null,
+    "vocabulary": null
+  },
+  "print": {
+    "realization_id": null,
+    "generation_id": "549e7c0c-ed75-4cc4-95a8-e2b79d46e08e",
+    "student_pdf": null,
+    "teacher_pdf": null,
+    "inspection": null
+  },
+  "learn": {
+    "realization_id": null,
+    "generation_id": null,
+    "builder_id": null,
+    "release_id": null,
+    "assignment_id": null,
+    "instance_id": null,
+    "attempt_evidence": null,
+    "refresh_evidence": null
+  },
+  "stage_timings_ms": {
+    "constructor_s": 1920,
+    "create_unit_s": 46700,
+    "path_plan_s": 9220,
+    "path_approve_s": 110,
+    "prepare_s": 7520
+  },
+  "failure_recovery": null,
+  "rubric": {
+    "print": null,
+    "learn": null
+  },
+  "evidence_paths": [
+    "docs/unit-native-program/evidence/live/A-cycle/00-health.json",
+    "docs/unit-native-program/evidence/live/A-cycle/00-provider-snapshot.json",
+    "docs/unit-native-program/evidence/live/A-cycle/01-unit-input.json",
+    "docs/unit-native-program/evidence/live/A-cycle/03-path-plan.json",
+    "docs/unit-native-program/evidence/live/A-cycle/05-path-approval.json",
+    "docs/unit-native-program/evidence/live/A-cycle/06-prepare.json"
+  ],
+  "limitations": [
+    "POST http://127.0.0.1:8000/api/v1/v3/chunked/549e7c0c-ed75-4cc4-95a8-e2b79d46e08e/approve -> 409: {\n  \"detail\": \"Current lesson approval requires native document contract v2 and immutable path provenance\"\n}"
+  ],
+  "error": "RuntimeError: POST http://127.0.0.1:8000/api/v1/v3/chunked/549e7c0c-ed75-4cc4-95a8-e2b79d46e08e/approve -> 409: {\n  \"detail\": \"Current lesson approval requires native document contract v2 and immutable path provenance\"\n}"
+}

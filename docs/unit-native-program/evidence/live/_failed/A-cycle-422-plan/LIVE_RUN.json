@@ -1,0 +1,61 @@
+{
+  "case_id": "A-cycle",
+  "status": "FAIL",
+  "commit": "a88c643",
+  "provider": "deepseek-v4-pro",
+  "model": {
+    "page_model_fast": "deepseek-v4-flash",
+    "page_model_standard": "deepseek-v4-pro",
+    "xplore_native_worker_enabled": true,
+    "anthropic_key_set": true,
+    "deepseek_key_set": true,
+    "openai_key_set": true
+  },
+  "started_at": "2026-09-08T04:29:16.964786+00:00",
+  "finished_at": "2026-09-08T04:29:23.275813+00:00",
+  "unit_id": "0deff77b-c79d-4439-8512-c91b6e5327af",
+  "path_lesson_id": null,
+  "teaching_plan_id": null,
+  "teaching_revision": null,
+  "teaching_hash": null,
+  "contracts": {
+    "print": null,
+    "learn": null,
+    "vocabulary": null
+  },
+  "print": {
+    "realization_id": null,
+    "generation_id": null,
+    "student_pdf": null,
+    "teacher_pdf": null,
+    "inspection": null
+  },
+  "learn": {
+    "realization_id": null,
+    "generation_id": null,
+    "builder_id": null,
+    "release_id": null,
+    "assignment_id": null,
+    "instance_id": null,
+    "attempt_evidence": null,
+    "refresh_evidence": null
+  },
+  "stage_timings_ms": {
+    "constructor_s": 4410,
+    "create_unit_s": 110
+  },
+  "failure_recovery": null,
+  "rubric": {
+    "print": null,
+    "learn": null
+  },
+  "evidence_paths": [
+    "docs/unit-native-program/evidence/live/A-cycle/00-health.json",
+    "docs/unit-native-program/evidence/live/A-cycle/00-provider-snapshot.json",
+    "docs/unit-native-program/evidence/live/A-cycle/01-unit-input.json"
+  ],
+  "limitations": [
+    "POST http://127.0.0.1:8000/api/v1/units/0deff77b-c79d-4439-8512-c91b6e5327af/path:plan -> 422: {\n  \"detail\": [\n    {\n      \"type\": \"extra_forbidden\",\n      \"loc\": [\n        \"body\",\n        \"must_include\"\n      ],\n      \"msg\": \"Extra inputs are not permitted\",\n      \"input\": []\n    },\n    {\n      \"type\": \"extra_forbidden\",\n      \"loc\": [\n        \"body\",\n        \"must_avoid\"\n      ],\n      \"msg\": \"Extra inputs are not permitted\",\n      \"input\": []\n    },\n    {\n      \"type\": \"extra_forbidden\",\n      \"loc\": [\n        \"body\",\n        \"terminology\"\n      ],\n      \"msg\": \"Extra inputs are not permitted\",\n      \"input\": []\n    },\n    {\n      \"type\": \"extra_forbidden\",\n      \"loc\": [\n        \"body\",\n        \"notation\"\n      ],\n      \"msg\": \"Extra inputs are not permitted\",\n      \"input\": null\n    },\n    {\n      \"type\": \"extra_forbidden\",\n      \"loc\": [\n        \"body\",\n        \"assessment_context\"\n      ],\n      \"msg\": \"Extra inputs are not permitted\",\n      \"input\": null\n    },\n    {\n      \"type\": \"extra_forbidden\",\n      \"loc\": [\n        \"body\",\n        \"known_difficulties\"\n      ],\n      \"msg\": \"Extra inputs are not permitted\",\n      \"input\": []\n    }\n  ]\n}"
+  ],
+  "error": "RuntimeError: POST http://127.0.0.1:8000/api/v1/units/0deff77b-c79d-4439-8512-c91b6e5327af/path:plan -> 422: {\n  \"detail\": [\n    {\n      \"type\": \"extra_forbidden\",\n      \"loc\": [\n        \"body\",\n        \"must_include\"\n      ],\n      \"msg\": \"Extra inputs are not permitted\",\n      \"input\": []\n    },\n    {\n      \"type\": \"extra_forbidden\",\n      \"loc\": [\n        \"body\",\n        \"must_avoid\"\n      ],\n      \"msg\": \"Extra inputs are not permitted\",\n      \"input\": []\n    },\n    {\n      \"type\": \"extra_forbidden\",\n      \"loc\": [\n        \"body\",\n        \"terminology\"\n      ],\n      \"msg\": \"Extra inputs are not permitted\",\n      \"input\": []\n    },\n    {\n      \"type\": \"extra_forbidden\",\n      \"loc\": [\n        \"body\",\n        \"notation\"\n      ],\n      \"msg\": \"Extra inputs are not permitted\",\n      \"input\": null\n    },\n    {\n      \"type\": \"extra_forbidden\",\n      \"loc\": [\n        \"body\",\n        \"assessment_context\"\n      ],\n      \"msg\": \"Extra inputs are not permitted\",\n      \"input\": null\n    },\n    {\n      \"type\": \"extra_forbidden\",\n      \"loc\": [\n        \"body\",\n        \"known_difficulties\"\n      ],\n      \"msg\": \"Extra inputs are not permitted\",\n      \"input\": []\n    }\n  ]\n}"
+}

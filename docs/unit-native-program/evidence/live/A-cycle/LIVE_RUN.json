@@ -1,0 +1,26 @@
+{
+  "case_id": "A-cycle",
+  "status": "PASS_WITH_BLOCKERS",
+  "salvaged_from_generation": "b17572f5-b7ee-45cc-b5a7-d2da9310febd",
+  "finished_at": "2026-09-08T05:18:01.601546+00:00",
+  "print": {
+    "generation_id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd",
+    "status": "ready"
+  },
+  "learn": {
+    "generation_id": "learn-out-fb767eb51b40",
+    "builder_id": "e2a95a72-b35c-4355-9064-640367a3dad0",
+    "realization_id": "7d9059c1-6377-4db9-a12f-4644bcb95deb",
+    "release_id": "f18f0607-c4fd-47d6-84b2-9f8c9a3b3663",
+    "instance_id": "7c774717-1295-40c3-9600-d9a8915f75a2",
+    "attempt_evidence": {}
+  },
+  "teaching_hash": "5478751375d49a1ea2d7920418e6ff45969bb4c9cd6f0fddd5a7b79dfe49143f",
+  "teaching_revision": 1,
+  "limitations": [
+    "PDF export may be BLOCKED: Playwright print-route timeout / frontend print auth",
+    "Poppler pdftoppm not on PATH for page-image inspection",
+    "Google Sign-In UI not automated; JWT mint used for product API authenticity",
+    "Publish path required native_learn in _ACTIVE_SOURCES"
+  ]
+}

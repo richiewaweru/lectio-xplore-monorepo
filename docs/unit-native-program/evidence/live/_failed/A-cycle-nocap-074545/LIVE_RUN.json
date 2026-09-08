@@ -1,0 +1,70 @@
+{
+  "case_id": "A-cycle",
+  "status": "FAIL",
+  "commit": "a88c643",
+  "provider": "deepseek-v4-pro",
+  "model": {
+    "page_model_fast": "deepseek-v4-flash",
+    "page_model_standard": "deepseek-v4-pro",
+    "xplore_native_worker_enabled": true,
+    "anthropic_key_set": true,
+    "deepseek_key_set": true,
+    "openai_key_set": true
+  },
+  "started_at": "2026-09-08T04:38:08.308320+00:00",
+  "finished_at": "2026-09-08T04:40:16.472200+00:00",
+  "unit_id": "5a40532b-4f29-4b1b-a935-1b19a58e98e5",
+  "path_lesson_id": "c2ce8cf4-c868-4122-b1d5-611f12a378fd",
+  "teaching_plan_id": "668ed738-6081-40fc-b5f9-126587735c6b",
+  "teaching_revision": 1,
+  "teaching_hash": null,
+  "contracts": {
+    "print": null,
+    "learn": null,
+    "vocabulary": null
+  },
+  "print": {
+    "realization_id": null,
+    "generation_id": "62cf65b6-d8c6-4cf7-9aa3-785fef351685",
+    "student_pdf": null,
+    "teacher_pdf": null,
+    "inspection": null
+  },
+  "learn": {
+    "realization_id": null,
+    "generation_id": null,
+    "builder_id": null,
+    "release_id": null,
+    "assignment_id": null,
+    "instance_id": null,
+    "attempt_evidence": null,
+    "refresh_evidence": null
+  },
+  "stage_timings_ms": {
+    "constructor_s": 2530,
+    "create_unit_s": 51160,
+    "path_plan_s": 11780,
+    "path_approve_s": 170,
+    "prepare_s": 7810,
+    "teaching_plan_s": 49190
+  },
+  "failure_recovery": null,
+  "rubric": {
+    "print": null,
+    "learn": null
+  },
+  "evidence_paths": [
+    "docs/unit-native-program/evidence/live/A-cycle/00-health.json",
+    "docs/unit-native-program/evidence/live/A-cycle/00-provider-snapshot.json",
+    "docs/unit-native-program/evidence/live/A-cycle/01-unit-input.json",
+    "docs/unit-native-program/evidence/live/A-cycle/03-path-plan.json",
+    "docs/unit-native-program/evidence/live/A-cycle/05-path-approval.json",
+    "docs/unit-native-program/evidence/live/A-cycle/06-prepare.json",
+    "docs/unit-native-program/evidence/live/A-cycle/13-teaching-review.json",
+    "docs/unit-native-program/evidence/live/A-cycle/14-teaching-approve.json"
+  ],
+  "limitations": [
+    "generation failed at stage=failed_terminal: {'generation_id': '62cf65b6-d8c6-4cf7-9aa3-785fef351685', 'pack_id': None, 'stage': 'failed_terminal', 'doc_version': 'rev:0', 'failed_sections': [], 'blueprint_id': None, 'execution_started': True, 'next_action': 'inspect_error', 'error': \"NO_COMPATIBLE_CAPABILITY block='independent-b1' intent='practise-independent' action=None: empty legal form set\", 'error_type': 'NO_COMPATIBLE_CAPABILITY', 'variant_generation_ids': {}, 'document_version': 2, 'document_exists': False, 'sections_total': 0, 'sections_ready': 0, 'sections_failed': 0, 'blocks_total': 0, 'blocks_ready': 0, 'blocks_failed': 0, 'failed_section_ids': [], 'failed_block_ids': [], 'error_detail': {'scope': 'generation', 'code': 'NO_COMPATIBLE_CAPABILITY', 'message': \"NO_COMPATIBLE_CAPABILITY block='independent-b1' intent='practise-independent' action=None: empty legal form set\", 'retryable': False, 'stage': 'planning_forms', 'type': 'NoCompatiblePrintCapabilityError'}, 'visual_quality': {'status': 'ready', 'flagged': [], 'flagged_count': 0, 'failed_request_ids': [], 'retryable': False}}"
+  ],
+  "error": "RuntimeError: generation failed at stage=failed_terminal: {'generation_id': '62cf65b6-d8c6-4cf7-9aa3-785fef351685', 'pack_id': None, 'stage': 'failed_terminal', 'doc_version': 'rev:0', 'failed_sections': [], 'blueprint_id': None, 'execution_started': True, 'next_action': 'inspect_error', 'error': \"NO_COMPATIBLE_CAPABILITY block='independent-b1' intent='practise-independent' action=None: empty legal form set\", 'error_type': 'NO_COMPATIBLE_CAPABILITY', 'variant_generation_ids': {}, 'document_version': 2, 'document_exists': False, 'sections_total': 0, 'sections_ready': 0, 'sections_failed': 0, 'blocks_total': 0, 'blocks_ready': 0, 'blocks_failed': 0, 'failed_section_ids': [], 'failed_block_ids': [], 'error_detail': {'scope': 'generation', 'code': 'NO_COMPATIBLE_CAPABILITY', 'message': \"NO_COMPATIBLE_CAPABILITY block='independent-b1' intent='practise-independent' action=None: empty legal form set\", 'retryable': False, 'stage': 'planning_forms', 'type': 'NoCompatiblePrintCapabilityError'}, 'visual_quality': {'status': 'ready', 'flagged': [], 'flagged_count': 0, 'failed_request_ids': [], 'retryable': False}}"
+}

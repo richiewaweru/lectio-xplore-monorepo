@@ -1,0 +1,24 @@
+{
+  "generation_id": "62cf65b6-d8c6-4cf7-9aa3-785fef351685",
+  "path_lesson_id": "c2ce8cf4-c868-4122-b1d5-611f12a378fd",
+  "objective": "Students will recall that insects are living things that grow and change, and identify examples of animals that go through different growth stages.",
+  "objective_hash": "6fba8591f1c78e3eb94ce3d525c6952e9f4afe01381e31d19cebd1678c0e4e29",
+  "skeleton_id": "factual.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "organise",
+    "guided",
+    "independent",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "organise",
+    "guided",
+    "independent",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

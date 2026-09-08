@@ -1,0 +1,100 @@
+{
+  "id": "81effc5f-8eba-4c23-a953-b221ba84ca26",
+  "unit_id": "7ab0136b-982f-4f71-b43f-b68ad9351b6d",
+  "version": 1,
+  "revision": 2,
+  "status": "approved",
+  "generated_by": "path_planner",
+  "merge_critic_results": [],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": "2026-09-08T04:31:28.406572",
+  "created_at": "2026-09-08T04:31:28.183650",
+  "lessons": [
+    {
+      "id": "8aa99b4a-3dc7-4273-8631-9360a4894df6",
+      "concept_id": "5769ff1c-5c34-43f8-8d82-2b760b3f854e",
+      "concept_slug": "science.identifying.the.four.stages.of.the.butterfly.life.cycle",
+      "title": "Identifying the Four Stages of the Butterfly Life Cycle",
+      "objective": "Name and sequence the four stages of the butterfly life cycle: egg, larva (caterpillar), pupa (chrysalis), and adult butterfly.",
+      "objective_hash": "8768b02293d4330da8467d2eca9dfce6fd8e13e5bbdc1f8481d0c6bddafbf937",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "The butterfly life cycle has four distinct stages.",
+        "The correct sequence of the stages is egg, larva, pupa, and adult."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "939d43b0-83b4-4b49-8aae-aae30caab3f3",
+      "concept_id": "3131c90b-e02b-4ebb-a1d3-b1ce727f1827",
+      "concept_slug": "science.describing.changes.in.each.life.cycle.stage",
+      "title": "Describing Changes in Each Life Cycle Stage",
+      "objective": "Describe the key processes and changes occurring during the egg, larva, pupa, and adult butterfly stages.",
+      "objective_hash": "bc4fdddd366e035ccfa944ecb9a14ff982d677af05a0674897d897ea98048986",
+      "prerequisites": [
+        "8aa99b4a-3dc7-4273-8631-9360a4894df6"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "During the larva stage, the caterpillar hatches from the egg and grows by eating.",
+        "During the pupa stage, the caterpillar is enclosed in a chrysalis and transforms into an adult.",
+        "During the adult stage, the fully formed butterfly emerges and is capable of flight."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "70d48e40-34ac-48bd-8117-c987199c26e2",
+      "concept_id": "fe027d53-a1f2-49a1-b6d0-b174f14ea182",
+      "concept_slug": "science.explaining.the.continuous.butterfly.life.cycle",
+      "title": "Explaining the Continuous Butterfly Life Cycle",
+      "objective": "Explain that the butterfly life cycle is continuous because adult butterflies reproduce and lay eggs, beginning the cycle again.",
+      "objective_hash": "862c0dfd553af62a3b6cb4dd768cdfc42ca62c3f9cb5bef97c5f361682a9d58c",
+      "prerequisites": [
+        "8aa99b4a-3dc7-4273-8631-9360a4894df6",
+        "939d43b0-83b4-4b49-8aae-aae30caab3f3"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "An adult female butterfly lays eggs after mating.",
+        "The eggs develop into new larvae, repeating the life-cycle sequence.",
+        "The life cycle is a circular process without an absolute beginning or end."
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}

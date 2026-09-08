@@ -1,0 +1,22 @@
+{
+  "generation_id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd",
+  "path_lesson_id": "41942953-2089-4050-982d-e8d8e48ab1a4",
+  "objective": "Explain that a life cycle is the series of stages an organism passes through and that it repeats when adults produce young.",
+  "objective_hash": "3c89d28127e539694724d43536664679293fdfd5ac422eaf7498f7bd9db680db",
+  "skeleton_id": "conceptual.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "explain",
+    "contrast",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "explain",
+    "contrast",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

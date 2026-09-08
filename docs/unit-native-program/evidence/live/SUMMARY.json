@@ -1,0 +1,11 @@
+{
+  "finished_at": "2026-09-08T04:48:43.868288+00:00",
+  "commit": "a88c643",
+  "results": [
+    {
+      "case_id": "A-cycle",
+      "status": "FAIL",
+      "error": "NoCompatibleLearnCapabilityError: NO_COMPATIBLE_CAPABILITY block='explain-b1' intent='name-parts' action=None: empty content and interaction candidate sets"
+    }
+  ]
+}

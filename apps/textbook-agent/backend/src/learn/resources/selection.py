@@ -20,6 +20,26 @@ PASSIVE_ACTIONS = frozenset({"compare-without-response", "read-explanation"})
 ACTION_ALIASES = {
     "reconstruct-order": "order-items",
 }
+# When teaching omits learner_action, default a closed-set action for intents
+# that only have interaction coverage (or spatial-denied name-parts).
+# Only default actions that a generation-ready writer can honour today.
+# Sequence is the sole deterministic writer (P06); other interactions stay
+# content-only unless teaching already supplied a learner_action.
+INTENT_ACTION_DEFAULTS = {
+    "sequence": "order-items",
+    "practise-guided": "order-items",
+}
+# Intents with no/weak catalogue coverage still need a text content shell so
+# dual-path Learn production does not fail closed selection empty.
+INTENT_CONTENT_FALLBACKS = {
+    "emphasise": ("explanation-block", "key-fact", "summary-block"),
+    "define": ("definition-card", "explanation-block", "key-fact"),
+    "name-parts": ("definition-card", "explanation-block", "key-fact"),
+    "diagnose-misconception": ("quiz-check", "callout-block", "explanation-block"),
+    "check-understanding": ("quiz-check", "fill-in-blank", "explanation-block"),
+    "practise-independent": ("quiz-check", "fill-in-blank", "explanation-block"),
+    "practise-guided": ("worked-example-card", "process-steps", "explanation-block"),
+}
 
 
 class NoCompatibleLearnCapabilityError(RuntimeError):
@@ -135,7 +155,10 @@ def derive_learn_block_candidates(
     budgets = {str(k): int(v) for k, v in (remaining_budgets or {}).items()}
     index = _capability_index(capabilities)
     writers = writer_view if writer_view is not None else (load_learn_writer_view().get("capabilities") or {})
-    canonical_action = normalize_action(action)
+    effective_action = action
+    if not action and intent in INTENT_ACTION_DEFAULTS:
+        effective_action = INTENT_ACTION_DEFAULTS[intent]
+    canonical_action = normalize_action(effective_action)
 
     excluded: dict[str, str] = {}
     content: list[str] = []
@@ -180,7 +203,9 @@ def derive_learn_block_candidates(
             continue
 
         actions = [str(item) for item in (record.get("supported_actions") or [])]
-        if not _action_matches(action=action, supported_actions=actions, kind=kind):
+        if not _action_matches(
+            action=canonical_action, supported_actions=actions, kind=kind
+        ):
             excluded[capability_id] = "action_unsupported"
             continue
 
@@ -197,6 +222,19 @@ def derive_learn_block_candidates(
             content.append(capability_id)
         else:
             interactions.append(capability_id)
+
+    if not content and not interactions:
+        for fallback_id in INTENT_CONTENT_FALLBACKS.get(intent, ()):
+            if fallback_id not in content_offered:
+                continue
+            record = index.get(fallback_id)
+            if not isinstance(record, dict):
+                continue
+            if str(record.get("availability") or "") == "unavailable":
+                continue
+            content.append(fallback_id)
+            excluded.pop(fallback_id, None)
+            break
 
     return LearnBlockCandidates(
         block_id=block_id,

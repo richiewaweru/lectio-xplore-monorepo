@@ -1,0 +1,22 @@
+{
+  "generation_id": "903b267b-4bce-41ee-ab45-1cbe977796df",
+  "path_lesson_id": "8ee16e5a-fab9-4e63-b731-a654e9504a6a",
+  "objective": "Explain that a life cycle is a repeated pattern of stages that a living thing goes through as it grows and reproduces.",
+  "objective_hash": "2fb7d842a2c20be36a813e7b02ea01bfafb665cb7cdcf96f0f44a055685e8bf6",
+  "skeleton_id": "conceptual.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "explain",
+    "contrast",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "explain",
+    "contrast",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

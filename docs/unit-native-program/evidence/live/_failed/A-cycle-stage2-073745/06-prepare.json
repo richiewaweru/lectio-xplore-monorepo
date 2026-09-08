@@ -1,0 +1,24 @@
+{
+  "generation_id": "b5b40929-e30c-4ce2-898c-6e18064399de",
+  "path_lesson_id": "b0adb061-a487-4449-b3d2-b2ee1006791d",
+  "objective": "Name the four stages of a butterfly's life cycle in order: egg, larva, pupa, adult.",
+  "objective_hash": "ce75af22d0befee556286701031d5e273c7de628a6fa3f2306a53b74b37ff940",
+  "skeleton_id": "factual.first_exposure",
+  "skeleton_version": 1,
+  "slots": [
+    "orient",
+    "organise",
+    "guided",
+    "independent",
+    "check"
+  ],
+  "section_roles": [
+    "orient",
+    "organise",
+    "guided",
+    "independent",
+    "check"
+  ],
+  "status": "awaiting_review",
+  "reused": false
+}

@@ -106,9 +106,16 @@ def select_learn_deterministically(
         for block in section.blocks:
             row = candidates[block.id]
             content_id = row.content_candidates[0] if row.content_candidates else None
+            # Prefer Sequence among required interactions — sole generation-ready writer.
             interaction_id: str | None
             if row.requires_response:
-                if not row.interaction_candidates:
+                ordered = []
+                if "sequence" in row.interaction_candidates:
+                    ordered.append("sequence")
+                ordered.extend(
+                    i for i in row.interaction_candidates if i != "sequence"
+                )
+                if not ordered:
                     raise NoCompatibleLearnCapabilityError(
                         block_id=block.id,
                         intent=block.intent,
@@ -116,7 +123,7 @@ def select_learn_deterministically(
                         constraints={"interaction_candidates": []},
                         reason="required interaction set empty",
                     )
-                interaction_id = row.interaction_candidates[0]
+                interaction_id = ordered[0]
             else:
                 # Optional interaction → explicit none (P04-N03).
                 interaction_id = None

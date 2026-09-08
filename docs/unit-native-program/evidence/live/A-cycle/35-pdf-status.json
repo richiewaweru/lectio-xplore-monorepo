@@ -1,0 +1,12 @@
+{
+  "student": {
+    "status": 500,
+    "bytes": 0,
+    "body": "{\"detail\":{\"message\":\"NotImplementedError: \",\"debug\":{}}}"
+  },
+  "teacher": {
+    "status": 500,
+    "bytes": 0,
+    "body": "{\"detail\":{\"message\":\"NotImplementedError: \",\"debug\":{}}}"
+  }
+}

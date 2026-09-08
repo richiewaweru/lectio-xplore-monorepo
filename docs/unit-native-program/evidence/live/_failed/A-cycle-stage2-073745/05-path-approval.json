@@ -1,0 +1,129 @@
+{
+  "id": "a2e0adc0-ea56-4e6a-a5e1-748ea8563b75",
+  "unit_id": "2a0c1bb2-7e98-469a-a8b2-b3cda929875e",
+  "version": 1,
+  "revision": 2,
+  "status": "approved",
+  "generated_by": "path_planner",
+  "merge_critic_results": [],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": "2026-09-08T04:36:15.470522",
+  "created_at": "2026-09-08T04:36:15.243306",
+  "lessons": [
+    {
+      "id": "b0adb061-a487-4449-b3d2-b2ee1006791d",
+      "concept_id": "b714cbd5-e619-4aa3-be34-926631a01ba6",
+      "concept_slug": "science.the.four.stages.of.a.butterfly.s.life.cycle",
+      "title": "The four stages of a butterfly's life cycle",
+      "objective": "Name the four stages of a butterfly's life cycle in order: egg, larva, pupa, adult.",
+      "objective_hash": "ce75af22d0befee556286701031d5e273c7de628a6fa3f2306a53b74b37ff940",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "A butterfly's life cycle has four ordered stages",
+        "The stages are egg, larva, pupa, and adult"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "d8f1f406-0122-4bc7-ad43-d5ef53b0419c",
+      "concept_id": "0ac3bf35-6c38-43c4-9b2c-0b5c9e5986de",
+      "concept_slug": "science.characteristics.of.each.life.cycle.stage",
+      "title": "Characteristics of each life cycle stage",
+      "objective": "Describe the key characteristics of each life cycle stage: egg, larva, pupa, and adult.",
+      "objective_hash": "133ed64e3001cf50a2c193d3cd45c6c8aad882da56b524f254a24708071bfd56",
+      "prerequisites": [
+        "b0adb061-a487-4449-b3d2-b2ee1006791d"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Eggs are laid by adult butterflies",
+        "Larvae (caterpillars) hatch from eggs and eat to grow",
+        "Pupae (chrysalises) are the resting stage where transformation occurs",
+        "Adults emerge from the pupa and can fly"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "3ee288c6-df24-4b7d-a520-e6d67cfb5979",
+      "concept_id": "bb5679d2-7d53-4eb9-bfc1-8c5d3a1ef5aa",
+      "concept_slug": "science.how.the.life.cycle.continues",
+      "title": "How the life cycle continues",
+      "objective": "Explain that adult butterflies lay eggs, starting the life cycle again.",
+      "objective_hash": "c95ac8e65338d79e2491ed0630d1fbe235fe603d53cf02b78f5ada1e2eb18ddf",
+      "prerequisites": [
+        "b0adb061-a487-4449-b3d2-b2ee1006791d",
+        "d8f1f406-0122-4bc7-ad43-d5ef53b0419c"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Adult butterflies reproduce by laying eggs",
+        "The life cycle is continuous and repeats"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "423f3d03-4214-49f3-abd5-4cd0bef89eab",
+      "concept_id": "6e2bcd1a-abbf-44eb-8c26-04aa931e3448",
+      "concept_slug": "science.putting.the.butterfly.life.cycle.in.order",
+      "title": "Putting the butterfly life cycle in order",
+      "objective": "Order the stages of a butterfly's life cycle (egg, larva, pupa, adult) and explain that adult butterflies lay eggs to continue the cycle.",
+      "objective_hash": "e8cfc59e215bfdfca21a326c9fdfad2119cb25df03c6baba068dfed1e7af3e93",
+      "prerequisites": [
+        "b0adb061-a487-4449-b3d2-b2ee1006791d",
+        "d8f1f406-0122-4bc7-ad43-d5ef53b0419c",
+        "3ee288c6-df24-4b7d-a520-e6d67cfb5979"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "The complete sequence of the butterfly life cycle is egg, larva, pupa, adult",
+        "The cycle repeats when adult butterflies lay eggs"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "procedural",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 3,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}

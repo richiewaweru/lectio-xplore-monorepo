@@ -1,0 +1,80 @@
+{
+  "case_id": "A-cycle",
+  "status": "FAIL",
+  "commit": "a88c643",
+  "provider": "deepseek-v4-pro",
+  "model": {
+    "page_model_fast": "deepseek-v4-flash",
+    "page_model_standard": "deepseek-v4-pro",
+    "xplore_native_worker_enabled": true,
+    "anthropic_key_set": true,
+    "deepseek_key_set": true,
+    "openai_key_set": true
+  },
+  "started_at": "2026-09-08T04:46:05.749170+00:00",
+  "finished_at": "2026-09-08T04:48:43.858164+00:00",
+  "unit_id": "802cdb7b-d8d6-439f-84e7-2cdb0611e902",
+  "path_lesson_id": "41942953-2089-4050-982d-e8d8e48ab1a4",
+  "teaching_plan_id": "dd1f937f-0fa1-43cc-8901-0de41fd712fc",
+  "teaching_revision": 1,
+  "teaching_hash": null,
+  "contracts": {
+    "print": null,
+    "learn": null,
+    "vocabulary": null
+  },
+  "print": {
+    "realization_id": null,
+    "generation_id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd",
+    "student_pdf": null,
+    "teacher_pdf": null,
+    "inspection": {
+      "status": "BLOCKED",
+      "reason": "pdftoppm (Poppler) not on PATH",
+      "text_pdf_present": false
+    }
+  },
+  "learn": {
+    "realization_id": null,
+    "generation_id": null,
+    "builder_id": null,
+    "release_id": null,
+    "assignment_id": null,
+    "instance_id": null,
+    "attempt_evidence": null,
+    "refresh_evidence": null
+  },
+  "stage_timings_ms": {
+    "constructor_s": 2610,
+    "create_unit_s": 46880,
+    "path_plan_s": 11450,
+    "path_approve_s": 110,
+    "prepare_s": 7670,
+    "teaching_plan_s": 74730,
+    "print_writers_s": 12470
+  },
+  "failure_recovery": null,
+  "rubric": {
+    "print": null,
+    "learn": null
+  },
+  "evidence_paths": [
+    "docs/unit-native-program/evidence/live/A-cycle/00-health.json",
+    "docs/unit-native-program/evidence/live/A-cycle/00-provider-snapshot.json",
+    "docs/unit-native-program/evidence/live/A-cycle/01-unit-input.json",
+    "docs/unit-native-program/evidence/live/A-cycle/03-path-plan.json",
+    "docs/unit-native-program/evidence/live/A-cycle/05-path-approval.json",
+    "docs/unit-native-program/evidence/live/A-cycle/06-prepare.json",
+    "docs/unit-native-program/evidence/live/A-cycle/13-teaching-review.json",
+    "docs/unit-native-program/evidence/live/A-cycle/14-teaching-approve.json",
+    "docs/unit-native-program/evidence/live/A-cycle/20-print-status.json",
+    "docs/unit-native-program/evidence/live/A-cycle/21-print-status-refresh.json"
+  ],
+  "limitations": [
+    "PDF student export failed: POST http://127.0.0.1:8000/api/v1/v3/generations/b17572f5-b7ee-45cc-b5a7-d2da9310febd/export/pdf -> 500: {\n  \"detail\": {\n    \"message\": \"NotImplementedError: \",\n    \"debug\": {}\n  }\n}",
+    "PDF teacher export failed: POST http://127.0.0.1:8000/api/v1/v3/generations/b17572f5-b7ee-45cc-b5a7-d2da9310febd/export/pdf -> 500: {\n  \"detail\": {\n    \"message\": \"NotImplementedError: \",\n    \"debug\": {}\n  }\n}",
+    "P09-V02 visual page-image inspection BLOCKED: install Poppler pdftoppm",
+    "NO_COMPATIBLE_CAPABILITY block='explain-b1' intent='name-parts' action=None: empty content and interaction candidate sets"
+  ],
+  "error": "NoCompatibleLearnCapabilityError: NO_COMPATIBLE_CAPABILITY block='explain-b1' intent='name-parts' action=None: empty content and interaction candidate sets"
+}

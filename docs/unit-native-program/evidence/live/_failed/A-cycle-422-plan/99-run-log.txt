@@ -1,0 +1,59 @@
+[2026-09-08T04:29:23.183271+00:00] unit_id=0deff77b-c79d-4439-8512-c91b6e5327af
+[2026-09-08T04:29:23.275813+00:00] FAILED: POST http://127.0.0.1:8000/api/v1/units/0deff77b-c79d-4439-8512-c91b6e5327af/path:plan -> 422: {
+  "detail": [
+    {
+      "type": "extra_forbidden",
+      "loc": [
+        "body",
+        "must_include"
+      ],
+      "msg": "Extra inputs are not permitted",
+      "input": []
+    },
+    {
+      "type": "extra_forbidden",
+      "loc": [
+        "body",
+        "must_avoid"
+      ],
+      "msg": "Extra inputs are not permitted",
+      "input": []
+    },
+    {
+      "type": "extra_forbidden",
+      "loc": [
+        "body",
+        "terminology"
+      ],
+      "msg": "Extra inputs are not permitted",
+      "input": []
+    },
+    {
+      "type": "extra_forbidden",
+      "loc": [
+        "body",
+        "notation"
+      ],
+      "msg": "Extra inputs are not permitted",
+      "input": null
+    },
+    {
+      "type": "extra_forbidden",
+      "loc": [
+        "body",
+        "assessment_context"
+      ],
+      "msg": "Extra inputs are not permitted",
+      "input": null
+    },
+    {
+      "type": "extra_forbidden",
+      "loc": [
+        "body",
+        "known_difficulties"
+      ],
+      "msg": "Extra inputs are not permitted",
+      "input": []
+    }
+  ]
+}

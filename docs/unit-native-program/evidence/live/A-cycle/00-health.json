@@ -1,0 +1,8 @@
+{
+  "status": "ok",
+  "timestamp": "2026-09-08T04:55:57.193072+00:00",
+  "version": "1.0.0-beta.1",
+  "instance_id": "bc7f1d47-9991-439e-b648-cc7f4adbdc42",
+  "started_at": "2026-09-08T04:52:53.612609+00:00",
+  "pipeline_architecture": "shell-pipeline-native-lectio"
+}

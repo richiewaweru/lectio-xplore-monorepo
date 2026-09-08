@@ -1,0 +1,523 @@
+{
+  "generation_id": "62cf65b6-d8c6-4cf7-9aa3-785fef351685",
+  "teaching_plan": {
+    "arc": "This lesson opens on one butterfly seen at four different moments, so learners meet the puzzle that a crawling caterpillar and a flying butterfly share the same life. It then names these growth stages in order and uses the same one butterfly to break the ideas that a caterpillar and butterfly are different animals, and that the chrysalis is only a resting shell. The lesson ends with the learner identifying the growth stages and recognising that the same animal changes over time.",
+    "revision": 1,
+    "sections": [
+      {
+        "blocks": [
+          {
+            "id": "orient-b1",
+            "brief": "Present anchor-1 as one butterfly observed at four separate moments: a tiny egg, a crawling caterpillar-like form, a still case, and a flying butterfly. Ask which picture shows the butterfly, and invite the learner to notice that the pictures do not look like the same animal. Do not name the stages or give the answer yet.",
+            "intent": "orient",
+            "evidence": "The orient slot needs a concrete situation that creates a reason to care, and anchor-1 supplies exactly that by presenting one animal at four visually different moments without yet explaining them.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "slot.orient.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "orient",
+        "transition": null,
+        "specific_purpose": "Open attention with a concrete puzzle: the same animal looks completely different at different moments of its life."
+      },
+      {
+        "blocks": [
+          {
+            "id": "organise-b1",
+            "brief": "Using anchor-1, name the four growth stages in order: egg, caterpillar, chrysalis, butterfly. State that the same living thing moves through every stage in this order, and that each stage leads to the next. Do not yet explain what happens inside the chrysalis.",
+            "intent": "sequence",
+            "evidence": "The organise slot's job is to impose structure on the anchor's facts, and the four moments of anchor-1 become retrievable only when they are placed in the ordered growth sequence the objective requires.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "prior-1",
+              "prior-2"
+            ],
+            "learner_action": null,
+            "departure_reason": "The slot has no typical intents, so the closest permitted intent is sequence: order matters here because the objective asks learners to recognise growth stages.",
+            "source_question_ids": []
+          },
+          {
+            "id": "organise-b2",
+            "brief": "State the single high-value idea: all four pictures in anchor-1 show the same butterfly. The caterpillar does not turn into a different animal; the same animal grows and changes.",
+            "intent": "emphasise",
+            "evidence": "Before confronting M1, the organised section must make the target idea explicit, because the misconception that caterpillar and butterfly are different animals can only be challenged against a clearly stated alternative.",
+            "position": 1,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "prior-1",
+              "prior-2",
+              "M1"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "organise",
+        "transition": "Now that the learner has seen one butterfly in four different forms, the lesson can name those forms and put them in order.",
+        "specific_purpose": "Impose the four growth stages in order and establish that all four pictures show the same living thing."
+      },
+      {
+        "blocks": [
+          {
+            "id": "guided-b1",
+            "brief": "With the four stage names from anchor-1 visible as support, ask the learner to decide whether the caterpillar and the butterfly are two different animals in the same place, or the same animal at two stages. Ask the learner to point to the stage between them as evidence. Do not remove the stage labels.",
+            "intent": "practise-guided",
+            "evidence": "M1 is a held belief that can be surfaced only when the learner must actively make the same-animal judgment, and leaving the stage names visible keeps this rehearsal scaffolded rather than independent.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "M1",
+              "prior-1",
+              "slot.guided.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "guided-b2",
+            "brief": "Using anchor-1, ask the learner to explain why a butterfly was not hiding inside the chrysalis the whole time. Keep the ordered stages visible and direct the learner to compare the caterpillar before the chrysalis with the butterfly after it. Accept that the chrysalis is a growing stage, not a waiting shell.",
+            "intent": "practise-guided",
+            "evidence": "M2 requires the learner to think about the chrysalis stage itself, and keeping the ordered stages visible lets the learner reason that the caterpillar came before the chrysalis, so the adult butterfly cannot already be inside it.",
+            "position": 1,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "M2",
+              "prior-2"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "guided",
+        "transition": "With the four stages named and the same-animal claim made, the learner can now try that thinking while the stage order is still available.",
+        "specific_purpose": "Practise ordering the growth stages and judging same-versus-different animal with scaffolding still visible."
+      },
+      {
+        "blocks": [
+          {
+            "id": "independent-b1",
+            "brief": "Show the four moments of anchor-1 again, but without the stage names. Ask the learner to place the moments in growth order and then answer: are the crawling form and the flying form the same animal? Require the learner to explain the answer using the idea of growth stages, not labels alone.",
+            "intent": "practise-independent",
+            "evidence": "Independent practice is the correct next move because the learner has already succeeded with the scaffold present, and this block removes the stage labels while still using anchor-1 as the concrete case.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "prior-1",
+              "prior-2",
+              "M1"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          },
+          {
+            "id": "independent-b2",
+            "brief": "Using the same four moments of anchor-1, ask the learner to state what the chrysalis is if the adult butterfly was not already inside it. Require the answer to name the chrysalis as a growing stage that comes from the caterpillar and leads to the butterfly.",
+            "intent": "practise-independent",
+            "evidence": "This removes the scaffold from the chrysalis misconception check, so the learner must now state the target model rather than rely on a visible stage reminder.",
+            "position": 1,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "prior-2",
+              "M2"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": []
+          }
+        ],
+        "slot_id": "independent",
+        "transition": "The learner has now made both judgments with the stage order visible, so the next step is to make the same reasoning unaided.",
+        "specific_purpose": "Repeat the same-animal and chrysalis judgments without the stage scaffold, using the anchor as the concrete case."
+      },
+      {
+        "blocks": [
+          {
+            "id": "check-b1",
+            "brief": "Present anchor-1 and ask a question that distinguishes the target model from M1 and M2. The learner must identify the growth-stage relationship that shows the four pictures are one animal, and the misconception options must include the different-animal belief and the already-inside-chrysalis belief as confident wrong answers.",
+            "intent": "diagnose-misconception",
+            "evidence": "The check slot is the one place where wrong answers must identify which wrong model the learner holds, and both M1 and M2 are named on the card, so a diagnostic item against anchor-1 is the correct move.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "M1",
+              "M2",
+              "slot.check.purpose",
+              "lesson.objective"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [
+              "62cf65b6-d8c6-4cf7-9aa3-785fef351685:62cf65b6-d8c6-4cf7-9aa3-785fef351685:5850ed1d-e1c9-4425-bce3-7c5b37589ad0.i1"
+            ]
+          }
+        ],
+        "slot_id": "check",
+        "transition": "With both scaffolded and unaided practice complete, this final check measures whether the learner still carries either of the two wrong models.",
+        "specific_purpose": "The shared diagnostic: determine which of the two approved misconceptions, if either, the learner still holds about anchor-1."
+      }
+    ],
+    "anchor_usage": [
+      {
+        "usage": "Introduce anchor-1 as a single butterfly photographed at four different moments, without naming the stages yet.",
+        "slot_id": "orient"
+      },
+      {
+        "usage": "Use anchor-1 to impose the order of growth stages: egg, caterpillar, chrysalis, butterfly, all belonging to the same animal.",
+        "slot_id": "organise"
+      },
+      {
+        "usage": "Reuse anchor-1 to test the misconception that caterpillar and butterfly are different animals, with the stage order still present as support.",
+        "slot_id": "guided"
+      },
+      {
+        "usage": "Remove the scaffold and ask the learner to make the same same-animal judgment about anchor-1 without stage labels present.",
+        "slot_id": "independent"
+      },
+      {
+        "usage": "Return to anchor-1 as the concrete case for a diagnostic that determines whether the learner still holds either approved misconception.",
+        "slot_id": "check"
+      }
+    ],
+    "approval_status": "pending",
+    "preparation_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870",
+    "teaching_plan_id": "668ed738-6081-40fc-b5f9-126587735c6b",
+    "misconception_focus_ids": [
+      "M1",
+      "M2"
+    ]
+  },
+  "teaching_validation": {
+    "ok": true,
+    "issues": []
+  },
+  "teaching_qc": [],
+  "teaching_review": {
+    "status": "pending",
+    "revision": 1,
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "teacher_note": null
+  },
+  "lesson_packet": {
+    "scope": {
+      "terminology": [],
+      "must_establish": [],
+      "must_not_introduce": []
+    },
+    "slots": [
+      {
+        "purpose": "Give the learner a reason to care and a concrete situation to hold.",
+        "slot_id": "orient",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "orient",
+          "activate-prior-knowledge",
+          "emphasise"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "Impose a structure on the facts so they are retrievable, not just listed.",
+        "slot_id": "organise",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [],
+        "visual_required": false
+      },
+      {
+        "purpose": "Practice with scaffolding still present. Learner does the thinking, support stays.",
+        "slot_id": "guided",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [],
+        "visual_required": false
+      },
+      {
+        "purpose": "Practice with scaffolding removed.",
+        "slot_id": "independent",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [],
+        "visual_required": false
+      },
+      {
+        "purpose": "The shared diagnostic. Identical across every variant. Written from the card only, never from the prose above it.\n",
+        "slot_id": "check",
+        "max_blocks": 1,
+        "min_blocks": 1,
+        "typical_intents": [
+          "check-understanding",
+          "practise-independent",
+          "diagnose-misconception"
+        ],
+        "visual_required": false
+      }
+    ],
+    "anchor": {
+      "id": "anchor-1",
+      "description": "A single butterfly observed over its whole life, seen at four distinct moments: a tiny egg, a crawl\u2026"
+    },
+    "lesson": {
+      "subject": "Science",
+      "objective": "Students will recall that insects are living things that grow and change, and identify examples of animals that go through different growth stages.",
+      "grade_level": "Grade",
+      "lesson_mode": "first_exposure",
+      "knowledge_type": "conceptual",
+      "path_lesson_id": "62cf65b6-d8c6-4cf7-9aa3-785fef351685"
+    },
+    "limits": {
+      "max_sections": 4,
+      "max_total_blocks": 10,
+      "max_blocks_per_section": 3
+    },
+    "resource_id": "lesson",
+    "approved_items": [
+      {
+        "id": "62cf65b6-d8c6-4cf7-9aa3-785fef351685:62cf65b6-d8c6-4cf7-9aa3-785fef351685:5850ed1d-e1c9-4425-bce3-7c5b37589ad0.i1",
+        "stem": "A student watches a caterpillar in a jar. Over two weeks, the caterpillar stops moving, forms a chrysalis, and a butterfly emerges. What should the student conclude about the caterpillar and the butterfly?",
+        "card_id": "62cf65b6-d8c6-4cf7-9aa3-785fef351685:5850ed1d-e1c9-4425-bce3-7c5b37589ad0",
+        "options": [
+          {
+            "key": "a",
+            "text": "They are the same animal at different stages of its life.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "They are two different animals that share a jar.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The butterfly was hidden inside the caterpillar from the start.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The caterpillar turned into a brand-new animal overnight.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M1",
+          "c": "M2",
+          "d": null
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "62cf65b6-d8c6-4cf7-9aa3-785fef351685:62cf65b6-d8c6-4cf7-9aa3-785fef351685:5850ed1d-e1c9-4425-bce3-7c5b37589ad0.i2",
+        "stem": "A gardener finds a small caterpillar eating a leaf on Monday. On Friday, she sees a butterfly flying near the same plant. What best explains what happened?",
+        "card_id": "62cf65b6-d8c6-4cf7-9aa3-785fef351685:5850ed1d-e1c9-4425-bce3-7c5b37589ad0",
+        "options": [
+          {
+            "key": "a",
+            "text": "The butterfly replaced the caterpillar as a new resident.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The butterfly came to the plant after the caterpillar left.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The caterpillar likely changed into the butterfly during the week.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The butterfly hid inside the caterpillar until it could escape.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": "M1",
+          "b": "M1",
+          "c": null,
+          "d": "M2"
+        },
+        "correct_key": "c"
+      },
+      {
+        "id": "62cf65b6-d8c6-4cf7-9aa3-785fef351685:62cf65b6-d8c6-4cf7-9aa3-785fef351685:5850ed1d-e1c9-4425-bce3-7c5b37589ad0.i3",
+        "stem": "A class finds a chrysalis hanging from a twig. Inside, a caterpillar is changing. Which statement describes what is happening inside the chrysalis?",
+        "card_id": "62cf65b6-d8c6-4cf7-9aa3-785fef351685:5850ed1d-e1c9-4425-bce3-7c5b37589ad0",
+        "options": [
+          {
+            "key": "a",
+            "text": "A new butterfly animal is being built by a resting shell.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The caterpillar's body is reorganizing into an adult butterfly.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The caterpillar is sleeping while a butterfly moves in.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The chrysalis keeps the butterfly safe from other insects.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": "M2",
+          "b": null,
+          "c": "M1",
+          "d": null
+        },
+        "correct_key": "b"
+      },
+      {
+        "id": "62cf65b6-d8c6-4cf7-9aa3-785fef351685:62cf65b6-d8c6-4cf7-9aa3-785fef351685:5850ed1d-e1c9-4425-bce3-7c5b37589ad0.i4",
+        "stem": "Scientists compare a caterpillar with a butterfly that emerged from the same chrysalis. Why do the two look so different?",
+        "card_id": "62cf65b6-d8c6-4cf7-9aa3-785fef351685:5850ed1d-e1c9-4425-bce3-7c5b37589ad0",
+        "options": [
+          {
+            "key": "a",
+            "text": "The butterfly came from a different egg than the caterpillar.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "They are different growth stages of the same insect.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The butterfly was already formed and just grew larger.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The caterpillar stopped eating and became a butterfly without changing.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": "M1",
+          "b": null,
+          "c": "M2",
+          "d": null
+        },
+        "correct_key": "b"
+      },
+      {
+        "id": "62cf65b6-d8c6-4cf7-9aa3-785fef351685:62cf65b6-d8c6-4cf7-9aa3-785fef351685:5850ed1d-e1c9-4425-bce3-7c5b37589ad0.i5",
+        "stem": "A child watches a monarch caterpillar form a chrysalis. A week later, a monarch butterfly comes out. Which idea best matches what the child saw?",
+        "card_id": "62cf65b6-d8c6-4cf7-9aa3-785fef351685:5850ed1d-e1c9-4425-bce3-7c5b37589ad0",
+        "options": [
+          {
+            "key": "a",
+            "text": "The chrysalis was a house where two different insects met.",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The chrysalis kept the butterfly hidden until it was ready.",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The chrysalis was a stage in the butterfly's own growth.",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The chrysalis made the caterpillar turn into a new species.",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": "M1",
+          "b": "M2",
+          "c": null,
+          "d": null
+        },
+        "correct_key": "c"
+      }
+    ],
+    "misconceptions": [
+      {
+        "id": "M1",
+        "statement": "{'id': 'M1', 'description': 'A caterpillar and a butterfly are different animals that happen to live in the same place.', 'source': 'drafted'}"
+      },
+      {
+        "id": "M2",
+        "statement": "{'id': 'M2', 'description': 'The chrysalis is a resting shell the caterpillar builds, and the adult butterfly was already inside it the whole time.', 'source': 'drafted'}"
+      }
+    ],
+    "prior_established": [
+      {
+        "id": "prior-1",
+        "statement": "insects are living things that grow and change"
+      },
+      {
+        "id": "prior-2",
+        "statement": "some animals go through different stages as they grow"
+      }
+    ]
+  },
+  "catalogue": {
+    "version": "1.1.0",
+    "form_projection_hash": null,
+    "teaching_projection_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870"
+  }
+}

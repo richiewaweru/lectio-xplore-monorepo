@@ -76,7 +76,23 @@ def _repair_missing_assessment_sources(
     packet: ImmutableLessonPacket,
     assessment_intents: set[str],
 ) -> None:
-    """Assign unused approved cards when a model omits assessment ownership."""
+    """Assign unused approved cards when a model omits assessment ownership.
+
+    Print closed selection rejects questions/choices without sources. Only bind
+    for intents whose primary job is assessment/practice — never for orient /
+    explain content blocks that merely list choices as an optional form.
+    """
+    bind_intents = {
+        "check-understanding",
+        "diagnose-misconception",
+        "practise-independent",
+        "practise-guided",
+        "classify",
+        "apply",
+        "transfer",
+        "evaluate",
+    } & set(assessment_intents)
+
     used = {
         source_id
         for section in plan.sections
@@ -86,14 +102,38 @@ def _repair_missing_assessment_sources(
     available = [
         item.id for item in packet.approved_items if item.id not in used
     ]
+    priority = (
+        "check-understanding",
+        "diagnose-misconception",
+        "practise-independent",
+        "practise-guided",
+        "classify",
+        "apply",
+        "transfer",
+        "evaluate",
+    )
+
+    ordered_blocks = []
+    for intent_name in priority:
+        for section in plan.sections:
+            for block in section.blocks:
+                if block.intent == intent_name and not block.source_question_ids:
+                    ordered_blocks.append(block)
     for section in plan.sections:
         for block in section.blocks:
             if (
-                block.intent == "check-understanding"
+                block not in ordered_blocks
+                and block.intent in bind_intents
                 and not block.source_question_ids
-                and available
             ):
-                block.source_question_ids = [available.pop(0)]
+                ordered_blocks.append(block)
+
+    for block in ordered_blocks:
+        if not available:
+            break
+        if block.intent not in bind_intents:
+            continue
+        block.source_question_ids = [available.pop(0)]
 
 
 def _repair_invalid_evidence_refs(

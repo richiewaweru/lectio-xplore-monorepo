@@ -726,15 +726,27 @@ async def _require_current_native_generation(
         or (context.get("native_whole_lesson") if isinstance(context, dict) else False)
         or resolved_state.get("page_document_v2")
     )
+    shared_preparation = bool(
+        resolved_state.get("shared_preparation")
+        or (context.get("shared_preparation") if isinstance(context, dict) else False)
+        or resolved_state.get("path_prepared")
+    )
     async with async_session_factory() as session:
         provenance = await session.get(LessonProvenanceModel, generation_id)
-    if (
-        contract_version < 2
-        or not native_state
-        or provenance is None
-        or not provenance.path_version_id
-        or not provenance.path_lesson_id
-    ):
+    has_path_provenance = bool(
+        provenance is not None
+        and provenance.path_version_id
+        and provenance.path_lesson_id
+    )
+    # Print-native v2 generations keep the historical gate. Unit shared
+    # preparation (P02) intentionally persists document_contract_version=1
+    # until a path consumer admits a native realization; those rows must still
+    # pass with immutable path provenance so teaching can run.
+    allowed = has_path_provenance and (
+        (contract_version >= 2 and native_state)
+        or shared_preparation
+    )
+    if not allowed:
         raise HTTPException(
             status_code=409,
             detail=(
@@ -1508,12 +1520,22 @@ async def _run_chunked_stage2_pipeline(
 
         # Native whole-lesson path: items → teaching plan → halt for teacher approval.
         # Do not run legacy section briefs, assembly, or component writers.
+        # Unit shared preparation (P02) also uses this teaching halt even though
+        # document_contract_version stays 1 until a Print realization upgrades it.
         from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
 
         native_whole_lesson = generation_is_native_whole_lesson(state) or (
             int(getattr(plan, "document_contract_version", 1) or 1) >= 2
         )
-        if native_whole_lesson:
+        shared_unit_prep = bool(
+            state.get("shared_preparation")
+            or state.get("path_prepared")
+            or (
+                isinstance(state.get("context"), dict)
+                and state["context"].get("shared_preparation")
+            )
+        )
+        if native_whole_lesson or shared_unit_prep:
             await _items_job()
             native_failure_stage = "planning_teaching"
             from print.generation.whole_lesson.service import run_and_persist_teaching_plan
@@ -1527,6 +1549,7 @@ async def _run_chunked_stage2_pipeline(
                 {
                     "stage": "awaiting_teaching_approval",
                     "native_whole_lesson": True,
+                    "shared_preparation": True if shared_unit_prep else state.get("shared_preparation"),
                     "teaching_plan_summary": {
                         "arc": (teaching_summary.get("teaching_plan") or {}).get("arc"),
                         "section_count": len(

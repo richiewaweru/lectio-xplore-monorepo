@@ -1,0 +1,5 @@
+[2026-09-08T04:31:19.109076+00:00] unit_id=7ab0136b-982f-4f71-b43f-b68ad9351b6d
+[2026-09-08T04:31:35.984400+00:00] generation_id=549e7c0c-ed75-4cc4-95a8-e2b79d46e08e
+[2026-09-08T04:31:36.105460+00:00] FAILED: POST http://127.0.0.1:8000/api/v1/v3/chunked/549e7c0c-ed75-4cc4-95a8-e2b79d46e08e/approve -> 409: {
+  "detail": "Current lesson approval requires native document contract v2 and immutable path provenance"
+}

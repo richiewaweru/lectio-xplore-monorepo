@@ -32,7 +32,7 @@ from learn.publishing.publish_validation import (
 router = APIRouter(prefix="/api/v1/learn", tags=["learn-releases"])
 
 _MAX_DOCUMENT_BYTES = 5 * 1024 * 1024
-_ACTIVE_SOURCES = {"manual", "component_lectio", "template"}
+_ACTIVE_SOURCES = {"manual", "component_lectio", "template", "native_learn"}
 _MAX_RELEASE_ALLOC_ATTEMPTS = 8
 
 

@@ -1,0 +1,128 @@
+{
+  "id": "b8ad0364-4f48-45c7-a5c2-c695e7a986c3",
+  "unit_id": "802cdb7b-d8d6-439f-84e7-2cdb0611e902",
+  "version": 1,
+  "revision": 1,
+  "status": "draft",
+  "generated_by": "path_planner",
+  "merge_critic_results": [],
+  "prerequisite_risks": [],
+  "forward_verified": true,
+  "reaches_destination": true,
+  "completeness_note": null,
+  "open_assumptions": [],
+  "approved_at": null,
+  "created_at": "2026-09-08T04:47:07.403193",
+  "lessons": [
+    {
+      "id": "41942953-2089-4050-982d-e8d8e48ab1a4",
+      "concept_id": "6d55ed9f-c2bd-4463-b5c1-b94b34afafa1",
+      "concept_slug": "science.recognise.a.butterfly.life.cycle.as.a.repeating.sequence",
+      "title": "Recognise a butterfly life cycle as a repeating sequence",
+      "objective": "Explain that a life cycle is the series of stages an organism passes through and that it repeats when adults produce young.",
+      "objective_hash": "3c89d28127e539694724d43536664679293fdfd5ac422eaf7498f7bd9db680db",
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "must_establish": [
+        "A life cycle is a repeated sequence of stages",
+        "In many animals, adults produce young to continue the cycle"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 0,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "474fe3e9-e4e9-4d50-a3cc-0bcf35333fca",
+      "concept_id": "59bba22c-4d1e-4e38-a988-85ce0fa45e34",
+      "concept_slug": "science.identify.the.four.stages.of.butterfly.metamorphosis",
+      "title": "Identify the four stages of butterfly metamorphosis",
+      "objective": "Name the four stages of a butterfly's life cycle in order: egg, larva/caterpillar, pupa/chrysalis, and adult.",
+      "objective_hash": "9ed4f22a819ac24faf57e48c69b87b9a4430b0c8f3aadb40047c4626304d4e96",
+      "prerequisites": [
+        "41942953-2089-4050-982d-e8d8e48ab1a4"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Butterfly stages in order: egg, larva/caterpillar, pupa/chrysalis, adult",
+        "The process is called metamorphosis",
+        "Each stage looks different from the others"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "factual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 1,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "f0b5fd1b-d009-42ec-a512-73a49f2ae8b9",
+      "concept_id": "312ac646-5693-48ef-a422-3a9531432ff9",
+      "concept_slug": "science.describe.what.happens.in.each.butterfly.stage",
+      "title": "Describe what happens in each butterfly stage",
+      "objective": "Describe the main features and activities of a butterfly in each stage: egg, larva/caterpillar, pupa/chrysalis, and adult.",
+      "objective_hash": "73c612d18675743c2ce034e5fb933f048493b3e72ad65380691f89a6f706dc2b",
+      "prerequisites": [
+        "474fe3e9-e4e9-4d50-a3cc-0bcf35333fca"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "Egg: a butterfly begins life inside an egg",
+        "Larva/caterpillar: hatches, eats, and grows",
+        "Pupa/chrysalis: the body reorganises into the adult form",
+        "Adult: flying, mating, and egg-laying stage"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 2,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    },
+    {
+      "id": "6c9cad30-c46d-4f56-a7c8-6962a1c0f02c",
+      "concept_id": "7eb77072-a384-41cc-9a8c-a5e08f2fa70c",
+      "concept_slug": "science.explain.how.the.butterfly.life.cycle.repeats",
+      "title": "Explain how the butterfly life cycle repeats",
+      "objective": "Explain that the adult butterfly lays eggs, which hatch into larvae, so the life cycle begins again.",
+      "objective_hash": "3af29c3415d2b2dcec15bd9c38f9eb931a05826b7ba3462ba04ee58f65a093a0",
+      "prerequisites": [
+        "f0b5fd1b-d009-42ec-a512-73a49f2ae8b9"
+      ],
+      "external_prerequisites": [],
+      "must_establish": [
+        "The adult stage produces eggs",
+        "Eggs begin the next life cycle",
+        "The cycle repeats continuously"
+      ],
+      "exclusions": [],
+      "primary_knowledge_type": "conceptual",
+      "secondary_demand": null,
+      "knowledge_type_source": "path_planner",
+      "merge_warning": false,
+      "position": 3,
+      "source": "path_planner",
+      "teacher_edited": false,
+      "skipped": false,
+      "revision": 1,
+      "pack_id": null
+    }
+  ]
+}
