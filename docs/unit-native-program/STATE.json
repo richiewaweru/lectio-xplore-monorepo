@@ -2,8 +2,8 @@
   "pack_version": "1.0",
   "reviewed_sha": "5d1563903a22d6d40e12a86dcc4d9021ca8202a3",
   "implementation_branch": "feat/unit-print-learn",
-  "implementation_head": "6e879d1",
-  "current_phase": "P06",
+  "implementation_head": "pending-p08",
+  "current_phase": "P08",
   "phases": {
     "P00": {
       "status": "PASS",
@@ -115,15 +115,37 @@
       "blockers": []
     },
     "P07": {
-      "status": "NOT_STARTED",
-      "report": null,
-      "evidence": [],
+      "status": "PASS",
+      "report": "docs/unit-native-program/reports/P07_PHASE_REPORT.md",
+      "evidence": [
+        "docs/unit-native-program/evidence/mocks/p07/u01.txt",
+        "docs/unit-native-program/evidence/mocks/p07/u02.txt",
+        "docs/unit-native-program/evidence/mocks/p07/u03.txt",
+        "docs/unit-native-program/evidence/mocks/p07/u04.txt",
+        "docs/unit-native-program/evidence/mocks/p07/u05.txt",
+        "docs/unit-native-program/evidence/mocks/p07/u06.txt",
+        "docs/unit-native-program/evidence/mocks/p07/u01-u06-pytest.txt",
+        "docs/unit-native-program/evidence/mocks/p07/evaluator-parity.txt",
+        "docs/unit-native-program/evidence/mocks/p07/legacy-runtime-regression.txt"
+      ],
       "blockers": []
     },
     "P08": {
-      "status": "NOT_STARTED",
-      "report": null,
-      "evidence": [],
+      "status": "PASS",
+      "report": "docs/unit-native-program/reports/P08_PHASE_REPORT.md",
+      "evidence": [
+        "docs/unit-native-program/evidence/mocks/p08/i01.txt",
+        "docs/unit-native-program/evidence/mocks/p08/i02.txt",
+        "docs/unit-native-program/evidence/mocks/p08/i03.txt",
+        "docs/unit-native-program/evidence/mocks/p08/i04.txt",
+        "docs/unit-native-program/evidence/mocks/p08/i05-app-check.txt",
+        "docs/unit-native-program/evidence/mocks/p08/i05-domain-guards.txt",
+        "docs/unit-native-program/evidence/mocks/p08/i05-db-integration.txt",
+        "docs/unit-native-program/evidence/mocks/p08/i05-frontend-build.txt",
+        "docs/unit-native-program/evidence/mocks/p08/i06.txt",
+        "docs/unit-native-program/evidence/mocks/p08/i06-mock-catalogue.json",
+        "docs/unit-native-program/LIVE_READY_RUNBOOK.md"
+      ],
       "blockers": []
     },
     "P09": {
@@ -135,5 +157,5 @@
   },
   "core_dual_path_acceptance": "NOT_RUN",
   "full_catalogue_acceptance": "NOT_RUN",
-  "next_action": "P07 Learn runtime is eligible after P06 PASS. Optional: install Poppler and re-run P05-P04 page images."
+  "next_action": "P09 live proof is eligible after P08 PASS. Follow docs/unit-native-program/LIVE_READY_RUNBOOK.md and pack/verification/LIVE_PROTOCOL.md. Optional: install Poppler and re-run P05-P04 page images."
 }

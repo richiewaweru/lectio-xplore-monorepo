@@ -1,0 +1,12 @@
+{
+  "suite": "tests/print_learn/test_p08_integration_gates.py",
+  "class": "deterministic_integration",
+  "live_claim": false,
+  "mocks": {
+    "teaching_llm": "print.generation.whole_lesson.teaching_agent._call_teaching_model",
+    "print_writer": "print.generation.whole_lesson.executor.dispatch_writer_async",
+    "structural_planner": "tests.planning.test_path_bridge._fake_structural_planner",
+    "component_selector": "tests.planning.test_path_bridge._fake_component_selector"
+  },
+  "note": "LLM teaching call and Print writer dispatch are mocked. Closed selection, DB persistence, leases, realizations and Learn assembly use production services. Not a live P09 campaign."
+}
