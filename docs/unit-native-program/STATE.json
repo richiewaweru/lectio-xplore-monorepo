@@ -2,7 +2,7 @@
   "pack_version": "1.0",
   "reviewed_sha": "5d1563903a22d6d40e12a86dcc4d9021ca8202a3",
   "implementation_branch": "feat/unit-print-learn",
-  "implementation_head": "a43c906",
+  "implementation_head": "a42be33",
   "current_phase": "P06",
   "phases": {
     "P00": {

@@ -2,13 +2,13 @@
 
 | ID | Problem | Severity | Canonical owner |
 |---|---|---|---|
-| LRN-001 | learner auth still mixes learner session and teacher JWT semantics | High | `learn/runtime`, `infra/auth` |
-| LRN-002 | client can influence score/outcome/evidence | Critical | `learn/runtime/evaluation` |
-| LRN-003 | concept/misconception bindings should derive from LearnRelease | High | `learn/evidence`, `learn/runtime` |
-| LRN-004 | interaction UI→attempt persistence bridge incomplete | High | frontend `learn/student`, backend `learn/runtime` |
-| LRN-005 | passive section completion semantics incomplete | Medium | `learn/runtime` |
+| LRN-001 | learner auth still mixes learner session and teacher JWT semantics (session enforced when header present; teacher JWT may still act without it) | High | `learn/runtime`, `infra/auth` |
+| LRN-002 | ~~client can influence score/outcome/evidence~~ — fixed in P07: server evaluates from release; client score fields rejected | Critical→Closed | `learn/runtime/evaluation` |
+| LRN-003 | ~~concept/misconception bindings should derive from LearnRelease~~ — fixed in P07 from contract `concept_refs` | High→Closed | `learn/evidence`, `learn/runtime` |
+| LRN-004 | ~~interaction UI→attempt persistence bridge incomplete~~ — Sequence production bridge wired in P07; other kinds still unmounted | High→Partial | frontend `learn/student`, backend `learn/runtime` |
+| LRN-005 | ~~passive section completion semantics incomplete~~ — `/sections/complete` + resume `mark_visited` in P07 | Medium→Closed | `learn/runtime` |
 | LRN-006 | sequential navigation enforcement incomplete | Medium | `learn/runtime`, frontend `learn/student` |
-| LRN-007 | analytics scoping may include unrelated learner instances | High | `learn/analytics` |
+| LRN-007 | ~~analytics scoping may include unrelated learner instances~~ — fixed in P07: assignment-bound scope only | High→Closed | `learn/analytics` |
 | LRN-008 | ImageHotspot/DragLabel spatial authoring incomplete | Medium | `packages/lectio-learn`, `learn/authoring` |
 | DATA-001 | Float scores rather than precise numeric | Medium | `infra/database`, `learn/runtime` |
 | DATA-002 | LearningInstance should likely relate to assignment recipient | Medium | `learn/distribution`, DB |
