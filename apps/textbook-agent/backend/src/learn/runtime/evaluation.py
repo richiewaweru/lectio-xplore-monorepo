@@ -1,12 +1,12 @@
 """Server-authoritative Learn evaluators (P07).
 
-Parity target: ``@lectio/learn`` ``interaction-contract.ts`` — especially
-``evaluateSequence``. Hand-maintained divergent scoring is not allowed;
-golden tests pin shared semantics.
+Parity target: ``@lectio/learn`` ``interaction-contract.ts``. Hand-maintained
+divergent scoring is not allowed; golden tests pin shared semantics.
 """
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Mapping
 
@@ -47,7 +47,17 @@ def _graded_feedback(outcome: str, feedback: Mapping[str, Any]) -> str:
         return str(feedback.get("correct") or "")
     if outcome == "partial":
         return str(feedback.get("partial") or feedback.get("incorrect") or "")
+    if outcome == "pending-review":
+        return str(feedback.get("partial") or "Submitted for teacher review.")
     return str(feedback.get("incorrect") or "")
+
+
+def _require_non_empty_string(value: Any, field: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise InteractionResponseError(
+            f"{field} must be a non-empty string", "invalid-response"
+        )
+    return value
 
 
 def _require_string_array(value: Any, field: str) -> list[str]:
@@ -56,18 +66,309 @@ def _require_string_array(value: Any, field: str) -> list[str]:
     return list(value)
 
 
+def _require_string_array_config(value: Any, field: str) -> list[str]:
+    if not isinstance(value, list) or len(value) == 0:
+        raise InteractionConfigError(f"{field} must be a non-empty array")
+    return [str(item) for item in value]
+
+
 def _reject_duplicates(ids: list[str], field: str) -> None:
     if len(set(ids)) != len(ids):
         raise InteractionResponseError(f"{field} contains duplicate ids", "duplicate-response-id")
 
 
-def _reject_unknown(ids: list[str], known: set[str], field: str) -> None:
+def _reject_unknown(ids: list[str], known: set[str] | None, field: str) -> None:
+    if known is None:
+        return
     for item_id in ids:
         if item_id not in known:
             raise InteractionResponseError(
                 f'{field} references unknown id "{item_id}"',
                 "unknown-response-id",
             )
+
+
+def _reject_unknown_config(ids: list[str], known: set[str] | None, field: str) -> None:
+    if known is None:
+        return
+    for item_id in ids:
+        if item_id not in known:
+            raise InteractionConfigError(f'{field} references undeclared option "{item_id}"')
+
+
+def _option_id_set(options: Any) -> set[str] | None:
+    if not isinstance(options, list) or not options:
+        return None
+    known: set[str] = set()
+    for option in options:
+        if isinstance(option, dict) and option.get("id") is not None:
+            known.add(str(option["id"]))
+        else:
+            known.add(str(option))
+    return known
+
+
+def _normalize_answer(value: str, *, case_sensitive: bool) -> str:
+    cleaned = re.sub(r"\s+", " ", value.strip())
+    return cleaned if case_sensitive else cleaned.casefold()
+
+
+def evaluate_choice(
+    config: Mapping[str, Any],
+    response: Mapping[str, Any] | None,
+    feedback: Mapping[str, Any],
+) -> EvaluationResult:
+    known = _option_id_set(config.get("options"))
+    correct = str(config.get("correct_option_id") or "")
+    if not correct:
+        raise InteractionConfigError("choice config requires correct_option_id")
+    if known is not None and correct not in known:
+        raise InteractionConfigError(
+            f'correct_option_id "{correct}" is not one of the declared options'
+        )
+    selected = _require_non_empty_string(
+        (response or {}).get("selected_option_id"), "selected_option_id"
+    )
+    _reject_unknown([selected], known, "selected_option_id")
+    ok = selected == correct
+    return EvaluationResult(
+        outcome="correct" if ok else "incorrect",
+        score_earned=1.0 if ok else 0.0,
+        score_possible=1.0,
+        feedback=_graded_feedback("correct" if ok else "incorrect", feedback),
+        details={"selected_option_id": selected},
+    )
+
+
+def evaluate_multi_select(
+    config: Mapping[str, Any],
+    response: Mapping[str, Any] | None,
+    feedback: Mapping[str, Any],
+) -> EvaluationResult:
+    correct_ids = _require_string_array_config(config.get("correct_option_ids"), "correct_option_ids")
+    known = _option_id_set(config.get("options"))
+    _reject_unknown_config(correct_ids, known, "correct_option_ids")
+
+    selected_ids = _require_string_array(
+        (response or {}).get("selected_option_ids"), "selected_option_ids"
+    )
+    _reject_duplicates(selected_ids, "selected_option_ids")
+    _reject_unknown(selected_ids, known, "selected_option_ids")
+
+    correct = set(correct_ids)
+    selected = set(selected_ids)
+    hits = sum(1 for item_id in selected if item_id in correct)
+    false_positives = sum(1 for item_id in selected if item_id not in correct)
+    score_possible = float(len(correct))
+    score_earned = float(max(0, hits - false_positives))
+    if (
+        score_earned == score_possible
+        and false_positives == 0
+        and len(selected) == len(correct)
+    ):
+        outcome = "correct"
+    elif score_earned > 0:
+        outcome = "partial"
+    else:
+        outcome = "incorrect"
+    return EvaluationResult(
+        outcome=outcome,
+        score_earned=score_earned,
+        score_possible=score_possible,
+        feedback=_graded_feedback(outcome, feedback),
+        details={"false_positives": false_positives},
+    )
+
+
+def evaluate_fill_blank(
+    config: Mapping[str, Any],
+    response: Mapping[str, Any] | None,
+    feedback: Mapping[str, Any],
+) -> EvaluationResult:
+    answers = config.get("answers")
+    if not isinstance(answers, list) or len(answers) == 0:
+        raise InteractionConfigError("fill-blank config requires a non-empty answers[]")
+    blank_ids = config.get("blank_ids")
+    if blank_ids is not None and (
+        not isinstance(blank_ids, list) or len(blank_ids) != len(answers)
+    ):
+        raise InteractionConfigError("blank_ids must have one id per answer")
+
+    blanks = _require_string_array((response or {}).get("blanks"), "blanks")
+    if len(blanks) != len(answers):
+        raise InteractionResponseError(
+            f"expected {len(answers)} blank response(s), received {len(blanks)}",
+            "response-count-mismatch",
+        )
+
+    case_sensitive = config.get("case_sensitive") is True
+    score_possible = float(len(answers))
+    score_earned = 0.0
+    per_blank: list[dict[str, Any]] = []
+    for index, answer in enumerate(answers):
+        accepted_raw = answer if isinstance(answer, list) else [answer]
+        accepted = [
+            _normalize_answer(str(value), case_sensitive=case_sensitive)
+            for value in accepted_raw
+        ]
+        given = _normalize_answer(blanks[index] if index < len(blanks) else "", case_sensitive=case_sensitive)
+        correct = given in accepted
+        if correct:
+            score_earned += 1.0
+        blank_id = (
+            str(blank_ids[index])
+            if isinstance(blank_ids, list) and index < len(blank_ids)
+            else str(index)
+        )
+        per_blank.append({"id": blank_id, "correct": correct})
+
+    outcome = _partial_outcome(score_earned, score_possible)
+    return EvaluationResult(
+        outcome=outcome,
+        score_earned=score_earned,
+        score_possible=score_possible,
+        feedback=_graded_feedback(outcome, feedback),
+        details={"per_blank": per_blank},
+    )
+
+
+def evaluate_numeric(
+    config: Mapping[str, Any],
+    response: Mapping[str, Any] | None,
+    feedback: Mapping[str, Any],
+) -> EvaluationResult:
+    value = config.get("value")
+    if not isinstance(value, (int, float)) or isinstance(value, bool) or not _isfinite(value):
+        raise InteractionConfigError("numeric config value must be a finite number")
+    tolerance = config.get("tolerance")
+    if tolerance is not None:
+        if (
+            not isinstance(tolerance, (int, float))
+            or isinstance(tolerance, bool)
+            or not _isfinite(tolerance)
+        ):
+            raise InteractionConfigError("numeric tolerance must be a finite number")
+        if float(tolerance) < 0:
+            raise InteractionConfigError("numeric tolerance must not be negative")
+    given = (response or {}).get("value")
+    if not isinstance(given, (int, float)) or isinstance(given, bool) or not _isfinite(given):
+        raise InteractionResponseError(
+            "numeric response value must be a finite number", "invalid-response"
+        )
+    tol = float(tolerance) if tolerance is not None else 0.0
+    ok = abs(float(given) - float(value)) <= tol
+    return EvaluationResult(
+        outcome="correct" if ok else "incorrect",
+        score_earned=1.0 if ok else 0.0,
+        score_possible=1.0,
+        feedback=_graded_feedback("correct" if ok else "incorrect", feedback),
+        details={
+            "value": float(given),
+            "tolerance": tol,
+            "unit": config.get("unit") if config.get("unit") is not None else None,
+        },
+    )
+
+
+def _isfinite(value: float | int) -> bool:
+    return value == value and value not in (float("inf"), float("-inf"))
+
+
+def evaluate_short_response(
+    config: Mapping[str, Any],
+    response: Mapping[str, Any] | None,
+    feedback: Mapping[str, Any],
+) -> EvaluationResult:
+    text = _require_non_empty_string((response or {}).get("text"), "text")
+    mode = config.get("evaluation")
+    if mode == "teacher-review":
+        return EvaluationResult(
+            outcome="pending-review",
+            score_earned=0.0,
+            score_possible=1.0,
+            feedback=_graded_feedback("pending-review", feedback),
+            details={
+                "mode": "teacher-review",
+                "review_guidance": config.get("review_guidance"),
+                "text": text,
+            },
+        )
+    if mode != "accepted-answers":
+        raise InteractionConfigError(
+            "short-response evaluation must be 'accepted-answers' or 'teacher-review', "
+            f'received "{mode}"'
+        )
+    accepted_answers = config.get("accepted_answers")
+    if not isinstance(accepted_answers, list) or len(accepted_answers) == 0:
+        raise InteractionConfigError(
+            "short-response accepted-answers mode requires a non-empty accepted_answers[]"
+        )
+    case_sensitive = config.get("case_sensitive") is True
+    accepted = [
+        _normalize_answer(str(answer), case_sensitive=case_sensitive)
+        for answer in accepted_answers
+    ]
+    ok = _normalize_answer(text, case_sensitive=case_sensitive) in accepted
+    return EvaluationResult(
+        outcome="correct" if ok else "incorrect",
+        score_earned=1.0 if ok else 0.0,
+        score_possible=1.0,
+        feedback=_graded_feedback("correct" if ok else "incorrect", feedback),
+        details={"mode": "accepted-answers", "text": text},
+    )
+
+
+def evaluate_match_pairs(
+    config: Mapping[str, Any],
+    response: Mapping[str, Any] | None,
+    feedback: Mapping[str, Any],
+) -> EvaluationResult:
+    pairs = config.get("pairs")
+    if not isinstance(pairs, list) or len(pairs) == 0:
+        raise InteractionConfigError("match-pairs config requires a non-empty pairs[]")
+    lefts = [str(pair.get("left")) for pair in pairs if isinstance(pair, dict)]
+    if len(set(lefts)) != len(lefts):
+        raise InteractionConfigError("match-pairs source ids must be unique")
+    expected = {
+        str(pair["left"]): str(pair["right"])
+        for pair in pairs
+        if isinstance(pair, dict)
+    }
+    valid_targets = {str(pair["right"]) for pair in pairs if isinstance(pair, dict)}
+
+    matches = (response or {}).get("matches")
+    if not isinstance(matches, list):
+        raise InteractionResponseError("matches must be an array", "invalid-response")
+    submitted_lefts = [
+        _require_non_empty_string(
+            match.get("left") if isinstance(match, dict) else None, "match.left"
+        )
+        for match in matches
+    ]
+    _reject_duplicates(submitted_lefts, "matches")
+    _reject_unknown(submitted_lefts, set(expected.keys()), "match.left")
+    submitted_rights = [
+        _require_non_empty_string(
+            match.get("right") if isinstance(match, dict) else None, "match.right"
+        )
+        for match in matches
+    ]
+    _reject_unknown(submitted_rights, valid_targets, "match.right")
+
+    score_possible = float(len(expected))
+    score_earned = 0.0
+    for match in matches:
+        if not isinstance(match, dict):
+            continue
+        if expected.get(str(match.get("left"))) == str(match.get("right")):
+            score_earned += 1.0
+    outcome = _partial_outcome(score_earned, score_possible)
+    return EvaluationResult(
+        outcome=outcome,
+        score_earned=score_earned,
+        score_possible=score_possible,
+        feedback=_graded_feedback(outcome, feedback),
+    )
 
 
 def evaluate_sequence(
@@ -103,56 +404,26 @@ def evaluate_sequence(
     )
 
 
-def evaluate_choice(
-    config: Mapping[str, Any],
-    response: Mapping[str, Any] | None,
-    feedback: Mapping[str, Any],
-) -> EvaluationResult:
-    selected = (response or {}).get("selected_option_id")
-    if not isinstance(selected, str) or not selected.strip():
-        raise InteractionResponseError(
-            "selected_option_id must be a non-empty string", "invalid-response"
-        )
-    correct = str(config.get("correct_option_id") or "")
-    if not correct:
-        raise InteractionConfigError("choice config requires correct_option_id")
-    options = config.get("options")
-    if isinstance(options, list) and options:
-        known: set[str] = set()
-        for option in options:
-            if isinstance(option, dict) and option.get("id") is not None:
-                known.add(str(option["id"]))
-            else:
-                known.add(str(option))
-        if correct not in known:
-            raise InteractionConfigError(
-                f'correct_option_id "{correct}" is not one of the declared options'
-            )
-        if selected not in known:
-            raise InteractionResponseError(
-                f'selected_option_id references unknown id "{selected}"',
-                "unknown-response-id",
-            )
-    score_earned = 1.0 if selected == correct else 0.0
-    outcome = "correct" if score_earned == 1.0 else "incorrect"
-    return EvaluationResult(
-        outcome=outcome,
-        score_earned=score_earned,
-        score_possible=1.0,
-        feedback=_graded_feedback(outcome, feedback),
-    )
-
-
 def evaluate_interaction(contract: Mapping[str, Any], response: Any) -> EvaluationResult:
     kind = str(contract.get("kind") or "")
     config = contract.get("config") if isinstance(contract.get("config"), dict) else {}
     feedback = contract.get("feedback") if isinstance(contract.get("feedback"), dict) else {}
     response_map = response if isinstance(response, dict) else {}
 
-    if kind == "sequence":
-        return evaluate_sequence(config, response_map, feedback)
     if kind in {"choice", "image-hotspot"}:
         return evaluate_choice(config, response_map, feedback)
+    if kind == "multi-select":
+        return evaluate_multi_select(config, response_map, feedback)
+    if kind == "fill-blank":
+        return evaluate_fill_blank(config, response_map, feedback)
+    if kind == "numeric":
+        return evaluate_numeric(config, response_map, feedback)
+    if kind == "short-response":
+        return evaluate_short_response(config, response_map, feedback)
+    if kind in {"match-pairs", "classify", "drag-label"}:
+        return evaluate_match_pairs(config, response_map, feedback)
+    if kind == "sequence":
+        return evaluate_sequence(config, response_map, feedback)
     raise InteractionConfigError(f"Unsupported interaction kind: {kind}")
 
 
@@ -210,7 +481,11 @@ def find_interaction_in_document(
         if not isinstance(contract, dict):
             continue
         cid = str(contract.get("id") or block.get("id") or block_id)
-        if cid == interaction_id or str(block_id) == interaction_id or str(block.get("id")) == interaction_id:
+        if (
+            cid == interaction_id
+            or str(block_id) == interaction_id
+            or str(block.get("id")) == interaction_id
+        ):
             return dict(contract), block_to_section.get(str(block_id))
     raise UnknownInteractionError(interaction_id)
 

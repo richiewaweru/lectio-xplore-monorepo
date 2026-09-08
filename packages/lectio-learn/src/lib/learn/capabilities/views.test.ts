@@ -88,7 +88,16 @@ describe('capability catalogue integrity', () => {
 	});
 
 	it('does not let an unwired interaction claim generation-ready', () => {
-		const wired = new Set(['sequence']);
+		const wired = new Set([
+			'choice',
+			'multi-select',
+			'fill-blank',
+			'numeric',
+			'short-response',
+			'match-pairs',
+			'classify',
+			'sequence'
+		]);
 		for (const record of records.filter((entry) => entry.kind === 'interaction')) {
 			if (wired.has(record.id)) {
 				expect(record.readiness, record.id).toBe('generation-ready');

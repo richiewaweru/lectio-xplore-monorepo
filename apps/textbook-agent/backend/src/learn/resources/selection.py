@@ -174,9 +174,15 @@ def derive_learn_block_candidates(
             excluded[capability_id] = "package_unavailable"
             continue
 
-        # Writer/runtime support: package must export a writer projection. Incomplete
-        # interactions remain selectable when policy admits them and a schema exists
-        # (P04-N01 Sequence); Builder repair readiness is P06.
+        # Production selection admits only generation-ready interactions
+        # (package isSelectable). Incomplete kinds stay in writer/runtime views.
+        if kind == "interaction":
+            readiness = str(record.get("readiness") or "")
+            if readiness != "generation-ready" or availability != "available":
+                excluded[capability_id] = "not_generation_ready"
+                continue
+
+        # Writer projection: package must export a writer schema for the kind.
         if capability_id not in writers and availability not in {"available", "incomplete"}:
             excluded[capability_id] = "writer_unsupported"
             continue

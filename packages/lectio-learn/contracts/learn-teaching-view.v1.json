@@ -12,23 +12,34 @@
     },
     {
       "intent": "apply",
-      "supported_today": false,
-      "learner_actions": []
+      "supported_today": true,
+      "learner_actions": [
+        "enter-number"
+      ]
     },
     {
       "intent": "check-understanding",
       "supported_today": true,
       "learner_actions": [
+        "classify-items",
+        "complete-missing-values",
+        "enter-number",
         "enter-text",
+        "match-pairs",
         "order-items",
+        "produce-extended-response",
         "read-explanation",
+        "select-many",
         "select-one"
       ]
     },
     {
       "intent": "classify",
-      "supported_today": false,
-      "learner_actions": []
+      "supported_today": true,
+      "learner_actions": [
+        "classify-items",
+        "select-many"
+      ]
     },
     {
       "intent": "compare",
@@ -41,6 +52,8 @@
       "intent": "define",
       "supported_today": true,
       "learner_actions": [
+        "complete-missing-values",
+        "match-pairs",
         "read-explanation"
       ]
     },
@@ -55,13 +68,16 @@
       "intent": "diagnose-misconception",
       "supported_today": true,
       "learner_actions": [
-        "read-explanation"
+        "read-explanation",
+        "select-one"
       ]
     },
     {
       "intent": "evaluate",
       "supported_today": true,
       "learner_actions": [
+        "enter-text",
+        "produce-extended-response",
         "read-explanation"
       ]
     },
@@ -69,6 +85,8 @@
       "intent": "explain",
       "supported_today": true,
       "learner_actions": [
+        "enter-text",
+        "produce-extended-response",
         "read-explanation"
       ]
     },
@@ -97,6 +115,7 @@
       "intent": "name-parts",
       "supported_today": true,
       "learner_actions": [
+        "match-pairs",
         "read-explanation"
       ]
     },
@@ -111,7 +130,11 @@
       "intent": "practise-guided",
       "supported_today": true,
       "learner_actions": [
+        "classify-items",
+        "complete-missing-values",
+        "enter-number",
         "enter-text",
+        "match-pairs",
         "order-items",
         "read-explanation",
         "select-one"
@@ -121,8 +144,10 @@
       "intent": "practise-independent",
       "supported_today": true,
       "learner_actions": [
+        "enter-number",
         "enter-text",
         "read-explanation",
+        "select-many",
         "select-one"
       ]
     },
@@ -130,6 +155,8 @@
       "intent": "reflect",
       "supported_today": true,
       "learner_actions": [
+        "enter-text",
+        "produce-extended-response",
         "read-explanation"
       ]
     },
@@ -177,9 +204,15 @@
     }
   ],
   "supported_actions": [
+    "classify-items",
+    "complete-missing-values",
+    "enter-number",
     "enter-text",
+    "match-pairs",
     "order-items",
+    "produce-extended-response",
     "read-explanation",
+    "select-many",
     "select-one"
   ]
 }

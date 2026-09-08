@@ -2,39 +2,39 @@
   "manifest_version": "1.0.0",
   "catalogue_version": "1.0.0",
   "package_version": "0.7.0",
-  "generated_at": "2026-09-08T01:12:14.237Z",
+  "generated_at": "2026-09-08T21:16:39.925Z",
   "capability_counts": {
     "total": 43,
     "interaction": 10,
     "content": 33,
-    "readiness:planned": 11,
-    "availability:incomplete": 8,
-    "readiness:generation-ready": 30,
-    "availability:available": 32,
+    "readiness:generation-ready": 37,
+    "availability:available": 39,
+    "readiness:planned": 4,
     "availability:unavailable": 3,
-    "readiness:manual-only": 2
+    "readiness:manual-only": 2,
+    "availability:incomplete": 1
   },
   "artifacts": [
     {
       "file": "learn-capabilities.v1.json",
       "view": "catalogue",
       "view_version": "1.0.0",
-      "sha256": "1a24f0aecbee250520f3720403e256fcec84864e1ea02702c66ff676bd45ea62",
-      "bytes": 183904
+      "sha256": "dfebe0c2687e66d7e028599adc1ceeaef982a8c77f869227ddba5fd2937cbec2",
+      "bytes": 181049
     },
     {
       "file": "learn-teaching-view.v1.json",
       "view": "teaching",
       "view_version": "1.0.0",
-      "sha256": "4140d610ee8c9588273d242103b9f4b4ad01a08952d5ae6f1c8a60007deb9a05",
-      "bytes": 3603
+      "sha256": "acc2e14a12adba212a68046d6c192b0783feaee69d47b2a54e15511badf45f12",
+      "bytes": 4433
     },
     {
       "file": "learn-selection-view.v1.json",
       "view": "selection",
       "view_version": "1.0.0",
-      "sha256": "7332e741b31ff1f76276b23e99690c025055ad6c34c7f5918aeea2c32b3882d6",
-      "bytes": 38589
+      "sha256": "a5592354454a72d3bf2d4945c4ae6beba18076df8cff0f8a33a77a8b21b4b0db",
+      "bytes": 41237
     },
     {
       "file": "learn-writer-view.v1.json",

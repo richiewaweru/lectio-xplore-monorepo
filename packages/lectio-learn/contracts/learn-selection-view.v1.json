@@ -3,6 +3,222 @@
   "view_version": "1.0.0",
   "capabilities": [
     {
+      "id": "choice",
+      "kind": "interaction",
+      "purpose": "Let a learner choose the one correct option from a closed set.",
+      "cognitive_job": "discriminate the correct idea from plausible alternatives",
+      "supported_intents": [
+        "check-understanding",
+        "diagnose-misconception",
+        "practise-independent"
+      ],
+      "supported_actions": [
+        "select-one"
+      ],
+      "choose_when": "The response reduces to one option, and every wrong option is one a real learner would pick for a stateable reason.",
+      "reject_when": "Distractors are filler, more than one option is defensible, or the answer cannot be reduced to a selection.",
+      "prerequisites": [
+        "The idea being checked has already been taught in this lesson."
+      ],
+      "capacity": {
+        "optionsMin": 2,
+        "optionsMax": 5,
+        "stemMaxWords": 40,
+        "optionMaxWords": 20
+      },
+      "evaluation_mode": "auto-score",
+      "partial_scoring": false,
+      "requires_asset": false,
+      "presentation_variants": [
+        "text",
+        "image"
+      ]
+    },
+    {
+      "id": "multi-select",
+      "kind": "interaction",
+      "purpose": "Let a learner choose every option that satisfies the prompt.",
+      "cognitive_job": "apply a membership rule across several candidates",
+      "supported_intents": [
+        "check-understanding",
+        "classify",
+        "practise-independent"
+      ],
+      "supported_actions": [
+        "select-many"
+      ],
+      "choose_when": "More than one option is correct and the learner must find all of them without being told how many.",
+      "reject_when": "Exactly one option is correct, or the options are not independent of each other.",
+      "prerequisites": [
+        "The membership rule has been stated or derived in this lesson."
+      ],
+      "capacity": {
+        "optionsMin": 3,
+        "optionsMax": 6,
+        "correctMin": 2,
+        "stemMaxWords": 40
+      },
+      "evaluation_mode": "auto-score",
+      "partial_scoring": true,
+      "requires_asset": false,
+      "presentation_variants": [
+        "text"
+      ]
+    },
+    {
+      "id": "fill-blank",
+      "kind": "interaction",
+      "purpose": "Have a learner supply the missing terms inside a given structure.",
+      "cognitive_job": "retrieve precise vocabulary in context",
+      "supported_intents": [
+        "check-understanding",
+        "practise-guided",
+        "define"
+      ],
+      "supported_actions": [
+        "complete-missing-values"
+      ],
+      "choose_when": "The surrounding text supplies enough context that the missing term is determinate, and the accepted answers can be enumerated.",
+      "reject_when": "The answer is a judgement, a sentence, or has more valid phrasings than can be listed.",
+      "prerequisites": [
+        "The terms being recalled appear earlier in the lesson."
+      ],
+      "capacity": {
+        "blanksMin": 1,
+        "blanksMax": 6,
+        "alternativesPerBlankMax": 5
+      },
+      "evaluation_mode": "auto-score",
+      "partial_scoring": true,
+      "requires_asset": false,
+      "presentation_variants": [
+        "text"
+      ]
+    },
+    {
+      "id": "numeric",
+      "kind": "interaction",
+      "purpose": "Collect a numeric answer and score it within a declared tolerance.",
+      "cognitive_job": "carry out a calculation and report a value",
+      "supported_intents": [
+        "apply",
+        "practise-guided",
+        "practise-independent",
+        "check-understanding"
+      ],
+      "supported_actions": [
+        "enter-number"
+      ],
+      "choose_when": "The answer is a single number, and the acceptable spread around it can be stated as a tolerance.",
+      "reject_when": "The answer is a range, a symbolic expression, or depends on the method the learner chose.",
+      "prerequisites": [
+        "The method producing the value has been demonstrated or derived."
+      ],
+      "capacity": {
+        "promptMaxWords": 60
+      },
+      "evaluation_mode": "auto-score",
+      "partial_scoring": false,
+      "requires_asset": false,
+      "presentation_variants": [
+        "text"
+      ]
+    },
+    {
+      "id": "short-response",
+      "kind": "interaction",
+      "purpose": "Collect a short written answer, scored against declared accepted answers or read by a teacher.",
+      "cognitive_job": "produce an answer in the learner’s own words",
+      "supported_intents": [
+        "check-understanding",
+        "reflect",
+        "evaluate",
+        "explain"
+      ],
+      "supported_actions": [
+        "enter-text",
+        "produce-extended-response"
+      ],
+      "choose_when": "The learner must write the answer. Use accepted-answers only when the correct wordings can genuinely be listed; otherwise use teacher-review.",
+      "reject_when": "The answer is open reasoning and the author wants it auto-scored anyway. String matching is not comprehension.",
+      "prerequisites": [
+        "A teacher review surface exists when evaluation is teacher-review."
+      ],
+      "capacity": {
+        "promptMaxWords": 60,
+        "acceptedAnswersMax": 12,
+        "responseMaxWords": 60
+      },
+      "evaluation_mode": "auto-score",
+      "partial_scoring": false,
+      "requires_asset": false,
+      "presentation_variants": [
+        "text"
+      ]
+    },
+    {
+      "id": "match-pairs",
+      "kind": "interaction",
+      "purpose": "Have a learner connect each item to its counterpart.",
+      "cognitive_job": "recognise correspondence between two sets",
+      "supported_intents": [
+        "define",
+        "name-parts",
+        "check-understanding",
+        "practise-guided"
+      ],
+      "supported_actions": [
+        "match-pairs"
+      ],
+      "choose_when": "Each item has exactly one counterpart, and the correspondence is the thing being learned.",
+      "reject_when": "An item has several valid counterparts, or the sets are so small the answer is obvious by elimination.",
+      "prerequisites": [
+        "Both sides have been introduced in the lesson."
+      ],
+      "capacity": {
+        "pairsMin": 3,
+        "pairsMax": 8,
+        "labelMaxWords": 12
+      },
+      "evaluation_mode": "auto-score",
+      "partial_scoring": true,
+      "requires_asset": false,
+      "presentation_variants": [
+        "text"
+      ]
+    },
+    {
+      "id": "classify",
+      "kind": "interaction",
+      "purpose": "Have a learner assign each item to exactly one named category.",
+      "cognitive_job": "apply a category membership rule",
+      "supported_intents": [
+        "classify",
+        "check-understanding",
+        "practise-guided"
+      ],
+      "supported_actions": [
+        "classify-items"
+      ],
+      "choose_when": "Every item belongs to exactly one category and the membership rule has been stated.",
+      "reject_when": "An item legitimately belongs to more than one category. Multiple-category membership is not implemented, so it must not be authored.",
+      "prerequisites": [
+        "The categories and their membership rule appear in the lesson."
+      ],
+      "capacity": {
+        "itemsMin": 3,
+        "itemsMax": 10,
+        "categoriesMin": 2,
+        "categoriesMax": 4
+      },
+      "evaluation_mode": "auto-score",
+      "partial_scoring": true,
+      "requires_asset": false,
+      "presentation_variants": [
+        "text"
+      ]
+    },
+    {
       "id": "sequence",
       "kind": "interaction",
       "purpose": "Let a learner reconstruct a defensible order.",
@@ -904,104 +1120,6 @@
     }
   ],
   "excluded": [
-    {
-      "id": "choice",
-      "readiness": "planned",
-      "availability": "incomplete",
-      "blocking_reasons": [
-        "No native selection policy offers this kind, so no generation run can choose it (P04).",
-        "No Builder editor exists for the payload, so a teacher cannot repair a generated instance (P06)."
-      ],
-      "path_to_readiness": [
-        "P04: register the kind in the native selection policy and prove selection from a shared plan.",
-        "P06: add a Builder editor for the payload and prove an edit persists and republishes.",
-        "P07: prove attempt persistence and authoritative evaluation through the runtime."
-      ]
-    },
-    {
-      "id": "multi-select",
-      "readiness": "planned",
-      "availability": "incomplete",
-      "blocking_reasons": [
-        "No native selection policy offers this kind, so no generation run can choose it (P04).",
-        "No Builder editor exists for the payload, so a teacher cannot repair a generated instance (P06)."
-      ],
-      "path_to_readiness": [
-        "P04: register the kind in the native selection policy and prove selection from a shared plan.",
-        "P06: add a Builder editor for the payload and prove an edit persists and republishes.",
-        "P07: prove attempt persistence and authoritative evaluation through the runtime."
-      ]
-    },
-    {
-      "id": "fill-blank",
-      "readiness": "planned",
-      "availability": "incomplete",
-      "blocking_reasons": [
-        "No native selection policy offers this kind, so no generation run can choose it (P04).",
-        "No Builder editor exists for the payload, so a teacher cannot repair a generated instance (P06)."
-      ],
-      "path_to_readiness": [
-        "P04: register the kind in the native selection policy and prove selection from a shared plan.",
-        "P06: add a Builder editor for the payload and prove an edit persists and republishes.",
-        "P07: prove attempt persistence and authoritative evaluation through the runtime."
-      ]
-    },
-    {
-      "id": "numeric",
-      "readiness": "planned",
-      "availability": "incomplete",
-      "blocking_reasons": [
-        "No native selection policy offers this kind, so no generation run can choose it (P04).",
-        "No Builder editor exists for the payload, so a teacher cannot repair a generated instance (P06)."
-      ],
-      "path_to_readiness": [
-        "P04: register the kind in the native selection policy and prove selection from a shared plan.",
-        "P06: add a Builder editor for the payload and prove an edit persists and republishes.",
-        "P07: prove attempt persistence and authoritative evaluation through the runtime."
-      ]
-    },
-    {
-      "id": "short-response",
-      "readiness": "planned",
-      "availability": "incomplete",
-      "blocking_reasons": [
-        "No native selection policy offers this kind, so no generation run can choose it (P04).",
-        "No Builder editor exists for the payload, so a teacher cannot repair a generated instance (P06)."
-      ],
-      "path_to_readiness": [
-        "P04: register the kind in the native selection policy and prove selection from a shared plan.",
-        "P06: add a Builder editor for the payload and prove an edit persists and republishes.",
-        "P07: prove attempt persistence and authoritative evaluation through the runtime."
-      ]
-    },
-    {
-      "id": "match-pairs",
-      "readiness": "planned",
-      "availability": "incomplete",
-      "blocking_reasons": [
-        "No native selection policy offers this kind, so no generation run can choose it (P04).",
-        "No Builder editor exists for the payload, so a teacher cannot repair a generated instance (P06)."
-      ],
-      "path_to_readiness": [
-        "P04: register the kind in the native selection policy and prove selection from a shared plan.",
-        "P06: add a Builder editor for the payload and prove an edit persists and republishes.",
-        "P07: prove attempt persistence and authoritative evaluation through the runtime."
-      ]
-    },
-    {
-      "id": "classify",
-      "readiness": "planned",
-      "availability": "incomplete",
-      "blocking_reasons": [
-        "No native selection policy offers this kind, so no generation run can choose it (P04).",
-        "No Builder editor exists for the payload, so a teacher cannot repair a generated instance (P06)."
-      ],
-      "path_to_readiness": [
-        "P04: register the kind in the native selection policy and prove selection from a shared plan.",
-        "P06: add a Builder editor for the payload and prove an edit persists and republishes.",
-        "P07: prove attempt persistence and authoritative evaluation through the runtime."
-      ]
-    },
     {
       "id": "image-hotspot",
       "readiness": "planned",

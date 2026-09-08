@@ -6,24 +6,18 @@ const SOURCE_DIR = 'packages/lectio-learn/src/lib/learn';
 const EVALUATOR = 'packages/lectio-learn/src/lib/learn/interaction-contract.ts';
 
 /**
- * Every text/auto-score interaction below has a closed payload schema, a
- * deterministic evaluator and a keyboard-operable renderer. Kinds without a
- * Builder editor and native selection path stay `planned` / `incomplete`.
- * Sequence is generation-ready after P06 (policy + Builder editor + writer).
+ * Core text/auto-score interactions are generation-ready once writer + assemble
+ * + renderer + evaluator + Builder edit schema are connected. Spatial kinds stay
+ * unavailable until asset-region authoring exists.
  */
-const NOT_YET_SELECTABLE: Pick<
+const GENERATION_READY: Pick<
 	LearnCapabilityRecord,
 	'readiness' | 'availability' | 'blocking_reasons' | 'path_to_readiness'
 > = {
-	readiness: 'planned',
-	availability: 'incomplete',
-	blocking_reasons: [
-		'No native selection policy offers this kind, so no generation run can choose it (P04).',
-		'No Builder editor exists for the payload, so a teacher cannot repair a generated instance (P06).'
-	],
+	readiness: 'generation-ready',
+	availability: 'available',
+	blocking_reasons: [],
 	path_to_readiness: [
-		'P04: register the kind in the native selection policy and prove selection from a shared plan.',
-		'P06: add a Builder editor for the payload and prove an edit persists and republishes.',
 		'P07: prove attempt persistence and authoritative evaluation through the runtime.'
 	]
 };
@@ -111,16 +105,16 @@ export const interactionCapabilities: LearnCapabilityRecord[] = [
 			'Options are a radio group; correctness feedback is announced through a status region.'
 		),
 		presentation_variants: ['text', 'image'],
-		...NOT_YET_SELECTABLE,
+		...GENERATION_READY,
 		readiness_evidence: {
 			source_path: `${SOURCE_DIR}/ChoiceInteraction.svelte`,
 			data_schema: true,
 			evaluator: true,
-			authoring_support: false,
+			authoring_support: true,
 			renderer: true,
 			keyboard_operable: true,
 			contract_export: true,
-			consumer_selection_support: false,
+			consumer_selection_support: true,
 			evidence:
 				'interaction-contract.test.ts, capabilities/golden.test.ts, interaction-shells.keyboard.test.ts'
 		},
@@ -193,16 +187,16 @@ export const interactionCapabilities: LearnCapabilityRecord[] = [
 		asset_requirements: null,
 		accessibility: accessibility('Checkbox group with an announced running selection count.'),
 		presentation_variants: ['text'],
-		...NOT_YET_SELECTABLE,
+		...GENERATION_READY,
 		readiness_evidence: {
 			source_path: `${SOURCE_DIR}/MultiSelectInteraction.svelte`,
 			data_schema: true,
 			evaluator: true,
-			authoring_support: false,
+			authoring_support: true,
 			renderer: true,
 			keyboard_operable: true,
 			contract_export: true,
-			consumer_selection_support: false,
+			consumer_selection_support: true,
 			evidence: 'capabilities/golden.test.ts, interaction-contract.test.ts'
 		},
 		compatibility: { since: '0.7.0', deprecates: [], migration: null }
@@ -269,7 +263,7 @@ export const interactionCapabilities: LearnCapabilityRecord[] = [
 		asset_requirements: null,
 		accessibility: accessibility('Each blank is a labelled text input with per-blank feedback.'),
 		presentation_variants: ['text'],
-		...NOT_YET_SELECTABLE,
+		...GENERATION_READY,
 		readiness_evidence: {
 			source_path: `${SOURCE_DIR}/interaction-contract.ts#evaluateFillBlank`,
 			data_schema: true,
@@ -278,7 +272,7 @@ export const interactionCapabilities: LearnCapabilityRecord[] = [
 			renderer: true,
 			keyboard_operable: true,
 			contract_export: true,
-			consumer_selection_support: false,
+			consumer_selection_support: true,
 			evidence: 'capabilities/golden.test.ts; the fill-in-blank content capability is selectable'
 		},
 		compatibility: { since: '0.7.0', deprecates: [], migration: null }
@@ -340,16 +334,16 @@ export const interactionCapabilities: LearnCapabilityRecord[] = [
 		asset_requirements: null,
 		accessibility: accessibility('Single labelled numeric input; unit shown beside the field.'),
 		presentation_variants: ['text'],
-		...NOT_YET_SELECTABLE,
+		...GENERATION_READY,
 		readiness_evidence: {
 			source_path: `${SOURCE_DIR}/NumericInteraction.svelte`,
 			data_schema: true,
 			evaluator: true,
-			authoring_support: false,
+			authoring_support: true,
 			renderer: true,
 			keyboard_operable: true,
 			contract_export: true,
-			consumer_selection_support: false,
+			consumer_selection_support: true,
 			evidence: 'capabilities/golden.test.ts negative numeric cases'
 		},
 		compatibility: { since: '0.7.0', deprecates: [], migration: null }
@@ -423,16 +417,16 @@ export const interactionCapabilities: LearnCapabilityRecord[] = [
 			'Single labelled text input; review-pending state is announced rather than shown as a score.'
 		),
 		presentation_variants: ['text'],
-		...NOT_YET_SELECTABLE,
+		...GENERATION_READY,
 		readiness_evidence: {
 			source_path: `${SOURCE_DIR}/ShortResponseInteraction.svelte`,
 			data_schema: true,
 			evaluator: true,
-			authoring_support: false,
+			authoring_support: true,
 			renderer: true,
 			keyboard_operable: true,
 			contract_export: true,
-			consumer_selection_support: false,
+			consumer_selection_support: true,
 			evidence:
 				'capabilities/golden.test.ts short-response cases; the numeric alias defect is gone'
 		},
@@ -505,16 +499,16 @@ export const interactionCapabilities: LearnCapabilityRecord[] = [
 			'Two button lists; a source is activated then a target, so no pointer drag is required.'
 		),
 		presentation_variants: ['text'],
-		...NOT_YET_SELECTABLE,
+		...GENERATION_READY,
 		readiness_evidence: {
 			source_path: `${SOURCE_DIR}/MatchPairsInteraction.svelte`,
 			data_schema: true,
 			evaluator: true,
-			authoring_support: false,
+			authoring_support: true,
 			renderer: true,
 			keyboard_operable: true,
 			contract_export: true,
-			consumer_selection_support: false,
+			consumer_selection_support: true,
 			evidence: 'capabilities/golden.test.ts, interaction-shells.keyboard.test.ts'
 		},
 		compatibility: { since: '0.7.0', deprecates: [], migration: null }
@@ -585,16 +579,16 @@ export const interactionCapabilities: LearnCapabilityRecord[] = [
 			'Item and category buttons; an item is activated then a category, so no pointer drag is required.'
 		),
 		presentation_variants: ['text'],
-		...NOT_YET_SELECTABLE,
+		...GENERATION_READY,
 		readiness_evidence: {
 			source_path: `${SOURCE_DIR}/ClassifyInteraction.svelte`,
 			data_schema: true,
 			evaluator: true,
-			authoring_support: false,
+			authoring_support: true,
 			renderer: true,
 			keyboard_operable: true,
 			contract_export: true,
-			consumer_selection_support: false,
+			consumer_selection_support: true,
 			evidence:
 				'capabilities/golden.test.ts asserts single-category evaluation matches the declaration'
 		},
@@ -663,14 +657,7 @@ export const interactionCapabilities: LearnCapabilityRecord[] = [
 			'Move-up and move-down buttons per item, so ordering never requires a pointer drag.'
 		),
 		presentation_variants: ['text'],
-		...{
-			readiness: 'generation-ready' as const,
-			availability: 'available' as const,
-			blocking_reasons: [] as string[],
-			path_to_readiness: [
-				'P07: prove attempt persistence and authoritative evaluation through the runtime.'
-			]
-		},
+		...GENERATION_READY,
 		readiness_evidence: {
 			source_path: `${SOURCE_DIR}/SequenceInteraction.svelte`,
 			data_schema: true,

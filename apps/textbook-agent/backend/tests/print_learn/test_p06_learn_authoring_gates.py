@@ -190,6 +190,84 @@ def test_p06_l01_sequence_via_selector_writer_not_injected() -> None:
     assert contract["provenance"]["teaching_plan_hash"] == snapshot.teaching_plan_hash
 
 
+@pytest.mark.parametrize(
+    "capability_id,intent,action,brief",
+    [
+        ("choice", "check-understanding", "select-one", "Soil; Air; Light"),
+        ("multi-select", "check-understanding", "select-many", "Leaf; Stem; Root; Flower"),
+        ("fill-blank", "practise-guided", "complete-missing-values", "Chlorophyll absorbs light"),
+        ("numeric", "apply", "enter-number", "Enter 42 kg of biomass"),
+        ("short-response", "check-understanding", "enter-text", "Name the pigment chlorophyll"),
+        ("match-pairs", "define", "match-pairs", "CO2; carbon dioxide; H2O; water"),
+        ("classify", "classify", "classify-items", "Apple; fruit; Carrot; vegetable"),
+        ("sequence", "sequence", "order-items", "Egg; Larva; Pupa; Adult"),
+    ],
+)
+def test_p06_l01_core_writers_via_selector(
+    capability_id: str,
+    intent: str,
+    action: str,
+    brief: str,
+) -> None:
+    """Each core interaction writes a valid payload through selector/writer."""
+    plan = _plan(
+        _block("b-core", intent=intent, brief=brief, action=action),
+        plan_id=f"tp-p06-{capability_id}",
+    )
+    snapshot = _snapshot(plan)
+    decisions = [d for d in snapshot.decisions if d.interaction_id]
+    assert decisions, snapshot.decisions
+    assert decisions[0].interaction_id == capability_id
+
+    orders = compile_learn_work_orders(teaching_plan=plan, snapshot=snapshot)
+    ix_orders = [o for o in orders if o.lane == "interaction"]
+    assert len(ix_orders) == 1
+    assert ix_orders[0].capability_id == capability_id
+
+    _, request, payload = write_interaction_from_work_order(ix_orders[0])
+    assert request["capability_id"] == capability_id
+    assert payload["kind"] == capability_id
+    assert validate_interaction_contract(payload) == []
+
+    document = assemble_ordered_learn_document(
+        teaching_plan=plan,
+        snapshot=snapshot,
+        work_orders=orders,
+        write_interactions=True,
+    )
+    contracts = [
+        b["learn_interaction"]
+        for b in document["blocks"].values()
+        if isinstance(b.get("learn_interaction"), dict)
+    ]
+    assert any(c.get("kind") == capability_id for c in contracts)
+
+
+def test_p06_core_writer_rejects_invalid_payloads() -> None:
+    from learn.generation.interaction_writer import (
+        InteractionWriterError,
+        write_interaction_from_request,
+    )
+
+    with pytest.raises(InteractionWriterError):
+        write_interaction_from_request(
+            {
+                "capability_id": "choice",
+                "lane": "interaction",
+                "brief": "x",
+                "block_id": "b1",
+                "approved_items": [
+                    SimpleNamespace(
+                        id="i1",
+                        stem="Stem",
+                        options=({"id": "only", "text": "One"},),
+                        correct_key="only",
+                    )
+                ],
+            }
+        )
+
+
 # ---------------------------------------------------------------------------
 # P06-L02
 # ---------------------------------------------------------------------------

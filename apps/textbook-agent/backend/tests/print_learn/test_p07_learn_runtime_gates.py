@@ -254,6 +254,75 @@ def test_p07_sequence_evaluator_parity_with_ts_goldens() -> None:
     assert is_complete(partial, {"type": "score_at_least", "min_ratio": 0.5}) is False
 
 
+def test_p07_core_evaluators_parity_choice_numeric_classify_sequence() -> None:
+    from learn.runtime.evaluation import (
+        evaluate_choice,
+        evaluate_interaction,
+        evaluate_multi_select,
+        evaluate_numeric,
+    )
+
+    feedback = {"correct": "ok", "incorrect": "no", "partial": "partial"}
+
+    choice = evaluate_choice(
+        {
+            "options": [{"id": "a", "text": "A"}, {"id": "b", "text": "B"}],
+            "correct_option_id": "b",
+        },
+        {"selected_option_id": "b"},
+        feedback,
+    )
+    assert choice.outcome == "correct"
+
+    multi = evaluate_multi_select(
+        {
+            "options": [
+                {"id": "a", "text": "A"},
+                {"id": "b", "text": "B"},
+                {"id": "c", "text": "C"},
+            ],
+            "correct_option_ids": ["a", "c"],
+        },
+        {"selected_option_ids": ["a", "c"]},
+        feedback,
+    )
+    assert multi.outcome == "correct"
+
+    numeric = evaluate_numeric({"value": 10, "tolerance": 1}, {"value": 10.5}, feedback)
+    assert numeric.outcome == "correct"
+
+    classify = evaluate_interaction(
+        {
+            "kind": "classify",
+            "config": {
+                "pairs": [
+                    {"left": "apple", "right": "fruit"},
+                    {"left": "carrot", "right": "veg"},
+                ]
+            },
+            "feedback": feedback,
+        },
+        {
+            "matches": [
+                {"left": "apple", "right": "fruit"},
+                {"left": "carrot", "right": "veg"},
+            ]
+        },
+    )
+    assert classify.outcome == "correct"
+
+    seq = evaluate_interaction(
+        {
+            "kind": "sequence",
+            "config": {"order": ["a", "b", "c"]},
+            "feedback": feedback,
+        },
+        {"order": ["a", "c", "b"]},
+    )
+    assert seq.outcome == "partial"
+    assert seq.score_earned == 1
+
+
 # ---------------------------------------------------------------------------
 # P07-U01
 # ---------------------------------------------------------------------------
