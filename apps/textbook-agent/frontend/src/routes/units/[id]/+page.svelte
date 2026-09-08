@@ -592,7 +592,7 @@
 								<h3>{preparation?.workflow_stage ?? 'Ready when you are'}</h3>
 								<p>{preparation?.stale ? 'This lesson changed since it was last written and needs to be made again.' : 'Prepare uses the approved lesson path and the existing page-oriented generation flow.'}</p>
 							</div>
-							{#if preparation?.stale && preparation.can_regenerate}
+							{#if preparation?.stale && preparation?.can_regenerate}
 								<form class="regenerate" onsubmit={(event) => { event.preventDefault(); void regenerate(); }}>
 									<label><span>What changed</span><input bind:value={regenerationReason} minlength="3" maxlength="500" required /></label>
 									<button class="primary" type="submit" disabled={busy !== null || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Making it again…' : 'Make it again'}</button>
@@ -604,19 +604,20 @@
 									<button class="primary" type="submit" disabled={busy !== null || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Starting fresh…' : 'Start fresh'}</button>
 								</form>
 							{:else if preparation?.generation_id || (preparation?.realizations?.length ?? 0) > 0}
+								{@const prep = preparation}
 								<div class="ready-actions">
-									{#if preparation.print_open_href}
-										<a class="primary link" href={preparation.print_open_href}>Open Print</a>
-									{:else if preparation.generation_id}
-										<a class="primary link" href={`/studio?generation_id=${encodeURIComponent(preparation.generation_id)}`}>Open review</a>
-										<a class="secondary link" href={`/studio/print/${encodeURIComponent(preparation.generation_id)}`}>Print</a>
+									{#if prep?.print_open_href}
+										<a class="primary link" href={prep.print_open_href}>Open Print</a>
+									{:else if prep?.generation_id}
+										<a class="primary link" href={`/studio?generation_id=${encodeURIComponent(prep.generation_id)}`}>Open review</a>
+										<a class="secondary link" href={`/studio/print/${encodeURIComponent(prep.generation_id)}`}>Print</a>
 									{/if}
-									{#if preparation.learn_open_href}
-										<a class="secondary link" href={preparation.learn_open_href}>Open Learn</a>
-									{:else if preparation.learn_output_id}
-										<a class="secondary link" href={`/studio?generation_id=${encodeURIComponent(preparation.learn_output_id)}`}>Open Learn</a>
+									{#if prep?.learn_open_href}
+										<a class="secondary link" href={prep.learn_open_href}>Open Learn</a>
+									{:else if prep?.learn_output_id}
+										<a class="secondary link" href={`/studio?generation_id=${encodeURIComponent(prep.learn_output_id)}`}>Open Learn</a>
 									{/if}
-									{#if preparation.realizations?.some((row) => row.status === 'read_only')}
+									{#if prep?.realizations?.some((row) => row.status === 'read_only')}
 										<p class="hint">A legacy output is read-only — regenerate to create an explicit Print or Learn realization.</p>
 									{/if}
 									<button class="secondary" type="button" onclick={() => { void openTab('groups'); showVersions = true; }}>Make versions for my groups</button>

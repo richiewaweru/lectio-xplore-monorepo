@@ -239,7 +239,7 @@ export function createDocumentStore() {
 			);
 			nextBlock = {
 				...block,
-				learn_interaction: updated as typeof block.learn_interaction,
+				learn_interaction: updated as unknown as NonNullable<typeof block.learn_interaction>,
 				assessment_mode:
 					(updated.assessment_mode as typeof block.assessment_mode) ?? block.assessment_mode,
 				content: {

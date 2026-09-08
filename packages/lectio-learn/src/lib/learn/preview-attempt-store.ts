@@ -47,7 +47,7 @@ export function createPreviewAttemptStore(): PreviewAttemptStore {
 		},
 		submit(contract: LearnInteractionContract, response: unknown) {
 			const state = this.getState(contract.id);
-			const result = evaluateInteraction(contract, response, state);
+			const result = evaluateInteraction(contract, response);
 			state.attempt_count += 1;
 			state.last_result = result;
 			state.responses.push(response);
