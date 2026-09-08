@@ -2,12 +2,11 @@
 	import {
 		LectioThemeSurface,
 		basePresetMap,
-		templateRegistryMap,
-		type LessonDocument,
-		type SectionContent
+		type LessonDocument
 	} from '@lectio/learn';
-	import { buildStudentStages, clampStageIndex, sectionContentAt } from './student-shell';
+	import { buildStudentStages, clampStageIndex } from './student-shell';
 	import StudentStageNav from './StudentStageNav.svelte';
+	import OrderedBlockList from './OrderedBlockList.svelte';
 
 	interface Props {
 		document: LessonDocument;
@@ -28,23 +27,12 @@
 	let internalIndex = $state(0);
 	const currentIndex = $derived(clampStageIndex(activeIndex ?? internalIndex, stages.length));
 	const activeStage = $derived(stages[currentIndex] ?? null);
-	const activeContent = $derived(
-		activeStage ? sectionContentAt(document, activeStage.section.id) : null
-	);
 	const preset = $derived(basePresetMap[document.preset_id] ?? null);
 
 	function selectStage(index: number) {
 		const next = clampStageIndex(index, stages.length);
 		if (activeIndex === undefined) internalIndex = next;
 		onActiveIndexChange?.(next);
-	}
-
-	function templateFor(content: SectionContent | null) {
-		if (!content) return null;
-		return (
-			templateRegistryMap[content.template_id] ??
-			templateRegistryMap[activeStage?.section.template_id ?? '']
-		);
 	}
 </script>
 
@@ -53,6 +41,7 @@
 	data-testid="student-lesson-shell"
 	data-preview={preview ? 'true' : 'false'}
 	data-persist-attempts={preview ? 'false' : 'true'}
+	data-render-mode="ordered-blocks"
 >
 	<header class="shell-header">
 		<p class="eyebrow">{preset?.name ?? document.preset_id}</p>
@@ -66,24 +55,23 @@
 		<StudentStageNav {stages} {currentIndex} onSelect={selectStage} />
 
 		<section class="stage-panel" data-testid="stage-panel" data-section-id={activeStage?.section.id}>
-			{#if activeContent}
-				{@const template = templateFor(activeContent)}
-				{#if template}
-					<LectioThemeSurface {preset}>
-						{@const TemplateRender = template.render}
-						<article class="stage-article">
-							<p class="stage-badge">
-								{activeStage?.assessment_mode}
-								{#if activeStage?.required}
-									· required
-								{/if}
-							</p>
-							<TemplateRender section={activeContent} />
-						</article>
-					</LectioThemeSurface>
-				{:else}
-					<p class="empty">Template unavailable for this section.</p>
-				{/if}
+			{#if activeStage}
+				<LectioThemeSurface {preset}>
+					<article class="stage-article">
+						<p class="stage-badge">
+							{activeStage.assessment_mode}
+							{#if activeStage.required}
+								· required
+							{/if}
+						</p>
+						<!-- Authoritative block_ids order — not SectionContent reconstruction. -->
+						<OrderedBlockList
+							{document}
+							sectionId={activeStage.section.id}
+							{preview}
+						/>
+					</article>
+				</LectioThemeSurface>
 			{:else}
 				<p class="empty">Section content could not be resolved.</p>
 			{/if}

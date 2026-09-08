@@ -1,7 +1,12 @@
 import { getComponentById, getComponentFieldMap } from '../schema/registry';
+import type { LearnInteractionContract } from '../learn/interaction-contract';
+import { validateInteractionContract } from '../learn/interaction-contract';
 import { getEmptyContent } from './content-factories';
 import { validateSection } from '../schema/validate';
 import type { GradeBand, PitfallContent, SectionContent, WorkedExampleContent } from '../schema/types';
+
+/** Reserved component_id prefix for Learn interaction blocks (P06). */
+export const LEARN_INTERACTION_COMPONENT_PREFIX = 'learn-interaction:';
 
 /** Portable lesson document format version. Bump on breaking changes. */
 export type LessonDocumentVersion = 1;
@@ -39,6 +44,15 @@ export interface BlockInstance {
 	component_id: string;
 	content: Record<string, unknown>;
 	position: number;
+	/**
+	 * Authored Learn interaction contract when this block is an activity.
+	 * Authoritative for evaluation; never reconstructed from SectionContent.
+	 */
+	learn_interaction?: LearnInteractionContract;
+	/** Section-level assessment override for interaction blocks. */
+	assessment_mode?: SectionAssessmentMode | 'practice' | 'graded';
+	/** Authored concept refs on the block (not learner runtime state). */
+	concept_refs?: SectionConceptRef[];
 }
 
 export interface DocumentSection {
@@ -309,7 +323,12 @@ function applyBlockToSection(
 }
 
 /**
- * Rebuild SectionContent[] from a LessonDocument (for rendering / validation).
+ * Rebuild SectionContent[] from a LessonDocument.
+ *
+ * Compatibility contract (P06): this path is **lossy** for repeated same-type
+ * blocks and for content→activity→content interleaving — interaction blocks are
+ * skipped and duplicate component fields overwrite. Authoritative student/Builder
+ * render must use {@link orderedBlocksInSection} / `block_ids` instead.
  */
 export function toSectionContents(document: LessonDocument): SectionContent[] {
 	const ordered = [...document.sections].sort((a, b) => a.position - b.position);
@@ -318,10 +337,43 @@ export function toSectionContents(document: LessonDocument): SectionContent[] {
 		for (const blockId of docSection.block_ids) {
 			const block = document.blocks[blockId];
 			if (!block) continue;
+			if (isLearnInteractionBlock(block)) continue;
 			applyBlockToSection(section, block.component_id, block.content);
 		}
 		return section;
 	});
+}
+
+export function isLearnInteractionBlock(block: BlockInstance): boolean {
+	if (block.learn_interaction) return true;
+	return block.component_id.startsWith(LEARN_INTERACTION_COMPONENT_PREFIX);
+}
+
+/** Authoritative ordered blocks for a section — preserves repeats and interleaving. */
+export function orderedBlocksInSection(
+	document: LessonDocument,
+	sectionId: string
+): BlockInstance[] {
+	const section = orderedDocumentSections(document).find((s) => s.id === sectionId);
+	if (!section) return [];
+	const out: BlockInstance[] = [];
+	for (const blockId of section.block_ids) {
+		const block = document.blocks[blockId];
+		if (block) out.push(block);
+	}
+	return out;
+}
+
+/** Flatten all sections' block_ids in document order. */
+export function orderedBlocksInDocument(document: LessonDocument): BlockInstance[] {
+	const out: BlockInstance[] = [];
+	for (const section of orderedDocumentSections(document)) {
+		for (const blockId of section.block_ids) {
+			const block = document.blocks[blockId];
+			if (block) out.push(block);
+		}
+	}
+	return out;
 }
 
 /**
@@ -362,6 +414,17 @@ export function validateDocument(document: LessonDocument): DocumentValidationRe
 	}
 
 	for (const block of Object.values(document.blocks)) {
+		if (isLearnInteractionBlock(block)) {
+			const contract = block.learn_interaction;
+			if (!contract) {
+				errors.push(`Interaction block "${block.id}" is missing learn_interaction.`);
+			} else {
+				for (const msg of validateInteractionContract(contract)) {
+					errors.push(`Interaction block "${block.id}": ${msg}`);
+				}
+			}
+			continue;
+		}
 		if (!getComponentById(block.component_id)) {
 			errors.push(`Unknown component_id on block "${block.id}": "${block.component_id}".`);
 		}
@@ -371,6 +434,7 @@ export function validateDocument(document: LessonDocument): DocumentValidationRe
 		return { valid: false, errors, warnings };
 	}
 
+	// Content-only projection for legacy section validators — interactions omitted by design.
 	const sections = toSectionContents(document);
 	sections.forEach((sec) => {
 		const w = validateSection(sec);

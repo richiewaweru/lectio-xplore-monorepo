@@ -143,15 +143,31 @@ export {
 	validateDocument,
 	getFieldComponentMap,
 	orderedDocumentSections,
+	orderedBlocksInSection,
+	orderedBlocksInDocument,
+	isLearnInteractionBlock,
 	learnerSectionLabel,
 	withDefaultLearnerSectionMeta,
-	assertNoLearnerStateOnSection
+	assertNoLearnerStateOnSection,
+	LEARN_INTERACTION_COMPONENT_PREFIX
 } from './teacher/document';
 
 export { getEmptyContent, getPreviewContent, assertFactoriesCoverRegistry } from './teacher/content-factories';
 
 export { getEditSchema } from './teacher/edit-schemas';
 export type { EditSchema, FieldSchema, FieldInputType } from './teacher/edit-schemas';
+export {
+	getInteractionEditSchema,
+	hasInteractionConfigSchema,
+	interactionContractToEditorContent,
+	applyInteractionEditorField
+} from './teacher/interaction-edit-schemas';
+
+export {
+	createPreviewAttemptStore,
+	type PreviewAttemptStore,
+	type PreviewAttemptRecord
+} from './learn/preview-attempt-store';
 
 // ── Template system ─────────────────────────────────
 export {

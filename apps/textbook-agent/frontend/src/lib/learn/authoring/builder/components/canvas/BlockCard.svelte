@@ -1,8 +1,15 @@
 <script lang="ts">
 	import { dragHandle } from 'svelte-dnd-action';
 	import { cn } from '@lectio/learn';
-	import { getComponentById, getEditSchema } from '@lectio/learn';
-	import type { BlockInstance, LessonDocument } from '@lectio/learn';
+	import {
+		getComponentById,
+		getEditSchema,
+		getInteractionEditSchema,
+		interactionContractToEditorContent,
+		isLearnInteractionBlock,
+		SequenceInteraction
+	} from '@lectio/learn';
+	import type { BlockInstance, LessonDocument, LearnInteractionContract } from '@lectio/learn';
 	import type { DocumentStore } from '$lib/learn/authoring/builder/stores/document.svelte';
 	import { ArrowDown, ArrowUp, Copy, GripVertical, Pencil, Trash2 } from 'lucide-svelte';
 	import type { BlockGenerateContextBlock } from '$lib/learn/authoring/builder/api/ai-client';
@@ -73,7 +80,25 @@
 	const aiToken = $derived(getToken());
 
 	const meta = $derived(getComponentById(block.component_id));
-	const editSchema = $derived(getEditSchema(block.component_id));
+	const isInteraction = $derived(isLearnInteractionBlock(block));
+	const interactionKind = $derived(
+		block.learn_interaction?.kind ??
+			(block.component_id.startsWith('learn-interaction:')
+				? block.component_id.slice('learn-interaction:'.length)
+				: null)
+	);
+	const editSchema = $derived(
+		isInteraction && interactionKind
+			? getInteractionEditSchema(interactionKind)
+			: getEditSchema(block.component_id)
+	);
+	const editorContent = $derived(
+		isInteraction && block.learn_interaction
+			? interactionContractToEditorContent(
+					block.learn_interaction as unknown as Record<string, unknown>
+				)
+			: block.content
+	);
 
 	let sectionWarnings = $state<string[]>([]);
 
@@ -150,7 +175,9 @@
 			<span
 				class="block-label truncate text-xs font-semibold uppercase tracking-wide text-slate-500"
 			>
-				{meta?.teacherLabel ?? block.component_id}
+				{isInteraction
+					? `Interaction · ${interactionKind ?? 'unknown'}`
+					: (meta?.teacherLabel ?? block.component_id)}
 			</span>
 		</div>
 		<div class="flex flex-wrap items-center gap-1">
@@ -258,7 +285,7 @@
 			<div class="min-w-0 border-slate-100 lg:border-r lg:pr-4">
 				<BlockEditor
 					schema={editSchema}
-					content={block.content}
+					content={editorContent}
 					onchange={(field, value) => onupdatefield?.(field, value)}
 					onfieldblur={onfieldblur}
 					{store}
@@ -266,20 +293,48 @@
 			</div>
 			<div class="min-w-0 overflow-hidden rounded-lg border border-slate-100 bg-slate-50/50 p-3" style="overflow-wrap: break-word; word-break: break-word;">
 				<p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Live preview</p>
+				{#if isInteraction && block.learn_interaction?.kind === 'sequence'}
+					{@const contract = block.learn_interaction as LearnInteractionContract}
+					{@const cfg = contract.config as {
+						order?: string[];
+						items?: Array<{ id: string; label: string }>;
+					}}
+					<SequenceInteraction
+						prompt={contract.prompt}
+						steps={cfg.items ?? (cfg.order ?? []).map((id) => ({ id, label: id }))}
+						correctOrder={cfg.order ?? []}
+						feedback={contract.feedback}
+					/>
+				{:else}
+					<BlockPreview
+						componentId={block.component_id}
+						content={block.content}
+						media={document?.media ?? {}}
+					/>
+				{/if}
+			</div>
+	</div>
+	{:else}
+		<div class="block-content overflow-hidden p-4" style="overflow-wrap: break-word; word-break: break-word;">
+			{#if isInteraction && block.learn_interaction?.kind === 'sequence'}
+				{@const contract = block.learn_interaction as LearnInteractionContract}
+				{@const cfg = contract.config as {
+					order?: string[];
+					items?: Array<{ id: string; label: string }>;
+				}}
+				<SequenceInteraction
+					prompt={contract.prompt}
+					steps={cfg.items ?? (cfg.order ?? []).map((id) => ({ id, label: id }))}
+					correctOrder={cfg.order ?? []}
+					feedback={contract.feedback}
+				/>
+			{:else}
 				<BlockPreview
 					componentId={block.component_id}
 					content={block.content}
 					media={document?.media ?? {}}
 				/>
-			</div>
-	</div>
-	{:else}
-		<div class="block-content overflow-hidden p-4" style="overflow-wrap: break-word; word-break: break-word;">
-			<BlockPreview
-				componentId={block.component_id}
-				content={block.content}
-				media={document?.media ?? {}}
-			/>
+			{/if}
 		</div>
 	{/if}
 

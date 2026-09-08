@@ -1,5 +1,5 @@
 import type { BlockInstance, DocumentSection, LessonDocument, MediaReference } from '@lectio/learn';
-import { getEmptyContent, getTemplateById } from '@lectio/learn';
+import { applyInteractionEditorField, getEmptyContent, getTemplateById } from '@lectio/learn';
 import { saveDocument } from '$lib/learn/authoring/builder/persistence/idb-store';
 import {
 	ensureBuilderSyncAdapterRegistered,
@@ -230,14 +230,35 @@ export function createDocumentStore() {
 		const block = document.blocks[blockId];
 		if (!block) return;
 		beginFieldMutationIfNeeded();
+		let nextBlock = { ...block };
+		if (block.learn_interaction) {
+			const updated = applyInteractionEditorField(
+				block.learn_interaction as unknown as Record<string, unknown>,
+				field,
+				value
+			);
+			nextBlock = {
+				...block,
+				learn_interaction: updated as typeof block.learn_interaction,
+				assessment_mode:
+					(updated.assessment_mode as typeof block.assessment_mode) ?? block.assessment_mode,
+				content: {
+					...block.content,
+					prompt: updated.prompt,
+					kind: updated.kind
+				}
+			};
+		} else {
+			nextBlock = {
+				...block,
+				content: { ...block.content, [field]: value }
+			};
+		}
 		const next: LessonDocument = {
 			...document,
 			blocks: {
 				...document.blocks,
-				[blockId]: {
-					...block,
-					content: { ...block.content, [field]: value }
-				}
+				[blockId]: nextBlock
 			},
 			updated_at: new Date().toISOString()
 		};

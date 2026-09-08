@@ -3,6 +3,36 @@
   "view_version": "1.0.0",
   "capabilities": [
     {
+      "id": "sequence",
+      "kind": "interaction",
+      "purpose": "Let a learner reconstruct a defensible order.",
+      "cognitive_job": "reconstruct temporal or procedural order",
+      "supported_intents": [
+        "sequence",
+        "practise-guided",
+        "check-understanding"
+      ],
+      "supported_actions": [
+        "order-items"
+      ],
+      "choose_when": "The stages have one defensible order and every stage is distinguishable from the others.",
+      "reject_when": "Several orders are valid. Only one accepted order is implemented, so alternatives must not be claimed.",
+      "prerequisites": [
+        "The process has been shown or traced in the lesson."
+      ],
+      "capacity": {
+        "itemsMin": 3,
+        "itemsMax": 7,
+        "labelMaxWords": 12
+      },
+      "evaluation_mode": "auto-score",
+      "partial_scoring": true,
+      "requires_asset": false,
+      "presentation_variants": [
+        "text"
+      ]
+    },
+    {
       "id": "section-header",
       "kind": "content",
       "purpose": "Opens a section with title, subject, objective, and level indicators",
@@ -960,20 +990,6 @@
     },
     {
       "id": "classify",
-      "readiness": "planned",
-      "availability": "incomplete",
-      "blocking_reasons": [
-        "No native selection policy offers this kind, so no generation run can choose it (P04).",
-        "No Builder editor exists for the payload, so a teacher cannot repair a generated instance (P06)."
-      ],
-      "path_to_readiness": [
-        "P04: register the kind in the native selection policy and prove selection from a shared plan.",
-        "P06: add a Builder editor for the payload and prove an edit persists and republishes.",
-        "P07: prove attempt persistence and authoritative evaluation through the runtime."
-      ]
-    },
-    {
-      "id": "sequence",
       "readiness": "planned",
       "availability": "incomplete",
       "blocking_reasons": [

@@ -12,8 +12,8 @@ import json
 from typing import Any
 
 # Sequence is offered here so reconstruct-order / order-items can select it
-# without editing component definitions (P04-N01 / P04-N06). Full
-# generation-ready status still waits on Builder (P06) per D-007.
+# without editing component definitions (P04-N01 / P04-N06). P06 adds Builder
+# repair and marks Sequence generation-ready in the package catalogue.
 LEARN_NATIVE_POLICY_BODY: dict[str, Any] = {
     "version": "1",
     "path": "learn",

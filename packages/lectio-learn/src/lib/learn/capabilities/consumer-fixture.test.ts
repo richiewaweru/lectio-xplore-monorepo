@@ -57,8 +57,13 @@ describe('package-only consumer', () => {
 			);
 		}
 
-		// Every interaction kind is still pre-selection, so none may be offered.
+		// Incomplete / unavailable / unwired interactions stay out of the generation-ready view.
+		// Sequence is offered after P06 Builder + selection wiring.
 		for (const record of catalogue.filter((entry) => entry.kind === 'interaction')) {
+			if (record.id === 'sequence') {
+				expect(offered, record.id).toContain(record.id);
+				continue;
+			}
 			expect(offered, record.id).not.toContain(record.id);
 		}
 	});

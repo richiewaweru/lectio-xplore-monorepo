@@ -7,11 +7,9 @@ const EVALUATOR = 'packages/lectio-learn/src/lib/learn/interaction-contract.ts';
 
 /**
  * Every text/auto-score interaction below has a closed payload schema, a
- * deterministic evaluator, a keyboard-operable renderer and — from this phase —
- * a contract export. None of them is wired into native selection yet, so none
- * claims `generation-ready`: readiness is `planned` with `availability:
- * incomplete` and a stated path. Claiming otherwise would make a UI shell look
- * like a generation capability.
+ * deterministic evaluator and a keyboard-operable renderer. Kinds without a
+ * Builder editor and native selection path stay `planned` / `incomplete`.
+ * Sequence is generation-ready after P06 (policy + Builder editor + writer).
  */
 const NOT_YET_SELECTABLE: Pick<
 	LearnCapabilityRecord,
@@ -665,17 +663,25 @@ export const interactionCapabilities: LearnCapabilityRecord[] = [
 			'Move-up and move-down buttons per item, so ordering never requires a pointer drag.'
 		),
 		presentation_variants: ['text'],
-		...NOT_YET_SELECTABLE,
+		...{
+			readiness: 'generation-ready' as const,
+			availability: 'available' as const,
+			blocking_reasons: [] as string[],
+			path_to_readiness: [
+				'P07: prove attempt persistence and authoritative evaluation through the runtime.'
+			]
+		},
 		readiness_evidence: {
 			source_path: `${SOURCE_DIR}/SequenceInteraction.svelte`,
 			data_schema: true,
 			evaluator: true,
-			authoring_support: false,
+			authoring_support: true,
 			renderer: true,
 			keyboard_operable: true,
 			contract_export: true,
-			consumer_selection_support: false,
-			evidence: 'capabilities/golden.test.ts partial-order case'
+			consumer_selection_support: true,
+			evidence:
+				'P06: native policy offers Sequence; Builder interaction editor persists; ordered assemble writes via selector/writer'
 		},
 		compatibility: { since: '0.7.0', deprecates: [], migration: null }
 	},

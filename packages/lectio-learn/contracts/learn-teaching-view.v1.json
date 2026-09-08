@@ -20,6 +20,7 @@
       "supported_today": true,
       "learner_actions": [
         "enter-text",
+        "order-items",
         "read-explanation",
         "select-one"
       ]
@@ -111,6 +112,7 @@
       "supported_today": true,
       "learner_actions": [
         "enter-text",
+        "order-items",
         "read-explanation",
         "select-one"
       ]
@@ -133,8 +135,10 @@
     },
     {
       "intent": "sequence",
-      "supported_today": false,
-      "learner_actions": []
+      "supported_today": true,
+      "learner_actions": [
+        "order-items"
+      ]
     },
     {
       "intent": "show-structure",
@@ -174,6 +178,7 @@
   ],
   "supported_actions": [
     "enter-text",
+    "order-items",
     "read-explanation",
     "select-one"
   ]

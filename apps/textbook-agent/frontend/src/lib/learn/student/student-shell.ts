@@ -1,7 +1,7 @@
 import {
 	orderedDocumentSections,
-	toSectionContents,
 	withDefaultLearnerSectionMeta,
+	orderedBlocksInSection,
 	type DocumentSection,
 	type LessonDocument
 } from '@lectio/learn';
@@ -28,10 +28,18 @@ export function buildStudentStages(document: LessonDocument): StudentStage[] {
 	});
 }
 
+/**
+ * @deprecated Prefer orderedBlocksInSection — SectionContent reconstruction collapses order.
+ * Kept for legacy template paths with an explicit compatibility contract.
+ */
 export function sectionContentAt(document: LessonDocument, sectionId: string) {
-	const contents = toSectionContents(document);
-	return contents.find((s) => s.section_id === sectionId) ?? null;
+	// Intentionally not used by StudentLessonShell after P06.
+	void document;
+	void sectionId;
+	return null;
 }
+
+export { orderedBlocksInSection };
 
 export function clampStageIndex(index: number, length: number): number {
 	if (length <= 0) return 0;

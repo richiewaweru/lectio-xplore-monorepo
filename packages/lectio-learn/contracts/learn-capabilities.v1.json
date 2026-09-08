@@ -1394,27 +1394,22 @@
       "presentation_variants": [
         "text"
       ],
-      "readiness": "planned",
-      "availability": "incomplete",
-      "blocking_reasons": [
-        "No native selection policy offers this kind, so no generation run can choose it (P04).",
-        "No Builder editor exists for the payload, so a teacher cannot repair a generated instance (P06)."
-      ],
+      "readiness": "generation-ready",
+      "availability": "available",
+      "blocking_reasons": [],
       "path_to_readiness": [
-        "P04: register the kind in the native selection policy and prove selection from a shared plan.",
-        "P06: add a Builder editor for the payload and prove an edit persists and republishes.",
         "P07: prove attempt persistence and authoritative evaluation through the runtime."
       ],
       "readiness_evidence": {
         "source_path": "packages/lectio-learn/src/lib/learn/SequenceInteraction.svelte",
         "data_schema": true,
         "evaluator": true,
-        "authoring_support": false,
+        "authoring_support": true,
         "renderer": true,
         "keyboard_operable": true,
         "contract_export": true,
-        "consumer_selection_support": false,
-        "evidence": "capabilities/golden.test.ts partial-order case"
+        "consumer_selection_support": true,
+        "evidence": "P06: native policy offers Sequence; Builder interaction editor persists; ordered assemble writes via selector/writer"
       },
       "compatibility": {
         "since": "0.7.0",
