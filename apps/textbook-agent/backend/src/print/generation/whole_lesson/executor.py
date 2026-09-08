@@ -32,7 +32,7 @@ from print.generation.native_production import (
     build_closed_print_production_plan,
     selection_trace_payload,
 )
-from print.generation.whole_lesson.form_agent import NoLegalFormCandidatesError, run_form_planner
+from print.generation.whole_lesson.form_agent import NoLegalFormCandidatesError
 from print.generation.whole_lesson.form_plan import FormPlan, coerce_form_plan
 from print.generation.whole_lesson.legality import (
     LessonLegalityError,
