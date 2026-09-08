@@ -1,7 +1,7 @@
 {
   "generated_at": "2026-09-09",
   "baseline_sha": "5d1563903a22d6d40e12a86dcc4d9021ca8202a3",
-  "corrective_round_head": "pending",
+  "corrective_round_head": "a64eab9",
   "note": "Core eight text interactions are generation-ready after corrective writers/evaluators/edit schemas. Spatial shells remain unavailable until asset-coordinate authoring exists. Live verification is DEFERRED this round.",
   "rollup": {
     "learn_interaction_shells": {"unavailable": 2, "generation_ready": 8, "incomplete": 0},
