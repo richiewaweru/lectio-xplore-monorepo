@@ -21,8 +21,14 @@ from print.generation.whole_lesson.packet_builder import (
 )
 from print.generation.whole_lesson.repository import PageDocumentRepository
 from print.generation.whole_lesson.teaching_agent import run_lesson_approach_planner
-from curriculum.teaching_plan.service import plan_shared_teaching
+from curriculum.teaching_plan.service import (
+    bind_shared_teaching_runner,
+    plan_shared_teaching,
+)
 from v3_blueprint.planning.persistence import load_chunked_state
+
+# Composition root: bind Print-owned planner without curriculum importing print.
+bind_shared_teaching_runner(run_lesson_approach_planner)
 
 
 def slot_ids_from_structural_plan(plan_raw: Mapping[str, Any] | dict[str, Any] | None) -> tuple[str, ...]:

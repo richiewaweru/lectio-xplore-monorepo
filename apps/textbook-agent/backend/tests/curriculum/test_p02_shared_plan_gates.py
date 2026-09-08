@@ -365,17 +365,20 @@ def test_p02_s06_edit_creates_revision_old_approved_readable() -> None:
 
 
 @pytest.mark.asyncio
-async def test_p02_print_adapts_to_curriculum_teaching_service(monkeypatch) -> None:
-    """Print calls the curriculum façade rather than a duplicated planner."""
+async def test_p02_print_adapts_to_curriculum_teaching_service() -> None:
+    """Print binds the curriculum façade rather than owning a duplicated planner."""
+    from curriculum.teaching_plan.service import bind_shared_teaching_runner
+    from print.generation.whole_lesson.teaching_agent import run_lesson_approach_planner
+
     called = {}
 
     async def fake_run(packet, **kwargs):
         called["ok"] = True
         return SimpleNamespace(plan=None)
 
-    monkeypatch.setattr(
-        "print.generation.whole_lesson.teaching_agent.run_lesson_approach_planner",
-        fake_run,
-    )
-    await plan_shared_teaching(SimpleNamespace(), require_items=False)
-    assert called["ok"] is True
+    bind_shared_teaching_runner(fake_run)
+    try:
+        await plan_shared_teaching(SimpleNamespace(), require_items=False)
+        assert called["ok"] is True
+    finally:
+        bind_shared_teaching_runner(run_lesson_approach_planner)
