@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from dataclasses import dataclass
 from typing import Any
@@ -30,7 +31,6 @@ from print.generation.whole_lesson.teaching_errors import (
     is_recognized_teaching_output_error,
 )
 from print.generation.whole_lesson.teaching_plan import (
-    LearnerActionBrief,
     TeachingPlan,
     TeachingPlanDraft,
     materialize_teaching_plan,
@@ -85,50 +85,145 @@ def _assessment_forms_for_intent(intent: str) -> set[str]:
     return out
 
 
-def _repair_missing_order_learner_actions(
+def _objective_requires_order_reconstruction(
     plan: TeachingPlan,
     packet: ImmutableLessonPacket,
-) -> None:
-    """Attach order-items when the objective is ordering and teaching omitted action.
-
-    Sequence is the only generation-ready Learn interaction writer. Ordering
-    objectives that land on sequence / practise-guided / check-understanding
-    without a learner_action otherwise produce content-only Learn surfaces.
-    """
+) -> bool:
     objective = f"{packet.lesson.objective} {plan.arc}".lower()
-    if not any(
+    return any(
         token in objective
         for token in ("order", "sequence", "stages", "cycle", "procedure", "steps")
-    ):
-        return
-    if any(block.learner_action is not None for section in plan.sections for block in section.blocks):
-        return
-    preferred = ("sequence", "practise-guided", "check-understanding")
-    target = None
-    for intent_name in preferred:
-        for section in plan.sections:
-            for block in section.blocks:
-                if block.intent == intent_name and block.learner_action is None:
-                    target = block
-                    break
-            if target is not None:
-                break
-        if target is not None:
-            break
-    if target is None:
-        return
-    # Do not inherit assessment question ids — they are usually MC/open and
-    # break Sequence work-order compilation. Empty sources let the Sequence
-    # writer synthesize steps from the teaching block content.
-    target.learner_action = LearnerActionBrief(
-        action="order-items",
-        support_level="guided" if target.intent != "check-understanding" else "independent",
-        evidence=(
-            "Objective requires reconstructing an ordered sequence; "
-            "attach a Sequence interaction so the learner can respond."
-        ),
-        source_item_ids=[],
     )
+
+
+def _missing_order_learner_action_errors(
+    plan: TeachingPlan,
+    packet: ImmutableLessonPacket,
+) -> list[str]:
+    """Fail closed when ordering is required but teaching omitted learner_action.
+
+    Learn must not invent Sequence downstream. The model must emit the action
+    through the teaching repair loop.
+    """
+    if not _objective_requires_order_reconstruction(plan, packet):
+        return []
+    if any(
+        block.learner_action is not None
+        for section in plan.sections
+        for block in section.blocks
+    ):
+        return []
+    preferred = ("sequence", "practise-guided", "check-understanding")
+    has_candidate_block = any(
+        block.intent in preferred
+        for section in plan.sections
+        for block in section.blocks
+    )
+    if not has_candidate_block:
+        return [
+            "TEACHING_MISSING_ORDER_ACTION: objective requires reconstructing an "
+            "ordered sequence, but no sequence/practise-guided/check-understanding "
+            "block exists to own an order-items learner_action."
+        ]
+    return [
+        "TEACHING_MISSING_ORDER_ACTION: objective requires reconstructing an "
+        "ordered sequence, but no block declares a learner_action. Emit "
+        "learner_action.action='order-items' on a sequence, practise-guided, or "
+        "check-understanding block. Do not leave Learn to invent Sequence."
+    ]
+
+
+_STOPWORDS = frozenset(
+    {
+        "the",
+        "and",
+        "for",
+        "that",
+        "with",
+        "from",
+        "this",
+        "into",
+        "about",
+        "which",
+        "their",
+        "them",
+        "then",
+        "than",
+        "when",
+        "what",
+        "where",
+        "while",
+        "have",
+        "has",
+        "are",
+        "was",
+        "were",
+        "been",
+        "being",
+        "does",
+        "did",
+        "can",
+        "could",
+        "should",
+        "would",
+        "will",
+        "not",
+        "use",
+        "using",
+        "used",
+        "each",
+        "every",
+        "also",
+        "into",
+        "over",
+        "under",
+        "between",
+        "check",
+        "select",
+        "selects",
+        "learner",
+        "learners",
+        "explain",
+        "explains",
+    }
+)
+
+
+def _token_set(*texts: str) -> set[str]:
+    tokens: set[str] = set()
+    for text in texts:
+        for tok in re.findall(r"[a-z0-9]+", (text or "").lower()):
+            if len(tok) > 3 and tok not in _STOPWORDS:
+                tokens.add(tok)
+    return tokens
+
+
+def _assessment_item_compatible_with_block(
+    *,
+    block: Any,
+    item: Any,
+    packet: ImmutableLessonPacket,
+) -> bool:
+    """Require kind-legal forms plus non-empty concept/purpose overlap."""
+    forms = _assessment_forms_for_intent(block.intent)
+    kind = approved_item_kind(item)
+    if kind == "multiple_choice" and "choices" not in forms:
+        return False
+    if kind == "open_response" and "questions" not in forms:
+        return False
+    stem = str(getattr(item, "stem", "") or "")
+    item_tokens = _token_set(stem)
+    scope_tokens = _token_set(
+        block.brief,
+        block.evidence,
+        packet.lesson.objective,
+        " ".join(packet.scope.terminology),
+        " ".join(entry.statement for entry in packet.scope.must_establish),
+        packet.anchor.description or "",
+    )
+    if not item_tokens or not scope_tokens:
+        return False
+    return bool(item_tokens & scope_tokens)
 
 
 def _repair_briefs_missing_anchor_grounding(
@@ -197,13 +292,11 @@ def _repair_missing_assessment_sources(
     plan: TeachingPlan,
     packet: ImmutableLessonPacket,
     assessment_intents: set[str],
-) -> None:
-    """Assign unused approved cards when a model omits assessment ownership.
+) -> list[str]:
+    """Bind unused approved cards only on kind + concept/purpose overlap.
 
-    Print closed selection rejects questions/choices without sources. Only bind
-    for intents whose primary job is assessment/practice — never for orient /
-    explain content blocks that merely list choices as an optional form.
-    Kind must match forms legal for the intent (MC → choices; open → questions).
+    Never guess with pool.pop(0). When an assessment-owning block still lacks a
+    compatible source, return a structured repair request for the model.
     """
     bind_intents = {
         "check-understanding",
@@ -222,14 +315,7 @@ def _repair_missing_assessment_sources(
         for block in section.blocks
         for source_id in block.source_question_ids
     }
-    available_by_kind: dict[str, list[str]] = {
-        "multiple_choice": [],
-        "open_response": [],
-    }
-    for item in packet.approved_items:
-        if item.id in used:
-            continue
-        available_by_kind[approved_item_kind(item)].append(item.id)
+    available = [item for item in packet.approved_items if item.id not in used]
 
     priority = (
         "check-understanding",
@@ -257,18 +343,31 @@ def _repair_missing_assessment_sources(
             ):
                 ordered_blocks.append(block)
 
+    ownership_errors: list[str] = []
     for block in ordered_blocks:
         if block.intent not in bind_intents:
             continue
-        forms = _assessment_forms_for_intent(block.intent)
-        pool: list[str] = []
-        if "choices" in forms and available_by_kind["multiple_choice"]:
-            pool = available_by_kind["multiple_choice"]
-        elif "questions" in forms and available_by_kind["open_response"]:
-            pool = available_by_kind["open_response"]
-        if not pool:
+        match = None
+        for item in available:
+            if item.id in used:
+                continue
+            if _assessment_item_compatible_with_block(
+                block=block, item=item, packet=packet
+            ):
+                match = item
+                break
+        if match is None:
+            ownership_errors.append(
+                "TEACHING_MISSING_ASSESSMENT_OWNERSHIP: block "
+                f"{block.id!r} intent={block.intent!r} requires an approved "
+                "assessment source whose kind matches legal forms and whose stem "
+                "overlaps the block brief/objective/owned vocabulary. Do not guess "
+                "an unrelated item."
+            )
             continue
-        block.source_question_ids = [pool.pop(0)]
+        block.source_question_ids = [match.id]
+        used.add(match.id)
+    return ownership_errors
 
 
 def _repair_invalid_evidence_refs(
@@ -466,12 +565,14 @@ async def run_lesson_approach_planner(
                 )
                 continue
             _repair_briefs_missing_anchor_grounding(plan, packet)
-            _repair_missing_order_learner_actions(plan, packet)
+            ownership_errors = _missing_order_learner_action_errors(plan, packet)
             _repair_incompatible_assessment_sources(plan, packet)
-            _repair_missing_assessment_sources(
-                plan,
-                packet,
-                set(assessment_source_policy["eligible_intents"]),
+            ownership_errors.extend(
+                _repair_missing_assessment_sources(
+                    plan,
+                    packet,
+                    set(assessment_source_policy["eligible_intents"]),
+                )
             )
             _repair_invalid_evidence_refs(plan, packet)
             validation = validate_teaching_plan(
@@ -495,7 +596,7 @@ async def run_lesson_approach_planner(
                     attempt=attempt,
                 )
             )
-            if validation.ok:
+            if validation.ok and not ownership_errors:
                 return TeachingPlanResult(
                     plan=plan,
                     validation=validation,
@@ -512,7 +613,7 @@ async def run_lesson_approach_planner(
             last_error = "validation_failed"
             repair_errors = [
                 f"{issue.code}: {issue.message}" for issue in validation.issues
-            ]
+            ] + ownership_errors
             output_invalid_details = repair_errors
         except Exception as exc:
             last_exception = exc
