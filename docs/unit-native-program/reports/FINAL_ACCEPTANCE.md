@@ -3,20 +3,18 @@
 Repository: `richiewaweru/lectio-xplore-monorepo` (local `C:\Projects\lectio`)  
 Branch: `feat/unit-print-learn`  
 Pack-reviewed base: `5d1563903a22d6d40e12a86dcc4d9021ca8202a3`  
-Implementation tip at P09 write-up: `a88c643` + uncommitted P09 live repairs (see `P09_PHASE_REPORT.md`).
+
+## Corrective round (2026-09-09)
+
+Offline corrective cleanup completed: selection shortcuts removed, core eight writers/evaluators promoted to generation-ready, teaching ownership fail-closed (no silent order-items / no `pool.pop(0)` assessment guess).
+
+**Live verification this round: DEFERRED / NOT_RUN.** Prior P09 live evidence under `evidence/live/` is historical only and is not re-claimed as newly proven.
 
 ## Core dual-path acceptance
 
-**Result: NOT COMPLETE (PASS_WITH_BLOCKERS)**
+**Result: NOT COMPLETE**
 
-Live cases A–D ran through product APIs with real providers. Student/teacher PDFs + pdftoppm page images exist for A–D. Case A demonstrated Sequence attempts (client-score reject + wrong/right). Controlled Print failure recovery (P09-V05) passed with sibling Learn release unchanged.
-
-Still blocking full core acceptance:
-
-- B/C/D lack live interaction attempts (teaching often omitted learner_action)
-- Case A Sequence steps are salvage-synthesized from the brief, not owned lifecycle stage labels
-- Spatial interactions remain unavailable (Case D text alternative)
-- Google Sign-In browser path not automated (JWT mint for API)
+Offline dual-path + P03–P08 gates PASS with labelled mocks (`evidence/mocks/corrective-offline-gates.txt`). Core acceptance still requires a fresh live campaign on current head.
 
 ## Full-catalogue acceptance
 
@@ -24,30 +22,20 @@ Still blocking full core acceptance:
 
 | Capability | Status |
 |---|---|
-| Sequence | generation-ready; live attempt proven on Case A salvage |
-| Classify / Numeric / other | not observed with attempts on live B/C |
+| Core eight (choice, multi-select, fill-blank, numeric, short-response, match-pairs, classify, sequence) | generation-ready offline (writer + evaluator + edit schema + selection) |
 | ImageHotspot / DragLabel | unavailable |
-| Print forms | closed selection + writers; live PDF export proven A–D |
+| Print forms | closed selection + writers; live PDF export historically proven A–D (not re-run) |
 
 ## Phase / gate totals
 
 | Phase | Status |
 |---|---|
-| P00–P08 | PASS |
-| P09 | PASS_WITH_BLOCKERS |
-
-| Gate | Status |
-|---|---|
-| P09-V01 | PASS_WITH_BLOCKERS |
-| P09-V02 | PASS |
-| P09-V03 | PASS_WITH_BLOCKERS |
-| P09-V04 | PASS_WITH_BLOCKERS |
-| P09-V05 | PASS |
-| P09-V06 | PASS |
+| P00–P08 | PASS (P04/P06/P07 reopened and re-passed offline) |
+| P09 live | DEFERRED (historical PASS_WITH_BLOCKERS retained) |
 
 ## Evidence
 
-- Live: `docs/unit-native-program/evidence/live/` (`SUMMARY.json`, A–D, `V05-failure-recovery/`)
-- Attempts: `A-cycle/47-attempts.json`
-- V05: `V05-failure-recovery/LIVE_RUN.json`
-- Decisions: D-033–D-044
+- Offline corrective: `docs/unit-native-program/evidence/mocks/corrective-offline-gates.txt`
+- Historical live: `docs/unit-native-program/evidence/live/` (not re-verified)
+- Inventory: `docs/unit-native-program/CAPABILITY_INVENTORY.json`
+- Decisions: D-045–D-047

@@ -201,7 +201,16 @@ def _draft_for_packet(packet, *, item_id: str | None) -> TeachingPlanDraft:
     return TeachingPlanDraft(
         arc=(
             "Open on two plants that grew differently, isolate light as the cause, "
-            "order the light-to-food stages, and check with the approved covered-leaf item."
+            + (
+                "order the light-to-food stages, and check with the approved covered-leaf item."
+                if any(
+                    (slot.slot_id in {"practice", "apply"}
+                     or "practice" in slot.slot_id
+                     or "apply" in slot.slot_id)
+                    for slot in packet.slots
+                )
+                else "and check with the approved covered-leaf item."
+            )
         ),
         anchor_usage=anchors,
         misconception_focus_ids=[],

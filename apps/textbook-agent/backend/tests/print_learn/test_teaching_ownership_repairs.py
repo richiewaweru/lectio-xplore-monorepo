@@ -100,6 +100,24 @@ def test_missing_order_action_emits_repair_not_silent_sequence() -> None:
     assert plan.sections[0].blocks[0].learner_action is None
 
 
+def test_check_understanding_alone_does_not_own_order_requirement() -> None:
+    """Causal check blocks are not forced into order-items ownership."""
+    packet = _packet(objective="Explain why light is required for food-making.")
+    plan = _plan(
+        TeachingPlanBlock(
+            id="b-check",
+            position=0,
+            intent="check-understanding",
+            brief="Check that chlorophyll absorbs light.",
+            evidence="Selects the chlorophyll fact",
+            source_question_ids=[],
+            learner_action=None,
+        ),
+        arc="Explain light then check understanding.",
+    )
+    assert _missing_order_learner_action_errors(plan, packet) == []
+
+
 def test_order_action_present_is_not_an_error() -> None:
     packet = _packet(objective="Order the stages of the life cycle.")
     plan = _plan(

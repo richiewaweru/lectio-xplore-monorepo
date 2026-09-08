@@ -1,25 +1,41 @@
-# Final acceptance
+# Final acceptance — Unit Print/Learn implementation pack
+
+Repository: `richiewaweru/lectio-xplore-monorepo` (local `C:\Projects\lectio`)  
+Branch: `feat/unit-print-learn`  
+Pack-reviewed base: `5d1563903a22d6d40e12a86dcc4d9021ca8202a3`  
+
+## Corrective round (2026-09-09)
+
+Offline corrective cleanup completed: selection shortcuts removed, core eight writers/evaluators promoted to generation-ready, teaching ownership fail-closed (no silent order-items / no `pool.pop(0)` assessment guess).
+
+**Live verification this round: DEFERRED / NOT_RUN.** Prior P09 live evidence under `evidence/live/` is historical only and is not re-claimed as newly proven.
 
 ## Core dual-path acceptance
-PASS requires all P00–P09 required gates with compatible evidence, four live cases through both native paths, no fixture substitutions, preserved shared meaning, valid PDF delivery, generated new Learn interactions, authenticated persisted runtime, immutable releases and successful scoped recovery.
-If spatial capability remains unavailable, case D must still use an actual supported visual Learn capability; list the missing spatial feature and mark full-catalogue acceptance incomplete.
-No claim of ALL interactions complete if any newly added item lacks package/export/authoring/runtime proof.
+
+**Result: NOT COMPLETE**
+
+Offline dual-path + P03–P08 gates PASS with labelled mocks (`evidence/mocks/corrective-offline-gates.txt`). Core acceptance still requires a fresh live campaign on current head.
 
 ## Full-catalogue acceptance
-PASS only when every newly added interaction inventory row is generation-ready and verified through package and consumer tests, plus appropriate live samples. Manual-only/deferred rows are allowed as honest delivery limitations but mean full-catalogue acceptance is NOT COMPLETE.
-All text/core interactions described in P01 are required for the core implementation unless a substantive discovered incompatibility is explicitly recorded as a scope deviation; such deviation must not disappear from final report.
 
-## Final report
-- Repository, branch and commits.
-- Phase/gate totals and links.
-- Package capabilities added/fixed and export ownership.
-- Shared/native contracts and migrations.
-- Live case results and artifact references.
-- Actual stage timing distribution; no unsupported 'fast' claims.
-- Required repairs and residual risks.
-- Core dual-path result and separate full-catalogue result.
-- Blockers or unavailable tools/provider access, if any.
-- Instructions to run, reproduce and resume.
+**Result: NOT COMPLETE**
 
-## Explicit non-passes
-Frontend build still failing; manual substitution of prepared plan; new interactions only in preview fixtures; response state lost on refresh; score accepted from client; current revision falsely stamped onto old draft; PDF process hangs; missing approval/source refs; partial gate suite described as complete.
+| Capability | Status |
+|---|---|
+| Core eight (choice, multi-select, fill-blank, numeric, short-response, match-pairs, classify, sequence) | generation-ready offline (writer + evaluator + edit schema + selection) |
+| ImageHotspot / DragLabel | unavailable |
+| Print forms | closed selection + writers; live PDF export historically proven A–D (not re-run) |
+
+## Phase / gate totals
+
+| Phase | Status |
+|---|---|
+| P00–P08 | PASS (P04/P06/P07 reopened and re-passed offline) |
+| P09 live | DEFERRED (historical PASS_WITH_BLOCKERS retained) |
+
+## Evidence
+
+- Offline corrective: `docs/unit-native-program/evidence/mocks/corrective-offline-gates.txt`
+- Historical live: `docs/unit-native-program/evidence/live/` (not re-verified)
+- Inventory: `docs/unit-native-program/CAPABILITY_INVENTORY.json`
+- Decisions: D-045–D-047

@@ -4,6 +4,18 @@
   "implementation_branch": "feat/unit-print-learn",
   "implementation_head": "pending",
   "current_phase": "P09",
+  "corrective_round": {
+    "name": "print-learn-cleanup",
+    "status": "COMPLETE_OFFLINE",
+    "live_status": "DEFERRED",
+    "commits": [
+      "b4dcc36",
+      "06d269f",
+      "e4ed36e",
+      "f2c558b"
+    ],
+    "notes": "Removed selection/teaching shortcuts; wired core eight writers/evaluators; teaching ownership fail-closed. Offline P03–P08 + P04 corrective tests PASS with labelled mocks. Live V01–V05 not re-run this round."
+  },
   "phases": {
     "P00": {
       "status": "PASS",
@@ -14,8 +26,9 @@
     "P01": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P01_PHASE_REPORT.md",
-      "evidence": ["docs/unit-native-program/evidence/mocks/p01/"],
-      "blockers": []
+      "evidence": ["docs/unit-native-program/evidence/mocks/p01/", "docs/unit-native-program/evidence/mocks/corrective-offline-gates.txt"],
+      "blockers": [],
+      "reopened_by_corrective": ["P01-K05 readiness view"]
     },
     "P02": {
       "status": "PASS",
@@ -26,57 +39,59 @@
     "P03": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P03_PHASE_REPORT.md",
-      "evidence": ["docs/unit-native-program/evidence/mocks/p03/"],
+      "evidence": ["docs/unit-native-program/evidence/mocks/p03/", "docs/unit-native-program/evidence/mocks/corrective-offline-gates.txt"],
       "blockers": []
     },
     "P04": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P04_PHASE_REPORT.md",
-      "evidence": ["docs/unit-native-program/evidence/mocks/p04/"],
-      "blockers": []
+      "evidence": ["docs/unit-native-program/evidence/mocks/p04/", "docs/unit-native-program/evidence/mocks/corrective-offline-gates.txt"],
+      "blockers": [],
+      "reopened_by_corrective": true
     },
     "P05": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P05_PHASE_REPORT.md",
-      "evidence": ["docs/unit-native-program/evidence/mocks/p05/"],
+      "evidence": ["docs/unit-native-program/evidence/mocks/p05/", "docs/unit-native-program/evidence/mocks/corrective-offline-gates.txt"],
       "blockers": []
     },
     "P06": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P06_PHASE_REPORT.md",
-      "evidence": ["docs/unit-native-program/evidence/mocks/p06/"],
-      "blockers": []
+      "evidence": ["docs/unit-native-program/evidence/mocks/p06/", "docs/unit-native-program/evidence/mocks/corrective-offline-gates.txt"],
+      "blockers": [],
+      "reopened_by_corrective": true
     },
     "P07": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P07_PHASE_REPORT.md",
-      "evidence": ["docs/unit-native-program/evidence/mocks/p07/"],
-      "blockers": []
+      "evidence": ["docs/unit-native-program/evidence/mocks/p07/", "docs/unit-native-program/evidence/mocks/corrective-offline-gates.txt"],
+      "blockers": [],
+      "reopened_by_corrective": true
     },
     "P08": {
       "status": "PASS",
       "report": "docs/unit-native-program/reports/P08_PHASE_REPORT.md",
-      "evidence": ["docs/unit-native-program/evidence/mocks/p08/", "docs/unit-native-program/LIVE_READY_RUNBOOK.md"],
+      "evidence": ["docs/unit-native-program/evidence/mocks/p08/", "docs/unit-native-program/evidence/mocks/corrective-offline-gates.txt"],
       "blockers": []
     },
     "P09": {
-      "status": "PASS_WITH_BLOCKERS",
+      "status": "DEFERRED",
       "report": "docs/unit-native-program/reports/P09_PHASE_REPORT.md",
       "evidence": [
         "docs/unit-native-program/evidence/live/",
         "docs/unit-native-program/evidence/live/V05-failure-recovery/",
-        "docs/unit-native-program/reports/FINAL_ACCEPTANCE.md",
-        "apps/textbook-agent/backend/scripts/run_p09_live_campaign.py"
+        "docs/unit-native-program/reports/FINAL_ACCEPTANCE.md"
       ],
       "blockers": [
-        "B/C/D live Learn surfaces still lack interaction attempts (Classify/Numeric not emitted without learner_action)",
-        "Case A Sequence attempt used order-items salvage; steps synthesized from brief (not owned stage labels)",
-        "Spatial ImageHotspot/DragLabel remain unavailable (Case D text alternative)",
+        "Live V01–V05 not re-verified in the corrective round (historical PASS_WITH_BLOCKERS evidence retained)",
+        "Spatial ImageHotspot/DragLabel remain unavailable",
         "Google Sign-In UI not automated (JWT mint for API)"
-      ]
+      ],
+      "historical_live_status": "PASS_WITH_BLOCKERS"
     }
   },
   "core_dual_path_acceptance": "NOT_COMPLETE",
   "full_catalogue_acceptance": "NOT_COMPLETE",
-  "next_action": "Improve teaching→learner_action for Classify/Numeric on B/C; strengthen Sequence step grounding for cycle objectives; keep spatial deferred. Core dual-path remains NOT_COMPLETE until B/C attempt evidence (and stronger A Sequence fidelity) land."
+  "next_action": "Run a fresh live campaign on current head after teaching-owned learner_actions land for Classify/Numeric; do not treat prior salvage/live evidence as newly proven. Spatial remains deferred."
 }

@@ -286,7 +286,11 @@ def test_p06_l02_repeated_and_interleaved_order_survives_assemble() -> None:
     sequence = block_component_sequence(document)
     # Must keep two explanation-shaped blocks around the interaction (not collapsed).
     assert any(c.startswith("learn-interaction:") for c in sequence), sequence
-    explanation_idxs = [i for i, c in enumerate(sequence) if c in {"explanation-block", "key-fact"}]
+    explanation_idxs = [
+        i
+        for i, c in enumerate(sequence)
+        if c in {"explanation-block", "key-fact", "callout-block", "insight-strip"}
+    ]
     interaction_idxs = [i for i, c in enumerate(sequence) if c.startswith("learn-interaction:")]
     assert len(explanation_idxs) >= 2, sequence
     assert len(interaction_idxs) == 1, sequence

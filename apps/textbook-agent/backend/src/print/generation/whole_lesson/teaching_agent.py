@@ -107,29 +107,33 @@ def _missing_order_learner_action_errors(
     """
     if not _objective_requires_order_reconstruction(plan, packet):
         return []
-    if any(
+    has_order_action = any(
         block.learner_action is not None
-        for section in plan.sections
-        for block in section.blocks
-    ):
-        return []
-    preferred = ("sequence", "practise-guided", "check-understanding")
-    has_candidate_block = any(
-        block.intent in preferred
+        and str(block.learner_action.action) in {"order-items", "reconstruct-order"}
         for section in plan.sections
         for block in section.blocks
     )
-    if not has_candidate_block:
+    if has_order_action:
+        return []
+    # Ordering ownership belongs on sequence / guided-practice blocks, not on
+    # every check-understanding assessment block.
+    preferred = ("sequence", "practise-guided")
+    preferred_blocks = [
+        block
+        for section in plan.sections
+        for block in section.blocks
+        if block.intent in preferred
+    ]
+    if not preferred_blocks:
         return [
             "TEACHING_MISSING_ORDER_ACTION: objective requires reconstructing an "
-            "ordered sequence, but no sequence/practise-guided/check-understanding "
-            "block exists to own an order-items learner_action."
+            "ordered sequence, but no sequence/practise-guided block exists to own "
+            "an order-items learner_action."
         ]
     return [
         "TEACHING_MISSING_ORDER_ACTION: objective requires reconstructing an "
-        "ordered sequence, but no block declares a learner_action. Emit "
-        "learner_action.action='order-items' on a sequence, practise-guided, or "
-        "check-understanding block. Do not leave Learn to invent Sequence."
+        "ordered sequence, but no sequence/practise-guided block declares "
+        "learner_action.action='order-items'. Do not leave Learn to invent Sequence."
     ]
 
 

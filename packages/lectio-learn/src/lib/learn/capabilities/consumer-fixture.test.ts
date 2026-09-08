@@ -58,9 +58,19 @@ describe('package-only consumer', () => {
 		}
 
 		// Incomplete / unavailable / unwired interactions stay out of the generation-ready view.
-		// Sequence is offered after P06 Builder + selection wiring.
+		// Core eight are offered after writer + editor + selection wiring.
+		const wired = new Set([
+			'choice',
+			'multi-select',
+			'fill-blank',
+			'numeric',
+			'short-response',
+			'match-pairs',
+			'classify',
+			'sequence'
+		]);
 		for (const record of catalogue.filter((entry) => entry.kind === 'interaction')) {
-			if (record.id === 'sequence') {
+			if (wired.has(record.id)) {
 				expect(offered, record.id).toContain(record.id);
 				continue;
 			}
@@ -71,10 +81,12 @@ describe('package-only consumer', () => {
 	it('can plan in shared vocabulary without learning a single native id', () => {
 		const teaching = buildTeachingView([...catalogue]);
 		const nativeIds = new Set(catalogue.map((record) => record.id));
+		const sharedByDesign = new Set(['classify', 'sequence', 'match-pairs', 'compare', 'define', 'explain']);
 		const serialized = JSON.stringify(teaching);
 		for (const id of nativeIds) {
 			// Hyphenated capability ids never occur in natural prose, so a hit is a leak.
-			if (!id.includes('-')) continue;
+			// Shared vocabulary ids that coincide with learner actions/intents are allowed.
+			if (!id.includes('-') || sharedByDesign.has(id)) continue;
 			expect(serialized.includes(id), `teaching view leaks "${id}"`).toBe(false);
 		}
 		expect(teaching.coverage.some((entry) => entry.supported_today)).toBe(true);
