@@ -32,9 +32,11 @@ from learn.runtime_models import (
     LessonProgressModel,
 )
 from learn.runtime_service import (
+    assert_instance_access,
     complete_instance,
     create_learner,
     create_learner_session,
+    mark_section_passive_complete,
     rebuild_concept_states,
     rebuild_progress,
     require_learner_session_for,
@@ -58,16 +60,53 @@ class StartInstanceBody(BaseModel):
 
 
 class SubmitAttemptBody(BaseModel):
+    """Client may only send identity + response. Scores/outcomes are server-authored."""
+
     interaction_id: str
     client_submission_id: str
     response_json: dict[str, Any]
-    outcome: str
-    score_earned: float = 0
-    score_possible: float = 1
-    assessment_mode: str = "graded"
     section_id: str | None = None
+    expected_release_id: str | None = None
+    # Rejected if present — kept only so we can 422 instead of silently ignoring.
+    outcome: str | None = None
+    score_earned: float | None = None
+    score_possible: float | None = None
+    assessment_mode: str | None = None
     concept_bindings: list[dict[str, Any]] | None = None
     misconception_id: str | None = None
+
+
+class PassiveCompleteBody(BaseModel):
+    section_id: str
+
+
+class ResumeSectionBody(BaseModel):
+    section_id: str
+    mark_visited: bool = False
+
+
+def _reject_client_score_claims(body: SubmitAttemptBody) -> None:
+    forbidden = []
+    if body.outcome is not None:
+        forbidden.append("outcome")
+    if body.score_earned is not None:
+        forbidden.append("score_earned")
+    if body.score_possible is not None:
+        forbidden.append("score_possible")
+    if body.assessment_mode is not None:
+        forbidden.append("assessment_mode")
+    if body.concept_bindings is not None:
+        forbidden.append("concept_bindings")
+    if body.misconception_id is not None:
+        forbidden.append("misconception_id")
+    if forbidden:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Client score/outcome/evidence claims are rejected; server evaluates from release",
+                "rejected_fields": forbidden,
+            },
+        )
 
 
 class CreateClassBody(BaseModel):
@@ -96,10 +135,6 @@ class CreateAssignmentBody(BaseModel):
 class CreateSessionBody(BaseModel):
     learner_id: str | None = None
     invite_code: str | None = None
-
-
-class ResumeSectionBody(BaseModel):
-    section_id: str
 
 
 async def _optional_learner_guard(
@@ -181,25 +216,22 @@ async def api_submit_attempt(
     session: AsyncSession = Depends(get_async_session),
     x_learner_session: str | None = Header(default=None, alias="X-Learner-Session"),
 ) -> dict[str, Any]:
+    _ = current_user
+    _reject_client_score_claims(body)
     instance = await session.get(LearningInstanceModel, instance_id)
     if instance is None:
         raise HTTPException(status_code=404, detail="LearningInstance not found")
-    await _optional_learner_guard(
-        session, learner_id=instance.learner_id, x_learner_session=x_learner_session
+    await assert_instance_access(
+        session, instance=instance, token=x_learner_session, require_session=False
     )
-    attempt = await submit_attempt(
+    attempt, evaluation, _created = await submit_attempt(
         session,
         learning_instance_id=instance_id,
         interaction_id=body.interaction_id,
         client_submission_id=body.client_submission_id,
         response_json=body.response_json,
-        outcome=body.outcome,
-        score_earned=body.score_earned,
-        score_possible=body.score_possible,
-        assessment_mode=body.assessment_mode,
         section_id=body.section_id,
-        concept_bindings=body.concept_bindings,
-        misconception_id=body.misconception_id,
+        expected_release_id=body.expected_release_id,
     )
     if instance.assignment_id:
         recipient = await session.scalar(
@@ -217,9 +249,42 @@ async def api_submit_attempt(
     return {
         "id": attempt.id,
         "client_submission_id": attempt.client_submission_id,
-        "outcome": attempt.outcome,
-        "score_earned": attempt.score_earned,
-        "score_possible": attempt.score_possible,
+        "interaction_id": attempt.interaction_id,
+        "outcome": evaluation["outcome"],
+        "score_earned": evaluation["score_earned"],
+        "score_possible": evaluation["score_possible"],
+        "feedback": evaluation.get("feedback", ""),
+        "completed": evaluation.get("completed", False),
+        "assessment_mode": evaluation.get("assessment_mode", attempt.assessment_mode),
+        "idempotent_replay": evaluation.get("idempotent_replay", False),
+        "response_json": attempt.response_json,
+    }
+
+
+@router.post("/instances/{instance_id}/sections/complete")
+async def api_passive_section_complete(
+    instance_id: str,
+    body: PassiveCompleteBody,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+    x_learner_session: str | None = Header(default=None, alias="X-Learner-Session"),
+) -> dict[str, Any]:
+    """Mark a passive/content section visited without inventing graded attempts."""
+    _ = current_user
+    instance = await session.get(LearningInstanceModel, instance_id)
+    if instance is None:
+        raise HTTPException(status_code=404, detail="LearningInstance not found")
+    await assert_instance_access(
+        session, instance=instance, token=x_learner_session, require_session=False
+    )
+    progress = await mark_section_passive_complete(
+        session, learning_instance_id=instance_id, section_id=body.section_id
+    )
+    await session.commit()
+    return {
+        "section_id": body.section_id,
+        "completed_section_ids": progress.completed_section_ids,
+        "completed_interaction_ids": progress.completed_interaction_ids,
     }
 
 
@@ -230,11 +295,12 @@ async def api_get_instance(
     session: AsyncSession = Depends(get_async_session),
     x_learner_session: str | None = Header(default=None, alias="X-Learner-Session"),
 ) -> dict[str, Any]:
+    _ = current_user
     instance = await session.get(LearningInstanceModel, instance_id)
     if instance is None:
         raise HTTPException(status_code=404, detail="LearningInstance not found")
-    await _optional_learner_guard(
-        session, learner_id=instance.learner_id, x_learner_session=x_learner_session
+    await assert_instance_access(
+        session, instance=instance, token=x_learner_session, require_session=False
     )
     progress = await session.scalar(
         select(LessonProgressModel).where(
@@ -248,7 +314,16 @@ async def api_get_instance(
             .order_by(LearnerAttemptModel.created_at.asc())
         )
     ).scalars().all()
-    scores = score_split(list(attempts))
+    release = await session.get(LearnReleaseModel, instance.learn_release_id)
+    document = (
+        release.document_json
+        if release is not None and isinstance(release.document_json, dict)
+        else {}
+    )
+    from learn.runtime.runtime_service import _contracts_index
+
+    contracts = _contracts_index(document)
+    scores = score_split(list(attempts), contracts_by_interaction=contracts)
     return {
         "id": instance.id,
         "learner_id": instance.learner_id,
@@ -271,10 +346,13 @@ async def api_get_instance(
                 "id": a.id,
                 "interaction_id": a.interaction_id,
                 "client_submission_id": a.client_submission_id,
+                "section_id": a.section_id,
                 "outcome": a.outcome,
                 "assessment_mode": a.assessment_mode,
                 "score_earned": a.score_earned,
                 "score_possible": a.score_possible,
+                "response_json": a.response_json,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
             }
             for a in attempts
         ],
@@ -289,17 +367,28 @@ async def api_resume_section(
     session: AsyncSession = Depends(get_async_session),
     x_learner_session: str | None = Header(default=None, alias="X-Learner-Session"),
 ) -> dict[str, Any]:
+    _ = current_user
     instance = await session.get(LearningInstanceModel, instance_id)
     if instance is None:
         raise HTTPException(status_code=404, detail="LearningInstance not found")
-    await _optional_learner_guard(
-        session, learner_id=instance.learner_id, x_learner_session=x_learner_session
+    await assert_instance_access(
+        session, instance=instance, token=x_learner_session, require_session=False
     )
     updated = await set_current_section(
         session, learning_instance_id=instance_id, section_id=body.section_id
     )
+    completed_sections: list[str] = []
+    if body.mark_visited:
+        progress = await mark_section_passive_complete(
+            session, learning_instance_id=instance_id, section_id=body.section_id
+        )
+        completed_sections = list(progress.completed_section_ids or [])
     await session.commit()
-    return {"id": updated.id, "current_section_id": updated.current_section_id}
+    return {
+        "id": updated.id,
+        "current_section_id": updated.current_section_id,
+        "completed_section_ids": completed_sections,
+    }
 
 
 @router.post("/instances/{instance_id}/complete")

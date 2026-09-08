@@ -65,6 +65,26 @@ async def class_overview(
             )
         )
     ).scalars().all()
+
+    # Scope class analytics to assignment-bound instances for this class's
+    # assignments (and matching release). Self-started instances are excluded
+    # unless they are explicitly linked via assignment_id (P07-U06 / LRN-007).
+    class_assignments = (
+        await session.execute(
+            select(LearnAssignmentModel).where(LearnAssignmentModel.class_id == class_id)
+        )
+    ).scalars().all()
+    assignment_ids = {a.id for a in class_assignments}
+    assignment_release_ids = {a.id: a.learn_release_id for a in class_assignments}
+
+    scoped_instances = [
+        i
+        for i in instances
+        if i.assignment_id
+        and i.assignment_id in assignment_ids
+        and i.learn_release_id == assignment_release_ids.get(i.assignment_id)
+    ]
+    instances = scoped_instances
     instance_ids = [i.id for i in instances]
     attempts = (
         (
