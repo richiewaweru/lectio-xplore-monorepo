@@ -4,6 +4,8 @@ Phase/status: **PASS**
 
 Plan: `tracking/R04-PLAN.md`
 
+Tested commit: `83f524a62c11cd4dcc85cc0ee8eb30a44f1c4d4e` (includes fix `4f0306bb`).
+
 ## Production fixes (pre-test commit)
 
 - `print/generation/native_production.py`: use `LessonIdentity.objective` for `lesson_title` (field `title` does not exist).
