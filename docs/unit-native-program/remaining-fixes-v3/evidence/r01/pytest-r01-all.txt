@@ -1,0 +1,8 @@
+﻿...................................                                      [100%]
+============================== warnings summary ===============================
+tests/authoring_correction/test_a04_learn_authoring.py::test_a04_payload_strategies_audit_does_not_restore_wide_pipeline
+  C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+    class GenerationFieldContract(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+35 passed, 1 warning in 14.21s

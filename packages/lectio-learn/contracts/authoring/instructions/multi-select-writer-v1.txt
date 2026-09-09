@@ -1,6 +1,10 @@
 Capability: multi-select.
 
-Write a closed interaction where the learner selects every correct option.
+Author a complete activity envelope: student-facing prompt, multi-select config, and feedback.
+
+- Write the prompt as a clear question the learner reads directly. The planning brief is context only — do not copy it verbatim.
+- Provide feedback.correct and feedback.incorrect messages tied to the question and options.
+- Put options and correct option ids in config.
 
 - Include three to six independent options.
 - Use at least two correct option ids.

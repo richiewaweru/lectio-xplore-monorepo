@@ -8,6 +8,7 @@ from typing import Any, Mapping, Sequence
 from infra.authoring import (
     AuthoringDefinition,
     AuthoringEngine,
+    AuthoringEngineError,
     AuthoringProvider,
     AuthoringRegistry,
     AuthoringRequest,
@@ -36,6 +37,25 @@ _DEFAULT_FEEDBACK = {
     "incorrect": "Not yet — try again.",
     "partial": "Partly right — check your answers.",
 }
+_CONVERT_DEFAULT_FEEDBACK = {
+    "correct": "Correct.",
+    "incorrect": "Not yet — try again.",
+}
+_TRUSTED_CONFIG_KEYS = frozenset(
+    {"id", "assessment_mode", "concept_refs", "attempt_policy", "completion", "accessibility"}
+)
+_CORE_INTERACTION_ENVELOPE_IDS = frozenset(
+    {
+        "choice",
+        "multi-select",
+        "fill-blank",
+        "numeric",
+        "short-response",
+        "match-pairs",
+        "classify",
+        "sequence",
+    }
+)
 _DEFAULT_COMPLETION = {"type": "submitted"}
 _DEFAULT_ATTEMPT_POLICY = {
     "max_attempts": None,
@@ -50,14 +70,23 @@ def _instruction_text(raw: Any) -> str:
     return str(raw or "")
 
 
-def _definition_from_order(order: LearnWorkOrder) -> AuthoringDefinition:
+def _definition_from_order(
+    order: LearnWorkOrder,
+    *,
+    mode: str | None = None,
+) -> AuthoringDefinition:
     definition = dict(order.authoring_definition or {})
+    payload_schema: Mapping[str, Any] = order.expected_output_schema
+    if mode == "convert-approved":
+        config_schema = definition.get("config_schema")
+        if isinstance(config_schema, Mapping):
+            payload_schema = config_schema
     return AuthoringDefinition(
         capability_id=str(definition.get("capability_id") or order.capability_id),
         native_path=str(definition.get("native_path") or "learn"),
         modes=tuple(order.modes),  # type: ignore[arg-type]
         instructions=_instruction_text(definition.get("instructions") or order.instructions),
-        payload_schema=order.expected_output_schema,
+        payload_schema=dict(payload_schema),
         required_inputs=tuple(order.required_inputs),
         validator_refs=tuple(order.validator_refs),
         converter_ref=definition.get("converter_ref"),
@@ -117,12 +146,43 @@ def _resolve_top_level_ref(schema: Mapping[str, Any]) -> Mapping[str, Any]:
     return resolved if isinstance(resolved, Mapping) else schema
 
 
+def _config_schema(definition: AuthoringDefinition) -> Mapping[str, Any]:
+    raw = definition.raw or {}
+    config = raw.get("config_schema")
+    if isinstance(config, Mapping):
+        return config
+    return definition.payload_schema
+
+
+def _uses_authoring_envelope(definition: AuthoringDefinition) -> bool:
+    capability_id = definition.capability_id
+    raw = definition.raw or {}
+    return capability_id in _CORE_INTERACTION_ENVELOPE_IDS and isinstance(
+        raw.get("config_schema"), Mapping
+    )
+
+
+def _authoring_config(payload: Mapping[str, Any], *, envelope: bool) -> Mapping[str, Any]:
+    if envelope:
+        config = payload.get("config")
+        if isinstance(config, Mapping):
+            return config
+        return {}
+    return payload
+
+
+def _strip_trusted_config_fields(config: Mapping[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in config.items() if key not in _TRUSTED_CONFIG_KEYS}
+
+
 def _payload_schema_validator(
     definition: AuthoringDefinition,
     request: AuthoringRequest,
     payload: Mapping[str, Any],
 ) -> list[AuthoringValidationError]:
-    del request
+    if request.mode == "convert-approved" and _uses_authoring_envelope(definition):
+        schema = _resolve_top_level_ref(_config_schema(definition))
+        return validate_json_schema(schema, payload)
     return validate_json_schema(_resolve_top_level_ref(definition.payload_schema), payload)
 
 
@@ -140,7 +200,8 @@ def _validate_classify_config(
     request: AuthoringRequest,
     payload: Mapping[str, Any],
 ) -> list[AuthoringValidationError]:
-    del definition, request
+    envelope = _uses_authoring_envelope(definition) and request.mode == "generate"
+    payload = _strip_trusted_config_fields(_authoring_config(payload, envelope=envelope))
     errors: list[AuthoringValidationError] = []
     categories = payload.get("categories")
     if not isinstance(categories, list) or len(categories) < 2:
@@ -189,9 +250,10 @@ def _config_validator(evaluator: Any, response: Mapping[str, Any]) -> Any:
         request: AuthoringRequest,
         payload: Mapping[str, Any],
     ) -> list[AuthoringValidationError]:
-        del definition, request
+        envelope = _uses_authoring_envelope(definition) and request.mode == "generate"
+        config = _strip_trusted_config_fields(_authoring_config(payload, envelope=envelope))
         try:
-            evaluator(payload, response, {})
+            evaluator(config, response, {})
         except InteractionConfigError as exc:
             return [AuthoringValidationError("", str(exc))]
         except InteractionResponseError:
@@ -201,8 +263,29 @@ def _config_validator(evaluator: Any, response: Mapping[str, Any]) -> Any:
     return validate
 
 
-def _feedback() -> dict[str, str]:
-    return {"correct": "Correct.", "incorrect": "Not yet.", "partial": "Partly right."}
+def _approved_prompt(item: Mapping[str, Any]) -> str:
+    prompt = str(_get(item, "stem", "prompt", "question") or "").strip()
+    if not prompt:
+        raise ValueError("approved item requires stem, prompt or question")
+    return prompt
+
+
+def _approved_feedback(item: Mapping[str, Any]) -> dict[str, str] | None:
+    feedback = item.get("feedback")
+    if isinstance(feedback, Mapping):
+        correct = str(feedback.get("correct") or "").strip()
+        incorrect = str(feedback.get("incorrect") or "").strip()
+        if correct and incorrect:
+            out: dict[str, str] = {"correct": correct, "incorrect": incorrect}
+            partial = str(feedback.get("partial") or "").strip()
+            if partial:
+                out["partial"] = partial
+            return out
+    correct = str(item.get("feedback_correct") or "").strip()
+    incorrect = str(item.get("feedback_incorrect") or "").strip()
+    if correct and incorrect:
+        return {"correct": correct, "incorrect": incorrect}
+    return None
 
 
 def _get(item: Mapping[str, Any], *keys: str) -> Any:
@@ -252,10 +335,6 @@ def _approved(request: AuthoringRequest) -> Mapping[str, Any]:
     if isinstance(raw, list) and raw and isinstance(raw[0], Mapping):
         return raw[0]
     raise ValueError("approved item required")
-
-
-def _prompt_from_order(order: LearnWorkOrder) -> str:
-    return order.brief.strip() or "Complete the interaction"
 
 
 def _convert_choice(
@@ -323,7 +402,14 @@ def _convert_fill_blank(
         answers = [answers]
     if not isinstance(answers, list) or not answers:
         raise ValueError("fill-blank approved item requires answers")
-    return {"answers": [str(answer) for answer in answers], "case_sensitive": False}
+    payload: dict[str, Any] = {
+        "answers": [str(answer) for answer in answers],
+        "case_sensitive": bool(_get(item, "case_sensitive") or False),
+    }
+    blank_ids = _get(item, "blank_ids")
+    if isinstance(blank_ids, list):
+        payload["blank_ids"] = [str(blank_id) for blank_id in blank_ids]
+    return payload
 
 
 def _convert_numeric(
@@ -495,18 +581,18 @@ async def run_learn_authoring(
         approved_item = approved_by_id.get(order.approved_item_ids[0])
     elif approved_items:
         approved_item = approved_items[0]
+    selected_mode = mode or ("convert-approved" if approved_item is not None else "generate")
+    conversion_items = approved_items if selected_mode == "convert-approved" else None
+    approved_item = approved_item if selected_mode == "convert-approved" else None
     scoped = build_learn_writer_request(
         order,
         allowed_facts=allowed_facts,
         terminology=terminology,
         approved_item=approved_item,
     )
-    selected_mode = mode or ("convert-approved" if approved_item is not None else "generate")
-    conversion_items = approved_items if selected_mode == "convert-approved" else None
-    approved_item = approved_item if selected_mode == "convert-approved" else None
     request = AuthoringRequest(
         work_order_id=order.work_order_id,
-        definition=_definition_from_order(order),
+        definition=_definition_from_order(order, mode=selected_mode),
         scoped_request=scoped,
         inputs=_input_map(
             order,
@@ -534,17 +620,82 @@ def interaction_contract_from_authoring_result(
     interaction_id: str | None = None,
     assessment_mode: str = "practice",
     concept_refs: Sequence[Mapping[str, Any]] | None = None,
+    approved_item: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    prompt = _prompt_from_order(order)
+    if result.mode == "generate":
+        if not isinstance(result.payload, Mapping):
+            raise AuthoringEngineError(
+                "INVALID_PAYLOAD",
+                "generate interaction result must be an object",
+                stage="assemble",
+            )
+        envelope = dict(result.payload)
+        for trusted in ("id", "assessment_mode", "concept_refs"):
+            envelope.pop(trusted, None)
+        prompt = str(envelope.get("prompt") or "").strip()
+        if not prompt:
+            raise AuthoringEngineError(
+                "INVALID_PAYLOAD",
+                "generate interaction requires authored prompt",
+                stage="assemble",
+            )
+        feedback_raw = envelope.get("feedback")
+        if not isinstance(feedback_raw, Mapping):
+            raise AuthoringEngineError(
+                "INVALID_PAYLOAD",
+                "generate interaction requires authored feedback",
+                stage="assemble",
+            )
+        feedback = {
+            "correct": str(feedback_raw.get("correct") or "").strip(),
+            "incorrect": str(feedback_raw.get("incorrect") or "").strip(),
+        }
+        if not feedback["correct"] or not feedback["incorrect"]:
+            raise AuthoringEngineError(
+                "INVALID_PAYLOAD",
+                "generate interaction requires feedback.correct and feedback.incorrect",
+                stage="assemble",
+            )
+        partial = str(feedback_raw.get("partial") or "").strip()
+        if partial:
+            feedback["partial"] = partial
+        config_raw = envelope.get("config")
+        if not isinstance(config_raw, Mapping):
+            raise AuthoringEngineError(
+                "INVALID_PAYLOAD",
+                "generate interaction requires config object",
+                stage="assemble",
+            )
+        config = _strip_trusted_config_fields(config_raw)
+    else:
+        if approved_item is None:
+            raise AuthoringEngineError(
+                "INCOMPATIBLE_APPROVED_ITEM",
+                "convert-approved assembly requires approved item",
+                stage="assemble",
+            )
+        try:
+            prompt = _approved_prompt(approved_item)
+        except ValueError as exc:
+            raise AuthoringEngineError(
+                "INCOMPATIBLE_APPROVED_ITEM",
+                str(exc),
+                stage="assemble",
+            ) from exc
+        config = _strip_trusted_config_fields(result.payload)
+        preserved = _approved_feedback(approved_item)
+        feedback = dict(preserved or _CONVERT_DEFAULT_FEEDBACK)
+
+    prompt = prompt.strip()
     contract: dict[str, Any] = {
         "id": interaction_id or f"ix-{order.block_id}-{order.capability_id}",
         "kind": order.capability_id,
         "prompt": prompt,
         "assessment_mode": assessment_mode if assessment_mode in {"practice", "graded"} else "practice",
         "attempt_policy": dict(_DEFAULT_ATTEMPT_POLICY),
-        "feedback": dict(_DEFAULT_FEEDBACK),
+        "feedback": feedback,
         "completion": dict(_DEFAULT_COMPLETION),
-        "config": dict(result.payload),
+        "config": dict(config),
         "accessibility": {
             "aria_label": prompt,
             "narration": "optional",
@@ -567,6 +718,23 @@ def interaction_contract_from_authoring_result(
     return contract
 
 
+def _resolve_approved_item(
+    order: LearnWorkOrder,
+    approved_items: Sequence[Mapping[str, Any]] | None,
+) -> Mapping[str, Any] | None:
+    approved_by_id = {
+        str(item.get("id") or ""): item
+        for item in (approved_items or [])
+        if isinstance(item, Mapping)
+    }
+    if order.approved_item_ids:
+        return approved_by_id.get(order.approved_item_ids[0])
+    if approved_items:
+        first = approved_items[0]
+        return first if isinstance(first, Mapping) else None
+    return None
+
+
 async def run_learn_work_order_authoring(
     order: LearnWorkOrder,
     *,
@@ -579,6 +747,7 @@ async def run_learn_work_order_authoring(
     assessment_mode: str = "practice",
     concept_refs: Sequence[Mapping[str, Any]] | None = None,
 ) -> AuthoringResult:
+    approved_item = _resolve_approved_item(order, approved_items)
     result = await run_learn_authoring(
         order,
         provider=provider,
@@ -595,6 +764,7 @@ async def run_learn_work_order_authoring(
         result,
         assessment_mode=assessment_mode,
         concept_refs=concept_refs,
+        approved_item=approved_item if result.mode == "convert-approved" else None,
     )
     return AuthoringResult(
         work_order_id=result.work_order_id,

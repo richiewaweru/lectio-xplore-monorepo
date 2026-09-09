@@ -14,7 +14,7 @@ from infra.authoring import AuthoringEngine, AuthoringProviderCall, AuthoringReq
 from learn.generation.authoring_adapter import run_learn_work_order_authoring
 from learn.generation.native_selection import LearnSelectionDecision, LearnSelectionSnapshot
 from learn.generation.work_orders import compile_learn_work_orders
-from learn.runtime.evaluation import evaluate_numeric
+from learn.runtime.evaluation import evaluate_interaction
 
 
 PLANNING_BRIEF = "Create a distance calculation using speed and time"
@@ -42,7 +42,14 @@ class CaptureEngine(AuthoringEngine):
 
 class NumericProvider:
     async def invoke(self, call: AuthoringProviderCall) -> dict[str, object]:
-        return {"value": EXPECTED_ANSWER, "tolerance": 0, "unit": "m"}
+        return {
+            "prompt": EXPECTED_STUDENT_QUESTION,
+            "config": {"value": EXPECTED_ANSWER, "tolerance": 0, "unit": "m"},
+            "feedback": {
+                "correct": "Correct — the distance is 50 metres.",
+                "incorrect": EXPECTED_FEEDBACK_INCORRECT,
+            },
+        }
 
 
 def _numeric_order() -> object:
@@ -108,7 +115,7 @@ async def test_r00_numeric_generate_preserves_provider_question_feedback_and_fac
     assert contract["prompt"] == EXPECTED_STUDENT_QUESTION
     assert EXPECTED_FEEDBACK_INCORRECT in str(contract["feedback"]["incorrect"])
 
-    correct = evaluate_numeric(contract, {"value": EXPECTED_ANSWER})
-    incorrect = evaluate_numeric(contract, {"value": 5})
+    correct = evaluate_interaction(contract, {"value": EXPECTED_ANSWER})
+    incorrect = evaluate_interaction(contract, {"value": 5})
     assert correct.outcome == "correct"
     assert incorrect.outcome == "incorrect"

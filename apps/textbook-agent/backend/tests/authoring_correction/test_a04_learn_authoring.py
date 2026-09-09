@@ -26,7 +26,7 @@ from learn.resources.selection import load_learn_writer_view
 from learn.runtime.evaluation import evaluate_interaction
 
 
-CORE_GENERATED: dict[str, dict[str, Any]] = {
+CORE_CONFIG: dict[str, dict[str, Any]] = {
     "choice": {
         "options": [{"id": "a", "text": "liquid to solid"}, {"id": "b", "text": "liquid to vapour"}],
         "correct_option_id": "b",
@@ -70,6 +70,25 @@ CONTENT_PAYLOADS: dict[str, dict[str, Any]] = {
     "fill-in-blank": {"segments": [{"text": "The green pigment is ", "is_blank": False}, {"text": "", "is_blank": True, "answer": "chlorophyll"}]},
 }
 
+CORE_GENERATED = CORE_CONFIG
+
+
+def _interaction_envelope(
+    capability_id: str,
+    *,
+    prompt: str | None = None,
+    feedback: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "prompt": prompt or f"Complete this {capability_id.replace('-', ' ')} activity.",
+        "config": dict(CORE_CONFIG[capability_id]),
+        "feedback": feedback
+        or {
+            "correct": "Correct.",
+            "incorrect": "Not yet — review and try again.",
+        },
+    }
+
 
 class CapabilityProvider:
     def __init__(self) -> None:
@@ -77,8 +96,8 @@ class CapabilityProvider:
 
     async def invoke(self, call: AuthoringProviderCall) -> dict[str, Any]:
         self.calls.append(call)
-        if call.capability_id in CORE_GENERATED:
-            return dict(CORE_GENERATED[call.capability_id])
+        if call.capability_id in CORE_CONFIG:
+            return _interaction_envelope(call.capability_id)
         return dict(CONTENT_PAYLOADS[call.capability_id])
 
 
@@ -150,13 +169,13 @@ def test_a04_g01_native_production_authors_content_before_assembly() -> None:
     "capability_id,action,approved,response",
     [
         ("choice", "select-one", {"id": "choice-nonfirst", **CORE_GENERATED["choice"], "correct_key": "b", "stem": "What is evaporation?"}, {"selected_option_id": "b"}),
-        ("multi-select", "select-many", {"id": "multi-nonleading", **CORE_GENERATED["multi-select"], "correct_keys": ["evaporation", "condensation"]}, {"selected_option_ids": ["evaporation", "condensation"]}),
-        ("fill-blank", "complete-missing-values", {"id": "fill-pigment", "answers": ["chlorophyll"]}, {"blanks": ["chlorophyll"]}),
-        ("numeric", "enter-number", {"id": "numeric-distance", "value": 50, "unit": "m"}, {"value": 50}),
+        ("multi-select", "select-many", {"id": "multi-nonleading", "stem": "Which processes involve a phase change?", **CORE_GENERATED["multi-select"], "correct_keys": ["evaporation", "condensation"]}, {"selected_option_ids": ["evaporation", "condensation"]}),
+        ("fill-blank", "complete-missing-values", {"id": "fill-pigment", "stem": "The green pigment in leaves is ____.", "answers": ["chlorophyll"]}, {"blanks": ["chlorophyll"]}),
+        ("numeric", "enter-number", {"id": "numeric-distance", "stem": "How far does the cart travel?", "value": 50, "unit": "m"}, {"value": 50}),
         ("short-response", "enter-text", {"id": "short-review", "prompt": "Explain why a cold glass develops droplets."}, {"text": "Water vapour condenses on the cold glass."}),
-        ("match-pairs", "match-pairs", {"id": "match-water", "pairs": {"evaporation": "liquid to vapour", "condensation": "vapour to liquid"}}, {"matches": [{"left": "evaporation", "right": "liquid to vapour"}, {"left": "condensation", "right": "vapour to liquid"}]}),
-        ("classify", "classify-items", {"id": "classify-water", **CORE_GENERATED["classify"], "mapping": {"rain": "liquid", "water vapour": "gas", "dew": "liquid"}}, {"matches": [{"left": "rain", "right": "liquid"}, {"left": "water vapour", "right": "gas"}, {"left": "dew", "right": "liquid"}]}),
-        ("sequence", "order-items", {"id": "sequence-butterfly", "correct_order": ["egg", "larva", "pupa", "adult"]}, {"order": ["egg", "larva", "pupa", "adult"]}),
+        ("match-pairs", "match-pairs", {"id": "match-water", "stem": "Match each process to its description.", "pairs": {"evaporation": "liquid to vapour", "condensation": "vapour to liquid"}}, {"matches": [{"left": "evaporation", "right": "liquid to vapour"}, {"left": "condensation", "right": "vapour to liquid"}]}),
+        ("classify", "classify-items", {"id": "classify-water", "stem": "Classify each state of water.", **CORE_GENERATED["classify"], "mapping": {"rain": "liquid", "water vapour": "gas", "dew": "liquid"}}, {"matches": [{"left": "rain", "right": "liquid"}, {"left": "water vapour", "right": "gas"}, {"left": "dew", "right": "liquid"}]}),
+        ("sequence", "order-items", {"id": "sequence-butterfly", "stem": "Order the butterfly life stages.", "correct_order": ["egg", "larva", "pupa", "adult"]}, {"order": ["egg", "larva", "pupa", "adult"]}),
     ],
 )
 def test_a04_g02_g04_core_interactions_convert_and_evaluate(
@@ -198,7 +217,8 @@ def test_a04_g02_core_interactions_generate_through_provider(capability_id: str,
     )
 
     assert provider.calls[0].capability_id == capability_id
-    assert contract["config"] == CORE_GENERATED[capability_id]
+    assert contract["config"] == CORE_CONFIG[capability_id]
+    assert contract["prompt"] != "Author " + capability_id
     assert validate_interaction_contract(contract) == []
 
 

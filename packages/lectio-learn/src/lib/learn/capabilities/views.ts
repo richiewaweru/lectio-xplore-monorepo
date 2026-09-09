@@ -23,6 +23,18 @@ export const AUTHORING_DEFINITION_VERSION = '2.0.0';
 
 type AuthoringMode = 'generate' | 'convert-approved';
 
+/** Core interactions that author a full activity envelope in generate mode. */
+export const CORE_INTERACTION_ENVELOPE_IDS = new Set([
+	'choice',
+	'multi-select',
+	'fill-blank',
+	'numeric',
+	'short-response',
+	'match-pairs',
+	'classify',
+	'sequence'
+]);
+
 export interface AuthoringInstructions {
 	resource_ref: string;
 	text: string;
@@ -224,6 +236,53 @@ export function buildSelectionView(records: LearnCapabilityRecord[]): LearnSelec
 
 // ── Writer view ─────────────────────────────────────────────────────────────
 
+/** Generate-mode envelope: student prompt + runtime config + feedback. */
+export function buildAuthoringEnvelopeSchema(configSchema: JsonSchema): JsonSchema {
+	return {
+		type: 'object',
+		required: ['prompt', 'config', 'feedback'],
+		additionalProperties: true,
+		properties: {
+			prompt: { type: 'string', minLength: 1 },
+			config: configSchema,
+			feedback: {
+				type: 'object',
+				required: ['correct', 'incorrect'],
+				additionalProperties: false,
+				properties: {
+					correct: { type: 'string' },
+					incorrect: { type: 'string' },
+					partial: { type: 'string' }
+				}
+			}
+		}
+	};
+}
+
+function envelopeFieldGuidance(
+	record: LearnCapabilityRecord,
+	configGuidance: Record<string, string>
+): Record<string, string> {
+	return {
+		prompt:
+			'Student-facing question or instruction. Use plain language the learner reads directly; do not copy the planning brief.',
+		'feedback.correct': 'Short message shown when the learner answer is fully correct.',
+		'feedback.incorrect': 'Short message shown when the learner answer is wrong or incomplete.',
+		'feedback.partial':
+			'Optional message when partial credit applies; omit when the interaction does not support partial scoring.',
+		...Object.fromEntries(
+			Object.entries(configGuidance).map(([key, value]) => [`config.${key}`, value])
+		)
+	};
+}
+
+function writerPayloadSchema(record: LearnCapabilityRecord): JsonSchema {
+	if (record.kind === 'interaction' && CORE_INTERACTION_ENVELOPE_IDS.has(record.id)) {
+		return buildAuthoringEnvelopeSchema(record.payload_schema);
+	}
+	return record.payload_schema;
+}
+
 export interface LearnWriterRecord {
 	id: string;
 	definition_version: string;
@@ -236,6 +295,8 @@ export interface LearnWriterRecord {
 	schema_ref: string;
 	payload_schema_ref: string;
 	payload_schema: JsonSchema;
+	/** Runtime interaction config schema (unchanged); present for envelope interactions. */
+	config_schema?: JsonSchema;
 	field_guidance: Record<string, string>;
 	required_inputs: string[];
 	requires: string[];
@@ -361,6 +422,13 @@ export function buildWriterView(records: LearnCapabilityRecord[]): LearnWriterVi
 		const modes = modesFor(record);
 		const required_inputs = requiredInputsFor(record);
 		const converter_ref = converterRefFor(record);
+		const usesEnvelope =
+			record.kind === 'interaction' && CORE_INTERACTION_ENVELOPE_IDS.has(record.id);
+		const configSchema = record.payload_schema;
+		const payloadSchema = writerPayloadSchema(record);
+		const fieldGuidance = usesEnvelope
+			? envelopeFieldGuidance(record, record.field_guidance)
+			: { ...record.field_guidance };
 		const definitionPayload = {
 			definition_version: AUTHORING_DEFINITION_VERSION,
 			capability_id: record.id,
@@ -370,8 +438,9 @@ export function buildWriterView(records: LearnCapabilityRecord[]): LearnWriterVi
 			modes,
 			instructions,
 			schema_ref: record.payload_schema_ref,
-			payload_schema: record.payload_schema,
-			field_guidance: { ...record.field_guidance },
+			payload_schema: payloadSchema,
+			...(usesEnvelope ? { config_schema: configSchema } : {}),
+			field_guidance: fieldGuidance,
 			required_inputs,
 			requires: [...record.requires],
 			capacity: { ...record.capacity },
@@ -395,8 +464,9 @@ export function buildWriterView(records: LearnCapabilityRecord[]): LearnWriterVi
 			instructions,
 			schema_ref: record.payload_schema_ref,
 			payload_schema_ref: record.payload_schema_ref,
-			payload_schema: record.payload_schema,
-			field_guidance: { ...record.field_guidance },
+			payload_schema: payloadSchema,
+			...(usesEnvelope ? { config_schema: configSchema } : {}),
+			field_guidance: fieldGuidance,
 			required_inputs,
 			requires: [...record.requires],
 			capacity: { ...record.capacity },

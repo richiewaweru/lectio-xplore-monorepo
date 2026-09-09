@@ -2,7 +2,7 @@
   "manifest_version": "1.0.0",
   "catalogue_version": "1.0.0",
   "package_version": "0.7.0",
-  "generated_at": "2026-09-09T17:18:28.095Z",
+  "generated_at": "2026-09-09T19:21:35.941Z",
   "capability_counts": {
     "total": 43,
     "interaction": 10,
@@ -40,8 +40,8 @@
       "file": "learn-writer-view.v1.json",
       "view": "writer",
       "view_version": "2.0.0",
-      "sha256": "9b6c02c10cce5d4f4e8c73eb96bd809bdf70a8aadc33e7d2706642ec1d5434b0",
-      "bytes": 134846
+      "sha256": "7eca101958e4d812ffbdeb69ec2caedb6b10558b9f9e355f49a390433703130e",
+      "bytes": 157616
     },
     {
       "file": "learn-runtime-view.v1.json",
@@ -68,15 +68,15 @@
       "file": "authoring/instructions/choice-writer-v1.txt",
       "view": "authoring-resource",
       "view_version": "2.0.0",
-      "sha256": "0b4d31998793916951861a47c8cc0d75f3c83dc76be7cabad903742da1645c81",
-      "bytes": 299
+      "sha256": "5a33d1c1bec4b1cd7fb3c8d273d3b655383b1b2747ee5d665af721353e9670af",
+      "bytes": 623
     },
     {
       "file": "authoring/instructions/classify-writer-v1.txt",
       "view": "authoring-resource",
       "view_version": "2.0.0",
-      "sha256": "425f7f00e13d7e8d19794525432db8ff26ba5eafaf0f1f5ef487758d12388049",
-      "bytes": 270
+      "sha256": "e7d17c711b922677b152f93bc022d64bed913024749ca249f1c48c3d7436d903",
+      "bytes": 620
     },
     {
       "file": "authoring/instructions/comparison-grid-writer-v1.txt",
@@ -131,8 +131,8 @@
       "file": "authoring/instructions/fill-blank-writer-v1.txt",
       "view": "authoring-resource",
       "view_version": "2.0.0",
-      "sha256": "e502f52e655c25f14ff296939b5c12257efca488b16b8ea22b7769f821513897",
-      "bytes": 380
+      "sha256": "8e8124ab5e1f17cb9da40f9a1be25f13da2c0767f8020e36cf5074c73bd69361",
+      "bytes": 677
     },
     {
       "file": "authoring/instructions/fill-in-blank-writer-v1.txt",
@@ -194,22 +194,22 @@
       "file": "authoring/instructions/match-pairs-writer-v1.txt",
       "view": "authoring-resource",
       "view_version": "2.0.0",
-      "sha256": "313e095ed941ef1d85fc46b8a41d4e4b90c6477df1f6de31bef189256a50c358",
-      "bytes": 276
+      "sha256": "513875cd42c0743a1dc10d63e7e87bcc06cd33523c890390f3d48adcacee2f5f",
+      "bytes": 582
     },
     {
       "file": "authoring/instructions/multi-select-writer-v1.txt",
       "view": "authoring-resource",
       "view_version": "2.0.0",
-      "sha256": "acd5e37eb742d0526c19967518c244f8737fbec649ee389c201d21d3464734e7",
-      "bytes": 296
+      "sha256": "cc584d41df86a62381412082e51afee17df56a5495d792be2fd852a96cb7ecb3",
+      "bytes": 593
     },
     {
       "file": "authoring/instructions/numeric-writer-v1.txt",
       "view": "authoring-resource",
       "view_version": "2.0.0",
-      "sha256": "fe04a3a0dd9d73a89521f0faba8a680f8bcab6b37709549056b40f1d0de62ace",
-      "bytes": 320
+      "sha256": "a71032b841c09ce04f4a2c494d67e3765393c31f051ba4000007d988f44b528b",
+      "bytes": 640
     },
     {
       "file": "authoring/instructions/pitfall-alert-writer-v1.txt",
@@ -271,8 +271,8 @@
       "file": "authoring/instructions/sequence-writer-v1.txt",
       "view": "authoring-resource",
       "view_version": "2.0.0",
-      "sha256": "0692ab3491f59113495f7eb8f8a579a055929fe639c5b82b8e7e91ecf526efae",
-      "bytes": 325
+      "sha256": "81fa98af2465a372e4a44b1868850bfff648f9f9db9fe81a5b5abbace0c68d15",
+      "bytes": 635
     },
     {
       "file": "authoring/instructions/short-answer-writer-v1.txt",
@@ -285,8 +285,8 @@
       "file": "authoring/instructions/short-response-writer-v1.txt",
       "view": "authoring-resource",
       "view_version": "2.0.0",
-      "sha256": "843f9d78861758d392c3982294b68de805fe57dc67ab33913432faa113eb6e49",
-      "bytes": 379
+      "sha256": "b556ecdd735bd95bba516112859a19e7b35d3bf68af6ed8b60bae338b4788ad1",
+      "bytes": 754
     },
     {
       "file": "authoring/instructions/student-textbox-writer-v1.txt",

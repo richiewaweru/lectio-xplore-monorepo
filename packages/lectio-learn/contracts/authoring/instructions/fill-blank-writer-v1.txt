@@ -1,6 +1,10 @@
 Capability: fill-blank.
 
-Write a fill-in-the-blank interaction with enumerable accepted answers.
+Author a complete activity envelope: student-facing prompt, fill-blank config, and feedback.
+
+- Write the prompt as clear text with blanks the learner completes. The planning brief is context only — do not copy it verbatim.
+- Provide feedback.correct and feedback.incorrect messages tied to the blanks and answers.
+- Put accepted answers and blank ids in config.
 
 - Declare one answer entry per blank in reading order.
 - Use stable blank ids when the rendered text identifies blanks.

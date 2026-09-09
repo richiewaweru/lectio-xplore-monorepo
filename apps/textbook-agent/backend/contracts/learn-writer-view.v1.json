@@ -15,11 +15,92 @@
       ],
       "instructions": {
         "resource_ref": "contracts/authoring/instructions/choice-writer-v1.txt",
-        "text": "Capability: choice.\r\n\r\nWrite a single-answer closed choice interaction.\r\n\r\n- Use at least two options with unique stable ids.\r\n- Exactly one option is correct.\r\n- Distractors must be plausible and tied to a stateable misconception.\r\n- Do not use this for questions with several defensible answers."
+        "text": "Capability: choice.\r\n\r\nAuthor a complete activity envelope: student-facing prompt, choice config, and feedback.\r\n\r\n- Write the prompt as a clear question the learner reads directly. The planning brief is context only — do not copy it verbatim.\r\n- Provide feedback.correct and feedback.incorrect messages tied to the question and distractors.\r\n- Put options and the correct option id in config.\r\n\r\n- Use at least two options with unique stable ids.\r\n- Exactly one option is correct.\r\n- Distractors must be plausible and tied to a stateable misconception.\r\n- Do not use this for questions with several defensible answers."
       },
       "schema_ref": "learn/choice/config.v1",
       "payload_schema_ref": "learn/choice/config.v1",
       "payload_schema": {
+        "type": "object",
+        "required": [
+          "prompt",
+          "config",
+          "feedback"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "config": {
+            "$id": "learn/choice/config.v1",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "options",
+              "correct_option_id"
+            ],
+            "properties": {
+              "options": {
+                "type": "array",
+                "minItems": 2,
+                "uniqueItems": true,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "text"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "text": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "explanation": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "correct_option_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "presentation": {
+                "enum": [
+                  "text",
+                  "image"
+                ]
+              }
+            }
+          },
+          "feedback": {
+            "type": "object",
+            "required": [
+              "correct",
+              "incorrect"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "correct": {
+                "type": "string"
+              },
+              "incorrect": {
+                "type": "string"
+              },
+              "partial": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "config_schema": {
         "$id": "learn/choice/config.v1",
         "type": "object",
         "additionalProperties": false,
@@ -67,9 +148,13 @@
         }
       },
       "field_guidance": {
-        "options": "Stable ids, parallel grammatical form. Give each wrong option an explanation naming the misconception it reveals.",
-        "correct_option_id": "Must equal the id of exactly one declared option.",
-        "presentation": "'image' renders options as pictures; evaluation is identical, so do not author a separate kind for it."
+        "prompt": "Student-facing question or instruction. Use plain language the learner reads directly; do not copy the planning brief.",
+        "feedback.correct": "Short message shown when the learner answer is fully correct.",
+        "feedback.incorrect": "Short message shown when the learner answer is wrong or incomplete.",
+        "feedback.partial": "Optional message when partial credit applies; omit when the interaction does not support partial scoring.",
+        "config.options": "Stable ids, parallel grammatical form. Give each wrong option an explanation naming the misconception it reveals.",
+        "config.correct_option_id": "Must equal the id of exactly one declared option.",
+        "config.presentation": "'image' renders options as pictures; evaluation is identical, so do not author a separate kind for it."
       },
       "required_inputs": [
         "teaching_plan_block",
@@ -123,7 +208,7 @@
         "learn.evaluateChoice"
       ],
       "converter_ref": "learn.choice.approved_item_converter",
-      "definition_hash": "3136cfa60aaa6192063cab42a5b2e39392b0ffe56d4f48a1b90a8d5e0962a16f",
+      "definition_hash": "55cd7cc5affd18bd6d18335f9e568a4e66ccce542c77ff1636dfc9dd82a5f845",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/ChoiceInteraction.svelte",
@@ -145,11 +230,91 @@
       ],
       "instructions": {
         "resource_ref": "contracts/authoring/instructions/multi-select-writer-v1.txt",
-        "text": "Capability: multi-select.\r\n\r\nWrite a closed interaction where the learner selects every correct option.\r\n\r\n- Include three to six independent options.\r\n- Use at least two correct option ids.\r\n- Every correct id must name a declared option.\r\n- Do not use this when exactly one answer is correct."
+        "text": "Capability: multi-select.\r\n\r\nAuthor a complete activity envelope: student-facing prompt, multi-select config, and feedback.\r\n\r\n- Write the prompt as a clear question the learner reads directly. The planning brief is context only — do not copy it verbatim.\r\n- Provide feedback.correct and feedback.incorrect messages tied to the question and options.\r\n- Put options and correct option ids in config.\r\n\r\n- Include three to six independent options.\r\n- Use at least two correct option ids.\r\n- Every correct id must name a declared option.\r\n- Do not use this when exactly one answer is correct."
       },
       "schema_ref": "learn/multi-select/config.v1",
       "payload_schema_ref": "learn/multi-select/config.v1",
       "payload_schema": {
+        "type": "object",
+        "required": [
+          "prompt",
+          "config",
+          "feedback"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "config": {
+            "$id": "learn/multi-select/config.v1",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "options",
+              "correct_option_ids"
+            ],
+            "properties": {
+              "options": {
+                "type": "array",
+                "minItems": 2,
+                "uniqueItems": true,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "text"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "text": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "explanation": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "correct_option_ids": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "feedback": {
+            "type": "object",
+            "required": [
+              "correct",
+              "incorrect"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "correct": {
+                "type": "string"
+              },
+              "incorrect": {
+                "type": "string"
+              },
+              "partial": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "config_schema": {
         "$id": "learn/multi-select/config.v1",
         "type": "object",
         "additionalProperties": false,
@@ -196,8 +361,12 @@
         }
       },
       "field_guidance": {
-        "options": "Independent candidates. Do not include an option that implies another.",
-        "correct_option_ids": "Two or more declared option ids. A single correct id belongs to the choice kind instead."
+        "prompt": "Student-facing question or instruction. Use plain language the learner reads directly; do not copy the planning brief.",
+        "feedback.correct": "Short message shown when the learner answer is fully correct.",
+        "feedback.incorrect": "Short message shown when the learner answer is wrong or incomplete.",
+        "feedback.partial": "Optional message when partial credit applies; omit when the interaction does not support partial scoring.",
+        "config.options": "Independent candidates. Do not include an option that implies another.",
+        "config.correct_option_ids": "Two or more declared option ids. A single correct id belongs to the choice kind instead."
       },
       "required_inputs": [
         "teaching_plan_block",
@@ -255,7 +424,7 @@
         "learn.evaluateMultiSelect"
       ],
       "converter_ref": "learn.multi-select.approved_item_converter",
-      "definition_hash": "8afa0378d4b35c391aeb50697c523a8a44ed61160401cb26303096f0072ca4e0",
+      "definition_hash": "264cc22d3e3c7ad8bded612991ae201b0f3f8b980c7075bf424a6083297a0d64",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/MultiSelectInteraction.svelte",
@@ -277,11 +446,88 @@
       ],
       "instructions": {
         "resource_ref": "contracts/authoring/instructions/fill-blank-writer-v1.txt",
-        "text": "Capability: fill-blank.\r\n\r\nWrite a fill-in-the-blank interaction with enumerable accepted answers.\r\n\r\n- Declare one answer entry per blank in reading order.\r\n- Use stable blank ids when the rendered text identifies blanks.\r\n- Include genuine alternatives only when both wordings should score correct.\r\n- Do not use this for open reasoning, judgement, or sentence-length answers."
+        "text": "Capability: fill-blank.\r\n\r\nAuthor a complete activity envelope: student-facing prompt, fill-blank config, and feedback.\r\n\r\n- Write the prompt as clear text with blanks the learner completes. The planning brief is context only — do not copy it verbatim.\r\n- Provide feedback.correct and feedback.incorrect messages tied to the blanks and answers.\r\n- Put accepted answers and blank ids in config.\r\n\r\n- Declare one answer entry per blank in reading order.\r\n- Use stable blank ids when the rendered text identifies blanks.\r\n- Include genuine alternatives only when both wordings should score correct.\r\n- Do not use this for open reasoning, judgement, or sentence-length answers."
       },
       "schema_ref": "learn/fill-blank/config.v1",
       "payload_schema_ref": "learn/fill-blank/config.v1",
       "payload_schema": {
+        "type": "object",
+        "required": [
+          "prompt",
+          "config",
+          "feedback"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "config": {
+            "$id": "learn/fill-blank/config.v1",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "answers"
+            ],
+            "properties": {
+              "answers": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  ]
+                }
+              },
+              "blank_ids": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "case_sensitive": {
+                "type": "boolean"
+              }
+            }
+          },
+          "feedback": {
+            "type": "object",
+            "required": [
+              "correct",
+              "incorrect"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "correct": {
+                "type": "string"
+              },
+              "incorrect": {
+                "type": "string"
+              },
+              "partial": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "config_schema": {
         "$id": "learn/fill-blank/config.v1",
         "type": "object",
         "additionalProperties": false,
@@ -325,9 +571,13 @@
         }
       },
       "field_guidance": {
-        "answers": "One entry per blank, in reading order. Use an array for a blank with genuine alternatives.",
-        "blank_ids": "Stable ids so per-blank feedback survives a re-render.",
-        "case_sensitive": "Leave false unless capitalisation is the thing being assessed. Answers are compared after trimming and whitespace collapsing."
+        "prompt": "Student-facing question or instruction. Use plain language the learner reads directly; do not copy the planning brief.",
+        "feedback.correct": "Short message shown when the learner answer is fully correct.",
+        "feedback.incorrect": "Short message shown when the learner answer is wrong or incomplete.",
+        "feedback.partial": "Optional message when partial credit applies; omit when the interaction does not support partial scoring.",
+        "config.answers": "One entry per blank, in reading order. Use an array for a blank with genuine alternatives.",
+        "config.blank_ids": "Stable ids so per-blank feedback survives a re-render.",
+        "config.case_sensitive": "Leave false unless capitalisation is the thing being assessed. Answers are compared after trimming and whitespace collapsing."
       },
       "required_inputs": [
         "teaching_plan_block",
@@ -374,7 +624,7 @@
         "learn.evaluateFillBlank"
       ],
       "converter_ref": "learn.fill-blank.approved_item_converter",
-      "definition_hash": "6ae68003e679f5d189a51057dfc7596f32b932390bdf11f3d1efb2d51b610f54",
+      "definition_hash": "8811ac11e2e86973c28d6f1558fe00dfdeb2820b512eab9b9ec99f2c33af647b",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateFillBlank",
@@ -396,11 +646,66 @@
       ],
       "instructions": {
         "resource_ref": "contracts/authoring/instructions/numeric-writer-v1.txt",
-        "text": "Capability: numeric.\r\n\r\nWrite a numeric-answer interaction with a declared target and optional tolerance.\r\n\r\n- The target value must be finite.\r\n- Tolerance must be finite and non-negative.\r\n- State units for the learner when units matter.\r\n- Do not use tolerance to hide an ambiguous method or multiple valid answers."
+        "text": "Capability: numeric.\r\n\r\nAuthor a complete activity envelope: student-facing prompt, numeric config, and feedback.\r\n\r\n- Write the prompt as a clear question the learner reads directly. The planning brief is context only — do not copy it verbatim.\r\n- Provide feedback.correct and feedback.incorrect messages tied to the question and method.\r\n- Put the numeric answer spec in config: target value, tolerance and optional unit.\r\n\r\n- The target value must be finite.\r\n- Tolerance must be finite and non-negative.\r\n- State units for the learner when units matter.\r\n- Do not use tolerance to hide an ambiguous method or multiple valid answers."
       },
       "schema_ref": "learn/numeric/config.v1",
       "payload_schema_ref": "learn/numeric/config.v1",
       "payload_schema": {
+        "type": "object",
+        "required": [
+          "prompt",
+          "config",
+          "feedback"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "config": {
+            "$id": "learn/numeric/config.v1",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "value"
+            ],
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "tolerance": {
+                "type": "number",
+                "minimum": 0
+              },
+              "unit": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "feedback": {
+            "type": "object",
+            "required": [
+              "correct",
+              "incorrect"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "correct": {
+                "type": "string"
+              },
+              "incorrect": {
+                "type": "string"
+              },
+              "partial": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "config_schema": {
         "$id": "learn/numeric/config.v1",
         "type": "object",
         "additionalProperties": false,
@@ -422,9 +727,13 @@
         }
       },
       "field_guidance": {
-        "value": "The exact expected value. NaN and infinity are rejected.",
-        "tolerance": "Absolute tolerance, never negative. Use 0 for an exact answer; do not use tolerance to hide an unclear question.",
-        "unit": "State the unit the learner should answer in. The evaluator compares magnitudes only; it does not convert units."
+        "prompt": "Student-facing question or instruction. Use plain language the learner reads directly; do not copy the planning brief.",
+        "feedback.correct": "Short message shown when the learner answer is fully correct.",
+        "feedback.incorrect": "Short message shown when the learner answer is wrong or incomplete.",
+        "feedback.partial": "Optional message when partial credit applies; omit when the interaction does not support partial scoring.",
+        "config.value": "The exact expected value. NaN and infinity are rejected.",
+        "config.tolerance": "Absolute tolerance, never negative. Use 0 for an exact answer; do not use tolerance to hide an unclear question.",
+        "config.unit": "State the unit the learner should answer in. The evaluator compares magnitudes only; it does not convert units."
       },
       "required_inputs": [
         "teaching_plan_block",
@@ -465,7 +774,7 @@
         "learn.evaluateNumeric"
       ],
       "converter_ref": "learn.numeric.approved_item_converter",
-      "definition_hash": "d7697c89f49baa9a23887e5e3ed94072895e28a2995c7fc841dcd90bd6a4a405",
+      "definition_hash": "85f91648822f3e13ed6fb2e70ebad0130ca4640b9dff1fd82630c66abd8bcbbb",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/NumericInteraction.svelte",
@@ -487,11 +796,101 @@
       ],
       "instructions": {
         "resource_ref": "contracts/authoring/instructions/short-response-writer-v1.txt",
-        "text": "Capability: short-response.\r\n\r\nWrite a short text response interaction.\r\n\r\n- Use `accepted-answers` only for names, terms, or short phrases whose valid wordings can be listed.\r\n- Use `teacher-review` for reasoning, reflection, or explanation.\r\n- Accepted answers must be non-empty and distinct after normalization.\r\n- Do not auto-score broad comprehension with string matching."
+        "text": "Capability: short-response.\r\n\r\nAuthor a complete activity envelope: student-facing prompt, short-response config, and feedback.\r\n\r\n- Write the prompt as a clear question the learner reads directly. The planning brief is context only — do not copy it verbatim.\r\n- Provide feedback.correct and feedback.incorrect messages; use feedback.partial when partial credit applies.\r\n- Put evaluation mode and accepted answers or review guidance in config.\r\n\r\n- Use `accepted-answers` only for names, terms, or short phrases whose valid wordings can be listed.\r\n- Use `teacher-review` for reasoning, reflection, or explanation.\r\n- Accepted answers must be non-empty and distinct after normalization.\r\n- Do not auto-score broad comprehension with string matching."
       },
       "schema_ref": "learn/short-response/config.v1",
       "payload_schema_ref": "learn/short-response/config.v1",
       "payload_schema": {
+        "type": "object",
+        "required": [
+          "prompt",
+          "config",
+          "feedback"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "config": {
+            "$id": "learn/short-response/config.v1",
+            "type": "object",
+            "required": [
+              "evaluation"
+            ],
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "required": [
+                  "evaluation",
+                  "accepted_answers"
+                ],
+                "properties": {
+                  "evaluation": {
+                    "const": "accepted-answers"
+                  },
+                  "accepted_answers": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "case_sensitive": {
+                    "type": "boolean"
+                  },
+                  "max_words": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              },
+              {
+                "additionalProperties": false,
+                "required": [
+                  "evaluation"
+                ],
+                "properties": {
+                  "evaluation": {
+                    "const": "teacher-review"
+                  },
+                  "review_guidance": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "max_words": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            ]
+          },
+          "feedback": {
+            "type": "object",
+            "required": [
+              "correct",
+              "incorrect"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "correct": {
+                "type": "string"
+              },
+              "incorrect": {
+                "type": "string"
+              },
+              "partial": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "config_schema": {
         "$id": "learn/short-response/config.v1",
         "type": "object",
         "required": [
@@ -548,11 +947,15 @@
         ]
       },
       "field_guidance": {
-        "evaluation": "'accepted-answers' for a term, name or short phrase. 'teacher-review' for anything the learner reasons out.",
-        "accepted_answers": "Every wording that should score as correct, including common synonyms. Compared after trimming, whitespace collapsing and case folding.",
-        "review_guidance": "What the teacher should look for. Only meaningful under teacher-review.",
-        "case_sensitive": "Enable only when capitalisation is itself the answer.",
-        "max_words": "Advisory ceiling shown to the learner. It bounds the input, it does not affect scoring."
+        "prompt": "Student-facing question or instruction. Use plain language the learner reads directly; do not copy the planning brief.",
+        "feedback.correct": "Short message shown when the learner answer is fully correct.",
+        "feedback.incorrect": "Short message shown when the learner answer is wrong or incomplete.",
+        "feedback.partial": "Optional message when partial credit applies; omit when the interaction does not support partial scoring.",
+        "config.evaluation": "'accepted-answers' for a term, name or short phrase. 'teacher-review' for anything the learner reasons out.",
+        "config.accepted_answers": "Every wording that should score as correct, including common synonyms. Compared after trimming, whitespace collapsing and case folding.",
+        "config.review_guidance": "What the teacher should look for. Only meaningful under teacher-review.",
+        "config.case_sensitive": "Enable only when capitalisation is itself the answer.",
+        "config.max_words": "Advisory ceiling shown to the learner. It bounds the input, it does not affect scoring."
       },
       "required_inputs": [
         "teaching_plan_block",
@@ -598,7 +1001,7 @@
         "learn.evaluateShortResponse"
       ],
       "converter_ref": "learn.short-response.approved_item_converter",
-      "definition_hash": "3c560ce400a0f80456dbca6e52d79109a5d05a942abe3926a4a96dd826436b07",
+      "definition_hash": "6a0b6fd6a7db9a3758f448f9b92af1751417b1cefff700bcc154b1c8868f6553",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/ShortResponseInteraction.svelte",
@@ -620,11 +1023,77 @@
       ],
       "instructions": {
         "resource_ref": "contracts/authoring/instructions/match-pairs-writer-v1.txt",
-        "text": "Capability: match-pairs.\r\n\r\nWrite a matching interaction between two sets.\r\n\r\n- Each source item must have exactly one correct target.\r\n- Source ids must be unique.\r\n- Labels should be short enough to scan.\r\n- Do not use this when a source can validly match several targets."
+        "text": "Capability: match-pairs.\r\n\r\nAuthor a complete activity envelope: student-facing prompt, match-pairs config, and feedback.\r\n\r\n- Write the prompt as clear matching instructions the learner reads directly. The planning brief is context only — do not copy it verbatim.\r\n- Provide feedback.correct and feedback.incorrect messages tied to the pairs.\r\n- Put pair definitions in config.\r\n\r\n- Each source item must have exactly one correct target.\r\n- Source ids must be unique.\r\n- Labels should be short enough to scan.\r\n- Do not use this when a source can validly match several targets."
       },
       "schema_ref": "learn/match-pairs/config.v1",
       "payload_schema_ref": "learn/match-pairs/config.v1",
       "payload_schema": {
+        "type": "object",
+        "required": [
+          "prompt",
+          "config",
+          "feedback"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "config": {
+            "$id": "learn/match-pairs/config.v1",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "pairs"
+            ],
+            "properties": {
+              "pairs": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "left",
+                    "right"
+                  ],
+                  "properties": {
+                    "left": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "right": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "feedback": {
+            "type": "object",
+            "required": [
+              "correct",
+              "incorrect"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "correct": {
+                "type": "string"
+              },
+              "incorrect": {
+                "type": "string"
+              },
+              "partial": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "config_schema": {
         "$id": "learn/match-pairs/config.v1",
         "type": "object",
         "additionalProperties": false,
@@ -657,7 +1126,11 @@
         }
       },
       "field_guidance": {
-        "pairs": "Each entry links one source id to one target id. Source ids must be unique; a repeated source has no single answer."
+        "prompt": "Student-facing question or instruction. Use plain language the learner reads directly; do not copy the planning brief.",
+        "feedback.correct": "Short message shown when the learner answer is fully correct.",
+        "feedback.incorrect": "Short message shown when the learner answer is wrong or incomplete.",
+        "feedback.partial": "Optional message when partial credit applies; omit when the interaction does not support partial scoring.",
+        "config.pairs": "Each entry links one source id to one target id. Source ids must be unique; a repeated source has no single answer."
       },
       "required_inputs": [
         "teaching_plan_block",
@@ -706,7 +1179,7 @@
         "learn.evaluateMatchPairs"
       ],
       "converter_ref": "learn.match-pairs.approved_item_converter",
-      "definition_hash": "6ad9e6376bdda2e11ffc50e6c33e35b9546252571b997280f9bc1e1ce691b84d",
+      "definition_hash": "6a1a411e8a97c8fc73a9d1727eabfb7ce933d9b764ae5cb71ed5cd8909115d1d",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/MatchPairsInteraction.svelte",
@@ -728,11 +1201,100 @@
       ],
       "instructions": {
         "resource_ref": "contracts/authoring/instructions/classify-writer-v1.txt",
-        "text": "Capability: classify.\r\n\r\nWrite a classification interaction.\r\n\r\n- Declare category ids and labels before item assignments.\r\n- Each item belongs to exactly one category.\r\n- Item ids must be unique.\r\n- Do not use this for overlapping categories or fuzzy judgement calls."
+        "text": "Capability: classify.\r\n\r\nAuthor a complete activity envelope: student-facing prompt, classify config, and feedback.\r\n\r\n- Write the prompt as clear classification instructions the learner reads directly. The planning brief is context only — do not copy it verbatim.\r\n- Provide feedback.correct and feedback.incorrect messages tied to the categories and items.\r\n- Put categories and item assignments in config.\r\n\r\n- Declare category ids and labels before item assignments.\r\n- Each item belongs to exactly one category.\r\n- Item ids must be unique.\r\n- Do not use this for overlapping categories or fuzzy judgement calls."
       },
       "schema_ref": "learn/classify/config.v1",
       "payload_schema_ref": "learn/classify/config.v1",
       "payload_schema": {
+        "type": "object",
+        "required": [
+          "prompt",
+          "config",
+          "feedback"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "config": {
+            "$id": "learn/classify/config.v1",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "pairs"
+            ],
+            "properties": {
+              "pairs": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "left",
+                    "right"
+                  ],
+                  "properties": {
+                    "left": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "right": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              },
+              "categories": {
+                "type": "array",
+                "minItems": 2,
+                "uniqueItems": true,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "label"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "feedback": {
+            "type": "object",
+            "required": [
+              "correct",
+              "incorrect"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "correct": {
+                "type": "string"
+              },
+              "incorrect": {
+                "type": "string"
+              },
+              "partial": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "config_schema": {
         "$id": "learn/classify/config.v1",
         "type": "object",
         "additionalProperties": false,
@@ -788,8 +1350,12 @@
         }
       },
       "field_guidance": {
-        "pairs": "One entry per item: `left` is the item id, `right` is its single category id. The evaluator scores one point per correct assignment.",
-        "categories": "Declare the category ids and labels the learner chooses between."
+        "prompt": "Student-facing question or instruction. Use plain language the learner reads directly; do not copy the planning brief.",
+        "feedback.correct": "Short message shown when the learner answer is fully correct.",
+        "feedback.incorrect": "Short message shown when the learner answer is wrong or incomplete.",
+        "feedback.partial": "Optional message when partial credit applies; omit when the interaction does not support partial scoring.",
+        "config.pairs": "One entry per item: `left` is the item id, `right` is its single category id. The evaluator scores one point per correct assignment.",
+        "config.categories": "Declare the category ids and labels the learner chooses between."
       },
       "required_inputs": [
         "teaching_plan_block",
@@ -849,7 +1415,7 @@
         "learn.evaluateMatchPairs"
       ],
       "converter_ref": "learn.classify.approved_item_converter",
-      "definition_hash": "7965997ed0c9beeef03a9c9b15ce4b31793ac201b8f87c6ea4e87c2dd698bec7",
+      "definition_hash": "72e74cb5afe2f58f43e34de9eb27ab66b7088613ea6cf395caeaa9ec2cee9ddf",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/ClassifyInteraction.svelte",
@@ -871,11 +1437,86 @@
       ],
       "instructions": {
         "resource_ref": "contracts/authoring/instructions/sequence-writer-v1.txt",
-        "text": "Capability: sequence.\r\n\r\nWrite a sequence interaction with one accepted order.\r\n\r\n- Every item id must appear exactly once in the order.\r\n- Labels should be short and distinguishable.\r\n- Use this for temporal, causal, procedural, or staged relationships.\r\n- Do not claim several accepted orders; this contract supports one."
+        "text": "Capability: sequence.\r\n\r\nAuthor a complete activity envelope: student-facing prompt, sequence config, and feedback.\r\n\r\n- Write the prompt as clear ordering instructions the learner reads directly. The planning brief is context only — do not copy it verbatim.\r\n- Provide feedback.correct and feedback.incorrect messages tied to the sequence.\r\n- Put items and the correct order in config.\r\n\r\n- Every item id must appear exactly once in the order.\r\n- Labels should be short and distinguishable.\r\n- Use this for temporal, causal, procedural, or staged relationships.\r\n- Do not claim several accepted orders; this contract supports one."
       },
       "schema_ref": "learn/sequence/config.v1",
       "payload_schema_ref": "learn/sequence/config.v1",
       "payload_schema": {
+        "type": "object",
+        "required": [
+          "prompt",
+          "config",
+          "feedback"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "minLength": 1
+          },
+          "config": {
+            "$id": "learn/sequence/config.v1",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "order"
+            ],
+            "properties": {
+              "order": {
+                "type": "array",
+                "minItems": 2,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "items": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "label"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "feedback": {
+            "type": "object",
+            "required": [
+              "correct",
+              "incorrect"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "correct": {
+                "type": "string"
+              },
+              "incorrect": {
+                "type": "string"
+              },
+              "partial": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "config_schema": {
         "$id": "learn/sequence/config.v1",
         "type": "object",
         "additionalProperties": false,
@@ -917,8 +1558,12 @@
         }
       },
       "field_guidance": {
-        "order": "The one accepted order, as item ids. Alternative valid orders are not supported.",
-        "items": "Labels shown to the learner, keyed by the same ids used in `order`."
+        "prompt": "Student-facing question or instruction. Use plain language the learner reads directly; do not copy the planning brief.",
+        "feedback.correct": "Short message shown when the learner answer is fully correct.",
+        "feedback.incorrect": "Short message shown when the learner answer is wrong or incomplete.",
+        "feedback.partial": "Optional message when partial credit applies; omit when the interaction does not support partial scoring.",
+        "config.order": "The one accepted order, as item ids. Alternative valid orders are not supported.",
+        "config.items": "Labels shown to the learner, keyed by the same ids used in `order`."
       },
       "required_inputs": [
         "teaching_plan_block",
@@ -973,7 +1618,7 @@
         "learn.evaluateSequence"
       ],
       "converter_ref": "learn.sequence.approved_item_converter",
-      "definition_hash": "93a7aab24a6f1ff586076ff8e1d7cfbc5fafd002fb9ce5eb8365a2ce7e3f4f08",
+      "definition_hash": "48b8acf6f339bc6e8c0f50f9edf70b98bee045c0a822a4ccc03e50c53661bf3c",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/SequenceInteraction.svelte",

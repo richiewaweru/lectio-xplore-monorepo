@@ -1,6 +1,10 @@
 Capability: numeric.
 
-Write a numeric-answer interaction with a declared target and optional tolerance.
+Author a complete activity envelope: student-facing prompt, numeric config, and feedback.
+
+- Write the prompt as a clear question the learner reads directly. The planning brief is context only — do not copy it verbatim.
+- Provide feedback.correct and feedback.incorrect messages tied to the question and method.
+- Put the numeric answer spec in config: target value, tolerance and optional unit.
 
 - The target value must be finite.
 - Tolerance must be finite and non-negative.

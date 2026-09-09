@@ -1,6 +1,10 @@
 Capability: short-response.
 
-Write a short text response interaction.
+Author a complete activity envelope: student-facing prompt, short-response config, and feedback.
+
+- Write the prompt as a clear question the learner reads directly. The planning brief is context only — do not copy it verbatim.
+- Provide feedback.correct and feedback.incorrect messages; use feedback.partial when partial credit applies.
+- Put evaluation mode and accepted answers or review guidance in config.
 
 - Use `accepted-answers` only for names, terms, or short phrases whose valid wordings can be listed.
 - Use `teacher-review` for reasoning, reflection, or explanation.

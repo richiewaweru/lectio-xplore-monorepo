@@ -81,6 +81,7 @@ def _complete_definition_payload(writer_card: Mapping[str, Any]) -> dict[str, An
             "schema_ref",
             "payload_schema_ref",
             "payload_schema",
+            "config_schema",
             "field_guidance",
             "required_inputs",
             "requires",

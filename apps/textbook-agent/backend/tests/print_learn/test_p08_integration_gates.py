@@ -97,7 +97,7 @@ MOCKS = {
     "component_selector": "tests.planning.test_path_bridge._fake_component_selector",
 }
 
-_P08_CORE_GENERATED: dict[str, dict] = {
+_P08_CORE_CONFIG: dict[str, dict] = {
     "choice": {
         "options": [{"id": "a", "text": "No light reached the leaf"}, {"id": "b", "text": "The soil ran out of food"}],
         "correct_option_id": "a",
@@ -196,7 +196,16 @@ def _p08_sequence_payload(brief: str) -> dict:
     if len(parts) >= 2:
         items = [{"id": f"step{index}", "label": label} for index, label in enumerate(parts)]
         return {"items": items, "order": [item["id"] for item in items]}
-    return dict(_P08_CORE_GENERATED["sequence"])
+    return dict(_P08_CORE_CONFIG["sequence"])
+
+
+def _p08_interaction_envelope(capability_id: str, *, config: dict, brief: str) -> dict:
+    prompt = brief.strip() or f"Complete this {capability_id.replace('-', ' ')} activity."
+    return {
+        "prompt": prompt,
+        "config": config,
+        "feedback": {"correct": "Correct.", "incorrect": "Try again."},
+    }
 
 
 class P08LearnMockProvider:
@@ -209,9 +218,14 @@ class P08LearnMockProvider:
         self.calls.append(call)
         brief = _p08_brief_from_call(call)
         if call.capability_id == "sequence":
-            return _p08_sequence_payload(brief)
-        if call.capability_id in _P08_CORE_GENERATED:
-            return dict(_P08_CORE_GENERATED[call.capability_id])
+            config = _p08_sequence_payload(brief)
+            return _p08_interaction_envelope("sequence", config=config, brief=brief)
+        if call.capability_id in _P08_CORE_CONFIG:
+            return _p08_interaction_envelope(
+                call.capability_id,
+                config=dict(_P08_CORE_CONFIG[call.capability_id]),
+                brief=brief,
+            )
         template = _P08_CONTENT_PAYLOADS.get(call.capability_id, _P08_CONTENT_PAYLOADS["explanation-block"])
         return _p08_embed_brief(dict(template), brief)
 

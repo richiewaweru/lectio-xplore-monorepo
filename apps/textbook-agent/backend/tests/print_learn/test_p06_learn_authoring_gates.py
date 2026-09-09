@@ -43,7 +43,7 @@ from learn.resources.native_policy import default_learn_policy, policy_version_a
 from infra.authoring import AuthoringProviderCall
 
 
-CORE_PROVIDER_PAYLOADS = {
+CORE_PROVIDER_CONFIG = {
     "choice": {
         "options": [{"id": "soil", "text": "Soil"}, {"id": "air", "text": "Air"}],
         "correct_option_id": "air",
@@ -64,6 +64,9 @@ CORE_PROVIDER_PAYLOADS = {
         "items": [{"id": "egg", "label": "Egg"}, {"id": "larva", "label": "Larva"}, {"id": "pupa", "label": "Pupa"}, {"id": "adult", "label": "Adult"}],
         "order": ["egg", "larva", "pupa", "adult"],
     },
+}
+
+CONTENT_PROVIDER_PAYLOADS = {
     "quiz-check": {
         "question": "What do plants use?",
         "options": [{"text": "Light", "correct": True, "explanation": "Yes."}, {"text": "Noise", "correct": False, "explanation": "No."}],
@@ -84,9 +87,24 @@ CORE_PROVIDER_PAYLOADS = {
 }
 
 
+def _interaction_envelope(capability_id: str) -> dict[str, object]:
+    return {
+        "prompt": f"Complete this {capability_id.replace('-', ' ')} activity.",
+        "config": dict(CORE_PROVIDER_CONFIG[capability_id]),
+        "feedback": {"correct": "Correct.", "incorrect": "Try again."},
+    }
+
+
 class P06Provider:
     async def invoke(self, call: AuthoringProviderCall):
-        return dict(CORE_PROVIDER_PAYLOADS.get(call.capability_id, CORE_PROVIDER_PAYLOADS["explanation-block"]))
+        if call.capability_id in CORE_PROVIDER_CONFIG:
+            return _interaction_envelope(call.capability_id)
+        return dict(
+            CONTENT_PROVIDER_PAYLOADS.get(
+                call.capability_id,
+                CONTENT_PROVIDER_PAYLOADS["explanation-block"],
+            )
+        )
 
 
 async def _author_all_async(orders):

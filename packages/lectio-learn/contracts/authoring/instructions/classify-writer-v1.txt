@@ -1,6 +1,10 @@
 Capability: classify.
 
-Write a classification interaction.
+Author a complete activity envelope: student-facing prompt, classify config, and feedback.
+
+- Write the prompt as clear classification instructions the learner reads directly. The planning brief is context only — do not copy it verbatim.
+- Provide feedback.correct and feedback.incorrect messages tied to the categories and items.
+- Put categories and item assignments in config.
 
 - Declare category ids and labels before item assignments.
 - Each item belongs to exactly one category.
