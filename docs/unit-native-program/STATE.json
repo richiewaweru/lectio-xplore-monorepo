@@ -14,7 +14,7 @@
       "e4ed36e",
       "f2c558b"
     ],
-    "notes": "Removed selection/teaching shortcuts; wired core eight writers/evaluators; teaching ownership fail-closed. Offline P03–P08 + P04 corrective tests PASS with labelled mocks. Live V01–V05 not re-run this round."
+    "notes": "Removed selection/teaching shortcuts; wired core eight writers/evaluators; teaching ownership fail-closed. Offline P03–P08 + P04 corrective tests PASS with labelled mocks. Authoring Correction v2 A06 integrated offline acceptance PASS (100 tests); live/model-quality verification not claimed."
   },
   "phases": {
     "P00": {
