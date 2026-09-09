@@ -1,0 +1,7 @@
+Capability: what-next-bridge.
+
+Write a bridge from this section to the next learning move.
+
+- Summarize what the learner can now use.
+- Preview the next task without teaching it fully.
+- Keep the transition tied to the approved sequence.

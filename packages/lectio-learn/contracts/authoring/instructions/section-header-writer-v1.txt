@@ -1,0 +1,7 @@
+Capability: section-header.
+
+Write a compact section opener that orients the learner to the section's job.
+
+- Keep title and framing tied to the approved teaching block.
+- Do not introduce assessment answers or unsupported facts.
+- Prefer clear signposting over decorative copy.

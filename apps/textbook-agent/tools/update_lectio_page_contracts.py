@@ -19,6 +19,11 @@ SYNC_FILES = (
     "base-print.css",
     "manifest.json",
 )
+GENERATED_SYNC_FILES = {
+    "generated/form-selection-view.v1.json": "form-selection-view.v1.json",
+    "generated/form-writer-view.v1.json": "form-writer-view.v1.json",
+    "generated/intent-object-map.v1.json": "intent-object-map.v1.json",
+}
 
 
 def _sha256(path: Path) -> str:
@@ -72,9 +77,41 @@ def _sync_json_files(source_contracts: Path, target_dir: Path) -> dict[str, dict
             "sha256": hashlib.sha256(payload).hexdigest(),
             "bytes": len(payload),
         }
+    for source_name, target_name in GENERATED_SYNC_FILES.items():
+        source = source_contracts / source_name
+        if not source.exists():
+            raise FileNotFoundError(f"Missing page generated contract: {source}")
+        target = target_dir / target_name
+        payload = source.read_bytes()
+        target.write_bytes(payload)
+        file_meta[target_name] = {
+            "path": target_name,
+            "source_path": source_name,
+            "sha256": hashlib.sha256(payload).hexdigest(),
+            "bytes": len(payload),
+        }
+    authoring_source = source_contracts / "authoring"
+    if authoring_source.exists():
+        for source in sorted(authoring_source.rglob("*")):
+            if not source.is_file():
+                continue
+            rel = source.relative_to(source_contracts).as_posix()
+            target = target_dir / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            payload = source.read_bytes()
+            target.write_bytes(payload)
+            file_meta[rel] = {
+                "path": rel,
+                "sha256": hashlib.sha256(payload).hexdigest(),
+                "bytes": len(payload),
+            }
     # Remove stale json not in sync set (keep sync-manifest.json)
     for stale in target_dir.glob("*.json"):
-        if stale.name not in SYNC_FILES and stale.name != "sync-manifest.json":
+        if (
+            stale.name not in SYNC_FILES
+            and stale.name not in GENERATED_SYNC_FILES.values()
+            and stale.name != "sync-manifest.json"
+        ):
             stale.unlink()
     return file_meta
 

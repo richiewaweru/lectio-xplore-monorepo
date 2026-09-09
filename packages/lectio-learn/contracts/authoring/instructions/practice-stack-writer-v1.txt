@@ -1,0 +1,7 @@
+Capability: practice-stack.
+
+Write a short stack of practice prompts.
+
+- Progress from supported to more independent work when the schema permits it.
+- Keep every prompt tied to the same objective.
+- Do not include questions without enough information to answer.

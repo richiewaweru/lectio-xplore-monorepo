@@ -1,0 +1,8 @@
+Capability: diagram-compare.
+
+Write a comparison diagram payload.
+
+- Compare genuinely parallel dimensions.
+- Keep labels concise and aligned across compared items.
+- Include only relationships the learner is meant to inspect.
+- Do not use this as a generic image placeholder.

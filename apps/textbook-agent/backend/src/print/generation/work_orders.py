@@ -12,6 +12,14 @@ from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
 from print.generation.selection_snapshot import PrintSelectionDecision, PrintSelectionSnapshot
 from print.resources.selection import load_form_writer_view
 
+REGISTERED_PRINT_VALIDATOR_REFS = frozenset(
+    {
+        "print.payload_schema",
+        "print.validate_content",
+        "print.validate_answer_key_integrity",
+    }
+)
+
 
 class PrintWorkOrder(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -29,6 +37,11 @@ class PrintWorkOrder(BaseModel):
     dependency_ids: list[str] = Field(default_factory=list)
     expected_output_schema: dict[str, Any] = Field(default_factory=dict)
     field_guidance: dict[str, Any] = Field(default_factory=dict)
+    authoring_definition: dict[str, Any] = Field(default_factory=dict)
+    instructions: dict[str, Any] | str | None = None
+    required_inputs: list[str] = Field(default_factory=list)
+    modes: list[str] = Field(default_factory=list)
+    validator_refs: list[str] = Field(default_factory=list)
     brief: str = ""
     intent: str = ""
     action: str | None = None
@@ -39,12 +52,39 @@ class WriterRequestLeakError(AssertionError):
     pass
 
 
-def _form_contract_hash(form_id: str, writer_card: Mapping[str, Any]) -> str:
-    payload = {
-        "id": form_id,
-        "payload_schema_ref": writer_card.get("payload_schema_ref"),
-        "payload_schema": writer_card.get("payload_schema"),
+def _complete_definition_payload(writer_card: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        key: writer_card.get(key)
+        for key in (
+            "definition_version",
+            "capability_id",
+            "native_path",
+            "lane",
+            "purpose",
+            "modes",
+            "instructions",
+            "schema_ref",
+            "payload_schema_ref",
+            "payload_schema",
+            "field_guidance",
+            "writer_guidance",
+            "required_inputs",
+            "capacity",
+            "negative_cases",
+            "validator_refs",
+            "converter_ref",
+            "postprocessor_ref",
+            "fragmentation",
+            "emphasis",
+            "placement",
+        )
+        if writer_card.get(key) is not None
     }
+
+
+def _form_contract_hash(form_id: str, writer_card: Mapping[str, Any]) -> str:
+    payload = _complete_definition_payload(writer_card)
+    payload.setdefault("capability_id", form_id)
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
@@ -55,7 +95,34 @@ def _writer_card(form_id: str) -> dict[str, Any]:
     card = forms.get(form_id)
     if not isinstance(card, dict):
         raise KeyError(f"form writer view missing {form_id!r}")
-    return dict(card)
+    out = dict(card)
+    _assert_authoring_definition_ready(form_id, out)
+    return out
+
+
+def _assert_authoring_definition_ready(form_id: str, card: Mapping[str, Any]) -> None:
+    instructions = card.get("instructions")
+    text = ""
+    if isinstance(instructions, Mapping):
+        text = str(instructions.get("text") or "").strip()
+    elif isinstance(instructions, str):
+        text = instructions.strip()
+    if not text:
+        raise ValueError(f"print/{form_id}: missing authoring instructions")
+    if not card.get("payload_schema") and not card.get("payload_schema_ref"):
+        raise ValueError(f"print/{form_id}: missing payload schema")
+    if not card.get("required_inputs"):
+        raise ValueError(f"print/{form_id}: missing required_inputs")
+    if "generate" not in set(card.get("modes") or ()) and "convert-approved" not in set(
+        card.get("modes") or ()
+    ):
+        raise ValueError(f"print/{form_id}: missing supported authoring modes")
+    refs = [str(ref) for ref in (card.get("validator_refs") or [])]
+    if not refs:
+        raise ValueError(f"print/{form_id}: missing validator_refs")
+    unknown = sorted(set(refs) - REGISTERED_PRINT_VALIDATOR_REFS)
+    if unknown:
+        raise ValueError(f"print/{form_id}: unknown validator_refs {unknown}")
 
 
 def _block_index(teaching_plan: TeachingPlan) -> dict[str, tuple[str, TeachingPlanBlock]]:
@@ -83,6 +150,7 @@ def compile_print_work_orders(
         if not isinstance(schema, dict):
             schema = {"$ref": card.get("payload_schema_ref")}
         guidance = card.get("writer_guidance") or card.get("field_guidance") or {}
+        definition = _complete_definition_payload(card)
         deps: list[str] = []
         if block.learner_action is not None:
             deps = list(block.learner_action.dependencies or [])
@@ -101,6 +169,11 @@ def compile_print_work_orders(
                 dependency_ids=deps,
                 expected_output_schema=dict(schema),
                 field_guidance=dict(guidance),
+                authoring_definition=definition,
+                instructions=definition.get("instructions"),
+                required_inputs=list(card.get("required_inputs") or []),
+                modes=list(card.get("modes") or []),
+                validator_refs=list(card.get("validator_refs") or []),
                 brief=block.brief,
                 intent=block.intent,
                 action=action,
@@ -133,6 +206,12 @@ def build_print_writer_request(
         "dependency_ids": list(order.dependency_ids),
         "payload_schema": order.expected_output_schema,
         "field_guidance": order.field_guidance,
+        "authoring_definition": order.authoring_definition,
+        "instructions": order.instructions,
+        "definition_hash": order.capability_contract_hash,
+        "required_inputs": list(order.required_inputs),
+        "modes": list(order.modes),
+        "validator_refs": list(order.validator_refs),
         "allowed_facts": list(allowed_facts or []),
         "terminology": list(terminology or []),
     }

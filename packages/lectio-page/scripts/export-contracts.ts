@@ -14,7 +14,14 @@
  */
 
 import { createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+	copyFileSync,
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	writeFileSync
+} from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -40,6 +47,21 @@ const GENERATED_FILES = [
 	'generated/intent-object-map.v1.json'
 ] as const;
 
+function listFiles(dir: string, prefix: string): string[] {
+	if (!existsSync(dir)) return [];
+	const out: string[] = [];
+	for (const entry of readdirSync(dir, { withFileTypes: true })) {
+		const rel = `${prefix}/${entry.name}`;
+		const full = join(dir, entry.name);
+		if (entry.isDirectory()) {
+			out.push(...listFiles(full, rel));
+		} else {
+			out.push(rel);
+		}
+	}
+	return out.sort();
+}
+
 function argValue(flag: string): string | null {
 	const index = process.argv.indexOf(flag);
 	if (index === -1) return null;
@@ -58,13 +80,15 @@ export function readCatalogueSource(sourceDir: string): CatalogueSource {
 		objects: objectCatalogue.objects,
 		intent_catalogue_version: intentCatalogue.catalogue_version,
 		object_catalogue_version: objectCatalogue.catalogue_version,
-		document_schema: read('lectio-document-v2.schema.json') as JsonObject
+		document_schema: read('lectio-document-v2.schema.json') as JsonObject,
+		authoring_resource_root: sourceDir
 	};
 }
 
 export function exportContracts(sourceDir: string, outDir: string): void {
 	mkdirSync(outDir, { recursive: true });
 	mkdirSync(join(outDir, 'generated'), { recursive: true });
+	mkdirSync(join(outDir, 'authoring', 'instructions'), { recursive: true });
 
 	// base-print.css source of truth is src/lib/print/ — that is the path exported
 	// from package.json. Sync it into the contracts dir before hashing so
@@ -78,6 +102,14 @@ export function exportContracts(sourceDir: string, outDir: string): void {
 		if (resolve(from) !== resolve(to)) copyFileSync(from, to);
 	}
 
+	const instructionFiles = listFiles(join(sourceDir, 'authoring'), 'authoring');
+	for (const name of instructionFiles) {
+		const from = join(sourceDir, name);
+		const to = join(outDir, name);
+		mkdirSync(dirname(to), { recursive: true });
+		if (resolve(from) !== resolve(to)) copyFileSync(from, to);
+	}
+
 	const source = readCatalogueSource(sourceDir);
 	const views: Array<[string, unknown]> = [
 		['generated/form-selection-view.v1.json', buildSelectionView(source)],
@@ -88,7 +120,7 @@ export function exportContracts(sourceDir: string, outDir: string): void {
 		writeFileSync(join(outDir, name), JSON.stringify(view, null, 2) + '\n');
 	}
 
-	const entries = [...AUTHORED_FILES, ...GENERATED_FILES].map((name) => {
+	const entries = [...AUTHORED_FILES, ...instructionFiles, ...GENERATED_FILES].map((name) => {
 		const bytes = readFileSync(join(outDir, name));
 		return {
 			path: name,

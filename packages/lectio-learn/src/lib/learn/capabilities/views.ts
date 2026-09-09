@@ -10,12 +10,76 @@
  * capability records, so a record change cannot leave a view stale.
  */
 
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import type { JsonSchema, LearnCapabilityRecord } from './types';
 
 export const TEACHING_VIEW_VERSION = '1.0.0';
 export const SELECTION_VIEW_VERSION = '1.0.0';
-export const WRITER_VIEW_VERSION = '1.0.0';
+export const WRITER_VIEW_VERSION = '2.0.0';
 export const RUNTIME_VIEW_VERSION = '1.0.0';
+export const AUTHORING_DEFINITION_VERSION = '2.0.0';
+
+type AuthoringMode = 'generate' | 'convert-approved';
+
+export interface AuthoringInstructions {
+	resource_ref: string;
+	text: string;
+}
+
+const LEARN_INSTRUCTION_RESOURCE_IDS = new Set([
+	'choice',
+	'multi-select',
+	'fill-blank',
+	'numeric',
+	'short-response',
+	'match-pairs',
+	'classify',
+	'sequence',
+	'section-header',
+	'hook-hero',
+	'explanation-block',
+	'definition-card',
+	'key-fact',
+	'callout-block',
+	'process-steps',
+	'worked-example-card',
+	'summary-block',
+	'timeline-block',
+	'diagram-compare',
+	'quiz-check',
+	'fill-in-blank',
+	'answer-key',
+	'comparison-grid',
+	'definition-family',
+	'diagram-block',
+	'diagram-series',
+	'glossary-rail',
+	'insight-strip',
+	'interview-anchor',
+	'pitfall-alert',
+	'practice-stack',
+	'prerequisite-strip',
+	'reflection-prompt',
+	'section-divider',
+	'short-answer',
+	'student-textbox',
+	'what-next-bridge'
+]);
+
+const REGISTERED_VALIDATOR_REFS = new Set([
+	'learn.payload_schema',
+	'learn.evaluateChoice',
+	'learn.evaluateMultiSelect',
+	'learn.evaluateFillBlank',
+	'learn.evaluateNumeric',
+	'learn.evaluateShortResponse',
+	'learn.evaluateMatchPairs',
+	'learn.evaluateSequence',
+	'learn.quizContentToInteractionContract',
+	'learn.fillBlankContentToInteractionContract'
+]);
 
 /** A capability a consumer may actually select and run today. */
 export function isSelectable(record: LearnCapabilityRecord): boolean {
@@ -162,14 +226,26 @@ export function buildSelectionView(records: LearnCapabilityRecord[]): LearnSelec
 
 export interface LearnWriterRecord {
 	id: string;
+	definition_version: string;
+	capability_id: string;
+	native_path: 'learn';
+	lane: LearnCapabilityRecord['kind'];
 	purpose: string;
+	modes: AuthoringMode[];
+	instructions: AuthoringInstructions;
+	schema_ref: string;
 	payload_schema_ref: string;
 	payload_schema: JsonSchema;
 	field_guidance: Record<string, string>;
+	required_inputs: string[];
 	requires: string[];
 	capacity: Record<string, number>;
 	negative_cases: string[];
 	examples: unknown[];
+	validator_refs: string[];
+	converter_ref?: string;
+	postprocessor_ref?: string;
+	definition_hash: string;
 	asset_requirements: LearnCapabilityRecord['asset_requirements'];
 	source_refs: string[];
 }
@@ -186,22 +262,153 @@ export interface LearnWriterView {
 	capabilities: Record<string, LearnWriterRecord>;
 }
 
+function stableStringify(value: unknown): string {
+	if (Array.isArray(value)) {
+		return `[${value.map(stableStringify).join(',')}]`;
+	}
+	if (value && typeof value === 'object') {
+		return `{${Object.entries(value as Record<string, unknown>)
+			.filter(([, child]) => child !== undefined)
+			.sort(([a], [b]) => a.localeCompare(b))
+			.map(([key, child]) => `${JSON.stringify(key)}:${stableStringify(child)}`)
+			.join(',')}}`;
+	}
+	return JSON.stringify(value);
+}
+
+function hashDefinition(payload: Record<string, unknown>): string {
+	return createHash('sha256').update(stableStringify(payload)).digest('hex');
+}
+
+function instructionResourceRef(record: LearnCapabilityRecord): string {
+	const id = LEARN_INSTRUCTION_RESOURCE_IDS.has(record.id)
+		? record.id
+		: record.kind === 'content'
+			? 'generic-content'
+			: 'generic-interaction';
+	return `contracts/authoring/instructions/${id}-writer-v1.txt`;
+}
+
+function readPackageResource(resourceRef: string): string {
+	const url = new URL(`../../../../${resourceRef}`, import.meta.url);
+	try {
+		return readFileSync(fileURLToPath(url), 'utf8').trim();
+	} catch (error) {
+		throw new Error(`authoring instruction resource missing: ${resourceRef}`, {
+			cause: error
+		});
+	}
+}
+
+function instructionsFor(record: LearnCapabilityRecord): AuthoringInstructions {
+	if (isSelectable(record) && !LEARN_INSTRUCTION_RESOURCE_IDS.has(record.id)) {
+		throw new Error(`no authoring instruction resource registered for learn/${record.id}`);
+	}
+	const resource_ref = instructionResourceRef(record);
+	return { resource_ref, text: readPackageResource(resource_ref) };
+}
+
+function modesFor(record: LearnCapabilityRecord): AuthoringMode[] {
+	if (record.kind === 'interaction') return ['generate', 'convert-approved'];
+	return ['generate'];
+}
+
+function requiredInputsFor(record: LearnCapabilityRecord): string[] {
+	const base = [
+		'teaching_plan_block',
+		'learn_selection_decision',
+		'lesson_context',
+		'allowed_facts',
+		'terminology'
+	];
+	if (record.kind === 'interaction') {
+		return [...base, 'learner_action', 'approved_items_when_converting'];
+	}
+	return base;
+}
+
+function evaluatorName(contractRef: string | null): string | null {
+	if (!contractRef) return null;
+	return contractRef.split('#')[1] ?? null;
+}
+
+function validatorRefsFor(record: LearnCapabilityRecord): string[] {
+	const refs = ['learn.payload_schema'];
+	const evaluator = evaluatorName(record.evaluation.contract_ref);
+	if (evaluator) refs.push(`learn.${evaluator}`);
+	for (const ref of refs) {
+		if (!REGISTERED_VALIDATOR_REFS.has(ref)) {
+			throw new Error(`unknown validator_ref "${ref}" for learn/${record.id}`);
+		}
+	}
+	return refs;
+}
+
+function converterRefFor(record: LearnCapabilityRecord): string | undefined {
+	const evaluator = evaluatorName(record.evaluation.contract_ref);
+	if (evaluator === 'quizContentToInteractionContract') return 'learn.quizContentToInteractionContract';
+	if (evaluator === 'fillBlankContentToInteractionContract') {
+		return 'learn.fillBlankContentToInteractionContract';
+	}
+	return record.kind === 'interaction' ? `learn.${record.id}.approved_item_converter` : undefined;
+}
+
 export function buildWriterView(records: LearnCapabilityRecord[]): LearnWriterView {
 	const capabilities: Record<string, LearnWriterRecord> = {};
 	for (const record of records) {
-		capabilities[record.id] = {
-			id: record.id,
+		const instructions = instructionsFor(record);
+		const validator_refs = validatorRefsFor(record);
+		const modes = modesFor(record);
+		const required_inputs = requiredInputsFor(record);
+		const converter_ref = converterRefFor(record);
+		const definitionPayload = {
+			definition_version: AUTHORING_DEFINITION_VERSION,
+			capability_id: record.id,
+			native_path: 'learn',
+			lane: record.kind,
 			purpose: record.purpose,
-			payload_schema_ref: record.payload_schema_ref,
+			modes,
+			instructions,
+			schema_ref: record.payload_schema_ref,
 			payload_schema: record.payload_schema,
 			field_guidance: { ...record.field_guidance },
+			required_inputs,
 			requires: [...record.requires],
 			capacity: { ...record.capacity },
 			negative_cases: [...record.negative_cases],
 			examples: record.examples,
+			validator_refs,
+			converter_ref,
+			asset_requirements: record.asset_requirements,
+			evaluation: record.evaluation,
+			allowed_config: record.allowed_config,
+			default_behaviour: record.default_behaviour
+		};
+		capabilities[record.id] = {
+			id: record.id,
+			definition_version: AUTHORING_DEFINITION_VERSION,
+			capability_id: record.id,
+			native_path: 'learn',
+			lane: record.kind,
+			purpose: record.purpose,
+			modes,
+			instructions,
+			schema_ref: record.payload_schema_ref,
+			payload_schema_ref: record.payload_schema_ref,
+			payload_schema: record.payload_schema,
+			field_guidance: { ...record.field_guidance },
+			required_inputs,
+			requires: [...record.requires],
+			capacity: { ...record.capacity },
+			negative_cases: [...record.negative_cases],
+			examples: record.examples,
+			validator_refs,
+			...(converter_ref ? { converter_ref } : {}),
+			definition_hash: hashDefinition(definitionPayload),
 			asset_requirements: record.asset_requirements,
 			source_refs: [
 				record.readiness_evidence.source_path,
+				instructions.resource_ref,
 				record.payload_schema_ref,
 				...(record.evaluation.contract_ref ? [record.evaluation.contract_ref] : [])
 			]

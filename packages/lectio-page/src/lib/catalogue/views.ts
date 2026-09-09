@@ -1,3 +1,7 @@
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import intentCatalogue from '../../../contracts/intent-catalogue.v1.json';
 import objectCatalogue from '../../../contracts/object-catalogue.v1.json';
 import documentSchema from '../../../contracts/lectio-document-v2.schema.json';
@@ -5,8 +9,9 @@ import type { IntentRecord } from './compatibility';
 import type { CapacityLimits, ObjectRecord } from './objects';
 
 export const SELECTION_VIEW_VERSION = '1.0.0';
-export const WRITER_VIEW_VERSION = '1.0.0';
+export const WRITER_VIEW_VERSION = '2.0.0';
 export const INTENT_OBJECT_MAP_VERSION = '1.0.0';
+export const AUTHORING_DEFINITION_VERSION = '2.0.0';
 
 /**
  * The two catalogues plus the document schema, passed explicitly so the
@@ -19,9 +24,46 @@ export interface CatalogueSource {
 	intent_catalogue_version: string;
 	object_catalogue_version: string;
 	document_schema: JsonObject;
+	authoring_resource_root?: string;
 }
 
 type JsonObject = Record<string, unknown>;
+type AuthoringMode = 'generate' | 'convert-approved';
+
+export interface AuthoringInstructions {
+	resource_ref: string;
+	text: string;
+}
+
+const PRINT_INSTRUCTION_RESOURCES: Record<string, string> = {
+	prose: 'contracts/authoring/instructions/prose-writer-v1.txt',
+	list: 'contracts/authoring/instructions/list-writer-v1.txt',
+	table: 'contracts/authoring/instructions/table-writer-v1.txt',
+	figure: 'contracts/authoring/instructions/figure-brief-writer-v1.txt',
+	aside: 'contracts/authoring/instructions/aside-writer-v1.txt',
+	'worked-example': 'contracts/authoring/instructions/worked-example-writer-v1.txt',
+	questions: 'contracts/authoring/instructions/questions-converter-v1.txt',
+	choices: 'contracts/authoring/instructions/choices-converter-v1.txt',
+	heading: 'contracts/authoring/instructions/heading-system-v1.txt',
+	'answer-key': 'contracts/authoring/instructions/answer-key-system-v1.txt'
+};
+
+const PRINT_VALIDATOR_REFS = new Set([
+	'print.payload_schema',
+	'print.validate_content',
+	'print.validate_answer_key_integrity'
+]);
+
+function defaultContractsRoot(): string {
+	if (import.meta.url.startsWith('file:')) {
+		try {
+			return fileURLToPath(new URL('../../../contracts', import.meta.url));
+		} catch {
+			// Vitest can rewrite import.meta.url on Windows; package tests run from package root.
+		}
+	}
+	return join(process.cwd(), 'contracts');
+}
 
 export function catalogueSource(): CatalogueSource {
 	return {
@@ -29,7 +71,8 @@ export function catalogueSource(): CatalogueSource {
 		objects: objectCatalogue.objects as unknown as Record<string, ObjectRecord>,
 		intent_catalogue_version: intentCatalogue.catalogue_version,
 		object_catalogue_version: objectCatalogue.catalogue_version,
-		document_schema: documentSchema as unknown as JsonObject
+		document_schema: documentSchema as unknown as JsonObject,
+		authoring_resource_root: defaultContractsRoot()
 	};
 }
 
@@ -178,15 +221,28 @@ export function buildSelectionView(source: CatalogueSource = catalogueSource()):
 
 export interface FormWriterRecord {
 	id: string;
+	definition_version: string;
+	capability_id: string;
+	native_path: 'print';
+	lane: 'content';
 	purpose: string;
+	modes: AuthoringMode[];
+	instructions: AuthoringInstructions;
+	schema_ref: string;
 	payload_schema_ref: string;
 	/** The exact payload subschema, resolved from the document schema. */
 	payload_schema: JsonObject;
 	/** Shorthand field map kept for humans; `payload_schema` is authoritative. */
 	content_schema: Record<string, string>;
+	field_guidance: Record<string, string>;
 	writer_guidance: Record<string, string>;
+	required_inputs: string[];
 	negative_cases: string[];
 	capacity: CapacityLimits;
+	validator_refs: string[];
+	converter_ref?: string;
+	postprocessor_ref?: string;
+	definition_hash: string;
 	fragmentation: string;
 	emphasis: string;
 	placement: string[];
@@ -225,6 +281,79 @@ function resolveLocalRef(root: JsonObject, pointer: string): JsonObject {
 	return node as JsonObject;
 }
 
+function readPackageResource(resourceRef: string, source: CatalogueSource): string {
+	const root =
+		source.authoring_resource_root ??
+		defaultContractsRoot();
+	const relative = resourceRef.replace(/^contracts\//, '');
+	try {
+		return readFileSync(join(root, relative), 'utf8').trim();
+	} catch (error) {
+		throw new Error(`authoring instruction resource missing: ${resourceRef}`, {
+			cause: error
+		});
+	}
+}
+
+function instructionFor(id: string, source: CatalogueSource): AuthoringInstructions {
+	const resource_ref = PRINT_INSTRUCTION_RESOURCES[id];
+	if (!resource_ref) {
+		throw new Error(`no authoring instruction resource registered for print/${id}`);
+	}
+	return { resource_ref, text: readPackageResource(resource_ref, source) };
+}
+
+function modesFor(id: string): AuthoringMode[] {
+	return id === 'questions' || id === 'choices' || id === 'answer-key'
+		? ['convert-approved']
+		: ['generate'];
+}
+
+function requiredInputsFor(id: string): string[] {
+	const base = [
+		'teaching_plan_block',
+		'form_selection_decision',
+		'lesson_context',
+		'allowed_facts',
+		'terminology'
+	];
+	if (id === 'questions' || id === 'choices' || id === 'answer-key') {
+		return [...base, 'approved_assessment_items'];
+	}
+	return base;
+}
+
+function validatorRefsFor(id: string): string[] {
+	const refs = ['print.payload_schema', 'print.validate_content'];
+	if (id === 'questions' || id === 'choices' || id === 'answer-key') {
+		refs.push('print.validate_answer_key_integrity');
+	}
+	for (const ref of refs) {
+		if (!PRINT_VALIDATOR_REFS.has(ref)) {
+			throw new Error(`unknown validator_ref "${ref}" for print/${id}`);
+		}
+	}
+	return refs;
+}
+
+function stableStringify(value: unknown): string {
+	if (Array.isArray(value)) {
+		return `[${value.map(stableStringify).join(',')}]`;
+	}
+	if (value && typeof value === 'object') {
+		return `{${Object.entries(value as Record<string, unknown>)
+			.filter(([, child]) => child !== undefined)
+			.sort(([a], [b]) => a.localeCompare(b))
+			.map(([key, child]) => `${JSON.stringify(key)}:${stableStringify(child)}`)
+			.join(',')}}`;
+	}
+	return JSON.stringify(value);
+}
+
+function hashDefinition(payload: Record<string, unknown>): string {
+	return createHash('sha256').update(stableStringify(payload)).digest('hex');
+}
+
 export function buildWriterRecord(
 	id: string,
 	source: CatalogueSource = catalogueSource()
@@ -248,15 +377,60 @@ export function buildWriterRecord(
 		);
 	}
 
+	const instructions = instructionFor(id, source);
+	const fieldGuidance = { ...record.writer_guidance };
+	const validator_refs = validatorRefsFor(id);
+	const schema_ref = record.payload_schema_ref;
+	const payload_schema = resolveLocalRef(source.document_schema, `#${pointer}`);
+	const definitionPayload = {
+		definition_version: AUTHORING_DEFINITION_VERSION,
+		capability_id: id,
+		native_path: 'print',
+		lane: 'content',
+		purpose: record.holds,
+		modes: modesFor(id),
+		instructions,
+		schema_ref,
+		payload_schema,
+		field_guidance: fieldGuidance,
+		required_inputs: requiredInputsFor(id),
+		capacity: { ...(record.capacity ?? {}) },
+		negative_cases: [...(record.negative_cases ?? [])],
+		validator_refs,
+		converter_ref:
+			id === 'questions' || id === 'choices'
+				? 'print.approved_assessment_converter'
+				: undefined,
+		postprocessor_ref: id === 'figure' ? 'print.figure_asset_postprocessor' : undefined,
+		fragmentation: record.fragmentation,
+		emphasis: record.emphasis,
+		placement: [...record.placement]
+	};
+
 	return {
 		id,
+		definition_version: AUTHORING_DEFINITION_VERSION,
+		capability_id: id,
+		native_path: 'print',
+		lane: 'content',
 		purpose: record.holds,
+		modes: modesFor(id),
+		instructions,
+		schema_ref,
 		payload_schema_ref: record.payload_schema_ref,
-		payload_schema: resolveLocalRef(source.document_schema, `#${pointer}`),
+		payload_schema,
 		content_schema: { ...record.content_schema },
-		writer_guidance: { ...record.writer_guidance },
+		field_guidance: fieldGuidance,
+		writer_guidance: fieldGuidance,
+		required_inputs: requiredInputsFor(id),
 		negative_cases: [...(record.negative_cases ?? [])],
 		capacity: { ...(record.capacity ?? {}) },
+		validator_refs,
+		...(definitionPayload.converter_ref ? { converter_ref: definitionPayload.converter_ref } : {}),
+		...(definitionPayload.postprocessor_ref
+			? { postprocessor_ref: definitionPayload.postprocessor_ref }
+			: {}),
+		definition_hash: hashDefinition(definitionPayload),
 		fragmentation: record.fragmentation,
 		emphasis: record.emphasis,
 		placement: [...record.placement],

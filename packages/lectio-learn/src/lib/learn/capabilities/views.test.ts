@@ -232,7 +232,20 @@ describe('writer and runtime views', () => {
 		for (const record of records) {
 			const entry = view.capabilities[record.id];
 			expect(entry, record.id).toBeDefined();
+			expect(entry!.definition_version).toBe('2.0.0');
+			expect(entry!.capability_id).toBe(record.id);
+			expect(entry!.native_path).toBe('learn');
+			expect(entry!.lane).toBe(record.kind);
+			expect(entry!.modes.length, record.id).toBeGreaterThan(0);
+			expect(entry!.instructions.text.length, record.id).toBeGreaterThan(20);
+			expect(entry!.instructions.resource_ref, record.id).toMatch(
+				/^contracts\/authoring\/instructions\//
+			);
+			expect(entry!.schema_ref, record.id).toBe(record.payload_schema_ref);
 			expect(entry!.payload_schema_ref, record.id).toBe(record.payload_schema_ref);
+			expect(entry!.required_inputs.length, record.id).toBeGreaterThan(0);
+			expect(entry!.validator_refs, record.id).toContain('learn.payload_schema');
+			expect(entry!.definition_hash, record.id).toMatch(/^[0-9a-f]{64}$/);
 			expect(entry!.source_refs.length, record.id).toBeGreaterThan(0);
 		}
 	});

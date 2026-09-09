@@ -245,6 +245,16 @@ def project_writer_contract(
     intent_catalogue: Mapping[str, Any] | None = None,
     object_catalogue: Mapping[str, Any] | None = None,
 ) -> WriterContractProjection:
+    try:
+        from print.resources.selection import load_form_writer_view
+
+        writer_view = load_form_writer_view().get("forms") or {}
+        writer_card = writer_view.get(object_id)
+        if isinstance(writer_card, dict):
+            return writer_card  # type: ignore[return-value]
+    except Exception:
+        pass
+
     intents_doc = intent_catalogue or get_intent_catalogue()
     objects_doc = object_catalogue or get_object_catalogue()
     objects = objects_doc.get("objects") or {}

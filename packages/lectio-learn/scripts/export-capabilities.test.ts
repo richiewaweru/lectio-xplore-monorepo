@@ -20,6 +20,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = join(ROOT, 'src/lib/learn/capabilities/interactions.ts');
+const CHOICE_INSTRUCTIONS = join(ROOT, 'contracts/authoring/instructions/choice-writer-v1.txt');
 
 type JsonObject = Record<string, unknown>;
 
@@ -79,7 +80,11 @@ describe('learn capability export (P01-K01)', () => {
 		}
 		const manifest = readJson(join(first, 'learn-capability-manifest.json'));
 		const artifacts = manifest.artifacts as ManifestEntry[];
-		expect(artifacts.map((entry) => entry.file).sort()).toEqual([...ARTIFACTS].sort());
+		const files = artifacts.map((entry) => entry.file).sort();
+		for (const file of ARTIFACTS) {
+			expect(files, file).toContain(file);
+		}
+		expect(files.some((file) => file.startsWith('authoring/instructions/'))).toBe(true);
 		for (const entry of artifacts) {
 			expect(entry.sha256, entry.file).toMatch(/^[0-9a-f]{64}$/);
 			const serialized = readFileSync(join(first, entry.file), 'utf8');
@@ -136,5 +141,31 @@ describe('learn capability export (P01-K01)', () => {
 		expect(readFileSync(join(restored, 'learn-capabilities.v1.json'), 'utf8')).toBe(
 			readFileSync(join(first, 'learn-capabilities.v1.json'), 'utf8')
 		);
+	}, 180000);
+
+	it('propagates a package instruction change into writer request definitions', () => {
+		const original = readFileSync(CHOICE_INSTRUCTIONS, 'utf8');
+		const marker = 'P01-A01 instruction marker.';
+		const mutated = tempOut();
+		try {
+			writeFileSync(CHOICE_INSTRUCTIONS, `${original}\n\n${marker}\n`, 'utf8');
+			runExport(mutated);
+
+			const writer = readJson(join(mutated, 'learn-writer-view.v1.json'));
+			const choice = (
+				writer.capabilities as Record<
+					string,
+					{ instructions: { text: string }; definition_hash: string }
+				>
+			).choice;
+			const baseline = readJson(join(first, 'learn-writer-view.v1.json'));
+			const baselineChoice = (
+				baseline.capabilities as Record<string, { definition_hash: string }>
+			).choice;
+			expect(choice.instructions.text).toContain(marker);
+			expect(choice.definition_hash).not.toBe(baselineChoice.definition_hash);
+		} finally {
+			writeFileSync(CHOICE_INSTRUCTIONS, original, 'utf8');
+		}
 	}, 180000);
 });

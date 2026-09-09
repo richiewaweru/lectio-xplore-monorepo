@@ -1,0 +1,5 @@
+Assigned object: heading.
+
+Headings are structural document chrome, not generated teaching content. A writer must preserve the supplied title and level from the approved plan.
+
+Output must validate against the heading payload schema.

@@ -1,0 +1,8 @@
+Capability: sequence.
+
+Write a sequence interaction with one accepted order.
+
+- Every item id must appear exactly once in the order.
+- Labels should be short and distinguishable.
+- Use this for temporal, causal, procedural, or staged relationships.
+- Do not claim several accepted orders; this contract supports one.

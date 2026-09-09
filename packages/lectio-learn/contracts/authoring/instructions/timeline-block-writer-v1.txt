@@ -1,0 +1,7 @@
+Capability: timeline-block.
+
+Write a timeline for ordered events, phases, or stages.
+
+- Entries must have a defensible order.
+- Keep labels short and dates or stage names stable.
+- Do not use a timeline for unordered categories or unrelated facts.

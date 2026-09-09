@@ -1,10 +1,23 @@
 {
   "view": "writer",
-  "view_version": "1.0.0",
+  "view_version": "2.0.0",
   "capabilities": {
     "choice": {
       "id": "choice",
+      "definition_version": "2.0.0",
+      "capability_id": "choice",
+      "native_path": "learn",
+      "lane": "interaction",
       "purpose": "Let a learner choose the one correct option from a closed set.",
+      "modes": [
+        "generate",
+        "convert-approved"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/choice-writer-v1.txt",
+        "text": "Capability: choice.\r\n\r\nWrite a single-answer closed choice interaction.\r\n\r\n- Use at least two options with unique stable ids.\r\n- Exactly one option is correct.\r\n- Distractors must be plausible and tied to a stateable misconception.\r\n- Do not use this for questions with several defensible answers."
+      },
+      "schema_ref": "learn/choice/config.v1",
       "payload_schema_ref": "learn/choice/config.v1",
       "payload_schema": {
         "$id": "learn/choice/config.v1",
@@ -58,6 +71,15 @@
         "correct_option_id": "Must equal the id of exactly one declared option.",
         "presentation": "'image' renders options as pictures; evaluation is identical, so do not author a separate kind for it."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology",
+        "learner_action",
+        "approved_items_when_converting"
+      ],
       "requires": [
         "at least two options with unique non-empty ids",
         "exactly one correct_option_id, and it must name a declared option",
@@ -96,16 +118,36 @@
           "correct_option_id": "air"
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema",
+        "learn.evaluateChoice"
+      ],
+      "converter_ref": "learn.choice.approved_item_converter",
+      "definition_hash": "3136cfa60aaa6192063cab42a5b2e39392b0ffe56d4f48a1b90a8d5e0962a16f",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/ChoiceInteraction.svelte",
+        "contracts/authoring/instructions/choice-writer-v1.txt",
         "learn/choice/config.v1",
         "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateChoice"
       ]
     },
     "multi-select": {
       "id": "multi-select",
+      "definition_version": "2.0.0",
+      "capability_id": "multi-select",
+      "native_path": "learn",
+      "lane": "interaction",
       "purpose": "Let a learner choose every option that satisfies the prompt.",
+      "modes": [
+        "generate",
+        "convert-approved"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/multi-select-writer-v1.txt",
+        "text": "Capability: multi-select.\r\n\r\nWrite a closed interaction where the learner selects every correct option.\r\n\r\n- Include three to six independent options.\r\n- Use at least two correct option ids.\r\n- Every correct id must name a declared option.\r\n- Do not use this when exactly one answer is correct."
+      },
+      "schema_ref": "learn/multi-select/config.v1",
       "payload_schema_ref": "learn/multi-select/config.v1",
       "payload_schema": {
         "$id": "learn/multi-select/config.v1",
@@ -157,6 +199,15 @@
         "options": "Independent candidates. Do not include an option that implies another.",
         "correct_option_ids": "Two or more declared option ids. A single correct id belongs to the choice kind instead."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology",
+        "learner_action",
+        "approved_items_when_converting"
+      ],
       "requires": [
         "at least two options with unique non-empty ids",
         "every correct_option_id must name a declared option",
@@ -199,16 +250,36 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema",
+        "learn.evaluateMultiSelect"
+      ],
+      "converter_ref": "learn.multi-select.approved_item_converter",
+      "definition_hash": "8afa0378d4b35c391aeb50697c523a8a44ed61160401cb26303096f0072ca4e0",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/MultiSelectInteraction.svelte",
+        "contracts/authoring/instructions/multi-select-writer-v1.txt",
         "learn/multi-select/config.v1",
         "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateMultiSelect"
       ]
     },
     "fill-blank": {
       "id": "fill-blank",
+      "definition_version": "2.0.0",
+      "capability_id": "fill-blank",
+      "native_path": "learn",
+      "lane": "interaction",
       "purpose": "Have a learner supply the missing terms inside a given structure.",
+      "modes": [
+        "generate",
+        "convert-approved"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/fill-blank-writer-v1.txt",
+        "text": "Capability: fill-blank.\r\n\r\nWrite a fill-in-the-blank interaction with enumerable accepted answers.\r\n\r\n- Declare one answer entry per blank in reading order.\r\n- Use stable blank ids when the rendered text identifies blanks.\r\n- Include genuine alternatives only when both wordings should score correct.\r\n- Do not use this for open reasoning, judgement, or sentence-length answers."
+      },
+      "schema_ref": "learn/fill-blank/config.v1",
       "payload_schema_ref": "learn/fill-blank/config.v1",
       "payload_schema": {
         "$id": "learn/fill-blank/config.v1",
@@ -258,6 +329,15 @@
         "blank_ids": "Stable ids so per-blank feedback survives a re-render.",
         "case_sensitive": "Leave false unless capitalisation is the thing being assessed. Answers are compared after trimming and whitespace collapsing."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology",
+        "learner_action",
+        "approved_items_when_converting"
+      ],
       "requires": [
         "one accepted-answer entry per blank",
         "blank_ids, when present, must be unique and match the answer count",
@@ -289,16 +369,36 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema",
+        "learn.evaluateFillBlank"
+      ],
+      "converter_ref": "learn.fill-blank.approved_item_converter",
+      "definition_hash": "6ae68003e679f5d189a51057dfc7596f32b932390bdf11f3d1efb2d51b610f54",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateFillBlank",
+        "contracts/authoring/instructions/fill-blank-writer-v1.txt",
         "learn/fill-blank/config.v1",
         "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateFillBlank"
       ]
     },
     "numeric": {
       "id": "numeric",
+      "definition_version": "2.0.0",
+      "capability_id": "numeric",
+      "native_path": "learn",
+      "lane": "interaction",
       "purpose": "Collect a numeric answer and score it within a declared tolerance.",
+      "modes": [
+        "generate",
+        "convert-approved"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/numeric-writer-v1.txt",
+        "text": "Capability: numeric.\r\n\r\nWrite a numeric-answer interaction with a declared target and optional tolerance.\r\n\r\n- The target value must be finite.\r\n- Tolerance must be finite and non-negative.\r\n- State units for the learner when units matter.\r\n- Do not use tolerance to hide an ambiguous method or multiple valid answers."
+      },
+      "schema_ref": "learn/numeric/config.v1",
       "payload_schema_ref": "learn/numeric/config.v1",
       "payload_schema": {
         "$id": "learn/numeric/config.v1",
@@ -326,6 +426,15 @@
         "tolerance": "Absolute tolerance, never negative. Use 0 for an exact answer; do not use tolerance to hide an unclear question.",
         "unit": "State the unit the learner should answer in. The evaluator compares magnitudes only; it does not convert units."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology",
+        "learner_action",
+        "approved_items_when_converting"
+      ],
       "requires": [
         "a finite target value",
         "a non-negative finite tolerance when tolerance is given",
@@ -351,16 +460,36 @@
           "unit": "m/s^2"
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema",
+        "learn.evaluateNumeric"
+      ],
+      "converter_ref": "learn.numeric.approved_item_converter",
+      "definition_hash": "d7697c89f49baa9a23887e5e3ed94072895e28a2995c7fc841dcd90bd6a4a405",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/NumericInteraction.svelte",
+        "contracts/authoring/instructions/numeric-writer-v1.txt",
         "learn/numeric/config.v1",
         "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateNumeric"
       ]
     },
     "short-response": {
       "id": "short-response",
+      "definition_version": "2.0.0",
+      "capability_id": "short-response",
+      "native_path": "learn",
+      "lane": "interaction",
       "purpose": "Collect a short written answer, scored against declared accepted answers or read by a teacher.",
+      "modes": [
+        "generate",
+        "convert-approved"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/short-response-writer-v1.txt",
+        "text": "Capability: short-response.\r\n\r\nWrite a short text response interaction.\r\n\r\n- Use `accepted-answers` only for names, terms, or short phrases whose valid wordings can be listed.\r\n- Use `teacher-review` for reasoning, reflection, or explanation.\r\n- Accepted answers must be non-empty and distinct after normalization.\r\n- Do not auto-score broad comprehension with string matching."
+      },
+      "schema_ref": "learn/short-response/config.v1",
       "payload_schema_ref": "learn/short-response/config.v1",
       "payload_schema": {
         "$id": "learn/short-response/config.v1",
@@ -425,6 +554,15 @@
         "case_sensitive": "Enable only when capitalisation is itself the answer.",
         "max_words": "Advisory ceiling shown to the learner. It bounds the input, it does not affect scoring."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology",
+        "learner_action",
+        "approved_items_when_converting"
+      ],
       "requires": [
         "evaluation must be 'accepted-answers' or 'teacher-review'",
         "accepted-answers mode requires a non-empty, normalization-unique accepted_answers list",
@@ -455,16 +593,36 @@
           "review_guidance": "Look for a stated mechanism linking light energy to glucose."
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema",
+        "learn.evaluateShortResponse"
+      ],
+      "converter_ref": "learn.short-response.approved_item_converter",
+      "definition_hash": "3c560ce400a0f80456dbca6e52d79109a5d05a942abe3926a4a96dd826436b07",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/ShortResponseInteraction.svelte",
+        "contracts/authoring/instructions/short-response-writer-v1.txt",
         "learn/short-response/config.v1",
         "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateShortResponse"
       ]
     },
     "match-pairs": {
       "id": "match-pairs",
+      "definition_version": "2.0.0",
+      "capability_id": "match-pairs",
+      "native_path": "learn",
+      "lane": "interaction",
       "purpose": "Have a learner connect each item to its counterpart.",
+      "modes": [
+        "generate",
+        "convert-approved"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/match-pairs-writer-v1.txt",
+        "text": "Capability: match-pairs.\r\n\r\nWrite a matching interaction between two sets.\r\n\r\n- Each source item must have exactly one correct target.\r\n- Source ids must be unique.\r\n- Labels should be short enough to scan.\r\n- Do not use this when a source can validly match several targets."
+      },
+      "schema_ref": "learn/match-pairs/config.v1",
       "payload_schema_ref": "learn/match-pairs/config.v1",
       "payload_schema": {
         "$id": "learn/match-pairs/config.v1",
@@ -501,6 +659,15 @@
       "field_guidance": {
         "pairs": "Each entry links one source id to one target id. Source ids must be unique; a repeated source has no single answer."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology",
+        "learner_action",
+        "approved_items_when_converting"
+      ],
       "requires": [
         "unique source ids",
         "every submitted link must reference a declared source and a declared target",
@@ -534,16 +701,36 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema",
+        "learn.evaluateMatchPairs"
+      ],
+      "converter_ref": "learn.match-pairs.approved_item_converter",
+      "definition_hash": "6ad9e6376bdda2e11ffc50e6c33e35b9546252571b997280f9bc1e1ce691b84d",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/MatchPairsInteraction.svelte",
+        "contracts/authoring/instructions/match-pairs-writer-v1.txt",
         "learn/match-pairs/config.v1",
         "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateMatchPairs"
       ]
     },
     "classify": {
       "id": "classify",
+      "definition_version": "2.0.0",
+      "capability_id": "classify",
+      "native_path": "learn",
+      "lane": "interaction",
       "purpose": "Have a learner assign each item to exactly one named category.",
+      "modes": [
+        "generate",
+        "convert-approved"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/classify-writer-v1.txt",
+        "text": "Capability: classify.\r\n\r\nWrite a classification interaction.\r\n\r\n- Declare category ids and labels before item assignments.\r\n- Each item belongs to exactly one category.\r\n- Item ids must be unique.\r\n- Do not use this for overlapping categories or fuzzy judgement calls."
+      },
+      "schema_ref": "learn/classify/config.v1",
       "payload_schema_ref": "learn/classify/config.v1",
       "payload_schema": {
         "$id": "learn/classify/config.v1",
@@ -604,6 +791,15 @@
         "pairs": "One entry per item: `left` is the item id, `right` is its single category id. The evaluator scores one point per correct assignment.",
         "categories": "Declare the category ids and labels the learner chooses between."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology",
+        "learner_action",
+        "approved_items_when_converting"
+      ],
       "requires": [
         "single-category membership per item",
         "unique item ids",
@@ -648,16 +844,36 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema",
+        "learn.evaluateMatchPairs"
+      ],
+      "converter_ref": "learn.classify.approved_item_converter",
+      "definition_hash": "7965997ed0c9beeef03a9c9b15ce4b31793ac201b8f87c6ea4e87c2dd698bec7",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/ClassifyInteraction.svelte",
+        "contracts/authoring/instructions/classify-writer-v1.txt",
         "learn/classify/config.v1",
         "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateMatchPairs"
       ]
     },
     "sequence": {
       "id": "sequence",
+      "definition_version": "2.0.0",
+      "capability_id": "sequence",
+      "native_path": "learn",
+      "lane": "interaction",
       "purpose": "Let a learner reconstruct a defensible order.",
+      "modes": [
+        "generate",
+        "convert-approved"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/sequence-writer-v1.txt",
+        "text": "Capability: sequence.\r\n\r\nWrite a sequence interaction with one accepted order.\r\n\r\n- Every item id must appear exactly once in the order.\r\n- Labels should be short and distinguishable.\r\n- Use this for temporal, causal, procedural, or staged relationships.\r\n- Do not claim several accepted orders; this contract supports one."
+      },
+      "schema_ref": "learn/sequence/config.v1",
       "payload_schema_ref": "learn/sequence/config.v1",
       "payload_schema": {
         "$id": "learn/sequence/config.v1",
@@ -704,6 +920,15 @@
         "order": "The one accepted order, as item ids. Alternative valid orders are not supported.",
         "items": "Labels shown to the learner, keyed by the same ids used in `order`."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology",
+        "learner_action",
+        "approved_items_when_converting"
+      ],
       "requires": [
         "unique item ids",
         "the expected order must cover every item exactly once",
@@ -743,16 +968,36 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema",
+        "learn.evaluateSequence"
+      ],
+      "converter_ref": "learn.sequence.approved_item_converter",
+      "definition_hash": "93a7aab24a6f1ff586076ff8e1d7cfbc5fafd002fb9ce5eb8365a2ce7e3f4f08",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/SequenceInteraction.svelte",
+        "contracts/authoring/instructions/sequence-writer-v1.txt",
         "learn/sequence/config.v1",
         "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateSequence"
       ]
     },
     "image-hotspot": {
       "id": "image-hotspot",
+      "definition_version": "2.0.0",
+      "capability_id": "image-hotspot",
+      "native_path": "learn",
+      "lane": "interaction",
       "purpose": "Have a learner identify the correct region of a given visual.",
+      "modes": [
+        "generate",
+        "convert-approved"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/generic-interaction-writer-v1.txt",
+        "text": "Capability: generic Learn interaction.\r\n\r\nThis interaction is not generation-enabled by native policy today. Preserve its package schema and readiness blockers; do not generate without an explicit package-owned instruction resource."
+      },
+      "schema_ref": "learn/image-hotspot/config.v1",
       "payload_schema_ref": "learn/image-hotspot/config.v1",
       "payload_schema": {
         "$id": "learn/image-hotspot/config.v1",
@@ -825,6 +1070,15 @@
         "regions": "Percentages of the asset’s intrinsic box, origin top-left. Coordinates must be verified against the actual asset, not estimated.",
         "correct_option_id": "Must name one declared region."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology",
+        "learner_action",
+        "approved_items_when_converting"
+      ],
       "requires": [
         "an existing asset id with alt text",
         "at least two regions with unique ids and coordinates inside the asset box",
@@ -842,6 +1096,12 @@
         "correct_option_id naming an undeclared region"
       ],
       "examples": [],
+      "validator_refs": [
+        "learn.payload_schema",
+        "learn.evaluateChoice"
+      ],
+      "converter_ref": "learn.image-hotspot.approved_item_converter",
+      "definition_hash": "91305fd3a34615247c060866c0fa432549d8a57bf94a06fb849f6f75a3cdbdd2",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -853,13 +1113,27 @@
       },
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/ImageHotspotInteraction.svelte",
+        "contracts/authoring/instructions/generic-interaction-writer-v1.txt",
         "learn/image-hotspot/config.v1",
         "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateChoice"
       ]
     },
     "drag-label": {
       "id": "drag-label",
+      "definition_version": "2.0.0",
+      "capability_id": "drag-label",
+      "native_path": "learn",
+      "lane": "interaction",
       "purpose": "Have a learner attach each label to its correct target on a visual.",
+      "modes": [
+        "generate",
+        "convert-approved"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/generic-interaction-writer-v1.txt",
+        "text": "Capability: generic Learn interaction.\r\n\r\nThis interaction is not generation-enabled by native policy today. Preserve its package schema and readiness blockers; do not generate without an explicit package-owned instruction resource."
+      },
+      "schema_ref": "learn/drag-label/config.v1",
       "payload_schema_ref": "learn/drag-label/config.v1",
       "payload_schema": {
         "$id": "learn/drag-label/config.v1",
@@ -915,6 +1189,15 @@
         "pairs": "`left` is the label id, `right` is the target id it belongs to.",
         "image": "Reference an asset that already exists, with alt text describing what it carries."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology",
+        "learner_action",
+        "approved_items_when_converting"
+      ],
       "requires": [
         "an existing asset id with alt text",
         "unique label ids",
@@ -931,6 +1214,12 @@
         "the same label placed twice"
       ],
       "examples": [],
+      "validator_refs": [
+        "learn.payload_schema",
+        "learn.evaluateMatchPairs"
+      ],
+      "converter_ref": "learn.drag-label.approved_item_converter",
+      "definition_hash": "bbc1230a0867107365fe9163bf8cf4b446628ea192f093ba0955d7f2679719ab",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -942,13 +1231,26 @@
       },
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/DragLabelInteraction.svelte",
+        "contracts/authoring/instructions/generic-interaction-writer-v1.txt",
         "learn/drag-label/config.v1",
         "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateMatchPairs"
       ]
     },
     "section-header": {
       "id": "section-header",
+      "definition_version": "2.0.0",
+      "capability_id": "section-header",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Opens a section with title, subject, objective, and level indicators",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/section-header-writer-v1.txt",
+        "text": "Capability: section-header.\r\n\r\nWrite a compact section opener that orients the learner to the section's job.\r\n\r\n- Keep title and framing tied to the approved teaching block.\r\n- Do not introduce assessment answers or unsupported facts.\r\n- Prefer clear signposting over decorative copy."
+      },
+      "schema_ref": "section-content-schema.json#/properties/header",
       "payload_schema_ref": "section-content-schema.json#/properties/header",
       "payload_schema": {
         "$ref": "#/definitions/SectionHeaderContent"
@@ -962,6 +1264,13 @@
         "objectives": "Optional learning objective strings. Format: structured_array. Plain text bullet lines.",
         "level_pills": "Optional difficulty pills with labels. Format: structured_array. Structured items with label and warm/medium/cold variant."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Keep title concise; subtitle optional for tonal context."
       ],
@@ -978,15 +1287,32 @@
           "grade_band": "secondary"
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "840e007c8aeb2371476e69619c791b234f68306976cdd6b8c791dc944b996b96",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/section-header",
+        "contracts/authoring/instructions/section-header-writer-v1.txt",
         "section-content-schema.json#/properties/header"
       ]
     },
     "hook-hero": {
       "id": "hook-hero",
+      "definition_version": "2.0.0",
+      "capability_id": "hook-hero",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Creates felt need before explanation arrives",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/hook-hero-writer-v1.txt",
+        "text": "Capability: hook-hero.\r\n\r\nWrite an engaging opening anchor.\r\n\r\n- Use the approved concrete example or problem.\r\n- Make the hook serve the objective, not entertainment alone.\r\n- Keep claims factual and within the supplied source scope."
+      },
+      "schema_ref": "section-content-schema.json#/properties/hook",
       "payload_schema_ref": "section-content-schema.json#/properties/hook",
       "payload_schema": {
         "$ref": "#/definitions/HookHeroContent"
@@ -1002,6 +1328,13 @@
         "svg_content": "Optional inline SVG markup. Format: plain_text. Sanitized SVG inserted when present.",
         "quote_attribution": "Attribution line for quote hooks. Format: plain_text. Plain text."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Anchor should be short and specific to the section concept.",
         "Match optional payloads to the selected hook type."
@@ -1027,15 +1360,32 @@
           }
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "99013a85fb3a90f4bac73c2b57f2628a9937053e26a802bb1771da4529322df2",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/hook-hero",
+        "contracts/authoring/instructions/hook-hero-writer-v1.txt",
         "section-content-schema.json#/properties/hook"
       ]
     },
     "explanation-block": {
       "id": "explanation-block",
+      "definition_version": "2.0.0",
+      "capability_id": "explanation-block",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Sustained prose that builds a mental model",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/explanation-block-writer-v1.txt",
+        "text": "Capability: explanation-block.\r\n\r\nWrite explanatory lesson content.\r\n\r\n- Each paragraph should advance the selected intent.\r\n- Make causal, contrastive, or procedural links explicit when the intent calls for them.\r\n- Keep terminology consistent with the supplied lesson context.\r\n- Do not write final interaction payloads inside prose."
+      },
+      "schema_ref": "section-content-schema.json#/properties/explanation",
       "payload_schema_ref": "section-content-schema.json#/properties/explanation",
       "payload_schema": {
         "$ref": "#/definitions/ExplanationContent"
@@ -1045,6 +1395,13 @@
         "emphasis": "Phrases highlighted inside the explanation body. Format: plain_phrase_list. Lectio highlights matching phrases in the body.",
         "callouts": "Optional sideline notes with a tone tag and text. Format: structured_array. Displayed as optional notes associated with the explanation block."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Put the primary teaching narrative in body.",
         "Use emphasis for concepts that should visually pop when they recur in body."
@@ -1060,15 +1417,32 @@
           "emphasis": []
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "6576589f7a83be257d0fb1d69b38ead4fb30c0b56dd180b2301506ec81735648",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/explanation-block",
+        "contracts/authoring/instructions/explanation-block-writer-v1.txt",
         "section-content-schema.json#/properties/explanation"
       ]
     },
     "prerequisite-strip": {
       "id": "prerequisite-strip",
+      "definition_version": "2.0.0",
+      "capability_id": "prerequisite-strip",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Lists assumed knowledge with optional refresher pop-ups",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/prerequisite-strip-writer-v1.txt",
+        "text": "Capability: prerequisite-strip.\r\n\r\nWrite a short reminder of prerequisite knowledge.\r\n\r\n- Include only knowledge needed for the next teaching move.\r\n- Keep reminders factual and compact.\r\n- Do not reteach the whole prerequisite topic."
+      },
+      "schema_ref": "section-content-schema.json#/properties/prerequisites",
       "payload_schema_ref": "section-content-schema.json#/properties/prerequisites",
       "payload_schema": {
         "$ref": "#/definitions/PrerequisiteContent"
@@ -1078,6 +1452,13 @@
         "items[].concept": "Named prerequisite concept. Format: plain_text. Plain text.",
         "items[].refresher": "Optional one-line refresher. Format: inline_markdown. Inline markdown."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "List only prerequisites the section truly depends on."
       ],
@@ -1094,15 +1475,32 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "8ec2ff493cb34ddca01002e27730f2cd3787fa8d5e6be22d509d4d5904dc9a9a",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/prerequisite-strip",
+        "contracts/authoring/instructions/prerequisite-strip-writer-v1.txt",
         "section-content-schema.json#/properties/prerequisites"
       ]
     },
     "what-next-bridge": {
       "id": "what-next-bridge",
+      "definition_version": "2.0.0",
+      "capability_id": "what-next-bridge",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Connects the section forward to what the concept enables",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/what-next-bridge-writer-v1.txt",
+        "text": "Capability: what-next-bridge.\r\n\r\nWrite a bridge from this section to the next learning move.\r\n\r\n- Summarize what the learner can now use.\r\n- Preview the next task without teaching it fully.\r\n- Keep the transition tied to the approved sequence."
+      },
+      "schema_ref": "section-content-schema.json#/properties/what_next",
       "payload_schema_ref": "section-content-schema.json#/properties/what_next",
       "payload_schema": {
         "$ref": "#/definitions/WhatNextContent"
@@ -1113,6 +1511,13 @@
         "preview": "Optional preview blurb of the next chunk. Format: plain_text. Plain text.",
         "prerequisites": "Optional short prerequisites the learner should recall. Format: structured_array. Plain text list items."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Keep next concrete and short."
       ],
@@ -1129,15 +1534,32 @@
           "preview": "Preview."
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "6ae5abc8974be87a36982fb59d6dcc0b23e1353d0474b50b4d3223262427104d",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/what-next-bridge",
+        "contracts/authoring/instructions/what-next-bridge-writer-v1.txt",
         "section-content-schema.json#/properties/what_next"
       ]
     },
     "interview-anchor": {
       "id": "interview-anchor",
+      "definition_version": "2.0.0",
+      "capability_id": "interview-anchor",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Makes knowledge speakable - rehearse explaining the concept",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/interview-anchor-writer-v1.txt",
+        "text": "Capability: interview-anchor.\r\n\r\nWrite an interview-style anchor that frames the concept through a realistic voice or scenario.\r\n\r\n- Keep voice grounded and age appropriate.\r\n- Tie every question or answer to the lesson objective.\r\n- Do not invent unsupported biographical or factual claims."
+      },
+      "schema_ref": "section-content-schema.json#/properties/interview",
       "payload_schema_ref": "section-content-schema.json#/properties/interview",
       "payload_schema": {
         "$ref": "#/definitions/InterviewContent"
@@ -1147,6 +1569,13 @@
         "audience": "Who the interview voice represents. Format: plain_text_short. Plain text.",
         "follow_up": "Optional follow-up question block. Format: block_markdown. Block markdown."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Keep audience concrete and short."
       ],
@@ -1162,15 +1591,32 @@
           "audience": "Friend"
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "ba414bbcbee220e552fcee650d3228e64995739e44c58098d4558eabb376e31e",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/interview-anchor",
+        "contracts/authoring/instructions/interview-anchor-writer-v1.txt",
         "section-content-schema.json#/properties/interview"
       ]
     },
     "callout-block": {
       "id": "callout-block",
+      "definition_version": "2.0.0",
+      "capability_id": "callout-block",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Standalone highlighted callout ΓÇö tip, warning, info, or exam note",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/callout-block-writer-v1.txt",
+        "text": "Capability: callout-block.\r\n\r\nWrite a callout that highlights a warning, misconception, tip, or important distinction.\r\n\r\n- The callout must earn its interruption of the main flow.\r\n- Label the callout by its instructional job.\r\n- Do not hide essential sequence explanation or answer keys here."
+      },
+      "schema_ref": "section-content-schema.json#/properties/callout",
       "payload_schema_ref": "section-content-schema.json#/properties/callout",
       "payload_schema": {
         "$ref": "#/definitions/CalloutBlockContent"
@@ -1180,6 +1626,13 @@
         "heading": "Optional short heading above the body. Format: plain_text. Plain text.",
         "body": "Primary callout body text. Format: block_markdown. Block markdown with support for emphasis and short lists."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Use headings sparingly; variant already carries tone."
       ],
@@ -1194,15 +1647,32 @@
           "body": "Notice this."
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "2a461cacbef7cd27c28ce97942f36de855aa5da407eeb8d802b63e2952983119",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/callout-block",
+        "contracts/authoring/instructions/callout-block-writer-v1.txt",
         "section-content-schema.json#/properties/callout"
       ]
     },
     "summary-block": {
       "id": "summary-block",
+      "definition_version": "2.0.0",
+      "capability_id": "summary-block",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Lists what this section covered ΓÇö key takeaways as bullets",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/summary-block-writer-v1.txt",
+        "text": "Capability: summary-block.\r\n\r\nWrite a summary that consolidates material already taught.\r\n\r\n- Use concise bullets or statements according to the schema.\r\n- Preserve the main conceptual relationships, not isolated trivia.\r\n- Do not introduce new facts that were not taught in the source block sequence."
+      },
+      "schema_ref": "section-content-schema.json#/properties/summary",
       "payload_schema_ref": "section-content-schema.json#/properties/summary",
       "payload_schema": {
         "$ref": "#/definitions/SummaryBlockContent"
@@ -1212,6 +1682,13 @@
         "items[].text": "Bullet text for each take-away. Format: inline_markdown. Inline markdown.",
         "closing": "Optional closing line after bullets. Format: inline_markdown. Inline markdown."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Keep items tight and parallel in structure where possible."
       ],
@@ -1234,15 +1711,32 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "16890150cda3b37212a97e0e99e93d7277ad940f82e41f78e6c05794195ec56d",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/summary-block",
+        "contracts/authoring/instructions/summary-block-writer-v1.txt",
         "section-content-schema.json#/properties/summary"
       ]
     },
     "section-divider": {
       "id": "section-divider",
+      "definition_version": "2.0.0",
+      "capability_id": "section-divider",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Named visual break between parts within a section",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/section-divider-writer-v1.txt",
+        "text": "Capability: section-divider.\r\n\r\nWrite a transition or divider between lesson sections.\r\n\r\n- Signal what changes in the learning flow.\r\n- Keep text short and navigational.\r\n- Do not add new teaching content that belongs in a block."
+      },
+      "schema_ref": "section-content-schema.json#/properties/divider",
       "payload_schema_ref": "section-content-schema.json#/properties/divider",
       "payload_schema": {
         "$ref": "#/definitions/SectionDividerContent"
@@ -1250,6 +1744,13 @@
       "field_guidance": {
         "label": "Short divider label between sections. Format: plain_text. Plain text."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Use a concise transition label, not a second heading."
       ],
@@ -1262,15 +1763,32 @@
           "label": "Part B"
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "35086f2dafe45dc8cf8aa46133a8f860f6db30a31519413714d37f726ad13374",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/section-divider",
+        "contracts/authoring/instructions/section-divider-writer-v1.txt",
         "section-content-schema.json#/properties/divider"
       ]
     },
     "definition-card": {
       "id": "definition-card",
+      "definition_version": "2.0.0",
+      "capability_id": "definition-card",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Anchors a formal term with formal and plain versions",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/definition-card-writer-v1.txt",
+        "text": "Capability: definition-card.\r\n\r\nWrite a focused definition card.\r\n\r\n- Define one term or tightly related concept.\r\n- Include the minimum context needed to use the term correctly.\r\n- Avoid circular definitions and unexplained jargon.\r\n- Do not turn the card into a broad explanation block."
+      },
+      "schema_ref": "section-content-schema.json#/properties/definition",
       "payload_schema_ref": "section-content-schema.json#/properties/definition",
       "payload_schema": {
         "$ref": "#/definitions/DefinitionContent"
@@ -1285,6 +1803,13 @@
         "related_terms": "Related vocabulary references. Format: structured_array. Plain text entries.",
         "etymology": "Optional etymology note. Format: inline_markdown. Inline markdown."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "plain should read approachable; formal should be more precise.",
         "Do not wrap examples in quotation marks if the renderer already decorates them."
@@ -1302,15 +1827,32 @@
           "plain": "Plain def."
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "a3bdd4a0a2fceb250ba777b7f5eef9261c3fd6f11a469c00aea8567320de6746",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/definition-card",
+        "contracts/authoring/instructions/definition-card-writer-v1.txt",
         "section-content-schema.json#/properties/definition"
       ]
     },
     "definition-family": {
       "id": "definition-family",
+      "definition_version": "2.0.0",
+      "capability_id": "definition-family",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Groups related terms that belong together conceptually",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/definition-family-writer-v1.txt",
+        "text": "Capability: definition-family.\r\n\r\nWrite a family of related definitions.\r\n\r\n- Keep terms in the same conceptual neighborhood.\r\n- Make distinctions explicit where learners may confuse terms.\r\n- Avoid broad explanation that belongs in an explanation block."
+      },
+      "schema_ref": "section-content-schema.json#/properties/definition_family",
       "payload_schema_ref": "section-content-schema.json#/properties/definition_family",
       "payload_schema": {
         "$ref": "#/definitions/DefinitionFamilyContent"
@@ -1320,6 +1862,13 @@
         "family_intro": "Optional introduction before accordion items. Format: inline_markdown. Inline markdown.",
         "definitions": "List of DefinitionCard-shaped objects. Format: structured_array. Each entry uses the same field semantics as definition-card."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Keep related definitions grouped by a single conceptual family."
       ],
@@ -1340,15 +1889,32 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "8c1a58ab4ac05d83cf041cddae57cbfa50a4ea155e97e651f340135ea9504308",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/definition-family",
+        "contracts/authoring/instructions/definition-family-writer-v1.txt",
         "section-content-schema.json#/properties/definition_family"
       ]
     },
     "glossary-rail": {
       "id": "glossary-rail",
+      "definition_version": "2.0.0",
+      "capability_id": "glossary-rail",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Vocabulary visible in peripheral field, updates by section",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/glossary-rail-writer-v1.txt",
+        "text": "Capability: glossary-rail.\r\n\r\nWrite compact glossary support for terms used in the lesson.\r\n\r\n- Include only terms needed for this section.\r\n- Definitions should be short and usable in context.\r\n- Do not introduce unrelated vocabulary."
+      },
+      "schema_ref": "section-content-schema.json#/properties/glossary",
       "payload_schema_ref": "section-content-schema.json#/properties/glossary",
       "payload_schema": {
         "$ref": "#/definitions/GlossaryContent"
@@ -1360,6 +1926,13 @@
         "terms[].pronunciation": "Optional pronunciation hint. Format: plain_text. Plain text.",
         "terms[].related": "Optional related term strings. Format: structured_array. Plain text cross-links."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Keep definitions short and classroom-ready for the rail layout."
       ],
@@ -1379,18 +1952,42 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "f4ac161bdffec159ecae927b4b0d296072fd7a1f286167acd456294b7b8144ff",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/glossary-rail",
+        "contracts/authoring/instructions/glossary-rail-writer-v1.txt",
         "section-content-schema.json#/properties/glossary"
       ]
     },
     "glossary-inline": {
       "id": "glossary-inline",
+      "definition_version": "2.0.0",
+      "capability_id": "glossary-inline",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "In-text definition pop-up on a defined term",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/generic-content-writer-v1.txt",
+        "text": "Capability: generic Learn content.\r\n\r\nThis capability is not generation-enabled by native policy today. Preserve its package schema and do not claim readiness from this fallback instruction."
+      },
+      "schema_ref": "learn/content/glossary-inline/inline.v1",
       "payload_schema_ref": "learn/content/glossary-inline/inline.v1",
       "payload_schema": {},
       "field_guidance": {},
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [],
       "capacity": {
         "definitionMaxWords": 30
@@ -1402,15 +1999,32 @@
           "definition": "Short gloss."
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "c34c7d16666d4ad071de3328ead03f8079b15eb50a75f2b7c74eca8753e1797a",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/glossary-inline",
+        "contracts/authoring/instructions/generic-content-writer-v1.txt",
         "learn/content/glossary-inline/inline.v1"
       ]
     },
     "insight-strip": {
       "id": "insight-strip",
+      "definition_version": "2.0.0",
+      "capability_id": "insight-strip",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Side-by-side comparison of 2-3 related values or concepts",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/insight-strip-writer-v1.txt",
+        "text": "Capability: insight-strip.\r\n\r\nWrite a brief insight that helps the learner connect ideas.\r\n\r\n- State the connection directly.\r\n- Keep the insight grounded in taught material.\r\n- Do not replace required explanation or practice."
+      },
+      "schema_ref": "section-content-schema.json#/properties/insight_strip",
       "payload_schema_ref": "section-content-schema.json#/properties/insight_strip",
       "payload_schema": {
         "$ref": "#/definitions/InsightStripContent"
@@ -1421,6 +2035,13 @@
         "cells[].note": "Optional supporting note. Format: inline_markdown. Inline markdown.",
         "cells[].highlight": "Optional emphasis flag for the cell. Format: boolean. Toggles highlight styling when true."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Keep each cell to a single insight; avoid long paragraphs per cell."
       ],
@@ -1444,15 +2065,32 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "3414fc81db9c5a12edc9a0110914d8e27964d591a60a6737d59b51d8f4fbd2ad",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/insight-strip",
+        "contracts/authoring/instructions/insight-strip-writer-v1.txt",
         "section-content-schema.json#/properties/insight_strip"
       ]
     },
     "key-fact": {
       "id": "key-fact",
+      "definition_version": "2.0.0",
+      "capability_id": "key-fact",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Visually prominent stat, formula, or date that anchors the section",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/key-fact-writer-v1.txt",
+        "text": "Capability: key-fact.\r\n\r\nWrite a concise fact the learner should retain.\r\n\r\n- State one important claim clearly.\r\n- Include supporting context only if the schema asks for it.\r\n- Do not pack several unrelated facts into one card."
+      },
+      "schema_ref": "section-content-schema.json#/properties/key_fact",
       "payload_schema_ref": "section-content-schema.json#/properties/key_fact",
       "payload_schema": {
         "$ref": "#/definitions/KeyFactContent"
@@ -1463,6 +2101,13 @@
         "source": "Optional attribution or source label. Format: plain_text. Plain text.",
         "formula": "Standalone equation or formula to display prominently. Format: latex_raw."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Keep the fact line short and exam-ready."
       ],
@@ -1481,15 +2126,32 @@
           "context": "Carbon Dioxide + Water + Light → Glucose + Oxygen"
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "3ea2ad6b0301ae997bca09ad58ee60272bbc5e3678e4e0b563d66b745672145c",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/key-fact",
+        "contracts/authoring/instructions/key-fact-writer-v1.txt",
         "section-content-schema.json#/properties/key_fact"
       ]
     },
     "comparison-grid": {
       "id": "comparison-grid",
+      "definition_version": "2.0.0",
+      "capability_id": "comparison-grid",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Holds multiple concepts in view so distinctions become structural",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/comparison-grid-writer-v1.txt",
+        "text": "Capability: comparison-grid.\r\n\r\nWrite a structured comparison across shared dimensions.\r\n\r\n- Use parallel criteria across compared items.\r\n- Keep each cell concise and comparable.\r\n- Do not compare unrelated things just to fill a grid."
+      },
+      "schema_ref": "section-content-schema.json#/properties/comparison_grid",
       "payload_schema_ref": "section-content-schema.json#/properties/comparison_grid",
       "payload_schema": {
         "$ref": "#/definitions/ComparisonGridContent"
@@ -1506,6 +2168,13 @@
         "rows[].takeaway": "Optional short synthesis for the row. Format: plain_text_short. Plain text.",
         "apply_prompt": "Optional apply/synthesis prompt after the grid. Format: plain_text. Plain text."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Each row.values array length must match the number of columns.",
         "Use stable column ids when referencing columns in downstream tooling."
@@ -1539,15 +2208,32 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "51eefabb1d4ed129deb661dc402426467301f16c7a20cd7899a2f1aa5a1e1555",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/comparison-grid",
+        "contracts/authoring/instructions/comparison-grid-writer-v1.txt",
         "section-content-schema.json#/properties/comparison_grid"
       ]
     },
     "worked-example-card": {
       "id": "worked-example-card",
+      "definition_version": "2.0.0",
+      "capability_id": "worked-example-card",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Shows reasoning in action step by step, each step justified",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/worked-example-card-writer-v1.txt",
+        "text": "Capability: worked-example-card.\r\n\r\nWrite a worked example that models a method from problem to answer.\r\n\r\n- Use a concrete problem tied to the lesson objective.\r\n- Every step must do useful mathematical, scientific, or reasoning work.\r\n- The answer must follow from the steps.\r\n- Do not introduce a method outside the supplied teaching scope."
+      },
+      "schema_ref": "section-content-schema.json#/properties/worked_example",
       "payload_schema_ref": "section-content-schema.json#/properties/worked_example",
       "payload_schema": {
         "$ref": "#/definitions/WorkedExampleContent"
@@ -1563,6 +2249,13 @@
         "answer": "Short canonical answer line when provided. Format: plain_text. Plain text result line.",
         "diagram": "Optional diagram attached to the worked example. Format: structured_object. Rendered with the shared diagram surface when present."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Each step should represent one clear reasoning move.",
         "Keep formulas as raw LaTeX in formula fields."
@@ -1587,15 +2280,32 @@
           "conclusion": "Done."
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "6641b2c2a05c254d05f84ff9abcbde975bd031df71769cda5b4aadf3ed1fa8cf",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/worked-example-card",
+        "contracts/authoring/instructions/worked-example-card-writer-v1.txt",
         "section-content-schema.json#/properties/worked_example"
       ]
     },
     "process-steps": {
       "id": "process-steps",
+      "definition_version": "2.0.0",
+      "capability_id": "process-steps",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "A repeatable procedure where order is non-negotiable",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/process-steps-writer-v1.txt",
+        "text": "Capability: process-steps.\r\n\r\nWrite ordered steps for a process, method, or causal chain.\r\n\r\n- Each step should be a distinct stage or action.\r\n- Preserve the actual order; do not sort by importance.\r\n- Include transitions or explanations only where the schema supports them."
+      },
+      "schema_ref": "section-content-schema.json#/properties/process",
       "payload_schema_ref": "section-content-schema.json#/properties/process",
       "payload_schema": {
         "$ref": "#/definitions/ProcessContent"
@@ -1610,6 +2320,13 @@
         "steps[].output": "Short output label for the step. Format: plain_text_short. Plain text.",
         "steps[].warning": "Optional caution for the step. Format: plain_text. Plain text."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Action should be short and verb-first.",
         "detail expands the action; input/output are labels, not paragraphs."
@@ -1632,15 +2349,32 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "5632a59154784bad5a0e6b10067fd91c8d5592f4f6e35248849460e35eb06849",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/process-steps",
+        "contracts/authoring/instructions/process-steps-writer-v1.txt",
         "section-content-schema.json#/properties/process"
       ]
     },
     "practice-stack": {
       "id": "practice-stack",
+      "definition_version": "2.0.0",
+      "capability_id": "practice-stack",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Problems at calibrated difficulty with progressive hints and optional solutions",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/practice-stack-writer-v1.txt",
+        "text": "Capability: practice-stack.\r\n\r\nWrite a short stack of practice prompts.\r\n\r\n- Progress from supported to more independent work when the schema permits it.\r\n- Keep every prompt tied to the same objective.\r\n- Do not include questions without enough information to answer."
+      },
+      "schema_ref": "section-content-schema.json#/properties/practice",
       "payload_schema_ref": "section-content-schema.json#/properties/practice",
       "payload_schema": {
         "$ref": "#/definitions/PracticeContent"
@@ -1655,6 +2389,13 @@
         "problems[].diagram": "Optional instructional diagram payload matching DiagramContent. Format: structured_object. Rendered using the shared diagram renderer when present.",
         "problems[].difficulty": "Declared difficulty band for the problem. Format: enum."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Order hints from light support to stronger support.",
         "Problem difficulty must use the supported enum values."
@@ -1693,15 +2434,32 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "30a2fc272adf981cba053ffc0010ab21496fe6664d7dfbff381648ab98340426",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/practice-stack",
+        "contracts/authoring/instructions/practice-stack-writer-v1.txt",
         "section-content-schema.json#/properties/practice"
       ]
     },
     "quiz-check": {
       "id": "quiz-check",
+      "definition_version": "2.0.0",
+      "capability_id": "quiz-check",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Quick concept check with immediate feedback mid-section",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/quiz-check-writer-v1.txt",
+        "text": "Capability: quiz-check.\r\n\r\nWrite a content-backed single-choice quiz check.\r\n\r\n- The question must check something already taught.\r\n- Include one correct option and plausible wrong options.\r\n- Feedback should explain the learning point without revealing unrelated material.\r\n- Do not create a quiz without a deterministic correct answer."
+      },
+      "schema_ref": "section-content-schema.json#/properties/quiz",
       "payload_schema_ref": "section-content-schema.json#/properties/quiz",
       "payload_schema": {
         "$ref": "#/definitions/QuizContent"
@@ -1716,6 +2474,13 @@
         "feedback_incorrect": "Short feedback when the learner is incorrect. Format: plain_text. Plain text.",
         "quiz_type": "Optional quiz mode discriminator (multiple-choice vs true-false). Format: enum."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Every option should include an explanation.",
         "Prefer exactly one correct option unless the quiz explicitly supports otherwise.",
@@ -1753,16 +2518,35 @@
           "feedback_incorrect": "Review."
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema",
+        "learn.quizContentToInteractionContract"
+      ],
+      "converter_ref": "learn.quizContentToInteractionContract",
+      "definition_hash": "4a63981121438f00ee537d0166ff19c9c13d6c6b3fa38a9a66307f3ba995596c",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/quiz-check",
+        "contracts/authoring/instructions/quiz-check-writer-v1.txt",
         "section-content-schema.json#/properties/quiz",
         "packages/lectio-learn/src/lib/learn/interaction-contract.ts#quizContentToInteractionContract"
       ]
     },
     "reflection-prompt": {
       "id": "reflection-prompt",
+      "definition_version": "2.0.0",
+      "capability_id": "reflection-prompt",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Pauses forward motion and turns attention inward",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/reflection-prompt-writer-v1.txt",
+        "text": "Capability: reflection-prompt.\r\n\r\nWrite a reflection prompt.\r\n\r\n- Ask for thinking that can reasonably follow from the lesson.\r\n- Keep the prompt open only when teacher review is expected.\r\n- Do not auto-score broad personal reflection."
+      },
+      "schema_ref": "section-content-schema.json#/properties/reflection",
       "payload_schema_ref": "section-content-schema.json#/properties/reflection",
       "payload_schema": {
         "$ref": "#/definitions/ReflectionContent"
@@ -1775,6 +2559,13 @@
         "time_minutes": "Duration guidance for timed reflections. Format: number. Numeric minutes.",
         "pair_instruction": "Pair-share facilitation line. Format: plain_text. Plain text."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Choose optional fields that match the reflection type."
       ],
@@ -1789,15 +2580,32 @@
           "type": "open"
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "4daab5c5312ebfdfbc73fa08956424803e39d15fe4a49b584cde87e961aebacc",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/reflection-prompt",
+        "contracts/authoring/instructions/reflection-prompt-writer-v1.txt",
         "section-content-schema.json#/properties/reflection"
       ]
     },
     "student-textbox": {
       "id": "student-textbox",
+      "definition_version": "2.0.0",
+      "capability_id": "student-textbox",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Simple write-in box for student responses ΓÇö no framing beyond a prompt",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/student-textbox-writer-v1.txt",
+        "text": "Capability: student-textbox.\r\n\r\nWrite a learner text-entry activity.\r\n\r\n- Make the prompt clear and bounded.\r\n- Do not imply automatic correctness unless an evaluator is declared.\r\n- Include review guidance when the response needs teacher judgement."
+      },
+      "schema_ref": "section-content-schema.json#/properties/student_textbox",
       "payload_schema_ref": "section-content-schema.json#/properties/student_textbox",
       "payload_schema": {
         "$ref": "#/definitions/StudentTextboxContent"
@@ -1807,6 +2615,13 @@
         "lines": "Optional number of ruled lines for print layouts. Format: number. Controls ruled line count, not screen layout height.",
         "label": "Optional accessible label for the input. Format: plain_text. Plain text."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Keep prompts concrete and tied to a single task."
       ],
@@ -1820,15 +2635,32 @@
           "prompt": "Write notes."
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "e2f7f986f3fbff9bdf0b8e25b1052490532dff5b6cacee9eb2ab6d01ec153343",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/student-textbox",
+        "contracts/authoring/instructions/student-textbox-writer-v1.txt",
         "section-content-schema.json#/properties/student_textbox"
       ]
     },
     "short-answer": {
       "id": "short-answer",
+      "definition_version": "2.0.0",
+      "capability_id": "short-answer",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Open question with write-in space and optional mark scheme",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/short-answer-writer-v1.txt",
+        "text": "Capability: short-answer.\r\n\r\nWrite a short-answer content activity.\r\n\r\n- Prompt for a compact answer that follows from taught content.\r\n- Provide accepted answers only when exact scoring is valid.\r\n- Use teacher review for explanation or reasoning."
+      },
+      "schema_ref": "section-content-schema.json#/properties/short_answer",
       "payload_schema_ref": "section-content-schema.json#/properties/short_answer",
       "payload_schema": {
         "$ref": "#/definitions/ShortAnswerContent"
@@ -1839,6 +2671,13 @@
         "lines": "Optional ruled line count for print. Format: number. Print layout hint.",
         "mark_scheme": "Optional marking guidance for teachers or auto-graders. Format: block_markdown. Block markdown rubric text."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Keep mark_scheme aligned to the stated marks when both exist."
       ],
@@ -1853,15 +2692,32 @@
           "question": "Explain inertia in one paragraph."
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "bf2a8d9d8e43afa3aeea06da2b43bfff853ded3a621aa28959362d1c4a68841f",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/short-answer",
+        "contracts/authoring/instructions/short-answer-writer-v1.txt",
         "section-content-schema.json#/properties/short_answer"
       ]
     },
     "fill-in-blank": {
       "id": "fill-in-blank",
+      "definition_version": "2.0.0",
+      "capability_id": "fill-in-blank",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Cloze passage with student-completed blanks ΓÇö tests recall not recognition",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/fill-in-blank-writer-v1.txt",
+        "text": "Capability: fill-in-blank.\r\n\r\nWrite a content-backed fill-in-the-blank activity.\r\n\r\n- Use blanks only where the accepted answer is determinate.\r\n- Provide accepted answers for each blank.\r\n- Keep surrounding text sufficient for recall.\r\n- Do not use blanks for open explanation or judgement."
+      },
+      "schema_ref": "section-content-schema.json#/properties/fill_in_blank",
       "payload_schema_ref": "section-content-schema.json#/properties/fill_in_blank",
       "payload_schema": {
         "$ref": "#/definitions/FillInBlankContent"
@@ -1873,6 +2729,13 @@
         "segments[].answer": "Answer text when is_blank is true. Format: plain_text.",
         "word_bank": "Optional word bank entries. Format: structured_array. Plain text entries; should cover blank answers when provided."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Alternate plain text segments with blanks as needed.",
         "Every blank segment should have an answer.",
@@ -1899,16 +2762,35 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema",
+        "learn.fillBlankContentToInteractionContract"
+      ],
+      "converter_ref": "learn.fillBlankContentToInteractionContract",
+      "definition_hash": "c7d5c0c32787dd0d4ccaebe8a062ab795b2df18a9dc20b3f548b64bed7742cc8",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/fill-in-blank",
+        "contracts/authoring/instructions/fill-in-blank-writer-v1.txt",
         "section-content-schema.json#/properties/fill_in_blank",
         "packages/lectio-learn/src/lib/learn/interaction-contract.ts#fillBlankContentToInteractionContract"
       ]
     },
     "pitfall-alert": {
       "id": "pitfall-alert",
+      "definition_version": "2.0.0",
+      "capability_id": "pitfall-alert",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Names a specific misconception before the learner makes it",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/pitfall-alert-writer-v1.txt",
+        "text": "Capability: pitfall-alert.\r\n\r\nWrite a misconception or error warning.\r\n\r\n- Name the likely mistake clearly.\r\n- Explain why it is wrong using lesson terminology.\r\n- Keep correction actionable and concise."
+      },
+      "schema_ref": "section-content-schema.json#/properties/pitfall",
       "payload_schema_ref": "section-content-schema.json#/properties/pitfall",
       "payload_schema": {
         "$ref": "#/definitions/PitfallContent"
@@ -1922,6 +2804,13 @@
         "severity": "Relative severity tag (minor or major). Format: enum.",
         "label": "Header label for the pitfall box. Format: plain_text_short. Rendered as a bold heading inside the alert box. Defaults to \"Common Misconception\" when absent."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Correction should directly address the misconception line.",
         "Prefer examples[] when you need more than one short illustration."
@@ -1943,15 +2832,32 @@
           "correction": "In a vacuum, all objects accelerate at the same rate regardless of mass."
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "588281c8bf38070b89ae8ec230f968c5305da1af4fe498d652d9408c1ab2c868",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/pitfall-alert",
+        "contracts/authoring/instructions/pitfall-alert-writer-v1.txt",
         "section-content-schema.json#/properties/pitfall"
       ]
     },
     "diagram-block": {
       "id": "diagram-block",
+      "definition_version": "2.0.0",
+      "capability_id": "diagram-block",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Makes spatial or relational structure visible",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/diagram-block-writer-v1.txt",
+        "text": "Capability: diagram-block.\r\n\r\nWrite a diagram description or structured visual payload.\r\n\r\n- Name the visual relationship the learner should inspect.\r\n- Include required labels and relationships.\r\n- Do not rely on decorative imagery to carry essential teaching."
+      },
+      "schema_ref": "section-content-schema.json#/properties/diagram",
       "payload_schema_ref": "section-content-schema.json#/properties/diagram",
       "payload_schema": {
         "$ref": "#/definitions/DiagramContent"
@@ -1967,6 +2873,13 @@
         "description": "Extended description of the diagram for side-by-side layout. Format: block_markdown. When present, diagram renders in a two-column grid: image left, description right.",
         "figure_ref": "Sequential figure reference label. Format: plain_text_short. Rendered as a label above or beside the caption."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Provide either image_url or svg_content for a visible diagram.",
         "Keep callout coordinates inside 0–100 for both raster and vector diagrams."
@@ -1989,6 +2902,10 @@
           "svg_content": "<svg viewBox=\"0 0 200 120\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20 100 Q100 20 180 40\" fill=\"none\" stroke=\"#333\" stroke-width=\"2\"/></svg>"
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "f0ca5c2893b998c27f7d24dbeb4808812b0bf703202442c82e9508789e974d8d",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -2001,12 +2918,25 @@
       },
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/diagram-block",
+        "contracts/authoring/instructions/diagram-block-writer-v1.txt",
         "section-content-schema.json#/properties/diagram"
       ]
     },
     "diagram-compare": {
       "id": "diagram-compare",
+      "definition_version": "2.0.0",
+      "capability_id": "diagram-compare",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Before and after comparison with a drag slider",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/diagram-compare-writer-v1.txt",
+        "text": "Capability: diagram-compare.\r\n\r\nWrite a comparison diagram payload.\r\n\r\n- Compare genuinely parallel dimensions.\r\n- Keep labels concise and aligned across compared items.\r\n- Include only relationships the learner is meant to inspect.\r\n- Do not use this as a generic image placeholder."
+      },
+      "schema_ref": "section-content-schema.json#/properties/diagram_compare",
       "payload_schema_ref": "section-content-schema.json#/properties/diagram_compare",
       "payload_schema": {
         "$ref": "#/definitions/DiagramCompareContent"
@@ -2023,6 +2953,13 @@
         "caption": "Shared caption for the compare figure. Format: plain_text. Plain text.",
         "alt_text": "Accessibility description covering both panels. Format: accessibility_text. Plain text."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Provide either SVG or image URLs for each side you want to show.",
         "Keep column labels short; they appear in compact headers."
@@ -2039,6 +2976,10 @@
           "alt_text": "Side-by-side diagram comparison."
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "400d2291c604a4de39fa5586ad7893c99871974eedb768ff3e6d6d3708806f08",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -2051,12 +2992,25 @@
       },
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/diagram-compare",
+        "contracts/authoring/instructions/diagram-compare-writer-v1.txt",
         "section-content-schema.json#/properties/diagram_compare"
       ]
     },
     "diagram-series": {
       "id": "diagram-series",
+      "definition_version": "2.0.0",
+      "capability_id": "diagram-series",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "A progression of diagrams that tells a sequence",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/diagram-series-writer-v1.txt",
+        "text": "Capability: diagram-series.\r\n\r\nWrite a sequence of related diagrams.\r\n\r\n- Each panel must add a distinct stage, view, or comparison.\r\n- Keep labels consistent across panels.\r\n- Do not split a single simple diagram into filler panels."
+      },
+      "schema_ref": "section-content-schema.json#/properties/diagram_series",
       "payload_schema_ref": "section-content-schema.json#/properties/diagram_series",
       "payload_schema": {
         "$ref": "#/definitions/DiagramSeriesContent"
@@ -2068,6 +3022,13 @@
         "diagrams[].svg_content": "Optional SVG markup for the step. Format: plain_text. Sanitized SVG when present.",
         "diagrams[].image_url": "Optional raster image for the step. Format: media_url. Rendered when svg_content is absent."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Each step should include at least one visual source (SVG or image).",
         "Keep step labels parallel in tone and length."
@@ -2088,6 +3049,10 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "45c88e9db1aba80284d4f2c7d41fdaaf31b1d39f90e691a946ed342c6d21d774",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -2100,17 +3065,37 @@
       },
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/diagram-series",
+        "contracts/authoring/instructions/diagram-series-writer-v1.txt",
         "section-content-schema.json#/properties/diagram_series"
       ]
     },
     "video-embed": {
       "id": "video-embed",
+      "definition_version": "2.0.0",
+      "capability_id": "video-embed",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Embeds a video with caption and print fallback",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/generic-content-writer-v1.txt",
+        "text": "Capability: generic Learn content.\r\n\r\nThis capability is not generation-enabled by native policy today. Preserve its package schema and do not claim readiness from this fallback instruction."
+      },
+      "schema_ref": "section-content-schema.json#/properties/video_embed",
       "payload_schema_ref": "section-content-schema.json#/properties/video_embed",
       "payload_schema": {
         "$ref": "#/definitions/VideoEmbedContent"
       },
       "field_guidance": {},
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [],
       "capacity": {
         "captionMaxWords": 40
@@ -2122,6 +3107,10 @@
           "print_fallback": "thumbnail"
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "402c4c4c48a1a2a148a239cdbe526e275033965f606a458a9e2f61836401c22c",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -2134,17 +3123,37 @@
       },
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/video-embed",
+        "contracts/authoring/instructions/generic-content-writer-v1.txt",
         "section-content-schema.json#/properties/video_embed"
       ]
     },
     "image-block": {
       "id": "image-block",
+      "definition_version": "2.0.0",
+      "capability_id": "image-block",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Uploaded raster image with caption and layout options",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/generic-content-writer-v1.txt",
+        "text": "Capability: generic Learn content.\r\n\r\nThis capability is not generation-enabled by native policy today. Preserve its package schema and do not claim readiness from this fallback instruction."
+      },
+      "schema_ref": "section-content-schema.json#/properties/image_block",
       "payload_schema_ref": "section-content-schema.json#/properties/image_block",
       "payload_schema": {
         "$ref": "#/definitions/ImageBlockContent"
       },
       "field_guidance": {},
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [],
       "capacity": {
         "captionMaxWords": 40,
@@ -2158,6 +3167,10 @@
           "caption": "Figure 1."
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "e16f2ca6daa8c9f51e8dc69f7373c12cac6775af6235520d82e3061b7a3cf9d6",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -2170,12 +3183,25 @@
       },
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/image-block",
+        "contracts/authoring/instructions/generic-content-writer-v1.txt",
         "section-content-schema.json#/properties/image_block"
       ]
     },
     "timeline-block": {
       "id": "timeline-block",
+      "definition_version": "2.0.0",
+      "capability_id": "timeline-block",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Turns chronology into a readable instructional spine",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/timeline-block-writer-v1.txt",
+        "text": "Capability: timeline-block.\r\n\r\nWrite a timeline for ordered events, phases, or stages.\r\n\r\n- Entries must have a defensible order.\r\n- Keep labels short and dates or stage names stable.\r\n- Do not use a timeline for unordered categories or unrelated facts."
+      },
+      "schema_ref": "section-content-schema.json#/properties/timeline",
       "payload_schema_ref": "section-content-schema.json#/properties/timeline",
       "payload_schema": {
         "$ref": "#/definitions/TimelineContent"
@@ -2192,6 +3218,13 @@
         "events[].era": "Optional era grouping label. Format: plain_text. Plain text.",
         "closing_takeaway": "Optional synthesis line after events. Format: plain_text. Plain text."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Events should usually appear in chronological order.",
         "Each event should have a stable id."
@@ -2216,6 +3249,10 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "a93dba8209c0cef877d47a717a98f0e30553ca0c307ef23827c9e416c726c48b",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -2228,12 +3265,25 @@
       },
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/timeline-block",
+        "contracts/authoring/instructions/timeline-block-writer-v1.txt",
         "section-content-schema.json#/properties/timeline"
       ]
     },
     "simulation-block": {
       "id": "simulation-block",
+      "definition_version": "2.0.0",
+      "capability_id": "simulation-block",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Manipulate a variable and discover the concept through observation",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/generic-content-writer-v1.txt",
+        "text": "Capability: generic Learn content.\r\n\r\nThis capability is not generation-enabled by native policy today. Preserve its package schema and do not claim readiness from this fallback instruction."
+      },
+      "schema_ref": "section-content-schema.json#/properties/simulation",
       "payload_schema_ref": "section-content-schema.json#/properties/simulation",
       "payload_schema": {
         "$ref": "#/definitions/SimulationContent"
@@ -2249,6 +3299,13 @@
         "fallback_diagram": "Optional DiagramContent used when iframe content is unavailable. Format: structured_object. Rendered with DiagramBlock semantics.",
         "explanation": "Optional instructor-facing explanation of the interaction. Format: inline_markdown. Inline markdown helper text."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Provide either html_content or a meaningful fallback_diagram for offline contexts.",
         "Keep spec.goal aligned with what the iframe interaction practices."
@@ -2278,6 +3335,10 @@
           }
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "661cd584a5bb6d279d8e5c7fe68b19791c26702aa56993e284d4e29cbe820e41",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -2290,12 +3351,25 @@
       },
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/simulation-block",
+        "contracts/authoring/instructions/generic-content-writer-v1.txt",
         "section-content-schema.json#/properties/simulation"
       ]
     },
     "answer-key": {
       "id": "answer-key",
+      "definition_version": "2.0.0",
+      "capability_id": "answer-key",
+      "native_path": "learn",
+      "lane": "content",
       "purpose": "Provides correct answers with misconception evidence for each diagnostic distractor",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/answer-key-writer-v1.txt",
+        "text": "Capability: answer-key.\r\n\r\nWrite teacher-facing answer support from approved assessed content only.\r\n\r\n- Preserve answer identity and scoring relationships.\r\n- Do not expose answer material as learner-facing instruction.\r\n- Do not invent keys for unassessed content."
+      },
+      "schema_ref": "section-content-schema.json#/properties/answer_key",
       "payload_schema_ref": "section-content-schema.json#/properties/answer_key",
       "payload_schema": {
         "$ref": "#/definitions/AnswerKeyContent"
@@ -2311,6 +3385,13 @@
         "entries[].diagnostics[].misconception_id": "Caller-supplied misconception id; Lectio does not interpret it. Format: plain_text_short.",
         "entries[].diagnostics[].misconception_label": "Human-readable misconception hypothesis. Format: plain_text."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "learn_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "requires": [
         "Use evidence language: chose \"{option_text}\" → consistent with: {misconception_label}.",
         "Never describe a diagnostic tag as a confirmed learner belief.",
@@ -2342,9 +3423,14 @@
           ]
         }
       ],
+      "validator_refs": [
+        "learn.payload_schema"
+      ],
+      "definition_hash": "f81a8840ee9c5c674b2bdf1fd539c7b860f31a3f9655a12ae45d9c3178b157ed",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/answer-key",
+        "contracts/authoring/instructions/answer-key-writer-v1.txt",
         "section-content-schema.json#/properties/answer_key"
       ]
     }

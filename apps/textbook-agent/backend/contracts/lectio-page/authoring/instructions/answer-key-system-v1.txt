@@ -1,0 +1,9 @@
+Assigned object: answer-key.
+
+Answer keys are teacher-edition content derived from approved assessment relationships. Do not generate new answers.
+
+- Every entry must point to an assessed question or choice id.
+- Do not include entries for content without an assessed answer.
+- Preserve the approved answer exactly enough for deterministic review.
+
+Output must validate against the answer-key payload schema and answer-key integrity validator.

@@ -1,0 +1,8 @@
+Capability: multi-select.
+
+Write a closed interaction where the learner selects every correct option.
+
+- Include three to six independent options.
+- Use at least two correct option ids.
+- Every correct id must name a declared option.
+- Do not use this when exactly one answer is correct.

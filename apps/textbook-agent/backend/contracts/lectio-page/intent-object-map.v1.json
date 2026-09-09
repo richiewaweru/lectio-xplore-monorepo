@@ -1,0 +1,423 @@
+{
+  "view": "intent-object-map",
+  "view_version": "1.0.0",
+  "intent_catalogue_version": "1.1.0",
+  "object_catalogue_version": "1.2.0",
+  "intent_to_objects": {
+    "orient": [
+      "prose",
+      "figure",
+      "choices"
+    ],
+    "activate-prior-knowledge": [
+      "prose",
+      "list",
+      "questions",
+      "choices"
+    ],
+    "state-goal": [
+      "prose",
+      "list"
+    ],
+    "define": [
+      "prose",
+      "table",
+      "aside"
+    ],
+    "name-parts": [
+      "list",
+      "table",
+      "figure"
+    ],
+    "classify": [
+      "list",
+      "table",
+      "questions",
+      "choices"
+    ],
+    "compare": [
+      "table",
+      "prose",
+      "questions"
+    ],
+    "sequence": [
+      "list",
+      "table",
+      "figure",
+      "questions"
+    ],
+    "explain": [
+      "prose",
+      "figure",
+      "table"
+    ],
+    "explain-cause": [
+      "prose",
+      "figure",
+      "table",
+      "questions"
+    ],
+    "trace-flow": [
+      "figure",
+      "list",
+      "table",
+      "prose"
+    ],
+    "show-structure": [
+      "figure",
+      "table",
+      "list"
+    ],
+    "demonstrate": [
+      "worked-example",
+      "figure"
+    ],
+    "model-thinking": [
+      "worked-example",
+      "prose"
+    ],
+    "derive": [
+      "worked-example",
+      "prose",
+      "table"
+    ],
+    "interpret": [
+      "prose",
+      "figure",
+      "table",
+      "questions"
+    ],
+    "apply": [
+      "questions",
+      "worked-example",
+      "table"
+    ],
+    "transfer": [
+      "questions",
+      "worked-example"
+    ],
+    "practise-guided": [
+      "questions",
+      "worked-example"
+    ],
+    "practise-independent": [
+      "questions",
+      "choices"
+    ],
+    "check-understanding": [
+      "questions",
+      "choices"
+    ],
+    "diagnose-misconception": [
+      "choices",
+      "questions",
+      "aside"
+    ],
+    "warn": [
+      "aside",
+      "prose"
+    ],
+    "emphasise": [
+      "aside",
+      "prose"
+    ],
+    "memory-aid": [
+      "aside",
+      "list"
+    ],
+    "summarise": [
+      "list",
+      "prose",
+      "table"
+    ],
+    "connect-forward": [
+      "prose",
+      "list"
+    ],
+    "connect-back": [
+      "prose",
+      "list",
+      "questions"
+    ],
+    "reflect": [
+      "questions",
+      "prose"
+    ],
+    "investigate": [
+      "questions",
+      "list",
+      "table",
+      "figure"
+    ],
+    "evaluate": [
+      "questions",
+      "table",
+      "prose"
+    ],
+    "answer-key": [
+      "answer-key"
+    ]
+  },
+  "object_to_intents": {
+    "heading": [],
+    "prose": [
+      "orient",
+      "activate-prior-knowledge",
+      "state-goal",
+      "define",
+      "compare",
+      "explain",
+      "explain-cause",
+      "trace-flow",
+      "model-thinking",
+      "derive",
+      "interpret",
+      "warn",
+      "emphasise",
+      "summarise",
+      "connect-forward",
+      "connect-back",
+      "reflect",
+      "evaluate"
+    ],
+    "list": [
+      "activate-prior-knowledge",
+      "state-goal",
+      "name-parts",
+      "classify",
+      "sequence",
+      "trace-flow",
+      "show-structure",
+      "memory-aid",
+      "summarise",
+      "connect-forward",
+      "connect-back",
+      "investigate"
+    ],
+    "table": [
+      "define",
+      "name-parts",
+      "classify",
+      "compare",
+      "sequence",
+      "explain",
+      "explain-cause",
+      "trace-flow",
+      "show-structure",
+      "derive",
+      "interpret",
+      "apply",
+      "summarise",
+      "investigate",
+      "evaluate"
+    ],
+    "figure": [
+      "orient",
+      "name-parts",
+      "sequence",
+      "explain",
+      "explain-cause",
+      "trace-flow",
+      "show-structure",
+      "demonstrate",
+      "interpret",
+      "investigate"
+    ],
+    "aside": [
+      "define",
+      "diagnose-misconception",
+      "warn",
+      "emphasise",
+      "memory-aid"
+    ],
+    "worked-example": [
+      "demonstrate",
+      "model-thinking",
+      "derive",
+      "apply",
+      "transfer",
+      "practise-guided"
+    ],
+    "questions": [
+      "activate-prior-knowledge",
+      "classify",
+      "compare",
+      "sequence",
+      "explain-cause",
+      "interpret",
+      "apply",
+      "transfer",
+      "practise-guided",
+      "practise-independent",
+      "check-understanding",
+      "diagnose-misconception",
+      "connect-back",
+      "reflect",
+      "investigate",
+      "evaluate"
+    ],
+    "choices": [
+      "orient",
+      "activate-prior-knowledge",
+      "classify",
+      "practise-independent",
+      "check-understanding",
+      "diagnose-misconception"
+    ],
+    "answer-key": [
+      "answer-key"
+    ]
+  },
+  "selectable_intent_to_forms": {
+    "orient": [
+      "prose",
+      "figure",
+      "choices"
+    ],
+    "activate-prior-knowledge": [
+      "prose",
+      "list",
+      "questions",
+      "choices"
+    ],
+    "state-goal": [
+      "prose",
+      "list"
+    ],
+    "define": [
+      "prose",
+      "table",
+      "aside"
+    ],
+    "name-parts": [
+      "list",
+      "table",
+      "figure"
+    ],
+    "classify": [
+      "list",
+      "table",
+      "questions",
+      "choices"
+    ],
+    "compare": [
+      "table",
+      "prose",
+      "questions"
+    ],
+    "sequence": [
+      "list",
+      "table",
+      "figure",
+      "questions"
+    ],
+    "explain": [
+      "prose",
+      "figure",
+      "table"
+    ],
+    "explain-cause": [
+      "prose",
+      "figure",
+      "table",
+      "questions"
+    ],
+    "trace-flow": [
+      "figure",
+      "list",
+      "table",
+      "prose"
+    ],
+    "show-structure": [
+      "figure",
+      "table",
+      "list"
+    ],
+    "demonstrate": [
+      "worked-example",
+      "figure"
+    ],
+    "model-thinking": [
+      "worked-example",
+      "prose"
+    ],
+    "derive": [
+      "worked-example",
+      "prose",
+      "table"
+    ],
+    "interpret": [
+      "prose",
+      "figure",
+      "table",
+      "questions"
+    ],
+    "apply": [
+      "questions",
+      "worked-example",
+      "table"
+    ],
+    "transfer": [
+      "questions",
+      "worked-example"
+    ],
+    "practise-guided": [
+      "questions",
+      "worked-example"
+    ],
+    "practise-independent": [
+      "questions",
+      "choices"
+    ],
+    "check-understanding": [
+      "questions",
+      "choices"
+    ],
+    "diagnose-misconception": [
+      "choices",
+      "questions",
+      "aside"
+    ],
+    "warn": [
+      "aside",
+      "prose"
+    ],
+    "emphasise": [
+      "aside",
+      "prose"
+    ],
+    "memory-aid": [
+      "aside",
+      "list"
+    ],
+    "summarise": [
+      "list",
+      "prose",
+      "table"
+    ],
+    "connect-forward": [
+      "prose",
+      "list"
+    ],
+    "connect-back": [
+      "prose",
+      "list",
+      "questions"
+    ],
+    "reflect": [
+      "questions",
+      "prose"
+    ],
+    "investigate": [
+      "questions",
+      "list",
+      "table",
+      "figure"
+    ],
+    "evaluate": [
+      "questions",
+      "table",
+      "prose"
+    ]
+  }
+}

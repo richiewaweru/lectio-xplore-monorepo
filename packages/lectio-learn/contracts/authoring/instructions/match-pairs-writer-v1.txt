@@ -1,0 +1,8 @@
+Capability: match-pairs.
+
+Write a matching interaction between two sets.
+
+- Each source item must have exactly one correct target.
+- Source ids must be unique.
+- Labels should be short enough to scan.
+- Do not use this when a source can validly match several targets.

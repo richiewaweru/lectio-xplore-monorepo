@@ -1,0 +1,7 @@
+Capability: summary-block.
+
+Write a summary that consolidates material already taught.
+
+- Use concise bullets or statements according to the schema.
+- Preserve the main conceptual relationships, not isolated trivia.
+- Do not introduce new facts that were not taught in the source block sequence.

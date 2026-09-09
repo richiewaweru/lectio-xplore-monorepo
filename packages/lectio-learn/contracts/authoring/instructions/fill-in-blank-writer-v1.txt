@@ -1,0 +1,8 @@
+Capability: fill-in-blank.
+
+Write a content-backed fill-in-the-blank activity.
+
+- Use blanks only where the accepted answer is determinate.
+- Provide accepted answers for each blank.
+- Keep surrounding text sufficient for recall.
+- Do not use blanks for open explanation or judgement.

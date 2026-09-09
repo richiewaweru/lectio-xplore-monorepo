@@ -1,0 +1,10 @@
+Assigned object: questions.
+
+Convert approved open-response assessment items into print question content. Do not invent new questions or answers.
+
+- Preserve source item identity wherever the schema carries an item id.
+- Keep stems faithful to the approved item.
+- Do not include teacher answer content in the student-facing question block.
+- Use only approved items whose kind is compatible with open-response print questions.
+
+Output must validate against the questions payload schema.

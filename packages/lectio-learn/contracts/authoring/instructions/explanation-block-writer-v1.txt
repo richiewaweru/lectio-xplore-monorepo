@@ -1,0 +1,8 @@
+Capability: explanation-block.
+
+Write explanatory lesson content.
+
+- Each paragraph should advance the selected intent.
+- Make causal, contrastive, or procedural links explicit when the intent calls for them.
+- Keep terminology consistent with the supplied lesson context.
+- Do not write final interaction payloads inside prose.

@@ -4,7 +4,7 @@
   "contract_version": "1.1.0",
   "intent_catalogue_version": "1.1.0",
   "object_catalogue_version": "1.2.0",
-  "generated_at": "2026-09-07T21:42:52.844Z",
+  "generated_at": "2026-09-09T17:18:25.853Z",
   "files": [
     {
       "path": "lectio-document-v2.schema.json",
@@ -27,14 +27,64 @@
       "bytes": 7482
     },
     {
+      "path": "authoring/instructions/answer-key-system-v1.txt",
+      "sha256": "186c1bd2747bd0a7b8958de0e7e26365cf8b95a4fdee75df868c36cbfce7f855",
+      "bytes": 453
+    },
+    {
+      "path": "authoring/instructions/aside-writer-v1.txt",
+      "sha256": "a548845a7e51435c28dd31aef5ba6272968725ac935c1ac443ac27fb54e63e8c",
+      "bytes": 523
+    },
+    {
+      "path": "authoring/instructions/choices-converter-v1.txt",
+      "sha256": "2d0dae057135f80f36ba388f15523650eb5f62627545830f03c299b35afb4636",
+      "bytes": 503
+    },
+    {
+      "path": "authoring/instructions/figure-brief-writer-v1.txt",
+      "sha256": "f320a1e0fc8249e8746ae6c9474b080a0a19c3555dc0ae1d6ed7dae1ad7519a6",
+      "bytes": 935
+    },
+    {
+      "path": "authoring/instructions/heading-system-v1.txt",
+      "sha256": "f9f340b461af0b21cba97d0680accf8de21a71c5f0be0923d2f2a5c860e6d545",
+      "bytes": 239
+    },
+    {
+      "path": "authoring/instructions/list-writer-v1.txt",
+      "sha256": "605d2cd4795973699fa6058b16824b9a123194216d53338b72f4722bacb6cdf2",
+      "bytes": 695
+    },
+    {
+      "path": "authoring/instructions/prose-writer-v1.txt",
+      "sha256": "4437159463588c7cba3bb9dd87718aea4e75e74d7bf6dad626c9009b6849520b",
+      "bytes": 670
+    },
+    {
+      "path": "authoring/instructions/questions-converter-v1.txt",
+      "sha256": "f2efad7dafe0a69a2fa3353818c3c124460d74ff99a39afd3db6cb4faea5833b",
+      "bytes": 498
+    },
+    {
+      "path": "authoring/instructions/table-writer-v1.txt",
+      "sha256": "3575bd5db7e37bbe9167346b93da64c6ac4ee65bfdba6b0d59514e8080ce534d",
+      "bytes": 992
+    },
+    {
+      "path": "authoring/instructions/worked-example-writer-v1.txt",
+      "sha256": "f3d236b352ee4d8cc66cad2e996dbdb2e9758c7add5bc066387dbf6135cf15b9",
+      "bytes": 911
+    },
+    {
       "path": "generated/form-selection-view.v1.json",
       "sha256": "69cd25809c6f860429d78348f48ccebf4434e835d9601af695609508d1f61c42",
       "bytes": 8023
     },
     {
       "path": "generated/form-writer-view.v1.json",
-      "sha256": "94194f3973040a414a2e884d644c55cfee0f62cef4b9dfd9a066d870e653ab1c",
-      "bytes": 25839
+      "sha256": "20f38080b81834bb7399630c508c9d4fb25ab8457f204225fb789f3687a4d302",
+      "bytes": 44747
     },
     {
       "path": "generated/intent-object-map.v1.json",

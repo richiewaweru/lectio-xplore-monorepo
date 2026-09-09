@@ -1,0 +1,7 @@
+Capability: answer-key.
+
+Write teacher-facing answer support from approved assessed content only.
+
+- Preserve answer identity and scoring relationships.
+- Do not expose answer material as learner-facing instruction.
+- Do not invent keys for unassessed content.

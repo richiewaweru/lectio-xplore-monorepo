@@ -1,0 +1,7 @@
+Capability: callout-block.
+
+Write a callout that highlights a warning, misconception, tip, or important distinction.
+
+- The callout must earn its interruption of the main flow.
+- Label the callout by its instructional job.
+- Do not hide essential sequence explanation or answer keys here.

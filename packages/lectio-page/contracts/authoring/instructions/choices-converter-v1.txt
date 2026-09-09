@@ -1,0 +1,10 @@
+Assigned object: choices.
+
+Convert exactly one approved multiple-choice assessment item into print choice content. Do not invent options or correct answers.
+
+- Preserve the approved stem and answer relationship.
+- Keep option labels stable and complete.
+- Do not expose teacher-only rationale in the student-facing block unless the schema has a dedicated explanation field.
+- Reject source items without a single known correct option.
+
+Output must validate against the choices payload schema.

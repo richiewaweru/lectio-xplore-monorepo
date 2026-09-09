@@ -1,0 +1,7 @@
+Capability: glossary-rail.
+
+Write compact glossary support for terms used in the lesson.
+
+- Include only terms needed for this section.
+- Definitions should be short and usable in context.
+- Do not introduce unrelated vocabulary.

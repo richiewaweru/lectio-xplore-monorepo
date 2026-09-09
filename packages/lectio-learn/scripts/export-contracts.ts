@@ -22,8 +22,8 @@
  * Single source of truth stays here in TypeScript.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { resolve } from 'path';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { dirname, join, resolve } from 'path';
 import { createGenerator } from 'ts-json-schema-generator';
 import { validateAllLectioContentModules } from '../src/lib/lectio/core/validate-component';
 import { lectioComponentModules } from '../src/lib/schema/registry';
@@ -38,6 +38,7 @@ import {
 	buildSelectionView,
 	buildTeachingView,
 	buildWriterView,
+	AUTHORING_DEFINITION_VERSION,
 	RUNTIME_VIEW_VERSION,
 	SELECTION_VIEW_VERSION,
 	TEACHING_VIEW_VERSION,
@@ -60,6 +61,36 @@ const packageJson = JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as
 };
 
 type JsonObject = Record<string, unknown>;
+
+function listFiles(dir: string, prefix: string): string[] {
+	if (!existsSync(dir)) return [];
+	const out: string[] = [];
+	for (const entry of readdirSync(dir, { withFileTypes: true })) {
+		const rel = `${prefix}/${entry.name}`;
+		const full = join(dir, entry.name);
+		if (entry.isDirectory()) {
+			out.push(...listFiles(full, rel));
+		} else {
+			out.push(rel);
+		}
+	}
+	return out.sort();
+}
+
+function copyAuthoringResources(outDir: string): ManifestEntry[] {
+	const sourceRoot = resolve('contracts/authoring');
+	const files = listFiles(sourceRoot, 'authoring');
+	const entries: ManifestEntry[] = [];
+	for (const file of files) {
+		const source = resolve('contracts', file);
+		const target = resolve(outDir, file);
+		mkdirSync(dirname(target), { recursive: true });
+		if (source !== target) copyFileSync(source, target);
+		const serialized = readFileSync(target, 'utf8');
+		entries.push(manifestEntry(file, 'authoring-resource', AUTHORING_DEFINITION_VERSION, serialized));
+	}
+	return entries;
+}
 
 const lectioModulesList = Array.from(lectioComponentModules);
 const validationIssues = validateAllLectioContentModules(lectioModulesList);
@@ -191,6 +222,7 @@ writeView(
 	RUNTIME_VIEW_VERSION,
 	buildRuntimeView(capabilities)
 );
+artifacts.push(...copyAuthoringResources(OUT));
 
 const counts: Record<string, number> = {
 	total: capabilities.length,

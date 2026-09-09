@@ -1,0 +1,8 @@
+Capability: fill-blank.
+
+Write a fill-in-the-blank interaction with enumerable accepted answers.
+
+- Declare one answer entry per blank in reading order.
+- Use stable blank ids when the rendered text identifies blanks.
+- Include genuine alternatives only when both wordings should score correct.
+- Do not use this for open reasoning, judgement, or sentence-length answers.

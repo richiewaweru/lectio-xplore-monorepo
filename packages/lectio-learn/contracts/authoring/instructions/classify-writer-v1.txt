@@ -1,0 +1,8 @@
+Capability: classify.
+
+Write a classification interaction.
+
+- Declare category ids and labels before item assignments.
+- Each item belongs to exactly one category.
+- Item ids must be unique.
+- Do not use this for overlapping categories or fuzzy judgement calls.

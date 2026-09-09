@@ -1,0 +1,7 @@
+Capability: process-steps.
+
+Write ordered steps for a process, method, or causal chain.
+
+- Each step should be a distinct stage or action.
+- Preserve the actual order; do not sort by importance.
+- Include transitions or explanations only where the schema supports them.

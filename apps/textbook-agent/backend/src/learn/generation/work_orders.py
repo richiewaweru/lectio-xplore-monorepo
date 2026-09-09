@@ -16,6 +16,21 @@ from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
 from learn.generation.native_selection import LearnSelectionDecision, LearnSelectionSnapshot
 from learn.resources.selection import load_learn_writer_view
 
+REGISTERED_LEARN_VALIDATOR_REFS = frozenset(
+    {
+        "learn.payload_schema",
+        "learn.evaluateChoice",
+        "learn.evaluateMultiSelect",
+        "learn.evaluateFillBlank",
+        "learn.evaluateNumeric",
+        "learn.evaluateShortResponse",
+        "learn.evaluateMatchPairs",
+        "learn.evaluateSequence",
+        "learn.quizContentToInteractionContract",
+        "learn.fillBlankContentToInteractionContract",
+    }
+)
+
 
 class LearnWorkOrder(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -33,6 +48,11 @@ class LearnWorkOrder(BaseModel):
     dependency_ids: list[str] = Field(default_factory=list)
     expected_output_schema: dict[str, Any] = Field(default_factory=dict)
     field_guidance: dict[str, Any] = Field(default_factory=dict)
+    authoring_definition: dict[str, Any] = Field(default_factory=dict)
+    instructions: dict[str, Any] | str | None = None
+    required_inputs: list[str] = Field(default_factory=list)
+    modes: list[str] = Field(default_factory=list)
+    validator_refs: list[str] = Field(default_factory=list)
     brief: str = ""
     intent: str = ""
     action: str | None = None
@@ -46,12 +66,38 @@ class WriterRequestLeakError(AssertionError):
     pass
 
 
-def _capability_contract_hash(capability_id: str, writer_card: Mapping[str, Any]) -> str:
-    payload = {
-        "id": capability_id,
-        "payload_schema_ref": writer_card.get("payload_schema_ref"),
-        "payload_schema": writer_card.get("payload_schema"),
+def _complete_definition_payload(writer_card: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        key: writer_card.get(key)
+        for key in (
+            "definition_version",
+            "capability_id",
+            "native_path",
+            "lane",
+            "purpose",
+            "modes",
+            "instructions",
+            "schema_ref",
+            "payload_schema_ref",
+            "payload_schema",
+            "field_guidance",
+            "required_inputs",
+            "requires",
+            "capacity",
+            "negative_cases",
+            "examples",
+            "validator_refs",
+            "converter_ref",
+            "postprocessor_ref",
+            "asset_requirements",
+        )
+        if writer_card.get(key) is not None
     }
+
+
+def _capability_contract_hash(capability_id: str, writer_card: Mapping[str, Any]) -> str:
+    payload = _complete_definition_payload(writer_card)
+    payload.setdefault("capability_id", capability_id)
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
@@ -62,7 +108,34 @@ def _writer_card(capability_id: str) -> dict[str, Any]:
     card = cards.get(capability_id)
     if not isinstance(card, dict):
         raise KeyError(f"writer view missing capability {capability_id!r}")
-    return dict(card)
+    out = dict(card)
+    _assert_authoring_definition_ready(capability_id, out)
+    return out
+
+
+def _assert_authoring_definition_ready(capability_id: str, card: Mapping[str, Any]) -> None:
+    instructions = card.get("instructions")
+    text = ""
+    if isinstance(instructions, Mapping):
+        text = str(instructions.get("text") or "").strip()
+    elif isinstance(instructions, str):
+        text = instructions.strip()
+    if not text:
+        raise ValueError(f"learn/{capability_id}: missing authoring instructions")
+    if not card.get("payload_schema") and not card.get("payload_schema_ref"):
+        raise ValueError(f"learn/{capability_id}: missing payload schema")
+    if not card.get("required_inputs"):
+        raise ValueError(f"learn/{capability_id}: missing required_inputs")
+    if "generate" not in set(card.get("modes") or ()) and "convert-approved" not in set(
+        card.get("modes") or ()
+    ):
+        raise ValueError(f"learn/{capability_id}: missing supported authoring modes")
+    refs = [str(ref) for ref in (card.get("validator_refs") or [])]
+    if not refs:
+        raise ValueError(f"learn/{capability_id}: missing validator_refs")
+    unknown = sorted(set(refs) - REGISTERED_LEARN_VALIDATOR_REFS)
+    if unknown:
+        raise ValueError(f"learn/{capability_id}: unknown validator_refs {unknown}")
 
 
 def _block_index(teaching_plan: TeachingPlan) -> dict[str, tuple[str, TeachingPlanBlock]]:
@@ -122,6 +195,7 @@ def compile_learn_work_orders(
             schema = card.get("payload_schema")
             if not isinstance(schema, dict):
                 schema = {"$ref": card.get("payload_schema_ref")}
+            definition = _complete_definition_payload(card)
             authoring_mode: Literal["new", "approved_item"] = (
                 "approved_item" if source_ids and lane == "interaction" else "new"
             )
@@ -140,6 +214,11 @@ def compile_learn_work_orders(
                     dependency_ids=list(decision.dependency_ids),
                     expected_output_schema=dict(schema),
                     field_guidance=dict(card.get("field_guidance") or {}),
+                    authoring_definition=definition,
+                    instructions=definition.get("instructions"),
+                    required_inputs=list(card.get("required_inputs") or []),
+                    modes=list(card.get("modes") or []),
+                    validator_refs=list(card.get("validator_refs") or []),
                     brief=block.brief,
                     intent=block.intent,
                     action=action,
@@ -178,6 +257,12 @@ def build_learn_writer_request(
         "dependency_ids": list(order.dependency_ids),
         "payload_schema": order.expected_output_schema,
         "field_guidance": order.field_guidance,
+        "authoring_definition": order.authoring_definition,
+        "instructions": order.instructions,
+        "definition_hash": order.capability_contract_hash,
+        "required_inputs": list(order.required_inputs),
+        "modes": list(order.modes),
+        "validator_refs": list(order.validator_refs),
         "allowed_facts": list(allowed_facts or []),
         "terminology": list(terminology or []),
         "authoring_mode": order.authoring_mode,

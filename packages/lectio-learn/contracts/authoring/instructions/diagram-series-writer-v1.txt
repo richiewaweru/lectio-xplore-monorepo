@@ -1,0 +1,7 @@
+Capability: diagram-series.
+
+Write a sequence of related diagrams.
+
+- Each panel must add a distinct stage, view, or comparison.
+- Keep labels consistent across panels.
+- Do not split a single simple diagram into filler panels.

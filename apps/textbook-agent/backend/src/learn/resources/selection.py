@@ -20,6 +20,20 @@ PASSIVE_ACTIONS = frozenset({"compare-without-response", "read-explanation"})
 ACTION_ALIASES = {
     "reconstruct-order": "order-items",
 }
+_REGISTERED_VALIDATOR_REFS: frozenset[str] = frozenset(
+    {
+        "learn.payload_schema",
+        "learn.evaluateChoice",
+        "learn.evaluateMultiSelect",
+        "learn.evaluateFillBlank",
+        "learn.evaluateNumeric",
+        "learn.evaluateShortResponse",
+        "learn.evaluateMatchPairs",
+        "learn.evaluateSequence",
+        "learn.quizContentToInteractionContract",
+        "learn.fillBlankContentToInteractionContract",
+    }
+)
 # Content-only shells when teaching omitted a learner_action (or used a passive
 # action) and the closed shortlist is otherwise empty. Never used to paper over
 # a required interaction with an empty interaction set.
@@ -128,6 +142,34 @@ def _action_matches(
     return False
 
 
+def _writer_readiness_error(
+    capability_id: str, card: Mapping[str, Any] | None
+) -> str | None:
+    del capability_id
+    if not isinstance(card, Mapping):
+        return "writer_view_missing"
+    instructions = card.get("instructions")
+    text = ""
+    if isinstance(instructions, Mapping):
+        text = str(instructions.get("text") or "").strip()
+    elif isinstance(instructions, str):
+        text = instructions.strip()
+    if not text:
+        return "missing_instructions"
+    if not card.get("payload_schema") and not card.get("payload_schema_ref"):
+        return "missing_payload_schema"
+    if not card.get("required_inputs"):
+        return "missing_required_inputs"
+    if not set(card.get("modes") or ()).intersection({"generate", "convert-approved"}):
+        return "missing_authoring_mode"
+    refs = {str(ref) for ref in (card.get("validator_refs") or [])}
+    if not refs:
+        return "missing_validator_refs"
+    if refs - _REGISTERED_VALIDATOR_REFS:
+        return "unknown_validator_refs"
+    return None
+
+
 def derive_learn_block_candidates(
     *,
     block_id: str,
@@ -183,14 +225,10 @@ def derive_learn_block_candidates(
                 continue
 
         # Writer projection: package must export a writer schema for the kind.
-        if capability_id not in writers and availability not in {"available", "incomplete"}:
-            excluded[capability_id] = "writer_unsupported"
+        writer_error = _writer_readiness_error(capability_id, writers.get(capability_id))
+        if writer_error is not None:
+            excluded[capability_id] = writer_error
             continue
-        if capability_id not in writers:
-            # Prefer writer-view presence; fall back to payload_schema on the record.
-            if not record.get("payload_schema") and not record.get("payload_schema_ref"):
-                excluded[capability_id] = "writer_unsupported"
-                continue
 
         intents = {str(item) for item in (record.get("supported_intents") or [])}
         if intent not in intents:

@@ -1,12 +1,24 @@
 {
   "view": "writer",
-  "view_version": "1.0.0",
+  "view_version": "2.0.0",
   "object_catalogue_version": "1.2.0",
   "document_schema_ref": "lectio-document-v2.schema.json",
   "forms": {
     "heading": {
       "id": "heading",
+      "definition_version": "2.0.0",
+      "capability_id": "heading",
+      "native_path": "print",
+      "lane": "content",
       "purpose": "Heading text, hierarchy level, optional numbering.",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/heading-system-v1.txt",
+        "text": "Assigned object: heading.\r\n\r\nHeadings are structural document chrome, not generated teaching content. A writer must preserve the supplied title and level from the approved plan.\r\n\r\nOutput must validate against the heading payload schema."
+      },
+      "schema_ref": "lectio-document-v2.schema.json#/$defs/heading-content",
       "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/heading-content",
       "payload_schema": {
         "type": "object",
@@ -43,17 +55,34 @@
         "text": "string",
         "number": "string|null"
       },
+      "field_guidance": {
+        "level": "1 for the lesson title, 2 for a section, 3 for a subsection. Never skip a level.",
+        "text": "Name the content, not the pedagogy. No trailing punctuation.",
+        "number": "Only when the document numbers sections. Null otherwise — never invent numbering."
+      },
       "writer_guidance": {
         "level": "1 for the lesson title, 2 for a section, 3 for a subsection. Never skip a level.",
         "text": "Name the content, not the pedagogy. No trailing punctuation.",
         "number": "Only when the document numbers sections. Null otherwise — never invent numbering."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "form_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "negative_cases": [
         "level 3 directly under level 1",
         "heading as the final block of a section",
         "heading text restating the sentence that follows it"
       ],
       "capacity": {},
+      "validator_refs": [
+        "print.payload_schema",
+        "print.validate_content"
+      ],
+      "definition_hash": "9fb6eb59fe566c2aef20194d9c95189636b78a88a2ffb4189638f3604572f24c",
       "fragmentation": "Must be bound with the first following block in one break-inside:avoid wrapper. Never render alone.",
       "emphasis": "Type size, weight, rule, and spacing only. No box.",
       "placement": [
@@ -67,7 +96,19 @@
     },
     "prose": {
       "id": "prose",
+      "definition_version": "2.0.0",
+      "capability_id": "prose",
+      "native_path": "print",
+      "lane": "content",
       "purpose": "Paragraphs and restrained inline nodes.",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/prose-writer-v1.txt",
+        "text": "Assigned object: prose.\r\n\r\nWrite continuous explanatory or connective text because the planned content requires a line of reasoning that should be read in sequence.\r\n\r\n- Each paragraph has one clear job.\r\n- Lead with the concrete claim or anchor evidence, not generic scene-setting.\r\n- Make causal links explicit when the intent is causal.\r\n- Do not convert naturally parallel facts into a prose list.\r\n- Do not describe a visual that should have been a figure; respect the fixed plan and keep prose within its declared role.\r\n- Stay within the supplied paragraph and word capacity.\r\n\r\nOutput:\r\n\r\n{\r\n  \"paragraphs\": [\"complete paragraph\", \"optional next paragraph\"]\r\n}"
+      },
+      "schema_ref": "lectio-document-v2.schema.json#/$defs/prose-content",
       "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/prose-content",
       "payload_schema": {
         "type": "object",
@@ -88,9 +129,19 @@
       "content_schema": {
         "paragraphs": "RichParagraph[]"
       },
+      "field_guidance": {
+        "paragraphs": "One idea per paragraph, in reading order. Each paragraph is an array of inline nodes; use a term node for a defined term and a math node for notation. Do not emit an empty paragraph to create spacing."
+      },
       "writer_guidance": {
         "paragraphs": "One idea per paragraph, in reading order. Each paragraph is an array of inline nodes; use a term node for a defined term and a math node for notation. Do not emit an empty paragraph to create spacing."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "form_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "negative_cases": [
         "a single-sentence paragraph that belongs in the previous paragraph",
         "paragraphs used as disguised list items",
@@ -101,6 +152,11 @@
         "paragraphsMax": 4,
         "wordsPerParagraph": 120
       },
+      "validator_refs": [
+        "print.payload_schema",
+        "print.validate_content"
+      ],
+      "definition_hash": "7f31417bef0dcc5a71248e795ec6952d2bf79ddcd742f46335fe68da86e4d113",
       "fragmentation": "Splits freely with widows/orphans. Paragraphs may split.",
       "emphasis": "Inline weight, italic, small caps, and whitespace. No background or border.",
       "placement": [
@@ -113,7 +169,19 @@
     },
     "list": {
       "id": "list",
+      "definition_version": "2.0.0",
+      "capability_id": "list",
+      "native_path": "print",
+      "lane": "content",
       "purpose": "Ordered or unordered items with optional lead-in.",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/list-writer-v1.txt",
+        "text": "Assigned object: list.\r\n\r\nUse the specified list style. Items must express genuinely discrete, parallel, or sequential units.\r\n\r\n- `steps`: each item is an action in required order.\r\n- `ordered`: order matters but items may be claims or stages.\r\n- `unordered`: parallel items with no sequence claim.\r\n- `glossary`: each item names a term and its concise meaning using the contract's permitted rich text representation.\r\n- Avoid fragments unless the educational form calls for labels.\r\n- Do not hide causal explanation inside oversized list items.\r\n\r\nOutput:\r\n\r\n{\r\n  \"style\": \"ordered|unordered|steps|glossary\",\r\n  \"lead_in\": \"optional concise lead-in or null\",\r\n  \"items\": [{\"text\": \"...\"}]\r\n}"
+      },
+      "schema_ref": "lectio-document-v2.schema.json#/$defs/list-content",
       "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/list-content",
       "payload_schema": {
         "type": "object",
@@ -164,11 +232,23 @@
         "lead_in": "RichText|null",
         "items": "ListItem[]"
       },
+      "field_guidance": {
+        "style": "ordered or steps when position carries meaning, unordered when it does not, glossary for term/definition pairs.",
+        "lead_in": "One clause naming what the items have in common. Null when the preceding prose already says it.",
+        "items": "Parallel grammatical form across every item. Keep each item within wordsPerItem; an item needing a sentence of explanation belongs in prose."
+      },
       "writer_guidance": {
         "style": "ordered or steps when position carries meaning, unordered when it does not, glossary for term/definition pairs.",
         "lead_in": "One clause naming what the items have in common. Null when the preceding prose already says it.",
         "items": "Parallel grammatical form across every item. Keep each item within wordsPerItem; an item needing a sentence of explanation belongs in prose."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "form_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "negative_cases": [
         "two items",
         "items of mixed grammatical form",
@@ -181,6 +261,11 @@
         "wordsPerItem": 25,
         "leadInMaxWords": 20
       },
+      "validator_refs": [
+        "print.payload_schema",
+        "print.validate_content"
+      ],
+      "definition_hash": "e90ec051da4201d76fd81eb39ee906e024559c1484c3b502bd2d0ca8e9623826",
       "fragmentation": "List may split between items; individual item avoids splitting when practical.",
       "emphasis": "Markers, hanging indent, weight, and spacing. No box.",
       "placement": [
@@ -194,7 +279,19 @@
     },
     "table": {
       "id": "table",
+      "definition_version": "2.0.0",
+      "capability_id": "table",
+      "native_path": "print",
+      "lane": "content",
       "purpose": "Columns, rows, header, caption, and semantic presentation hint.",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/table-writer-v1.txt",
+        "text": "Assigned object: table.\r\n\r\nA table is justified only because the fixed plan contains a real relationship that becomes inspectable across rows and columns.\r\n\r\n- Declare stable, short column IDs.\r\n- Every row must have exactly the declared cells.\r\n- Use `comparison` only for parallel dimensions, `timeline` only for ordered time/stage progression, otherwise `standard`.\r\n- Keep cell text concise; move continuous reasoning elsewhere.\r\n- Do not create decorative columns such as \"Notes\" with unrelated prose.\r\n- Do not create blank learner-response cells in this lesson slice unless the supplied contract explicitly permits a writable-cell representation.\r\n\r\nOutput:\r\n\r\n{\r\n  \"columns\": [{\"id\": \"...\", \"label\": \"...\"}],\r\n  \"rows\": [{\"cells\": [{\"column_id\": \"...\", \"value\": \"...\"}]}],\r\n  \"caption\": \"optional or null\",\r\n  \"presentation\": \"standard|comparison|timeline\"\r\n}\r\n\r\nFor each row, include one cell entry for every declared column. The column_id values must match the column ids exactly."
+      },
+      "schema_ref": "lectio-document-v2.schema.json#/$defs/table-content",
       "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/table-content",
       "payload_schema": {
         "type": "object",
@@ -265,12 +362,25 @@
         "caption": "string|null",
         "presentation": "standard|comparison|timeline"
       },
+      "field_guidance": {
+        "columns": "First column is the row label. Every other column header names one criterion applied identically down the column.",
+        "rows": "Cell values keyed by column id. Every cell must be fillable with a comparable value — never 'n/a'.",
+        "caption": "States what the reader should notice. Null when the surrounding prose already does.",
+        "presentation": "comparison when the columns are the things compared, timeline when the first column is time, standard otherwise."
+      },
       "writer_guidance": {
         "columns": "First column is the row label. Every other column header names one criterion applied identically down the column.",
         "rows": "Cell values keyed by column id. Every cell must be fillable with a comparable value — never 'n/a'.",
         "caption": "States what the reader should notice. Null when the surrounding prose already does.",
         "presentation": "comparison when the columns are the things compared, timeline when the first column is time, standard otherwise."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "form_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "negative_cases": [
         "a single value column",
         "a cell containing a full sentence",
@@ -285,6 +395,11 @@
         "wordsPerCell": 12,
         "captionMaxWords": 20
       },
+      "validator_refs": [
+        "print.payload_schema",
+        "print.validate_content"
+      ],
+      "definition_hash": "d843ec6c952533bb63da231fbee3c189c5d6b0f9e71035db1900dbfc3970caad",
       "fragmentation": "May split across pages. thead repeats. Rows avoid splitting.",
       "emphasis": "Rules, alignment, weight, and sparse header tint only when photocopy-safe. No enclosing box.",
       "placement": [
@@ -298,7 +413,19 @@
     },
     "figure": {
       "id": "figure",
+      "definition_version": "2.0.0",
+      "capability_id": "figure",
+      "native_path": "print",
+      "lane": "content",
       "purpose": "Image or SVG asset, caption, alt text, width hint.",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/figure-brief-writer-v1.txt",
+        "text": "Assigned object: figure.\r\n\r\nCreate the document content and media-generation brief for a figure whose block position is already fixed. Do not generate image bytes.\r\n\r\nThe figure must make spatial structure, change, comparison, flow, or evidence more inspectable than prose alone.\r\n\r\nProvide:\r\n\r\n- a precise visual subject;\r\n- pedagogical visual job;\r\n- required visible elements/labels;\r\n- forbidden or misleading elements;\r\n- connection to the anchor;\r\n- accessible alt text describing the educational information;\r\n- a concise caption that interprets rather than merely names;\r\n- image/svg kind recommendation consistent with existing visual routing.\r\n\r\nDo not put essential teaching only in decorative imagery. Do not include text that contradicts the unit terminology.\r\n\r\nOutput only semantic figure content. Do not output `request_id`, asset `status`, `src`, or `svg`; the backend owns runtime asset identity and delivery state."
+      },
+      "schema_ref": "lectio-document-v2.schema.json#/$defs/figure-content",
       "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/figure-content",
       "payload_schema": {
         "type": "object",
@@ -360,12 +487,25 @@
         "alt_text": "string",
         "width": "main|span"
       },
+      "field_guidance": {
+        "asset": "Reference an existing asset by identity. Never invent a path or describe an image that has not been produced.",
+        "caption": "Say what the reader should take from the figure, not what it depicts. Null when the prose already says it.",
+        "alt_text": "Describe the information the figure carries for a reader who cannot see it. Required even when a caption exists.",
+        "width": "span only when detail is lost at main-column width."
+      },
       "writer_guidance": {
         "asset": "Reference an existing asset by identity. Never invent a path or describe an image that has not been produced.",
         "caption": "Say what the reader should take from the figure, not what it depicts. Null when the prose already says it.",
         "alt_text": "Describe the information the figure carries for a reader who cannot see it. Required even when a caption exists.",
         "width": "span only when detail is lost at main-column width."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "form_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "negative_cases": [
         "asset reference that does not resolve",
         "alt_text repeating the caption verbatim",
@@ -376,6 +516,12 @@
         "captionMaxWords": 30,
         "altTextMaxWords": 40
       },
+      "validator_refs": [
+        "print.payload_schema",
+        "print.validate_content"
+      ],
+      "postprocessor_ref": "print.figure_asset_postprocessor",
+      "definition_hash": "88644ec2bde0798d1cae9562d369f09e64f04cdf05c4248455588724f2206538",
       "fragmentation": "Figure and caption are atomic. May move to next page.",
       "emphasis": "Scale, whitespace, caption typography, and optional hairline around the plate only—not a card.",
       "placement": [
@@ -389,7 +535,19 @@
     },
     "aside": {
       "id": "aside",
+      "definition_version": "2.0.0",
+      "capability_id": "aside",
+      "native_path": "print",
+      "lane": "content",
       "purpose": "Short set-apart note with optional student-facing label.",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/aside-writer-v1.txt",
+        "text": "Assigned object: aside.\r\n\r\nWrite a short supporting note that deserves separation from the main prose but does not introduce a new teaching thread.\r\n\r\n- Use a concise label that names the note's job.\r\n- Keep the body brief and anchored to the selected teaching block.\r\n- Do not hide required explanation, answer keys, or assessment content in an aside.\r\n- Reject decorative trivia and anything that would distract from the section objective.\r\n\r\nOutput:\r\n\r\n{\r\n  \"label\": \"short note label\",\r\n  \"body\": \"supporting note\"\r\n}"
+      },
+      "schema_ref": "lectio-document-v2.schema.json#/$defs/aside-content",
       "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/aside-content",
       "payload_schema": {
         "type": "object",
@@ -413,10 +571,21 @@
         "label": "string|null",
         "body": "RichText"
       },
+      "field_guidance": {
+        "label": "A short student-facing cue such as the teacher label for the intent. Null when the body speaks for itself.",
+        "body": "One point, self-contained, readable out of sequence. Stay inside bodyMaxWords — an aside that overflows is prose."
+      },
       "writer_guidance": {
         "label": "A short student-facing cue such as the teacher label for the intent. Null when the body speaks for itself.",
         "body": "One point, self-contained, readable out of sequence. Stay inside bodyMaxWords — an aside that overflows is prose."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "form_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "negative_cases": [
         "body longer than bodyMaxWords",
         "more than maxPerSection asides in one section",
@@ -428,6 +597,11 @@
         "labelMaxWords": 4,
         "maxPerSection": 2
       },
+      "validator_refs": [
+        "print.payload_schema",
+        "print.validate_content"
+      ],
+      "definition_hash": "8483a697cb55aa82671ac71479ef5883e55b643b986227db9cc0656ab0e36ca9",
       "fragmentation": "Atomic. Margin placement uses float, clear:right, and negative margin. Move cleanly if it does not fit.",
       "emphasis": "The only object allowed a border or background. Default is a single vertical rule with restrained label.",
       "placement": [
@@ -441,7 +615,19 @@
     },
     "worked-example": {
       "id": "worked-example",
+      "definition_version": "2.0.0",
+      "capability_id": "worked-example",
+      "native_path": "print",
+      "lane": "content",
       "purpose": "Problem/setup, ordered reasoning steps, final answer, optional checks.",
+      "modes": [
+        "generate"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/worked-example-writer-v1.txt",
+        "text": "Assigned object: worked-example.\r\n\r\nCarry one specific problem or case from statement through visible steps to an answer. Match the fixed intent:\r\n\r\n- `demonstrate`: model the complete method for first exposure.\r\n- `practise-guided`: leave the learner cognitively active while providing structured support.\r\n- `derive`: make each transformation justified.\r\n- `interpret`: connect each step to the meaning of the result.\r\n\r\nRules:\r\n\r\n- Use the lesson anchor when the brief requires it.\r\n- Every step changes or interprets something; no filler steps.\r\n- The answer follows from the steps.\r\n- The optional check independently verifies the result when appropriate.\r\n- Do not introduce a method outside the objective.\r\n\r\nOutput:\r\n\r\n{\r\n  \"title\": \"optional or null\",\r\n  \"problem\": \"specific problem\",\r\n  \"steps\": [{\"text\": \"...\"}],\r\n  \"answer\": \"complete answer\",\r\n  \"check\": \"optional independent check or null\"\r\n}"
+      },
+      "schema_ref": "lectio-document-v2.schema.json#/$defs/worked-example-content",
       "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/worked-example-content",
       "payload_schema": {
         "type": "object",
@@ -499,6 +685,13 @@
         "answer": "RichText",
         "check": "RichText|null"
       },
+      "field_guidance": {
+        "title": "Names the method being demonstrated. Null when the problem statement is self-explanatory.",
+        "problem": "A concrete instance with every value the learner needs. Stay inside problemMaxWords.",
+        "steps": "Each step states what is done and why. No step may be left for the learner to supply — that is guided practice, not a demonstration.",
+        "answer": "The final result, stated plainly. Required; a worked example without an answer is rejected.",
+        "check": "How the reader verifies the answer is reasonable. Null when no cheap check exists."
+      },
       "writer_guidance": {
         "title": "Names the method being demonstrated. Null when the problem statement is self-explanatory.",
         "problem": "A concrete instance with every value the learner needs. Stay inside problemMaxWords.",
@@ -506,6 +699,13 @@
         "answer": "The final result, stated plainly. Required; a worked example without an answer is rejected.",
         "check": "How the reader verifies the answer is reasonable. Null when no cheap check exists."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "form_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology"
+      ],
       "negative_cases": [
         "missing answer",
         "a step whose working is elided for the learner to complete",
@@ -518,6 +718,11 @@
         "wordsPerStep": 40,
         "problemMaxWords": 60
       },
+      "validator_refs": [
+        "print.payload_schema",
+        "print.validate_content"
+      ],
+      "definition_hash": "c9d7bf7244e180bc07abb67763faeb69a96639fd832ac97d179f9ba727d3da28",
       "fragmentation": "May split between steps. A step avoids internal split where practical. Final step and answer stay together.",
       "emphasis": "Numbered steps, hanging labels, indentation, and rules. No enclosing box.",
       "placement": [
@@ -531,7 +736,19 @@
     },
     "questions": {
       "id": "questions",
+      "definition_version": "2.0.0",
+      "capability_id": "questions",
+      "native_path": "print",
+      "lane": "content",
       "purpose": "Open prompts, marks, response guidance, answer-space specification.",
+      "modes": [
+        "convert-approved"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/questions-converter-v1.txt",
+        "text": "Assigned object: questions.\r\n\r\nConvert approved open-response assessment items into print question content. Do not invent new questions or answers.\r\n\r\n- Preserve source item identity wherever the schema carries an item id.\r\n- Keep stems faithful to the approved item.\r\n- Do not include teacher answer content in the student-facing question block.\r\n- Use only approved items whose kind is compatible with open-response print questions.\r\n\r\nOutput must validate against the questions payload schema."
+      },
+      "schema_ref": "lectio-document-v2.schema.json#/$defs/questions-content",
       "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/questions-content",
       "payload_schema": {
         "type": "object",
@@ -587,10 +804,22 @@
         "items": "QuestionItem[]",
         "instructions": "RichText|null"
       },
+      "field_guidance": {
+        "items": "One prompt per item, within stemMaxWords. Set answer space from the expected response length, and marks only where the document awards them. Expected answers belong in the teacher edition, never in the student prompt.",
+        "instructions": "How to respond, when it is not obvious. Null otherwise."
+      },
       "writer_guidance": {
         "items": "One prompt per item, within stemMaxWords. Set answer space from the expected response length, and marks only where the document awards them. Expected answers belong in the teacher edition, never in the student prompt.",
         "instructions": "How to respond, when it is not obvious. Null otherwise."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "form_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology",
+        "approved_assessment_items"
+      ],
       "negative_cases": [
         "a prompt whose answer is a fixed choice from a closed set",
         "an item with no question in it",
@@ -602,6 +831,13 @@
         "itemsMax": 6,
         "stemMaxWords": 45
       },
+      "validator_refs": [
+        "print.payload_schema",
+        "print.validate_content",
+        "print.validate_answer_key_integrity"
+      ],
+      "converter_ref": "print.approved_assessment_converter",
+      "definition_hash": "2d60846c2e0dcef679021ce6399e158102c8f84bf3642828682cce4dfbaab87a",
       "fragmentation": "Split between questions, never inside a question. Prompt stays with minimum answer space.",
       "emphasis": "Hanging numbers, marks aligned to edge, ruled answer space. No cards.",
       "placement": [
@@ -615,7 +851,19 @@
     },
     "choices": {
       "id": "choices",
+      "definition_version": "2.0.0",
+      "capability_id": "choices",
+      "native_path": "print",
+      "lane": "content",
       "purpose": "Stem, lettered options, optional marks.",
+      "modes": [
+        "convert-approved"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/choices-converter-v1.txt",
+        "text": "Assigned object: choices.\r\n\r\nConvert exactly one approved multiple-choice assessment item into print choice content. Do not invent options or correct answers.\r\n\r\n- Preserve the approved stem and answer relationship.\r\n- Keep option labels stable and complete.\r\n- Do not expose teacher-only rationale in the student-facing block unless the schema has a dedicated explanation field.\r\n- Reject source items without a single known correct option.\r\n\r\nOutput must validate against the choices payload schema."
+      },
+      "schema_ref": "lectio-document-v2.schema.json#/$defs/choices-content",
       "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/choices-content",
       "payload_schema": {
         "type": "object",
@@ -662,11 +910,24 @@
         "options": "ChoiceOption[]",
         "marks": "number|null"
       },
+      "field_guidance": {
+        "stem": "One question, answerable without reading the options first. Stay inside stemMaxWords.",
+        "options": "Between optionsMin and optionsMax options with stable ids and parallel form. Every wrong option must be one a real learner would pick, and for what reason. Correctness is carried in the teacher edition, not printed beside the option.",
+        "marks": "Only when the document awards marks. Null otherwise."
+      },
       "writer_guidance": {
         "stem": "One question, answerable without reading the options first. Stay inside stemMaxWords.",
         "options": "Between optionsMin and optionsMax options with stable ids and parallel form. Every wrong option must be one a real learner would pick, and for what reason. Correctness is carried in the teacher edition, not printed beside the option.",
         "marks": "Only when the document awards marks. Null otherwise."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "form_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology",
+        "approved_assessment_items"
+      ],
       "negative_cases": [
         "a filler distractor no learner would choose",
         "'all of the above' or 'none of the above'",
@@ -679,6 +940,13 @@
         "stemMaxWords": 40,
         "optionMaxWords": 15
       },
+      "validator_refs": [
+        "print.payload_schema",
+        "print.validate_content",
+        "print.validate_answer_key_integrity"
+      ],
+      "converter_ref": "print.approved_assessment_converter",
+      "definition_hash": "46612595aa3d935bce9bf8942224e119deadc759bcd46e184666a5e7262bb479",
       "fragmentation": "Atomic when it fits; otherwise keep stem with at least two options and split only between options.",
       "emphasis": "Letters A/B/C/D, hanging indent, whitespace. Never radio controls.",
       "placement": [
@@ -691,7 +959,19 @@
     },
     "answer-key": {
       "id": "answer-key",
+      "definition_version": "2.0.0",
+      "capability_id": "answer-key",
+      "native_path": "print",
+      "lane": "content",
       "purpose": "Question references, expected answers, alternatives, working, rubric and misconceptions.",
+      "modes": [
+        "convert-approved"
+      ],
+      "instructions": {
+        "resource_ref": "contracts/authoring/instructions/answer-key-system-v1.txt",
+        "text": "Assigned object: answer-key.\r\n\r\nAnswer keys are teacher-edition content derived from approved assessment relationships. Do not generate new answers.\r\n\r\n- Every entry must point to an assessed question or choice id.\r\n- Do not include entries for content without an assessed answer.\r\n- Preserve the approved answer exactly enough for deterministic review.\r\n\r\nOutput must validate against the answer-key payload schema and answer-key integrity validator."
+      },
+      "schema_ref": "lectio-document-v2.schema.json#/$defs/answer-key-content",
       "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/answer-key-content",
       "payload_schema": {
         "type": "object",
@@ -771,9 +1051,20 @@
       "content_schema": {
         "groups": "AnswerGroup[]"
       },
+      "field_guidance": {
+        "groups": "One group per source block, in document order. Each entry references the question it answers, gives the expected answer plus acceptable alternatives, and names the misconception a wrong answer reveals where the source block declared one. Never introduce an answer for a question that is not in the document."
+      },
       "writer_guidance": {
         "groups": "One group per source block, in document order. Each entry references the question it answers, gives the expected answer plus acceptable alternatives, and names the misconception a wrong answer reveals where the source block declared one. Never introduce an answer for a question that is not in the document."
       },
+      "required_inputs": [
+        "teaching_plan_block",
+        "form_selection_decision",
+        "lesson_context",
+        "allowed_facts",
+        "terminology",
+        "approved_assessment_items"
+      ],
       "negative_cases": [
         "an entry referencing a question id that is not in the document",
         "answer-key content appearing in the student edition",
@@ -781,6 +1072,12 @@
         "alternatives that contradict the expected answer"
       ],
       "capacity": {},
+      "validator_refs": [
+        "print.payload_schema",
+        "print.validate_content",
+        "print.validate_answer_key_integrity"
+      ],
+      "definition_hash": "630b483e4cfd735a20616466296142476769bd883f507137830d6d3225ca9666",
       "fragmentation": "Split between entries. Entry keeps question reference with first answer line.",
       "emphasis": "Heading hierarchy, compact typography, rules. No card.",
       "placement": [

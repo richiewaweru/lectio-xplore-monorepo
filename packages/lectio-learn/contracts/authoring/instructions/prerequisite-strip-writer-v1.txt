@@ -1,0 +1,7 @@
+Capability: prerequisite-strip.
+
+Write a short reminder of prerequisite knowledge.
+
+- Include only knowledge needed for the next teaching move.
+- Keep reminders factual and compact.
+- Do not reteach the whole prerequisite topic.

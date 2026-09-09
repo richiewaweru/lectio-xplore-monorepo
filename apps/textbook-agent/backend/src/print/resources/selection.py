@@ -31,6 +31,13 @@ _IMPLEMENTED_FORM_OBJECTS: frozenset[str] = frozenset(
     }
 )
 _NEVER_SELECTABLE_OBJECTS: frozenset[str] = frozenset({"heading", "answer-key"})
+_REGISTERED_VALIDATOR_REFS: frozenset[str] = frozenset(
+    {
+        "print.payload_schema",
+        "print.validate_content",
+        "print.validate_answer_key_integrity",
+    }
+)
 
 
 class NoCompatiblePrintCapabilityError(RuntimeError):
@@ -121,6 +128,31 @@ def _object_actions_fallback() -> dict[str, tuple[str, ...]]:
     return out
 
 
+def _writer_readiness_error(form_id: str, card: Mapping[str, Any] | None) -> str | None:
+    if not isinstance(card, Mapping):
+        return "writer_view_missing"
+    instructions = card.get("instructions")
+    text = ""
+    if isinstance(instructions, Mapping):
+        text = str(instructions.get("text") or "").strip()
+    elif isinstance(instructions, str):
+        text = instructions.strip()
+    if not text:
+        return "missing_instructions"
+    if not card.get("payload_schema") and not card.get("payload_schema_ref"):
+        return "missing_payload_schema"
+    if not card.get("required_inputs"):
+        return "missing_required_inputs"
+    if not set(card.get("modes") or ()).intersection({"generate", "convert-approved"}):
+        return "missing_authoring_mode"
+    refs = {str(ref) for ref in (card.get("validator_refs") or [])}
+    if not refs:
+        return "missing_validator_refs"
+    if refs - _REGISTERED_VALIDATOR_REFS:
+        return "unknown_validator_refs"
+    return None
+
+
 def _apply_approved_item_filter(
     legal: Sequence[str],
     *,
@@ -168,6 +200,7 @@ def derive_print_block_candidates(
     available_asset_ids: Sequence[str] | None = None,
     policy: Mapping[str, Any] | None = None,
     form_cards: Mapping[str, Mapping[str, Any]] | None = None,
+    writer_view: Mapping[str, Mapping[str, Any]] | None = None,
     source_question_ids: Sequence[str] | None = None,
     approved_items: Sequence[Any] | None = None,
     remaining_budgets: Mapping[str, int] | None = None,
@@ -180,7 +213,7 @@ def derive_print_block_candidates(
     cards = dict(form_cards) if form_cards is not None else _form_cards()
     fallback_actions = _object_actions_fallback()
     budgets = {str(k): int(v) for k, v in (remaining_budgets or {}).items()}
-    writer_view = load_form_writer_view().get("forms") or {}
+    writers = writer_view if writer_view is not None else (load_form_writer_view().get("forms") or {})
 
     excluded: dict[str, str] = {}
     legal: list[str] = []
@@ -196,8 +229,9 @@ def derive_print_block_candidates(
         if form_id not in offered:
             excluded[form_id] = "not_in_native_policy"
             continue
-        if form_id not in writer_view and form_id not in _IMPLEMENTED_FORM_OBJECTS:
-            excluded[form_id] = "writer_view_missing"
+        writer_error = _writer_readiness_error(form_id, writers.get(form_id))
+        if writer_error is not None:
+            excluded[form_id] = writer_error
             continue
 
         card = cards.get(form_id)

@@ -1,0 +1,8 @@
+Capability: numeric.
+
+Write a numeric-answer interaction with a declared target and optional tolerance.
+
+- The target value must be finite.
+- Tolerance must be finite and non-negative.
+- State units for the learner when units matter.
+- Do not use tolerance to hide an ambiguous method or multiple valid answers.

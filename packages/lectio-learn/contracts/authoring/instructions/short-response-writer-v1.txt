@@ -1,0 +1,8 @@
+Capability: short-response.
+
+Write a short text response interaction.
+
+- Use `accepted-answers` only for names, terms, or short phrases whose valid wordings can be listed.
+- Use `teacher-review` for reasoning, reflection, or explanation.
+- Accepted answers must be non-empty and distinct after normalization.
+- Do not auto-score broad comprehension with string matching.

@@ -1,0 +1,3 @@
+Capability: generic Learn interaction.
+
+This interaction is not generation-enabled by native policy today. Preserve its package schema and readiness blockers; do not generate without an explicit package-owned instruction resource.

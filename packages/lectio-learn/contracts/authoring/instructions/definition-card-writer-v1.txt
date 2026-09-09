@@ -1,0 +1,8 @@
+Capability: definition-card.
+
+Write a focused definition card.
+
+- Define one term or tightly related concept.
+- Include the minimum context needed to use the term correctly.
+- Avoid circular definitions and unexplained jargon.
+- Do not turn the card into a broad explanation block.

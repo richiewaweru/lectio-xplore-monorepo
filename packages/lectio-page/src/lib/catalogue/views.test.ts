@@ -244,9 +244,21 @@ describe('P01-K06 — selection and writer views stay separated', () => {
 		expect(Object.keys(writer.forms).sort()).toEqual([...PAGE_OBJECTS].sort());
 		for (const id of PAGE_OBJECTS) {
 			const record = writer.forms[id];
+			expect(record.definition_version).toBe('2.0.0');
+			expect(record.capability_id).toBe(id);
+			expect(record.native_path).toBe('print');
+			expect(record.lane).toBe('content');
+			expect(record.modes.length).toBeGreaterThan(0);
+			expect(record.instructions.text.length, id).toBeGreaterThan(20);
+			expect(record.instructions.resource_ref, id).toMatch(/^contracts\/authoring\/instructions\//);
+			expect(record.schema_ref).toBe(record.payload_schema_ref);
 			expect(record.payload_schema.type).toBe('object');
 			expect(record.payload_schema.additionalProperties).toBe(false);
+			expect(record.required_inputs.length, id).toBeGreaterThan(0);
+			expect(record.validator_refs, id).toContain('print.payload_schema');
+			expect(record.definition_hash, id).toMatch(/^[0-9a-f]{64}$/);
 			expect(Object.keys(record.writer_guidance).length).toBeGreaterThan(0);
+			expect(record.field_guidance).toEqual(record.writer_guidance);
 			expect(record.source_refs).toContain(`object-catalogue.v1.json#/objects/${id}`);
 		}
 	});

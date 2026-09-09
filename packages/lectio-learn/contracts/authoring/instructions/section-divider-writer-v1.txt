@@ -1,0 +1,7 @@
+Capability: section-divider.
+
+Write a transition or divider between lesson sections.
+
+- Signal what changes in the learning flow.
+- Keep text short and navigational.
+- Do not add new teaching content that belongs in a block.

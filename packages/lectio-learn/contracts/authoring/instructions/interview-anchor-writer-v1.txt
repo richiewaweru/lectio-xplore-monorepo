@@ -1,0 +1,7 @@
+Capability: interview-anchor.
+
+Write an interview-style anchor that frames the concept through a realistic voice or scenario.
+
+- Keep voice grounded and age appropriate.
+- Tie every question or answer to the lesson objective.
+- Do not invent unsupported biographical or factual claims.

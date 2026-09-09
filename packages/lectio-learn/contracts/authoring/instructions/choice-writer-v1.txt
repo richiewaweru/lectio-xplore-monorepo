@@ -1,0 +1,8 @@
+Capability: choice.
+
+Write a single-answer closed choice interaction.
+
+- Use at least two options with unique stable ids.
+- Exactly one option is correct.
+- Distractors must be plausible and tied to a stateable misconception.
+- Do not use this for questions with several defensible answers.

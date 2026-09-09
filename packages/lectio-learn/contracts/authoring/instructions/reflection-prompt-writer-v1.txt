@@ -1,0 +1,7 @@
+Capability: reflection-prompt.
+
+Write a reflection prompt.
+
+- Ask for thinking that can reasonably follow from the lesson.
+- Keep the prompt open only when teacher review is expected.
+- Do not auto-score broad personal reflection.

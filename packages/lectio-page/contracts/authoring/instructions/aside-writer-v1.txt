@@ -1,0 +1,15 @@
+Assigned object: aside.
+
+Write a short supporting note that deserves separation from the main prose but does not introduce a new teaching thread.
+
+- Use a concise label that names the note's job.
+- Keep the body brief and anchored to the selected teaching block.
+- Do not hide required explanation, answer keys, or assessment content in an aside.
+- Reject decorative trivia and anything that would distract from the section objective.
+
+Output:
+
+{
+  "label": "short note label",
+  "body": "supporting note"
+}

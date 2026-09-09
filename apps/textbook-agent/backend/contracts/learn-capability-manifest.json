@@ -2,7 +2,7 @@
   "manifest_version": "1.0.0",
   "catalogue_version": "1.0.0",
   "package_version": "0.7.0",
-  "generated_at": "2026-09-08T21:16:39.925Z",
+  "generated_at": "2026-09-09T17:18:28.095Z",
   "capability_counts": {
     "total": 43,
     "interaction": 10,
@@ -39,9 +39,9 @@
     {
       "file": "learn-writer-view.v1.json",
       "view": "writer",
-      "view_version": "1.0.0",
-      "sha256": "25ccba29221b16d15750e24bbd62cc5f1afe34ff233b6895603923d910648f6b",
-      "bytes": 86583
+      "view_version": "2.0.0",
+      "sha256": "9b6c02c10cce5d4f4e8c73eb96bd809bdf70a8aadc33e7d2706642ec1d5434b0",
+      "bytes": 134846
     },
     {
       "file": "learn-runtime-view.v1.json",
@@ -49,6 +49,279 @@
       "view_version": "1.0.0",
       "sha256": "7fa85dc726c5517e5ac236402c14a506ee6310a4b185f07e514c3ff61489dfd7",
       "bytes": 39932
+    },
+    {
+      "file": "authoring/instructions/answer-key-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "4376ccc002cac46442c00780734990938c0b8ca9d6e94bfb99d036c80587cc73",
+      "bytes": 268
+    },
+    {
+      "file": "authoring/instructions/callout-block-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "0537934aad21b9791aba18b952397286457e3459205a0958ba26790939b969ca",
+      "bytes": 296
+    },
+    {
+      "file": "authoring/instructions/choice-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "0b4d31998793916951861a47c8cc0d75f3c83dc76be7cabad903742da1645c81",
+      "bytes": 299
+    },
+    {
+      "file": "authoring/instructions/classify-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "425f7f00e13d7e8d19794525432db8ff26ba5eafaf0f1f5ef487758d12388049",
+      "bytes": 270
+    },
+    {
+      "file": "authoring/instructions/comparison-grid-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "7de7a1ba692d260c10ec5ba4b1e84f7a447d497ef46477e321189fdad7152716",
+      "bytes": 237
+    },
+    {
+      "file": "authoring/instructions/definition-card-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "37a0d255e32c1758b5ef79a3513db9050bd8c16f147d6d4febbe763035eb6353",
+      "bytes": 290
+    },
+    {
+      "file": "authoring/instructions/definition-family-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "04ccade96c2ec271fa84298e121b47ac3d43ea8660f66c5f65b31cbb46a887d7",
+      "bytes": 256
+    },
+    {
+      "file": "authoring/instructions/diagram-block-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "2426528617a9288e6a4816fc3cc48e7122cf2ea21c9194f320e2938c26568af8",
+      "bytes": 263
+    },
+    {
+      "file": "authoring/instructions/diagram-compare-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "5314f64f2208b3e90565d83493472cf3323c975915523a9a3b1df6b41590666a",
+      "bytes": 285
+    },
+    {
+      "file": "authoring/instructions/diagram-series-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "2dc34fbd1e37715e822d7b794ce319157aafc2a950c974817ffcd0d7b8790baf",
+      "bytes": 235
+    },
+    {
+      "file": "authoring/instructions/explanation-block-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "1ebaf2abb3901f63e641407fa8367e45723d7bcf473d0f298f287393710a6077",
+      "bytes": 337
+    },
+    {
+      "file": "authoring/instructions/fill-blank-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "e502f52e655c25f14ff296939b5c12257efca488b16b8ea22b7769f821513897",
+      "bytes": 380
+    },
+    {
+      "file": "authoring/instructions/fill-in-blank-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "110ca8e693d388a934351ce6eb10fd4680624717ef3d2aa80d97c888a03c73b3",
+      "bytes": 293
+    },
+    {
+      "file": "authoring/instructions/generic-content-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "9cc15e01cc8b69c29f17762e169fd437f52d6f388a731a428f6446ab771e30c7",
+      "bytes": 192
+    },
+    {
+      "file": "authoring/instructions/generic-interaction-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "309a5afc5c3ffac6cdf49246ba3c7c00af1050c7ddc2bae47ba776bce6a29c81",
+      "bytes": 234
+    },
+    {
+      "file": "authoring/instructions/glossary-rail-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "80ec2c7a5a0734cec973ed3ee94277c96aa615d1243408c17eb9231a268d16a6",
+      "bytes": 237
+    },
+    {
+      "file": "authoring/instructions/hook-hero-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "54ac4b0363ed3ff2ece8844171694621dc0a3025aa2b15620ddb472f63b352d3",
+      "bytes": 236
+    },
+    {
+      "file": "authoring/instructions/insight-strip-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "be9e7abdb63729e3284ea079e57d30a8b3fdd9b606b437eee7755636f00acf65",
+      "bytes": 228
+    },
+    {
+      "file": "authoring/instructions/interview-anchor-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "277b934f363d95ad5a07158ff835504392d2b1898ebf9fdaf382a190955fa74b",
+      "bytes": 293
+    },
+    {
+      "file": "authoring/instructions/key-fact-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "40a75ae5b22e35552004a6bc67b2082d26a484302dd859f6d0dccd40775c6028",
+      "bytes": 230
+    },
+    {
+      "file": "authoring/instructions/match-pairs-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "313e095ed941ef1d85fc46b8a41d4e4b90c6477df1f6de31bef189256a50c358",
+      "bytes": 276
+    },
+    {
+      "file": "authoring/instructions/multi-select-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "acd5e37eb742d0526c19967518c244f8737fbec649ee389c201d21d3464734e7",
+      "bytes": 296
+    },
+    {
+      "file": "authoring/instructions/numeric-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "fe04a3a0dd9d73a89521f0faba8a680f8bcab6b37709549056b40f1d0de62ace",
+      "bytes": 320
+    },
+    {
+      "file": "authoring/instructions/pitfall-alert-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "f4d7838780d696adac0ed87089adb02421e053043157b01e7791c9ed5fc29229",
+      "bytes": 205
+    },
+    {
+      "file": "authoring/instructions/practice-stack-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "de1b8dab2b91f113d342451de073d132e497b83a529529d7dabbb110506c2fdf",
+      "bytes": 270
+    },
+    {
+      "file": "authoring/instructions/prerequisite-strip-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "600640d5a7ff0c93817212f9b66df05a66da64530ea9b30983e7ae4c9e0eeea4",
+      "bytes": 236
+    },
+    {
+      "file": "authoring/instructions/process-steps-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "bf7284f2fde42cbd48771ff1bf010eeb3984771fa4d39aa5f9418b41e92bbd5d",
+      "bytes": 277
+    },
+    {
+      "file": "authoring/instructions/quiz-check-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "5abfd27a9edc0606d7778b91e04a57eae981439d12fac726b9781a4d454af66d",
+      "bytes": 339
+    },
+    {
+      "file": "authoring/instructions/reflection-prompt-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "1857f26593d7b860e66bc2202269e4f2d1a3801eece5c7dbb3887c1b454154ca",
+      "bytes": 238
+    },
+    {
+      "file": "authoring/instructions/section-divider-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "34718609c87d312831fa12fe16d62851db60a964c8f8e33dc5cf82979a31a278",
+      "bytes": 232
+    },
+    {
+      "file": "authoring/instructions/section-header-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "f017857b2b291a1ea3407be16e893167059ec018874ed9fe4bcbd83ef52e622e",
+      "bytes": 286
+    },
+    {
+      "file": "authoring/instructions/sequence-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "0692ab3491f59113495f7eb8f8a579a055929fe639c5b82b8e7e91ecf526efae",
+      "bytes": 325
+    },
+    {
+      "file": "authoring/instructions/short-answer-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "245fc609a728c2a2cc4b01e1aadd4bca3c94bc36f5fc96c972372e2349a7422d",
+      "bytes": 250
+    },
+    {
+      "file": "authoring/instructions/short-response-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "843f9d78861758d392c3982294b68de805fe57dc67ab33913432faa113eb6e49",
+      "bytes": 379
+    },
+    {
+      "file": "authoring/instructions/student-textbox-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "39cc7b26abb063dff0717719084dfd1e959a4dfb77d7c3adbfde5f8a89dc0987",
+      "bytes": 251
+    },
+    {
+      "file": "authoring/instructions/summary-block-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "7b5e3b28c91480b55be0312183967c4f47e2f94283d5d652772f2d08b34bb9e0",
+      "bytes": 303
+    },
+    {
+      "file": "authoring/instructions/timeline-block-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "a95ba8c22ec7364d2910410ea73627b0430354451186a2b19afd941d17f211c8",
+      "bytes": 255
+    },
+    {
+      "file": "authoring/instructions/what-next-bridge-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "da3dc96447824d1f000d507bff53babdf630b0c81f0b8bbec0cb2e5efd967284",
+      "bytes": 245
+    },
+    {
+      "file": "authoring/instructions/worked-example-card-writer-v1.txt",
+      "view": "authoring-resource",
+      "view_version": "2.0.0",
+      "sha256": "df2c5940db0642bf66ba353f0ef169b0e5e000d444c105d5da05af9edc836580",
+      "bytes": 345
     }
   ]
 }

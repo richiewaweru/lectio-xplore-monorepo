@@ -1,0 +1,8 @@
+Capability: quiz-check.
+
+Write a content-backed single-choice quiz check.
+
+- The question must check something already taught.
+- Include one correct option and plausible wrong options.
+- Feedback should explain the learning point without revealing unrelated material.
+- Do not create a quiz without a deterministic correct answer.

@@ -1,5 +1,13 @@
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+	copyFileSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -33,6 +41,20 @@ function seedSource(dir: string): void {
 	for (const name of CATALOGUE_FILES) {
 		copyFileSync(join(contractsDir, name), join(dir, name));
 	}
+	copyTree(join(contractsDir, 'authoring'), join(dir, 'authoring'));
+}
+
+function copyTree(from: string, to: string): void {
+	mkdirSync(to, { recursive: true });
+	for (const entry of readdirSync(from, { withFileTypes: true })) {
+		const source = join(from, entry.name);
+		const target = join(to, entry.name);
+		if (entry.isDirectory()) {
+			copyTree(source, target);
+		} else {
+			copyFileSync(source, target);
+		}
+	}
 }
 
 function readJson<T>(path: string): T {
@@ -43,7 +65,14 @@ interface SelectionView {
 	forms: Array<{ id: string; choose_when: string; capacity: Record<string, number> }>;
 }
 interface WriterView {
-	forms: Record<string, { writer_guidance: Record<string, string> }>;
+	forms: Record<
+		string,
+		{
+			writer_guidance: Record<string, string>;
+			instructions: { text: string; resource_ref: string };
+			definition_hash: string;
+		}
+	>;
 }
 interface Manifest {
 	generated_at: string;
@@ -171,6 +200,25 @@ describe('P01-K01 — the Print contract exporter regenerates reproducibly', () 
 			'P01-K01 mutated field guidance'
 		);
 		expect(mutated.forms.aside!.writer_guidance.body).toBe('P01-K01 mutated field guidance');
+	});
+
+	it('propagates a package instruction change into the writer view and definition hash', () => {
+		const instructionPath = join(mutatedSource, 'authoring/instructions/prose-writer-v1.txt');
+		writeFileSync(
+			instructionPath,
+			`${readFileSync(instructionPath, 'utf8')}\n\nP01-A01 instruction marker.\n`,
+			'utf8'
+		);
+
+		runExporter(mutatedSource, mutatedOut);
+
+		const baseline = readJson<WriterView>(join(baselineOut, 'generated/form-writer-view.v1.json'));
+		const mutated = readJson<WriterView>(join(mutatedOut, 'generated/form-writer-view.v1.json'));
+
+		expect(mutated.forms.prose!.instructions.text).toContain('P01-A01 instruction marker.');
+		expect(mutated.forms.prose!.definition_hash).not.toBe(
+			baseline.forms.prose!.definition_hash
+		);
 	});
 
 	it('drops a form from the selection view when the source marks it unselectable', () => {
