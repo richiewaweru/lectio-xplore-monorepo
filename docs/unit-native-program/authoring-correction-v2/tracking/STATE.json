@@ -2,23 +2,28 @@
   "pack_version": "2.0",
   "baseline": "998e9f36e75f81899a6405a5d199e2f246bcbf9c",
   "branch": "feat/unit-print-learn",
-  "status": "A06_REOPENED_BY_R00",
+  "status": "CORRECTED_BY_REMAINING_FIXES_V3",
   "phases": {
     "A00": "PASS",
     "A01": "PASS",
-    "A02": "REOPENED",
+    "A02": "PASS",
     "A03": "PASS",
-    "A04": "REOPENED",
-    "A05": "REOPENED",
-    "A06": "REOPENED"
+    "A04": "PASS",
+    "A05": "PASS",
+    "A06": "PASS"
   },
   "live_verification": "DEFERRED",
-  "offline_acceptance": "REOPENED_NOT_INDEPENDENTLY_PROVEN",
-  "implementation_head": "db157f00731602c35ec1ec1e71fd5cc5d21e655b",
+  "offline_acceptance": "PASS_VIA_REMAINING_FIXES_V3",
+  "implementation_head": "4b6bbc4694bb996e857f500772f6fe773531d63f",
   "r00_reopen": {
     "reviewed_at_head": "db157f00731602c35ec1ec1e71fd5cc5d21e655b",
     "reopened_phases": ["A02", "A04", "A05", "A06"],
     "reason": "remaining-fixes-v3 R00 regressions expose unsupported PASS claims; historical evidence paths preserved",
     "evidence": "docs/unit-native-program/remaining-fixes-v3/evidence/r00/pytest-r00-all.txt"
+  },
+  "r05_correction": {
+    "verified_commit": "4b6bbc4694bb996e857f500772f6fe773531d63f",
+    "evidence": "docs/unit-native-program/remaining-fixes-v3/evidence/r05/full-offline-gates.txt",
+    "note": "A02/A04/A05/A06 independently proven by Remaining Fixes R01–R04 plus green authoring_correction/P06–P08 suite"
   }
 }
