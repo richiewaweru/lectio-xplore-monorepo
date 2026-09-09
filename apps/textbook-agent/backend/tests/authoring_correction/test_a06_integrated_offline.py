@@ -1,50 +1,29 @@
-"""A06 integrated offline acceptance — dual-path production with mocked boundaries."""
+"""A06 integrated offline — historical suite; real evidence moved to R04 gates.
+
+Superseded claims (deepcopy reload, hash-only publish, dispatch_writer_async dual-path,
+evaluator-only interaction checks) are removed. See tests/remaining_fixes/test_r04_*.py.
+"""
 
 from __future__ import annotations
 
-import copy
-from typing import Any
-
 import pytest
 
-from curriculum.teaching_plan.models import (
-    LearnerActionBrief,
-    TeachingPlan,
-    TeachingPlanBlock,
-    TeachingPlanSection,
-)
+from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock, TeachingPlanSection
 from infra.authoring import AuthoringEngineError, AuthoringProviderCall
-from learn.generation.authoring_adapter import run_learn_work_order_authoring
-from learn.generation.interaction_writer import InteractionWriterError, validate_interaction_contract
-from learn.generation.native_production import build_closed_learn_production, teaching_plan_content_hash
+from learn.generation.interaction_writer import InteractionWriterError
+from learn.generation.native_production import build_closed_learn_production
+from learn.generation.preparation_context import LearnPreparationContext
 from learn.generation.native_selection import build_learn_selection_snapshot
-from learn.generation.work_orders import LearnWorkOrder, compile_learn_work_orders
-from learn.publishing.publish_validation import PublishValidationError, validate_publishable_lesson_document
-from learn.publishing.release_routes import document_hash
+from learn.generation.ordered_assemble import assemble_ordered_learn_document
+from learn.generation.work_orders import LearnWorkOrder, build_learn_writer_request
 from learn.resources.native_policy import default_learn_policy, policy_version_and_hash
 from learn.resources.selection import load_learn_writer_view
-from learn.runtime.evaluation import evaluate_interaction, evaluate_numeric, evaluate_sequence
-from print.generation.selection_snapshot import build_print_selection_snapshot, select_print_deterministically
-from print.resources.native_policy import default_print_policy, policy_version_and_hash as print_policy_hash
-from print.resources.selection import build_print_candidate_map
-from print.rendering.page_objects import WriterContext, dispatch_writer_async
-from tests.authoring_correction.test_a04_learn_authoring import CapabilityProvider, CORE_GENERATED
-from v3_blueprint.planning.models import PlannedBlock
-
-
-class _PrintCapturingProvider:
-    def __init__(self, payload: dict[str, Any]) -> None:
-        self.payload = payload
-        self.calls: list[AuthoringProviderCall] = []
-
-    async def invoke(self, call: AuthoringProviderCall) -> dict[str, Any]:
-        self.calls.append(call)
-        return dict(self.payload)
+from tests.authoring_correction.test_a04_learn_authoring import CapabilityProvider
 
 
 def _learn_plan(*blocks: TeachingPlanBlock) -> TeachingPlan:
     return TeachingPlan(
-        arc="Light drives photosynthesis and distance practice.",
+        arc="Light drives photosynthesis.",
         teaching_plan_id="tp-a06",
         revision=1,
         sections=[TeachingPlanSection(slot_id="main", specific_purpose="Integrated offline", blocks=list(blocks))],
@@ -52,7 +31,7 @@ def _learn_plan(*blocks: TeachingPlanBlock) -> TeachingPlan:
 
 
 def _snapshot(plan: TeachingPlan):
-    plan_hash = teaching_plan_content_hash(plan)
+    plan_hash = "hash-a06"
     _, policy_hash = policy_version_and_hash(default_learn_policy())
     return build_learn_selection_snapshot(
         plan,
@@ -63,138 +42,15 @@ def _snapshot(plan: TeachingPlan):
     )
 
 
-def _print_ctx(object_id: str, *, block_id: str, brief: str) -> WriterContext:
-    planned = PlannedBlock.model_validate(
-        {
-            "id": block_id,
-            "position": 0,
-            "intent": "explain",
-            "object": object_id,
-            "evidence": "A06 evidence",
-            "brief": brief,
-            "source_question_ids": [],
-        }
-    )
-    return WriterContext(planned=planned, use_llm=True, item_records=[])
-
-
+@pytest.mark.skip(reason="Superseded by R04-G01/G02: real dual-path persist + publish API — test_r04_g01_dual_path_persistence.py")
 def test_a06_g02_dual_path_same_revision_mocked_only() -> None:
-    """Print and Learn closed production from one teaching revision; providers mocked."""
-    import asyncio
-
-    plan = _learn_plan(
-        TeachingPlanBlock(
-            id="b-explain",
-            position=0,
-            intent="explain",
-            brief="Explain how light powers photosynthesis with a concrete plant example.",
-            evidence="Read explanation",
-        ),
-    )
-    plan_hash = teaching_plan_content_hash(plan)
-    policy = default_learn_policy()
-    policy["offered_content"] = ["explanation-block"]
-    provider = CapabilityProvider()
-
-    learn_production = build_closed_learn_production(
-        teaching_plan=plan,
-        policy=policy,
-        provider=provider,
-        title=plan.arc,
-    )
-    assert learn_production["teaching_plan_hash"] == plan_hash
-    assert learn_production["document"]["blocks"]
-    assert provider.calls
-
-    print_candidates = build_print_candidate_map(
-        plan,
-        compatible_objects_by_intent={"explain": ("prose", "list")},
-    )
-    _, native_hash = print_policy_hash()
-    print_decisions = select_print_deterministically(plan, candidate_map=print_candidates)
-    print_snapshot = build_print_selection_snapshot(
-        plan,
-        candidate_map=print_candidates,
-        teaching_plan_hash=plan_hash,
-        native_policy_hash=native_hash,
-        package_contract_hash="pkg-page-a06",
-        decisions=print_decisions,
-    )
-    assert print_snapshot.teaching_plan_hash == plan_hash
-    assert print_snapshot.teaching_plan_revision == plan.revision
-
-    async def _print_block() -> None:
-        payload = {"paragraphs": ["Plants convert light into food through photosynthesis."]}
-        result = await dispatch_writer_async(
-            _print_ctx("prose", block_id="b-explain", brief="Explain photosynthesis."),
-            provider=_PrintCapturingProvider(payload),
-        )
-        assert result.status == "ready"
-        assert "photosynthesis" in str(result.content).lower()
-
-    asyncio.run(_print_block())
+    """Former dual-path claim used dispatch_writer_async, not full Print production."""
+    pytest.skip("Use test_r04_g01_dual_path_persistence")
 
 
-@pytest.mark.parametrize(
-    "capability_id,action,response",
-    [
-        ("sequence", "order-items", {"order": ["egg", "larva", "pupa", "adult"]}),
-        ("numeric", "enter-number", {"value": 50}),
-    ],
-)
-def test_a06_g03_core_interactions_evaluate_and_reload(
-    capability_id: str,
-    action: str,
-    response: dict[str, Any],
-) -> None:
-    """Representative interaction contracts evaluate and survive publish reload."""
-    from learn.generation.interaction_writer import write_interaction_from_request
-
-    approved = None
-    if capability_id == "numeric":
-        approved = {"id": "numeric-a06", "value": 50, "unit": "m"}
-    if capability_id == "sequence":
-        approved = {"id": "sequence-a06", "correct_order": ["egg", "larva", "pupa", "adult"]}
-
-    contract = write_interaction_from_request(
-        {
-            "work_order_id": f"a06::{capability_id}",
-            "block_id": f"b-{capability_id}",
-            "capability_id": capability_id,
-            "lane": "interaction",
-            "brief": f"Author {capability_id}",
-            "intent": "check-understanding",
-            "action": action,
-            "evidence": "Known-answer regression",
-            "teaching_plan_hash": "a06",
-            "approved_items": [approved] if approved else [],
-        },
-        provider=CapabilityProvider(),
-    )
-    assert validate_interaction_contract(contract) == []
-    result = evaluate_interaction(contract, response)
-    assert result.outcome == "correct"
-
-    plan = _learn_plan(
-        TeachingPlanBlock(
-            id=f"b-{capability_id}",
-            position=0,
-            intent="check-understanding",
-            brief=f"Check {capability_id}.",
-            evidence="Evidence",
-            learner_action=LearnerActionBrief(action=action, support_level="guided", evidence="Evidence", source_item_ids=[]),
-        )
-    )
-    document = build_closed_learn_production(
-        teaching_plan=plan,
-        policy={**default_learn_policy(), "offered_content": ["explanation-block"], "offered_interactions": [capability_id]},
-        provider=CapabilityProvider(),
-    )["document"]
-    validate_publishable_lesson_document(document)
-    reloaded = copy.deepcopy(document)
-    reloaded["title"] = "Reloaded"
-    validate_publishable_lesson_document(reloaded)
-    assert document_hash(document) == document_hash(copy.deepcopy(document))
+@pytest.mark.skip(reason="Superseded by R04-G03/G05: runtime API + component mounts — test_r04_g03_*, interaction-shells.r04.test.ts")
+def test_a06_g03_core_interactions_evaluate_and_reload() -> None:
+    pytest.skip("Use R04 runtime and component gates")
 
 
 def test_a06_g03_invalid_payload_rejected_at_provider_boundary() -> None:
@@ -210,38 +66,27 @@ def test_a06_g03_invalid_payload_rejected_at_provider_boundary() -> None:
     )
 
     class _BadProvider:
-        async def invoke(self, call: AuthoringProviderCall) -> dict[str, Any]:
+        async def invoke(self, call: AuthoringProviderCall) -> dict:
             return {"not_a_valid_explanation_block": True}
 
     with pytest.raises(AuthoringEngineError, match="REPAIR_EXHAUSTED|INVALID_PAYLOAD"):
-        build_closed_learn_production(teaching_plan=plan, provider=_BadProvider())
+        build_closed_learn_production(
+            teaching_plan=plan,
+            provider=_BadProvider(),
+            preparation_context=LearnPreparationContext(
+                objective="Explain evaporation.",
+                allowed_facts=["Evaporation turns liquid water into vapour."],
+            ),
+        )
 
 
+@pytest.mark.skip(reason="Superseded by R04-G02: publish v1/v2 via API — test_r04_g02_publish_builder.py")
 def test_a06_g04_publish_v1_immutable_v2_hash() -> None:
-    """Published v1 hash stays stable when draft moves to v2."""
-    document = build_closed_learn_production(
-        teaching_plan=_learn_plan(
-            TeachingPlanBlock(
-                id="b1",
-                position=0,
-                intent="explain",
-                brief="Plants need light.",
-                evidence="Read",
-            )
-        ),
-        provider=CapabilityProvider(),
-    )["document"]
-    validate_publishable_lesson_document(document)
-    hash_v1 = document_hash(document)
-    edited = copy.deepcopy(document)
-    edited["blocks"][next(iter(edited["blocks"]))]["content"]["body"] = "Edited body"
-    hash_v2 = document_hash(edited)
-    assert hash_v1 != hash_v2
-    assert document_hash(copy.deepcopy(document)) == hash_v1
+    pytest.skip("Use test_r04_g02_publish_builder")
 
 
-def test_a06_g05_definition_edit_changes_contract_hash() -> None:
-    """Instruction/schema drift changes definition hash used by production requests."""
+def test_a06_g05_definition_edit_changes_writer_request_instructions() -> None:
+    """Instruction drift changes writer request text (definition hash path simulated in R04-G06)."""
     card = load_learn_writer_view()["capabilities"]["explanation-block"]
     order = LearnWorkOrder(
         work_order_id="learn::a06::b1::explanation-block",
@@ -264,8 +109,6 @@ def test_a06_g05_definition_edit_changes_contract_hash() -> None:
         intent="explain",
         evidence="Evidence",
     )
-    from learn.generation.work_orders import build_learn_writer_request
-
     baseline = build_learn_writer_request(order)
     mutated_card = dict(card)
     instructions = dict(mutated_card.get("instructions") or {})
@@ -284,8 +127,6 @@ def test_a06_g05_definition_edit_changes_contract_hash() -> None:
 
 def test_a06_g05_assembly_still_rejects_missing_authored_results() -> None:
     """Defect regression: assembly fails closed without authored payloads."""
-    from learn.generation.ordered_assemble import assemble_ordered_learn_document
-
     plan = _learn_plan(
         TeachingPlanBlock(id="b1", position=0, intent="explain", brief="Explain.", evidence="Read")
     )

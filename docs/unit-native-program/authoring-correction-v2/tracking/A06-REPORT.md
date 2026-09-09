@@ -1,21 +1,23 @@
 # A06 Report — Integrated offline acceptance
 
-> **R00 reopen (2026-09-09, reviewed HEAD `db157f0`):** A06 gates are **REOPENED**. Historical integrated-suite evidence under `evidence/a06/` is preserved as historical only. R00 regressions show prior offline-complete wording was not independently proven against current production defects.
+> **R00 reopen (2026-09-09, reviewed HEAD `db157f0`):** A06 gates are **REOPENED**. Historical integrated-suite evidence under `evidence/a06/` is preserved as historical only.
 
-Status: REOPENED (historical report below recorded PASS at prior HEAD)
+> **R04 supersession (2026-09-09):** Overstated A06 tests (`deepcopy` reload, hash-only publish, `dispatch_writer_async` dual-path, evaluator-only interaction checks) were removed or skipped. Real evidence lives in remaining-fixes-v3 **R04-G01..G06** (`tests/remaining_fixes/test_r04_*.py`, `interaction-shells.r04.test.ts`).
+
+Status: REOPENED — superseded integrated claims; partial regressions remain in `test_a06_integrated_offline.py`
 
 ## Summary
-Integrated offline acceptance re-ran the full Authoring Correction v2 gate suite with mocked provider boundaries only. P07 runtime assembly now authors work orders before ordered assembly. P08 Learn production injects `P08LearnMockProvider` through `produce_learn_from_approved_teaching`. Dual-path, evaluation, invalid-payload, publish immutability and definition regressions are covered in `test_a06_integrated_offline.py`.
+Historical report below recorded PASS at prior HEAD using evidence that R04 audit found insufficient per POLICY.md. R04 implements honest persistence, publish, runtime, failure-retry, component-mount, and instruction-drift gates.
 
-Live/model-quality verification remains DEFERRED. Historical live evidence is unchanged.
+Live/model-quality verification remains DEFERRED.
 
-## Gates
-- A06-G01 PASS: attributable commands, evidence paths and tracking artefacts recorded
-- A06-G02 PASS: `test_a06_g02_dual_path_same_revision_mocked_only`
-- A06-G03 PASS: `test_a06_g03_core_interactions_evaluate_and_reload`, `test_a06_g03_invalid_payload_rejected_at_provider_boundary`
-- A06-G04 PASS: `test_a06_g04_publish_v1_immutable_v2_hash`
-- A06-G05 PASS: `test_a06_g05_definition_edit_changes_contract_hash`, `test_a06_g05_assembly_still_rejects_missing_authored_results`
-- A06-G06 PASS: this report separates offline completion from deferred live verification
+## Gates (current)
+- A06-G01 PASS: tracking artefacts exist
+- A06-G02 SUPERSEDED → R04-G01 `test_r04_g01_dual_path_persistence`
+- A06-G03 PARTIAL: invalid-payload regression retained; interaction/runtime → R04-G03/G05
+- A06-G04 SUPERSEDED → R04-G02 `test_r04_g02_publish_builder`
+- A06-G05 PARTIAL: writer-request instruction drift + assembly regression; full instruction/release → R04-G06
+- A06-G06 PASS: offline vs live separation (unchanged)
 
 ## Evidence
 - `docs/unit-native-program/authoring-correction-v2/evidence/a06/full-offline-gates.txt`
