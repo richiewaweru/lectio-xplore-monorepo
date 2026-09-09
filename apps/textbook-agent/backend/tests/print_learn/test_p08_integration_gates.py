@@ -49,6 +49,7 @@ from curriculum.teaching_plan.projections import (
     assert_sentinels_absent,
     with_excluded_sentinels,
 )
+from infra.authoring import AuthoringProviderCall
 from learn.generation.native_execution import produce_learn_from_approved_teaching
 from learn.generation.native_production import build_closed_learn_production
 from learn.generation.work_orders import build_learn_writer_request
@@ -91,9 +92,132 @@ EVIDENCE_ROOT = (
 MOCKS = {
     "teaching_llm": "print.generation.whole_lesson.teaching_agent._call_teaching_model",
     "print_writer": "print.generation.whole_lesson.executor.dispatch_writer_async",
+    "learn_authoring_provider": "tests.print_learn.test_p08_integration_gates.P08LearnMockProvider",
     "structural_planner": "tests.planning.test_path_bridge._fake_structural_planner",
     "component_selector": "tests.planning.test_path_bridge._fake_component_selector",
 }
+
+_P08_CORE_GENERATED: dict[str, dict] = {
+    "choice": {
+        "options": [{"id": "a", "text": "No light reached the leaf"}, {"id": "b", "text": "The soil ran out of food"}],
+        "correct_option_id": "a",
+    },
+    "multi-select": {
+        "options": [{"id": "light", "text": "light"}, {"id": "co2", "text": "carbon dioxide"}, {"id": "noise", "text": "noise"}],
+        "correct_option_ids": ["light", "co2"],
+    },
+    "fill-blank": {"answers": ["chlorophyll"], "blank_ids": ["pigment"], "case_sensitive": False},
+    "numeric": {"value": 6, "tolerance": 0, "unit": "h"},
+    "short-response": {"evaluation": "teacher-review", "review_guidance": "Explain why light is required."},
+    "match-pairs": {"pairs": [{"left": "lit leaf", "right": "makes food"}, {"left": "covered leaf", "right": "no food"}]},
+    "classify": {
+        "categories": [{"id": "input", "label": "input"}, {"id": "output", "label": "output"}],
+        "pairs": [{"left": "light", "right": "input"}, {"left": "sugar", "right": "output"}],
+    },
+    "sequence": {
+        "items": [
+            {"id": "light", "label": "Absorb light"},
+            {"id": "water", "label": "Split water"},
+            {"id": "carbon", "label": "Fix carbon into sugar"},
+        ],
+        "order": ["light", "water", "carbon"],
+    },
+}
+
+_P08_CONTENT_PAYLOADS: dict[str, dict] = {
+    "section-header": {"title": "Photosynthesis", "subject": "science", "grade_band": "primary"},
+    "hook-hero": {"headline": "Two plants, one difference", "body": "Light changes food production.", "anchor": "photosynthesis"},
+    "explanation-block": {"body": "Plants use light energy to make food.", "emphasis": ["light"]},
+    "definition-card": {"term": "Photosynthesis", "formal": "Light-driven food production.", "plain": "Plants make food using light."},
+    "key-fact": {"fact": "Light is required for food production."},
+    "callout-block": {"variant": "info", "body": "Covered leaves cannot make food without light."},
+    "process-steps": {"title": "Light to food", "steps": [{"number": 1, "action": "Absorb light", "detail": "Chlorophyll captures energy."}]},
+    "worked-example-card": {"title": "Lit vs covered", "setup": "Compare two leaves.", "steps": [{"label": "Observe", "content": "Only the lit leaf makes food."}], "conclusion": "Light is required."},
+    "summary-block": {"items": [{"text": "Light drives photosynthesis."}]},
+    "timeline-block": {"title": "Day in a leaf", "events": [{"id": "morning", "year": "1", "title": "Sunrise", "summary": "Light arrives."}]},
+    "diagram-compare": {"before_label": "Covered", "after_label": "Lit", "caption": "Light changes outcomes.", "alt_text": "Lit leaf beside covered leaf."},
+    "quiz-check": {
+        "question": "Why did the covered leaf fail?",
+        "options": [{"text": "No light", "correct": True, "explanation": "Correct."}, {"text": "No soil", "correct": False, "explanation": "No."}],
+        "feedback_correct": "Correct.",
+        "feedback_incorrect": "Review light.",
+    },
+    "fill-in-blank": {"segments": [{"text": "Plants need ", "is_blank": False}, {"text": "", "is_blank": True, "answer": "light"}]},
+}
+
+
+def _p08_brief_from_call(call: AuthoringProviderCall) -> str:
+    marker = "## SCOPED REQUEST"
+    if call.is_repair and "## REPAIR PAYLOAD" in call.prompt:
+        marker = "## REPAIR PAYLOAD"
+    start = call.prompt.find(marker)
+    if start < 0:
+        return ""
+    json_start = call.prompt.find("{", start)
+    if json_start < 0:
+        return ""
+    depth = 0
+    for index, char in enumerate(call.prompt[json_start:], start=json_start):
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    data = json.loads(call.prompt[json_start : index + 1])
+                except json.JSONDecodeError:
+                    return ""
+                scoped = data.get("scoped_request") or {}
+                if scoped.get("brief"):
+                    return str(scoped["brief"])
+                block = (data.get("inputs") or {}).get("teaching_plan_block") or {}
+                return str(block.get("brief") or "")
+    return ""
+
+
+def _p08_embed_brief(payload: dict, brief: str) -> dict:
+    if not brief:
+        return payload
+    out = dict(payload)
+    for key in ("body", "title", "headline", "fact", "question", "problem", "formal", "plain", "caption", "setup", "conclusion"):
+        if key in out and isinstance(out[key], str):
+            out[key] = f"{brief} {out[key]}".strip()
+    if isinstance(out.get("paragraphs"), list) and out["paragraphs"]:
+        out["paragraphs"] = [f"{brief} {out['paragraphs'][0]}".strip()]
+    elif "title" in out and isinstance(out["title"], str):
+        out["title"] = f"{brief} {out['title']}".strip()
+    elif "question" in out and isinstance(out["question"], str):
+        out["question"] = f"{brief} {out['question']}".strip()
+    return out
+
+
+def _p08_sequence_payload(brief: str) -> dict:
+    parts = [part.strip() for part in brief.replace(";", ",").split(",") if part.strip()]
+    if len(parts) >= 2:
+        items = [{"id": f"step{index}", "label": label} for index, label in enumerate(parts)]
+        return {"items": items, "order": [item["id"] for item in items]}
+    return dict(_P08_CORE_GENERATED["sequence"])
+
+
+class P08LearnMockProvider:
+    """MOCK Learn authoring provider — schema-valid payloads for closed production."""
+
+    def __init__(self) -> None:
+        self.calls: list[AuthoringProviderCall] = []
+
+    async def invoke(self, call: AuthoringProviderCall) -> dict:
+        self.calls.append(call)
+        brief = _p08_brief_from_call(call)
+        if call.capability_id == "sequence":
+            return _p08_sequence_payload(brief)
+        if call.capability_id in _P08_CORE_GENERATED:
+            return dict(_P08_CORE_GENERATED[call.capability_id])
+        template = _P08_CONTENT_PAYLOADS.get(call.capability_id, _P08_CONTENT_PAYLOADS["explanation-block"])
+        return _p08_embed_brief(dict(template), brief)
+
+
+def _p08_learn_provider() -> P08LearnMockProvider:
+    return P08LearnMockProvider()
 
 
 @pytest.fixture(autouse=True)
@@ -468,6 +592,7 @@ async def _run_learn(
     gid: str,
     user_id: str,
     path_lesson_id: str,
+    provider: P08LearnMockProvider | None = None,
 ) -> dict:
     async with async_session_factory() as session:
         state = await load_shared_teaching_state(session, gid)
@@ -491,6 +616,7 @@ async def _run_learn(
             pack_id=pack_id,
             title=learn_plan.arc,
             subject="science",
+            provider=provider or _p08_learn_provider(),
         )
         await link_print_realization(
             session,
@@ -595,6 +721,7 @@ async def test_p08_i03_sentinels_scoped_repair_stale_lease() -> None:
         teaching_plan=learn_plan,
         title=learn_plan.arc,
         write_interactions=True,
+        provider=_p08_learn_provider(),
     )
     sentinel = "SIBLING_SCHEMA_SENTINEL_p08i03_zz9"
     ix_orders = [o for o in production["work_orders"] if o.lane == "interaction"]
@@ -796,7 +923,7 @@ def test_p08_i06_mock_catalogue_is_explicit() -> None:
         "live_claim": False,
         "mocks": MOCKS,
         "note": (
-            "LLM teaching call and Print writer dispatch are mocked. "
+            "LLM teaching call, Print writer dispatch and Learn authoring provider are mocked. "
             "Closed selection, DB persistence, leases, realizations and Learn "
             "assembly use production services. Not a live P09 campaign."
         ),

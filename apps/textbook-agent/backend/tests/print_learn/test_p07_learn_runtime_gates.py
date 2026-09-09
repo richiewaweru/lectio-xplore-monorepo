@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
@@ -17,8 +18,11 @@ from curriculum.teaching_plan.models import (
     TeachingPlanBlock,
     TeachingPlanSection,
 )
+from infra.authoring import AuthoringProviderCall
+from learn.generation.authoring_adapter import run_learn_work_order_authoring
 from learn.generation.native_selection import build_learn_selection_snapshot
 from learn.generation.ordered_assemble import assemble_ordered_learn_document
+from learn.generation.work_orders import compile_learn_work_orders
 from learn.resources.native_policy import default_learn_policy, policy_version_and_hash as learn_policy_hash
 from learn.runtime.evaluation import (
     InteractionConfigError,
@@ -26,6 +30,47 @@ from learn.runtime.evaluation import (
     evaluate_sequence,
     is_complete,
 )
+
+
+_P07_PROVIDER_PAYLOADS = {
+    "sequence": {
+        "items": [
+            {"id": "egg", "label": "Egg"},
+            {"id": "larva", "label": "Larva"},
+            {"id": "pupa", "label": "Pupa"},
+            {"id": "adult", "label": "Adult"},
+        ],
+        "order": ["egg", "larva", "pupa", "adult"],
+    },
+    "explanation-block": {"body": "Intro prose about the butterfly life cycle.", "emphasis": ["cycle"]},
+}
+
+
+class _P07AuthoringProvider:
+    async def invoke(self, call: AuthoringProviderCall):
+        return dict(
+            _P07_PROVIDER_PAYLOADS.get(
+                call.capability_id,
+                _P07_PROVIDER_PAYLOADS["explanation-block"],
+            )
+        )
+
+
+async def _author_all_async(orders):
+    provider = _P07AuthoringProvider()
+    return {
+        order.work_order_id: await run_learn_work_order_authoring(order, provider=provider)
+        for order in orders
+    }
+
+
+def _author_all(orders):
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(_author_all_async(orders))
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        return executor.submit(lambda: asyncio.run(_author_all_async(orders))).result()
 
 
 def _snapshot(plan: TeachingPlan):
@@ -102,9 +147,13 @@ def _sequence_document(
             )
         ],
     )
+    snapshot = _snapshot(plan)
+    orders = compile_learn_work_orders(teaching_plan=plan, snapshot=snapshot)
     document = assemble_ordered_learn_document(
         teaching_plan=plan,
-        snapshot=_snapshot(plan),
+        snapshot=snapshot,
+        work_orders=orders,
+        authored_results=_author_all(orders),
         lesson_id="doc-p07",
         title="P07 Sequence",
         subject="biology",

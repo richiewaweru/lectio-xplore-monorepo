@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from application.unit_lesson.realizations import admit_realization
 from core.database.models import EditableLessonModel, GenerationModel
 from curriculum.teaching_plan.models import TeachingPlan
+from infra.authoring import AuthoringEngine, AuthoringProvider
 from learn.generation.native_production import (
     build_closed_learn_production_async,
     teaching_plan_content_hash,
@@ -39,6 +40,8 @@ async def produce_learn_from_approved_teaching(
     available_asset_ids: Sequence[str] | None = None,
     approved_items: Sequence[Any] | None = None,
     policy: Mapping[str, Any] | None = None,
+    provider: AuthoringProvider | None = None,
+    engine: AuthoringEngine | None = None,
 ) -> dict[str, Any]:
     """Run closed Learn production and persist generation + editable draft.
 
@@ -55,6 +58,8 @@ async def produce_learn_from_approved_teaching(
         source_generation_id=output_id,
         approved_items=approved_items,
         write_interactions=True,
+        provider=provider,
+        engine=engine,
     )
     document = dict(production["document"])
     document["id"] = output_id
