@@ -1,14 +1,17 @@
 {
   "baseline": "db157f00731602c35ec1ec1e71fd5cc5d21e655b",
   "branch": "feat/unit-print-learn",
-  "status": "R04_PASS",
+  "status": "COMPLETE_OFFLINE",
+  "verified_commit": "4b6bbc4694bb996e857f500772f6fe773531d63f",
   "phases": {
     "R00": "PASS",
     "R01": "PASS",
     "R02": "PASS",
     "R03": "PASS",
     "R04": "PASS",
-    "R05": "NOT_RUN"
+    "R05": "PASS"
   },
+  "gates_pass": "27/27",
+  "completion_wording": "Remaining fixes verified offline; live/model-quality verification deferred",
   "live_verification": "DEFERRED"
 }
