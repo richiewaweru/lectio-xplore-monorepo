@@ -29,25 +29,12 @@ _REGISTERED_VALIDATOR_REFS: frozenset[str] = frozenset(
         "learn.evaluateNumeric",
         "learn.evaluateShortResponse",
         "learn.evaluateMatchPairs",
+        "learn.evaluateClassify",
         "learn.evaluateSequence",
         "learn.quizContentToInteractionContract",
         "learn.fillBlankContentToInteractionContract",
     }
 )
-# Content-only shells when teaching omitted a learner_action (or used a passive
-# action) and the closed shortlist is otherwise empty. Never used to paper over
-# a required interaction with an empty interaction set.
-INTENT_CONTENT_FALLBACKS = {
-    "emphasise": ("explanation-block", "key-fact", "summary-block"),
-    "define": ("definition-card", "explanation-block", "key-fact"),
-    "name-parts": ("definition-card", "explanation-block", "key-fact"),
-    "diagnose-misconception": ("quiz-check", "callout-block", "explanation-block"),
-    "check-understanding": ("quiz-check", "fill-in-blank", "explanation-block"),
-    "practise-independent": ("quiz-check", "fill-in-blank", "explanation-block"),
-    "practise-guided": ("worked-example-card", "process-steps", "explanation-block"),
-}
-
-
 class NoCompatibleLearnCapabilityError(RuntimeError):
     """Required response/action has no legal capability under the closed set."""
 
@@ -255,33 +242,6 @@ def derive_learn_block_candidates(
             content.append(capability_id)
         else:
             interactions.append(capability_id)
-
-    # Content fallback only for non-required-response blocks, and only when the
-    # fallback capability still matches package intent/action support.
-    if (
-        not requires_response
-        and not content
-        and not interactions
-    ):
-        for fallback_id in INTENT_CONTENT_FALLBACKS.get(intent, ()):
-            if fallback_id not in content_offered:
-                continue
-            record = index.get(fallback_id)
-            if not isinstance(record, dict):
-                continue
-            if str(record.get("availability") or "") == "unavailable":
-                continue
-            intents = {str(item) for item in (record.get("supported_intents") or [])}
-            if intent not in intents:
-                continue
-            actions = [str(item) for item in (record.get("supported_actions") or [])]
-            if not _action_matches(
-                action=canonical_action, supported_actions=actions, kind="content"
-            ):
-                continue
-            content.append(fallback_id)
-            excluded.pop(fallback_id, None)
-            break
 
     return LearnBlockCandidates(
         block_id=block_id,

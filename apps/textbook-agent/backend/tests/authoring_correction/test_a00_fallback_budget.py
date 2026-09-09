@@ -29,7 +29,15 @@ def test_a00_fallback_candidate_stays_excluded_when_budget_exhausted() -> None:
         policy=policy,
         capabilities=capabilities,
         remaining_budgets={"explanation-block": 0},
-        writer_view={"explanation-block": {"payload_schema": {"type": "object"}}},
+        writer_view={
+            "explanation-block": {
+                "instructions": {"text": "Write explanatory prose."},
+                "payload_schema": {"type": "object"},
+                "required_inputs": ["brief"],
+                "modes": ["generate"],
+                "validator_refs": ["learn.payload_schema"],
+            }
+        },
     )
 
     assert derived.content_candidates == ()

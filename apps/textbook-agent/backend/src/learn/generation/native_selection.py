@@ -128,6 +128,50 @@ def rank_learn_interaction_candidates(
     return [capability_id for _, _, _, capability_id in scored]
 
 
+def rank_learn_content_candidates(
+    content_ids: Sequence[str],
+    *,
+    brief: str,
+    intent: str,
+    action: str | None,
+    selection_view: Mapping[str, Any] | None = None,
+) -> list[str]:
+    """Rank closed content shortlist by package guidance and clear intent hints."""
+    if not content_ids:
+        return []
+    view = selection_view if selection_view is not None else load_learn_selection_view()
+    by_id: dict[str, Mapping[str, Any]] = {}
+    for row in view.get("capabilities") or []:
+        if isinstance(row, Mapping) and row.get("id"):
+            by_id[str(row["id"])] = row
+    query_text = f"{brief} {intent} {action or ''}"
+    query = _guidance_tokens(query_text)
+    lowered = query_text.lower()
+    scored: list[tuple[int, int, int, int, str]] = []
+    for index, capability_id in enumerate(content_ids):
+        record = by_id.get(capability_id) or {}
+        choose = _guidance_tokens(str(record.get("choose_when") or ""))
+        reject = _guidance_tokens(str(record.get("reject_when") or ""))
+        choose_hits = len(query & choose)
+        reject_hits = len(query & reject)
+        intent_bonus = 0
+        if capability_id == "explanation-block" and any(
+            token in lowered for token in ("explain", "causal", "prose", "why")
+        ):
+            intent_bonus = 3
+        elif capability_id == "definition-card" and any(
+            token in lowered for token in ("define", "definition", "term")
+        ):
+            intent_bonus = 3
+        elif capability_id == "summary-block" and any(
+            token in lowered for token in ("summar", "takeaway", "recap")
+        ):
+            intent_bonus = 3
+        scored.append((-(choose_hits + intent_bonus), reject_hits, -intent_bonus, index, capability_id))
+    scored.sort()
+    return [capability_id for _, _, _, _, capability_id in scored]
+
+
 def _source_and_deps_for_block(block: Any) -> tuple[list[str], list[str]]:
     source_ids = list(block.source_question_ids or [])
     deps: list[str] = []
@@ -146,6 +190,7 @@ def _decide_from_candidates(
     teaching_plan: TeachingPlan,
     candidates: Mapping[str, LearnBlockCandidates],
     *,
+    pick_content: Any,
     pick_interaction: Any,
     reason_with_interaction: str,
 ) -> list[LearnSelectionDecision]:
@@ -153,7 +198,7 @@ def _decide_from_candidates(
     for section in teaching_plan.sections:
         for block in section.blocks:
             row = candidates[block.id]
-            content_id = row.content_candidates[0] if row.content_candidates else None
+            content_id = pick_content(block, row) if row.content_candidates else None
             interaction_id: str | None
             if row.requires_response:
                 if not row.interaction_candidates:
@@ -215,9 +260,13 @@ def select_learn_first_legal(
     def _first(_block: Any, row: LearnBlockCandidates) -> str:
         return row.interaction_candidates[0]
 
+    def _first_content(_block: Any, row: LearnBlockCandidates) -> str:
+        return row.content_candidates[0]
+
     decisions = _decide_from_candidates(
         teaching_plan,
         candidates,
+        pick_content=_first_content,
         pick_interaction=_first,
         reason_with_interaction="deterministic first-legal closed candidate",
     )
@@ -252,9 +301,19 @@ def select_learn_deterministically(
         )
         return ranked[0]
 
+    def _ranked_content(block: Any, row: LearnBlockCandidates) -> str:
+        ranked = rank_learn_content_candidates(
+            row.content_candidates,
+            brief=str(getattr(block, "brief", "") or ""),
+            intent=block.intent,
+            action=row.action,
+        )
+        return ranked[0]
+
     decisions = _decide_from_candidates(
         teaching_plan,
         candidates,
+        pick_content=_ranked_content,
         pick_interaction=_ranked,
         reason_with_interaction="choose_when-ranked closed candidate",
     )
@@ -406,6 +465,7 @@ __all__ = [
     "SelectionErrorCode",
     "build_learn_selection_snapshot",
     "candidate_map_payload",
+    "rank_learn_content_candidates",
     "rank_learn_interaction_candidates",
     "select_learn_deterministically",
     "select_learn_first_legal",

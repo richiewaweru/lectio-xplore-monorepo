@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from typing import Any, Literal, Mapping, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from curriculum.teaching_plan.models import TeachingPlan
 from print.generation.whole_lesson.form_plan import FormDecision, FormPlan
-from print.resources.selection import PASSIVE_ACTIONS
+from print.resources.selection import PASSIVE_ACTIONS, load_form_selection_view
 
 SelectionErrorCode = Literal[
     "OUT_OF_SET",
@@ -183,12 +184,48 @@ def validate_print_selection(
             )
 
 
-def select_print_deterministically(
+_TOKEN_RE = re.compile(r"[a-z0-9]+")
+
+
+def _guidance_tokens(text: str) -> frozenset[str]:
+    return frozenset(tok for tok in _TOKEN_RE.findall(text.lower()) if len(tok) > 2)
+
+
+def rank_print_form_candidates(
+    form_ids: Sequence[str],
+    *,
+    brief: str,
+    intent: str,
+    action: str | None,
+    selection_view: Mapping[str, Any] | None = None,
+) -> list[str]:
+    """Rank a closed Print form shortlist by package choose_when / reject_when."""
+    if not form_ids:
+        return []
+    view = selection_view if selection_view is not None else load_form_selection_view()
+    by_id: dict[str, Mapping[str, Any]] = {}
+    for row in view.get("forms") or []:
+        if isinstance(row, Mapping) and row.get("id"):
+            by_id[str(row["id"])] = row
+    query = _guidance_tokens(f"{brief} {intent} {action or ''}")
+    scored: list[tuple[int, int, int, str]] = []
+    for index, form_id in enumerate(form_ids):
+        record = by_id.get(form_id) or {}
+        choose = _guidance_tokens(str(record.get("choose_when") or ""))
+        reject = _guidance_tokens(str(record.get("reject_when") or ""))
+        choose_hits = len(query & choose)
+        reject_hits = len(query & reject)
+        scored.append((-choose_hits, reject_hits, index, form_id))
+    scored.sort()
+    return [form_id for _, _, _, form_id in scored]
+
+
+def select_print_first_legal(
     teaching_plan: TeachingPlan,
     *,
     candidate_map: Mapping[str, Sequence[str]],
 ) -> list[PrintSelectionDecision]:
-    """Code-owned closed selection: first legal form per block."""
+    """Test helper: first legal form per block from the closed shortlist."""
     from print.resources.selection import NoCompatiblePrintCapabilityError
 
     decisions: list[PrintSelectionDecision] = []
@@ -212,6 +249,49 @@ def select_print_deterministically(
                     form_id=str(allowed[0]),
                     placement="main",
                     reason="deterministic first-legal closed candidate",
+                )
+            )
+    return decisions
+
+
+def select_print_deterministically(
+    teaching_plan: TeachingPlan,
+    *,
+    candidate_map: Mapping[str, Sequence[str]],
+) -> list[PrintSelectionDecision]:
+    """Production closed selection: choose_when-ranked form per block."""
+    from print.resources.selection import NoCompatiblePrintCapabilityError
+
+    decisions: list[PrintSelectionDecision] = []
+    for section in teaching_plan.sections:
+        for block in section.blocks:
+            allowed = list(candidate_map.get(block.id) or ())
+            if not allowed:
+                action = None
+                if block.learner_action is not None:
+                    action = block.learner_action.action
+                raise NoCompatiblePrintCapabilityError(
+                    block_id=block.id,
+                    intent=block.intent,
+                    action=action,
+                    constraints={"candidates": []},
+                    reason="empty legal form set",
+                )
+            action = None
+            if block.learner_action is not None:
+                action = block.learner_action.action
+            ranked = rank_print_form_candidates(
+                allowed,
+                brief=str(getattr(block, "brief", "") or ""),
+                intent=block.intent,
+                action=action,
+            )
+            decisions.append(
+                PrintSelectionDecision(
+                    block_id=block.id,
+                    form_id=str(ranked[0]),
+                    placement="main",
+                    reason="choose_when-ranked closed candidate",
                 )
             )
     return decisions
@@ -285,7 +365,9 @@ __all__ = [
     "SelectionErrorCode",
     "build_print_selection_snapshot",
     "form_plan_from_decisions",
+    "rank_print_form_candidates",
     "select_print_deterministically",
+    "select_print_first_legal",
     "snapshot_from_form_plan",
     "validate_print_selection",
 ]
