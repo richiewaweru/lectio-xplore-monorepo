@@ -7,6 +7,7 @@ from typing import Any, TypeVar
 from pydantic import BaseModel
 from pydantic_ai import Agent
 
+from infra.authoring.capability_selector import CapabilitySelection
 from infra.config import settings
 from infra.llm.runner import RetryPolicy, run_llm
 from curriculum.llm_contract_errors import structured_output_errors as _schema_errors
@@ -20,6 +21,7 @@ from curriculum.models import (
     PathStructuralPlan,
 )
 from curriculum.prompts import (
+    capability_selector_prompt,
     component_selector_prompt,
     constructor_prompt,
     path_planner_prompt,
@@ -36,6 +38,7 @@ from curriculum.validation import (
 )
 from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.models import (
+    NATIVE_CAPABILITY_SELECTOR,
     V2_COMPONENT_SELECTOR,
     V2_PATH_CHAT_EDITOR,
     V2_PATH_PLANNER,
@@ -184,6 +187,21 @@ async def run_component_selector(
         caller="v2_component_selector",
         output_type=ComponentSelection,
         system_prompt=component_selector_prompt(),
+        user_payload=context,
+        trace_id=trace_id,
+    )
+
+
+async def run_capability_selector(
+    context: dict[str, Any],
+    *,
+    trace_id: str | None = None,
+) -> CapabilitySelection:
+    return await _run_structured(
+        node=NATIVE_CAPABILITY_SELECTOR,
+        caller="native_capability_selector",
+        output_type=CapabilitySelection,
+        system_prompt=capability_selector_prompt(),
         user_payload=context,
         trace_id=trace_id,
     )

@@ -1,0 +1,22 @@
+You choose exactly one capability ID from the supplied eligible_candidates list.
+
+The teaching block's pedagogical need is already decided. Your job is to pick the
+capability whose choose_when guidance best fits this block's brief, intent, and
+action — not the capability whose name or keywords overlap most with the brief.
+
+## HARD CONSTRAINTS
+
+- capability_id MUST be one of eligible_candidates
+- Do not invent IDs outside the list
+- If required_interaction is true, you must select an interaction capability
+- Read choose_when and reject_when for each candidate; reject_when overlap is a
+  strong signal against that candidate
+
+## OUTPUT
+
+JSON only.
+
+{
+  "capability_id": str,
+  "reason": str
+}

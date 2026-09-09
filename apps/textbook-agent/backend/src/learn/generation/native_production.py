@@ -14,6 +14,7 @@ from typing import Any, Mapping, Sequence
 
 from curriculum.teaching_plan.models import TeachingPlan
 from infra.authoring import AuthoringEngine, AuthoringProvider
+from infra.authoring.capability_selector import ChooseFn
 from learn.generation.authoring_adapter import author_learn_work_orders
 from learn.generation.preparation_context import (
     LearnPreparationContext,
@@ -21,7 +22,7 @@ from learn.generation.preparation_context import (
 )
 from learn.generation.native_selection import (
     LearnSelectionSnapshot,
-    build_learn_selection_snapshot,
+    build_learn_selection_snapshot_async,
 )
 from learn.generation.ordered_assemble import assemble_ordered_learn_document
 from learn.generation.work_orders import LearnWorkOrder, compile_learn_work_orders
@@ -85,6 +86,7 @@ def build_closed_learn_production(
     provider: AuthoringProvider | None = None,
     engine: AuthoringEngine | None = None,
     preparation_context: LearnPreparationContext | None = None,
+    choose: ChooseFn | None = None,
 ) -> dict[str, Any]:
     return _run_sync(
         build_closed_learn_production_async(
@@ -99,6 +101,7 @@ def build_closed_learn_production(
             provider=provider,
             engine=engine,
             preparation_context=preparation_context,
+            choose=choose,
         )
     )
 
@@ -116,18 +119,29 @@ async def build_closed_learn_production_async(
     provider: AuthoringProvider | None = None,
     engine: AuthoringEngine | None = None,
     preparation_context: LearnPreparationContext | None = None,
+    choose: ChooseFn | None = None,
 ) -> dict[str, Any]:
     """Closed selection + work orders + assembled LessonDocument from shared teaching."""
     body = dict(policy) if policy is not None else default_learn_policy()
     _, policy_hash = policy_version_and_hash(body)
     plan_hash = teaching_plan_content_hash(teaching_plan)
-    snapshot = build_learn_selection_snapshot(
+    prep = preparation_context or LearnPreparationContext(
+        objective=str(teaching_plan.arc or title or "").strip(),
+    )
+    lesson_ctx = lesson_context_from_preparation(
+        prep,
+        title=title or teaching_plan.arc or "Learn lesson",
+        subject=subject,
+    )
+    snapshot = await build_learn_selection_snapshot_async(
         teaching_plan,
         teaching_plan_hash=plan_hash,
         native_policy_hash=policy_hash,
         package_contract_hash=package_contract_hash(),
         available_asset_ids=available_asset_ids,
         policy=body,
+        teaching_context=lesson_ctx,
+        choose=choose,
     )
     orders = compile_learn_work_orders(
         teaching_plan=teaching_plan,
@@ -138,18 +152,11 @@ async def build_closed_learn_production_async(
         dict(item) if isinstance(item, Mapping) else vars(item)
         for item in (approved_items or [])
     ]
-    prep = preparation_context or LearnPreparationContext(
-        objective=str(teaching_plan.arc or title or "").strip(),
-    )
     authored_results = await author_learn_work_orders(
         orders,
         provider=provider,
         engine=engine,
-        lesson_context=lesson_context_from_preparation(
-            prep,
-            title=title or teaching_plan.arc or "Learn lesson",
-            subject=subject,
-        ),
+        lesson_context=lesson_ctx,
         allowed_facts=prep.allowed_facts,
         terminology=prep.terminology,
         approved_items=approved_maps,

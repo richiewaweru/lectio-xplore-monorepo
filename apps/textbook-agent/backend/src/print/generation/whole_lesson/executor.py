@@ -29,7 +29,7 @@ from print.generation.whole_lesson.failure_policy import (
 )
 from print.generation.whole_lesson.figure_ids import stable_figure_request_id
 from print.generation.native_production import (
-    build_closed_print_production_plan,
+    build_closed_print_production_plan_async,
     compile_print_work_orders_for_form_plan,
     selection_trace_payload,
 )
@@ -958,7 +958,7 @@ async def execute_after_teaching_approval(
         # form planner remains available for studio/legacy callers of
         # run_form_planner; post-approval execution must not invent a second plan.
         try:
-            closed_plan, snapshot, orders = build_closed_print_production_plan(
+            closed_plan, snapshot, orders = await build_closed_print_production_plan_async(
                 teaching_plan=teaching_plan,
                 packet=packet,
                 legality=legality,

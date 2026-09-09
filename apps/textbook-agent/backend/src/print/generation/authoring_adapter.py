@@ -13,6 +13,7 @@ from infra.authoring import (
     AuthoringValidationError,
     LLMAuthoringProvider,
 )
+from print.generation.source_resolver import resolve_print_work_order_sources
 from print.generation.work_orders import PrintWorkOrder, build_print_writer_request
 from print.rendering.page_objects.validation import ContentValidationError, validate_content
 
@@ -187,14 +188,15 @@ async def run_print_authoring(
     approved_items: Sequence[Mapping[str, Any]] | None = None,
     mode: str | None = None,
 ) -> AuthoringResult:
+    resolved = resolve_print_work_order_sources(order, approved_items, forced_mode=mode)
     scoped = build_print_writer_request(
         order,
         allowed_facts=allowed_facts,
         terminology=terminology,
     )
-    selected_mode = mode or ("convert-approved" if approved_items else "generate")
-    conversion_items = approved_items if selected_mode == "convert-approved" else None
-    approved_item = conversion_items[0] if conversion_items else None
+    selected_mode = resolved.mode
+    conversion_items = list(resolved.items) if selected_mode == "convert-approved" else None
+    approved_item = resolved.primary_item
     request = AuthoringRequest(
         work_order_id=order.work_order_id,
         definition=_definition_from_order(order),
@@ -207,7 +209,7 @@ async def run_print_authoring(
             approved_items=conversion_items,
         ),
         teaching_revision=order.teaching_plan_revision,
-        source_identities=tuple(order.source_refs),
+        source_identities=resolved.ref_ids,
         mode=selected_mode,  # type: ignore[arg-type]
         approved_item=approved_item,
     )

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import re
@@ -10,6 +11,7 @@ from typing import Any, Literal, Mapping, Sequence
 from pydantic import BaseModel, ConfigDict, Field
 
 from curriculum.teaching_plan.models import TeachingPlan
+from infra.authoring.capability_selector import ChooseFn, select_capability_from_shortlist
 from print.generation.whole_lesson.form_plan import FormDecision, FormPlan
 from print.resources.selection import PASSIVE_ACTIONS, load_form_selection_view
 
@@ -259,7 +261,7 @@ def select_print_deterministically(
     *,
     candidate_map: Mapping[str, Sequence[str]],
 ) -> list[PrintSelectionDecision]:
-    """Production closed selection: choose_when-ranked form per block."""
+    """Test utility: keyword-ranked closed selection (not production policy)."""
     from print.resources.selection import NoCompatiblePrintCapabilityError
 
     decisions: list[PrintSelectionDecision] = []
@@ -291,13 +293,82 @@ def select_print_deterministically(
                     block_id=block.id,
                     form_id=str(ranked[0]),
                     placement="main",
-                    reason="choose_when-ranked closed candidate",
+                    reason="keyword-ranked test utility",
                 )
             )
     return decisions
 
 
-def build_print_selection_snapshot(
+async def select_print_with_model_async(
+    teaching_plan: TeachingPlan,
+    *,
+    candidate_map: Mapping[str, Sequence[str]],
+    choose: ChooseFn | None = None,
+    teaching_context: Mapping[str, Any] | None = None,
+    required_visual_slots: set[str] | None = None,
+) -> list[PrintSelectionDecision]:
+    """Production closed selection via configured model selector."""
+    from print.resources.selection import NoCompatiblePrintCapabilityError
+
+    selection_view = load_form_selection_view()
+    visual_slots = required_visual_slots or set()
+    block_meta = {
+        block.id: (section.slot_id, block)
+        for section in teaching_plan.sections
+        for block in section.blocks
+    }
+    decisions: list[PrintSelectionDecision] = []
+    for block_id, (slot_id, block) in block_meta.items():
+        allowed = [str(item) for item in (candidate_map.get(block_id) or ())]
+        if not allowed:
+            action = None
+            if block.learner_action is not None:
+                action = block.learner_action.action
+            raise NoCompatiblePrintCapabilityError(
+                block_id=block.id,
+                intent=block.intent,
+                action=action,
+                constraints={"candidates": []},
+                reason="empty legal form set",
+            )
+        action = None
+        if block.learner_action is not None:
+            action = block.learner_action.action
+        constraints: dict[str, Any] = {}
+        required_form: str | None = None
+        if slot_id in visual_slots and "figure" in allowed:
+            required_form = "figure"
+        visual_intents = {"illustrate", "show-structure", "show-process"}
+        if block.intent in visual_intents and "figure" in allowed:
+            required_form = "figure"
+        if required_form:
+            constraints["required_form"] = required_form
+            allowed = [required_form]
+        selection = await select_capability_from_shortlist(
+            candidate_ids=allowed,
+            brief=str(getattr(block, "brief", "") or ""),
+            intent=block.intent,
+            action=action,
+            lane="form",
+            required=True,
+            selection_view=selection_view,
+            collection_key="forms",
+            teaching_context=teaching_context,
+            constraints=constraints or None,
+            choose=choose,
+        )
+        decisions.append(
+            PrintSelectionDecision(
+                block_id=block.id,
+                form_id=selection.capability_id,
+                placement="main",
+                reason=selection.reason or "model-selected closed form candidate",
+            )
+        )
+    return decisions
+
+
+async def build_print_selection_snapshot_async(
     teaching_plan: TeachingPlan,
     *,
     candidate_map: Mapping[str, Sequence[str]],
@@ -305,11 +376,20 @@ def build_print_selection_snapshot(
     native_policy_hash: str,
     package_contract_hash: str,
     decisions: Sequence[PrintSelectionDecision] | None = None,
+    choose: ChooseFn | None = None,
+    teaching_context: Mapping[str, Any] | None = None,
+    required_visual_slots: set[str] | None = None,
 ) -> PrintSelectionSnapshot:
     chosen = (
         list(decisions)
         if decisions is not None
-        else select_print_deterministically(teaching_plan, candidate_map=candidate_map)
+        else await select_print_with_model_async(
+            teaching_plan,
+            candidate_map=candidate_map,
+            choose=choose,
+            teaching_context=teaching_context,
+            required_visual_slots=required_visual_slots,
+        )
     )
     validate_print_selection(
         teaching_plan=teaching_plan,
@@ -333,6 +413,51 @@ def build_print_selection_snapshot(
         decisions=list(chosen),
     )
     return snap.seal()
+
+
+def build_print_selection_snapshot(
+    teaching_plan: TeachingPlan,
+    *,
+    candidate_map: Mapping[str, Sequence[str]],
+    teaching_plan_hash: str,
+    native_policy_hash: str,
+    package_contract_hash: str,
+    decisions: Sequence[PrintSelectionDecision] | None = None,
+    choose: ChooseFn | None = None,
+    teaching_context: Mapping[str, Any] | None = None,
+    required_visual_slots: set[str] | None = None,
+) -> PrintSelectionSnapshot:
+    """Sync helper for tests; production callers should use the async builder."""
+    if decisions is not None:
+        return asyncio.run(
+            build_print_selection_snapshot_async(
+                teaching_plan,
+                candidate_map=candidate_map,
+                teaching_plan_hash=teaching_plan_hash,
+                native_policy_hash=native_policy_hash,
+                package_contract_hash=package_contract_hash,
+                decisions=decisions,
+            )
+        )
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(
+            build_print_selection_snapshot_async(
+                teaching_plan,
+                candidate_map=candidate_map,
+                teaching_plan_hash=teaching_plan_hash,
+                native_policy_hash=native_policy_hash,
+                package_contract_hash=package_contract_hash,
+                choose=choose,
+                teaching_context=teaching_context,
+                required_visual_slots=required_visual_slots,
+            )
+        )
+    raise RuntimeError(
+        "build_print_selection_snapshot cannot run model selection inside an event loop; "
+        "await build_print_selection_snapshot_async instead"
+    )
 
 
 def form_plan_from_decisions(
@@ -364,10 +489,12 @@ __all__ = [
     "SelectionError",
     "SelectionErrorCode",
     "build_print_selection_snapshot",
+    "build_print_selection_snapshot_async",
     "form_plan_from_decisions",
     "rank_print_form_candidates",
     "select_print_deterministically",
     "select_print_first_legal",
+    "select_print_with_model_async",
     "snapshot_from_form_plan",
     "validate_print_selection",
 ]

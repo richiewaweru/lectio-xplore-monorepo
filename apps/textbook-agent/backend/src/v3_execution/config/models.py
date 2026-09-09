@@ -32,6 +32,7 @@ V2_PATH_STRUCTURAL_PLANNER = "v2_path_structural_planner"
 V2_PATH_CHAT_EDITOR = "v2_path_chat_editor"
 V2_LESSON_APPROACH_PLANNER = "v2_lesson_approach_planner"
 V2_FORM_PLANNER = "v2_form_planner"
+NATIVE_CAPABILITY_SELECTOR = "native_capability_selector"
 V3_CONSTRUCTOR = "v3_constructor"
 V3_VISUAL_TOPOLOGY_PLANNER = "v3_visual_topology_planner"
 
@@ -59,6 +60,7 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V2_PATH_CHAT_EDITOR: ModelSlot.STANDARD,
     V2_LESSON_APPROACH_PLANNER: ModelSlot.STANDARD,
     V2_FORM_PLANNER: ModelSlot.FAST,
+    NATIVE_CAPABILITY_SELECTOR: ModelSlot.FAST,
     V3_CONSTRUCTOR: ModelSlot.FAST,
     V3_VISUAL_TOPOLOGY_PLANNER: ModelSlot.STANDARD,
 }
@@ -101,6 +103,7 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     # provider reasoning adds latency without improving the persisted contract.
     V2_LESSON_APPROACH_PLANNER: False,
     V2_FORM_PLANNER: False,
+    NATIVE_CAPABILITY_SELECTOR: False,
     V3_CONSTRUCTOR: False,
     V3_VISUAL_TOPOLOGY_PLANNER: False,
 }
@@ -311,6 +314,7 @@ def get_v3_model(node_name: str, *, model_overrides: dict | None = None):
 
 
 __all__ = [
+    "NATIVE_CAPABILITY_SELECTOR",
     "V2_COMPONENT_SELECTOR",
     "V2_FORM_PLANNER",
     "V2_LESSON_APPROACH_PLANNER",

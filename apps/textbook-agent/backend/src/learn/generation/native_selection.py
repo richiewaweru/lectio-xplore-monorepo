@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import re
@@ -10,6 +11,7 @@ from typing import Any, Literal, Mapping, Sequence
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from curriculum.teaching_plan.models import TeachingPlan
+from infra.authoring.capability_selector import ChooseFn, select_capability_from_shortlist
 from learn.resources.selection import (
     LearnBlockCandidates,
     NoCompatibleLearnCapabilityError,
@@ -279,12 +281,7 @@ def select_learn_deterministically(
     available_asset_ids: Sequence[str] | None = None,
     policy: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, LearnBlockCandidates], list[LearnSelectionDecision]]:
-    """Production closed selection: first legal content + choose_when-ranked interaction.
-
-    Ranks the already-closed shortlist with package choose_when / reject_when
-    against the block brief. Does not invent actions or prefer Sequence for
-    writer readiness.
-    """
+    """Test utility: keyword-ranked closed selection (not production policy)."""
     candidates = build_learn_candidate_map(
         teaching_plan,
         available_asset_ids=available_asset_ids,
@@ -315,12 +312,130 @@ def select_learn_deterministically(
         candidates,
         pick_content=_ranked_content,
         pick_interaction=_ranked,
-        reason_with_interaction="choose_when-ranked closed candidate",
+        reason_with_interaction="keyword-ranked test utility",
     )
     return candidates, decisions
 
 
-def build_learn_selection_snapshot(
+async def select_learn_with_model_async(
+    teaching_plan: TeachingPlan,
+    *,
+    available_asset_ids: Sequence[str] | None = None,
+    policy: Mapping[str, Any] | None = None,
+    choose: ChooseFn | None = None,
+    teaching_context: Mapping[str, Any] | None = None,
+) -> tuple[dict[str, LearnBlockCandidates], list[LearnSelectionDecision]]:
+    """Production closed selection via configured model selector."""
+    candidates = build_learn_candidate_map(
+        teaching_plan,
+        available_asset_ids=available_asset_ids,
+        policy=policy,
+        fail_on_empty_required=True,
+    )
+    selection_view = load_learn_selection_view()
+    content_reason = "model-selected closed content candidate"
+    interaction_reason = "model-selected closed interaction candidate"
+    pick_cache: dict[tuple[str, str, tuple[str, ...]], str] = {}
+
+    async def _pick(
+        *,
+        lane: str,
+        candidate_ids: Sequence[str],
+        block: Any,
+        row: LearnBlockCandidates,
+        required: bool,
+    ) -> str | None:
+        if not candidate_ids:
+            return None
+        key = (block.id, lane, tuple(candidate_ids))
+        if key in pick_cache:
+            return pick_cache[key]
+        selection = await select_capability_from_shortlist(
+            candidate_ids=candidate_ids,
+            brief=str(getattr(block, "brief", "") or ""),
+            intent=block.intent,
+            action=row.action,
+            lane=lane,
+            required=required,
+            selection_view=selection_view,
+            collection_key="capabilities",
+            teaching_context=teaching_context,
+            choose=choose,
+        )
+        pick_cache[key] = selection.capability_id
+        return selection.capability_id
+
+    async def _pick_content(block: Any, row: LearnBlockCandidates) -> str | None:
+        if not row.content_candidates:
+            return None
+        return await _pick(
+            lane="content",
+            candidate_ids=row.content_candidates,
+            block=block,
+            row=row,
+            required=False,
+        )
+
+    async def _pick_interaction(block: Any, row: LearnBlockCandidates) -> str | None:
+        if not row.requires_response:
+            return None
+        return await _pick(
+            lane="interaction",
+            candidate_ids=row.interaction_candidates,
+            block=block,
+            row=row,
+            required=True,
+        )
+
+    decisions: list[LearnSelectionDecision] = []
+    for section in teaching_plan.sections:
+        for block in section.blocks:
+            row = candidates[block.id]
+            content_id = await _pick_content(block, row) if row.content_candidates else None
+            interaction_id: str | None
+            if row.requires_response:
+                if not row.interaction_candidates:
+                    raise NoCompatibleLearnCapabilityError(
+                        block_id=block.id,
+                        intent=block.intent,
+                        action=row.action,
+                        constraints={"interaction_candidates": []},
+                        reason="required interaction set empty",
+                    )
+                interaction_id = await _pick_interaction(block, row)
+            else:
+                interaction_id = None
+            source_ids, deps = _source_and_deps_for_block(block)
+            if not content_id and not interaction_id:
+                raise NoCompatibleLearnCapabilityError(
+                    block_id=block.id,
+                    intent=block.intent,
+                    action=row.action,
+                    constraints={},
+                    reason="no content or interaction selected",
+                )
+            decisions.append(
+                LearnSelectionDecision(
+                    block_id=block.id,
+                    content_id=content_id,
+                    interaction_id=interaction_id,
+                    reason=(
+                        interaction_reason
+                        if interaction_id
+                        else (
+                            content_reason
+                            if content_id
+                            else "passive content; interaction=none"
+                        )
+                    ),
+                    source_item_ids=source_ids,
+                    dependency_ids=deps,
+                )
+            )
+    return candidates, decisions
+
+
+async def build_learn_selection_snapshot_async(
     teaching_plan: TeachingPlan,
     *,
     teaching_plan_hash: str,
@@ -329,13 +444,25 @@ def build_learn_selection_snapshot(
     available_asset_ids: Sequence[str] | None = None,
     policy: Mapping[str, Any] | None = None,
     decisions: Sequence[LearnSelectionDecision] | None = None,
+    choose: ChooseFn | None = None,
+    teaching_context: Mapping[str, Any] | None = None,
 ) -> LearnSelectionSnapshot:
-    candidates, auto = select_learn_deterministically(
-        teaching_plan,
-        available_asset_ids=available_asset_ids,
-        policy=policy,
-    )
-    chosen = list(decisions) if decisions is not None else auto
+    if decisions is not None:
+        candidates = build_learn_candidate_map(
+            teaching_plan,
+            available_asset_ids=available_asset_ids,
+            policy=policy,
+            fail_on_empty_required=True,
+        )
+        chosen = list(decisions)
+    else:
+        candidates, chosen = await select_learn_with_model_async(
+            teaching_plan,
+            available_asset_ids=available_asset_ids,
+            policy=policy,
+            choose=choose,
+            teaching_context=teaching_context,
+        )
     validate_learn_selection(
         teaching_plan=teaching_plan,
         decisions=chosen,
@@ -355,6 +482,52 @@ def build_learn_selection_snapshot(
         decisions=list(chosen),
     )
     return snap.seal()
+
+
+def build_learn_selection_snapshot(
+    teaching_plan: TeachingPlan,
+    *,
+    teaching_plan_hash: str,
+    native_policy_hash: str,
+    package_contract_hash: str,
+    available_asset_ids: Sequence[str] | None = None,
+    policy: Mapping[str, Any] | None = None,
+    decisions: Sequence[LearnSelectionDecision] | None = None,
+    choose: ChooseFn | None = None,
+    teaching_context: Mapping[str, Any] | None = None,
+) -> LearnSelectionSnapshot:
+    """Sync helper for tests; production callers should use the async builder."""
+    if decisions is not None:
+        return asyncio.run(
+            build_learn_selection_snapshot_async(
+                teaching_plan,
+                teaching_plan_hash=teaching_plan_hash,
+                native_policy_hash=native_policy_hash,
+                package_contract_hash=package_contract_hash,
+                available_asset_ids=available_asset_ids,
+                policy=policy,
+                decisions=decisions,
+            )
+        )
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(
+            build_learn_selection_snapshot_async(
+                teaching_plan,
+                teaching_plan_hash=teaching_plan_hash,
+                native_policy_hash=native_policy_hash,
+                package_contract_hash=package_contract_hash,
+                available_asset_ids=available_asset_ids,
+                policy=policy,
+                choose=choose,
+                teaching_context=teaching_context,
+            )
+        )
+    raise RuntimeError(
+        "build_learn_selection_snapshot cannot run model selection inside an event loop; "
+        "await build_learn_selection_snapshot_async instead"
+    )
 
 
 def validate_learn_selection(
@@ -464,10 +637,12 @@ __all__ = [
     "SelectionError",
     "SelectionErrorCode",
     "build_learn_selection_snapshot",
+    "build_learn_selection_snapshot_async",
     "candidate_map_payload",
     "rank_learn_content_candidates",
     "rank_learn_interaction_candidates",
     "select_learn_deterministically",
     "select_learn_first_legal",
+    "select_learn_with_model_async",
     "validate_learn_selection",
 ]
