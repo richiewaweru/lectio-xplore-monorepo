@@ -1,6 +1,8 @@
 # A04 Report — Learn content and interaction authoring
 
-Status: PASS
+> **R00 reopen (2026-09-09, reviewed HEAD `db157f0`):** A04 gates are **REOPENED**. Historical PASS evidence under `evidence/a04/` is preserved as historical only. `interaction_contract_from_authoring_result` still uses planning brief as prompt with generic feedback on current HEAD.
+
+Status: REOPENED (historical report below recorded PASS at prior HEAD)
 
 ## Summary
 Native Learn production now authors content and interaction work orders through the shared `infra.authoring` engine before ordered assembly. Planning briefs are inputs to authoring requests, not final lesson payloads. Assembly consumes validated authoring results keyed by work order id and rejects missing or mismatched results.

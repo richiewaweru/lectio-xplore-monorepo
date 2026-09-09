@@ -1,6 +1,8 @@
 # A02 Report — Reusable authoring engine
 
-Status: PASS
+> **R00 reopen (2026-09-09, reviewed HEAD `db157f0`):** A02 gates are **REOPENED**. Historical PASS evidence under `evidence/a02/` is preserved as historical only. R00 regressions show production Learn authoring still substitutes brief-as-prompt and binds positional approved pool items. See `remaining-fixes-v3/tracking/R00-REPORT.md`.
+
+Status: REOPENED (historical report below recorded PASS at prior HEAD)
 Tested commit: A02 commit at `git HEAD` on `feat/unit-print-learn`
 
 ## Summary

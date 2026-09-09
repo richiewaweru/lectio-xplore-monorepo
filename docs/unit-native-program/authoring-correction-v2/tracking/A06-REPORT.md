@@ -1,6 +1,8 @@
 # A06 Report — Integrated offline acceptance
 
-Status: PASS
+> **R00 reopen (2026-09-09, reviewed HEAD `db157f0`):** A06 gates are **REOPENED**. Historical integrated-suite evidence under `evidence/a06/` is preserved as historical only. R00 regressions show prior offline-complete wording was not independently proven against current production defects.
+
+Status: REOPENED (historical report below recorded PASS at prior HEAD)
 
 ## Summary
 Integrated offline acceptance re-ran the full Authoring Correction v2 gate suite with mocked provider boundaries only. P07 runtime assembly now authors work orders before ordered assembly. P08 Learn production injects `P08LearnMockProvider` through `produce_learn_from_approved_teaching`. Dual-path, evaluation, invalid-payload, publish immutability and definition regressions are covered in `test_a06_integrated_offline.py`.

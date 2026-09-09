@@ -2,17 +2,23 @@
   "pack_version": "2.0",
   "baseline": "998e9f36e75f81899a6405a5d199e2f246bcbf9c",
   "branch": "feat/unit-print-learn",
-  "status": "A06_PASS",
+  "status": "A06_REOPENED_BY_R00",
   "phases": {
     "A00": "PASS",
     "A01": "PASS",
-    "A02": "PASS",
+    "A02": "REOPENED",
     "A03": "PASS",
-    "A04": "PASS",
-    "A05": "PASS",
-    "A06": "PASS"
+    "A04": "REOPENED",
+    "A05": "REOPENED",
+    "A06": "REOPENED"
   },
   "live_verification": "DEFERRED",
-  "offline_acceptance": "COMPLETE_OFFLINE",
-  "implementation_head": "a0ecbb6"
+  "offline_acceptance": "REOPENED_NOT_INDEPENDENTLY_PROVEN",
+  "implementation_head": "db157f00731602c35ec1ec1e71fd5cc5d21e655b",
+  "r00_reopen": {
+    "reviewed_at_head": "db157f00731602c35ec1ec1e71fd5cc5d21e655b",
+    "reopened_phases": ["A02", "A04", "A05", "A06"],
+    "reason": "remaining-fixes-v3 R00 regressions expose unsupported PASS claims; historical evidence paths preserved",
+    "evidence": "docs/unit-native-program/remaining-fixes-v3/evidence/r00/pytest-r00-all.txt"
+  }
 }

@@ -1,6 +1,8 @@
 # A05 Report — Selection and upstream ownership
 
-Status: PASS
+> **R00 reopen (2026-09-09, reviewed HEAD `db157f0`):** A05 gates are **REOPENED**. Historical PASS evidence under `evidence/a05/` is preserved as historical only. Production selection uses keyword `rank_learn_*_candidates[0]` without configured model selector on current HEAD.
+
+Status: REOPENED (historical report below recorded PASS at prior HEAD)
 
 ## Summary
 Backend semantic fallback maps were removed. Learn eligibility no longer reincludes content via `INTENT_CONTENT_FALLBACKS` when the closed shortlist is empty. Print production selection ranks forms with package guidance instead of tuple index zero. Learn production selection ranks content capabilities with the same choose_when / reject_when mechanism already used for interactions.
