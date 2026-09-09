@@ -249,14 +249,16 @@ def write_interaction_from_request(
                 mode=mode,
             )
         )
-        approved_item = approved_items[0] if approved_items and result.mode == "convert-approved" else None
+        from learn.generation.source_resolver import resolve_learn_work_order_sources
+
+        resolved = resolve_learn_work_order_sources(order, approved_items, forced_mode=mode)
         contract = interaction_contract_from_authoring_result(
             order,
             result,
             interaction_id=interaction_id,
             assessment_mode=assessment_mode,
             concept_refs=concept_refs,
-            approved_item=approved_item if isinstance(approved_item, Mapping) else None,
+            approved_item=resolved.primary_item if result.mode == "convert-approved" else None,
         )
     except Exception as exc:
         raise _as_writer_error(exc) from exc
@@ -300,13 +302,15 @@ def write_interaction_from_work_order(
                 approved_items=approved_seq,
             )
         )
-        approved_item = approved_seq[0] if approved_seq and result.mode == "convert-approved" else None
+        from learn.generation.source_resolver import resolve_learn_work_order_sources
+
+        resolved = resolve_learn_work_order_sources(order, approved_seq)
         payload = interaction_contract_from_authoring_result(
             order,
             result,
             assessment_mode=assessment_mode,
             concept_refs=concept_refs,
-            approved_item=approved_item if isinstance(approved_item, Mapping) else None,
+            approved_item=resolved.primary_item if result.mode == "convert-approved" else None,
         )
     except Exception as exc:
         raise _as_writer_error(exc) from exc

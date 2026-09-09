@@ -104,6 +104,7 @@ async def test_r00_numeric_generate_preserves_provider_question_feedback_and_fac
     result = await run_learn_work_order_authoring(
         order,
         engine=engine,
+        lesson_context={"objective": "Calculate distance from speed and time"},
         allowed_facts=SCOPED_FACTS,
     )
     contract = result.payload

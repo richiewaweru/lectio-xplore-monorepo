@@ -10,6 +10,7 @@ from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock, Tea
 from infra.authoring import AuthoringProviderCall
 from learn.generation.authoring_adapter import author_learn_work_orders
 from learn.generation.native_production import build_closed_learn_production
+from learn.generation.preparation_context import LearnPreparationContext
 from learn.resources.native_policy import default_learn_policy
 
 
@@ -66,6 +67,10 @@ async def test_r00_build_closed_learn_production_passes_preparation_facts() -> N
             teaching_plan=plan,
             policy=policy,
             provider=ContentProvider(),
+            preparation_context=LearnPreparationContext(
+                objective="Calculate distance from speed and time",
+                allowed_facts=PREP_FACTS,
+            ),
         )
 
     assert captured["allowed_facts"] == PREP_FACTS

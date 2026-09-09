@@ -1,4 +1,4 @@
-"""R00 regression: approved-source resolver must not bind positional pool items."""
+"""R02 gates G01–G03: exact approved-source resolution."""
 
 from __future__ import annotations
 
@@ -12,9 +12,10 @@ from curriculum.teaching_plan.models import (
     TeachingPlanBlock,
     TeachingPlanSection,
 )
-from infra.authoring import AuthoringEngine, AuthoringProviderCall, AuthoringRequest
+from infra.authoring import AuthoringEngine, AuthoringEngineError, AuthoringProviderCall, AuthoringRequest
 from learn.generation.authoring_adapter import run_learn_authoring
 from learn.generation.native_selection import LearnSelectionDecision, LearnSelectionSnapshot
+from learn.generation.source_resolver import resolve_learn_work_order_sources
 from learn.generation.work_orders import compile_learn_work_orders
 
 
@@ -40,10 +41,7 @@ class ChoiceProvider:
                 ],
                 "correct_option_id": "b",
             },
-            "feedback": {
-                "correct": "Correct.",
-                "incorrect": "Not yet — try again.",
-            },
+            "feedback": {"correct": "Correct.", "incorrect": "Not yet."},
         }
 
 
@@ -68,12 +66,11 @@ def _choice_order(*, approved_item_ids: list[str], source_refs: list[str] | None
     refs = list(source_refs if source_refs is not None else approved_item_ids)
     plan = TeachingPlan(
         arc="Approved source ownership",
-        teaching_plan_id="tp-r00-source",
+        teaching_plan_id="tp-r02-source",
         revision=1,
         sections=[
             TeachingPlanSection(
                 slot_id="check",
-                specific_purpose="Approved choice conversion",
                 blocks=[
                     TeachingPlanBlock(
                         id="b-choice",
@@ -96,9 +93,9 @@ def _choice_order(*, approved_item_ids: list[str], source_refs: list[str] | None
     snapshot = LearnSelectionSnapshot(
         teaching_plan_id=plan.teaching_plan_id,
         teaching_plan_revision=1,
-        teaching_plan_hash="hash-r00-source",
-        native_policy_hash="policy-r00",
-        package_contract_hash="pkg-r00",
+        teaching_plan_hash="hash-r02-source",
+        native_policy_hash="policy-r02",
+        package_contract_hash="pkg-r02",
         decisions=[
             LearnSelectionDecision(
                 block_id="b-choice",
@@ -107,20 +104,26 @@ def _choice_order(*, approved_item_ids: list[str], source_refs: list[str] | None
             )
         ],
     ).seal()
-    orders = compile_learn_work_orders(
-        teaching_plan=plan,
-        snapshot=snapshot,
-        approved_items=_pool(),
-    )
+    orders = compile_learn_work_orders(teaching_plan=plan, snapshot=snapshot, approved_items=_pool())
     order = orders[0]
     if approved_item_ids:
         return order.model_copy(update={"approved_item_ids": approved_item_ids})
     return order.model_copy(update={"approved_item_ids": [], "authoring_mode": "new", "source_refs": []})
 
 
+def test_r02_g01_no_ref_work_order_zero_scoped_items() -> None:
+    """R02-G01: empty refs → zero scoped items and generate mode."""
+    order = _choice_order(approved_item_ids=[], source_refs=[])
+    resolved = resolve_learn_work_order_sources(order, _pool())
+    assert resolved.ref_ids == ()
+    assert resolved.items == ()
+    assert resolved.mode == "generate"
+    assert resolved.primary_item is None
+
+
 @pytest.mark.asyncio
-async def test_r00_no_ref_work_order_does_not_bind_first_pool_item() -> None:
-    """Scenario 3 partial: source-free work order with nonempty pool stays in generate mode."""
+async def test_r02_g01_no_implicit_conversion_despite_populated_pool() -> None:
+    """R02-G01: provider request stays in generate with empty conversion inputs."""
     order = _choice_order(approved_item_ids=[], source_refs=[])
     engine = CaptureEngine(
         registry=__import__(
@@ -129,7 +132,6 @@ async def test_r00_no_ref_work_order_does_not_bind_first_pool_item() -> None:
         ).build_learn_authoring_registry(),
         provider=ChoiceProvider(),
     )
-
     await run_learn_authoring(
         order,
         engine=engine,
@@ -140,13 +142,12 @@ async def test_r00_no_ref_work_order_does_not_bind_first_pool_item() -> None:
     request = CaptureEngine.captured
     assert request is not None
     assert request.mode == "generate"
-    assert request.approved_item is None
     assert request.inputs["approved_items_when_converting"] == []
 
 
 @pytest.mark.asyncio
-async def test_r00_explicit_q2_excludes_q1_sentinel_from_model_visible_inputs() -> None:
-    """Scenario 2 partial: explicit q2 reference must not leak q1 into conversion inputs."""
+async def test_r02_g02_explicit_q2_only_in_model_visible_inputs() -> None:
+    """R02-G02: q2 only in inputs and repair prompt; q1 sentinel absent."""
     order = _choice_order(approved_item_ids=["q2"], source_refs=["q2"])
     engine = CaptureEngine(
         registry=__import__(
@@ -155,15 +156,36 @@ async def test_r00_explicit_q2_excludes_q1_sentinel_from_model_visible_inputs() 
         ).build_learn_authoring_registry(),
         provider=ChoiceProvider(),
     )
-
-    await run_learn_authoring(
-        order,
-        engine=engine,
-        approved_items=_pool(),
-    )
+    await run_learn_authoring(order, engine=engine, approved_items=_pool())
     request = CaptureEngine.captured
     assert request is not None
     serialized = json.dumps(request.inputs["approved_items_when_converting"], sort_keys=True)
     assert SENTINEL not in serialized
     assert len(request.inputs["approved_items_when_converting"]) == 1
     assert request.inputs["approved_items_when_converting"][0]["id"] == "q2"
+    prompt_blob = json.dumps(request.scoped_request, sort_keys=True)
+    assert SENTINEL not in prompt_blob
+
+
+def test_r02_g03_missing_reference_fails_before_provider() -> None:
+    """R02-G03: missing approved id fails at resolution."""
+    order = _choice_order(approved_item_ids=["q2"], source_refs=["q2"]).model_copy(
+        update={"approved_item_ids": ["missing"], "source_refs": ["missing"]},
+    )
+    with pytest.raises(AuthoringEngineError, match="missing from pool"):
+        resolve_learn_work_order_sources(order, _pool())
+
+
+def test_r02_g03_duplicate_pool_id_fails_before_provider() -> None:
+    """R02-G03: duplicate ambiguous pool ids fail at resolution."""
+    order = _choice_order(approved_item_ids=["q1"], source_refs=["q1"])
+    pool = [* _pool(), {"id": "q1", "stem": "duplicate", "options": [], "correct_key": "a"}]
+    with pytest.raises(AuthoringEngineError, match="duplicate ambiguous"):
+        resolve_learn_work_order_sources(order, pool)
+
+
+def test_r02_g03_multi_source_without_contract_fails() -> None:
+    """R02-G03: multi-source rejected for single-source converters."""
+    order = _choice_order(approved_item_ids=["q1", "q2"], source_refs=["q1", "q2"])
+    with pytest.raises(AuthoringEngineError, match="does not support multi-source"):
+        resolve_learn_work_order_sources(order, _pool())

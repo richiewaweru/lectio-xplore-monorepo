@@ -14,6 +14,7 @@ from infra.authoring import AuthoringEngine, AuthoringProviderCall
 from learn.generation.authoring_adapter import run_learn_work_order_authoring
 from learn.generation.interaction_writer import InteractionWriterError, write_interaction_from_request
 from learn.generation.native_production import build_closed_learn_production
+from learn.generation.preparation_context import LearnPreparationContext
 from learn.generation.native_selection import LearnSelectionDecision, LearnSelectionSnapshot
 from learn.generation.work_orders import compile_learn_work_orders
 from learn.resources.native_policy import default_learn_policy
@@ -25,6 +26,11 @@ from tests.authoring_correction.test_a04_learn_authoring import (
 )
 
 PLANNING_BRIEF = "Create a distance calculation using speed and time"
+SCOPED_FACTS = [
+    "Speed v equals 5 m/s.",
+    "Time t equals 10 s.",
+    "Distance d equals v times t.",
+]
 STUDENT_PROMPT = "A cyclist travels at 5 m/s for 10 seconds. How far does she travel?"
 FEEDBACK_INCORRECT = (
     "Multiply speed by time: distance equals v times t, so 5 times 10 equals 50 metres."
@@ -115,7 +121,12 @@ async def test_r01_g01_provider_prompt_feedback_survive_work_order_authoring() -
     """R01-G01: authored prompt/config/feedback survive run_learn_work_order_authoring."""
     provider = EnvelopeProvider()
     order = _numeric_order()
-    result = await run_learn_work_order_authoring(order, provider=provider)
+    result = await run_learn_work_order_authoring(
+        order,
+        provider=provider,
+        lesson_context={"objective": "Calculate distance from speed and time"},
+        allowed_facts=SCOPED_FACTS,
+    )
     contract = result.payload
 
     assert contract["prompt"] == STUDENT_PROMPT
@@ -154,7 +165,15 @@ def test_r01_g01_provider_prompt_feedback_survive_closed_production() -> None:
     policy["offered_interactions"] = ["numeric"]
     provider = EnvelopeProvider()
 
-    production = build_closed_learn_production(teaching_plan=plan, policy=policy, provider=provider)
+    production = build_closed_learn_production(
+        teaching_plan=plan,
+        policy=policy,
+        provider=provider,
+        preparation_context=LearnPreparationContext(
+            objective="Calculate distance from speed and time",
+            allowed_facts=SCOPED_FACTS,
+        ),
+    )
     block = next(iter(production["document"]["blocks"].values()))
     interaction = block["learn_interaction"]
 

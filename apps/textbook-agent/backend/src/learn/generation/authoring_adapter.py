@@ -18,6 +18,7 @@ from infra.authoring import (
 )
 from infra.authoring.engine import stable_hash
 from infra.authoring.validation import validate_json_schema
+from learn.generation.source_resolver import resolve_learn_work_order_sources
 from learn.generation.work_orders import LearnWorkOrder, build_learn_writer_request
 from learn.runtime.evaluation import (
     InteractionConfigError,
@@ -378,16 +379,26 @@ def _convert_short_response(
 ) -> Mapping[str, Any]:
     del definition
     item = _approved(request)
-    answer = _get(item, "correct_key", "answer", "accepted_answer")
-    if not answer:
+    answers = _get(item, "accepted_answers", "accepted_answer", "correct_key", "answer")
+    if isinstance(answers, str):
+        answers = [answers]
+    if isinstance(answers, list):
+        accepted = [str(answer) for answer in answers if answer is not None and str(answer).strip()]
+        if accepted:
+            return {
+                "evaluation": "accepted-answers",
+                "accepted_answers": accepted,
+                "case_sensitive": bool(_get(item, "case_sensitive") or False),
+            }
+    if answers and not isinstance(answers, list):
         return {
-            "evaluation": "teacher-review",
-            "review_guidance": str(_get(item, "stem", "prompt") or ""),
+            "evaluation": "accepted-answers",
+            "accepted_answers": [str(answers)],
+            "case_sensitive": bool(_get(item, "case_sensitive") or False),
         }
     return {
-        "evaluation": "accepted-answers",
-        "accepted_answers": [str(answer)],
-        "case_sensitive": False,
+        "evaluation": "teacher-review",
+        "review_guidance": str(_get(item, "stem", "prompt") or ""),
     }
 
 
@@ -496,7 +507,7 @@ def _convert_sequence(
     order = _get(item, "order", "sequence", "correct_order")
     if not isinstance(order, list) or len(order) < 2:
         raise ValueError("sequence approved item requires ordered ids")
-    ids = [_slug(entry, fallback=f"step-{index + 1}") for index, entry in enumerate(order)]
+    ids = [str(entry) for entry in order]
     items = _get(item, "items")
     if not isinstance(items, list):
         items = [{"id": ids[index], "label": str(entry)} for index, entry in enumerate(order)]
@@ -560,6 +571,33 @@ def build_learn_authoring_registry() -> AuthoringRegistry:
     )
 
 
+def _validate_teaching_context(
+    order: LearnWorkOrder,
+    *,
+    lesson_context: Mapping[str, Any] | None,
+    allowed_facts: Sequence[str] | None,
+    mode: str,
+) -> None:
+    if mode == "convert-approved":
+        return
+    if "lesson_context" in order.required_inputs:
+        objective = str((lesson_context or {}).get("objective") or "").strip()
+        if not objective:
+            raise AuthoringEngineError(
+                "MISSING_AUTHORING_INPUT",
+                "objective is required for generate authoring",
+                stage="inputs",
+            )
+    if "allowed_facts" in order.required_inputs:
+        facts = [str(fact).strip() for fact in (allowed_facts or [])]
+        if not facts or not any(facts):
+            raise AuthoringEngineError(
+                "MISSING_AUTHORING_INPUT",
+                "allowed_facts are required for generate authoring",
+                stage="inputs",
+            )
+
+
 async def run_learn_authoring(
     order: LearnWorkOrder,
     *,
@@ -571,19 +609,16 @@ async def run_learn_authoring(
     approved_items: Sequence[Mapping[str, Any]] | None = None,
     mode: str | None = None,
 ) -> AuthoringResult:
-    approved_by_id = {
-        str(item.get("id") or ""): item
-        for item in (approved_items or [])
-        if isinstance(item, Mapping)
-    }
-    approved_item = None
-    if order.approved_item_ids:
-        approved_item = approved_by_id.get(order.approved_item_ids[0])
-    elif approved_items:
-        approved_item = approved_items[0]
-    selected_mode = mode or ("convert-approved" if approved_item is not None else "generate")
-    conversion_items = approved_items if selected_mode == "convert-approved" else None
-    approved_item = approved_item if selected_mode == "convert-approved" else None
+    resolved = resolve_learn_work_order_sources(order, approved_items, forced_mode=mode)
+    selected_mode = resolved.mode
+    scoped_items = list(resolved.items) if selected_mode == "convert-approved" else []
+    approved_item = resolved.primary_item
+    _validate_teaching_context(
+        order,
+        lesson_context=lesson_context,
+        allowed_facts=allowed_facts,
+        mode=selected_mode,
+    )
     scoped = build_learn_writer_request(
         order,
         allowed_facts=allowed_facts,
@@ -599,10 +634,10 @@ async def run_learn_authoring(
             lesson_context=lesson_context,
             allowed_facts=allowed_facts,
             terminology=terminology,
-            approved_items=conversion_items,
+            approved_items=scoped_items,
         ),
         teaching_revision=order.teaching_plan_revision,
-        source_identities=tuple(order.source_refs),
+        source_identities=resolved.ref_ids or tuple(order.source_refs),
         mode=selected_mode,  # type: ignore[arg-type]
         approved_item=approved_item,
     )
@@ -718,23 +753,6 @@ def interaction_contract_from_authoring_result(
     return contract
 
 
-def _resolve_approved_item(
-    order: LearnWorkOrder,
-    approved_items: Sequence[Mapping[str, Any]] | None,
-) -> Mapping[str, Any] | None:
-    approved_by_id = {
-        str(item.get("id") or ""): item
-        for item in (approved_items or [])
-        if isinstance(item, Mapping)
-    }
-    if order.approved_item_ids:
-        return approved_by_id.get(order.approved_item_ids[0])
-    if approved_items:
-        first = approved_items[0]
-        return first if isinstance(first, Mapping) else None
-    return None
-
-
 async def run_learn_work_order_authoring(
     order: LearnWorkOrder,
     *,
@@ -747,7 +765,7 @@ async def run_learn_work_order_authoring(
     assessment_mode: str = "practice",
     concept_refs: Sequence[Mapping[str, Any]] | None = None,
 ) -> AuthoringResult:
-    approved_item = _resolve_approved_item(order, approved_items)
+    resolved = resolve_learn_work_order_sources(order, approved_items)
     result = await run_learn_authoring(
         order,
         provider=provider,
@@ -764,7 +782,7 @@ async def run_learn_work_order_authoring(
         result,
         assessment_mode=assessment_mode,
         concept_refs=concept_refs,
-        approved_item=approved_item if result.mode == "convert-approved" else None,
+        approved_item=resolved.primary_item if result.mode == "convert-approved" else None,
     )
     return AuthoringResult(
         work_order_id=result.work_order_id,

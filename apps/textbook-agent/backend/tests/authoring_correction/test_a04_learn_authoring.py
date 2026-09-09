@@ -18,6 +18,7 @@ from learn.generation.interaction_writer import (
     write_interaction_from_request,
 )
 from learn.generation.native_production import build_closed_learn_production
+from learn.generation.preparation_context import LearnPreparationContext
 from learn.generation.native_selection import LearnSelectionDecision, LearnSelectionSnapshot
 from learn.generation.ordered_assemble import assemble_ordered_learn_document, block_component_sequence
 from learn.generation.work_orders import LearnWorkOrder
@@ -112,6 +113,9 @@ def _request(capability_id: str, *, action: str, approved_items: list[Mapping[st
         "action": action,
         "evidence": "Known-answer regression",
         "teaching_plan_hash": "a04",
+        "lesson_context": {"objective": "Known-answer regression objective"},
+        "allowed_facts": ["Scoped fact for regression."],
+        "terminology": [],
         "approved_items": approved_items or [],
     }
 
@@ -157,7 +161,15 @@ def test_a04_g01_native_production_authors_content_before_assembly() -> None:
     policy["offered_content"] = ["explanation-block"]
     provider = CapabilityProvider()
 
-    production = build_closed_learn_production(teaching_plan=plan, policy=policy, provider=provider)
+    production = build_closed_learn_production(
+        teaching_plan=plan,
+        policy=policy,
+        provider=provider,
+        preparation_context=LearnPreparationContext(
+            objective="Explain evaporation",
+            allowed_facts=["Liquid water can become vapour through evaporation."],
+        ),
+    )
 
     block = next(iter(production["document"]["blocks"].values()))
     assert block["content"]["body"] != "Explain evaporation with an everyday example."
@@ -260,7 +272,12 @@ async def test_a04_g06_policy_content_schemas_and_ordering_preserved() -> None:
     provider = CapabilityProvider()
     orders = [_order(cid, block_id=f"b{index}") for index, cid in enumerate(content_ids)]
     results = {
-        order.work_order_id: await run_learn_work_order_authoring(order, provider=provider)
+        order.work_order_id: await run_learn_work_order_authoring(
+            order,
+            provider=provider,
+            lesson_context={"objective": "Cover all offered content types"},
+            allowed_facts=["Scoped fact for content regression."],
+        )
         for order in orders
     }
     plan = TeachingPlan(

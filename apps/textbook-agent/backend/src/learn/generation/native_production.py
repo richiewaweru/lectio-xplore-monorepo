@@ -15,6 +15,10 @@ from typing import Any, Mapping, Sequence
 from curriculum.teaching_plan.models import TeachingPlan
 from infra.authoring import AuthoringEngine, AuthoringProvider
 from learn.generation.authoring_adapter import author_learn_work_orders
+from learn.generation.preparation_context import (
+    LearnPreparationContext,
+    lesson_context_from_preparation,
+)
 from learn.generation.native_selection import (
     LearnSelectionSnapshot,
     build_learn_selection_snapshot,
@@ -80,6 +84,7 @@ def build_closed_learn_production(
     write_interactions: bool = True,
     provider: AuthoringProvider | None = None,
     engine: AuthoringEngine | None = None,
+    preparation_context: LearnPreparationContext | None = None,
 ) -> dict[str, Any]:
     return _run_sync(
         build_closed_learn_production_async(
@@ -93,6 +98,7 @@ def build_closed_learn_production(
             write_interactions=write_interactions,
             provider=provider,
             engine=engine,
+            preparation_context=preparation_context,
         )
     )
 
@@ -109,6 +115,7 @@ async def build_closed_learn_production_async(
     write_interactions: bool = True,
     provider: AuthoringProvider | None = None,
     engine: AuthoringEngine | None = None,
+    preparation_context: LearnPreparationContext | None = None,
 ) -> dict[str, Any]:
     """Closed selection + work orders + assembled LessonDocument from shared teaching."""
     body = dict(policy) if policy is not None else default_learn_policy()
@@ -131,13 +138,20 @@ async def build_closed_learn_production_async(
         dict(item) if isinstance(item, Mapping) else vars(item)
         for item in (approved_items or [])
     ]
+    prep = preparation_context or LearnPreparationContext(
+        objective=str(teaching_plan.arc or title or "").strip(),
+    )
     authored_results = await author_learn_work_orders(
         orders,
         provider=provider,
         engine=engine,
-        lesson_context={"title": title or teaching_plan.arc or "Learn lesson", "subject": subject},
-        allowed_facts=[],
-        terminology=[],
+        lesson_context=lesson_context_from_preparation(
+            prep,
+            title=title or teaching_plan.arc or "Learn lesson",
+            subject=subject,
+        ),
+        allowed_facts=prep.allowed_facts,
+        terminology=prep.terminology,
         approved_items=approved_maps,
     )
     document = assemble_ordered_learn_document(

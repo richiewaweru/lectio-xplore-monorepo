@@ -20,6 +20,10 @@ from learn.generation.native_production import (
     build_closed_learn_production_async,
     teaching_plan_content_hash,
 )
+from learn.generation.preparation_context import (
+    LearnPreparationContext,
+    learn_preparation_context_from_state,
+)
 from learn.publishing.publish_validation import validate_publishable_lesson_document
 
 
@@ -42,6 +46,7 @@ async def produce_learn_from_approved_teaching(
     policy: Mapping[str, Any] | None = None,
     provider: AuthoringProvider | None = None,
     engine: AuthoringEngine | None = None,
+    preparation_context: LearnPreparationContext | None = None,
 ) -> dict[str, Any]:
     """Run closed Learn production and persist generation + editable draft.
 
@@ -49,6 +54,12 @@ async def produce_learn_from_approved_teaching(
     bypassed: ``build_closed_learn_production`` seals the snapshot first.
     """
     output_id = f"learn-out-{uuid.uuid4().hex[:12]}"
+    prep = preparation_context
+    if prep is None:
+        from print.generation.whole_lesson.repository import PageDocumentRepository
+
+        state = await PageDocumentRepository(session, preparation_generation_id).load_page_generation_state()
+        prep = learn_preparation_context_from_state(state)
     production = await build_closed_learn_production_async(
         teaching_plan=teaching_plan,
         available_asset_ids=available_asset_ids,
@@ -60,6 +71,7 @@ async def produce_learn_from_approved_teaching(
         write_interactions=True,
         provider=provider,
         engine=engine,
+        preparation_context=prep,
     )
     document = dict(production["document"])
     document["id"] = output_id
