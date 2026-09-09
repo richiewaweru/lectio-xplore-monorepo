@@ -1,0 +1,3 @@
+# Repair template
+Correct only the supplied failed result for this work order. Preserve the original objective, source facts, selected capability and valid answer relationships. The original scoped request and authoritative definition are attached, followed by the previous output and errors with field paths.
+Return the complete corrected payload in the same schema. Do not remove required tasks, replace the activity type, invent a new answer key, or discard approved sources to make validation pass. If the input is insufficient, use the configured missing-input/error contract. Repairs are bounded by the engine; do not implement an unbounded self-retry loop.

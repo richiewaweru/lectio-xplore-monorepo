@@ -1,0 +1,6 @@
+﻿uv run pytest -q tests/authoring_correction/test_a00_arbitrary_answers.py => 1
+uv run pytest -q tests/authoring_correction/test_a00_brief_as_content.py => 1
+uv run pytest -q tests/authoring_correction/test_a00_print_table_fallback.py => 1
+uv run pytest -q tests/authoring_correction/test_a00_first_content_selection.py => 1
+uv run pytest -q tests/authoring_correction/test_a00_fallback_budget.py => 1
+uv run pytest -q tests/authoring_correction => 1

@@ -1,0 +1,118 @@
+{
+  "purpose": "Independent offline regression expectations; adapt shapes to canonical schemas, preserve meaning.",
+  "cases": [
+    {
+      "id": "numeric-distance",
+      "facts": [
+        "speed = 5 m/s",
+        "time = 10 s",
+        "distance = speed \u00d7 time"
+      ],
+      "expected_answer": 50,
+      "unit": "m",
+      "reject_behavior": "first-number answer 5 or default 1"
+    },
+    {
+      "id": "choice-nonfirst",
+      "options": [
+        {
+          "id": "a",
+          "text": "liquid to solid"
+        },
+        {
+          "id": "b",
+          "text": "liquid to vapour"
+        },
+        {
+          "id": "c",
+          "text": "vapour to liquid"
+        }
+      ],
+      "question": "What is evaporation?",
+      "correct": "b",
+      "invalid_source_variant": "correct key z must fail, never choose a"
+    },
+    {
+      "id": "multi-nonleading",
+      "options": [
+        "stone",
+        "evaporation",
+        "metal",
+        "condensation"
+      ],
+      "correct_indices": [
+        1,
+        3
+      ],
+      "reject_behavior": "first two options correct"
+    },
+    {
+      "id": "classify-water",
+      "categories": [
+        "liquid",
+        "gas"
+      ],
+      "mapping": {
+        "rain": "liquid",
+        "water vapour": "gas",
+        "dew": "liquid"
+      },
+      "reject_behavior": "invented Category A/B or alternating assignment"
+    },
+    {
+      "id": "match-water",
+      "pairs": {
+        "evaporation": "liquid to vapour",
+        "condensation": "vapour to liquid"
+      },
+      "requirement": "shuffle presentation without changing answer relationships"
+    },
+    {
+      "id": "sequence-butterfly",
+      "correct_order": [
+        "egg",
+        "larva",
+        "pupa",
+        "adult"
+      ],
+      "requirement": "preserve explicit supplied order even if presentation order is shuffled"
+    },
+    {
+      "id": "fill-pigment",
+      "prompt": "The green pigment is ___.",
+      "accepted": [
+        "chlorophyll"
+      ],
+      "reject_behavior": "last word of planning brief as key"
+    },
+    {
+      "id": "short-review",
+      "prompt": "Explain why a cold glass develops droplets.",
+      "mode": "teacher-review",
+      "requirement": "submission awaits review; do not report automatic correctness"
+    },
+    {
+      "id": "content-brief",
+      "brief": "Explain evaporation with an everyday example.",
+      "mock_output_requirement": "complete factual explanatory prose in exact selected component schema",
+      "reject_behavior": "brief copied as finished content"
+    },
+    {
+      "id": "print-table-failure",
+      "topic": "fractions",
+      "provider_result": "timeout or invalid payload after bounded repair",
+      "expected": "typed failure; no fixed leaf table"
+    },
+    {
+      "id": "fallback-budget",
+      "candidate_budget": 0,
+      "expected": "candidate stays excluded on fallback"
+    },
+    {
+      "id": "missing-context",
+      "brief": "Create a classification task.",
+      "facts": [],
+      "expected": "missing-input/repair failure, not invented categories"
+    }
+  ]
+}
