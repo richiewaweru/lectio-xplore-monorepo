@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 if TYPE_CHECKING:
+    from print.generation.work_orders import PrintWorkOrder
     from v3_blueprint.planning.models import PlannedBlock
 
 
@@ -27,6 +28,7 @@ class WriterContext:
     generation_id: str | None = None
     use_llm: bool = False
     section_id: str | None = None
+    print_work_order: PrintWorkOrder | None = None
 
 
 @dataclass

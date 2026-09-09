@@ -6,7 +6,7 @@ import asyncio
 import json
 import random
 import time
-from typing import Any
+from typing import Any, Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,8 +30,10 @@ from print.generation.whole_lesson.failure_policy import (
 from print.generation.whole_lesson.figure_ids import stable_figure_request_id
 from print.generation.native_production import (
     build_closed_print_production_plan,
+    compile_print_work_orders_for_form_plan,
     selection_trace_payload,
 )
+from print.generation.work_orders import PrintWorkOrder
 from print.generation.whole_lesson.form_agent import NoLegalFormCandidatesError
 from print.generation.whole_lesson.form_plan import FormPlan, coerce_form_plan
 from print.generation.whole_lesson.legality import (
@@ -143,6 +145,7 @@ async def _write_one_block(
     packet: ImmutableLessonPacket,
     intents: dict[str, Any],
     item_records: tuple[dict[str, Any], ...],
+    work_order: PrintWorkOrder,
     variant_id: str,
     prior: dict[str, Any] | None,
     lease: ExecutionLease | None,
@@ -259,6 +262,7 @@ async def _write_one_block(
         generation_id=generation_id,
         use_llm=True,
         section_id=slot_id,
+        print_work_order=work_order,
     )
 
     last_error: dict[str, Any] | None = None
@@ -402,6 +406,7 @@ async def write_form_blocks(
     form_plan: FormPlan,
     packet: ImmutableLessonPacket,
     teaching_plan: TeachingPlan,
+    work_orders: Sequence[PrintWorkOrder] | None = None,
     variant_id: str = DEFAULT_VARIANT_ID,
     lease: ExecutionLease | None = None,
 ) -> list[dict[str, Any]]:
@@ -409,6 +414,15 @@ async def write_form_blocks(
     resolved = resolve_block_plans(teaching_plan, form_plan)
     intents = get_intent_catalogue().get("intents") or {}
     item_records = _packet_item_records(packet)
+    selected_orders = (
+        list(work_orders)
+        if work_orders is not None
+        else compile_print_work_orders_for_form_plan(
+            teaching_plan=teaching_plan,
+            form_plan=form_plan,
+        )
+    )
+    order_by_block = {order.block_id: order for order in selected_orders}
     async with async_session_factory() as session:
         repo = PageDocumentRepository(session, generation_id)
         stored = await repo.load_block_results()
@@ -489,6 +503,7 @@ async def write_form_blocks(
                     packet=packet,
                     intents=intents,
                     item_records=item_records,
+                    work_order=order_by_block[block.id],
                     variant_id=variant_id,
                     prior=stored.get(key),
                     lease=lease,
@@ -1050,6 +1065,7 @@ async def execute_after_teaching_approval(
         form_plan=form_plan,
         packet=packet,
         teaching_plan=teaching_plan,
+        work_orders=orders if "orders" in locals() else None,
         lease=lease,
     )
     if any(o.get("status") == "lease_lost" for o in write_outcomes):

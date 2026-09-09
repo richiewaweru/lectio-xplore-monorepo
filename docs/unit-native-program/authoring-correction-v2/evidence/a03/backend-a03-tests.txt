@@ -1,0 +1,13 @@
+Command:
+cd apps/textbook-agent/backend
+uv run pytest -q tests/authoring_correction/test_a03_print_authoring_migration.py
+
+Result:
+.....                                                                    [100%]
+
+Warnings:
+src\contracts\generation_manifest.py:6
+  UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+
+Summary:
+5 passed, 1 warning in 13.00s

@@ -14,11 +14,20 @@ from print.rendering.page_objects.models import (
     WriterError,
     WriterOutcome,
 )
-from print.rendering.page_objects.prompts import build_repair_prompt, build_writer_prompt
 from print.rendering.page_objects.validation import (
     ContentValidationError,
     UnsupportedObject,
     validate_content,
+)
+from infra.authoring import (
+    AuthoringEngineError,
+    AuthoringProvider,
+    AuthoringProviderCall,
+    AuthoringTransportError,
+)
+from print.generation.work_orders import (
+    PrintWorkOrder,
+    build_print_work_order_from_planned_block,
 )
 from print.generation.whole_lesson.figure_ids import stable_figure_request_id
 
@@ -155,25 +164,6 @@ def dispatch_writer(ctx: WriterContext) -> WriterOutcome:
     return _finalize_result(ctx, result)
 
 
-def _coerce_raw_content(raw: object) -> object:
-    if isinstance(raw, dict):
-        return raw
-    if hasattr(raw, "model_dump"):
-        return dict(raw.model_dump(mode="json"))
-    if isinstance(raw, str):
-        text = raw.strip()
-        if text.startswith("```"):
-            # Strip optional markdown fences.
-            lines = text.splitlines()
-            if lines and lines[0].startswith("```"):
-                lines = lines[1:]
-            if lines and lines[-1].strip() == "```":
-                lines = lines[:-1]
-            text = "\n".join(lines).strip()
-        return json.loads(text)
-    raise WriterError(f"unexpected writer output type: {type(raw)!r}")
-
-
 def _rich_text_to_plain_text(value: object) -> object:
     """Unwrap editor-document text when a scalar form field receives it."""
     parsed = value
@@ -248,14 +238,6 @@ def normalize_persisted_document_json(document: object) -> object:
     return normalized
 
 
-def _validation_errors_from_exc(exc: Exception) -> list[dict[str, Any]]:
-    if isinstance(exc, ContentValidationError):
-        return list(exc.errors)
-    if isinstance(exc, json.JSONDecodeError):
-        return [{"path": "", "message": f"invalid JSON: {exc.msg}"}]
-    return [{"path": "", "message": str(exc)}]
-
-
 class WriterProvider(Protocol):
     async def write(
         self,
@@ -269,98 +251,66 @@ class WriterProvider(Protocol):
     ) -> object: ...
 
 
-def _writer_contract(object_id: str) -> Any:
-    try:
-        from print.generation.catalogue_projections import project_writer_contract
+class _LegacyWriterAuthoringProvider:
+    def __init__(self, inner: WriterProvider, *, ctx: WriterContext) -> None:
+        self.inner = inner
+        self.ctx = ctx
 
-        return project_writer_contract(object_id)
-    except Exception:  # noqa: BLE001 — contract is advisory for prompts
-        return {"object_id": object_id}
+    async def invoke(self, call: AuthoringProviderCall) -> object:
+        output_model = WRITER_PROVIDER_OUTPUTS[call.capability_id]
+        try:
+            result = await self.inner.write(
+                object_id=call.capability_id,
+                section_id=self.ctx.section_id or "",
+                block_id=self.ctx.planned.id,
+                attempt=call.attempt,
+                prompt=call.prompt,
+                output_model=output_model,
+            )
+        except (TimeoutError, ConnectionError, OSError) as exc:
+            raise AuthoringTransportError(str(exc)) from exc
+        if hasattr(result, "model_dump"):
+            result = result.model_dump(mode="json", exclude_none=True)
+        return _normalize_scalar_rich_text(call.capability_id, result)
 
 
-async def _llm_write(ctx: WriterContext, *, prompt: str | None = None) -> object:
-    from pydantic_ai import Agent
+def _authoring_provider(
+    provider: WriterProvider | AuthoringProvider | None,
+    *,
+    ctx: WriterContext,
+) -> AuthoringProvider | None:
+    if provider is None:
+        return None
+    if hasattr(provider, "invoke"):
+        return provider  # type: ignore[return-value]
+    return _LegacyWriterAuthoringProvider(provider, ctx=ctx)  # type: ignore[arg-type]
 
-    from contracts.lectio_page import get_intent_catalogue
-    from core.config import settings
-    from core.llm.runner import RetryPolicy, run_llm
-    from print.generation.model_tiers import tier_for_object_writer
-    from print.generation.prompts import page_writer_common_prompt, prompt_text
-    from v3_execution.config import get_v3_model_settings, get_v3_slot
-    from v3_execution.config.models import V3_BLOCK_WRITER_FAST, V3_BLOCK_WRITER_STANDARD
-    from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 
-    tier = tier_for_object_writer(ctx.planned.object) or "FAST"
-    node = V3_BLOCK_WRITER_STANDARD if tier == "STANDARD" else V3_BLOCK_WRITER_FAST
-    output_model = WRITER_PROVIDER_OUTPUTS[ctx.planned.object]
-    model, provider_output, structured_context, spec, _source = prepare_structured_agent(
-        node_name=node,
-        output_type=output_model,
+def _work_order_for_context(ctx: WriterContext) -> PrintWorkOrder:
+    if ctx.print_work_order is not None:
+        return ctx.print_work_order
+    return build_print_work_order_from_planned_block(
+        ctx.planned,
+        section_id=ctx.section_id,
     )
-    slot = get_v3_slot(node)
 
-    if prompt is None:
-        common = page_writer_common_prompt()
-        specific_name = {
-            "prose": "prose-writer-v1.txt",
-            "list": "list-writer-v1.txt",
-            "table": "table-writer-v1.txt",
-            "worked-example": "worked-example-writer-v1.txt",
-            "figure": "figure-brief-writer-v1.txt",
-            "aside": "list-writer-v1.txt",
-        }.get(ctx.planned.object)
-        specific = prompt_text(specific_name) if specific_name else ""
-        intent_rec = (get_intent_catalogue().get("intents") or {}).get(ctx.planned.intent) or {}
-        contract = _writer_contract(ctx.planned.object)
-        prev_brief = ctx.neighbour_summaries[0] if len(ctx.neighbour_summaries) > 0 else ""
-        next_brief = ctx.neighbour_summaries[1] if len(ctx.neighbour_summaries) > 1 else ""
-        payload = {
-            "lesson_context": ctx.lesson_context or {},
-            "terminology": list(ctx.terminology),
-            "block": {
-                "id": ctx.planned.id,
-                "position": ctx.planned.position,
-                "intent": ctx.planned.intent,
-                "intent_generation_guidance": intent_rec.get("generation_guidance"),
-                "brief": ctx.planned.brief,
-                "object": ctx.planned.object,
-                "placement": ctx.planned.placement,
-            },
-            "neighbours": {"before": prev_brief, "after": next_brief},
-            "writer_contract": contract.to_dict()
-            if hasattr(contract, "to_dict")
-            else contract,
-        }
-        prompt = f"{common}\n\n{specific}\n\n## INPUT JSON\n{json.dumps(payload, indent=2, sort_keys=True)}"
 
-    agent = Agent(
-        model=model,
-        output_type=provider_output,
-        system_prompt=prompt,
-        retries=NO_OUTPUT_RETRY,
+def _content_validation_from_authoring_error(
+    object_id: str,
+    exc: AuthoringEngineError,
+) -> ContentValidationError | None:
+    if exc.code not in {
+        "INVALID_PAYLOAD",
+        "INCOMPATIBLE_APPROVED_ITEM",
+        "REPAIR_EXHAUSTED",
+    }:
+        return None
+    if not exc.errors:
+        return None
+    return ContentValidationError(
+        object_id,
+        [error.to_dict() for error in exc.errors],
     )
-    result = await run_llm(
-        trace_id=str(uuid.uuid4()),
-        caller=f"v3_block_writer_{ctx.planned.object}",
-        generation_id=ctx.generation_id,
-        agent=agent,
-        user_prompt="Return JSON only for this block's content schema.",
-        model=model,
-        slot=slot,
-        spec=spec,
-        node=node,
-        model_settings=get_v3_model_settings(node),
-        retry_policy=RetryPolicy(
-            max_attempts=1 + int(settings.xplore_page_writer_retries),
-            call_timeout_seconds=float(
-                settings.page_standard_writer_timeout_seconds
-                if tier == "STANDARD"
-                else settings.page_fast_writer_timeout_seconds
-            ),
-        ),
-        structured_context=structured_context,
-    )
-    return result.output
 
 
 def _figure_result_from_content(
@@ -396,54 +346,33 @@ async def _write_validated_llm(
     *,
     provider: WriterProvider | None = None,
 ) -> WriterOutcome:
+    # Lazy import avoids circular import via page_objects.__init__ → registry.
+    from print.generation.authoring_adapter import run_print_authoring
+
     object_id = ctx.planned.object
     if object_id not in FORM_OUTPUTS:
         raise UnsupportedObject(object_id)
-    contract = _writer_contract(object_id)
-    prompt = build_writer_prompt(ctx, contract)
-    output_model = WRITER_PROVIDER_OUTPUTS[object_id]
-
-    async def _call(attempt: int, call_prompt: str) -> object:
-        if provider is not None:
-            return await provider.write(
-                object_id=object_id,
-                section_id=ctx.section_id or "",
-                block_id=ctx.planned.id,
-                attempt=attempt,
-                prompt=call_prompt,
-                output_model=output_model,
-            )
-        return await _llm_write(ctx, prompt=call_prompt)
-
-    raw = await _call(1, prompt)
     try:
-        coerced = _coerce_raw_content(raw)
-        coerced = _normalize_scalar_rich_text(object_id, coerced)
-        content = validate_content(object_id, coerced)
-    except (ContentValidationError, json.JSONDecodeError, WriterError) as first_exc:
-        errors = _validation_errors_from_exc(first_exc)
-        previous = raw
-        try:
-            previous = _coerce_raw_content(raw) if not isinstance(raw, str) else raw
-        except Exception:  # noqa: BLE001
-            previous = raw if isinstance(raw, (dict, list, str)) else str(raw)
-        repair_prompt = build_repair_prompt(
-            ctx,
-            previous_output=previous,
-            validation_errors=errors,
-            contract=contract,
+        authoring_result = await run_print_authoring(
+            _work_order_for_context(ctx),
+            provider=_authoring_provider(provider, ctx=ctx),
+            lesson_context=ctx.lesson_context,
+            allowed_facts=list(ctx.lesson_context.get("allowed_facts") or [])
+            if isinstance(ctx.lesson_context, dict)
+            else None,
+            terminology=ctx.terminology,
+            approved_items=ctx.item_records if object_id in {"questions", "choices"} else None,
+            mode="generate",
         )
-        try:
-            repaired_raw = await _call(2, repair_prompt)
-            coerced = _coerce_raw_content(repaired_raw)
-            coerced = _normalize_scalar_rich_text(object_id, coerced)
-            content = validate_content(object_id, coerced)
-        except (ContentValidationError, json.JSONDecodeError, WriterError) as final_exc:
-            if isinstance(final_exc, ContentValidationError):
-                raise final_exc
-            raise ContentValidationError(
-                object_id, _validation_errors_from_exc(final_exc)
-            ) from final_exc
+    except AuthoringEngineError as exc:
+        content_error = _content_validation_from_authoring_error(object_id, exc)
+        if content_error is not None:
+            raise content_error from exc
+        raise
+    content = validate_content(
+        object_id,
+        _normalize_scalar_rich_text(object_id, authoring_result.payload),
+    )
 
     if object_id == "figure":
         return _figure_result_from_content(ctx, content)
@@ -458,21 +387,9 @@ async def _write_validated_llm(
 async def dispatch_writer_async(
     ctx: WriterContext,
     *,
-    provider: WriterProvider | None = None,
+    provider: WriterProvider | AuthoringProvider | None = None,
 ) -> WriterOutcome:
-    # Scripted/mock providers may exercise questions/choices validation+repair.
-    if provider is not None and ctx.use_llm:
-        return await _write_validated_llm(ctx, provider=provider)
-
     if ctx.planned.object in {"questions", "choices"} or not ctx.use_llm:
         return dispatch_writer(ctx)
 
-    if ctx.planned.object in {"figure", "table"}:
-        try:
-            return await _write_validated_llm(ctx)
-        except Exception:
-            # Deterministic fallback keeps the typed document renderable when
-            # a provider cannot satisfy a visual or dynamic-cell contract.
-            return dispatch_writer(ctx)
-
-    return await _write_validated_llm(ctx)
+    return await _write_validated_llm(ctx, provider=provider)

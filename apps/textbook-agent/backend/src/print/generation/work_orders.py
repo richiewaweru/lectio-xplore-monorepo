@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any, Literal, Mapping, Sequence
+from typing import Any, Literal, Mapping, Sequence, TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
 from print.generation.selection_snapshot import PrintSelectionDecision, PrintSelectionSnapshot
 from print.resources.selection import load_form_writer_view
+
+if TYPE_CHECKING:
+    from v3_blueprint.planning.models import PlannedBlock
 
 REGISTERED_PRINT_VALIDATOR_REFS = frozenset(
     {
@@ -183,6 +186,48 @@ def compile_print_work_orders(
     return orders
 
 
+def build_print_work_order_from_planned_block(
+    planned: PlannedBlock,
+    *,
+    section_id: str | None = None,
+    teaching_plan_id: str = "ad-hoc",
+    teaching_plan_revision: int = 1,
+    teaching_plan_hash: str = "ad-hoc",
+) -> PrintWorkOrder:
+    """Build a package-backed work order for direct writer tests/tools."""
+    form_id = str(planned.object)
+    card = _writer_card(form_id)
+    schema = card.get("payload_schema")
+    if not isinstance(schema, dict):
+        schema = {"$ref": card.get("payload_schema_ref")}
+    guidance = card.get("writer_guidance") or card.get("field_guidance") or {}
+    definition = _complete_definition_payload(card)
+    return PrintWorkOrder(
+        work_order_id=f"print::ad-hoc::{planned.id}::{form_id}",
+        block_id=str(planned.id),
+        section_id=str(section_id or ""),
+        form_id=form_id,
+        placement=getattr(planned, "placement", "main") or "main",
+        teaching_plan_id=teaching_plan_id,
+        teaching_plan_revision=teaching_plan_revision,
+        teaching_plan_hash=teaching_plan_hash,
+        capability_contract_hash=_form_contract_hash(form_id, card),
+        source_refs=list(getattr(planned, "source_question_ids", None) or []),
+        dependency_ids=[],
+        expected_output_schema=dict(schema),
+        field_guidance=dict(guidance),
+        authoring_definition=definition,
+        instructions=definition.get("instructions"),
+        required_inputs=list(card.get("required_inputs") or []),
+        modes=list(card.get("modes") or []),
+        validator_refs=list(card.get("validator_refs") or []),
+        brief=str(planned.brief or ""),
+        intent=str(planned.intent or ""),
+        action=None,
+        evidence=str(getattr(planned, "evidence", "") or ""),
+    )
+
+
 def build_print_writer_request(
     order: PrintWorkOrder,
     *,
@@ -254,6 +299,7 @@ __all__ = [
     "PrintWorkOrder",
     "WriterRequestLeakError",
     "assert_no_sibling_schema_leak",
+    "build_print_work_order_from_planned_block",
     "build_print_writer_request",
     "compile_print_work_orders",
     "decisions_cover_teaching_plan",

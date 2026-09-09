@@ -44,6 +44,22 @@ def classify_failure(exc: BaseException) -> FailureClassification:
 
     if ContentValidationError is not None and isinstance(exc, ContentValidationError):
         return FailureClassification(code="VALIDATION", retryable=True, repairable=False)
+    try:
+        from infra.authoring import AuthoringEngineError
+    except ImportError:  # pragma: no cover
+        AuthoringEngineError = None  # type: ignore[misc, assignment]
+
+    if AuthoringEngineError is not None and isinstance(exc, AuthoringEngineError):
+        if exc.code in {"MISSING_AUTHORING_DEFINITION", "MISSING_AUTHORING_INPUT"}:
+            return FailureClassification(code="CONTRACT", retryable=False, repairable=False)
+        if exc.code in {"INVALID_PAYLOAD", "INCOMPATIBLE_APPROVED_ITEM", "REPAIR_EXHAUSTED"}:
+            return FailureClassification(code="VALIDATION", retryable=True, repairable=False)
+        if exc.code == "NO_COMPATIBLE_CAPABILITY":
+            return FailureClassification(
+                code="TRANSPORT" if exc.retryable else "CONTRACT",
+                retryable=exc.retryable,
+                repairable=False,
+            )
     if isinstance(exc, TeachingPlanOutputInvalidError):
         return FailureClassification(
             code="MODEL_OUTPUT_INVALID", retryable=True, repairable=False
@@ -132,5 +148,7 @@ def structured_error_from_exc(
 
     if (details := getattr(exc, "details", None)) is not None:
         payload["details"] = list(details)
+    if (failure_record := getattr(exc, "to_failure_record", None)) is not None:
+        payload["authoring"] = failure_record()
 
     return payload

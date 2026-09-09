@@ -18,6 +18,7 @@ from print.generation.selection_snapshot import (
     build_print_selection_snapshot,
     form_plan_from_decisions,
     select_print_deterministically,
+    snapshot_from_form_plan,
 )
 from print.generation.work_orders import PrintWorkOrder, compile_print_work_orders
 from print.generation.whole_lesson.form_plan import FormPlan
@@ -160,6 +161,31 @@ def build_closed_print_production_plan(
     return form_plan, snapshot, orders
 
 
+def compile_print_work_orders_for_form_plan(
+    *,
+    teaching_plan: TeachingPlan,
+    form_plan: FormPlan,
+    policy: Mapping[str, Any] | None = None,
+) -> list[PrintWorkOrder]:
+    """Reconstruct selected work orders for a validated/reused Print form plan."""
+    body = dict(policy) if policy is not None else default_print_policy()
+    _, policy_hash = policy_version_and_hash(body)
+    candidate_map = {
+        decision.block_id: [decision.object]
+        for section in form_plan.sections
+        for decision in section.forms
+    }
+    snapshot = snapshot_from_form_plan(
+        teaching_plan=teaching_plan,
+        form_plan=form_plan,
+        candidate_map=candidate_map,
+        teaching_plan_hash=teaching_plan_content_hash(teaching_plan),
+        native_policy_hash=policy_hash,
+        package_contract_hash=package_contract_hash(),
+    )
+    return compile_print_work_orders(teaching_plan=teaching_plan, snapshot=snapshot)
+
+
 def selection_trace_payload(
     snapshot: PrintSelectionSnapshot,
     orders: Sequence[PrintWorkOrder],
@@ -173,6 +199,7 @@ def selection_trace_payload(
 
 __all__ = [
     "build_closed_print_production_plan",
+    "compile_print_work_orders_for_form_plan",
     "package_contract_hash",
     "prefer_figure_for_visual_slots",
     "selection_trace_payload",
