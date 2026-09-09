@@ -58,8 +58,20 @@ async def produce_learn_from_approved_teaching(
     if prep is None:
         from print.generation.whole_lesson.repository import PageDocumentRepository
 
-        state = await PageDocumentRepository(session, preparation_generation_id).load_page_generation_state()
-        prep = learn_preparation_context_from_state(state)
+        prep_state: dict[str, Any] = {}
+        prep_generation = await session.get(GenerationModel, preparation_generation_id)
+        if prep_generation is not None:
+            chunked = prep_generation.chunked_state_json
+            if isinstance(chunked, dict):
+                packet = chunked.get("shared_preparation_packet")
+                if isinstance(packet, dict):
+                    prep_state["shared_preparation_packet"] = packet
+        page_state = await PageDocumentRepository(
+            session, preparation_generation_id
+        ).load_page_generation_state()
+        if isinstance(page_state, dict):
+            prep_state.update(page_state)
+        prep = learn_preparation_context_from_state(prep_state)
     production = await build_closed_learn_production_async(
         teaching_plan=teaching_plan,
         available_asset_ids=available_asset_ids,

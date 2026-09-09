@@ -85,7 +85,7 @@ async def build_closed_print_production_plan_async(
     plan_hash = teaching_plan_content_hash(teaching_plan)
     teaching_context = {
         "arc": teaching_plan.arc,
-        "lesson_title": packet.lesson.title,
+        "lesson_title": packet.lesson.objective,
         "subject": packet.lesson.subject,
     }
     if sealed_form_plan is not None:
