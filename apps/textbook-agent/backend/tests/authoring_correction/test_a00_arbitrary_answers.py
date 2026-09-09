@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
+from infra.authoring import AuthoringProviderCall
 from learn.generation.interaction_writer import (
     InteractionWriterError,
     write_interaction_from_request,
@@ -20,12 +22,22 @@ def _request(capability_id: str, brief: str, **extra: object) -> dict[str, objec
         "lane": "interaction",
         "brief": brief,
         "intent": "check-understanding",
-        "action": None,
+        "action": extra.pop("action", "select-one"),
         "evidence": "A00 independently specified answer regression",
         "teaching_plan_hash": "a00-plan",
         "capability_contract_hash": "a00-capability",
         **extra,
     }
+
+
+class ScriptedProvider:
+    def __init__(self, response: Any) -> None:
+        self.response = response
+        self.calls: list[AuthoringProviderCall] = []
+
+    async def invoke(self, call: AuthoringProviderCall) -> Any:
+        self.calls.append(call)
+        return self.response
 
 
 def test_a00_numeric_uses_independent_answer_not_first_number() -> None:
@@ -34,7 +46,9 @@ def test_a00_numeric_uses_independent_answer_not_first_number() -> None:
         _request(
             "numeric",
             "A cart moves at speed = 5 m/s for time = 10 s. Enter the distance in m.",
-        )
+            action="enter-number",
+        ),
+        provider=ScriptedProvider({"value": 50, "tolerance": 0, "unit": "m"}),
     )
 
     assert payload["config"]["value"] == 50
@@ -44,7 +58,12 @@ def test_a00_numeric_uses_independent_answer_not_first_number() -> None:
 def test_a00_fill_blank_uses_supplied_answer_not_last_word() -> None:
     """KNOWN_ANSWER_CASES fill-pigment: accepted answer is chlorophyll."""
     payload = write_interaction_from_request(
-        _request("fill-blank", "The green pigment is ___.")
+        _request(
+            "fill-blank",
+            "The green pigment is ___.",
+            action="complete-missing-values",
+        ),
+        provider=ScriptedProvider({"answers": ["chlorophyll"], "case_sensitive": False}),
     )
 
     assert payload["config"]["answers"] == ["chlorophyll"]
@@ -63,11 +82,12 @@ def test_a00_choice_rejects_invalid_correct_key_instead_of_first_option() -> Non
         correct_key="z",
     )
 
-    with pytest.raises(InteractionWriterError, match="correct_option_id"):
+    with pytest.raises(InteractionWriterError, match="correct_key"):
         write_interaction_from_request(
             _request(
                 "choice",
                 "What is evaporation?",
+                action="select-one",
                 approved_items=[approved],
             )
         )

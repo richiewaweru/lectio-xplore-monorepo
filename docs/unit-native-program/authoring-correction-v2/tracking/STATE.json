@@ -2,16 +2,16 @@
   "pack_version": "2.0",
   "baseline": "998e9f36e75f81899a6405a5d199e2f246bcbf9c",
   "branch": "feat/unit-print-learn",
-  "status": "A02_PASS",
+  "status": "A03_PASS",
   "phases": {
     "A00": "PASS",
     "A01": "PASS",
     "A02": "PASS",
-    "A03": "NOT_RUN",
+    "A03": "PASS",
     "A04": "NOT_RUN",
     "A05": "NOT_RUN",
     "A06": "NOT_RUN"
   },
   "live_verification": "DEFERRED",
-  "implementation_head": "A02 commit (git HEAD)"
+  "implementation_head": "A03 working tree; commit pending"
 }

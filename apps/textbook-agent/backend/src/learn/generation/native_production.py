@@ -6,11 +6,15 @@ LLM call sites; this module is code-owned selection, work orders and assembly.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Mapping, Sequence
 
 from curriculum.teaching_plan.models import TeachingPlan
+from infra.authoring import AuthoringEngine, AuthoringProvider
+from learn.generation.authoring_adapter import author_learn_work_orders
 from learn.generation.native_selection import (
     LearnSelectionSnapshot,
     build_learn_selection_snapshot,
@@ -74,6 +78,37 @@ def build_closed_learn_production(
     source_generation_id: str | None = None,
     approved_items: Sequence[Any] | None = None,
     write_interactions: bool = True,
+    provider: AuthoringProvider | None = None,
+    engine: AuthoringEngine | None = None,
+) -> dict[str, Any]:
+    return _run_sync(
+        build_closed_learn_production_async(
+            teaching_plan=teaching_plan,
+            available_asset_ids=available_asset_ids,
+            policy=policy,
+            title=title,
+            subject=subject,
+            source_generation_id=source_generation_id,
+            approved_items=approved_items,
+            write_interactions=write_interactions,
+            provider=provider,
+            engine=engine,
+        )
+    )
+
+
+async def build_closed_learn_production_async(
+    *,
+    teaching_plan: TeachingPlan,
+    available_asset_ids: Sequence[str] | None = None,
+    policy: Mapping[str, Any] | None = None,
+    title: str | None = None,
+    subject: str = "science",
+    source_generation_id: str | None = None,
+    approved_items: Sequence[Any] | None = None,
+    write_interactions: bool = True,
+    provider: AuthoringProvider | None = None,
+    engine: AuthoringEngine | None = None,
 ) -> dict[str, Any]:
     """Closed selection + work orders + assembled LessonDocument from shared teaching."""
     body = dict(policy) if policy is not None else default_learn_policy()
@@ -92,15 +127,29 @@ def build_closed_learn_production(
         snapshot=snapshot,
         approved_items=approved_items,
     )
+    approved_maps = [
+        dict(item) if isinstance(item, Mapping) else vars(item)
+        for item in (approved_items or [])
+    ]
+    authored_results = await author_learn_work_orders(
+        orders,
+        provider=provider,
+        engine=engine,
+        lesson_context={"title": title or teaching_plan.arc or "Learn lesson", "subject": subject},
+        allowed_facts=[],
+        terminology=[],
+        approved_items=approved_maps,
+    )
     document = assemble_ordered_learn_document(
         teaching_plan=teaching_plan,
         snapshot=snapshot,
         work_orders=orders,
+        authored_results=authored_results,
         title=title or teaching_plan.arc or "Learn lesson",
         subject=subject,
         source="generated",
         source_generation_id=source_generation_id,
-        write_interactions=write_interactions,
+        write_interactions=False,
         approved_items=approved_items,
     )
     document = host_interaction_blocks_for_builder(document)
@@ -112,7 +161,17 @@ def build_closed_learn_production(
         "work_orders": orders,
         "document": document,
         "selection_trace": selection_trace_payload(snapshot, orders),
+        "authoring_results": authored_results,
     }
+
+
+def _run_sync(coro: Any) -> Any:
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        return executor.submit(lambda: asyncio.run(coro)).result()
 
 
 def selection_trace_payload(
@@ -129,6 +188,7 @@ def selection_trace_payload(
 
 __all__ = [
     "build_closed_learn_production",
+    "build_closed_learn_production_async",
     "host_interaction_blocks_for_builder",
     "package_contract_hash",
     "selection_trace_payload",

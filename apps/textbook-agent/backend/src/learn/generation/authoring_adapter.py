@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from infra.authoring import (
@@ -12,6 +15,8 @@ from infra.authoring import (
     AuthoringValidationError,
     LLMAuthoringProvider,
 )
+from infra.authoring.engine import stable_hash
+from infra.authoring.validation import validate_json_schema
 from learn.generation.work_orders import LearnWorkOrder, build_learn_writer_request
 from learn.runtime.evaluation import (
     InteractionConfigError,
@@ -24,6 +29,19 @@ from learn.runtime.evaluation import (
     evaluate_sequence,
     evaluate_short_response,
 )
+
+
+_DEFAULT_FEEDBACK = {
+    "correct": "Correct.",
+    "incorrect": "Not yet — try again.",
+    "partial": "Partly right — check your answers.",
+}
+_DEFAULT_COMPLETION = {"type": "submitted"}
+_DEFAULT_ATTEMPT_POLICY = {
+    "max_attempts": None,
+    "show_feedback_after_submit": True,
+    "allow_retry_after_correct": True,
+}
 
 
 def _instruction_text(raw: Any) -> str:
@@ -78,6 +96,36 @@ def _input_map(
     }
 
 
+def _contracts_dir() -> Path:
+    return Path(__file__).resolve().parents[3] / "contracts"
+
+
+@lru_cache(maxsize=1)
+def _section_content_schema() -> Mapping[str, Any]:
+    path = _contracts_dir() / "section-content-schema.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _resolve_top_level_ref(schema: Mapping[str, Any]) -> Mapping[str, Any]:
+    ref = schema.get("$ref")
+    if not isinstance(ref, str) or not ref.startswith("#/definitions/"):
+        return schema
+    definitions = _section_content_schema().get("definitions")
+    if not isinstance(definitions, Mapping):
+        return schema
+    resolved = definitions.get(ref.removeprefix("#/definitions/"))
+    return resolved if isinstance(resolved, Mapping) else schema
+
+
+def _payload_schema_validator(
+    definition: AuthoringDefinition,
+    request: AuthoringRequest,
+    payload: Mapping[str, Any],
+) -> list[AuthoringValidationError]:
+    del request
+    return validate_json_schema(_resolve_top_level_ref(definition.payload_schema), payload)
+
+
 def _noop_validator(
     definition: AuthoringDefinition,
     request: AuthoringRequest,
@@ -85,6 +133,54 @@ def _noop_validator(
 ) -> list[AuthoringValidationError]:
     del definition, request, payload
     return []
+
+
+def _validate_classify_config(
+    definition: AuthoringDefinition,
+    request: AuthoringRequest,
+    payload: Mapping[str, Any],
+) -> list[AuthoringValidationError]:
+    del definition, request
+    errors: list[AuthoringValidationError] = []
+    categories = payload.get("categories")
+    if not isinstance(categories, list) or len(categories) < 2:
+        errors.append(AuthoringValidationError("categories", "at least two categories required"))
+        return errors
+    category_ids: set[str] = set()
+    for index, category in enumerate(categories):
+        if not isinstance(category, Mapping):
+            errors.append(AuthoringValidationError(f"categories[{index}]", "category must be an object"))
+            continue
+        cid = str(category.get("id") or "")
+        if not cid:
+            errors.append(AuthoringValidationError(f"categories[{index}].id", "category id required"))
+        if cid in category_ids:
+            errors.append(AuthoringValidationError(f"categories[{index}].id", "duplicate category id"))
+        category_ids.add(cid)
+    pairs = payload.get("pairs")
+    if not isinstance(pairs, list) or not pairs:
+        errors.append(AuthoringValidationError("pairs", "pairs required"))
+        return errors
+    lefts: set[str] = set()
+    for index, pair in enumerate(pairs):
+        if not isinstance(pair, Mapping):
+            errors.append(AuthoringValidationError(f"pairs[{index}]", "pair must be an object"))
+            continue
+        left = str(pair.get("left") or "")
+        right = str(pair.get("right") or "")
+        if not left or not right:
+            errors.append(AuthoringValidationError(f"pairs[{index}]", "left and right required"))
+        if left in lefts:
+            errors.append(AuthoringValidationError(f"pairs[{index}].left", "duplicate item id"))
+        lefts.add(left)
+        if right not in category_ids:
+            errors.append(
+                AuthoringValidationError(
+                    f"pairs[{index}].right",
+                    "classification target must name a declared category",
+                )
+            )
+    return errors
 
 
 def _config_validator(evaluator: Any, response: Mapping[str, Any]) -> Any:
@@ -116,9 +212,23 @@ def _get(item: Mapping[str, Any], *keys: str) -> Any:
     return None
 
 
+def _slug(value: Any, *, fallback: str) -> str:
+    text = str(value or "").strip().lower()
+    out: list[str] = []
+    previous_dash = False
+    for char in text:
+        if char.isalnum():
+            out.append(char)
+            previous_dash = False
+        elif not previous_dash:
+            out.append("-")
+            previous_dash = True
+    return "".join(out).strip("-") or fallback
+
+
 def _options(item: Mapping[str, Any]) -> list[dict[str, str]]:
     options_raw = _get(item, "options") or []
-    if not isinstance(options_raw, list):
+    if not isinstance(options_raw, Sequence) or isinstance(options_raw, (str, bytes)):
         return []
     out = []
     for index, option in enumerate(options_raw):
@@ -142,6 +252,10 @@ def _approved(request: AuthoringRequest) -> Mapping[str, Any]:
     if isinstance(raw, list) and raw and isinstance(raw[0], Mapping):
         return raw[0]
     raise ValueError("approved item required")
+
+
+def _prompt_from_order(order: LearnWorkOrder) -> str:
+    return order.brief.strip() or "Complete the interaction"
 
 
 def _convert_choice(
@@ -169,7 +283,14 @@ def _convert_multi_select(
     correct_ids = _get(item, "correct_keys", "correct_option_ids")
     if not isinstance(correct_ids, list) or not correct_ids:
         raise ValueError("multi-select approved item requires correct_keys")
-    return {"options": options, "correct_option_ids": [str(item) for item in correct_ids]}
+    if not options:
+        raise ValueError("multi-select approved item requires options")
+    known = {option["id"] for option in options}
+    selected = [str(item) for item in correct_ids]
+    dangling = [item for item in selected if item not in known]
+    if dangling:
+        raise ValueError(f"correct_keys reference undeclared options: {dangling}")
+    return {"options": options, "correct_option_ids": selected}
 
 
 def _convert_short_response(
@@ -231,9 +352,53 @@ def _convert_pairs(
     del definition
     item = _approved(request)
     pairs = _get(item, "pairs", "matches")
+    if isinstance(pairs, Mapping):
+        pairs = [{"left": str(left), "right": str(right)} for left, right in pairs.items()]
     if not isinstance(pairs, list) or not pairs:
         raise ValueError("pair interaction requires pairs")
     return {"pairs": pairs}
+
+
+def _convert_classify(
+    definition: AuthoringDefinition,
+    request: AuthoringRequest,
+) -> Mapping[str, Any]:
+    del definition
+    item = _approved(request)
+    categories_raw = _get(item, "categories")
+    mapping = _get(item, "mapping", "assignments", "pairs")
+    if not isinstance(categories_raw, list) or len(categories_raw) < 2:
+        raise ValueError("classify approved item requires categories")
+    categories: list[dict[str, str]] = []
+    category_by_name: dict[str, str] = {}
+    for index, category in enumerate(categories_raw):
+        if isinstance(category, Mapping):
+            label = str(_get(category, "label", "text", "id") or "")
+            cid = str(_get(category, "id", "key") or _slug(label, fallback=f"cat-{index + 1}"))
+        else:
+            label = str(category)
+            cid = _slug(label, fallback=f"cat-{index + 1}")
+        if not label:
+            raise ValueError("classify category label required")
+        categories.append({"id": cid, "label": label})
+        category_by_name[cid] = cid
+        category_by_name[label] = cid
+    if isinstance(mapping, Mapping):
+        pairs = [
+            {"left": str(left), "right": category_by_name.get(str(right), str(right))}
+            for left, right in mapping.items()
+        ]
+    elif isinstance(mapping, list):
+        pairs = []
+        for entry in mapping:
+            if not isinstance(entry, Mapping):
+                raise ValueError("classify mapping entries must be objects")
+            left = _get(entry, "left", "item", "id")
+            right = _get(entry, "right", "category", "category_id")
+            pairs.append({"left": str(left), "right": category_by_name.get(str(right), str(right))})
+    else:
+        raise ValueError("classify approved item requires mapping")
+    return {"categories": categories, "pairs": pairs}
 
 
 def _convert_sequence(
@@ -242,16 +407,20 @@ def _convert_sequence(
 ) -> Mapping[str, Any]:
     del definition
     item = _approved(request)
-    order = _get(item, "order", "sequence")
+    order = _get(item, "order", "sequence", "correct_order")
     if not isinstance(order, list) or len(order) < 2:
         raise ValueError("sequence approved item requires ordered ids")
-    return {"order": [str(entry) for entry in order]}
+    ids = [_slug(entry, fallback=f"step-{index + 1}") for index, entry in enumerate(order)]
+    items = _get(item, "items")
+    if not isinstance(items, list):
+        items = [{"id": ids[index], "label": str(entry)} for index, entry in enumerate(order)]
+    return {"order": ids, "items": items}
 
 
 def build_learn_authoring_registry() -> AuthoringRegistry:
     return (
         AuthoringRegistry()
-        .with_validator("learn.payload_schema", _noop_validator)
+        .with_validator("learn.payload_schema", _payload_schema_validator)
         .with_validator(
             "learn.evaluateChoice",
             _config_validator(
@@ -279,6 +448,7 @@ def build_learn_authoring_registry() -> AuthoringRegistry:
             "learn.evaluateMatchPairs",
             _config_validator(evaluate_match_pairs, {"matches": []}),
         )
+        .with_validator("learn.evaluateClassify", _validate_classify_config)
         .with_validator(
             "learn.evaluateSequence",
             _config_validator(evaluate_sequence, {"order": []}),
@@ -291,7 +461,7 @@ def build_learn_authoring_registry() -> AuthoringRegistry:
         .with_converter("learn.numeric.approved_item_converter", _convert_numeric)
         .with_converter("learn.short-response.approved_item_converter", _convert_short_response)
         .with_converter("learn.match-pairs.approved_item_converter", _convert_pairs)
-        .with_converter("learn.classify.approved_item_converter", _convert_pairs)
+        .with_converter("learn.classify.approved_item_converter", _convert_classify)
         .with_converter("learn.sequence.approved_item_converter", _convert_sequence)
         .with_converter(
             "learn.quizContentToInteractionContract",
@@ -355,3 +525,108 @@ async def run_learn_authoring(
         provider=provider or LLMAuthoringProvider(),
     )
     return await selected_engine.execute(request, provider=provider)
+
+
+def interaction_contract_from_authoring_result(
+    order: LearnWorkOrder,
+    result: AuthoringResult,
+    *,
+    interaction_id: str | None = None,
+    assessment_mode: str = "practice",
+    concept_refs: Sequence[Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    prompt = _prompt_from_order(order)
+    contract: dict[str, Any] = {
+        "id": interaction_id or f"ix-{order.block_id}-{order.capability_id}",
+        "kind": order.capability_id,
+        "prompt": prompt,
+        "assessment_mode": assessment_mode if assessment_mode in {"practice", "graded"} else "practice",
+        "attempt_policy": dict(_DEFAULT_ATTEMPT_POLICY),
+        "feedback": dict(_DEFAULT_FEEDBACK),
+        "completion": dict(_DEFAULT_COMPLETION),
+        "config": dict(result.payload),
+        "accessibility": {
+            "aria_label": prompt,
+            "narration": "optional",
+            "keyboard_operable": True,
+        },
+        "ai_config_rule": "config-only",
+        "concept_refs": [dict(ref) for ref in (concept_refs or [])],
+        "provenance": {
+            **result.provenance.to_dict(),
+            "block_id": order.block_id,
+            "capability_id": order.capability_id,
+            "capability_contract_hash": order.capability_contract_hash,
+            "teaching_plan_id": order.teaching_plan_id,
+            "teaching_plan_revision": order.teaching_plan_revision,
+            "teaching_plan_hash": order.teaching_plan_hash,
+            "authoring_mode": result.mode,
+            "payload_hash": stable_hash(result.payload),
+        },
+    }
+    return contract
+
+
+async def run_learn_work_order_authoring(
+    order: LearnWorkOrder,
+    *,
+    provider: AuthoringProvider | None = None,
+    engine: AuthoringEngine | None = None,
+    lesson_context: Mapping[str, Any] | None = None,
+    allowed_facts: Sequence[str] | None = None,
+    terminology: Sequence[str] | None = None,
+    approved_items: Sequence[Mapping[str, Any]] | None = None,
+    assessment_mode: str = "practice",
+    concept_refs: Sequence[Mapping[str, Any]] | None = None,
+) -> AuthoringResult:
+    result = await run_learn_authoring(
+        order,
+        provider=provider,
+        engine=engine,
+        lesson_context=lesson_context,
+        allowed_facts=allowed_facts,
+        terminology=terminology,
+        approved_items=approved_items,
+    )
+    if order.lane != "interaction":
+        return result
+    contract = interaction_contract_from_authoring_result(
+        order,
+        result,
+        assessment_mode=assessment_mode,
+        concept_refs=concept_refs,
+    )
+    return AuthoringResult(
+        work_order_id=result.work_order_id,
+        capability_id=result.capability_id,
+        native_path=result.native_path,
+        mode=result.mode,
+        payload=contract,
+        provenance=result.provenance,
+        transport_attempts=result.transport_attempts,
+        repair_attempts=result.repair_attempts,
+    )
+
+
+async def author_learn_work_orders(
+    orders: Sequence[LearnWorkOrder],
+    *,
+    provider: AuthoringProvider | None = None,
+    engine: AuthoringEngine | None = None,
+    lesson_context: Mapping[str, Any] | None = None,
+    allowed_facts: Sequence[str] | None = None,
+    terminology: Sequence[str] | None = None,
+    approved_items: Sequence[Mapping[str, Any]] | None = None,
+) -> dict[str, AuthoringResult]:
+    results: dict[str, AuthoringResult] = {}
+    for order in orders:
+        results[order.work_order_id] = await run_learn_work_order_authoring(
+            order,
+            provider=provider,
+            engine=engine,
+            lesson_context=lesson_context,
+            allowed_facts=allowed_facts,
+            terminology=terminology,
+            approved_items=approved_items,
+        )
+    return results

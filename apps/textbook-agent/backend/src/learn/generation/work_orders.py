@@ -25,6 +25,7 @@ REGISTERED_LEARN_VALIDATOR_REFS = frozenset(
         "learn.evaluateNumeric",
         "learn.evaluateShortResponse",
         "learn.evaluateMatchPairs",
+        "learn.evaluateClassify",
         "learn.evaluateSequence",
         "learn.quizContentToInteractionContract",
         "learn.fillBlankContentToInteractionContract",
@@ -154,7 +155,8 @@ def compile_learn_work_orders(
 ) -> list[LearnWorkOrder]:
     """Compile exact per-capability work orders from a sealed selection snapshot."""
     approved_by_id = {
-        str(getattr(item, "id", "") or ""): item for item in (approved_items or [])
+        str(item.get("id") if isinstance(item, Mapping) else getattr(item, "id", "") or ""): item
+        for item in (approved_items or [])
     }
     blocks = _block_index(teaching_plan)
     orders: list[LearnWorkOrder] = []
@@ -268,9 +270,36 @@ def build_learn_writer_request(
         "authoring_mode": order.authoring_mode,
     }
     if order.authoring_mode == "approved_item" and approved_item is not None:
+        allowed_keys = (
+            "id",
+            "stem",
+            "prompt",
+            "question",
+            "options",
+            "correct_key",
+            "correct_keys",
+            "correct_option_id",
+            "correct_option_ids",
+            "answer",
+            "accepted_answer",
+            "answers",
+            "accepted_answers",
+            "value",
+            "tolerance",
+            "unit",
+            "pairs",
+            "matches",
+            "categories",
+            "mapping",
+            "assignments",
+            "order",
+            "sequence",
+            "correct_order",
+            "items",
+        )
         request["approved_item"] = {
             key: approved_item[key]
-            for key in ("id", "stem", "prompt", "options", "correct_key")
+            for key in allowed_keys
             if key in approved_item
         }
     assert_no_sibling_schema_leak(request, selected_capability_id=order.capability_id)

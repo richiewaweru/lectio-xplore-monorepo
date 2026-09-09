@@ -7,9 +7,23 @@ from curriculum.teaching_plan.models import (
     TeachingPlanBlock,
     TeachingPlanSection,
 )
-from learn.generation.native_selection import build_learn_selection_snapshot
-from learn.generation.ordered_assemble import assemble_ordered_learn_document
-from learn.resources.native_policy import default_learn_policy, policy_version_and_hash
+from infra.authoring import AuthoringProviderCall
+from learn.generation.native_production import build_closed_learn_production
+from learn.resources.native_policy import default_learn_policy
+
+
+class ContentProvider:
+    async def invoke(self, call: AuthoringProviderCall) -> dict[str, object]:
+        assert call.native_path == "learn"
+        if call.capability_id == "callout-block":
+            return {
+                "variant": "info",
+                "body": "Evaporation is when liquid water changes into vapour, like a puddle drying after sunshine.",
+            }
+        return {
+            "body": "Evaporation is when liquid water changes into vapour, like a puddle drying after sunshine.",
+            "emphasis": ["evaporation"],
+        }
 
 
 def test_a00_ordered_assemble_does_not_copy_brief_as_content_body() -> None:
@@ -35,15 +49,14 @@ def test_a00_ordered_assemble_does_not_copy_brief_as_content_body() -> None:
             )
         ],
     )
-    _, policy_hash = policy_version_and_hash(default_learn_policy())
-    snapshot = build_learn_selection_snapshot(
-        plan,
-        teaching_plan_hash="hash-a00-brief",
-        native_policy_hash=policy_hash,
-        package_contract_hash="pkg-a00",
+    policy = default_learn_policy()
+    policy["offered_content"] = ["explanation-block"]
+    production = build_closed_learn_production(
+        teaching_plan=plan,
+        policy=policy,
+        provider=ContentProvider(),
     )
-
-    document = assemble_ordered_learn_document(teaching_plan=plan, snapshot=snapshot)
+    document = production["document"]
     block = next(iter(document["blocks"].values()))
     body = str((block.get("content") or {}).get("body") or "")
 

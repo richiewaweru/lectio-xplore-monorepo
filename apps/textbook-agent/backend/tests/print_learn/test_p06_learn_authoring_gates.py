@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
@@ -22,6 +23,7 @@ from learn.generation.interaction_writer import (
     validate_interaction_contract,
     write_interaction_from_work_order,
 )
+from learn.generation.authoring_adapter import run_learn_work_order_authoring
 from learn.generation.native_selection import (
     build_learn_selection_snapshot,
 )
@@ -38,6 +40,69 @@ from learn.publishing.publish_validation import (
 )
 from learn.publishing.release_routes import document_hash, resolve_release_provenance
 from learn.resources.native_policy import default_learn_policy, policy_version_and_hash as learn_policy_hash
+from infra.authoring import AuthoringProviderCall
+
+
+CORE_PROVIDER_PAYLOADS = {
+    "choice": {
+        "options": [{"id": "soil", "text": "Soil"}, {"id": "air", "text": "Air"}],
+        "correct_option_id": "air",
+    },
+    "multi-select": {
+        "options": [{"id": "leaf", "text": "Leaf"}, {"id": "stem", "text": "Stem"}, {"id": "root", "text": "Root"}],
+        "correct_option_ids": ["leaf", "stem"],
+    },
+    "fill-blank": {"answers": ["chlorophyll"], "blank_ids": ["blank-1"], "case_sensitive": False},
+    "numeric": {"value": 42, "tolerance": 0, "unit": "kg"},
+    "short-response": {"evaluation": "teacher-review", "review_guidance": "Review the response."},
+    "match-pairs": {"pairs": [{"left": "co2", "right": "carbon dioxide"}, {"left": "h2o", "right": "water"}]},
+    "classify": {
+        "categories": [{"id": "fruit", "label": "fruit"}, {"id": "vegetable", "label": "vegetable"}],
+        "pairs": [{"left": "apple", "right": "fruit"}, {"left": "carrot", "right": "vegetable"}],
+    },
+    "sequence": {
+        "items": [{"id": "egg", "label": "Egg"}, {"id": "larva", "label": "Larva"}, {"id": "pupa", "label": "Pupa"}, {"id": "adult", "label": "Adult"}],
+        "order": ["egg", "larva", "pupa", "adult"],
+    },
+    "quiz-check": {
+        "question": "What do plants use?",
+        "options": [{"text": "Light", "correct": True, "explanation": "Yes."}, {"text": "Noise", "correct": False, "explanation": "No."}],
+        "feedback_correct": "Correct.",
+        "feedback_incorrect": "Try again.",
+    },
+    "fill-in-blank": {"segments": [{"text": "Plants use ", "is_blank": False}, {"text": "", "is_blank": True, "answer": "light"}]},
+    "worked-example-card": {
+        "title": "Worked example",
+        "setup": "A plant gets light.",
+        "steps": [{"label": "Check", "content": "Identify the energy source."}],
+        "conclusion": "Light is needed.",
+    },
+    "process-steps": {"title": "Process", "steps": [{"number": 1, "action": "Absorb", "detail": "Light is absorbed."}]},
+    "explanation-block": {"body": "Plants use light energy.", "emphasis": ["light"]},
+    "callout-block": {"variant": "info", "body": "Light matters."},
+    "key-fact": {"fact": "Light supplies energy."},
+}
+
+
+class P06Provider:
+    async def invoke(self, call: AuthoringProviderCall):
+        return dict(CORE_PROVIDER_PAYLOADS.get(call.capability_id, CORE_PROVIDER_PAYLOADS["explanation-block"]))
+
+
+async def _author_all_async(orders):
+    return {
+        order.work_order_id: await run_learn_work_order_authoring(order, provider=P06Provider())
+        for order in orders
+    }
+
+
+def _author_all(orders):
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(_author_all_async(orders))
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        return executor.submit(lambda: asyncio.run(_author_all_async(orders))).result()
 
 
 def _snapshot(plan: TeachingPlan):
@@ -161,11 +226,11 @@ def test_p06_l01_sequence_via_selector_writer_not_injected() -> None:
     assert len(ix_orders) == 1
     assert ix_orders[0].capability_id == "sequence"
 
-    authoring_plan, request, payload = write_interaction_from_work_order(ix_orders[0])
+    authoring_plan, request, payload = write_interaction_from_work_order(ix_orders[0], provider=P06Provider())
     assert authoring_plan.mode == "new"
     assert request["work_order_id"] == ix_orders[0].work_order_id
     assert request["capability_id"] == "sequence"
-    assert "payload_schema" in request
+    assert request["authoring_mode"] == "generate"
     assert payload["kind"] == "sequence"
     assert payload["provenance"]["work_order_id"] == ix_orders[0].work_order_id
     assert validate_interaction_contract(payload) == []
@@ -174,7 +239,7 @@ def test_p06_l01_sequence_via_selector_writer_not_injected() -> None:
         teaching_plan=plan,
         snapshot=snapshot,
         work_orders=orders,
-        write_interactions=True,
+        authored_results=_author_all(orders),
     )
     interactions = [
         b
@@ -224,7 +289,7 @@ def test_p06_l01_core_writers_via_selector(
     assert len(ix_orders) == 1
     assert ix_orders[0].capability_id == capability_id
 
-    _, request, payload = write_interaction_from_work_order(ix_orders[0])
+    _, request, payload = write_interaction_from_work_order(ix_orders[0], provider=P06Provider())
     assert request["capability_id"] == capability_id
     assert payload["kind"] == capability_id
     assert validate_interaction_contract(payload) == []
@@ -233,7 +298,7 @@ def test_p06_l01_core_writers_via_selector(
         teaching_plan=plan,
         snapshot=snapshot,
         work_orders=orders,
-        write_interactions=True,
+        authored_results=_author_all(orders),
     )
     contracts = [
         b["learn_interaction"]
@@ -280,7 +345,8 @@ def test_p06_l02_repeated_and_interleaved_order_survives_assemble() -> None:
     document = assemble_ordered_learn_document(
         teaching_plan=plan,
         snapshot=snapshot,
-        write_interactions=True,
+        work_orders=compile_learn_work_orders(teaching_plan=plan, snapshot=snapshot),
+        authored_results=_author_all(compile_learn_work_orders(teaching_plan=plan, snapshot=snapshot)),
     )
 
     sequence = block_component_sequence(document)
@@ -325,7 +391,13 @@ def test_p06_l03_builder_edit_persists_and_malformed_blocks_publish() -> None:
         )
     )
     snapshot = _snapshot(plan)
-    document = assemble_ordered_learn_document(teaching_plan=plan, snapshot=snapshot)
+    orders = compile_learn_work_orders(teaching_plan=plan, snapshot=snapshot)
+    document = assemble_ordered_learn_document(
+        teaching_plan=plan,
+        snapshot=snapshot,
+        work_orders=orders,
+        authored_results=_author_all(orders),
+    )
 
     # Locate interaction and apply a Builder-style field edit.
     block_id = next(
@@ -446,9 +518,13 @@ def _sequence_lesson() -> dict:
             action="order-items",
         )
     )
+    snapshot = _snapshot(plan)
+    orders = compile_learn_work_orders(teaching_plan=plan, snapshot=snapshot)
     return assemble_ordered_learn_document(
         teaching_plan=plan,
-        snapshot=_snapshot(plan),
+        snapshot=snapshot,
+        work_orders=orders,
+        authored_results=_author_all(orders),
         lesson_id="doc-seq",
         title="Sequence lesson",
         subject="biology",

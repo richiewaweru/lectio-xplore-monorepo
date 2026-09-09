@@ -16,7 +16,7 @@ from application.unit_lesson.realizations import admit_realization
 from core.database.models import EditableLessonModel, GenerationModel
 from curriculum.teaching_plan.models import TeachingPlan
 from learn.generation.native_production import (
-    build_closed_learn_production,
+    build_closed_learn_production_async,
     teaching_plan_content_hash,
 )
 from learn.publishing.publish_validation import validate_publishable_lesson_document
@@ -46,7 +46,7 @@ async def produce_learn_from_approved_teaching(
     bypassed: ``build_closed_learn_production`` seals the snapshot first.
     """
     output_id = f"learn-out-{uuid.uuid4().hex[:12]}"
-    production = build_closed_learn_production(
+    production = await build_closed_learn_production_async(
         teaching_plan=teaching_plan,
         available_asset_ids=available_asset_ids,
         policy=policy,

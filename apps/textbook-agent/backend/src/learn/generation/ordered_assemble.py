@@ -14,7 +14,7 @@ from typing import Any, Mapping, Sequence
 from curriculum.teaching_plan.models import TeachingPlan
 from learn.generation.interaction_writer import (
     InteractionWriterError,
-    write_interaction_from_work_order,
+    validate_interaction_contract,
 )
 from learn.generation.native_selection import LearnSelectionSnapshot
 from learn.generation.work_orders import LearnWorkOrder, compile_learn_work_orders
@@ -28,50 +28,25 @@ def _new_id(prefix: str) -> str:
     return f"{prefix}-{uuid.uuid4().hex[:12]}"
 
 
-def _content_block_from_decision(
+def _content_block_from_result(
     *,
-    block_id: str,
+    order: LearnWorkOrder,
     content_id: str,
-    brief: str,
+    payload: Mapping[str, Any],
+    provenance: Mapping[str, Any],
     position: int,
 ) -> dict[str, Any]:
-    """Minimal validated content payload for assembly fixtures / native assemble."""
-    # Map common content ids to a body-bearing shape the student shell can render.
-    if content_id in {"explanation-block", "callout", "key-concept", "summary-block"}:
-        content: dict[str, Any] = {"body": brief or "Content"}
-        if content_id == "explanation-block":
-            content = {"body": brief or "Content", "callouts": []}
-        return {
-            "id": _new_id("blk"),
-            "component_id": content_id if content_id != "key-concept" else "key-fact",
-            "position": position,
-            "content": content if content_id != "key-concept" else {"statement": brief or "Key idea"},
-        }
-    if content_id == "section-header":
-        return {
-            "id": _new_id("blk"),
-            "component_id": "section-header",
-            "position": position,
-            "content": {"title": brief or "Section", "subtitle": ""},
-        }
-    if content_id == "hook-hero":
-        return {
-            "id": _new_id("blk"),
-            "component_id": "hook-hero",
-            "position": position,
-            "content": {
-                "type": "prose",
-                "headline": brief[:80] or "Hook",
-                "body": brief or "Hook body",
-                "anchor": block_id,
-            },
-        }
-    # Generic fallback: explanation-shaped body under the selected component id.
     return {
         "id": _new_id("blk"),
         "component_id": content_id,
         "position": position,
-        "content": {"body": brief or "Content"},
+        "content": dict(payload),
+        "authoring": {
+            "work_order_id": order.work_order_id,
+            "capability_id": order.capability_id,
+            "capability_contract_hash": order.capability_contract_hash,
+            "provenance": dict(provenance),
+        },
     }
 
 
@@ -99,6 +74,7 @@ def assemble_ordered_learn_document(
     teaching_plan: TeachingPlan,
     snapshot: LearnSelectionSnapshot,
     work_orders: Sequence[LearnWorkOrder] | None = None,
+    authored_results: Mapping[str, Any] | None = None,
     interaction_payloads: Mapping[str, Mapping[str, Any]] | None = None,
     content_overrides: Mapping[str, Mapping[str, Any]] | None = None,
     title: str | None = None,
@@ -107,15 +83,20 @@ def assemble_ordered_learn_document(
     lesson_id: str | None = None,
     source: str = "generated",
     source_generation_id: str | None = None,
-    write_interactions: bool = True,
+    write_interactions: bool = False,
     approved_items: Sequence[Any] | None = None,
 ) -> dict[str, Any]:
     """Assemble a LessonDocument whose ``block_ids`` are the authority for order.
 
-    When ``write_interactions`` is true, interaction work orders are executed
-    through the normal writer (not injected). Pass ``interaction_payloads`` keyed
-    by work_order_id only for replay of already-written payloads.
+    Assembly is a pure consumer: every selected work order must have a matching
+    validated authoring result. ``interaction_payloads`` is accepted only for
+    legacy replay of already-written interaction contracts.
     """
+    if write_interactions:
+        raise InteractionWriterError(
+            "ASSEMBLY_AUTHORING_DISABLED",
+            "assembly no longer writes interactions; provide authored_results",
+        )
     orders = list(work_orders) if work_orders is not None else compile_learn_work_orders(
         teaching_plan=teaching_plan,
         snapshot=snapshot,
@@ -125,18 +106,8 @@ def assemble_ordered_learn_document(
     for order in orders:
         orders_by_block.setdefault(order.block_id, []).append(order)
 
+    authored = dict(authored_results or {})
     written = dict(interaction_payloads or {})
-    if write_interactions:
-        for order in orders:
-            if order.lane != "interaction":
-                continue
-            if order.work_order_id in written:
-                continue
-            _, _, payload = write_interaction_from_work_order(
-                order,
-                approved_items=approved_items,
-            )
-            written[order.work_order_id] = payload
 
     blocks: dict[str, dict[str, Any]] = {}
     sections_out: list[dict[str, Any]] = []
@@ -157,20 +128,52 @@ def assemble_ordered_learn_document(
             interaction_order = next((o for o in block_orders if o.lane == "interaction"), None)
 
             if content_order is not None or decision.content_id:
+                if content_order is None:
+                    raise InteractionWriterError(
+                        "MISSING_CONTENT_ORDER",
+                        f"selection has content for {plan_block.id!r} but no work order",
+                    )
                 content_id = (content_order.capability_id if content_order else decision.content_id) or "explanation-block"
-                override = (content_overrides or {}).get(plan_block.id)
-                if override is not None:
-                    block = {
-                        "id": _new_id("blk"),
-                        "component_id": str(override.get("component_id") or content_id),
-                        "position": position,
-                        "content": dict(override.get("content") or {"body": plan_block.brief}),
-                    }
-                else:
-                    block = _content_block_from_decision(
-                        block_id=plan_block.id,
+                override = (content_overrides or {}).get(content_order.work_order_id)
+                if override is None:
+                    result = authored.get(content_order.work_order_id)
+                    if result is None:
+                        raise InteractionWriterError(
+                            "MISSING_CONTENT_PAYLOAD",
+                            f"no content payload for work order {content_order.work_order_id!r}",
+                        )
+                    result_work_order_id = str(getattr(result, "work_order_id", "") or "")
+                    result_capability_id = str(getattr(result, "capability_id", "") or "")
+                    result_native_path = str(getattr(result, "native_path", "") or "")
+                    if (
+                        result_work_order_id != content_order.work_order_id
+                        or result_capability_id != content_order.capability_id
+                        or result_native_path != "learn"
+                    ):
+                        raise InteractionWriterError(
+                            "MISMATCHED_CONTENT_PAYLOAD",
+                            f"content result does not match {content_order.work_order_id!r}",
+                        )
+                    payload = getattr(result, "payload", None)
+                    provenance = getattr(result, "provenance", None)
+                    if not isinstance(payload, dict) or provenance is None:
+                        raise InteractionWriterError(
+                            "UNVALIDATED_CONTENT_PAYLOAD",
+                            f"content result for {content_order.work_order_id!r} is not validated",
+                        )
+                    block = _content_block_from_result(
+                        order=content_order,
                         content_id=content_id,
-                        brief=plan_block.brief,
+                        payload=payload,
+                        provenance=provenance.to_dict() if hasattr(provenance, "to_dict") else {},
+                        position=position,
+                    )
+                else:
+                    block = _content_block_from_result(
+                        order=content_order,
+                        content_id=str(override.get("component_id") or content_id),
+                        payload=dict(override.get("content") or {}),
+                        provenance=dict(override.get("provenance") or {}),
                         position=position,
                     )
                 blocks[block["id"]] = block
@@ -183,12 +186,41 @@ def assemble_ordered_learn_document(
                         "MISSING_INTERACTION_ORDER",
                         f"selection has interaction for {plan_block.id!r} but no work order",
                     )
+                result = authored.get(interaction_order.work_order_id)
                 payload = written.get(interaction_order.work_order_id)
+                if payload is None and result is not None:
+                    result_work_order_id = str(getattr(result, "work_order_id", "") or "")
+                    result_capability_id = str(getattr(result, "capability_id", "") or "")
+                    result_native_path = str(getattr(result, "native_path", "") or "")
+                    if (
+                        result_work_order_id != interaction_order.work_order_id
+                        or result_capability_id != interaction_order.capability_id
+                        or result_native_path != "learn"
+                    ):
+                        raise InteractionWriterError(
+                            "MISMATCHED_INTERACTION_PAYLOAD",
+                            f"interaction result does not match {interaction_order.work_order_id!r}",
+                        )
+                    maybe_payload = getattr(result, "payload", None)
+                    if not isinstance(maybe_payload, dict):
+                        raise InteractionWriterError(
+                            "UNVALIDATED_INTERACTION_PAYLOAD",
+                            f"interaction result for {interaction_order.work_order_id!r} is not validated",
+                        )
+                    payload = maybe_payload
                 if payload is None:
                     raise InteractionWriterError(
                         "MISSING_INTERACTION_PAYLOAD",
                         f"no payload for work order {interaction_order.work_order_id!r}",
                     )
+                if payload.get("kind") != interaction_order.capability_id:
+                    raise InteractionWriterError(
+                        "MISMATCHED_INTERACTION_PAYLOAD",
+                        f"interaction payload kind does not match {interaction_order.work_order_id!r}",
+                    )
+                errors = validate_interaction_contract(payload)
+                if errors:
+                    raise InteractionWriterError("UNVALIDATED_INTERACTION_PAYLOAD", "; ".join(errors))
                 block = _interaction_block(contract=payload, position=position)
                 blocks[block["id"]] = block
                 block_ids.append(block["id"])
