@@ -20,9 +20,16 @@ class LearnPreparationContext(BaseModel):
     dependency_results: list[dict[str, Any]] = Field(default_factory=list)
 
 
-def _fact_strings(values: Sequence[Any] | None) -> list[str]:
+def _fact_strings(values: Any) -> list[str]:
     out: list[str] = []
-    for item in values or []:
+    if values is None or isinstance(values, (bool, int, float)):
+        return out
+    if isinstance(values, str):
+        text = values.strip()
+        return [text] if text else out
+    if not isinstance(values, Sequence):
+        return out
+    for item in values:
         if isinstance(item, str):
             text = item.strip()
             if text:
@@ -60,7 +67,30 @@ def learn_preparation_context_from_state(state: Mapping[str, Any]) -> LearnPrepa
 
     prior = _fact_strings(packet.get("prior_established") or state.get("prior_established"))
     must_establish = _fact_strings(packet.get("must_establish") or state.get("must_establish"))
-    allowed_facts = list(dict.fromkeys([*prior, *must_establish]))
+    scope_must = _fact_strings(scope.get("must_establish") if isinstance(scope, Mapping) else None)
+    lesson_actuals = packet.get("lesson_actuals") or state.get("lesson_actuals") or []
+    actual_facts: list[str] = []
+    if isinstance(lesson_actuals, list):
+        for entry in lesson_actuals:
+            if not isinstance(entry, Mapping):
+                continue
+            # Prefer explicit fact lists; ignore boolean `established` flags.
+            fact_bucket = entry.get("must_establish")
+            if fact_bucket is None:
+                fact_bucket = entry.get("facts")
+            if fact_bucket is None and isinstance(entry.get("established"), (list, tuple, str)):
+                fact_bucket = entry.get("established")
+            if fact_bucket is None and entry.get("statement"):
+                fact_bucket = [entry.get("statement")]
+            actual_facts.extend(_fact_strings(fact_bucket))
+    allowed_facts = list(dict.fromkeys([*prior, *must_establish, *scope_must, *actual_facts]))
+    if not allowed_facts:
+        # Fall back to objective/arc text so offline generate has a factual anchor
+        # when the pinned packet stores objectives without a separate fact list.
+        for candidate in (objective, teaching_arc, str(packet.get("title") or "").strip()):
+            if candidate:
+                allowed_facts = [candidate]
+                break
 
     terminology = [
         str(term).strip()

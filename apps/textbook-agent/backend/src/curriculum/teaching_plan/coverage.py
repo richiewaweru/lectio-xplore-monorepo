@@ -16,6 +16,7 @@ def instructional_coverage(plan: TeachingPlan | Mapping[str, Any]) -> dict[str, 
 
     intents: list[str] = []
     briefs: list[str] = []
+    unsourced_briefs: list[str] = []
     evidence: list[str] = []
     actions: list[str] = []
     source_ids: list[str] = []
@@ -32,16 +33,19 @@ def instructional_coverage(plan: TeachingPlan | Mapping[str, Any]) -> dict[str, 
             block_ids.append(bid)
             if intent:
                 intents.append(intent)
+            block_sources = [str(sid) for sid in (block.get("source_question_ids") or [])]
             if brief:
                 briefs.append(brief)
+                if not block_sources:
+                    unsourced_briefs.append(brief)
             if ev:
                 evidence.append(ev)
             learner = block.get("learner_action") or {}
             action = learner.get("action") if isinstance(learner, dict) else None
             if action:
                 actions.append(str(action))
-            for sid in block.get("source_question_ids") or []:
-                source_ids.append(str(sid))
+            for sid in block_sources:
+                source_ids.append(sid)
             for sid in (learner.get("source_item_ids") if isinstance(learner, dict) else None) or []:
                 source_ids.append(str(sid))
             if intent in visual_intents:
@@ -54,6 +58,7 @@ def instructional_coverage(plan: TeachingPlan | Mapping[str, Any]) -> dict[str, 
         "block_ids": block_ids,
         "intents": intents,
         "briefs": briefs,
+        "unsourced_briefs": unsourced_briefs,
         "evidence": evidence,
         "actions": sorted(set(actions)),
         "source_item_ids": sorted(set(source_ids)),
@@ -124,11 +129,16 @@ def assert_learn_covers_instruction(
     assert arc in title or title, "learn document missing title/objective signal"
 
     blob = str(learn_document)
-    for brief in coverage.get("briefs") or []:
+    # Generate-authored blocks must carry teaching briefs. Convert-approved blocks
+    # preserve bank stems/keys instead of rewriting the teaching brief (R01/R02).
+    for brief in coverage.get("unsourced_briefs") or coverage.get("briefs") or []:
         # Briefs may be truncated in content bodies; require distinctive substrings.
         token = brief[:48].strip()
         if len(token) >= 12:
             assert token in blob, f"learn output missing teaching brief token {token!r}"
+
+    for sid in coverage.get("source_item_ids") or []:
+        assert str(sid) in blob, f"learn output missing approved source item {sid!r}"
 
     actions = set(coverage.get("actions") or [])
     if "order-items" in actions or "reconstruct-order" in actions:

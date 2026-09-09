@@ -25,8 +25,9 @@ from learn.generation.interaction_writer import (
 )
 from learn.generation.authoring_adapter import run_learn_work_order_authoring
 from learn.generation.native_selection import (
-    build_learn_selection_snapshot,
+    build_learn_selection_snapshot_async,
 )
+from infra.authoring.capability_selector import CapabilitySelection
 from learn.generation.ordered_assemble import (
     assemble_ordered_learn_document,
     block_component_sequence,
@@ -84,6 +85,12 @@ CONTENT_PROVIDER_PAYLOADS = {
     "explanation-block": {"body": "Plants use light energy.", "emphasis": ["light"]},
     "callout-block": {"variant": "info", "body": "Light matters."},
     "key-fact": {"fact": "Light supplies energy."},
+    "summary-block": {"items": [{"text": "Light supplies energy for food making."}]},
+    "definition-card": {"term": "Photosynthesis", "formal": "Plants make food using light.", "plain": "Light helps plants make food."},
+    "section-header": {"title": "Light and food", "subject": "science", "grade_band": "primary"},
+    "hook-hero": {"headline": "Why did one plant grow?", "body": "Light reached one plant.", "anchor": "light"},
+    "timeline-block": {"title": "Growth", "events": [{"id": "day1", "year": "1", "title": "Sprout", "summary": "The seed sprouts."}]},
+    "diagram-compare": {"before_label": "Dark", "after_label": "Light", "caption": "Light changes growth.", "alt_text": "Dark versus lit plant"},
 }
 
 
@@ -109,7 +116,13 @@ class P06Provider:
 
 async def _author_all_async(orders):
     return {
-        order.work_order_id: await run_learn_work_order_authoring(order, provider=P06Provider())
+        order.work_order_id: await run_learn_work_order_authoring(
+            order,
+            provider=P06Provider(),
+            lesson_context={"objective": "P06 offline fixture objective", "subject": "science"},
+            allowed_facts=["P06 fixture fact for generate authoring."],
+            terminology=[],
+        )
         for order in orders
     }
 
@@ -123,15 +136,40 @@ def _author_all(orders):
         return executor.submit(lambda: asyncio.run(_author_all_async(orders))).result()
 
 
+async def _test_choose(context: dict) -> CapabilitySelection:
+    """MOCK selector for offline P06 fixtures — picks first eligible closed-set ID."""
+    ids = list(context.get("candidate_ids") or [])
+    if not ids:
+        eligible = context.get("eligible_candidates") or []
+        ids = [
+            str(row["id"] if isinstance(row, dict) else row)
+            for row in eligible
+        ]
+    if not ids:
+        raise AssertionError(f"mock selector received empty shortlist: {context!r}")
+    return CapabilitySelection(capability_id=str(ids[0]), reason="p06-mock-selector")
+
+
 def _snapshot(plan: TeachingPlan):
     _, policy_hash = learn_policy_hash()
-    return build_learn_selection_snapshot(
-        plan,
-        teaching_plan_hash=f"hash-{plan.teaching_plan_id}",
-        native_policy_hash=policy_hash,
-        package_contract_hash="pkg-learn-p06",
-        policy=default_learn_policy(),
-    )
+
+    async def _run():
+        return await build_learn_selection_snapshot_async(
+            plan,
+            teaching_plan_hash=f"hash-{plan.teaching_plan_id}",
+            native_policy_hash=policy_hash,
+            package_contract_hash="pkg-learn-p06",
+            policy=default_learn_policy(),
+            choose=_test_choose,
+            teaching_context={"objective": "P06 offline fixture objective"},
+        )
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(_run())
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        return executor.submit(lambda: asyncio.run(_run())).result()
 
 
 def _plan(*blocks: TeachingPlanBlock, plan_id: str = "tp-p06", revision: int = 1) -> TeachingPlan:

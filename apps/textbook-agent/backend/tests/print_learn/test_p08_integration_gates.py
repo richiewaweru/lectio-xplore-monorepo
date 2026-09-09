@@ -52,7 +52,9 @@ from curriculum.teaching_plan.projections import (
 from infra.authoring import AuthoringProviderCall
 from learn.generation.native_execution import produce_learn_from_approved_teaching
 from learn.generation.native_production import build_closed_learn_production
+from learn.generation.preparation_context import learn_preparation_context_from_state
 from learn.generation.work_orders import build_learn_writer_request
+from infra.authoring.capability_selector import CapabilitySelection
 from print.contracts.lectio_page import validate_document
 from print.generation.whole_lesson.executor import execute_after_teaching_approval
 from print.generation.whole_lesson.failure_injection import (
@@ -232,6 +234,14 @@ class P08LearnMockProvider:
 
 def _p08_learn_provider() -> P08LearnMockProvider:
     return P08LearnMockProvider()
+
+
+async def _p08_choose(context: dict) -> CapabilitySelection:
+    """MOCK Learn selector for offline P08 — first eligible closed-set ID."""
+    ids = list(context.get("candidate_ids") or [])
+    if not ids:
+        raise AssertionError(f"p08 mock selector empty shortlist: {context!r}")
+    return CapabilitySelection(capability_id=str(ids[0]), reason="p08-mock-selector")
 
 
 @pytest.fixture(autouse=True)
@@ -631,6 +641,7 @@ async def _run_learn(
             title=learn_plan.arc,
             subject="science",
             provider=provider or _p08_learn_provider(),
+            choose=_p08_choose,
         )
         await link_print_realization(
             session,
@@ -731,11 +742,16 @@ async def test_p08_i03_sentinels_scoped_repair_stale_lease() -> None:
     async with async_session_factory() as session:
         state = await load_shared_teaching_state(session, gid)
         _, learn_plan = await accept_shared_teaching_for_both(state)
+    from learn.generation.preparation_context import learn_preparation_context_from_state
+
+    prep = learn_preparation_context_from_state(state)
     production = build_closed_learn_production(
         teaching_plan=learn_plan,
         title=learn_plan.arc,
         write_interactions=True,
         provider=_p08_learn_provider(),
+        preparation_context=prep,
+        choose=_p08_choose,
     )
     sentinel = "SIBLING_SCHEMA_SENTINEL_p08i03_zz9"
     ix_orders = [o for o in production["work_orders"] if o.lane == "interaction"]

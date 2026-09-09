@@ -24,6 +24,7 @@ from learn.generation.preparation_context import (
     LearnPreparationContext,
     learn_preparation_context_from_state,
 )
+from infra.authoring.capability_selector import ChooseFn
 from learn.publishing.publish_validation import validate_publishable_lesson_document
 
 
@@ -47,6 +48,7 @@ async def produce_learn_from_approved_teaching(
     provider: AuthoringProvider | None = None,
     engine: AuthoringEngine | None = None,
     preparation_context: LearnPreparationContext | None = None,
+    choose: ChooseFn | None = None,
 ) -> dict[str, Any]:
     """Run closed Learn production and persist generation + editable draft.
 
@@ -84,6 +86,7 @@ async def produce_learn_from_approved_teaching(
         provider=provider,
         engine=engine,
         preparation_context=prep,
+        choose=choose,
     )
     document = dict(production["document"])
     document["id"] = output_id

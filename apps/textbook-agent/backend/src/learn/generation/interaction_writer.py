@@ -232,6 +232,25 @@ def write_interaction_from_request(
         dict(item) if isinstance(item, Mapping) else vars(item)
         for item in approved_items_raw
     ]
+    lesson_context = (
+        dict(request["lesson_context"])
+        if isinstance(request.get("lesson_context"), Mapping)
+        else {}
+    )
+    if not str(lesson_context.get("objective") or "").strip():
+        lesson_context["objective"] = str(request.get("brief") or order.brief or order.intent or "Learn objective").strip()
+    allowed_facts = request.get("allowed_facts")
+    if not isinstance(allowed_facts, Sequence) or isinstance(allowed_facts, (str, bytes)):
+        brief_text = str(request.get("brief") or order.brief or "").strip()
+        allowed_facts = [brief_text] if brief_text else ["Offline fixture fact."]
+    else:
+        allowed_facts = list(allowed_facts)
+    terminology = (
+        list(request["terminology"])
+        if isinstance(request.get("terminology"), Sequence)
+        and not isinstance(request.get("terminology"), (str, bytes))
+        else None
+    )
     selected_engine = engine or AuthoringEngine(
         registry=build_learn_authoring_registry(),
         provider=provider,
@@ -242,9 +261,9 @@ def write_interaction_from_request(
                 order,
                 provider=provider,
                 engine=selected_engine,
-                lesson_context=request.get("lesson_context") if isinstance(request.get("lesson_context"), Mapping) else None,
-                allowed_facts=request.get("allowed_facts") if isinstance(request.get("allowed_facts"), Sequence) else None,
-                terminology=request.get("terminology") if isinstance(request.get("terminology"), Sequence) else None,
+                lesson_context=lesson_context,
+                allowed_facts=allowed_facts,
+                terminology=terminology,
                 approved_items=approved_items,
                 mode=mode,
             )
@@ -272,6 +291,8 @@ def write_interaction_from_work_order(
     order: LearnWorkOrder,
     *,
     allowed_facts: Sequence[str] | None = None,
+    lesson_context: Mapping[str, Any] | None = None,
+    terminology: Sequence[str] | None = None,
     assessment_mode: str = "practice",
     concept_refs: Sequence[Mapping[str, Any]] | None = None,
     approved_items: Sequence[Any] | Mapping[str, Any] | None = None,
@@ -292,13 +313,21 @@ def write_interaction_from_work_order(
             dict(item) if isinstance(item, Mapping) else vars(item)
             for item in (approved_items or [])
         ]
+    context = dict(lesson_context or {})
+    if not str(context.get("objective") or "").strip():
+        context["objective"] = order.brief.strip() or order.intent or "Learn objective"
+    facts = list(allowed_facts) if allowed_facts is not None else (
+        [order.brief.strip()] if order.brief.strip() else ["Offline fixture fact."]
+    )
     try:
         result = _run_sync(
             run_learn_authoring(
                 order,
                 provider=provider,
                 engine=engine,
-                allowed_facts=allowed_facts,
+                lesson_context=context,
+                allowed_facts=facts,
+                terminology=terminology,
                 approved_items=approved_seq,
             )
         )

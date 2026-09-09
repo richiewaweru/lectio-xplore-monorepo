@@ -83,10 +83,12 @@ async def build_closed_print_production_plan_async(
         policy=body,
     )
     plan_hash = teaching_plan_content_hash(teaching_plan)
+    lesson = packet.lesson
+    lesson_title = getattr(lesson, "objective", None) or getattr(lesson, "title", None) or ""
     teaching_context = {
         "arc": teaching_plan.arc,
-        "lesson_title": packet.lesson.objective,
-        "subject": packet.lesson.subject,
+        "lesson_title": lesson_title,
+        "subject": getattr(lesson, "subject", None) or "",
     }
     if sealed_form_plan is not None:
         snapshot = snapshot_from_form_plan(

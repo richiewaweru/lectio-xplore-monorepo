@@ -48,7 +48,13 @@ def test_a00_numeric_uses_independent_answer_not_first_number() -> None:
             "A cart moves at speed = 5 m/s for time = 10 s. Enter the distance in m.",
             action="enter-number",
         ),
-        provider=ScriptedProvider({"value": 50, "tolerance": 0, "unit": "m"}),
+        provider=ScriptedProvider(
+            {
+                "prompt": "Enter the distance in m.",
+                "config": {"value": 50, "tolerance": 0, "unit": "m"},
+                "feedback": {"correct": "Correct.", "incorrect": "Try again."},
+            }
+        ),
     )
 
     assert payload["config"]["value"] == 50
@@ -63,7 +69,13 @@ def test_a00_fill_blank_uses_supplied_answer_not_last_word() -> None:
             "The green pigment is ___.",
             action="complete-missing-values",
         ),
-        provider=ScriptedProvider({"answers": ["chlorophyll"], "case_sensitive": False}),
+        provider=ScriptedProvider(
+            {
+                "prompt": "The green pigment is ___.",
+                "config": {"answers": ["chlorophyll"], "case_sensitive": False},
+                "feedback": {"correct": "Correct.", "incorrect": "Try again."},
+            }
+        ),
     )
 
     assert payload["config"]["answers"] == ["chlorophyll"]

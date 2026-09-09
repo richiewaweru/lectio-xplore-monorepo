@@ -74,7 +74,6 @@ def _print_order(form_id: str = "prose"):
                         intent="explain",
                         brief="Explain why leaves need light for photosynthesis.",
                         evidence="Learner states the role of light.",
-                        source_question_ids=["src-print-1"],
                     )
                 ],
             )
@@ -111,7 +110,6 @@ def _learn_order():
                             support_level="guided",
                             evidence="Learner selects carbon dioxide.",
                         ),
-                        source_question_ids=["src-learn-1"],
                     )
                 ],
             )
@@ -133,11 +131,15 @@ async def test_a02_print_and_learn_adapters_share_engine_with_own_schemas() -> N
     provider = ScriptedProvider(
         {"paragraphs": ["Light supplies energy for photosynthesis."]},
         {
-            "options": [
-                {"id": "air", "text": "Carbon dioxide"},
-                {"id": "soil", "text": "Soil"},
-            ],
-            "correct_option_id": "air",
+            "prompt": "Choose the source of most plant biomass.",
+            "config": {
+                "options": [
+                    {"id": "air", "text": "Carbon dioxide"},
+                    {"id": "soil", "text": "Soil"},
+                ],
+                "correct_option_id": "air",
+            },
+            "feedback": {"correct": "Yes.", "incorrect": "No."},
         },
     )
     engine = _shared_engine(provider)
@@ -151,6 +153,7 @@ async def test_a02_print_and_learn_adapters_share_engine_with_own_schemas() -> N
     learn_result = await run_learn_authoring(
         _learn_order(),
         engine=engine,
+        lesson_context={"objective": "Identify the source of plant biomass."},
         allowed_facts=["Most plant biomass comes from carbon dioxide."],
         terminology=["biomass"],
     )
@@ -158,7 +161,8 @@ async def test_a02_print_and_learn_adapters_share_engine_with_own_schemas() -> N
     assert print_result.payload == {
         "paragraphs": ["Light supplies energy for photosynthesis."]
     }
-    assert learn_result.payload["correct_option_id"] == "air"
+    # Learn generate schemas author prompt/config/feedback (R01 envelope).
+    assert learn_result.payload["config"]["correct_option_id"] == "air"
     assert [call.native_path for call in provider.calls] == ["print", "learn"]
     assert [call.output_schema for call in provider.calls][0] != provider.calls[1].output_schema
     assert all(
@@ -171,16 +175,21 @@ async def test_a02_print_and_learn_adapters_share_engine_with_own_schemas() -> N
 async def test_a02_request_capture_is_scoped() -> None:
     provider = ScriptedProvider(
         {
-            "options": [
-                {"id": "air", "text": "Carbon dioxide"},
-                {"id": "soil", "text": "Soil"},
-            ],
-            "correct_option_id": "air",
+            "prompt": "Choose the source of most plant biomass.",
+            "config": {
+                "options": [
+                    {"id": "air", "text": "Carbon dioxide"},
+                    {"id": "soil", "text": "Soil"},
+                ],
+                "correct_option_id": "air",
+            },
+            "feedback": {"correct": "Yes.", "incorrect": "No."},
         }
     )
     await run_learn_authoring(
         _learn_order(),
         engine=_shared_engine(provider),
+        lesson_context={"objective": "Identify the source of plant biomass."},
         allowed_facts=["Only this scoped fact is allowed."],
         terminology=["carbon dioxide"],
         approved_items=[
@@ -230,7 +239,11 @@ async def test_a02_repair_exhaustion_is_typed_failure() -> None:
     provider = ScriptedProvider({"paragraphs": []}, {"paragraphs": []})
 
     with pytest.raises(AuthoringEngineError) as caught:
-        await run_print_authoring(_print_order(), engine=_shared_engine(provider))
+        await run_print_authoring(
+            _print_order(),
+            engine=_shared_engine(provider),
+            allowed_facts=["Leaves use light energy."],
+        )
 
     assert caught.value.code == "REPAIR_EXHAUSTED"
     assert caught.value.stage == "repair"
@@ -280,6 +293,7 @@ async def test_a02_missing_definition_input_and_provider_are_typed_failures() ->
         await run_print_authoring(
             _print_order(),
             engine=AuthoringEngine(registry=build_print_authoring_registry(), provider=None),
+            allowed_facts=["Leaves use light energy."],
         )
     assert no_provider.value.code == "NO_COMPATIBLE_CAPABILITY"
 
@@ -301,7 +315,7 @@ async def test_a02_provenance_present_and_transport_retries_bounded() -> None:
     assert result.transport_attempts == 2
     assert result.repair_attempts == 0
     assert result.provenance.work_order_id == result.work_order_id
-    assert result.provenance.source_identities == ("src-print-1",)
+    assert result.provenance.source_identities == ()
     assert result.provenance.teaching_revision == 3
     assert len(result.provenance.definition_hash) == 64
     assert len(result.provenance.input_hash) == 64

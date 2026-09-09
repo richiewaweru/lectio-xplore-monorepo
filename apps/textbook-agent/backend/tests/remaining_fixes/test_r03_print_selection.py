@@ -59,6 +59,7 @@ def _packet(plan: TeachingPlan) -> SimpleNamespace:
         lesson=SimpleNamespace(
             path_lesson_id="lesson-r03",
             title="Fixture lesson",
+            objective="Fixture lesson",
             subject="science",
         ),
         approved_items=[],

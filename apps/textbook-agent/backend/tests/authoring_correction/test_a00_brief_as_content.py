@@ -9,6 +9,7 @@ from curriculum.teaching_plan.models import (
 )
 from infra.authoring import AuthoringProviderCall
 from learn.generation.native_production import build_closed_learn_production
+from learn.generation.preparation_context import LearnPreparationContext
 from learn.resources.native_policy import default_learn_policy
 
 
@@ -55,6 +56,11 @@ def test_a00_ordered_assemble_does_not_copy_brief_as_content_body() -> None:
         teaching_plan=plan,
         policy=policy,
         provider=ContentProvider(),
+        preparation_context=LearnPreparationContext(
+            objective="Explain evaporation with an everyday example.",
+            allowed_facts=["Evaporation turns liquid water into vapour."],
+            terminology=["evaporation"],
+        ),
     )
     document = production["document"]
     block = next(iter(document["blocks"].values()))
