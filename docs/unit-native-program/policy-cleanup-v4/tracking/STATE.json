@@ -3,15 +3,16 @@
   "branch": "feat/unit-print-learn",
   "baseline": "c3563abbb141443bc0131917d09de81a8e4c118a",
   "reviewed_baseline": "c3563abbb141443bc0131917d09de81a8e4c118a",
-  "status": "IN_PROGRESS",
-  "verified_commit": null,
+  "status": "COMPLETE_OFFLINE",
+  "verified_commit": "80cbc1685f4830a55379912adfaea06302cec0c3",
   "phases": {
-    "P0": "IN_PROGRESS",
-    "P1": "NOT_RUN",
-    "P2": "NOT_RUN",
-    "P3": "NOT_RUN",
-    "P4": "NOT_RUN"
+    "P0": "PASS",
+    "P1": "PASS",
+    "P2": "PASS",
+    "P3": "PASS",
+    "P4": "PASS"
   },
-  "gates_pass": "0/24",
+  "gates_pass": "24/24",
+  "completion_wording": "Policy cleanup verified offline; live/model-quality verification deferred",
   "live_verification": "DEFERRED"
 }
