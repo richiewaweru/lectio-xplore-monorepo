@@ -1,13 +1,15 @@
 """Full Learn publish validation (P06).
 
-Validates LessonDocument shape, ordered block integrity, interaction contracts,
-media/concept references, and answer-key dangling refs before snapshotting.
+Supports legacy LessonDocument v1 (sections/blocks) and LearnDocument v2
+(ordered nodes). Validates interaction contracts and dangling refs before
+snapshotting.
 """
 
 from __future__ import annotations
 
 from typing import Any, Mapping
 
+from learn.contracts.lesson_document import validate_learn_document
 from learn.generation.interaction_writer import validate_interaction_contract
 
 INTERACTION_COMPONENT_PREFIX = "learn-interaction:"
@@ -16,7 +18,7 @@ INTERACTION_COMPONENT_PREFIX = "learn-interaction:"
 class PublishValidationError(ValueError):
     def __init__(self, errors: list[str]) -> None:
         self.errors = list(errors)
-        super().__init__("; ".join(self.errors) if self.errors else "publish validation failed")
+        super().__init("; ".join(self.errors) if self.errors else "publish validation failed")
 
 
 def _is_interaction_block(block: Mapping[str, Any]) -> bool:
@@ -26,7 +28,31 @@ def _is_interaction_block(block: Mapping[str, Any]) -> bool:
     return component_id.startswith(INTERACTION_COMPONENT_PREFIX)
 
 
-def collect_publish_validation_errors(document: Mapping[str, Any]) -> list[str]:
+def _collect_v2_publish_errors(document: Mapping[str, Any]) -> list[str]:
+    """LearnDocument v2: node schema + light interaction config integrity."""
+    errors = validate_learn_document(document)
+    nodes = document.get("nodes")
+    if not isinstance(nodes, list):
+        return errors
+
+    for index, raw in enumerate(nodes):
+        if not isinstance(raw, dict) or raw.get("kind") != "interaction":
+            continue
+        config = raw.get("config") if isinstance(raw.get("config"), dict) else {}
+        if raw.get("interaction_type") != "sequence":
+            continue
+        order = [str(x) for x in (config.get("order") or [])]
+        items = config.get("items") if isinstance(config.get("items"), list) else []
+        item_ids = {str(i.get("id")) for i in items if isinstance(i, dict)}
+        for oid in order:
+            if items and oid not in item_ids:
+                errors.append(
+                    f"nodes[{index}]: dangling sequence order id {oid!r} not in items"
+                )
+    return errors
+
+
+def _collect_v1_publish_errors(document: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
     if not isinstance(document.get("version"), int):
         errors.append("LessonDocument.version must be an integer")
@@ -71,9 +97,12 @@ def collect_publish_validation_errors(document: Mapping[str, Any]) -> list[str]:
                 else:
                     for msg in validate_interaction_contract(contract):
                         errors.append(f"block {bid_s!r}: {msg}")
-                    # Dangling answer / item refs for sequence
                     if contract.get("kind") == "sequence":
-                        config = contract.get("config") if isinstance(contract.get("config"), dict) else {}
+                        config = (
+                            contract.get("config")
+                            if isinstance(contract.get("config"), dict)
+                            else {}
+                        )
                         order = [str(x) for x in (config.get("order") or [])]
                         items = config.get("items") if isinstance(config.get("items"), list) else []
                         item_ids = {str(i.get("id")) for i in items if isinstance(i, dict)}
@@ -83,12 +112,10 @@ def collect_publish_validation_errors(document: Mapping[str, Any]) -> list[str]:
                                     f"block {bid_s!r}: dangling sequence order id {oid!r} not in items"
                                 )
 
-            # Concept refs must be well-formed when present
             for ref in block.get("concept_refs") or []:
                 if not isinstance(ref, dict) or not str(ref.get("concept_id") or "").strip():
                     errors.append(f"block {bid_s!r}: concept_refs require concept_id")
 
-            # Media dangling refs (common asset fields)
             content = block.get("content") if isinstance(block.get("content"), dict) else {}
             for key in ("media_id", "asset_id", "image_id"):
                 mid = content.get(key)
@@ -103,6 +130,13 @@ def collect_publish_validation_errors(document: Mapping[str, Any]) -> list[str]:
                 errors.append(f"section {section.get('id')!r}: concept_refs require concept_id")
 
     return errors
+
+
+def collect_publish_validation_errors(document: Mapping[str, Any]) -> list[str]:
+    version = document.get("version")
+    if version == 2:
+        return _collect_v2_publish_errors(document)
+    return _collect_v1_publish_errors(document)
 
 
 def validate_publishable_lesson_document(document: Mapping[str, Any]) -> None:

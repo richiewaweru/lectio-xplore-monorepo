@@ -2,7 +2,6 @@
 	import type { StudentTextboxContent } from '$lib/schema/types';
 	import { Card } from '$lib/components/ui/card';
 	import { usePrintMode } from '$lib/utils/printContext';
-	import RuledLines from '$lib/print/RuledLines.svelte';
 
 	let { content }: { content: StudentTextboxContent } = $props();
 
@@ -13,7 +12,16 @@
 
 {#if printMode}
 	<div class="textbox-print student-textbox" data-print-container="atomic">
-		<RuledLines {lines} label={content.prompt} />
+		<div class="ruled-lines">
+			{#if content.prompt}
+				<p class="label">{content.prompt}</p>
+			{/if}
+			<div class="lines-container">
+				{#each Array.from({ length: lines }) as _}
+					<div class="line" style="height: 1.8rem"></div>
+				{/each}
+			</div>
+		</div>
 		<p class="student-textbox__label">Response Area</p>
 	</div>
 {:else}
@@ -51,6 +59,23 @@
 			#ddd 27px,
 			#ddd 28px
 		);
+	}
+
+	.ruled-lines .label {
+		font-size: 0.875rem;
+		font-weight: 600;
+		margin-bottom: 0.5rem;
+		color: #374151;
+	}
+
+	.ruled-lines .lines-container {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.ruled-lines .line {
+		border-bottom: 1px solid #d1d5db;
+		margin-bottom: 0.25rem;
 	}
 
 	.student-textbox__label {

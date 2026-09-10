@@ -176,6 +176,46 @@ def _new_row(
     )
 
 
+async def admit_single_path(
+    session: AsyncSession,
+    *,
+    path_lesson_id: str,
+    path: NativePath,
+    teaching_plan_id: str,
+    teaching_plan_revision: int,
+    teaching_plan_hash: str,
+    variant_id: str = DEFAULT_VARIANT_ID,
+    preparation_generation_id: str | None = None,
+    pack_id: str | None = None,
+    output_id: str | None = None,
+    native_policy_version: str | None = None,
+    native_policy_hash: str | None = None,
+    package_contract_version: str | None = None,
+    package_contract_hash: str | None = None,
+) -> tuple[NativeRealizationModel, bool]:
+    """Product-default admission: exactly one explicitly selected native path.
+
+    Does not admit the sibling path. Sibling generation starts again from the
+    same approved Teaching Plan via a separate admission call.
+    """
+    return await admit_realization(
+        session,
+        path_lesson_id=path_lesson_id,
+        path=path,
+        teaching_plan_id=teaching_plan_id,
+        teaching_plan_revision=teaching_plan_revision,
+        teaching_plan_hash=teaching_plan_hash,
+        variant_id=variant_id,
+        preparation_generation_id=preparation_generation_id,
+        pack_id=pack_id,
+        output_id=output_id,
+        native_policy_version=native_policy_version,
+        native_policy_hash=native_policy_hash,
+        package_contract_version=package_contract_version,
+        package_contract_hash=package_contract_hash,
+    )
+
+
 async def admit_realization(
     session: AsyncSession,
     *,
@@ -420,7 +460,7 @@ def classify_legacy_chunked(
         or chunked.get("page_document_v2")
         or contract_version >= 2
     )
-    learn = control.get("pipeline") == "component_lectio" and not native
+    learn = control.get("pipeline") in {"native_learn", "learn_document"} and not native
     shared = bool(chunked.get("shared_preparation") or context.get("shared_preparation"))
     if shared and not native and not learn:
         return None
@@ -518,6 +558,7 @@ __all__ = [
     "RealizationAdmissionError",
     "RealizationReadOnlyError",
     "admit_realization",
+    "admit_single_path",
     "backfill_legacy_realization",
     "classify_legacy_chunked",
     "find_realization",

@@ -30,9 +30,9 @@ async def list_packs(
     pack_repo: LearningPackRepository = Depends(get_pack_repository),
     limit: int = 20,
 ) -> list[PackStatusResponse]:
-    packs = await pack_repo.list_component_lectio_by_user(current_user.id, limit=limit)
+    packs = await pack_repo.list_canonical_by_user(current_user.id, limit=limit)
     return [
-        _pack_to_status(pack, await pack_repo.component_generations_for_pack(pack.id))
+        _pack_to_status(pack, await pack_repo.canonical_generations_for_pack(pack.id))
         for pack in packs
     ]
 
@@ -46,7 +46,7 @@ async def get_pack_status(
     pack = await pack_repo.find_by_id(pack_id)
     if pack is None or pack.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Pack not found.")
-    generations = await pack_repo.component_generations_for_pack(pack_id)
+    generations = await pack_repo.canonical_generations_for_pack(pack_id)
     if not generations:
         # A pack containing only retired or unmarked generations is not part of
         # the canonical product surface.
@@ -64,7 +64,7 @@ async def get_pack_document(
     pack = await pack_repo.find_by_id(pack_id)
     if pack is None or pack.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Pack not found.")
-    generations = await pack_repo.component_generations_for_pack(pack_id)
+    generations = await pack_repo.canonical_generations_for_pack(pack_id)
     if not generations:
         raise HTTPException(status_code=404, detail="Pack not found.")
 

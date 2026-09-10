@@ -3,10 +3,9 @@ import intentVocabulary from '../data/instructional-intents.v1.json';
 /**
  * Canonical instructional intent identifier.
  *
- * The identifiers are owned by the Print intent catalogue
- * (`@lectio/page` `contracts/intent-catalogue.v1.json`) and copied here without
- * renaming so both native paths speak one vocabulary. New identifiers are added
- * upstream first; `scripts/export-contracts.ts` re-syncs this file.
+ * Identifiers are owned by `@lectio/contracts` (`data/instructional-intents.v1.json`).
+ * Print (`@lectio/page`) and Learn adapt these ids with path-specific inventory;
+ * they must not invent or rename intent identifiers locally.
  */
 export type InstructionalIntentId = keyof typeof intentVocabulary.intents;
 

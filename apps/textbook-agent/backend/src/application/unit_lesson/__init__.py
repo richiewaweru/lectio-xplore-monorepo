@@ -14,6 +14,7 @@ from application.unit_lesson.dispatch import (
 from application.unit_lesson.prepare import prepare_path_lesson
 from application.unit_lesson.realizations import (
     admit_realization,
+    admit_single_path,
     list_realizations_for_lesson,
     mark_stale_for_teaching_change,
     request_outputs,
@@ -25,6 +26,7 @@ from application.unit_lesson.realizations import (
 __all__ = [
     "PathPreparationBlocked",
     "admit_realization",
+    "admit_single_path",
     "enforce_path_owned_card_objective",
     "initialise_path_generation",
     "list_realizations_for_lesson",

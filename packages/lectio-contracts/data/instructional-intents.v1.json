@@ -1,9 +1,9 @@
 {
 	"vocabulary_version": "1.0.0",
-	"note": "Canonical instructional intent identifiers. Projected from the Print intent catalogue by scripts/export-contracts.ts — edit the source catalogue, never this file. Native inventory (valid_objects, generation guidance) is deliberately dropped.",
+	"note": "Canonical instructional intent identifiers. Owned by @lectio/contracts — edit this file, then re-run export-contracts to regenerate the teaching view. Print adapts these ids with valid_objects and generation guidance; never invent intent ids in @lectio/page.",
 	"source": {
-		"package": "@lectio/page",
-		"file": "contracts/intent-catalogue.v1.json",
+		"package": "@lectio/contracts",
+		"file": "data/instructional-intents.v1.json",
 		"catalogue_version": "1.1.0"
 	},
 	"intents": {

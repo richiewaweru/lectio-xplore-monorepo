@@ -2,7 +2,6 @@
 	import type { DiagramContent, PracticeContent } from '$lib/schema/types';
 	import { Card } from '$lib/components/ui/card';
 	import { usePrintMode } from '$lib/utils/printContext';
-	import RuledLines from '$lib/print/RuledLines.svelte';
 	import {
 		Accordion,
 		AccordionItem,
@@ -109,8 +108,13 @@ let {
 					</div>
 				{/if}
 				{#if problem.writein_lines && problem.writein_lines > 0}
-					<div data-print-role="answer-lines">
-						<RuledLines lines={problem.writein_lines} label="Your answer:" />
+					<div data-print-role="answer-lines" class="ruled-lines">
+						<p class="label">Your answer:</p>
+						<div class="lines-container">
+							{#each Array.from({ length: problem.writein_lines }) as _}
+								<div class="line" style="height: 1.8rem"></div>
+							{/each}
+						</div>
 					</div>
 				{/if}
 				{#if problem.solution && content.solutions_available && showInlineAnswersInPrint}
@@ -445,5 +449,26 @@ let {
 
 	.practice-print-answer {
 		margin-top: 0.5rem;
+	}
+
+	.ruled-lines {
+		margin: 1rem 0;
+	}
+
+	.ruled-lines .label {
+		font-size: 0.875rem;
+		font-weight: 600;
+		margin-bottom: 0.5rem;
+		color: #374151;
+	}
+
+	.ruled-lines .lines-container {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.ruled-lines .line {
+		border-bottom: 1px solid #d1d5db;
+		margin-bottom: 0.25rem;
 	}
 </style>

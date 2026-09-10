@@ -268,9 +268,10 @@ async def test_p02_s04_print_and_learn_accept_identical_revision() -> None:
                         source_question_ids=["item-open-1"],
                         learner_action=LearnerActionBrief(
                             action="order-items",
-                            support_level="independent",
-                            evidence="Correct complete order",
-                            source_item_ids=["item-open-1"],
+                            target="sequence stages",
+                            purpose="Check understanding",
+                            expected_evidence="Correct complete order",
+                            difficulty="independent",
                         ),
                     )
                 ],

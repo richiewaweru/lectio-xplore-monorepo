@@ -391,9 +391,7 @@ class TestBuilderLessonRoutes:
             assert response.status_code == 410
             assert response.json()["detail"]["code"] == "legacy_pipeline_retired"
 
-    async def test_open_component_lectio_generation_is_idempotent_and_builder_native(
-        self, db_session_factory
-    ):
+    async def test_open_component_lectio_generation_is_retired(self, db_session_factory):
         generation_id = "component-generation-a"
         async with db_session_factory() as session:
             session.add(
@@ -420,30 +418,12 @@ class TestBuilderLessonRoutes:
                 f"/api/v1/builder/lessons/from-component-lectio/{generation_id}"
             )
 
-        assert first.status_code == 200
-        assert second.status_code == 200
-        first_body = first.json()
-        second_body = second.json()
-        assert second_body["id"] == first_body["id"]
-        assert first_body["source_type"] == "component_lectio"
-        assert first_body["source_generation_id"] == generation_id
-        assert first_body["document"]["id"] == first_body["id"]
-        assert first_body["document"]["source_generation_id"] == generation_id
+        assert first.status_code == 410
+        assert second.status_code == 410
+        detail = first.json()["detail"]
+        assert detail["code"] == "component_lectio_retired"
 
-        async with db_session_factory() as session:
-            rows = list(
-                (
-                    await session.scalars(
-                        select(EditableLessonModel).where(
-                            EditableLessonModel.source_generation_id == generation_id,
-                            EditableLessonModel.source_type == "component_lectio",
-                        )
-                    )
-                ).all()
-            )
-        assert len(rows) == 1
-
-    async def test_open_component_lectio_rejects_incomplete_and_invalid_documents(
+    async def test_open_component_lectio_rejects_all_legacy_opens(
         self, db_session_factory
     ):
         async with db_session_factory() as session:
@@ -497,12 +477,9 @@ class TestBuilderLessonRoutes:
                 "/api/v1/builder/lessons/from-component-lectio/component-generation-unmarked"
             )
 
-        assert incomplete.status_code == 409
-        assert "completed" in incomplete.json()["detail"]
-        assert invalid.status_code == 422
-        assert "Missing required field" in invalid.json()["detail"]
-        assert unmarked.status_code == 409
-        assert "Component Lectio" in unmarked.json()["detail"]
+        assert incomplete.status_code == 410
+        assert invalid.status_code == 410
+        assert unmarked.status_code == 410
 
     async def test_rejects_unknown_component_and_bad_section_references(self):
         invalid_component = _minimal_lesson()

@@ -24,10 +24,10 @@ from core.entities.user import User
 from application.unit_lesson.realizations import get_realization, resolve_by_path, to_identity
 from learn.generation.units_dispatch import dispatch_units_generation, units_dispatch_task
 from learn.authoring.builder.service import (
-    ComponentLectioBuilderDocumentError,
-    ComponentLectioBuilderNotReadyError,
-    get_or_create_component_lectio_builder_lesson,
+    ComponentLectioBuilderError,
+    get_or_create_native_learn_builder_lesson,
 )
+from learn.generation.pipeline_dispatch import COMPONENT_LECTIO_RETIRED
 from curriculum.models import PathVersionMutationRequest
 from v3_blueprint.planning.persistence import load_chunked_state
 
@@ -164,7 +164,9 @@ async def _builder_id(
         select(EditableLessonModel.id).where(
             EditableLessonModel.user_id == user_id,
             EditableLessonModel.source_generation_id == generation.id,
-            EditableLessonModel.source_type == "component_lectio",
+            EditableLessonModel.source_type.in_(
+                ("learn_document", "native_learn", "document", "manual", "template")
+            ),
         )
     )
 
@@ -223,7 +225,7 @@ async def _status(
         stage=stage,
         document_present=isinstance(generation.document_json, dict),
         failed_blocks=[str(item) for item in failed if isinstance(item, str)],
-        retryable=stage in {"failed", "assembly_blocked", "stage2_error", "component_lectio_error"},
+        retryable=stage in {"failed", "assembly_blocked", "stage2_error", "native_learn_error"},
         builder_id=await _builder_id(session, generation, user_id),
         display_title=str(state.get("display_title")) if state.get("display_title") else None,
         review_cards=review_cards,
@@ -314,7 +316,7 @@ async def _dispatch(
                 session, generation, state, current_user.id, realization=realization
             )
         if (
-            stage == "component_lectio_running"
+            stage == "native_learn_running"
             and (task := units_dispatch_task(generation.id)) is not None
             and not task.done()
         ):
@@ -326,7 +328,7 @@ async def _dispatch(
     if retry and stage not in {
         "assembly_blocked",
         "stage2_error",
-        "component_lectio_error",
+        "native_learn_error",
         "failed",
     }:
         raise HTTPException(status_code=409, detail="Generation is not retryable")
@@ -335,8 +337,8 @@ async def _dispatch(
             generation_id=generation.id, user_id=current_user.id, state=state
         )
     except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    state = {**state, "stage": "component_lectio_running", "execution_started": True}
+        raise HTTPException(status_code=410, detail=str(exc)) from exc
+    state = {**state, "stage": "native_learn_running", "execution_started": True}
     generation.status = "running"
     return await _status(session, generation, state, current_user.id, realization=realization)
 
@@ -417,19 +419,22 @@ async def open_units_builder(
         raise HTTPException(status_code=409, detail="Lesson generation linkage is stale")
     if realization is not None and realization.path != "learn":
         raise HTTPException(status_code=409, detail="Builder open requires a Learn realization")
-    if str((state.get("control") or {}).get("pipeline") or "retired") != "component_lectio":
-        raise HTTPException(status_code=409, detail="Generation is not marked as Component Lectio")
+    if str((state.get("control") or {}).get("pipeline") or "retired") not in {
+        "native_learn",
+        "learn_document",
+    }:
+        raise HTTPException(status_code=410, detail=COMPONENT_LECTIO_RETIRED)
     try:
-        await get_or_create_component_lectio_builder_lesson(
+        await get_or_create_native_learn_builder_lesson(
             session, generation=generation, user_id=current_user.id
         )
         await session.commit()
-    except ComponentLectioBuilderNotReadyError as exc:
+    except ComponentLectioBuilderError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=410, detail=str(exc)) from exc
+    except ValueError as exc:
         await session.rollback()
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except ComponentLectioBuilderDocumentError as exc:
-        await session.rollback()
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return await _status(session, generation, state, current_user.id, realization=realization)
 
 

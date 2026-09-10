@@ -46,8 +46,6 @@ def instructional_coverage(plan: TeachingPlan | Mapping[str, Any]) -> dict[str, 
                 actions.append(str(action))
             for sid in block_sources:
                 source_ids.append(sid)
-            for sid in (learner.get("source_item_ids") if isinstance(learner, dict) else None) or []:
-                source_ids.append(str(sid))
             if intent in visual_intents:
                 visual_block_ids.append(bid)
 

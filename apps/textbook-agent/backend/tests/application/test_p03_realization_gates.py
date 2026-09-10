@@ -233,10 +233,10 @@ async def test_p03_r03_persisted_path_survives_default_change(
     realization_id = row.id
 
     # Simulate process restart + flipped environment default toward Learn.
-    monkeypatch.setenv("GENERATION_PIPELINE_DEFAULT", "component_lectio")
+    monkeypatch.setenv("GENERATION_PIPELINE_DEFAULT", "native_learn")
     from infra.config import settings
 
-    monkeypatch.setattr(settings, "generation_pipeline_default", "component_lectio", raising=False)
+    monkeypatch.setattr(settings, "generation_pipeline_default", "native_learn", raising=False)
 
     reloaded = await db_session.get(NativeRealizationModel, realization_id)
     assert reloaded is not None
@@ -454,7 +454,7 @@ async def test_p03_r06_concurrent_uniqueness_and_status_routing(
                 document_json={"sections": [{"id": "learn"}], "path": "learn"},
                 chunked_state_json={
                     "stage": "ready",
-                    "control": {"pipeline": "component_lectio", "pipeline_version": 1},
+                    "control": {"pipeline": "native_learn", "pipeline_version": 1},
                 },
             )
         )

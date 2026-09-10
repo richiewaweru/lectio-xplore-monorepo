@@ -39,7 +39,7 @@ class LearningPackRepository:
             )
             return list(result.scalars().all())
 
-    async def list_component_lectio_by_user(
+    async def list_canonical_by_user(
         self, user_id: str, limit: int = 20
     ) -> list[LearningPackModel]:
         """List packs that have at least one explicitly canonical generation.
@@ -108,8 +108,8 @@ class LearningPackRepository:
             )
             return list(result.scalars().all())
 
-    async def component_generations_for_pack(self, pack_id: str) -> list[GenerationModel]:
-        """Load only explicitly Component Lectio generations for a pack."""
+    async def canonical_generations_for_pack(self, pack_id: str) -> list[GenerationModel]:
+        """Load only explicitly canonical Learn generations for a pack."""
         async with self._session_factory() as session:
             result = await session.execute(
                 select(GenerationModel)
