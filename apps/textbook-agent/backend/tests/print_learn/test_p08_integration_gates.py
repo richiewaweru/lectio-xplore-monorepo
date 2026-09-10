@@ -293,10 +293,10 @@ def _draft_for_packet(packet, *, item_id: str | None) -> TeachingPlanDraft:
                             evidence="Correct complete order of the light-to-food stages.",
                             learner_action=LearnerActionBrief(
                                 action="order-items",
-                                support_level="independent",
-                                evidence="Correct complete order of the light-to-food stages.",
-                                source_item_ids=[],
-                                dependencies=[],
+                                target="light-to-food stages",
+                                purpose="Check understanding",
+                                expected_evidence="Correct complete order of the light-to-food stages.",
+                                difficulty="independent",
                             ),
                         )
                     ],

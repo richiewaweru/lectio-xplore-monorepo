@@ -126,8 +126,10 @@ def test_a01_instruction_text_reaches_actual_writer_requests() -> None:
                         evidence="Evidence",
                         learner_action=LearnerActionBrief(
                             action="select-one",
-                            support_level="guided",
-                            evidence="Evidence",
+                            target="taught idea",
+                            purpose="Check understanding",
+                            expected_evidence="Evidence",
+                            difficulty="guided",
                         ),
                     )
                 ],

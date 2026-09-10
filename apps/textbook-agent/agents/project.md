@@ -1,27 +1,40 @@
 # Project Config
 
 AI-powered Unit → Print + Learn system that generates Lectio-native instructional materials from curriculum units and learner context.
-Monorepo app: `backend/` (FastAPI + Python) and `frontend/` (SvelteKit + TypeScript), plus packages `@lectio/page` and `@lectio/learn`.
+Monorepo app: `backend/` (FastAPI + Python) and `frontend/` (SvelteKit + TypeScript), plus packages `@lectio/contracts`, `@lectio/page`, and `@lectio/learn` (interaction UI only).
 
 ## Architecture Rules
 
 Canonical lesson creation is the **Unit path** only (see `docs/architecture/CURRENT_SYSTEM.md`):
 
 ```text
-Unit → Concepts → PathLesson → approved instructional meaning
-                         ├→ PRINT → whole_lesson / page objects / @lectio/page → PDF
-                         └→ LEARN → component_lectio → Builder → Preview → LearnRelease
-                                                   → Runtime / Distribution / Insight
+Unit → Concepts → PathLesson → Teaching Plan (approved instructional meaning)
+                              ├→ PRINT → document primitives → Print realizer
+                              │          → page objects / @lectio/page → PDF
+                              └→ LEARN → document primitives + retained interactions
+                                         → LearnDocument v2 → Builder / Runtime
+                                         → LearnRelease / Distribution / Insight
+
+Shared ordinary content vocabulary: backend/src/document/
+  Paragraph | Heading | List | Figure | Table | Callout
+Retained Learn interactions (KEEP):
+  choice | multi-select | fill-blank | classify | match-pairs | sequence | numeric | short-response
 ```
+
+Package ownership:
+- `@lectio/contracts` owns shared instructional intents / learner actions
+- `@lectio/page` is the Print page-document engine
+- `@lectio/learn` is retained for interaction UI shells only; ordinary Learn document rendering lives under the app (`frontend/src/lib/learn/document/`)
 
 ### Backend layout (`backend/src/`)
 
 | Package | Role |
 | --- | --- |
 | `application/` | Thin cross-domain orchestration (`unit_lesson`, `builder_print`) |
-| `curriculum/` | Units, path planning, schedules, shapes, shared instructional meaning |
-| `print/` | Print generation, rendering, resources, contracts, `http/v3_studio` |
-| `learn/` | Authoring, generation, publishing, runtime, analytics, distribution, evidence |
+| `curriculum/` | Units, path planning, schedules, shapes, Teaching Plan (shared instructional meaning) |
+| `document/` | Neutral ordinary content vocabulary shared by Print and Learn realizers |
+| `print/` | Print generation, document realizer, rendering, resources, contracts, `http/v3_studio` |
+| `learn/` | Authoring, document generation, interactions, publishing, runtime, analytics, distribution, evidence |
 | `infra/` | Auth helpers, DB, LLM, telemetry, health, config |
 | `app.py` | Composition root |
 
@@ -29,19 +42,20 @@ Historical shims (`planning/`, `generation/`, `core/`, `learning/`, …) may rem
 
 Critical invariants:
 - `print/` must not import `learn/` product modules (and inverse) except through documented application orchestration
-- `curriculum/` owns instructional truth; native domains realize it
+- `curriculum/` owns instructional truth (Teaching Plan); native domains realize it independently on Print|Learn paths
+- `document/` owns ordinary content forms only; interactions stay Learn-owned
 - `application/` stays thin: admission, status, cross-domain handoff only
 - `infra/` owns DB/provider/auth primitives; not product pedagogy
-- The Print canonical artifact is a structured Lectio page document; Learn uses `LessonDocument` / release snapshots
+- Print canonical artifact is a structured Lectio page document; Learn uses LearnDocument v2 / release snapshots
 
 ### Frontend layout (`frontend/src/lib/`)
 
 | Owner | Typical contents |
 | --- | --- |
 | `shared/` | Auth stores, settings, cross-cutting UI |
-| `curriculum/` | Units UI |
+| `curriculum/` | Units UI, explicit Print|Learn path admission |
 | `print/` | Studio, print canvas, PDF preview |
-| `learn/` | Builder, student shell, distribution, insight |
+| `learn/` | Document canvas/renderers, interactions, builder, student shell, distribution, insight |
 | `api/` | HTTP clients |
 
 Product routes: `/units`, `/studio*`, `/builder*`, `/learn*`, `/packs*`, `/settings*`, `/login`, `/onboarding`.
@@ -68,7 +82,8 @@ uv run python ../tools/agent/check_architecture.py --format text
 
 ## Key Entities
 
-- `Unit` / `PathLesson` -- curriculum identity and approved instructional meaning
+- `Unit` / `PathLesson` / Teaching Plan -- curriculum identity and approved instructional meaning
 - `Generation` -- stored generation metadata plus native document/state
-- `LessonDocument` / `LearnRelease` -- Learn authoring and immutable release
+- LearnDocument v2 / `LearnRelease` -- Learn authoring and immutable release
 - Page document v2 -- Print native artifact used for reload and PDF
+- Document primitives (`document/`) -- ordinary content shared before path realization

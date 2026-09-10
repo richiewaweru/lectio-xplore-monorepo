@@ -1,4 +1,9 @@
-"""Cross-domain dual-path native outputs from one approved teaching revision (P08)."""
+"""Legacy dual-path convenience for scripts and integration tests (P08).
+
+Not the product default. Production admits one explicitly selected path at a
+time via ``admit_single_path`` / ``admit_realization``. Do not wire new
+curriculum or units generation through this module; Phase M retires it.
+"""
 
 from __future__ import annotations
 
@@ -12,7 +17,6 @@ from curriculum.teaching_plan.consumers import (
     assert_identical_consumer_handoffs,
 )
 from curriculum.teaching_plan.coverage import instructional_coverage
-from learn.generation.native_execution import produce_learn_from_approved_teaching
 from print.generation.native_production import teaching_plan_content_hash as print_hash
 from print.generation.whole_lesson.repository import PageDocumentRepository
 

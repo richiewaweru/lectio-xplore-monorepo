@@ -107,8 +107,10 @@ def _learn_order():
                         evidence="Learner selects carbon dioxide.",
                         learner_action=LearnerActionBrief(
                             action="select-one",
-                            support_level="guided",
-                            evidence="Learner selects carbon dioxide.",
+                            target="source of plant biomass",
+                            purpose="Check understanding",
+                            expected_evidence="Learner selects carbon dioxide.",
+                            difficulty="guided",
                         ),
                     )
                 ],

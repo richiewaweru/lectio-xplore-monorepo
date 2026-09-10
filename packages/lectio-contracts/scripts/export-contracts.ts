@@ -1,24 +1,23 @@
 /**
  * scripts/export-contracts.ts
  *
- * Two jobs, in order:
+ * Regenerates teaching-view + manifest from the authored shared vocabulary:
+ *   - data/instructional-intents.v1.json  (canonical intent owner: @lectio/contracts)
+ *   - data/learner-actions.v1.json        (authored here)
  *
- * 1. Project `data/instructional-intents.v1.json` from the canonical Print intent
- *    catalogue. Identifiers, labels, roles, cognitive jobs and neighbouring
- *    boundaries are copied verbatim; `valid_objects` and generation guidance are
- *    dropped because they are native inventory, not shared vocabulary.
- * 2. Regenerate `generated/teaching-view.v1.json` and `generated/manifest.json`.
+ * Print (`@lectio/page`) adapts these intent ids with valid_objects / generation
+ * guidance. Do not project intents from the page catalogue anymore.
  *
  *   pnpm --filter @lectio/contracts export-contracts
- *   tsx scripts/export-contracts.ts --source <intent-catalogue.json> --out <dir>
+ *   tsx scripts/export-contracts.ts --out <dir>
  *
- * `--source` and `--out` exist so the regeneration gate can drive the real
- * exporter against a mutated source copy without touching the committed files.
+ * `--out` exists so the regeneration gate can drive the exporter against a
+ * temporary package copy without touching the committed files.
  * `generated_at` is the only non-reproducible field in the output.
  */
 
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -29,6 +28,7 @@ import type { LearnerActionRecord } from '../src/actions';
 
 export const INTENT_VOCABULARY_VERSION = '1.0.0';
 
+/** Legacy Print catalogue shape — kept only for one-shot migration helpers/tests. */
 export interface SourceIntent {
 	teacher_label: string;
 	pedagogical_role: string;
@@ -52,7 +52,11 @@ export interface IntentVocabularyFile {
 	intents: Record<string, InstructionalIntentRecord>;
 }
 
-/** Pure projection: canonical Print intent catalogue → neutral shared vocabulary. */
+/**
+ * Convert a Print intent catalogue into neutral shared vocabulary.
+ * Prefer editing `data/instructional-intents.v1.json` directly; this helper
+ * remains for alignment checks and historical migration.
+ */
 export function projectIntentVocabulary(
 	catalogue: SourceIntentCatalogue
 ): IntentVocabularyFile {
@@ -69,10 +73,10 @@ export function projectIntentVocabulary(
 	}
 	return {
 		vocabulary_version: INTENT_VOCABULARY_VERSION,
-		note: 'Canonical instructional intent identifiers. Projected from the Print intent catalogue by scripts/export-contracts.ts — edit the source catalogue, never this file. Native inventory (valid_objects, generation guidance) is deliberately dropped.',
+		note: 'Canonical instructional intent identifiers. Owned by @lectio/contracts. Print adapts these ids with valid_objects and generation guidance.',
 		source: {
-			package: '@lectio/page',
-			file: 'contracts/intent-catalogue.v1.json',
+			package: '@lectio/contracts',
+			file: 'data/instructional-intents.v1.json',
 			catalogue_version: catalogue.catalogue_version
 		},
 		intents
@@ -87,36 +91,50 @@ function argValue(flag: string): string | null {
 	return process.argv[index + 1] ?? null;
 }
 
-export function exportContracts(sourcePath: string, outRoot: string): void {
-	const catalogue = JSON.parse(readFileSync(sourcePath, 'utf8')) as SourceIntentCatalogue;
-	const vocabulary = projectIntentVocabulary(catalogue);
+function loadAuthoredVocabulary(root: string): IntentVocabularyFile {
+	const path = join(root, 'data/instructional-intents.v1.json');
+	return JSON.parse(readFileSync(path, 'utf8')) as IntentVocabularyFile;
+}
+
+function loadLearnerActions(root: string): typeof learnerActions {
+	const path = join(root, 'data/learner-actions.v1.json');
+	return JSON.parse(readFileSync(path, 'utf8')) as typeof learnerActions;
+}
+
+/** Regenerate teaching-view + manifest from authored contracts vocabulary. */
+export function exportContracts(outRoot: string, vocabularyRoot: string = packageRoot): void {
+	const vocabulary = loadAuthoredVocabulary(vocabularyRoot);
+	const actionsFile = loadLearnerActions(vocabularyRoot);
 
 	const dataDir = join(outRoot, 'data');
 	const generatedDir = join(outRoot, 'generated');
 	mkdirSync(dataDir, { recursive: true });
 	mkdirSync(generatedDir, { recursive: true });
 
+	// Authored intents are copied, never rewritten from Print.
 	writeFileSync(
 		join(dataDir, 'instructional-intents.v1.json'),
 		JSON.stringify(vocabulary, null, '\t') + '\n'
 	);
+	copyFileSync(
+		join(vocabularyRoot, 'data/learner-actions.v1.json'),
+		join(dataDir, 'learner-actions.v1.json')
+	);
 
 	const teachingView = projectTeachingView({
 		intents: vocabulary.intents,
-		actions: learnerActions.actions as unknown as Record<string, LearnerActionRecord>,
+		actions: actionsFile.actions as unknown as Record<string, LearnerActionRecord>,
 		intent_vocabulary_version: vocabulary.vocabulary_version,
-		action_vocabulary_version: learnerActions.vocabulary_version
+		action_vocabulary_version: actionsFile.vocabulary_version
 	});
 	writeFileSync(
 		join(generatedDir, 'teaching-view.v1.json'),
 		JSON.stringify(teachingView, null, '\t') + '\n'
 	);
 
-	// `learner-actions.v1.json` is authored, not generated: it is hashed from the
-	// package where it lives and never rewritten by the exporter.
 	const hashed: Array<{ path: string; from: string }> = [
 		{ path: 'data/instructional-intents.v1.json', from: outRoot },
-		{ path: 'data/learner-actions.v1.json', from: packageRoot },
+		{ path: 'data/learner-actions.v1.json', from: outRoot },
 		{ path: 'generated/teaching-view.v1.json', from: outRoot }
 	];
 
@@ -136,9 +154,9 @@ export function exportContracts(sourcePath: string, outRoot: string): void {
 				manifest_version: '1.0.0',
 				package: '@lectio/contracts',
 				intent_vocabulary_version: vocabulary.vocabulary_version,
-				action_vocabulary_version: learnerActions.vocabulary_version,
+				action_vocabulary_version: actionsFile.vocabulary_version,
 				teaching_view_version: teachingView.view_version,
-				intent_source_catalogue_version: catalogue.catalogue_version,
+				intent_source_catalogue_version: vocabulary.source.catalogue_version,
 				generated_at: new Date().toISOString(),
 				files
 			},
@@ -147,7 +165,7 @@ export function exportContracts(sourcePath: string, outRoot: string): void {
 		) + '\n'
 	);
 
-	console.log(`Synced instructional vocabulary from ${sourcePath}`);
+	console.log(`Synced teaching view from authored @lectio/contracts vocabulary`);
 	console.log(
 		`  ${Object.keys(vocabulary.intents).length} intents (${teachingView.intents.length} teaching-selectable)`
 	);
@@ -162,9 +180,7 @@ const invokedDirectly =
 	resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (invokedDirectly) {
-	const source = resolve(
-		argValue('--source') ??
-			join(packageRoot, '../lectio-page/contracts/intent-catalogue.v1.json')
-	);
-	exportContracts(source, resolve(argValue('--out') ?? packageRoot));
+	const outRoot = resolve(argValue('--out') ?? packageRoot);
+	const vocabRoot = resolve(argValue('--vocab') ?? packageRoot);
+	exportContracts(outRoot, vocabRoot);
 }

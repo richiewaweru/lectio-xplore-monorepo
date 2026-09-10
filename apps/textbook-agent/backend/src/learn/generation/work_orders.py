@@ -171,8 +171,8 @@ def compile_learn_work_orders(
         evidence = block.evidence
         if block.learner_action is not None:
             action = block.learner_action.action
-            support = block.learner_action.support_level
-            evidence = block.learner_action.evidence or evidence
+            support = block.learner_action.difficulty
+            evidence = block.learner_action.expected_evidence or evidence
 
         # When a learner action is present, trust decision.source_item_ids
         # including an empty list — empty means "author new", not "fall back

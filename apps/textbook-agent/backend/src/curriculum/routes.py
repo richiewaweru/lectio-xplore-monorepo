@@ -1376,7 +1376,11 @@ async def post_path_lesson_realizations(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, object]:
-    """Admit requested native outputs (Print and/or Learn) for one lesson."""
+    """Admit requested native outputs for one lesson.
+
+    Product default is a single explicitly selected path. The request body may
+    list multiple paths for scripts/tests; generation does not auto-admit both.
+    """
     try:
         _unit, version, lesson = await _owned_version_and_lesson(
             session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id

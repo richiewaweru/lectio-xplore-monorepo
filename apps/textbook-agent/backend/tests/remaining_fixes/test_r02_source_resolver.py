@@ -81,9 +81,10 @@ def _choice_order(*, approved_item_ids: list[str], source_refs: list[str] | None
                         source_question_ids=refs,
                         learner_action=LearnerActionBrief(
                             action="select-one",
-                            support_level="guided",
-                            evidence="Learner selects evaporation.",
-                            source_item_ids=refs,
+                            target="evaporation choice",
+                            purpose="Check understanding",
+                            expected_evidence="Learner selects evaporation.",
+                            difficulty="guided",
                         ),
                     )
                 ],

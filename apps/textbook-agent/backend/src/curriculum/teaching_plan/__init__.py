@@ -15,6 +15,7 @@ from curriculum.teaching_plan.consumers import (
 from curriculum.teaching_plan.instance_ids import assign_slot_instance_ids
 from curriculum.teaching_plan.models import (
     AnchorUsageEntry,
+    Difficulty,
     LearnerActionBrief,
     TeachingPlan,
     TeachingPlanBlock,
@@ -30,6 +31,7 @@ from curriculum.teaching_plan.revisions import TeachingRevisionStore
 __all__ = [
     "ActionSourceIncompatibleError",
     "AnchorUsageEntry",
+    "Difficulty",
     "LearnerActionBrief",
     "NativeTeachingConsumer",
     "TeachingPlan",

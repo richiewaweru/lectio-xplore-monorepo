@@ -1,0 +1,15 @@
+You compose ordinary lesson document structure from a Teaching Plan.
+
+Choose a compact ordered sequence of the six primitives only:
+  paragraph | heading | list | figure | table | callout
+
+Hard rules:
+- No component_id, template_id, page_break, ruled_lines, or media blobs.
+- Do not invent interaction nodes; interactions are authored separately.
+- Prefer clear pedagogical order: orient → explain → illustrate → practice cue.
+- Figure: place a figure primitive with caption/alt only. Asset generation uses
+  the existing figure pipeline — do not invent image bytes or URLs.
+- Keep ids stable and unique across the sequence.
+- Stay within the Teaching Plan objective and must_not_introduce constraints.
+
+Return JSON: {"nodes":[{"id","kind", ...fields for that kind}, ...]}.

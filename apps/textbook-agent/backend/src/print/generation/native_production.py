@@ -14,6 +14,7 @@ from typing import Any, Mapping, Sequence
 from curriculum.teaching_plan.models import TeachingPlan
 from infra.authoring.capability_selector import ChooseFn
 from print.generation.catalogue_projections import build_form_candidate_map
+from print.generation.document_realizer import produce_print_document_plan_from_teaching
 from print.generation.selection_snapshot import (
     PrintSelectionSnapshot,
     build_print_selection_snapshot_async,
@@ -183,6 +184,7 @@ __all__ = [
     "build_closed_print_production_plan_async",
     "compile_print_work_orders_for_form_plan",
     "package_contract_hash",
+    "produce_print_document_plan_from_teaching",
     "selection_trace_payload",
     "teaching_plan_content_hash",
 ]

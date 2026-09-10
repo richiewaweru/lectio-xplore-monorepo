@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-GenerationPipeline = Literal["component_lectio"]
-_GENERATION_PIPELINES = frozenset({"component_lectio"})
+GenerationPipeline = Literal["native_learn", "learn_document"]
+_GENERATION_PIPELINES = frozenset({"native_learn", "learn_document"})
 
 
 def _default_env_file() -> Path:
@@ -221,7 +221,7 @@ class Settings(BaseSettings):
     )
     # Live Learn admission. Print (whole_lesson) remains a separate realization path.
     generation_pipeline_default: GenerationPipeline = Field(
-        default="component_lectio",
+        default="native_learn",
         validation_alias=AliasChoices(
             "GENERATION_PIPELINE_DEFAULT",
             "generation_pipeline_default",

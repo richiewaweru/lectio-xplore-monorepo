@@ -155,9 +155,7 @@ def compile_print_work_orders(
             schema = {"$ref": card.get("payload_schema_ref")}
         guidance = card.get("writer_guidance") or card.get("field_guidance") or {}
         definition = _complete_definition_payload(card)
-        deps: list[str] = []
-        if block.learner_action is not None:
-            deps = list(block.learner_action.dependencies or [])
+        deps = list(block.stimulus_dependencies or [])
         orders.append(
             PrintWorkOrder(
                 work_order_id=f"print::{snapshot.path}::{block.id}::{decision.form_id}",

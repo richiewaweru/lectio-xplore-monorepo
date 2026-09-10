@@ -92,8 +92,10 @@ def build_form_planner_payload(
                         "learner_action": (
                             {
                                 "action": block.learner_action.action,
-                                "support_level": block.learner_action.support_level,
-                                "evidence": block.learner_action.evidence,
+                                "target": block.learner_action.target,
+                                "purpose": block.learner_action.purpose,
+                                "expected_evidence": block.learner_action.expected_evidence,
+                                "difficulty": block.learner_action.difficulty,
                             }
                             if block.learner_action is not None
                             else None

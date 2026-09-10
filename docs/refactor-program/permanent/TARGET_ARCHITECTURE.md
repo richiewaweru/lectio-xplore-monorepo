@@ -19,6 +19,8 @@ apps/textbook-agent/backend/src/
 ├── print/
 │   ├── api/
 │   ├── generation/
+│   │   ├── document_realizer.py   # Teaching Plan → Print page document
+│   │   ├── document_form_map.py
 │   │   ├── planning/
 │   │   ├── forms/
 │   │   ├── prompts/
@@ -34,6 +36,11 @@ apps/textbook-agent/backend/src/
 │   │   └── pdf/
 │   └── contracts/
 │
+├── document/                      # shared ordinary content vocabulary
+│   ├── models.py                  # Paragraph/Heading/List/Figure/Table/Callout
+│   ├── composition.py
+│   └── validation.py
+│
 ├── learn/
 │   ├── api/
 │   ├── authoring/
@@ -41,14 +48,16 @@ apps/textbook-agent/backend/src/
 │   │   ├── persistence/
 │   │   └── preview/
 │   ├── generation/
-│   │   ├── planning/
-│   │   ├── component_selection/
+│   │   ├── document_realizer.py   # Teaching Plan → LearnDocument v2
+│   │   ├── document_writer.py
+│   │   ├── assemble.py
+│   │   ├── native_production.py
+│   │   ├── native_execution.py
 │   │   ├── prompts/
 │   │   ├── writers/
 │   │   ├── validation/
-│   │   ├── assembly/
-│   │   ├── retry/
 │   │   └── events/
+│   ├── interactions/              # retained KEEP-set interaction contracts only
 │   ├── publishing/
 │   ├── runtime/
 │   ├── distribution/
@@ -96,6 +105,8 @@ apps/textbook-agent/frontend/src/lib/
 │   └── export/
 │
 └── learn/
+    ├── document/          # app-owned LearnDocument canvas / renderers / editors
+    ├── interactions/      # retained KEEP-set UI shells
     ├── authoring/
     │   └── builder/
     ├── student/
@@ -114,9 +125,13 @@ SvelteKit route files remain route-oriented but should become thin feature entry
 
 ```text
 packages/
-├── lectio-page/
-└── lectio-learn/
+├── lectio-contracts/   # shared instructional intents / learner actions
+├── lectio-page/        # Print page-document engine
+└── lectio-learn/       # retained interaction UI only (ordinary Learn document path is app-owned)
 ```
 
-`@lectio/learn` must not own classes, DB runtime, assignments, or teacher analytics.
+`@lectio/contracts` owns shared instructional vocabulary used by Teaching Plan and both paths.
+`@lectio/learn` must not own classes, DB runtime, assignments, teacher analytics, or ordinary document primitives.
 `@lectio/page` must not own curriculum or user/application concerns.
+
+Learn generation realizes ordinary content from `backend/src/document/` primitives plus the retained interaction KEEP set; it does not select ExplanationBlock-style content components.

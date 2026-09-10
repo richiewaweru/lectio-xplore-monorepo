@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -7,27 +7,24 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { TeachingView } from '../src/teaching-view';
 import {
 	projectIntentVocabulary,
+	type IntentVocabularyFile,
 	type SourceIntentCatalogue
 } from '../scripts/export-contracts';
 
 const packageRoot = join(import.meta.dirname, '..');
-const canonicalSource = join(
-	packageRoot,
-	'../lectio-page/contracts/intent-catalogue.v1.json'
-);
 const scriptPath = join(packageRoot, 'scripts/export-contracts.ts');
 const tsxBin = join(
 	packageRoot,
 	process.platform === 'win32' ? 'node_modules/tsx/dist/cli.mjs' : 'node_modules/.bin/tsx'
 );
 
-/** Runs the real exporter as a child process, not an in-process re-implementation. */
-function runExporter(sourcePath: string, outRoot: string): void {
+/** Runs the real exporter as a child process. */
+function runExporter(vocabRoot: string, outRoot: string): void {
 	const command = process.platform === 'win32' ? process.execPath : tsxBin;
 	const args =
 		process.platform === 'win32'
-			? [tsxBin, scriptPath, '--source', sourcePath, '--out', outRoot]
-			: [scriptPath, '--source', sourcePath, '--out', outRoot];
+			? [tsxBin, scriptPath, '--vocab', vocabRoot, '--out', outRoot]
+			: [scriptPath, '--vocab', vocabRoot, '--out', outRoot];
 	execFileSync(command, args, { cwd: packageRoot, stdio: 'pipe' });
 }
 
@@ -51,6 +48,8 @@ describe('P01-K01 — the shared vocabulary exporter regenerates reproducibly', 
 	beforeAll(() => {
 		baseline = mkdtempSync(join(tmpdir(), 'lectio-contracts-base-'));
 		mutated = mkdtempSync(join(tmpdir(), 'lectio-contracts-mut-'));
+		cpSync(join(packageRoot, 'data'), join(baseline, 'data'), { recursive: true });
+		cpSync(join(packageRoot, 'data'), join(mutated, 'data'), { recursive: true });
 	});
 
 	afterAll(() => {
@@ -59,11 +58,11 @@ describe('P01-K01 — the shared vocabulary exporter regenerates reproducibly', 
 	});
 
 	it('reproduces byte-identical output apart from the timestamp', () => {
-		runExporter(canonicalSource, baseline);
+		runExporter(baseline, baseline);
 		const firstManifest = readManifest(baseline);
 		const firstView = readFileSync(join(baseline, 'generated/teaching-view.v1.json'), 'utf8');
 
-		runExporter(canonicalSource, baseline);
+		runExporter(baseline, baseline);
 		const secondManifest = readManifest(baseline);
 		const secondView = readFileSync(join(baseline, 'generated/teaching-view.v1.json'), 'utf8');
 
@@ -72,7 +71,7 @@ describe('P01-K01 — the shared vocabulary exporter regenerates reproducibly', 
 		expect(Date.parse(secondManifest.generated_at)).not.toBeNaN();
 	});
 
-	it('matches the copies committed to the package', () => {
+	it('matches the teaching view committed to the package', () => {
 		expect(readFileSync(join(baseline, 'generated/teaching-view.v1.json'), 'utf8')).toBe(
 			readFileSync(join(packageRoot, 'generated/teaching-view.v1.json'), 'utf8')
 		);
@@ -81,22 +80,24 @@ describe('P01-K01 — the shared vocabulary exporter regenerates reproducibly', 
 		);
 	});
 
-	it('propagates a deliberate source-field change into the generated teaching view', () => {
-		const catalogue = JSON.parse(
-			readFileSync(canonicalSource, 'utf8')
-		) as SourceIntentCatalogue;
-		const before = catalogue.intents['compare'];
+	it('propagates a deliberate authored-intent change into the teaching view', () => {
+		const vocabulary = JSON.parse(
+			readFileSync(join(mutated, 'data/instructional-intents.v1.json'), 'utf8')
+		) as IntentVocabularyFile;
+		const before = vocabulary.intents['compare'];
 		expect(before).toBeDefined();
 
-		catalogue.intents['compare'] = {
+		vocabulary.intents['compare'] = {
 			...before!,
-			teacher_label: 'P01-K01 mutated label',
+			label: 'P01-K01 mutated label',
 			cognitive_job: 'P01-K01 mutated cognitive job'
 		};
-		const mutatedSource = join(mutated, 'intent-catalogue.mutated.json');
-		writeFileSync(mutatedSource, JSON.stringify(catalogue, null, 2));
+		writeFileSync(
+			join(mutated, 'data/instructional-intents.v1.json'),
+			JSON.stringify(vocabulary, null, '\t') + '\n'
+		);
 
-		runExporter(mutatedSource, mutated);
+		runExporter(mutated, mutated);
 
 		const baselineCompare = readView(baseline).intents.find((i) => i.id === 'compare');
 		const mutatedCompare = readView(mutated).intents.find((i) => i.id === 'compare');
@@ -114,14 +115,15 @@ describe('P01-K01 — the shared vocabulary exporter regenerates reproducibly', 
 		expect(mutatedHash).not.toBe(baselineHash);
 	});
 
-	it('drops a source intent from the view when the source marks it unselectable', () => {
+	it('marks an intent unselectable when the authored vocabulary says so', () => {
 		const catalogue = JSON.parse(
-			readFileSync(canonicalSource, 'utf8')
+			readFileSync(join(packageRoot, '../lectio-page/contracts/intent-catalogue.v1.json'), 'utf8')
 		) as SourceIntentCatalogue;
 		catalogue.intents['reflect'] = { ...catalogue.intents['reflect']!, selectable: false };
 		const vocabulary = projectIntentVocabulary(catalogue);
 
 		expect(Object.keys(vocabulary.intents)).toHaveLength(32);
 		expect(vocabulary.intents['reflect']?.teaching_selectable).toBe(false);
+		expect(vocabulary.source.package).toBe('@lectio/contracts');
 	});
 });

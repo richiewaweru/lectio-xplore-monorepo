@@ -239,8 +239,8 @@ describe('/units/[id]', () => {
 			reused: false
 		});
 		render(UnitPage);
-		await screen.findByRole('button', { name: 'Prepare Lesson' });
-		await fireEvent.click(screen.getByRole('button', { name: 'Prepare Lesson' }));
+		await screen.findByRole('button', { name: 'Generate Print' });
+		await fireEvent.click(screen.getByRole('button', { name: 'Generate Print' }));
 		await waitFor(() => expect(mocks.preparePathLesson).toHaveBeenCalled());
 		expect(mocks.getLessonShape).not.toHaveBeenCalled();
 		expect(mocks.preparePathLesson.mock.calls[0][4]).toEqual(['group-core']);
@@ -264,7 +264,7 @@ describe('/units/[id]', () => {
 			reused: false
 		});
 		render(UnitPage);
-		await fireEvent.click(await screen.findByRole('button', { name: 'Prepare Lesson' }));
+		await fireEvent.click(await screen.findByRole('button', { name: 'Generate Print' }));
 		await waitFor(() => expect(mocks.preparePathLesson).toHaveBeenCalled());
 		expect(mocks.getLessonShape).not.toHaveBeenCalled();
 		expect(mocks.preparePathLesson.mock.calls[0][4]).toEqual([]);
@@ -290,9 +290,13 @@ describe('/units/[id]', () => {
 		expect(mocks.approveUnitPath).toHaveBeenCalled();
 	});
 
-	it('shows Prepare Lesson without requiring mount-time shape fetch', async () => {
+	it('shows Generate Print without requiring mount-time shape fetch', async () => {
 		render(UnitPage);
-		expect(await screen.findByRole('button', { name: 'Prepare Lesson' })).toBeTruthy();
+		expect(await screen.findByRole('button', { name: 'Generate Print' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Generate Learn' })).toBeTruthy();
+		expect(
+			screen.getByText('Print and Learn are generated independently from the Teaching Plan.')
+		).toBeTruthy();
 		expect(mocks.getLessonShape).not.toHaveBeenCalled();
 	});
 
@@ -300,13 +304,14 @@ describe('/units/[id]', () => {
 		mocks.getPreparedLessonStatus.mockResolvedValue({
 			path_lesson_id: lessonOne.id, lesson_revision: 1, generation_id: 'generation-1',
 			generation_status: 'awaiting_review', workflow_stage: 'awaiting_review', objective_hash: 'hash-1',
-			stale: false, can_prepare: false, can_regenerate: true
+			stale: false, can_prepare: false, can_regenerate: true,
+			print_open_href: '/studio/print/generation-1'
 		});
 		render(UnitPage);
 		await screen.findByRole('button', { name: 'Check preparation status' });
 		await fireEvent.click(screen.getByRole('button', { name: 'Check preparation status' }));
 		await waitFor(() => expect(mocks.getPreparedLessonStatus).toHaveBeenCalled());
-		expect(await screen.findByRole('link', { name: 'Print' })).toBeTruthy();
+		expect(await screen.findByRole('link', { name: 'Open Print' })).toBeTruthy();
 	});
 
 	it('starts a fresh generation for a non-stale terminal native run', async () => {
@@ -351,6 +356,7 @@ describe('/units/[id]', () => {
 		await fireEvent.click(await screen.findByRole('button', { name: 'Check preparation status' }));
 		await waitFor(() => expect(mocks.getPreparedLessonStatus).toHaveBeenCalled());
 		expect(screen.queryByRole('button', { name: 'Start fresh' })).toBeNull();
-		expect(screen.getByRole('link', { name: 'Open review' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Generate Print' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Generate Learn' })).toBeTruthy();
 	});
 });

@@ -7,24 +7,32 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
-SupportLevel = Literal["guided", "independent"]
+Difficulty = Literal["guided", "independent"]
 
 
 class LearnerActionBrief(BaseModel):
-    """What the learner is asked to do — never a native component or form id."""
+    """Path-agnostic learner-task meaning — never a native component or form id.
+
+    Minimum semantic fields only. Provenance (approved item ids, stimulus deps)
+    lives on the TeachingPlanBlock, not here.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     action: str = Field(min_length=1)
-    support_level: SupportLevel
-    evidence: str = Field(min_length=1)
-    source_item_ids: list[str] = Field(default_factory=list)
-    dependencies: list[str] = Field(
-        default_factory=list,
-        description="Stimulus or content asset ids this action depends on.",
+    target: str = Field(
+        min_length=1,
+        description="What the learner acts on (concept, items, structure) — not a UI id.",
     )
-    task_constraints: str | None = None
-    relevant_concepts: list[str] = Field(default_factory=list)
+    purpose: str = Field(
+        min_length=1,
+        description="Why the learner is asked to do this.",
+    )
+    expected_evidence: str = Field(
+        min_length=1,
+        description="What successful performance should show.",
+    )
+    difficulty: Difficulty
 
 
 class TeachingPlanBlock(BaseModel):
@@ -44,24 +52,16 @@ class TeachingPlanBlock(BaseModel):
             "block. A multiple-choice source must be the only ID in this array."
         ),
     )
+    stimulus_dependencies: list[str] = Field(
+        default_factory=list,
+        description="Stimulus or content asset ids this block's learner task depends on.",
+    )
     learner_action: LearnerActionBrief | None = None
 
     @model_validator(mode="after")
-    def _normalize_departure_and_sources(self) -> TeachingPlanBlock:
+    def _normalize_departure(self) -> TeachingPlanBlock:
         if self.departure_reason is not None and not self.departure_reason.strip():
             self.departure_reason = None
-        # Keep block-level and action-level source ownership aligned when both set.
-        if self.learner_action is not None and self.learner_action.source_item_ids:
-            if not self.source_question_ids:
-                self.source_question_ids = list(self.learner_action.source_item_ids)
-            elif list(self.source_question_ids) != list(self.learner_action.source_item_ids):
-                raise ValueError(
-                    "source_question_ids must match learner_action.source_item_ids when both are set"
-                )
-        elif self.source_question_ids and self.learner_action is not None:
-            self.learner_action = self.learner_action.model_copy(
-                update={"source_item_ids": list(self.source_question_ids)}
-            )
         return self
 
 
@@ -124,6 +124,10 @@ class TeachingPlanDraftBlock(BaseModel):
             "Approved assessment-item ownership. Leave empty for a non-assessment "
             "block. A multiple-choice source must be the only ID in this array."
         ),
+    )
+    stimulus_dependencies: list[str] = Field(
+        default_factory=list,
+        description="Stimulus or content asset ids this block's learner task depends on.",
     )
     learner_action: LearnerActionBrief | None = None
 
@@ -197,6 +201,7 @@ def materialize_teaching_plan(
                         evidence=block.evidence,
                         departure_reason=block.departure_reason,
                         source_question_ids=list(block.source_question_ids),
+                        stimulus_dependencies=list(block.stimulus_dependencies),
                         learner_action=block.learner_action,
                     )
                     for position, block in enumerate(section.blocks)

@@ -34,28 +34,26 @@ const pageCatalogue = JSON.parse(
 	>;
 };
 
-describe('instructional intent vocabulary is a faithful copy of the canonical Print catalogue', () => {
-	it('preserves all 32 canonical intent ids in catalogue order', () => {
-		const canonical = Object.keys(pageCatalogue.intents);
-		expect(canonical).toHaveLength(32);
-		expect(INSTRUCTIONAL_INTENT_IDS).toEqual(canonical);
+describe('instructional intent vocabulary is owned by @lectio/contracts', () => {
+	it('preserves all 32 canonical intent ids', () => {
+		expect(INSTRUCTIONAL_INTENT_IDS).toHaveLength(32);
 	});
 
-	it('pins the source catalogue revision it was generated from', () => {
-		expect(INSTRUCTIONAL_INTENT_SOURCE.package).toBe('@lectio/page');
-		expect(INSTRUCTIONAL_INTENT_SOURCE.catalogue_version).toBe(pageCatalogue.catalogue_version);
+	it('pins ownership to @lectio/contracts', () => {
+		expect(INSTRUCTIONAL_INTENT_SOURCE.package).toBe('@lectio/contracts');
+		expect(INSTRUCTIONAL_INTENT_SOURCE.file).toBe('data/instructional-intents.v1.json');
 	});
 
-	it('copies label, role, cognitive job, choose_when and boundaries verbatim', () => {
-		for (const [id, sourceRecord] of Object.entries(pageCatalogue.intents)) {
-			const record = getInstructionalIntent(id);
-			expect(record, `intent ${id} missing from shared vocabulary`).toBeDefined();
-			expect(record!.label).toBe(sourceRecord.teacher_label);
-			expect(record!.pedagogical_role).toBe(sourceRecord.pedagogical_role);
-			expect(record!.cognitive_job).toBe(sourceRecord.cognitive_job);
-			expect(record!.choose_when).toBe(sourceRecord.choose_when ?? null);
-			expect(record!.boundaries).toEqual(sourceRecord.not_when ?? {});
-			expect(record!.teaching_selectable).toBe(sourceRecord.selectable !== false);
+	it('Print catalogue adapts the same intent ids (no local invent)', () => {
+		const pageIds = Object.keys(pageCatalogue.intents);
+		expect(pageIds.sort()).toEqual([...INSTRUCTIONAL_INTENT_IDS].sort());
+		for (const id of INSTRUCTIONAL_INTENT_IDS) {
+			const shared = getInstructionalIntent(id)!;
+			const page = pageCatalogue.intents[id]!;
+			expect(page, `Print missing shared intent ${id}`).toBeDefined();
+			expect(page.teacher_label).toBe(shared.label);
+			expect(page.pedagogical_role).toBe(shared.pedagogical_role);
+			expect(page.cognitive_job).toBe(shared.cognitive_job);
 		}
 	});
 

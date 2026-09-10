@@ -299,12 +299,26 @@ JSON only. No preamble, no code fences, no commentary.
           "evidence_refs": [str],
           "evidence": str,
           "departure_reason": str | null,
-          "source_question_ids": [str]
+          "source_question_ids": [str],
+          "stimulus_dependencies": [str],
+          "learner_action": {
+            "action": str,
+            "target": str,
+            "purpose": str,
+            "expected_evidence": str,
+            "difficulty": "guided" | "independent"
+          } | null
         }
       ]
     }
   ]
 }
+
+`learner_action` is path-agnostic learner-task meaning. Use it only when the
+learner must do something that produces evidence. Never put Print form ids,
+Learn capability/component ids, page object ids, or interaction kinds here.
+`stimulus_dependencies` and `source_question_ids` are block provenance, not
+part of learner-task meaning.
 
 Sections appear in skeleton order, one output section per supplied slot. Do not
 output slot_id, block id, or position. The backend attaches the fixed slot id and

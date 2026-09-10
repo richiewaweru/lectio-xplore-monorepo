@@ -381,7 +381,7 @@ def validate_teaching_plan(
             ]
             if (
                 block.learner_action is not None
-                and block.learner_action.source_item_ids
+                and block.source_question_ids
             ):
                 from curriculum.teaching_plan.compatibility import (
                     ActionSourceIncompatibleError,
@@ -390,7 +390,7 @@ def validate_teaching_plan(
 
                 action_sources = [
                     approved_by_id[qid]
-                    for qid in block.learner_action.source_item_ids
+                    for qid in block.source_question_ids
                     if qid in approved_by_id
                 ]
                 try:

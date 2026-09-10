@@ -22,22 +22,35 @@ from core.entities.user import User
 from infra.rate_limit import limiter
 from infra.storage.gcs_image_store import GCSImageStore
 from learn.authoring.builder.service import (
-    ComponentLectioBuilderDocumentError,
-    ComponentLectioBuilderNotReadyError,
-    get_or_create_component_lectio_builder_lesson,
+    ACTIVE_BUILDER_SOURCE_TYPES,
+    ComponentLectioBuilderError,
+    get_or_create_native_learn_builder_lesson,
+    validate_builder_document,
 )
+from learn.generation.pipeline_dispatch import COMPONENT_LECTIO_RETIRED
 from contracts.lectio import get_component_registry_entry
 from learn.generation.interaction_writer import validate_interaction_contract
 
 router = APIRouter(prefix="/api/v1/builder", tags=["builder"])
 logger = logging.getLogger(__name__)
 
-_VALID_SOURCES = {"manual", "v3_generation", "component_lectio", "template"}
-_ACTIVE_SOURCES = {"manual", "component_lectio", "template"}
-_RETIRED_SOURCES = {"v3_generation", "v3_studio", "legacy", "legacy_unit"}
+_VALID_SOURCES = {
+    "manual",
+    "v3_generation",
+    "template",
+    "document",
+    "learn_document",
+    "native_learn",
+}
+_ACTIVE_SOURCES = set(ACTIVE_BUILDER_SOURCE_TYPES)
+_RETIRED_SOURCES = {"v3_generation", "v3_studio", "legacy", "legacy_unit", "component_lectio"}
 _LEGACY_PIPELINE_RETIRED = {
     "code": "legacy_pipeline_retired",
     "message": "The Legacy Studio pipeline has been retired. Use the Units workflow.",
+}
+_COMPONENT_LECTIO_RETIRED = {
+    "code": "component_lectio_retired",
+    "message": COMPONENT_LECTIO_RETIRED,
 }
 _MAX_DOCUMENT_BYTES = 5 * 1024 * 1024
 _MAX_MEDIA_UPLOAD_BYTES = 10 * 1024 * 1024
@@ -70,6 +83,13 @@ def _validate_lesson_document_shape(document: dict[str, Any]) -> None:
         )
 
     version = payload.get("version")
+    if version == 2:
+        errors = validate_builder_document(payload)
+        if errors:
+            raise HTTPException(status_code=422, detail="; ".join(errors))
+        return
+
+    # Deprecated LessonDocument v1 (component/sections/blocks) until Phase M.
     if not isinstance(version, int):
         raise HTTPException(status_code=422, detail="LessonDocument.version must be an integer")
 
@@ -158,8 +178,16 @@ class BuilderLessonCreateRequest(BaseModel):
     title: str | None = None
     class_label: str | None = None
     source_generation_id: str | None = None
-    source_type: Literal["manual", "v3_generation", "component_lectio", "template"] = "manual"
-    document: dict[str, Any] = Field(..., description="LessonDocument JSON payload")
+    source_type: Literal[
+        "manual",
+        "v3_generation",
+        "component_lectio",
+        "template",
+        "document",
+        "learn_document",
+        "native_learn",
+    ] = "manual"
+    document: dict[str, Any] = Field(..., description="LessonDocument / LearnDocument JSON payload")
 
 
 class BuilderLessonUpdateRequest(BaseModel):
@@ -328,18 +356,22 @@ async def create_builder_lesson(
     session: AsyncSession = Depends(get_async_session),
 ) -> BuilderLessonDetailResponse:
     if body.source_type not in _VALID_SOURCES:
+        if body.source_type in _RETIRED_SOURCES:
+            raise HTTPException(
+                status_code=410,
+                detail=_COMPONENT_LECTIO_RETIRED
+                if body.source_type == "component_lectio"
+                else _LEGACY_PIPELINE_RETIRED,
+            )
         raise HTTPException(status_code=422, detail=f"Unsupported source_type: {body.source_type}")
     if body.source_type == "v3_generation":
         raise HTTPException(status_code=410, detail=_LEGACY_PIPELINE_RETIRED)
-    if body.source_type in {"v3_generation", "component_lectio"} and not body.source_generation_id:
+    if body.source_type == "component_lectio":
+        raise HTTPException(status_code=410, detail=_COMPONENT_LECTIO_RETIRED)
+    if body.source_type in {"v3_generation"} and not body.source_generation_id:
         raise HTTPException(
             status_code=422,
             detail=f"source_generation_id is required for {body.source_type}",
-        )
-    if body.source_type == "component_lectio":
-        raise HTTPException(
-            status_code=422,
-            detail="Use the Component Lectio open endpoint for component_lectio lessons",
         )
 
     if body.source_generation_id:
@@ -399,6 +431,20 @@ async def open_component_lectio_builder_lesson(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> BuilderLessonDetailResponse:
+    _ = (generation_id, request, current_user, session)
+    raise HTTPException(status_code=410, detail=_COMPONENT_LECTIO_RETIRED)
+
+
+@router.post(
+    "/lessons/from-native-learn/{generation_id}",
+    response_model=BuilderLessonDetailResponse,
+)
+async def open_native_learn_builder_lesson(
+    generation_id: str,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> BuilderLessonDetailResponse:
     generation_result = await session.execute(
         select(GenerationModel).where(
             GenerationModel.id == generation_id,
@@ -410,21 +456,21 @@ async def open_component_lectio_builder_lesson(
         raise HTTPException(status_code=404, detail="Source generation not found")
 
     try:
-        lesson = await get_or_create_component_lectio_builder_lesson(
+        lesson = await get_or_create_native_learn_builder_lesson(
             session,
             generation=generation,
             user_id=current_user.id,
         )
         await session.commit()
-    except ComponentLectioBuilderNotReadyError as exc:
+    except ComponentLectioBuilderError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=410, detail=str(exc)) from exc
+    except ValueError as exc:
         await session.rollback()
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except ComponentLectioBuilderDocumentError as exc:
-        await session.rollback()
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     _log_builder_event(
-        "component_lectio_lesson_opened",
+        "native_learn_lesson_opened",
         user_id=current_user.id,
         lesson_id=lesson.id,
         request=request,

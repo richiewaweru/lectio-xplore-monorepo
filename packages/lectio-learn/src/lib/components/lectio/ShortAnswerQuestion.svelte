@@ -4,7 +4,6 @@
 	import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '$lib/components/ui/collapsible';
 	import { Badge } from '$lib/components/ui/badge';
 	import { usePrintMode } from '$lib/utils/printContext';
-	import RuledLines from '$lib/print/RuledLines.svelte';
 
 	let { content }: { content: ShortAnswerContent } = $props();
 
@@ -21,7 +20,14 @@
 				<span class="short-answer-marks">[{content.marks} {content.marks === 1 ? 'mark' : 'marks'}]</span>
 			{/if}
 		</div>
-		<RuledLines {lines} label="Answer:" />
+		<div class="ruled-lines">
+			<p class="label">Answer:</p>
+			<div class="lines-container">
+				{#each Array.from({ length: lines }) as _}
+					<div class="line" style="height: 1.8rem"></div>
+				{/each}
+			</div>
+		</div>
 	</div>
 {:else}
 <Card class="border-border/60 rh-pad-card">
@@ -97,5 +103,22 @@
 			#ddd 27px,
 			#ddd 28px
 		);
+	}
+
+	.ruled-lines .label {
+		font-size: 0.875rem;
+		font-weight: 600;
+		margin-bottom: 0.5rem;
+		color: #374151;
+	}
+
+	.ruled-lines .lines-container {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.ruled-lines .line {
+		border-bottom: 1px solid #d1d5db;
+		margin-bottom: 0.25rem;
 	}
 </style>

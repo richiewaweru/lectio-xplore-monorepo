@@ -24,6 +24,9 @@ from learn.generation.native_selection import (
     LearnSelectionSnapshot,
     build_learn_selection_snapshot_async,
 )
+from learn.generation.assemble import assemble_learn_document
+from learn.generation.document_realizer import realize_learn_document
+from learn.generation.document_writer import write_document_node, write_interaction_node
 from learn.generation.ordered_assemble import assemble_ordered_learn_document
 from learn.generation.work_orders import LearnWorkOrder, compile_learn_work_orders
 from learn.resources.native_policy import (
@@ -207,11 +210,83 @@ def selection_trace_payload(
     }
 
 
+def produce_learn_document_from_teaching(
+    *,
+    teaching_plan: TeachingPlan,
+    title: str | None = None,
+    subject: str = "science",
+    source_generation_id: str | None = None,
+    lesson_id: str | None = None,
+) -> dict[str, Any]:
+    """Cutover target: Teaching Plan → document realizer → LearnDocument v2.
+
+    Does not call the legacy component assembly path.
+    Ordinary content is written as document primitives; interactions use stub
+    config shells for retained types.
+    """
+    composition = realize_learn_document(teaching_plan)
+    brief_by_block: dict[str, str] = {}
+    for section in teaching_plan.sections:
+        for block in section.blocks:
+            brief_by_block[block.id] = block.brief
+
+    nodes: list[dict[str, Any]] = []
+    for decision in composition.decisions:
+        brief = brief_by_block.get(decision.teaching_block_id, "")
+        decision_payload = decision.model_dump(mode="json")
+        if decision.lane == "document":
+            nodes.append(
+                write_document_node(
+                    form=decision.kind,
+                    brief=brief,
+                    teaching_block_id=decision.teaching_block_id,
+                    decision=decision_payload,
+                )
+            )
+        elif decision.lane == "learn_interaction":
+            nodes.append(
+                write_interaction_node(
+                    interaction_type=decision.kind,
+                    brief=brief,
+                    teaching_block_id=decision.teaching_block_id,
+                    decision=decision_payload,
+                )
+            )
+        else:
+            raise ValueError(
+                f"unsupported Learn composition lane {decision.lane!r} "
+                f"for block {decision.teaching_block_id!r}"
+            )
+
+    document = assemble_learn_document(
+        nodes,
+        {
+            "id": lesson_id,
+            "title": title or teaching_plan.arc or "Learn lesson",
+            "subject": subject,
+            "source": "generated",
+            "source_generation_id": source_generation_id,
+            "teaching_plan_id": teaching_plan.teaching_plan_id or composition.teaching_plan_id,
+            "teaching_plan_revision": (
+                teaching_plan.revision
+                if teaching_plan.revision is not None
+                else composition.teaching_plan_revision
+            ),
+        },
+    )
+    return {
+        "composition_plan": composition,
+        "document": document,
+        "teaching_plan_hash": teaching_plan_content_hash(teaching_plan),
+    }
+
+
 __all__ = [
     "build_closed_learn_production",
     "build_closed_learn_production_async",
     "host_interaction_blocks_for_builder",
     "package_contract_hash",
+    "produce_learn_document_from_teaching",
     "selection_trace_payload",
     "teaching_plan_content_hash",
 ]

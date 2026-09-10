@@ -93,10 +93,10 @@ def _block(
     if action is not None:
         learner = LearnerActionBrief(
             action=action,
-            support_level=support,  # type: ignore[arg-type]
-            evidence=evidence,
-            source_item_ids=list(source_question_ids or []),
-            dependencies=list(dependencies or []),
+            target=action.replace("-", " "),
+            purpose="Check understanding",
+            expected_evidence=evidence,
+            difficulty=support,  # type: ignore[arg-type]
         )
     return TeachingPlanBlock(
         id=block_id,
@@ -105,6 +105,7 @@ def _block(
         brief=brief,
         evidence=evidence,
         source_question_ids=list(source_question_ids or []),
+        stimulus_dependencies=list(dependencies or []),
         learner_action=learner,
     )
 

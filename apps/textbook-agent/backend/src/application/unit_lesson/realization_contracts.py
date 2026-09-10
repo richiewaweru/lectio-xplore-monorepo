@@ -41,9 +41,13 @@ PRINT_PACKAGE_CONTRACT: dict[str, Any] = {
     "package": "@lectio/page",
     "contract_version": "1.1.0",
 }
+# App-owned Learn surface: ordinary document primitives + retained interactions.
+# Package string is deliberately not "@lectio/learn" so admissions stay valid
+# after the lectio-learn package is retired.
 LEARN_PACKAGE_CONTRACT: dict[str, Any] = {
-    "package": "@lectio/learn",
-    "contract_version": "1.0.0",
+    "package": "learn",
+    "contract_version": "2.0.0",
+    "surface": "document+interactions",
 }
 
 
@@ -91,17 +95,45 @@ class RealizationIdentity(BaseModel):
 
 
 class RequestOutputsBody(BaseModel):
+    """Admit native realizations. Product default is exactly one path.
+
+    Multi-path lists remain accepted for scripts/tests; production clients
+    should send a single selected path (Print or Learn).
+    """
+
     model_config = ConfigDict(extra="forbid")
 
     path_version_id: str
     path_revision: int
-    paths: list[NativePath] = Field(min_length=1)
+    paths: list[NativePath] = Field(
+        min_length=1,
+        description="Product default: one explicitly selected path.",
+    )
     teaching_plan_id: str
     teaching_plan_revision: int = Field(ge=1)
     teaching_plan_hash: str
     variant_id: str = DEFAULT_VARIANT_ID
     preparation_generation_id: str | None = None
     # Optional overrides for gate/policy tests — production omits these.
+    native_policy_version: str | None = None
+    native_policy_hash: str | None = None
+    package_contract_version: str | None = None
+    package_contract_hash: str | None = None
+
+
+class AdmitSinglePathBody(BaseModel):
+    """Explicit single-path admission request (product default)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    path_version_id: str
+    path_revision: int
+    path: NativePath
+    teaching_plan_id: str
+    teaching_plan_revision: int = Field(ge=1)
+    teaching_plan_hash: str
+    variant_id: str = DEFAULT_VARIANT_ID
+    preparation_generation_id: str | None = None
     native_policy_version: str | None = None
     native_policy_hash: str | None = None
     package_contract_version: str | None = None
@@ -116,6 +148,7 @@ class RealizationRetryBody(BaseModel):
 
 
 __all__ = [
+    "AdmitSinglePathBody",
     "DEFAULT_VARIANT_ID",
     "LEGACY_AMBIGUOUS_VARIANT",
     "LEARN_NATIVE_POLICY",

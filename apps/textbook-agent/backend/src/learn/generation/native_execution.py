@@ -1,6 +1,7 @@
 """Persist native Learn outputs from an approved shared teaching revision.
 
-Does not substitute prepared plans or bypass closed selection. Application
+Production Learn generation uses the LearnDocument v2 document path only.
+Does not substitute prepared plans or bypass teaching acceptance. Application
 orchestration loads the shared teaching state and passes the accepted plan here.
 """
 
@@ -16,20 +17,37 @@ from application.unit_lesson.realizations import admit_realization
 from core.database.models import EditableLessonModel, GenerationModel
 from curriculum.teaching_plan.models import TeachingPlan
 from infra.authoring import AuthoringEngine, AuthoringProvider
+from infra.authoring.capability_selector import ChooseFn
 from learn.generation.native_production import (
-    build_closed_learn_production_async,
+    package_contract_hash,
+    produce_learn_document_from_teaching,
     teaching_plan_content_hash,
 )
 from learn.generation.preparation_context import (
     LearnPreparationContext,
     learn_preparation_context_from_state,
 )
-from infra.authoring.capability_selector import ChooseFn
 from learn.publishing.publish_validation import validate_publishable_lesson_document
+from learn.resources.native_policy import default_learn_policy, policy_version_and_hash
 
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _preparation_from_generation(
+    generation: GenerationModel | None,
+) -> LearnPreparationContext:
+    """Load preparation only from GenerationModel.chunked_state_json."""
+    prep_state: dict[str, Any] = {}
+    if generation is not None:
+        chunked = generation.chunked_state_json
+        if isinstance(chunked, dict):
+            prep_state = dict(chunked)
+            packet = chunked.get("shared_preparation_packet")
+            if isinstance(packet, dict):
+                prep_state["shared_preparation_packet"] = packet
+    return learn_preparation_context_from_state(prep_state)
 
 
 async def produce_learn_from_approved_teaching(
@@ -50,43 +68,31 @@ async def produce_learn_from_approved_teaching(
     preparation_context: LearnPreparationContext | None = None,
     choose: ChooseFn | None = None,
 ) -> dict[str, Any]:
-    """Run closed Learn production and persist generation + editable draft.
+    """Run LearnDocument v2 production and persist generation + editable draft.
 
-    Returns production artifacts plus realization linkage. Selection is never
-    bypassed: ``build_closed_learn_production`` seals the snapshot first.
+    Unused closed-selection parameters (provider/engine/choose/approved_items)
+    remain on the signature for call-site compatibility; production is document
+    realizer only.
     """
+    _ = (available_asset_ids, approved_items, provider, engine, choose)
+
     output_id = f"learn-out-{uuid.uuid4().hex[:12]}"
     prep = preparation_context
     if prep is None:
-        from print.generation.whole_lesson.repository import PageDocumentRepository
-
-        prep_state: dict[str, Any] = {}
         prep_generation = await session.get(GenerationModel, preparation_generation_id)
-        if prep_generation is not None:
-            chunked = prep_generation.chunked_state_json
-            if isinstance(chunked, dict):
-                packet = chunked.get("shared_preparation_packet")
-                if isinstance(packet, dict):
-                    prep_state["shared_preparation_packet"] = packet
-        page_state = await PageDocumentRepository(
-            session, preparation_generation_id
-        ).load_page_generation_state()
-        if isinstance(page_state, dict):
-            prep_state.update(page_state)
-        prep = learn_preparation_context_from_state(prep_state)
-    production = await build_closed_learn_production_async(
+        prep = _preparation_from_generation(prep_generation)
+    _ = prep  # preparation is accepted from chunked state / caller; v2 path is plan-driven
+
+    body = dict(policy) if policy is not None else default_learn_policy()
+    _, policy_hash = policy_version_and_hash(body)
+    pkg_hash = package_contract_hash()
+
+    production = produce_learn_document_from_teaching(
         teaching_plan=teaching_plan,
-        available_asset_ids=available_asset_ids,
-        policy=policy,
         title=title,
         subject=subject,
         source_generation_id=output_id,
-        approved_items=approved_items,
-        write_interactions=True,
-        provider=provider,
-        engine=engine,
-        preparation_context=prep,
-        choose=choose,
+        lesson_id=output_id,
     )
     document = dict(production["document"])
     document["id"] = output_id
@@ -109,13 +115,22 @@ async def produce_learn_from_approved_teaching(
         chunked_state_json={
             "shared_preparation": False,
             "native_learn": True,
+            "learn_document": True,
+            "document_version": 2,
             "control": {"pipeline": "native_learn"},
             "preparation_generation_id": preparation_generation_id,
             "teaching_plan_id": teaching_plan.teaching_plan_id,
             "teaching_plan_revision": teaching_plan.revision,
             "teaching_plan_hash": plan_hash,
-            "selection_trace": production["selection_trace"],
-            "form_prompt": "closed_learn_selection",
+            "selection_trace": {
+                "form_prompt": "learn_document_v2",
+                "composition_plan": (
+                    production["composition_plan"].model_dump(mode="json")
+                    if hasattr(production["composition_plan"], "model_dump")
+                    else production["composition_plan"]
+                ),
+            },
+            "form_prompt": "learn_document_v2",
         },
     )
     session.add(generation)
@@ -126,7 +141,7 @@ async def produce_learn_from_approved_teaching(
         id=lesson_id,
         user_id=user_id,
         source_generation_id=output_id,
-        source_type="native_learn",
+        source_type="learn_document",
         title=str(document.get("title") or "Learn lesson"),
         class_label=None,
         document_json={
@@ -150,8 +165,8 @@ async def produce_learn_from_approved_teaching(
         preparation_generation_id=preparation_generation_id,
         pack_id=pack_id or preparation_generation_id,
         output_id=output_id,
-        native_policy_hash=str(production["native_policy_hash"]),
-        package_contract_hash=str(production["package_contract_hash"]),
+        native_policy_hash=policy_hash,
+        package_contract_hash=pkg_hash,
     )
     realization.status = "ready"
     realization.output_id = output_id
@@ -165,9 +180,11 @@ async def produce_learn_from_approved_teaching(
         "realization_created": created,
         "teaching_plan_hash": plan_hash,
         "teaching_plan_revision": int(teaching_plan.revision or 1),
-        "selection_trace": production["selection_trace"],
+        "selection_trace": generation.chunked_state_json["selection_trace"],
         "document": document,
         "content_hash": teaching_plan_content_hash(teaching_plan),
+        "native_policy_hash": policy_hash,
+        "package_contract_hash": pkg_hash,
     }
 
 
