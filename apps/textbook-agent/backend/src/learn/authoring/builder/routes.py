@@ -27,6 +27,7 @@ from learn.authoring.builder.service import (
     get_or_create_component_lectio_builder_lesson,
 )
 from contracts.lectio import get_component_registry_entry
+from learn.generation.interaction_writer import validate_interaction_contract
 
 router = APIRouter(prefix="/api/v1/builder", tags=["builder"])
 logger = logging.getLogger(__name__)
@@ -106,6 +107,15 @@ def _validate_lesson_document_shape(document: dict[str, Any]) -> None:
 
         if "content" not in raw_block:
             raise HTTPException(status_code=422, detail=f"Block '{block_id}' is missing content")
+
+        contract = raw_block.get("learn_interaction") or raw_block.get("interaction")
+        if isinstance(contract, dict):
+            errors = validate_interaction_contract(contract)
+            if errors:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Block '{block_id}' interaction invalid: {'; '.join(errors)}",
+                )
 
     for section in sections:
         if not isinstance(section, dict):

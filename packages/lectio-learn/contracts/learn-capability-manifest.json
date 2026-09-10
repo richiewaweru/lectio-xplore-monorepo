@@ -2,7 +2,7 @@
   "manifest_version": "1.0.0",
   "catalogue_version": "1.0.0",
   "package_version": "0.7.0",
-  "generated_at": "2026-09-09T19:21:35.941Z",
+  "generated_at": "2026-09-10T17:57:23.133Z",
   "capability_counts": {
     "total": 43,
     "interaction": 10,
@@ -40,8 +40,8 @@
       "file": "learn-writer-view.v1.json",
       "view": "writer",
       "view_version": "2.0.0",
-      "sha256": "7eca101958e4d812ffbdeb69ec2caedb6b10558b9f9e355f49a390433703130e",
-      "bytes": 157616
+      "sha256": "e101519d929b8cc1fc801bc5ce17a00183f9e4d5d74f7f6b11ae1f9de99c54dd",
+      "bytes": 168803
     },
     {
       "file": "learn-runtime-view.v1.json",
@@ -124,8 +124,8 @@
       "file": "authoring/instructions/explanation-block-writer-v1.txt",
       "view": "authoring-resource",
       "view_version": "2.0.0",
-      "sha256": "1ebaf2abb3901f63e641407fa8367e45723d7bcf473d0f298f287393710a6077",
-      "bytes": 337
+      "sha256": "89123beaf474b315816a4bc149d7b7a3fca1fa02ab5a39840060eb6b560aade1",
+      "bytes": 808
     },
     {
       "file": "authoring/instructions/fill-blank-writer-v1.txt",
@@ -285,8 +285,8 @@
       "file": "authoring/instructions/short-response-writer-v1.txt",
       "view": "authoring-resource",
       "view_version": "2.0.0",
-      "sha256": "b556ecdd735bd95bba516112859a19e7b35d3bf68af6ed8b60bae338b4788ad1",
-      "bytes": 754
+      "sha256": "c5d5b3b9ff4a1263918796183e21ba935d85c53c35cec727f8cfbaa2adeb3aa5",
+      "bytes": 1482
     },
     {
       "file": "authoring/instructions/student-textbox-writer-v1.txt",

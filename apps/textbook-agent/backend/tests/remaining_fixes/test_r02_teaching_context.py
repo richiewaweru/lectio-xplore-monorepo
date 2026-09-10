@@ -145,14 +145,50 @@ async def test_r02_g05_blank_objective_fails_before_provider() -> None:
 
 @pytest.mark.asyncio
 async def test_r02_g05_empty_facts_fail_for_generate() -> None:
-    """R02-G05: generate with empty allowed_facts raises MISSING_AUTHORING_INPUT."""
+    """Superseded by policy-cleanup G06/G07: default supplied_preferred allows empty facts."""
     order = _explain_order()
-    with pytest.raises(AuthoringEngineError, match="MISSING_AUTHORING_INPUT"):
+    engine = __import__(
+        "learn.generation.authoring_adapter",
+        fromlist=["build_learn_authoring_registry"],
+    ).build_learn_authoring_registry()
+    from infra.authoring import AuthoringEngine
+
+    selected = AuthoringEngine(registry=engine, provider=ContentProvider())
+    result = await run_learn_authoring(
+        order,
+        engine=selected,
+        lesson_context={"objective": "Explain evaporation"},
+        allowed_facts=[],
+    )
+    assert result.mode == "generate"
+    assert result.provenance.policy is not None
+    assert result.provenance.policy["effective_knowledge_policy"] == "supplied_preferred"
+    assert result.provenance.policy["executed_knowledge_mode"] == "model_knowledge"
+
+
+@pytest.mark.asyncio
+async def test_r02_g05_supplied_only_empty_facts_fail_before_provider() -> None:
+    """Replacement for blanket empty-facts ban: supplied_only still fails with zero calls."""
+    order = _explain_order()
+    calls = {"n": 0}
+
+    class CountingProvider:
+        async def invoke(self, call: AuthoringProviderCall) -> dict[str, object]:
+            calls["n"] += 1
+            return {"body": "should not run", "emphasis": []}
+
+    with pytest.raises(AuthoringEngineError, match="MISSING_AUTHORING_INPUT|supplied_only"):
         await run_learn_authoring(
             order,
-            lesson_context={"objective": "Explain distance"},
+            provider=CountingProvider(),
+            lesson_context={
+                "objective": "Explain evaporation",
+                "requested_knowledge_policy": "supplied_only",
+            },
             allowed_facts=[],
+            requested_knowledge_policy="supplied_only",
         )
+    assert calls["n"] == 0
 
 
 def test_r02_g05_convert_succeeds_without_duplicated_facts() -> None:

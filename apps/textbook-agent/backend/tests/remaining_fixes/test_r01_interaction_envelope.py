@@ -255,7 +255,8 @@ def test_r01_g04_core_interactions_generate_and_convert(capability_id: str) -> N
         approved["pairs"] = {p["left"]: p["right"] for p in CORE_CONFIG["match-pairs"]["pairs"]}
     elif capability_id == "short-response":
         approved.pop("evaluation", None)
-        approved.pop("review_guidance", None)
+        approved["review_guidance"] = "Assess whether the response links observation to claim."
+        approved["assessment_policy"] = "automatic_preferred"
     elif capability_id == "fill-blank":
         approved["blank_ids"] = CORE_CONFIG["fill-blank"]["blank_ids"]
 
@@ -265,7 +266,15 @@ def test_r01_g04_core_interactions_generate_and_convert(capability_id: str) -> N
     assert converted["prompt"] == f"Approved stem for {capability_id}?"
     if capability_id == "short-response":
         assert converted["config"]["evaluation"] == "teacher-review"
-        assert converted["config"]["review_guidance"] == f"Approved stem for {capability_id}?"
+        assert converted["config"]["review_guidance"] == (
+            "Assess whether the response links observation to claim."
+        )
+        assert (
+            converted.get("provenance", {})
+            .get("policy", {})
+            .get("fallback_reason")
+            == "missing_accepted_answers_automatic_preferred"
+        )
     else:
         assert converted["config"] == CORE_CONFIG[capability_id]
 

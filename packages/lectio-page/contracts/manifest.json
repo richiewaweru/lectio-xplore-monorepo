@@ -4,7 +4,7 @@
   "contract_version": "1.1.0",
   "intent_catalogue_version": "1.1.0",
   "object_catalogue_version": "1.2.0",
-  "generated_at": "2026-09-09T17:18:25.853Z",
+  "generated_at": "2026-09-10T17:57:42.165Z",
   "files": [
     {
       "path": "lectio-document-v2.schema.json",
@@ -58,8 +58,8 @@
     },
     {
       "path": "authoring/instructions/prose-writer-v1.txt",
-      "sha256": "4437159463588c7cba3bb9dd87718aea4e75e74d7bf6dad626c9009b6849520b",
-      "bytes": 670
+      "sha256": "a14953a8cee47bd9b0dd63ab9f2ff6fda1b553c3cfe7a3e52a5cd9ef7b5febec",
+      "bytes": 1141
     },
     {
       "path": "authoring/instructions/questions-converter-v1.txt",
@@ -83,8 +83,8 @@
     },
     {
       "path": "generated/form-writer-view.v1.json",
-      "sha256": "20f38080b81834bb7399630c508c9d4fb25ab8457f204225fb789f3687a4d302",
-      "bytes": 44747
+      "sha256": "ab7387765b772776dcf7aa255fbde7661c530346d9e9af2b8bb1ab0eef67f7ff",
+      "bytes": 46982
     },
     {
       "path": "generated/intent-object-map.v1.json",

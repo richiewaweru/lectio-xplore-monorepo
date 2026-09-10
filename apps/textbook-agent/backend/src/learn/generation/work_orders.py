@@ -92,6 +92,8 @@ def _complete_definition_payload(writer_card: Mapping[str, Any]) -> dict[str, An
             "converter_ref",
             "postprocessor_ref",
             "asset_requirements",
+            "knowledge",
+            "assessment",
         )
         if writer_card.get(key) is not None
     }

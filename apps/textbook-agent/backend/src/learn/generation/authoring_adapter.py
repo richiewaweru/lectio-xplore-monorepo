@@ -17,6 +17,11 @@ from infra.authoring import (
     LLMAuthoringProvider,
 )
 from infra.authoring.engine import stable_hash
+from infra.authoring.policy_resolver import (
+    PolicyDecision,
+    resolve_authoring_policy,
+    with_assessment_fallback,
+)
 from infra.authoring.validation import validate_json_schema
 from learn.generation.source_resolver import resolve_learn_work_order_sources
 from learn.generation.work_orders import LearnWorkOrder, build_learn_writer_request
@@ -377,28 +382,62 @@ def _convert_short_response(
     definition: AuthoringDefinition,
     request: AuthoringRequest,
 ) -> Mapping[str, Any]:
-    del definition
     item = _approved(request)
     answers = _get(item, "accepted_answers", "accepted_answer", "correct_key", "answer")
     if isinstance(answers, str):
         answers = [answers]
+    accepted: list[str] = []
     if isinstance(answers, list):
         accepted = [str(answer) for answer in answers if answer is not None and str(answer).strip()]
-        if accepted:
-            return {
-                "evaluation": "accepted-answers",
-                "accepted_answers": accepted,
-                "case_sensitive": bool(_get(item, "case_sensitive") or False),
-            }
-    if answers and not isinstance(answers, list):
+    elif answers is not None:
+        accepted = [str(answers)]
+
+    item_assessment = _get(item, "assessment_policy", "evaluation", "assessment")
+    guidance = str(_get(item, "review_guidance", "teacher_guidance") or "").strip()
+
+    if isinstance(request.policy, dict) and request.policy.get("effective_assessment_policy"):
+        from infra.authoring.policy_resolver import read_legacy_policy_snapshot
+
+        decision = read_legacy_policy_snapshot({"policy": request.policy})
+        if decision is None:
+            decision = resolve_authoring_policy(
+                capability_id=definition.capability_id,
+                native_path=definition.native_path,
+                modes=definition.modes,
+                authoring_mode="convert-approved",
+                raw_definition=definition.raw,
+                approved_item_assessment=item_assessment,
+                definition_hash=definition.definition_hash,
+            )
+    else:
+        decision = resolve_authoring_policy(
+            capability_id=definition.capability_id,
+            native_path=definition.native_path,
+            modes=definition.modes,
+            authoring_mode="convert-approved",
+            raw_definition=definition.raw,
+            approved_item_assessment=item_assessment,
+            definition_hash=definition.definition_hash,
+        )
+
+    final = with_assessment_fallback(
+        decision,
+        accepted_answers_present=bool(accepted),
+        review_guidance=guidance or None,
+    )
+    if isinstance(request.policy, dict):
+        request.policy.clear()
+        request.policy.update(final.to_dict())
+
+    if final.executed_evaluation_mode == "accepted-answers":
         return {
             "evaluation": "accepted-answers",
-            "accepted_answers": [str(answers)],
+            "accepted_answers": accepted,
             "case_sensitive": bool(_get(item, "case_sensitive") or False),
         }
     return {
         "evaluation": "teacher-review",
-        "review_guidance": str(_get(item, "stem", "prompt") or ""),
+        "review_guidance": guidance,
     }
 
 
@@ -577,9 +616,17 @@ def _validate_teaching_context(
     lesson_context: Mapping[str, Any] | None,
     allowed_facts: Sequence[str] | None,
     mode: str,
+    decision: PolicyDecision,
 ) -> None:
     if mode == "convert-approved":
         return
+    if decision.input_availability in {"unresolved_references", "retrieval_failure"}:
+        raise AuthoringEngineError(
+            "MISSING_AUTHORING_INPUT",
+            f"factual input availability is {decision.input_availability}; cannot author",
+            stage="inputs",
+            retryable=False,
+        )
     if "lesson_context" in order.required_inputs:
         objective = str((lesson_context or {}).get("objective") or "").strip()
         if not objective:
@@ -588,14 +635,20 @@ def _validate_teaching_context(
                 "objective is required for generate authoring",
                 stage="inputs",
             )
-    if "allowed_facts" in order.required_inputs:
-        facts = [str(fact).strip() for fact in (allowed_facts or [])]
-        if not facts or not any(facts):
-            raise AuthoringEngineError(
-                "MISSING_AUTHORING_INPUT",
-                "allowed_facts are required for generate authoring",
-                stage="inputs",
-            )
+    if decision.executed_knowledge_mode == "missing_context":
+        raise AuthoringEngineError(
+            "MISSING_AUTHORING_INPUT",
+            "allowed_facts are required under supplied_only knowledge policy",
+            stage="inputs",
+            retryable=False,
+        )
+    # supplied_preferred / objective_development may proceed with empty facts when
+    # intentionally absent. Empty/whitespace fact strings never count as supplied.
+    if allowed_facts is not None:
+        cleaned = [str(fact).strip() for fact in allowed_facts]
+        if any(not item for item in cleaned) and any(cleaned):
+            # Mixed blank entries are ignored; nonempty survivors already classified.
+            pass
 
 
 async def run_learn_authoring(
@@ -608,26 +661,69 @@ async def run_learn_authoring(
     terminology: Sequence[str] | None = None,
     approved_items: Sequence[Mapping[str, Any]] | None = None,
     mode: str | None = None,
+    requested_knowledge_policy: str | None = None,
+    requested_assessment_policy: str | None = None,
+    unresolved_fact_ids: Sequence[str] | None = None,
+    referenced_fact_ids: Sequence[str] | None = None,
+    retrieval_failed: bool = False,
+    legacy_absent: bool = False,
+    input_revision: str | None = None,
 ) -> AuthoringResult:
     resolved = resolve_learn_work_order_sources(order, approved_items, forced_mode=mode)
     selected_mode = resolved.mode
     scoped_items = list(resolved.items) if selected_mode == "convert-approved" else []
     approved_item = resolved.primary_item
+    definition = _definition_from_order(order, mode=selected_mode)
+    ctx = dict(lesson_context or {})
+    unresolved = list(unresolved_fact_ids or ctx.get("unresolved_fact_ids") or [])
+    referenced = list(referenced_fact_ids or ctx.get("referenced_fact_ids") or [])
+    item_assessment = None
+    if isinstance(approved_item, Mapping):
+        item_assessment = approved_item.get("assessment_policy") or approved_item.get("evaluation")
+    decision = resolve_authoring_policy(
+        capability_id=definition.capability_id,
+        native_path=definition.native_path,
+        modes=definition.modes,
+        authoring_mode=selected_mode,
+        raw_definition=definition.raw,
+        requested_knowledge_policy=requested_knowledge_policy
+        or ctx.get("requested_knowledge_policy"),
+        requested_assessment_policy=requested_assessment_policy
+        or ctx.get("requested_assessment_policy"),
+        allowed_facts=allowed_facts,
+        referenced_fact_ids=referenced,
+        unresolved_fact_ids=unresolved,
+        retrieval_failed=retrieval_failed or bool(ctx.get("retrieval_failed")),
+        legacy_absent=legacy_absent or bool(ctx.get("legacy_absent")),
+        definition_version=str(definition.raw.get("definition_version") or "") or None,
+        definition_hash=definition.definition_hash,
+        input_revision=input_revision or ctx.get("input_revision"),
+        approved_item_assessment=item_assessment,
+    )
     _validate_teaching_context(
         order,
         lesson_context=lesson_context,
         allowed_facts=allowed_facts,
         mode=selected_mode,
+        decision=decision,
     )
+    policy_payload = decision.to_dict()
     scoped = build_learn_writer_request(
         order,
         allowed_facts=allowed_facts,
         terminology=terminology,
         approved_item=approved_item,
     )
+    if isinstance(scoped, dict):
+        scoped = {
+            **scoped,
+            "resolved_knowledge_policy": decision.effective_knowledge_policy,
+            "executed_knowledge_mode": decision.executed_knowledge_mode,
+            "input_availability": decision.input_availability,
+        }
     request = AuthoringRequest(
         work_order_id=order.work_order_id,
-        definition=_definition_from_order(order, mode=selected_mode),
+        definition=definition,
         scoped_request=scoped,
         inputs=_input_map(
             order,
@@ -640,12 +736,33 @@ async def run_learn_authoring(
         source_identities=resolved.ref_ids or tuple(order.source_refs),
         mode=selected_mode,  # type: ignore[arg-type]
         approved_item=approved_item,
+        policy=policy_payload,
     )
     selected_engine = engine or AuthoringEngine(
         registry=build_learn_authoring_registry(),
         provider=provider or LLMAuthoringProvider(),
     )
-    return await selected_engine.execute(request, provider=provider)
+    result = await selected_engine.execute(request, provider=provider)
+    # Re-attach possibly updated policy (convert fallback) onto provenance.
+    final_policy = dict(request.policy or policy_payload)
+    updated_prov = type(result.provenance)(
+        work_order_id=result.provenance.work_order_id,
+        source_identities=result.provenance.source_identities,
+        teaching_revision=result.provenance.teaching_revision,
+        definition_hash=result.provenance.definition_hash,
+        input_hash=result.provenance.input_hash,
+        policy=final_policy,
+    )
+    return AuthoringResult(
+        work_order_id=result.work_order_id,
+        capability_id=result.capability_id,
+        native_path=result.native_path,
+        mode=result.mode,
+        payload=result.payload,
+        provenance=updated_prov,
+        transport_attempts=result.transport_attempts,
+        repair_attempts=result.repair_attempts,
+    )
 
 
 def interaction_contract_from_authoring_result(

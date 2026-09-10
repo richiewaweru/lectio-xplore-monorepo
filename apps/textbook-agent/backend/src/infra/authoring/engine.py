@@ -83,8 +83,10 @@ def provenance_for(request: AuthoringRequest) -> AuthoringProvenance:
                 "inputs": dict(request.inputs),
                 "mode": request.mode,
                 "approved_item": dict(request.approved_item or {}),
+                "policy": dict(request.policy or {}),
             }
         ),
+        policy=dict(request.policy) if request.policy is not None else None,
     )
 
 
@@ -283,6 +285,7 @@ class AuthoringEngine:
             approved_item=request.approved_item,
             trace_id=request.trace_id,
             generation_id=request.generation_id,
+            policy=request.policy,
         )
 
     def _validate_required_inputs(

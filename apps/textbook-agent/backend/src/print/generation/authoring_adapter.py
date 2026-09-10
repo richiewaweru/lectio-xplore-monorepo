@@ -187,7 +187,10 @@ async def run_print_authoring(
     terminology: Sequence[str] | None = None,
     approved_items: Sequence[Mapping[str, Any]] | None = None,
     mode: str | None = None,
+    requested_knowledge_policy: str | None = None,
 ) -> AuthoringResult:
+    from infra.authoring.policy_resolver import resolve_authoring_policy
+
     resolved = resolve_print_work_order_sources(order, approved_items, forced_mode=mode)
     scoped = build_print_writer_request(
         order,
@@ -197,14 +200,43 @@ async def run_print_authoring(
     selected_mode = resolved.mode
     conversion_items = list(resolved.items) if selected_mode == "convert-approved" else None
     approved_item = resolved.primary_item
+    definition = _definition_from_order(order)
+    ctx = dict(lesson_context or {})
+    facts = list(allowed_facts) if allowed_facts is not None else list(ctx.get("allowed_facts") or [])
+    decision = resolve_authoring_policy(
+        capability_id=definition.capability_id,
+        native_path=definition.native_path,
+        modes=definition.modes,
+        authoring_mode=selected_mode,
+        raw_definition=definition.raw,
+        requested_knowledge_policy=requested_knowledge_policy
+        or ctx.get("requested_knowledge_policy"),
+        allowed_facts=facts,
+        definition_hash=definition.definition_hash,
+        definition_version=str(definition.raw.get("definition_version") or "") or None,
+    )
+    if selected_mode == "generate" and decision.executed_knowledge_mode == "missing_context":
+        raise AuthoringEngineError(
+            "MISSING_AUTHORING_INPUT",
+            "allowed_facts are required under supplied_only knowledge policy",
+            stage="inputs",
+            retryable=False,
+        )
+    if isinstance(scoped, dict):
+        scoped = {
+            **scoped,
+            "resolved_knowledge_policy": decision.effective_knowledge_policy,
+            "executed_knowledge_mode": decision.executed_knowledge_mode,
+            "input_availability": decision.input_availability,
+        }
     request = AuthoringRequest(
         work_order_id=order.work_order_id,
-        definition=_definition_from_order(order),
+        definition=definition,
         scoped_request=scoped,
         inputs=_input_map(
             order,
             lesson_context=lesson_context,
-            allowed_facts=allowed_facts,
+            allowed_facts=facts,
             terminology=terminology,
             approved_items=conversion_items,
         ),
@@ -212,12 +244,31 @@ async def run_print_authoring(
         source_identities=resolved.ref_ids,
         mode=selected_mode,  # type: ignore[arg-type]
         approved_item=approved_item,
+        policy=decision.to_dict(),
     )
     selected_engine = engine or AuthoringEngine(
         registry=build_print_authoring_registry(),
         provider=provider or LLMAuthoringProvider(),
     )
     try:
-        return await selected_engine.execute(request, provider=provider)
+        result = await selected_engine.execute(request, provider=provider)
     except AuthoringEngineError:
         raise
+    updated_prov = type(result.provenance)(
+        work_order_id=result.provenance.work_order_id,
+        source_identities=result.provenance.source_identities,
+        teaching_revision=result.provenance.teaching_revision,
+        definition_hash=result.provenance.definition_hash,
+        input_hash=result.provenance.input_hash,
+        policy=dict(request.policy or {}),
+    )
+    return AuthoringResult(
+        work_order_id=result.work_order_id,
+        capability_id=result.capability_id,
+        native_path=result.native_path,
+        mode=result.mode,
+        payload=result.payload,
+        provenance=updated_prov,
+        transport_attempts=result.transport_attempts,
+        repair_attempts=result.repair_attempts,
+    )

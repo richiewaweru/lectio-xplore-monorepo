@@ -23,6 +23,20 @@ export const AUTHORING_DEFINITION_VERSION = '2.0.0';
 
 type AuthoringMode = 'generate' | 'convert-approved';
 
+export type KnowledgePolicy = 'supplied_only' | 'supplied_preferred' | 'objective_development';
+export type AssessmentPolicy = 'automatic_required' | 'automatic_preferred' | 'teacher_review';
+
+export interface KnowledgePolicySpec {
+	default: KnowledgePolicy;
+	supported: KnowledgePolicy[];
+}
+
+export interface AssessmentPolicySpec {
+	default: AssessmentPolicy;
+	supported: AssessmentPolicy[];
+	teacher_review_permitted: boolean;
+}
+
 /** Core interactions that author a full activity envelope in generate mode. */
 export const CORE_INTERACTION_ENVELOPE_IDS = new Set([
 	'choice',
@@ -306,6 +320,8 @@ export interface LearnWriterRecord {
 	validator_refs: string[];
 	converter_ref?: string;
 	postprocessor_ref?: string;
+	knowledge: KnowledgePolicySpec;
+	assessment?: AssessmentPolicySpec;
 	definition_hash: string;
 	asset_requirements: LearnCapabilityRecord['asset_requirements'];
 	source_refs: string[];
@@ -405,6 +421,32 @@ function validatorRefsFor(record: LearnCapabilityRecord): string[] {
 	return refs;
 }
 
+function knowledgeFor(record: LearnCapabilityRecord): KnowledgePolicySpec {
+	return {
+		default: 'supplied_preferred',
+		supported: ['supplied_only', 'supplied_preferred', 'objective_development']
+	};
+}
+
+function assessmentFor(record: LearnCapabilityRecord): AssessmentPolicySpec | undefined {
+	if (record.kind !== 'interaction') return undefined;
+	if (record.id === 'short-response') {
+		return {
+			default: 'automatic_preferred',
+			supported: ['automatic_required', 'automatic_preferred', 'teacher_review'],
+			teacher_review_permitted: true
+		};
+	}
+	if (CORE_INTERACTION_ENVELOPE_IDS.has(record.id)) {
+		return {
+			default: 'automatic_required',
+			supported: ['automatic_required'],
+			teacher_review_permitted: false
+		};
+	}
+	return undefined;
+}
+
 function converterRefFor(record: LearnCapabilityRecord): string | undefined {
 	const evaluator = evaluatorName(record.evaluation.contract_ref);
 	if (evaluator === 'quizContentToInteractionContract') return 'learn.quizContentToInteractionContract';
@@ -429,6 +471,8 @@ export function buildWriterView(records: LearnCapabilityRecord[]): LearnWriterVi
 		const fieldGuidance = usesEnvelope
 			? envelopeFieldGuidance(record, record.field_guidance)
 			: { ...record.field_guidance };
+		const knowledge = knowledgeFor(record);
+		const assessment = assessmentFor(record);
 		const definitionPayload = {
 			definition_version: AUTHORING_DEFINITION_VERSION,
 			capability_id: record.id,
@@ -448,6 +492,8 @@ export function buildWriterView(records: LearnCapabilityRecord[]): LearnWriterVi
 			examples: record.examples,
 			validator_refs,
 			converter_ref,
+			knowledge,
+			...(assessment ? { assessment } : {}),
 			asset_requirements: record.asset_requirements,
 			evaluation: record.evaluation,
 			allowed_config: record.allowed_config,
@@ -474,6 +520,8 @@ export function buildWriterView(records: LearnCapabilityRecord[]): LearnWriterVi
 			examples: record.examples,
 			validator_refs,
 			...(converter_ref ? { converter_ref } : {}),
+			knowledge,
+			...(assessment ? { assessment } : {}),
 			definition_hash: hashDefinition(definitionPayload),
 			asset_requirements: record.asset_requirements,
 			source_refs: [

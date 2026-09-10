@@ -114,7 +114,7 @@ async def test_r04_g02_publish_v1_builder_edit_v2_immutable(db_session_factory, 
 
 @pytest.mark.asyncio
 async def test_r04_g02_builder_malformed_edit_rejected(db_session_factory, _api, _seed) -> None:
-    """Publish validation rejects malformed interaction config on release."""
+    """Builder PUT rejects malformed interaction config (policy-cleanup G21)."""
     document = build_envelope_closed_production_document()
     async with await r04_client() as client:
         created = await client.post(
@@ -129,9 +129,11 @@ async def test_r04_g02_builder_malformed_edit_rejected(db_session_factory, _api,
             if isinstance(contract, dict) and contract.get("kind") == "sequence":
                 contract["config"] = {"order": []}
                 break
-        await client.put(
+        upd = await client.put(
             f"/api/v1/builder/lessons/{lesson_id}",
             json={"title": "R04 malformed", "document": bad},
         )
+        assert upd.status_code == 422, upd.text
+        # Draft remains valid; publish of unchanged draft still succeeds.
         pub = await client.post(f"/api/v1/learn/lessons/{lesson_id}/releases", json={})
-        assert pub.status_code in {400, 422}, pub.text
+        assert pub.status_code == 201, pub.text

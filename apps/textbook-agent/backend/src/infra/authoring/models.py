@@ -11,6 +11,7 @@ AuthoringFailureCode = Literal[
     "INVALID_PAYLOAD",
     "NO_COMPATIBLE_CAPABILITY",
     "REPAIR_EXHAUSTED",
+    "POLICY_CONFLICT",
 ]
 
 
@@ -49,6 +50,7 @@ class AuthoringRequest:
     approved_item: Mapping[str, Any] | None = None
     trace_id: str | None = None
     generation_id: str | None = None
+    policy: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -58,15 +60,19 @@ class AuthoringProvenance:
     teaching_revision: int
     definition_hash: str
     input_hash: str
+    policy: Mapping[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "work_order_id": self.work_order_id,
             "source_identities": list(self.source_identities),
             "teaching_revision": self.teaching_revision,
             "definition_hash": self.definition_hash,
             "input_hash": self.input_hash,
         }
+        if self.policy is not None:
+            payload["policy"] = dict(self.policy)
+        return payload
 
 
 @dataclass(frozen=True)

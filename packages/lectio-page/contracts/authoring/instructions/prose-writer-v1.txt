@@ -9,6 +9,11 @@ Write continuous explanatory or connective text because the planned content requ
 - Do not describe a visual that should have been a figure; respect the fixed plan and keep prose within its declared role.
 - Stay within the supplied paragraph and word capacity.
 
+Knowledge policy (code-resolved; do not invent policy):
+- supplied_only: write strictly within supplied facts and terminology.
+- supplied_preferred: use supplied facts as the primary basis; when none are supplied by design, develop from the objective with scoped model knowledge. Never describe model knowledge as approved factual material.
+- objective_development: develop the objective with model knowledge while respecting any supplied material and constraints.
+
 Output:
 
 {

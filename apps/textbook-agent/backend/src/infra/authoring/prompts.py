@@ -8,34 +8,40 @@ from infra.authoring.models import (
     AuthoringRequest,
     AuthoringValidationError,
 )
+from infra.authoring.policy_resolver import (
+    PolicyDecision,
+    knowledge_instruction_block,
+    read_legacy_policy_snapshot,
+)
 
 COMMON_AUTHORING_TEMPLATE = """You author one already-selected educational capability. Follow the
 supplied AuthoringDefinition and exact output schema. Preserve block identity, objective, scope,
 learner action, source ownership and assessment mode. Do not select another capability or redesign
 the teaching plan.
 
-Write final student-facing material using the supplied facts and terminology. Planning instructions
-are not final content. For an activity, produce a meaningful prompt, task data, justified answer
-relationships and useful feedback as required by the contract. Do not infer correctness from option
-positions, number/word positions, example ordering or arbitrary defaults. Do not copy illustrative
-examples as unrelated lesson content.
+Planning instructions are not final content. For an activity, produce a meaningful prompt, task
+data, justified answer relationships and useful feedback as required by the contract. Do not infer
+correctness from option positions, number/word positions, example ordering or arbitrary defaults.
+Do not copy illustrative examples as unrelated lesson content.
 
 Treat approved items as authoritative content. Conversion must preserve their question and answer
 meaning. Report incompatibility through the defined error path instead of guessing. Use supported
-teacher-review only when the work order permits it.
+teacher-review only when the work order policy permits it.
 
 Return exactly the selected output schema. Do not emit sibling schemas, markdown wrappers, internal
 planning metadata or extra fields. If required information is absent, use the configured
-missing-input mechanism; do not create placeholder content to satisfy structure."""
+missing-input mechanism; do not create placeholder content to satisfy structure.
+
+Do not invent or overwrite knowledge/assessment policy fields. Effective policy is code-owned."""
 
 REPAIR_TEMPLATE = """Correct only the supplied failed result for this work order. Preserve the
-original objective, source facts, selected capability and valid answer relationships. The original
-scoped request and authoritative definition are attached, followed by the previous output and
-errors with field paths.
+original objective, source facts, selected capability, effective policy and valid answer
+relationships. The original scoped request and authoritative definition are attached, followed by
+the previous output and errors with field paths.
 Return the complete corrected payload in the same schema. Do not remove required tasks, replace the
 activity type, invent a new answer key, or discard approved sources to make validation pass. If the
 input is insufficient, use the configured missing-input/error contract. Repairs are bounded by the
-engine; do not implement an unbounded self-retry loop."""
+engine; do not implement an unbounded self-retry loop. Do not alter trusted policy fields."""
 
 
 def _definition_prompt_payload(definition: AuthoringDefinition) -> dict[str, Any]:
@@ -49,7 +55,18 @@ def _definition_prompt_payload(definition: AuthoringDefinition) -> dict[str, Any
         "validator_refs": list(definition.validator_refs),
         "converter_ref": definition.converter_ref,
         "definition_hash": definition.definition_hash,
+        "knowledge": dict(definition.raw.get("knowledge") or {}) if definition.raw else {},
+        "assessment": dict(definition.raw.get("assessment") or {}) if definition.raw else {},
     }
+
+
+def _policy_from_request(request: AuthoringRequest) -> PolicyDecision | None:
+    if request.policy:
+        try:
+            return read_legacy_policy_snapshot({"policy": request.policy})
+        except Exception:
+            return None
+    return None
 
 
 def build_authoring_prompt(
@@ -64,9 +81,21 @@ def build_authoring_prompt(
     }
     if request.approved_item is not None:
         payload["approved_item"] = dict(request.approved_item)
+    if request.policy is not None:
+        payload["resolved_policy"] = dict(request.policy)
+    decision = _policy_from_request(request)
+    knowledge_block = (
+        knowledge_instruction_block(decision)
+        if decision is not None
+        else (
+            "Knowledge policy: use supplied facts as the primary basis when present; "
+            "do not describe model knowledge as approved factual material."
+        )
+    )
     return "\n\n".join(
         [
             COMMON_AUTHORING_TEMPLATE,
+            "## KNOWLEDGE POLICY\n" + knowledge_block,
             "## PACKAGE CAPABILITY INSTRUCTIONS\n" + definition.instructions,
             "## AUTHORING DEFINITION\n"
             + json.dumps(_definition_prompt_payload(definition), indent=2, sort_keys=True),
@@ -89,6 +118,7 @@ def build_repair_prompt(
         "authoring_definition": _definition_prompt_payload(definition),
         "previous_invalid_output": previous_output,
         "validation_errors": [error.to_dict() for error in errors],
+        "resolved_policy": dict(request.policy or {}),
     }
     if request.approved_item is not None:
         payload = {**payload, "approved_item": dict(request.approved_item)}

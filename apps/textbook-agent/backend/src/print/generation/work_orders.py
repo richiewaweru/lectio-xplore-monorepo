@@ -77,6 +77,7 @@ def _complete_definition_payload(writer_card: Mapping[str, Any]) -> dict[str, An
             "validator_refs",
             "converter_ref",
             "postprocessor_ref",
+            "knowledge",
             "fragmentation",
             "emphasis",
             "placement",

@@ -82,7 +82,15 @@
         "print.payload_schema",
         "print.validate_content"
       ],
-      "definition_hash": "9fb6eb59fe566c2aef20194d9c95189636b78a88a2ffb4189638f3604572f24c",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "6775560a928f466f08ac1694160f2f32d1633f42369b549ab34bf271240a159e",
       "fragmentation": "Must be bound with the first following block in one break-inside:avoid wrapper. Never render alone.",
       "emphasis": "Type size, weight, rule, and spacing only. No box.",
       "placement": [
@@ -106,7 +114,7 @@
       ],
       "instructions": {
         "resource_ref": "contracts/authoring/instructions/prose-writer-v1.txt",
-        "text": "Assigned object: prose.\r\n\r\nWrite continuous explanatory or connective text because the planned content requires a line of reasoning that should be read in sequence.\r\n\r\n- Each paragraph has one clear job.\r\n- Lead with the concrete claim or anchor evidence, not generic scene-setting.\r\n- Make causal links explicit when the intent is causal.\r\n- Do not convert naturally parallel facts into a prose list.\r\n- Do not describe a visual that should have been a figure; respect the fixed plan and keep prose within its declared role.\r\n- Stay within the supplied paragraph and word capacity.\r\n\r\nOutput:\r\n\r\n{\r\n  \"paragraphs\": [\"complete paragraph\", \"optional next paragraph\"]\r\n}"
+        "text": "Assigned object: prose.\r\n\r\nWrite continuous explanatory or connective text because the planned content requires a line of reasoning that should be read in sequence.\r\n\r\n- Each paragraph has one clear job.\r\n- Lead with the concrete claim or anchor evidence, not generic scene-setting.\r\n- Make causal links explicit when the intent is causal.\r\n- Do not convert naturally parallel facts into a prose list.\r\n- Do not describe a visual that should have been a figure; respect the fixed plan and keep prose within its declared role.\r\n- Stay within the supplied paragraph and word capacity.\r\n\r\nKnowledge policy (code-resolved; do not invent policy):\r\n- supplied_only: write strictly within supplied facts and terminology.\r\n- supplied_preferred: use supplied facts as the primary basis; when none are supplied by design, develop from the objective with scoped model knowledge. Never describe model knowledge as approved factual material.\r\n- objective_development: develop the objective with model knowledge while respecting any supplied material and constraints.\r\n\r\nOutput:\r\n\r\n{\r\n  \"paragraphs\": [\"complete paragraph\", \"optional next paragraph\"]\r\n}"
       },
       "schema_ref": "lectio-document-v2.schema.json#/$defs/prose-content",
       "payload_schema_ref": "lectio-document-v2.schema.json#/$defs/prose-content",
@@ -156,7 +164,15 @@
         "print.payload_schema",
         "print.validate_content"
       ],
-      "definition_hash": "7f31417bef0dcc5a71248e795ec6952d2bf79ddcd742f46335fe68da86e4d113",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "4b2deda18e9cc51101b92e6f011aab2dfff40fec00b6862cd35ee3bd1ae832ac",
       "fragmentation": "Splits freely with widows/orphans. Paragraphs may split.",
       "emphasis": "Inline weight, italic, small caps, and whitespace. No background or border.",
       "placement": [
@@ -265,7 +281,15 @@
         "print.payload_schema",
         "print.validate_content"
       ],
-      "definition_hash": "e90ec051da4201d76fd81eb39ee906e024559c1484c3b502bd2d0ca8e9623826",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "ceb0f169c1b372e2ef99c66fd1390952eb10c300b8af3e09e7723b46465cd0f2",
       "fragmentation": "List may split between items; individual item avoids splitting when practical.",
       "emphasis": "Markers, hanging indent, weight, and spacing. No box.",
       "placement": [
@@ -399,7 +423,15 @@
         "print.payload_schema",
         "print.validate_content"
       ],
-      "definition_hash": "d843ec6c952533bb63da231fbee3c189c5d6b0f9e71035db1900dbfc3970caad",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "93d0e81eb0ecdcfa25a6bbbc2145bf44cf350c7f46b5fabe976111e5c02d50dd",
       "fragmentation": "May split across pages. thead repeats. Rows avoid splitting.",
       "emphasis": "Rules, alignment, weight, and sparse header tint only when photocopy-safe. No enclosing box.",
       "placement": [
@@ -520,8 +552,16 @@
         "print.payload_schema",
         "print.validate_content"
       ],
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
       "postprocessor_ref": "print.figure_asset_postprocessor",
-      "definition_hash": "88644ec2bde0798d1cae9562d369f09e64f04cdf05c4248455588724f2206538",
+      "definition_hash": "f334dd491e2c0a1774fbf6dffe09ae4bee929cdc2b8fd3459a11b80c287a5c6f",
       "fragmentation": "Figure and caption are atomic. May move to next page.",
       "emphasis": "Scale, whitespace, caption typography, and optional hairline around the plate only—not a card.",
       "placement": [
@@ -601,7 +641,15 @@
         "print.payload_schema",
         "print.validate_content"
       ],
-      "definition_hash": "8483a697cb55aa82671ac71479ef5883e55b643b986227db9cc0656ab0e36ca9",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "bee27442591b00d25fcd2a2d3c342cf5a62f7d02ff1827d28a2a12cc7e49941c",
       "fragmentation": "Atomic. Margin placement uses float, clear:right, and negative margin. Move cleanly if it does not fit.",
       "emphasis": "The only object allowed a border or background. Default is a single vertical rule with restrained label.",
       "placement": [
@@ -722,7 +770,15 @@
         "print.payload_schema",
         "print.validate_content"
       ],
-      "definition_hash": "c9d7bf7244e180bc07abb67763faeb69a96639fd832ac97d179f9ba727d3da28",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "197576128395d2d45f3445c92fa526a6ae1237577b8ffd52c287d9c3529e1d23",
       "fragmentation": "May split between steps. A step avoids internal split where practical. Final step and answer stay together.",
       "emphasis": "Numbered steps, hanging labels, indentation, and rules. No enclosing box.",
       "placement": [
@@ -836,8 +892,14 @@
         "print.validate_content",
         "print.validate_answer_key_integrity"
       ],
+      "knowledge": {
+        "default": "supplied_only",
+        "supported": [
+          "supplied_only"
+        ]
+      },
       "converter_ref": "print.approved_assessment_converter",
-      "definition_hash": "2d60846c2e0dcef679021ce6399e158102c8f84bf3642828682cce4dfbaab87a",
+      "definition_hash": "cffa8c93e83ca7c965eabcd1f49bd5ec171ce0f733b12a662a82facfadbf896d",
       "fragmentation": "Split between questions, never inside a question. Prompt stays with minimum answer space.",
       "emphasis": "Hanging numbers, marks aligned to edge, ruled answer space. No cards.",
       "placement": [
@@ -945,8 +1007,14 @@
         "print.validate_content",
         "print.validate_answer_key_integrity"
       ],
+      "knowledge": {
+        "default": "supplied_only",
+        "supported": [
+          "supplied_only"
+        ]
+      },
       "converter_ref": "print.approved_assessment_converter",
-      "definition_hash": "46612595aa3d935bce9bf8942224e119deadc759bcd46e184666a5e7262bb479",
+      "definition_hash": "9acfedad39ec8f63b5868e4fa43a10d1d9f9bc7b93bbd7a967fe60db21871d40",
       "fragmentation": "Atomic when it fits; otherwise keep stem with at least two options and split only between options.",
       "emphasis": "Letters A/B/C/D, hanging indent, whitespace. Never radio controls.",
       "placement": [
@@ -1077,7 +1145,13 @@
         "print.validate_content",
         "print.validate_answer_key_integrity"
       ],
-      "definition_hash": "630b483e4cfd735a20616466296142476769bd883f507137830d6d3225ca9666",
+      "knowledge": {
+        "default": "supplied_only",
+        "supported": [
+          "supplied_only"
+        ]
+      },
+      "definition_hash": "2a2207e2815db1c58c94dc5b02db7a915e899c390df574fb60a65c935afeafa7",
       "fragmentation": "Split between entries. Entry keeps question reference with first answer line.",
       "emphasis": "Heading hierarchy, compact typography, rules. No card.",
       "placement": [

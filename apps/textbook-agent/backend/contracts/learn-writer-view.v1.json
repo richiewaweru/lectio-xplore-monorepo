@@ -208,7 +208,22 @@
         "learn.evaluateChoice"
       ],
       "converter_ref": "learn.choice.approved_item_converter",
-      "definition_hash": "55cd7cc5affd18bd6d18335f9e568a4e66ccce542c77ff1636dfc9dd82a5f845",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "assessment": {
+        "default": "automatic_required",
+        "supported": [
+          "automatic_required"
+        ],
+        "teacher_review_permitted": false
+      },
+      "definition_hash": "9c9eca46dacb6c6603192a541ee7c019236a8ab713137ae9027d3e3557c1c7eb",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/ChoiceInteraction.svelte",
@@ -424,7 +439,22 @@
         "learn.evaluateMultiSelect"
       ],
       "converter_ref": "learn.multi-select.approved_item_converter",
-      "definition_hash": "264cc22d3e3c7ad8bded612991ae201b0f3f8b980c7075bf424a6083297a0d64",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "assessment": {
+        "default": "automatic_required",
+        "supported": [
+          "automatic_required"
+        ],
+        "teacher_review_permitted": false
+      },
+      "definition_hash": "2eceefe198086c28c10e070bf5c54109f02c6190ee71d3b1819a8866f651f930",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/MultiSelectInteraction.svelte",
@@ -624,7 +654,22 @@
         "learn.evaluateFillBlank"
       ],
       "converter_ref": "learn.fill-blank.approved_item_converter",
-      "definition_hash": "8811ac11e2e86973c28d6f1558fe00dfdeb2820b512eab9b9ec99f2c33af647b",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "assessment": {
+        "default": "automatic_required",
+        "supported": [
+          "automatic_required"
+        ],
+        "teacher_review_permitted": false
+      },
+      "definition_hash": "b579113f8fbd31319a44f1e06052435aea716062a18bcefebb96b7d849724539",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateFillBlank",
@@ -774,7 +819,22 @@
         "learn.evaluateNumeric"
       ],
       "converter_ref": "learn.numeric.approved_item_converter",
-      "definition_hash": "85f91648822f3e13ed6fb2e70ebad0130ca4640b9dff1fd82630c66abd8bcbbb",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "assessment": {
+        "default": "automatic_required",
+        "supported": [
+          "automatic_required"
+        ],
+        "teacher_review_permitted": false
+      },
+      "definition_hash": "4c0d4d8e7fd699a426ce48e2d5ebd371538b441b74dd6e710581d4fed283311a",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/NumericInteraction.svelte",
@@ -796,7 +856,7 @@
       ],
       "instructions": {
         "resource_ref": "contracts/authoring/instructions/short-response-writer-v1.txt",
-        "text": "Capability: short-response.\r\n\r\nAuthor a complete activity envelope: student-facing prompt, short-response config, and feedback.\r\n\r\n- Write the prompt as a clear question the learner reads directly. The planning brief is context only — do not copy it verbatim.\r\n- Provide feedback.correct and feedback.incorrect messages; use feedback.partial when partial credit applies.\r\n- Put evaluation mode and accepted answers or review guidance in config.\r\n\r\n- Use `accepted-answers` only for names, terms, or short phrases whose valid wordings can be listed.\r\n- Use `teacher-review` for reasoning, reflection, or explanation.\r\n- Accepted answers must be non-empty and distinct after normalization.\r\n- Do not auto-score broad comprehension with string matching."
+        "text": "Capability: short-response.\r\n\r\nAuthor a complete activity envelope: student-facing prompt, short-response config, and feedback.\r\n\r\n- Write the prompt as a clear question the learner reads directly. The planning brief is context only — do not copy it verbatim.\r\n- Provide feedback.correct and feedback.incorrect messages; use feedback.partial when partial credit applies.\r\n- Put evaluation mode and accepted answers or review guidance in config.\r\n\r\nKnowledge policy (code-resolved; do not invent policy):\r\n- supplied_only: write strictly within supplied facts; if factual context is required and absent, do not invent statements.\r\n- supplied_preferred: use supplied facts as the primary basis; when none are supplied by design, develop from the objective with scoped model knowledge. Never describe model knowledge as approved factual material.\r\n- objective_development: develop the objective with model knowledge while respecting any supplied material and constraints.\r\n\r\nAssessment policy (code-resolved; do not invent policy):\r\n- Use `accepted-answers` only for names, terms, or short phrases whose valid wordings can be listed.\r\n- Use `teacher-review` only when the resolved policy permits it, with non-empty review_guidance.\r\n- Do not switch to teacher-review merely because an answer key is missing unless policy authorizes that fallback.\r\n- Accepted answers must be non-empty and distinct after normalization.\r\n- Do not auto-score broad comprehension with string matching."
       },
       "schema_ref": "learn/short-response/config.v1",
       "payload_schema_ref": "learn/short-response/config.v1",
@@ -1001,7 +1061,24 @@
         "learn.evaluateShortResponse"
       ],
       "converter_ref": "learn.short-response.approved_item_converter",
-      "definition_hash": "6a0b6fd6a7db9a3758f448f9b92af1751417b1cefff700bcc154b1c8868f6553",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "assessment": {
+        "default": "automatic_preferred",
+        "supported": [
+          "automatic_required",
+          "automatic_preferred",
+          "teacher_review"
+        ],
+        "teacher_review_permitted": true
+      },
+      "definition_hash": "35aafe497b2f659c70284644ed5b5f569372dfa1a9deae4cbb4030e1ea7260c4",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/ShortResponseInteraction.svelte",
@@ -1179,7 +1256,22 @@
         "learn.evaluateMatchPairs"
       ],
       "converter_ref": "learn.match-pairs.approved_item_converter",
-      "definition_hash": "6a1a411e8a97c8fc73a9d1727eabfb7ce933d9b764ae5cb71ed5cd8909115d1d",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "assessment": {
+        "default": "automatic_required",
+        "supported": [
+          "automatic_required"
+        ],
+        "teacher_review_permitted": false
+      },
+      "definition_hash": "96c68af697b3e88f91d98ad0a361503f903e17d2216e2be5175b0809072aa56f",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/MatchPairsInteraction.svelte",
@@ -1415,7 +1507,22 @@
         "learn.evaluateMatchPairs"
       ],
       "converter_ref": "learn.classify.approved_item_converter",
-      "definition_hash": "72e74cb5afe2f58f43e34de9eb27ab66b7088613ea6cf395caeaa9ec2cee9ddf",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "assessment": {
+        "default": "automatic_required",
+        "supported": [
+          "automatic_required"
+        ],
+        "teacher_review_permitted": false
+      },
+      "definition_hash": "f4fec8d3ac4c0b3628f68c9819ef918446e0e70ff2957cd7d59e48a295fd64dc",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/ClassifyInteraction.svelte",
@@ -1618,7 +1725,22 @@
         "learn.evaluateSequence"
       ],
       "converter_ref": "learn.sequence.approved_item_converter",
-      "definition_hash": "48b8acf6f339bc6e8c0f50f9edf70b98bee045c0a822a4ccc03e50c53661bf3c",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "assessment": {
+        "default": "automatic_required",
+        "supported": [
+          "automatic_required"
+        ],
+        "teacher_review_permitted": false
+      },
+      "definition_hash": "1f2b433a54f7b2f5335b057951f65b4b132fb923d1f5793b51d2cd9c83a70dbf",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/learn/SequenceInteraction.svelte",
@@ -1746,7 +1868,15 @@
         "learn.evaluateChoice"
       ],
       "converter_ref": "learn.image-hotspot.approved_item_converter",
-      "definition_hash": "91305fd3a34615247c060866c0fa432549d8a57bf94a06fb849f6f75a3cdbdd2",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "ac283c54885ddb6d059fba9b1343646b5c399079ac4bd43f67dcb3141ec90883",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -1864,7 +1994,15 @@
         "learn.evaluateMatchPairs"
       ],
       "converter_ref": "learn.drag-label.approved_item_converter",
-      "definition_hash": "bbc1230a0867107365fe9163bf8cf4b446628ea192f093ba0955d7f2679719ab",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "6affd020c9e479174611192d5a5f23e8a524182e306f8f17f4296d75431dd734",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -1935,7 +2073,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "840e007c8aeb2371476e69619c791b234f68306976cdd6b8c791dc944b996b96",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "45ef8fc4bbe82a9e451c46b76cccf4a284159c8e8ffa86631a5664e21d4b0292",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/section-header",
@@ -2008,7 +2154,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "99013a85fb3a90f4bac73c2b57f2628a9937053e26a802bb1771da4529322df2",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "3e4d65580b28cbf448a875e62aac8d90fa427591dee4349d54e652b7ceb0a4bd",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/hook-hero",
@@ -2028,7 +2182,7 @@
       ],
       "instructions": {
         "resource_ref": "contracts/authoring/instructions/explanation-block-writer-v1.txt",
-        "text": "Capability: explanation-block.\r\n\r\nWrite explanatory lesson content.\r\n\r\n- Each paragraph should advance the selected intent.\r\n- Make causal, contrastive, or procedural links explicit when the intent calls for them.\r\n- Keep terminology consistent with the supplied lesson context.\r\n- Do not write final interaction payloads inside prose."
+        "text": "Capability: explanation-block.\r\n\r\nWrite explanatory lesson content.\r\n\r\n- Each paragraph should advance the selected intent.\r\n- Make causal, contrastive, or procedural links explicit when the intent calls for them.\r\n- Keep terminology consistent with the supplied lesson context.\r\n- Do not write final interaction payloads inside prose.\r\n\r\nKnowledge policy (code-resolved; do not invent policy):\r\n- supplied_only: write strictly within supplied facts and terminology.\r\n- supplied_preferred: use supplied facts as the primary basis; when none are supplied by design, develop from the objective with scoped model knowledge. Never describe model knowledge as approved factual material.\r\n- objective_development: develop the objective with model knowledge while respecting any supplied material and constraints."
       },
       "schema_ref": "section-content-schema.json#/properties/explanation",
       "payload_schema_ref": "section-content-schema.json#/properties/explanation",
@@ -2065,7 +2219,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "6576589f7a83be257d0fb1d69b38ead4fb30c0b56dd180b2301506ec81735648",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "8920c920b2e4501754c43443c95aba5445bdca9a23471479a23bc3fbe81584fb",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/explanation-block",
@@ -2123,7 +2285,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "8ec2ff493cb34ddca01002e27730f2cd3787fa8d5e6be22d509d4d5904dc9a9a",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "4327a7089f382333f20eda2ac2df1f75ecc325a4179994d1580d8d9b2c11917d",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/prerequisite-strip",
@@ -2182,7 +2352,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "6ae5abc8974be87a36982fb59d6dcc0b23e1353d0474b50b4d3223262427104d",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "54f2d0e9afc9528971441a66b99bc5bd9c3873551498870de4e9a2680763625d",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/what-next-bridge",
@@ -2239,7 +2417,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "ba414bbcbee220e552fcee650d3228e64995739e44c58098d4558eabb376e31e",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "a988d098ba47418fcaadb1698a9f4896b936327cf59ffce15c138e9b1475fe63",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/interview-anchor",
@@ -2295,7 +2481,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "2a461cacbef7cd27c28ce97942f36de855aa5da407eeb8d802b63e2952983119",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "2270a3ecf1d1cee6e9441815d676ce47f02a1e77e4acdef251869b11e44496c2",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/callout-block",
@@ -2359,7 +2553,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "16890150cda3b37212a97e0e99e93d7277ad940f82e41f78e6c05794195ec56d",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "34d3e35037e3e8a687ea2cf260a9832f662cf0387bf5b10c831f9d5277037556",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/summary-block",
@@ -2411,7 +2613,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "35086f2dafe45dc8cf8aa46133a8f860f6db30a31519413714d37f726ad13374",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "65ca81155fb515a89c7ea309b4756bf2f33e34f52a83a6807924ddc2ff6f3d32",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/section-divider",
@@ -2475,7 +2685,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "a3bdd4a0a2fceb250ba777b7f5eef9261c3fd6f11a469c00aea8567320de6746",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "24961476c0f612377fd063540279b7f237134116e41e1500fef03c39bb51be10",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/definition-card",
@@ -2537,7 +2755,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "8c1a58ab4ac05d83cf041cddae57cbfa50a4ea155e97e651f340135ea9504308",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "19e6ad1afef215b5d8dbdc3ec35319691afbe7ff5dbbbecf357b784fee73f6a7",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/definition-family",
@@ -2600,7 +2826,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "f4ac161bdffec159ecae927b4b0d296072fd7a1f286167acd456294b7b8144ff",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "0c9954ed8cea47d06e3fd9b44d30a8138fb78ac4be6ca2c51c4a16b7ca49bf78",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/glossary-rail",
@@ -2647,7 +2881,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "c34c7d16666d4ad071de3328ead03f8079b15eb50a75f2b7c74eca8753e1797a",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "097f381d8fd7ec7176dfbf9a4a4e4b72f9f8da4200dbcb58d74a081428570858",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/glossary-inline",
@@ -2713,7 +2955,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "3414fc81db9c5a12edc9a0110914d8e27964d591a60a6737d59b51d8f4fbd2ad",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "c68414d0751bb07884a1fa5b06fb842e823638fe79d743ea84c2fd515cb0e7f3",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/insight-strip",
@@ -2774,7 +3024,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "3ea2ad6b0301ae997bca09ad58ee60272bbc5e3678e4e0b563d66b745672145c",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "27b6ee4b4cb33a360d4cdfb042e5d4ce20b5efaf942f46dace6584002e43360b",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/key-fact",
@@ -2856,7 +3114,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "51eefabb1d4ed129deb661dc402426467301f16c7a20cd7899a2f1aa5a1e1555",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "81eb3d6caf4de4bc38c31ef2583a244a6bacfea81c6038384885730aaa0cabbd",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/comparison-grid",
@@ -2928,7 +3194,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "6641b2c2a05c254d05f84ff9abcbde975bd031df71769cda5b4aadf3ed1fa8cf",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "dbfdc76ccf56a75e2b5d6e8f6fb353427191ff2162727f883c16eac019bc5130",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/worked-example-card",
@@ -2997,7 +3271,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "5632a59154784bad5a0e6b10067fd91c8d5592f4f6e35248849460e35eb06849",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "36ff81743193abefc158558cdaa203c8eef430f43ce58730a2a1a4ccb94e501c",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/process-steps",
@@ -3082,7 +3364,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "30a2fc272adf981cba053ffc0010ab21496fe6664d7dfbff381648ab98340426",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "7cb45e58dc22c3ba062a94cf584a2467a4596529b2bddd0621b5b2e4c5771c77",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/practice-stack",
@@ -3168,7 +3458,15 @@
         "learn.quizContentToInteractionContract"
       ],
       "converter_ref": "learn.quizContentToInteractionContract",
-      "definition_hash": "4a63981121438f00ee537d0166ff19c9c13d6c6b3fa38a9a66307f3ba995596c",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "5baefb7b69a9ba511994cd4351920f97af54eb6c5eaa6801dae42c39b245774e",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/quiz-check",
@@ -3228,7 +3526,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "4daab5c5312ebfdfbc73fa08956424803e39d15fe4a49b584cde87e961aebacc",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "a57d607a7da163d52b4ec081443bc8cb7625d50e6ec91e3649deac9908094e7f",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/reflection-prompt",
@@ -3283,7 +3589,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "e2f7f986f3fbff9bdf0b8e25b1052490532dff5b6cacee9eb2ab6d01ec153343",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "54e55e230f8f74fa82ff02cc6ef5be384dbf6fda5741482e7e22d23ab740b0a5",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/student-textbox",
@@ -3340,7 +3654,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "bf2a8d9d8e43afa3aeea06da2b43bfff853ded3a621aa28959362d1c4a68841f",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "4d41ef8056c0d59da3905eacf4bd06795ca12ecdf997010b475da108fff7bc9e",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/short-answer",
@@ -3412,7 +3734,15 @@
         "learn.fillBlankContentToInteractionContract"
       ],
       "converter_ref": "learn.fillBlankContentToInteractionContract",
-      "definition_hash": "c7d5c0c32787dd0d4ccaebe8a062ab795b2df18a9dc20b3f548b64bed7742cc8",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "2bc05608ec6172967872dd399513644d07147e64dc02dc2210d5283e5489d34f",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/fill-in-blank",
@@ -3480,7 +3810,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "588281c8bf38070b89ae8ec230f968c5305da1af4fe498d652d9408c1ab2c868",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "ba30888d165d1edfa869c8b6f0474b272acb890e5780894b4eedbaf302f3fb32",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/pitfall-alert",
@@ -3550,7 +3888,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "f0ca5c2893b998c27f7d24dbeb4808812b0bf703202442c82e9508789e974d8d",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "120017a00c4137ed7d04e86d8ceccea057b0ffb0b8e26ba0c73bf2250e09ab30",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -3624,7 +3970,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "400d2291c604a4de39fa5586ad7893c99871974eedb768ff3e6d6d3708806f08",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "ea1363b7dbb2b634a448f0b5db779b3f475f5833d764d1d6e0b3841c2ce2e885",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -3697,7 +4051,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "45c88e9db1aba80284d4f2c7d41fdaaf31b1d39f90e691a946ed342c6d21d774",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "430e4fb9cc70899cd67613fd177e372aa2b6da41d16438486f7f602b2d3b63f1",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -3755,7 +4117,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "402c4c4c48a1a2a148a239cdbe526e275033965f606a458a9e2f61836401c22c",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "dd75ccac7b430df5dd6fb0fdac0cbc226ba1092f793ff66f3f2f06d0dc3b2412",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -3815,7 +4185,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "e16f2ca6daa8c9f51e8dc69f7373c12cac6775af6235520d82e3061b7a3cf9d6",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "8e4bc09ae34ffb1ca8ce8381cc206aa305dbf82e64fbeac2e701d951e918b5e9",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -3897,7 +4275,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "a93dba8209c0cef877d47a717a98f0e30553ca0c307ef23827c9e416c726c48b",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "41cc6dd770f6ae60490c11a18aac342bbd830cce98f3c65ab46e5de2a4d30b43",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -3983,7 +4369,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "661cd584a5bb6d279d8e5c7fe68b19791c26702aa56993e284d4e29cbe820e41",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "3bf83d7f012bfc8faa6b15079540be4efac0256c3824560368d0c21fd4505070",
       "asset_requirements": {
         "kinds": [
           "image",
@@ -4071,7 +4465,15 @@
       "validator_refs": [
         "learn.payload_schema"
       ],
-      "definition_hash": "f81a8840ee9c5c674b2bdf1fd539c7b860f31a3f9655a12ae45d9c3178b157ed",
+      "knowledge": {
+        "default": "supplied_preferred",
+        "supported": [
+          "supplied_only",
+          "supplied_preferred",
+          "objective_development"
+        ]
+      },
+      "definition_hash": "ff6d65b324f2cf32316797c54665beb4808b8da3234e653462805081d7fc5cd2",
       "asset_requirements": null,
       "source_refs": [
         "packages/lectio-learn/src/lib/lectio/components/answer-key",

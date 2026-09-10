@@ -242,6 +242,10 @@ export interface FormWriterRecord {
 	validator_refs: string[];
 	converter_ref?: string;
 	postprocessor_ref?: string;
+	knowledge: {
+		default: 'supplied_only' | 'supplied_preferred' | 'objective_development';
+		supported: Array<'supplied_only' | 'supplied_preferred' | 'objective_development'>;
+	};
 	definition_hash: string;
 	fragmentation: string;
 	emphasis: string;
@@ -323,6 +327,19 @@ function requiredInputsFor(id: string): string[] {
 	return base;
 }
 
+function knowledgeFor(id: string): {
+	default: 'supplied_only' | 'supplied_preferred' | 'objective_development';
+	supported: Array<'supplied_only' | 'supplied_preferred' | 'objective_development'>;
+} {
+	if (id === 'questions' || id === 'choices' || id === 'answer-key') {
+		return { default: 'supplied_only', supported: ['supplied_only'] };
+	}
+	return {
+		default: 'supplied_preferred',
+		supported: ['supplied_only', 'supplied_preferred', 'objective_development']
+	};
+}
+
 function validatorRefsFor(id: string): string[] {
 	const refs = ['print.payload_schema', 'print.validate_content'];
 	if (id === 'questions' || id === 'choices' || id === 'answer-key') {
@@ -382,6 +399,7 @@ export function buildWriterRecord(
 	const validator_refs = validatorRefsFor(id);
 	const schema_ref = record.payload_schema_ref;
 	const payload_schema = resolveLocalRef(source.document_schema, `#${pointer}`);
+	const knowledge = knowledgeFor(id);
 	const definitionPayload = {
 		definition_version: AUTHORING_DEFINITION_VERSION,
 		capability_id: id,
@@ -397,6 +415,7 @@ export function buildWriterRecord(
 		capacity: { ...(record.capacity ?? {}) },
 		negative_cases: [...(record.negative_cases ?? [])],
 		validator_refs,
+		knowledge,
 		converter_ref:
 			id === 'questions' || id === 'choices'
 				? 'print.approved_assessment_converter'
@@ -426,6 +445,7 @@ export function buildWriterRecord(
 		negative_cases: [...(record.negative_cases ?? [])],
 		capacity: { ...(record.capacity ?? {}) },
 		validator_refs,
+		knowledge,
 		...(definitionPayload.converter_ref ? { converter_ref: definitionPayload.converter_ref } : {}),
 		...(definitionPayload.postprocessor_ref
 			? { postprocessor_ref: definitionPayload.postprocessor_ref }

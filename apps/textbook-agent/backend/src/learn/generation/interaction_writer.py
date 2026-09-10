@@ -238,13 +238,14 @@ def write_interaction_from_request(
         else {}
     )
     if not str(lesson_context.get("objective") or "").strip():
-        lesson_context["objective"] = str(request.get("brief") or order.brief or order.intent or "Learn objective").strip()
-    allowed_facts = request.get("allowed_facts")
-    if not isinstance(allowed_facts, Sequence) or isinstance(allowed_facts, (str, bytes)):
-        brief_text = str(request.get("brief") or order.brief or "").strip()
-        allowed_facts = [brief_text] if brief_text else ["Offline fixture fact."]
+        lesson_context["objective"] = str(
+            request.get("brief") or order.brief or order.intent or "Learn objective"
+        ).strip()
+    allowed_facts_raw = request.get("allowed_facts")
+    if not isinstance(allowed_facts_raw, Sequence) or isinstance(allowed_facts_raw, (str, bytes)):
+        allowed_facts = None
     else:
-        allowed_facts = list(allowed_facts)
+        allowed_facts = list(allowed_facts_raw)
     terminology = (
         list(request["terminology"])
         if isinstance(request.get("terminology"), Sequence)
@@ -266,6 +267,16 @@ def write_interaction_from_request(
                 terminology=terminology,
                 approved_items=approved_items,
                 mode=mode,
+                requested_knowledge_policy=(
+                    str(request["requested_knowledge_policy"])
+                    if request.get("requested_knowledge_policy")
+                    else None
+                ),
+                requested_assessment_policy=(
+                    str(request["requested_assessment_policy"])
+                    if request.get("requested_assessment_policy")
+                    else None
+                ),
             )
         )
         from learn.generation.source_resolver import resolve_learn_work_order_sources
@@ -316,9 +327,10 @@ def write_interaction_from_work_order(
     context = dict(lesson_context or {})
     if not str(context.get("objective") or "").strip():
         context["objective"] = order.brief.strip() or order.intent or "Learn objective"
-    facts = list(allowed_facts) if allowed_facts is not None else (
-        [order.brief.strip()] if order.brief.strip() else ["Offline fixture fact."]
-    )
+    if allowed_facts is None:
+        facts: list[str] | None = None
+    else:
+        facts = list(allowed_facts)
     try:
         result = _run_sync(
             run_learn_authoring(

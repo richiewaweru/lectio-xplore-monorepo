@@ -258,6 +258,12 @@ async def _write_one_block(
             "must_not_introduce": [
                 entry.statement for entry in packet.scope.must_not_introduce
             ],
+            "allowed_facts": [
+                entry.statement
+                for entry in list(packet.scope.must_establish or [])
+                + list(getattr(packet, "prior_established", None) or [])
+                if getattr(entry, "statement", None)
+            ],
         },
         generation_id=generation_id,
         use_llm=True,
