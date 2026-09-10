@@ -5,9 +5,8 @@ Implementation branch: feat/unit-print-learn
 Baseline commit: c3563abbb141443bc0131917d09de81a8e4c118a
 Tested code commit: 80cbc1685f4830a55379912adfaea06302cec0c3
 Working-tree state during tests: clean for implementation files; unrelated .tmp/ and P09 artifacts preserved
-Evidence/report commit: (this docs commit)
+Evidence/report commit: 2f08766ec0a04094f57e05e38c6da63e5836033c
 ```
-
 ## Changes by phase
 
 ### P0
