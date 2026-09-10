@@ -138,10 +138,10 @@ def _block(
     if action is not None:
         learner = LearnerActionBrief(
             action=action,
-            support_level="guided",
-            evidence="Evidence",
-            source_item_ids=[],
-            dependencies=[],
+            target=action.replace("-", " "),
+            purpose="Check understanding",
+            expected_evidence="Evidence",
+            difficulty="guided",
         )
     return TeachingPlanBlock(
         id=block_id,
@@ -150,6 +150,7 @@ def _block(
         brief=brief,
         evidence="Evidence",
         source_question_ids=[],
+        stimulus_dependencies=[],
         learner_action=learner,
     )
 

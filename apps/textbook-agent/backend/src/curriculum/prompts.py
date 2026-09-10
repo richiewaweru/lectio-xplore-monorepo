@@ -14,7 +14,7 @@ LESSON_APPROACH_PROMPT_V1_SHA256 = (
     "475b8b178f74c1397742b12002a324e18ae3e39a4fffd9e7a4c199713780a9cd"
 )
 LESSON_APPROACH_PROMPT_V2_SHA256 = (
-    "d94ba4db88aaff85a33f5ff96032fc5eea5e0ecbc08b3112b27639f38386d4d5"
+    "1e48a253a1be4cdc4c3f77b4a2d57a2662fdf2869db7a724af4fe15dac5b7e3d"
 )
 
 
@@ -42,6 +42,8 @@ _PROMPT_NAMES = {
 _PACKAGED_PROMPT_NAMES = {
     "path-planner.md",
     "merge-critic.md",
+    "document-composer-v1.txt",
+    "document-writer-v1.txt",
 }
 
 
@@ -115,3 +117,11 @@ def capability_selector_prompt() -> str:
 
 def page_writer_common_prompt() -> str:
     return prompt_text("page-writer-common-v1.txt")
+
+
+def document_composer_prompt() -> str:
+    return packaged_prompt_text("document-composer-v1.txt")
+
+
+def document_writer_prompt() -> str:
+    return packaged_prompt_text("document-writer-v1.txt")

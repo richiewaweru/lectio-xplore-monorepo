@@ -27,6 +27,12 @@
 	import LessonVersionsPanel from '$lib/curriculum/units/components/LessonVersionsPanel.svelte';
 	import LessonResultsPanel from '$lib/curriculum/units/components/LessonResultsPanel.svelte';
 	import ResourceComposerPanel from '$lib/curriculum/units/components/ResourceComposerPanel.svelte';
+	import {
+		PATH_INDEPENDENCE_COPY,
+		generatePathLabel,
+		openPathLabel,
+		pathHasRealization
+	} from '$lib/curriculum/units/path-generation';
 	import type {
 		LessonMode,
 		KnowledgeType,
@@ -41,6 +47,7 @@
 		UnitPath,
 		MergeCriticResult
 	} from '$lib/types/units';
+	import type { NativePathKind } from '$lib/curriculum/units/path-generation';
 
 	const unitId = $derived(page.params.id ?? '');
 	let unit = $state<Unit | null>(null);
@@ -379,7 +386,7 @@
 		}
 	}
 
-	async function prepare(): Promise<void> {
+	async function prepare(pathKind: NativePathKind = 'print'): Promise<void> {
 		if (!selected) return;
 		await act('prepare', async () => {
 			if (!groupsLoaded) {
@@ -398,7 +405,12 @@
 				lessonMode,
 				selectedGroupIds
 			);
-			window.location.href = `/studio?generation_id=${encodeURIComponent(prepared.generation_id)}`;
+			// Explicit path choice: open the selected path surface (no convert).
+			if (pathKind === 'print') {
+				window.location.href = `/studio/print/${encodeURIComponent(prepared.generation_id)}`;
+			} else {
+				window.location.href = `/studio?generation_id=${encodeURIComponent(prepared.generation_id)}`;
+			}
 		}, false);
 	}
 
@@ -590,7 +602,10 @@
 							<div>
 								<p class="eyebrow">Preparation</p>
 								<h3>{preparation?.workflow_stage ?? 'Ready when you are'}</h3>
-								<p>{preparation?.stale ? 'This lesson changed since it was last written and needs to be made again.' : 'Prepare uses the approved lesson path and the existing page-oriented generation flow.'}</p>
+								<p>{PATH_INDEPENDENCE_COPY}</p>
+								{#if preparation?.stale}
+									<p>This lesson changed since it was last written and needs to be made again.</p>
+								{/if}
 							</div>
 							{#if preparation?.stale && preparation?.can_regenerate}
 								<form class="regenerate" onsubmit={(event) => { event.preventDefault(); void regenerate(); }}>
@@ -607,25 +622,29 @@
 								{@const prep = preparation}
 								<div class="ready-actions">
 									{#if prep?.print_open_href}
-										<a class="primary link" href={prep.print_open_href}>Open Print</a>
-									{:else if prep?.generation_id}
-										<a class="primary link" href={`/studio?generation_id=${encodeURIComponent(prep.generation_id)}`}>Open review</a>
-										<a class="secondary link" href={`/studio/print/${encodeURIComponent(prep.generation_id)}`}>Print</a>
+										<a class="primary link" href={prep.print_open_href}>{openPathLabel('print')}</a>
+									{:else if prep?.generation_id && pathHasRealization(prep, 'print')}
+										<a class="primary link" href={`/studio/print/${encodeURIComponent(prep.generation_id)}`}>{openPathLabel('print')}</a>
+									{:else if !pathHasRealization(prep, 'print')}
+										<button class="primary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={() => prepare('print')}>{busy === 'prepare' ? 'Generating Print…' : generatePathLabel('print')}</button>
 									{/if}
 									{#if prep?.learn_open_href}
-										<a class="secondary link" href={prep.learn_open_href}>Open Learn</a>
+										<a class="secondary link" href={prep.learn_open_href}>{openPathLabel('learn')}</a>
 									{:else if prep?.learn_output_id}
-										<a class="secondary link" href={`/studio?generation_id=${encodeURIComponent(prep.learn_output_id)}`}>Open Learn</a>
+										<a class="secondary link" href={`/studio?generation_id=${encodeURIComponent(prep.learn_output_id)}`}>{openPathLabel('learn')}</a>
+									{:else if !pathHasRealization(prep, 'learn')}
+										<button class="secondary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={() => prepare('learn')}>{busy === 'prepare' ? 'Generating Learn…' : generatePathLabel('learn')}</button>
 									{/if}
 									{#if prep?.realizations?.some((row) => row.status === 'read_only')}
-										<p class="hint">A legacy output is read-only — regenerate to create an explicit Print or Learn realization.</p>
+										<p class="hint">A legacy output is read-only — generate an explicit Print or Learn realization from the Teaching Plan.</p>
 									{/if}
 									<button class="secondary" type="button" onclick={() => { void openTab('groups'); showVersions = true; }}>Make versions for my groups</button>
 									<button class="text-button" type="button" disabled={busy !== null} onclick={() => ensurePreparationStatus()}>Refresh status</button>
 								</div>
 							{:else}
 								<div class="ready-actions">
-									<button class="primary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={prepare}>{busy === 'prepare' ? 'Making the lesson…' : 'Prepare Lesson'}</button>
+									<button class="primary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={() => prepare('print')}>{busy === 'prepare' ? 'Generating Print…' : generatePathLabel('print')}</button>
+									<button class="secondary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={() => prepare('learn')}>{busy === 'prepare' ? 'Generating Learn…' : generatePathLabel('learn')}</button>
 									<button class="text-button" type="button" disabled={busy !== null} onclick={() => ensurePreparationStatus()}>Check preparation status</button>
 								</div>
 							{/if}

@@ -3,13 +3,13 @@
 	import { Card } from '$lib/components/ui/card';
 	import { Brain } from 'lucide-svelte';
 	import { usePrintMode } from '$lib/utils/printContext';
-	import RuledLines from '$lib/print/RuledLines.svelte';
 	import { renderInlineMarkdown } from '$lib/utils/markdown';
 
 	let { content }: { content: ReflectionContent } = $props();
 
 	const getPrintMode = usePrintMode();
 	const printMode = $derived(getPrintMode());
+	const writeLines = $derived(content.space && content.space > 0 ? content.space : 4);
 
 	const typeLabels: Record<string, string> = {
 		open: 'Reflect',
@@ -28,7 +28,13 @@
 		{#if content.type === 'sentence-stem' && content.sentence_stem}
 			<p class="reflection-print-stem">{content.sentence_stem} ________________</p>
 		{/if}
-		<RuledLines lines={content.space && content.space > 0 ? content.space : 4} />
+		<div class="ruled-lines">
+			<div class="lines-container">
+				{#each Array.from({ length: writeLines }) as _}
+					<div class="line" style="height: 1.8rem"></div>
+				{/each}
+			</div>
+		</div>
 	</div>
 {:else}
 <Card class="border-l-4 border-l-indigo-400 bg-indigo-50/50 rh-pad-card">
@@ -68,3 +74,24 @@
 	</div>
 </Card>
 {/if}
+<style>
+	.ruled-lines {
+		margin: 1rem 0;
+	}
+
+	.ruled-lines .lines-container {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.ruled-lines .line {
+		border-bottom: 1px solid #d1d5db;
+		margin-bottom: 0.25rem;
+	}
+
+	@media print {
+		.ruled-lines .line {
+			border-bottom: 1px solid #9ca3af;
+		}
+	}
+</style>

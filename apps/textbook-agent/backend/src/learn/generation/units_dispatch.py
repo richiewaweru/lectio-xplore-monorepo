@@ -1,4 +1,10 @@
-"""Units-owned dispatch seam for persisted Component Lectio generations."""
+"""Units-owned dispatch seam for persisted Learn generations.
+
+The ordinary component Lectio execution path is retired. Active Learn unit
+generation uses the LearnDocument v2 / native_learn document path via
+``produce_learn_from_approved_teaching`` after shared teaching approval.
+This module rejects retired markers and refuses to launch the deleted package.
+"""
 
 from __future__ import annotations
 
@@ -6,46 +12,29 @@ import asyncio
 import logging
 from typing import Any
 
-from learn.generation.pipeline_dispatch import resolve_generation_pipeline
-from learn.generation.component_lectio.launcher import launch_component_lectio
-from learn.generation.component_lectio.service import (
-    persist_component_lectio_failure,
-    persist_component_lectio_start,
+from learn.generation.pipeline_dispatch import (
+    COMPONENT_LECTIO_RETIRED,
+    resolve_generation_pipeline,
 )
 
 _tasks: dict[str, asyncio.Task[None]] = {}
 log = logging.getLogger(__name__)
 
 
-async def _run_units_generation(generation_id: str) -> None:
-    try:
-        await launch_component_lectio(generation_id=generation_id)
-    except Exception as exc:  # noqa: BLE001
-        log.error(
-            "units_component_lectio_failed generation_id=%s error_type=%s",
-            generation_id,
-            type(exc).__name__,
-        )
-        try:
-            await persist_component_lectio_failure(generation_id, exc)
-        except Exception:  # noqa: BLE001
-            log.exception(
-                "units_component_lectio_failure_persist_failed generation_id=%s", generation_id
-            )
-
-
 async def dispatch_units_generation(
     *, generation_id: str, user_id: str, state: dict[str, Any]
 ) -> str:
-    """Start the persisted pipeline without allowing a Studio fallback."""
+    """Refuse retired Component Lectio launches; document path is elsewhere."""
+    _ = user_id
     pipeline = resolve_generation_pipeline(state, generation_id=generation_id)
-    if pipeline != "component_lectio":
-        raise ValueError("This Units generation is not admitted to Component Lectio")
-    existing = _tasks.get(generation_id)
-    if existing is None or existing.done():
-        await persist_component_lectio_start(generation_id)
-        _tasks[generation_id] = asyncio.create_task(_run_units_generation(generation_id))
-    return pipeline
+    if pipeline is None:
+        raise ValueError(COMPONENT_LECTIO_RETIRED)
+    # Active markers admit identity only; production runs through native
+    # document execution after teaching approval, not this launcher.
+    raise ValueError(
+        "Use the learn document path (produce_learn_from_approved_teaching); "
+        "direct Units component execution is retired"
+    )
 
 
 def units_dispatch_task(generation_id: str) -> asyncio.Task[None] | None:

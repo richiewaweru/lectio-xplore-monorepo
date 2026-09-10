@@ -308,8 +308,4 @@ async def test_a04_g06_policy_content_schemas_and_ordering_preserved() -> None:
 
 @pytest.mark.asyncio
 async def test_a04_payload_strategies_audit_does_not_restore_wide_pipeline() -> None:
-    from learn.generation.component_lectio.payload_strategies import strategy_for
-
-    assert strategy_for("content", "explanation-block") == "content_section_writer"
-    assert strategy_for("content", "quiz-check") is None
-    assert run_learn_authoring is not None
+    pytest.skip("Phase M: component_lectio payload_strategies deleted")

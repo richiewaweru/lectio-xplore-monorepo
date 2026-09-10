@@ -130,9 +130,10 @@ def test_order_action_present_is_not_an_error() -> None:
             source_question_ids=[],
             learner_action=LearnerActionBrief(
                 action="order-items",
-                support_level="independent",
-                evidence="Order reconstructed",
-                source_item_ids=[],
+                target="life cycle order",
+                purpose="Check understanding",
+                expected_evidence="Order reconstructed",
+                difficulty="independent",
             ),
         )
     )

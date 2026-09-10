@@ -4,7 +4,7 @@ Authority for:
 - default selection from settings
 - persist identity on generation admission
 - resolve persisted identity for status/retry/resume
-- historical markers are retained as inert metadata and never admitted
+- historical markers (including retired component Lectio) are inert
 """
 
 from __future__ import annotations
@@ -20,9 +20,14 @@ log = logging.getLogger(__name__)
 
 PIPELINE_VERSION = 1
 GenerationPipelineName = GenerationPipeline
-_HISTORICAL_PIPELINE_MARKERS = frozenset({"v3_studio"})
+_ACTIVE_PIPELINES = frozenset({"native_learn", "learn_document"})
+_HISTORICAL_PIPELINE_MARKERS = frozenset({"v3_studio", "component_lectio"})
 
 CONTROL_KEY = "control"
+
+COMPONENT_LECTIO_RETIRED = (
+    "component_lectio retired; use learn document path"
+)
 
 
 def select_default_pipeline() -> GenerationPipeline:
@@ -30,8 +35,8 @@ def select_default_pipeline() -> GenerationPipeline:
 
 
 def pipeline_control_payload(pipeline: GenerationPipeline) -> dict[str, Any]:
-    if pipeline != "component_lectio":
-        raise ValueError("Only Component Lectio generations can be admitted")
+    if pipeline not in _ACTIVE_PIPELINES:
+        raise ValueError(COMPONENT_LECTIO_RETIRED)
     return {
         "pipeline": pipeline,
         "pipeline_version": PIPELINE_VERSION,
@@ -84,8 +89,8 @@ def resolve_generation_pipeline(
     control = _control_from_state(state)
     if control is not None:
         raw = control.get("pipeline")
-        if raw == "component_lectio":
-            return "component_lectio"
+        if raw in _ACTIVE_PIPELINES:
+            return raw  # type: ignore[return-value]
         if raw in _HISTORICAL_PIPELINE_MARKERS:
             log.info(
                 "generation_pipeline_retired generation_id=%s pipeline=%s",
@@ -116,6 +121,6 @@ def pipeline_from_state_or_default(state: dict[str, Any] | None) -> GenerationPi
     if control is None:
         return None
     raw = control.get("pipeline")
-    if raw == "component_lectio":
-        return "component_lectio"
+    if raw in _ACTIVE_PIPELINES:
+        return raw  # type: ignore[return-value]
     return None

@@ -78,13 +78,16 @@ class RecordingChoose:
 
 def _summarise_plan(*, interaction: bool = False) -> TeachingPlan:
     learner = None
+    source_question_ids: list[str] = []
     if interaction:
         learner = LearnerActionBrief(
             action="choose-one",
-            support_level="guided",
-            evidence="Pick the best summary.",
-            source_item_ids=["q1"],
+            target="best summary",
+            purpose="Check understanding",
+            expected_evidence="Pick the best summary.",
+            difficulty="guided",
         )
+        source_question_ids = ["q1"]
     return TeachingPlan(
         arc="Evaporation explanation",
         teaching_plan_id="tp-r03-learn",
@@ -100,6 +103,7 @@ def _summarise_plan(*, interaction: bool = False) -> TeachingPlan:
                         intent="summarise",
                         brief=BRIEF,
                         evidence="Learner reads a causal prose explanation.",
+                        source_question_ids=source_question_ids,
                         learner_action=learner,
                     )
                 ],
@@ -126,9 +130,10 @@ async def test_r03_g01_ambiguous_learn_invokes_selector_through_production() -> 
         evidence="Order evidence",
         learner_action=LearnerActionBrief(
             action="order-items",
-            support_level="guided",
-            evidence="Order the stages.",
-            source_item_ids=[],
+            target="stages order",
+            purpose="Check understanding",
+            expected_evidence="Order the stages.",
+            difficulty="guided",
         ),
     )
     plan = TeachingPlan(

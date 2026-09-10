@@ -175,16 +175,9 @@ def rank_learn_content_candidates(
 
 
 def _source_and_deps_for_block(block: Any) -> tuple[list[str], list[str]]:
+    """Provenance lives on the block: source_question_ids + stimulus_dependencies."""
     source_ids = list(block.source_question_ids or [])
-    deps: list[str] = []
-    if block.learner_action is not None:
-        deps = list(block.learner_action.dependencies or [])
-        # order-items must not inherit MC/open question ids from the
-        # block — Sequence authors new steps (empty sources allowed).
-        if block.learner_action.action == "order-items":
-            source_ids = list(block.learner_action.source_item_ids or [])
-        elif block.learner_action.source_item_ids:
-            source_ids = list(block.learner_action.source_item_ids)
+    deps = list(block.stimulus_dependencies or [])
     return source_ids, deps
 
 

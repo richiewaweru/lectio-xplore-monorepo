@@ -97,8 +97,10 @@ def _numeric_order() -> object:
                         evidence="Learner calculates distance from speed and time.",
                         learner_action=LearnerActionBrief(
                             action="enter-number",
-                            support_level="guided",
-                            evidence="Learner calculates distance from speed and time.",
+                            target="distance from speed and time",
+                            purpose="Check understanding",
+                            expected_evidence="Learner calculates distance from speed and time.",
+                            difficulty="guided",
                         ),
                     )
                 ],
@@ -153,8 +155,10 @@ def test_r01_g01_provider_prompt_feedback_survive_closed_production() -> None:
                         evidence="Calculate distance.",
                         learner_action=LearnerActionBrief(
                             action="enter-number",
-                            support_level="guided",
-                            evidence="Calculate distance.",
+                            target="distance calculation",
+                            purpose="Check understanding",
+                            expected_evidence="Calculate distance.",
+                            difficulty="guided",
                         ),
                     )
                 ],

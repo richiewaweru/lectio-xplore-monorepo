@@ -1,7 +1,11 @@
-"""Learn native selection policy — consumer narrowing only (P04).
+"""Learn native selection policy — consumer narrowing only (P04 / Phase G).
 
 May offer/deny capabilities and budgets. Must not rewrite purpose, schemas or
-evaluator semantics owned by @lectio/learn.
+evaluator semantics owned by retained interaction contracts.
+
+Ordinary content generation is owned by the Learn document realizer (shared
+document primitives). ``offered_content`` stays empty so legacy component ids
+are not policy-admitted; writers still exist until Phase M hard-delete.
 """
 
 from __future__ import annotations
@@ -11,47 +15,23 @@ import hashlib
 import json
 from typing import Any
 
-# Sequence is offered here so reconstruct-order / order-items can select it
-# without editing component definitions (P04-N01 / P04-N06). P06 adds Builder
-# repair and marks Sequence generation-ready in the package catalogue.
+from learn.interactions.registry import (
+    DELETED_INTERACTIONS,
+    RETAINED_INTERACTIONS,
+    RETIRED_ORDINARY_CONTENT_IDS,
+)
+
 LEARN_NATIVE_POLICY_BODY: dict[str, Any] = {
     "version": "1",
     "path": "learn",
     "selector": "content_interactions",
     "writer": "learn_components",
-    # IDs must match @lectio/learn capability catalogue rows (not aliases).
-    "offered_content": [
-        "section-header",
-        "hook-hero",
-        "explanation-block",
-        "definition-card",
-        "key-fact",
-        "callout-block",
-        "process-steps",
-        "worked-example-card",
-        "summary-block",
-        "timeline-block",
-        "diagram-compare",
-        "quiz-check",
-        "fill-in-blank",
-    ],
-    # Policy-admitted interactions (may still be package `planned` / incomplete).
-    "offered_interactions": [
-        "sequence",
-        "choice",
-        "multi-select",
-        "fill-blank",
-        "numeric",
-        "short-response",
-        "match-pairs",
-        "classify",
-    ],
-    "denied_capabilities": [
-        "image-hotspot",
-        "drag-label",
-        "image-block",
-        "video-embed",
-    ],
+    # Document realizer is the production ordinary-content path (Phase E/F).
+    # Keep empty until Phase M removes legacy content capability writers.
+    "offered_content": [],
+    # Policy-admitted interactions only (Phase G KEEP set).
+    "offered_interactions": sorted(RETAINED_INTERACTIONS),
+    "denied_capabilities": sorted(DELETED_INTERACTIONS | RETIRED_ORDINARY_CONTENT_IDS),
     "budgets": {
         "max_interactions_per_block": 1,
         "max_content_per_block": 1,
