@@ -1,0 +1,17 @@
+{
+  "pack": "policy-cleanup-v4",
+  "branch": "feat/unit-print-learn",
+  "baseline": "c3563abbb141443bc0131917d09de81a8e4c118a",
+  "reviewed_baseline": "c3563abbb141443bc0131917d09de81a8e4c118a",
+  "status": "IN_PROGRESS",
+  "verified_commit": null,
+  "phases": {
+    "P0": "IN_PROGRESS",
+    "P1": "NOT_RUN",
+    "P2": "NOT_RUN",
+    "P3": "NOT_RUN",
+    "P4": "NOT_RUN"
+  },
+  "gates_pass": "0/24",
+  "live_verification": "DEFERRED"
+}
