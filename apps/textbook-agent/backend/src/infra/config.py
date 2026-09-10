@@ -157,7 +157,7 @@ class Settings(BaseSettings):
     # Whole-lesson native planning: semantic tiers (model names are configurable).
     # Prefer PAGE_MODEL_*; fall back to the live V3 slot model names from Textbook agent.
     page_model_standard: str = Field(
-        default="deepseek-v4-pro",
+        default="deepseek-flash",
         validation_alias=AliasChoices(
             "PAGE_MODEL_STANDARD",
             "V3_STANDARD_MODEL_NAME",
@@ -165,7 +165,7 @@ class Settings(BaseSettings):
         ),
     )
     page_model_fast: str = Field(
-        default="deepseek-v4-flash",
+        default="deepseek-flash",
         validation_alias=AliasChoices(
             "PAGE_MODEL_FAST",
             "V3_FAST_MODEL_NAME",

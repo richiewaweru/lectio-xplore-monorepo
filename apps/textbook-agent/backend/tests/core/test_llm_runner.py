@@ -101,7 +101,7 @@ async def test_run_llm_publishes_cache_usage_fields_on_success() -> None:
             slot=ModelSlot.STANDARD,
             spec=ModelSpec(
                 family=ModelFamily.OPENAI_COMPATIBLE,
-                model_name="deepseek-v4-pro",
+                model_name="deepseek-flash",
                 base_url="https://api.deepseek.com",
             ),
             node="v3_stage2_expander",
@@ -154,7 +154,7 @@ async def test_run_llm_raises_typed_error_for_length_truncation() -> None:
             slot=ModelSlot.STANDARD,
             spec=ModelSpec(
                 family=ModelFamily.OPENAI_COMPATIBLE,
-                model_name="deepseek-v4-pro",
+                model_name="deepseek-flash",
                 base_url="https://api.deepseek.com",
             ),
             node="v3_stage1_planner",

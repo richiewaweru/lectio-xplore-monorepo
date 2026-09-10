@@ -74,15 +74,15 @@ validated Xplore walkthrough:
 | `DEEPSEEK_API_KEY` | deployment secret |
 | `ANTHROPIC_API_KEY` | deployment secret; used by the configured visual-QC slot |
 | `V3_FAST_PROVIDER` | `openai_compatible` |
-| `V3_FAST_MODEL_NAME` | `deepseek-v4-flash` |
+| `V3_FAST_MODEL_NAME` | `deepseek-flash` |
 | `V3_FAST_BASE_URL` | `https://api.deepseek.com` |
 | `V3_FAST_API_KEY_ENV` | `DEEPSEEK_API_KEY` |
 | `V3_STANDARD_PROVIDER` | `openai_compatible` |
-| `V3_STANDARD_MODEL_NAME` | `deepseek-v4-pro` |
+| `V3_STANDARD_MODEL_NAME` | `deepseek-flash` |
 | `V3_STANDARD_BASE_URL` | `https://api.deepseek.com` |
 | `V3_STANDARD_API_KEY_ENV` | `DEEPSEEK_API_KEY` |
 | `V3_PREMIUM_PROVIDER` | `openai_compatible` |
-| `V3_PREMIUM_MODEL_NAME` | `deepseek-v4-pro` |
+| `V3_PREMIUM_MODEL_NAME` | `deepseek-flash` |
 | `V3_PREMIUM_BASE_URL` | `https://api.deepseek.com` |
 | `V3_PREMIUM_API_KEY_ENV` | `DEEPSEEK_API_KEY` |
 | `V3_STAGE2_PARALLEL` | `true` |

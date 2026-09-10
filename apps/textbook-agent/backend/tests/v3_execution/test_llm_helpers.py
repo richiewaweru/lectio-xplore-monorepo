@@ -18,7 +18,7 @@ class _ExampleModel(BaseModel):
 def _deepseek_spec() -> ModelSpec:
     return ModelSpec(
         family=ModelFamily.OPENAI_COMPATIBLE,
-        model_name="deepseek-v4-flash",
+        model_name="deepseek-flash",
         base_url="https://api.deepseek.com",
         api_key_env="DEEPSEEK_API_KEY",
     )

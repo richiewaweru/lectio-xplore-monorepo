@@ -7,7 +7,7 @@ from core.llm.transport import DEEPSEEK_BETA_BASE_URL, structured_base_url
 def test_structured_base_url_uses_beta_for_deepseek_strict() -> None:
     spec = ModelSpec(
         family=ModelFamily.OPENAI_COMPATIBLE,
-        model_name="deepseek-v4-flash",
+        model_name="deepseek-flash",
         base_url="https://api.deepseek.com",
         api_key_env="DEEPSEEK_API_KEY",
     )
@@ -19,7 +19,7 @@ def test_build_structured_model_preserves_normal_base_for_prompted(monkeypatch) 
     monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
     spec = ModelSpec(
         family=ModelFamily.OPENAI_COMPATIBLE,
-        model_name="deepseek-v4-flash",
+        model_name="deepseek-flash",
         base_url="https://api.deepseek.com",
         api_key_env="DEEPSEEK_API_KEY",
     )

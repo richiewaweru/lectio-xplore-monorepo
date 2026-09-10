@@ -117,7 +117,7 @@ async def test_propose_intent_uses_prompted_output_for_deepseek() -> None:
                 ),
                 ModelSpec(
                     family=ModelFamily.OPENAI_COMPATIBLE,
-                    model_name="deepseek-v4-pro",
+                    model_name="deepseek-flash",
                     base_url="https://api.deepseek.com",
                     api_key_env="DEEPSEEK_API_KEY",
                 ),

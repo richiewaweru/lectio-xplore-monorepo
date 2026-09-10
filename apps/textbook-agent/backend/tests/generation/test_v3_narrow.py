@@ -145,7 +145,7 @@ async def test_narrow_uses_prompted_output_for_deepseek_models():
                 ),
                 ModelSpec(
                     family=ModelFamily.OPENAI_COMPATIBLE,
-                    model_name="deepseek-v4-flash",
+                    model_name="deepseek-flash",
                     base_url="https://api.deepseek.com",
                     api_key_env="DEEPSEEK_API_KEY",
                 ),

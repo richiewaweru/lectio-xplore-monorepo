@@ -27,7 +27,7 @@ async def test_live_deepseek_strict_typed_schema() -> None:
 
     monkeypatch = pytest.MonkeyPatch()
     monkeypatch.setenv("V3_FAST_PROVIDER", "openai_compatible")
-    monkeypatch.setenv("V3_FAST_MODEL_NAME", "deepseek-v4-flash")
+    monkeypatch.setenv("V3_FAST_MODEL_NAME", "deepseek-flash")
     monkeypatch.setenv("V3_FAST_BASE_URL", "https://api.deepseek.com")
     monkeypatch.setenv("V3_FAST_API_KEY_ENV", "DEEPSEEK_API_KEY")
     monkeypatch.setenv("DEEPSEEK_STRUCTURED_MODE", "strict_tool")
@@ -76,7 +76,7 @@ def test_prepare_structured_agent_uses_beta_model_for_deepseek_strict() -> None:
     os.environ.setdefault("DEEPSEEK_API_KEY", "test-key")
     spec = ModelSpec(
         family=ModelFamily.OPENAI_COMPATIBLE,
-        model_name="deepseek-v4-flash",
+        model_name="deepseek-flash",
         base_url="https://api.deepseek.com",
         api_key_env="DEEPSEEK_API_KEY",
     )

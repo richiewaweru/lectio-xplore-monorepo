@@ -138,7 +138,7 @@ def test_stage2_uses_helper_backstop_without_node_level_cap() -> None:
 @pytest.mark.asyncio
 async def test_call_stage2_section_omits_extended_cache_beta_header(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("V3_STANDARD_PROVIDER", "openai_compatible")
-    monkeypatch.setenv("V3_STANDARD_MODEL_NAME", "deepseek-v4-pro")
+    monkeypatch.setenv("V3_STANDARD_MODEL_NAME", "deepseek-flash")
     monkeypatch.setenv("V3_STANDARD_BASE_URL", "https://api.deepseek.com")
     monkeypatch.setenv("V3_STANDARD_API_KEY_ENV", "DEEPSEEK_API_KEY")
     monkeypatch.setenv("DEEPSEEK_API_KEY", "test-deepseek-key")
@@ -156,7 +156,7 @@ async def test_call_stage2_section_omits_extended_cache_beta_header(monkeypatch:
             "get_v3_spec",
             return_value=ModelSpec(
                 family=ModelFamily.OPENAI_COMPATIBLE,
-                model_name="deepseek-v4-pro",
+                model_name="deepseek-flash",
                 base_url="https://api.deepseek.com",
             ),
         ),

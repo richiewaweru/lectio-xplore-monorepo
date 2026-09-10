@@ -32,4 +32,10 @@ or `run_structured_agent` instead of adding provider-specific branching locally.
 
 - To keep Anthropic as the deployment baseline, leave `V3_*` slot overrides unset.
 - To run DeepSeek, set the `V3_*` slot overrides plus `DEEPSEEK_API_KEY`.
+- The supported DeepSeek posture uses `deepseek-flash` (DeepSeek-V4.1-Flash) for
+  `V3_FAST_*`, `V3_STANDARD_*`, and `V3_PREMIUM_*`. Slots still differ by
+  `max_tokens` and per-node thinking policy; they no longer point at different
+  model IDs. Legacy IDs `deepseek-v4-flash` and `deepseek-v4-pro` temporarily
+  route to V4.1 Flash on DeepSeek's side, but new config should use
+  `deepseek-flash`.
 - Roll back strict mode with `DEEPSEEK_STRUCTURED_MODE=prompted_json`.

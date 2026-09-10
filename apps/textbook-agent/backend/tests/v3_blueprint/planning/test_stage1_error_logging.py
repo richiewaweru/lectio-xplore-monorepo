@@ -120,7 +120,7 @@ async def test_call_stage1_uses_shared_model_settings_helper() -> None:
             "os.environ",
             {
                 "V3_STANDARD_PROVIDER": "openai_compatible",
-                "V3_STANDARD_MODEL_NAME": "deepseek-v4-pro",
+                "V3_STANDARD_MODEL_NAME": "deepseek-flash",
                 "V3_STANDARD_BASE_URL": "https://api.deepseek.com",
                 "V3_STANDARD_API_KEY_ENV": "DEEPSEEK_API_KEY",
                 "DEEPSEEK_API_KEY": "test-deepseek-key",
