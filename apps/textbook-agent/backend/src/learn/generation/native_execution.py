@@ -1,8 +1,7 @@
 """Persist native Learn outputs from an approved shared teaching revision.
 
-Production Learn generation uses the LearnDocument v2 document path only.
-Does not substitute prepared plans or bypass teaching acceptance. Application
-orchestration loads the shared teaching state and passes the accepted plan here.
+Production Learn generation uses the LearnDocument v2 document path:
+compose (LLM) → write ordinary primitives (LLM) → interaction writer → assemble.
 """
 
 from __future__ import annotations
@@ -16,11 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from application.unit_lesson.realizations import admit_realization
 from core.database.models import EditableLessonModel, GenerationModel
 from curriculum.teaching_plan.models import TeachingPlan
-from infra.authoring import AuthoringEngine, AuthoringProvider
+from infra.authoring import AuthoringEngine, AuthoringProvider, LLMAuthoringProvider
 from infra.authoring.capability_selector import ChooseFn
 from learn.generation.native_production import (
     package_contract_hash,
-    produce_learn_document_from_teaching,
+    produce_learn_document_from_teaching_async,
     teaching_plan_content_hash,
 )
 from learn.generation.preparation_context import (
@@ -70,29 +69,35 @@ async def produce_learn_from_approved_teaching(
 ) -> dict[str, Any]:
     """Run LearnDocument v2 production and persist generation + editable draft.
 
-    Unused closed-selection parameters (provider/engine/choose/approved_items)
-    remain on the signature for call-site compatibility; production is document
-    realizer only.
+    Provider/engine are required for real writing. When omitted, defaults to
+    ``LLMAuthoringProvider`` so Unit production does not silently stub content.
     """
-    _ = (available_asset_ids, approved_items, provider, engine, choose)
-
+    _ = choose  # closed-selection choose is unused on the v2 compose path
     output_id = f"learn-out-{uuid.uuid4().hex[:12]}"
     prep = preparation_context
     if prep is None:
         prep_generation = await session.get(GenerationModel, preparation_generation_id)
         prep = _preparation_from_generation(prep_generation)
-    _ = prep  # preparation is accepted from chunked state / caller; v2 path is plan-driven
 
     body = dict(policy) if policy is not None else default_learn_policy()
     _, policy_hash = policy_version_and_hash(body)
     pkg_hash = package_contract_hash()
 
-    production = produce_learn_document_from_teaching(
+    selected_provider = provider or LLMAuthoringProvider(node_name="v3_block_writer_fast")
+    selected_engine = engine
+
+    production = await produce_learn_document_from_teaching_async(
         teaching_plan=teaching_plan,
         title=title,
         subject=subject,
         source_generation_id=output_id,
         lesson_id=output_id,
+        provider=selected_provider,
+        engine=selected_engine,
+        preparation_context=prep,
+        available_asset_ids=available_asset_ids,
+        approved_items=approved_items,
+        allow_heuristic_composition_fallback=True,
     )
     document = dict(production["document"])
     document["id"] = output_id
@@ -108,7 +113,6 @@ async def produce_learn_from_approved_teaching(
         status="completed",
         requested_template_id="lesson",
         requested_preset_id="standard",
-        # Only set pack_id when it is a real learning_packs row (FK).
         pack_id=pack_id,
         created_at=_utcnow(),
         document_json=document,
@@ -123,14 +127,14 @@ async def produce_learn_from_approved_teaching(
             "teaching_plan_revision": teaching_plan.revision,
             "teaching_plan_hash": plan_hash,
             "selection_trace": {
-                "form_prompt": "learn_document_v2",
+                "form_prompt": "learn_document_v2_compose_write",
                 "composition_plan": (
                     production["composition_plan"].model_dump(mode="json")
                     if hasattr(production["composition_plan"], "model_dump")
                     else production["composition_plan"]
                 ),
             },
-            "form_prompt": "learn_document_v2",
+            "form_prompt": "learn_document_v2_compose_write",
         },
     )
     session.add(generation)

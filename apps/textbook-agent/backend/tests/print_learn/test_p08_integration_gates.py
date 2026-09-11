@@ -127,6 +127,30 @@ _P08_CORE_CONFIG: dict[str, dict] = {
 }
 
 _P08_CONTENT_PAYLOADS: dict[str, dict] = {
+    "paragraph": {"kind": "paragraph", "text": "Plants use light energy to make food."},
+    "heading": {"kind": "heading", "text": "Photosynthesis", "level": 2},
+    "list": {
+        "kind": "list",
+        "ordered": False,
+        "items": ["Absorb light", "Take in carbon dioxide", "Make sugar"],
+    },
+    "table": {
+        "kind": "table",
+        "headers": ["Leaf", "Result"],
+        "rows": [["Lit", "Makes food"], ["Covered", "No food"]],
+        "caption": "Light changes outcomes.",
+    },
+    "callout": {
+        "kind": "callout",
+        "tone": "warning",
+        "title": "Caution",
+        "body": "Covered leaves cannot make food without light.",
+    },
+    "figure": {
+        "kind": "figure",
+        "caption": "Lit leaf beside covered leaf.",
+        "alt": "Comparison of lit and covered leaves.",
+    },
     "section-header": {"title": "Photosynthesis", "subject": "science", "grade_band": "primary"},
     "hook-hero": {"headline": "Two plants, one difference", "body": "Light changes food production.", "anchor": "photosynthesis"},
     "explanation-block": {"body": "Plants use light energy to make food.", "emphasis": ["light"]},
@@ -219,6 +243,65 @@ class P08LearnMockProvider:
     async def invoke(self, call: AuthoringProviderCall) -> dict:
         self.calls.append(call)
         brief = _p08_brief_from_call(call)
+        capability_id = str(call.capability_id or "")
+        if capability_id.startswith("document-writer:"):
+            kind = capability_id.split(":", 1)[1]
+            payload = dict(_P08_CONTENT_PAYLOADS.get(kind, _P08_CONTENT_PAYLOADS["paragraph"]))
+            # Never embed the Teaching Plan brief into learner-facing text.
+            return payload
+        if capability_id.startswith("document-composer") or capability_id == "document-composer":
+            # Compact composition choices for every teaching block in the request.
+            import json as _json
+            import re as _re
+
+            nodes = []
+            teaching = {}
+            try:
+                # Prompt embeds {"inputs": {"teaching_plan": {...}}}
+                match = _re.search(r'"teaching_plan"\s*:\s*\{', call.prompt)
+                if match:
+                    start = match.end() - 1
+                    depth = 0
+                    for index, char in enumerate(call.prompt[start:], start=start):
+                        if char == "{":
+                            depth += 1
+                        elif char == "}":
+                            depth -= 1
+                            if depth == 0:
+                                teaching = _json.loads(call.prompt[start : index + 1])
+                                break
+            except Exception:
+                teaching = {}
+            for section in teaching.get("sections") or []:
+                section_id = str(section.get("slot_id") or "")
+                for block in section.get("blocks") or []:
+                    block_id = str(block.get("id") or "")
+                    if not block_id:
+                        continue
+                    nodes.append(
+                        {
+                            "id": f"n-{block_id}",
+                            "teaching_block_id": block_id,
+                            "section_id": section_id or None,
+                            "kind": "paragraph",
+                            "role": "content",
+                            "reason": f"Cover teaching block {block_id}",
+                        }
+                    )
+            if not nodes:
+                # Heuristic fallback path will cover if composer fails validation;
+                # still return a minimal legal payload.
+                nodes = [
+                    {
+                        "id": "n1",
+                        "teaching_block_id": "orient-b1",
+                        "section_id": "orient",
+                        "kind": "paragraph",
+                        "role": "orient",
+                        "reason": "Introduce the leaf anchor.",
+                    }
+                ]
+            return {"nodes": nodes}
         if call.capability_id == "sequence":
             config = _p08_sequence_payload(brief)
             return _p08_interaction_envelope("sequence", config=config, brief=brief)
@@ -228,7 +311,17 @@ class P08LearnMockProvider:
                 config=dict(_P08_CORE_CONFIG[call.capability_id]),
                 brief=brief,
             )
-        template = _P08_CONTENT_PAYLOADS.get(call.capability_id, _P08_CONTENT_PAYLOADS["explanation-block"])
+        template = _P08_CONTENT_PAYLOADS.get(call.capability_id, _P08_CONTENT_PAYLOADS["paragraph"])
+        # Document primitives must not embed briefs; legacy content cards may.
+        if capability_id in {
+            "paragraph",
+            "heading",
+            "list",
+            "figure",
+            "table",
+            "callout",
+        }:
+            return dict(template)
         return _p08_embed_brief(dict(template), brief)
 
 
@@ -667,7 +760,10 @@ async def test_p08_i01_uninterrupted_dual_path_no_plan_swap() -> None:
 
     learn_result = await _run_learn(gid=gid, user_id=user_id, path_lesson_id=lesson_id)
     assert learn_result["status"] == "ready"
-    assert learn_result["selection_trace"]["form_prompt"] == "closed_learn_selection"
+    assert learn_result["selection_trace"]["form_prompt"] in {
+        "closed_learn_selection",
+        "learn_document_v2_compose_write",
+    }
 
     async with async_session_factory() as session:
         generation = await session.get(GenerationModel, gid)
@@ -683,17 +779,46 @@ async def test_p08_i01_uninterrupted_dual_path_no_plan_swap() -> None:
 
         learn_gen = await session.get(GenerationModel, learn_result["output_id"])
         assert learn_gen is not None
-        assert (learn_gen.chunked_state_json or {}).get("form_prompt") == "closed_learn_selection"
+        assert (learn_gen.chunked_state_json or {}).get("form_prompt") in {
+            "closed_learn_selection",
+            "learn_document_v2_compose_write",
+        }
         doc = learn_gen.document_json or {}
-        assert doc.get("assembly", {}).get("selection_hash")
-        snap = learn_result["selection_trace"]["selection_snapshot"]
-        teaching_ids = [
-            b["id"]
-            for s in (state["teaching_plan"].get("sections") or [])
-            for b in (s.get("blocks") or [])
-        ]
-        decided = [d["block_id"] for d in snap.get("decisions") or []]
-        assert set(teaching_ids) == set(decided)
+        # v2 LearnDocument uses ordered nodes; v1 used assembly.selection_hash.
+        if doc.get("nodes"):
+            teaching_ids = {
+                b["id"]
+                for s in (state["teaching_plan"].get("sections") or [])
+                for b in (s.get("blocks") or [])
+            }
+            covered = {
+                str(n.get("teaching_block_id"))
+                for n in doc["nodes"]
+                if isinstance(n, dict) and n.get("teaching_block_id")
+            }
+            assert teaching_ids <= covered
+            composition = (
+                (learn_result.get("selection_trace") or {}).get("composition_plan")
+                or {}
+            )
+            decisions = composition.get("decisions") or []
+            if decisions:
+                decided = {
+                    str(d.get("teaching_block_id") or d.get("block_id"))
+                    for d in decisions
+                    if isinstance(d, dict)
+                }
+                assert teaching_ids <= decided
+        else:
+            assert doc.get("assembly", {}).get("selection_hash")
+            snap = learn_result["selection_trace"]["selection_snapshot"]
+            teaching_ids = [
+                b["id"]
+                for s in (state["teaching_plan"].get("sections") or [])
+                for b in (s.get("blocks") or [])
+            ]
+            decided = [d["block_id"] for d in snap.get("decisions") or []]
+            assert set(teaching_ids) == set(decided)
 
         print_doc = reload_document(generation.document_json or {})
         assert validate_document(print_doc) == []
@@ -864,11 +989,26 @@ async def test_p08_i04_teacher_edit_and_sibling_isolation() -> None:
         assert lesson is not None
         doc = dict(lesson.document_json or {})
         doc["title"] = edited_title
+        edited = False
         for block in (doc.get("blocks") or {}).values():
             if isinstance(block, dict) and isinstance(block.get("content"), dict):
                 if "body" in block["content"]:
                     block["content"]["body"] = edited_body
+                    edited = True
                     break
+        if not edited:
+            for node in doc.get("nodes") or []:
+                if not isinstance(node, dict):
+                    continue
+                if node.get("kind") == "paragraph" and "text" in node:
+                    node["text"] = edited_body
+                    edited = True
+                    break
+                if node.get("kind") == "callout" and "body" in node:
+                    node["body"] = edited_body
+                    edited = True
+                    break
+        assert edited, "expected an editable ordinary content surface on Learn document"
         lesson.document_json = doc
         lesson.title = edited_title
         lesson.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)

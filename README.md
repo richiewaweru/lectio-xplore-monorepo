@@ -7,8 +7,8 @@ Unit-driven curriculum product: **Print** (PDF) and **Learn** (interactive) real
 | Path | Package | Role |
 |---|---|---|
 | `packages/lectio-page` | `@lectio/page` | Print document engine |
-| `packages/lectio-learn` | `@lectio/learn` | Interactive Learn components |
-| `apps/textbook-agent` | Xplore app | FastAPI + SvelteKit product |
+| `packages/lectio-contracts` | `@lectio/contracts` | Shared instructional vocabulary |
+| `apps/textbook-agent` | Xplore app | FastAPI + SvelteKit product (Learn interactions app-owned) |
 
 ## Architecture
 

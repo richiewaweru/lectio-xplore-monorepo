@@ -1,4 +1,4 @@
-import type { LessonDocument } from '@lectio/learn';
+import type { BuilderDocument } from '$lib/learn/authoring/builder/api/lesson-crud';
 import { isApiError } from '$lib/api/errors';
 import {
 	deleteBuilderLesson,
@@ -60,7 +60,7 @@ export async function queueLessonSave(documentId: string): Promise<void> {
 	});
 }
 
-export async function saveLessonToServer(document: LessonDocument): Promise<void> {
+export async function saveLessonToServer(document: BuilderDocument): Promise<void> {
 	ensureBuilderSyncAdapterRegistered();
 	try {
 		await updateBuilderLesson(document.id, {
@@ -82,11 +82,14 @@ export async function flushBuilderSyncQueue(): Promise<SyncResult> {
 
 export async function loadBuilderLessonWithFallback(
 	lessonId: string
-): Promise<{ document: LessonDocument; source: 'server' | 'idb' }> {
+): Promise<{ document: BuilderDocument; source: 'server' | 'idb' }> {
 	ensureBuilderSyncAdapterRegistered();
 	try {
 		const remote = await getBuilderLesson(lessonId);
-		await saveDocument(remote.document);
+		// Cache is best-effort — never block the editor on IndexedDB upgrade/contention.
+		void saveDocument(remote.document as Parameters<typeof saveDocument>[0]).catch((error) => {
+			console.warn('[builder] idb cache write skipped', error);
+		});
 		return { document: remote.document, source: 'server' };
 	} catch (error) {
 		if (!_isRetryableSyncError(error)) {
@@ -96,7 +99,6 @@ export async function loadBuilderLessonWithFallback(
 		if (!cached) {
 			throw error;
 		}
-		return { document: cached, source: 'idb' };
+		return { document: cached as BuilderDocument, source: 'idb' };
 	}
 }
-

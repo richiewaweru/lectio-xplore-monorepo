@@ -1,7 +1,0 @@
-Capability: diagram-block.
-
-Write a diagram description or structured visual payload.
-
-- Name the visual relationship the learner should inspect.
-- Include required labels and relationships.
-- Do not rely on decorative imagery to carry essential teaching.

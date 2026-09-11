@@ -1,4 +1,4 @@
-"""Unit tests for Print/Learn document realizers (Phase E)."""
+"""Unit tests for Print/Learn document realizers (Phase E / correction Wave 1)."""
 
 from __future__ import annotations
 
@@ -8,15 +8,18 @@ from curriculum.teaching_plan.models import (
     TeachingPlanBlock,
     TeachingPlanSection,
 )
-from document.composition import (
-    DOCUMENT_PRIMITIVE_KINDS,
-    LEGACY_LEARN_COMPONENT_IDS,
-    LEARN_RETAINED_INTERACTIONS,
-    PRINT_ONLY_LAYOUT_OBJECTS,
-    PRINT_TASK_OBJECTS,
-)
+from document.models import DOCUMENT_PRIMITIVE_KINDS
 from learn.generation.document_realizer import realize_learn_document
+from learn.interactions.registry import (
+    RETAINED_INTERACTIONS,
+    RETIRED_ORDINARY_CONTENT_IDS,
+)
+from print.generation.document_form_map import PRINT_ONLY_LAYOUT_OBJECTS
 from print.generation.document_realizer import realize_print_document
+from print.generation.task_treatments import PRINT_TASK_TREATMENTS
+
+# Mirror of Learn-side forbid set used in assertions (no Learn→Print import in prod).
+_LEARN_FORBIDDEN_PRINT = PRINT_ONLY_LAYOUT_OBJECTS | PRINT_TASK_TREATMENTS
 
 
 def _action(
@@ -103,7 +106,7 @@ def test_order_items_maps_to_learn_sequence_interaction() -> None:
     interaction = next(d for d in learn_plan.decisions if d.lane == "learn_interaction")
     assert interaction.kind == "sequence"
     assert interaction.teaching_block_id == "s1-b1"
-    assert interaction.kind in LEARN_RETAINED_INTERACTIONS
+    assert interaction.kind in RETAINED_INTERACTIONS
 
 
 def test_compare_intent_maps_to_table() -> None:
@@ -144,12 +147,12 @@ def test_print_path_never_emits_learn_interaction_ids() -> None:
     )
     print_plan = realize_print_document(plan)
     emitted = {d.kind for d in print_plan.decisions}
-    assert emitted.isdisjoint(LEARN_RETAINED_INTERACTIONS)
-    assert emitted.isdisjoint(LEGACY_LEARN_COMPONENT_IDS)
+    assert emitted.isdisjoint(RETAINED_INTERACTIONS)
+    assert emitted.isdisjoint(RETIRED_ORDINARY_CONTENT_IDS)
     assert all(d.lane != "learn_interaction" for d in print_plan.decisions)
     assert "choices" in emitted
     assert "questions" in emitted
-    assert emitted <= (DOCUMENT_PRIMITIVE_KINDS | PRINT_TASK_OBJECTS)
+    assert emitted <= (DOCUMENT_PRIMITIVE_KINDS | PRINT_TASK_TREATMENTS)
 
 
 def test_learn_path_never_emits_print_only_objects() -> None:
@@ -174,9 +177,8 @@ def test_learn_path_never_emits_print_only_objects() -> None:
     )
     learn_plan = realize_learn_document(plan)
     emitted = {d.kind for d in learn_plan.decisions}
-    assert emitted.isdisjoint(PRINT_ONLY_LAYOUT_OBJECTS)
-    assert emitted.isdisjoint(PRINT_TASK_OBJECTS)
+    assert emitted.isdisjoint(_LEARN_FORBIDDEN_PRINT)
     assert "ruled_lines" not in emitted
     assert "multi-select" in emitted
     assert all(d.kind != "ExplanationBlock" for d in learn_plan.decisions)
-    assert all(d.kind not in LEGACY_LEARN_COMPONENT_IDS for d in learn_plan.decisions)
+    assert all(d.kind not in RETIRED_ORDINARY_CONTENT_IDS for d in learn_plan.decisions)

@@ -1,6 +1,5 @@
-import type { SectionContent } from '@lectio/learn';
-
 import { parseIncomingSection } from '$lib/parse-section';
+import type { SectionContent } from '$lib/types';
 import type {
 	FailedSectionEntry,
 	GenerationDocument,

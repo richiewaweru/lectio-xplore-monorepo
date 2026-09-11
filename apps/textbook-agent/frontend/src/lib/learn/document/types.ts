@@ -86,6 +86,11 @@ export interface InteractionNode extends NodeBase {
 	prompt?: string;
 	config?: Record<string, unknown>;
 	feedback?: Record<string, unknown> | string | null;
+	assessment_mode?: string | null;
+	attempt_policy?: Record<string, unknown> | null;
+	completion?: Record<string, unknown> | string | null;
+	/** Full authored contract for evaluate/reload. */
+	contract?: Record<string, unknown> | null;
 }
 
 export type LearnNode = DocumentNode | InteractionNode;

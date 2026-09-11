@@ -111,16 +111,24 @@ class LLMAuthoringProvider:
     async def invoke(self, call: AuthoringProviderCall) -> Any:
         from v3_execution.llm_helpers import run_structured_agent
 
-        return await run_structured_agent(
-            node_name=self.node_name,
-            trace_id=call.work_order_id,
-            generation_id=None,
-            system_prompt=call.prompt,
-            user_prompt="Return JSON only for the selected capability payload.",
-            output_schema=dict(call.output_schema),
-            repair_attempts=0,
-            retries={"output": 0},
-        )
+        # Stage-local output repair lives here; AuthoringEngine also repairs on
+        # schema/validator failure. Zero output retries caused live compose/write
+        # to fail on the first malformed structured response.
+        try:
+            return await run_structured_agent(
+                node_name=self.node_name,
+                trace_id=call.work_order_id,
+                generation_id=None,
+                system_prompt=call.prompt,
+                user_prompt="Return JSON only for the selected capability payload.",
+                output_schema=dict(call.output_schema),
+                repair_attempts=1,
+                retries={"output": 1},
+            )
+        except AuthoringTransportError:
+            raise
+        except Exception as exc:  # noqa: BLE001 — map provider failures for engine retries
+            raise AuthoringTransportError(str(exc)) from exc
 
 
 @dataclass

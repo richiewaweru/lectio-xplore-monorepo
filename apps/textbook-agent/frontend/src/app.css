@@ -1,10 +1,9 @@
 @import 'tailwindcss';
 @import 'katex/dist/katex.min.css';
-@import '@lectio/learn/theme.css';
+@import '$lib/learn/theme/theme.css';
 
 /**
- * Print / Save as PDF: hide builder chrome; keep Lectio lesson content.
- * Lectio component print rules come from @lectio/learn/theme.css.
+ * Print / Save as PDF: hide builder chrome; keep lesson content.
  */
 @media print {
 	.document-toolbar,
@@ -38,14 +37,12 @@
 	.block-card {
 		border: none !important;
 		box-shadow: none !important;
-		/* fragmentation handled by Lectio component data-print-* attributes */
 	}
 
 	.block-content {
 		padding: 0 !important;
 	}
 
-	/* Section headers in canvas (between sections) */
 	.section-divider {
 		page-break-before: always;
 		break-before: page;

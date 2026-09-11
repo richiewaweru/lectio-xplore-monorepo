@@ -226,10 +226,10 @@
       "definition_hash": "9c9eca46dacb6c6603192a541ee7c019236a8ab713137ae9027d3e3557c1c7eb",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/learn/ChoiceInteraction.svelte",
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/ChoiceInteraction.svelte",
         "contracts/authoring/instructions/choice-writer-v1.txt",
         "learn/choice/config.v1",
-        "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateChoice"
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateChoice"
       ]
     },
     "multi-select": {
@@ -457,10 +457,10 @@
       "definition_hash": "2eceefe198086c28c10e070bf5c54109f02c6190ee71d3b1819a8866f651f930",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/learn/MultiSelectInteraction.svelte",
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/MultiSelectInteraction.svelte",
         "contracts/authoring/instructions/multi-select-writer-v1.txt",
         "learn/multi-select/config.v1",
-        "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateMultiSelect"
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateMultiSelect"
       ]
     },
     "fill-blank": {
@@ -672,10 +672,10 @@
       "definition_hash": "b579113f8fbd31319a44f1e06052435aea716062a18bcefebb96b7d849724539",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateFillBlank",
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateFillBlank",
         "contracts/authoring/instructions/fill-blank-writer-v1.txt",
         "learn/fill-blank/config.v1",
-        "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateFillBlank"
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateFillBlank"
       ]
     },
     "numeric": {
@@ -837,10 +837,10 @@
       "definition_hash": "4c0d4d8e7fd699a426ce48e2d5ebd371538b441b74dd6e710581d4fed283311a",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/learn/NumericInteraction.svelte",
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/NumericInteraction.svelte",
         "contracts/authoring/instructions/numeric-writer-v1.txt",
         "learn/numeric/config.v1",
-        "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateNumeric"
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateNumeric"
       ]
     },
     "short-response": {
@@ -1081,10 +1081,10 @@
       "definition_hash": "35aafe497b2f659c70284644ed5b5f569372dfa1a9deae4cbb4030e1ea7260c4",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/learn/ShortResponseInteraction.svelte",
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/ShortResponseInteraction.svelte",
         "contracts/authoring/instructions/short-response-writer-v1.txt",
         "learn/short-response/config.v1",
-        "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateShortResponse"
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateShortResponse"
       ]
     },
     "match-pairs": {
@@ -1274,10 +1274,10 @@
       "definition_hash": "96c68af697b3e88f91d98ad0a361503f903e17d2216e2be5175b0809072aa56f",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/learn/MatchPairsInteraction.svelte",
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/MatchPairsInteraction.svelte",
         "contracts/authoring/instructions/match-pairs-writer-v1.txt",
         "learn/match-pairs/config.v1",
-        "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateMatchPairs"
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateMatchPairs"
       ]
     },
     "classify": {
@@ -1525,10 +1525,10 @@
       "definition_hash": "f4fec8d3ac4c0b3628f68c9819ef918446e0e70ff2957cd7d59e48a295fd64dc",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/learn/ClassifyInteraction.svelte",
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/ClassifyInteraction.svelte",
         "contracts/authoring/instructions/classify-writer-v1.txt",
         "learn/classify/config.v1",
-        "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateMatchPairs"
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateMatchPairs"
       ]
     },
     "sequence": {
@@ -1743,10 +1743,10 @@
       "definition_hash": "1f2b433a54f7b2f5335b057951f65b4b132fb923d1f5793b51d2cd9c83a70dbf",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/learn/SequenceInteraction.svelte",
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/SequenceInteraction.svelte",
         "contracts/authoring/instructions/sequence-writer-v1.txt",
         "learn/sequence/config.v1",
-        "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateSequence"
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateSequence"
       ]
     },
     "image-hotspot": {
@@ -1887,10 +1887,10 @@
         "authoring_tool": null
       },
       "source_refs": [
-        "packages/lectio-learn/src/lib/learn/ImageHotspotInteraction.svelte",
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/ImageHotspotInteraction.svelte",
         "contracts/authoring/instructions/generic-interaction-writer-v1.txt",
         "learn/image-hotspot/config.v1",
-        "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateChoice"
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateChoice"
       ]
     },
     "drag-label": {
@@ -2013,10 +2013,10 @@
         "authoring_tool": null
       },
       "source_refs": [
-        "packages/lectio-learn/src/lib/learn/DragLabelInteraction.svelte",
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/DragLabelInteraction.svelte",
         "contracts/authoring/instructions/generic-interaction-writer-v1.txt",
         "learn/drag-label/config.v1",
-        "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateMatchPairs"
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateMatchPairs"
       ]
     },
     "section-header": {
@@ -2084,7 +2084,7 @@
       "definition_hash": "45ef8fc4bbe82a9e451c46b76cccf4a284159c8e8ffa86631a5664e21d4b0292",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/section-header",
+        "RETIRED/ordinary-component/section-header",
         "contracts/authoring/instructions/section-header-writer-v1.txt",
         "section-content-schema.json#/properties/header"
       ]
@@ -2165,7 +2165,7 @@
       "definition_hash": "3e4d65580b28cbf448a875e62aac8d90fa427591dee4349d54e652b7ceb0a4bd",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/hook-hero",
+        "RETIRED/ordinary-component/hook-hero",
         "contracts/authoring/instructions/hook-hero-writer-v1.txt",
         "section-content-schema.json#/properties/hook"
       ]
@@ -2230,7 +2230,7 @@
       "definition_hash": "8920c920b2e4501754c43443c95aba5445bdca9a23471479a23bc3fbe81584fb",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/explanation-block",
+        "RETIRED/ordinary-component/explanation-block",
         "contracts/authoring/instructions/explanation-block-writer-v1.txt",
         "section-content-schema.json#/properties/explanation"
       ]
@@ -2296,7 +2296,7 @@
       "definition_hash": "4327a7089f382333f20eda2ac2df1f75ecc325a4179994d1580d8d9b2c11917d",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/prerequisite-strip",
+        "RETIRED/ordinary-component/prerequisite-strip",
         "contracts/authoring/instructions/prerequisite-strip-writer-v1.txt",
         "section-content-schema.json#/properties/prerequisites"
       ]
@@ -2363,7 +2363,7 @@
       "definition_hash": "54f2d0e9afc9528971441a66b99bc5bd9c3873551498870de4e9a2680763625d",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/what-next-bridge",
+        "RETIRED/ordinary-component/what-next-bridge",
         "contracts/authoring/instructions/what-next-bridge-writer-v1.txt",
         "section-content-schema.json#/properties/what_next"
       ]
@@ -2428,7 +2428,7 @@
       "definition_hash": "a988d098ba47418fcaadb1698a9f4896b936327cf59ffce15c138e9b1475fe63",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/interview-anchor",
+        "RETIRED/ordinary-component/interview-anchor",
         "contracts/authoring/instructions/interview-anchor-writer-v1.txt",
         "section-content-schema.json#/properties/interview"
       ]
@@ -2492,7 +2492,7 @@
       "definition_hash": "2270a3ecf1d1cee6e9441815d676ce47f02a1e77e4acdef251869b11e44496c2",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/callout-block",
+        "RETIRED/ordinary-component/callout-block",
         "contracts/authoring/instructions/callout-block-writer-v1.txt",
         "section-content-schema.json#/properties/callout"
       ]
@@ -2564,7 +2564,7 @@
       "definition_hash": "34d3e35037e3e8a687ea2cf260a9832f662cf0387bf5b10c831f9d5277037556",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/summary-block",
+        "RETIRED/ordinary-component/summary-block",
         "contracts/authoring/instructions/summary-block-writer-v1.txt",
         "section-content-schema.json#/properties/summary"
       ]
@@ -2624,7 +2624,7 @@
       "definition_hash": "65ca81155fb515a89c7ea309b4756bf2f33e34f52a83a6807924ddc2ff6f3d32",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/section-divider",
+        "RETIRED/ordinary-component/section-divider",
         "contracts/authoring/instructions/section-divider-writer-v1.txt",
         "section-content-schema.json#/properties/divider"
       ]
@@ -2696,7 +2696,7 @@
       "definition_hash": "24961476c0f612377fd063540279b7f237134116e41e1500fef03c39bb51be10",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/definition-card",
+        "RETIRED/ordinary-component/definition-card",
         "contracts/authoring/instructions/definition-card-writer-v1.txt",
         "section-content-schema.json#/properties/definition"
       ]
@@ -2766,7 +2766,7 @@
       "definition_hash": "19e6ad1afef215b5d8dbdc3ec35319691afbe7ff5dbbbecf357b784fee73f6a7",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/definition-family",
+        "RETIRED/ordinary-component/definition-family",
         "contracts/authoring/instructions/definition-family-writer-v1.txt",
         "section-content-schema.json#/properties/definition_family"
       ]
@@ -2837,7 +2837,7 @@
       "definition_hash": "0c9954ed8cea47d06e3fd9b44d30a8138fb78ac4be6ca2c51c4a16b7ca49bf78",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/glossary-rail",
+        "RETIRED/ordinary-component/glossary-rail",
         "contracts/authoring/instructions/glossary-rail-writer-v1.txt",
         "section-content-schema.json#/properties/glossary"
       ]
@@ -2892,7 +2892,7 @@
       "definition_hash": "097f381d8fd7ec7176dfbf9a4a4e4b72f9f8da4200dbcb58d74a081428570858",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/glossary-inline",
+        "RETIRED/ordinary-component/glossary-inline",
         "contracts/authoring/instructions/generic-content-writer-v1.txt",
         "learn/content/glossary-inline/inline.v1"
       ]
@@ -2966,7 +2966,7 @@
       "definition_hash": "c68414d0751bb07884a1fa5b06fb842e823638fe79d743ea84c2fd515cb0e7f3",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/insight-strip",
+        "RETIRED/ordinary-component/insight-strip",
         "contracts/authoring/instructions/insight-strip-writer-v1.txt",
         "section-content-schema.json#/properties/insight_strip"
       ]
@@ -3035,7 +3035,7 @@
       "definition_hash": "27b6ee4b4cb33a360d4cdfb042e5d4ce20b5efaf942f46dace6584002e43360b",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/key-fact",
+        "RETIRED/ordinary-component/key-fact",
         "contracts/authoring/instructions/key-fact-writer-v1.txt",
         "section-content-schema.json#/properties/key_fact"
       ]
@@ -3125,7 +3125,7 @@
       "definition_hash": "81eb3d6caf4de4bc38c31ef2583a244a6bacfea81c6038384885730aaa0cabbd",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/comparison-grid",
+        "RETIRED/ordinary-component/comparison-grid",
         "contracts/authoring/instructions/comparison-grid-writer-v1.txt",
         "section-content-schema.json#/properties/comparison_grid"
       ]
@@ -3205,7 +3205,7 @@
       "definition_hash": "dbfdc76ccf56a75e2b5d6e8f6fb353427191ff2162727f883c16eac019bc5130",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/worked-example-card",
+        "RETIRED/ordinary-component/worked-example-card",
         "contracts/authoring/instructions/worked-example-card-writer-v1.txt",
         "section-content-schema.json#/properties/worked_example"
       ]
@@ -3282,7 +3282,7 @@
       "definition_hash": "36ff81743193abefc158558cdaa203c8eef430f43ce58730a2a1a4ccb94e501c",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/process-steps",
+        "RETIRED/ordinary-component/process-steps",
         "contracts/authoring/instructions/process-steps-writer-v1.txt",
         "section-content-schema.json#/properties/process"
       ]
@@ -3375,7 +3375,7 @@
       "definition_hash": "7cb45e58dc22c3ba062a94cf584a2467a4596529b2bddd0621b5b2e4c5771c77",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/practice-stack",
+        "RETIRED/ordinary-component/practice-stack",
         "contracts/authoring/instructions/practice-stack-writer-v1.txt",
         "section-content-schema.json#/properties/practice"
       ]
@@ -3469,10 +3469,10 @@
       "definition_hash": "5baefb7b69a9ba511994cd4351920f97af54eb6c5eaa6801dae42c39b245774e",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/quiz-check",
+        "RETIRED/ordinary-component/quiz-check",
         "contracts/authoring/instructions/quiz-check-writer-v1.txt",
         "section-content-schema.json#/properties/quiz",
-        "packages/lectio-learn/src/lib/learn/interaction-contract.ts#quizContentToInteractionContract"
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#quizContentToInteractionContract"
       ]
     },
     "reflection-prompt": {
@@ -3537,7 +3537,7 @@
       "definition_hash": "a57d607a7da163d52b4ec081443bc8cb7625d50e6ec91e3649deac9908094e7f",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/reflection-prompt",
+        "RETIRED/ordinary-component/reflection-prompt",
         "contracts/authoring/instructions/reflection-prompt-writer-v1.txt",
         "section-content-schema.json#/properties/reflection"
       ]
@@ -3600,7 +3600,7 @@
       "definition_hash": "54e55e230f8f74fa82ff02cc6ef5be384dbf6fda5741482e7e22d23ab740b0a5",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/student-textbox",
+        "RETIRED/ordinary-component/student-textbox",
         "contracts/authoring/instructions/student-textbox-writer-v1.txt",
         "section-content-schema.json#/properties/student_textbox"
       ]
@@ -3665,7 +3665,7 @@
       "definition_hash": "4d41ef8056c0d59da3905eacf4bd06795ca12ecdf997010b475da108fff7bc9e",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/short-answer",
+        "RETIRED/ordinary-component/short-answer",
         "contracts/authoring/instructions/short-answer-writer-v1.txt",
         "section-content-schema.json#/properties/short_answer"
       ]
@@ -3745,10 +3745,10 @@
       "definition_hash": "2bc05608ec6172967872dd399513644d07147e64dc02dc2210d5283e5489d34f",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/fill-in-blank",
+        "RETIRED/ordinary-component/fill-in-blank",
         "contracts/authoring/instructions/fill-in-blank-writer-v1.txt",
         "section-content-schema.json#/properties/fill_in_blank",
-        "packages/lectio-learn/src/lib/learn/interaction-contract.ts#fillBlankContentToInteractionContract"
+        "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#fillBlankContentToInteractionContract"
       ]
     },
     "pitfall-alert": {
@@ -3821,7 +3821,7 @@
       "definition_hash": "ba30888d165d1edfa869c8b6f0474b272acb890e5780894b4eedbaf302f3fb32",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/pitfall-alert",
+        "RETIRED/ordinary-component/pitfall-alert",
         "contracts/authoring/instructions/pitfall-alert-writer-v1.txt",
         "section-content-schema.json#/properties/pitfall"
       ]
@@ -3908,7 +3908,7 @@
         "authoring_tool": "Builder media attachment"
       },
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/diagram-block",
+        "RETIRED/ordinary-component/diagram-block",
         "contracts/authoring/instructions/diagram-block-writer-v1.txt",
         "section-content-schema.json#/properties/diagram"
       ]
@@ -3990,7 +3990,7 @@
         "authoring_tool": "Builder media attachment"
       },
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/diagram-compare",
+        "RETIRED/ordinary-component/diagram-compare",
         "contracts/authoring/instructions/diagram-compare-writer-v1.txt",
         "section-content-schema.json#/properties/diagram_compare"
       ]
@@ -4071,7 +4071,7 @@
         "authoring_tool": "Builder media attachment"
       },
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/diagram-series",
+        "RETIRED/ordinary-component/diagram-series",
         "contracts/authoring/instructions/diagram-series-writer-v1.txt",
         "section-content-schema.json#/properties/diagram_series"
       ]
@@ -4137,7 +4137,7 @@
         "authoring_tool": "Builder media attachment"
       },
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/video-embed",
+        "RETIRED/ordinary-component/video-embed",
         "contracts/authoring/instructions/generic-content-writer-v1.txt",
         "section-content-schema.json#/properties/video_embed"
       ]
@@ -4205,7 +4205,7 @@
         "authoring_tool": "Builder media attachment"
       },
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/image-block",
+        "RETIRED/ordinary-component/image-block",
         "contracts/authoring/instructions/generic-content-writer-v1.txt",
         "section-content-schema.json#/properties/image_block"
       ]
@@ -4295,7 +4295,7 @@
         "authoring_tool": "Builder media attachment"
       },
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/timeline-block",
+        "RETIRED/ordinary-component/timeline-block",
         "contracts/authoring/instructions/timeline-block-writer-v1.txt",
         "section-content-schema.json#/properties/timeline"
       ]
@@ -4389,7 +4389,7 @@
         "authoring_tool": "Builder media attachment"
       },
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/simulation-block",
+        "RETIRED/ordinary-component/simulation-block",
         "contracts/authoring/instructions/generic-content-writer-v1.txt",
         "section-content-schema.json#/properties/simulation"
       ]
@@ -4476,7 +4476,7 @@
       "definition_hash": "ff6d65b324f2cf32316797c54665beb4808b8da3234e653462805081d7fc5cd2",
       "asset_requirements": null,
       "source_refs": [
-        "packages/lectio-learn/src/lib/lectio/components/answer-key",
+        "RETIRED/ordinary-component/answer-key",
         "contracts/authoring/instructions/answer-key-writer-v1.txt",
         "section-content-schema.json#/properties/answer_key"
       ]

@@ -68,6 +68,30 @@ CORE_PROVIDER_CONFIG = {
 }
 
 CONTENT_PROVIDER_PAYLOADS = {
+    "paragraph": {"kind": "paragraph", "text": "Plants use light energy to make food."},
+    "heading": {"kind": "heading", "text": "Light and food", "level": 2},
+    "list": {
+        "kind": "list",
+        "ordered": False,
+        "items": ["Absorb light", "Take in carbon dioxide", "Make sugar"],
+    },
+    "table": {
+        "kind": "table",
+        "headers": ["Condition", "Result"],
+        "rows": [["Light", "Grows"], ["Dark", "Wilts"]],
+        "caption": "Light changes growth.",
+    },
+    "callout": {
+        "kind": "callout",
+        "tone": "note",
+        "title": "Remember",
+        "body": "Light supplies energy for food making.",
+    },
+    "figure": {
+        "kind": "figure",
+        "caption": "A leaf in light versus shade.",
+        "alt": "Two leaves, one lit and one shaded.",
+    },
     "quiz-check": {
         "question": "What do plants use?",
         "options": [{"text": "Light", "correct": True, "explanation": "Yes."}, {"text": "Noise", "correct": False, "explanation": "No."}],
@@ -109,7 +133,7 @@ class P06Provider:
         return dict(
             CONTENT_PROVIDER_PAYLOADS.get(
                 call.capability_id,
-                CONTENT_PROVIDER_PAYLOADS["explanation-block"],
+                CONTENT_PROVIDER_PAYLOADS["paragraph"],
             )
         )
 
@@ -407,13 +431,21 @@ def test_p06_l02_repeated_and_interleaved_order_survives_assemble() -> None:
     )
 
     sequence = block_component_sequence(document)
-    # Must keep two explanation-shaped blocks around the interaction (not collapsed).
+    # Must keep two ordinary content blocks around the interaction (not collapsed).
     assert any(c.startswith("learn-interaction:") for c in sequence), sequence
-    explanation_idxs = [
-        i
-        for i, c in enumerate(sequence)
-        if c in {"explanation-block", "key-fact", "callout-block", "insight-strip"}
-    ]
+    ordinary = {
+        "paragraph",
+        "heading",
+        "list",
+        "figure",
+        "table",
+        "callout",
+        "explanation-block",
+        "key-fact",
+        "callout-block",
+        "insight-strip",
+    }
+    explanation_idxs = [i for i, c in enumerate(sequence) if c in ordinary]
     interaction_idxs = [i for i, c in enumerate(sequence) if c.startswith("learn-interaction:")]
     assert len(explanation_idxs) >= 2, sequence
     assert len(interaction_idxs) == 1, sequence
@@ -455,6 +487,9 @@ def test_p06_l03_builder_edit_persists_and_malformed_blocks_publish() -> None:
         work_orders=orders,
         authored_results=_author_all(orders),
     )
+    from learn.generation.native_production import host_interaction_blocks_for_builder
+
+    document = host_interaction_blocks_for_builder(document)
 
     # Locate interaction and apply a Builder-style field edit.
     block_id = next(
@@ -493,25 +528,37 @@ def test_p06_l03_builder_edit_persists_and_malformed_blocks_publish() -> None:
 
 
 def test_p06_l04_preview_store_does_not_claim_production_persistence() -> None:
-    """Preview attempt store is explicitly non-persisting (package contract)."""
-    # Backend gate: preview never writes LearnerAttemptModel — covered in async test below.
-    # This unit proves the package preview store API contract used by the shell.
+    """Preview attempt store is explicitly non-persisting (app Learn contract)."""
     from pathlib import Path
 
-    store_path = (
-        Path(__file__).resolve().parents[4]
-        / "packages"
-        / "lectio-learn"
+    repo_candidates = [
+        Path(__file__).resolve().parents[3]
+        / "apps"
+        / "textbook-agent"
+        / "frontend"
         / "src"
         / "lib"
         / "learn"
-        / "preview-attempt-store.ts"
-    )
-    # Monorepo layout: backend/tests/print_learn -> repo root is parents[3]
-    repo_candidates = [
-        Path(__file__).resolve().parents[3] / "packages" / "lectio-learn" / "src" / "lib" / "learn" / "preview-attempt-store.ts",
-        Path(__file__).resolve().parents[4] / "packages" / "lectio-learn" / "src" / "lib" / "learn" / "preview-attempt-store.ts",
-        Path(__file__).resolve().parents[5] / "packages" / "lectio-learn" / "src" / "lib" / "learn" / "preview-attempt-store.ts",
+        / "student"
+        / "preview-attempt-store.ts",
+        Path(__file__).resolve().parents[4]
+        / "apps"
+        / "textbook-agent"
+        / "frontend"
+        / "src"
+        / "lib"
+        / "learn"
+        / "student"
+        / "preview-attempt-store.ts",
+        Path(__file__).resolve().parents[5]
+        / "apps"
+        / "textbook-agent"
+        / "frontend"
+        / "src"
+        / "lib"
+        / "learn"
+        / "student"
+        / "preview-attempt-store.ts",
     ]
     store_path = next((p for p in repo_candidates if p.exists()), None)
     assert store_path is not None, repo_candidates

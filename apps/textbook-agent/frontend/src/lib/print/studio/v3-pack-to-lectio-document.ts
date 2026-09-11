@@ -1,5 +1,4 @@
-import type { SectionContent } from '@lectio/learn';
-import type { GenerationDocument } from '$lib/types';
+import type { GenerationDocument, SectionContent } from '$lib/types';
 import { normalizeDocument } from '$lib/print/generation/viewer-state';
 
 export type V3PackDocument = {

@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/state';
-	import { providePrintMode, type LessonDocument } from '@lectio/learn';
 	import { buildApiUrl } from '$lib/api/client';
-	import LessonReadOnlyView from '$lib/learn/authoring/builder/components/canvas/LessonReadOnlyView.svelte';
-	import '$lib/learn/authoring/builder/styles/print.css';
+	import DocumentCanvas from '$lib/learn/document/DocumentCanvas.svelte';
+	import { isLearnDocument, type LearnDocument } from '$lib/learn/document/types';
 	import {
 		forceEagerImages,
 		waitForPrintImages,
@@ -15,9 +14,7 @@
 	const token = $derived(page.url.searchParams.get('token'));
 	const audience = $derived(page.url.searchParams.get('audience') === 'student' ? 'student' : 'teacher');
 
-	providePrintMode(() => page.url.searchParams.get('print') === 'true');
-
-	let lessonDocument = $state<LessonDocument | null>(null);
+	let lessonDocument = $state<LearnDocument | null>(null);
 	let dataReady = $state(false);
 	let captureReady = $state(false);
 	let fetchStatus = $state('not-started');
@@ -51,7 +48,15 @@
 				return;
 			}
 
-			lessonDocument = (await response.json()) as LessonDocument;
+			const payload = await response.json();
+			if (!isLearnDocument(payload)) {
+				loadError =
+					'Builder print requires LearnDocument v2. LessonDocument v1 print is retired.';
+				dataReady = true;
+				captureReady = true;
+				return;
+			}
+			lessonDocument = payload;
 			dataReady = true;
 			await tick();
 			forceEagerImages();
@@ -82,7 +87,7 @@
 	{#if dataReady && loadError}
 		<p class="print-error">{loadError}</p>
 	{:else if dataReady && lessonDocument}
-		<LessonReadOnlyView document={lessonDocument} />
+		<DocumentCanvas document={lessonDocument} editable={false} />
 	{/if}
 </div>
 

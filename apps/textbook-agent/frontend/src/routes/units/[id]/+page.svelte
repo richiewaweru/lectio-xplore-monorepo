@@ -18,6 +18,7 @@
 		patchPathLesson,
 		planUnitPath,
 		preparePathLesson,
+		generateLearnRealization,
 		regeneratePathLesson,
 		restorePathVersion
 	} from '$lib/api/units';
@@ -398,6 +399,29 @@
 					selectedGroupIds = [];
 				}
 			}
+			// If preparation already exists and Learn is requested, try generating Learn
+			// from the approved Teaching Plan (sibling path; no Print conversion).
+			if (pathKind === 'learn' && preparation?.generation_id) {
+				try {
+					const result = await generateLearnRealization(
+						unitId,
+						path as UnitPath,
+						selected
+					);
+					const href =
+						result.open_href ||
+						(result.editable_lesson_id
+							? `/builder/${encodeURIComponent(result.editable_lesson_id)}`
+							: null);
+					if (href) {
+						window.location.href = href;
+						return;
+					}
+				} catch (err) {
+					// Teaching not approved yet — fall through to shared prep / studio review.
+					if (!(isApiError(err) && err.status === 409)) throw err;
+				}
+			}
 			const prepared = await preparePathLesson(
 				unitId,
 				path as UnitPath,
@@ -405,11 +429,13 @@
 				lessonMode,
 				selectedGroupIds
 			);
-			// Explicit path choice: open the selected path surface (no convert).
+			// Explicit path choice: Print → studio (queue/poll native worker);
+			// Learn → studio teaching review with path=learn. The print viewer
+			// at /studio/print/{id} is for a ready LectioDocument, not admission.
 			if (pathKind === 'print') {
-				window.location.href = `/studio/print/${encodeURIComponent(prepared.generation_id)}`;
-			} else {
 				window.location.href = `/studio?generation_id=${encodeURIComponent(prepared.generation_id)}`;
+			} else {
+				window.location.href = `/studio?generation_id=${encodeURIComponent(prepared.generation_id)}&path=learn`;
 			}
 		}, false);
 	}

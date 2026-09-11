@@ -18,7 +18,8 @@ INTERACTION_COMPONENT_PREFIX = "learn-interaction:"
 class PublishValidationError(ValueError):
     def __init__(self, errors: list[str]) -> None:
         self.errors = list(errors)
-        super().__init("; ".join(self.errors) if self.errors else "publish validation failed")
+        message = "; ".join(self.errors) if self.errors else "publish validation failed"
+        ValueError.__init__(self, message)
 
 
 def _is_interaction_block(block: Mapping[str, Any]) -> bool:

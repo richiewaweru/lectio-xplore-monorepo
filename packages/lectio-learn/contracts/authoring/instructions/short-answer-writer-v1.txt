@@ -1,7 +1,0 @@
-Capability: short-answer.
-
-Write a short-answer content activity.
-
-- Prompt for a compact answer that follows from taught content.
-- Provide accepted answers only when exact scoring is valid.
-- Use teacher review for explanation or reasoning.

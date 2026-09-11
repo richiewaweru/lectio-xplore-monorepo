@@ -6,7 +6,7 @@ FastAPI + SvelteKit app for Unit-based Print and Learn lesson creation.
 
 - `backend/src/` — `application/`, `curriculum/`, `print/`, `learn/`, `infra/`, `app.py`
 - `frontend/` — SvelteKit UI (`/units`, `/studio`, `/builder`, `/learn`, …)
-- Consumes workspace packages `@lectio/page` and `@lectio/learn`
+- Consumes workspace package `@lectio/page`; Learn interactions live under `frontend/src/lib/learn/`
 
 ## Run
 

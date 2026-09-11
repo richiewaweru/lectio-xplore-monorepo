@@ -1,7 +1,7 @@
 # Project Config
 
 AI-powered Unit → Print + Learn system that generates Lectio-native instructional materials from curriculum units and learner context.
-Monorepo app: `backend/` (FastAPI + Python) and `frontend/` (SvelteKit + TypeScript), plus packages `@lectio/contracts`, `@lectio/page`, and `@lectio/learn` (interaction UI only).
+Monorepo app: `backend/` (FastAPI + Python) and `frontend/` (SvelteKit + TypeScript), plus packages `@lectio/contracts` and `@lectio/page`. Learn interaction UI lives under `frontend/src/lib/learn/interactions/`.
 
 ## Architecture Rules
 
@@ -24,7 +24,7 @@ Retained Learn interactions (KEEP):
 Package ownership:
 - `@lectio/contracts` owns shared instructional intents / learner actions
 - `@lectio/page` is the Print page-document engine
-- `@lectio/learn` is retained for interaction UI shells only; ordinary Learn document rendering lives under the app (`frontend/src/lib/learn/document/`)
+- Learn ordinary document rendering and interaction shells live under the app (`frontend/src/lib/learn/document/`, `frontend/src/lib/learn/interactions/`). `@lectio/learn` has been removed.
 
 ### Backend layout (`backend/src/`)
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { DocumentNode } from '../types';
+	import type { AssetRef } from '../resolve-asset';
 	import ParagraphNodeView from './ParagraphNode.svelte';
 	import HeadingNodeView from './HeadingNode.svelte';
 	import ListNodeView from './ListNode.svelte';
@@ -9,9 +10,10 @@
 
 	interface Props {
 		node: DocumentNode;
+		assets?: Record<string, AssetRef> | null;
 	}
 
-	let { node }: Props = $props();
+	let { node, assets = null }: Props = $props();
 </script>
 
 <div class="document-node-renderer" data-testid="document-node-renderer" data-kind={node.kind}>
@@ -22,7 +24,7 @@
 	{:else if node.kind === 'list'}
 		<ListNodeView {node} />
 	{:else if node.kind === 'figure'}
-		<FigureNodeView {node} />
+		<FigureNodeView {node} {assets} />
 	{:else if node.kind === 'table'}
 		<TableNodeView {node} />
 	{:else if node.kind === 'callout'}

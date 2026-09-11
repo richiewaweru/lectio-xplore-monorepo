@@ -54,6 +54,30 @@ _P07_PROVIDER_PAYLOADS = {
     "callout-block": {"variant": "info", "body": "The butterfly life cycle has four stages."},
     "key-fact": {"fact": "Butterflies develop through metamorphosis."},
     "summary-block": {"items": [{"text": "Egg, larva, pupa, and adult form the cycle."}]},
+    "paragraph": {"kind": "paragraph", "text": "Intro prose about the butterfly life cycle."},
+    "heading": {"kind": "heading", "text": "Butterfly life cycle", "level": 2},
+    "list": {
+        "kind": "list",
+        "ordered": True,
+        "items": ["Egg", "Larva", "Pupa", "Adult"],
+    },
+    "table": {
+        "kind": "table",
+        "headers": ["Stage", "What happens"],
+        "rows": [["Egg", "Starts"], ["Adult", "Flies"]],
+        "caption": "Life cycle stages",
+    },
+    "callout": {
+        "kind": "callout",
+        "tone": "note",
+        "title": "Remember",
+        "body": "The butterfly life cycle has four stages.",
+    },
+    "figure": {
+        "kind": "figure",
+        "caption": "Butterfly metamorphosis diagram.",
+        "alt": "Four stages of butterfly metamorphosis.",
+    },
 }
 
 
@@ -62,7 +86,7 @@ class _P07AuthoringProvider:
         return dict(
             _P07_PROVIDER_PAYLOADS.get(
                 call.capability_id,
-                _P07_PROVIDER_PAYLOADS["explanation-block"],
+                _P07_PROVIDER_PAYLOADS["paragraph"],
             )
         )
 
@@ -201,6 +225,9 @@ def _sequence_document(
         title="P07 Sequence",
         subject="biology",
     )
+    from learn.generation.native_production import host_interaction_blocks_for_builder
+
+    document = host_interaction_blocks_for_builder(document)
     # Builder registry does not yet list learn-interaction:* ids; keep contract
     # while using a registered host component for draft persistence.
     for block in document["blocks"].values():

@@ -1,7 +1,0 @@
-Capability: student-textbox.
-
-Write a learner text-entry activity.
-
-- Make the prompt clear and bounded.
-- Do not imply automatic correctness unless an evaluator is declared.
-- Include review guidance when the response needs teacher judgement.

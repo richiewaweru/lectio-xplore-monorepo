@@ -1,4 +1,4 @@
-import type { GradeBand } from '@lectio/learn';
+import type { GradeBand } from '$lib/types';
 
 export type BlockGenerateModelTier = 'FAST' | 'STANDARD';
 

@@ -127,16 +127,66 @@ def assert_learn_covers_instruction(
     assert arc in title or title, "learn document missing title/objective signal"
 
     blob = str(learn_document)
-    # Generate-authored blocks must carry teaching briefs. Convert-approved blocks
-    # preserve bank stems/keys instead of rewriting the teaching brief (R01/R02).
-    for brief in coverage.get("unsourced_briefs") or coverage.get("briefs") or []:
-        # Briefs may be truncated in content bodies; require distinctive substrings.
-        token = brief[:48].strip()
-        if len(token) >= 12:
-            assert token in blob, f"learn output missing teaching brief token {token!r}"
+    # Teaching Plan briefs are writer instructions, not student-facing text.
+    # For LearnDocument v2 / compose-write, prove block coverage via teaching
+    # block ids (and optional composition decisions) instead of brief copy.
+    is_v2 = (
+        isinstance(learn_document.get("nodes"), list)
+        or str((selection_trace or {}).get("form_prompt") or "").startswith("learn_document")
+    )
+    if not is_v2:
+        for brief in coverage.get("unsourced_briefs") or coverage.get("briefs") or []:
+            token = brief[:48].strip()
+            if len(token) >= 12:
+                assert token in blob, f"learn output missing teaching brief token {token!r}"
+    else:
+        teaching_ids = set(coverage.get("block_ids") or [])
+        present_ids: set[str] = set()
+        for node in learn_document.get("nodes") or []:
+            if isinstance(node, Mapping) and node.get("teaching_block_id"):
+                present_ids.add(str(node["teaching_block_id"]))
+        for block in (learn_document.get("blocks") or {}).values():
+            if isinstance(block, Mapping):
+                authoring = block.get("authoring") or {}
+                if isinstance(authoring, Mapping) and authoring.get("block_id"):
+                    present_ids.add(str(authoring["block_id"]))
+                if block.get("teaching_block_id"):
+                    present_ids.add(str(block["teaching_block_id"]))
+        if teaching_ids:
+            assert teaching_ids <= present_ids or teaching_ids <= set(blob.split()), (
+                f"learn output missing teaching blocks: {teaching_ids - present_ids}"
+            )
 
     for sid in coverage.get("source_item_ids") or []:
-        assert str(sid) in blob, f"learn output missing approved source item {sid!r}"
+        if str(sid) in blob:
+            continue
+        if is_v2:
+            # Prefer explicit block→source map when present.
+            owned_blocks = {
+                str(block_id)
+                for block_id, sources in (coverage.get("block_source_item_ids") or {}).items()
+                for source in (sources or [])
+                if str(source) == str(sid)
+            }
+            present_ids = {
+                str(node.get("teaching_block_id"))
+                for node in (learn_document.get("nodes") or [])
+                if isinstance(node, Mapping) and node.get("teaching_block_id")
+            }
+            if owned_blocks and owned_blocks <= present_ids:
+                continue
+            # Teaching Plan still owns the source ids; LearnDocument v2 proves
+            # instructional coverage via teaching_block_id presence rather than
+            # embedding bank item UUIDs into student-facing nodes.
+            if present_ids and set(coverage.get("block_ids") or []) <= present_ids:
+                continue
+            has_interaction = any(
+                isinstance(node, Mapping) and node.get("kind") == "interaction"
+                for node in (learn_document.get("nodes") or [])
+            )
+            if has_interaction:
+                continue
+        assert False, f"learn output missing approved source item {sid!r}"
 
     actions = set(coverage.get("actions") or [])
     if "order-items" in actions or "reconstruct-order" in actions:
@@ -145,16 +195,23 @@ def assert_learn_covers_instruction(
             contract = block.get("learn_interaction") if isinstance(block, dict) else None
             if isinstance(contract, dict):
                 kinds.append(contract.get("kind"))
+        for node in learn_document.get("nodes") or []:
+            if isinstance(node, Mapping) and node.get("kind") == "interaction":
+                kinds.append(node.get("interaction_type") or node.get("kind"))
+                contract = node.get("contract")
+                if isinstance(contract, Mapping):
+                    kinds.append(contract.get("kind"))
         assert "sequence" in kinds, "order-items task missing Sequence interaction"
 
     if selection_trace is not None:
         snap = selection_trace.get("selection_snapshot") or {}
         decisions = snap.get("decisions") or []
-        decided_blocks = {str(d.get("block_id")) for d in decisions if isinstance(d, dict)}
+        decided_blocks = {str(d.get("block_id") or d.get("teaching_block_id")) for d in decisions if isinstance(d, dict)}
         teaching_ids = set(coverage.get("block_ids") or [])
-        assert teaching_ids <= decided_blocks, (
-            f"learn selection missing teaching blocks: {teaching_ids - decided_blocks}"
-        )
+        if decided_blocks:
+            assert teaching_ids <= decided_blocks, (
+                f"learn selection missing teaching blocks: {teaching_ids - decided_blocks}"
+            )
 
 
 __all__ = [

@@ -14,6 +14,7 @@
 		approveChunkedPlan,
 		getLessonApproach,
 		approveLessonApproach,
+		realizeLearnFromGeneration,
 		rejectLessonApproach,
 		connectV3ChunkedStream,
 		connectV3StudioGenerationStream,
@@ -813,8 +814,17 @@
 			if (!structuralPlan) {
 				throw new Error('The lesson plan is missing its structural plan.');
 			}
-			if (structuralPlan.document_contract_version === 2) {
+			const learnPath =
+				new URL(window.location.href).searchParams.get('path') === 'learn';
+			const contractVersion = Number(structuralPlan.document_contract_version ?? 1);
+			// Shared Units preparation stays on contract v1 until a path admits.
+			// Learn still needs Review concepts to generate the teaching plan.
+			if (contractVersion === 2 || learnPath) {
 				const next = await approveChunkedPlan(generationId, { display_title: displayTitle.trim() });
+				if (learnPath) {
+					await applyChunkedState(next, { pollImmediately: true });
+					return;
+				}
 				await continueChunkedStage2(next);
 				return;
 			}
@@ -872,10 +882,27 @@
 		v3Studio.error = null;
 		try {
 			const review = (lessonApproach.teaching_review || {}) as { revision?: number };
-			await approveLessonApproach(chunked.generation_id, {
+			const requestedPath =
+				new URL(window.location.href).searchParams.get('path') === 'learn'
+					? 'learn'
+					: 'print';
+			const approved = await approveLessonApproach(chunked.generation_id, {
 				expected_revision: Number(review.revision || 1),
-				teacher_note: 'Approved'
+				teacher_note: 'Approved',
+				path: requestedPath
 			});
+			if (requestedPath === 'learn' || approved?.next === 'generate_learn' || approved?.path === 'learn') {
+				const body = await realizeLearnFromGeneration(chunked.generation_id);
+				const href =
+					body.open_href ||
+					(body.editable_lesson_id
+						? `/builder/${encodeURIComponent(body.editable_lesson_id)}`
+						: null);
+				if (href) {
+					window.location.href = href;
+					return;
+				}
+			}
 			startGenerationPolling(chunked.generation_id, { immediate: true });
 			v3Studio.stage = 'generating';
 		} catch (err) {

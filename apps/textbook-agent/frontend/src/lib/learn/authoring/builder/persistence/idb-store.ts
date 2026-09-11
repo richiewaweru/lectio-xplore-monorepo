@@ -1,5 +1,5 @@
 import { openDB, type IDBPDatabase } from 'idb';
-import type { LessonDocument } from '@lectio/learn';
+import type { LearnDocument } from '$lib/learn/document/types';
 
 const DB_NAME = 'lesson-builder';
 const DB_VERSION = 3;
@@ -11,7 +11,7 @@ export const DOCUMENT_VERSIONS_STORE = 'document-versions';
 export interface DocumentVersion {
 	id: string;
 	document_id: string;
-	snapshot: LessonDocument;
+	snapshot: LearnDocument;
 	label?: string;
 	created_at: string;
 }
@@ -47,13 +47,13 @@ function newVersionId(): string {
 /** Persist a version snapshot; enforces at most `MAX_VERSIONS_PER_DOCUMENT` per document (oldest removed). */
 export async function saveVersionSnapshot(
 	documentId: string,
-	snapshot: LessonDocument,
+	snapshot: LearnDocument,
 	label?: string,
 	/** For tests or backdating; defaults to now. */
 	createdAt?: string
 ): Promise<string> {
 	const db = await getDB();
-	const plain = JSON.parse(JSON.stringify(snapshot)) as LessonDocument;
+	const plain = JSON.parse(JSON.stringify(snapshot)) as LearnDocument;
 	const id = newVersionId();
 	const row: DocumentVersion = {
 		id,
@@ -98,30 +98,30 @@ export async function deleteVersion(versionId: string): Promise<void> {
  * Reversible: current state is preserved in history first.
  */
 export async function restoreVersionWithBackup(
-	current: LessonDocument,
+	current: LearnDocument,
 	target: DocumentVersion
-): Promise<LessonDocument> {
+): Promise<LearnDocument> {
 	if (current.id !== target.document_id) {
 		throw new Error('Version does not belong to this document.');
 	}
 	await saveVersionSnapshot(current.id, current, 'Before restore');
-	return JSON.parse(JSON.stringify(target.snapshot)) as LessonDocument;
+	return JSON.parse(JSON.stringify(target.snapshot)) as LearnDocument;
 }
 
-export async function saveDocument(doc: LessonDocument): Promise<void> {
+export async function saveDocument(doc: LearnDocument): Promise<void> {
 	const db = await getDB();
 	/** JSON round-trip strips Svelte proxies and guarantees a plain tree for IDB (structuredClone can mis-handle proxies). */
-	const row = JSON.parse(JSON.stringify(doc)) as LessonDocument;
+	const row = JSON.parse(JSON.stringify(doc)) as LearnDocument;
 	row.updated_at = new Date().toISOString();
 	await db.put(STORE_NAME, row);
 }
 
-export async function getDocument(id: string): Promise<LessonDocument | undefined> {
+export async function getDocument(id: string): Promise<LearnDocument | undefined> {
 	const db = await getDB();
 	return db.get(STORE_NAME, id);
 }
 
-export async function listDocuments(): Promise<LessonDocument[]> {
+export async function listDocuments(): Promise<LearnDocument[]> {
 	const db = await getDB();
 	const all = await db.getAllFromIndex(STORE_NAME, 'updated_at');
 	return all.reverse();

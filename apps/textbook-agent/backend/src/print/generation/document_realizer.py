@@ -1,7 +1,7 @@
-"""Print document realizer — Teaching Plan → compact composition plan (Phase E/H).
+"""Print document realizer — Teaching Plan → compact composition plan.
 
-Deterministic heuristics only. Ordinary content uses shared document primitives;
-learner tasks that require a response become Print-only task treatments.
+Ordinary content uses shared document primitives; learner tasks that require a
+response become Print-only task treatments (print/generation/task_treatments).
 """
 
 from __future__ import annotations
@@ -9,18 +9,35 @@ from __future__ import annotations
 from typing import Any, Mapping, TypedDict
 
 from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
-from document.composition import (
-    DOCUMENT_PRIMITIVE_KINDS,
-    LEGACY_LEARN_COMPONENT_IDS,
-    PRINT_TASK_OBJECTS,
-    CompositionDecision,
-    CompositionPlan,
-)
+from document.composition import CompositionDecision, CompositionPlan
 from document.heuristics import choose_document_primitive
+from document.models import DOCUMENT_PRIMITIVE_KINDS
 from print.generation.document_form_map import to_print_object
 from print.generation.task_treatments import (
     PRINT_TASK_TREATMENTS,
     print_treatment_for_learner_action,
+)
+
+# Local denylist of retired ordinary-component ids from the old Learn package.
+# Keep Print free of product imports into the Learn domain.
+_RETIRED_LEARN_ORDINARY_IDS: frozenset[str] = frozenset(
+    {
+        "ExplanationBlock",
+        "section-header",
+        "hook-hero",
+        "explanation-block",
+        "definition-card",
+        "key-fact",
+        "callout-block",
+        "process-steps",
+        "worked-example-card",
+        "summary-block",
+        "timeline-block",
+        "diagram-compare",
+        "quiz-check",
+        "fill-in-blank",
+        "diagram-block",
+    }
 )
 
 
@@ -57,7 +74,11 @@ def _action_for(block: TeachingPlanBlock) -> str | None:
     return str(block.learner_action.action or "").strip() or None
 
 
-def _decide_block(block: TeachingPlanBlock) -> CompositionDecision:
+def _decide_block(
+    block: TeachingPlanBlock,
+    *,
+    section_id: str | None,
+) -> CompositionDecision:
     action = _action_for(block)
     intent = (block.intent or "").strip().lower().replace("_", "-")
     treatment = print_treatment_for_learner_action(action, intent=intent)
@@ -67,6 +88,7 @@ def _decide_block(block: TeachingPlanBlock) -> CompositionDecision:
             kind=treatment,
             lane="print_task",
             reason=f"learner_action {action!r} → Print task {treatment!r}",
+            section_id=section_id,
         )
 
     kind, reason = choose_document_primitive(block)
@@ -75,27 +97,33 @@ def _decide_block(block: TeachingPlanBlock) -> CompositionDecision:
         kind=kind,
         lane="document",
         reason=reason,
+        section_id=section_id,
     )
 
 
 def realize_print_document(
     teaching_plan: TeachingPlan | Mapping[str, Any],
 ) -> CompositionPlan:
-    """Build an ordered Print composition plan from an approved Teaching Plan."""
+    """Build an ordered Print composition plan from an approved Teaching Plan.
+
+    Deterministic heuristic fallback. Production prefers the LLM composer when
+    a provider is available (see document.composer).
+    """
     plan = _as_plan(teaching_plan)
     decisions: list[CompositionDecision] = []
     for section in plan.sections:
+        section_id = str(section.slot_id or "")
         for block in section.blocks:
-            decisions.append(_decide_block(block))
+            decisions.append(_decide_block(block, section_id=section_id or None))
 
     for decision in decisions:
-        if decision.kind in LEGACY_LEARN_COMPONENT_IDS:
+        if decision.kind in _RETIRED_LEARN_ORDINARY_IDS:
             raise ValueError(
                 f"Print realizer emitted legacy Learn component id {decision.kind!r}"
             )
         if decision.lane == "document" and decision.kind not in DOCUMENT_PRIMITIVE_KINDS:
             raise ValueError(f"illegal document kind on Print plan: {decision.kind!r}")
-        if decision.lane == "print_task" and decision.kind not in PRINT_TASK_OBJECTS:
+        if decision.lane == "print_task" and decision.kind not in PRINT_TASK_TREATMENTS:
             raise ValueError(f"illegal Print task object: {decision.kind!r}")
         if decision.lane == "learn_interaction":
             raise ValueError("Print composition plan must not include Learn interactions")
@@ -153,11 +181,7 @@ def realize_print_to_page_forms(
 def produce_print_document_plan_from_teaching(
     teaching_plan: TeachingPlan | Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Additive document-path plan: composition decisions + Print object mapping.
-
-    Does not replace the whole-lesson PDF FormPlan pipeline — callers that still
-    need catalogue selection should use ``build_closed_print_production_plan*``.
-    """
+    """Document-path plan: composition decisions + Print object mapping."""
     composition = realize_print_document(teaching_plan)
     page_forms = realize_print_to_page_forms(composition)
     return {

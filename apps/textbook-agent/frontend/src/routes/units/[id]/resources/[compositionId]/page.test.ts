@@ -11,45 +11,80 @@ vi.mock('$app/state', () => ({
 	}
 }));
 vi.mock('$lib/api/units', () => ({ getUnitResource }));
+vi.mock('$lib/print/components/studio/LectioPageDocumentView.svelte', async () => ({
+	default: (await import('../../../../studio/__fixtures__/MockGeneric.svelte')).default
+}));
 
 import ResourcePage from './+page.svelte';
 
 describe('/units/[id]/resources/[compositionId]', () => {
 	afterEach(cleanup);
 
-	it('loads a saved projection into the Lectio resource surface', async () => {
+	it('loads a LectioDocument v2 projection into the page engine', async () => {
 		getUnitResource.mockResolvedValue({
-			id: 'composition-1', unit_id: 'unit-1', path_version_id: 'path-1', path_version: 1,
-			path_revision: 1, projection: 'unit_exam', status: 'ready', lesson_ids: ['lesson-1'],
-			period_ids: ['period-1'], group_ids: ['group-core'], selected_component_refs: [],
-			selected_item_ids: ['item-1'], include_keys: true, template_version: 'resource-projection.v1',
-			source_snapshots: [], document: {
-				generation_id: 'composition-1', template_id: 'guided-concept-path', subject: 'Science',
-				status: 'final_ready', sections: [{
-					section_id: 'question-1', template_id: 'guided-concept-path',
-					header: { title: 'Projected assessment', subject: 'Science', grade_band: 'primary' },
-					quiz: { question: 'Where is food made?', quiz_type: 'multiple-choice',
-						options: [
-						{ text: 'Roots', correct: false, explanation: 'Review.' },
-						{ text: 'Leaves', correct: true, explanation: 'Correct.' }
-					] }
-				}],
-				answer_key: {
-					label: 'Shared diagnostic answer key',
-					note: 'Confirm diagnostic hypotheses against learner reasoning.',
-					entries: [{
-						question_number: 1, question: 'Where is food made?',
-						correct_answer: 'Leaves', correct_key: 'B', diagnostics: [{
-							option_key: 'A', option_text: 'Roots', misconception_id: 'soil-food',
-							misconception_label: 'Chose roots → consistent with a soil-food misconception.'
-						}]
-					}]
-				}
+			id: 'composition-1',
+			unit_id: 'unit-1',
+			path_version_id: 'path-1',
+			path_version: 1,
+			path_revision: 1,
+			projection: 'unit_exam',
+			status: 'ready',
+			lesson_ids: ['lesson-1'],
+			period_ids: ['period-1'],
+			group_ids: ['group-core'],
+			selected_component_refs: [],
+			selected_item_ids: ['item-1'],
+			include_keys: true,
+			template_version: 'resource-projection.v1',
+			source_snapshots: [],
+			document: {
+				document_version: 2,
+				id: 'composition-1',
+				title: 'Projected assessment',
+				subject: 'Science',
+				sections: [
+					{
+						id: 'question-1',
+						title: 'Projected assessment',
+						blocks: [{ id: 'b1', type: 'paragraph', text: 'Where is food made?' }]
+					}
+				]
 			}
 		});
 
 		render(ResourcePage);
 		expect(await screen.findByRole('button', { name: 'Print' })).toBeTruthy();
-		expect(await screen.findByText('Where is food made?')).toBeTruthy();
+		expect(await screen.findByText(/unit exam/i)).toBeTruthy();
+	});
+
+	it('rejects legacy SectionContent packs', async () => {
+		getUnitResource.mockResolvedValue({
+			id: 'composition-1',
+			unit_id: 'unit-1',
+			path_version_id: 'path-1',
+			path_version: 1,
+			path_revision: 1,
+			projection: 'unit_exam',
+			status: 'ready',
+			lesson_ids: [],
+			period_ids: [],
+			group_ids: [],
+			selected_component_refs: [],
+			selected_item_ids: [],
+			include_keys: true,
+			template_version: 'resource-projection.v1',
+			source_snapshots: [],
+			document: {
+				generation_id: 'composition-1',
+				template_id: 'guided-concept-path',
+				subject: 'Science',
+				sections: []
+			}
+		});
+
+		render(ResourcePage);
+		expect(
+			await screen.findByText(/no LectioDocument v2 payload/i)
+		).toBeTruthy();
 	});
 });

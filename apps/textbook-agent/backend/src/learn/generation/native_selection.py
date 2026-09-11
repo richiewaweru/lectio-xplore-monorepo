@@ -141,6 +141,10 @@ def rank_learn_content_candidates(
     """Rank closed content shortlist by package guidance and clear intent hints."""
     if not content_ids:
         return []
+    from document.heuristics import choose_document_primitive
+    from document.models import DOCUMENT_PRIMITIVE_KINDS
+    from curriculum.teaching_plan.models import TeachingPlanBlock
+
     view = selection_view if selection_view is not None else load_learn_selection_view()
     by_id: dict[str, Mapping[str, Any]] = {}
     for row in view.get("capabilities") or []:
@@ -149,6 +153,20 @@ def rank_learn_content_candidates(
     query_text = f"{brief} {intent} {action or ''}"
     query = _guidance_tokens(query_text)
     lowered = query_text.lower()
+    preferred_primitive: str | None = None
+    if any(cid in DOCUMENT_PRIMITIVE_KINDS for cid in content_ids):
+        try:
+            preferred_primitive, _ = choose_document_primitive(
+                TeachingPlanBlock(
+                    id="rank",
+                    position=0,
+                    intent=intent,
+                    brief=brief,
+                    evidence="",
+                )
+            )
+        except Exception:  # noqa: BLE001
+            preferred_primitive = "paragraph"
     scored: list[tuple[int, int, int, int, str]] = []
     for index, capability_id in enumerate(content_ids):
         record = by_id.get(capability_id) or {}
@@ -157,7 +175,11 @@ def rank_learn_content_candidates(
         choose_hits = len(query & choose)
         reject_hits = len(query & reject)
         intent_bonus = 0
-        if capability_id == "explanation-block" and any(
+        if preferred_primitive and capability_id == preferred_primitive:
+            intent_bonus = 5
+        elif capability_id == "paragraph" and preferred_primitive is None:
+            intent_bonus = 2
+        elif capability_id == "explanation-block" and any(
             token in lowered for token in ("explain", "causal", "prose", "why")
         ):
             intent_bonus = 3

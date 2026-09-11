@@ -1,6 +1,6 @@
 import { ensureOk } from '$lib/api/errors';
 import { apiFetch } from '$lib/api/client';
-import type { LessonDocument } from '@lectio/learn';
+import type { LearnDocument } from '$lib/learn/document/types';
 
 export interface LearnReleaseSummary {
 	id: string;
@@ -13,7 +13,7 @@ export interface LearnReleaseSummary {
 }
 
 export interface LearnReleaseRecord extends LearnReleaseSummary {
-	document: LessonDocument;
+	document: LearnDocument;
 	source_generation_id?: string | null;
 	path_lesson_id?: string | null;
 }

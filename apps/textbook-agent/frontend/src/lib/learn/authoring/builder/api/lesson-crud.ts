@@ -1,8 +1,17 @@
 import { ensureOk } from '$lib/api/errors';
 import { apiFetch } from '$lib/api/client';
-import type { LessonDocument } from '@lectio/learn';
+import type { LearnDocument } from '$lib/learn/document/types';
 
-export type BuilderLessonSourceType = 'manual' | 'v3_generation' | 'template';
+/** Builder persists LearnDocument v2 only (`learn_document` / `document` source). */
+export type BuilderDocument = LearnDocument;
+
+export type BuilderLessonSourceType =
+	| 'manual'
+	| 'v3_generation'
+	| 'template'
+	| 'document'
+	| 'learn_document'
+	| 'native_learn';
 
 export interface BuilderLessonSummary {
 	id: string;
@@ -15,7 +24,7 @@ export interface BuilderLessonSummary {
 }
 
 export interface BuilderLessonRecord extends BuilderLessonSummary {
-	document: LessonDocument;
+	document: BuilderDocument;
 }
 
 export interface CreateBuilderLessonRequest {
@@ -23,13 +32,13 @@ export interface CreateBuilderLessonRequest {
 	class_label?: string | null;
 	source_generation_id?: string;
 	source_type?: BuilderLessonSourceType;
-	document: LessonDocument;
+	document: BuilderDocument;
 }
 
 export interface UpdateBuilderLessonRequest {
 	title?: string;
 	class_label?: string | null;
-	document: LessonDocument;
+	document: BuilderDocument;
 }
 
 export async function createBuilderLesson(

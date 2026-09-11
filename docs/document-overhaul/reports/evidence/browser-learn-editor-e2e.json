@@ -1,0 +1,25 @@
+{
+  "proof": "browser_learn_editor_e2e",
+  "status": "PASS",
+  "editable_lesson_id": "62cf9b26-dfd2-4fcf-b0cc-b5d10850d9db",
+  "source_generation_id": "learn-out-0f35ee03d68f",
+  "url": "http://127.0.0.1:3000/builder/62cf9b26-dfd2-4fcf-b0cc-b5d10850d9db",
+  "observed": {
+    "render_learn_document_v2": true,
+    "interaction_choice_mounted": true,
+    "answer_and_evaluate": {
+      "selected": "Open stomata let in CO2 for photosynthesis, but also let water escape.",
+      "feedback": "Yes — open stomata trade CO2 gain for water loss, which is why plants must balance opening and closing."
+    },
+    "edit_paragraph": "BROWSER_PROOF: stomata are adjustable openings on the leaf surface.",
+    "save": true,
+    "reload_preserved_edit": true,
+    "add_node": "New paragraph",
+    "primitives_visible": ["heading", "paragraph", "callout", "interaction"]
+  },
+  "fixes_during_proof": [
+    "resolveClientApiBase prefers Vite same-origin proxy for loopback API targets",
+    "builder page loads via {#await} so async state paints reliably",
+    "IDB cache write is best-effort and does not block editor open"
+  ]
+}

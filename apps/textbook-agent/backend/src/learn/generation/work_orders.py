@@ -106,15 +106,52 @@ def _capability_contract_hash(capability_id: str, writer_card: Mapping[str, Any]
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+def _document_primitive_writer_card(capability_id: str) -> dict[str, Any]:
+    """Synthetic Learn writer card for shared document primitives.
+
+    Closed LessonDocument v1 tests still compile content work orders. Production
+    LearnDocument v2 uses ``document.writer`` directly; these cards keep the
+    sealed selection → work-order path honest without reviving ExplanationBlock.
+    """
+    from document.writer import _PRIMITIVE_SCHEMAS
+    from document.writer_prompts import document_writer_prompt
+
+    schema = _PRIMITIVE_SCHEMAS.get(capability_id)
+    if schema is None:
+        raise KeyError(capability_id)
+    return {
+        "instructions": {
+            "text": document_writer_prompt(),
+        },
+        "payload_schema": schema,
+        "required_inputs": [
+            "teaching_plan_block",
+            "learn_selection_decision",
+            "lesson_context",
+            "allowed_facts",
+            "terminology",
+        ],
+        "modes": ["generate"],
+        "validator_refs": ["learn.payload_schema"],
+        "field_guidance": {},
+    }
+
+
 def _writer_card(capability_id: str) -> dict[str, Any]:
+    from document.models import DOCUMENT_PRIMITIVE_KINDS
+
     view = load_learn_writer_view()
     cards = view.get("capabilities") or {}
     card = cards.get(capability_id)
-    if not isinstance(card, dict):
-        raise KeyError(f"writer view missing capability {capability_id!r}")
-    out = dict(card)
-    _assert_authoring_definition_ready(capability_id, out)
-    return out
+    if isinstance(card, dict):
+        out = dict(card)
+        _assert_authoring_definition_ready(capability_id, out)
+        return out
+    if capability_id in DOCUMENT_PRIMITIVE_KINDS:
+        out = _document_primitive_writer_card(capability_id)
+        _assert_authoring_definition_ready(capability_id, out)
+        return out
+    raise KeyError(f"writer view missing capability {capability_id!r}")
 
 
 def _assert_authoring_definition_ready(capability_id: str, card: Mapping[str, Any]) -> None:

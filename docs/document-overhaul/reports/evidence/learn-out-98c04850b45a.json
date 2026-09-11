@@ -1,0 +1,295 @@
+{
+  "output_id": "learn-out-98c04850b45a",
+  "editable_lesson_id": "222e3b0f-6fc1-4656-a37e-5c9fb0da70b2",
+  "teaching_plan_id": "tp-live-persist-7276f7cd",
+  "kinds": [
+    "heading",
+    "paragraph",
+    "figure",
+    "heading",
+    "paragraph",
+    "figure",
+    "callout",
+    "paragraph",
+    "interaction"
+  ],
+  "db_status": "persisted",
+  "document": {
+    "version": 2,
+    "id": "learn-out-98c04850b45a",
+    "title": "Stomata trade-off",
+    "subject": "science",
+    "source": "generated",
+    "source_generation_id": "learn-out-98c04850b45a",
+    "nodes": [
+      {
+        "id": "node-2cc1355d6e46",
+        "teaching_block_id": "orient-b1",
+        "kind": "heading",
+        "text": "Stomata: Adjustable Openings in the Leaf",
+        "level": 2
+      },
+      {
+        "id": "node-2299e9b97ae0",
+        "teaching_block_id": "orient-b1",
+        "kind": "paragraph",
+        "text": "A leaf's surface is dotted with tiny pores called stomata. Each stoma is an opening that can widen or narrow, letting gases move between the leaf's interior and the surrounding air."
+      },
+      {
+        "id": "node-6b00be10b670",
+        "teaching_block_id": "orient-b1",
+        "kind": "figure",
+        "asset_id": "proof/node-6b00be10b670.png",
+        "caption": "Underside of a leaf showing stomata \u2014 small adjustable openings on the leaf surface.",
+        "alt": "Close-up view of a leaf surface dotted with small openings called stomata, each shown as a pore that can widen or narrow."
+      },
+      {
+        "id": "node-90d4c93ef2a3",
+        "teaching_block_id": "explain-b1",
+        "kind": "heading",
+        "text": "The Open/Close Trade-Off: Gaining CO2 Without Losing Too Much Water",
+        "level": 2
+      },
+      {
+        "id": "node-3b0b2219d866",
+        "teaching_block_id": "explain-b1",
+        "kind": "paragraph",
+        "text": "Each stoma is an adjustable opening on the leaf surface. When it opens, carbon dioxide from the air can diffuse in, which the leaf needs for photosynthesis. The same opening, however, lets water vapour diffuse out. This means the plant faces a trade-off: keeping stomata open brings in carbon dioxide for photosynthesis but also costs water vapour; closing them conserves water but limits carbon dioxide uptake, reducing photosynthesis."
+      },
+      {
+        "id": "node-06ac8307fc58",
+        "teaching_block_id": "explain-b1",
+        "kind": "figure",
+        "asset_id": "proof/node-06ac8307fc58.png",
+        "caption": "An open stoma: carbon dioxide diffuses in while water vapour diffuses out. When the stoma closes, water loss is reduced but carbon dioxide entry is limited.",
+        "alt": "Diagram of a leaf surface stoma in two states. Left: the stoma is open, with arrows showing carbon dioxide entering the leaf and water vapour leaving. Right: the stoma is closed, with no carbon dioxide entering and water loss stopped, labelled to show the trade-off between gaining carbon dioxide and conserving water."
+      },
+      {
+        "id": "node-cced8796dc7e",
+        "teaching_block_id": "explain-b1",
+        "kind": "callout",
+        "tone": "warning",
+        "title": "Watch out: stomata are not on a fixed night-and-day timetable",
+        "body": "A common myth is that stomata must open at night and close during the day. In reality, whether stomata open or close depends on the balance between taking in CO2 and losing water, alongside light, water availability, and the plant's environment. If you assume a fixed daily schedule, you can misread the trade-off: opening always admits CO2 but also lets water escape, while closing conserves water but restricts CO2 supply."
+      },
+      {
+        "id": "node-fa27147f536c",
+        "teaching_block_id": "explain-b1",
+        "kind": "paragraph",
+        "text": "A stoma is a controlled opening in the leaf surface. When guard cells swell and bow apart, the pore opens and carbon dioxide from the air diffuses in for photosynthesis. The same opening, however, lets water vapour escape along its concentration gradient in a process called transpiration. The trade-off is therefore built into the structure: a leaf cannot take in CO2 without also losing water. When water is scarce or the leaf risks dehydration, guard cells lose turgor and the pore closes. That closure conserves water but also cuts off the CO2 supply, slowing photosynthesis. Leaves balance these competing needs by opening when conditions favour gain more than loss, and closing when the cost of water loss outweighs the benefit of carbon gain."
+      },
+      {
+        "id": "ix-7e9aa8890d36",
+        "kind": "interaction",
+        "interaction_type": "choice",
+        "teaching_block_id": "explain-b1",
+        "prompt": "A plant's stomata are open during the day. What is the main trade-off of keeping them open?",
+        "config": {
+          "options": [
+            {
+              "id": "co2-in-water-out",
+              "text": "Carbon dioxide enters for photosynthesis, but water vapour escapes.",
+              "explanation": "Correct: open stomata enable CO2 uptake while unavoidably losing water vapour."
+            },
+            {
+              "id": "oxygen-in-water-in",
+              "text": "Oxygen enters and water is pulled in, so the leaf gains both gases.",
+              "explanation": "Misconception: confuses the direction of diffusion; water leaves rather than enters through open stomata."
+            },
+            {
+              "id": "water-in-co2-out",
+              "text": "Water enters through the stomata while carbon dioxide leaves.",
+              "explanation": "Misconception: reverses the exchange; the leaf takes in CO2 and loses water."
+            },
+            {
+              "id": "closed-at-night",
+              "text": "Stomata must stay open at night to let carbon dioxide in for growth.",
+              "explanation": "Misconception: assumes stomata must be open at night; many plants close them to conserve water."
+            }
+          ],
+          "correct_option_id": "co2-in-water-out",
+          "presentation": "text"
+        },
+        "feedback": {
+          "correct": "Exactly \u2014 open stomata let carbon dioxide in for photosynthesis, but the same gap lets water vapour diffuse out. That is the trade-off.",
+          "incorrect": "Not quite. Open stomata allow gas exchange, but the key trade-off is gaining carbon dioxide while losing water vapour. Remember stomata are not simply closed at night; the balance depends on conditions."
+        },
+        "assessment_mode": "practice",
+        "attempt_policy": {
+          "max_attempts": null,
+          "show_feedback_after_submit": true,
+          "allow_retry_after_correct": true
+        },
+        "completion": {
+          "type": "submitted"
+        },
+        "contract": {
+          "id": "ix-explain-b1-choice",
+          "kind": "choice",
+          "prompt": "A plant's stomata are open during the day. What is the main trade-off of keeping them open?",
+          "assessment_mode": "practice",
+          "attempt_policy": {
+            "max_attempts": null,
+            "show_feedback_after_submit": true,
+            "allow_retry_after_correct": true
+          },
+          "feedback": {
+            "correct": "Exactly \u2014 open stomata let carbon dioxide in for photosynthesis, but the same gap lets water vapour diffuse out. That is the trade-off.",
+            "incorrect": "Not quite. Open stomata allow gas exchange, but the key trade-off is gaining carbon dioxide while losing water vapour. Remember stomata are not simply closed at night; the balance depends on conditions."
+          },
+          "completion": {
+            "type": "submitted"
+          },
+          "config": {
+            "options": [
+              {
+                "id": "co2-in-water-out",
+                "text": "Carbon dioxide enters for photosynthesis, but water vapour escapes.",
+                "explanation": "Correct: open stomata enable CO2 uptake while unavoidably losing water vapour."
+              },
+              {
+                "id": "oxygen-in-water-in",
+                "text": "Oxygen enters and water is pulled in, so the leaf gains both gases.",
+                "explanation": "Misconception: confuses the direction of diffusion; water leaves rather than enters through open stomata."
+              },
+              {
+                "id": "water-in-co2-out",
+                "text": "Water enters through the stomata while carbon dioxide leaves.",
+                "explanation": "Misconception: reverses the exchange; the leaf takes in CO2 and loses water."
+              },
+              {
+                "id": "closed-at-night",
+                "text": "Stomata must stay open at night to let carbon dioxide in for growth.",
+                "explanation": "Misconception: assumes stomata must be open at night; many plants close them to conserve water."
+              }
+            ],
+            "correct_option_id": "co2-in-water-out",
+            "presentation": "text"
+          },
+          "accessibility": {
+            "aria_label": "A plant's stomata are open during the day. What is the main trade-off of keeping them open?",
+            "narration": "optional",
+            "keyboard_operable": true
+          },
+          "ai_config_rule": "config-only",
+          "concept_refs": [],
+          "provenance": {
+            "work_order_id": "learn::request::choice",
+            "source_identities": [],
+            "teaching_revision": 1,
+            "definition_hash": "9c9eca46dacb6c6603192a541ee7c019236a8ab713137ae9027d3e3557c1c7eb",
+            "input_hash": "ca0a39d39cfb9eb908d62ad5df4c76b5a1a761e19238f77ee648925e427b67dc",
+            "policy": {
+              "requested_knowledge_policy": null,
+              "effective_knowledge_policy": "supplied_preferred",
+              "knowledge_policy_source": "package:1.0.0",
+              "requested_assessment_policy": null,
+              "effective_assessment_policy": "automatic_required",
+              "assessment_policy_source": "package:1.0.0",
+              "policy_version": "1.0.0",
+              "input_availability": "intentionally_absent",
+              "executed_knowledge_mode": "model_knowledge",
+              "executed_evaluation_mode": "accepted-answers",
+              "fallback_reason": null,
+              "definition_version": "2.0.0",
+              "definition_hash": "9c9eca46dacb6c6603192a541ee7c019236a8ab713137ae9027d3e3557c1c7eb",
+              "input_revision": null,
+              "teacher_review_permitted": false
+            },
+            "block_id": "explain-b1",
+            "capability_id": "choice",
+            "capability_contract_hash": "9c9eca46dacb6c6603192a541ee7c019236a8ab713137ae9027d3e3557c1c7eb",
+            "teaching_plan_id": "tp-live-persist-7276f7cd",
+            "teaching_plan_revision": 1,
+            "teaching_plan_hash": "ad-hoc",
+            "authoring_mode": "generate",
+            "payload_hash": "9de7c0a0dcc0fb48a32dde08fbb634720d90f98d6443bfc2f0fbb3eb8f97d348"
+          }
+        }
+      }
+    ],
+    "created_at": "2026-09-11T02:24:20Z",
+    "updated_at": "2026-09-11T02:24:20Z",
+    "teaching_plan_id": "tp-live-persist-7276f7cd",
+    "teaching_plan_revision": 1
+  },
+  "composition_plan": {
+    "path": "learn",
+    "teaching_plan_id": "tp-live-persist-7276f7cd",
+    "teaching_plan_revision": 1,
+    "decisions": [
+      {
+        "teaching_block_id": "orient-b1",
+        "kind": "heading",
+        "lane": "document",
+        "reason": "Orients the learner by naming the topic of stomata in the leaf.",
+        "section_id": "orient",
+        "role": "section_header"
+      },
+      {
+        "teaching_block_id": "orient-b1",
+        "kind": "paragraph",
+        "lane": "document",
+        "reason": "Introduces stomata as adjustable openings in the leaf so the learner can name them.",
+        "section_id": "orient",
+        "role": "introduce_concept"
+      },
+      {
+        "teaching_block_id": "orient-b1",
+        "kind": "figure",
+        "lane": "document",
+        "reason": "Shows a leaf surface with stomata as adjustable openings, supporting the naming evidence.",
+        "section_id": "orient",
+        "role": "illustrate_anchor"
+      },
+      {
+        "teaching_block_id": "explain-b1",
+        "kind": "heading",
+        "lane": "document",
+        "reason": "Signals the explanation of the open/close gas-exchange trade-off.",
+        "section_id": "explain",
+        "role": "section_header"
+      },
+      {
+        "teaching_block_id": "explain-b1",
+        "kind": "paragraph",
+        "lane": "document",
+        "reason": "Explains how opening stomata admits CO2 while losing water, and closing reduces water loss but limits CO2.",
+        "section_id": "explain",
+        "role": "explain_tradeoff"
+      },
+      {
+        "teaching_block_id": "explain-b1",
+        "kind": "figure",
+        "lane": "document",
+        "reason": "Visualizes the exchange between CO2 uptake and water loss through an open stoma.",
+        "section_id": "explain",
+        "role": "illustrate_tradeoff"
+      },
+      {
+        "teaching_block_id": "explain-b1",
+        "kind": "callout",
+        "lane": "document",
+        "reason": "Warns against the myth that stomata operate on a fixed night/day schedule.",
+        "section_id": "explain",
+        "role": "misconception_warning"
+      },
+      {
+        "teaching_block_id": "explain-b1",
+        "kind": "paragraph",
+        "lane": "document",
+        "reason": "Cues the learner that a select-one check on the stomata trade-off follows.",
+        "section_id": "explain",
+        "role": "practice_cue"
+      },
+      {
+        "teaching_block_id": "explain-b1",
+        "kind": "choice",
+        "lane": "learn_interaction",
+        "reason": "learner_action \u2192 retained interaction 'choice'",
+        "section_id": "explain",
+        "role": "check"
+      }
+    ]
+  }
+}

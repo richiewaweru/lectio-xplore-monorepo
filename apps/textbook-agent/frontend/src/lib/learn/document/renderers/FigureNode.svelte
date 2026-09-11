@@ -1,20 +1,30 @@
 <script lang="ts">
 	import type { FigureNode } from '../types';
+	import { resolveAssetUrl, type AssetRef } from '../resolve-asset';
 
 	interface Props {
 		node: FigureNode;
+		/** Optional asset map (id → url) when the document carries resolved media. */
+		assets?: Record<string, AssetRef> | null;
 	}
 
-	let { node }: Props = $props();
+	let { node, assets = null }: Props = $props();
+
+	const src = $derived(resolveAssetUrl(node.asset_id, assets));
+	const alt = $derived(node.alt || node.caption || 'Figure');
 </script>
 
 <figure class="learn-figure" data-testid="figure-node" data-node-id={node.id}>
-	{#if node.asset_id}
-		<div class="asset-slot" data-asset-id={node.asset_id} role="img" aria-label={node.alt || node.caption || 'Figure'}>
-			<span class="asset-label">Figure · {node.asset_id}</span>
-		</div>
+	{#if src}
+		<img
+			class="figure-img"
+			src={src}
+			alt={alt}
+			data-asset-id={node.asset_id ?? undefined}
+			data-testid="figure-img"
+		/>
 	{:else}
-		<div class="asset-slot empty" role="img" aria-label={node.alt || 'Figure placeholder'}>
+		<div class="asset-slot empty" role="img" aria-label={alt}>
 			<span class="asset-label">{node.alt || 'No asset'}</span>
 		</div>
 	{/if}
@@ -28,6 +38,15 @@
 		margin: 0;
 		display: grid;
 		gap: 8px;
+	}
+	.figure-img {
+		display: block;
+		width: 100%;
+		max-height: 420px;
+		object-fit: contain;
+		border: 1px solid var(--rule, #ccc);
+		border-radius: 10px;
+		background: var(--surface, #f7f7f5);
 	}
 	.asset-slot {
 		display: grid;

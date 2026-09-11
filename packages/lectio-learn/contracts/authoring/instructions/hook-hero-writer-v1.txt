@@ -1,7 +1,0 @@
-Capability: hook-hero.
-
-Write an engaging opening anchor.
-
-- Use the approved concrete example or problem.
-- Make the hook serve the objective, not entertainment alone.
-- Keep claims factual and within the supplied source scope.
