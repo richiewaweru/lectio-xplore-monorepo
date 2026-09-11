@@ -58,7 +58,7 @@
 - [x] relevant backend tests
 - [x] architecture validation
 - [x] zero-legacy checks
-- [ ] tracking uses actual SHA *(stamped after implementation commit)*
+- [x] tracking uses actual SHA *(implementation `5bebfbad40e2c4f510e54a5c01670cdd5d952b5e`; tracking follow-up stamped next)*
 - [ ] independent verifier = YES
 - [ ] validate_repo full backend *(FAIL — pre-existing ruff/planning debt)*
 

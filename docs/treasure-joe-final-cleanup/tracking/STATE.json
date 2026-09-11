@@ -2,12 +2,17 @@
   "program": "treasure-joe-final-cleanup",
   "branch": "fix/treasure-joe-final-cleanup",
   "baseline_sha": "6f782e94769d0dfce34b2dd80d1d462a9c38bd04",
+  "implementation_sha": "5bebfbad40e2c4f510e54a5c01670cdd5d952b5e",
   "phases": {
-    "A": { "status": "PASS", "sha": "pending-implementation-commit" },
-    "B": { "status": "PASS", "sha": "pending-implementation-commit" },
-    "C": { "status": "PASS", "sha": "pending-implementation-commit" },
-    "D": { "status": "PASS", "sha": "pending-implementation-commit" },
-    "E": { "status": "PASS", "sha": "pending-implementation-commit" },
-    "F": { "status": "FAIL", "sha": "pending-implementation-commit", "note": "validate_repo red (pre-existing ruff/planning); pack pnpm + focused pytest + architecture green" }
+    "A": { "status": "PASS", "sha": "5bebfbad40e2c4f510e54a5c01670cdd5d952b5e" },
+    "B": { "status": "PASS", "sha": "5bebfbad40e2c4f510e54a5c01670cdd5d952b5e" },
+    "C": { "status": "PASS", "sha": "5bebfbad40e2c4f510e54a5c01670cdd5d952b5e" },
+    "D": { "status": "PASS", "sha": "5bebfbad40e2c4f510e54a5c01670cdd5d952b5e" },
+    "E": { "status": "PASS", "sha": "5bebfbad40e2c4f510e54a5c01670cdd5d952b5e" },
+    "F": {
+      "status": "FAIL",
+      "sha": "5bebfbad40e2c4f510e54a5c01670cdd5d952b5e",
+      "note": "validate_repo red (pre-existing ruff/planning); pack pnpm + focused pytest + architecture green"
+    }
   }
 }
