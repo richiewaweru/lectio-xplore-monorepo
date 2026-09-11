@@ -37,6 +37,7 @@ from learn.generation.work_orders import LearnWorkOrder, compile_learn_work_orde
 from learn.interactions.action_map import (
     ACTION_TO_LEARN_INTERACTION,
     PASSIVE_LEARNER_ACTIONS,
+    interaction_for_learner_action,
 )
 from learn.interactions.registry import RETAINED_INTERACTIONS
 from learn.resources.native_policy import (
@@ -249,6 +250,32 @@ def _block_lookup(plan: TeachingPlan) -> dict[str, TeachingPlanBlock]:
     return {block.id: block for section in plan.sections for block in section.blocks}
 
 
+def _realized_sections(plan: TeachingPlan, nodes: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    block_to_section: dict[str, str] = {}
+    sections: list[dict[str, Any]] = []
+    for index, section in enumerate(plan.sections):
+        slot_id = str(section.slot_id or f"section-{index}")
+        sections.append(
+            {
+                "id": slot_id,
+                "title": str(section.specific_purpose or slot_id),
+                "position": index,
+                "transition": section.transition,
+                "node_ids": [],
+            }
+        )
+        for block in section.blocks:
+            block_to_section[block.id] = slot_id
+    by_id = {item["id"]: item for item in sections}
+    for node in nodes:
+        block_id = str(node.get("teaching_block_id") or "")
+        section_id = block_to_section.get(block_id)
+        node_id = str(node.get("id") or "")
+        if section_id and node_id and section_id in by_id:
+            by_id[section_id]["node_ids"].append(node_id)
+    return sections
+
+
 def _section_lookup(plan: TeachingPlan) -> dict[str, str]:
     out: dict[str, str] = {}
     for section in plan.sections:
@@ -270,12 +297,17 @@ def _select_interaction_for_block(
 ) -> str | None:
     """Derive retained interaction for a learner_action.
 
-    One obvious candidate → deterministic. Multiple → prefer action map, else first legal.
+    One obvious candidate → deterministic YAML default. Multiple legal kinds
+    still stay inside the policy map. The interaction-selection spec is loaded
+    so the production path hashes the file-backed reasoning policy.
     """
+    from core.prompts.loader import effective_prompt_text
+
+    effective_prompt_text("interaction-selection")
     action = _action_for(block)
     if not action or action in PASSIVE_LEARNER_ACTIONS:
         return None
-    mapped = ACTION_TO_LEARN_INTERACTION.get(action)
+    mapped = interaction_for_learner_action(action) or ACTION_TO_LEARN_INTERACTION.get(action)
     legal = list(candidates_by_block.get(block.id, ()) if candidates_by_block else ())
     legal = [c for c in legal if c in RETAINED_INTERACTIONS]
     if mapped and (not legal or mapped in legal):
@@ -326,6 +358,7 @@ def _layer_learn_interactions(
             if document_plan.teaching_plan_revision is not None
             else plan.revision
         ),
+        composition_mode=document_plan.composition_mode,
         decisions=decisions,
     )
 
@@ -522,6 +555,7 @@ async def produce_learn_document_from_teaching_async(
                 if teaching_plan.revision is not None
                 else composition.teaching_plan_revision
             ),
+            "sections": _realized_sections(teaching_plan, nodes),
         },
     )
     return {

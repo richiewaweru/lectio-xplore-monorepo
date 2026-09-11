@@ -1,0 +1,134 @@
+{
+  "arc": "The lesson opens on one watered plant in a window where a single leaf has been covered, and asks learners to commit to what they think will happen to that leaf. The explanation traces the chain in one direction \u2014 light is required to make food, the cover stops light from reaching that leaf, so that leaf cannot make food even though the plant is watered \u2014 and marks that statement as the one to retain. The close returns to the same covered leaf and asks the learner to choose the explanation that follows from the chain rather than the belief that water alone feeds a plant.",
+  "anchor_usage": [
+    {
+      "slot_id": "orient",
+      "usage": "Introduce the anchor for the first time: one watered plant in a window with one leaf wrapped in a cover and the other leaves in the light, and ask learners to commit to a prediction about whether the covered leaf can still make food."
+    },
+    {
+      "slot_id": "explain",
+      "usage": "Build the causal chain on the same plant: light reaches the uncovered leaves, the cover stops light from reaching the one covered leaf, and since light is required to make food that leaf cannot make food \u2014 with the plant still watered so water is visibly unchanged."
+    },
+    {
+      "slot_id": "check",
+      "usage": "Return to the same watered plant with the covered leaf as the case the learner must explain, discriminating the light-and-cover explanation from a water-based one."
+    }
+  ],
+  "misconception_focus_ids": [],
+  "sections": [
+    {
+      "slot_id": "orient",
+      "specific_purpose": "Open attention on the covered-leaf plant and get learners to commit to what they think the cover does, so the explanation has a held prediction to resolve.",
+      "transition": null,
+      "blocks": [
+        {
+          "id": "orient-b1",
+          "position": 0,
+          "intent": "orient",
+          "brief": "Present the anchor plant: one healthy plant in a window that is watered as usual, with one of its leaves wrapped in a cover that keeps light out while the other leaves stay uncovered in the light. Ask learners to say whether they think the covered leaf can still make food, and to give a reason for their answer. Do not explain light's role, do not explain what the cover does to light, and do not resolve the prediction \u2014 the point is a commitment the explanation will return to. Use only the terms light, leaf, food, and cover.",
+          "evidence_refs": [
+            "lesson.objective",
+            "anchor.anchor-covered-leaf",
+            "scope.must_establish[0]",
+            "scope.must_establish[1]",
+            "slot.orient.purpose"
+          ],
+          "evidence": "The objective asks the learner to explain one particular covered-leaf case, so the opening must put that exact plant \u2014 covered leaf, watered soil, light on the other leaves \u2014 in front of them before any mechanism is stated, giving the later causal chain a concrete case to confirm or correct.",
+          "departure_reason": null,
+          "source_question_ids": [],
+          "stimulus_dependencies": [],
+          "learner_action": {
+            "action": "select-one",
+            "target": "whether the covered leaf on the watered window plant can still make food",
+            "purpose": "elicit a prediction before the light requirement is explained, so learners have a position to test against the explanation",
+            "expected_evidence": "the learner commits to one prediction about the covered leaf and a stated reason, which can be revisited after the causal chain is taught",
+            "difficulty": "guided"
+          }
+        }
+      ]
+    },
+    {
+      "slot_id": "explain",
+      "specific_purpose": "Establish that light is required to make food and that a cover blocks light from the covered leaf, so the leaf's failure is explained by blocked light rather than by anything about water.",
+      "transition": "Learners now hold a prediction about the covered leaf; this section supplies the mechanism that tells them whether their prediction was right.",
+      "blocks": [
+        {
+          "id": "explain-b1",
+          "position": 0,
+          "intent": "explain-cause",
+          "brief": "Using the same window plant, state and connect the chain in one direction: a leaf needs light to make food; the uncovered leaves receive light and can make food; the cover stops light from reaching the one covered leaf, so that leaf cannot make food. Make the direction explicit \u2014 the cover is the cause, the blocked light is what follows from it, and the leaf not making food is the result \u2014 and keep the plant watered throughout so water is visibly unchanged and cannot be read as the cause. Stay at the level of light, leaf, food, and cover; do not describe anything inside the leaf beyond 'it needs light to make food'.",
+          "evidence_refs": [
+            "lesson.objective",
+            "anchor.anchor-covered-leaf",
+            "scope.must_establish[0]",
+            "scope.must_establish[1]",
+            "scope.must_establish.must-light",
+            "scope.must_establish.must-cover",
+            "slot.explain.purpose"
+          ],
+          "evidence": "The objective is a why \u2014 why the covered leaf cannot make food \u2014 so this block must state the cause-to-result mechanism (cover blocks light, light is required for food) rather than describe how the leaf looks or define what a leaf is.",
+          "departure_reason": null,
+          "source_question_ids": [],
+          "stimulus_dependencies": [],
+          "learner_action": null
+        },
+        {
+          "id": "explain-b2",
+          "position": 1,
+          "intent": "emphasise",
+          "brief": "Set apart the single statement learners must retain from the anchored case: a leaf with a cover over it gets no light, and without light a leaf cannot make food \u2014 so the water the plant receives does not change that. Mark this as the idea the whole case turns on. Do not add a second competing key idea and do not re-walk the chain link by link.",
+          "evidence_refs": [
+            "scope.must_establish[0]",
+            "scope.must_establish[1]",
+            "scope.must_establish.must-cover",
+            "lesson.objective",
+            "anchor.anchor-covered-leaf"
+          ],
+          "evidence": "Both required scope statements collapse into one retained sentence \u2014 no light reaches the covered leaf, and no light means no food \u2014 and isolating it keeps the learner from trying to hold the chain and the takeaway as separate ideas at once.",
+          "departure_reason": "The explanation slot's job is to leave one high-value statement intact after the chain has been built; without a separate block that statement competes with the chain links for the learner's attention.",
+          "source_question_ids": [],
+          "stimulus_dependencies": [],
+          "learner_action": null
+        }
+      ]
+    },
+    {
+      "slot_id": "check",
+      "specific_purpose": "Measure whether the learner explains the covered leaf's failure using blocked light rather than insufficient water, applied to the anchored plant.",
+      "transition": "Learners have the causal chain and the retained statement; this section tests whether they can apply that chain to the anchored plant and pick the explanation that follows from it.",
+      "blocks": [
+        {
+          "id": "check-b1",
+          "position": 0,
+          "intent": "check-understanding",
+          "brief": "Return to the same window plant: one leaf covered, the rest in the light, the soil watered. Have learners choose the explanation that follows from the chain taught \u2014 the cover stopped light from reaching that leaf, and a leaf needs light to make food, so the water the plant receives cannot make up for the missing light. The explanation to be ruled out is the water-based one: that the plant was not watered enough, or that water is what makes food. Treat only the light-and-cover explanation as correct; a learner choosing the water explanation has not taken in the mechanism.",
+          "evidence_refs": [
+            "lesson.objective",
+            "anchor.anchor-covered-leaf",
+            "scope.must_establish.must-light",
+            "scope.must_establish.must-cover",
+            "slot.check.purpose",
+            "item.item-cover-1"
+          ],
+          "evidence": "The objective asks for an explanation of this exact case, so the check must discriminate a light-and-cover explanation from a water-based one on the anchored plant rather than merely asking learners to recall that light is required.",
+          "departure_reason": null,
+          "source_question_ids": [
+            "item-cover-1"
+          ],
+          "stimulus_dependencies": [],
+          "learner_action": {
+            "action": "select-one",
+            "target": "the explanation for why the covered leaf on the watered plant cannot make food",
+            "purpose": "detect whether the learner's explanation rests on blocked light rather than on the plant being insufficiently watered",
+            "expected_evidence": "the learner selects the explanation citing the cover blocking light and light being required for food, not the water-based explanation",
+            "difficulty": "independent"
+          }
+        }
+      ]
+    }
+  ],
+  "teaching_plan_id": null,
+  "revision": null,
+  "preparation_hash": null,
+  "approval_status": null
+}

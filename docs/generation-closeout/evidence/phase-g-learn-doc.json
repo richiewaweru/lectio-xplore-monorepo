@@ -1,0 +1,386 @@
+{
+  "summary": {
+    "composition_mode": "llm",
+    "sections": [
+      {
+        "id": "orient",
+        "title": "Open attention on the covered-leaf plant and get learners to commit to what they think the cover does, so the explanation has a held prediction to resolve.",
+        "position": 0,
+        "transition": null,
+        "node_ids": [
+          "node-85ab91c29f11",
+          "node-269b29122b16",
+          "ix-a8b10e679e1d"
+        ]
+      },
+      {
+        "id": "explain",
+        "title": "Establish that light is required to make food and that a cover blocks light from the covered leaf, so the leaf's failure is explained by blocked light rather than by anything about water.",
+        "position": 1,
+        "transition": "Learners now hold a prediction about the covered leaf; this section supplies the mechanism that tells them whether their prediction was right.",
+        "node_ids": [
+          "node-febd9b8ba053",
+          "node-8e7ee8f3f0e4",
+          "node-c2a736cd7c06"
+        ]
+      },
+      {
+        "id": "check",
+        "title": "Measure whether the learner explains the covered leaf's failure using blocked light rather than insufficient water, applied to the anchored plant.",
+        "position": 2,
+        "transition": "Learners have the causal chain and the retained statement; this section tests whether they can apply that chain to the anchored plant and pick the explanation that follows from it.",
+        "node_ids": [
+          "node-0368c7d106ff",
+          "node-532378d6fc43",
+          "ix-e5bf5fc42fe3"
+        ]
+      }
+    ],
+    "interactions": [
+      {
+        "id": "ix-a8b10e679e1d",
+        "type": "choice",
+        "prompt": "Look at the plant in the window. It is watered as usual, one leaf is wrapped in a cover that keeps light out, and the ot"
+      },
+      {
+        "id": "ix-e5bf5fc42fe3",
+        "type": "choice",
+        "prompt": "A window plant has one leaf covered so no light reaches it, the other leaves are in the light, and the soil is watered. "
+      }
+    ],
+    "document_id": "lesson-83544975bb35",
+    "node_count": 9,
+    "teaching_plan_hash": "359fecfae531b322a28f7bdcef4e9bee93c2ff3e6f9a9cd9b41c2fd4c4dedc26"
+  },
+  "document": {
+    "version": 2,
+    "id": "lesson-83544975bb35",
+    "title": "Closeout G covered leaf",
+    "subject": "Science",
+    "source": "generated",
+    "source_generation_id": "closeout-g-conceptual",
+    "nodes": [
+      {
+        "id": "node-85ab91c29f11",
+        "teaching_block_id": "orient-b1",
+        "kind": "heading",
+        "text": "The plant with one covered leaf",
+        "level": 2
+      },
+      {
+        "id": "node-269b29122b16",
+        "teaching_block_id": "orient-b1",
+        "kind": "paragraph",
+        "text": "Here is a healthy plant in a window. It is watered as usual. One leaf has a cover on it, and the cover keeps light out. The other leaves stay uncovered in the light. Look at the covered leaf. Do you think that leaf can still make food? Say what you think, and give a reason for your answer."
+      },
+      {
+        "id": "node-febd9b8ba053",
+        "teaching_block_id": "explain-b1",
+        "kind": "paragraph",
+        "text": "A leaf needs light to make food. On the window plant, the cover over one leaf comes first: because of the cover, light no longer reaches that leaf. The uncovered leaves still receive light, so they can make food. But with light blocked from the covered leaf, that one leaf cannot make food \u2014 even though the plant is watered as usual. Water stays the same for every leaf, so the cover and the blocked light, not water, are what explain why the covered leaf cannot make food."
+      },
+      {
+        "id": "node-8e7ee8f3f0e4",
+        "teaching_block_id": "explain-b1",
+        "kind": "figure",
+        "asset_id": "closeout-g-conceptual/node-8e7ee8f3f0e4/learn-fig-closeout-g-conceptual-node-8e7ee8f3f0e4.png",
+        "caption": "A watered plant in a window. Light falls on the uncovered leaves, so they can make food. The cover over one leaf stops light from reaching it, so that leaf cannot make food.",
+        "alt": "A potted plant standing in a window, watered as usual. Light from the window shines on the uncovered leaves, which can make food. One leaf is enclosed in a cover; light is shown stopping at the cover, so that leaf receives no light and cannot make food. The water in the pot is unchanged throughout."
+      },
+      {
+        "id": "node-c2a736cd7c06",
+        "teaching_block_id": "explain-b2",
+        "kind": "callout",
+        "tone": "important",
+        "title": "The idea the case turns on",
+        "body": "A leaf with a cover over it gets no light, and without light a leaf cannot make food. The water the plant receives does not change that."
+      },
+      {
+        "id": "node-0368c7d106ff",
+        "teaching_block_id": "check-b1",
+        "kind": "heading",
+        "text": "Explaining the covered leaf on the watered plant",
+        "level": 2
+      },
+      {
+        "id": "node-532378d6fc43",
+        "teaching_block_id": "check-b1",
+        "kind": "paragraph",
+        "text": "Think back to the plant in the window: one leaf was covered, the other leaves were left in the light, and the soil was watered. Choose the explanation that follows from the chain you traced."
+      },
+      {
+        "id": "ix-a8b10e679e1d",
+        "kind": "interaction",
+        "interaction_type": "choice",
+        "teaching_block_id": "orient-b1",
+        "prompt": "Look at the plant in the window. It is watered as usual, one leaf is wrapped in a cover that keeps light out, and the other leaves are uncovered in the light. Do you think the covered leaf can still make food, and why?",
+        "config": {
+          "options": [
+            {
+              "id": "cannot_because_covered",
+              "text": "No, because the cover keeps light from reaching that leaf",
+              "explanation": "This does not match the stateable belief that coverage blocks light from the leaf."
+            },
+            {
+              "id": "can_because_watered",
+              "text": "Yes, because the plant is watered as usual",
+              "explanation": "Names the misconception that water alone is enough for a leaf to make food."
+            },
+            {
+              "id": "can_because_plant_healthy",
+              "text": "Yes, because the rest of the plant looks healthy",
+              "explanation": "Names the misconception that one leaf's food-making can be inferred from the plant's overall appearance."
+            }
+          ],
+          "correct_option_id": "cannot_because_covered"
+        },
+        "feedback": {
+          "correct": "You committed to the covered leaf not making food because the cover blocks light. Hold on to that prediction \u2014 the explanation will return to this leaf.",
+          "incorrect": "That reason does not yet account for what the cover does to the covered leaf. Commit to a prediction now; the explanation will return to this leaf."
+        },
+        "assessment_mode": "practice",
+        "attempt_policy": {
+          "max_attempts": null,
+          "show_feedback_after_submit": true,
+          "allow_retry_after_correct": true
+        },
+        "completion": {
+          "type": "submitted"
+        },
+        "contract": {
+          "id": "ix-orient-b1-choice",
+          "kind": "choice",
+          "prompt": "Look at the plant in the window. It is watered as usual, one leaf is wrapped in a cover that keeps light out, and the other leaves are uncovered in the light. Do you think the covered leaf can still make food, and why?",
+          "assessment_mode": "practice",
+          "attempt_policy": {
+            "max_attempts": null,
+            "show_feedback_after_submit": true,
+            "allow_retry_after_correct": true
+          },
+          "feedback": {
+            "correct": "You committed to the covered leaf not making food because the cover blocks light. Hold on to that prediction \u2014 the explanation will return to this leaf.",
+            "incorrect": "That reason does not yet account for what the cover does to the covered leaf. Commit to a prediction now; the explanation will return to this leaf."
+          },
+          "completion": {
+            "type": "submitted"
+          },
+          "config": {
+            "options": [
+              {
+                "id": "cannot_because_covered",
+                "text": "No, because the cover keeps light from reaching that leaf",
+                "explanation": "This does not match the stateable belief that coverage blocks light from the leaf."
+              },
+              {
+                "id": "can_because_watered",
+                "text": "Yes, because the plant is watered as usual",
+                "explanation": "Names the misconception that water alone is enough for a leaf to make food."
+              },
+              {
+                "id": "can_because_plant_healthy",
+                "text": "Yes, because the rest of the plant looks healthy",
+                "explanation": "Names the misconception that one leaf's food-making can be inferred from the plant's overall appearance."
+              }
+            ],
+            "correct_option_id": "cannot_because_covered"
+          },
+          "accessibility": {
+            "aria_label": "Look at the plant in the window. It is watered as usual, one leaf is wrapped in a cover that keeps light out, and the other leaves are uncovered in the light. Do you think the covered leaf can still make food, and why?",
+            "narration": "optional",
+            "keyboard_operable": true
+          },
+          "ai_config_rule": "config-only",
+          "concept_refs": [],
+          "provenance": {
+            "work_order_id": "learn::request::choice",
+            "source_identities": [],
+            "teaching_revision": 1,
+            "definition_hash": "9c9eca46dacb6c6603192a541ee7c019236a8ab713137ae9027d3e3557c1c7eb",
+            "input_hash": "614b2a6549d056d00f0aace406bd06b2ecac5e80394585c34fb3b30e98c266bd",
+            "policy": {
+              "requested_knowledge_policy": null,
+              "effective_knowledge_policy": "supplied_preferred",
+              "knowledge_policy_source": "package:1.0.0",
+              "requested_assessment_policy": null,
+              "effective_assessment_policy": "automatic_required",
+              "assessment_policy_source": "package:1.0.0",
+              "policy_version": "1.0.0",
+              "input_availability": "intentionally_absent",
+              "executed_knowledge_mode": "model_knowledge",
+              "executed_evaluation_mode": "accepted-answers",
+              "fallback_reason": null,
+              "definition_version": "2.0.0",
+              "definition_hash": "9c9eca46dacb6c6603192a541ee7c019236a8ab713137ae9027d3e3557c1c7eb",
+              "input_revision": null,
+              "teacher_review_permitted": false
+            },
+            "block_id": "orient-b1",
+            "capability_id": "choice",
+            "capability_contract_hash": "9c9eca46dacb6c6603192a541ee7c019236a8ab713137ae9027d3e3557c1c7eb",
+            "teaching_plan_id": "teaching-plan",
+            "teaching_plan_revision": 1,
+            "teaching_plan_hash": "ad-hoc",
+            "authoring_mode": "generate",
+            "payload_hash": "eea635555584914c8a92042db3af181b11f98b6669716152744ba494f7bbfcab"
+          }
+        }
+      },
+      {
+        "id": "ix-e5bf5fc42fe3",
+        "kind": "interaction",
+        "interaction_type": "choice",
+        "teaching_block_id": "check-b1",
+        "prompt": "A window plant has one leaf covered so no light reaches it, the other leaves are in the light, and the soil is watered. Why will the covered leaf be unable to make food?",
+        "config": {
+          "correct_option_id": "cover-light",
+          "options": [
+            {
+              "id": "cover-light",
+              "text": "The cover stops light reaching that leaf, and a leaf needs light to make food.",
+              "explanation": "Correct: this follows the chain that light is needed to make food and the cover blocks light."
+            },
+            {
+              "id": "not-watered",
+              "text": "Because the plant was not watered enough.",
+              "explanation": "Misses the mechanism: the soil is watered, so lack of water is not the cause."
+            },
+            {
+              "id": "water-makes-food",
+              "text": "Because water is what makes food, and the leaf got none.",
+              "explanation": "Reveals the misconception that water itself makes food rather than supplying materials."
+            }
+          ]
+        },
+        "feedback": {
+          "correct": "Yes. The cover blocks light to that leaf, and light is needed to make food, so the water the plant gets cannot replace the missing light.",
+          "incorrect": "Look again at the covered leaf: the soil is watered, so the problem is not water. The cover stops light reaching that leaf, and light is needed to make food."
+        },
+        "assessment_mode": "practice",
+        "attempt_policy": {
+          "max_attempts": null,
+          "show_feedback_after_submit": true,
+          "allow_retry_after_correct": true
+        },
+        "completion": {
+          "type": "submitted"
+        },
+        "contract": {
+          "id": "ix-check-b1-choice",
+          "kind": "choice",
+          "prompt": "A window plant has one leaf covered so no light reaches it, the other leaves are in the light, and the soil is watered. Why will the covered leaf be unable to make food?",
+          "assessment_mode": "practice",
+          "attempt_policy": {
+            "max_attempts": null,
+            "show_feedback_after_submit": true,
+            "allow_retry_after_correct": true
+          },
+          "feedback": {
+            "correct": "Yes. The cover blocks light to that leaf, and light is needed to make food, so the water the plant gets cannot replace the missing light.",
+            "incorrect": "Look again at the covered leaf: the soil is watered, so the problem is not water. The cover stops light reaching that leaf, and light is needed to make food."
+          },
+          "completion": {
+            "type": "submitted"
+          },
+          "config": {
+            "correct_option_id": "cover-light",
+            "options": [
+              {
+                "id": "cover-light",
+                "text": "The cover stops light reaching that leaf, and a leaf needs light to make food.",
+                "explanation": "Correct: this follows the chain that light is needed to make food and the cover blocks light."
+              },
+              {
+                "id": "not-watered",
+                "text": "Because the plant was not watered enough.",
+                "explanation": "Misses the mechanism: the soil is watered, so lack of water is not the cause."
+              },
+              {
+                "id": "water-makes-food",
+                "text": "Because water is what makes food, and the leaf got none.",
+                "explanation": "Reveals the misconception that water itself makes food rather than supplying materials."
+              }
+            ]
+          },
+          "accessibility": {
+            "aria_label": "A window plant has one leaf covered so no light reaches it, the other leaves are in the light, and the soil is watered. Why will the covered leaf be unable to make food?",
+            "narration": "optional",
+            "keyboard_operable": true
+          },
+          "ai_config_rule": "config-only",
+          "concept_refs": [],
+          "provenance": {
+            "work_order_id": "learn::request::choice",
+            "source_identities": [],
+            "teaching_revision": 1,
+            "definition_hash": "9c9eca46dacb6c6603192a541ee7c019236a8ab713137ae9027d3e3557c1c7eb",
+            "input_hash": "d457de2992a74a62c2b97516c06721e2df5e9535125f6469073a0cdd34877d11",
+            "policy": {
+              "requested_knowledge_policy": null,
+              "effective_knowledge_policy": "supplied_preferred",
+              "knowledge_policy_source": "package:1.0.0",
+              "requested_assessment_policy": null,
+              "effective_assessment_policy": "automatic_required",
+              "assessment_policy_source": "package:1.0.0",
+              "policy_version": "1.0.0",
+              "input_availability": "intentionally_absent",
+              "executed_knowledge_mode": "model_knowledge",
+              "executed_evaluation_mode": "accepted-answers",
+              "fallback_reason": null,
+              "definition_version": "2.0.0",
+              "definition_hash": "9c9eca46dacb6c6603192a541ee7c019236a8ab713137ae9027d3e3557c1c7eb",
+              "input_revision": null,
+              "teacher_review_permitted": false
+            },
+            "block_id": "check-b1",
+            "capability_id": "choice",
+            "capability_contract_hash": "9c9eca46dacb6c6603192a541ee7c019236a8ab713137ae9027d3e3557c1c7eb",
+            "teaching_plan_id": "teaching-plan",
+            "teaching_plan_revision": 1,
+            "teaching_plan_hash": "ad-hoc",
+            "authoring_mode": "generate",
+            "payload_hash": "0f52bdc105f837683a8bf81bea667302d8347f34cf85a5a350b38e552a9b8e67"
+          }
+        }
+      }
+    ],
+    "created_at": "2026-09-11T09:37:30Z",
+    "updated_at": "2026-09-11T09:37:30Z",
+    "teaching_plan_id": null,
+    "teaching_plan_revision": null,
+    "sections": [
+      {
+        "id": "orient",
+        "title": "Open attention on the covered-leaf plant and get learners to commit to what they think the cover does, so the explanation has a held prediction to resolve.",
+        "position": 0,
+        "transition": null,
+        "node_ids": [
+          "node-85ab91c29f11",
+          "node-269b29122b16",
+          "ix-a8b10e679e1d"
+        ]
+      },
+      {
+        "id": "explain",
+        "title": "Establish that light is required to make food and that a cover blocks light from the covered leaf, so the leaf's failure is explained by blocked light rather than by anything about water.",
+        "position": 1,
+        "transition": "Learners now hold a prediction about the covered leaf; this section supplies the mechanism that tells them whether their prediction was right.",
+        "node_ids": [
+          "node-febd9b8ba053",
+          "node-8e7ee8f3f0e4",
+          "node-c2a736cd7c06"
+        ]
+      },
+      {
+        "id": "check",
+        "title": "Measure whether the learner explains the covered leaf's failure using blocked light rather than insufficient water, applied to the anchored plant.",
+        "position": 2,
+        "transition": "Learners have the causal chain and the retained statement; this section tests whether they can apply that chain to the anchored plant and pick the explanation that follows from it.",
+        "node_ids": [
+          "node-0368c7d106ff",
+          "node-532378d6fc43",
+          "ix-e5bf5fc42fe3"
+        ]
+      }
+    ]
+  }
+}

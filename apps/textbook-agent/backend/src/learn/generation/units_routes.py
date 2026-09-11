@@ -495,4 +495,57 @@ async def generate_learn_realization(
     return result
 
 
+@router.post(
+    "/{unit_id}/path/lessons/{lesson_id}/realizations:generate-print",
+)
+async def generate_print_realization(
+    unit_id: str,
+    lesson_id: str,
+    body: PathLessonMutationRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, Any]:
+    """Admit + queue Print from an approved Teaching Plan (no Studio re-approval)."""
+    from application.unit_lesson.realize_print_handoff import realize_print_from_preparation
+
+    unit = await session.scalar(
+        select(UnitModel).where(UnitModel.id == unit_id, UnitModel.owner_id == current_user.id)
+    )
+    lesson = await session.scalar(select(PathLessonModel).where(PathLessonModel.id == lesson_id))
+    if unit is None or lesson is None:
+        raise HTTPException(status_code=404, detail="Unit lesson not found")
+    version = await session.get(PathVersionModel, lesson.path_version_id)
+    if version is None or version.unit_id != unit.id:
+        raise HTTPException(status_code=404, detail="Unit lesson not found")
+
+    if (
+        version.id != body.path_version_id
+        or version.revision != body.path_revision
+        or lesson.revision != body.lesson_revision
+    ):
+        raise HTTPException(
+            status_code=409, detail="The unit path changed; reload before continuing"
+        )
+    prep_id = lesson.pack_id
+    if not prep_id:
+        raise HTTPException(status_code=409, detail="Prepare the lesson before generating Print")
+
+    try:
+        result = await realize_print_from_preparation(
+            session,
+            preparation_generation_id=prep_id,
+            user_id=current_user.id,
+            path_lesson_id=lesson.id,
+        )
+        await session.commit()
+    except HTTPException:
+        await session.rollback()
+        raise
+    except Exception as exc:
+        await session.rollback()
+        raise HTTPException(status_code=500, detail=str(exc)[:400]) from exc
+
+    return result
+
+
 __all__ = ["router"]

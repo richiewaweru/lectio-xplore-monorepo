@@ -8,6 +8,7 @@ describe('native print edition contract', () => {
 	it('reads the authoritative edition query and passes it to the V2 renderer', () => {
 		expect(source).toContain("page.url.searchParams.get('edition') === 'student'");
 		expect(source).toContain('<LectioPageDocumentView document={pageDocumentV2} {edition} />');
+		expect(source).toContain('PrintDocumentEditor');
 		expect(source).not.toContain('<LectioPageDocumentView document={pageDocumentV2} edition="teacher" />');
 	});
 

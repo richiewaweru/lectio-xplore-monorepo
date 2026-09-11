@@ -10,6 +10,8 @@ import logging
 from typing import Any, Mapping
 from urllib.parse import urlsplit
 
+from core.prompts.loader import effective_prompt_text
+
 from v3_execution.executors.visual_executor import execute_visual
 from v3_execution.models import VisualGeneratorWorkOrder, VisualPlanItem
 
@@ -68,6 +70,12 @@ def _work_order_for_figure(
         source_of_truth.append({"key": f"block.{node_id}.evidence", "text": evidence})
     if caption:
         source_of_truth.append({"key": f"figure.{node_id}.caption", "text": caption})
+    source_of_truth.append(
+        {
+            "key": "figure.authoring_policy",
+            "text": effective_prompt_text("figure-authoring"),
+        }
+    )
     purpose = (caption or alt or intent or "lesson concept diagram").strip()[:120]
     return VisualGeneratorWorkOrder(
         work_order_id=f"learn-visual:{request_id}",

@@ -1,0 +1,11 @@
+version: 1
+mappings:
+  select-one: {candidates: [choice], default: choice}
+  select-many: {candidates: [multi-select], default: multi-select}
+  complete-missing-values: {candidates: [fill-blank], default: fill-blank}
+  classify-items: {candidates: [classify], default: classify}
+  match-pairs: {candidates: [match-pairs], default: match-pairs}
+  order-items: {candidates: [sequence], default: sequence}
+  reconstruct-order: {candidates: [sequence], default: sequence}
+  enter-number: {candidates: [numeric], default: numeric}
+  enter-text: {candidates: [short-response], default: short-response}

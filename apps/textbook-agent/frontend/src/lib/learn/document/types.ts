@@ -95,6 +95,14 @@ export interface InteractionNode extends NodeBase {
 
 export type LearnNode = DocumentNode | InteractionNode;
 
+export interface LearnSection {
+	id: string;
+	title?: string;
+	position: number;
+	transition?: string | null;
+	node_ids?: string[];
+}
+
 export interface LearnDocument {
 	version: 2;
 	id: string;
@@ -103,6 +111,7 @@ export interface LearnDocument {
 	source: string;
 	source_generation_id?: string | null;
 	nodes: LearnNode[];
+	sections?: LearnSection[];
 	created_at: string;
 	updated_at: string;
 	teaching_plan_id?: string | null;

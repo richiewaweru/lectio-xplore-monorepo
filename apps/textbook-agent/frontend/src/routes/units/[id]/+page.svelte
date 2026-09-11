@@ -19,6 +19,7 @@
 		planUnitPath,
 		preparePathLesson,
 		generateLearnRealization,
+		generatePrintRealization,
 		regeneratePathLesson,
 		restorePathVersion
 	} from '$lib/api/units';
@@ -399,27 +400,48 @@
 					selectedGroupIds = [];
 				}
 			}
-			// If preparation already exists and Learn is requested, try generating Learn
-			// from the approved Teaching Plan (sibling path; no Print conversion).
-			if (pathKind === 'learn' && preparation?.generation_id) {
+			// If preparation already exists, realize the chosen path from the
+			// approved Teaching Plan (no Studio re-approval, no path conversion).
+			const existingGenerationId = preparation?.generation_id || selected.pack_id;
+			if (existingGenerationId) {
 				try {
-					const result = await generateLearnRealization(
-						unitId,
-						path as UnitPath,
-						selected
-					);
-					const href =
-						result.open_href ||
-						(result.editable_lesson_id
-							? `/builder/${encodeURIComponent(result.editable_lesson_id)}`
-							: null);
-					if (href) {
+					if (pathKind === 'learn') {
+						const result = await generateLearnRealization(
+							unitId,
+							path as UnitPath,
+							selected
+						);
+						const href =
+							result.open_href ||
+							(result.editable_lesson_id
+								? `/builder/${encodeURIComponent(result.editable_lesson_id)}`
+								: null);
+						if (href) {
+							window.location.href = href;
+							return;
+						}
+					} else if (pathKind === 'print') {
+						const result = await generatePrintRealization(
+							unitId,
+							path as UnitPath,
+							selected
+						);
+						const href = result.open_href || `/studio/print/${encodeURIComponent(result.output_id)}`;
 						window.location.href = href;
 						return;
 					}
 				} catch (err) {
-					// Teaching not approved yet — fall through to shared prep / studio review.
-					if (!(isApiError(err) && err.status === 409)) throw err;
+					// Teaching not approved yet — open existing prep in Studio for review
+					// (do not silently re-prepare a failed/stale pack).
+					if (isApiError(err) && err.status === 409) {
+						const qs =
+							pathKind === 'learn'
+								? `?generation_id=${encodeURIComponent(existingGenerationId)}&path=learn`
+								: `?generation_id=${encodeURIComponent(existingGenerationId)}`;
+						window.location.href = `/studio${qs}`;
+						return;
+					}
+					throw err;
 				}
 			}
 			const prepared = await preparePathLesson(

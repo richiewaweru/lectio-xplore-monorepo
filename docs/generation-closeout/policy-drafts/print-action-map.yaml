@@ -1,0 +1,16 @@
+version: 1
+mappings:
+  select-one: {candidates: [choices], default: choices}
+  select-many: {candidates: [choices], default: choices}
+  complete-missing-values: {candidates: [questions], default: questions}
+  classify-items: {candidates: [questions], default: questions}
+  match-pairs: {candidates: [questions], default: questions}
+  order-items: {candidates: [questions], default: questions}
+  reconstruct-order: {candidates: [questions], default: questions}
+  enter-number: {candidates: [questions, worked-example], default: questions}
+  enter-text: {candidates: [questions, worked-example], default: questions}
+contextual_rules:
+  - when:
+      intents: [demonstrate, model, worked-example, walkthrough]
+      actions: [enter-text, enter-number]
+    prefer: worked-example

@@ -32,6 +32,7 @@
 	let status = $state<string | null>(null);
 	let saving = $state(false);
 	let addKind = $state<AddableKind>('paragraph');
+	let activeSectionId = $state<string>('all');
 
 	$effect(() => {
 		if (store.document) onDocumentChange?.(store.document);
@@ -39,6 +40,13 @@
 
 	const doc = $derived(store.document);
 	const selectedId = $derived(store.selectedNodeId);
+	const sections = $derived(doc?.sections ?? []);
+	const viewDocument = $derived.by(() => {
+		if (!doc || activeSectionId === 'all' || sections.length === 0) return doc;
+		const section = sections.find((item) => item.id === activeSectionId);
+		const allowed = new Set(section?.node_ids ?? []);
+		return { ...doc, nodes: doc.nodes.filter((node) => allowed.has(node.id)) };
+	});
 
 	async function save() {
 		if (!doc || !lessonId) {
@@ -143,8 +151,30 @@
 			<p class="status" data-testid="editor-status" role="status">{status}</p>
 		{/if}
 
+		{#if sections.length > 0}
+			<nav class="section-tabs" data-testid="section-tabs" aria-label="Lesson sections">
+				<button
+					type="button"
+					class:active={activeSectionId === 'all'}
+					onclick={() => (activeSectionId = 'all')}
+				>
+					All
+				</button>
+				{#each sections as section}
+					<button
+						type="button"
+						class:active={activeSectionId === section.id}
+						title={section.title || section.id}
+						onclick={() => (activeSectionId = section.id)}
+					>
+						{section.id}
+					</button>
+				{/each}
+			</nav>
+		{/if}
+
 		<DocumentCanvas
-			document={doc}
+			document={viewDocument ?? doc}
 			selectedNodeId={selectedId}
 			editable
 			onSelectNode={(id) => store.selectNode(id)}
@@ -192,6 +222,22 @@
 		padding: 6px 10px;
 		cursor: pointer;
 		text-decoration: none;
+	}
+	.section-tabs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+	.section-tabs button {
+		max-width: 12rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		text-transform: capitalize;
+	}
+	.section-tabs button.active {
+		font-weight: 600;
+		border-color: var(--ink, #1a1a1a);
 	}
 	button:disabled {
 		opacity: 0.45;

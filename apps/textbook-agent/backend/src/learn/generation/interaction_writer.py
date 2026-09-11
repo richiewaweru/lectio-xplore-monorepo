@@ -161,16 +161,26 @@ def _work_order_from_request(request: Mapping[str, Any]) -> LearnWorkOrder:
             card = dict(raw_card)
     except Exception:
         card = {}
+    from core.prompts.loader import effective_prompt_text, hash_prompt
+
     definition = dict(request.get("authoring_definition") or card)
     schema = request.get("payload_schema") or card.get("payload_schema") or {}
-    instructions = request.get("instructions") or definition.get("instructions") or card.get("instructions")
+    base_instructions = (
+        request.get("instructions") or definition.get("instructions") or card.get("instructions")
+    )
+    policy = effective_prompt_text("interaction-writer")
+    if isinstance(base_instructions, Mapping):
+        base_text = str(base_instructions.get("text") or "")
+    else:
+        base_text = str(base_instructions or "")
+    instructions = f"{policy}\n\n{base_text}".strip() if base_text else policy
     required_inputs = request.get("required_inputs") or card.get("required_inputs") or []
     modes = request.get("modes") or card.get("modes") or ["generate", "convert-approved"]
     validator_refs = request.get("validator_refs") or card.get("validator_refs") or []
     contract_hash = str(
         request.get("capability_contract_hash")
         or card.get("definition_hash")
-        or "ad-hoc"
+        or hash_prompt(instructions)
     )
 
     approved_items = request.get("approved_items")

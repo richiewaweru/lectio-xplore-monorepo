@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 	getPathHistory: vi.fn(), getPathStatus: vi.fn(), getHistoricalPath: vi.fn(), restorePathVersion: vi.fn(),
 	getPreparedLessonStatus: vi.fn(), approveUnitPath: vi.fn(), planUnitPath: vi.fn(),
 	patchPathLesson: vi.fn(), mergePathLessons: vi.fn(), preparePathLesson: vi.fn(),
+	generateLearnRealization: vi.fn(), generatePrintRealization: vi.fn(),
 	regeneratePathLesson: vi.fn(), editUnitPathByChat: vi.fn()
 }));
 
@@ -358,5 +359,35 @@ describe('/units/[id]', () => {
 		expect(screen.queryByRole('button', { name: 'Start fresh' })).toBeNull();
 		expect(screen.getByRole('button', { name: 'Generate Print' })).toBeTruthy();
 		expect(screen.getByRole('button', { name: 'Generate Learn' })).toBeTruthy();
+	});
+
+	it('realizes Print from an existing preparation without Studio admission', async () => {
+		const locationStub = { href: '' };
+		vi.stubGlobal('location', locationStub);
+		mocks.generatePrintRealization.mockResolvedValue({
+			output_id: 'print-gen-9',
+			open_href: '/studio/print/print-gen-9'
+		});
+		render(UnitPage);
+		await fireEvent.click(await screen.findByRole('button', { name: /Plant outputs/ }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Generate Print' }));
+		await waitFor(() => expect(mocks.generatePrintRealization).toHaveBeenCalled());
+		expect(mocks.preparePathLesson).not.toHaveBeenCalled();
+		expect(locationStub.href).toBe('/studio/print/print-gen-9');
+		vi.unstubAllGlobals();
+	});
+
+	it('opens Studio review when Learn realization needs Teaching Plan approval', async () => {
+		const locationStub = { href: '' };
+		vi.stubGlobal('location', locationStub);
+		mocks.generateLearnRealization.mockRejectedValue(new ApiError(409, 'Approve first'));
+		render(UnitPage);
+		await fireEvent.click(await screen.findByRole('button', { name: /Plant outputs/ }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Generate Learn' }));
+		await waitFor(() => expect(mocks.generateLearnRealization).toHaveBeenCalled());
+		expect(mocks.preparePathLesson).not.toHaveBeenCalled();
+		expect(locationStub.href).toContain('/studio?generation_id=');
+		expect(locationStub.href).toContain('path=learn');
+		vi.unstubAllGlobals();
 	});
 });

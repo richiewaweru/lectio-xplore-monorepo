@@ -1,13 +1,14 @@
 """Learner-action → retained interaction mapping (Learn-owned).
 
 Teaching Plan learner actions describe WHAT the learner should do.
-This module maps those path-agnostic actions onto retained Learn interaction kinds.
+Legal mappings come from ``backend/resources/policies/learn-action-map.yaml``.
 """
 
 from __future__ import annotations
 
 from typing import Literal
 
+from core.policies.loader import learn_defaults, learn_interaction_for_action, passive_learner_actions
 from learn.interactions.registry import RETAINED_INTERACTIONS
 
 LearnRetainedInteraction = Literal[
@@ -21,29 +22,27 @@ LearnRetainedInteraction = Literal[
     "short-response",
 ]
 
-# Passive actions do not require an interactive response surface.
-PASSIVE_LEARNER_ACTIONS: frozenset[str] = frozenset(
-    {"compare-without-response", "read-explanation"}
-)
+PASSIVE_LEARNER_ACTIONS: frozenset[str] = passive_learner_actions()
 
 ACTION_TO_LEARN_INTERACTION: dict[str, LearnRetainedInteraction] = {
-    "select-one": "choice",
-    "select-many": "multi-select",
-    "complete-missing-values": "fill-blank",
-    "classify-items": "classify",
-    "match-pairs": "match-pairs",
-    "order-items": "sequence",
-    "enter-number": "numeric",
-    "enter-text": "short-response",
-    # Gate wording alias
-    "reconstruct-order": "sequence",
+    key: value  # type: ignore[misc]
+    for key, value in learn_defaults().items()
+    if value in RETAINED_INTERACTIONS
 }
 
 assert frozenset(ACTION_TO_LEARN_INTERACTION.values()) <= RETAINED_INTERACTIONS
+
+
+def interaction_for_learner_action(action: str | None) -> LearnRetainedInteraction | None:
+    mapped = learn_interaction_for_action(action)
+    if mapped in RETAINED_INTERACTIONS:
+        return mapped  # type: ignore[return-value]
+    return None
 
 
 __all__ = [
     "ACTION_TO_LEARN_INTERACTION",
     "LearnRetainedInteraction",
     "PASSIVE_LEARNER_ACTIONS",
+    "interaction_for_learner_action",
 ]

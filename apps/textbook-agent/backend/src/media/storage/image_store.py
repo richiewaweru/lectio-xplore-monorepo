@@ -297,9 +297,19 @@ class GCSImageStore(ImageStore):
         return f"gcs:{self.bucket_name} auth={self.credential_source}"
 
 
+def local_image_store_root() -> Path:
+    """Absolute image-store directory. Independent of process CWD."""
+    raw = (settings.image_store_root or "").strip()
+    if raw:
+        return Path(raw).expanduser().resolve()
+    return (Path(__file__).resolve().parents[3] / "data" / "images").resolve()
+
+
 def get_image_store() -> ImageStore:
     env = settings.app_env
     if env == "production":
         return GCSImageStore(bucket_name=settings.gcs_bucket_name)
-    return LocalImageStore(base_path=Path("data/images"), base_url=settings.image_base_url)
+    root = local_image_store_root()
+    root.mkdir(parents=True, exist_ok=True)
+    return LocalImageStore(base_path=root, base_url=settings.image_base_url)
 

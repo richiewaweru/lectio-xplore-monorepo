@@ -29,7 +29,7 @@ from print.generation.work_orders import (
     PrintWorkOrder,
     build_print_work_order_from_planned_block,
 )
-from print.generation.whole_lesson.figure_ids import stable_figure_request_id
+from print.generation.document_form_map import PRINT_OBJECT_TO_PRIMITIVE
 
 
 def _assert_fixed_object(ctx: WriterContext, expected: str) -> None:
@@ -391,5 +391,8 @@ async def dispatch_writer_async(
 ) -> WriterOutcome:
     if ctx.planned.object in {"questions", "choices"} or not ctx.use_llm:
         return dispatch_writer(ctx)
+    if ctx.planned.object in PRINT_OBJECT_TO_PRIMITIVE:
+        from print.generation.shared_writer_bridge import write_ordinary_via_shared_writer
 
+        return await write_ordinary_via_shared_writer(ctx, provider=provider)
     return await _write_validated_llm(ctx, provider=provider)

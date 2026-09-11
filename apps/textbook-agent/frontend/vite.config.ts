@@ -92,7 +92,8 @@ export default defineConfig(({ mode }) => {
 		server: {
 			proxy: {
 				'/api': apiTarget,
-				'/health': apiTarget
+				'/health': apiTarget,
+				'/images': apiTarget
 			}
 		},
 		ssr: {

@@ -137,6 +137,55 @@ def _missing_order_learner_action_errors(
     ]
 
 
+_CHECK_PRACTICE_INTENTS = frozenset(
+    {
+        "check-understanding",
+        "check",
+        "assess",
+        "practise-guided",
+        "practise-independent",
+        "practice-guided",
+        "practice-independent",
+        "guided-practice",
+        "independent-practice",
+    }
+)
+
+_PASSIVE_EVIDENCE_MARKERS = (
+    "observe",
+    "read",
+    "listen",
+    "watch",
+    "follow the worked",
+    "no response",
+)
+
+
+def _missing_check_practice_action_errors(plan: TeachingPlan) -> list[str]:
+    """Fail closed when evidence-bearing check/practice blocks omit learner_action.
+
+    Legitimate passive blocks (read/observe/worked-example follow) stay allowed.
+    """
+    errors: list[str] = []
+    for section in plan.sections:
+        for block in section.blocks:
+            if block.learner_action is not None:
+                continue
+            intent = (block.intent or "").strip().lower().replace("_", "-")
+            if intent not in _CHECK_PRACTICE_INTENTS:
+                continue
+            evidence = f"{block.evidence} {block.brief}".lower()
+            if any(marker in evidence for marker in _PASSIVE_EVIDENCE_MARKERS):
+                continue
+            errors.append(
+                "TEACHING_MISSING_LEARNER_ACTION: "
+                f"block {block.id!r} intent={intent!r} is evidence-bearing "
+                "check/practice but learner_action is null. Either declare a "
+                "path-agnostic action or make the block genuinely passive."
+            )
+    return errors
+
+
 _STOPWORDS = frozenset(
     {
         "the",
@@ -570,6 +619,7 @@ async def run_lesson_approach_planner(
                 continue
             _repair_briefs_missing_anchor_grounding(plan, packet)
             ownership_errors = _missing_order_learner_action_errors(plan, packet)
+            ownership_errors.extend(_missing_check_practice_action_errors(plan))
             _repair_incompatible_assessment_sources(plan, packet)
             ownership_errors.extend(
                 _repair_missing_assessment_sources(

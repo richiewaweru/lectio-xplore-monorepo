@@ -24,18 +24,23 @@ def _instruction_text(raw: Any) -> str:
     return str(raw or "")
 
 
+from core.prompts.loader import effective_prompt_text, hash_prompt
+
 def _definition_from_order(order: PrintWorkOrder) -> AuthoringDefinition:
     definition = dict(order.authoring_definition or {})
+    base = _instruction_text(definition.get("instructions") or order.instructions)
+    policy = effective_prompt_text("print-realization")
+    instructions = f"{policy}\n\n{base}".strip() if base else policy
     return AuthoringDefinition(
         capability_id=str(definition.get("capability_id") or order.form_id),
         native_path=str(definition.get("native_path") or "print"),
         modes=tuple(order.modes),  # type: ignore[arg-type]
-        instructions=_instruction_text(definition.get("instructions") or order.instructions),
+        instructions=instructions,
         payload_schema=order.expected_output_schema,
         required_inputs=tuple(order.required_inputs),
         validator_refs=tuple(order.validator_refs),
         converter_ref=definition.get("converter_ref"),
-        definition_hash=order.capability_contract_hash,
+        definition_hash=str(order.capability_contract_hash or hash_prompt(instructions)),
         raw=definition,
     )
 

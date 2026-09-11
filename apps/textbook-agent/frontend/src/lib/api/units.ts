@@ -360,6 +360,37 @@ export function generateLearnRealization(
 	);
 }
 
+export type GeneratePrintResult = {
+	status: string;
+	path: 'print';
+	output_id: string;
+	realization_id?: string;
+	open_href?: string | null;
+	teaching_plan_hash?: string;
+	teaching_plan_revision?: number;
+};
+
+/** Admit + queue Print from an approved Teaching Plan (no Studio re-approval). */
+export function generatePrintRealization(
+	unitId: string,
+	path: UnitPath,
+	lesson: PathLesson
+): Promise<GeneratePrintResult> {
+	return jsonRequest(
+		`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons/${encodeURIComponent(lesson.id)}/realizations:generate-print`,
+		'Could not generate the Print lesson.',
+		{
+			method: 'POST',
+			headers: jsonHeaders,
+			body: JSON.stringify({
+				path_version_id: path.id,
+				path_revision: path.revision,
+				lesson_revision: lesson.revision
+			})
+		}
+	);
+}
+
 export function regeneratePathLesson(
 	unitId: string,
 	path: UnitPath,

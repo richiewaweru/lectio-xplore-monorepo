@@ -50,6 +50,15 @@
 		return map;
 	});
 
+	let activeSectionId = $state<string>('all');
+	const sections = $derived(document.sections ?? []);
+	const viewDocument = $derived.by(() => {
+		if (activeSectionId === 'all' || sections.length === 0) return document;
+		const section = sections.find((item) => item.id === activeSectionId);
+		const allowed = new Set(section?.node_ids ?? []);
+		return { ...document, nodes: document.nodes.filter((node) => allowed.has(node.id)) };
+	});
+
 	async function onSubmitInteraction(args: {
 		interactionId: string;
 		response: Record<string, unknown>;
@@ -70,10 +79,31 @@
 	data-document-version="2"
 	data-preview={preview ? 'true' : 'false'}
 	data-persist-attempts={preview ? 'false' : 'true'}
-	data-node-count={document.nodes.length}
+	data-node-count={viewDocument.nodes.length}
 >
+	{#if sections.length > 0}
+		<nav class="section-tabs" data-testid="runtime-section-tabs" aria-label="Lesson sections">
+			<button
+				type="button"
+				class:active={activeSectionId === 'all'}
+				onclick={() => (activeSectionId = 'all')}
+			>
+				All
+			</button>
+			{#each sections as section}
+				<button
+					type="button"
+					class:active={activeSectionId === section.id}
+					title={section.title || section.id}
+					onclick={() => (activeSectionId = section.id)}
+				>
+					{section.id}
+				</button>
+			{/each}
+		</nav>
+	{/if}
 	<DocumentCanvas
-		{document}
+		document={viewDocument}
 		{selectedNodeId}
 		{onSelectNode}
 		attemptsByInteraction={attemptStates}
@@ -98,5 +128,26 @@
 		font: 500 11px 'IBM Plex Mono', monospace;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
+	}
+	.section-tabs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+	.section-tabs button {
+		border: 1px solid var(--rule, #ccc);
+		border-radius: 8px;
+		background: var(--paper, #fff);
+		padding: 6px 10px;
+		cursor: pointer;
+		max-width: 12rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		text-transform: capitalize;
+	}
+	.section-tabs button.active {
+		font-weight: 600;
+		border-color: var(--ink, #1a1a1a);
 	}
 </style>

@@ -17,6 +17,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from infra.config import settings
 from infra.rate_limit import limiter
+from media.storage.image_store import local_image_store_root
 from infra.database.migrations import upgrade_database
 from infra.database.session import engine
 from infra.errors import register_error_handlers
@@ -59,7 +60,7 @@ from v3_blueprint.skeletons import initialize_skeleton_catalog
 logger = logging.getLogger("uvicorn.error")
 __version__ = VERSION
 _PRODUCTION_LIKE_ENVS = {"production", "staging"}
-_IMAGES_DIR = Path("data/images")
+_IMAGES_DIR = local_image_store_root()
 _IMAGE_PROBE_CACHE_TTL_SECONDS = 600
 _FALLBACK_PROBE_IMAGE = (
     b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"

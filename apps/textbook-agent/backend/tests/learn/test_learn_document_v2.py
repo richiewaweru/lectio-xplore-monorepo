@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+from typing import Any
 
 from curriculum.teaching_plan.models import (
     LearnerActionBrief,
@@ -10,6 +11,7 @@ from curriculum.teaching_plan.models import (
     TeachingPlanBlock,
     TeachingPlanSection,
 )
+from infra.authoring import AuthoringProviderCall
 from learn.contracts.lesson_document import (
     LearnDocumentValidationError,
     assert_valid_learn_document,
@@ -17,6 +19,66 @@ from learn.contracts.lesson_document import (
 )
 from learn.generation.assemble import assemble_learn_document
 from learn.generation.native_production import produce_learn_document_from_teaching
+
+
+class _OfflineDocProvider:
+    """Deterministic offline provider for compose/write unit tests."""
+
+    async def invoke(self, call: AuthoringProviderCall) -> dict[str, Any]:
+        kind = str(call.capability_id or "paragraph")
+        if kind in {"sequence", "order-items"} or "sequence" in kind:
+            return {
+                "prompt": "Order the stages.",
+                "config": {
+                    "items": [
+                        {"id": "a", "label": "A"},
+                        {"id": "b", "label": "B"},
+                        {"id": "c", "label": "C"},
+                    ],
+                    "order": ["a", "b", "c"],
+                },
+                "feedback": {"correct": "Correct.", "incorrect": "Try again."},
+            }
+        if kind in {"choice", "select-one", "interaction"} or "choice" in kind:
+            return {
+                "prompt": "Choose one.",
+                "config": {
+                    "options": [
+                        {"id": "yes", "text": "Yes"},
+                        {"id": "no", "text": "No"},
+                    ],
+                    "correct_option_id": "yes",
+                },
+                "feedback": {"correct": "Correct.", "incorrect": "Try again."},
+            }
+        if "heading" in kind:
+            return {"kind": "heading", "text": "Evaporation", "level": 2}
+        if "list" in kind:
+            return {"kind": "list", "ordered": False, "items": ["Heat", "Escape"]}
+        if "callout" in kind:
+            return {
+                "kind": "callout",
+                "tone": "tip",
+                "title": "Tip",
+                "body": "Warm surfaces dry faster.",
+            }
+        if "table" in kind:
+            return {
+                "kind": "table",
+                "headers": ["Stage", "State"],
+                "rows": [["Evaporation", "Liquid to vapour"]],
+                "caption": "States of water.",
+            }
+        if "figure" in kind:
+            return {
+                "kind": "figure",
+                "caption": "Water cycle diagram",
+                "alt": "Diagram of evaporation",
+            }
+        return {
+            "kind": "paragraph",
+            "text": "Water molecules at a free surface can leave the liquid and become vapour when they gain enough energy.",
+        }
 
 
 def test_passive_mixed_nodes_validate() -> None:
@@ -197,6 +259,8 @@ def test_produce_learn_document_from_teaching_is_v2_without_component_ids() -> N
         title="Evaporation",
         subject="science",
         source_generation_id="gen-doc-v2",
+        provider=_OfflineDocProvider(),
+        allow_heuristic_composition_fallback=True,
     )
     document = result["document"]
     assert document["version"] == 2
