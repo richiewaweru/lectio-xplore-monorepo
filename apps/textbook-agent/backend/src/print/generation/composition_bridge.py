@@ -113,6 +113,7 @@ def _layer_print_tasks(
             if document_plan.teaching_plan_revision is not None
             else plan.revision
         ),
+        composition_mode=document_plan.composition_mode,
         decisions=decisions,
     )
 

@@ -1,0 +1,14 @@
+version: 1
+actions:
+  select-one: {description: "Choose exactly one option or conclusion."}
+  select-many: {description: "Choose multiple valid options."}
+  complete-missing-values: {description: "Supply missing word(s), term(s), or value(s)."}
+  classify-items: {description: "Assign items to categories."}
+  match-pairs: {description: "Connect corresponding items."}
+  order-items: {description: "Put items or stages in meaningful order."}
+  reconstruct-order: {alias_of: order-items}
+  enter-number: {description: "Produce a numeric response."}
+  enter-text: {description: "Produce a short written response."}
+passive_actions:
+  - compare-without-response
+  - read-explanation

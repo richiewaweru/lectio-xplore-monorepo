@@ -8,6 +8,7 @@
 	import '$lib/print/styles/print.css';
 	import { apiFetch } from '$lib/api/client';
 	import LectioPageDocumentView from '$lib/print/components/studio/LectioPageDocumentView.svelte';
+	import PrintDocumentEditor from '$lib/print/components/studio/PrintDocumentEditor.svelte';
 	import { extractLectioDocumentV2 } from '$lib/print/studio/document-version';
 	import { forceEagerImages, waitForPrintImages, type PrintImageWaitResult } from '$lib/print/studio/print-readiness';
 	import type { V3GenerationDetail } from '$lib/types/v3';
@@ -55,6 +56,7 @@
 	let templateId = $state('none');
 	let loadError = $state<string | null>(null);
 	let pageDocumentV2 = $state<LectioDocument | null>(null);
+	let documentRevision = $state(0);
 	let subject = $state('');
 	let imageDebug = $state<PrintImageWaitResult | null>(null);
 
@@ -108,6 +110,20 @@
 				sectionCount = v2.sections.length;
 				templateId = 'lectio-page-v2';
 				subject = typeof v2.subject === 'string' ? v2.subject.trim() : v2.title;
+				const revRaw = (detail as V3GenerationDetail & { document_revision?: number }).document_revision;
+				if (typeof revRaw === 'number') {
+					documentRevision = revRaw;
+				} else {
+					const statusRes = await apiFetch(
+						`/api/v1/v3/chunked/${encodeURIComponent(generationId)}/status`,
+						{ headers }
+					);
+					if (statusRes.ok) {
+						const statusJson = (await statusRes.json()) as { doc_version?: string };
+						const match = String(statusJson.doc_version || '').match(/^rev:(\d+)$/);
+						if (match) documentRevision = Number(match[1]);
+					}
+				}
 			} else {
 				const root = data as unknown as Record<string, unknown>;
 				const nested = root.lectio_document as Record<string, unknown> | undefined;
@@ -171,6 +187,16 @@
 				<p><span class="print-diagnostics-label">Template ID:</span> {templateId}</p>
 			</div>
 		{/if}
+		<PrintDocumentEditor
+			generationId={generationId ?? ''}
+			token={token ?? ''}
+			document={pageDocumentV2}
+			{documentRevision}
+			onDocumentChange={(next) => {
+				pageDocumentV2 = next;
+				sectionCount = next.sections.length;
+			}}
+		/>
 		<LectioPageDocumentView document={pageDocumentV2} {edition} />
 	{/if}
 </div>

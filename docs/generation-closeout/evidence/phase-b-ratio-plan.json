@@ -1,0 +1,137 @@
+{
+  "arc": "This lesson opens on a juice recipe that calls for 2 cups of concentrate and 3 cups of water, and asks what that pairing actually tells a person who wants to mix it. The explanation names the pairing as a ratio \u2014 one comparison of two quantities measured in the same kind of unit \u2014 and then makes the order argument visible by laying out 2 cups concentrate against 3 cups water and swapping them to 3 against 2, so the learner sees that the reversed order describes a different, stronger mixture. The close uses a single approved item to check whether the learner can read a ratio in its written order and use the order of the quantities as the reason for its meaning.",
+  "anchor_usage": [
+    {
+      "slot_id": "orient",
+      "usage": "The juice recipe is introduced here as the concrete case: 2 cups concentrate and 3 cups water, with the question of what that pairing tells someone who wants to mix it."
+    },
+    {
+      "slot_id": "explain",
+      "usage": "The same recipe supplies both quantities the ratio compares; the definition block names the 2-to-3 pairing as a ratio, and the sequence block reuses that recipe to lay out the two quantities in reading order and then in reversed order so the order claim is seen, not just stated."
+    },
+    {
+      "slot_id": "check",
+      "usage": "The recipe's 2:3 pairing is the case the approved item checks, with the order of the two quantities as the evidence the learner must use to justify what the ratio means."
+    }
+  ],
+  "misconception_focus_ids": [],
+  "sections": [
+    {
+      "slot_id": "orient",
+      "specific_purpose": "Open attention on the juice recipe and make the reader's question concrete: what does '2 cups concentrate and 3 cups water' actually tell you before you mix it?",
+      "transition": null,
+      "blocks": [
+        {
+          "id": "orient-b1",
+          "position": 0,
+          "intent": "orient",
+          "brief": "Present the juice recipe as a real mixing situation: 2 cups of concentrate and 3 cups of water go into the pitcher. Raise the question a person would actually have when reading that recipe \u2014 if a friend asked you to describe this recipe in one short pairing of numbers instead of a sentence, what would that pairing be telling the friend? Name the two quantities explicitly (concentrate, water) and keep them as two separate amounts for now. Do not yet use the word 'ratio', do not say the numbers are being compared, and do not explain what a comparison is \u2014 leave the recipe as an unanswered concrete case.",
+          "evidence_refs": [
+            "lesson.objective",
+            "anchor.anchor-juice",
+            "slot.orient.purpose",
+            "scope.must_establish[0]"
+          ],
+          "evidence": "The objective is first-exposure conceptual, so the opening must supply the concrete recipe before any abstraction; beginning with the definition of 'ratio' would leave the anchor as decoration rather than the thing the definition is about.",
+          "departure_reason": null,
+          "source_question_ids": [],
+          "stimulus_dependencies": [],
+          "learner_action": {
+            "action": "describe-in-own-words",
+            "target": "what the 2 cups of concentrate and 3 cups of water tell someone who wants to mix this recipe",
+            "purpose": "surface the learner's current way of reading a two-amount recipe before the term 'ratio' is supplied",
+            "expected_evidence": "a short statement naming both quantities, revealing whether the learner already treats them as a paired comparison or as two unrelated amounts",
+            "difficulty": "guided"
+          }
+        }
+      ]
+    },
+    {
+      "slot_id": "explain",
+      "specific_purpose": "Build the core understanding: name the pairing as a ratio, state what a ratio compares, and then make the order claim visible by laying the recipe's two quantities out in reading order and in reversed order.",
+      "transition": "The recipe is on the table as two concrete amounts; this section turns those two amounts into the named idea the objective asks for and uses a laid-out ordering of the quantities to show why their order cannot be swapped.",
+      "blocks": [
+        {
+          "id": "explain-b1",
+          "position": 0,
+          "intent": "define",
+          "brief": "Name the 2 cups of concentrate and 3 cups of water as a ratio: a ratio compares two quantities measured in the same kind of unit, here two amounts of liquid measured in cups. State directly that writing the ratio for this recipe as 2:3 says 'for every 2 cups of concentrate there are 3 cups of water', and that the two numbers are not two separate facts but one paired comparison. Use the words 'ratio', 'compare', 'quantity', and 'recipe'. Do not mention per-unit amounts, rates, or speed.",
+          "evidence_refs": [
+            "lesson.objective",
+            "scope.must_establish[0]",
+            "anchor.anchor-juice",
+            "slot.explain.purpose"
+          ],
+          "evidence": "The objective asks the learner to explain what a ratio IS, and the first must_establish statement is the definition itself; a cause-and-effect explanation would answer the wrong question, so the concept must be named and defined before any order argument is made.",
+          "departure_reason": "The slot's typical intents are 'explain' and 'explain-cause', but this objective asks for a meaning, not a mechanism; a precise definition of the term 'ratio' is what the first must_establish statement requires and no causal chain exists to explain.",
+          "source_question_ids": [],
+          "stimulus_dependencies": [],
+          "learner_action": null
+        },
+        {
+          "id": "explain-b2",
+          "position": 1,
+          "intent": "sequence",
+          "brief": "Using the same juice recipe, lay out the two quantities in the order the ratio is written and then in the reversed order, and make the difference visible. First position: 2 cups concentrate written first, 3 cups water written second, giving the pairing 2:3. Second position: write the same recipe's pairing the other way, 3:2, and spell out what that reversed pairing would demand \u2014 3 cups of concentrate with only 2 cups of water, a stronger, more concentrated mixture, which is a different recipe and not the same recipe read in reverse. Establish that the order of the two quantities is part of what the ratio claims: 2:3 for this recipe is not the same as 3:2 for this recipe. Keep the quantities in cups and keep the recipe as the case throughout. Do not introduce per-unit amounts, rates, or speed.",
+          "evidence_refs": [
+            "scope.must_establish[1]",
+            "scope.must_establish[0]",
+            "anchor.anchor-juice",
+            "slot.explain.purpose"
+          ],
+          "evidence": "The second must_establish statement is about order mattering, and at Grade 6 the only way to see that is to watch the same recipe's two quantities occupy first and second position and then swap \u2014 a bare assertion that 'order matters' would not establish it, so the ordered layout is the teaching move, not a display of it.",
+          "departure_reason": "The slot's typical intents are 'explain' and 'explain-cause', but the objective requires the learner to reconstruct an ordered structure \u2014 which quantity is written first and which second \u2014 rather than to hear a causal claim, so a sequence intent owns the order-items learner action the objective demands.",
+          "source_question_ids": [],
+          "stimulus_dependencies": [],
+          "learner_action": {
+            "action": "order-items",
+            "target": "the two quantities of the juice recipe placed in the order the ratio is written and then in the reversed order",
+            "purpose": "make the learner reconstruct the ordered pairing themselves so the direction of the ratio is produced, not merely read",
+            "expected_evidence": "the learner places 2 cups concentrate first and 3 cups water second for 2:3, and recognises that moving concentrate to first position in the reverse pairing changes what the numbers claim about the mixture",
+            "difficulty": "guided"
+          }
+        }
+      ]
+    },
+    {
+      "slot_id": "check",
+      "specific_purpose": "Check whether the learner can use the ratio for the juice recipe and justify its meaning by the order of the two quantities.",
+      "transition": "The learner has now seen the ratio defined and has reconstructed the ordered pairing on the recipe; this section asks them to read a recipe ratio in its written order and justify the meaning unaided.",
+      "blocks": [
+        {
+          "id": "check-b1",
+          "position": 0,
+          "intent": "check-understanding",
+          "brief": "Use the approved item to check whether the learner can read a ratio for a recipe in the order it is written, name both quantities as measured in the same kind of unit, and treat the reversed order as a different comparison rather than an interchangeable one. The check must require the order of the two quantities to serve as the reason for the meaning, not a recalled definition of 'ratio'. Do not restate the definition, do not re-demonstrate the reversed pairing, and do not accept an answer that treats 2:3 and 3:2 as the same.",
+          "evidence_refs": [
+            "lesson.objective",
+            "scope.must_establish[0]",
+            "scope.must_establish[1]",
+            "anchor.anchor-juice",
+            "slot.check.purpose",
+            "item.item-ratio-1"
+          ],
+          "evidence": "This is the one point where the objective's operative verb \u2014 'use a ratio to compare two quantities in a simple recipe' \u2014 is measured, and the approved item supplies the recipe case; correct-versus-incorrect is exactly the signal wanted because both must_establish statements are now testable at once.",
+          "departure_reason": null,
+          "source_question_ids": [
+            "item-ratio-1"
+          ],
+          "stimulus_dependencies": [
+            "anchor.anchor-juice"
+          ],
+          "learner_action": {
+            "action": "select-one",
+            "target": "the meaning of the ratio 2:3 for a recipe, judged by which quantity is written first",
+            "purpose": "measure whether the objective landed, using the order of the numbers as the evidence rather than a recalled definition",
+            "expected_evidence": "selection of the option that names both quantities in the same kind of unit, reads the ratio in its written order, and treats the reversed order as a different comparison",
+            "difficulty": "independent"
+          }
+        }
+      ]
+    }
+  ],
+  "teaching_plan_id": null,
+  "revision": null,
+  "preparation_hash": null,
+  "approval_status": null
+}

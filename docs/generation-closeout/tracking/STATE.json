@@ -1,0 +1,16 @@
+{
+  "program": "generation-closeout",
+  "branch": "fix/generation-spec-closeout",
+  "baseline_sha": "db8390335c085eca084ed758fc154d43aed3af41",
+  "phases": {
+    "A": { "status": "PASS", "sha": "pending-commit" },
+    "B": { "status": "PASS", "sha": "pending-commit" },
+    "C": { "status": "PASS", "sha": "pending-commit" },
+    "D": { "status": "PASS", "sha": "pending-commit" },
+    "E": { "status": "PASS", "sha": "pending-commit" },
+    "F": { "status": "PASS", "sha": "pending-commit" },
+    "G": { "status": "PASS", "sha": "pending-commit" },
+    "H": { "status": "PASS", "sha": "pending-commit" },
+    "I": { "status": "PASS", "sha": "pending-commit" }
+  }
+}

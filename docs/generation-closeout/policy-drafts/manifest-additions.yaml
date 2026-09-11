@@ -1,0 +1,38 @@
+# Illustrative additions to backend/resources/prompts/manifest.yaml.
+# `editable` controls teacher overlays, not developer file editing.
+prompts:
+  - id: learner-action-policy
+    file: learner-action-policy.md
+    stage_label: Decides when learners should act
+    editable: false
+    version: 1
+  - id: document-composer
+    file: document-composer.md
+    stage_label: Chooses document forms
+    editable: false
+    version: 1
+  - id: document-writer
+    file: document-writer.md
+    stage_label: Writes ordinary lesson content
+    editable: false
+    version: 1
+  - id: interaction-selection
+    file: interaction-selection.md
+    stage_label: Chooses Learn interaction form
+    editable: false
+    version: 1
+  - id: interaction-writer
+    file: interaction-writer.md
+    stage_label: Writes learner interactions
+    editable: false
+    version: 1
+  - id: figure-authoring
+    file: figure-authoring.md
+    stage_label: Designs lesson figures
+    editable: false
+    version: 1
+  - id: print-realization
+    file: print-realization.md
+    stage_label: Realizes Print treatments
+    editable: false
+    version: 1

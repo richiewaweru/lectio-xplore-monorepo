@@ -120,8 +120,12 @@ def page_writer_common_prompt() -> str:
 
 
 def document_composer_prompt() -> str:
-    return packaged_prompt_text("document-composer-v1.txt")
+    from core.prompts import effective_prompt_text
+
+    return effective_prompt_text("document-composer")
 
 
 def document_writer_prompt() -> str:
-    return packaged_prompt_text("document-writer-v1.txt")
+    from core.prompts import effective_prompt_text
+
+    return effective_prompt_text("document-writer")

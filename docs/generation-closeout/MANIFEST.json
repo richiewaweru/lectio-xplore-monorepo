@@ -1,0 +1,28 @@
+{
+  "name": "Lectio Generation Closeout Pack",
+  "repository": "richiewaweru/lectio-xplore-monorepo",
+  "baseline_branch": "fix/document-overhaul-correction",
+  "baseline_sha": "db8390335c085eca084ed758fc154d43aed3af41",
+  "files": [
+    "00_READ_ME_FIRST.md",
+    "01_LOCKED_DECISIONS.md",
+    "02_PROMPT_POLICY_ARCHITECTURE.md",
+    "03_ACTIVE_FILE_MAP.md",
+    "04_PHASE_SEQUENCE.md",
+    "05_STRICT_DEFINITION_OF_DONE.md",
+    "06_EXPECTED_TARGET_FLOW.md",
+    "policy-drafts/learn-action-map.yaml",
+    "policy-drafts/learner-actions.yaml",
+    "policy-drafts/manifest-additions.yaml",
+    "policy-drafts/print-action-map.yaml",
+    "prompts/CASA_MASTER_EXECUTION_PROMPT.md",
+    "prompts/CASA_PHASE_AGENT_TEMPLATE.md",
+    "prompts/INDEPENDENT_VERIFIER_PROMPT.md",
+    "spec-drafts/figure-authoring.md",
+    "spec-drafts/interaction-selection.md",
+    "spec-drafts/interaction-writer.md",
+    "spec-drafts/learner-action-policy.md",
+    "spec-drafts/print-realization.md",
+    "verification/FINAL_ACCEPTANCE_MATRIX.md"
+  ]
+}

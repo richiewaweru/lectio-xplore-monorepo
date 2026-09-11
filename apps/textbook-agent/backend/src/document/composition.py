@@ -69,6 +69,7 @@ class CompositionPlan(BaseModel):
     path: Literal["print", "learn"]
     teaching_plan_id: str | None = None
     teaching_plan_revision: int | None = None
+    composition_mode: Literal["llm", "heuristic_fallback"] = "llm"
     decisions: list[CompositionDecision] = Field(default_factory=list)
 
 

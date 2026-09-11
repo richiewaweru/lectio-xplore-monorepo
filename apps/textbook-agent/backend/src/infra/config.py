@@ -240,6 +240,7 @@ class Settings(BaseSettings):
     report_output_dir: str = "outputs/reports"
     pdf_temp_dir: str = "outputs/pdf"
     image_base_url: str = "http://localhost:8000/images"
+    image_store_root: str = ""
     gcs_bucket_name: str = "textbook-diagrams"
 
     # Authentication

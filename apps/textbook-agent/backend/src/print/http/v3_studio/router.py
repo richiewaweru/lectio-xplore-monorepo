@@ -4536,6 +4536,11 @@ class PageBlockPatchRequest(BaseModel):
     content_patch: dict[str, Any]
 
 
+class LectioDocumentPutRequest(BaseModel):
+    expected_document_revision: int
+    document: dict[str, Any]
+
+
 class FigureVisualCallbackRequest(BaseModel):
     request_id: str
     block_id: str | None = None
@@ -4674,6 +4679,33 @@ async def post_realize_learn(
     return result
 
 
+@v3_studio_router.post("/generations/{generation_id}/realize-print")
+async def post_realize_print(
+    generation_id: str,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Queue Print from an approved Teaching Plan on this preparation generation."""
+    await _load_owned_generation(generation_id, current_user.id)
+    from application.unit_lesson.realize_print_handoff import realize_print_from_preparation
+
+    async with async_session_factory() as session:
+        try:
+            result = await realize_print_from_preparation(
+                session,
+                preparation_generation_id=generation_id,
+                user_id=current_user.id,
+            )
+            await session.commit()
+        except HTTPException:
+            await session.rollback()
+            raise
+        except Exception as exc:
+            await session.rollback()
+            logger.exception("realize-print failed generation_id=%s", generation_id)
+            raise HTTPException(status_code=500, detail=str(exc)[:400]) from exc
+    return result
+
+
 @v3_studio_router.post("/generations/{generation_id}/lesson-approach/reject")
 async def post_lesson_approach_reject(
     generation_id: str,
@@ -4751,6 +4783,73 @@ async def patch_page_block(
         )
         await session.commit()
     return {"generation_id": generation_id, "block_id": block_id, "document_revision": revision}
+
+
+@v3_studio_router.get("/generations/{generation_id}/lectio-document")
+async def get_lectio_document(
+    generation_id: str,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    await _load_owned_generation(generation_id, current_user.id)
+    from print.generation.whole_lesson.repository import PageDocumentRepository
+    from print.rendering.page_objects.document_assembly import reload_document
+
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, generation_id)
+        if generation is None:
+            raise HTTPException(status_code=404, detail="Generation not found")
+        repo = PageDocumentRepository(session, generation_id)
+        state = await repo.load_page_generation_state()
+        envelope = generation.document_json or {}
+        document = reload_document(envelope)
+    return {
+        "generation_id": generation_id,
+        "document_revision": int(state.get("document_revision") or 0),
+        "document": document,
+    }
+
+
+@v3_studio_router.put("/generations/{generation_id}/lectio-document")
+async def put_lectio_document(
+    generation_id: str,
+    body: LectioDocumentPutRequest,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Replace the native LectioDocument v2 with optimistic revision control."""
+    await _load_owned_generation(generation_id, current_user.id)
+    from print.rendering.page_objects.document_assembly import persist_document_json
+    from print.generation.whole_lesson.events import make_event
+    from print.generation.whole_lesson.repository import PageDocumentRepository
+    from contracts.lectio_page import validate_document
+
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, generation_id)
+        if generation is None:
+            raise HTTPException(status_code=404, detail="Generation not found")
+        repo = PageDocumentRepository(session, generation_id)
+        state = await repo.load_page_generation_state()
+        current_rev = int(state.get("document_revision") or 0)
+        if body.expected_document_revision != current_rev:
+            raise HTTPException(status_code=409, detail="stale document revision")
+        errors = validate_document(body.document)
+        if errors:
+            raise HTTPException(status_code=400, detail="; ".join(str(err) for err in errors[:8]))
+        envelope = generation.document_json or {}
+        generation.document_json = persist_document_json(envelope, body.document)
+        revision = await repo.bump_document_revision()
+        await repo.append_event(
+            make_event(
+                "lectio_document_saved",
+                generation_id=generation_id,
+                status="ready",
+            )
+        )
+        await session.commit()
+    return {
+        "generation_id": generation_id,
+        "document_revision": revision,
+        "document": body.document,
+    }
 
 
 @v3_studio_router.post("/generations/{generation_id}/visuals/callback")

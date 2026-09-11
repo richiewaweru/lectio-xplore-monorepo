@@ -19,7 +19,10 @@ from document.models import (
     TableNode,
     document_node_adapter,
 )
-from document.writer_prompts import document_writer_prompt
+from document.writer_prompts import (
+    document_writer_prompt,
+    document_writer_prompt_hash,
+)
 from infra.authoring import (
     AuthoringDefinition,
     AuthoringEngine,
@@ -186,7 +189,7 @@ def _definition_for(kind: DocumentPrimitiveKind) -> AuthoringDefinition:
         payload_schema=_PRIMITIVE_SCHEMAS[kind],
         required_inputs=("kind", "brief", "teaching_block"),
         validator_refs=("document.writer_schema",),
-        definition_hash=f"document-writer-v1:{kind}",
+        definition_hash=f"{document_writer_prompt_hash()}:{kind}",
     )
 
 

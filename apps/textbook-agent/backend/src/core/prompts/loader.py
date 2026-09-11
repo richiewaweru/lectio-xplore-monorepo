@@ -83,6 +83,22 @@ def hash_prompt(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+CLOSEOUT_PROMPT_IDS = (
+    "learner-action-policy",
+    "document-composer",
+    "document-writer",
+    "interaction-selection",
+    "interaction-writer",
+    "figure-authoring",
+    "print-realization",
+)
+
+
+def closeout_prompt_hashes() -> dict[str, str]:
+    """Effective hashes for generation-closeout specs currently in the manifest."""
+    return {prompt_id: hash_prompt(effective_prompt_text(prompt_id)) for prompt_id in CLOSEOUT_PROMPT_IDS}
+
+
 def _parse_manifest_entries(raw: Any) -> list[PromptManifestEntry]:
     entries_raw = raw.get("prompts") if isinstance(raw, dict) else None
     if not isinstance(entries_raw, list):
@@ -282,10 +298,13 @@ async def delete_override(prompt_id: str, user_id: str, session: AsyncSession) -
 
 
 __all__ = [
+    "CLOSEOUT_PROMPT_IDS",
     "PromptLockedError",
     "PromptManifestEntry",
     "PromptNotFoundError",
+    "closeout_prompt_hashes",
     "delete_override",
+    "effective_prompt_text",
     "get_default_prompt",
     "get_manifest_entry",
     "hash_prompt",

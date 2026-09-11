@@ -15,7 +15,10 @@ from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
 from document.composition import CompositionDecision, CompositionPlan
 from document.heuristics import choose_document_primitive
 from document.models import DOCUMENT_PRIMITIVE_KINDS
-from document.writer_prompts import document_composer_prompt
+from document.writer_prompts import (
+    document_composer_prompt,
+    document_composer_prompt_hash,
+)
 from infra.authoring import (
     AuthoringDefinition,
     AuthoringEngine,
@@ -142,7 +145,7 @@ def _composer_definition(*, path: Literal["print", "learn"]) -> AuthoringDefinit
         payload_schema=COMPOSER_SCHEMA,
         required_inputs=("teaching_plan",),
         validator_refs=("document.composer_schema",),
-        definition_hash="document-composer-v1",
+        definition_hash=document_composer_prompt_hash(),
     )
 
 
@@ -203,6 +206,7 @@ def heuristic_compose_document_plan(
         path=path,
         teaching_plan_id=plan.teaching_plan_id,
         teaching_plan_revision=plan.revision,
+        composition_mode="heuristic_fallback",
         decisions=decisions,
     )
 

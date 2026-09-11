@@ -40,6 +40,7 @@ def assemble_learn_document(
         "updated_at": str(info.get("updated_at") or now),
         "teaching_plan_id": info.get("teaching_plan_id"),
         "teaching_plan_revision": info.get("teaching_plan_revision"),
+        "sections": [dict(section) for section in (info.get("sections") or [])],
     }
     # Drop explicit nulls for optional provenance only when caller omitted keys.
     if "teaching_plan_id" not in info:

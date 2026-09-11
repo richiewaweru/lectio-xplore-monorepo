@@ -1,0 +1,411 @@
+{
+  "ix": [
+    {
+      "id": "ix-32693315b8d3",
+      "type": "sequence"
+    },
+    {
+      "id": "ix-0d0b09765616",
+      "type": "choice"
+    }
+  ],
+  "document": {
+    "version": 2,
+    "id": "lesson-b3575d63d6c6",
+    "title": "Closeout G ratios",
+    "subject": "Mathematics",
+    "source": "generated",
+    "source_generation_id": "closeout-g-ratios",
+    "nodes": [
+      {
+        "id": "node-f6ebd72956c8",
+        "teaching_block_id": "orient-b1",
+        "kind": "paragraph",
+        "text": "Picture a pitcher of juice being mixed. The recipe calls for 2 cups of concentrate and 3 cups of water. Those are the two amounts that go in, and they stay two separate amounts: 2 cups of concentrate, 3 cups of water. Now suppose a friend asked you to pass this recipe along, not as a sentence but as one short pairing of numbers. What would that little pairing be telling your friend about how to mix the juice?"
+      },
+      {
+        "id": "node-faaf19b668ea",
+        "teaching_block_id": "orient-b1",
+        "kind": "callout",
+        "tone": "note",
+        "title": "Before you mix",
+        "body": "You are making juice from a recipe that calls for 2 cups of concentrate and 3 cups of water, both poured into the pitcher. If a friend asked you to describe this recipe with just one short pairing of numbers instead of a whole sentence, what would that pairing be telling them about how to mix it?"
+      },
+      {
+        "id": "node-8d8710e48691",
+        "teaching_block_id": "explain-b1",
+        "kind": "heading",
+        "text": "2 Cups Concentrate to 3 Cups Water: A Ratio That Compares Two Quantities",
+        "level": 2
+      },
+      {
+        "id": "node-2f05c192ca6d",
+        "teaching_block_id": "explain-b1",
+        "kind": "paragraph",
+        "text": "The juice recipe calls for 2 cups of concentrate and 3 cups of water. Taken together, this pairing is a ratio: a ratio compares two quantities measured in the same kind of unit, and here both quantities are amounts of liquid measured in cups. Writing the ratio for this recipe as 2:3 says \"for every 2 cups of concentrate there are 3 cups of water.\" The two numbers are not two separate facts standing on their own; they form one paired comparison, describing the recipe as a single relationship between the concentrate and the water."
+      },
+      {
+        "id": "node-2ded2b56e457",
+        "teaching_block_id": "explain-b2",
+        "kind": "paragraph",
+        "text": "Read the recipe's two quantities in the order the ratio is written and they give 2:3 \u2014 2 cups of concentrate written first, 3 cups of water written second. Write the same recipe's pairing the other way and you get 3:2: 3 cups of concentrate with only 2 cups of water. That swapped pairing is not this recipe read in reverse \u2014 it calls for more concentrate and less water, so it would make a stronger, more concentrated mixture. The order of the two quantities is part of what the ratio claims: 2:3 for this recipe is not the same as 3:2 for this recipe."
+      },
+      {
+        "id": "node-6af6bfab9d39",
+        "teaching_block_id": "explain-b2",
+        "kind": "table",
+        "headers": [
+          "Written order of the pairing",
+          "Concentrate",
+          "Water",
+          "What the pairing demands of the recipe"
+        ],
+        "rows": [
+          [
+            "2:3",
+            "2 cups",
+            "3 cups",
+            "2 cups of concentrate written first, 3 cups of water written second: the juice recipe as it is given."
+          ],
+          [
+            "3:2",
+            "3 cups",
+            "2 cups",
+            "3 cups of concentrate written first with only 2 cups of water written second: a stronger, more concentrated mixture, which is a different recipe, not the same recipe read in reverse."
+          ]
+        ],
+        "caption": "The same recipe written both ways: 2:3 and 3:2. Swapping which quantity is written first changes what the ratio claims, so 2:3 for this recipe is not the same as 3:2 for this recipe."
+      },
+      {
+        "id": "node-9ea605333fe6",
+        "teaching_block_id": "explain-b2",
+        "kind": "callout",
+        "tone": "important",
+        "title": "Order Is Part of the Ratio",
+        "body": "Take the juice recipe: 2 cups of concentrate and 3 cups of water. Written in that order, the ratio is 2:3 \u2014 concentrate first, water second. Now keep the same recipe but write the pairing the other way, 3:2. That reversed order would demand 3 cups of concentrate with only 2 cups of water, a stronger, more concentrated mixture. That is a different recipe, not the same recipe read in reverse. So the order of the two quantities is part of what the ratio claims: 2:3 for this recipe is not the same as 3:2 for this recipe."
+      },
+      {
+        "id": "node-74e1778f80c3",
+        "teaching_block_id": "check-b1",
+        "kind": "heading",
+        "text": "Check: Reading a Ratio in Order",
+        "level": 2
+      },
+      {
+        "id": "node-8d795923991f",
+        "teaching_block_id": "check-b1",
+        "kind": "callout",
+        "tone": "important",
+        "title": "Check Your Reading of the Ratio",
+        "body": "A recipe writes a ratio as 2:3. Explain what this comparison means. In your explanation, name both quantities and the unit they are measured in, and use the order in which they are written to justify why 2:3 describes the mixture it does rather than a different one. Remember: if the reversed order described the same mixture, you would have no reason to prefer the written order \u2014 so account for the order, and do not treat 2:3 and 3:2 as interchangeable."
+      },
+      {
+        "id": "ix-32693315b8d3",
+        "kind": "interaction",
+        "interaction_type": "sequence",
+        "teaching_block_id": "explain-b2",
+        "prompt": "The juice recipe calls for 2 cups of concentrate and 3 cups of water, written as the ratio 2:3. Order the steps below to show how the same two quantities behave when their positions swap, and why 2:3 is not the same as 3:2.",
+        "config": {
+          "items": [
+            {
+              "id": "write-first",
+              "label": "Write 2 cups concentrate first, then 3 cups water, as the ratio 2:3."
+            },
+            {
+              "id": "read-first",
+              "label": "Read 2:3 as 2 cups concentrate for every 3 cups water."
+            },
+            {
+              "id": "swap",
+              "label": "Swap the same quantities to write the ratio 3:2."
+            },
+            {
+              "id": "read-swap",
+              "label": "Read 3:2 as 3 cups concentrate for every 2 cups water."
+            },
+            {
+              "id": "compare",
+              "label": "Compare: 3:2 gives a stronger, more concentrated mixture than 2:3."
+            }
+          ],
+          "order": [
+            "write-first",
+            "read-first",
+            "swap",
+            "read-swap",
+            "compare"
+          ]
+        },
+        "feedback": {
+          "correct": "Yes \u2014 the recipe's quantities appear as 2:3, and swapping their positions gives 3:2, which describes a different, more concentrated mixture. The order of the quantities is part of what the ratio claims.",
+          "incorrect": "Not quite. Start by writing the recipe's quantities in the given order as 2:3, then swap the same two quantities to 3:2 and compare what each order describes. Check the order of your steps against how a ratio's meaning changes when its quantities trade places."
+        },
+        "assessment_mode": "practice",
+        "attempt_policy": {
+          "max_attempts": null,
+          "show_feedback_after_submit": true,
+          "allow_retry_after_correct": true
+        },
+        "completion": {
+          "type": "submitted"
+        },
+        "contract": {
+          "id": "ix-explain-b2-sequence",
+          "kind": "sequence",
+          "prompt": "The juice recipe calls for 2 cups of concentrate and 3 cups of water, written as the ratio 2:3. Order the steps below to show how the same two quantities behave when their positions swap, and why 2:3 is not the same as 3:2.",
+          "assessment_mode": "practice",
+          "attempt_policy": {
+            "max_attempts": null,
+            "show_feedback_after_submit": true,
+            "allow_retry_after_correct": true
+          },
+          "feedback": {
+            "correct": "Yes \u2014 the recipe's quantities appear as 2:3, and swapping their positions gives 3:2, which describes a different, more concentrated mixture. The order of the quantities is part of what the ratio claims.",
+            "incorrect": "Not quite. Start by writing the recipe's quantities in the given order as 2:3, then swap the same two quantities to 3:2 and compare what each order describes. Check the order of your steps against how a ratio's meaning changes when its quantities trade places."
+          },
+          "completion": {
+            "type": "submitted"
+          },
+          "config": {
+            "items": [
+              {
+                "id": "write-first",
+                "label": "Write 2 cups concentrate first, then 3 cups water, as the ratio 2:3."
+              },
+              {
+                "id": "read-first",
+                "label": "Read 2:3 as 2 cups concentrate for every 3 cups water."
+              },
+              {
+                "id": "swap",
+                "label": "Swap the same quantities to write the ratio 3:2."
+              },
+              {
+                "id": "read-swap",
+                "label": "Read 3:2 as 3 cups concentrate for every 2 cups water."
+              },
+              {
+                "id": "compare",
+                "label": "Compare: 3:2 gives a stronger, more concentrated mixture than 2:3."
+              }
+            ],
+            "order": [
+              "write-first",
+              "read-first",
+              "swap",
+              "read-swap",
+              "compare"
+            ]
+          },
+          "accessibility": {
+            "aria_label": "The juice recipe calls for 2 cups of concentrate and 3 cups of water, written as the ratio 2:3. Order the steps below to show how the same two quantities behave when their positions swap, and why 2:3 is not the same as 3:2.",
+            "narration": "optional",
+            "keyboard_operable": true
+          },
+          "ai_config_rule": "config-only",
+          "concept_refs": [],
+          "provenance": {
+            "work_order_id": "learn::request::sequence",
+            "source_identities": [],
+            "teaching_revision": 1,
+            "definition_hash": "1f2b433a54f7b2f5335b057951f65b4b132fb923d1f5793b51d2cd9c83a70dbf",
+            "input_hash": "3737278fab55211cfef025a37ce3d39506c0cdfd8b94210fcbf7fcf6c98231d0",
+            "policy": {
+              "requested_knowledge_policy": null,
+              "effective_knowledge_policy": "supplied_preferred",
+              "knowledge_policy_source": "package:1.0.0",
+              "requested_assessment_policy": null,
+              "effective_assessment_policy": "automatic_required",
+              "assessment_policy_source": "package:1.0.0",
+              "policy_version": "1.0.0",
+              "input_availability": "intentionally_absent",
+              "executed_knowledge_mode": "model_knowledge",
+              "executed_evaluation_mode": "accepted-answers",
+              "fallback_reason": null,
+              "definition_version": "2.0.0",
+              "definition_hash": "1f2b433a54f7b2f5335b057951f65b4b132fb923d1f5793b51d2cd9c83a70dbf",
+              "input_revision": null,
+              "teacher_review_permitted": false
+            },
+            "block_id": "explain-b2",
+            "capability_id": "sequence",
+            "capability_contract_hash": "1f2b433a54f7b2f5335b057951f65b4b132fb923d1f5793b51d2cd9c83a70dbf",
+            "teaching_plan_id": "teaching-plan",
+            "teaching_plan_revision": 1,
+            "teaching_plan_hash": "ad-hoc",
+            "authoring_mode": "generate",
+            "payload_hash": "c7e93e9ce650cc56141b469f85f7ceacdbcbd8e44a5083717cc7df3bc802fbf4"
+          }
+        }
+      },
+      {
+        "id": "ix-0d0b09765616",
+        "kind": "interaction",
+        "interaction_type": "choice",
+        "teaching_block_id": "check-b1",
+        "prompt": "A recipe mixes 2 cups of concentrate with 3 cups of water. Which statement correctly describes the ratio written as 2:3?",
+        "config": {
+          "options": [
+            {
+              "id": "concentrate_to_water",
+              "text": "2:3 compares 2 cups of concentrate to 3 cups of water, in that written order.",
+              "explanation": "Correct: the ratio reads the two quantities in the order they are written, both measured in cups."
+            },
+            {
+              "id": "water_to_concentrate",
+              "text": "2:3 compares 3 cups of water to 2 cups of concentrate.",
+              "explanation": "Reverses the written order, treating the two quantities as interchangeable."
+            },
+            {
+              "id": "same_units_either",
+              "text": "2:3 means the same as 3:2 because both quantities are in cups.",
+              "explanation": "Assumes same units make the order irrelevant, so 2:3 and 3:2 are treated as the same."
+            },
+            {
+              "id": "total_cups",
+              "text": "2:3 compares 2 cups concentrate to the 5 total cups of mixture.",
+              "explanation": "Compares a part to the whole instead of comparing the two same-unit quantities."
+            }
+          ],
+          "correct_option_id": "concentrate_to_water"
+        },
+        "feedback": {
+          "correct": "Yes. 2:3 reads in written order: 2 cups of concentrate compared with 3 cups of water, both in cups. Reversing it would describe a different, stronger mixture.",
+          "incorrect": "The order matters. 2:3 compares 2 cups of concentrate with 3 cups of water in that order; 3:2 would be the reversed, different comparison, not the same thing."
+        },
+        "assessment_mode": "practice",
+        "attempt_policy": {
+          "max_attempts": null,
+          "show_feedback_after_submit": true,
+          "allow_retry_after_correct": true
+        },
+        "completion": {
+          "type": "submitted"
+        },
+        "contract": {
+          "id": "ix-check-b1-choice",
+          "kind": "choice",
+          "prompt": "A recipe mixes 2 cups of concentrate with 3 cups of water. Which statement correctly describes the ratio written as 2:3?",
+          "assessment_mode": "practice",
+          "attempt_policy": {
+            "max_attempts": null,
+            "show_feedback_after_submit": true,
+            "allow_retry_after_correct": true
+          },
+          "feedback": {
+            "correct": "Yes. 2:3 reads in written order: 2 cups of concentrate compared with 3 cups of water, both in cups. Reversing it would describe a different, stronger mixture.",
+            "incorrect": "The order matters. 2:3 compares 2 cups of concentrate with 3 cups of water in that order; 3:2 would be the reversed, different comparison, not the same thing."
+          },
+          "completion": {
+            "type": "submitted"
+          },
+          "config": {
+            "options": [
+              {
+                "id": "concentrate_to_water",
+                "text": "2:3 compares 2 cups of concentrate to 3 cups of water, in that written order.",
+                "explanation": "Correct: the ratio reads the two quantities in the order they are written, both measured in cups."
+              },
+              {
+                "id": "water_to_concentrate",
+                "text": "2:3 compares 3 cups of water to 2 cups of concentrate.",
+                "explanation": "Reverses the written order, treating the two quantities as interchangeable."
+              },
+              {
+                "id": "same_units_either",
+                "text": "2:3 means the same as 3:2 because both quantities are in cups.",
+                "explanation": "Assumes same units make the order irrelevant, so 2:3 and 3:2 are treated as the same."
+              },
+              {
+                "id": "total_cups",
+                "text": "2:3 compares 2 cups concentrate to the 5 total cups of mixture.",
+                "explanation": "Compares a part to the whole instead of comparing the two same-unit quantities."
+              }
+            ],
+            "correct_option_id": "concentrate_to_water"
+          },
+          "accessibility": {
+            "aria_label": "A recipe mixes 2 cups of concentrate with 3 cups of water. Which statement correctly describes the ratio written as 2:3?",
+            "narration": "optional",
+            "keyboard_operable": true
+          },
+          "ai_config_rule": "config-only",
+          "concept_refs": [],
+          "provenance": {
+            "work_order_id": "learn::request::choice",
+            "source_identities": [],
+            "teaching_revision": 1,
+            "definition_hash": "9c9eca46dacb6c6603192a541ee7c019236a8ab713137ae9027d3e3557c1c7eb",
+            "input_hash": "f5ff5a13a28362e1f9cd43a6ba2baedfbe1f815d249806d8c179aa161b012d23",
+            "policy": {
+              "requested_knowledge_policy": null,
+              "effective_knowledge_policy": "supplied_preferred",
+              "knowledge_policy_source": "package:1.0.0",
+              "requested_assessment_policy": null,
+              "effective_assessment_policy": "automatic_required",
+              "assessment_policy_source": "package:1.0.0",
+              "policy_version": "1.0.0",
+              "input_availability": "intentionally_absent",
+              "executed_knowledge_mode": "model_knowledge",
+              "executed_evaluation_mode": "accepted-answers",
+              "fallback_reason": null,
+              "definition_version": "2.0.0",
+              "definition_hash": "9c9eca46dacb6c6603192a541ee7c019236a8ab713137ae9027d3e3557c1c7eb",
+              "input_revision": null,
+              "teacher_review_permitted": false
+            },
+            "block_id": "check-b1",
+            "capability_id": "choice",
+            "capability_contract_hash": "9c9eca46dacb6c6603192a541ee7c019236a8ab713137ae9027d3e3557c1c7eb",
+            "teaching_plan_id": "teaching-plan",
+            "teaching_plan_revision": 1,
+            "teaching_plan_hash": "ad-hoc",
+            "authoring_mode": "generate",
+            "payload_hash": "bc12badacf3ec56d14c46f6efcdfdd598fc83dce2b223c7cfaa6ffd70d9633d2"
+          }
+        }
+      }
+    ],
+    "created_at": "2026-09-11T09:38:46Z",
+    "updated_at": "2026-09-11T09:38:46Z",
+    "teaching_plan_id": null,
+    "teaching_plan_revision": null,
+    "sections": [
+      {
+        "id": "orient",
+        "title": "Open attention on the juice recipe and make the reader's question concrete: what does '2 cups concentrate and 3 cups water' actually tell you before you mix it?",
+        "position": 0,
+        "transition": null,
+        "node_ids": [
+          "node-f6ebd72956c8",
+          "node-faaf19b668ea"
+        ]
+      },
+      {
+        "id": "explain",
+        "title": "Build the core understanding: name the pairing as a ratio, state what a ratio compares, and then make the order claim visible by laying the recipe's two quantities out in reading order and in reversed order.",
+        "position": 1,
+        "transition": "The recipe is on the table as two concrete amounts; this section turns those two amounts into the named idea the objective asks for and uses a laid-out ordering of the quantities to show why their order cannot be swapped.",
+        "node_ids": [
+          "node-8d8710e48691",
+          "node-2f05c192ca6d",
+          "node-2ded2b56e457",
+          "node-6af6bfab9d39",
+          "node-9ea605333fe6",
+          "ix-32693315b8d3"
+        ]
+      },
+      {
+        "id": "check",
+        "title": "Check whether the learner can use the ratio for the juice recipe and justify its meaning by the order of the two quantities.",
+        "position": 2,
+        "transition": "The learner has now seen the ratio defined and has reconstructed the ordered pairing on the recipe; this section asks them to read a recipe ratio in its written order and justify the meaning unaided.",
+        "node_ids": [
+          "node-74e1778f80c3",
+          "node-8d795923991f",
+          "ix-0d0b09765616"
+        ]
+      }
+    ]
+  }
+}

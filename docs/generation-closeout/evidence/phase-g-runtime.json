@@ -1,0 +1,73 @@
+{
+  "detail": {
+    "id": "e2fd64b0-3963-49e1-ba91-8aeba485bb28",
+    "learner_id": "782d4070-9ab1-433d-9dbf-ad65f2705909",
+    "learn_release_id": "8981d029-b113-4b16-9b50-139bdcf723ea",
+    "assignment_id": null,
+    "status": "active",
+    "score_earned": 0.0,
+    "score_possible": 0.0,
+    "current_section_id": "check-b1",
+    "graded": {
+      "attempts": 0,
+      "raw_attempts": 0,
+      "score_earned": 0.0,
+      "score_possible": 0.0
+    },
+    "practice": {
+      "attempts": 2,
+      "raw_attempts": 2,
+      "score_earned": 6.0,
+      "score_possible": 6.0
+    },
+    "progress": {
+      "completed_section_ids": [
+        "explain-b2",
+        "check-b1"
+      ],
+      "completed_interaction_ids": [
+        "ix-explain-b2-sequence",
+        "ix-check-b1-choice"
+      ],
+      "score_earned": 0.0,
+      "score_possible": 0.0
+    },
+    "attempts": [
+      {
+        "id": "9bac17e5-8106-494b-a692-6cb0321fed05",
+        "interaction_id": "ix-explain-b2-sequence",
+        "client_submission_id": "g2-sequence-a859430d",
+        "section_id": "explain-b2",
+        "outcome": "correct",
+        "assessment_mode": "practice",
+        "score_earned": 5.0,
+        "score_possible": 5.0,
+        "response_json": {
+          "order": [
+            "write-first",
+            "read-first",
+            "swap",
+            "read-swap",
+            "compare"
+          ]
+        },
+        "created_at": "2026-09-11T09:55:54.994123"
+      },
+      {
+        "id": "a44f902b-94f1-482c-882f-755cfd674b20",
+        "interaction_id": "ix-check-b1-choice",
+        "client_submission_id": "g2-choice-7c63cbbd",
+        "section_id": "check-b1",
+        "outcome": "correct",
+        "assessment_mode": "practice",
+        "score_earned": 1.0,
+        "score_possible": 1.0,
+        "response_json": {
+          "selected_option_id": "concentrate_to_water"
+        },
+        "created_at": "2026-09-11T09:55:55.103584"
+      }
+    ]
+  },
+  "note": "omit section_id"
+}

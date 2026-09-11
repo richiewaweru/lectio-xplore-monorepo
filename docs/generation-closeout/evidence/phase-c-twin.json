@@ -1,0 +1,65 @@
+{
+  "learn": [
+    [
+      "orient-b1",
+      "paragraph",
+      "document"
+    ],
+    [
+      "orient-b1",
+      "choice",
+      "learn_interaction"
+    ],
+    [
+      "explain-b1",
+      "paragraph",
+      "document"
+    ],
+    [
+      "explain-b2",
+      "paragraph",
+      "document"
+    ],
+    [
+      "check-b1",
+      "paragraph",
+      "document"
+    ],
+    [
+      "check-b1",
+      "choice",
+      "learn_interaction"
+    ]
+  ],
+  "print": [
+    [
+      "orient-b1",
+      "choices",
+      "print_task"
+    ],
+    [
+      "explain-b1",
+      "paragraph",
+      "document"
+    ],
+    [
+      "explain-b2",
+      "paragraph",
+      "document"
+    ],
+    [
+      "check-b1",
+      "choices",
+      "print_task"
+    ]
+  ],
+  "hashes": {
+    "learner-action-policy": "7a59ce1394ef384075fe89c26f21ea22071ae0d00b6e0acc95bc0bf39ebd2f84",
+    "document-composer": "1e22585b1bfd0a9c161a2240368dc662784b1b5e4e36dee9d5cc61a32b097b8c",
+    "document-writer": "c24bc83c1b6259ec1b3c6c18b2e06a94499913121902ea0dcab3b68c3ffafde1",
+    "interaction-selection": "7b805952d3d0f2789332946b0f83cc6a823ddf78adc4aad2000b02cc797fc044",
+    "interaction-writer": "b3c7121fbcdc127efc378dad2b0688765e9cf340108792bdc596fcb134e58a13",
+    "figure-authoring": "5564b47e609c67ce8105af2002b24ab6af06a4af4368a5a97845855d21bad4b1",
+    "print-realization": "167d16d0b3156bdf655ea702063ab30f31853bd2c9d06aaf31e3087c65960615"
+  }
+}

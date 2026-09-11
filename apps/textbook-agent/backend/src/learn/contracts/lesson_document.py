@@ -137,6 +137,18 @@ LearnNode = Annotated[
 learn_node_adapter: TypeAdapter[LearnNode] = TypeAdapter(LearnNode)
 
 
+class LearnSection(BaseModel):
+    """Realized section identity for tabs, local regen, and analytics."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1)
+    title: str = ""
+    position: int = Field(ge=0)
+    transition: str | None = None
+    node_ids: list[str] = Field(default_factory=list)
+
+
 class LearnDocument(BaseModel):
     """Ordered-node LearnDocument (version 2)."""
 
@@ -149,6 +161,7 @@ class LearnDocument(BaseModel):
     source: str
     source_generation_id: str | None = None
     nodes: list[LearnNode] = Field(default_factory=list)
+    sections: list[LearnSection] = Field(default_factory=list)
     created_at: str
     updated_at: str
     teaching_plan_id: str | None = None
@@ -314,6 +327,21 @@ def validate_learn_document(document: Any) -> list[str]:
             continue
         seen_ids.add(node_id)
 
+    sections = document.get("sections")
+    if sections is None:
+        sections = []
+    elif not isinstance(sections, list):
+        errors.append("sections must be an array")
+        sections = []
+    for index, raw_section in enumerate(sections):
+        if not isinstance(raw_section, dict):
+            errors.append(f"sections[{index}] must be an object")
+            continue
+        try:
+            LearnSection.model_validate(raw_section)
+        except ValidationError as exc:
+            errors.append(f"sections[{index}]: {exc}")
+
     return errors
 
 
@@ -332,6 +360,7 @@ __all__ = [
     "LearnDocument",
     "LearnDocumentValidationError",
     "LearnNode",
+    "LearnSection",
     "LessonDocumentValidationError",
     "RETAINED_INTERACTION_TYPES",
     "assert_valid_learn_document",

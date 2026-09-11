@@ -53,12 +53,21 @@ def render_teaching_prompt(
     spec = get_spec(resource_id)
     identity = render_resource_identity(spec)
     system = lesson_approach_planner_prompt().replace("{resource_identity}", identity)
+    from core.prompts.loader import effective_prompt_text
+
+    learner_action_policy = effective_prompt_text("learner-action-policy")
     payload = {
         "fixed_input": packet.planner_payload(),
         "teaching_guidance": teaching_guidance.to_dict(),
     }
     user = json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False)
-    rendered = f"{system}\n\n## USER INPUT\n\n{user}"
+    rendered = (
+        f"{system}\n\n## LEARNER ACTION POLICY\n\n{learner_action_policy}"
+        f"\n\nThis policy supersedes any narrower reading that learner actions "
+        f"are only formal assessment. Path-agnostic actions may appear before, "
+        f"during, or after explanation when they improve the sequence.\n\n"
+        f"## USER INPUT\n\n{user}"
+    )
     assert_no_page_object_ids(rendered, where="lesson-approach prompt")
     return rendered
 

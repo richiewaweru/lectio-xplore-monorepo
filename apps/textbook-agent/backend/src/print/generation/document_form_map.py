@@ -19,7 +19,12 @@ PRINT_OBJECT_TO_PRIMITIVE: dict[str, DocumentPrimitiveKind] = {
 }
 
 PRIMITIVE_TO_PRINT_OBJECT: dict[DocumentPrimitiveKind, str] = {
-    value: key for key, value in PRINT_OBJECT_TO_PRIMITIVE.items()
+    "paragraph": "prose",
+    "heading": "prose",
+    "list": "list",
+    "figure": "figure",
+    "table": "table",
+    "callout": "aside",
 }
 
 # Paper-only / task treatments — not shared document primitives.

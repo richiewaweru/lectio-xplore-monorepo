@@ -469,7 +469,7 @@ async def test_p03_r06_concurrent_uniqueness_and_status_routing(
         learn_id = to_identity(learn_resolved)
         assert print_id.output_id != learn_id.output_id
         assert print_id.open_href == f"/studio/print/{print_id.output_id}"
-        assert learn_id.open_href == f"/studio?generation_id={learn_id.output_id}"
+        assert learn_id.open_href == f"/builder/from-native-learn/{learn_id.output_id}"
         assert print_id.path == "print"
         assert learn_id.path == "learn"
 
