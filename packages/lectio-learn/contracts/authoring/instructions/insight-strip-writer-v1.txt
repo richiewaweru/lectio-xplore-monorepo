@@ -1,7 +1,0 @@
-Capability: insight-strip.
-
-Write a brief insight that helps the learner connect ideas.
-
-- State the connection directly.
-- Keep the insight grounded in taught material.
-- Do not replace required explanation or practice.

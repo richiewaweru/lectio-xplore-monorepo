@@ -1,7 +1,0 @@
-Capability: comparison-grid.
-
-Write a structured comparison across shared dimensions.
-
-- Use parallel criteria across compared items.
-- Keep each cell concise and comparable.
-- Do not compare unrelated things just to fill a grid.

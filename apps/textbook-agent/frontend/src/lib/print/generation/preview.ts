@@ -1,4 +1,4 @@
-import type { SectionContent } from '@lectio/learn';
+import type { SectionContent } from '$lib/types';
 
 function firstSentences(text: string, count = 2): string {
 	const normalized = text.replace(/\s+/g, ' ').trim();

@@ -1,20 +1,12 @@
 <script lang="ts">
-	import {
-		LectioThemeSurface,
-		basePresetMap,
-		type LessonDocument
-	} from '@lectio/learn';
 	import { isLearnDocument, type LearnDocument } from '$lib/learn/document/types';
-	import { buildStudentStages, clampStageIndex } from './student-shell';
-	import StudentStageNav from './StudentStageNav.svelte';
-	import OrderedBlockList from './OrderedBlockList.svelte';
 	import OrderedDocumentList from './OrderedDocumentList.svelte';
-	import type { AttemptSubmitHandler } from './OrderedBlockList.svelte';
+	import type { AttemptSubmitHandler } from '$lib/learn/interactions/types';
 	import type { StoredAttempt } from './api/attempts';
 
 	interface Props {
-		/** v1 LessonDocument (sections/blocks) or v2 LearnDocument (ordered nodes). */
-		document: LessonDocument | LearnDocument;
+		document: LearnDocument;
+		/** Unused for v2 flat documents; kept for call-site compatibility. */
 		activeIndex?: number;
 		onActiveIndexChange?: (index: number) => void;
 		/** Preview mode: same shell/interactions, never posts attempts. */
@@ -25,30 +17,12 @@
 
 	let {
 		document,
-		activeIndex = undefined,
-		onActiveIndexChange = undefined,
 		preview = false,
 		attemptsByInteraction = new Map(),
 		onSubmitAttempt = undefined
 	}: Props = $props();
 
 	const isV2 = $derived(isLearnDocument(document));
-	const v1Document = $derived(isV2 ? null : (document as LessonDocument));
-	const v2Document = $derived(isV2 ? (document as LearnDocument) : null);
-
-	const stages = $derived(v1Document ? buildStudentStages(v1Document) : []);
-	let internalIndex = $state(0);
-	const currentIndex = $derived(clampStageIndex(activeIndex ?? internalIndex, stages.length));
-	const activeStage = $derived(stages[currentIndex] ?? null);
-	const preset = $derived(
-		v1Document ? (basePresetMap[v1Document.preset_id] ?? null) : null
-	);
-
-	function selectStage(index: number) {
-		const next = clampStageIndex(index, stages.length);
-		if (activeIndex === undefined) internalIndex = next;
-		onActiveIndexChange?.(next);
-	}
 </script>
 
 <div
@@ -56,58 +30,32 @@
 	data-testid="student-lesson-shell"
 	data-preview={preview ? 'true' : 'false'}
 	data-persist-attempts={preview ? 'false' : 'true'}
-	data-render-mode={isV2 ? 'ordered-nodes' : 'ordered-blocks'}
-	data-document-version={isV2 ? '2' : '1'}
+	data-render-mode="ordered-nodes"
+	data-document-version="2"
 >
 	<header class="shell-header">
-		<p class="eyebrow">{preset?.name ?? (v1Document?.preset_id ?? 'Learn')}</p>
+		<p class="eyebrow">Learn</p>
 		<h1>{document.title}</h1>
-		<p class="lede">
-			{document.subject}
-			{#if isV2}
-				· {(v2Document?.nodes.length ?? 0)} nodes
-			{:else}
-				· {stages.length} stages
-			{/if}
-		</p>
+		<p class="lede">{document.subject} · {document.nodes.length} nodes</p>
 	</header>
 
-	{#if isV2 && v2Document}
+	{#if isV2}
 		<section class="stage-panel" data-testid="stage-panel" data-document-version="2">
 			<article class="stage-article">
 				<p class="stage-badge">document · v2</p>
-				<OrderedDocumentList document={v2Document} {preview} />
+				<OrderedDocumentList
+					{document}
+					{preview}
+					{attemptsByInteraction}
+					{onSubmitAttempt}
+				/>
 			</article>
 		</section>
-	{:else if stages.length === 0}
-		<p class="empty">This lesson has no sections yet.</p>
 	{:else}
-		<StudentStageNav {stages} {currentIndex} onSelect={selectStage} />
-
-		<section class="stage-panel" data-testid="stage-panel" data-section-id={activeStage?.section.id}>
-			{#if activeStage && v1Document}
-				<LectioThemeSurface {preset}>
-					<article class="stage-article">
-						<p class="stage-badge">
-							{activeStage.assessment_mode}
-							{#if activeStage.required}
-								· required
-							{/if}
-						</p>
-						<!-- Authoritative block_ids order — not SectionContent reconstruction. -->
-						<OrderedBlockList
-							document={v1Document}
-							sectionId={activeStage.section.id}
-							{preview}
-							{attemptsByInteraction}
-							{onSubmitAttempt}
-						/>
-					</article>
-				</LectioThemeSurface>
-			{:else}
-				<p class="empty">Section content could not be resolved.</p>
-			{/if}
-		</section>
+		<p class="empty">
+			This release uses a retired LessonDocument v1 payload. Republish as LearnDocument v2 to open
+			it here.
+		</p>
 	{/if}
 </div>
 

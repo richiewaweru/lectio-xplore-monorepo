@@ -1,3 +1,0 @@
-Capability: generic Learn content.
-
-This capability is not generation-enabled by native policy today. Preserve its package schema and do not claim readiness from this fallback instruction.

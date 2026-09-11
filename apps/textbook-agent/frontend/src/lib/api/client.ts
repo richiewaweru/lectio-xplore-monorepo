@@ -2,10 +2,9 @@ import { get } from 'svelte/store';
 import { authToken } from '$lib/shared/stores/auth';
 import { resolveClientApiBase, type ApiEnvironment } from '$lib/api/config';
 
-const API_BASE = resolveClientApiBase(import.meta.env as ApiEnvironment);
-
 export function buildApiUrl(path: string): string {
-	return API_BASE ? `${API_BASE}${path}` : path;
+	const apiBase = resolveClientApiBase(import.meta.env as ApiEnvironment);
+	return apiBase ? `${apiBase}${path}` : path;
 }
 
 export function apiFetch(path: string, init?: RequestInit): Promise<Response> {

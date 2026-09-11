@@ -960,14 +960,15 @@ async def execute_after_teaching_approval(
                 lease_token=ltok,
             )
             raise TimeoutError("injected form planner timeout")
-        # Native Unit path: closed selection is authoritative (P04/P05). The LLM
-        # form planner remains available for studio/legacy callers of
-        # run_form_planner; post-approval execution must not invent a second plan.
+        # Canonical: shared document composition chooses ordinary forms;
+        # Print task treatments layer on learner_action blocks. FormPlan is
+        # the layout carrier for writers/assembly — not the ordinary selector.
         try:
             closed_plan, snapshot, orders = await build_closed_print_production_plan_async(
                 teaching_plan=teaching_plan,
                 packet=packet,
                 legality=legality,
+                use_document_composition=True,
             )
             candidate_map = {
                 key: tuple(values) for key, values in snapshot.candidate_map.items()

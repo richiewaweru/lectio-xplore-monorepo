@@ -27,6 +27,11 @@ PRINT_ONLY_OBJECTS = frozenset(
     {"worked-example", "questions", "choices", "answer-key"}
 )
 
+# Print-only layout/response surfaces that must never appear on Learn plans.
+PRINT_ONLY_LAYOUT_OBJECTS: frozenset[str] = frozenset(
+    {"ruled_lines", "page_break", "answer-key", "working-space"}
+)
+
 
 def is_ordinary_document_object(object_id: str) -> bool:
     return object_id in PRINT_OBJECT_TO_PRIMITIVE

@@ -24,8 +24,32 @@ function isDockerFrontendHost(locationLike?: Pick<Location, 'port'> | null): boo
 	return source.port === '3000';
 }
 
-export function resolveClientApiBase(env: FrontendEnvironment): string {
-	return normalizeUrl(pickConfiguredUrl(env.PUBLIC_API_URL, env.VITE_API_TARGET));
+export function resolveClientApiBase(
+	env: FrontendEnvironment,
+	locationLike?: Pick<Location, 'hostname' | 'origin'> | null
+): string {
+	const configured = normalizeUrl(pickConfiguredUrl(env.PUBLIC_API_URL, env.VITE_API_TARGET));
+	if (!configured) {
+		return '';
+	}
+	const source =
+		locationLike ?? (typeof window !== 'undefined' ? window.location : null);
+	if (!source) {
+		return configured;
+	}
+	try {
+		const apiHost = new URL(configured).hostname;
+		const pageHost = source.hostname;
+		const loopback = new Set(['localhost', '127.0.0.1', '::1']);
+		// Local browser → local API: always use the Vite same-origin proxy.
+		// Direct calls to localhost:8000 fail in some embedded browsers (CORS / private network).
+		if (loopback.has(apiHost) && loopback.has(pageHost)) {
+			return '';
+		}
+	} catch {
+		return configured;
+	}
+	return configured;
 }
 
 export function resolveDevProxyTarget(

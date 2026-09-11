@@ -1,4 +1,33 @@
-import type { SectionContent } from '@lectio/learn';
+/**
+ * Legacy Component Lectio section payload (adapter/diagnostics only).
+ * Not rendered via `@lectio/learn` — Print uses `@lectio/page` LectioDocument.
+ */
+export type SectionContent = {
+	section_id: string;
+	template_id: string;
+	header?: {
+		title?: string;
+		subject?: string;
+		grade_band?: string;
+		[key: string]: unknown;
+	};
+	hook?: { body?: string; headline?: string; anchor?: string; [key: string]: unknown };
+	explanation?: { body?: string; emphasis?: unknown; [key: string]: unknown };
+	definition?: { plain?: string; [key: string]: unknown };
+	process?: {
+		intro?: string;
+		steps?: Array<{ detail?: string; action?: string; [key: string]: unknown }>;
+		[key: string]: unknown;
+	};
+	practice?: {
+		problems?: Array<{ question?: string; [key: string]: unknown }>;
+		[key: string]: unknown;
+	};
+	quiz?: { question?: string; [key: string]: unknown };
+	reflection?: { prompt?: string; [key: string]: unknown };
+	what_next?: { body?: string; preview?: string; [key: string]: unknown };
+	[key: string]: unknown;
+};
 
 export type TeacherRole = 'teacher' | 'tutor' | 'homeschool' | 'instructor';
 export type GradeBand = 'primary' | 'middle' | 'high_school' | 'undergraduate' | 'adult';

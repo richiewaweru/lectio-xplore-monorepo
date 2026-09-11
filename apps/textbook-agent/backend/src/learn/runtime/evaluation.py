@@ -460,9 +460,42 @@ def score_aggregation_of(contract: Mapping[str, Any] | None) -> str:
 def find_interaction_in_document(
     document: Mapping[str, Any] | None, interaction_id: str
 ) -> tuple[dict[str, Any], str | None]:
-    """Locate learn_interaction by contract id or block id. Returns (contract, section_id)."""
+    """Locate interaction by contract id, node id, or block id.
+
+    Supports LearnDocument v2 ordered ``nodes`` and legacy v1 ``blocks``.
+    Returns (contract, section_id).
+    """
     if not isinstance(document, dict):
         raise UnknownInteractionError(interaction_id)
+
+    # LearnDocument v2: ordered interaction nodes.
+    nodes = document.get("nodes")
+    if isinstance(nodes, list):
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            if str(node.get("kind") or "") != "interaction":
+                continue
+            contract = node.get("contract") if isinstance(node.get("contract"), dict) else None
+            if contract is None:
+                contract = {
+                    "id": node.get("id"),
+                    "kind": node.get("interaction_type"),
+                    "prompt": node.get("prompt") or "",
+                    "config": dict(node.get("config") or {}),
+                    "feedback": node.get("feedback"),
+                    "attempt_policy": node.get("attempt_policy"),
+                    "assessment_mode": node.get("assessment_mode"),
+                    "completion": node.get("completion"),
+                }
+            else:
+                contract = dict(contract)
+                contract.setdefault("id", node.get("id"))
+                contract.setdefault("kind", node.get("interaction_type"))
+            cid = str(contract.get("id") or node.get("id") or "")
+            if cid == interaction_id or str(node.get("id")) == interaction_id:
+                return contract, str(node.get("teaching_block_id") or "") or None
+
     blocks = document.get("blocks") if isinstance(document.get("blocks"), dict) else {}
     sections = document.get("sections") if isinstance(document.get("sections"), list) else []
 

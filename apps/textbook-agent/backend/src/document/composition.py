@@ -1,4 +1,9 @@
-"""Compact composition-plan decision schemas for Print/Learn document realizers."""
+"""Compact composition-plan decision schemas for Print/Learn document realizers.
+
+Path-specific task/interaction maps live in print/ and learn/.
+This module owns only shared ordinary-content composition contracts and
+intent cues used by generic document heuristics / the LLM composer.
+"""
 
 from __future__ import annotations
 
@@ -11,87 +16,6 @@ from document.models import DOCUMENT_PRIMITIVE_KINDS
 DocumentPrimitiveKind = Literal[
     "paragraph", "heading", "list", "figure", "table", "callout"
 ]
-
-PrintTaskObject = Literal["worked-example", "questions", "choices"]
-
-LearnRetainedInteraction = Literal[
-    "choice",
-    "multi-select",
-    "fill-blank",
-    "classify",
-    "match-pairs",
-    "sequence",
-    "numeric",
-    "short-response",
-]
-
-PRINT_TASK_OBJECTS: frozenset[str] = frozenset({"worked-example", "questions", "choices"})
-LEARN_RETAINED_INTERACTIONS: frozenset[str] = frozenset(
-    {
-        "choice",
-        "multi-select",
-        "fill-blank",
-        "classify",
-        "match-pairs",
-        "sequence",
-        "numeric",
-        "short-response",
-    }
-)
-
-# Print-only layout/response surfaces that must never appear on Learn plans.
-PRINT_ONLY_LAYOUT_OBJECTS: frozenset[str] = frozenset(
-    {"ruled_lines", "page_break", "answer-key", "working-space"}
-)
-
-# Retired ordinary Learn component ids — never selectable by document realizers.
-LEGACY_LEARN_COMPONENT_IDS: frozenset[str] = frozenset(
-    {
-        "ExplanationBlock",
-        "explanation-block",
-        "definition-card",
-        "section-header",
-        "hook-hero",
-        "key-fact",
-        "callout-block",
-        "process-steps",
-        "worked-example-card",
-        "summary-block",
-        "timeline-block",
-        "diagram-compare",
-        "quiz-check",
-        "fill-in-blank",
-    }
-)
-
-PASSIVE_LEARNER_ACTIONS: frozenset[str] = frozenset(
-    {"compare-without-response", "read-explanation"}
-)
-
-ACTION_TO_LEARN_INTERACTION: dict[str, LearnRetainedInteraction] = {
-    "select-one": "choice",
-    "select-many": "multi-select",
-    "complete-missing-values": "fill-blank",
-    "classify-items": "classify",
-    "match-pairs": "match-pairs",
-    "order-items": "sequence",
-    "enter-number": "numeric",
-    "enter-text": "short-response",
-    # Gate wording alias
-    "reconstruct-order": "sequence",
-}
-
-ACTION_TO_PRINT_TASK: dict[str, PrintTaskObject] = {
-    "select-one": "choices",
-    "select-many": "choices",
-    "complete-missing-values": "questions",
-    "classify-items": "questions",
-    "match-pairs": "questions",
-    "order-items": "questions",
-    "enter-number": "questions",
-    "enter-text": "questions",
-    "reconstruct-order": "questions",
-}
 
 VISUAL_INTENTS: frozenset[str] = frozenset(
     {
@@ -110,13 +34,15 @@ DEFINE_INTENTS: frozenset[str] = frozenset(
 LIST_INTENTS: frozenset[str] = frozenset(
     {"list", "enumerate", "sequence", "steps", "outline"}
 )
-WORKED_EXAMPLE_INTENTS: frozenset[str] = frozenset(
-    {"demonstrate", "model", "worked-example", "walkthrough"}
-)
 
 
 class CompositionDecision(BaseModel):
-    """One ordered realization choice for a teaching block."""
+    """One ordered realization choice for a teaching block.
+
+    ``kind`` for lane=document must be one of the six ordinary primitives.
+    Path-specific lanes (print_task / learn_interaction) are validated by
+    the owning realizer — not by shared document maps.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -127,6 +53,14 @@ class CompositionDecision(BaseModel):
     )
     lane: Literal["document", "print_task", "learn_interaction"]
     reason: str = Field(min_length=1)
+    section_id: str | None = Field(
+        default=None,
+        description="Teaching Plan section / slot id for local regeneration.",
+    )
+    role: str | None = Field(
+        default=None,
+        description="Optional pedagogical role for this node within the block (e.g. orient, explain).",
+    )
 
 
 class CompositionPlan(BaseModel):
@@ -139,22 +73,12 @@ class CompositionPlan(BaseModel):
 
 
 __all__ = [
-    "ACTION_TO_LEARN_INTERACTION",
-    "ACTION_TO_PRINT_TASK",
     "COMPARE_INTENTS",
     "CompositionDecision",
     "CompositionPlan",
     "DEFINE_INTENTS",
     "DOCUMENT_PRIMITIVE_KINDS",
     "DocumentPrimitiveKind",
-    "LEGACY_LEARN_COMPONENT_IDS",
-    "LEARN_RETAINED_INTERACTIONS",
     "LIST_INTENTS",
-    "LearnRetainedInteraction",
-    "PASSIVE_LEARNER_ACTIONS",
-    "PRINT_ONLY_LAYOUT_OBJECTS",
-    "PRINT_TASK_OBJECTS",
-    "PrintTaskObject",
     "VISUAL_INTENTS",
-    "WORKED_EXAMPLE_INTENTS",
 ]

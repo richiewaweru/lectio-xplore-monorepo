@@ -97,7 +97,7 @@ export default defineConfig(({ mode }) => {
 		},
 		ssr: {
 			// Workspace packages must be bundled so Node SSR does not load raw .ts.
-			noExternal: ['@lectio/contracts', '@lectio/page', '@lectio/learn']
+			noExternal: ['@lectio/contracts', '@lectio/page']
 		},
 		/*build: {
 			rollupOptions: {

@@ -40,7 +40,7 @@ Product routes: `/units`, `/studio*`, `/builder*`, `/learn*`, `/packs*`, `/setti
 
 - `@lectio/contracts` — `packages/lectio-contracts` (shared instructional intents / learner actions)
 - `@lectio/page` — `packages/lectio-page` (Print page-document engine)
-- `@lectio/learn` — `packages/lectio-learn` (retained interaction UI only; ordinary document path is app-owned)
+- Learn interaction UI — app-owned under `frontend/src/lib/learn/interactions/` (`@lectio/learn` removed)
 
 ## Program state
 

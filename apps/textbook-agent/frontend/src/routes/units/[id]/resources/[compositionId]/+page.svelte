@@ -1,30 +1,31 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { providePrintMode } from '@lectio/learn';
 	import { getUnitResource } from '$lib/api/units';
-	import V3LectioPrintDocumentView from '$lib/print/components/studio/V3LectioPrintDocumentView.svelte';
-	import { adaptV3PackToLectioDocument, type V3PackDocument } from '$lib/print/studio/v3-pack-to-lectio-document';
-	import type { GenerationDocument } from '$lib/types';
+	import LectioPageDocumentView from '$lib/print/components/studio/LectioPageDocumentView.svelte';
+	import { extractLectioDocumentV2 } from '$lib/print/studio/document-version';
 	import type { ResourceComposition } from '$lib/types/units';
+	import type { LectioDocument } from '@lectio/page/contract';
 	import '$lib/print/styles/print.css';
 
 	const unitId = $derived(page.params.id ?? '');
 	const compositionId = $derived(page.params.compositionId ?? '');
 	const printMode = $derived(page.url.searchParams.get('print') === 'true');
-	providePrintMode(() => printMode);
 
 	let composition = $state<ResourceComposition | null>(null);
-	let document = $state<GenerationDocument | null>(null);
+	let document = $state<LectioDocument | null>(null);
 	let error = $state<string | null>(null);
 
 	onMount(async () => {
 		try {
 			composition = await getUnitResource(unitId, compositionId);
-			document = adaptV3PackToLectioDocument(composition.document as V3PackDocument, {
-				routeGenerationId: composition.id ?? compositionId,
-				includeAnswerKey: true
-			});
+			const extracted = extractLectioDocumentV2(composition.document);
+			if (!extracted) {
+				error =
+					'This resource has no LectioDocument v2 payload. Legacy SectionContent packs are not rendered.';
+				return;
+			}
+			document = extracted;
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Could not render this resource.';
 		}
@@ -44,7 +45,7 @@
 
 <svelte:head><title>{composition ? composition.projection.replaceAll('_', ' ') : 'Resource'} · Xplore</title></svelte:head>
 
-<main data-renderer="lectio" data-print-route="unit-resource" data-generation-complete={document || error ? 'true' : 'false'}>
+<main data-renderer="lectio-page-v2" data-print-route="unit-resource" data-generation-complete={document || error ? 'true' : 'false'}>
 	{#if !printMode}
 		<header class="resource-toolbar">
 			<a href={`/units/${unitId}`}>← Unit workspace</a>
@@ -55,7 +56,7 @@
 	{#if error}
 		<p class="resource-error" role="alert">{error}</p>
 	{:else if document}
-		<V3LectioPrintDocumentView {document} />
+		<LectioPageDocumentView {document} edition="teacher" />
 	{:else}
 		<p class="loading">Preparing resource…</p>
 	{/if}

@@ -1,8 +1,0 @@
-Capability: worked-example-card.
-
-Write a worked example that models a method from problem to answer.
-
-- Use a concrete problem tied to the lesson objective.
-- Every step must do useful mathematical, scientific, or reasoning work.
-- The answer must follow from the steps.
-- Do not introduce a method outside the supplied teaching scope.

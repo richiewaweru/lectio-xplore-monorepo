@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { LectioThemeSurface, basePresetMap, templateRegistryMap } from '@lectio/learn';
-	import type { SectionContent } from '@lectio/learn';
 	import type { BookletStatus, V3DraftPack } from '$lib/types/v3';
 	import V3BookletIssuesPanel from '$lib/print/components/studio/V3BookletIssuesPanel.svelte';
+	import LectioPageDocumentView from '$lib/print/components/studio/LectioPageDocumentView.svelte';
+	import { extractLectioDocumentV2 } from '$lib/print/studio/document-version';
 	import {
 		getBookletPrintReadiness,
 		getBookletStatusSummary
@@ -18,8 +18,7 @@
 
 	let { pack, status, issues = [], showIssues = true, onRetryIncomplete }: Props = $props();
 
-	const template = $derived(templateRegistryMap[pack.template_id]);
-	const preset = $derived(basePresetMap['blue-classroom'] ?? Object.values(basePresetMap)[0]);
+	const pageDocument = $derived(extractLectioDocumentV2(pack));
 	const printReadiness = $derived(getBookletPrintReadiness(status, pack));
 	const statusSummary = $derived(getBookletStatusSummary(status));
 	const incompleteDiagnostics = $derived(
@@ -94,20 +93,21 @@
 		<V3BookletIssuesPanel {issues} />
 	{/if}
 
-	{#if template && preset}
-		<LectioThemeSurface {preset}>
-			<div class="space-y-6">
-				{#each pack.sections as section, idx (String(section.section_id ?? idx))}
-					{@const TemplateRender = template.render}
-					<article class="rounded-xl border border-border/50 bg-card p-4 shadow-sm">
-						<TemplateRender section={section as unknown as SectionContent} />
-					</article>
-				{/each}
-			</div>
-		</LectioThemeSurface>
+	{#if pageDocument}
+		<LectioPageDocumentView document={pageDocument} edition="teacher" />
 	{:else}
-		<p class="text-sm text-muted-foreground">
-			Template unavailable for <code>{pack.template_id}</code>.
-		</p>
+		<div class="space-y-3 rounded-xl border border-border/50 bg-card p-4">
+			<p class="text-sm text-muted-foreground">
+				SectionContent template preview is retired. Open Print when a LectioDocument v2 payload is
+				available (template <code>{pack.template_id}</code>).
+			</p>
+			<ul class="space-y-2 text-sm">
+				{#each pack.sections as section, idx (String(section.section_id ?? idx))}
+					<li class="rounded-md border border-border/40 px-3 py-2">
+						{String(section.title ?? section.section_id ?? `Section ${idx + 1}`)}
+					</li>
+				{/each}
+			</ul>
+		</div>
 	{/if}
 </section>

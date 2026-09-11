@@ -5,7 +5,7 @@
     "choice": {
       "id": "choice",
       "kind": "interaction",
-      "renderer_ref": "packages/lectio-learn/src/lib/learn/ChoiceInteraction.svelte",
+      "renderer_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/ChoiceInteraction.svelte",
       "response_schema": {
         "$id": "learn/choice/response.v1",
         "type": "object",
@@ -22,7 +22,7 @@
       },
       "evaluation": {
         "mode": "auto-score",
-        "contract_ref": "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateChoice",
+        "contract_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateChoice",
         "partial_scoring": false,
         "invalid_response_policy": "reject"
       },
@@ -44,7 +44,7 @@
     "multi-select": {
       "id": "multi-select",
       "kind": "interaction",
-      "renderer_ref": "packages/lectio-learn/src/lib/learn/MultiSelectInteraction.svelte",
+      "renderer_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/MultiSelectInteraction.svelte",
       "response_schema": {
         "$id": "learn/multi-select/response.v1",
         "type": "object",
@@ -65,7 +65,7 @@
       },
       "evaluation": {
         "mode": "auto-score",
-        "contract_ref": "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateMultiSelect",
+        "contract_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateMultiSelect",
         "partial_scoring": true,
         "invalid_response_policy": "reject"
       },
@@ -87,7 +87,7 @@
     "fill-blank": {
       "id": "fill-blank",
       "kind": "interaction",
-      "renderer_ref": "packages/lectio-learn/src/lib/components/lectio/FillInTheBlank.svelte",
+      "renderer_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/FillInTheBlank.svelte",
       "response_schema": {
         "$id": "learn/fill-blank/response.v1",
         "type": "object",
@@ -107,7 +107,7 @@
       },
       "evaluation": {
         "mode": "auto-score",
-        "contract_ref": "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateFillBlank",
+        "contract_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateFillBlank",
         "partial_scoring": true,
         "invalid_response_policy": "reject"
       },
@@ -130,7 +130,7 @@
     "numeric": {
       "id": "numeric",
       "kind": "interaction",
-      "renderer_ref": "packages/lectio-learn/src/lib/learn/NumericInteraction.svelte",
+      "renderer_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/NumericInteraction.svelte",
       "response_schema": {
         "$id": "learn/numeric/response.v1",
         "type": "object",
@@ -146,7 +146,7 @@
       },
       "evaluation": {
         "mode": "auto-score",
-        "contract_ref": "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateNumeric",
+        "contract_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateNumeric",
         "partial_scoring": false,
         "invalid_response_policy": "reject"
       },
@@ -169,7 +169,7 @@
     "short-response": {
       "id": "short-response",
       "kind": "interaction",
-      "renderer_ref": "packages/lectio-learn/src/lib/learn/ShortResponseInteraction.svelte",
+      "renderer_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/ShortResponseInteraction.svelte",
       "response_schema": {
         "$id": "learn/short-response/response.v1",
         "type": "object",
@@ -186,7 +186,7 @@
       },
       "evaluation": {
         "mode": "auto-score",
-        "contract_ref": "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateShortResponse",
+        "contract_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateShortResponse",
         "partial_scoring": false,
         "invalid_response_policy": "reject"
       },
@@ -208,7 +208,7 @@
     "match-pairs": {
       "id": "match-pairs",
       "kind": "interaction",
-      "renderer_ref": "packages/lectio-learn/src/lib/learn/MatchPairsInteraction.svelte",
+      "renderer_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/MatchPairsInteraction.svelte",
       "response_schema": {
         "$id": "learn/match-pairs/response.v1",
         "type": "object",
@@ -243,7 +243,7 @@
       },
       "evaluation": {
         "mode": "auto-score",
-        "contract_ref": "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateMatchPairs",
+        "contract_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateMatchPairs",
         "partial_scoring": true,
         "invalid_response_policy": "reject"
       },
@@ -265,7 +265,7 @@
     "classify": {
       "id": "classify",
       "kind": "interaction",
-      "renderer_ref": "packages/lectio-learn/src/lib/learn/ClassifyInteraction.svelte",
+      "renderer_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/ClassifyInteraction.svelte",
       "response_schema": {
         "$id": "learn/classify/response.v1",
         "type": "object",
@@ -300,7 +300,7 @@
       },
       "evaluation": {
         "mode": "auto-score",
-        "contract_ref": "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateMatchPairs",
+        "contract_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateMatchPairs",
         "partial_scoring": true,
         "invalid_response_policy": "reject"
       },
@@ -321,7 +321,7 @@
     "sequence": {
       "id": "sequence",
       "kind": "interaction",
-      "renderer_ref": "packages/lectio-learn/src/lib/learn/SequenceInteraction.svelte",
+      "renderer_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/SequenceInteraction.svelte",
       "response_schema": {
         "$id": "learn/sequence/response.v1",
         "type": "object",
@@ -342,7 +342,7 @@
       },
       "evaluation": {
         "mode": "auto-score",
-        "contract_ref": "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateSequence",
+        "contract_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateSequence",
         "partial_scoring": true,
         "invalid_response_policy": "reject"
       },
@@ -363,7 +363,7 @@
     "image-hotspot": {
       "id": "image-hotspot",
       "kind": "interaction",
-      "renderer_ref": "packages/lectio-learn/src/lib/learn/ImageHotspotInteraction.svelte",
+      "renderer_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/ImageHotspotInteraction.svelte",
       "response_schema": {
         "$id": "learn/image-hotspot/response.v1",
         "type": "object",
@@ -380,7 +380,7 @@
       },
       "evaluation": {
         "mode": "auto-score",
-        "contract_ref": "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateChoice",
+        "contract_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateChoice",
         "partial_scoring": false,
         "invalid_response_policy": "reject"
       },
@@ -397,7 +397,7 @@
     "drag-label": {
       "id": "drag-label",
       "kind": "interaction",
-      "renderer_ref": "packages/lectio-learn/src/lib/learn/DragLabelInteraction.svelte",
+      "renderer_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/DragLabelInteraction.svelte",
       "response_schema": {
         "$id": "learn/drag-label/response.v1",
         "type": "object",
@@ -432,7 +432,7 @@
       },
       "evaluation": {
         "mode": "auto-score",
-        "contract_ref": "packages/lectio-learn/src/lib/learn/interaction-contract.ts#evaluateMatchPairs",
+        "contract_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#evaluateMatchPairs",
         "partial_scoring": true,
         "invalid_response_policy": "reject"
       },
@@ -449,7 +449,7 @@
     "section-header": {
       "id": "section-header",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/section-header/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/section-header/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -474,7 +474,7 @@
     "hook-hero": {
       "id": "hook-hero",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/hook-hero/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/hook-hero/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -499,7 +499,7 @@
     "explanation-block": {
       "id": "explanation-block",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/explanation-block/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/explanation-block/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -524,7 +524,7 @@
     "prerequisite-strip": {
       "id": "prerequisite-strip",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/prerequisite-strip/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/prerequisite-strip/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -550,7 +550,7 @@
     "what-next-bridge": {
       "id": "what-next-bridge",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/what-next-bridge/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/what-next-bridge/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -575,7 +575,7 @@
     "interview-anchor": {
       "id": "interview-anchor",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/interview-anchor/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/interview-anchor/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -600,7 +600,7 @@
     "callout-block": {
       "id": "callout-block",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/callout-block/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/callout-block/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -625,7 +625,7 @@
     "summary-block": {
       "id": "summary-block",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/summary-block/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/summary-block/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -650,7 +650,7 @@
     "section-divider": {
       "id": "section-divider",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/section-divider/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/section-divider/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -675,7 +675,7 @@
     "definition-card": {
       "id": "definition-card",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/definition-card/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/definition-card/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -701,7 +701,7 @@
     "definition-family": {
       "id": "definition-family",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/definition-family/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/definition-family/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -727,7 +727,7 @@
     "glossary-rail": {
       "id": "glossary-rail",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/glossary-rail/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/glossary-rail/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -754,7 +754,7 @@
     "glossary-inline": {
       "id": "glossary-inline",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/glossary-inline/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/glossary-inline/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -779,7 +779,7 @@
     "insight-strip": {
       "id": "insight-strip",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/insight-strip/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/insight-strip/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -804,7 +804,7 @@
     "key-fact": {
       "id": "key-fact",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/key-fact/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/key-fact/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -829,7 +829,7 @@
     "comparison-grid": {
       "id": "comparison-grid",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/comparison-grid/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/comparison-grid/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -854,7 +854,7 @@
     "worked-example-card": {
       "id": "worked-example-card",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/worked-example-card/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/worked-example-card/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -882,7 +882,7 @@
     "process-steps": {
       "id": "process-steps",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/process-steps/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/process-steps/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -908,7 +908,7 @@
     "practice-stack": {
       "id": "practice-stack",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/practice-stack/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/practice-stack/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -936,7 +936,7 @@
     "quiz-check": {
       "id": "quiz-check",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/quiz-check/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/quiz-check/Component.svelte",
       "response_schema": {
         "$id": "learn/choice/response.v1",
         "type": "object",
@@ -953,7 +953,7 @@
       },
       "evaluation": {
         "mode": "auto-score",
-        "contract_ref": "packages/lectio-learn/src/lib/learn/interaction-contract.ts#quizContentToInteractionContract",
+        "contract_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#quizContentToInteractionContract",
         "partial_scoring": false,
         "invalid_response_policy": "reject"
       },
@@ -974,7 +974,7 @@
     "reflection-prompt": {
       "id": "reflection-prompt",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/reflection-prompt/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/reflection-prompt/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -999,7 +999,7 @@
     "student-textbox": {
       "id": "student-textbox",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/student-textbox/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/student-textbox/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -1024,7 +1024,7 @@
     "short-answer": {
       "id": "short-answer",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/short-answer/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/short-answer/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -1049,7 +1049,7 @@
     "fill-in-blank": {
       "id": "fill-in-blank",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/fill-in-blank/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/fill-in-blank/Component.svelte",
       "response_schema": {
         "$id": "learn/fill-blank/response.v1",
         "type": "object",
@@ -1069,7 +1069,7 @@
       },
       "evaluation": {
         "mode": "auto-score",
-        "contract_ref": "packages/lectio-learn/src/lib/learn/interaction-contract.ts#fillBlankContentToInteractionContract",
+        "contract_ref": "apps/textbook-agent/frontend/src/lib/learn/interactions/interaction-contract.ts#fillBlankContentToInteractionContract",
         "partial_scoring": true,
         "invalid_response_policy": "reject"
       },
@@ -1091,7 +1091,7 @@
     "pitfall-alert": {
       "id": "pitfall-alert",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/pitfall-alert/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/pitfall-alert/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -1117,7 +1117,7 @@
     "diagram-block": {
       "id": "diagram-block",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/diagram-block/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/diagram-block/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -1144,7 +1144,7 @@
     "diagram-compare": {
       "id": "diagram-compare",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/diagram-compare/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/diagram-compare/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -1169,7 +1169,7 @@
     "diagram-series": {
       "id": "diagram-series",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/diagram-series/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/diagram-series/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -1195,7 +1195,7 @@
     "video-embed": {
       "id": "video-embed",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/video-embed/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/video-embed/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -1220,7 +1220,7 @@
     "image-block": {
       "id": "image-block",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/image-block/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/image-block/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -1245,7 +1245,7 @@
     "timeline-block": {
       "id": "timeline-block",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/timeline-block/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/timeline-block/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -1271,7 +1271,7 @@
     "simulation-block": {
       "id": "simulation-block",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/simulation-block/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/simulation-block/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",
@@ -1296,7 +1296,7 @@
     "answer-key": {
       "id": "answer-key",
       "kind": "content",
-      "renderer_ref": "packages/lectio-learn/src/lib/lectio/components/answer-key/Component.svelte",
+      "renderer_ref": "RETIRED/ordinary-component/answer-key/Component.svelte",
       "response_schema": null,
       "evaluation": {
         "mode": "none",

@@ -2,15 +2,14 @@
 	import { browser } from '$app/environment';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
-	import type { LessonDocument } from '@lectio/learn';
-	import type { LearnDocument } from '$lib/learn/document/types';
+	import { isLearnDocument, type LearnDocument } from '$lib/learn/document/types';
 	import { loadBuilderLessonWithFallback } from '$lib/learn/authoring/builder/persistence/server-sync';
 	import StudentLessonShell from '$lib/learn/student/StudentLessonShell.svelte';
 	import { isApiError } from '$lib/api/errors';
 
 	let ready = $state(false);
 	let error = $state<string | null>(null);
-	let document = $state<LessonDocument | LearnDocument | null>(null);
+	let document = $state<LearnDocument | null>(null);
 
 	const id = $derived(page.params.id);
 
@@ -18,6 +17,12 @@
 		if (!browser || !id) return;
 		try {
 			const result = await loadBuilderLessonWithFallback(id);
+			if (!result.document || !isLearnDocument(result.document)) {
+				error =
+					'This lesson is not a LearnDocument v2 payload. Open Builder to migrate or recreate it.';
+				ready = true;
+				return;
+			}
 			document = result.document;
 			ready = true;
 		} catch (err) {

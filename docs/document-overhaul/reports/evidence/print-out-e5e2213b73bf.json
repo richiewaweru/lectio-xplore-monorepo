@@ -1,0 +1,27 @@
+{
+  "generation_id": "print-out-e5e2213b73bf",
+  "pdf_path": "C:\\Projects\\lectio\\docs\\document-overhaul\\reports\\evidence\\print-out-e5e2213b73bf.pdf",
+  "pdf_bytes": 2218,
+  "reloaded_bytes": 2218,
+  "form_objects": [
+    "prose",
+    "prose",
+    "choices"
+  ],
+  "lanes": [
+    "document",
+    "document",
+    "document",
+    "document",
+    "document",
+    "print_task"
+  ],
+  "kinds": [
+    "heading",
+    "paragraph",
+    "paragraph",
+    "figure",
+    "callout",
+    "choices"
+  ]
+}

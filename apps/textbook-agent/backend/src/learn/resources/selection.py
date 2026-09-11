@@ -8,6 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from document.models import DOCUMENT_PRIMITIVE_KINDS
 from learn.resources.native_policy import (
     capabilities_requiring_assets,
     default_learn_policy,
@@ -242,6 +243,13 @@ def derive_learn_block_candidates(
             content.append(capability_id)
         else:
             interactions.append(capability_id)
+
+    # Ordinary content is owned by the shared document composer (six primitives).
+    # When the native policy intentionally offers no legacy component ids, expose
+    # document primitives so selection / interaction layering still has a legal
+    # content surface for every teaching block.
+    if not content and not content_offered:
+        content = sorted(DOCUMENT_PRIMITIVE_KINDS)
 
     return LearnBlockCandidates(
         block_id=block_id,

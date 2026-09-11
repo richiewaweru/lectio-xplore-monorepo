@@ -10,8 +10,8 @@ from curriculum.teaching_plan.models import (
     TeachingPlanBlock,
     TeachingPlanSection,
 )
-from document.composition import DOCUMENT_PRIMITIVE_KINDS
 from document.heuristics import choose_document_primitive
+from document.models import DOCUMENT_PRIMITIVE_KINDS
 from print.generation.document_form_map import to_print_object
 from print.generation.document_realizer import (
     produce_print_document_plan_from_teaching,

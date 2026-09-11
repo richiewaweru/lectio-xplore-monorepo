@@ -1,7 +1,0 @@
-Capability: definition-family.
-
-Write a family of related definitions.
-
-- Keep terms in the same conceptual neighborhood.
-- Make distinctions explicit where learners may confuse terms.
-- Avoid broad explanation that belongs in an explanation block.

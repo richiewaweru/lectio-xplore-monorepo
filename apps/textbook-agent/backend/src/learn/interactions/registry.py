@@ -32,9 +32,10 @@ DELETED_INTERACTIONS: frozenset[str] = frozenset(
 )
 
 # Ordinary Learn component ids retired in favor of shared document primitives.
-# Listed here so native policy can deny them until Phase M hard-deletes writers.
+# Listed here so native policy / realizers can deny them.
 RETIRED_ORDINARY_CONTENT_IDS: frozenset[str] = frozenset(
     {
+        "ExplanationBlock",
         "section-header",
         "hook-hero",
         "explanation-block",

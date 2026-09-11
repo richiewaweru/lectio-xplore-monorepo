@@ -114,7 +114,7 @@ describe('connectV3StudioGenerationStream', () => {
 		});
 
 		const doc = await fetchV3Document('gen-1');
-		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/print/generations/gen-1/document', {
+		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/generations/gen-1/document', {
 			method: 'GET',
 			headers: { 'Content-Type': 'application/json' }
 		});
@@ -128,7 +128,7 @@ describe('connectV3StudioGenerationStream', () => {
 		});
 
 		const rows = await getV3Generations();
-		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/print/generations?limit=20&offset=0', {
+		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/generations?limit=20&offset=0', {
 			method: 'GET',
 			headers: { 'Content-Type': 'application/json' }
 		});
@@ -142,7 +142,7 @@ describe('connectV3StudioGenerationStream', () => {
 		});
 
 		const row = await getV3GenerationDetail('gen-1');
-		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/print/generations/gen-1', {
+		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/generations/gen-1', {
 			method: 'GET',
 			headers: { 'Content-Type': 'application/json' }
 		});
@@ -162,7 +162,7 @@ describe('connectV3StudioGenerationStream', () => {
 
 		const result = await retryNativeVisuals('gen-1');
 
-		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/print/generations/gen-1/visuals/retry', {
+		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/generations/gen-1/visuals/retry', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' }
 		});
@@ -331,7 +331,7 @@ describe('connectV3StudioGenerationStream', () => {
 			json: async () => ({ blueprint_id: 'bp-1', title: 'Plan' })
 		});
 		const preview = await getV3GenerationBlueprint('gen-1');
-		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/print/generations/gen-1/blueprint', {
+		expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/v3/generations/gen-1/blueprint', {
 			method: 'GET',
 			headers: { 'Content-Type': 'application/json' }
 		});

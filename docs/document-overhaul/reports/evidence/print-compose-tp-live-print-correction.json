@@ -1,0 +1,27 @@
+{
+  "proof": "LIVE_PRINT_COMPOSITION",
+  "teaching_plan_id": "tp-live-print-correction",
+  "teaching_plan_hash": "5921944b91343511c2ae56ad048f6626ebac13d4f8858396d3bad04abbadfb8a",
+  "kinds": [
+    "heading",
+    "paragraph",
+    "heading",
+    "paragraph",
+    "figure",
+    "choices"
+  ],
+  "lanes": [
+    "document",
+    "document",
+    "document",
+    "document",
+    "document",
+    "print_task"
+  ],
+  "form_objects": [
+    "prose",
+    "prose",
+    "choices"
+  ],
+  "note": "Composition+FormPlan only; full PDF requires DB+worker (Postgres unavailable this run)"
+}

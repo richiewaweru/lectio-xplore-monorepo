@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { SectionContent } from '@lectio/learn';
+import type { SectionContent } from '$lib/types';
 
 const SectionContentSchema = z
 	.object({

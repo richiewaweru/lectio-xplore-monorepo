@@ -1,7 +1,0 @@
-Capability: key-fact.
-
-Write a concise fact the learner should retain.
-
-- State one important claim clearly.
-- Include supporting context only if the schema asks for it.
-- Do not pack several unrelated facts into one card.

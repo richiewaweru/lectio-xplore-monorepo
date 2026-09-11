@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
@@ -4571,12 +4571,54 @@ async def post_lesson_approach_approve(
     generation_id: str,
     body: LessonApproachApproveRequest,
     current_user: User = Depends(get_current_user),
+    path: str | None = Query(default=None),
 ) -> JSONResponse:
     await _load_owned_generation(generation_id, current_user.id)
     from print.generation.whole_lesson.service import approve_teaching_and_queue
+    from print.generation.whole_lesson.repository import PageDocumentRepository
+
+    requested_path = (path or getattr(body, "path", None) or "print").strip().lower()
+    if requested_path not in {"print", "learn"}:
+        requested_path = "print"
 
     async with async_session_factory() as session:
         try:
+            if requested_path == "learn":
+                # Path-neutral teaching approval: persist approval without
+                # queuing the Print whole-lesson worker.
+                repo = PageDocumentRepository(session, generation_id)
+                state = await repo.load_page_generation_state()
+                if not state.get("teaching_plan"):
+                    raise HTTPException(status_code=409, detail="no teaching plan to approve")
+                state = await repo.save_teaching_review(
+                    status="approved",
+                    expected_revision=body.expected_revision,
+                    reviewed_by=current_user.id,
+                    teacher_note=body.teacher_note,
+                    queue=False,
+                )
+                # Stamp requested path for Units Learn generate.
+                chunked = dict(state)
+                chunked["requested_realization_path"] = "learn"
+                generation = await session.get(GenerationModel, generation_id)
+                if generation is not None:
+                    generation.chunked_state_json = {
+                        **(generation.chunked_state_json or {}),
+                        **chunked,
+                        "requested_realization_path": "learn",
+                    }
+                await session.commit()
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "generation_id": generation_id,
+                        "status": "teaching_approved",
+                        "path": "learn",
+                        "queued": False,
+                        "next": "generate_learn",
+                    },
+                )
+
             result = await approve_teaching_and_queue(
                 session,
                 generation_id,
@@ -4584,6 +4626,8 @@ async def post_lesson_approach_approve(
                 reviewed_by=current_user.id,
                 teacher_note=body.teacher_note,
             )
+        except HTTPException:
+            raise
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except Exception as exc:
@@ -4594,9 +4638,40 @@ async def post_lesson_approach_approve(
         content={
             "generation_id": generation_id,
             "status": result.get("status") or "queued",
+            "path": "print",
             "document_version": 2,
         },
     )
+
+
+@v3_studio_router.post("/generations/{generation_id}/realize-learn")
+async def post_realize_learn(
+    generation_id: str,
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Generate Learn from an approved Teaching Plan on this preparation generation.
+
+    Cross-domain handoff goes through application orchestration (not print→learn).
+    """
+    await _load_owned_generation(generation_id, current_user.id)
+    from application.unit_lesson.realize_learn_handoff import realize_learn_from_preparation
+
+    async with async_session_factory() as session:
+        try:
+            result = await realize_learn_from_preparation(
+                session,
+                preparation_generation_id=generation_id,
+                user_id=current_user.id,
+            )
+            await session.commit()
+        except HTTPException:
+            await session.rollback()
+            raise
+        except Exception as exc:
+            await session.rollback()
+            logger.exception("realize-learn failed generation_id=%s", generation_id)
+            raise HTTPException(status_code=500, detail=str(exc)[:400]) from exc
+    return result
 
 
 @v3_studio_router.post("/generations/{generation_id}/lesson-approach/reject")

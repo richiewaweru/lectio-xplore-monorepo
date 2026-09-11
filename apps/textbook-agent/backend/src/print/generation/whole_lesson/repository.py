@@ -1084,7 +1084,16 @@ class PageDocumentRepository:
 
             review = dict(state.get("teaching_review") or {})
             current_rev = int(review.get("revision") or 1)
-            if expected_revision != current_rev:
+            approved_rev = review.get("approved_revision")
+            already_approved = (
+                str(review.get("status") or "") == "approved" and approved_rev is not None
+            )
+            # After Learn (or a prior Print) approval, review.revision is the
+            # next pending slot, not the approved teaching revision. Queuing
+            # Print must not require a new draft.
+            if status == "approved" and queue and already_approved:
+                pass
+            elif expected_revision != current_rev:
                 raise ValueError(
                     f"stale teaching revision: expected {expected_revision}, current {current_rev}"
                 )
@@ -1092,7 +1101,7 @@ class PageDocumentRepository:
             if status == "approved" and queue and gen_status in post_approval:
                 boxed.append(state)
                 return
-            if status == "approved":
+            if status == "approved" and not (queue and already_approved):
                 store = TeachingRevisionStore(state)
                 store.approve(
                     expected_revision=expected_revision,
@@ -1132,8 +1141,20 @@ class PageDocumentRepository:
                 # Rejection is terminal alias outside the main graph.
                 generation.status = "rejected_by_teacher"
             elif status == "approved":
-                # Non-queue legacy path should not be used for Phase 02.
-                raise ValueError("approved teaching review requires queue=True")
+                # Learn (and other non-Print) approval: persist the teaching
+                # revision without queuing the Print whole-lesson worker.
+                events = list(state.get("events") or [])
+                events.append(
+                    {
+                        **make_event(
+                            "teaching_plan_approved",
+                            generation_id=self.generation_id,
+                            status="teaching_approved",
+                        ),
+                        "at": _now(),
+                    }
+                )
+                state["events"] = events[-500:]
             boxed.append(state)
 
         await self.mutate_state(mutation=_mut)

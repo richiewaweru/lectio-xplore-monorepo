@@ -580,10 +580,20 @@ def test_p04_omitted_learner_action_does_not_fabricate_order_items() -> None:
     assert derived.requires_response is False
     assert derived.interaction_candidates == ()
     assert "sequence" not in derived.interaction_candidates
-    # Do not invent an interaction; empty dual shortlist fails closed when selecting.
+    # Document primitives remain legal content; do not invent an interaction.
     plan = _plan(block, plan_id="tp-seq-no-action")
-    with pytest.raises(NoCompatibleLearnCapabilityError):
-        select_learn_deterministically(plan)
+    candidates, decisions = select_learn_deterministically(plan)
+    assert candidates["b-seq-no-action"].interaction_candidates == ()
+    assert decisions[0].interaction_id is None
+    assert decisions[0].content_id is not None
+    assert decisions[0].content_id in {
+        "paragraph",
+        "heading",
+        "list",
+        "figure",
+        "table",
+        "callout",
+    }
 
 
 def test_p04_practise_guided_without_action_is_not_forced_onto_sequence() -> None:

@@ -62,8 +62,17 @@ async def build_closed_print_production_plan_async(
     policy: Mapping[str, Any] | None = None,
     choose: ChooseFn | None = None,
     sealed_form_plan: FormPlan | None = None,
+    provider: Any | None = None,
+    engine: Any | None = None,
+    use_document_composition: bool = True,
 ) -> tuple[FormPlan, PrintSelectionSnapshot, list[PrintWorkOrder]]:
-    """Closed selection + work orders from an approved shared teaching plan."""
+    """Build Print FormPlan from shared document composition (canonical).
+
+    When ``use_document_composition`` is True (default), ordinary content
+    selection uses ``document.composer`` + Print task treatments — not the
+    closed catalogue LLM form selector. FormPlan remains the Print layout
+    carrier for writers/assembly.
+    """
     body = dict(policy) if policy is not None else default_print_policy()
     _, policy_hash = policy_version_and_hash(body)
     assets = [str(item) for item in (available_asset_ids or ()) if item]
@@ -84,13 +93,6 @@ async def build_closed_print_production_plan_async(
         policy=body,
     )
     plan_hash = teaching_plan_content_hash(teaching_plan)
-    lesson = packet.lesson
-    lesson_title = getattr(lesson, "objective", None) or getattr(lesson, "title", None) or ""
-    teaching_context = {
-        "arc": teaching_plan.arc,
-        "lesson_title": lesson_title,
-        "subject": getattr(lesson, "subject", None) or "",
-    }
     if sealed_form_plan is not None:
         snapshot = snapshot_from_form_plan(
             teaching_plan=teaching_plan,
@@ -101,7 +103,29 @@ async def build_closed_print_production_plan_async(
             package_contract_hash=package_contract_hash(),
         )
         form_plan = sealed_form_plan
+    elif use_document_composition:
+        from print.generation.composition_bridge import (
+            build_print_production_from_composition,
+        )
+
+        form_plan, snapshot, _composition = await build_print_production_from_composition(
+            teaching_plan=teaching_plan,
+            provider=provider,
+            engine=engine,
+            policy=body,
+            allow_heuristic_fallback=True,
+            candidate_map=candidate_map,
+        )
+        _ = choose  # catalogue choose unused when composition owns ordinary selection
     else:
+        # Legacy closed catalogue selection — kept for salvage/tests only.
+        lesson = packet.lesson
+        lesson_title = getattr(lesson, "objective", None) or getattr(lesson, "title", None) or ""
+        teaching_context = {
+            "arc": teaching_plan.arc,
+            "lesson_title": lesson_title,
+            "subject": getattr(lesson, "subject", None) or "",
+        }
         snapshot = await build_print_selection_snapshot_async(
             teaching_plan,
             candidate_map=candidate_map,

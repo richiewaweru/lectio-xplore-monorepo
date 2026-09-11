@@ -1,0 +1,20 @@
+{
+  "teaching_plan_id": "tp-sibling-93b6e7cb",
+  "learn_kinds": [
+    "heading",
+    "paragraph",
+    "figure",
+    "callout"
+  ],
+  "print_kinds": [
+    "choices"
+  ],
+  "print_lanes": [
+    "print_task"
+  ],
+  "form_objects": [
+    "choices"
+  ],
+  "print_teaching_plan_hash": "b18919fe8941ae0fcdef3fc1d23010b67772e4c3d1988f166ede887d6d21f19e",
+  "independence": "no conversion; both from Teaching Plan"
+}

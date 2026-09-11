@@ -37,7 +37,9 @@ def open_href_for(path: NativePath, *, output_id: str | None, status: str) -> st
         return None
     if path == "print":
         return f"/studio/print/{output_id}"
-    return f"/studio?generation_id={output_id}"
+    # Learn opens the editable lesson when available; callers may override with
+    # editable_lesson_id. Generation id alone routes to native Learn builder open.
+    return f"/builder/from-native-learn/{output_id}"
 
 
 def to_identity(row: NativeRealizationModel) -> RealizationIdentity:

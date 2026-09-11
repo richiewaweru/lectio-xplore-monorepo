@@ -115,6 +115,12 @@ class InteractionNode(BaseModel):
     prompt: str = ""
     config: dict[str, Any] = Field(default_factory=dict)
     feedback: dict[str, Any] | str | None = None
+    # Runtime evaluation metadata (not ordinary content).
+    assessment_mode: str | None = None
+    attempt_policy: dict[str, Any] | None = None
+    completion: dict[str, Any] | str | None = None
+    # Full authored contract retained for evaluate/reload (attempt state stays outside).
+    contract: dict[str, Any] | None = None
 
 
 LearnNode = Annotated[

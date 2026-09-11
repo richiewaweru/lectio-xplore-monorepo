@@ -1,7 +1,0 @@
-Capability: pitfall-alert.
-
-Write a misconception or error warning.
-
-- Name the likely mistake clearly.
-- Explain why it is wrong using lesson terminology.
-- Keep correction actionable and concise.

@@ -1,58 +1,66 @@
 # Document + Interaction Overhaul — State
 
 **Classification**: major  
-**Branch**: `refactor/document-model-overhaul`  
-**Baseline SHA**: `1dabd746af65ac9d9272fcb7c49f000632407754`  
-**Backup tag**: `backup/document-overhaul-precut-2026-09-10`  
+**Original overhaul branch**: `refactor/document-model-overhaul` (historical)  
+**Correction branch**: `fix/document-overhaul-correction`  
+**Correction baseline SHA**: `cebb61f2073311b5f7fd2daca8c10ce81e8ed117` (`origin/main`)  
 **Started**: 2026-09-10  
-**Closed**: 2026-09-11 (Phases A–O complete in working tree; see reports)
+**Correction pass**: 2026-09-11
 
-## Progress
+## Current program status
 
-- [x] Documented scope and pack copied to `docs/document-overhaul/`
-- [x] Mapped current dependencies (see pack repo-map)
-- [x] Established baseline (commands below — Phase O)
-- [x] Phase A — Shared instructional contracts
-- [x] Phase B — Minimal document vocabulary
-- [x] Phase C — Extract Print content from layout
-- [x] Phase D — Explicit single-path admission
-- [x] Phase E — Path document realizers
-- [x] Phase F — Rebuild Learn generation
-- [x] Phase G — Rationalize Learn interactions
-- [x] Phase H — Align Print realization
-- [x] Phase I — Learn document renderer/editor
-- [x] Phase J — Writers and prompts
-- [x] Phase K — Persistence and releases
-- [x] Phase L — Frontend path UX
-- [x] Phase M — Hard delete legacy → `reports/PHASE_M_LEGACY_DELETION.md`
-- [x] Phase N — Repo/package cleanup → `reports/PHASE_N_REPO_CLEANUP.md`
-- [x] Phase O — Full verification → `reports/PHASE_O_VERIFICATION.md`
+**PASS**
+
+The corrective pass wired real LLM composition/writing, Learn figure asset attachment,
+real interaction authoring, one Print composition path, Unit Learn routing,
+LearnDocument v2 UI shells, and deleted `packages/lectio-learn`.
+
+Live proofs (production provider + local Postgres + browser):
+
+- Compose + write PASS
+- 8/8 interactions PASS
+- Print composition PASS
+- Print PDF generation ID `print-out-de8b57b66f33`
+- Sibling path (same Teaching Plan → Learn + Print independently) PASS
+- Learn persist + edit/save/reload API PASS (`learn-out-0f35ee03d68f`)
+- Browser Learn editor E2E PASS (`browser-learn-editor-e2e.json`)
+
+See `reports/CORRECTION_REPORT.md` (sections A–K) and `reports/CORRECTION_LEDGER.md`.
+
+Do **not** treat Phase M/N/O historical PASS reports as current evidence.
+
+## Correction waves
+
+- [x] Wave 0 — Baseline + branch
+- [x] Wave 1 — Shared `document/` boundary
+- [x] Wave 2 — LLM compose + write
+- [x] Wave 3 — Learn interactions
+- [x] Wave 4 — Print cutover
+- [x] Wave 5 — Unit route
+- [x] Wave 6 — Learn renderer/editor
+- [x] Wave 7 — `@lectio/learn` deletion
+- [x] Wave 8 — Verification + report A–K → **PASS**
 
 ## Interaction KEEP / DELETE (locked)
 
 **KEEP:** `choice`, `multi-select`, `fill-blank`, `classify`, `match-pairs`, `sequence`, `numeric`, `short-response`  
 **DELETE:** `image-hotspot`, `drag-label`, `image-choice`/`image-block`, `video-embed`, spatial actions
 
-## Deferred debt
+## Live proofs recorded (correction)
 
-- Full `@lectio/learn` package removal is **deferred** until interactions are fully moved to the app. Root `learn:test` / `learn:export` scripts remain so the workspace stays installable.
-- Ordinary content components still present inside `@lectio/learn` (ExplanationBlock, DefinitionCard, SectionContent templates, etc.) are not the production generation path; strip tracked in Phase N report.
+| Proof | Result |
+| --- | --- |
+| Live compose + write (`scripts/live_compose_write_proof.py`) | PASS |
+| Live 8 interactions (`scripts/live_interaction_proof.py`) | PASS |
+| Live Print composition (`scripts/live_print_composition_proof.py`) | PASS |
+| Live Print PDF (`scripts/live_print_pdf_proof.py`) | PASS (`print-out-de8b57b66f33`) |
+| Live sibling path (`scripts/live_sibling_path_proof.py`) | PASS (`tp-sibling-93b6e7cb`) |
+| Live Learn persist + edit/reload | PASS (`learn-out-0f35ee03d68f`, DB) |
+| Browser Learn editor E2E | PASS (`browser-learn-editor-e2e.json`) |
+| Repo gates (contracts/page/app/domain-guards) | PASS |
+| `tests/print_learn` + figure pipeline | PASS |
 
-## Baseline / Phase O Evidence
+## Historical notes (not current evidence)
 
-| Command | Result | Notes |
-| --- | --- | --- |
-| `pnpm contracts:test` | PASS | 20 tests |
-| `pnpm contracts:check` | PASS | Fixed TS18048 in `vocabulary.test.ts` during Phase O |
-| `pnpm page:test` | PASS | 64 tests |
-| Backend document/learn/print/curriculum pytest slice | PASS | 36 passed |
-| Zero-legacy `rg` | RECORDED | Matches justified in Phase O report; RuledLines=0; production `component_lectio` deleted |
-
-## Phase Gate Log
-
-| Phase | Status | Evidence |
-| --- | --- | --- |
-| A–L | complete | Working tree on `refactor/document-model-overhaul` (`document/`, realizers, FE canvas, interactions) |
-| M | complete | `reports/PHASE_M_LEGACY_DELETION.md` |
-| N | complete | `reports/PHASE_N_REPO_CLEANUP.md` |
-| O | complete | `reports/PHASE_O_VERIFICATION.md` — **PASS with deferred debt** |
+Phases A–O were previously marked complete on `refactor/document-model-overhaul`
+with “PASS with deferred debt”. That claim is superseded by this correction pass.

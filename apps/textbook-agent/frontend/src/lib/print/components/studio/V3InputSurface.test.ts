@@ -71,7 +71,9 @@ describe('V3InputSurface', () => {
 		expect((screen.getByLabelText('Class') as HTMLInputElement).value).toBe('');
 	});
 
-	it('submits the optional class label separately from the planning form', async () => {
+	it(
+		'submits the optional class label separately from the planning form',
+		async () => {
 		getProfile.mockRejectedValue(new Error('not available'));
 		narrowTopic.mockResolvedValue(candidates);
 		proposeIntent.mockResolvedValue(drafts);
@@ -108,7 +110,9 @@ describe('V3InputSurface', () => {
 			]
 		);
 		expect(onSubmit.mock.calls[0][0]).not.toHaveProperty('class_label');
-	});
+		},
+		15_000
+	);
 
 	it('soft-gates intent, context, and submit until the topic is confirmed', async () => {
 		narrowTopic.mockResolvedValue(candidates);

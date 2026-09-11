@@ -328,6 +328,38 @@ export function preparePathLesson(unitId: string, path: UnitPath, lesson: PathLe
 	);
 }
 
+export type GenerateLearnResult = {
+	status: string;
+	path: 'learn';
+	output_id: string;
+	editable_lesson_id: string;
+	realization_id?: string;
+	open_href?: string | null;
+	teaching_plan_hash?: string;
+	teaching_plan_revision?: number;
+};
+
+/** Admit + execute Learn from an approved Teaching Plan (no Print conversion). */
+export function generateLearnRealization(
+	unitId: string,
+	path: UnitPath,
+	lesson: PathLesson
+): Promise<GenerateLearnResult> {
+	return jsonRequest(
+		`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons/${encodeURIComponent(lesson.id)}/realizations:generate-learn`,
+		'Could not generate the Learn lesson.',
+		{
+			method: 'POST',
+			headers: jsonHeaders,
+			body: JSON.stringify({
+				path_version_id: path.id,
+				path_revision: path.revision,
+				lesson_revision: lesson.revision
+			})
+		}
+	);
+}
+
 export function regeneratePathLesson(
 	unitId: string,
 	path: UnitPath,
