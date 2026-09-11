@@ -1,0 +1,265 @@
+=== phase-f gate log 2026-09-11T23:05:45.9286262+03:00 ===
+[2026-09-11T23:05:56.4882932+03:00] contracts:test exit=0 duration=10.5133819s
+     G£ô P01-K01 GÇö the shared vocabulary exporter regenerates reproducibly > reproduces byte-identical output apart from the timestamp  2288ms
+     G£ô P01-K01 GÇö the shared vocabulary exporter regenerates reproducibly > propagates a deliberate authored-intent change into the teaching view  1190ms
+  
+   Test Files  3 passed (3)
+        Tests  20 passed (20)
+     Start at  23:05:50
+     Duration  5.37s (transform 325ms, setup 0ms, collect 945ms, tests 3.63s, environment 2ms, prepare 2.12s)
+  
+[2026-09-11T23:06:03.0513714+03:00] contracts:check exit=0 duration=6.3483538s
+  > lectio-xplore-monorepo@ contracts:check C:\Projects\lectio
+  > pnpm --filter @lectio/contracts check
+  
+  apps/textbook-agent/frontend             | GÇëWARNGÇë The field "pnpm.overrides" was found in C:\Projects\lectio\apps\textbook-agent\frontend/package.json. This will not take effect. You should configure "pnpm.overrides" at the root of the workspace instead.
+  
+  > @lectio/contracts@0.1.0 check C:\Projects\lectio\packages\lectio-contracts
+  > tsc -p tsconfig.json --noEmit
+  
+[2026-09-11T23:07:53.0099387+03:00] page_test exit=0 duration=44.8198348s cwd=C:\Projects\lectio
+   G£ô src/lib/catalogue/regeneration.test.ts (6 tests) 9511ms
+     G£ô P01-K01 GÇö the Print contract exporter regenerates reproducibly > reproduces byte-identical output apart from the timestamp  1226ms
+     G£ô P01-K01 GÇö the Print contract exporter regenerates reproducibly > propagates a deliberate choose_when and capacity change into the selection view  1993ms
+     G£ô P01-K01 GÇö the Print contract exporter regenerates reproducibly > propagates a deliberate writer-guidance change into the writer view  1332ms
+     G£ô P01-K01 GÇö the Print contract exporter regenerates reproducibly > propagates a package instruction change into the writer view and definition hash  1286ms
+     G£ô P01-K01 GÇö the Print contract exporter regenerates reproducibly > drops a form from the selection view when the source marks it unselectable  1488ms
+  
+   Test Files  11 passed (11)
+        Tests  64 passed (64)
+     Start at  23:07:17
+     Duration  34.83s (transform 8.57s, setup 202.06s, collect 35.38s, tests 11.34s, environment 52.64s, prepare 9.99s)
+  
+[2026-09-11T23:08:01.6795691+03:00] action_maps exit=0 duration=10.7888054s
+  ......                                                                   [100%]
+  6 passed in 0.35s
+[2026-09-11T23:08:22.8280811+03:00] page_check exit=0 duration=29.51914s cwd=C:\Projects\lectio
+  > lectio-xplore-monorepo@ page:check C:\Projects\lectio
+  > pnpm --filter @lectio/page check
+  
+  apps/textbook-agent/frontend             | GÇëWARNGÇë The field "pnpm.overrides" was found in C:\Projects\lectio\apps\textbook-agent\frontend/package.json. This will not take effect. You should configure "pnpm.overrides" at the root of the workspace instead.
+  
+  > @lectio/page@0.1.0-experimental.0 check C:\Projects\lectio\packages\lectio-page
+  > svelte-kit sync && svelte-check --tsconfig ./tsconfig.json
+  
+  Loading svelte-check in workspace: c:\Projects\lectio\packages\lectio-page
+  Getting Svelte diagnostics...
+  
+  svelte-check found 0 errors and 0 warnings
+[2026-09-11T23:08:37.1517050+03:00] learner_action_policy exit=0 duration=35.3122809s
+  ........                                                                 [100%]
+  ============================== warnings summary ===============================
+  src\contracts\generation_manifest.py:6
+    C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+      class GenerationFieldContract(BaseModel):
+  
+  -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+  8 passed, 1 warning in 23.75s
+[2026-09-11T23:09:12.5277499+03:00] learn exit=0 duration=35.2573512s
+  ...........................                                              [100%]
+  ============================== warnings summary ===============================
+  src\contracts\generation_manifest.py:6
+    C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+      class GenerationFieldContract(BaseModel):
+  
+  -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+  27 passed, 1 warning in 23.48s
+[2026-09-11T23:10:00.1242583+03:00] p03 exit=0 duration=47.4153484s
+  .......                                                                  [100%]
+  ============================== warnings summary ===============================
+  src\contracts\generation_manifest.py:6
+    C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+      class GenerationFieldContract(BaseModel):
+  
+  -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+  7 passed, 1 warning in 35.27s
+[2026-09-11T23:10:23.1930560+03:00] validate_repo exit=2 duration=0.5426168s
+  C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\python.exe: can't open file 'C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\agent\\validate_repo.py': [Errno 2] No such file or directory
+[2026-09-11T23:10:50.3585648+03:00] check_architecture exit=2 duration=27.0999832s
+  System.Management.Automation.RemoteException
+  [notice] A new release of pip is available: 26.1.2 -> 26.2.1
+  [notice] To update, run: C:\Users\richi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\python.exe -m pip install --upgrade pip
+  C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\python.exe: can't open file 'C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\agent\\check_architecture.py': [Errno 2] No such file or directory
+[2026-09-11T23:11:56.5124175+03:00] app_test exit=1 duration=94.0413665s
+      103|   });
+   G¥» runWithExpensiveErrorDiagnosticsDisabled ../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:47:12
+   G¥» checkCallback ../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:124:77
+   G¥» Timeout.checkRealTimersCallback ../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:118:16
+  System.Management.Automation.RemoteException
+  GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»[3/3]GÄ»
+  System.Management.Automation.RemoteException
+  
+   Test Files  2 failed | 55 passed (57)
+        Tests  3 failed | 253 passed (256)
+     Start at  23:10:29
+     Duration  86.29s (transform 39.59s, setup 0ms, collect 156.59s, tests 49.17s, environment 794.43s, prepare 36.55s)
+  
+  GÇëELIFECYCLEGÇë Test failed. See above for more details.
+  GÇëELIFECYCLEGÇë Command failed with exit code 1.
+[2026-09-11T23:12:04.8914057+03:00] validate_repo exit=2 duration=1.0044181s
+  C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\python.exe: can't open file 'C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\agent\\validate_repo.py': [Errno 2] No such file or directory
+[2026-09-11T23:12:10.2060968+03:00] check_architecture exit=2 duration=5.2380459s
+  System.Management.Automation.RemoteException
+  [notice] A new release of pip is available: 26.1.2 -> 26.2.1
+  [notice] To update, run: C:\Users\richi\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\python.exe -m pip install --upgrade pip
+  C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\python.exe: can't open file 'C:\\Projects\\lectio\\apps\\textbook-agent\\backend\\tools\\agent\\check_architecture.py': [Errno 2] No such file or directory
+[2026-09-11T23:12:48.6062337+03:00] app_check exit=0 duration=51.5903155s
+  Warn: This reference only captures the initial value of `initialDocument`. Did you mean to reference it inside a derived instead?
+  https://svelte.dev/e/state_referenced_locally (svelte)
+  	let mode = $state<'view' | 'edit'>('view');
+  	let draft = $state<LectioDocument>(cloneDocument(initialDocument));
+  	let revision = $state(documentRevision);
+  
+  c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\print\components\studio\PrintDocumentEditor.svelte:26:24
+  Warn: This reference only captures the initial value of `documentRevision`. Did you mean to reference it inside a closure instead?
+  https://svelte.dev/e/state_referenced_locally (svelte)
+  	let draft = $state<LectioDocument>(cloneDocument(initialDocument));
+  	let revision = $state(documentRevision);
+  	let status = $state('');
+  
+  ====================================
+  svelte-check found 0 errors and 4 warnings in 3 files
+[2026-09-11T23:13:07.1253236+03:00] app_test exit=1 duration=63.0838985s
+      103|   });
+   G¥» runWithExpensiveErrorDiagnosticsDisabled ../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:47:12
+   G¥» checkCallback ../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:124:77
+   G¥» Timeout.checkRealTimersCallback ../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:118:16
+  System.Management.Automation.RemoteException
+  GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»GÄ»[3/3]GÄ»
+  System.Management.Automation.RemoteException
+  
+   Test Files  2 failed | 55 passed (57)
+        Tests  3 failed | 253 passed (256)
+     Start at  23:12:11
+     Duration  54.93s (transform 34.36s, setup 0ms, collect 136.82s, tests 48.25s, environment 371.74s, prepare 45.11s)
+  
+  GÇëELIFECYCLEGÇë Test failed. See above for more details.
+  GÇëELIFECYCLEGÇë Command failed with exit code 1.
+[2026-09-11T23:13:14.3528881+03:00] domain_guards exit=0 duration=24.5542923s
+  
+  > lectio-xplore-monorepo@ program:domain-guards C:\Projects\lectio
+  > python tools/xplore-program/check_domain_boundaries.py --format text && python tools/xplore-program/check_backend_domain_boundaries.py --format text && python tools/xplore-program/check_zero_legacy.py && python -m pytest tools/xplore-program/tests/test_backend_domain_boundaries.py tools/xplore-program/tests/test_phase00_baseline.py -q
+  
+  Domain boundary check: PASS (0 violations)
+  Backend domain boundary check: PASS (0 violations)
+  ZERO_LEGACY_GUARD PASS
+  ......                                                                   [100%]
+  6 passed in 2.06s
+[2026-09-11T23:13:35.8831709+03:00] app_check exit=0 duration=28.2489077s
+  Warn: This reference only captures the initial value of `initialDocument`. Did you mean to reference it inside a derived instead?
+  https://svelte.dev/e/state_referenced_locally (svelte)
+  	let mode = $state<'view' | 'edit'>('view');
+  	let draft = $state<LectioDocument>(cloneDocument(initialDocument));
+  	let revision = $state(documentRevision);
+  
+  c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\print\components\studio\PrintDocumentEditor.svelte:26:24
+  Warn: This reference only captures the initial value of `documentRevision`. Did you mean to reference it inside a closure instead?
+  https://svelte.dev/e/state_referenced_locally (svelte)
+  	let draft = $state<LectioDocument>(cloneDocument(initialDocument));
+  	let revision = $state(documentRevision);
+  	let status = $state('');
+  
+  ====================================
+  svelte-check found 0 errors and 4 warnings in 3 files
+[2026-09-11T23:13:44.8070223+03:00] domain_guards exit=0 duration=8.586288s
+  
+  > lectio-xplore-monorepo@ program:domain-guards C:\Projects\lectio
+  > python tools/xplore-program/check_domain_boundaries.py --format text && python tools/xplore-program/check_backend_domain_boundaries.py --format text && python tools/xplore-program/check_zero_legacy.py && python -m pytest tools/xplore-program/tests/test_backend_domain_boundaries.py tools/xplore-program/tests/test_phase00_baseline.py -q
+  
+  Domain boundary check: PASS (0 violations)
+  Backend domain boundary check: PASS (0 violations)
+  ZERO_LEGACY_GUARD PASS
+  ......                                                                   [100%]
+  6 passed in 1.44s
+[2026-09-11T23:14:02.2569084+03:00] validate_repo exit=1 duration=0.8372309s
+  Traceback (most recent call last):
+    File "C:\Projects\lectio\apps\textbook-agent\tools\agent\validate_repo.py", line 14, in <module>
+      from tools.agent.common import (
+    File "C:\Projects\lectio\apps\textbook-agent\tools\agent\common.py", line 12, in <module>
+      from agents.scripts.common import (
+    File "C:\Projects\lectio\apps\textbook-agent\agents\scripts\common.py", line 8, in <module>
+      from jinja2 import Environment, FileSystemLoader
+  ModuleNotFoundError: No module named 'jinja2'
+[2026-09-11T23:14:06.1598979+03:00] check_architecture exit=0 duration=3.647432s
+  No architecture violations found.
+[2026-09-11T23:15:25.6293498+03:00] validate_repo exit=1 duration=65.8632981s
+  ImportError while importing test module 'C:\Projects\lectio\apps\textbook-agent\backend\tests\test_capture_whole_lesson_evidence_script.py'.
+  Hint: make sure your test modules/packages have valid Python names.
+  Traceback:
+  C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\importlib\__init__.py:126: in import_module
+      return _bootstrap._gcd_import(name[level:], package, level)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  tests\test_capture_whole_lesson_evidence_script.py:31: in <module>
+      CAPTURE = _load_capture_module()
+                ^^^^^^^^^^^^^^^^^^^^^^
+  tests\test_capture_whole_lesson_evidence_script.py:27: in _load_capture_module
+      spec.loader.exec_module(module)
+  scripts\capture_whole_lesson_evidence.py:29: in <module>
+      from planning.whole_lesson.native_routing import (
+  E   ModuleNotFoundError: No module named 'planning'
+  _____ ERROR collecting tests/v3_blueprint/planning/test_canonical_plan.py _____
+  ImportError while importing test module 'C:\Projects\lectio\apps\textbook-agent\backend\tests\v3_blueprint\planning\test_canonical_plan.py'.
+  Hint: make sure your test modules/packages have valid Python names.
+  Traceback:
+  C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\importlib\__init__.py:126: in import_module
+      return _bootstrap._gcd_import(name[level:], package, level)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  tests\v3_blueprint\planning\test_canonical_plan.py:17: in <module>
+      from resource_specs.candidates import resolve_role_candidates
+  E   ImportError: cannot import name 'resolve_role_candidates' from 'resource_specs.candidates' (C:\Projects\lectio\apps\textbook-agent\backend\src\resource_specs\candidates.py)
+  ============================== warnings summary ===============================
+  src\contracts\generation_manifest.py:6
+    C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+      class GenerationFieldContract(BaseModel):
+  
+  -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+  =========================== short test summary info ===========================
+  ERROR tests/planning/test_agent_retry_boundary.py
+  ERROR tests/planning/test_path_structural_repair.py
+  ERROR tests/planning/test_projections.py
+  ERROR tests/remaining_fixes/test_r02_conversion_preservation.py
+  ERROR tests/test_capture_whole_lesson_evidence_script.py
+  ERROR tests/v3_blueprint/planning/test_canonical_plan.py
+  !!!!!!!!!!!!!!!!!!! Interrupted: 6 errors during collection !!!!!!!!!!!!!!!!!!!
+  ================= 1 deselected, 1 warning, 6 errors in 51.49s =================
+  Validation failed for: backend-ruff, backend-pytest
+[2026-09-11T23:32:45.6107696+03:00] validate_repo exit=1 duration=785.1547645s
+  FAILED tests/planning/test_native_retry_lease_fencing.py::test_f03_stale_teaching_worker_cannot_persist_after_reclaim
+  FAILED tests/planning/test_native_retry_lease_fencing.py::test_f04_new_teaching_worker_wins_race
+  FAILED tests/planning/test_native_retry_pre_worker.py::test_r02_teaching_retry_does_not_rerun_items
+  FAILED tests/planning/test_native_retry_pre_worker.py::test_r06_visual_failure_not_owned_by_retry_native
+  FAILED tests/planning/test_native_retry_pre_worker.py::test_injected_form_timeout_retry_resumes_at_planning_forms
+  FAILED tests/planning/test_optional_path_actions_flow.py::test_baseline_create_plan_approve_prepare
+  FAILED tests/planning/test_optional_path_actions_flow.py::test_hints_do_not_block_approve_prepare
+  FAILED tests/planning/test_optional_path_actions_flow.py::test_hint_merge_then_prepare
+  FAILED tests/planning/test_optional_path_actions_flow.py::test_insert_foundation_then_prepare
+  FAILED tests/planning/test_optional_path_actions_flow.py::test_mark_starting_knowledge_then_prepare
+  FAILED tests/planning/test_optional_path_actions_flow.py::test_insert_foundation_stale_revision_is_recoverable
+  FAILED tests/planning/test_page_projections.py::test_v2_projections_do_not_read_legacy_component_fields
+  FAILED tests/planning/test_path_routes.py::test_unprepared_lesson_status_is_explicit_over_http
+  FAILED tests/planning/test_phase02_queue_and_lease.py::test_approve_queues_without_executing
+  FAILED tests/planning/test_phase02_resume_and_assembly.py::test_form_plan_reused_when_persisted
+  FAILED tests/planning/test_phase02_worker_failure_policy.py::test_normalize_writer_status_figure_pending
+  FAILED tests/planning/test_pre_worker_failure_sync.py::test_injected_form_timeout_persists_through_worker_boundary
+  FAILED tests/planning/test_prompt_resources.py::test_lesson_approach_prompt_checksums_are_authoritative
+  FAILED tests/planning/test_simplified_flow_e2e.py::test_create_plan_approve_prepare_smoke
+  FAILED tests/planning/test_simplified_flow_e2e.py::test_recoverable_planning_failure_retries_same_unit
+  FAILED tests/policy_cleanup/test_policy_g02_g17.py::test_g13_approved_short_response_preserves_answers
+  FAILED tests/policy_cleanup/test_policy_g02_g17.py::test_g14_automatic_required_missing_answer_fails
+  FAILED tests/policy_cleanup/test_policy_g02_g17.py::test_g15_explicit_teacher_review
+  FAILED tests/policy_cleanup/test_policy_g02_g17.py::test_g16_automatic_preferred_fallback_records_reason
+  FAILED tests/policy_cleanup/test_policy_g02_g17.py::test_g10_blank_objective_fails_convert_without_facts_ok
+  FAILED tests/policy_cleanup/test_policy_g12_g19.py::test_g19_saved_learn_document_retains_policy_identity
+  FAILED tests/remaining_fixes/test_r03_print_selection.py::test_r03_g02_print_invokes_selector_or_consumes_sealed_plan
+  FAILED tests/remaining_fixes/test_r04_g01_dual_path_persistence.py::test_r04_g01_dual_path_persist_fresh_session_reload
+  FAILED tests/remaining_fixes/test_r04_g02_publish_builder.py::test_r04_g02_publish_v1_builder_edit_v2_immutable
+  FAILED tests/remaining_fixes/test_r04_g02_publish_builder.py::test_r04_g02_builder_malformed_edit_rejected
+  FAILED tests/remaining_fixes/test_r04_g03_runtime_attempts.py::test_r04_g03_correct_incorrect_attempts_fresh_db
+  FAILED tests/remaining_fixes/test_r04_g03_runtime_attempts.py::test_r04_g03_reject_forged_client_score
+  FAILED tests/services/test_telemetry_service.py::test_llm_usage_route_scopes_to_authenticated_user
+  FAILED tests/v3_blueprint/planning/test_intent_plan.py::test_same_general_lesson_spec_across_four_subjects
+  FAILED tests/v3_blueprint/planning/test_intent_plan.py::test_stage1_user_message_strips_component_catalogue
+  FAILED tests/v3_blueprint/planning/test_intent_plan.py::test_stage1_prompt_forbids_component_choice
+  FAILED tests/v3_blueprint/planning/test_intent_plan.py::test_intent_purpose_rejecting_component_names
+  = 77 failed, 1314 passed, 6 skipped, 1 deselected, 9 warnings in 738.76s (0:12:18) =
+  Validation failed for: backend-ruff, backend-pytest

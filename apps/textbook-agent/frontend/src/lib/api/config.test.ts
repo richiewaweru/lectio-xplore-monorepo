@@ -14,17 +14,32 @@ describe('API config resolution', () => {
 
 	it('prefers PUBLIC_API_URL for browser API calls', () => {
 		expect(
-			resolveClientApiBase({
-				PUBLIC_API_URL: 'http://localhost:8001/',
-				VITE_API_TARGET: 'http://localhost:8000/'
-			})
+			resolveClientApiBase(
+				{
+					PUBLIC_API_URL: 'http://localhost:8001/',
+					VITE_API_TARGET: 'http://localhost:8000/'
+				},
+				{ hostname: 'app.example.test', origin: 'https://app.example.test' }
+			)
 		).toBe('http://localhost:8001');
 	});
 
 	it('falls back to VITE_API_TARGET for browser API calls', () => {
-		expect(resolveClientApiBase({ VITE_API_TARGET: 'http://localhost:8001/' })).toBe(
-			'http://localhost:8001'
-		);
+		expect(
+			resolveClientApiBase(
+				{ VITE_API_TARGET: 'http://localhost:8001/' },
+				{ hostname: 'app.example.test', origin: 'https://app.example.test' }
+			)
+		).toBe('http://localhost:8001');
+	});
+
+	it('uses same-origin proxy for loopback browser → loopback API', () => {
+		expect(
+			resolveClientApiBase(
+				{ PUBLIC_API_URL: 'http://localhost:8001/' },
+				{ hostname: 'localhost', origin: 'http://localhost:5173' }
+			)
+		).toBe('');
 	});
 
 	it('prefers VITE_API_TARGET for the dev proxy target', () => {

@@ -1,0 +1,17 @@
+Prepared From Path Lesson
+School:
+Treasure Joe Proof School
+Teacher:
+Treasure Joe
+Date:
+11 September 2026
+Student Name:
+
+Table of Contents
+1. Make the learner feel the need for a method by facing a total they cannot get from one memorised fact, and fix the concrete case of 3 boxes of 24 cookies.
+2. Build the procedure: split the two-digit factor into tens and ones, multiply each part by the one-digit factor, and name the two partial products.
+3. Let the learner see the boundary of the method by contrasting it with two similar-looking shortcuts that fail because they lose the tens value.
+4. Check whether the learner can decompose a two-digit factor into tens and ones and state the two partial products for the anchor case itself.
+
+Native visuals are not ready for print. Retry visuals from Studio before exporting.
+1

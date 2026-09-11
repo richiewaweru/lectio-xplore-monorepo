@@ -88,9 +88,14 @@ All retained kinds:
 ## J. Repository health
 - [x] backend affected suites
 - [x] frontend tests/checks
-- [ ] contracts checks *(not re-run this closeout pass — verify separately)*
+- [x] contracts checks *(re-run green on Treasure Joe Final Cleanup Phase F: `pnpm contracts:test` + `pnpm contracts:check`)*
 - [x] page checks
-- [x] app tests *(Unit/Print page vitest)*
+- [x] app tests *(Unit/Print page vitest; Treasure Joe F re-green after loopback/401 test alignment)*
 - [x] domain/architecture guards
 - [x] no stale package/import path
 - [x] no production stub/TODO on canonical flow
+
+## Treasure Joe re-proofs (2026-09-11)
+- [x] G exact Unit → Generate Learn → Builder → evaluate → persisted attempt (`docs/treasure-joe-final-cleanup/evidence/phase-d-PASS.json`)
+- [x] H PDF bytes contain edit marker + stale 409 + Learn sibling unchanged (`docs/treasure-joe-final-cleanup/evidence/phase-e-PASS.json`)
+- [ ] Full `validate_repo.py --scope backend` remains red on pre-existing ruff + planning suite debt (not claimed PASS)

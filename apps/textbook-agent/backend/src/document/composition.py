@@ -61,6 +61,14 @@ class CompositionDecision(BaseModel):
         default=None,
         description="Optional pedagogical role for this node within the block (e.g. orient, explain).",
     )
+    selection_mode: (
+        Literal["deterministic_single", "policy_default", "llm_multi_candidate"] | None
+    ) = Field(
+        default=None,
+        description=(
+            "How a learn_interaction kind was chosen. None for document/print_task lanes."
+        ),
+    )
 
 
 class CompositionPlan(BaseModel):

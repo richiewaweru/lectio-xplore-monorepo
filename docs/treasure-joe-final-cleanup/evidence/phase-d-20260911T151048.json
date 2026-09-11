@@ -1,0 +1,33 @@
+﻿{
+    "stamp":  "20260911T151048",
+    "status":  "PASS",
+    "unit_id":  "f8b9a4eb-346e-45b1-af35-e2248a10788a",
+    "generation_id":  "5d43ce47-6036-4fc2-ac12-31ba68e5f9e9",
+    "teaching_plan_actions":  [
+                                  "enter-text",
+                                  "select-one",
+                                  "select-one"
+                              ],
+    "unknown_actions":  [
+
+                        ],
+    "document_version":  2,
+    "open_href":  "/builder/2c7f23aa-da7e-49c8-af5e-c32948a055da",
+    "learn":  {
+                  "composition_mode":  "llm",
+                  "editable_lesson_id":  "2c7f23aa-da7e-49c8-af5e-c32948a055da",
+                  "output_id":  "learn-out-c39225773acd",
+                  "open_href":  "/builder/2c7f23aa-da7e-49c8-af5e-c32948a055da"
+              },
+    "release_id":  "5b1ed79a-9a33-42f6-a05c-b15ecd0d1f27",
+    "learner_id":  "f1fa014a-e582-4bb7-957c-50c871a60b9f",
+    "instance_id":  "92a16141-6e52-42b2-bd83-77b5711914e8",
+    "attempt":  {
+                    "outcome":  "correct",
+                    "interaction_id":  "ix-b85328663c1b",
+                    "id":  "66d4cfd8-5a57-4641-ad99-cf4b21b1cd10",
+                    "interaction_type":  "choice"
+                },
+    "reloaded_attempt_count":  1,
+    "path_note":  "Unit create→prepare→chunked approve→teaching approve→realizations:generate-learn completed earlier this session; this stamp closes publish→attempt→reload on that same LearnDocument v2"
+}

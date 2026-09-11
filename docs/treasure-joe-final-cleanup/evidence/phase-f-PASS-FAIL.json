@@ -1,0 +1,32 @@
+{
+  "phase": "F",
+  "status": "FAIL",
+  "reason": "validate_repo --scope backend still fails: backend-ruff (~1314 pre-existing findings) plus remaining planning/v3_blueprint suite failures unrelated to Treasure Joe A–E. Pack-required pnpm gates, focused backend pytest, check_architecture, and zero-v1 source searches are green.",
+  "starting_sha": "6f782e94769d0dfce34b2dd80d1d462a9c38bd04",
+  "branch": "fix/treasure-joe-final-cleanup",
+  "timestamp": "2026-09-11T20:40:00Z",
+  "commands": {
+    "pnpm contracts:test": {"exit": 0},
+    "pnpm contracts:check": {"exit": 0},
+    "pnpm page:test": {"exit": 0},
+    "pnpm page:check": {"exit": 0},
+    "pnpm app:test": {"exit": 0, "note": "257 passed after loopback/401 test alignment"},
+    "pnpm app:check": {"exit": 0},
+    "pnpm program:domain-guards": {"exit": 0},
+    "pytest tests/core/policies/test_action_maps.py": {"exit": 0},
+    "pytest tests/print_learn/test_learner_action_policy.py": {"exit": 0},
+    "pytest tests/learn": {"exit": 0},
+    "pytest tests/print_learn": {"exit": 0, "passed": 77},
+    "pytest tests/application/test_p03_realization_gates.py": {"exit": 0},
+    "check_architecture.py --format text": {"exit": 0, "result": "No architecture violations found."},
+    "validate_repo.py --scope backend": {"exit": 1, "note": "backend-ruff + backend-pytest (pre-existing planning/ruff debt; not introduced by A–E product changes)"}
+  },
+  "zero_legacy_src": {
+    "build_closed_learn_production": 0,
+    "build_closed_learn_production_async": 0,
+    "host_interaction_blocks_for_builder": 0,
+    "closed_learn_selection": 0,
+    "assemble_ordered_learn_document": 0
+  },
+  "independent_verifier": "pending-launch"
+}

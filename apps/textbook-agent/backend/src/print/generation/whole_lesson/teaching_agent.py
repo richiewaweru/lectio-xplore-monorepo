@@ -186,6 +186,69 @@ def _missing_check_practice_action_errors(plan: TeachingPlan) -> list[str]:
     return errors
 
 
+def _action_source_compatibility_errors(
+    plan: TeachingPlan,
+    packet: ImmutableLessonPacket,
+) -> list[str]:
+    """Fail closed when learner_action cannot express bound approved sources."""
+    from curriculum.teaching_plan.compatibility import (
+        ActionSourceIncompatibleError,
+        assert_action_compatible_with_sources,
+    )
+
+    by_id = {item.id: item for item in packet.approved_items}
+    errors: list[str] = []
+    for section in plan.sections:
+        for block in section.blocks:
+            if block.learner_action is None or not block.source_question_ids:
+                continue
+            action = str(block.learner_action.action or "").strip()
+            items = [by_id[sid] for sid in block.source_question_ids if sid in by_id]
+            if not items:
+                continue
+            try:
+                assert_action_compatible_with_sources(action=action, source_items=items)
+            except ActionSourceIncompatibleError as exc:
+                hint = ""
+                if action == "enter-text":
+                    hint = (
+                        " Prefer action='select-one' or 'select-many' when the "
+                        "block binds multiple-choice sources; keep enter-text "
+                        "only when sources are open_response or unbound."
+                    )
+                errors.append(f"{exc}{hint}")
+    return errors
+
+
+def _unknown_learner_action_errors(plan: TeachingPlan) -> list[str]:
+    """Fail closed when learner_action.action is outside learner-actions.yaml."""
+    from core.policies.loader import is_known_learner_action, known_learner_actions
+
+    legal = ", ".join(sorted(known_learner_actions()))
+    errors: list[str] = []
+    for section in plan.sections:
+        for block in section.blocks:
+            if block.learner_action is None:
+                continue
+            action = str(block.learner_action.action or "").strip()
+            if is_known_learner_action(action):
+                continue
+            hint = ""
+            if action == "describe-in-own-words":
+                hint = (
+                    " Use action='enter-text' (only without multiple-choice "
+                    "source binding) and put 'describe in own words' in "
+                    "target/purpose; if the block owns MC sources, use "
+                    "select-one or select-many instead."
+                )
+            errors.append(
+                "TEACHING_UNKNOWN_LEARNER_ACTION: "
+                f"block {block.id!r} learner_action.action={action!r} is not in "
+                f"learner-actions.yaml. Legal actions: {legal}.{hint}"
+            )
+    return errors
+
+
 _STOPWORDS = frozenset(
     {
         "the",
@@ -620,6 +683,8 @@ async def run_lesson_approach_planner(
             _repair_briefs_missing_anchor_grounding(plan, packet)
             ownership_errors = _missing_order_learner_action_errors(plan, packet)
             ownership_errors.extend(_missing_check_practice_action_errors(plan))
+            ownership_errors.extend(_unknown_learner_action_errors(plan))
+            ownership_errors.extend(_action_source_compatibility_errors(plan, packet))
             _repair_incompatible_assessment_sources(plan, packet)
             ownership_errors.extend(
                 _repair_missing_assessment_sources(

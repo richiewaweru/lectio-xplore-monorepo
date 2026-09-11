@@ -18,11 +18,7 @@ from curriculum.teaching_plan.models import (
 )
 from infra.authoring import AuthoringProviderCall
 from learn.generation.authoring_adapter import run_learn_work_order_authoring
-from learn.generation.native_production import build_closed_learn_production
 from learn.generation.preparation_context import LearnPreparationContext
-from learn.generation.native_selection import build_learn_selection_snapshot
-from learn.generation.ordered_assemble import assemble_ordered_learn_document
-from learn.generation.work_orders import compile_learn_work_orders
 from learn.resources.native_policy import default_learn_policy, policy_version_and_hash
 
 # Eight core interaction kinds exercised by R04-G05 and envelope production.
@@ -101,6 +97,12 @@ def _interaction_envelope(capability_id: str, *, prompt: str | None = None) -> d
         "prompt": prompt or f"Student task for {capability_id.replace('-', ' ')}.",
         "config": dict(CORE_PROVIDER_CONFIG[capability_id]),
         "feedback": {"correct": "Correct.", "incorrect": "Try again."},
+        "ai_config_rule": "config-only",
+        "attempt_policy": {
+            "max_attempts": None,
+            "show_feedback_after_submit": True,
+            "allow_retry_after_correct": True,
+        },
     }
 
 
@@ -200,15 +202,68 @@ def sequence_teaching_plan(*, plan_id: str = "tp-r04-seq") -> TeachingPlan:
     )
 
 
-def _snapshot(plan: TeachingPlan, *, package_hash: str = "pkg-r04") -> object:
-    _, policy_hash = policy_version_and_hash()
-    return build_learn_selection_snapshot(
-        plan,
-        teaching_plan_hash=f"hash-{plan.teaching_plan_id}",
-        native_policy_hash=policy_hash,
-        package_contract_hash=package_hash,
-        policy=default_learn_policy(),
-    )
+def _hand_built_sequence_document(*, title: str, lesson_id: str) -> dict[str, Any]:
+    """Historical v1 LessonDocument fixture for runtime/publish tests (not salvage generation)."""
+    interaction = {
+        "id": "ix-r04-sequence",
+        "kind": "sequence",
+        "prompt": "Order the stages of food production.",
+        "config": dict(CORE_PROVIDER_CONFIG["sequence"]),
+        "feedback": {"correct": "Correct.", "incorrect": "Try again."},
+        "assessment_mode": "graded",
+        "completion": {"type": "submitted"},
+        "ai_config_rule": "config-only",
+        "attempt_policy": {
+            "max_attempts": None,
+            "show_feedback_after_submit": True,
+            "allow_retry_after_correct": True,
+        },
+        "provenance": {
+            "definition_hash": "r04-fixture",
+            "policy": {
+                "policy_version": "1.0.0",
+                "effective_knowledge_policy": "supplied_preferred",
+                "effective_assessment_policy": "automatic_preferred",
+                "definition_hash": "r04-fixture",
+                "input_revision": "prep-rev-r04",
+            },
+        },
+    }
+    return {
+        "version": 1,
+        "id": lesson_id,
+        "title": title,
+        "subject": "biology",
+        "source": "generated",
+        "sections": [
+            {
+                "id": "practice",
+                "title": "Order the cycle",
+                "position": 0,
+                "block_ids": ["blk-intro", "blk-cycle"],
+            }
+        ],
+        "blocks": {
+            "blk-intro": {
+                "id": "blk-intro",
+                "component_id": "explanation-block",
+                "content": {
+                    "body": "Plants use light energy to make food.",
+                    "emphasis": ["light"],
+                },
+            },
+            "blk-cycle": {
+                "id": "blk-cycle",
+                "component_id": "explanation-block",
+                "content": {
+                    "body": "Order the stages of the light-driven cycle.",
+                    "emphasis": [],
+                },
+                "learn_interaction": interaction,
+            },
+        },
+        "media": {},
+    }
 
 
 def build_envelope_sequence_document(
@@ -217,9 +272,8 @@ def build_envelope_sequence_document(
     assessment_mode: str = "graded",
     concept_refs: list[dict] | None = None,
 ) -> dict[str, Any]:
-    """Learn document via closed production (MOCK provider), safe inside async tests."""
-    document = dict(build_envelope_closed_production_document(title="R04 Sequence"))
-    document["id"] = lesson_id
+    """Learn document fixture for R04 runtime/publish gates (hand-built, not closed salvage)."""
+    document = _hand_built_sequence_document(title="R04 Sequence", lesson_id=lesson_id)
     for block in document["blocks"].values():
         contract = block.get("learn_interaction")
         if not isinstance(contract, dict) or contract.get("kind") != "sequence":
@@ -228,21 +282,12 @@ def build_envelope_sequence_document(
         contract["completion"] = {"type": "submitted"}
         if concept_refs is not None:
             contract["concept_refs"] = concept_refs
-        block["component_id"] = "explanation-block"
     return document
 
 
 def build_envelope_closed_production_document(*, title: str = "R04 closed") -> dict[str, Any]:
-    """Full closed production path with MOCK provider."""
-    plan = sequence_teaching_plan(plan_id="tp-r04-closed")
-    return build_closed_learn_production(
-        teaching_plan=plan,
-        policy={**default_learn_policy(), "offered_interactions": ["sequence"]},
-        title=title,
-        provider=R04EnvelopeProvider(),
-        preparation_context=R04_PREP,
-    )["document"]
-
+    """Compatibility name: hand-built sequence fixture (closed salvage path deleted)."""
+    return _hand_built_sequence_document(title=title, lesson_id="doc-r04-closed")
 
 def interaction_id(document: dict, *, kind: str = "sequence") -> str:
     for block in document["blocks"].values():

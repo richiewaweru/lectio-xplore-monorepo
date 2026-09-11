@@ -1,0 +1,33 @@
+{
+  "name": "Lectio Treasure Joe Final Cleanup",
+  "repository": "richiewaweru/lectio-xplore-monorepo",
+  "base_branch": "fix/generation-spec-closeout",
+  "base_sha": "6f782e94769d0dfce34b2dd80d1d462a9c38bd04",
+  "phases": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F"
+  ],
+  "files": [
+    "00_READ_ME_FIRST.md",
+    "01_FINAL_GAPS_AND_DECISIONS.md",
+    "02_PHASE_SEQUENCE.md",
+    "03_EXPECTED_END_STATE.md",
+    "phases/PHASE_A_CLOSE_LEARNER_ACTION_VOCABULARY.md",
+    "phases/PHASE_B_TRUTHFUL_INTERACTION_SELECTION.md",
+    "phases/PHASE_C_DELETE_RESIDUAL_V1_LEARN_SALVAGE.md",
+    "phases/PHASE_D_EXACT_UNIT_TO_LEARN_PROOF.md",
+    "phases/PHASE_E_EXACT_PRINT_EDIT_TO_PDF_PROOF.md",
+    "phases/PHASE_F_REPOSITORY_HEALTH_AND_FINALITY.md",
+    "prompts/CASA_MASTER_FINAL_CLEANUP_PROMPT.md",
+    "prompts/CASA_PHASE_PROMPT.md",
+    "prompts/INDEPENDENT_VERIFIER_PROMPT.md",
+    "repo-map/ACTIVE_FILES.md",
+    "verification/COMMANDS.md",
+    "verification/SEARCH_GATES.md",
+    "verification/STRICT_GATE_MATRIX.md"
+  ]
+}

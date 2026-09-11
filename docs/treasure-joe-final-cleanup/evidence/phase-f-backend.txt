@@ -1,0 +1,147 @@
+backend gates 2026-09-11T22:49:53.0568058+03:00
+==== action_maps @ 2026-09-11T22:49:53.0804670+03:00 ====
+CMD: uv run pytest tests/core/policies/test_action_maps.py -q --tb=line
+EXIT: 0
+......                                                                   [100%]
+6 passed in 0.22s
+
+==== learner_action_policy @ 2026-09-11T22:50:01.3585608+03:00 ====
+CMD: uv run pytest tests/print_learn/test_learner_action_policy.py -q --tb=line
+EXIT: 0
+........                                                                 [100%]
+============================== warnings summary ===============================
+src\contracts\generation_manifest.py:6
+  C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+    class GenerationFieldContract(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+8 passed, 1 warning in 17.21s
+
+==== interaction_selection @ 2026-09-11T22:50:27.4551915+03:00 ====
+CMD: uv run pytest tests/learn/test_interaction_selection_modes.py tests/learn/test_zero_v1_learn_salvage.py -q --tb=line
+EXIT: 0
+........                                                                 [100%]
+============================== warnings summary ===============================
+src\contracts\generation_manifest.py:6
+  C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+    class GenerationFieldContract(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+8 passed, 1 warning in 15.93s
+
+==== tests_learn @ 2026-09-11T22:50:52.4527758+03:00 ====
+CMD: uv run pytest tests/learn -q --tb=line
+EXIT: 0
+...........................                                              [100%]
+============================== warnings summary ===============================
+src\contracts\generation_manifest.py:6
+  C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+    class GenerationFieldContract(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+27 passed, 1 warning in 16.34s
+
+==== tests_print_learn @ 2026-09-11T22:51:17.3553951+03:00 ====
+CMD: uv run pytest tests/print_learn -q --tb=line
+EXIT: 1
+............................FFF.F.F..........FF.......FFFFFFFFFF........ [ 93%]
+.....                                                                    [100%]
+================================== FAILURES ===================================
+E   print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+C:\Projects\lectio\apps\textbook-agent\backend\src\print\generation\whole_lesson\teaching_agent.py:784: print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+E   print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+C:\Projects\lectio\apps\textbook-agent\backend\src\print\generation\whole_lesson\teaching_agent.py:784: print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+E   print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+C:\Projects\lectio\apps\textbook-agent\backend\src\print\generation\whole_lesson\teaching_agent.py:784: print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+E   print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+C:\Projects\lectio\apps\textbook-agent\backend\src\print\generation\whole_lesson\teaching_agent.py:784: print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+E   print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+C:\Projects\lectio\apps\textbook-agent\backend\src\print\generation\whole_lesson\teaching_agent.py:784: print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+E   TypeError: _hand_built_lesson_from_orders() missing 2 required positional arguments: 'plan' and 'orders'
+C:\Projects\lectio\apps\textbook-agent\backend\tests\print_learn\test_p06_learn_authoring_gates.py:470: TypeError: _hand_built_lesson_from_orders() missing 2 required positional arguments: 'plan' and 'orders'
+E   learn.publishing.publish_validation.PublishValidationError: duplicate block_id in document order: blk-b-cycle
+C:\Projects\lectio\apps\textbook-agent\backend\src\learn\publishing\publish_validation.py:146: learn.publishing.publish_validation.PublishValidationError: duplicate block_id in document order: blk-b-cycle
+E   AssertionError: {"detail":"Block 'blk-cycle' interaction invalid: interaction.ai_config_rule must be 'config-only'"}
+    assert 422 == 201
+     +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+C:\Projects\lectio\apps\textbook-agent\backend\tests\print_learn\test_p07_learn_runtime_gates.py:313: AssertionError: {"detail":"Block 'blk-cycle' interaction invalid: interaction.ai_config_rule must be 'config-only'"}
+E   AssertionError: {"detail":"Block 'blk-cycle' interaction invalid: interaction.ai_config_rule must be 'config-only'"}
+    assert 422 == 201
+     +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+C:\Projects\lectio\apps\textbook-agent\backend\tests\print_learn\test_p07_learn_runtime_gates.py:313: AssertionError: {"detail":"Block 'blk-cycle' interaction invalid: interaction.ai_config_rule must be 'config-only'"}
+E   AssertionError: {"detail":"Block 'blk-cycle' interaction invalid: interaction.ai_config_rule must be 'config-only'"}
+    assert 422 == 201
+     +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+C:\Projects\lectio\apps\textbook-agent\backend\tests\print_learn\test_p07_learn_runtime_gates.py:313: AssertionError: {"detail":"Block 'blk-cycle' interaction invalid: interaction.ai_config_rule must be 'config-only'"}
+E   AssertionError: {"detail":"Block 'blk-cycle' interaction invalid: interaction.ai_config_rule must be 'config-only'"}
+    assert 422 == 201
+     +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+C:\Projects\lectio\apps\textbook-agent\backend\tests\print_learn\test_p07_learn_runtime_gates.py:313: AssertionError: {"detail":"Block 'blk-cycle' interaction invalid: interaction.ai_config_rule must be 'config-only'"}
+E   AssertionError: {"detail":"Block 'blk-cycle' interaction invalid: interaction.ai_config_rule must be 'config-only'"}
+    assert 422 == 201
+     +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+C:\Projects\lectio\apps\textbook-agent\backend\tests\print_learn\test_p07_learn_runtime_gates.py:313: AssertionError: {"detail":"Block 'blk-cycle' interaction invalid: interaction.ai_config_rule must be 'config-only'"}
+E   AssertionError: {"detail":"Block 'blk-cycle' interaction invalid: interaction.ai_config_rule must be 'config-only'"}
+    assert 422 == 201
+     +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+C:\Projects\lectio\apps\textbook-agent\backend\tests\print_learn\test_p07_learn_runtime_gates.py:313: AssertionError: {"detail":"Block 'blk-cycle' interaction invalid: interaction.ai_config_rule must be 'config-only'"}
+E   print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+C:\Projects\lectio\apps\textbook-agent\backend\src\print\generation\whole_lesson\teaching_agent.py:784: print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+E   print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+C:\Projects\lectio\apps\textbook-agent\backend\src\print\generation\whole_lesson\teaching_agent.py:784: print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+E   print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+C:\Projects\lectio\apps\textbook-agent\backend\src\print\generation\whole_lesson\teaching_agent.py:784: print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+E   print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+C:\Projects\lectio\apps\textbook-agent\backend\src\print\generation\whole_lesson\teaching_agent.py:784: print.generation.whole_lesson.teaching_errors.TeachingPlanOutputInvalidError: lesson approach planner returned invalid output after 2 attempts: TEACHING_MISSING_LEARNER_ACTION: block 'check-b1' intent='check-understanding' is evidence-bearing check/practice but learner_action is null. Either declare a path-agnostic action or make the block genuinely passive.
+============================== warnings summary ===============================
+src\contracts\generation_manifest.py:6
+  C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+    class GenerationFieldContract(BaseModel):
+
+tests/print_learn/test_p04_native_selection_gates.py::test_p04_n04_writer_requests_exclude_sibling_schemas
+tests/print_learn/test_p04_native_selection_gates.py::test_p04_n05_coverage_dependencies_and_assets
+tests/print_learn/test_p04_native_selection_gates.py::test_p04_activity_authoring_rejects_incompatible_approved_type
+  C:\Projects\lectio\apps\textbook-agent\backend\src\infra\llm\cost.py:80: PydanticAIDeprecationWarning: `AgentRunResult.usage` is no longer a method; access it as a property (drop the parentheses).
+    usage = usage_obj() if callable(usage_obj) else usage_obj
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/print_learn/test_p05_print_production_gates.py::test_p05_p01_uninterrupted_handoff_persists_valid_document
+FAILED tests/print_learn/test_p05_print_production_gates.py::test_p05_p02_student_hides_answers_teacher_key_matches_pin
+FAILED tests/print_learn/test_p05_print_production_gates.py::test_p05_p03_figure_position_and_missing_asset_tracked
+FAILED tests/print_learn/test_p05_print_production_gates.py::test_p05_p05_export_route_finishes_and_timeout_is_actionable
+FAILED tests/print_learn/test_p05_print_production_gates.py::test_p05_p06_recoverable_writer_failure_preserves_siblings
+FAILED tests/print_learn/test_p06_learn_authoring_gates.py::test_p06_l02_repeated_and_interleaved_order_survives_assemble
+FAILED tests/print_learn/test_p06_learn_authoring_gates.py::test_p06_l03_builder_edit_persists_and_malformed_blocks_publish
+FAILED tests/print_learn/test_p07_learn_runtime_gates.py::test_p07_u01_persist_restore_authoritative_feedback
+FAILED tests/print_learn/test_p07_learn_runtime_gates.py::test_p07_u02_reject_forged_scores_unknown_ix_cross_learner
+FAILED tests/print_learn/test_p07_learn_runtime_gates.py::test_p07_u03_idempotency_conflict_and_max_attempts
+FAILED tests/print_learn/test_p07_learn_runtime_gates.py::test_p07_u04_completion_rules_and_passive_sections
+FAILED tests/print_learn/test_p07_learn_runtime_gates.py::test_p07_u05_aggregation_and_practice_separation
+FAILED tests/print_learn/test_p07_learn_runtime_gates.py::test_p07_u06_analytics_excludes_self_started_keeps_release
+FAILED tests/print_learn/test_p08_integration_gates.py::test_p08_i01_uninterrupted_dual_path_no_plan_swap
+FAILED tests/print_learn/test_p08_integration_gates.py::test_p08_i02_instructional_coverage_both_outputs
+FAILED tests/print_learn/test_p08_integration_gates.py::test_p08_i03_sentinels_scoped_repair_stale_lease
+FAILED tests/print_learn/test_p08_integration_gates.py::test_p08_i04_teacher_edit_and_sibling_isolation
+17 failed, 60 passed, 4 warnings in 54.76s
+
+==== p03_realization @ 2026-09-11T22:52:22.3241342+03:00 ====
+CMD: uv run pytest tests/application/test_p03_realization_gates.py -q --tb=line
+EXIT: 0
+.......                                                                  [100%]
+============================== warnings summary ===============================
+src\contracts\generation_manifest.py:6
+  C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+    class GenerationFieldContract(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+7 passed, 1 warning in 27.19s
+
+==== validate_repo @ 2026-09-11T22:52:58.8207316+03:00 ====
+CMD: uv run python tools/agent/validate_repo.py --scope backend
+EXIT: 2
+
+==== check_architecture @ 2026-09-11T22:52:59.1083103+03:00 ====
+CMD: uv run python ../tools/agent/check_architecture.py --format text
+EXIT: 1
+

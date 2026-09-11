@@ -20,20 +20,13 @@ from document.writer import write_document_primitive
 from infra.authoring import AuthoringEngine, AuthoringProvider
 from infra.authoring.capability_selector import ChooseFn
 from learn.generation.assemble import assemble_learn_document
-from learn.generation.authoring_adapter import author_learn_work_orders
 from learn.generation.document_realizer import realize_learn_document
 from learn.generation.figure_pipeline import attach_figure_asset
 from learn.generation.interaction_writer import write_interaction_from_request
-from learn.generation.native_selection import (
-    LearnSelectionSnapshot,
-    build_learn_selection_snapshot_async,
-)
-from learn.generation.ordered_assemble import assemble_ordered_learn_document
 from learn.generation.preparation_context import (
     LearnPreparationContext,
     lesson_context_from_preparation,
 )
-from learn.generation.work_orders import LearnWorkOrder, compile_learn_work_orders
 from learn.interactions.action_map import (
     ACTION_TO_LEARN_INTERACTION,
     PASSIVE_LEARNER_ACTIONS,
@@ -42,7 +35,6 @@ from learn.interactions.action_map import (
 from learn.interactions.registry import RETAINED_INTERACTIONS
 from learn.resources.native_policy import (
     default_learn_policy,
-    policy_version_and_hash,
 )
 from learn.resources.selection import (
     build_learn_candidate_map,
@@ -71,160 +63,6 @@ def package_contract_hash() -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
-def host_interaction_blocks_for_builder(document: dict[str, Any]) -> dict[str, Any]:
-    """Legacy v1 host remap — kept for closed-path tests only."""
-    from document.models import DOCUMENT_PRIMITIVE_KINDS
-
-    blocks = document.get("blocks")
-    if not isinstance(blocks, dict):
-        return document
-    for block in blocks.values():
-        if not isinstance(block, dict):
-            continue
-        component_id = str(block.get("component_id") or "")
-        if isinstance(block.get("learn_interaction"), dict):
-            block["component_id"] = "explanation-block"
-        elif component_id.startswith("learn-interaction:"):
-            block["component_id"] = "explanation-block"
-        elif component_id in DOCUMENT_PRIMITIVE_KINDS:
-            # v1 LessonDocument host still expects registry component ids.
-            # Preserve authored payload under content; remap the host id only.
-            content = block.get("content")
-            if isinstance(content, dict) and "body" not in content:
-                text = (
-                    content.get("text")
-                    or content.get("body")
-                    or content.get("caption")
-                    or ""
-                )
-                if component_id == "list" and isinstance(content.get("items"), list):
-                    text = "; ".join(str(item) for item in content["items"])
-                elif component_id == "callout":
-                    text = str(content.get("body") or content.get("title") or text)
-                elif component_id == "table":
-                    text = str(content.get("caption") or "Comparison table.")
-                block["content"] = {
-                    "body": str(text) or "Generated ordinary content.",
-                    "emphasis": [],
-                    "primitive": dict(content),
-                }
-            block["component_id"] = "explanation-block"
-    return document
-
-
-def build_closed_learn_production(
-    *,
-    teaching_plan: TeachingPlan,
-    available_asset_ids: Sequence[str] | None = None,
-    policy: Mapping[str, Any] | None = None,
-    title: str | None = None,
-    subject: str = "science",
-    source_generation_id: str | None = None,
-    approved_items: Sequence[Any] | None = None,
-    write_interactions: bool = True,
-    provider: AuthoringProvider | None = None,
-    engine: AuthoringEngine | None = None,
-    preparation_context: LearnPreparationContext | None = None,
-    choose: ChooseFn | None = None,
-) -> dict[str, Any]:
-    return _run_sync(
-        build_closed_learn_production_async(
-            teaching_plan=teaching_plan,
-            available_asset_ids=available_asset_ids,
-            policy=policy,
-            title=title,
-            subject=subject,
-            source_generation_id=source_generation_id,
-            approved_items=approved_items,
-            write_interactions=write_interactions,
-            provider=provider,
-            engine=engine,
-            preparation_context=preparation_context,
-            choose=choose,
-        )
-    )
-
-
-async def build_closed_learn_production_async(
-    *,
-    teaching_plan: TeachingPlan,
-    available_asset_ids: Sequence[str] | None = None,
-    policy: Mapping[str, Any] | None = None,
-    title: str | None = None,
-    subject: str = "science",
-    source_generation_id: str | None = None,
-    approved_items: Sequence[Any] | None = None,
-    write_interactions: bool = True,
-    provider: AuthoringProvider | None = None,
-    engine: AuthoringEngine | None = None,
-    preparation_context: LearnPreparationContext | None = None,
-    choose: ChooseFn | None = None,
-) -> dict[str, Any]:
-    """Legacy closed LessonDocument v1 path (tests / salvage only — not Unit production)."""
-    body = dict(policy) if policy is not None else default_learn_policy()
-    _, policy_hash = policy_version_and_hash(body)
-    plan_hash = teaching_plan_content_hash(teaching_plan)
-    prep = preparation_context or LearnPreparationContext(
-        objective=str(teaching_plan.arc or title or "").strip(),
-    )
-    lesson_ctx = lesson_context_from_preparation(
-        prep,
-        title=title or teaching_plan.arc or "Learn lesson",
-        subject=subject,
-    )
-    snapshot = await build_learn_selection_snapshot_async(
-        teaching_plan,
-        teaching_plan_hash=plan_hash,
-        native_policy_hash=policy_hash,
-        package_contract_hash=package_contract_hash(),
-        available_asset_ids=available_asset_ids,
-        policy=body,
-        teaching_context=lesson_ctx,
-        choose=choose,
-    )
-    orders = compile_learn_work_orders(
-        teaching_plan=teaching_plan,
-        snapshot=snapshot,
-        approved_items=approved_items,
-    )
-    approved_maps = [
-        dict(item) if isinstance(item, Mapping) else vars(item)
-        for item in (approved_items or [])
-    ]
-    authored_results = await author_learn_work_orders(
-        orders,
-        provider=provider,
-        engine=engine,
-        lesson_context=lesson_ctx,
-        allowed_facts=prep.allowed_facts,
-        terminology=prep.terminology,
-        approved_items=approved_maps,
-    )
-    document = assemble_ordered_learn_document(
-        teaching_plan=teaching_plan,
-        snapshot=snapshot,
-        work_orders=orders,
-        authored_results=authored_results,
-        title=title or teaching_plan.arc or "Learn lesson",
-        subject=subject,
-        source="generated",
-        source_generation_id=source_generation_id,
-        write_interactions=False,
-        approved_items=approved_items,
-    )
-    document = host_interaction_blocks_for_builder(document)
-    return {
-        "teaching_plan_hash": plan_hash,
-        "native_policy_hash": policy_hash,
-        "package_contract_hash": package_contract_hash(),
-        "selection_snapshot": snapshot,
-        "work_orders": orders,
-        "document": document,
-        "selection_trace": selection_trace_payload(snapshot, orders),
-        "authoring_results": authored_results,
-    }
-
-
 def _run_sync(coro: Any) -> Any:
     try:
         asyncio.get_running_loop()
@@ -232,18 +70,6 @@ def _run_sync(coro: Any) -> Any:
         return asyncio.run(coro)
     with ThreadPoolExecutor(max_workers=1) as executor:
         return executor.submit(lambda: asyncio.run(coro)).result()
-
-
-def selection_trace_payload(
-    snapshot: LearnSelectionSnapshot,
-    orders: Sequence[LearnWorkOrder],
-) -> dict[str, Any]:
-    return {
-        "selection_snapshot": snapshot.model_dump(mode="json"),
-        "work_orders": [order.model_dump(mode="json") for order in orders],
-        "work_order_ids": [order.work_order_id for order in orders],
-        "form_prompt": "closed_learn_selection",
-    }
 
 
 def _block_lookup(plan: TeachingPlan) -> dict[str, TeachingPlanBlock]:
@@ -290,42 +116,122 @@ def _action_for(block: TeachingPlanBlock) -> str | None:
     return str(block.learner_action.action or "").strip() or None
 
 
-def _select_interaction_for_block(
+def _legal_interaction_candidates(
     block: TeachingPlanBlock,
     *,
     candidates_by_block: Mapping[str, Sequence[str]] | None = None,
-) -> str | None:
-    """Derive retained interaction for a learner_action.
+) -> list[str]:
+    """Closed legal interaction kinds for a block (runtime shortlist ∩ retained).
 
-    One obvious candidate → deterministic YAML default. Multiple legal kinds
-    still stay inside the policy map. The interaction-selection spec is loaded
-    so the production path hashes the file-backed reasoning policy.
+    Falls back to YAML learn-action-map candidates when no runtime shortlist.
     """
-    from core.prompts.loader import effective_prompt_text
+    from core.policies.loader import learn_candidates_for_action
 
-    effective_prompt_text("interaction-selection")
+    action = _action_for(block)
+    runtime = list(candidates_by_block.get(block.id, ()) if candidates_by_block else ())
+    runtime = [c for c in runtime if c in RETAINED_INTERACTIONS]
+    if runtime:
+        return runtime
+    yaml_candidates = [
+        c for c in learn_candidates_for_action(action) if c in RETAINED_INTERACTIONS
+    ]
+    return yaml_candidates
+
+
+async def _llm_select_interaction(
+    *,
+    legal: Sequence[str],
+    block: TeachingPlanBlock,
+    choose: ChooseFn | None = None,
+) -> str:
+    """Bounded LLM pick among legal candidates using interaction-selection.md."""
+    from core.prompts.loader import effective_prompt_text
+    from infra.authoring.capability_selector import (
+        CapabilitySelection,
+        select_capability_from_shortlist,
+    )
+
+    action = _action_for(block)
+    la = block.learner_action
+    evidence = str(la.expected_evidence if la is not None else block.evidence or "")
+    difficulty = str(la.difficulty if la is not None else "")
+    policy_text = effective_prompt_text("interaction-selection")
+
+    async def _default_choose(context: dict[str, Any]) -> CapabilitySelection:
+        from curriculum.agents import run_interaction_selection
+
+        slim = {
+            "learner_action": action,
+            "expected_evidence": evidence,
+            "difficulty": difficulty,
+            "intent": block.intent,
+            "brief": block.brief,
+            "legal_candidates": list(legal),
+            "policy": policy_text,
+        }
+        if context.get("repair"):
+            slim["repair"] = context["repair"]
+            slim["validation_errors"] = context.get("validation_errors")
+            slim["instruction"] = context.get("instruction")
+        return await run_interaction_selection(slim)
+
+    selection = await select_capability_from_shortlist(
+        candidate_ids=list(legal),
+        brief=str(block.brief or ""),
+        intent=str(block.intent or ""),
+        action=action,
+        lane="interaction",
+        required=True,
+        choose=choose or _default_choose,
+    )
+    chosen = str(selection.capability_id or "").strip()
+    if chosen not in set(legal):
+        raise ValueError(
+            f"interaction selection {chosen!r} not in legal candidates {list(legal)}"
+        )
+    return chosen
+
+
+async def _select_interaction_for_block(
+    block: TeachingPlanBlock,
+    *,
+    candidates_by_block: Mapping[str, Sequence[str]] | None = None,
+    choose: ChooseFn | None = None,
+) -> tuple[str | None, str | None]:
+    """Derive retained interaction and truthful selection_mode.
+
+    Returns (kind, selection_mode). Modes:
+    - deterministic_single: exactly one legal candidate, no LLM
+    - policy_default: YAML default with no multi-candidate shortlist, no LLM
+    - llm_multi_candidate: 2+ legal candidates, bounded LLM via interaction-selection.md
+    """
     action = _action_for(block)
     if not action or action in PASSIVE_LEARNER_ACTIONS:
-        return None
-    mapped = interaction_for_learner_action(action) or ACTION_TO_LEARN_INTERACTION.get(action)
-    legal = list(candidates_by_block.get(block.id, ()) if candidates_by_block else ())
-    legal = [c for c in legal if c in RETAINED_INTERACTIONS]
-    if mapped and (not legal or mapped in legal):
-        return mapped
+        return None, None
+    mapped = interaction_for_learner_action(action) or ACTION_TO_LEARN_INTERACTION.get(
+        action
+    )
+    legal = _legal_interaction_candidates(
+        block, candidates_by_block=candidates_by_block
+    )
     if len(legal) == 1:
-        return legal[0]
+        return legal[0], "deterministic_single"
+    if len(legal) >= 2:
+        chosen = await _llm_select_interaction(
+            legal=legal, block=block, choose=choose
+        )
+        return chosen, "llm_multi_candidate"
     if mapped:
-        return mapped
-    if legal:
-        return legal[0]
-    return mapped
+        return mapped, "policy_default"
+    return None, None
 
 
-def _layer_learn_interactions(
+async def _layer_learn_interactions(
     plan: TeachingPlan,
     document_plan: CompositionPlan,
     *,
     candidates_by_block: Mapping[str, Sequence[str]] | None = None,
+    choose: ChooseFn | None = None,
 ) -> CompositionPlan:
     """Append learn_interaction decisions after ordinary document composition."""
     section_map = _section_lookup(plan)
@@ -335,8 +241,8 @@ def _layer_learn_interactions(
         if block.id in seen_blocks:
             continue
         seen_blocks.add(block.id)
-        interaction = _select_interaction_for_block(
-            block, candidates_by_block=candidates_by_block
+        interaction, mode = await _select_interaction_for_block(
+            block, candidates_by_block=candidates_by_block, choose=choose
         )
         if interaction is None:
             continue
@@ -345,9 +251,13 @@ def _layer_learn_interactions(
                 teaching_block_id=block.id,
                 kind=interaction,
                 lane="learn_interaction",
-                reason=f"learner_action → retained interaction {interaction!r}",
+                reason=(
+                    f"learner_action → retained interaction {interaction!r} "
+                    f"(selection_mode={mode})"
+                ),
                 section_id=section_map.get(block.id) or None,
                 role="check",
+                selection_mode=mode,  # type: ignore[arg-type]
             )
         )
     return CompositionPlan(
@@ -445,7 +355,7 @@ async def produce_learn_document_from_teaching_async(
         engine=engine,
         allow_heuristic_fallback=allow_heuristic_composition_fallback,
     )
-    composition = _layer_learn_interactions(
+    composition = await _layer_learn_interactions(
         teaching_plan,
         document_plan,
         candidates_by_block=candidates_by_block,
@@ -602,12 +512,8 @@ _ = realize_learn_document
 
 
 __all__ = [
-    "build_closed_learn_production",
-    "build_closed_learn_production_async",
-    "host_interaction_blocks_for_builder",
     "package_contract_hash",
     "produce_learn_document_from_teaching",
     "produce_learn_document_from_teaching_async",
-    "selection_trace_payload",
     "teaching_plan_content_hash",
 ]

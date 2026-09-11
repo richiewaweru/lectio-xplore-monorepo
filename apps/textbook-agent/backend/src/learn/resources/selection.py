@@ -8,6 +8,11 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from core.policies.loader import (
+    learner_action_aliases,
+    passive_learner_actions,
+    resolve_learner_action,
+)
 from document.models import DOCUMENT_PRIMITIVE_KINDS
 from learn.resources.native_policy import (
     capabilities_requiring_assets,
@@ -16,11 +21,9 @@ from learn.resources.native_policy import (
     offered_interaction_ids,
 )
 
-PASSIVE_ACTIONS = frozenset({"compare-without-response", "read-explanation"})
-# Gate wording uses reconstruct-order; vocabulary id is order-items.
-ACTION_ALIASES = {
-    "reconstruct-order": "order-items",
-}
+PASSIVE_ACTIONS: frozenset[str] = passive_learner_actions()
+# Gate wording uses reconstruct-order; vocabulary id is order-items (YAML alias).
+ACTION_ALIASES: dict[str, str] = learner_action_aliases()
 _REGISTERED_VALIDATOR_REFS: frozenset[str] = frozenset(
     {
         "learn.payload_schema",
@@ -105,9 +108,7 @@ def _capability_index(
 
 
 def normalize_action(action: str | None) -> str | None:
-    if action is None:
-        return None
-    return ACTION_ALIASES.get(action, action)
+    return resolve_learner_action(action)
 
 
 def _action_matches(

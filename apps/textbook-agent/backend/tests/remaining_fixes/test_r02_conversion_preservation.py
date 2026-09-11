@@ -2,25 +2,32 @@
 
 from __future__ import annotations
 
-import pytest
+from typing import Any, Mapping
 
-from infra.authoring import AuthoringEngine, AuthoringProviderCall, AuthoringRequest
-from learn.generation.authoring_adapter import build_learn_authoring_registry
 from learn.generation.interaction_writer import write_interaction_from_request
-from tests.authoring_correction.test_a04_learn_authoring import CORE_CONFIG, _request
 
 
-class CaptureEngine(AuthoringEngine):
-    captured: AuthoringRequest | None = None
-
-    async def execute(self, request: AuthoringRequest, *, provider=None):
-        CaptureEngine.captured = request
-        return await super().execute(request, provider=provider)
-
-
-class DummyProvider:
-    async def invoke(self, call: AuthoringProviderCall) -> dict[str, object]:
-        return {}
+def _request(
+    capability_id: str,
+    *,
+    action: str,
+    approved_items: list[Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    return {
+        "work_order_id": f"r02::{capability_id}",
+        "block_id": f"b-{capability_id}",
+        "capability_id": capability_id,
+        "lane": "interaction",
+        "brief": f"Author {capability_id}",
+        "intent": "check-understanding",
+        "action": action,
+        "evidence": "Known-answer regression",
+        "teaching_plan_hash": "r02",
+        "lesson_context": {"objective": "Known-answer regression objective"},
+        "allowed_facts": ["Scoped fact for regression."],
+        "terminology": [],
+        "approved_items": approved_items or [],
+    }
 
 
 def test_r02_g06_sequence_ids_preserved_without_slugify() -> None:

@@ -1,0 +1,21 @@
+{
+  "stamp": "20260911T142726",
+  "steps": [
+    {
+      "create_unit": 201
+    },
+    {
+      "path_plan": 422
+    }
+  ],
+  "user": {
+    "id": "p09-live-teacher",
+    "email": "p09-teacher@lectio.local",
+    "name": "P09 Live Teacher",
+    "picture_url": null,
+    "created_at": "2026-09-08T04:29:17.439006",
+    "updated_at": "2026-09-08T04:29:17.439006",
+    "has_profile": false
+  },
+  "unit_id": "b9a9b700-f5cd-4ea6-9304-04af4c963a70"
+}

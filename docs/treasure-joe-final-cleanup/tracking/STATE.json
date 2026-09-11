@@ -1,0 +1,13 @@
+{
+  "program": "treasure-joe-final-cleanup",
+  "branch": "fix/treasure-joe-final-cleanup",
+  "baseline_sha": "6f782e94769d0dfce34b2dd80d1d462a9c38bd04",
+  "phases": {
+    "A": { "status": "PASS", "sha": "pending-implementation-commit" },
+    "B": { "status": "PASS", "sha": "pending-implementation-commit" },
+    "C": { "status": "PASS", "sha": "pending-implementation-commit" },
+    "D": { "status": "PASS", "sha": "pending-implementation-commit" },
+    "E": { "status": "PASS", "sha": "pending-implementation-commit" },
+    "F": { "status": "FAIL", "sha": "pending-implementation-commit", "note": "validate_repo red (pre-existing ruff/planning); pack pnpm + focused pytest + architecture green" }
+  }
+}

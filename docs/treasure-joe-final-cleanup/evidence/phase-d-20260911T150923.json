@@ -1,0 +1,51 @@
+﻿{
+    "stamp":  "20260911T150923",
+    "resumed_from":  "unit f8b9a4eb + release 5b1ed79a (prior Unit generate-learn succeeded)",
+    "steps":  [
+
+              ],
+    "teaching_plan_actions":  [
+                                  "enter-text",
+                                  "select-one",
+                                  "select-one"
+                              ],
+    "generation_id":  "5d43ce47-6036-4fc2-ac12-31ba68e5f9e9",
+    "unit_id":  "f8b9a4eb-346e-45b1-af35-e2248a10788a",
+    "document_version":  2,
+    "interactions":  [
+                         {
+                             "prompt":  "The bean plant on the windowsill was watered regularly but never given any plant food, yet it stayed healthy and grew ta",
+                             "id":  "ix-d37bab25a771",
+                             "type":  "short-response"
+                         },
+                         {
+                             "prompt":  "A bean plant on a windowsill grew healthy even though no plant food was ever added to its pot. Only water was given. Whe",
+                             "id":  "ix-b85328663c1b",
+                             "type":  "choice"
+                         },
+                         {
+                             "prompt":  "The potted bean plant on the windowsill grew well with only water and no plant food. Which statement best explains this?",
+                             "id":  "ix-1b9fe5569f18",
+                             "type":  "choice"
+                         }
+                     ],
+    "open_href":  "/builder/2c7f23aa-da7e-49c8-af5e-c32948a055da",
+    "learn":  {
+                  "editable_lesson_id":  "2c7f23aa-da7e-49c8-af5e-c32948a055da",
+                  "output_id":  "learn-out-c39225773acd",
+                  "open_href":  "/builder/2c7f23aa-da7e-49c8-af5e-c32948a055da",
+                  "gen_lookup":  "The remote server returned an error: (404) Not Found."
+              },
+    "learner_id":  "db404a39-ef73-4104-94c5-4b6211c6e455",
+    "instance_id":  "31a10459-9dcd-4321-812b-3febd4374784",
+    "release_id":  "5b1ed79a-9a33-42f6-a05c-b15ecd0d1f27",
+    "attempt":  {
+                    "outcome":  null,
+                    "interaction_id":  "ix-d37bab25a771",
+                    "id":  null,
+                    "interaction_type":  "short-response"
+                },
+    "reloaded_attempt_count":  1,
+    "unknown_check":  "src",
+    "status":  "PASS"
+}

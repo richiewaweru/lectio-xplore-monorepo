@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -51,9 +52,11 @@ from curriculum.teaching_plan.projections import (
 )
 from infra.authoring import AuthoringProviderCall
 from learn.generation.native_execution import produce_learn_from_approved_teaching
-from learn.generation.native_production import build_closed_learn_production
 from learn.generation.preparation_context import learn_preparation_context_from_state
-from learn.generation.work_orders import build_learn_writer_request
+from learn.generation.work_orders import build_learn_writer_request, compile_learn_work_orders
+from learn.generation.native_selection import build_learn_selection_snapshot_async
+from learn.resources.native_policy import default_learn_policy, policy_version_and_hash
+from learn.generation.native_production import teaching_plan_content_hash, package_contract_hash
 from infra.authoring.capability_selector import CapabilitySelection
 from print.contracts.lectio_page import validate_document
 from print.generation.whole_lesson.executor import execute_after_teaching_approval
@@ -413,6 +416,15 @@ def _draft_for_packet(packet, *, item_id: str | None) -> TeachingPlanDraft:
                                 "The objective requires a causal explanation of light."
                             ),
                             source_question_ids=source,
+                            learner_action=LearnerActionBrief(
+                                action="select-one",
+                                target="covered-leaf check item",
+                                purpose="Check causal understanding of light",
+                                expected_evidence=(
+                                    "Learner selects the approved covered-leaf explanation."
+                                ),
+                                difficulty="independent",
+                            ),
                         )
                     ],
                 )
@@ -761,7 +773,6 @@ async def test_p08_i01_uninterrupted_dual_path_no_plan_swap() -> None:
     learn_result = await _run_learn(gid=gid, user_id=user_id, path_lesson_id=lesson_id)
     assert learn_result["status"] == "ready"
     assert learn_result["selection_trace"]["form_prompt"] in {
-        "closed_learn_selection",
         "learn_document_v2_compose_write",
     }
 
@@ -780,7 +791,6 @@ async def test_p08_i01_uninterrupted_dual_path_no_plan_swap() -> None:
         learn_gen = await session.get(GenerationModel, learn_result["output_id"])
         assert learn_gen is not None
         assert (learn_gen.chunked_state_json or {}).get("form_prompt") in {
-            "closed_learn_selection",
             "learn_document_v2_compose_write",
         }
         doc = learn_gen.document_json or {}
@@ -870,16 +880,32 @@ async def test_p08_i03_sentinels_scoped_repair_stale_lease() -> None:
     from learn.generation.preparation_context import learn_preparation_context_from_state
 
     prep = learn_preparation_context_from_state(state)
-    production = build_closed_learn_production(
-        teaching_plan=learn_plan,
-        title=learn_plan.arc,
-        write_interactions=True,
-        provider=_p08_learn_provider(),
-        preparation_context=prep,
+    _, policy_hash = policy_version_and_hash(default_learn_policy())
+    snapshot = await build_learn_selection_snapshot_async(
+        learn_plan,
+        teaching_plan_hash=teaching_plan_content_hash(learn_plan),
+        native_policy_hash=policy_hash,
+        package_contract_hash=package_contract_hash(),
+        policy=default_learn_policy(),
         choose=_p08_choose,
     )
+    approved_item = SimpleNamespace(
+        id=item_id,
+        stem="Why did the covered leaf fail to make food?",
+        options=(
+            {"key": "A", "text": "No light reached the leaf", "correct": True},
+            {"key": "B", "text": "The soil ran out of food", "correct": False},
+        ),
+        correct_key="A",
+        type="multiple_choice",
+    )
+    production_orders = compile_learn_work_orders(
+        teaching_plan=learn_plan,
+        snapshot=snapshot,
+        approved_items=[approved_item],
+    )
     sentinel = "SIBLING_SCHEMA_SENTINEL_p08i03_zz9"
-    ix_orders = [o for o in production["work_orders"] if o.lane == "interaction"]
+    ix_orders = [o for o in production_orders if o.lane == "interaction"]
     if ix_orders:
         req = build_learn_writer_request(
             ix_orders[0],

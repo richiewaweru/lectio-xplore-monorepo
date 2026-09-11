@@ -1,0 +1,62 @@
+{
+  "stamp": "20260911T224855",
+  "marker": "TJ-E-MARKER-A8F69447E7",
+  "steps": [
+    {
+      "lectio_get": 200
+    },
+    {
+      "save": 200,
+      "body": "{\"generation_id\":\"b17572f5-b7ee-45cc-b5a7-d2da9310febd\",\"document_revision\":6,\"document\":{\"id\":\"doc-b17572f5-b7ee-45cc-b5a7-d2da9310febd\",\"title\":\"Explain that a life cycle is the series of stages an organism passes through and\",\"language\":\"en\",\"metadata\":{\"subject\":\"Science\",\"objective\":\"Explain that a life cycle is the series of stages an organism passes through and that it repeats when adults p"
+    },
+    {
+      "stale_put": 409,
+      "body": "{\"detail\":\"stale document revision\"}"
+    },
+    {
+      "export_pdf": 200,
+      "content_type": "application/pdf",
+      "bytes": 99497
+    }
+  ],
+  "prep_id": "b17572f5-b7ee-45cc-b5a7-d2da9310febd",
+  "learn_output_id": "learn-out-ccd04ae62c17",
+  "learn_editable_id": "6b7f1426-c374-41e1-947c-2b4e760c0db3",
+  "document_revision_before": 5,
+  "document_version": null,
+  "document_id": "doc-b17572f5-b7ee-45cc-b5a7-d2da9310febd",
+  "section_count": 4,
+  "edit_target": {
+    "section": 1,
+    "block": 1,
+    "field": "paragraphs0",
+    "block_id": "explain-b2"
+  },
+  "learn_before": {
+    "status": 200,
+    "updated_at": "2026-09-08T07:24:27.272494Z",
+    "title": "The lesson opens on a monarch butterfly landing on a milkweed leaf and laying an",
+    "node_count": 0,
+    "source_generation_id": "learn-out-ccd04ae62c17"
+  },
+  "document_revision_after": 6,
+  "reload_has_marker": true,
+  "reload_revision": 6,
+  "pdf_path": "C:\\Projects\\lectio\\docs\\treasure-joe-final-cleanup\\evidence\\phase-e-20260911T224855.pdf",
+  "pdf_extract_path": "C:\\Projects\\lectio\\docs\\treasure-joe-final-cleanup\\evidence\\phase-e-20260911T224855-pdf-text.txt",
+  "pdf_has_marker": true,
+  "pdf_text_preview": "Prepared From Path Lesson\nSchool:\nTreasure Joe Proof School\nTeacher:\nTreasure Joe\nDate:\n11 September 2026\nStudent Name:\n\nTable of Contents\n1. Open on the anchor and get the learner curious about what will happen next. Activate the prior knowledge that butterflies come from eggs without yet naming the full cycle.\n2. Build the core idea: the egg, caterpillar, chrysalis, and butterfly are stages of one organism's life cycle, and the cycle repeats when the adult butterfly produces young.\n3. Confront the two false models: that the egg, caterpillar, chrysalis, and butterfly are four different kinds of animals, and that the cycle stops at the butterfly.\n4. Check whether the learner can use the idea of a repeating life cycle to say what must happen after the adult butterfly stage.\n\nViewEditSaveRel",
+  "pdf_marker_match": {
+    "raw": true,
+    "normalized": true,
+    "dehyphenated": true
+  },
+  "learn_after": {
+    "status": 200,
+    "updated_at": "2026-09-08T07:24:27.272494Z",
+    "title": "The lesson opens on a monarch butterfly landing on a milkweed leaf and laying an",
+    "node_count": 0
+  },
+  "learn_sibling_unchanged": true,
+  "status": "PASS"
+}

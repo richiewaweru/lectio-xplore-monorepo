@@ -1,71 +1,13 @@
-"""A00 regression for Learn assembly copying a planning brief as final content."""
+"""A00: brief must not be copied as finished content — covered by v2 writer; salvage gone."""
 
 from __future__ import annotations
 
-from curriculum.teaching_plan.models import (
-    TeachingPlan,
-    TeachingPlanBlock,
-    TeachingPlanSection,
-)
-from infra.authoring import AuthoringProviderCall
-from learn.generation.native_production import build_closed_learn_production
-from learn.generation.preparation_context import LearnPreparationContext
-from learn.resources.native_policy import default_learn_policy
+from pathlib import Path
+
+from learn.generation import native_production
 
 
-class ContentProvider:
-    async def invoke(self, call: AuthoringProviderCall) -> dict[str, object]:
-        assert call.native_path == "learn"
-        if call.capability_id == "callout-block":
-            return {
-                "variant": "info",
-                "body": "Evaporation is when liquid water changes into vapour, like a puddle drying after sunshine.",
-            }
-        return {
-            "body": "Evaporation is when liquid water changes into vapour, like a puddle drying after sunshine.",
-            "emphasis": ["evaporation"],
-        }
-
-
-def test_a00_ordered_assemble_does_not_copy_brief_as_content_body() -> None:
-    """KNOWN_ANSWER_CASES content-brief: brief is input, not finished prose."""
-    brief = "Explain evaporation with an everyday example."
-    plan = TeachingPlan(
-        arc="A00 content brief",
-        teaching_plan_id="tp-a00-brief",
-        revision=1,
-        sections=[
-            TeachingPlanSection(
-                slot_id="explain",
-                specific_purpose="Explain evaporation",
-                blocks=[
-                    TeachingPlanBlock(
-                        id="b-content",
-                        position=0,
-                        intent="explain",
-                        brief=brief,
-                        evidence="Learner reads a complete factual explanation.",
-                    )
-                ],
-            )
-        ],
-    )
-    policy = default_learn_policy()
-    policy["offered_content"] = ["explanation-block"]
-    production = build_closed_learn_production(
-        teaching_plan=plan,
-        policy=policy,
-        provider=ContentProvider(),
-        preparation_context=LearnPreparationContext(
-            objective="Explain evaporation with an everyday example.",
-            allowed_facts=["Evaporation turns liquid water into vapour."],
-            terminology=["evaporation"],
-        ),
-    )
-    document = production["document"]
-    block = next(iter(document["blocks"].values()))
-    body = str((block.get("content") or {}).get("body") or "")
-
-    assert body
-    assert body != brief
-    assert "evaporation" in body.lower()
+def test_a00_closed_salvage_removed() -> None:
+    src = Path(native_production.__file__).read_text(encoding="utf-8")
+    assert "build_closed_learn_production" not in src
+    assert "assemble_ordered_learn_document" not in src

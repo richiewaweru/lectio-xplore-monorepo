@@ -1,0 +1,13 @@
+{
+  "stamp": "20260911T151927",
+  "marker": "TJ-E-MARKER-8E777FC4DA",
+  "steps": [],
+  "prep_id": "5d43ce47-6036-4fc2-ac12-31ba68e5f9e9",
+  "print_poll": [
+    {
+      "n": 0,
+      "stage": "failed_terminal",
+      "doc_exists": false
+    }
+  ]
+}
