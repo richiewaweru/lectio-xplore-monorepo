@@ -28,5 +28,6 @@
     "closed_learn_selection": 0,
     "assemble_ordered_learn_document": 0
   },
-  "independent_verifier": "pending-launch"
+  "independent_verifier": "pending-launch",
+  "implementation_sha": "5bebfbad40e2c4f510e54a5c01670cdd5d952b5e"
 }
