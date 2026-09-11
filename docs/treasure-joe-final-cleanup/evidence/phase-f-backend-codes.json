@@ -1,0 +1,10 @@
+{
+    "print_learn":  1,
+    "validate":  2,
+    "interaction":  0,
+    "arch":  1,
+    "action_maps":  0,
+    "learner_action":  0,
+    "learn":  0,
+    "p03":  0
+}

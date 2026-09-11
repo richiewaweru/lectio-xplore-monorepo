@@ -87,17 +87,19 @@ def _legality(*, explain_forms: list[str] | None = None) -> LessonLegalitySnapsh
 
 @pytest.mark.asyncio
 async def test_r03_g02_print_invokes_selector_or_consumes_sealed_plan() -> None:
-    """R03-G02: ambiguous Print uses selector; sealed plan skips second select."""
-    plan = _plan(brief="Explain evaporation in causal prose.")
+    """R03-G02: catalogue selector path uses choose; sealed plan skips reselect."""
+    plan = _plan(brief="Explain evaporation as a causal process with clear structure.")
     packet = _packet(plan)
     legality = _legality()
     choose = RecordingChoose(["table"])
 
+    # Explicit legacy catalogue path — composition path intentionally ignores choose.
     _, snapshot, _ = await build_closed_print_production_plan_async(
         teaching_plan=plan,
         packet=packet,
         legality=legality,
         choose=choose,
+        use_document_composition=False,
     )
     assert snapshot.decisions[0].form_id == "table"
     assert len(choose.calls) == 1

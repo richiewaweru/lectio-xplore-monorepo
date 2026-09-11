@@ -1,19 +1,31 @@
 from core.policies.loader import (
+    canonical_non_passive_actions,
+    is_known_learner_action,
+    known_learner_actions,
+    learn_candidates_for_action,
     learn_interaction_for_action,
+    learner_action_aliases,
     load_learn_action_map,
     load_learner_actions,
     load_policy,
     load_print_action_map,
     passive_learner_actions,
     print_treatment_for_action,
+    resolve_learner_action,
 )
 
 __all__ = [
+    "canonical_non_passive_actions",
+    "is_known_learner_action",
+    "known_learner_actions",
+    "learn_candidates_for_action",
     "learn_interaction_for_action",
+    "learner_action_aliases",
     "load_learn_action_map",
     "load_learner_actions",
     "load_policy",
     "load_print_action_map",
     "passive_learner_actions",
     "print_treatment_for_action",
+    "resolve_learner_action",
 ]

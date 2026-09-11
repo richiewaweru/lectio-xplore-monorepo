@@ -115,6 +115,12 @@ def capability_selector_prompt() -> str:
     return prompt_text("native-capability-selector-v1.txt")
 
 
+def interaction_selection_prompt() -> str:
+    from core.prompts import effective_prompt_text
+
+    return effective_prompt_text("interaction-selection")
+
+
 def page_writer_common_prompt() -> str:
     return prompt_text("page-writer-common-v1.txt")
 

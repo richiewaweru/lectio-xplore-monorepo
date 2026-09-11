@@ -1,0 +1,41 @@
+=== SEARCH GATES 2026-09-11T23:37:09.2390949+03:00 ===
+
+--- build_closed_learn_production in apps/textbook-agent/backend/src ---
+(no matches)
+
+--- build_closed_learn_production_async in apps/textbook-agent/backend/src ---
+(no matches)
+
+--- host_interaction_blocks_for_builder in apps/textbook-agent/backend/src ---
+(no matches)
+
+--- closed_learn_selection in apps/textbook-agent/backend/src ---
+(no matches)
+
+--- assemble_ordered_learn_document in apps/textbook-agent/backend/src ---
+(no matches)
+
+--- pending-commit in apps/textbook-agent/backend/src ---
+(no matches)
+
+--- PASS with in apps/textbook-agent/backend/src ---
+(no matches)
+
+--- deferred in apps/textbook-agent/backend/src ---
+apps/textbook-agent/backend/src\v3_execution\runtime\stage2_lanes.py:5:lanes finish (reshape deferred item: move brief into run_lane).
+apps/textbook-agent/backend/src\core\repositories\sql_student_profile_repo.py:79:    # Renaming is deferred because the current external DB can be reset later
+apps/textbook-agent/backend/src\print\generation\native_production.py:80:        assets = [f"deferred-visual:{packet.lesson.path_lesson_id}"]
+apps/textbook-agent/backend/src\print\generation\native_production.py:87:        assets = [f"deferred-visual:{packet.lesson.path_lesson_id}"]
+
+--- interaction-selection effective_prompt in native_production ---
+147:    """Bounded LLM pick among legal candidates using interaction-selection.md."""
+158:    policy_text = effective_prompt_text("interaction-selection")
+201:    """Derive retained interaction and truthful selection_mode.
+203:    Returns (kind, selection_mode). Modes:
+206:    - llm_multi_candidate: 2+ legal candidates, bounded LLM via interaction-selection.md
+256:                    f"(selection_mode={mode})"
+260:                selection_mode=mode,  # type: ignore[arg-type]
+
+--- describe-in-own-words ---
+apps/textbook-agent/backend/resources\prompts\learner-action-policy.md:79:Do **not** invent action ids. In particular, do not emit `describe-in-own-words`.
+apps/textbook-agent/backend/src\print\generation\whole_lesson\teaching_agent.py:237:            if action == "describe-in-own-words":

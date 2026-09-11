@@ -207,6 +207,24 @@ async def run_capability_selector(
     )
 
 
+async def run_interaction_selection(
+    context: dict[str, Any],
+    *,
+    trace_id: str | None = None,
+) -> CapabilitySelection:
+    """Pick among legal Learn interaction candidates using interaction-selection.md."""
+    from curriculum.prompts import interaction_selection_prompt
+
+    return await _run_structured(
+        node=NATIVE_CAPABILITY_SELECTOR,
+        caller="interaction_selection",
+        output_type=CapabilitySelection,
+        system_prompt=interaction_selection_prompt(),
+        user_payload=context,
+        trace_id=trace_id,
+    )
+
+
 async def run_path_structural_planner(
     fixed_context: dict[str, Any],
     *,

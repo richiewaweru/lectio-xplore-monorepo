@@ -1,0 +1,45 @@
+{
+  "stamp": "20260911T223202",
+  "marker": "TJ-E-MARKER-0A2C5F22E0",
+  "steps": [
+    {
+      "lectio_get": 200
+    },
+    {
+      "save": 200,
+      "body": "{\"generation_id\":\"4c4946f5-97af-4f0d-8be3-e3444ba602d7\",\"document_revision\":8,\"document\":{\"id\":\"doc-4c4946f5-97af-4f0d-8be3-e3444ba602d7\",\"title\":\"Decompose a two-digit factor into tens and ones, multiply each part by a one-dig\",\"language\":\"en\",\"metadata\":{\"subject\":\"Mathematics\",\"objective\":\"Decompose a two-digit factor into tens and ones, multiply each part by a one-digit factor, and state the t"
+    },
+    {
+      "stale_put": 409,
+      "body": "{\"detail\":\"stale document revision\"}"
+    },
+    {
+      "export_pdf": 500,
+      "content_type": "application/json",
+      "bytes": 94
+    }
+  ],
+  "prep_id": "4c4946f5-97af-4f0d-8be3-e3444ba602d7",
+  "learn_output_id": "learn-out-c3bf8b46afdf",
+  "learn_editable_id": "d352fb6a-5696-4691-88e2-9304f4c77939",
+  "document_revision_before": 7,
+  "document_version": null,
+  "document_id": "doc-4c4946f5-97af-4f0d-8be3-e3444ba602d7",
+  "section_count": 4,
+  "edit_target": {
+    "section": 1,
+    "block": 0,
+    "field": "paragraphs0",
+    "block_id": "explain-b1"
+  },
+  "learn_before": {
+    "status": 200,
+    "updated_at": "2026-09-08T05:58:34.571169Z",
+    "title": "The lesson opens on a baker who must total 3 boxes of 24 cookies, a problem that",
+    "node_count": 0,
+    "source_generation_id": "learn-out-c3bf8b46afdf"
+  },
+  "document_revision_after": 8,
+  "reload_has_marker": true,
+  "reload_revision": 8
+}

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from print.generation.whole_lesson.prompt_render import render_teaching_prompt
-from print.generation.whole_lesson.teaching_agent import _missing_check_practice_action_errors
+from print.generation.whole_lesson.teaching_agent import (
+    _missing_check_practice_action_errors,
+    _unknown_learner_action_errors,
+)
 from print.generation.whole_lesson.teaching_plan import (
     LearnerActionBrief,
     TeachingPlan,
@@ -43,6 +46,9 @@ def test_teaching_prompt_includes_learner_action_policy() -> None:
     assert "## LEARNER ACTION POLICY" in rendered
     assert "A learner action is not limited to tests" in rendered
     assert "Never name Learn interaction types" in rendered
+    assert "Closed action vocabulary" in rendered
+    assert "describe-in-own-words" in rendered
+    assert "enter-text" in rendered
 
 
 def test_check_practice_without_action_is_pathological() -> None:
@@ -86,3 +92,70 @@ def test_check_with_declared_action_passes() -> None:
         )
     )
     assert _missing_check_practice_action_errors(plan) == []
+    assert _unknown_learner_action_errors(plan) == []
+
+
+def test_unknown_learner_action_is_rejected() -> None:
+    plan = _plan(
+        _block(
+            learner_action=LearnerActionBrief(
+                action="invented-action",
+                target="something",
+                purpose="test",
+                expected_evidence="none",
+                difficulty="guided",
+            )
+        )
+    )
+    errors = _unknown_learner_action_errors(plan)
+    assert len(errors) == 1
+    assert "TEACHING_UNKNOWN_LEARNER_ACTION" in errors[0]
+    assert "invented-action" in errors[0]
+
+
+def test_describe_in_own_words_triggers_repair_hint() -> None:
+    plan = _plan(
+        _block(
+            intent="orient",
+            brief="Ask learners to describe the idea.",
+            evidence="Learner articulates the idea.",
+            learner_action=LearnerActionBrief(
+                action="describe-in-own-words",
+                target="the ratio idea",
+                purpose="surface current language",
+                expected_evidence="Learner describes the idea in own words",
+                difficulty="guided",
+            ),
+        )
+    )
+    errors = _unknown_learner_action_errors(plan)
+    assert len(errors) == 1
+    assert "describe-in-own-words" in errors[0]
+    assert "enter-text" in errors[0]
+
+
+def test_alias_and_passive_actions_are_known() -> None:
+    alias_plan = _plan(
+        _block(
+            learner_action=LearnerActionBrief(
+                action="reconstruct-order",
+                target="stages",
+                purpose="rebuild sequence",
+                expected_evidence="correct order",
+                difficulty="guided",
+            )
+        )
+    )
+    passive_plan = _plan(
+        _block(
+            learner_action=LearnerActionBrief(
+                action="read-explanation",
+                target="worked example",
+                purpose="follow silently",
+                expected_evidence="learner follows without response",
+                difficulty="guided",
+            )
+        )
+    )
+    assert _unknown_learner_action_errors(alias_plan) == []
+    assert _unknown_learner_action_errors(passive_plan) == []

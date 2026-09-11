@@ -1,0 +1,87 @@
+{
+  "stamp": "20260911T150607",
+  "steps": [
+    {
+      "create_unit": 201
+    },
+    {
+      "path_plan": 201
+    },
+    {
+      "path_approve": 200,
+      "body": "{\"id\":\"c91ddfda-945a-4ded-a5db-38af9c544995\",\"unit_id\":\"7e216db7-77fc-40d9-b2d1-67f261cbffb1\",\"version\":1,\"revision\":2,\"status\":\"approved\",\"generated_by\":\"path_planner\",\"merge_critic_results\":[],\"prerequisite_risks\":[],\"forward_verified\":true,\"reaches_destination\":true,\"completeness_note\":null,\"open"
+    },
+    {
+      "prepare": 200,
+      "body": "{\"generation_id\":\"638f736c-d3b3-473e-b641-2b048ca0c2ca\",\"path_lesson_id\":\"9f4f5ffd-9f9f-4b6a-88e8-a99166d5ec29\",\"objective\":\"Explain that green plants make their own food inside their leaves rather than absorbing ready-made food from the soil.\",\"objective_hash\":\"e40d2d30cbba457e77d1b82bb48a44a5f61f006ae08099942fc7ca9c2a4222dd\",\"skeleton_id\":\"conceptual.first_exposure\",\"skeleton_version\":1,\"slots\":[\"orient\",\"explain\",\"contrast\",\"check\"],\"section_roles\":[\"orient\",\"explain\",\"contrast\",\"check\"],\"sta"
+    },
+    {
+      "chunked_approve": 200,
+      "body": "{\"generation_id\":\"638f736c-d3b3-473e-b641-2b048ca0c2ca\",\"pack_id\":null,\"stage\":\"stage2_running\",\"structural_plan\":{\"cards\":[{\"id\":\"1f09c212-2403-49bf-9165-c77b637a0e65\",\"title\":\"Plants make their own food\",\"prereqs\":[\"plants have roots, stems and leaves\",\"living things need food to grow\"],\"opens_by\":\"A windowsill plant and a cupboard plant, watered alike, growing differently.\",\"objective\":\"Explain that green plants make their own food inside their leaves rather than absorbing ready-made food fro"
+    }
+  ],
+  "user": {
+    "id": "p09-live-teacher",
+    "email": "p09-teacher@lectio.local",
+    "name": "P09 Live Teacher",
+    "picture_url": null,
+    "created_at": "2026-09-08T04:29:17.439006",
+    "updated_at": "2026-09-08T04:29:17.439006",
+    "has_profile": false
+  },
+  "unit_id": "7e216db7-77fc-40d9-b2d1-67f261cbffb1",
+  "path_id": "c91ddfda-945a-4ded-a5db-38af9c544995",
+  "path_revision": 2,
+  "lesson_id": "9f4f5ffd-9f9f-4b6a-88e8-a99166d5ec29",
+  "generation_id": "638f736c-d3b3-473e-b641-2b048ca0c2ca",
+  "prep_poll": [
+    {
+      "n": 0,
+      "stage": "stage2_running",
+      "http": 200,
+      "error": null
+    },
+    {
+      "n": 1,
+      "stage": "stage2_running",
+      "http": 200,
+      "error": null
+    },
+    {
+      "n": 2,
+      "stage": "running",
+      "http": 200,
+      "error": null
+    },
+    {
+      "n": 3,
+      "stage": "running",
+      "http": 200,
+      "error": null
+    },
+    {
+      "n": 4,
+      "stage": "running",
+      "http": 200,
+      "error": null
+    },
+    {
+      "n": 5,
+      "stage": "running",
+      "http": 200,
+      "error": null
+    },
+    {
+      "n": 6,
+      "stage": "running",
+      "http": 200,
+      "error": null
+    },
+    {
+      "n": 7,
+      "stage": "failed_recoverable",
+      "http": 200,
+      "error": "lesson approach planner returned invalid output after 2 attempts: ACTION_SOURCE_INCOMPATIBLE: action 'enter-text' is incompatible with multiple-choice sources; got ['multiple_choice']. Reauthoring requires a versioned task revision."
+    }
+  ]
+}

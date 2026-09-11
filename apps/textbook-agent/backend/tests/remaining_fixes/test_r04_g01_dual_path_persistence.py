@@ -53,7 +53,9 @@ async def test_r04_g01_dual_path_persist_fresh_session_reload() -> None:
         print_doc = reload_document(print_gen.document_json or {})
         assert validate_document(print_doc) == []
         learn_doc = dict(learn_gen.document_json or {})
-        assert learn_doc.get("blocks")
+        # Canonical LearnDocument v2 uses nodes; legacy v1 used blocks.
+        assert learn_doc.get("nodes") or learn_doc.get("blocks")
+        assert int(learn_doc.get("version") or 0) >= 1
         assert print_doc != learn_doc
 
         print_realizations = (

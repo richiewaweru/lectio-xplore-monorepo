@@ -154,6 +154,13 @@ def _draft_for_packet(packet, *, item_id: str | None) -> TeachingPlanDraft:
                                 "The objective requires a causal explanation of light."
                             ),
                             source_question_ids=source,
+                            learner_action={
+                                "action": "select-one",
+                                "target": "why the covered leaf failed to make food",
+                                "purpose": "check causal understanding with the approved item",
+                                "expected_evidence": "learner selects the light cause",
+                                "difficulty": "guided",
+                            },
                         )
                     ],
                 )

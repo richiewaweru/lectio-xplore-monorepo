@@ -8,6 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from core.policies.loader import passive_learner_actions
 from curriculum.approved_items import approved_item_kind
 from print.contracts.lectio_page import get_object_catalogue, lectio_page_contracts_dir
 from print.resources.native_policy import (
@@ -16,8 +17,8 @@ from print.resources.native_policy import (
     offered_form_ids,
 )
 
-# Learner actions that do not require a response interface.
-PASSIVE_ACTIONS = frozenset({"compare-without-response", "read-explanation"})
+# Learner actions that do not require a response interface (YAML-backed).
+PASSIVE_ACTIONS: frozenset[str] = passive_learner_actions()
 _IMPLEMENTED_FORM_OBJECTS: frozenset[str] = frozenset(
     {
         "prose",

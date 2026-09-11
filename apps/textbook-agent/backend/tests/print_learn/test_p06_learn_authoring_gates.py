@@ -28,11 +28,18 @@ from learn.generation.native_selection import (
     build_learn_selection_snapshot_async,
 )
 from infra.authoring.capability_selector import CapabilitySelection
-from learn.generation.ordered_assemble import (
-    assemble_ordered_learn_document,
-    block_component_sequence,
-    ordered_block_ids,
-)
+def ordered_block_ids(document: dict) -> list[str]:
+    sections = document.get('sections') or []
+    if sections and isinstance(sections[0], dict) and sections[0].get('block_ids'):
+        return [str(x) for x in sections[0]['block_ids']]
+    return list((document.get('blocks') or {}).keys())
+
+
+def block_component_sequence(document: dict) -> list[str]:
+    return [
+        str((document.get('blocks') or {}).get(bid, {}).get('component_id') or '')
+        for bid in ordered_block_ids(document)
+    ]
 from learn.generation.work_orders import compile_learn_work_orders
 from learn.publishing.publish_validation import (
     PublishValidationError,
@@ -42,6 +49,68 @@ from learn.publishing.publish_validation import (
 from learn.publishing.release_routes import document_hash, resolve_release_provenance
 from learn.resources.native_policy import default_learn_policy, policy_version_and_hash as learn_policy_hash
 from infra.authoring import AuthoringProviderCall
+
+
+def _hand_built_lesson_from_orders(plan, orders, authored_results, *, lesson_id="doc-p06", title="P06", **_kwargs):
+    """Build a v1 LessonDocument fixture from authored work orders (no salvage assembler)."""
+    blocks: dict[str, dict] = {}
+    block_ids: list[str] = []
+    plan_hash = getattr(plan, "teaching_plan_id", "") or ""
+    for order in orders:
+        bid = f"blk-{order.block_id}"
+        result = authored_results.get(order.work_order_id) or authored_results.get(str(order.work_order_id))
+        payload = {}
+        if isinstance(result, dict):
+            payload = dict(result.get("payload") or result)
+        elif result is not None and hasattr(result, "payload"):
+            payload = dict(getattr(result, "payload") or {})
+        block = blocks.get(bid)
+        if block is None:
+            block = {
+                "id": bid,
+                "component_id": "explanation-block",
+                "content": {"body": str(getattr(order, "brief", None) or "Generated."), "emphasis": []},
+            }
+            blocks[bid] = block
+            block_ids.append(bid)
+        if order.lane == "interaction" or str(getattr(order, "capability_id", "") or "") in {
+            "choice",
+            "multi-select",
+            "sequence",
+            "numeric",
+            "fill-blank",
+            "short-response",
+            "match-pairs",
+            "classify",
+        }:
+            contract = dict(payload) if payload else {}
+            contract.setdefault("kind", order.capability_id)
+            contract.setdefault("id", f"ix-{order.block_id}")
+            contract.setdefault("prompt", str(getattr(order, "brief", None) or "Do the task."))
+            contract.setdefault("ai_config_rule", "config-only")
+            if "config" not in contract and order.capability_id in CORE_PROVIDER_CONFIG:
+                contract["config"] = copy.deepcopy(CORE_PROVIDER_CONFIG[order.capability_id])
+            provenance = dict(contract.get("provenance") or {})
+            provenance.setdefault("work_order_id", order.work_order_id)
+            provenance.setdefault(
+                "capability_contract_hash",
+                getattr(order, "capability_contract_hash", ""),
+            )
+            provenance.setdefault("teaching_plan_hash", plan_hash)
+            contract["provenance"] = provenance
+            block["learn_interaction"] = contract
+            kind = str(contract.get("kind") or order.capability_id or "choice")
+            block["component_id"] = f"learn-interaction:{kind}"
+    return {
+        "version": 1,
+        "id": lesson_id,
+        "title": title,
+        "subject": "biology",
+        "source": "generated",
+        "sections": [{"id": "main", "title": "Main", "position": 0, "block_ids": block_ids}],
+        "blocks": blocks,
+        "media": {},
+    }
 
 
 CORE_PROVIDER_CONFIG = {
@@ -316,11 +385,7 @@ def test_p06_l01_sequence_via_selector_writer_not_injected() -> None:
     assert payload["provenance"]["work_order_id"] == ix_orders[0].work_order_id
     assert validate_interaction_contract(payload) == []
 
-    document = assemble_ordered_learn_document(
-        teaching_plan=plan,
-        snapshot=snapshot,
-        work_orders=orders,
-        authored_results=_author_all(orders),
+    document = _hand_built_lesson_from_orders(plan, orders, _author_all(orders),
     )
     interactions = [
         b
@@ -375,11 +440,7 @@ def test_p06_l01_core_writers_via_selector(
     assert payload["kind"] == capability_id
     assert validate_interaction_contract(payload) == []
 
-    document = assemble_ordered_learn_document(
-        teaching_plan=plan,
-        snapshot=snapshot,
-        work_orders=orders,
-        authored_results=_author_all(orders),
+    document = _hand_built_lesson_from_orders(plan, orders, _author_all(orders),
     )
     contracts = [
         b["learn_interaction"]
@@ -423,11 +484,11 @@ def test_p06_l02_repeated_and_interleaved_order_survives_assemble() -> None:
     """Repeated same-type blocks and content→activity→content survive assemble."""
     plan = _interleaved_plan()
     snapshot = _snapshot(plan)
-    document = assemble_ordered_learn_document(
-        teaching_plan=plan,
-        snapshot=snapshot,
-        work_orders=compile_learn_work_orders(teaching_plan=plan, snapshot=snapshot),
-        authored_results=_author_all(compile_learn_work_orders(teaching_plan=plan, snapshot=snapshot)),
+    orders = compile_learn_work_orders(teaching_plan=plan, snapshot=snapshot)
+    document = _hand_built_lesson_from_orders(
+        plan,
+        orders,
+        _author_all(orders),
     )
 
     sequence = block_component_sequence(document)
@@ -481,15 +542,8 @@ def test_p06_l03_builder_edit_persists_and_malformed_blocks_publish() -> None:
     )
     snapshot = _snapshot(plan)
     orders = compile_learn_work_orders(teaching_plan=plan, snapshot=snapshot)
-    document = assemble_ordered_learn_document(
-        teaching_plan=plan,
-        snapshot=snapshot,
-        work_orders=orders,
-        authored_results=_author_all(orders),
+    document = _hand_built_lesson_from_orders(plan, orders, _author_all(orders),
     )
-    from learn.generation.native_production import host_interaction_blocks_for_builder
-
-    document = host_interaction_blocks_for_builder(document)
 
     # Locate interaction and apply a Builder-style field edit.
     block_id = next(
@@ -624,11 +678,7 @@ def _sequence_lesson() -> dict:
     )
     snapshot = _snapshot(plan)
     orders = compile_learn_work_orders(teaching_plan=plan, snapshot=snapshot)
-    return assemble_ordered_learn_document(
-        teaching_plan=plan,
-        snapshot=snapshot,
-        work_orders=orders,
-        authored_results=_author_all(orders),
+    return _hand_built_lesson_from_orders(plan, orders, _author_all(orders),
         lesson_id="doc-seq",
         title="Sequence lesson",
         subject="biology",

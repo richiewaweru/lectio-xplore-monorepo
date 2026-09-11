@@ -57,6 +57,43 @@ Do not infer `check = always action` or `explain = never action`.
 
 The learner does not need to be correct for every action to be worthwhile.
 
+## Closed action vocabulary
+
+`action` must be exactly one of these ids (from `learner-actions.yaml`):
+
+**Response-bearing**
+- `select-one`
+- `select-many`
+- `complete-missing-values`
+- `classify-items`
+- `match-pairs`
+- `order-items`
+- `reconstruct-order` (alias of `order-items`)
+- `enter-number`
+- `enter-text`
+
+**Passive** (optional; usually omit the action entirely)
+- `compare-without-response`
+- `read-explanation`
+
+Do **not** invent action ids. In particular, do not emit `describe-in-own-words`.
+For a short written or “in your own words” response, use `enter-text` and put the
+phrasing in `target` / `purpose` — **only when the block does not bind
+approved multiple-choice sources**.
+
+### Action ↔ approved-source compatibility
+
+When a block binds approved assessment sources, the action must match their form:
+
+- multiple-choice sources → `select-one` or `select-many` only
+- open-response / constructed sources → `enter-text`, `enter-number`,
+  `complete-missing-values`, `order-items`, `match-pairs`, or `classify-items`
+
+Never bind `enter-text` (or other open actions) to multiple-choice sources.
+If the check/practice owns MC items and you want written articulation, either
+keep the MC action (`select-one` / `select-many`) or omit the MC source binding
+and use `enter-text` without those sources.
+
 ## Output contract
 
 When an action is warranted, describe only semantic learner behavior:

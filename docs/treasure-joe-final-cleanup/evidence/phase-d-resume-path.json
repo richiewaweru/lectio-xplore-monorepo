@@ -1,0 +1,185 @@
+﻿{
+    "id":  "b29b99ea-fa64-46bb-b6ee-cd1c98997f4b",
+    "unit_id":  "f8b9a4eb-346e-45b1-af35-e2248a10788a",
+    "version":  1,
+    "revision":  2,
+    "status":  "approved",
+    "generated_by":  "path_planner",
+    "merge_critic_results":  [
+
+                             ],
+    "prerequisite_risks":  [
+
+                           ],
+    "forward_verified":  true,
+    "reaches_destination":  true,
+    "completeness_note":  null,
+    "open_assumptions":  [
+
+                         ],
+    "approved_at":  "2026-09-11T12:01:14.530355",
+    "created_at":  "2026-09-11T12:00:12.196007",
+    "lessons":  [
+                    {
+                        "id":  "6f93c6ea-518d-4e0a-88d2-1074e7000428",
+                        "concept_id":  "1f09c212-2403-49bf-9165-c77b637a0e65",
+                        "concept_slug":  "science.plants.make.their.own.food",
+                        "title":  "Plants Make Their Own Food",
+                        "objective":  "Explain that green plants make their own food rather than absorbing food from the soil, and identify the leaf as the main food-making organ.",
+                        "objective_hash":  "b5fb1bea37683a8630389bceb54a48666008b395237221187bf4170711298922",
+                        "prerequisites":  [
+
+                                          ],
+                        "external_prerequisites":  [
+
+                                                   ],
+                        "must_establish":  [
+                                               "Plants are producers that make their own food internally",
+                                               "The leaf is the main site of food production",
+                                               "Roots take in water and minerals, not ready-made food"
+                                           ],
+                        "exclusions":  [
+
+                                       ],
+                        "primary_knowledge_type":  "conceptual",
+                        "secondary_demand":  null,
+                        "knowledge_type_source":  "path_planner",
+                        "merge_warning":  false,
+                        "position":  0,
+                        "source":  "path_planner",
+                        "teacher_edited":  false,
+                        "skipped":  false,
+                        "revision":  1,
+                        "pack_id":  "5d43ce47-6036-4fc2-ac12-31ba68e5f9e9"
+                    },
+                    {
+                        "id":  "485cd95c-5ac3-4b8c-9828-be16382b67bf",
+                        "concept_id":  "5aefa498-ee3f-4309-ae73-04439a62de70",
+                        "concept_slug":  "science.light.is.the.energy.source.for.food.production",
+                        "title":  "Light Is the Energy Source for Food Production",
+                        "objective":  "Explain that leaves use light energy to make food and that the process is named photosynthesis.",
+                        "objective_hash":  "4b75cc1cb6997a2453cb63ef46e972b7c4d9449aee0f056c158fbccbce68ef77",
+                        "prerequisites":  [
+                                              "6f93c6ea-518d-4e0a-88d2-1074e7000428"
+                                          ],
+                        "external_prerequisites":  [
+
+                                                   ],
+                        "must_establish":  [
+                                               "Light energy is absorbed by leaves",
+                                               "Light energy is used to make food (glucose)",
+                                               "The process of making food using light is photosynthesis"
+                                           ],
+                        "exclusions":  [
+
+                                       ],
+                        "primary_knowledge_type":  "conceptual",
+                        "secondary_demand":  null,
+                        "knowledge_type_source":  "path_planner",
+                        "merge_warning":  false,
+                        "position":  1,
+                        "source":  "path_planner",
+                        "teacher_edited":  false,
+                        "skipped":  false,
+                        "revision":  1,
+                        "pack_id":  null
+                    },
+                    {
+                        "id":  "66509fb4-b511-4dc5-b331-1b2175d4b29c",
+                        "concept_id":  "165b3d6c-48df-4521-831c-1244bc7bbd45",
+                        "concept_slug":  "science.testing.a.leaf.for.starch.to.show.food.has.been.made",
+                        "title":  "Testing a Leaf for Starch to Show Food Has Been Made",
+                        "objective":  "Carry out and interpret a starch test on a de-starched leaf to decide whether the leaf has made food.",
+                        "objective_hash":  "dae5880e5294d904d427d62fff2bf4c45d93d2296993f2c9e3e1f49f51199844",
+                        "prerequisites":  [
+                                              "485cd95c-5ac3-4b8c-9828-be16382b67bf"
+                                          ],
+                        "external_prerequisites":  [
+
+                                                   ],
+                        "must_establish":  [
+                                               "A leaf is de-starched by keeping it in the dark before a test",
+                                               "Iodine solution is used to test a leaf for starch",
+                                               "A blue-black colour change on the leaf shows starch is present, meaning food was made"
+                                           ],
+                        "exclusions":  [
+
+                                       ],
+                        "primary_knowledge_type":  "procedural",
+                        "secondary_demand":  null,
+                        "knowledge_type_source":  "path_planner",
+                        "merge_warning":  false,
+                        "position":  2,
+                        "source":  "path_planner",
+                        "teacher_edited":  false,
+                        "skipped":  false,
+                        "revision":  1,
+                        "pack_id":  null
+                    },
+                    {
+                        "id":  "e57938e5-5f5f-4e30-90cd-74f620bbe9ce",
+                        "concept_id":  "87ccf3c7-8295-4466-9de1-c364513faf08",
+                        "concept_slug":  "science.comparing.covered.and.uncovered.leaves",
+                        "title":  "Comparing Covered and Uncovered Leaves",
+                        "objective":  "Use starch-test evidence to compare a covered leaf with an uncovered leaf and explain the light-related cause of any difference.",
+                        "objective_hash":  "c9176cb5b4d20e85269bc73de15eac023949a9393f0756ac75e3546ecf9158e2",
+                        "prerequisites":  [
+                                              "66509fb4-b511-4dc5-b331-1b2175d4b29c"
+                                          ],
+                        "external_prerequisites":  [
+
+                                                   ],
+                        "must_establish":  [
+                                               "A covered leaf receives no light",
+                                               "A covered leaf gives a negative starch test result; an uncovered leaf gives a positive result",
+                                               "The difference is caused by the presence or absence of light, not by water"
+                                           ],
+                        "exclusions":  [
+
+                                       ],
+                        "primary_knowledge_type":  "evaluative",
+                        "secondary_demand":  null,
+                        "knowledge_type_source":  "path_planner",
+                        "merge_warning":  false,
+                        "position":  3,
+                        "source":  "path_planner",
+                        "teacher_edited":  false,
+                        "skipped":  false,
+                        "revision":  1,
+                        "pack_id":  null
+                    },
+                    {
+                        "id":  "1a8f6546-1b40-4786-ab9c-181e51e496ef",
+                        "concept_id":  "56151c6c-81ca-402a-a843-3d46ba84ab62",
+                        "concept_slug":  "science.explaining.why.a.covered.watered.leaf.cannot.make.food",
+                        "title":  "Explaining Why a Covered, Watered Leaf Cannot Make Food",
+                        "objective":  "Explain that a covered leaf cannot make food because it receives no light for photosynthesis, even when the plant is well watered.",
+                        "objective_hash":  "5c428a7687612baf93d0eb0e29477c768d101033f469ba07ebdbd4616bb1c60d",
+                        "prerequisites":  [
+                                              "485cd95c-5ac3-4b8c-9828-be16382b67bf",
+                                              "e57938e5-5f5f-4e30-90cd-74f620bbe9ce"
+                                          ],
+                        "external_prerequisites":  [
+
+                                                   ],
+                        "must_establish":  [
+                                               "Water is needed by the plant but is not the energy source for making food",
+                                               "Without light, photosynthesis cannot take place in the covered leaf",
+                                               "Watering cannot replace the missing light, so the covered leaf makes no food"
+                                           ],
+                        "exclusions":  [
+
+                                       ],
+                        "primary_knowledge_type":  "evaluative",
+                        "secondary_demand":  null,
+                        "knowledge_type_source":  "path_planner",
+                        "merge_warning":  false,
+                        "position":  4,
+                        "source":  "path_planner",
+                        "teacher_edited":  false,
+                        "skipped":  false,
+                        "revision":  1,
+                        "pack_id":  null
+                    }
+                ]
+}

@@ -22,7 +22,6 @@ from infra.authoring import AuthoringProviderCall
 from infra.authoring.capability_selector import CapabilitySelection
 from learn.generation.authoring_adapter import run_learn_work_order_authoring
 from learn.generation.native_selection import build_learn_selection_snapshot_async
-from learn.generation.ordered_assemble import assemble_ordered_learn_document
 from learn.generation.work_orders import compile_learn_work_orders
 from learn.resources.native_policy import default_learn_policy, policy_version_and_hash as learn_policy_hash
 from learn.runtime.evaluation import (
@@ -188,68 +187,55 @@ def _sequence_document(
     concept_refs: list[dict] | None = None,
     allow_retry_after_correct: bool = True,
 ) -> dict:
-    plan = TeachingPlan(
-        arc="P07 sequence",
-        teaching_plan_id="tp-p07",
-        revision=1,
-        sections=[
-            TeachingPlanSection(
-                slot_id="practice",
-                specific_purpose="Order the cycle",
-                blocks=[
-                    _block(
-                        "b-intro",
-                        intent="explain",
-                        brief="Intro prose",
-                        position=0,
-                    ),
-                    _block(
-                        "b-cycle",
-                        intent="sequence",
-                        brief="Egg; Larva; Pupa; Adult",
-                        action="order-items",
-                        position=1,
-                    ),
-                ],
-            )
-        ],
-    )
-    snapshot = _snapshot(plan)
-    orders = compile_learn_work_orders(teaching_plan=plan, snapshot=snapshot)
-    document = assemble_ordered_learn_document(
-        teaching_plan=plan,
-        snapshot=snapshot,
-        work_orders=orders,
-        authored_results=_author_all(orders),
-        lesson_id="doc-p07",
-        title="P07 Sequence",
-        subject="biology",
-    )
-    from learn.generation.native_production import host_interaction_blocks_for_builder
-
-    document = host_interaction_blocks_for_builder(document)
-    # Builder registry does not yet list learn-interaction:* ids; keep contract
-    # while using a registered host component for draft persistence.
-    for block in document["blocks"].values():
-        if isinstance(block.get("learn_interaction"), dict):
-            block["component_id"] = "explanation-block"
-            contract = block["learn_interaction"]
-            if contract.get("kind") != "sequence":
-                continue
-            contract["assessment_mode"] = assessment_mode
-            contract["completion"] = completion or {"type": "submitted"}
-            contract["score_aggregation"] = score_aggregation
-            contract["attempt_policy"] = {
-                "max_attempts": max_attempts,
-                "show_feedback_after_submit": True,
-                "allow_retry_after_correct": allow_retry_after_correct,
+    """Hand-built LessonDocument v1 fixture (closed salvage assembler deleted)."""
+    seq_payload = _P07_PROVIDER_PAYLOADS["sequence"]
+    interaction = {
+        "id": "ix-p07-sequence",
+        "kind": "sequence",
+        "prompt": seq_payload["prompt"],
+        "config": dict(seq_payload["config"]),
+        "feedback": dict(seq_payload["feedback"]),
+        "ai_config_rule": "config-only",
+        "assessment_mode": assessment_mode,
+        "completion": completion or {"type": "submitted"},
+        "score_aggregation": score_aggregation,
+        "attempt_policy": {
+            "max_attempts": max_attempts,
+            "show_feedback_after_submit": True,
+            "allow_retry_after_correct": allow_retry_after_correct,
+        },
+    }
+    if concept_refs is not None:
+        interaction["concept_refs"] = concept_refs
+    return {
+        "version": 1,
+        "id": "doc-p07",
+        "title": "P07 Sequence",
+        "subject": "biology",
+        "source": "generated",
+        "sections": [
+            {
+                "id": "practice",
+                "title": "Order the cycle",
+                "position": 0,
+                "block_ids": ["blk-intro", "blk-cycle"],
             }
-            if concept_refs is not None:
-                contract["concept_refs"] = concept_refs
-        elif str(block.get("component_id") or "").startswith("learn-interaction:"):
-            block["component_id"] = "explanation-block"
-    return document
-
+        ],
+        "blocks": {
+            "blk-intro": {
+                "id": "blk-intro",
+                "component_id": "explanation-block",
+                "content": {"body": "Intro prose about the butterfly cycle.", "emphasis": []},
+            },
+            "blk-cycle": {
+                "id": "blk-cycle",
+                "component_id": "explanation-block",
+                "content": {"body": "Order the butterfly life stages.", "emphasis": []},
+                "learn_interaction": interaction,
+            },
+        },
+        "media": {},
+    }
 
 def _interaction_id(document: dict) -> str:
     for block in document["blocks"].values():

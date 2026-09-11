@@ -97,6 +97,8 @@ describe('builder lesson route', () => {
 	it('logs out on 401', async () => {
 		loadBuilderLessonWithFallback.mockRejectedValue(new ApiError(401, 'Unauthorized', 'auth'));
 		render(BuilderLessonPage);
+		const signIn = await waitFor(() => screen.getByRole('button', { name: 'Sign in' }));
+		signIn.click();
 		await waitFor(() => {
 			expect(logout).toHaveBeenCalled();
 			expect(goto).toHaveBeenCalledWith('/login', { replaceState: true });

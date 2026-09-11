@@ -13,7 +13,6 @@ from learn.generation.authoring_adapter import (
     build_learn_authoring_registry,
     run_learn_authoring,
 )
-from learn.generation.native_production import build_closed_learn_production
 from learn.generation.native_selection import LearnSelectionDecision, LearnSelectionSnapshot
 from learn.generation.preparation_context import LearnPreparationContext
 from learn.generation.work_orders import compile_learn_work_orders

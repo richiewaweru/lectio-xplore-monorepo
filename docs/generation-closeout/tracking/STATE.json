@@ -2,15 +2,17 @@
   "program": "generation-closeout",
   "branch": "fix/generation-spec-closeout",
   "baseline_sha": "db8390335c085eca084ed758fc154d43aed3af41",
+  "closeout_sha": "6f782e94769d0dfce34b2dd80d1d462a9c38bd04",
   "phases": {
-    "A": { "status": "PASS", "sha": "pending-commit" },
-    "B": { "status": "PASS", "sha": "pending-commit" },
-    "C": { "status": "PASS", "sha": "pending-commit" },
-    "D": { "status": "PASS", "sha": "pending-commit" },
-    "E": { "status": "PASS", "sha": "pending-commit" },
-    "F": { "status": "PASS", "sha": "pending-commit" },
-    "G": { "status": "PASS", "sha": "pending-commit" },
-    "H": { "status": "PASS", "sha": "pending-commit" },
-    "I": { "status": "PASS", "sha": "pending-commit" }
-  }
+    "A": { "status": "PASS", "sha": "6f782e94769d0dfce34b2dd80d1d462a9c38bd04" },
+    "B": { "status": "PASS", "sha": "6f782e94769d0dfce34b2dd80d1d462a9c38bd04" },
+    "C": { "status": "PASS", "sha": "6f782e94769d0dfce34b2dd80d1d462a9c38bd04" },
+    "D": { "status": "PASS", "sha": "6f782e94769d0dfce34b2dd80d1d462a9c38bd04" },
+    "E": { "status": "PASS", "sha": "6f782e94769d0dfce34b2dd80d1d462a9c38bd04" },
+    "F": { "status": "PASS", "sha": "6f782e94769d0dfce34b2dd80d1d462a9c38bd04" },
+    "G": { "status": "PASS", "sha": "6f782e94769d0dfce34b2dd80d1d462a9c38bd04" },
+    "H": { "status": "PASS", "sha": "6f782e94769d0dfce34b2dd80d1d462a9c38bd04" },
+    "I": { "status": "PASS", "sha": "6f782e94769d0dfce34b2dd80d1d462a9c38bd04" }
+  },
+  "notes": "Treasure Joe Final Cleanup re-proved G (exact Unit→Learn) and H (PDF marker in bytes) on fix/treasure-joe-final-cleanup; see docs/treasure-joe-final-cleanup/."
 }
