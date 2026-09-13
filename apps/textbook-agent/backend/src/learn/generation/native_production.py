@@ -308,6 +308,10 @@ async def produce_learn_document_from_teaching_async(
     available_asset_ids: Sequence[str] | None = None,
     approved_items: Sequence[Any] | None = None,
     allow_heuristic_composition_fallback: bool = True,
+    budget_ledger: Any | None = None,
+    checkpoint_store: Any | None = None,
+    progress_store: Any | None = None,
+    progress_run_id: str | None = None,
 ) -> dict[str, Any]:
     """Production LearnDocument v2: compose → write → assemble.
 
@@ -355,6 +359,10 @@ async def produce_learn_document_from_teaching_async(
         provider=provider,
         engine=engine,
         allow_heuristic_fallback=allow_heuristic_composition_fallback,
+        budget_ledger=budget_ledger,
+        checkpoint_store=checkpoint_store,
+        progress_store=progress_store,
+        progress_run_id=progress_run_id,
     )
     composition = await _layer_learn_interactions(
         teaching_plan,
@@ -406,6 +414,13 @@ async def produce_learn_document_from_teaching_async(
                 reason=decision.reason,
                 provider=provider,
                 engine=engine,
+                work_order_id=f"learn-node:{block.id}:{decision.kind}:{index}",
+                budget_ledger=budget_ledger,
+                checkpoint_store=checkpoint_store,
+                node_id=f"{block.id}:{decision.kind}",
+                progress_store=progress_store,
+                progress_run_id=progress_run_id,
+                progress_stage="writing",
             )
             if decision.kind == "figure" and not node.get("asset_id"):
                 # Caption/alt from writer; image via the shared visual pipeline.

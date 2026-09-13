@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from infra.execution.leases import (
+from infra.execution.leases import (  # noqa: F401 — re-exported for Print callers
     DEFAULT_LEASE_SECONDS,
     ExecutionLease,
     LeaseLostError,

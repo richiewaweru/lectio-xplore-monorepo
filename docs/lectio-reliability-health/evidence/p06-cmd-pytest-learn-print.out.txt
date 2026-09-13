@@ -1,0 +1,15 @@
+........................................................................ [ 69%]
+................................                                         [100%]
+============================== warnings summary ===============================
+src\contracts\generation_manifest.py:6
+  C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+    class GenerationFieldContract(BaseModel):
+
+tests/print_learn/test_p04_native_selection_gates.py::test_p04_n04_writer_requests_exclude_sibling_schemas
+tests/print_learn/test_p04_native_selection_gates.py::test_p04_n05_coverage_dependencies_and_assets
+tests/print_learn/test_p04_native_selection_gates.py::test_p04_activity_authoring_rejects_incompatible_approved_type
+  C:\Projects\lectio\apps\textbook-agent\backend\src\infra\llm\cost.py:81: PydanticAIDeprecationWarning: `AgentRunResult.usage` is no longer a method; access it as a property (drop the parentheses).
+    usage = usage_obj() if callable(usage_obj) else usage_obj
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+104 passed, 4 warnings in 76.38s (0:01:16)

@@ -7,13 +7,13 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
+from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app import app
 from application.unit_lesson.progress_routes import get_progress_store
 from application.unit_lesson.realizations import admit_realization
-from core.auth.middleware import get_current_user
 from core.database.models import (
     GenerationModel,
     NativeRealizationModel,

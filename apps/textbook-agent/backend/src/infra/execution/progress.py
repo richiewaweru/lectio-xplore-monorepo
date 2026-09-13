@@ -388,8 +388,7 @@ class ProgressStore:
             if state in {"completed", "ready", "skipped"}:
                 row.active.pop(item_id, None)
                 row.completed += 1
-                if row.total < row.completed:
-                    row.total = row.completed
+                row.total = max(row.total, row.completed)
             elif state in {"failed", "cancelled"}:
                 row.active.pop(item_id, None)
             else:

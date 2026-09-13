@@ -1,0 +1,609 @@
+stderr | src/routes/studio/page.test.ts > studio chunked URL resume > shows stage2 section pills updating from chunked SSE events
+[chunked] section failed model [ 'boom' ]
+
+stderr | src/lib/api/v3.test.ts > connectV3StudioGenerationStream > closes generation SSE on error without retrying
+[v3 generation stream] closed; document polling remains active Error: drop-1
+    at C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\api\v3.test.ts:205:26
+    at Proxy.assertThrows (file:///C:/Projects/lectio/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:2767:5)
+    at Proxy.methodWrapper (file:///C:/Projects/lectio/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)
+    at Proxy.<anonymous> (file:///C:/Projects/lectio/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1088:12)
+    at Proxy.overwritingMethodWrapper (file:///C:/Projects/lectio/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1735:33)
+    at Proxy.<anonymous> (file:///C:/Projects/lectio/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1420:16)
+    at Proxy.<anonymous> (file:///C:/Projects/lectio/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1029:14)
+    at Proxy.methodWrapper (file:///C:/Projects/lectio/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)
+    at C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\api\v3.test.ts:205:48
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/routes/units/[id]/page.test.ts > /units/[id] > requires knowledge type when merge sources differ
+TestingLibraryElementError: Unable to find an element with the display value: Select a type.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"unit-page svelte-l8ce1c"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"unit-head svelte-l8ce1c"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<a[39m
+            [33mclass[39m=[32m"back svelte-l8ce1c"[39m
+            [33mhref[39m=[32m"/units"[39m
+          [36m>[39m
+            [0m← Units[0m
+          [36m</a>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+          [36m>[39m
+            [0mScience · Grade 7[0m
+          [36m</p>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [0mPhotosynthesis[0m
+          [36m</h1>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [0mExplain how plants make food.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [0m [0m
+        [36m<div[39m
+          [33mclass[39m=[32m"head-actions svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [0mDraft[0m
+          [36m</span>[39m
+          [0m [0m
+          [36m<button[39m
+            [33mclass[39m=[32m"secondary svelte-l8ce1c"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mReplan the lessons[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</header>[39m
+      [0m [0m
+      [0m [0m
+      [0m [0m
+      [0m [0m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"Unit workspace views"[39m
+        [33mclass[39m=[32m"view-tabs svelte-l8ce1c"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-current[39m=[32m"page"[39m
+          [33mclass[39m=[32m"svelte-l8ce1c active"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mLessons[0m
+        [36m</button>[39m
+        [0m [0m
+        [36m<button[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mSchedule[0m
+        [36m</button>[39m
+        [0m [0m
+        [36m<button[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mGroups[0m
+        [36m</button>[39m
+        [0m [0m
+        [36m<button[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mResources[0m
+        [36m</button>[39m
+        [0m [0m
+        [36m<button[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mResults[0m
+        [36m</button>[39m
+        [0m [0m
+        [36m<button[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mHistory[0m
+        [36m</button>[39m
+      [36m</nav>[39m
+      [0m [0m
+      [0m [0m
+      [36m<section[39m
+        [33maria-label[39m=[32m"Lesson suggestions"[39m
+        [33mclass[39m=[32m"suggestions svelte-l8ce1c"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+        [36m>[39m
+          [0mSuggestions[0m
+        [36m</p>[39m
+        [0m [0m
+        [36m<ul[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [36m>[39m
+              [0mThese adjacent lessons overlap in what they establish.[0m
+            [36m</p>[39m
+            [0m [0m
+            [36m<div[39m
+              [33mclass[39m=[32m"suggestion-actions svelte-l8ce1c"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0mReview merge[0m
+              [36m</button>[39m
+              [0m [0m
+              [36m<button[39m
+                [33mclass[39m=[32m"ghost svelte-l8ce1c"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0mDismiss[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [0m[0m
+          [0m[0m
+        [36m</ul>[39m
+      [36m</section>[39m
+      [0m [0m
+      [36m<section[39m
+        [33maria-label[39m=[32m"Review merge"[39m
+        [33mclass[39m=[32m"merge-editor svelte-l8ce1c"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+        [36m>[39m
+          [0mMerge Lesson 1 + Lesson 2[0m
+        [36m</p>[39m
+        [0m [0m
+        [36m<label[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mTitle[0m
+          [36m</span>[39m
+          [36m<input[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [0m [0m
+        [36m<div[39m
+          [33mclass[39m=[32m"merge-source-objectives svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<strong>[39m
+              [0mLesson 1:[0m
+            [36m</strong>[39m
+            [0m Identify what plants need to make food.[0m
+          [36m</p>[39m
+          [0m [0m
+          [36m<p[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<strong>[39m
+              [0mLesson 2:[0m
+            [36m</strong>[39m
+            [0m Identify what plants produce.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [0m [0m
+        [36m<label[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mObjective[0m
+          [36m</span>[39m
+          [0m [0m
+          [36m<textarea[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [33mplaceholder[39m=[32m"Write one capability that genuinely covers both lessons."[39m
+          [36m/>[39m
+          [0m [0m
+          [36m<small[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [0mWrite one capability that genuinely covers both lessons.[0m
+          [36m</small>[39m
+        [36m</label>[39m
+        [0m [0m
+        [36m<label[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mMust establish [0m
+            [36m<small[39m
+              [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [36m>[39m
+              [0mone per line[0m
+            [36m</small>[39m
+          [36m</span>[39m
+          [36m<textarea[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [0m [0m
+        [36m<label[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mKnowledge type[0m
+          [36m</span>[39m
+          [0m [0m
+          [36m<select[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m""[39m
+            [36m>[39m
+              [0mChoose…[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"fact"[39m
+            [36m>[39m
+              [0mFact[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"concept"[39m
+            [36m>[39m
+              [0mConcept[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"procedure"[39m
+            [36m>[39m
+              [0mProcedure[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</label>[39m
+        [0m [0m
+        [36m<div[39m
+          [33mclass[39m=[32m"suggestion-actions svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"ghost svelte-l8ce1c"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mCancel[0m
+          [36m</button>[39m
+          [0m [0m
+          [36m<button[39m
+            [33mclass[39m=[32m"primary svelte-l8ce1c"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mMerge lessons[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+      [0m [0m
+      [36m<section[39m
+        [33mclass[39m=[32m"lock-in-bar svelte-l8ce1c"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+          [36m>[39m
+            [0mReady to teach from?[0m
+          [36m</p>[39m
+          [0m [0m
+          [36m<p[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [0mLocking it in freezes this lesson route so Print and Learn can be generated from it.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [0m [0m
+        [36m<div[39m
+          [33mclass[39m=[32m"lock-in svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"primary svelte-l8ce1c"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mLooks good — lock it in[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+      [0m [0m
+      [36m<div[39m
+        [33mclass[39m=[32m"workspace svelte-l8ce1c"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"Your lessons"[39m
+          [33mclass[39m=[32m"path-list svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+          [36m>[39m
+            [0mYour lessons[0m
+          [36m</p>[39m
+          [0m [0m
+          [36m<ol[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"svelte-l8ce1c active"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [36m>[39m
+                  [0m1[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [36m>[39m
+                  [36m<strong[39m
+                    [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                  [36m>[39m
+                    [0mPlant inputs[0m
+                  [36m</strong>[39m
+                [36m</span>[39m
+              [36m</button>[39m
+            [36m</li>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [36m>[39m
+                  [0m2[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [36m>[39m
+                  [36m<strong[39m
+                    [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                  [36m>[39m
+                    [0mPlant outputs[0m
+                  [36m</strong>[39m
+                  [36m<small[39m
+                    [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                  [36m>[39m
+                    [0mneeds lesson 1[0m
+                  [36m</small>[39m
+                [36m</span>[39m
+              [36m</button>[39m
+            [36m</li>[39m
+            [0m[0m
+          [36m</ol>[39m
+        [36m</aside>[39m
+        [0m [0m
+        [36m<main[39m
+          [33mclass[39m=[32m"inspector svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"inspector-head svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+              [36m>[39m
+                [0mLesson 1[0m
+              [36m</p>[39m
+              [36m<h2[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+              [36m>[39m
+                [0mPlant inputs[0m
+              [36m</h2>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [0m [0m
+          [36m<form[39m
+            [33mclass[39m=[32m"editor svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0mTitle[0m
+              [36m</span>[39m
+              [36m<input[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [33mrequired[39m=[32m""[39m
+              [36m/>[39m
+            [36m</label>[39m
+            [0m [0m
+            [36m<label[39m
+              [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0mWhat students will be able to do[0m
+              [36m</span>[39m
+              [36m<textarea[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [33mrequired[39m=[32m""[39m
+              [36m/>[39m
+            [36m</label>[39m
+            [0m [0m
+            [36m<label[39m
+              [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0mMust establish [0m
+                [36m<small[39m
+                  [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [36m>[39m
+                  [0mone per line[0m
+                [36m</small>[39m
+              [36m</span>[39m
+              [36m<textarea[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [33mrequired[39m=[32m""[39m
+              [36m/>[39m
+            [36m</label>[39m
+            [0m [0m
+            [36m<button[39m
+              [33mclass[39m=[32m"secondary svelte-l8ce1c"[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0mSave lesson changes[0m
+            [36m</button>[39m
+          [36m</form>[39m
+          [0m [0m
+          [36m<section[39m
+            [33mclass[39m=[32m"dependencies svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+              [36m>[39m
+                [0mBefore this lesson[0m
+              [36m</p>[39m
+              [36m<h3[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+              [36m>[39m
+                [0mWhat earlier lessons it requires[0m
+              [36m</h3>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [36m>[39m
+              [0mNothing — this can be the starting point.[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [0m [0m
+          [36m<section[39m
+            [33mclass[39m=[32m"shape svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"text-button svelte-l8ce1c"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mShow shape debug[0m
+            [36m</button>[39m
+          [36m</section>[39m
+          [0m [0m
+          [36m<section[39m
+            [33mclass[39m=[32m"prepare svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+              [36m>[39m
+                [0mPreparation[0m
+              [36m</p>[39m
+              [0m [0m
+              [36m<h3[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+              [36m>[39m
+                [0mReady when you are[0m
+              [36m</h3>[39m
+              [0m [0m
+              [36m<p[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+              [36m>[39m
+                [0mPrint and Learn are generated independently from the Teaching Plan.[0m
+              [36m</p>[39m
+              [0m [0m
+              [0m [0m
+            [36m</div>[39m
+            [0m [0m
+            [36m<div[39m
+              [33mclass[39m=[32m"ready-actions svelte-l8ce1c"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"primary svelte-l8ce1c"[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0mGenerate Print[0m
+              [36m</button>[39m
+              [0m [0m
+              [36m<button[39m
+                [33mclass[39m=[32m"secondary svelte-l8ce1c"[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0mGenerate Learn[0m
+              [36m</button>[39m
+              [0m [0m
+              [36m<button[39m
+                [33mclass[39m=[32m"text-button svelte-l8ce1c"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0mCheck preparation status[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</section>[39m
+        [36m</main>[39m
+      [36m</div>[39m
+      [0m [0m
+      [36m<section[39m
+        [33maria-label[39m=[32m"Edit your lessons by chat"[39m
+        [33mclass[39m=[32m"chat-edit svelte-l8ce1c"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+        [36m>[39m
+          [0mEdit your lessons[0m
+        [36m</p>[39m
+        [0m [0m
+        [36m<form[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<input[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [33mplaceholder[39m=[32m"e.g. Combine lessons 2 and 3, or add something about fractions"[39m
+          [36m/>[39m
+          [0m [0m
+          [36m<button[39m
+            [33mclass[39m=[32m"primary svelte-l8ce1c"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"submit"[39m
+          [36m>[39m
+            [0mSend[0m
+          [36m</button>[39m
+        [36m</form>[39m
+        [0m [0m
+      [36m</section>[39m
+    [36m</div>[39m
+    [0m [0m
+    [0m [0m
+    [0m[0m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError ../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ ../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ ../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ ../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/routes/units/[id]/page.test.ts:223:33
+    221|   expect(mergeButton.hasAttribute('disabled')).toBe(true);
+    222|   expect(mocks.mergePathLessons).not.toHaveBeenCalled();
+    223|   await fireEvent.change(screen.getByDisplayValue('Select a type'), { …
+       |                                 ^
+    224|   await waitFor(() => expect(mergeButton.hasAttribute('disabled')).toB…
+    225|  });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+

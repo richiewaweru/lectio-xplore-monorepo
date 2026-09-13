@@ -1,0 +1,104 @@
+﻿
+> lectio-xplore-monorepo@ app:check C:\Projects\lectio
+> pnpm --dir apps/textbook-agent/frontend check
+
+
+> frontend@1.0.0-beta.1 check C:\Projects\lectio\apps\textbook-agent\frontend
+> svelte-kit sync && svelte-check --tsconfig ./tsconfig.json
+
+Loading svelte-check in workspace: c:\Projects\lectio\apps\textbook-agent\frontend
+Getting Svelte diagnostics...
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\learn\document\DocumentCanvas.svelte:105:3
+Warn: noninteractive element cannot have nonnegative tabIndex value
+https://svelte.dev/e/a11y_no_noninteractive_tabindex (svelte)
+		{@const selected = selectedNodeId === node.id}
+		<div
+			class="canvas-node"
+			class:selected
+			data-testid="canvas-node"
+			data-node-id={node.id}
+			data-kind={node.kind}
+			data-selected={selected ? 'true' : 'false'}
+			role={onSelectNode ? 'button' : undefined}
+			tabindex={onSelectNode ? 0 : undefined}
+			onclick={() => onSelectNode && select(node)}
+			onkeydown={(e) => onKeydown(e, node)}
+		>
+			{#if editable && selected && node.kind !== 'interaction'}
+				<div class="editor-pane" data-testid="node-editor" data-kind={node.kind}>
+					{#if node.kind === 'paragraph'}
+						<ParagraphEditor
+							value={node.text}
+							onChange={(text) => onUpdateNodeText?.(node.id, text)}
+						/>
+					{:else if node.kind === 'heading'}
+						<HeadingEditor
+							value={node.text}
+							level={node.level ?? 2}
+							onChange={(text) => onUpdateHeading?.(node.id, { text })}
+							onLevelChange={(level) => onUpdateHeading?.(node.id, { level })}
+						/>
+					{:else if node.kind === 'list'}
+						<ListEditor
+							items={node.items}
+							ordered={node.ordered}
+							onChange={(items) => onUpdateListItems?.(node.id, items)}
+						/>
+					{:else if node.kind === 'callout'}
+						<CalloutEditor
+							body={node.body}
+							title={node.title ?? ''}
+							tone={node.tone ?? 'note'}
+							onChange={(patch) => onUpdateCallout?.(node.id, patch)}
+						/>
+					{:else if node.kind === 'figure'}
+						<FigureEditor
+							caption={node.caption ?? ''}
+							alt={node.alt ?? ''}
+							assetId={node.asset_id ?? null}
+							onChange={(patch) => onUpdateFigure?.(node.id, patch)}
+						/>
+					{:else if node.kind === 'table'}
+						<TableEditor
+							headers={node.headers ?? []}
+							rows={node.rows ?? []}
+							caption={node.caption ?? ''}
+							onChange={(patch) => onUpdateTable?.(node.id, patch)}
+						/>
+					{/if}
+				</div>
+			{:else if node.kind === 'interaction'}
+				<InteractionNodeRenderer
+					{node}
+					onSubmit={submitFor(node.id)}
+					initialEvaluation={initialEval(node.id)}
+				/>
+			{:else}
+				<DocumentNodeRenderer {node} {assets} />
+			{/if}
+		</div>
+	{/each}
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\learn\document\DocumentEditor.svelte:30:21
+Warn: This reference only captures the initial value of `initialDocument`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+	const store = createLearnDocumentStore();
+	store.loadDocument(initialDocument);
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\print\components\studio\PrintDocumentEditor.svelte:25:51
+Warn: This reference only captures the initial value of `initialDocument`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+	let mode = $state<'view' | 'edit'>('view');
+	let draft = $state<LectioDocument>(cloneDocument(initialDocument));
+	let revision = $state(documentRevision);
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\print\components\studio\PrintDocumentEditor.svelte:26:24
+Warn: This reference only captures the initial value of `documentRevision`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+	let draft = $state<LectioDocument>(cloneDocument(initialDocument));
+	let revision = $state(documentRevision);
+	let status = $state('');
+
+====================================
+svelte-check found 0 errors and 4 warnings in 3 files

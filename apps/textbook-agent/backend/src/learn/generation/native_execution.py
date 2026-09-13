@@ -14,6 +14,9 @@ from core.database.models import EditableLessonModel, GenerationModel
 from curriculum.teaching_plan.models import TeachingPlan
 from infra.authoring import AuthoringEngine, AuthoringProvider, LLMAuthoringProvider
 from infra.authoring.capability_selector import ChooseFn
+from infra.execution.call_budget import CallBudgetLedger
+from infra.execution.checkpoints import CheckpointStore
+from infra.execution.progress import default_progress_store
 from learn.generation.fencing import (
     LEARN_EXECUTION_KEY,
     LearnCancelledError,
@@ -226,8 +229,44 @@ async def produce_learn_from_approved_teaching(
     realization.status = "running"
     await session.flush()
 
+    # Durable budgets / checkpoints / progress (P03–P04 product wiring).
+    prior_state = dict(generation.chunked_state_json or {})
+    budget_ledger = CallBudgetLedger()
+    raw_ledger = prior_state.get("call_budget_ledger")
+    if isinstance(raw_ledger, dict) and raw_ledger:
+        budget_ledger.import_state(raw_ledger)
+
+    checkpoint_store = CheckpointStore()
+    raw_checkpoints = prior_state.get("checkpoint_store")
+    if isinstance(raw_checkpoints, dict) and raw_checkpoints:
+        try:
+            checkpoint_store = CheckpointStore.from_snapshot(raw_checkpoints)
+        except Exception:  # noqa: BLE001
+            checkpoint_store = CheckpointStore()
+
+    progress = default_progress_store
+    progress.ensure_run(
+        realization.id,
+        path="learn",
+        owner_user_id=user_id,
+        status="running",
+        stage="running",
+        realization_revision=int(realization.realization_revision or 1),
+        teaching_plan_revision=int(teaching_plan.revision or 1),
+    )
+    progress.append_event(
+        realization.id,
+        event_type="learn_production_started",
+        path="learn",
+        stage="running",
+        item_id=output_id,
+        attempt=1,
+    )
+
     # Provider work happens after admission identity is durable.
     selected_provider = provider or LLMAuthoringProvider(node_name="v3_block_writer_fast")
+    # Do not construct a bare AuthoringEngine here — writer/composer build a
+    # registry-aware engine and receive budget_ledger/checkpoint_store below.
     selected_engine = engine
 
     production = await produce_learn_document_from_teaching_async(
@@ -242,6 +281,10 @@ async def produce_learn_from_approved_teaching(
         available_asset_ids=available_asset_ids,
         approved_items=approved_items,
         allow_heuristic_composition_fallback=heuristic_fallback,
+        budget_ledger=budget_ledger,
+        checkpoint_store=checkpoint_store,
+        progress_store=progress,
+        progress_run_id=realization.id,
     )
     document = dict(production["document"])
     document["id"] = output_id
@@ -278,6 +321,8 @@ async def produce_learn_from_approved_teaching(
         "teaching_plan_id": teaching_plan.teaching_plan_id,
         "teaching_plan_revision": teaching_plan.revision,
         "teaching_plan_hash": plan_hash,
+        "call_budget_ledger": budget_ledger.export_state(),
+        "checkpoint_store": checkpoint_store.snapshot(),
         "selection_trace": {
             "form_prompt": "learn_document_v2_compose_write",
             "composition_mode": composition_mode,
@@ -289,6 +334,24 @@ async def produce_learn_from_approved_teaching(
         },
         "form_prompt": "learn_document_v2_compose_write",
     }
+    progress.sync_from_db(
+        realization.id,
+        path="learn",
+        owner_user_id=user_id,
+        status="ready",
+        realization_revision=int(realization.realization_revision or 1),
+        teaching_plan_revision=int(teaching_plan.revision or 1),
+        stage="ready",
+    )
+    progress.append_event(
+        realization.id,
+        event_type="learn_production_ready",
+        path="learn",
+        stage="ready",
+        item_id=output_id,
+        attempt=1,
+        payload={"composition_mode": composition_mode},
+    )
     # Keep lease meta after success.
     execution = learn_execution_from_generation(generation)
     execution["status"] = "ready"

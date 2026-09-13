@@ -1,0 +1,709 @@
+
+> lectio-xplore-monorepo@ app:test C:\Projects\lectio
+> pnpm --dir apps/textbook-agent/frontend test
+
+
+> frontend@1.0.0-beta.1 test C:\Projects\lectio\apps\textbook-agent\frontend
+> vitest run
+
+
+ RUN  v3.2.7 C:/Projects/lectio/apps/textbook-agent/frontend
+
+ ✓ src/lib/print/components/studio/V3BookletIssuesPanel.test.ts (1 test) 1058ms
+   ✓ V3BookletIssuesPanel > renders a flagged image and regenerates it with the editable QC hint  1055ms
+ ✓ src/lib/curriculum/units/components/TeachingSchedulePanel.test.ts (2 tests) 1223ms
+   ✓ TeachingSchedulePanel > moves only a period boundary through an accessible control and preserves path order  1088ms
+ ✓ src/lib/components/ProfileSetup.test.ts (2 tests) 1273ms
+   ✓ ProfileSetup > renders teacher-facing sections and submits the default teacher profile shape  956ms
+   ✓ ProfileSetup > hydrates teacher defaults, preserves populated values, and submits edits  310ms
+ ✓ src/lib/curriculum/units/components/LessonShapePanel.test.ts (2 tests) 1366ms
+   ✓ LessonShapePanel > shows canonical and declared variants with exact explanations and blocking issues  906ms
+   ✓ LessonShapePanel > requests and separately approves a teacher deviation  458ms
+ ✓ src/routes/page.test.ts (1 test) 938ms
+   ✓ root route session resume > redirects a resumed authenticated session away from the root route  935ms
+ ✓ src/routes/onboarding/page.test.ts (1 test) 1002ms
+   ✓ onboarding recovery mode > switches into recovery mode when a profile exists for a stale has_profile user  1000ms
+ ✓ src/lib/curriculum/units/components/LessonResultsPanel.test.ts (1 test) 1704ms
+   ✓ LessonResultsPanel > records only aggregate option counts and labels summaries advisory  1702ms
+ ✓ src/lib/curriculum/units/components/ResourceComposerPanel.test.ts (2 tests) 1807ms
+   ✓ ResourceComposerPanel > offers all projections and creates from approved selections  1623ms
+ ✓ src/routes/units/page.test.ts (8 tests) 2317ms
+   ✓ /units > loads only v2 units and does not call legacy wrappers  926ms
+   ✓ /units > opens the native creation flow when linked with the new lesson action  383ms
+   ✓ /units > asks the clarifying question first when the constructor returns one  373ms
+ ✓ src/routes/studio/generations/[id]/page.test.ts (8 tests) 1611ms
+   ✓ completed V3 generation page > loads V3 detail + V3 document and renders the pack without stream dependencies  595ms
+   ✓ completed V3 generation page > shows parent lesson link for supplement generations  555ms
+ ✓ src/routes/studio/page.test.ts (32 tests) 3506ms
+   ✓ studio chunked URL resume > redirects blank Studio to the native workspace without starting a plan  309ms
+   ✓ studio chunked URL resume > hydrates plan review from generation_id query when plan is ready  834ms
+ ❯ src/routes/units/[id]/page.test.ts (18 tests | 1 failed) 6027ms
+   ✓ /units/[id] > initial load fetches only unit and active path  942ms
+   ✓ /units/[id] > selecting a lesson does not fetch shape or preparation status  1009ms
+   ✓ /units/[id] > keeps lessons view when an optional tab endpoint fails  337ms
+   ✓ /units/[id] > lazy-loads history only when History tab is opened  342ms
+   ✓ /units/[id] > shows the numbered lesson list with dependency sentences 56ms
+   ✓ /units/[id] > does not show merge questions or open assumptions in the default lessons view 232ms
+   ✓ /units/[id] > shows deterministic merge suggestions without blocking lock-in  349ms
+   × /units/[id] > requires knowledge type when merge sources differ 292ms
+     → Unable to find an element with the display value: Select a type.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"unit-page svelte-l8ce1c"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"unit-head svelte-l8ce1c"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<a[39m
+            [33mclass[39m=[32m"back svelte-l8ce1c"[39m
+            [33mhref[39m=[32m"/units"[39m
+          [36m>[39m
+            [0m← Units[0m
+          [36m</a>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+          [36m>[39m
+            [0mScience · Grade 7[0m
+          [36m</p>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [0mPhotosynthesis[0m
+          [36m</h1>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [0mExplain how plants make food.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [0m [0m
+        [36m<div[39m
+          [33mclass[39m=[32m"head-actions svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [0mDraft[0m
+          [36m</span>[39m
+          [0m [0m
+          [36m<button[39m
+            [33mclass[39m=[32m"secondary svelte-l8ce1c"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mReplan the lessons[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</header>[39m
+      [0m [0m
+      [0m [0m
+      [0m [0m
+      [0m [0m
+      [36m<nav[39m
+        [33maria-label[39m=[32m"Unit workspace views"[39m
+        [33mclass[39m=[32m"view-tabs svelte-l8ce1c"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33maria-current[39m=[32m"page"[39m
+          [33mclass[39m=[32m"svelte-l8ce1c active"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mLessons[0m
+        [36m</button>[39m
+        [0m [0m
+        [36m<button[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mSchedule[0m
+        [36m</button>[39m
+        [0m [0m
+        [36m<button[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mGroups[0m
+        [36m</button>[39m
+        [0m [0m
+        [36m<button[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mResources[0m
+        [36m</button>[39m
+        [0m [0m
+        [36m<button[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mResults[0m
+        [36m</button>[39m
+        [0m [0m
+        [36m<button[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0mHistory[0m
+        [36m</button>[39m
+      [36m</nav>[39m
+      [0m [0m
+      [0m [0m
+      [36m<section[39m
+        [33maria-label[39m=[32m"Lesson suggestions"[39m
+        [33mclass[39m=[32m"suggestions svelte-l8ce1c"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+        [36m>[39m
+          [0mSuggestions[0m
+        [36m</p>[39m
+        [0m [0m
+        [36m<ul[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<li[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [36m>[39m
+              [0mThese adjacent lessons overlap in what they establish.[0m
+            [36m</p>[39m
+            [0m [0m
+            [36m<div[39m
+              [33mclass[39m=[32m"suggestion-actions svelte-l8ce1c"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0mReview merge[0m
+              [36m</button>[39m
+              [0m [0m
+              [36m<button[39m
+                [33mclass[39m=[32m"ghost svelte-l8ce1c"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0mDismiss[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</li>[39m
+          [0m[0m
+          [0m[0m
+        [36m</ul>[39m
+      [36m</section>[39m
+      [0m [0m
+      [36m<section[39m
+        [33maria-label[39m=[32m"Review merge"[39m
+        [33mclass[39m=[32m"merge-editor svelte-l8ce1c"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+        [36m>[39m
+          [0mMerge Lesson 1 + Lesson 2[0m
+        [36m</p>[39m
+        [0m [0m
+        [36m<label[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mTitle[0m
+          [36m</span>[39m
+          [36m<input[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [0m [0m
+        [36m<div[39m
+          [33mclass[39m=[32m"merge-source-objectives svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<strong>[39m
+              [0mLesson 1:[0m
+            [36m</strong>[39m
+            [0m Identify what plants need to make food.[0m
+          [36m</p>[39m
+          [0m [0m
+          [36m<p[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<strong>[39m
+              [0mLesson 2:[0m
+            [36m</strong>[39m
+            [0m Identify what plants produce.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [0m [0m
+        [36m<label[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mObjective[0m
+          [36m</span>[39m
+          [0m [0m
+          [36m<textarea[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [33mplaceholder[39m=[32m"Write one capability that genuinely covers both lessons."[39m
+          [36m/>[39m
+          [0m [0m
+          [36m<small[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [0mWrite one capability that genuinely covers both lessons.[0m
+          [36m</small>[39m
+        [36m</label>[39m
+        [0m [0m
+        [36m<label[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mMust establish [0m
+            [36m<small[39m
+              [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [36m>[39m
+              [0mone per line[0m
+            [36m</small>[39m
+          [36m</span>[39m
+          [36m<textarea[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [0m [0m
+        [36m<label[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0mKnowledge type[0m
+          [36m</span>[39m
+          [0m [0m
+          [36m<select[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m""[39m
+            [36m>[39m
+              [0mChoose…[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"fact"[39m
+            [36m>[39m
+              [0mFact[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"concept"[39m
+            [36m>[39m
+              [0mConcept[0m
+            [36m</option>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"procedure"[39m
+            [36m>[39m
+              [0mProcedure[0m
+            [36m</option>[39m
+          [36m</select>[39m
+        [36m</label>[39m
+        [0m [0m
+        [36m<div[39m
+          [33mclass[39m=[32m"suggestion-actions svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"ghost svelte-l8ce1c"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mCancel[0m
+          [36m</button>[39m
+          [0m [0m
+          [36m<button[39m
+            [33mclass[39m=[32m"primary svelte-l8ce1c"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mMerge lessons[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+      [0m [0m
+      [36m<section[39m
+        [33mclass[39m=[32m"lock-in-bar svelte-l8ce1c"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+          [36m>[39m
+            [0mReady to teach from?[0m
+          [36m</p>[39m
+          [0m [0m
+          [36m<p[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [0mLocking it in freezes this lesson route so Print and Learn can be generated from it.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [0m [0m
+        [36m<div[39m
+          [33mclass[39m=[32m"lock-in svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"primary svelte-l8ce1c"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mLooks good — lock it in[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+      [0m [0m
+      [36m<div[39m
+        [33mclass[39m=[32m"workspace svelte-l8ce1c"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33maria-label[39m=[32m"Your lessons"[39m
+          [33mclass[39m=[32m"path-list svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+          [36m>[39m
+            [0mYour lessons[0m
+          [36m</p>[39m
+          [0m [0m
+          [36m<ol[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"svelte-l8ce1c active"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [36m>[39m
+                  [0m1[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [36m>[39m
+                  [36m<strong[39m
+                    [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                  [36m>[39m
+                    [0mPlant inputs[0m
+                  [36m</strong>[39m
+                [36m</span>[39m
+              [36m</button>[39m
+            [36m</li>[39m
+            [36m<li[39m
+              [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [36m>[39m
+                  [0m2[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [36m>[39m
+                  [36m<strong[39m
+                    [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                  [36m>[39m
+                    [0mPlant outputs[0m
+                  [36m</strong>[39m
+                  [36m<small[39m
+                    [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                  [36m>[39m
+                    [0mneeds lesson 1[0m
+                  [36m</small>[39m
+                [36m</span>[39m
+              [36m</button>[39m
+            [36m</li>[39m
+            [0m[0m
+          [36m</ol>[39m
+        [36m</aside>[39m
+        [0m [0m
+        [36m<main[39m
+          [33mclass[39m=[32m"inspector svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"inspector-head svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+              [36m>[39m
+                [0mLesson 1[0m
+              [36m</p>[39m
+              [36m<h2[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+              [36m>[39m
+                [0mPlant inputs[0m
+              [36m</h2>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [0m [0m
+          [36m<form[39m
+            [33mclass[39m=[32m"editor svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0mTitle[0m
+              [36m</span>[39m
+              [36m<input[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [33mrequired[39m=[32m""[39m
+              [36m/>[39m
+            [36m</label>[39m
+            [0m [0m
+            [36m<label[39m
+              [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0mWhat students will be able to do[0m
+              [36m</span>[39m
+              [36m<textarea[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [33mrequired[39m=[32m""[39m
+              [36m/>[39m
+            [36m</label>[39m
+            [0m [0m
+            [36m<label[39m
+              [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0mMust establish [0m
+                [36m<small[39m
+                  [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [36m>[39m
+                  [0mone per line[0m
+                [36m</small>[39m
+              [36m</span>[39m
+              [36m<textarea[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+                [33mrequired[39m=[32m""[39m
+              [36m/>[39m
+            [36m</label>[39m
+            [0m [0m
+            [36m<button[39m
+              [33mclass[39m=[32m"secondary svelte-l8ce1c"[39m
+              [33mtype[39m=[32m"submit"[39m
+            [36m>[39m
+              [0mSave lesson changes[0m
+            [36m</button>[39m
+          [36m</form>[39m
+          [0m [0m
+          [36m<section[39m
+            [33mclass[39m=[32m"dependencies svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+              [36m>[39m
+                [0mBefore this lesson[0m
+              [36m</p>[39m
+              [36m<h3[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+              [36m>[39m
+                [0mWhat earlier lessons it requires[0m
+              [36m</h3>[39m
+            [36m</div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [36m>[39m
+              [0mNothing — this can be the starting point.[0m
+            [36m</p>[39m
+          [36m</section>[39m
+          [0m [0m
+          [36m<section[39m
+            [33mclass[39m=[32m"shape svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"text-button svelte-l8ce1c"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mShow shape debug[0m
+            [36m</button>[39m
+          [36m</section>[39m
+          [0m [0m
+          [36m<section[39m
+            [33mclass[39m=[32m"prepare svelte-l8ce1c"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+              [36m>[39m
+                [0mPreparation[0m
+              [36m</p>[39m
+              [0m [0m
+              [36m<h3[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+              [36m>[39m
+                [0mReady when you are[0m
+              [36m</h3>[39m
+              [0m [0m
+              [36m<p[39m
+                [33mclass[39m=[32m"svelte-l8ce1c"[39m
+              [36m>[39m
+                [0mPrint and Learn are generated independently from the Teaching Plan.[0m
+              [36m</p>[39m
+              [0m [0m
+              [0m [0m
+            [36m</div>[39m
+            [0m [0m
+            [36m<div[39m
+              [33mclass[39m=[32m"ready-actions svelte-l8ce1c"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"primary svelte-l8ce1c"[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0mGenerate Print[0m
+              [36m</button>[39m
+              [0m [0m
+              [36m<button[39m
+                [33mclass[39m=[32m"secondary svelte-l8ce1c"[39m
+                [33mdisabled[39m=[32m""[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0mGenerate Learn[0m
+              [36m</button>[39m
+              [0m [0m
+              [36m<button[39m
+                [33mclass[39m=[32m"text-button svelte-l8ce1c"[39m
+                [33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0mCheck preparation status[0m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</section>[39m
+        [36m</main>[39m
+      [36m</div>[39m
+      [0m [0m
+      [36m<section[39m
+        [33maria-label[39m=[32m"Edit your lessons by chat"[39m
+        [33mclass[39m=[32m"chat-edit svelte-l8ce1c"[39m
+      [36m>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"eyebrow svelte-l8ce1c"[39m
+        [36m>[39m
+          [0mEdit your lessons[0m
+        [36m</p>[39m
+        [0m [0m
+        [36m<form[39m
+          [33mclass[39m=[32m"svelte-l8ce1c"[39m
+        [36m>[39m
+          [36m<input[39m
+            [33mclass[39m=[32m"svelte-l8ce1c"[39m
+            [33mplaceholder[39m=[32m"e.g. Combine lessons 2 and 3, or add something about fractions"[39m
+          [36m/>[39m
+          [0m [0m
+          [36m<button[39m
+            [33mclass[39m=[32m"primary svelte-l8ce1c"[39m
+            [33mdisabled[39m=[32m""[39m
+            [33mtype[39m=[32m"submit"[39m
+          [36m>[39m
+            [0mSend[0m
+          [36m</button>[39m
+        [36m</form>[39m
+        [0m [0m
+      [36m</section>[39m
+    [36m</div>[39m
+    [0m [0m
+    [0m [0m
+    [0m[0m
+  [36m</div>[39m
+[36m</body>[39m
+   ✓ /units/[id] > prepare does not preflight lesson shape  415ms
+   ✓ /units/[id] > prepare still runs when groups load fails 214ms
+   ✓ /units/[id] > edits the lessons from the chat input 96ms
+   ✓ /units/[id] > locks in the path without open-assumption gates 169ms
+   ✓ /units/[id] > shows Generate Print without requiring mount-time shape fetch 114ms
+   ✓ /units/[id] > loads preparation status only when requested 159ms
+   ✓ /units/[id] > starts a fresh generation for a non-stale terminal native run 164ms
+   ✓ /units/[id] > does not offer start fresh when terminal regeneration is not permitted  310ms
+   ✓ /units/[id] > realizes Print from an existing preparation without Studio admission  311ms
+   ✓ /units/[id] > opens Studio review when Learn realization needs Teaching Plan approval  510ms
+ ✓ src/lib/components/workspace/NewLessonSplitButton.test.ts (1 test) 561ms
+   ✓ NewLessonSplitButton native destination > exposes one native lesson destination without legacy menu actions  558ms
+ ✓ src/lib/print/components/studio/V3PlanPreview.test.ts (1 test) 225ms
+ ✓ src/lib/print/components/studio/V3CanvasSection.test.ts (5 tests) 744ms
+   ✓ V3CanvasSection > shows a retryable failure card for failed sections  478ms
+ ✓ src/routes/units/[id]/resources/[compositionId]/page.test.ts (2 tests) 651ms
+   ✓ /units/[id]/resources/[compositionId] > loads a LectioDocument v2 projection into the page engine  610ms
+ ✓ src/lib/no-vendor-lectio-imports.test.ts (1 test) 225ms
+ ✓ src/lib/api/units.test.ts (9 tests) 172ms
+ ✓ src/routes/builder/[id]/page.test.ts (3 tests) 817ms
+   ✓ builder lesson route > loads LearnDocument v2 into the editor  334ms
+   ✓ builder lesson route > logs out on 401  427ms
+ ✓ src/lib/print/components/studio/V3PlanActions.test.ts (2 tests) 958ms
+   ✓ V3PlanActions > calls approve and recovery handlers  836ms
+ ✓ src/lib/print/components/studio/V3PlanningState.test.ts (1 test) 188ms
+ ✓ src/routes/settings/page.test.ts (2 tests) 934ms
+   ✓ /settings > renders the existing profile summary and edit entry point  872ms
+ ✓ src/routes/login/page.test.ts (1 test) 240ms
+ ✓ src/lib/print/components/studio/V3CanvasComponent.test.ts (2 tests) 279ms
+ ✓ src/lib/learn/document/document-state.test.ts (6 tests) 20ms
+ ✓ src/routes/dashboard/page.test.ts (1 test) 65ms
+ ✓ src/lib/print/generation/viewer-state.test.ts (9 tests) 40ms
+ ✓ src/lib/print/components/studio/V3InputSurface.test.ts (16 tests) 20068ms
+   ✓ V3InputSurface > renders the five proposed cards in order  1002ms
+   ✓ V3InputSurface > prefills a short class label from the profile and leaves long descriptions blank  533ms
+   ✓ V3InputSurface > submits the optional class label separately from the planning form  2463ms
+   ✓ V3InputSurface > soft-gates intent, context, and submit until the topic is confirmed  1245ms
+   ✓ V3InputSurface > narrows a valid topic from input after the debounce  702ms
+   ✓ V3InputSurface > discards an in-flight narrowing result when the topic changes  1374ms
+   ✓ V3InputSurface > shows inline chip descriptions and limits selection to four  1537ms
+   ✓ V3InputSurface > prefills the editable intent fields only after explicit topic confirmation  1134ms
+   ✓ V3InputSurface > can confirm an empty candidate result and skip selected suggestions  1878ms
+   ✓ V3InputSurface > gates and preserves drafts when a confirmed topic changes, then restores the original chips without calls  1160ms
+   ✓ V3InputSurface > preserves edited drafts and offers guarded refresh after reconfirming a new topic  1628ms
+   ✓ V3InputSurface > silently regenerates untouched drafts after reconfirming a new topic  1663ms
+   ✓ V3InputSurface > treats manual drafts without a generated baseline as teacher edits  1763ms
+   ✓ V3InputSurface > discards an in-flight intent response when the confirmed topic changes  946ms
+   ✓ V3InputSurface > shows a stale refresh pill and confirms before overwriting edits  956ms
+ ✓ src/lib/print/studio/v3-pack-to-lectio-document.test.ts (8 tests) 23ms
+ ✓ src/lib/print/generation/generation-poller.test.ts (2 tests) 39ms
+ ✓ src/lib/shared/auth/routing.test.ts (7 tests) 19ms
+ ✓ src/lib/learn/authoring/builder/api/pack-items.test.ts (3 tests) 22ms
+ ✓ src/lib/api/v3.test.ts (14 tests) 276ms
+ ✓ src/lib/api/errors.test.ts (2 tests) 21ms
+ ✓ src/lib/print/studio/v3-canvas.test.ts (6 tests) 17ms
+ ✓ src/routes/lessons/page.test.ts (1 test) 121ms
+ ✓ src/lib/parse-section.test.ts (2 tests) 20ms
+ ✓ src/lib/curriculum/units/unit-workspace.reliability.test.ts (7 tests) 15ms
+ ✓ src/lib/print/generation/live-stream.test.ts (10 tests) 29ms
+ ✓ src/lib/api/config.test.ts (10 tests) 13ms
+ ✓ src/lib/print/studio/v3-print-canvas.test.ts (5 tests) 13ms
+ ✓ src/lib/api/client.test.ts (2 tests) 16ms
+ ✓ src/lib/api/profile.test.ts (1 test) 14ms
+ ✓ src/lib/shared/auth/google.test.ts (3 tests) 16ms
+ ✓ src/lib/api/capabilities.test.ts (1 test) 17ms
+ ✓ src/routes/studio/print/[id]/page.test.ts (2 tests) 14ms
+ ✓ src/lib/print/studio/v3-booklet.test.ts (8 tests) 13ms
+ ✓ src/routes/workspace-shell-styles.test.ts (4 tests) 14ms
+ ✓ src/lib/print/stores/v3-studio.svelte.test.ts (1 test) 11ms
+ ✓ src/lib/shared/stores/auth.test.ts (3 tests) 16ms
+ ✓ src/lib/print/studio/v3-stream-state.test.ts (5 tests) 14ms
+ ✓ src/lib/print/studio/document-version.test.ts (3 tests) 8ms
+ ✓ src/lib/learn/student/student-shell.test.ts (1 test) 6ms
+ ✓ src/lib/print/generation/error-messages.test.ts (6 tests) 8ms
+ ✓ src/lib/print/studio/v3-document.test.ts (2 tests) 10ms
+ ✓ src/lib/curriculum/units/path-generation.test.ts (3 tests) 10ms
+ ✓ src/lib/print/components/studio/LectioPageDocumentView.test.ts (1 test) 8ms
+ ✓ src/lib/shared/settings/flags.test.ts (1 test) 9ms
+
+ Test Files  1 failed | 57 passed (58)
+      Tests  1 failed | 263 passed (264)
+   Start at  03:55:18
+   Duration  60.16s (transform 47.88s, setup 0ms, collect 161.65s, tests 50.85s, environment 433.88s, prepare 38.36s)
+
+ ELIFECYCLE  Test failed. See above for more details.
+ ELIFECYCLE  Command failed with exit code 1.

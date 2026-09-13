@@ -1,0 +1,15 @@
+verifier_sha=dbe3e651ea12c4fc0c9acb70a7dfe60d9c113eb1
+recorded_at=2026-09-13T04:03:36+03:00
+contracts:test=0
+contracts:check=0
+page:test=0
+page:check=0
+app:test=1
+app:check=0
+program:domain-guards=0
+architecture=0
+focused_pytest=0 (21 passed)
+ruff_check=1
+validate_repo_backend=FAIL_incomplete_log_after_ruff_fail (backend-ruff FAIL, 8 errors; pytest started but log truncated by interrupt; ruff alone fails G03)
+dirty_tree=unrelated unit-native-program + .tmp/.playwright-cli/output + verifier/p06 evidence untracked
+pdf_in_evidence=NONE

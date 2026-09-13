@@ -15,6 +15,7 @@ from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from application.builder_print.routes import router as builder_print_router
+from application.unit_lesson.progress_routes import router as realization_progress_router
 from core.routes.auth import router as auth_router
 from core.routes.capabilities import router as capabilities_router
 from core.routes.profile import router as profile_router
@@ -42,7 +43,6 @@ from infra.telemetry.service import telemetry_monitor
 from infra.version import VERSION
 from learn.analytics.insight_service import router as learn_analytics_router
 from learn.authoring.builder.routes import router as builder_router
-from application.unit_lesson.progress_routes import router as realization_progress_router
 from learn.generation.units_routes import router as units_generation_router
 from learn.publishing.release_routes import router as learn_release_router
 from learn.runtime.runtime_routes import router as learn_runtime_router

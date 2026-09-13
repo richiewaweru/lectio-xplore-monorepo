@@ -244,6 +244,9 @@ async def write_document_primitive(
     call_budget: CallBudget | None = None,
     budget_ledger: CallBudgetLedger | None = None,
     checkpoint_store: CheckpointStore | None = None,
+    progress_store: Any | None = None,
+    progress_run_id: str | None = None,
+    progress_stage: str = "writing",
 ) -> dict[str, Any]:
     """Write one ordinary document node using the LLM authoring engine."""
     if kind not in DOCUMENT_PRIMITIVE_KINDS:
@@ -313,6 +316,9 @@ async def write_document_primitive(
         call_budget=call_budget,
         budget_ledger=budget_ledger,
         max_provider_calls=3,
+        progress_store=progress_store,
+        progress_run_id=progress_run_id,
+        progress_stage=progress_stage,
     )
     if checkpoint_store is not None:
         checkpoint_store.begin(checkpoint_key, compatibility=compatibility)

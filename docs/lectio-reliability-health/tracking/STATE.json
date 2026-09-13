@@ -1,9 +1,9 @@
 {
   "program": "lectio-reliability-health",
-  "status": "IN_PROGRESS",
+  "status": "COMPLETE_NOT_READY",
   "reviewed_baseline": "a6b75e33d2a56452e05033a510f86db1566891b2",
-  "implementation_sha": "6281f5d9eea62dc01bc28de3bfff43c6ea902108",
-  "implementation_sha_note": "P04+P05 uncommitted atop 6281f5d9; SHA updates after commit",
+  "implementation_sha": "pending_closeout_commit",
+  "implementation_sha_note": "Stamp after closeout commit; verifier report against dbe3e651 remains authoritative for live gaps",
   "branch": "fix/lectio-reliability-health",
   "login_status": "PASS_LOCAL_PLAYWRIGHT_PERSISTENT",
   "browser_session": "playwright-cli session=reliability profile=.tmp/reliability-chrome-profile",
@@ -18,7 +18,7 @@
     "P03": "PASS",
     "P04": "PASS",
     "P05": "PASS",
-    "P06": "NOT_RUN"
+    "P06": "FAIL"
   },
   "gates": {
     "G01": "PASS",
@@ -40,24 +40,24 @@
     "G17": "PASS",
     "G18": "PASS",
     "G19": "PASS",
-    "G20": "PASS",
-    "G21": "PASS",
-    "G22": "NOT_RUN",
-    "G23": "NOT_RUN",
-    "G24": "NOT_RUN"
+    "G20": "FAIL",
+    "G21": "FAIL",
+    "G22": "FAIL",
+    "G23": "FAIL",
+    "G24": "FAIL"
   },
   "gate_notes": {
-    "G10": "sibling skip + selective_recovery_keys media/assembly/export",
-    "G16": "evidence/p04-pytest.txt",
-    "G17": "evidence/p04-trace-sample.json",
-    "G18": "auth/redaction/exporter isolation",
-    "G19": "evidence/p05-fe-store-boundaries.txt",
-    "G20": "evidence/p05-vitest-reliability.txt",
-    "G21": "dirty+409 vitest + conflict UI"
+    "G09-G17": "Learn production now wires CallBudgetLedger, CheckpointStore, ProgressStore into compose/write and persists ledger/checkpoints in chunked_state_json; ProgressStore still process-local for events",
+    "G20": "no live SSE reconnect browser proof",
+    "G21": "no live two-tab 409 browser proof",
+    "G22": "live journey incomplete; no retained PDF",
+    "G23": "no live recovery run-manifest",
+    "G24": "independent verifier NOT_READY — see VERIFIER-REPORT.md; live gates fail"
   },
   "final_verdict": "NOT_READY",
+  "verifier_report": "docs/lectio-reliability-health/tracking/VERIFIER-REPORT.md",
   "execution_environment": {
-    "agent": "Casa by Grok / Cursor Auto",
+    "agent": "Casa by Grok / Cursor Auto + independent verifier",
     "services": "native backend+frontend + Docker postgres textbookagent-db-1",
     "browser": "local Chromium via Playwright CLI persistent profile"
   }

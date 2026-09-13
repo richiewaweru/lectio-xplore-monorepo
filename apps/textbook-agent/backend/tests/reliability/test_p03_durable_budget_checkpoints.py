@@ -32,6 +32,7 @@ from infra.execution.checkpoints import (
     content_hash,
 )
 from infra.execution.error_policy import classify_provider_error, honor_retry_after
+from infra.execution.leases import ResumeDecision
 from infra.execution.resource_limits import ResourceLimitError, ResourceLimits
 from learn.generation.fencing import (
     LearnCancelledError,
@@ -43,7 +44,6 @@ from learn.generation.fencing import (
     empty_learn_execution_meta,
     write_learn_execution,
 )
-from infra.execution.leases import ResumeDecision
 
 
 class FakeProvider:

@@ -121,10 +121,11 @@
 					<label>
 						<span>Knowledge type</span>
 						<select bind:value={ws.mergeDraft.knowledgeType}>
-							<option value="">Choose…</option>
-							<option value="fact">Fact</option>
-							<option value="concept">Concept</option>
-							<option value="procedure">Procedure</option>
+							<option value="">Select a type</option>
+							<option value="factual">Factual</option>
+							<option value="conceptual">Conceptual</option>
+							<option value="procedural">Procedural</option>
+							<option value="evaluative">Evaluative</option>
 						</select>
 					</label>
 					<div class="suggestion-actions">

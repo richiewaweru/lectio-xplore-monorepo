@@ -220,7 +220,9 @@ describe('/units/[id]', () => {
 		});
 		expect(mergeButton.hasAttribute('disabled')).toBe(true);
 		expect(mocks.mergePathLessons).not.toHaveBeenCalled();
-		await fireEvent.change(screen.getByDisplayValue('Select a type'), { target: { value: 'conceptual' } });
+		await fireEvent.change(screen.getByDisplayValue('Select a type'), {
+			target: { value: 'conceptual' }
+		});
 		await waitFor(() => expect(mergeButton.hasAttribute('disabled')).toBe(false));
 	});
 

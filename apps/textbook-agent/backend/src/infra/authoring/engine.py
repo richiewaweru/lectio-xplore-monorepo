@@ -586,8 +586,7 @@ class AuthoringEngine:
                 cost_usd=cost_usd,
                 provider_request_id=provider_request_id,
             )
-        except Exception:
-            # Observability must never halt authoring.
+        except Exception:  # noqa: BLE001 — observability must never halt authoring
             return
         if self.trace_exporter is not None:
             store.export_traces(run_id, self.trace_exporter)

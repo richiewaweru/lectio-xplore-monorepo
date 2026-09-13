@@ -1,0 +1,11 @@
+﻿implementation_sha=dbe3e651ea12c4fc0c9acb70a7dfe60d9c113eb1
+auth_me_status=200
+user_id=2f297058-f6bc-47bf-9ffd-3208ad8246d4
+email_domain=gmail.com
+origin=http://127.0.0.1:5173
+api=http://127.0.0.1:8000
+browser_session=playwright-cli session=reliability
+profile=.tmp/reliability-chrome-profile
+has_token=true
+token_not_exported=true
+recorded_at_utc=2026-09-13T00:54:20.5598037Z

@@ -1,0 +1,115 @@
+P06 command inventory
+implementation_sha=dbe3e651ea12c4fc0c9acb70a7dfe60d9c113eb1
+recorded_start_utc=2026-09-13T00:54:28.7902157Z
+
+===== contracts-test =====
+cwd=C:\Projects\lectio
+cmd=pnpm contracts:test
+start_utc=2026-09-13T00:54:28.8116164Z
+end_utc=2026-09-13T00:54:34.9980988Z
+elapsed_ms=6173
+exit=0
+stdout=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-contracts-test.out.txt
+stderr=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-contracts-test.err.txt
+
+===== contracts-check =====
+cwd=C:\Projects\lectio
+cmd=pnpm contracts:check
+start_utc=2026-09-13T00:54:35.0127394Z
+end_utc=2026-09-13T00:54:38.0660499Z
+elapsed_ms=3046
+exit=0
+stdout=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-contracts-check.out.txt
+stderr=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-contracts-check.err.txt
+
+===== page-test =====
+cwd=C:\Projects\lectio
+cmd=pnpm page:test
+start_utc=2026-09-13T00:54:38.0692814Z
+end_utc=2026-09-13T00:54:58.4529587Z
+elapsed_ms=20366
+exit=0
+stdout=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-page-test.out.txt
+stderr=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-page-test.err.txt
+
+===== page-check =====
+cwd=C:\Projects\lectio
+cmd=pnpm page:check
+start_utc=2026-09-13T00:54:58.4554921Z
+end_utc=2026-09-13T00:55:14.6913829Z
+elapsed_ms=16223
+exit=0
+stdout=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-page-check.out.txt
+stderr=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-page-check.err.txt
+
+===== app-test =====
+cwd=C:\Projects\lectio
+cmd=pnpm app:test
+start_utc=2026-09-13T00:55:14.6943790Z
+end_utc=2026-09-13T00:56:19.3055423Z
+elapsed_ms=64597
+exit=1
+stdout=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-app-test.out.txt
+stderr=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-app-test.err.txt
+
+===== app-check =====
+cwd=C:\Projects\lectio
+cmd=pnpm app:check
+start_utc=2026-09-13T00:56:19.3090380Z
+end_utc=2026-09-13T00:56:47.6657665Z
+elapsed_ms=28329
+exit=0
+stdout=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-app-check.out.txt
+stderr=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-app-check.err.txt
+
+===== program-domain-guards =====
+cwd=C:\Projects\lectio
+cmd=pnpm program:domain-guards
+start_utc=2026-09-13T00:56:47.6700201Z
+end_utc=2026-09-13T00:56:57.8025718Z
+elapsed_ms=10119
+exit=0
+stdout=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-program-domain-guards.out.txt
+stderr=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-program-domain-guards.err.txt
+
+===== validate-repo-backend =====
+cwd=C:\Projects\lectio\apps\textbook-agent\backend
+cmd=uv run python ../tools/agent/validate_repo.py --scope backend
+start_utc=2026-09-13T00:56:57.8085701Z
+end_utc=2026-09-13T01:08:07.2645762Z
+elapsed_ms=669440
+exit=1
+stdout=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-validate-repo-backend.out.txt
+stderr=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-validate-repo-backend.err.txt
+
+===== check-architecture =====
+cwd=C:\Projects\lectio\apps\textbook-agent\backend
+cmd=uv run python ../tools/agent/check_architecture.py --format text
+start_utc=2026-09-13T01:08:07.2854832Z
+end_utc=2026-09-13T01:08:08.3522657Z
+elapsed_ms=1053
+exit=0
+stdout=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-check-architecture.out.txt
+stderr=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-check-architecture.err.txt
+
+===== pytest-p03-gates =====
+cwd=C:\Projects\lectio\apps\textbook-agent\backend
+cmd=uv run pytest tests/core/policies/test_action_maps.py tests/print_learn/test_learner_action_policy.py tests/application/test_p03_realization_gates.py -q
+start_utc=2026-09-13T01:08:08.3563529Z
+end_utc=2026-09-13T01:08:51.8180770Z
+elapsed_ms=43446
+exit=0
+stdout=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-pytest-p03-gates.out.txt
+stderr=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-pytest-p03-gates.err.txt
+
+===== pytest-learn-print =====
+cwd=C:\Projects\lectio\apps\textbook-agent\backend
+cmd=uv run pytest tests/learn tests/print_learn -q
+start_utc=2026-09-13T01:08:51.8285950Z
+end_utc=2026-09-13T01:10:16.8319188Z
+elapsed_ms=84989
+exit=0
+stdout=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-pytest-learn-print.out.txt
+stderr=C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-cmd-pytest-learn-print.err.txt
+
+recorded_end_utc=2026-09-13T01:10:16.8374356Z
