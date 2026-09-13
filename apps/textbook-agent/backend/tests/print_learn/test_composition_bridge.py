@@ -58,8 +58,27 @@ def _plan() -> TeachingPlan:
 
 def test_composition_to_form_plan_maps_primitives_and_tasks() -> None:
     plan = _plan()
+    # Without bound assessment sources, select-one must not emit bare choices.
+    plan.sections[0].blocks[1].source_question_ids = []
     heuristic_compose_document_plan(plan, path="print")
-    # Layer happens inside build_print_production_from_composition; exercise map via async.
+    form_plan, snapshot, composition = asyncio.run(
+        build_print_production_from_composition(
+            teaching_plan=plan,
+            provider=None,
+            allow_heuristic_fallback=True,
+        )
+    )
+    assert form_plan.sections[0].forms[0].object in {"prose", "heading", "list", "figure", "table", "aside"}
+    assert form_plan.sections[0].forms[1].object in {"prose", "heading", "list", "figure", "table", "aside"}
+    assert composition.path == "print"
+    assert snapshot.decisions[1].form_id != "choices"
+    assert all(d.reason for d in form_plan.sections[0].forms)
+
+
+def test_composition_to_form_plan_keeps_choices_when_source_bound() -> None:
+    plan = _plan()
+    plan.sections[0].blocks[1].source_question_ids = ["q-stomata-1"]
+    heuristic_compose_document_plan(plan, path="print")
     form_plan, snapshot, composition = asyncio.run(
         build_print_production_from_composition(
             teaching_plan=plan,
@@ -71,7 +90,6 @@ def test_composition_to_form_plan_maps_primitives_and_tasks() -> None:
     assert form_plan.sections[0].forms[1].object == "choices"
     assert composition.path == "print"
     assert snapshot.decisions[1].form_id == "choices"
-    # No catalogue LLM choose — objects come from composition / treatments.
     assert all(d.reason for d in form_plan.sections[0].forms)
 
 
