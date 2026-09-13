@@ -27,7 +27,7 @@ See `docs/lectio-reliability-health/evidence/p06c-run-manifest.json`.
 | G21 | PASS | Browser competing PUT: 200 then 409; local TAB-B kept |
 | G22 | PASS | Full linked journey; PDF `p06c-print.pdf` (88405 bytes) marker extracted |
 | G23 | PASS | Learn+Print Idempotency-Key replay; regenerate recovery |
-| G24 | NOT_RUN | Inventory green on tip; independent verifier pending |
+| G24 | PASS | Independent verifier READY — see `VERIFIER-REPORT.md` |
 
 ## Focused tests added
 
@@ -40,7 +40,12 @@ See `docs/lectio-reliability-health/evidence/p06c-run-manifest.json`.
 
 Inventory summary: `docs/lectio-reliability-health/evidence/tip-inventory-summary.json` — all listed commands exit 0, including `validate_repo.py --scope backend` (1416 passed).
 
-## Remaining for READY
+## Independent verifier
 
-1. Independent verifier per `prompts/02_VERIFIER.md`.
-2. Do not merge until READY.
+- **final_verdict: READY** — all G01–G24 PASS.
+- G03: first personal `validate_repo` EXIT=1 was sqlite lock flake on `test_d01`/`test_d02` only; serial rerun EXIT=0 (1416 passed) in `verifier-g24-validate-backend-rerun.out.txt`.
+- G19: personal `pnpm app:test` 264/264.
+- G20–G23: retained live evidence (session now logged out; no new live PASS invented).
+- Report: `docs/lectio-reliability-health/tracking/VERIFIER-REPORT.md`.
+
+Do not merge until operators accept READY stamp.

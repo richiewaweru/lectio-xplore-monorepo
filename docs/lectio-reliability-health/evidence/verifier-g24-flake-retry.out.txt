@@ -1,0 +1,13 @@
+..                                                                       [100%]
+============================== warnings summary ===============================
+src\contracts\generation_manifest.py:6
+  C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+    class GenerationFieldContract(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+2 passed, 1 warning in 46.29s
+
+---EXIT:0---
+---START:2026-09-13T18:45:09.9140845+03:00---
+---END:2026-09-13T18:46:16.0128824+03:00---
+
