@@ -36,7 +36,7 @@ See `docs/lectio-reliability-health/evidence/p06c-run-manifest.json`.
 
 ## Tip SHA (inventoried)
 
-`36d725e4b57870f63673ccedfff5b58437fb55cc`
+`4af552fe0b7dcfbbda1f88822cdf7fe78ac48fce` (rewritten tip; dropped oversized `p06-validate-after-wire.txt` for GitHub push)
 
 Inventory summary: `docs/lectio-reliability-health/evidence/tip-inventory-summary.json` — all listed commands exit 0, including `validate_repo.py --scope backend` (1416 passed).
 

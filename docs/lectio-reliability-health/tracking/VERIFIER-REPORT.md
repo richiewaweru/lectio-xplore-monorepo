@@ -9,9 +9,10 @@
 
 | Field | Value |
 |---|---|
-| Docs tip at stamp start | `93cac70abdfe1d07704ec364026e432f4513ad75` |
-| Code tip (`implementation_sha`) | `36d725e4b57870f63673ccedfff5b58437fb55cc` |
-| `git diff 36d725e4..93cac70` | **docs/lectio-reliability-health tracking+evidence only** (no product code drift) |
+| Docs tip at stamp start | `81dff67bb3028fcc1bd0a99f0d4ffd2fca755c2e` |
+| Code tip (`implementation_sha`) | `4af552fe0b7dcfbbda1f88822cdf7fe78ac48fce` |
+| `git diff 4af552fe..81dff67b` | **docs/lectio-reliability-health tracking+evidence only** (no product code drift) |
+| History note | Branch rewritten to drop `p06-validate-after-wire.txt` (125.88MB > GitHub 100MB); product tree otherwise unchanged |
 | Pack-relevant dirty tree | **No** — ignore-listed only: `.tmp/`, `.playwright-cli/`, `output/`, `p06b-validate-after-fixes.out.txt`, unit-native-program junk, `pytest-policy-remaining-authoring.txt` |
 | Login (retained P06c) | `auth_me_status=200` in `p06c-run-manifest.json` |
 | Login (fresh session) | Playwright `reliability` logged out (`/login`) — **no new live reproduction**; retained G20–G23 kept |
@@ -32,7 +33,7 @@
 
 ---
 
-## Spot-check: live-proofed code at tip `36d725e4`
+## Spot-check: live-proofed code at tip `4af552fe`
 
 | Fix | Location | Present? |
 |---|---|---|
@@ -77,7 +78,7 @@ Root cause: `sqlite3.OperationalError: database is locked` under contention (141
 | Gate | Verdict | Evidence / notes |
 |---|---|---|
 | G01 | **PASS** | Retained P06c `auth_me_status=200` + live screenshots. Fresh session logged out — no new live work claimed. |
-| G02 | **PASS** | Baseline + tip inventory on `36d725e4`; commands re-run this turn. |
+| G02 | **PASS** | Baseline + tip inventory on `4af552fe`; commands re-run this turn. |
 | G03 | **PASS** | Serial full backend validator EXIT=0 (`verifier-g24-validate-backend-rerun.out.txt`, 1416 passed). First EXIT=1 was sqlite lock flake only. |
 | G04 | **PASS** | Architecture + domain guards green; focused reliability pytest 27 passed; retired-assertion work retained. |
 | G05 | **PASS** | Stage-registry coverage retained; no contradictory red. |
@@ -99,7 +100,7 @@ Root cause: `sqlite3.OperationalError: database is locked` under contention (141
 | G21 | **PASS** | Retained `p06c-browser-409.json`: 200 then 409, `local_tabB_kept=true`. |
 | G22 | **PASS** | Linked run-manifest Unit→Learn→Builder→Print→PDF; PDF magic/hash/marker + learner attempt correct. |
 | G23 | **PASS** | Learn/Print repeat admission; regenerate stale + rebind evidenced. |
-| G24 | **PASS** | Clean code tip `36d725e4`; docs-only drift to stamp; mandatory inventory personally green (G03 after flake rerun); all G01–G23 PASS; artifacts retained. |
+| G24 | **PASS** | Clean code tip `4af552fe`; docs-only drift to stamp; mandatory inventory personally green (G03 after flake rerun); all G01–G23 PASS; artifacts retained. |
 
 ---
 

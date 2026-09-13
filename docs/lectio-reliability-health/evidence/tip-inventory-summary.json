@@ -1,9 +1,9 @@
 {
   "program": "lectio-reliability-health",
   "phase": "P06c",
-  "inventory_sha": "36d725e4b57870f63673ccedfff5b58437fb55cc",
+  "inventory_sha": "4af552fe0b7dcfbbda1f88822cdf7fe78ac48fce",
   "recorded_at_utc": "2026-09-13T15:05:00Z",
-  "note": "Full 05_COMMANDS.md inventory on tip after ruff/__all__ sort + composition_bridge test alignment. validate_repo covers focused learn/print_learn suites.",
+  "note": "Full 05_COMMANDS.md inventory on tip after ruff/__all__ sort + composition_bridge test alignment. validate_repo covers focused learn/print_learn suites. SHA restamped after dropping oversized p06-validate-after-wire.txt for GitHub push (product tree unchanged).",
   "commands": {
     "pnpm contracts:check": {"exit": 0, "log": "tip-contracts-check.out.txt"},
     "pnpm contracts:test": {"exit": 0, "log": "tip-contracts-test.out.txt"},

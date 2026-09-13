@@ -1,8 +1,8 @@
 {
   "program": "lectio-reliability-health",
   "phase": "P06c",
-  "implementation_sha": "36d725e4b57870f63673ccedfff5b58437fb55cc",
-  "implementation_sha_note": "Inventoried tip: composition_bridge soft-fail + bridge tests; failed_terminal non-reuse; regenerate stale rebind; Vitest suite-load timeouts; ruff __all__/import sort; retained P06c live evidence. Inventory: tip-inventory-summary.json (all exit 0).",
+  "implementation_sha": "4af552fe0b7dcfbbda1f88822cdf7fe78ac48fce",
+  "implementation_sha_note": "Rewritten inventoried tip (dropped oversized p06-validate-after-wire.txt): composition_bridge soft-fail + bridge tests; failed_terminal non-reuse; regenerate stale rebind; Vitest suite-load timeouts; ruff __all__/import sort; retained P06c live evidence. Inventory: tip-inventory-summary.json (all exit 0).",
   "branch": "fix/lectio-reliability-health",
   "recorded_at_utc": "2026-09-13T13:35:00Z",
   "environment": {
@@ -118,7 +118,7 @@
     "G24": "PENDING_INDEPENDENT_VERIFIER"
   },
   "inventory": {
-    "sha": "36d725e4b57870f63673ccedfff5b58437fb55cc",
+    "sha": "4af552fe0b7dcfbbda1f88822cdf7fe78ac48fce",
     "summary": "tip-inventory-summary.json",
     "validate_repo_backend_exit": 0,
     "app_test_exit": 0
