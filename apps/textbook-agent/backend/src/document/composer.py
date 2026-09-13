@@ -28,6 +28,12 @@ from infra.authoring import (
     AuthoringRequest,
 )
 from infra.authoring.engine import AuthoringRegistry
+from infra.execution.call_budget import BudgetExhaustedError, CallBudget, CallBudgetLedger
+from infra.execution.checkpoints import (
+    CheckpointCompatibility,
+    CheckpointStore,
+    content_hash,
+)
 
 COMPOSER_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -246,11 +252,19 @@ async def compose_document_plan(
     provider: AuthoringProvider | None = None,
     engine: AuthoringEngine | None = None,
     allow_heuristic_fallback: bool = True,
+    work_order_id: str | None = None,
+    call_budget: CallBudget | None = None,
+    budget_ledger: CallBudgetLedger | None = None,
+    checkpoint_store: CheckpointStore | None = None,
 ) -> CompositionPlan:
     """LLM composition of ordinary document structure.
 
     Does not emit interactions or Print task treatments — those are path-owned
     and layered by the Learn/Print realizers after composition.
+
+    Heuristic fallback is policy-gated (``allow_heuristic_fallback``), declared
+    via ``composition_mode="heuristic_fallback"``, and budgeted through
+    ``CallBudget.declare_fallback`` when a durable budget is attached.
     """
     plan = _as_plan(teaching_plan)
     if not any(section.blocks for section in plan.sections):
@@ -261,54 +275,149 @@ async def compose_document_plan(
             decisions=[],
         )
 
+    order_id = work_order_id or f"compose-{uuid.uuid4().hex[:12]}"
+    definition = _composer_definition(path=path)
+    inputs = {"teaching_plan": _teaching_plan_summary(plan)}
+    compatibility = CheckpointCompatibility(
+        teaching_revision=int(plan.revision or 1),
+        input_hash=content_hash(inputs),
+        definition_hash=str(definition.definition_hash or ""),
+        composition_identity=order_id,
+    )
+    checkpoint_key = f"composition:{order_id}"
+    if checkpoint_store is not None:
+        prior = checkpoint_store.get(checkpoint_key)
+        if prior is not None and prior.status == "ready" and prior.payload is not None:
+            return CompositionPlan.model_validate(prior.payload)
+
     if provider is None and engine is None:
         if allow_heuristic_fallback:
-            return heuristic_compose_document_plan(plan, path=path)
+            return _budgeted_heuristic_fallback(
+                plan,
+                path=path,
+                call_budget=call_budget,
+                budget_ledger=budget_ledger,
+                work_order_id=order_id,
+                checkpoint_store=checkpoint_store,
+                compatibility=compatibility,
+                checkpoint_key=checkpoint_key,
+            )
         raise DocumentComposerError(
             "NO_PROVIDER",
             "document composer requires an authoring provider",
         )
 
-    definition = _composer_definition(path=path)
     request = AuthoringRequest(
-        work_order_id=f"compose-{uuid.uuid4().hex[:12]}",
+        work_order_id=order_id,
         definition=definition,
         scoped_request={
             "stage": "document_composition",
             "path": path,
             "allowed_kinds": sorted(DOCUMENT_PRIMITIVE_KINDS),
+            "allow_heuristic_fallback": allow_heuristic_fallback,
         },
-        inputs={"teaching_plan": _teaching_plan_summary(plan)},
+        inputs=inputs,
         teaching_revision=int(plan.revision or 1),
         source_identities=(str(plan.teaching_plan_id or "teaching-plan"),),
         mode="generate",
+        policy={
+            "allow_heuristic_composition_fallback": allow_heuristic_fallback,
+        },
     )
+    # Leave one budget slot for a declared heuristic fallback when allowed.
+    repair_cap = 1 if allow_heuristic_fallback else 2
     selected = engine or AuthoringEngine(
         registry=AuthoringRegistry().with_validator(
             "document.composer_schema", _noop_validator
         ),
         provider=provider,
-        max_repair_attempts=2,
+        max_repair_attempts=repair_cap,
         max_transport_attempts=1,
+        call_budget=call_budget,
+        budget_ledger=budget_ledger,
+        max_provider_calls=3,
     )
+    if checkpoint_store is not None:
+        checkpoint_store.begin(checkpoint_key, compatibility=compatibility)
+
     try:
-        result = await selected.execute(request, provider=provider)
+        result = await selected.execute(
+            request,
+            provider=provider,
+            call_budget=call_budget,
+        )
     except AuthoringEngineError as exc:
         if allow_heuristic_fallback:
-            return heuristic_compose_document_plan(plan, path=path)
+            return _budgeted_heuristic_fallback(
+                plan,
+                path=path,
+                call_budget=call_budget or selected.call_budget,
+                budget_ledger=budget_ledger or selected.budget_ledger,
+                work_order_id=order_id,
+                checkpoint_store=checkpoint_store,
+                compatibility=compatibility,
+                checkpoint_key=checkpoint_key,
+            )
         raise DocumentComposerError(exc.code, str(exc)) from exc
 
     errors = _validate_composer_payload(plan, result.payload)
     if errors:
-        # Stage-local repair: one more generate with error feedback is handled by
-        # AuthoringEngine already. If still invalid, fall back or raise.
         if allow_heuristic_fallback:
-            return heuristic_compose_document_plan(plan, path=path)
+            return _budgeted_heuristic_fallback(
+                plan,
+                path=path,
+                call_budget=call_budget or selected.call_budget,
+                budget_ledger=budget_ledger or selected.budget_ledger,
+                work_order_id=order_id,
+                checkpoint_store=checkpoint_store,
+                compatibility=compatibility,
+                checkpoint_key=checkpoint_key,
+            )
         raise DocumentComposerError(
             "INVALID_COMPOSITION",
             "; ".join(errors),
         )
-    return _decisions_from_composer(plan, result.payload, path=path)
+    composed = _decisions_from_composer(plan, result.payload, path=path)
+    if checkpoint_store is not None:
+        checkpoint_store.commit(
+            checkpoint_key,
+            payload=composed.model_dump(mode="json"),
+            compatibility=compatibility,
+            outcome=composed.composition_mode,
+        )
+    return composed
+
+
+def _budgeted_heuristic_fallback(
+    plan: TeachingPlan,
+    *,
+    path: Literal["print", "learn"],
+    call_budget: CallBudget | None,
+    budget_ledger: CallBudgetLedger | None,
+    work_order_id: str,
+    checkpoint_store: CheckpointStore | None,
+    compatibility: CheckpointCompatibility,
+    checkpoint_key: str,
+) -> CompositionPlan:
+    budget = call_budget
+    if budget is None and budget_ledger is not None:
+        budget = budget_ledger.get_or_create(work_order_id, max_calls=3)
+    if budget is not None:
+        try:
+            budget.declare_fallback()
+        except BudgetExhaustedError as exc:
+            raise DocumentComposerError("BUDGET_EXHAUSTED", str(exc)) from exc
+        if budget_ledger is not None:
+            budget_ledger.persist(budget)
+    composed = heuristic_compose_document_plan(plan, path=path)
+    if checkpoint_store is not None:
+        checkpoint_store.commit(
+            checkpoint_key,
+            payload=composed.model_dump(mode="json"),
+            compatibility=compatibility,
+            outcome=composed.composition_mode,
+        )
+    return composed
 
 
 __all__ = [

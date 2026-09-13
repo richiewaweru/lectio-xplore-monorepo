@@ -24,6 +24,13 @@ from infra.authoring.models import (
 )
 from infra.authoring.prompts import build_authoring_prompt, build_repair_prompt
 from infra.authoring.validation import validate_json_schema
+from infra.execution.call_budget import (
+    DEFAULT_MAX_PROVIDER_CALLS,
+    BudgetExhaustedError,
+    CallBudget,
+    CallBudgetLedger,
+)
+from infra.execution.error_policy import classify_provider_error
 
 
 def stable_hash(payload: Any) -> str:
@@ -135,20 +142,26 @@ class LLMAuthoringProvider:
 class AuthoringEngine:
     registry: AuthoringRegistry = field(default_factory=AuthoringRegistry)
     provider: AuthoringProvider | None = None
-    max_transport_attempts: int = 2
-    max_repair_attempts: int = 1
+    # Soft caps within the durable CallBudget (default max 3 real dispatches).
+    max_transport_attempts: int = 1
+    max_repair_attempts: int = 2
+    max_provider_calls: int = DEFAULT_MAX_PROVIDER_CALLS
+    call_budget: CallBudget | None = None
+    budget_ledger: CallBudgetLedger | None = None
 
     async def execute(
         self,
         request: AuthoringRequest,
         *,
         provider: AuthoringProvider | None = None,
+        call_budget: CallBudget | None = None,
     ) -> AuthoringResult:
         definition = self._resolve_definition(request)
         effective = self._with_selected_mode(request, definition)
         provenance = provenance_for(effective)
         self._validate_required_inputs(effective, definition, provenance)
         self._validate_registered_refs(definition, provenance)
+        budget = self._resolve_budget(effective, call_budget)
 
         if effective.mode == "convert-approved":
             payload = self._convert_approved(effective, definition, provenance)
@@ -191,6 +204,7 @@ class AuthoringEngine:
             is_repair=False,
             base_attempt=1,
             provenance=provenance,
+            budget=budget,
         )
         payload, errors, previous_output = await self._parse_and_validate(
             definition,
@@ -199,6 +213,8 @@ class AuthoringEngine:
         )
         repair_attempts = 0
         while errors and repair_attempts < self.max_repair_attempts:
+            if budget.remaining <= 0:
+                break
             repair_attempts += 1
             repair_prompt = build_repair_prompt(
                 definition=definition,
@@ -214,6 +230,7 @@ class AuthoringEngine:
                 is_repair=True,
                 base_attempt=1 + repair_attempts,
                 provenance=provenance,
+                budget=budget,
             )
             transport_attempts += extra_transport_attempts
             payload, errors, previous_output = await self._parse_and_validate(
@@ -244,6 +261,33 @@ class AuthoringEngine:
             transport_attempts=transport_attempts,
             repair_attempts=repair_attempts,
         )
+
+    def _resolve_budget(
+        self,
+        request: AuthoringRequest,
+        call_budget: CallBudget | None,
+    ) -> CallBudget:
+        if call_budget is not None:
+            budget = call_budget
+        elif self.call_budget is not None:
+            budget = self.call_budget
+        elif self.budget_ledger is not None:
+            budget = self.budget_ledger.get_or_create(
+                request.work_order_id,
+                max_calls=self.max_provider_calls,
+            )
+        else:
+            budget = CallBudget(
+                work_item_id=request.work_order_id,
+                max_calls=self.max_provider_calls,
+            )
+        if self.budget_ledger is not None:
+            self.budget_ledger.persist(budget)
+        return budget
+
+    def _persist_budget(self, budget: CallBudget) -> None:
+        if self.budget_ledger is not None:
+            self.budget_ledger.persist(budget)
 
     def _resolve_definition(self, request: AuthoringRequest) -> AuthoringDefinition:
         definition = request.definition
@@ -378,36 +422,64 @@ class AuthoringEngine:
         request: AuthoringRequest,
         prompt: str,
         is_repair: bool,
-        base_attempt: int,
+        base_attempt: int,  # kept for call-site compatibility; budget owns attempt ids
         provenance: AuthoringProvenance,
+        budget: CallBudget,
     ) -> tuple[object, int]:
         assert request.mode is not None
+        _ = base_attempt
         attempts = 0
+        last_classified = None
         while attempts < self.max_transport_attempts:
             attempts += 1
+            try:
+                reserved = budget.reserve()
+            except BudgetExhaustedError as exc:
+                raise AuthoringEngineError(
+                    "BUDGET_EXHAUSTED",
+                    str(exc),
+                    stage="provider",
+                    retryable=False,
+                    provenance=provenance,
+                    transport_attempts=attempts - 1,
+                ) from exc
+            self._persist_budget(budget)
             call = AuthoringProviderCall(
                 work_order_id=request.work_order_id,
                 capability_id=definition.capability_id,
                 native_path=definition.native_path,
                 mode=request.mode,
-                attempt=base_attempt,
+                attempt=reserved,
                 is_repair=is_repair,
                 prompt=prompt,
                 output_schema=definition.payload_schema,
             )
             try:
-                return await provider.invoke(call), attempts
-            except AuthoringTransportError:
-                if attempts >= self.max_transport_attempts:
+                result = await provider.invoke(call)
+            except AuthoringTransportError as exc:
+                # Dispatch occurred (or ambiguous). Never release the slot as free.
+                budget.mark_ambiguous(reserved)
+                self._persist_budget(budget)
+                last_classified = classify_provider_error(exc)
+                if not last_classified.retryable or attempts >= self.max_transport_attempts:
                     raise AuthoringEngineError(
                         "NO_COMPATIBLE_CAPABILITY",
                         "provider transport attempts exhausted",
                         stage="provider",
-                        retryable=True,
+                        retryable=last_classified.retryable,
                         provenance=provenance,
                         transport_attempts=attempts,
-                    )
+                    ) from exc
                 await asyncio.sleep(0)
+                continue
+            except BaseException:
+                budget.mark_ambiguous(reserved)
+                self._persist_budget(budget)
+                raise
+            else:
+                budget.mark_dispatched(reserved)
+                self._persist_budget(budget)
+                return result, attempts
         raise AssertionError("unreachable provider retry state")
 
     async def _parse_and_validate(

@@ -31,6 +31,12 @@ class RealizationReadOnlyError(RealizationAdmissionError):
     code = "REALIZATION_READ_ONLY"
 
 
+class RealizationPayloadConflictError(RealizationAdmissionError):
+    """Same admission key with a different teaching/payload hash."""
+
+    code = "REALIZATION_PAYLOAD_CONFLICT"
+
+
 def open_href_for(path: NativePath, *, output_id: str | None, status: str) -> str | None:
     if not output_id:
         return None
@@ -156,6 +162,8 @@ def _new_row(
     output_id: str | None = None,
     error_summary: str | None = None,
     realization_id: str | None = None,
+    admission_request_key: str | None = None,
+    admission_payload_hash: str | None = None,
 ) -> NativeRealizationModel:
     # Persist path at admission. Later default-config changes must not rewrite it.
     return NativeRealizationModel(
@@ -176,6 +184,8 @@ def _new_row(
         error_summary=error_summary,
         pack_id=pack_id,
         preparation_generation_id=preparation_generation_id,
+        admission_request_key=admission_request_key,
+        admission_payload_hash=admission_payload_hash or teaching_plan_hash,
     )
 
 
@@ -235,12 +245,17 @@ async def admit_realization(
     native_policy_hash: str | None = None,
     package_contract_version: str | None = None,
     package_contract_hash: str | None = None,
+    admission_request_key: str | None = None,
+    admission_payload_hash: str | None = None,
 ) -> tuple[NativeRealizationModel, bool]:
     """Create or reuse one realization. Returns (row, created).
 
     Idempotent on (lesson, path, teaching revision, variant, policy hash,
     package hash). Concurrent inserts collide on the unique constraint and
     resolve to the existing row.
+
+    When ``admission_request_key`` is set, a matching row with a different
+    ``admission_payload_hash`` / teaching hash raises ``RealizationPayloadConflictError``.
     """
     policy_version, policy_hash = policy_for(path)
     package_version, package_hash = package_contract_for(path)
@@ -252,6 +267,28 @@ async def admit_realization(
         package_version = package_contract_version
     if package_contract_hash is not None:
         package_hash = package_contract_hash
+    payload_hash = admission_payload_hash or teaching_plan_hash
+
+    if admission_request_key:
+        by_key = await session.scalar(
+            select(NativeRealizationModel).where(
+                NativeRealizationModel.path_lesson_id == path_lesson_id,
+                NativeRealizationModel.path == path,
+                NativeRealizationModel.admission_request_key == admission_request_key,
+            )
+        )
+        if by_key is not None:
+            stored = str(by_key.admission_payload_hash or by_key.teaching_plan_hash or "")
+            if stored and stored != payload_hash:
+                raise RealizationPayloadConflictError(
+                    "Admission request key reused with a different payload hash"
+                )
+            if by_key.status == "read_only":
+                raise RealizationReadOnlyError(
+                    by_key.error_summary
+                    or "Realization is read-only; regenerate with an explicit path"
+                )
+            return by_key, False
 
     existing = await find_realization(
         session,
@@ -268,6 +305,18 @@ async def admit_realization(
                 existing.error_summary
                 or "Realization is read-only; regenerate with an explicit path"
             )
+        stored = str(existing.admission_payload_hash or existing.teaching_plan_hash or "")
+        if admission_request_key and stored and stored != payload_hash:
+            raise RealizationPayloadConflictError(
+                "Admission request key reused with a different payload hash"
+            )
+        if (
+            admission_request_key
+            and existing.admission_request_key is None
+            and hasattr(existing, "admission_request_key")
+        ):
+            existing.admission_request_key = admission_request_key
+            existing.admission_payload_hash = payload_hash
         return existing, False
 
     row = _new_row(
@@ -283,10 +332,10 @@ async def admit_realization(
         package_contract_hash=package_hash,
         preparation_generation_id=preparation_generation_id,
         pack_id=pack_id,
-        # output_id is assigned when the native artifact is created; do not
-        # invent a generation id that does not exist yet.
         output_id=output_id,
         status="queued",
+        admission_request_key=admission_request_key,
+        admission_payload_hash=payload_hash,
     )
     try:
         async with session.begin_nested():
@@ -303,10 +352,23 @@ async def admit_realization(
             native_policy_hash=policy_hash,
             package_contract_hash=package_hash,
         )
+        if raced is None and admission_request_key:
+            raced = await session.scalar(
+                select(NativeRealizationModel).where(
+                    NativeRealizationModel.path_lesson_id == path_lesson_id,
+                    NativeRealizationModel.path == path,
+                    NativeRealizationModel.admission_request_key == admission_request_key,
+                )
+            )
         if raced is None:
             raise RealizationAdmissionError(
                 "Concurrent realization create failed without a surviving row"
             ) from None
+        stored = str(raced.admission_payload_hash or raced.teaching_plan_hash or "")
+        if admission_request_key and stored and stored != payload_hash:
+            raise RealizationPayloadConflictError(
+                "Admission request key reused with a different payload hash"
+            )
         return raced, False
     return row, True
 
@@ -559,6 +621,7 @@ def persisted_path_is_stable(row: NativeRealizationModel, expected: NativePath) 
 
 __all__ = [
     "RealizationAdmissionError",
+    "RealizationPayloadConflictError",
     "RealizationReadOnlyError",
     "admit_realization",
     "admit_single_path",

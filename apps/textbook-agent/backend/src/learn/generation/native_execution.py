@@ -1,8 +1,4 @@
-"""Persist native Learn outputs from an approved shared teaching revision.
-
-Production Learn generation uses the LearnDocument v2 document path:
-compose (LLM) → write ordinary primitives (LLM) → interaction writer → assemble.
-"""
+"""Rewrite Learn production to admit before provider dispatch (P02 G07)."""
 
 from __future__ import annotations
 
@@ -18,6 +14,16 @@ from core.database.models import EditableLessonModel, GenerationModel
 from curriculum.teaching_plan.models import TeachingPlan
 from infra.authoring import AuthoringEngine, AuthoringProvider, LLMAuthoringProvider
 from infra.authoring.capability_selector import ChooseFn
+from learn.generation.fencing import (
+    LEARN_EXECUTION_KEY,
+    LearnCancelledError,
+    assert_learn_commit_allowed,
+    assert_learn_dispatch_allowed,
+    claim_learn_execution,
+    empty_learn_execution_meta,
+    learn_execution_from_generation,
+    write_learn_execution,
+)
 from learn.generation.native_production import (
     package_contract_hash,
     produce_learn_document_from_teaching_async,
@@ -50,6 +56,51 @@ def _preparation_from_generation(
     return learn_preparation_context_from_state(prep_state)
 
 
+async def _ready_result_from_existing(
+    session: AsyncSession,
+    *,
+    realization,
+    plan_hash: str,
+    teaching_plan: TeachingPlan,
+    policy_hash: str,
+    pkg_hash: str,
+) -> dict[str, Any] | None:
+    """Return a replay payload when a completed Learn realization already exists."""
+    output_id = str(realization.output_id or "")
+    if realization.status != "ready" or not output_id:
+        return None
+    generation = await session.get(GenerationModel, output_id)
+    if generation is None or not isinstance(generation.document_json, dict):
+        return None
+    document = dict(generation.document_json)
+    editable = None
+    # Prefer the editable lesson linked to this output when present.
+    from sqlalchemy import select
+
+    editable = await session.scalar(
+        select(EditableLessonModel)
+        .where(EditableLessonModel.source_generation_id == output_id)
+        .order_by(EditableLessonModel.created_at.desc())
+    )
+    return {
+        "status": "ready",
+        "output_id": output_id,
+        "editable_lesson_id": editable.id if editable is not None else None,
+        "realization_id": realization.id,
+        "realization_created": False,
+        "teaching_plan_hash": plan_hash,
+        "teaching_plan_revision": int(teaching_plan.revision or 1),
+        "selection_trace": (generation.chunked_state_json or {}).get("selection_trace")
+        if isinstance(generation.chunked_state_json, dict)
+        else {},
+        "document": document,
+        "content_hash": teaching_plan_content_hash(teaching_plan),
+        "native_policy_hash": policy_hash,
+        "package_contract_hash": pkg_hash,
+        "replayed": True,
+    }
+
+
 async def produce_learn_from_approved_teaching(
     session: AsyncSession,
     *,
@@ -67,14 +118,23 @@ async def produce_learn_from_approved_teaching(
     engine: AuthoringEngine | None = None,
     preparation_context: LearnPreparationContext | None = None,
     choose: ChooseFn | None = None,
+    admission_request_key: str | None = None,
+    worker_id: str | None = None,
+    allow_heuristic_composition_fallback: bool | None = None,
 ) -> dict[str, Any]:
-    """Run LearnDocument v2 production and persist generation + editable draft.
+    """Admit Learn realization, then run LearnDocument v2 production.
 
     Provider/engine are required for real writing. When omitted, defaults to
     ``LLMAuthoringProvider`` so Unit production does not silently stub content.
+
+    Ordering (P02 G07): allocate stable IDs + admit **before** provider calls so
+    concurrent identical requests reuse the same realization instead of minting
+    orphan generations.
+
+    P03: claim a Learn execution lease before dispatch; cancelled runs cannot
+    start new provider work.
     """
     _ = choose  # closed-selection choose is unused on the v2 compose path
-    output_id = f"learn-out-{uuid.uuid4().hex[:12]}"
     prep = preparation_context
     if prep is None:
         prep_generation = await session.get(GenerationModel, preparation_generation_id)
@@ -83,7 +143,90 @@ async def produce_learn_from_approved_teaching(
     body = dict(policy) if policy is not None else default_learn_policy()
     _, policy_hash = policy_version_and_hash(body)
     pkg_hash = package_contract_hash()
+    plan_hash = teaching_plan_content_hash(teaching_plan)
+    heuristic_fallback = (
+        bool(allow_heuristic_composition_fallback)
+        if allow_heuristic_composition_fallback is not None
+        else bool(body.get("allow_heuristic_composition_fallback", True))
+    )
 
+    # Admit first with a durable output_id (or reuse an existing admission).
+    provisional_output_id = f"learn-out-{uuid.uuid4().hex[:12]}"
+    realization, created = await admit_realization(
+        session,
+        path_lesson_id=path_lesson_id,
+        path="learn",
+        teaching_plan_id=str(teaching_plan.teaching_plan_id or ""),
+        teaching_plan_revision=int(teaching_plan.revision or 1),
+        teaching_plan_hash=plan_hash,
+        preparation_generation_id=preparation_generation_id,
+        pack_id=pack_id or preparation_generation_id,
+        output_id=provisional_output_id,
+        native_policy_hash=policy_hash,
+        package_contract_hash=pkg_hash,
+        admission_request_key=admission_request_key,
+        admission_payload_hash=plan_hash,
+    )
+    if not created and realization.output_id:
+        output_id = str(realization.output_id)
+    else:
+        output_id = provisional_output_id
+        realization.output_id = output_id
+    await session.flush()
+
+    replay = await _ready_result_from_existing(
+        session,
+        realization=realization,
+        plan_hash=plan_hash,
+        teaching_plan=teaching_plan,
+        policy_hash=policy_hash,
+        pkg_hash=pkg_hash,
+    )
+    if replay is not None:
+        return replay
+
+    # Ensure generation row exists so Learn fencing can attach lease metadata.
+    generation = await session.get(GenerationModel, output_id)
+    if generation is None:
+        generation = GenerationModel(
+            id=output_id,
+            user_id=user_id,
+            subject=subject,
+            context=title or teaching_plan.arc or "Learn native output",
+            status="queued",
+            requested_template_id="lesson",
+            requested_preset_id="standard",
+            pack_id=pack_id,
+            created_at=_utcnow(),
+            chunked_state_json={LEARN_EXECUTION_KEY: empty_learn_execution_meta()},
+        )
+        session.add(generation)
+        await session.flush()
+
+    execution = learn_execution_from_generation(generation)
+    try:
+        assert_learn_dispatch_allowed(execution)
+    except LearnCancelledError:
+        realization.status = "cancelled"
+        await session.flush()
+        raise
+
+    owner = worker_id or f"learn-worker-{uuid.uuid4().hex[:8]}"
+    lease = await claim_learn_execution(
+        session, generation_id=output_id, worker_id=owner
+    )
+    if lease is None:
+        # Re-check cancel / ownership.
+        generation = await session.get(GenerationModel, output_id)
+        assert generation is not None
+        execution = learn_execution_from_generation(generation)
+        assert_learn_dispatch_allowed(execution)
+        raise LearnCancelledError("Learn execution could not be claimed")
+
+    realization.status = "running"
+    await session.flush()
+
+    # Provider work happens after admission identity is durable.
     selected_provider = provider or LLMAuthoringProvider(node_name="v3_block_writer_fast")
     selected_engine = engine
 
@@ -98,7 +241,7 @@ async def produce_learn_from_approved_teaching(
         preparation_context=prep,
         available_asset_ids=available_asset_ids,
         approved_items=approved_items,
-        allow_heuristic_composition_fallback=True,
+        allow_heuristic_composition_fallback=heuristic_fallback,
     )
     document = dict(production["document"])
     document["id"] = output_id
@@ -106,39 +249,50 @@ async def produce_learn_from_approved_teaching(
     validate_publishable_lesson_document(document)
 
     plan_hash = str(production["teaching_plan_hash"])
-    generation = GenerationModel(
-        id=output_id,
-        user_id=user_id,
-        subject=subject,
-        context=title or teaching_plan.arc or "Learn native output",
-        status="completed",
-        requested_template_id="lesson",
-        requested_preset_id="standard",
-        pack_id=pack_id,
-        created_at=_utcnow(),
-        document_json=document,
-        chunked_state_json={
-            "shared_preparation": False,
-            "native_learn": True,
-            "learn_document": True,
-            "document_version": 2,
-            "control": {"pipeline": "native_learn"},
-            "preparation_generation_id": preparation_generation_id,
-            "teaching_plan_id": teaching_plan.teaching_plan_id,
-            "teaching_plan_revision": teaching_plan.revision,
-            "teaching_plan_hash": plan_hash,
-            "selection_trace": {
-                "form_prompt": "learn_document_v2_compose_write",
-                "composition_plan": (
-                    production["composition_plan"].model_dump(mode="json")
-                    if hasattr(production["composition_plan"], "model_dump")
-                    else production["composition_plan"]
-                ),
-            },
-            "form_prompt": "learn_document_v2_compose_write",
-        },
+    generation = await session.get(GenerationModel, output_id)
+    assert generation is not None
+    # Fenced commit: expired / cancelled workers cannot publish.
+    execution = learn_execution_from_generation(generation)
+    assert_learn_commit_allowed(
+        execution, worker_id=lease.worker_id, lease_token=lease.lease_token
     )
-    session.add(generation)
+
+    generation.status = "completed"
+    composition_plan = production["composition_plan"]
+    composition_mode = (
+        composition_plan.composition_mode
+        if hasattr(composition_plan, "composition_mode")
+        else (composition_plan or {}).get("composition_mode")
+        if isinstance(composition_plan, dict)
+        else "llm"
+    )
+    generation.document_json = document
+    generation.chunked_state_json = {
+        **dict(generation.chunked_state_json or {}),
+        "shared_preparation": False,
+        "native_learn": True,
+        "learn_document": True,
+        "document_version": 2,
+        "control": {"pipeline": "native_learn"},
+        "preparation_generation_id": preparation_generation_id,
+        "teaching_plan_id": teaching_plan.teaching_plan_id,
+        "teaching_plan_revision": teaching_plan.revision,
+        "teaching_plan_hash": plan_hash,
+        "selection_trace": {
+            "form_prompt": "learn_document_v2_compose_write",
+            "composition_mode": composition_mode,
+            "composition_plan": (
+                composition_plan.model_dump(mode="json")
+                if hasattr(composition_plan, "model_dump")
+                else composition_plan
+            ),
+        },
+        "form_prompt": "learn_document_v2_compose_write",
+    }
+    # Keep lease meta after success.
+    execution = learn_execution_from_generation(generation)
+    execution["status"] = "ready"
+    write_learn_execution(generation, execution)
 
     lesson_id = str(uuid.uuid4())
     now = _utcnow()
@@ -160,21 +314,9 @@ async def produce_learn_from_approved_teaching(
     )
     session.add(editable)
 
-    realization, created = await admit_realization(
-        session,
-        path_lesson_id=path_lesson_id,
-        path="learn",
-        teaching_plan_id=str(teaching_plan.teaching_plan_id or ""),
-        teaching_plan_revision=int(teaching_plan.revision or 1),
-        teaching_plan_hash=plan_hash,
-        preparation_generation_id=preparation_generation_id,
-        pack_id=pack_id or preparation_generation_id,
-        output_id=output_id,
-        native_policy_hash=policy_hash,
-        package_contract_hash=pkg_hash,
-    )
     realization.status = "ready"
     realization.output_id = output_id
+    realization.teaching_plan_hash = plan_hash
     await session.flush()
 
     return {
@@ -190,6 +332,7 @@ async def produce_learn_from_approved_teaching(
         "content_hash": teaching_plan_content_hash(teaching_plan),
         "native_policy_hash": policy_hash,
         "package_contract_hash": pkg_hash,
+        "replayed": False,
     }
 
 

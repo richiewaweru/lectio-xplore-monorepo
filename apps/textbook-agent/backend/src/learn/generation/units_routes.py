@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -447,6 +447,7 @@ async def generate_learn_realization(
     body: PathLessonMutationRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> dict[str, Any]:
     """Admit + execute LearnDocument v2 from an approved Teaching Plan.
 
@@ -483,6 +484,7 @@ async def generate_learn_realization(
             preparation_generation_id=prep_id,
             user_id=current_user.id,
             path_lesson_id=lesson.id,
+            admission_request_key=idempotency_key,
         )
         await session.commit()
     except HTTPException:
@@ -504,6 +506,7 @@ async def generate_print_realization(
     body: PathLessonMutationRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> dict[str, Any]:
     """Admit + queue Print from an approved Teaching Plan (no Studio re-approval)."""
     from application.unit_lesson.realize_print_handoff import realize_print_from_preparation
@@ -536,6 +539,7 @@ async def generate_print_realization(
             preparation_generation_id=prep_id,
             user_id=current_user.id,
             path_lesson_id=lesson.id,
+            admission_request_key=idempotency_key,
         )
         await session.commit()
     except HTTPException:

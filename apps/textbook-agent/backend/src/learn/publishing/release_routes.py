@@ -309,9 +309,34 @@ async def publish_learn_release(
     if existing is not None:
         return _to_response(existing, idempotent_replay=True)
 
-    # Optional idempotency key: store in title metadata is insufficient; treat as
-    # soft hint by re-checking hash after lock (above covers same-document clicks).
-    _ = body.idempotency_key or idempotency_key_header
+    effect_key = body.idempotency_key or idempotency_key_header
+    effect = None
+    if effect_key:
+        from application.unit_lesson.effect_keys import (
+            EffectPayloadConflictError,
+            remember_effect,
+        )
+
+        try:
+            effect, created = await remember_effect(
+                session,
+                owner_user_id=current_user.id,
+                kind="learn_publish",
+                resource_id=lesson.id,
+                request_key=effect_key,
+                payload_hash=digest,
+            )
+        except EffectPayloadConflictError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=str(exc),
+            ) from exc
+        if not created and isinstance(effect.outcome_json, dict):
+            prior_id = effect.outcome_json.get("release_id")
+            if prior_id:
+                prior = await session.get(LearnReleaseModel, prior_id)
+                if prior is not None:
+                    return _to_response(prior, idempotent_replay=True)
 
     last_error: Exception | None = None
     for _attempt in range(_MAX_RELEASE_ALLOC_ATTEMPTS):
@@ -342,6 +367,8 @@ async def publish_learn_release(
                 created_at=now,
             )
             session.add(release)
+            if effect is not None:
+                effect.outcome_json = {"release_id": release.id}
             await session.commit()
             await session.refresh(release)
             return _to_response(release)

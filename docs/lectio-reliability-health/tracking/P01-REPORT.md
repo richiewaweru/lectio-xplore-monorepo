@@ -1,7 +1,7 @@
 # Phase report
 Phase: P01
 Baseline SHA: a6b75e33d2a56452e05033a510f86db1566891b2
-Implementation SHA: (pending commit on fix/lectio-reliability-health)
+Implementation SHA: 1a1a5ed7dd85289341f5aa3bd414ae9feb39cf0d
 Served frontend/backend SHA for live checks: unchanged from P00 (native Vite :5173 + backend :8000); offline gates only this phase
 
 Files changed and purpose (high level):

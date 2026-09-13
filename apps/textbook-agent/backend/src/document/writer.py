@@ -31,6 +31,12 @@ from infra.authoring import (
     AuthoringRequest,
 )
 from infra.authoring.engine import AuthoringRegistry
+from infra.execution.call_budget import CallBudget, CallBudgetLedger
+from infra.execution.checkpoints import (
+    CheckpointCompatibility,
+    CheckpointStore,
+    content_hash,
+)
 
 DocumentPrimitiveKind = Literal[
     "paragraph", "heading", "list", "figure", "table", "callout"
@@ -234,6 +240,10 @@ async def write_document_primitive(
     reason: str | None = None,
     provider: AuthoringProvider | None = None,
     engine: AuthoringEngine | None = None,
+    work_order_id: str | None = None,
+    call_budget: CallBudget | None = None,
+    budget_ledger: CallBudgetLedger | None = None,
+    checkpoint_store: CheckpointStore | None = None,
 ) -> dict[str, Any]:
     """Write one ordinary document node using the LLM authoring engine."""
     if kind not in DOCUMENT_PRIMITIVE_KINDS:
@@ -248,6 +258,7 @@ async def write_document_primitive(
     block_id = teaching_block_id or str(teaching_block.get("id") or "") or None
     ctx = dict(lesson_context or {})
     definition = _definition_for(kind)  # type: ignore[arg-type]
+    order_id = work_order_id or f"write-{kind}-{uuid.uuid4().hex[:10]}"
     scoped = {
         "stage": "document_writing",
         "kind": kind,
@@ -262,18 +273,31 @@ async def write_document_primitive(
         "neighbours": list(neighbour_summaries or []),
         "objective": ctx.get("objective") or ctx.get("title"),
     }
+    inputs = {
+        "kind": kind,
+        "brief": brief,
+        "teaching_block": dict(teaching_block),
+        "lesson_context": ctx,
+        "allowed_facts": list(allowed_facts or []),
+        "terminology": list(terminology or []),
+    }
+    compatibility = CheckpointCompatibility(
+        teaching_revision=int(ctx.get("teaching_plan_revision") or 1),
+        input_hash=content_hash(inputs),
+        definition_hash=str(definition.definition_hash or ""),
+        composition_identity=order_id,
+    )
+    checkpoint_key = f"node:{order_id}"
+    if checkpoint_store is not None:
+        prior = checkpoint_store.get(checkpoint_key)
+        if prior is not None and prior.status == "ready" and prior.payload is not None:
+            return dict(prior.payload)
+
     request = AuthoringRequest(
-        work_order_id=f"write-{kind}-{uuid.uuid4().hex[:10]}",
+        work_order_id=order_id,
         definition=definition,
         scoped_request=scoped,
-        inputs={
-            "kind": kind,
-            "brief": brief,
-            "teaching_block": dict(teaching_block),
-            "lesson_context": ctx,
-            "allowed_facts": list(allowed_facts or []),
-            "terminology": list(terminology or []),
-        },
+        inputs=inputs,
         teaching_revision=int(ctx.get("teaching_plan_revision") or 1),
         source_identities=(block_id or "teaching-block",),
         mode="generate",
@@ -286,10 +310,22 @@ async def write_document_primitive(
         # Total provider dispatches for this work item: 1 initial + up to 2 repairs.
         max_repair_attempts=2,
         max_transport_attempts=1,
+        call_budget=call_budget,
+        budget_ledger=budget_ledger,
+        max_provider_calls=3,
     )
+    if checkpoint_store is not None:
+        checkpoint_store.begin(checkpoint_key, compatibility=compatibility)
+
     try:
-        result = await selected.execute(request, provider=provider)
+        result = await selected.execute(
+            request,
+            provider=provider,
+            call_budget=call_budget,
+        )
     except AuthoringEngineError as exc:
+        if checkpoint_store is not None:
+            checkpoint_store.mark_ambiguous(checkpoint_key)
         raise DocumentWriterError(exc.code, str(exc)) from exc
 
     payload = dict(result.payload)
@@ -299,14 +335,24 @@ async def write_document_primitive(
         # Do not open a second AuthoringEngine.execute loop — that multiplies the
         # call budget. Surface quality failure so the durable repair path (same
         # work-item counter) can reserve another call explicitly.
+        if checkpoint_store is not None:
+            checkpoint_store.mark_ambiguous(checkpoint_key)
         raise DocumentWriterError("INVALID_PAYLOAD", "; ".join(quality))
 
-    return _normalize_payload(
+    normalized = _normalize_payload(
         kind,  # type: ignore[arg-type]
         payload,
         node_id=nid,
         teaching_block_id=block_id,
     )
+    if checkpoint_store is not None:
+        checkpoint_store.commit(
+            checkpoint_key,
+            payload=normalized,
+            compatibility=compatibility,
+        )
+    return normalized
+
 
 
 __all__ = [

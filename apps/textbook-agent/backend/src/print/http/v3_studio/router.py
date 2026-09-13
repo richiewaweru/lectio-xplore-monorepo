@@ -12,7 +12,7 @@ from typing import Any
 from core.auth.jwt_handler import JWTHandler
 from core.auth.middleware import get_current_user
 from core.llm.runner import RetryPolicy, run_llm
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
@@ -4645,6 +4645,7 @@ async def post_lesson_approach_approve(
 async def post_realize_learn(
     generation_id: str,
     current_user: User = Depends(get_current_user),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> dict[str, Any]:
     """Generate Learn from an approved Teaching Plan on this preparation generation.
 
@@ -4659,6 +4660,7 @@ async def post_realize_learn(
                 session,
                 preparation_generation_id=generation_id,
                 user_id=current_user.id,
+                admission_request_key=idempotency_key,
             )
             await session.commit()
         except HTTPException:
@@ -4675,6 +4677,7 @@ async def post_realize_learn(
 async def post_realize_print(
     generation_id: str,
     current_user: User = Depends(get_current_user),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> dict[str, Any]:
     """Queue Print from an approved Teaching Plan on this preparation generation."""
     await _load_owned_generation(generation_id, current_user.id)
@@ -4686,6 +4689,7 @@ async def post_realize_print(
                 session,
                 preparation_generation_id=generation_id,
                 user_id=current_user.id,
+                admission_request_key=idempotency_key,
             )
             await session.commit()
         except HTTPException:

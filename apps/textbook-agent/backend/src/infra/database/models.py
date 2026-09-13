@@ -1071,3 +1071,31 @@ class NativeRealizationModel(Base):
     preparation_generation_id = Column(String, nullable=True)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+    # Caller-scoped admission key (P02 G07). NULL for legacy rows.
+    admission_request_key = Column(String, nullable=True)
+    admission_payload_hash = Column(String, nullable=True)
+
+
+class CallerEffectKeyModel(Base):
+    """Caller-scoped idempotency for save / publish / export effects (P02 G08)."""
+
+    __tablename__ = "caller_effect_keys"
+    __table_args__ = (
+        UniqueConstraint(
+            "owner_user_id",
+            "kind",
+            "resource_id",
+            "request_key",
+            name="uq_caller_effect_key",
+        ),
+        Index("ix_caller_effect_keys_resource", "kind", "resource_id"),
+    )
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    kind = Column(String, nullable=False)  # builder_save | learn_publish | print_export
+    resource_id = Column(String, nullable=False)
+    request_key = Column(String, nullable=False)
+    payload_hash = Column(String, nullable=False)
+    outcome_json = Column(JSON_DOCUMENT_TYPE, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)

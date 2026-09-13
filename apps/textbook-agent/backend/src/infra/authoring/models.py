@@ -12,6 +12,7 @@ AuthoringFailureCode = Literal[
     "INVALID_PAYLOAD",
     "NO_COMPATIBLE_CAPABILITY",
     "REPAIR_EXHAUSTED",
+    "BUDGET_EXHAUSTED",
     "POLICY_CONFLICT",
 ]
 
