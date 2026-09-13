@@ -112,6 +112,8 @@ async def write_ordinary_via_shared_writer(
             checkpoint_store=checkpoint_store,
             progress_store=progress_store,
             progress_run_id=progress_run_id,
+            work_order_id=f"print-node:{ctx.planned.id}:{kind}",
+            node_id=f"print-node:{ctx.planned.id}:{kind}",
         )
     except DocumentWriterError as exc:
         # Preserve typed authoring codes + validation errors for Print dispatch.

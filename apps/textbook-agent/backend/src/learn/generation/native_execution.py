@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from collections.abc import Mapping, Sequence
@@ -174,7 +175,20 @@ async def produce_learn_from_approved_teaching(
         admission_payload_hash=plan_hash,
     )
     if not created and realization.output_id:
-        output_id = str(realization.output_id)
+        # Failed prior runs keep stale checkpoints that can trip input_hash
+        # mismatches on resume. Mint a fresh output identity after failure.
+        if str(realization.status) in {
+            "failed",
+            "failed_terminal",
+            "failed_recoverable",
+            "cancelled",
+        }:
+            output_id = provisional_output_id
+            realization.output_id = output_id
+            realization.status = "queued"
+            realization.error_summary = None
+        else:
+            output_id = str(realization.output_id)
     else:
         output_id = provisional_output_id
         realization.output_id = output_id
@@ -231,6 +245,13 @@ async def produce_learn_from_approved_teaching(
 
     realization.status = "running"
     await session.flush()
+    # Independent-session durable persist / heartbeat cannot see uncommitted rows.
+    # Commit admission identity + lease before any cross-session write.
+    await session.commit()
+    realization = await session.get(type(realization), realization.id)
+    assert realization is not None
+    generation = await session.get(GenerationModel, output_id)
+    assert generation is not None
 
     # Durable budgets / checkpoints / progress (P03–P04 product wiring).
     prior_state = dict(generation.chunked_state_json or {})
@@ -272,29 +293,116 @@ async def produce_learn_from_approved_teaching(
         attempt=1,
     )
 
+    from learn.generation.reliability_persist import (
+        LEARN_HEARTBEAT_INTERVAL_SECONDS,
+        learn_heartbeat_loop,
+        persist_learn_reliability_state,
+    )
+
+    async def _durable_persist() -> None:
+        await persist_learn_reliability_state(
+            generation_id=output_id,
+            budget_ledger=budget_ledger,
+            checkpoint_store=checkpoint_store,
+            progress_store=progress,
+            progress_run_id=realization.id,
+            worker_id=lease.worker_id,
+            lease_token=lease.lease_token,
+            renew_heartbeat=True,
+        )
+
+    # Commit restored/empty reliability state before expensive provider work.
+    await _durable_persist()
+
+    stop_heartbeat = asyncio.Event()
+    heartbeat_task = asyncio.create_task(
+        learn_heartbeat_loop(
+            generation_id=output_id,
+            worker_id=lease.worker_id,
+            lease_token=lease.lease_token,
+            budget_ledger=budget_ledger,
+            checkpoint_store=checkpoint_store,
+            progress_store=progress,
+            progress_run_id=realization.id,
+            interval_seconds=LEARN_HEARTBEAT_INTERVAL_SECONDS,
+            stop_event=stop_heartbeat,
+        )
+    )
+
     # Provider work happens after admission identity is durable.
     selected_provider = provider or LLMAuthoringProvider(node_name="v3_block_writer_fast")
-    # Do not construct a bare AuthoringEngine here — writer/composer build a
-    # registry-aware engine and receive budget_ledger/checkpoint_store below.
     selected_engine = engine
 
-    production = await produce_learn_document_from_teaching_async(
-        teaching_plan=teaching_plan,
-        title=title,
-        subject=subject,
-        source_generation_id=output_id,
-        lesson_id=output_id,
-        provider=selected_provider,
-        engine=selected_engine,
-        preparation_context=prep,
-        available_asset_ids=available_asset_ids,
-        approved_items=approved_items,
-        allow_heuristic_composition_fallback=heuristic_fallback,
-        budget_ledger=budget_ledger,
-        checkpoint_store=checkpoint_store,
-        progress_store=progress,
-        progress_run_id=realization.id,
-    )
+    async def _on_item_committed(_item_id: str, _node: dict[str, Any]) -> None:
+        await _durable_persist()
+
+    try:
+        production = await produce_learn_document_from_teaching_async(
+            teaching_plan=teaching_plan,
+            title=title,
+            subject=subject,
+            source_generation_id=output_id,
+            lesson_id=output_id,
+            provider=selected_provider,
+            engine=selected_engine,
+            preparation_context=prep,
+            available_asset_ids=available_asset_ids,
+            approved_items=approved_items,
+            allow_heuristic_composition_fallback=heuristic_fallback,
+            budget_ledger=budget_ledger,
+            checkpoint_store=checkpoint_store,
+            progress_store=progress,
+            progress_run_id=realization.id,
+            durable_persist_hook=_durable_persist,
+            on_item_committed=_on_item_committed,
+        )
+    except Exception:
+        stop_heartbeat.set()
+        try:
+            await asyncio.wait_for(heartbeat_task, timeout=2.0)
+        except (TimeoutError, asyncio.CancelledError):
+            heartbeat_task.cancel()
+        # Persist terminal failure state so UI does not remain running.
+        try:
+            generation = await session.get(GenerationModel, output_id)
+            if generation is not None:
+                execution = learn_execution_from_generation(generation)
+                execution["status"] = "failed"
+                # Drop ownership so a later resume can claim after crash/fail.
+                execution["worker_id"] = None
+                execution["heartbeat_at"] = None
+                write_learn_execution(generation, execution)
+                await session.commit()
+                # Best-effort durable snapshot without ownership fence.
+                await persist_learn_reliability_state(
+                    generation_id=output_id,
+                    budget_ledger=budget_ledger,
+                    checkpoint_store=checkpoint_store,
+                    progress_store=progress,
+                    progress_run_id=realization.id,
+                )
+            progress.sync_from_db(
+                realization.id,
+                path="learn",
+                owner_user_id=user_id,
+                status="failed",
+                realization_revision=int(realization.realization_revision or 1),
+                teaching_plan_revision=int(teaching_plan.revision or 1),
+                stage="failed",
+            )
+            realization.status = "failed"
+            await session.commit()
+        except Exception:
+            logger.debug("learn failure persist skipped", exc_info=True)
+        raise
+    finally:
+        stop_heartbeat.set()
+        if not heartbeat_task.done():
+            try:
+                await asyncio.wait_for(heartbeat_task, timeout=2.0)
+            except (TimeoutError, asyncio.CancelledError):
+                heartbeat_task.cancel()
+
     document = dict(production["document"])
     document["id"] = output_id
     document["source_generation_id"] = output_id

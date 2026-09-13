@@ -145,9 +145,10 @@ async def test_a03_g01_dispatch_writer_uses_package_instructions_and_schema() ->
     assert len(provider.calls) == 1
     assert provider.calls[0].output_schema["required"] == ["kind", "text"]
     assert "paragraph" in str(provider.calls[0].output_schema).lower()
-    # Shared writer uses document.writer work orders, not Print package form schemas.
-    assert provider.calls[0].work_order_id.startswith("write-paragraph-")
+    # Correction pass C03: shared writer uses stable print-node composition IDs.
+    assert provider.calls[0].work_order_id == f"print-node:{ctx.planned.id}:paragraph"
     assert ctx.print_work_order is not None
+    # Print package work-order identity remains distinct from the writer node id.
     assert provider.calls[0].work_order_id != ctx.print_work_order.work_order_id
 
 

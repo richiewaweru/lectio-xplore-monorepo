@@ -1,0 +1,8 @@
+{
+    "name":  "architecture",
+    "exit":  0,
+    "command":  "uv run python ../tools/agent/check_architecture.py --format text",
+    "start":  "2026-09-13T23:27:57.8173026+03:00",
+    "end":  "2026-09-13T23:27:58.8489577+03:00",
+    "cwd":  "C:\\Projects\\lectio\\apps\\textbook-agent\\backend"
+}

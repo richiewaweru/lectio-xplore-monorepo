@@ -6,6 +6,7 @@ visual executor, then attaches a resolvable asset_id onto the figure node.
 
 from __future__ import annotations
 
+import inspect
 import logging
 from collections.abc import Mapping
 from typing import Any
@@ -109,10 +110,17 @@ async def attach_figure_asset(
     teaching_block: Mapping[str, Any],
     lesson_context: Mapping[str, Any] | None = None,
     max_attempts: int = 2,
+    budget_ledger: Any | None = None,
+    work_item_id: str | None = None,
+    durable_persist_hook: Any | None = None,
+    progress_store: Any | None = None,
+    progress_run_id: str | None = None,
 ) -> dict[str, Any]:
     """Run the visual pipeline for a figure node and set asset_id.
 
     Stage-local retries: figure failure → figure stage retry (max_attempts).
+    When ``budget_ledger`` is provided, each physical visual attempt reserves a
+    durable call slot before dispatch (C01/C04).
     """
     if str(node.get("kind") or "") != "figure":
         return dict(node)
@@ -130,10 +138,37 @@ async def attach_figure_asset(
         teaching_block=teaching_block,
         lesson_context=lesson_context,
     )
+    budget_key = work_item_id or f"learn-media:{node_id}"
+    budget = None
+    if budget_ledger is not None:
+        from infra.execution.call_budget import CallBudgetLedger
+
+        if isinstance(budget_ledger, CallBudgetLedger):
+            budget = budget_ledger.get_or_create(budget_key, max_calls=max(3, max_attempts))
 
     last_error: str | None = None
     for attempt in range(1, max_attempts + 1):
+        reserved = None
         try:
+            if budget is not None:
+                reserved = budget.reserve()
+                budget_ledger.persist(budget)
+                if durable_persist_hook is not None:
+                    maybe = durable_persist_hook()
+                    if inspect.isawaitable(maybe):
+                        await maybe
+            if progress_store is not None and progress_run_id:
+                try:
+                    progress_store.append_event(
+                        progress_run_id,
+                        event_type="media_attempt",
+                        path="learn",
+                        stage="media",
+                        item_id=budget_key,
+                        attempt=attempt,
+                    )
+                except Exception:
+                    logger.debug("media progress event skipped", exc_info=True)
             blocks = await execute_visual(
                 order,
                 _noop_emit,
@@ -141,6 +176,9 @@ async def attach_figure_asset(
                 generation_id=generation_id,
                 bypass_cache_read=attempt > 1,
             )
+            if budget is not None and reserved is not None:
+                budget.mark_dispatched(reserved)
+                budget_ledger.persist(budget)
             block = blocks[0] if blocks else None
             if block is None:
                 last_error = "visual executor returned no blocks"
@@ -163,6 +201,9 @@ async def attach_figure_asset(
                 or f"visual status={status!r} src={src!r}"
             )
         except Exception as exc:  # noqa: BLE001 — stage-local retry
+            if budget is not None and reserved is not None:
+                budget.mark_ambiguous(reserved)
+                budget_ledger.persist(budget)
             last_error = str(exc)[:500]
             logger.warning(
                 "learn figure attempt %s failed for %s: %s",

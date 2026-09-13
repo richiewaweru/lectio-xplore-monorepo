@@ -1,0 +1,8 @@
+{
+    "name":  "contracts-check",
+    "exit":  0,
+    "command":  "pnpm contracts:check",
+    "start":  "2026-09-13T22:51:33.9027288+03:00",
+    "end":  "2026-09-13T22:52:00.2909010+03:00",
+    "cwd":  "C:\\Projects\\lectio"
+}

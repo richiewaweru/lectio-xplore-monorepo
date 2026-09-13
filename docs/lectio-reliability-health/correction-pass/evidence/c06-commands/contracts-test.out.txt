@@ -1,0 +1,23 @@
+
+> lectio-xplore-monorepo@ contracts:test C:\Projects\lectio
+> pnpm --filter @lectio/contracts test
+
+apps/textbook-agent/frontend             |  WARN  The field "pnpm.overrides" was found in C:\Projects\lectio\apps\textbook-agent\frontend/package.json. This will not take effect. You should configure "pnpm.overrides" at the root of the workspace instead.
+
+> @lectio/contracts@0.1.0 test C:\Projects\lectio\packages\lectio-contracts
+> vitest run
+
+
+ RUN  v3.2.7 C:/Projects/lectio/packages/lectio-contracts
+
+ ✓ tests/vocabulary.test.ts (7 tests) 85ms
+ ✓ tests/teaching-view.test.ts (9 tests) 56ms
+ ✓ tests/regeneration.test.ts (4 tests) 6406ms
+   ✓ P01-K01 — the shared vocabulary exporter regenerates reproducibly > reproduces byte-identical output apart from the timestamp  4549ms
+   ✓ P01-K01 — the shared vocabulary exporter regenerates reproducibly > propagates a deliberate authored-intent change into the teaching view  1665ms
+
+ Test Files  3 passed (3)
+      Tests  20 passed (20)
+   Start at  22:52:12
+   Duration  10.49s (transform 3.11s, setup 0ms, collect 4.01s, tests 6.55s, environment 2ms, prepare 4.14s)
+

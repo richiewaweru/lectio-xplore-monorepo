@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import inspect
 import json
 import logging
 import uuid
@@ -24,7 +25,7 @@ from infra.authoring.capability_selector import ChooseFn
 from learn.generation.assemble import assemble_learn_document
 from learn.generation.document_realizer import realize_learn_document
 from learn.generation.figure_pipeline import FigurePipelineError, attach_figure_asset
-from learn.generation.interaction_writer import write_interaction_from_request
+from learn.generation.interaction_writer import write_interaction_from_request_async
 from learn.generation.preparation_context import (
     LearnPreparationContext,
     lesson_context_from_preparation,
@@ -277,6 +278,20 @@ async def _layer_learn_interactions(
     )
 
 
+def _assert_unique_node_ids(nodes: Sequence[Mapping[str, Any]]) -> None:
+    """Reject documents with colliding node ids before persist/publish (C03)."""
+    seen: dict[str, int] = {}
+    for index, node in enumerate(nodes):
+        nid = str(node.get("id") or "").strip()
+        if not nid:
+            raise ValueError(f"learn node at index {index} is missing id")
+        if nid in seen:
+            raise ValueError(
+                f"duplicate learn node id {nid!r} at indices {seen[nid]} and {index}"
+            )
+        seen[nid] = index
+
+
 def _interaction_node_from_contract(
     contract: Mapping[str, Any],
     *,
@@ -315,6 +330,8 @@ async def produce_learn_document_from_teaching_async(
     checkpoint_store: Any | None = None,
     progress_store: Any | None = None,
     progress_run_id: str | None = None,
+    durable_persist_hook: Any | None = None,
+    on_item_committed: Any | None = None,
 ) -> dict[str, Any]:
     """Production LearnDocument v2: compose → write → assemble.
 
@@ -383,6 +400,7 @@ async def produce_learn_document_from_teaching_async(
                 f"composition references unknown teaching block {decision.teaching_block_id!r}"
             )
         brief = block.brief or ""
+        item_id = f"learn-node:{block.id}:{decision.kind}:{index}"
         if decision.lane == "document":
             neighbours: list[dict[str, Any]] = []
             if decision in doc_decisions:
@@ -417,19 +435,17 @@ async def produce_learn_document_from_teaching_async(
                 reason=decision.reason,
                 provider=provider,
                 engine=engine,
-                work_order_id=f"learn-node:{block.id}:{decision.kind}:{index}",
+                work_order_id=item_id,
                 budget_ledger=budget_ledger,
                 checkpoint_store=checkpoint_store,
-                node_id=f"{block.id}:{decision.kind}",
+                # C03: unique within block — include decision index (same as work_order_id).
+                node_id=item_id,
                 progress_store=progress_store,
                 progress_run_id=progress_run_id,
                 progress_stage="writing",
+                durable_persist_hook=durable_persist_hook,
             )
             if decision.kind == "figure" and not node.get("asset_id"):
-                # Caption/alt from writer; image via the shared visual pipeline.
-                # Optional media: keep text + visible missing status when the
-                # visual provider is unavailable (credits/outage). Required
-                # visuals still fail closed via required_visual_slots.
                 required_slots = {
                     str(s).strip()
                     for s in (lesson_ctx.get("required_visual_slots") or [])
@@ -447,12 +463,15 @@ async def produce_learn_document_from_teaching_async(
                         ),
                         teaching_block=teaching_block_payload,
                         lesson_context=lesson_ctx,
+                        budget_ledger=budget_ledger,
+                        work_item_id=f"learn-media:{item_id}",
+                        durable_persist_hook=durable_persist_hook,
+                        progress_store=progress_store,
+                        progress_run_id=progress_run_id,
                     )
                 except FigurePipelineError as exc:
                     if visual_required:
                         raise
-                    # Keep a valid figure node without asset_id so optional
-                    # media failure is visible without aborting Learn compose.
                     node = dict(node)
                     node.pop("media_status", None)
                     node.pop("media_error", None)
@@ -465,7 +484,7 @@ async def produce_learn_document_from_teaching_async(
             nodes.append(node)
         elif decision.lane == "learn_interaction":
             action = _action_for(block)
-            contract = write_interaction_from_request(
+            contract = await write_interaction_from_request_async(
                 {
                     "capability_id": decision.kind,
                     "lane": "interaction",
@@ -482,13 +501,20 @@ async def produce_learn_document_from_teaching_async(
                     "terminology": list(prep.terminology or []),
                     "approved_items": list(approved_items or []),
                 },
+                interaction_id=item_id,
                 provider=provider,
                 engine=engine,
+                budget_ledger=budget_ledger,
+                checkpoint_store=checkpoint_store,
+                durable_persist_hook=durable_persist_hook,
+                progress_store=progress_store,
+                progress_run_id=progress_run_id,
             )
             nodes.append(
                 _interaction_node_from_contract(
                     contract,
                     teaching_block_id=block.id,
+                    node_id=item_id,
                 )
             )
         else:
@@ -496,6 +522,12 @@ async def produce_learn_document_from_teaching_async(
                 f"unsupported Learn composition lane {decision.lane!r} "
                 f"for block {decision.teaching_block_id!r}"
             )
+        if on_item_committed is not None:
+            maybe = on_item_committed(item_id, node if decision.lane == "document" else nodes[-1])
+            if inspect.isawaitable(maybe):
+                await maybe
+
+    _assert_unique_node_ids(nodes)
 
     document = assemble_learn_document(
         nodes,

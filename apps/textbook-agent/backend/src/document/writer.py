@@ -247,6 +247,7 @@ async def write_document_primitive(
     progress_store: Any | None = None,
     progress_run_id: str | None = None,
     progress_stage: str = "writing",
+    durable_persist_hook: Any | None = None,
 ) -> dict[str, Any]:
     """Write one ordinary document node using the LLM authoring engine."""
     if kind not in DOCUMENT_PRIMITIVE_KINDS:
@@ -283,6 +284,9 @@ async def write_document_primitive(
         "lesson_context": ctx,
         "allowed_facts": list(allowed_facts or []),
         "terminology": list(terminology or []),
+        "role": role,
+        "reason": reason,
+        "neighbours": list(neighbour_summaries or []),
     }
     compatibility = CheckpointCompatibility(
         teaching_revision=int(ctx.get("teaching_plan_revision") or 1),
@@ -294,6 +298,11 @@ async def write_document_primitive(
     if checkpoint_store is not None:
         prior = checkpoint_store.get(checkpoint_key)
         if prior is not None and prior.status == "ready" and prior.payload is not None:
+            # C01: validate compatibility BEFORE returning a cached ready payload.
+            checkpoint_store.decide_resume(
+                checkpoint_key,
+                compatibility=compatibility,
+            )
             return dict(prior.payload)
 
     request = AuthoringRequest(
@@ -319,7 +328,10 @@ async def write_document_primitive(
         progress_store=progress_store,
         progress_run_id=progress_run_id,
         progress_stage=progress_stage,
+        durable_persist_hook=durable_persist_hook,
     )
+    if durable_persist_hook is not None and getattr(selected, "durable_persist_hook", None) is None:
+        selected.durable_persist_hook = durable_persist_hook
     if checkpoint_store is not None:
         checkpoint_store.begin(checkpoint_key, compatibility=compatibility)
 

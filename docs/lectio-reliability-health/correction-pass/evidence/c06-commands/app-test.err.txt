@@ -1,0 +1,16 @@
+stderr | src/routes/studio/page.test.ts > studio chunked URL resume > shows stage2 section pills updating from chunked SSE events
+[chunked] section failed model [ 'boom' ]
+
+stderr | src/lib/api/v3.test.ts > connectV3StudioGenerationStream > closes generation SSE on error without retrying
+[v3 generation stream] closed; document polling remains active Error: drop-1
+    at C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\api\v3.test.ts:205:26
+    at Proxy.assertThrows (file:///C:/Projects/lectio/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:2767:5)
+    at Proxy.methodWrapper (file:///C:/Projects/lectio/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)
+    at Proxy.<anonymous> (file:///C:/Projects/lectio/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1088:12)
+    at Proxy.overwritingMethodWrapper (file:///C:/Projects/lectio/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1735:33)
+    at Proxy.<anonymous> (file:///C:/Projects/lectio/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1420:16)
+    at Proxy.<anonymous> (file:///C:/Projects/lectio/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1029:14)
+    at Proxy.methodWrapper (file:///C:/Projects/lectio/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)
+    at C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\api\v3.test.ts:205:48
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+

@@ -32,7 +32,9 @@ class LearnFenceError(LeaseLostError):
 
 
 def _now() -> str:
-    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    # Keep full precision (match Print repository._now). Truncating microseconds
+    # silently steals up to ~1s from short leases and flakes heartbeat tests.
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _parse_iso(value: Any) -> datetime | None:

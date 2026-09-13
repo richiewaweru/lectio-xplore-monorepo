@@ -1,0 +1,8 @@
+{
+    "name":  "validate-backend",
+    "exit":  1,
+    "command":  "uv run python ../tools/agent/validate_repo.py --scope backend",
+    "start":  "2026-09-13T23:18:29.0632564+03:00",
+    "end":  "2026-09-13T23:27:57.6365018+03:00",
+    "cwd":  "C:\\Projects\\lectio\\apps\\textbook-agent\\backend"
+}

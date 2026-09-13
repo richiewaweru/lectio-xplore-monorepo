@@ -1,0 +1,8 @@
+{
+    "name":  "page-test",
+    "exit":  0,
+    "command":  "pnpm page:test",
+    "start":  "2026-09-13T22:55:03.1349310+03:00",
+    "end":  "2026-09-13T22:56:29.0585816+03:00",
+    "cwd":  "C:\\Projects\\lectio"
+}

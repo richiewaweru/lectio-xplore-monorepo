@@ -1,0 +1,8 @@
+{
+    "name":  "domain-guards",
+    "exit":  0,
+    "command":  "pnpm program:domain-guards",
+    "start":  "2026-09-13T23:09:01.7251024+03:00",
+    "end":  "2026-09-13T23:09:31.0295041+03:00",
+    "cwd":  "C:\\Projects\\lectio"
+}

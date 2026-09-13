@@ -200,6 +200,8 @@ class AuthoringEngine:
     progress_run_id: str | None = None
     progress_stage: str = "writing"
     trace_exporter: TraceExporter | None = None
+    # C01: commit reserved budget to durable storage before provider.invoke.
+    durable_persist_hook: Any | None = None
 
     async def execute(
         self,
@@ -340,6 +342,15 @@ class AuthoringEngine:
     def _persist_budget(self, budget: CallBudget) -> None:
         if self.budget_ledger is not None:
             self.budget_ledger.persist(budget)
+
+    async def _durable_persist_after_reserve(self) -> None:
+        """Commit in-memory budget to durable storage before provider dispatch."""
+        hook = self.durable_persist_hook
+        if hook is None:
+            return
+        result = hook()
+        if inspect.isawaitable(result):
+            await result
 
     def _resolve_definition(self, request: AuthoringRequest) -> AuthoringDefinition:
         definition = request.definition
@@ -496,6 +507,7 @@ class AuthoringEngine:
                     transport_attempts=attempts - 1,
                 ) from exc
             self._persist_budget(budget)
+            await self._durable_persist_after_reserve()
             call = AuthoringProviderCall(
                 work_order_id=request.work_order_id,
                 capability_id=definition.capability_id,
