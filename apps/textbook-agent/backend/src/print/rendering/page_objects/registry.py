@@ -473,6 +473,10 @@ async def _write_validated_llm(
     ctx: WriterContext,
     *,
     provider: WriterProvider | None = None,
+    budget_ledger: Any | None = None,
+    checkpoint_store: Any | None = None,
+    progress_store: Any | None = None,
+    progress_run_id: str | None = None,
 ) -> WriterOutcome:
     # Lazy import avoids circular import via page_objects.__init__ → registry.
     from print.generation.authoring_adapter import run_print_authoring
@@ -491,6 +495,10 @@ async def _write_validated_llm(
             terminology=ctx.terminology,
             approved_items=ctx.item_records if object_id in {"questions", "choices"} else None,
             mode="generate",
+            budget_ledger=budget_ledger,
+            checkpoint_store=checkpoint_store,
+            progress_store=progress_store,
+            progress_run_id=progress_run_id,
         )
     except AuthoringEngineError as exc:
         content_error = _content_validation_from_authoring_error(object_id, exc)
@@ -516,11 +524,29 @@ async def dispatch_writer_async(
     ctx: WriterContext,
     *,
     provider: WriterProvider | AuthoringProvider | None = None,
+    budget_ledger: Any | None = None,
+    checkpoint_store: Any | None = None,
+    progress_store: Any | None = None,
+    progress_run_id: str | None = None,
 ) -> WriterOutcome:
     if ctx.planned.object in {"questions", "choices"} or not ctx.use_llm:
         return dispatch_writer(ctx)
     if ctx.planned.object in PRINT_OBJECT_TO_PRIMITIVE:
         from print.generation.shared_writer_bridge import write_ordinary_via_shared_writer
 
-        return await write_ordinary_via_shared_writer(ctx, provider=provider)
-    return await _write_validated_llm(ctx, provider=provider)
+        return await write_ordinary_via_shared_writer(
+            ctx,
+            provider=provider,
+            budget_ledger=budget_ledger,
+            checkpoint_store=checkpoint_store,
+            progress_store=progress_store,
+            progress_run_id=progress_run_id,
+        )
+    return await _write_validated_llm(
+        ctx,
+        provider=provider,
+        budget_ledger=budget_ledger,
+        checkpoint_store=checkpoint_store,
+        progress_store=progress_store,
+        progress_run_id=progress_run_id,
+    )

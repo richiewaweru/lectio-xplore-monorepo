@@ -118,7 +118,7 @@ async def test_resume_skips_completed_sections() -> None:
     gid = await _seed(ready)
     written: list[str] = []
 
-    async def _fake_dispatch(ctx):
+    async def _fake_dispatch(ctx, **_kwargs):
         written.append(ctx.planned.id)
         return WriterOutcome(
             block_id=ctx.planned.id,

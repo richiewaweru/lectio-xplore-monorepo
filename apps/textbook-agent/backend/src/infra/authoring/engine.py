@@ -156,8 +156,10 @@ class LLMAuthoringProvider:
     async def invoke(self, call: AuthoringProviderCall) -> Any:
         from v3_execution.llm_helpers import run_structured_agent
 
-        # Nested SDK/output retries multiply the durable work-item call budget.
-        # AuthoringEngine owns repair attempts; each invoke is one counted call.
+        # AuthoringEngine owns semantic repair attempts. Allow one pydantic-ai
+        # output retry for PromptedOutput wrapper/schema mismatches so a single
+        # bare-JSON reply (e.g. `{nodes:…}` without `{response:…}`) does not
+        # abort the whole Learn/Print compose as a fake capability miss.
         try:
             return await run_structured_agent(
                 node_name=self.node_name,
@@ -167,12 +169,20 @@ class LLMAuthoringProvider:
                 user_prompt="Return JSON only for the selected capability payload.",
                 output_schema=dict(call.output_schema),
                 repair_attempts=0,
-                retries={"output": 0},
+                retries={"output": 1},
             )
         except AuthoringTransportError:
             raise
+        except AuthoringEngineError:
+            raise
         except Exception as exc:
-            raise AuthoringTransportError(str(exc)) from exc
+            from curriculum.llm_contract_errors import is_transport_error
+
+            if is_transport_error(exc) or isinstance(exc, (TimeoutError, ConnectionError)):
+                raise AuthoringTransportError(str(exc)) from exc
+            # Preserve non-transport provider failures (schema/auth/output) so
+            # callers see the real class instead of a fake capability miss.
+            raise
 
 
 @dataclass
@@ -511,9 +521,13 @@ class AuthoringEngine:
                 )
                 last_classified = classify_provider_error(exc)
                 if not last_classified.retryable or attempts >= self.max_transport_attempts:
+                    cause = str(exc.__cause__ or exc).strip()
+                    detail = "provider transport attempts exhausted"
+                    if cause:
+                        detail = f"{detail}: {cause[:240]}"
                     raise AuthoringEngineError(
-                        "NO_COMPATIBLE_CAPABILITY",
-                        "provider transport attempts exhausted",
+                        "PROVIDER_TRANSPORT_EXHAUSTED",
+                        detail,
                         stage="provider",
                         retryable=last_classified.retryable,
                         provenance=provenance,

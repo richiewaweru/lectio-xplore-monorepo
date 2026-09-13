@@ -572,6 +572,109 @@ class ProgressStore:
                 "traces": [trace.to_dict() for trace in row.traces],
             }
 
+    def import_run_snapshot(self, data: Mapping[str, Any]) -> None:
+        """Hydrate/replace a run from a persisted snapshot (worker restart)."""
+        run_id = str(data.get("run_id") or "").strip()
+        if not run_id:
+            raise ValueError("progress snapshot missing run_id")
+        with self._lock:
+            events: list[RunEvent] = []
+            for raw in list(data.get("events") or []):
+                if not isinstance(raw, Mapping):
+                    continue
+                at_raw = raw.get("at")
+                if isinstance(at_raw, datetime):
+                    at = at_raw if at_raw.tzinfo else at_raw.replace(tzinfo=UTC)
+                elif isinstance(at_raw, str) and at_raw:
+                    at = datetime.fromisoformat(at_raw)
+                else:
+                    at = _utcnow()
+                events.append(
+                    RunEvent(
+                        seq=int(raw.get("seq") or 0),
+                        event_type=str(raw.get("event_type") or "event"),
+                        at=at,
+                        run_id=run_id,
+                        path=raw.get("path"),
+                        stage=raw.get("stage"),
+                        item_id=raw.get("item_id"),
+                        attempt=(
+                            int(raw["attempt"])
+                            if raw.get("attempt") is not None
+                            else None
+                        ),
+                        error_category=raw.get("error_category"),
+                        payload=dict(raw.get("payload") or {}),
+                    )
+                )
+            traces: list[ModelCallTrace] = []
+            for raw in list(data.get("traces") or []):
+                if not isinstance(raw, Mapping):
+                    continue
+                at_raw = raw.get("at")
+                if isinstance(at_raw, datetime):
+                    at = at_raw if at_raw.tzinfo else at_raw.replace(tzinfo=UTC)
+                elif isinstance(at_raw, str) and at_raw:
+                    at = datetime.fromisoformat(at_raw)
+                else:
+                    at = _utcnow()
+                traces.append(
+                    ModelCallTrace(
+                        run_id=run_id,
+                        path=str(raw.get("path") or data.get("path") or ""),
+                        stage=str(raw.get("stage") or ""),
+                        item_id=str(raw.get("item_id") or ""),
+                        attempt=int(raw.get("attempt") or 1),
+                        model=raw.get("model"),
+                        prompt_hash=raw.get("prompt_hash"),
+                        policy_hash=raw.get("policy_hash"),
+                        composition_mode=raw.get("composition_mode"),
+                        tokens_in=raw.get("tokens_in"),
+                        tokens_out=raw.get("tokens_out"),
+                        cost_usd=raw.get("cost_usd"),
+                        provider_request_id=raw.get("provider_request_id"),
+                        at=at,
+                    )
+                )
+            active: dict[str, ActiveItem] = {}
+            for key, raw in dict(data.get("active") or {}).items():
+                if not isinstance(raw, Mapping):
+                    continue
+                active[str(key)] = ActiveItem(
+                    item_id=str(raw.get("item_id") or key),
+                    stage=str(raw.get("stage") or ""),
+                    attempt=int(raw.get("attempt") or 1),
+                    state=str(raw.get("state") or "active"),
+                )
+            retries: dict[str, RetryScheduleEntry] = {}
+            for key, raw in dict(data.get("retries") or {}).items():
+                if not isinstance(raw, Mapping):
+                    continue
+                retries[str(key)] = RetryScheduleEntry(
+                    item_id=str(raw.get("item_id") or key),
+                    attempt=int(raw.get("attempt") or 1),
+                    next_retry_at=str(raw.get("next_retry_at") or ""),
+                    reason=raw.get("reason"),
+                )
+            self._runs[run_id] = _RunRecord(
+                run_id=run_id,
+                path=str(data.get("path") or ""),
+                owner_user_id=str(data.get("owner_user_id") or ""),
+                status=str(data.get("status") or "queued"),
+                stage=str(data.get("stage") or data.get("status") or "queued"),
+                realization_revision=int(data.get("realization_revision") or 1),
+                teaching_plan_revision=int(data.get("teaching_plan_revision") or 1),
+                document_revision=int(data.get("document_revision") or 0),
+                completed=int(data.get("completed") or 0),
+                total=int(data.get("total") or 0),
+                active=active,
+                retries=retries,
+                events=events,
+                traces=traces,
+                next_seq=int(data.get("next_seq") or (max((e.seq for e in events), default=0) + 1)),
+            )
+            self._trim_events(self._runs[run_id])
+
     def _status_unlocked(self, row: _RunRecord) -> RunStatusView:
         return RunStatusView(
             run_id=row.run_id,

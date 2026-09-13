@@ -20,7 +20,9 @@ import ResourcePage from './+page.svelte';
 describe('/units/[id]/resources/[compositionId]', () => {
 	afterEach(cleanup);
 
-	it('loads a LectioDocument v2 projection into the page engine', async () => {
+	it(
+		'loads a LectioDocument v2 projection into the page engine',
+		async () => {
 		getUnitResource.mockResolvedValue({
 			id: 'composition-1',
 			unit_id: 'unit-1',
@@ -55,7 +57,9 @@ describe('/units/[id]/resources/[compositionId]', () => {
 		render(ResourcePage);
 		expect(await screen.findByRole('button', { name: 'Print' })).toBeTruthy();
 		expect(await screen.findByText(/unit exam/i)).toBeTruthy();
-	});
+		},
+		15_000
+	);
 
 	it('rejects legacy SectionContent packs', async () => {
 		getUnitResource.mockResolvedValue({

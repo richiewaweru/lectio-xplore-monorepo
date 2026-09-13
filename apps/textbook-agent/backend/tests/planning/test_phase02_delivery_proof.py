@@ -218,7 +218,7 @@ async def test_conceptual_resilience_then_assemble() -> None:
         enabled=True, generation_id=gid, fail_block_index=1, fail_once=True
     )
 
-    async def _fake_dispatch(ctx):
+    async def _fake_dispatch(ctx, **_kwargs):
         return WriterOutcome(
             block_id=ctx.planned.id,
             content={"paragraphs": [ctx.planned.brief]},

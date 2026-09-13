@@ -1,0 +1,13 @@
+{
+  "path": "docs/lectio-reliability-health/evidence/p06c-print.pdf",
+  "bytes": 88405,
+  "sha256": "0acd6bf453668c8210598cda56255c4a1127593e69f55026b486f4a85066b22a",
+  "pages": 5,
+  "marker_found": true,
+  "payload": {
+    "school_name": "P06C Reliability School",
+    "teacher_name": "P06C Teacher",
+    "edition": "teacher"
+  },
+  "snippet": "area [P06C-PRINT-MARKER-20260913B]"
+}

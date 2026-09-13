@@ -1,0 +1,40 @@
+P06b command inventory (wave 0)
+workspace_sha_at_start=6d84d30691b35f3fc8dd0d4540be81598cc8d95f
+recorded_at_utc=2026-09-13T05:30:00Z
+notes=Auth re-established earlier then wiped by accidental second playwright open; awaiting re-login for live gates.
+
+===== contracts-test (retry after flake) =====
+exit=0 evidence=p06b-cmd-contracts-test-retry.out.txt
+
+===== contracts-check =====
+exit=0 evidence=p06b-cmd-contracts-check.out.txt
+
+===== page-test =====
+exit=0 evidence=p06b-cmd-page-test.out.txt
+
+===== page-check =====
+exit=0 evidence=p06b-cmd-page-check.out.txt
+
+===== app-test (after merge selector + ResourceComposer timeout) =====
+exit=0 evidence=p06b-cmd-app-test-rerun.out.txt tests=264 passed
+
+===== program-domain-guards =====
+exit=0 evidence=p06b-cmd-domain-guards.out.txt
+
+===== ruff =====
+exit=0 evidence=p06b-ruff.out.txt
+
+===== architecture =====
+exit=0 evidence=p06b-architecture.out.txt
+
+===== validate-repo-backend (pre-wave1 tip) =====
+exit=0 evidence=p06b-validate-backend.out.txt 1412 passed / 6 skipped
+
+===== dual-path previously failing =====
+exit=0 evidence=p06b-dual-path-pytest.out.txt 7 passed
+
+===== focused reliability after product wiring =====
+exit=0 27 passed (reliability + a02 + p02)
+
+===== progress snapshot =====
+exit=0 tests/reliability/test_progress_store_snapshot.py

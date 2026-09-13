@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import uuid
 from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
@@ -22,7 +23,7 @@ from infra.authoring import AuthoringEngine, AuthoringProvider
 from infra.authoring.capability_selector import ChooseFn
 from learn.generation.assemble import assemble_learn_document
 from learn.generation.document_realizer import realize_learn_document
-from learn.generation.figure_pipeline import attach_figure_asset
+from learn.generation.figure_pipeline import FigurePipelineError, attach_figure_asset
 from learn.generation.interaction_writer import write_interaction_from_request
 from learn.generation.preparation_context import (
     LearnPreparationContext,
@@ -41,6 +42,8 @@ from learn.resources.selection import (
     build_learn_candidate_map,
     load_learn_selection_view,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def teaching_plan_content_hash(plan: TeachingPlan | Mapping[str, Any]) -> str:
@@ -424,14 +427,41 @@ async def produce_learn_document_from_teaching_async(
             )
             if decision.kind == "figure" and not node.get("asset_id"):
                 # Caption/alt from writer; image via the shared visual pipeline.
-                node = await attach_figure_asset(
-                    node,
-                    generation_id=str(
-                        source_generation_id or lesson_id or "learn-figure"
-                    ),
-                    teaching_block=teaching_block_payload,
-                    lesson_context=lesson_ctx,
-                )
+                # Optional media: keep text + visible missing status when the
+                # visual provider is unavailable (credits/outage). Required
+                # visuals still fail closed via required_visual_slots.
+                required_slots = {
+                    str(s).strip()
+                    for s in (lesson_ctx.get("required_visual_slots") or [])
+                    if str(s).strip()
+                }
+                section_id = str(decision.section_id or "").strip()
+                visual_required = bool(
+                    section_id and section_id in required_slots
+                ) or bool(lesson_ctx.get("visual_required"))
+                try:
+                    node = await attach_figure_asset(
+                        node,
+                        generation_id=str(
+                            source_generation_id or lesson_id or "learn-figure"
+                        ),
+                        teaching_block=teaching_block_payload,
+                        lesson_context=lesson_ctx,
+                    )
+                except FigurePipelineError as exc:
+                    if visual_required:
+                        raise
+                    # Keep a valid figure node without asset_id so optional
+                    # media failure is visible without aborting Learn compose.
+                    node = dict(node)
+                    node.pop("media_status", None)
+                    node.pop("media_error", None)
+                    node["asset_id"] = None
+                    logger.warning(
+                        "optional learn figure skipped for %s: %s",
+                        node.get("id"),
+                        exc,
+                    )
             nodes.append(node)
         elif decision.lane == "learn_interaction":
             action = _action_for(block)

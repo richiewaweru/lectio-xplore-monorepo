@@ -1,0 +1,81 @@
+{
+  "idempotency_key": "0387dc0d-fd6b-425a-bdf8-e38c003bf617",
+  "learn": {
+    "status": "ready",
+    "path": "learn",
+    "output_id": "learn-out-6052a4793d5c",
+    "editable_lesson_id": "2d99beb9-cb5e-4aab-ae77-7c3d17bede84",
+    "realization_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+    "teaching_plan_hash": "1a72a38aad24520a6c9f2eead4e0b8a0cac376a6ac0315796da812ebbc38a5fa",
+    "teaching_plan_revision": 1,
+    "open_href": "/builder/2d99beb9-cb5e-4aab-ae77-7c3d17bede84",
+    "replayed": false
+  },
+  "repeat_http": 200,
+  "repeat": {
+    "status": "ready",
+    "path": "learn",
+    "output_id": "learn-out-6052a4793d5c",
+    "editable_lesson_id": "2d99beb9-cb5e-4aab-ae77-7c3d17bede84",
+    "realization_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+    "teaching_plan_hash": "1a72a38aad24520a6c9f2eead4e0b8a0cac376a6ac0315796da812ebbc38a5fa",
+    "teaching_plan_revision": 1,
+    "open_href": "/builder/2d99beb9-cb5e-4aab-ae77-7c3d17bede84",
+    "replayed": true
+  },
+  "status": {
+    "path_lesson_id": "5901155d-8dfa-4e92-8285-0ab3170efd4d",
+    "lesson_revision": 1,
+    "generation_id": "7206057e-5b25-4af8-9a77-40742213efac",
+    "generation_status": "awaiting_teaching_approval",
+    "workflow_stage": "awaiting_teaching_approval",
+    "objective_hash": "4711cf7bf87ce6e60c3f6e4c9dcec08e28992b509d5aa6fe7e764a22e2264cc2",
+    "stale": false,
+    "can_prepare": false,
+    "can_regenerate": true,
+    "realizations": [
+      {
+        "realization_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "learn",
+        "teaching_plan_id": "0779102d-6919-4b09-9023-c870744e78a3",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "1a72a38aad24520a6c9f2eead4e0b8a0cac376a6ac0315796da812ebbc38a5fa",
+        "variant_id": "everyone",
+        "native_policy_version": "1",
+        "native_policy_hash": "e3dae24f7e7555f43a031e75fd107ab6f8b155add5f377608e8982ec71cad219",
+        "package_contract_version": "2.0.0",
+        "package_contract_hash": "2ceaa8648d2a659c4765b9c43ec9242433999f2c014365ec377bf29df22435c7",
+        "realization_revision": 2,
+        "status": "ready",
+        "output_id": "learn-out-6052a4793d5c",
+        "error_summary": null,
+        "pack_id": "7206057e-5b25-4af8-9a77-40742213efac",
+        "open_href": "/builder/from-native-learn/learn-out-6052a4793d5c"
+      },
+      {
+        "realization_id": "28724db0-b983-4463-a729-97e051db21ed",
+        "path": "print",
+        "teaching_plan_id": "2b32d711-86a6-460c-878d-4e59c4c3e159",
+        "teaching_plan_revision": 1,
+        "teaching_plan_hash": "349e79bed689bf1c46ce2294817f89a8e035b30196560fabca6010cfdfececa9",
+        "variant_id": "everyone",
+        "native_policy_version": "1",
+        "native_policy_hash": "f88556c1bd9737234cd60aba46a4006b4e323597727451c0e90ef4b02b5e68b3",
+        "package_contract_version": "1.1.0",
+        "package_contract_hash": "2f10b7a2cc8c317edec41b6d3e4094d0ed4ee28aefef96c145d40812b394a944",
+        "realization_revision": 1,
+        "status": "stale",
+        "output_id": "8a890460-7324-4927-8a90-33aa7da5baa3",
+        "error_summary": "Lesson preparation regenerated (supersedes 8a890460-7324-4927-8a90-33aa7da5baa3); admit again against the new approved teaching revision",
+        "pack_id": "8a890460-7324-4927-8a90-33aa7da5baa3",
+        "open_href": "/studio/print/8a890460-7324-4927-8a90-33aa7da5baa3"
+      }
+    ],
+    "print_realization_id": "28724db0-b983-4463-a729-97e051db21ed",
+    "learn_realization_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+    "print_output_id": "8a890460-7324-4927-8a90-33aa7da5baa3",
+    "learn_output_id": "learn-out-6052a4793d5c",
+    "print_open_href": "/studio/print/8a890460-7324-4927-8a90-33aa7da5baa3",
+    "learn_open_href": "/builder/from-native-learn/learn-out-6052a4793d5c"
+  }
+}

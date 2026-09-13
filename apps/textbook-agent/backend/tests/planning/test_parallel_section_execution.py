@@ -102,7 +102,7 @@ async def test_section_parallel_respects_max_concurrency_and_canonical_order() -
     lock = asyncio.Lock()
     section_active: dict[str, int] = {}
 
-    async def _fake_dispatch(ctx):
+    async def _fake_dispatch(ctx, **_kwargs):
         nonlocal active, peak
         section_id = ctx.section_id or "unknown"
         async with lock:
@@ -145,7 +145,7 @@ async def test_section_parallel_writes_six_sections() -> None:
     teaching, plan = _plans(6)
     gid = await _seed(teaching, plan)
 
-    async def _fake_dispatch(ctx):
+    async def _fake_dispatch(ctx, **_kwargs):
         return WriterOutcome(
             block_id=ctx.planned.id,
             content={"paragraphs": [ctx.planned.brief]},
@@ -171,7 +171,7 @@ async def test_exhausted_provider_connection_remains_recoverable() -> None:
     teaching, plan = _plans(1)
     gid = await _seed(teaching, plan)
 
-    async def _connection_failure(_ctx):
+    async def _connection_failure(_ctx, **_kwargs):
         raise ModelAPIError(model_name="deepseek-v4", message="Connection error.")
 
     with (

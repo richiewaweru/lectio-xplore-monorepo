@@ -38,6 +38,6 @@ async def test_a00_table_llm_failure_surfaces_typed_failure_not_lit_leaf_stub() 
 
     with pytest.raises(AuthoringEngineError) as caught:
         await dispatch_writer_async(_table_context(), provider=FailingProvider())
-    assert caught.value.code == "NO_COMPATIBLE_CAPABILITY"
+    assert caught.value.code == "PROVIDER_TRANSPORT_EXHAUSTED"
     assert "Lit leaf" not in str(caught.value)
     assert "Covered leaf" not in str(caught.value)

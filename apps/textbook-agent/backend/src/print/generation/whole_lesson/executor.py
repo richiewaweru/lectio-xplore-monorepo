@@ -10,13 +10,17 @@ import time
 from collections.abc import Sequence
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
-from core.database.models import GenerationModel
+from core.database.models import GenerationModel, NativeRealizationModel
 from core.database.session import async_session_factory
 from curriculum.approved_items import ApprovedItemRecord, approved_items_as_writer_records
+from infra.execution.call_budget import CallBudgetLedger
+from infra.execution.checkpoints import CheckpointStore
+from infra.execution.progress import default_progress_store
 from print.contracts.lectio_page import get_intent_catalogue, validate_document
 from print.generation.catalogue_projections import build_form_candidate_map
 from print.generation.native_production import (
@@ -158,6 +162,10 @@ async def _write_one_block(
     variant_id: str,
     prior: dict[str, Any] | None,
     lease: ExecutionLease | None,
+    budget_ledger: Any | None = None,
+    checkpoint_store: Any | None = None,
+    progress_store: Any | None = None,
+    progress_run_id: str | None = None,
 ) -> dict[str, Any]:
     key = execution_key(slot_id, block.id, variant_id)
     attempt = int((prior or {}).get("attempts") or 0) + 1
@@ -285,7 +293,13 @@ async def _write_one_block(
     max_transport = 3
     while True:
         try:
-            result = await dispatch_writer_async(ctx)
+            result = await dispatch_writer_async(
+                ctx,
+                budget_ledger=budget_ledger,
+                checkpoint_store=checkpoint_store,
+                progress_store=progress_store,
+                progress_run_id=progress_run_id,
+            )
             if block.object == "figure":
                 rid = stable_figure_request_id(
                     generation_id=generation_id, block_id=block.id
@@ -424,6 +438,10 @@ async def write_form_blocks(
     work_orders: Sequence[PrintWorkOrder] | None = None,
     variant_id: str = DEFAULT_VARIANT_ID,
     lease: ExecutionLease | None = None,
+    budget_ledger: Any | None = None,
+    checkpoint_store: Any | None = None,
+    progress_store: Any | None = None,
+    progress_run_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Write pending form blocks section-by-section with bounded concurrency."""
     resolved = resolve_block_plans(teaching_plan, form_plan)
@@ -522,6 +540,10 @@ async def write_form_blocks(
                     variant_id=variant_id,
                     prior=stored.get(key),
                     lease=lease,
+                    budget_ledger=budget_ledger,
+                    checkpoint_store=checkpoint_store,
+                    progress_store=progress_store,
+                    progress_run_id=progress_run_id,
                 )
 
         async with section_semaphore:
@@ -857,6 +879,65 @@ async def execute_after_teaching_approval(
     current = str(generation.status if generation else "")
     wid = lease.worker_id if lease else None
     ltok = lease.lease_token if lease else None
+
+    # Durable budgets / checkpoints / progress (P03–P04 product wiring).
+    prior_state = dict(generation.chunked_state_json or {}) if generation else {}
+    budget_ledger = CallBudgetLedger()
+    raw_ledger = prior_state.get("call_budget_ledger")
+    if isinstance(raw_ledger, dict) and raw_ledger:
+        budget_ledger.import_state(raw_ledger)
+    checkpoint_store = CheckpointStore()
+    raw_checkpoints = prior_state.get("checkpoint_store")
+    if isinstance(raw_checkpoints, dict) and raw_checkpoints:
+        try:
+            checkpoint_store = CheckpointStore.from_snapshot(raw_checkpoints)
+        except Exception:  # noqa: BLE001
+            checkpoint_store = CheckpointStore()
+    progress = default_progress_store
+    realization = await session.scalar(
+        select(NativeRealizationModel).where(
+            NativeRealizationModel.output_id == generation_id
+        )
+    )
+    progress_run_id = realization.id if realization is not None else generation_id
+    owner_user_id = str(getattr(generation, "user_id", None) or "")
+    raw_progress = prior_state.get("progress_store")
+    if isinstance(raw_progress, dict) and raw_progress.get("run_id"):
+        try:
+            progress.import_run_snapshot(raw_progress)
+        except Exception:  # noqa: BLE001, S110
+            pass
+    progress.ensure_run(
+        progress_run_id,
+        path="print",
+        owner_user_id=owner_user_id,
+        status="running",
+        stage=current or "planning_forms",
+        realization_revision=int(getattr(realization, "realization_revision", 1) or 1),
+        teaching_plan_revision=int(getattr(teaching_plan, "revision", 1) or 1)
+        if teaching_plan is not None
+        else 1,
+    )
+
+    async def _persist_reliability_state() -> None:
+        # Use a short-lived session so concurrent writer sessions are not blocked.
+        try:
+            async with async_session_factory() as persist_session:
+                gen = await persist_session.get(GenerationModel, generation_id)
+                if gen is None:
+                    return
+                payload = dict(gen.chunked_state_json or {})
+                payload["call_budget_ledger"] = budget_ledger.export_state()
+                payload["checkpoint_store"] = checkpoint_store.snapshot()
+                try:
+                    payload["progress_store"] = progress.snapshot(progress_run_id)
+                except KeyError:
+                    pass
+                gen.chunked_state_json = payload
+                await persist_session.commit()
+        except Exception:
+            logger.debug("reliability state persist skipped", exc_info=True)
+
     if current == "queued":
         await repo.transition(
             expected={"queued"},
@@ -978,6 +1059,10 @@ async def execute_after_teaching_approval(
                 packet=packet,
                 legality=legality,
                 use_document_composition=True,
+                budget_ledger=budget_ledger,
+                checkpoint_store=checkpoint_store,
+                progress_store=progress,
+                progress_run_id=progress_run_id,
             )
             candidate_map = {
                 key: tuple(values) for key, values in snapshot.candidate_map.items()
@@ -989,9 +1074,49 @@ async def execute_after_teaching_approval(
                 required_visual_slots=set(packet.required_visual_slots()),
             )
             if not validation.ok:
-                raise NoLegalFormCandidatesError(
-                    sorted(d.block_id for d in snapshot.decisions)
+                blocking = [issue for issue in validation.issues if issue.blocking]
+                affected = sorted(
+                    {
+                        str(issue.path).split(".")[-1]
+                        for issue in blocking
+                        if issue.path and "block" in str(issue.path).casefold()
+                    }
+                    | {
+                        str(d.block_id)
+                        for d in snapshot.decisions
+                        if any(
+                            str(d.block_id) in str(issue.path)
+                            or str(d.block_id) in issue.message
+                            for issue in blocking
+                        )
+                    }
                 )
+                error = {
+                    "type": "FormPlanValidationError",
+                    "code": blocking[0].code if blocking else "FORM_PLAN_INVALID",
+                    "message": "; ".join(
+                        f"{issue.code}: {issue.message}" for issue in blocking[:8]
+                    )
+                    or "form plan validation failed",
+                    "stage": "planning_forms",
+                    "issues": [issue.to_dict() for issue in blocking],
+                    "block_ids": affected,
+                    "retryable": False,
+                    "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                }
+                await repo.transition(
+                    expected={"planning_forms"},
+                    target="failed_terminal",
+                    event="form_plan_failed",
+                    error=error,
+                    worker_id=wid,
+                    lease_token=ltok,
+                )
+                if lease is not None:
+                    await repo.release_execution(
+                        worker_id=lease.worker_id, lease_token=lease.lease_token
+                    )
+                return {"status": "failed_terminal", "error": error}
         except NoCompatiblePrintCapabilityError as exc:
             error = {
                 "type": "NoCompatiblePrintCapabilityError",
@@ -1053,6 +1178,7 @@ async def execute_after_teaching_approval(
             worker_id=wid,
             lease_token=ltok,
         )
+        await _persist_reliability_state()
         form_plan = closed_plan
         await repo.append_event(
             make_event(
@@ -1083,7 +1209,12 @@ async def execute_after_teaching_approval(
         teaching_plan=teaching_plan,
         work_orders=orders if "orders" in locals() else None,
         lease=lease,
+        budget_ledger=budget_ledger,
+        checkpoint_store=checkpoint_store,
+        progress_store=progress,
+        progress_run_id=progress_run_id,
     )
+    await _persist_reliability_state()
     if any(o.get("status") == "lease_lost" for o in write_outcomes):
         return {"status": "lease_lost"}
 

@@ -1,0 +1,52 @@
+{
+  "approve": {
+    "generation_id": "7206057e-5b25-4af8-9a77-40742213efac",
+    "status": "teaching_approved",
+    "path": "learn",
+    "queued": false,
+    "next": "generate_learn"
+  },
+  "learn_admit": {
+    "detail": "Admission request key reused with a different payload hash",
+    "error": "HTTP Error 409: Conflict"
+  },
+  "learn_repeat": {
+    "detail": "Admission request key reused with a different payload hash",
+    "error": "HTTP Error 409: Conflict"
+  },
+  "idempotency_key": "p06c-learn-a46e6ab0-a8bf-4af8-9f11-878c4ceacb9d",
+  "realization_id": null,
+  "editable_lesson_id": null,
+  "final_gen_status": "awaiting_teaching_approval",
+  "final_chunked": {
+    "generation_id": "7206057e-5b25-4af8-9a77-40742213efac",
+    "pack_id": null,
+    "stage": "awaiting_teaching_approval",
+    "doc_version": "rev:0",
+    "failed_sections": [],
+    "blueprint_id": null,
+    "execution_started": false,
+    "next_action": "approve_teaching",
+    "error": null,
+    "error_type": null,
+    "variant_generation_ids": {},
+    "document_version": 2,
+    "document_exists": false,
+    "sections_total": 0,
+    "sections_ready": 0,
+    "sections_failed": 0,
+    "blocks_total": 0,
+    "blocks_ready": 0,
+    "blocks_failed": 0,
+    "failed_section_ids": [],
+    "failed_block_ids": [],
+    "error_detail": null,
+    "visual_quality": {
+      "status": "ready",
+      "flagged": [],
+      "flagged_count": 0,
+      "failed_request_ids": [],
+      "retryable": false
+    }
+  }
+}

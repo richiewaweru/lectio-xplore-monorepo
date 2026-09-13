@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
@@ -38,6 +39,8 @@ from learn.generation.preparation_context import (
 )
 from learn.publishing.publish_validation import validate_publishable_lesson_document
 from learn.resources.native_policy import default_learn_policy, policy_version_and_hash
+
+logger = logging.getLogger(__name__)
 
 
 def _utcnow() -> datetime:
@@ -245,6 +248,12 @@ async def produce_learn_from_approved_teaching(
             checkpoint_store = CheckpointStore()
 
     progress = default_progress_store
+    raw_progress = prior_state.get("progress_store")
+    if isinstance(raw_progress, dict) and raw_progress.get("run_id"):
+        try:
+            progress.import_run_snapshot(raw_progress)
+        except Exception:
+            logger.debug("learn progress snapshot restore skipped", exc_info=True)
     progress.ensure_run(
         realization.id,
         path="learn",
@@ -323,6 +332,7 @@ async def produce_learn_from_approved_teaching(
         "teaching_plan_hash": plan_hash,
         "call_budget_ledger": budget_ledger.export_state(),
         "checkpoint_store": checkpoint_store.snapshot(),
+        "progress_store": progress.snapshot(realization.id),
         "selection_trace": {
             "form_prompt": "learn_document_v2_compose_write",
             "composition_mode": composition_mode,

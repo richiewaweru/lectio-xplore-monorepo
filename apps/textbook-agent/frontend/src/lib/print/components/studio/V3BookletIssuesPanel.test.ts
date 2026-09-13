@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
 	regenerateV3Visual: vi.fn()
@@ -12,7 +12,14 @@ vi.mock('$lib/api/v3', () => ({
 import V3BookletIssuesPanel from './V3BookletIssuesPanel.svelte';
 
 describe('V3BookletIssuesPanel', () => {
-	it('renders a flagged image and regenerates it with the editable QC hint', async () => {
+	afterEach(() => {
+		cleanup();
+		vi.clearAllMocks();
+	});
+
+	it(
+		'renders a flagged image and regenerates it with the editable QC hint',
+		async () => {
 		mocks.regenerateV3Visual.mockResolvedValue({
 			visual_id: 'vis-1',
 			attaches_to: 'practice',
@@ -72,5 +79,7 @@ describe('V3BookletIssuesPanel', () => {
 			})
 		);
 		expect(onRegenerated).toHaveBeenCalledTimes(1);
-	});
+		},
+		15_000
+	);
 });

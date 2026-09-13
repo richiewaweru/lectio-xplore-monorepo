@@ -338,7 +338,7 @@ async def test_a03_g05_retry_one_failed_block_preserves_siblings_and_order(monke
     gid, teaching, plan, packet = await _seed_retry_case()
     written: list[str] = []
 
-    async def fake_dispatch(ctx: WriterContext) -> WriterOutcome:
+    async def fake_dispatch(ctx: WriterContext, **_kwargs) -> WriterOutcome:
         assert ctx.print_work_order is not None
         assert ctx.print_work_order.block_id == "b-retry"
         assert len(ctx.print_work_order.capability_contract_hash) == 64

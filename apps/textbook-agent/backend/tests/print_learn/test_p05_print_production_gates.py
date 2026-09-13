@@ -198,7 +198,7 @@ def _draft_for_packet(packet, *, item_id: str | None) -> TeachingPlanDraft:
     )
 
 
-async def _fake_dispatch(ctx):
+async def _fake_dispatch(ctx, **_kwargs):
     planned = ctx.planned
     if planned.object == "figure":
         return WriterOutcome(

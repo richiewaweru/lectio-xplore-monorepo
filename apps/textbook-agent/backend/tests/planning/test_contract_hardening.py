@@ -853,7 +853,7 @@ async def test_resume_revalidates_legacy_fat_form_plan() -> None:
         orders = compile_print_work_orders(teaching_plan=teaching, snapshot=snapshot)
         return legal, snapshot, orders
 
-    async def _fake_dispatch(ctx):
+    async def _fake_dispatch(ctx, **_kwargs):
         return WriterOutcome(
             block_id=ctx.planned.id,
             content={"style": "unordered", "items": [{"text": "a"}]},
@@ -945,7 +945,7 @@ async def test_assemble_lesson_guidance_not_recalled_on_form_resume() -> None:
         guidance_calls["n"] += 1
         return real(*args, **kwargs)
 
-    async def _fake_dispatch(ctx):
+    async def _fake_dispatch(ctx, **_kwargs):
         return WriterOutcome(
             block_id=ctx.planned.id,
             content={"paragraphs": [ctx.planned.brief]},
@@ -1276,7 +1276,7 @@ async def test_resume_uses_persisted_compatibility_not_live_catalogue() -> None:
         seen_maps.append(result)
         return result
 
-    async def _fake_dispatch(ctx):
+    async def _fake_dispatch(ctx, **_kwargs):
         return WriterOutcome(
             block_id=ctx.planned.id,
             content={"paragraphs": [ctx.planned.brief]},

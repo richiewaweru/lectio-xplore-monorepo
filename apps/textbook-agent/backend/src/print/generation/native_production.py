@@ -66,6 +66,10 @@ async def build_closed_print_production_plan_async(
     provider: Any | None = None,
     engine: Any | None = None,
     use_document_composition: bool = True,
+    budget_ledger: Any | None = None,
+    checkpoint_store: Any | None = None,
+    progress_store: Any | None = None,
+    progress_run_id: str | None = None,
 ) -> tuple[FormPlan, PrintSelectionSnapshot, list[PrintWorkOrder]]:
     """Build Print FormPlan from shared document composition (canonical).
 
@@ -116,6 +120,11 @@ async def build_closed_print_production_plan_async(
             policy=body,
             allow_heuristic_fallback=True,
             candidate_map=candidate_map,
+            required_visual_slots=list(packet.required_visual_slots()),
+            budget_ledger=budget_ledger,
+            checkpoint_store=checkpoint_store,
+            progress_store=progress_store,
+            progress_run_id=progress_run_id,
         )
         _ = choose  # catalogue choose unused when composition owns ordinary selection
     else:

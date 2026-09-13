@@ -1,0 +1,23 @@
+{
+  "retry": {
+    "detail": {
+      "error_type": "INVALID_STATUS",
+      "message": "retry-native requires failed_recoverable, got 'failed_terminal'",
+      "stage": "failed_terminal",
+      "retry_target": "not_retryable",
+      "generation_id": "8a890460-7324-4927-8a90-33aa7da5baa3"
+    },
+    "error": "HTTP Error 409: Conflict"
+  },
+  "print": {
+    "detail": "illegal transition 'failed_terminal' \u2192 'queued'; allowed=[]",
+    "error": "HTTP Error 409: Conflict"
+  },
+  "last_status": {
+    "detail": "Realization not found",
+    "error": "HTTP Error 404: Not Found"
+  },
+  "gen": {
+    "status": "failed_terminal"
+  }
+}

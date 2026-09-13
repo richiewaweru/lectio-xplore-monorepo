@@ -306,9 +306,41 @@ async def admit_realization(
                 or "Realization is read-only; regenerate with an explicit path"
             )
         stored = str(existing.admission_payload_hash or existing.teaching_plan_hash or "")
+        prep_changed = (
+            preparation_generation_id is not None
+            and existing.preparation_generation_id not in {None, preparation_generation_id}
+        )
+        hash_changed = bool(stored and stored != payload_hash)
+        # After preparation regenerate, identity keys collide at the same
+        # teaching_plan_revision. Rebind stale/failed rows onto the new prep
+        # instead of raising a misleading admission-key conflict.
+        if (hash_changed or prep_changed) and existing.status in {
+            "stale",
+            "failed_terminal",
+            "failed_recoverable",
+            "failed",
+        }:
+            existing.teaching_plan_id = teaching_plan_id
+            existing.teaching_plan_hash = teaching_plan_hash
+            existing.preparation_generation_id = preparation_generation_id
+            existing.pack_id = pack_id
+            existing.output_id = output_id
+            existing.status = "queued"
+            existing.error_summary = None
+            existing.realization_revision = int(existing.realization_revision or 1) + 1
+            if admission_request_key:
+                existing.admission_request_key = admission_request_key
+                existing.admission_payload_hash = payload_hash
+            await session.flush()
+            return existing, True
         if admission_request_key and stored and stored != payload_hash:
             raise RealizationPayloadConflictError(
                 "Admission request key reused with a different payload hash"
+            )
+        if hash_changed or prep_changed:
+            raise RealizationPayloadConflictError(
+                "Existing realization is pinned to a different teaching/preparation; "
+                "regenerate the lesson preparation or mark the prior realization stale"
             )
         if (
             admission_request_key
@@ -480,6 +512,38 @@ async def mark_stale_for_teaching_change(
     return updated
 
 
+async def mark_stale_for_preparation_regenerate(
+    session: AsyncSession,
+    *,
+    path_lesson_id: str,
+    previous_pack_id: str | None,
+) -> list[NativeRealizationModel]:
+    """Preparation regenerate invalidates prior native realizations for the lesson.
+
+    Keeps output_id snapshots; status moves to stale so a later admit can rebind
+    the unique identity onto the new preparation/teaching hash.
+    """
+    rows = await session.scalars(
+        select(NativeRealizationModel).where(
+            NativeRealizationModel.path_lesson_id == path_lesson_id,
+            NativeRealizationModel.status.notin_(["read_only", "stale"]),
+        )
+    )
+    updated: list[NativeRealizationModel] = []
+    for row in rows.all():
+        prior_output = row.output_id
+        row.status = "stale"
+        row.error_summary = (
+            "Lesson preparation regenerated"
+            + (f" (supersedes {previous_pack_id})" if previous_pack_id else "")
+            + "; admit again against the new approved teaching revision"
+        )
+        assert row.output_id == prior_output
+        updated.append(row)
+    await session.flush()
+    return updated
+
+
 async def mark_stale_for_policy_change(
     session: AsyncSession,
     *,
@@ -632,6 +696,7 @@ __all__ = [
     "list_realizations_for_lesson",
     "mark_stale_for_policy_change",
     "mark_stale_for_teaching_change",
+    "mark_stale_for_preparation_regenerate",
     "open_href_for",
     "persisted_path_is_stable",
     "request_outputs",

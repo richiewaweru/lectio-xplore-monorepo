@@ -1,0 +1,88 @@
+{
+  "learner": {
+    "id": "f5b4104c-86c1-40a7-bbf5-2687e9f7c17f",
+    "display_name": "P06C L2 6a7da9",
+    "invite_code": "d8d34bbd"
+  },
+  "instance_id": "0605be5a-7901-462b-8b89-7c1e7fbd0bdb",
+  "attempt": {
+    "http": 200,
+    "request": {
+      "interaction_id": "ix-check-b1-choice",
+      "client_submission_id": "704f8fcb-f2af-46b1-bbac-cda80806ce84",
+      "response_json": {
+        "selected_option_id": "far_side"
+      },
+      "expected_release_id": "81a26183-aa3d-4a60-a110-a6bb632c29ac"
+    },
+    "body": {
+      "id": "434fa0b8-294b-437a-a716-c19737108995",
+      "client_submission_id": "704f8fcb-f2af-46b1-bbac-cda80806ce84",
+      "interaction_id": "ix-check-b1-choice",
+      "outcome": "correct",
+      "score_earned": 1.0,
+      "score_possible": 1.0,
+      "feedback": "Yes. The hand is opaque, so it blocks the straight-line light from the torch. The unlit region forms on the far side, opposite the torch, so as the hand moves relative to the light the shadow shifts accordingly.",
+      "completed": true,
+      "assessment_mode": "practice",
+      "idempotent_replay": false,
+      "response_json": {
+        "selected_option_id": "far_side"
+      }
+    }
+  },
+  "option_ids": [
+    "far_side",
+    "toward_source",
+    "on_hand",
+    "beside_source"
+  ],
+  "reload": {
+    "id": "0605be5a-7901-462b-8b89-7c1e7fbd0bdb",
+    "learner_id": "f5b4104c-86c1-40a7-bbf5-2687e9f7c17f",
+    "learn_release_id": "81a26183-aa3d-4a60-a110-a6bb632c29ac",
+    "assignment_id": null,
+    "status": "active",
+    "score_earned": 0.0,
+    "score_possible": 0.0,
+    "current_section_id": "check-b1",
+    "graded": {
+      "attempts": 0,
+      "raw_attempts": 0,
+      "score_earned": 0.0,
+      "score_possible": 0.0
+    },
+    "practice": {
+      "attempts": 1,
+      "raw_attempts": 1,
+      "score_earned": 1.0,
+      "score_possible": 1.0
+    },
+    "progress": {
+      "completed_section_ids": [
+        "check-b1"
+      ],
+      "completed_interaction_ids": [
+        "ix-check-b1-choice"
+      ],
+      "score_earned": 0.0,
+      "score_possible": 0.0
+    },
+    "attempts": [
+      {
+        "id": "434fa0b8-294b-437a-a716-c19737108995",
+        "interaction_id": "ix-check-b1-choice",
+        "client_submission_id": "704f8fcb-f2af-46b1-bbac-cda80806ce84",
+        "section_id": "check-b1",
+        "outcome": "correct",
+        "assessment_mode": "practice",
+        "score_earned": 1.0,
+        "score_possible": 1.0,
+        "response_json": {
+          "selected_option_id": "far_side"
+        },
+        "created_at": "2026-09-13T13:31:54.167289"
+      }
+    ]
+  }
+}

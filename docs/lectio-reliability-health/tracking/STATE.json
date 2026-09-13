@@ -1,16 +1,19 @@
 {
   "program": "lectio-reliability-health",
-  "status": "COMPLETE_NOT_READY",
+  "status": "AWAITING_FIXES_AFTER_VERIFIER",
   "reviewed_baseline": "a6b75e33d2a56452e05033a510f86db1566891b2",
-  "implementation_sha": "d3c44a63d57ba38d3efa8798c8f9d3545147f59d",
-  "implementation_sha_note": "Closeout commit; live G20–G24 remain FAIL per VERIFIER-REPORT and P06-REPORT",
+  "implementation_sha": "6d84d30691b35f3fc8dd0d4540be81598cc8d95f",
+  "implementation_sha_note": "Independent verifier: live G20–G23 proofs ran against dirty tree atop this SHA. Not a certified tip. Commit required before G24 READY.",
   "branch": "fix/lectio-reliability-health",
-  "login_status": "PASS_LOCAL_PLAYWRIGHT_PERSISTENT",
+  "login_status": "SESSION_EXPIRED_OR_LOGGED_OUT",
+  "login_status_note": "P06c retained auth_me=200; fresh playwright session=reliability now redirects /units → /login",
   "browser_session": "playwright-cli session=reliability profile=.tmp/reliability-chrome-profile",
   "browser_session_transferable": false,
   "target_origin": "http://127.0.0.1:5173",
   "api_origin": "http://127.0.0.1:8000",
   "baseline_unit_id": "5536822e-cc75-4513-8bf6-61702dd8dc46",
+  "live_unit_id": "ff3a0315-406c-4039-a5ee-bd76896f0dcc",
+  "live_prep_generation_id": "7206057e-5b25-4af8-9a77-40742213efac",
   "phases": {
     "P00": "PASS",
     "P01": "PASS",
@@ -18,7 +21,9 @@
     "P03": "PASS",
     "P04": "PASS",
     "P05": "PASS",
-    "P06": "FAIL"
+    "P06": "FAIL",
+    "P06b": "SUPERSEDED",
+    "P06c": "VERIFIER_NOT_READY"
   },
   "gates": {
     "G01": "PASS",
@@ -39,26 +44,28 @@
     "G16": "PASS",
     "G17": "PASS",
     "G18": "PASS",
-    "G19": "PASS",
-    "G20": "FAIL",
-    "G21": "FAIL",
-    "G22": "FAIL",
-    "G23": "FAIL",
+    "G19": "FAIL",
+    "G20": "PASS",
+    "G21": "PASS",
+    "G22": "PASS",
+    "G23": "PASS",
     "G24": "FAIL"
   },
   "gate_notes": {
-    "G09-G17": "Learn production now wires CallBudgetLedger, CheckpointStore, ProgressStore into compose/write and persists ledger/checkpoints in chunked_state_json; ProgressStore still process-local for events",
-    "G20": "no live SSE reconnect browser proof",
-    "G21": "no live two-tab 409 browser proof",
-    "G22": "live journey incomplete; no retained PDF",
-    "G23": "no live recovery run-manifest",
-    "G24": "independent verifier NOT_READY — see VERIFIER-REPORT.md; live gates fail"
+    "G19": "FAIL — verifier re-ran pnpm app:test exit=1 (7 timeouts / 257 passed); app:check + domain guards green",
+    "G20": "PASS — retained SSE after_seq replay + browser events_mode=replay; stream reconnect partial (timeout flag noted)",
+    "G21": "PASS — p06c-browser-409.json: tabA 200 then tabB 409; local_tabB_kept",
+    "G22": "PASS — linked manifest + PDF magic/hash/marker + learner attempt correct (spot-checked)",
+    "G23": "PASS — Learn/Print Idempotency-Key reuse + regenerate stale rebind evidenced",
+    "G24": "FAIL — dirty tree (no certified tip); app:test red; full validate_repo not re-run on tip this turn"
   },
   "final_verdict": "NOT_READY",
+  "run_manifest": "docs/lectio-reliability-health/evidence/p06c-run-manifest.json",
   "verifier_report": "docs/lectio-reliability-health/tracking/VERIFIER-REPORT.md",
+  "p06c_report": "docs/lectio-reliability-health/tracking/P06c-REPORT.md",
   "execution_environment": {
-    "agent": "Casa by Grok / Cursor Auto + independent verifier",
-    "services": "native backend+frontend + Docker postgres textbookagent-db-1",
-    "browser": "local Chromium via Playwright CLI persistent profile"
+    "agent": "independent verifier (Cursor Auto)",
+    "services": "native backend+frontend + Docker postgres (probed up)",
+    "browser": "playwright-cli session=reliability (fresh check logged out)"
   }
 }

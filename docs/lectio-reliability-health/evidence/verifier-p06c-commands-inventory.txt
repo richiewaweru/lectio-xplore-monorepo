@@ -1,0 +1,17 @@
+﻿# verifier-p06c command inventory (independent)
+recorded_at: 2026-09-13T16:49:07.3798469+03:00
+HEAD: 6d84d30691b35f3fc8dd0d4540be81598cc8d95f
+dirty_tree: YES
+
+| command | cwd | exit | log |
+|---|---|---|---|
+| pnpm program:domain-guards | root | 0 | verifier-p06c-domain-guards.out.txt |
+| uv run python ../tools/agent/check_architecture.py --format text | backend | 0 | verifier-p06c-architecture.out.txt |
+| uv run pytest tests/reliability/ tests/print_learn/test_p05_print_production_gates.py tests/print_learn/test_p08_integration_gates.py -q | backend | 0 (30 passed) | verifier-p06c-reliability-pytest.out.txt |
+| pnpm contracts:check | root | 0 | verifier-p06c-contracts-check.out.txt |
+| pnpm contracts:test | root | 0 | verifier-p06c-contracts-test.out.txt |
+| pnpm page:check | root | 0 | verifier-p06c-page-check.out.txt |
+| pnpm page:test | root | 0 | verifier-p06c-page-test.out.txt |
+| pnpm app:check | root | 0 | verifier-p06c-app-check.out.txt |
+| pnpm app:test | root | 1 (7 failed timeouts / 257 passed) | verifier-p06c-app-test.out.txt |
+| uv run python ../tools/agent/validate_repo.py --scope backend | backend | NOT_RUN this turn; retained p06b-validate-final.out.txt exit=0 (1413 passed) | p06b-validate-final.out.txt |

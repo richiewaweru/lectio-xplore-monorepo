@@ -722,6 +722,15 @@ async def prepare_path_lesson(
         previous = await session.get(LessonProvenanceModel, previous_pack_id)
         if previous is not None:
             previous.invalidated_at = _utcnow()
+        from application.unit_lesson.realizations import (
+            mark_stale_for_preparation_regenerate,
+        )
+
+        await mark_stale_for_preparation_regenerate(
+            session,
+            path_lesson_id=lesson.id,
+            previous_pack_id=previous_pack_id,
+        )
     await session.flush()
     await initialise_path_generation(
         session,

@@ -1,0 +1,46 @@
+{
+  "instance": {
+    "detail": [
+      {
+        "type": "missing",
+        "loc": [
+          "body",
+          "learner_id"
+        ],
+        "msg": "Field required",
+        "input": {
+          "release_id": "95dc90c4-cb1c-41f9-b6da-cb698fcb7a97",
+          "learner_label": "p06c-reliability-learner"
+        }
+      },
+      {
+        "type": "missing",
+        "loc": [
+          "body",
+          "learn_release_id"
+        ],
+        "msg": "Field required",
+        "input": {
+          "release_id": "95dc90c4-cb1c-41f9-b6da-cb698fcb7a97",
+          "learner_label": "p06c-reliability-learner"
+        }
+      }
+    ],
+    "error": "HTTP Error 422: Unprocessable Entity"
+  },
+  "attempt": null,
+  "print_admit": {
+    "status": "queued",
+    "path": "print",
+    "output_id": "8a890460-7324-4927-8a90-33aa7da5baa3",
+    "realization_id": "28724db0-b983-4463-a729-97e051db21ed",
+    "realization_created": true,
+    "teaching_plan_hash": "349e79bed689bf1c46ce2294817f89a8e035b30196560fabca6010cfdfececa9",
+    "teaching_plan_revision": 1,
+    "open_href": "/studio/print/8a890460-7324-4927-8a90-33aa7da5baa3"
+  },
+  "path_version_id": "3b157491-b7a2-41ed-8268-fc30eaf402f6",
+  "path_revision": 2,
+  "lesson_id": "5901155d-8dfa-4e92-8285-0ab3170efd4d",
+  "lesson_revision": 1
+}

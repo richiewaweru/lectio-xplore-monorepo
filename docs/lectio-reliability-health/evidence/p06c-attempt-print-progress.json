@@ -1,0 +1,167 @@
+{
+  "learner": {
+    "id": "fac821bc-41a2-4e14-b764-d0fae80be73a",
+    "display_name": "P06C Reliability Learner",
+    "invite_code": "b23b6350"
+  },
+  "instance": {
+    "id": "b38e5ae2-3853-4a7e-95a8-c76a7cc652b1",
+    "learner_id": "fac821bc-41a2-4e14-b764-d0fae80be73a",
+    "learn_release_id": "95dc90c4-cb1c-41f9-b6da-cb698fcb7a97",
+    "status": "active",
+    "current_section_id": null
+  },
+  "attempt": {
+    "detail": "section_id does not match release membership",
+    "error": "HTTP Error 422: Unprocessable Entity"
+  },
+  "final_status": {
+    "run_id": "28724db0-b983-4463-a729-97e051db21ed",
+    "path": "print",
+    "status": "queued",
+    "stage": "queued",
+    "active_items": [],
+    "completed": 0,
+    "total": 0,
+    "retry_schedule": [],
+    "allowed_actions": [
+      "refresh",
+      "cancel"
+    ],
+    "revisions": {
+      "realization_revision": 1,
+      "teaching_plan_revision": 1,
+      "document_revision": 0
+    },
+    "latest_seq": 3,
+    "links": {
+      "status": "/api/v1/realizations/28724db0-b983-4463-a729-97e051db21ed/status",
+      "events": "/api/v1/realizations/28724db0-b983-4463-a729-97e051db21ed/events",
+      "events_stream": "/api/v1/realizations/28724db0-b983-4463-a729-97e051db21ed/events/stream"
+    },
+    "db_status": "queued"
+  },
+  "events_sample": [
+    {
+      "poll": 75,
+      "http": 200,
+      "keys": [
+        "mode",
+        "events",
+        "snapshot",
+        "oldest_retained_seq",
+        "latest_seq"
+      ],
+      "count": 3
+    },
+    {
+      "poll": 80,
+      "http": 200,
+      "keys": [
+        "mode",
+        "events",
+        "snapshot",
+        "oldest_retained_seq",
+        "latest_seq"
+      ],
+      "count": 3
+    },
+    {
+      "poll": 85,
+      "http": 200,
+      "keys": [
+        "mode",
+        "events",
+        "snapshot",
+        "oldest_retained_seq",
+        "latest_seq"
+      ],
+      "count": 3
+    }
+  ],
+  "events_reconnect": {
+    "mode": "replay",
+    "events": [
+      {
+        "seq": 1,
+        "event_type": "model_call",
+        "at": "2026-09-13T12:29:39.864168+00:00",
+        "run_id": "28724db0-b983-4463-a729-97e051db21ed",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "write-paragraph-51b8c98fa1",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "a7864263c332f9825630d740ef2fd964666c20ffac895e7ffde4ea98d3c4b281",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 2,
+        "event_type": "model_call",
+        "at": "2026-09-13T12:29:40.109348+00:00",
+        "run_id": "28724db0-b983-4463-a729-97e051db21ed",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "write-paragraph-da735afa04",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "f83c9438657e25fe5eabe9c90f55b7335d877157523645fc76a54bbbeca8b3d7",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 3,
+        "event_type": "model_call",
+        "at": "2026-09-13T12:29:40.135945+00:00",
+        "run_id": "28724db0-b983-4463-a729-97e051db21ed",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "write-figure-2f974edc83",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "824ab62801ebf6d96c5574985995df6ceaf083fc9fb46a90c1f76c1709da3854",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      }
+    ],
+    "snapshot": null,
+    "oldest_retained_seq": 1,
+    "latest_seq": 3
+  },
+  "repeat_admission": {
+    "first": {
+      "detail": "illegal transition 'failed_terminal' \u2192 'queued'; allowed=[]",
+      "error": "HTTP Error 409: Conflict"
+    },
+    "second": {
+      "detail": "illegal transition 'failed_terminal' \u2192 'queued'; allowed=[]",
+      "error": "HTTP Error 409: Conflict"
+    }
+  },
+  "gen_status": "failed_terminal"
+}

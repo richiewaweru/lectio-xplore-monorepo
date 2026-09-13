@@ -195,6 +195,10 @@ async def run_print_authoring(
     approved_items: Sequence[Mapping[str, Any]] | None = None,
     mode: str | None = None,
     requested_knowledge_policy: str | None = None,
+    budget_ledger: Any | None = None,
+    checkpoint_store: Any | None = None,
+    progress_store: Any | None = None,
+    progress_run_id: str | None = None,
 ) -> AuthoringResult:
     from infra.authoring.policy_resolver import resolve_authoring_policy
 
@@ -256,7 +260,18 @@ async def run_print_authoring(
     selected_engine = engine or AuthoringEngine(
         registry=build_print_authoring_registry(),
         provider=provider or LLMAuthoringProvider(),
+        budget_ledger=budget_ledger,
+        progress_store=progress_store,
+        progress_run_id=progress_run_id,
+        progress_stage="writing",
     )
+    if engine is not None and budget_ledger is not None and selected_engine.budget_ledger is None:
+        selected_engine.budget_ledger = budget_ledger
+    if engine is not None and progress_store is not None:
+        selected_engine.progress_store = progress_store
+        selected_engine.progress_run_id = progress_run_id
+        selected_engine.progress_stage = "writing"
+    _ = checkpoint_store  # reserved for writer-level resume keys
     result = await selected_engine.execute(request, provider=provider)
     updated_prov = type(result.provenance)(
         work_order_id=result.provenance.work_order_id,

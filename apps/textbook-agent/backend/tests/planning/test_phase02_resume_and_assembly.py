@@ -162,7 +162,7 @@ async def test_composite_execution_keys_and_skip_ready() -> None:
     gid = await _seed(teaching=teaching, form_plan=plan, block_execution=ready)
     written: list[str] = []
 
-    async def _fake_dispatch(ctx):
+    async def _fake_dispatch(ctx, **_kwargs):
         written.append(ctx.planned.id)
         return WriterOutcome(
             block_id=ctx.planned.id,
@@ -200,7 +200,7 @@ async def test_middle_block_failure_does_not_stop_siblings() -> None:
         enabled=True, generation_id=gid, fail_block_index=1, fail_once=True
     )
 
-    async def _fake_dispatch(ctx):
+    async def _fake_dispatch(ctx, **_kwargs):
         return WriterOutcome(
             block_id=ctx.planned.id,
             content={"paragraphs": [f"ok {ctx.planned.id}"]},
@@ -238,7 +238,7 @@ async def test_form_plan_reused_when_persisted() -> None:
         form_calls["n"] += 1
         raise AssertionError("form planner must not run when plan is persisted")
 
-    async def _fake_dispatch(ctx):
+    async def _fake_dispatch(ctx, **_kwargs):
         return WriterOutcome(
             block_id=ctx.planned.id,
             content={"paragraphs": [ctx.planned.brief]},
@@ -439,7 +439,7 @@ async def test_started_current_token_not_duplicated() -> None:
 
     written: list[str] = []
 
-    async def _fake_dispatch(ctx):
+    async def _fake_dispatch(ctx, **_kwargs):
         written.append(ctx.planned.id)
         return WriterOutcome(
             block_id=ctx.planned.id,

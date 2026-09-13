@@ -1,0 +1,13 @@
+﻿{
+  "method": "playwright-cli page.evaluate two competing PUT lectio-document",
+  "generation_id": "7206057e-5b25-4af8-9a77-40742213efac",
+  "rev_before": 4,
+  "tabA": 200,
+  "tabB": 409,
+  "tabA_rev": 5,
+  "tabB_detail": "stale document revision",
+  "local_tabB_kept": true,
+  "events_latest": 4,
+  "events_mode": "replay",
+  "screenshot": "docs/lectio-reliability-health/evidence/p06c-print-reloaded.png"
+}

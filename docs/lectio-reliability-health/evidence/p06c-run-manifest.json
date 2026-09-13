@@ -1,0 +1,120 @@
+{
+  "program": "lectio-reliability-health",
+  "phase": "P06c",
+  "implementation_sha": "6d84d30691b35f3fc8dd0d4540be81598cc8d95f",
+  "implementation_sha_note": "Live journey executed against dirty working tree including: composition_bridge soft-fail empty source_question_ids; failed_terminal prep non-reuse; regenerate marks realizations stale; admit rebinds stale rows; lesson status uses pack_id. Commit required before G24 READY.",
+  "branch": "fix/lectio-reliability-health",
+  "recorded_at_utc": "2026-09-13T13:35:00Z",
+  "environment": {
+    "frontend": "http://127.0.0.1:5173",
+    "api": "http://127.0.0.1:8000",
+    "api_instance_id": "9e03b924-07da-4ba4-95c4-9a1524fd7987",
+    "browser_session": "playwright-cli session=reliability",
+    "profile": ".tmp/reliability-chrome-profile",
+    "secrets_exported": false
+  },
+  "auth": {
+    "auth_me_status": 200,
+    "user_id": "2f297058-f6bc-47bf-9ffd-3208ad8246d4",
+    "email_domain": "gmail.com"
+  },
+  "linked_ids": {
+    "unit_id": "ff3a0315-406c-4039-a5ee-bd76896f0dcc",
+    "path_version_id": "3b157491-b7a2-41ed-8268-fc30eaf402f6",
+    "path_revision": 2,
+    "path_lesson_id": "5901155d-8dfa-4e92-8285-0ab3170efd4d",
+    "lesson_revision": 1,
+    "prior_failed_prep_generation_id": "8a890460-7324-4927-8a90-33aa7da5baa3",
+    "preparation_generation_id": "7206057e-5b25-4af8-9a77-40742213efac",
+    "teaching_plan_hash": "1a72a38aad24520a6c9f2eead4e0b8a0cac376a6ac0315796da812ebbc38a5fa",
+    "teaching_plan_revision": 1,
+    "learn_realization_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+    "learn_output_id": "learn-out-6052a4793d5c",
+    "editable_lesson_id": "2d99beb9-cb5e-4aab-ae77-7c3d17bede84",
+    "builder_marker": "P06C-BUILDER-EDIT-20260913B",
+    "learn_release_id": "81a26183-aa3d-4a60-a110-a6bb632c29ac",
+    "learn_release_document_hash": "36affafe94f40bd0ab6ba8ed986c6917ff929a418084c965338c835c2ff0002f",
+    "print_realization_id": "28724db0-b983-4463-a729-97e051db21ed",
+    "print_output_id": "7206057e-5b25-4af8-9a77-40742213efac",
+    "print_marker": "P06C-PRINT-MARKER-20260913B",
+    "print_document_revision_at_pdf": 4,
+    "print_document_revision_after_browser_409": 5,
+    "learner_instance_id": "see p06c-learner-attempt.json",
+    "learner_attempt_id": "434fa0b8-294b-437a-a716-c19737108995"
+  },
+  "steps": [
+    {
+      "id": "S01_regenerate_after_failed_terminal",
+      "method": "API",
+      "result": "PASS",
+      "notes": "Prior prep 8a890460 failed_terminal on choices without source_question_ids. :regenerate → 7206057e. composition_bridge fix + stale realization rebind required."
+    },
+    {
+      "id": "S02_structural_teaching_approve",
+      "method": "API",
+      "result": "PASS",
+      "evidence": "p06c-teaching-poll.json"
+    },
+    {
+      "id": "S03_learn_admit_repeat_key",
+      "method": "API",
+      "result": "PASS",
+      "notes": "Stale prior learn rebinding; same Idempotency-Key → same realization_id, second call replayed=true",
+      "evidence": "p06c-learn-rebind.json"
+    },
+    {
+      "id": "S04_builder_edit_publish",
+      "method": "API",
+      "result": "PASS",
+      "marker": "P06C-BUILDER-EDIT-20260913B",
+      "release_id": "81a26183-aa3d-4a60-a110-a6bb632c29ac",
+      "evidence": "p06c-builder-print.json"
+    },
+    {
+      "id": "S05_print_admit_repeat_key",
+      "method": "API",
+      "result": "PASS",
+      "notes": "Print queued→ready/assembling; repeat Idempotency-Key same realization_id",
+      "evidence": "p06c-builder-print.json"
+    },
+    {
+      "id": "S06_print_marker_409_pdf",
+      "method": "API+browser",
+      "result": "PASS",
+      "pdf": "p06c-print.pdf",
+      "pdf_sha256": "0acd6bf453668c8210598cda56255c4a1127593e69f55026b486f4a85066b22a",
+      "marker_extracted": true,
+      "evidence": ["p06c-print-pdf-409-sse.json", "p06c-pdf-meta.json", "p06c-print-extracted.txt", "p06c-browser-409.json"]
+    },
+    {
+      "id": "S07_sse_reconnect_replay",
+      "method": "API+browser",
+      "result": "PASS",
+      "notes": "GET /realizations/{id}/events after_seq mid + stream Last-Event-ID; browser events_mode=replay",
+      "evidence": ["p06c-print-pdf-409-sse.json", "p06c-browser-409.json"]
+    },
+    {
+      "id": "S08_learner_attempt",
+      "method": "API",
+      "result": "PASS",
+      "notes": "selected_option_id=far_side → outcome correct; release contains builder marker",
+      "evidence": "p06c-learner-attempt.json"
+    }
+  ],
+  "artifacts": {
+    "pdf": "docs/lectio-reliability-health/evidence/p06c-print.pdf",
+    "pdf_text": "docs/lectio-reliability-health/evidence/p06c-print-extracted.txt",
+    "screenshots": [
+      "docs/lectio-reliability-health/evidence/p06c-print-studio.png",
+      "docs/lectio-reliability-health/evidence/p06c-print-reloaded.png",
+      "docs/lectio-reliability-health/evidence/p06c-print-after-409.png"
+    ]
+  },
+  "gates": {
+    "G20": "PASS",
+    "G21": "PASS",
+    "G22": "PASS",
+    "G23": "PASS",
+    "G24": "PENDING_INDEPENDENT_VERIFIER"
+  }
+}

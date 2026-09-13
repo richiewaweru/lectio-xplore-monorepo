@@ -19,6 +19,7 @@ from application.unit_lesson.effect_keys import (
 from application.unit_lesson.realizations import (
     RealizationPayloadConflictError,
     admit_realization,
+    mark_stale_for_preparation_regenerate,
 )
 from application.unit_lesson.stage_registry import (
     IllegalStageTransitionError,
@@ -29,12 +30,15 @@ from application.unit_lesson.stage_registry import (
     is_approval_wait,
     is_worker_claimable,
 )
+from application.unit_lesson.status import try_reuse_existing_preparation
 from core.database.models import (
     GenerationModel,
+    LessonProvenanceModel,
     NativeRealizationModel,
     PathLessonModel,
     UserModel,
 )
+from curriculum.models import PrepareLessonRequest
 from curriculum.service import approve_path, create_unit, persist_path_plan
 
 
@@ -238,3 +242,106 @@ async def test_g08_effect_key_replay_and_conflict(db_session: AsyncSession) -> N
             request_key="save-1",
             payload_hash=payload_digest({"doc": 2}),
         )
+
+
+@pytest.mark.asyncio
+async def test_g07_failed_terminal_prep_is_not_reused(db_session: AsyncSession) -> None:
+    """failed_terminal preparations must not be resurfaced by prepare reuse."""
+    lesson = await _prepared_lesson(db_session, user_id="p02-term")
+    prep_id = lesson.pack_id
+    assert prep_id is not None
+    generation = await db_session.get(GenerationModel, prep_id)
+    assert generation is not None
+    generation.status = "failed_terminal"
+    state = dict(generation.chunked_state_json or {})
+    state["stage"] = "failed_terminal"
+    state["structural_plan"] = {
+        "cards": [
+            {
+                "id": "card-1",
+                "title": lesson.title,
+                "objective": lesson.objective,
+                "prereqs": [],
+                "opens_by": "hook",
+                "closes_by": "check",
+            }
+        ],
+        "sections": [{"role": "orient", "title": "Orient", "blocks": []}],
+    }
+    generation.chunked_state_json = state
+    db_session.add(
+        LessonProvenanceModel(
+            pack_id=prep_id,
+            path_lesson_id=lesson.id,
+            objective_hash=lesson.objective_hash,
+            path_lesson_revision=lesson.revision,
+            lesson_mode="first_exposure",
+            group_ids=[],
+            skeleton_id="conceptual.first_exposure",
+            skeleton_version=1,
+        )
+    )
+    await db_session.flush()
+
+    reused = await try_reuse_existing_preparation(
+        db_session,
+        lesson=lesson,
+        request=PrepareLessonRequest(lesson_mode="first_exposure"),
+    )
+    assert reused is None
+
+
+@pytest.mark.asyncio
+async def test_g07_regenerate_stale_then_admit_rebinds_identity(
+    db_session: AsyncSession,
+) -> None:
+    """After regenerate marks prior admit stale, new prep/hash rebinds the unique row."""
+    lesson = await _prepared_lesson(db_session, user_id="p02-rebind")
+    old_prep = lesson.pack_id
+    assert old_prep is not None
+    first, created1 = await admit_realization(
+        db_session,
+        path_lesson_id=lesson.id,
+        path="learn",
+        teaching_plan_id="tp-old",
+        teaching_plan_revision=1,
+        teaching_plan_hash="hash-old",
+        preparation_generation_id=old_prep,
+        pack_id=old_prep,
+        output_id="learn-out-old",
+        admission_request_key="rebind-key",
+        admission_payload_hash="hash-old",
+    )
+    assert created1 is True
+    assert first.status == "queued"
+
+    updated = await mark_stale_for_preparation_regenerate(
+        db_session,
+        path_lesson_id=lesson.id,
+        previous_pack_id=old_prep,
+    )
+    assert len(updated) == 1
+    assert updated[0].id == first.id
+    assert updated[0].status == "stale"
+
+    new_prep = f"prep-rebind-{uuid.uuid4().hex[:8]}"
+    rebound, created2 = await admit_realization(
+        db_session,
+        path_lesson_id=lesson.id,
+        path="learn",
+        teaching_plan_id="tp-new",
+        teaching_plan_revision=1,
+        teaching_plan_hash="hash-new",
+        preparation_generation_id=new_prep,
+        pack_id=new_prep,
+        output_id="learn-out-new",
+        admission_request_key=str(uuid.uuid4()),
+        admission_payload_hash="hash-new",
+    )
+    assert created2 is True
+    assert rebound.id == first.id
+    assert rebound.status == "queued"
+    assert rebound.teaching_plan_hash == "hash-new"
+    assert rebound.preparation_generation_id == new_prep
+    assert rebound.output_id == "learn-out-new"
+    assert int(rebound.realization_revision) >= 2

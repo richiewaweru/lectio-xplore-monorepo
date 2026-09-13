@@ -1,0 +1,559 @@
+{
+  "generation_id": "7206057e-5b25-4af8-9a77-40742213efac",
+  "teaching_plan": {
+    "arc": "The lesson opens on a hand held in front of a torch and asks where the dark patch lands before anything is explained. It then builds the idea that light travels in straight lines from the torch, so the opaque hand stops the light that would have reached the wall and leaves an unlit region \u2014 a shadow \u2014 behind the hand, on the far side from the torch. Learners compare that case against a near-miss where the hand is moved to the side of the beam, confront the belief that the shadow is something the hand sends out, and close by explaining where the shadow falls and in which direction it would move for a new object.",
+    "revision": 1,
+    "sections": [
+      {
+        "blocks": [
+          {
+            "id": "orient-b1",
+            "brief": "Open with the concrete setup: a hand held in front of a torch shining on a wall. Describe only what is seen \u2014 the torch, the hand between the torch and the wall, a bright patch of light on the wall, and a hand-shaped dark patch on the wall. Do not explain why the dark patch is there, do not mention straight-line travel of light, and do not use the word shadow as something previously defined. Close by asking the learner to say where the dark patch is and to commit to where they think it will land before any reason is offered.",
+            "intent": "orient",
+            "evidence": "The objective is a how-and-where explanation, which requires a held concrete case; without committing to the observed arrangement first, the later causal account has nothing to attach to.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "slot.orient.purpose",
+              "lesson.objective"
+            ],
+            "learner_action": {
+              "action": "select-one",
+              "target": "which side of the hand the dark hand-shaped patch appears when the torch is on the left of the hand and the wall is on the right",
+              "purpose": "elicit an initial prediction before any explanation, so the learner has a commitment to revisit",
+              "difficulty": "guided",
+              "expected_evidence": "the learner commits to a position for the shadow, which reveals whether they already place it behind the hand or somewhere else"
+            },
+            "departure_reason": null,
+            "source_question_ids": [],
+            "stimulus_dependencies": [
+              "anchor-1"
+            ]
+          }
+        ],
+        "slot_id": "orient",
+        "transition": null,
+        "specific_purpose": "Give the learner a reason to care and a concrete situation to hold."
+      },
+      {
+        "blocks": [
+          {
+            "id": "explain-b1",
+            "brief": "Give the mechanism using the torch, the hand and the wall. Light from the torch travels in straight lines outward. The opaque hand stands in the path of those lines, so the light that would have reached one region of the wall never gets there. That region on the wall therefore receives no light and looks dark \u2014 this unlit region is the shadow. State clearly that the shadow is not something the hand gives off or sends out; it is the place the light cannot reach because the hand is in the way. Name the direction: the shadow appears on the side of the hand away from the torch, because the light can only be blocked downstream of its source. Do not yet describe what happens if the hand is moved out of the beam.",
+            "intent": "explain-cause",
+            "evidence": "The objective asks WHY a shadow appears and WHERE it sits; both are causal-and-positional claims, so the block must run the straight-line blocking mechanism rather than merely define the term.",
+            "position": 0,
+            "evidence_refs": [
+              "lesson.objective",
+              "anchor.anchor-1",
+              "prior-1",
+              "prior-2",
+              "M1",
+              "slot.explain.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [],
+            "stimulus_dependencies": [
+              "anchor-1"
+            ]
+          },
+          {
+            "id": "explain-b2",
+            "brief": "Follow the light itself through the torch\u2013hand\u2013wall arrangement. Show light leaving the torch in straight lines, show the rays meeting the opaque hand and stopping there, show the rays that pass beside the hand continuing to the wall, and show the unlit region on the wall immediately beyond the hand. The learner must notice the one-to-one correspondence: the shape of the dark region on the wall matches the outline of the hand that stands in the beam, and that dark region sits on the far side of the hand from the torch. Keep the torch on one side, the hand in the middle, the wall on the other side, and make the direction of travel explicit from torch, through the gap beside the hand, to the wall.",
+            "intent": "trace-flow",
+            "evidence": "The learner must see the light actually stopped and the unlit region left behind, because a purely verbal cause statement leaves the hand-to-shadow correspondence and the downstream direction unobserved.",
+            "position": 1,
+            "evidence_refs": [
+              "lesson.objective",
+              "anchor.anchor-1",
+              "prior-1",
+              "slot.explain.purpose"
+            ],
+            "learner_action": null,
+            "departure_reason": null,
+            "source_question_ids": [],
+            "stimulus_dependencies": [
+              "anchor-1"
+            ]
+          }
+        ],
+        "slot_id": "explain",
+        "transition": "The learner has committed to where the dark patch falls; this section now says why it must fall there.",
+        "specific_purpose": "Build the idea itself. State it, ground it, make it usable."
+      },
+      {
+        "blocks": [
+          {
+            "id": "contrast-b1",
+            "brief": "Place two arrangements side by side, both using the torch, the hand and the wall. In the first, the hand is held directly between the torch and the wall, and a dark hand-shaped patch appears on the wall beyond the hand. In the second, the hand is moved so it no longer stands in the beam, and no dark hand-shaped patch appears on the wall at all, even though the hand is still in the room. The learner must see that the difference is not the object and not the light, but whether the object blocks the light's straight-line path \u2014 no blocking, no shadow. Do not re-explain the mechanism from the previous section and do not mention transparent or translucent materials.",
+            "intent": "compare",
+            "evidence": "Comparing an in-the-beam case with an out-of-the-beam case makes blocking a necessary condition visible, which a single example can never show and which directly undercuts the belief that the hand produces the dark patch by itself.",
+            "position": 0,
+            "evidence_refs": [
+              "anchor.anchor-1",
+              "slot.contrast.purpose",
+              "M1",
+              "prior-5"
+            ],
+            "learner_action": {
+              "action": "select-one",
+              "target": "whether a hand-shaped dark patch appears on the wall when the hand is moved out of the torch's beam",
+              "purpose": "discriminate between two arrangements that differ only in whether the light path is blocked",
+              "difficulty": "guided",
+              "expected_evidence": "the learner chooses the no-shadow case for the out-of-beam hand, showing that blocking, not the object alone, is treated as the condition"
+            },
+            "departure_reason": null,
+            "source_question_ids": [],
+            "stimulus_dependencies": [
+              "anchor-1"
+            ]
+          },
+          {
+            "id": "contrast-b2",
+            "brief": "Surface the belief that the shadow is something the hand gives off or sends out, and let it fail against the near-miss. If the hand sent out its own shadow, the dark patch would appear wherever the hand was placed and would sit on the lit side of the hand, facing the torch. Ask the learner to say where the shadow would be under that belief, then point to the out-of-beam arrangement where the hand is present but no wall shadow appears, and to the in-beam arrangement where the dark region sits on the side of the hand away from the torch. The belief predicts the wrong place and the wrong presence; the blocking account predicts both correctly. State that the shadow is an absence of light on the far side, not something the hand emits.",
+            "intent": "diagnose-misconception",
+            "evidence": "M1 and M2 are held beliefs that make confident but wrong predictions about presence and side; the out-of-beam near-miss and the downstream position of the dark region are the two specific observations that break those predictions.",
+            "position": 1,
+            "evidence_refs": [
+              "M1",
+              "M2",
+              "anchor.anchor-1",
+              "slot.contrast.purpose"
+            ],
+            "learner_action": {
+              "action": "select-one",
+              "target": "which side of the hand the shadow sits on when the torch is on the left of the hand and the wall is on the right",
+              "purpose": "make the wrong model predict a specific side so the prediction can be checked against the arrangement",
+              "difficulty": "independent",
+              "expected_evidence": "the learner commits to a side, revealing whether the lit-side belief (M2) or the blocking account is driving the answer"
+            },
+            "departure_reason": "The contrast slot's job is to expose the boundary of the idea; the boundary here is not between two legitimate readings but between the blocking account and a held wrong model, so testing the wrong model does the work that plain comparison leaves undone.",
+            "source_question_ids": [
+              "7206057e-5b25-4af8-9a77-40742213efac:7206057e-5b25-4af8-9a77-40742213efac:c7bf440d-f1da-4edc-8731-07d34d206183.i2"
+            ],
+            "stimulus_dependencies": [
+              "anchor-1"
+            ]
+          }
+        ],
+        "slot_id": "contrast",
+        "transition": "The learner now has the torch\u2013hand\u2013wall account; this section tests its edge by changing one condition \u2014 whether the hand is in the beam at all.",
+        "specific_purpose": "Put a case and a near-miss side by side. The learner must see the boundary of the idea, not just the idea."
+      },
+      {
+        "blocks": [
+          {
+            "id": "check-b1",
+            "brief": "Check the objective on the torch\u2013hand\u2013wall setup with one change: the hand is moved to a different position in front of the torch while the wall stays where it is. The learner must explain where the dark hand-shaped patch now falls and state the direction it moves relative to the light source, using the straight-line blocking account rather than restating the definition of a shadow. The check must read whether the learner places the shadow on the far side of the hand from the torch and whether they can say which way it shifts when the hand moves toward or away from the light.",
+            "intent": "check-understanding",
+            "evidence": "The objective is phrased as explain-why plus state-the-position, and a moved-object case is the only check that reads both at once instead of only confirming that a shadow exists.",
+            "position": 0,
+            "evidence_refs": [
+              "lesson.objective",
+              "slot.check.purpose",
+              "anchor.anchor-1",
+              "M2"
+            ],
+            "learner_action": {
+              "action": "select-one",
+              "target": "where the hand-shaped dark patch falls and which way it moves when the hand changes position in front of the torch",
+              "purpose": "measure whether the causal and positional parts of the objective have landed unaided",
+              "difficulty": "independent",
+              "expected_evidence": "a correct choice for the moved hand, consistent with a shadow being the unlit region on the far side of the blocker from the light"
+            },
+            "departure_reason": null,
+            "source_question_ids": [
+              "7206057e-5b25-4af8-9a77-40742213efac:7206057e-5b25-4af8-9a77-40742213efac:c7bf440d-f1da-4edc-8731-07d34d206183.i1"
+            ],
+            "stimulus_dependencies": [
+              "anchor-1"
+            ]
+          }
+        ],
+        "slot_id": "check",
+        "transition": "The learner has seen the mechanism and its boundary; this section checks whether the objective has landed on the same setup with the object moved.",
+        "specific_purpose": "The shared diagnostic. Identical across every variant. Written from the card only, never from the prose above it."
+      }
+    ],
+    "anchor_usage": [
+      {
+        "usage": "Present the torch, the hand and the wall as a concrete situation; ask the learner to commit to where the dark patch will appear before any explanation is given.",
+        "slot_id": "orient"
+      },
+      {
+        "usage": "Trace the straight-line path of light from the torch, through the hand, to the wall, and locate the unlit region behind the hand as the shadow.",
+        "slot_id": "explain"
+      },
+      {
+        "usage": "Move the same hand so it no longer blocks the beam, and compare the shadow case with the no-blocking case to expose the boundary of when a shadow appears.",
+        "slot_id": "contrast"
+      },
+      {
+        "usage": "Reuse the torch-hand-wall setup with a changed position so the learner must apply the same reasoning to state the shadow position and direction.",
+        "slot_id": "check"
+      }
+    ],
+    "approval_status": "pending",
+    "preparation_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870",
+    "teaching_plan_id": "0779102d-6919-4b09-9023-c870744e78a3",
+    "misconception_focus_ids": [
+      "M1",
+      "M2"
+    ]
+  },
+  "teaching_validation": {
+    "ok": true,
+    "issues": []
+  },
+  "teaching_qc": [],
+  "teaching_review": {
+    "status": "pending",
+    "revision": 1,
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "teacher_note": null
+  },
+  "lesson_packet": {
+    "scope": {
+      "terminology": [],
+      "must_establish": [],
+      "must_not_introduce": []
+    },
+    "slots": [
+      {
+        "purpose": "Give the learner a reason to care and a concrete situation to hold.",
+        "slot_id": "orient",
+        "max_blocks": 2,
+        "min_blocks": 1,
+        "typical_intents": [
+          "orient",
+          "activate-prior-knowledge",
+          "emphasise"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "Build the idea itself. State it, ground it, make it usable.",
+        "slot_id": "explain",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [
+          "explain-cause",
+          "explain",
+          "define",
+          "show-structure",
+          "trace-flow",
+          "compare",
+          "name-parts"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "Put a case and a near-miss side by side. The learner must see the boundary of the idea, not just the idea.\n",
+        "slot_id": "contrast",
+        "max_blocks": 3,
+        "min_blocks": 1,
+        "typical_intents": [
+          "compare",
+          "classify",
+          "explain",
+          "warn",
+          "show-structure"
+        ],
+        "visual_required": false
+      },
+      {
+        "purpose": "The shared diagnostic. Identical across every variant. Written from the card only, never from the prose above it.\n",
+        "slot_id": "check",
+        "max_blocks": 1,
+        "min_blocks": 1,
+        "typical_intents": [
+          "check-understanding",
+          "practise-independent",
+          "diagnose-misconception"
+        ],
+        "visual_required": false
+      }
+    ],
+    "anchor": {
+      "id": "anchor-1",
+      "description": "A hand held in front of a torch shining on a wall: the hand blocks the light and a hand-shaped dark\u2026"
+    },
+    "lesson": {
+      "subject": "Science",
+      "objective": "Explain why a shadow appears when an opaque object blocks light, and describe the position of the shadow relative to the light source",
+      "grade_level": "Grade",
+      "lesson_mode": "first_exposure",
+      "knowledge_type": "conceptual",
+      "path_lesson_id": "7206057e-5b25-4af8-9a77-40742213efac"
+    },
+    "limits": {
+      "max_sections": 4,
+      "max_total_blocks": 10,
+      "max_blocks_per_section": 3
+    },
+    "resource_id": "lesson",
+    "approved_items": [
+      {
+        "id": "7206057e-5b25-4af8-9a77-40742213efac:7206057e-5b25-4af8-9a77-40742213efac:c7bf440d-f1da-4edc-8731-07d34d206183.i1",
+        "stem": "A student holds a flashlight on the left side of a wooden block and shines it toward the block. Where will the block's shadow appear?",
+        "card_id": "7206057e-5b25-4af8-9a77-40742213efac:c7bf440d-f1da-4edc-8731-07d34d206183",
+        "options": [
+          {
+            "key": "a",
+            "text": "On the right side of the block, away from the flashlight",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "On the left side of the block, between the block and the flashlight",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "All around the block, because the block gives off shadow",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Directly underneath the block, no matter how the beam is aimed",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M2",
+          "c": "M1",
+          "d": null
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "7206057e-5b25-4af8-9a77-40742213efac:7206057e-5b25-4af8-9a77-40742213efac:c7bf440d-f1da-4edc-8731-07d34d206183.i2",
+        "stem": "During a demonstration, a lamp shines on a metal spoon from the right. A dark shape forms on the wall to the left of the spoon. Which statement best explains this dark shape?",
+        "card_id": "7206057e-5b25-4af8-9a77-40742213efac:c7bf440d-f1da-4edc-8731-07d34d206183",
+        "options": [
+          {
+            "key": "a",
+            "text": "The spoon blocks the light traveling to the wall, so the light does not reach that area",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The spoon sends out its own shadow, which travels to the wall",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The light is blocked on the right side of the spoon, where the lamp touches it",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The wall absorbs all the light from the lamp in a dark patch",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M1",
+          "c": "M2",
+          "d": null
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "7206057e-5b25-4af8-9a77-40742213efac:7206057e-5b25-4af8-9a77-40742213efac:c7bf440d-f1da-4edc-8731-07d34d206183.i3",
+        "stem": "A clear glass window is placed between a bright lamp and a wall. What happens to the light from the lamp?",
+        "card_id": "7206057e-5b25-4af8-9a77-40742213efac:c7bf440d-f1da-4edc-8731-07d34d206183",
+        "options": [
+          {
+            "key": "a",
+            "text": "Most of the light passes through the glass and reaches the wall, so no solid shadow forms",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "The glass blocks the light completely, so it makes a solid dark shadow on the wall",
+            "correct": false,
+            "diagnoses": "M3",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "The glass sends out its own shadow to the wall, making a dark shape",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "The light stops at the glass and forms a shadow on the lamp side of the window",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M3",
+          "c": "M1",
+          "d": "M2"
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "7206057e-5b25-4af8-9a77-40742213efac:7206057e-5b25-4af8-9a77-40742213efac:c7bf440d-f1da-4edc-8731-07d34d206183.i4",
+        "stem": "A small toy is placed on a table. A lamp shines on the toy from behind it, and a screen is in front of the toy, opposite the lamp. Where on the screen does the shadow of the toy appear?",
+        "card_id": "7206057e-5b25-4af8-9a77-40742213efac:c7bf440d-f1da-4edc-8731-07d34d206183",
+        "options": [
+          {
+            "key": "a",
+            "text": "On the part of the screen directly opposite the lamp, where the toy blocks the light",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "On the part of the screen nearest the lamp, because the light hits the toy there first",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Everywhere on the screen at once, because the toy gives off shadow in all directions",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "On the table under the toy, but not on the screen",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M2",
+          "c": "M1",
+          "d": null
+        },
+        "correct_key": "a"
+      },
+      {
+        "id": "7206057e-5b25-4af8-9a77-40742213efac:7206057e-5b25-4af8-9a77-40742213efac:c7bf440d-f1da-4edc-8731-07d34d206183.i5",
+        "stem": "A student wants to make the shadow of a toy fall on a wall to the right of the toy. Where should the student place the lamp?",
+        "card_id": "7206057e-5b25-4af8-9a77-40742213efac:c7bf440d-f1da-4edc-8731-07d34d206183",
+        "options": [
+          {
+            "key": "a",
+            "text": "To the left of the toy, so the blocked light creates a shadow on the right",
+            "correct": true,
+            "diagnoses": null,
+            "teacher_edited": false
+          },
+          {
+            "key": "b",
+            "text": "To the right of the toy, so the light and shadow are on the same side",
+            "correct": false,
+            "diagnoses": "M2",
+            "teacher_edited": false
+          },
+          {
+            "key": "c",
+            "text": "Anywhere, because the toy always sends its shadow toward the wall",
+            "correct": false,
+            "diagnoses": "M1",
+            "teacher_edited": false
+          },
+          {
+            "key": "d",
+            "text": "Behind the toy, so the wall receives light from all directions",
+            "correct": false,
+            "diagnoses": null,
+            "teacher_edited": false
+          }
+        ],
+        "diagnoses": {
+          "a": null,
+          "b": "M2",
+          "c": "M1",
+          "d": null
+        },
+        "correct_key": "a"
+      }
+    ],
+    "misconceptions": [
+      {
+        "id": "M1",
+        "statement": "{'id': 'M1', 'description': 'A shadow is a thing the object gives off or sends out, so it appears wherever the object is, regardless of where the light is.', 'source': 'drafted'}"
+      },
+      {
+        "id": "M2",
+        "statement": "{'id': 'M2', 'description': \"The shadow forms on the same side of the object as the light source, or on the object's lit side, because that is the side the light touches.\", 'source': 'drafted'}"
+      },
+      {
+        "id": "M3",
+        "statement": "{'id': 'M3', 'description': 'Any object at all produces a full shadow, so transparent things like a glass window also cast a solid dark shadow like a wall does.', 'source': 'drafted'}"
+      }
+    ],
+    "prior_established": [
+      {
+        "id": "prior-1",
+        "statement": "light travels in straight lines"
+      },
+      {
+        "id": "prior-2",
+        "statement": "Light comes from a source and travels in straight lines"
+      },
+      {
+        "id": "prior-3",
+        "statement": "Light sources emit light; objects that do not emit light are seen by reflected light"
+      },
+      {
+        "id": "prior-4",
+        "statement": "Examples of light sources include the Sun, lamps, torches"
+      },
+      {
+        "id": "prior-5",
+        "statement": "Opaque materials block all light and form shadows"
+      },
+      {
+        "id": "prior-6",
+        "statement": "Transparent materials allow most light to pass through and form little or no shadow"
+      },
+      {
+        "id": "prior-7",
+        "statement": "Translucent materials allow some light to pass through and form a faint shadow"
+      }
+    ]
+  },
+  "catalogue": {
+    "version": "1.1.0",
+    "form_projection_hash": null,
+    "teaching_projection_hash": "a9530874d702efc409dcd4c87658fe037981b8a8a6ed76e1d95a551ff8885870"
+  }
+}

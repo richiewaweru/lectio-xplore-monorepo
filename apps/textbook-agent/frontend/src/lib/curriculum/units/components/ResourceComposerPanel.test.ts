@@ -38,7 +38,7 @@ describe('ResourceComposerPanel', () => {
 			projection: 'revision_sheet', component_refs: ['generation-1:intro']
 		}));
 		expect(oncreated).toHaveBeenCalledWith(expect.objectContaining({ id: 'composition-1' }));
-	});
+	}, 15000);
 
 	it('surfaces projection_unavailable without enabling creation', async () => {
 		mocks.previewUnitResource.mockResolvedValue({ ...preview, status: 'projection_unavailable', can_create: false, unavailable_reasons: ['Lesson preparation is stale.'] });

@@ -67,6 +67,10 @@ async def write_ordinary_via_shared_writer(
     ctx: WriterContext,
     *,
     provider: Any | None = None,
+    budget_ledger: Any | None = None,
+    checkpoint_store: Any | None = None,
+    progress_store: Any | None = None,
+    progress_run_id: str | None = None,
 ) -> WriterOutcome:
     """Author ordinary Print content through document.writer, then map to page objects."""
     object_id = ctx.planned.object
@@ -104,6 +108,10 @@ async def write_ordinary_via_shared_writer(
             allowed_facts=list(lesson_context.get("allowed_facts") or []),
             teaching_block_id=ctx.planned.id,
             provider=authoring,
+            budget_ledger=budget_ledger,
+            checkpoint_store=checkpoint_store,
+            progress_store=progress_store,
+            progress_run_id=progress_run_id,
         )
     except DocumentWriterError as exc:
         # Preserve typed authoring codes + validation errors for Print dispatch.

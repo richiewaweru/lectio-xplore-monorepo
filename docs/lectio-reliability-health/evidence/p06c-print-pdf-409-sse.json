@@ -1,0 +1,784 @@
+{
+  "pdf_marker": "P06C-PRINT-MARKER-20260913B",
+  "generation_id": "7206057e-5b25-4af8-9a77-40742213efac",
+  "realization_id": "28724db0-b983-4463-a729-97e051db21ed",
+  "sse_print": {
+    "mode": "replay",
+    "events": [
+      {
+        "seq": 1,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:21:07.778425+00:00",
+        "run_id": "28724db0-b983-4463-a729-97e051db21ed",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "write-paragraph-735c0ed5e8",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "365792f4129ce6115fe93ef8a307b4f00ed8a79c673f950f3e01e4aaded03ed4",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 2,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:21:07.909632+00:00",
+        "run_id": "28724db0-b983-4463-a729-97e051db21ed",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "write-paragraph-fa8bfd13ca",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "cee2d916928e9be41fb05833a5c05c76beabcf76b95aaf9081489871fa4859e0",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 3,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:21:08.190317+00:00",
+        "run_id": "28724db0-b983-4463-a729-97e051db21ed",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "write-paragraph-1cbe91edfc",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "c3e818a783a3f5e593eddae40cfe6908fc18a26702803a4037f1336aa8476940",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 4,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:21:08.593448+00:00",
+        "run_id": "28724db0-b983-4463-a729-97e051db21ed",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "write-table-c772957d31",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "b9f5c0f34e406391cdd01e76234eb69c2ca6a97601315f772890ac69c550e70c",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      }
+    ],
+    "snapshot": null,
+    "oldest_retained_seq": 1,
+    "latest_seq": 4
+  },
+  "sse_learn": {
+    "mode": "replay",
+    "events": [
+      {
+        "seq": 1,
+        "event_type": "learn_production_started",
+        "at": "2026-09-13T13:15:42.732721+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "learn",
+        "stage": "running",
+        "item_id": "learn-out-6052a4793d5c",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {}
+      },
+      {
+        "seq": 2,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:15:53.715271+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "learn",
+        "stage": "composition",
+        "item_id": "compose-33f9a36f5cf9",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "33bfc36b25986227cd0de9fe62574adfad0f989eded9e5715c22733ecf98f66f",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 3,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:15:55.811172+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "learn-node:orient-b1:heading:0",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "f277261d930c99ec382618166181351a78986efd1655eb6b554e2835212270cd",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 4,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:15:57.326911+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "learn-node:orient-b1:paragraph:1",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "550569d5dc4ea7085541a87000f67369948e5fa68759803e8c7fd52b57105a69",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 5,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:16:00.806922+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "learn-node:orient-b1:callout:2",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "76eb7a13f6c3f7756e8649ed3b87d249e11713fdccffaa50a01577ce4916d6a1",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 6,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:16:04.301302+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "learn-node:explain-b1:paragraph:3",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "051939a8524f693d80f506bb40a4a72938d3fc7403b55d9851d17820ac0bcad5",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 7,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:16:05.957616+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "learn-node:explain-b1:callout:4",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "e60e3f1d37a9e33f36818610fba9b6e8bec586555a2e0156667f4569d688bab1",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 8,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:16:07.708825+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "learn-node:explain-b2:figure:5",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "216289684c39a3d7b7897f368402f6854b83f30627ea133dcdca7823a204cd5e",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 9,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:16:12.974960+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "learn-node:explain-b2:paragraph:6",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "76f9bb789bd090256fd337fc3bfab8f16e224071cbc8782a9fb56ab2658bd7fd",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 10,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:16:14.242872+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "learn-node:contrast-b1:heading:7",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "fa0438c4644f85e9cc5f4d74dca7ab0bd9e1c576044a87570e9d29c9a36f46ab",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 11,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:16:17.238674+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "learn-node:contrast-b1:table:8",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "3d90d6f6dee3863b2c4e4a84529b9a317e87e9a5abe37611dc5b3334252d41bf",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 12,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:16:18.984643+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "learn-node:contrast-b1:callout:9",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "cdd026d86fa347268a41e2e1273ffc74739be38dc8f3984ab1c31fab1332faed",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 13,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:16:21.596275+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "learn-node:contrast-b2:paragraph:10",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "30b048d6347d2f6f4c152b9bc67e1ade33772ac713bb34daaf2530469631703e",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 14,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:16:24.912887+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "learn-node:contrast-b2:callout:11",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "35d3accdfd3b3388c07678251290961774a11e19becd8d9453b3ca1d46e7401e",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 15,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:16:25.730486+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "learn-node:check-b1:heading:12",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "4700d0a7a6c95888a39baeea9e3841c6b8aa031fe34c3271960cd4fa7bb6469b",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 16,
+        "event_type": "model_call",
+        "at": "2026-09-13T13:16:29.757267+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "document",
+        "stage": "writing",
+        "item_id": "learn-node:check-b1:paragraph:13",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "model": null,
+          "prompt_hash": "836e49475a43e6053e5585a4beaa95fceef9e68e9d2d012085032f3eaa79c7b5",
+          "policy_hash": null,
+          "composition_mode": null,
+          "tokens_in": null,
+          "tokens_out": null,
+          "cost_usd": null,
+          "provider_request_id": null,
+          "usage_known": false
+        }
+      },
+      {
+        "seq": 17,
+        "event_type": "learn_production_ready",
+        "at": "2026-09-13T13:16:43.850289+00:00",
+        "run_id": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+        "path": "learn",
+        "stage": "ready",
+        "item_id": "learn-out-6052a4793d5c",
+        "attempt": 1,
+        "error_category": null,
+        "payload": {
+          "composition_mode": "llm"
+        }
+      }
+    ],
+    "snapshot": null,
+    "oldest_retained_seq": 1,
+    "latest_seq": 17
+  },
+  "sse_reconnect": {
+    "after_seq": 2,
+    "http": 200,
+    "body": {
+      "mode": "replay",
+      "events": [
+        {
+          "seq": 3,
+          "event_type": "model_call",
+          "at": "2026-09-13T13:21:08.190317+00:00",
+          "run_id": "28724db0-b983-4463-a729-97e051db21ed",
+          "path": "document",
+          "stage": "writing",
+          "item_id": "write-paragraph-1cbe91edfc",
+          "attempt": 1,
+          "error_category": null,
+          "payload": {
+            "model": null,
+            "prompt_hash": "c3e818a783a3f5e593eddae40cfe6908fc18a26702803a4037f1336aa8476940",
+            "policy_hash": null,
+            "composition_mode": null,
+            "tokens_in": null,
+            "tokens_out": null,
+            "cost_usd": null,
+            "provider_request_id": null,
+            "usage_known": false
+          }
+        },
+        {
+          "seq": 4,
+          "event_type": "model_call",
+          "at": "2026-09-13T13:21:08.593448+00:00",
+          "run_id": "28724db0-b983-4463-a729-97e051db21ed",
+          "path": "document",
+          "stage": "writing",
+          "item_id": "write-table-c772957d31",
+          "attempt": 1,
+          "error_category": null,
+          "payload": {
+            "model": null,
+            "prompt_hash": "b9f5c0f34e406391cdd01e76234eb69c2ca6a97601315f772890ac69c550e70c",
+            "policy_hash": null,
+            "composition_mode": null,
+            "tokens_in": null,
+            "tokens_out": null,
+            "cost_usd": null,
+            "provider_request_id": null,
+            "usage_known": false
+          }
+        }
+      ],
+      "snapshot": null,
+      "oldest_retained_seq": 1,
+      "latest_seq": 4
+    }
+  },
+  "sse_stream_sample": [
+    "id: 1",
+    "event: model_call",
+    "data: {\"seq\": 1, \"event_type\": \"model_call\", \"at\": \"2026-09-13T13:21:07.778425+00:00\", \"run_id\": \"28724db0-b983-4463-a729-97e051db21ed\", \"path\": \"document\", \"stage\": \"writing\", \"item_id\": \"write-paragraph-735c0ed5e8\", \"attempt\": 1, \"error_category\": null, \"payload\": {\"model\": null, \"prompt_hash\": \"365792f4129ce6115fe93ef8a307b4f00ed8a79c673f950f3e01e4aaded03ed4\", \"policy_hash\": null, \"composition_mode\": null, \"tokens_in\": null, \"tokens_out\": null, \"cost_usd\": null, \"provider_request_id\": null, \"usage_known\": false}}",
+    "",
+    "id: 2",
+    "event: model_call",
+    "data: {\"seq\": 2, \"event_type\": \"model_call\", \"at\": \"2026-09-13T13:21:07.909632+00:00\", \"run_id\": \"28724db0-b983-4463-a729-97e051db21ed\", \"path\": \"document\", \"stage\": \"writing\", \"item_id\": \"write-paragraph-fa8bfd13ca\", \"attempt\": 1, \"error_category\": null, \"payload\": {\"model\": null, \"prompt_hash\": \"cee2d916928e9be41fb05833a5c05c76beabcf76b95aaf9081489871fa4859e0\", \"policy_hash\": null, \"composition_mode\": null, \"tokens_in\": null, \"tokens_out\": null, \"cost_usd\": null, \"provider_request_id\": null, \"usage_known\": false}}",
+    "",
+    "id: 3",
+    "event: model_call"
+  ],
+  "sse_stream_reconnect_error": "timed out",
+  "sse_stream_reconnect": {
+    "last_event_id": "3",
+    "sample": [
+      "id: 4",
+      "event: model_call",
+      "data: {\"seq\": 4, \"event_type\": \"model_call\", \"at\": \"2026-09-13T13:21:08.593448+00:00\", \"run_id\": \"28724db0-b983-4463-a729-97e051db21ed\", \"path\": \"document\", \"stage\": \"writing\", \"item_id\": \"write-table-c772957d31\", \"attempt\": 1, \"error_category\": null, \"payload\": {\"model\": null, \"prompt_hash\": \"b9f5c0f34e406391cdd01e76234eb69c2ca6a97601315f772890ac69c550e70c\", \"policy_hash\": null, \"composition_mode\": null, \"tokens_in\": null, \"tokens_out\": null, \"cost_usd\": null, \"provider_request_id\": null, \"usage_known\": false}}",
+      ""
+    ]
+  },
+  "print_rev_before": 3,
+  "print_save": {
+    "http": 200,
+    "body": {
+      "generation_id": "7206057e-5b25-4af8-9a77-40742213efac",
+      "document_revision": 4,
+      "document": {
+        "id": "doc-7206057e-5b25-4af8-9a77-40742213efac",
+        "title": "Explain why a shadow appears when an opaque object blocks light, and describe th",
+        "language": "en",
+        "metadata": {
+          "subject": "Science",
+          "objective": "Explain why a shadow appears when an opaque object blocks light, and describe the position of the shadow relative to the light source",
+          "grade_level": "Grade",
+          "lesson_mode": "first_exposure",
+          "resource_type": "lesson",
+          "knowledge_type": "conceptual",
+          "catalogue_version": "1.1.0",
+          "native_whole_lesson": true
+        },
+        "sections": [
+          {
+            "id": "orient",
+            "title": "Give the learner a reason to care and a concrete situation to hold.",
+            "blocks": [
+              {
+                "id": "orient-b1",
+                "intent": "orient",
+                "layout": {
+                  "placement": "main"
+                },
+                "object": "prose",
+                "content": {
+                  "paragraphs": [
+                    "A torch is switched on, shining towards a wall. A hand is held between the torch and the wall. On the wall you can see a bright patch of light, and close to it a hand-shaped dark patch. Look at where the bright patch and the dark patch appear. Where is the dark patch on the wall? Before you read on, commit to where you think the dark patch will land."
+                  ]
+                },
+                "position": 0
+              }
+            ]
+          },
+          {
+            "id": "explain",
+            "title": "Build the idea itself. State it, ground it, make it usable.",
+            "blocks": [
+              {
+                "id": "explain-b1",
+                "intent": "explain-cause",
+                "layout": {
+                  "placement": "main"
+                },
+                "object": "prose",
+                "content": {
+                  "paragraphs": [
+                    "When a torch shines on a wall, its light travels in straight lines outward from the torch. If you hold your hand in front of the torch, the opaque hand stands in the path of those lines, so the light that would have reached one region of the wall never gets there. That region of the wall therefore receives no light and looks dark \u2014 this unlit region is the shadow. A shadow is not something the hand gives off or sends out; it is simply the place the light cannot reach because the hand is in the way. The shadow appears on the side of the hand away from the torch, because light can only be blocked downstream of its source."
+                  ]
+                },
+                "position": 0
+              },
+              {
+                "id": "explain-b2",
+                "intent": "trace-flow",
+                "layout": {
+                  "placement": "main"
+                },
+                "object": "prose",
+                "content": {
+                  "paragraphs": [
+                    "Follow the light in the torch\u2013hand\u2013wall arrangement. Light leaves the torch as rays travelling in straight lines towards the wall. The rays that meet the opaque hand stop there, because the hand blocks the light. The rays that pass beside the hand keep going in the same straight direction until they reach the wall. On the wall, immediately beyond the hand and away from the torch, the place where the blocked rays would have landed stays unlit and appears as a dark region. That dark region takes the shape of the hand standing in the beam, so its outline matches the outline of the hand, and it sits on the far side of the hand from the torch."
+                  ]
+                },
+                "position": 1
+              }
+            ]
+          },
+          {
+            "id": "contrast",
+            "title": "Put a case and a near-miss side by side. The learner must see the boundary of the idea, not just the idea.",
+            "blocks": [
+              {
+                "id": "contrast-b1",
+                "intent": "compare",
+                "layout": {
+                  "placement": "main"
+                },
+                "object": "table",
+                "content": {
+                  "rows": [
+                    {
+                      "cells": {
+                        "c0": "Torch, hand and wall in line",
+                        "c1": "Held directly between the torch and the wall, in the light's straight-line path",
+                        "c2": "A dark, hand-shaped patch appears on the wall beyond the hand",
+                        "c3": "Light travels in a straight line from the torch and the hand blocks it, so no light reaches that part of the wall"
+                      }
+                    },
+                    {
+                      "cells": {
+                        "c0": "Hand moved out of the beam",
+                        "c1": "Still in the room, but no longer standing in the beam between the torch and the wall",
+                        "c2": "No dark hand-shaped patch appears anywhere on the wall",
+                        "c3": "Light travels in a straight line from the torch to the wall without being blocked, so the wall is lit as before"
+                      }
+                    }
+                  ],
+                  "caption": "Same torch, same hand, same wall \u2014 only the hand's position changes whether the light is blocked.",
+                  "columns": [
+                    {
+                      "id": "c0",
+                      "label": "Arrangement"
+                    },
+                    {
+                      "id": "c1",
+                      "label": "Where the hand is"
+                    },
+                    {
+                      "id": "c2",
+                      "label": "What appears on the wall"
+                    },
+                    {
+                      "id": "c3",
+                      "label": "What the light does"
+                    }
+                  ],
+                  "presentation": "standard"
+                },
+                "position": 0
+              },
+              {
+                "id": "contrast-b2",
+                "intent": "diagnose-misconception",
+                "layout": {
+                  "placement": "main"
+                },
+                "object": "choices",
+                "content": {
+                  "stem": "During a demonstration, a lamp shines on a metal spoon from the right. A dark shape forms on the wall to the left of the spoon. Which statement best explains this dark shape?",
+                  "options": [
+                    {
+                      "text": "The spoon blocks the light traveling to the wall, so the light does not reach that area [P06C-PRINT-MARKER-20260913B]",
+                      "letter": "a"
+                    },
+                    {
+                      "text": "The spoon sends out its own shadow, which travels to the wall",
+                      "letter": "b"
+                    },
+                    {
+                      "text": "The light is blocked on the right side of the spoon, where the lamp touches it",
+                      "letter": "c"
+                    },
+                    {
+                      "text": "The wall absorbs all the light from the lamp in a dark patch",
+                      "letter": "d"
+                    }
+                  ]
+                },
+                "position": 1
+              }
+            ]
+          },
+          {
+            "id": "check",
+            "title": "The shared diagnostic. Identical across every variant. Written from the card only, never from the prose above it.",
+            "blocks": [
+              {
+                "id": "check-b1",
+                "intent": "check-understanding",
+                "layout": {
+                  "placement": "main"
+                },
+                "object": "choices",
+                "content": {
+                  "stem": "A student holds a flashlight on the left side of a wooden block and shines it toward the block. Where will the block's shadow appear?",
+                  "options": [
+                    {
+                      "text": "On the right side of the block, away from the flashlight",
+                      "letter": "a"
+                    },
+                    {
+                      "text": "On the left side of the block, between the block and the flashlight",
+                      "letter": "b"
+                    },
+                    {
+                      "text": "All around the block, because the block gives off shadow",
+                      "letter": "c"
+                    },
+                    {
+                      "text": "Directly underneath the block, no matter how the beam is aimed",
+                      "letter": "d"
+                    }
+                  ]
+                },
+                "position": 0
+              }
+            ]
+          }
+        ],
+        "answer_key": {
+          "id": "answer-key-doc-7206057e-5b25-4af8-9a77-40742213efac",
+          "intent": "answer-key",
+          "object": "answer-key",
+          "content": {
+            "groups": [
+              {
+                "entries": [
+                  {
+                    "answer": "a",
+                    "question_id": "contrast-b2"
+                  },
+                  {
+                    "answer": "a",
+                    "question_id": "check-b1"
+                  }
+                ]
+              }
+            ]
+          },
+          "position": 0
+        },
+        "contract_version": "1.0.0",
+        "document_version": 2
+      }
+    }
+  },
+  "print_rev_after": 4,
+  "print_409": {
+    "http": 409,
+    "detail": {
+      "detail": "stale document revision"
+    },
+    "local_marker_preserved": true
+  },
+  "sibling_ids": {
+    "learn_realization": "9d875986-7c20-4fc8-be58-56e4ad8f5993",
+    "print_realization": "28724db0-b983-4463-a729-97e051db21ed",
+    "print_generation": "7206057e-5b25-4af8-9a77-40742213efac",
+    "print_rev": 4
+  },
+  "pdf_export_http": 422,
+  "pdf_content_type": "application/json",
+  "pdf_error": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"school_name\"],\"msg\":\"Field required\",\"input\":{}},{\"type\":\"missing\",\"loc\":[\"body\",\"teacher_name\"],\"msg\":\"Field required\",\"input\":{}}]}"
+}

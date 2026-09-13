@@ -1,0 +1,188 @@
+{
+  "struct_approve": {
+    "generation_id": "7206057e-5b25-4af8-9a77-40742213efac",
+    "pack_id": null,
+    "stage": "stage2_running",
+    "structural_plan": {
+      "cards": [
+        {
+          "id": "c7bf440d-f1da-4edc-8731-07d34d206183",
+          "title": "How a shadow forms when an opaque object blocks light",
+          "prereqs": [
+            "light travels in straight lines from a source",
+            "opaque materials block all light",
+            "transparent and translucent materials let some light through"
+          ],
+          "opens_by": "Recall that opaque materials block light while transparent and translucent materials let some through, so the learner is ready to ask what happens to the light that gets blocked.",
+          "objective": "Explain why a shadow appears when an opaque object blocks light, and describe the position of the shadow relative to the light source",
+          "misconceptions": [
+            {
+              "id": "M1",
+              "source": "drafted",
+              "description": "A shadow is a thing the object gives off or sends out, so it appears wherever the object is, regardless of where the light is."
+            },
+            {
+              "id": "M2",
+              "source": "drafted",
+              "description": "The shadow forms on the same side of the object as the light source, or on the object's lit side, because that is the side the light touches."
+            },
+            {
+              "id": "M3",
+              "source": "drafted",
+              "description": "Any object at all produces a full shadow, so transparent things like a glass window also cast a solid dark shadow like a wall does."
+            }
+          ],
+          "no_known_misconceptions": false
+        }
+      ],
+      "anchor": {
+        "example": "A hand held in front of a torch shining on a wall: the hand blocks the light and a hand-shaped dark\u2026",
+        "reuse_scope": "Reuse this anchor across the fixed path lesson slots."
+      },
+      "sections": [
+        {
+          "id": "orient",
+          "role": "orient",
+          "title": "Start with a shadow you have seen",
+          "blocks": [],
+          "card_id": null,
+          "purpose": "",
+          "components": [],
+          "must_establish": [],
+          "transition_note": null,
+          "visual_required": false,
+          "misconception_focus": []
+        },
+        {
+          "id": "explain",
+          "role": "explain",
+          "title": "Build the rule: blocked light makes a shadow",
+          "blocks": [],
+          "card_id": "c7bf440d-f1da-4edc-8731-07d34d206183",
+          "purpose": "",
+          "components": [],
+          "must_establish": [],
+          "transition_note": "From the everyday shadow scene, move to the mechanism: light travelling in straight lines is stopped by an opaque objec\u2026",
+          "visual_required": false,
+          "misconception_focus": []
+        },
+        {
+          "id": "contrast",
+          "role": "contrast",
+          "title": "Sort cases near the edge",
+          "blocks": [],
+          "card_id": "c7bf440d-f1da-4edc-8731-07d34d206183",
+          "purpose": "",
+          "components": [],
+          "must_establish": [],
+          "transition_note": "Now that the blocked-light rule is stated, test it against cases that look similar but behave differently, so the bound\u2026",
+          "visual_required": false,
+          "misconception_focus": []
+        },
+        {
+          "id": "check",
+          "role": "check",
+          "title": "Show what you know about shadows",
+          "blocks": [],
+          "card_id": "c7bf440d-f1da-4edc-8731-07d34d206183",
+          "purpose": "",
+          "components": [],
+          "must_establish": [],
+          "transition_note": "With the rule and its boundaries in place, the learner is ready to be checked on the card alone.",
+          "visual_required": false,
+          "misconception_focus": []
+        }
+      ],
+      "lesson_mode": "first_exposure",
+      "repair_focus": null,
+      "lesson_intent": {
+        "goal": "Explain why a shadow appears when an opaque object blocks light, and describe the position of the shadow relative to the light source",
+        "structure_rationale": "Path objective and skeleton slots are fixed; content awaits teacher review."
+      },
+      "question_plan": [
+        {
+          "section_id": "check",
+          "question_id": "q-check-1",
+          "temperature": "cold",
+          "diagram_required": false
+        }
+      ],
+      "prior_knowledge": [
+        "light travels in straight lines",
+        "Light comes from a source and travels in straight lines",
+        "Light sources emit light; objects that do not emit light are seen by reflected light",
+        "Examples of light sources include the Sun, lamps, torches",
+        "Opaque materials block all light and form shadows",
+        "Transparent materials allow most light to pass through and form little or no shadow",
+        "Translucent materials allow some light to pass through and form a faint shadow"
+      ],
+      "answer_key_style": "brief_explanations",
+      "document_contract_version": 1
+    },
+    "section_briefs": {
+      "check": null,
+      "orient": null,
+      "explain": null,
+      "contrast": null
+    },
+    "failed_sections": [],
+    "blueprint_id": null,
+    "execution_started": false,
+    "next_action": "wait_for_stage2",
+    "display_title": "How a shadow forms when an opaque object blocks light",
+    "error": null,
+    "error_type": null,
+    "inferred_lesson_mode": "first_exposure",
+    "lesson_mode_confidence": "high",
+    "variants": [],
+    "variant_generation_ids": {}
+  },
+  "polls": [
+    {
+      "n": 0,
+      "stage": "stage2_running",
+      "http": 200,
+      "error": null
+    },
+    {
+      "n": 1,
+      "stage": "running",
+      "http": 200,
+      "error": null
+    },
+    {
+      "n": 2,
+      "stage": "running",
+      "http": 200,
+      "error": null
+    },
+    {
+      "n": 3,
+      "stage": "running",
+      "http": 200,
+      "error": null
+    },
+    {
+      "n": 4,
+      "stage": "awaiting_teaching_approval",
+      "http": 200,
+      "error": null
+    }
+  ],
+  "teaching_review": {
+    "status": "pending",
+    "revision": 1,
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "teacher_note": null
+  },
+  "teaching_plan_revision": 1,
+  "actions": [
+    "select-one",
+    null,
+    null,
+    "select-one",
+    "select-one",
+    "select-one"
+  ]
+}

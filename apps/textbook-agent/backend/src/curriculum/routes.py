@@ -1347,14 +1347,13 @@ async def get_path_lesson_status(
             workflow_stage = str(chunked.get("stage") or generation.status or "unknown")
         except ValueError:
             workflow_stage = str(generation.status or "unknown")
-        # Prefer path-specific output when present; pack_id remains legacy prep link.
-        print_output = realization_fields.get("print_output_id")
-        learn_output = realization_fields.get("learn_output_id")
-        primary_generation_id = print_output or learn_output or generation.id
+        # Preparation pack_id is the status generation. Path-specific Print/Learn
+        # output ids live on realizations and must not replace the prep link —
+        # otherwise regenerate leaves status pointing at a superseded pack.
         return PreparedLessonStatusResponse(
             path_lesson_id=lesson.id,
             lesson_revision=lesson.revision,
-            generation_id=str(primary_generation_id) if primary_generation_id else generation.id,
+            generation_id=generation.id,
             generation_status=str(generation.status or "unknown"),
             workflow_stage="stale" if stale else workflow_stage,
             objective_hash=lesson.objective_hash,

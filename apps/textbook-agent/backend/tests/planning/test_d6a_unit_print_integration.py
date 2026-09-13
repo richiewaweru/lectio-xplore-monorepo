@@ -94,7 +94,7 @@ def _plans_for_packet(packet, legality):
     return teaching_and_form(sections=sections)
 
 
-async def _fake_dispatch(ctx):
+async def _fake_dispatch(ctx, **_kwargs):
     if ctx.planned.object == "figure":
         return WriterOutcome(
             block_id=ctx.planned.id,
