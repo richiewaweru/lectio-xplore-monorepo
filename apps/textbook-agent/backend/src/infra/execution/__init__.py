@@ -1,4 +1,4 @@
-"""Shared durable execution primitives for P03 (G09–G15)."""
+"""Shared durable execution primitives for P03–P04 (G09–G18)."""
 
 from infra.execution.call_budget import (
     DEFAULT_MAX_PROVIDER_CALLS,
@@ -20,11 +20,27 @@ from infra.execution.error_policy import (
     classify_provider_error,
     honor_retry_after,
 )
+from infra.execution.progress import (
+    DEFAULT_EVENT_RETENTION,
+    ActiveItem,
+    ModelCallTrace,
+    ProgressStore,
+    ReplayResult,
+    RetryScheduleEntry,
+    RunEvent,
+    RunStatusView,
+    allowed_actions_for,
+    default_progress_store,
+    prompt_hash_for,
+    redact_secrets,
+)
 from infra.execution.resource_limits import ResourceLimitError, ResourceLimits
 
 __all__ = [
     "CHECKPOINT_SCHEMA_VERSION",
+    "DEFAULT_EVENT_RETENTION",
     "DEFAULT_MAX_PROVIDER_CALLS",
+    "ActiveItem",
     "BudgetExhaustedError",
     "CallAttempt",
     "CallBudget",
@@ -34,9 +50,19 @@ __all__ = [
     "CheckpointStore",
     "ClassifiedProviderError",
     "IncompatibleCheckpointError",
+    "ModelCallTrace",
+    "ProgressStore",
+    "ReplayResult",
     "ResourceLimitError",
     "ResourceLimits",
+    "RetryScheduleEntry",
+    "RunEvent",
+    "RunStatusView",
+    "allowed_actions_for",
     "classify_provider_error",
     "content_hash",
+    "default_progress_store",
     "honor_retry_after",
+    "prompt_hash_for",
+    "redact_secrets",
 ]

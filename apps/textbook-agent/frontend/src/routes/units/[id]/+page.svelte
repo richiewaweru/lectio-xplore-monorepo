@@ -1,28 +1,6 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { isApiError } from '$lib/api/errors';
-	import {
-		approveUnitPath,
-		editUnitPathByChat,
-		getPreparedLessonStatus,
-		getHistoricalPath,
-		getPathHistory,
-		getTeachingSchedule,
-		getLessonShape,
-		getUnit,
-		getUnitGroups,
-		getUnitPath,
-		listUnitResources,
-		mergePathLessons,
-		patchPathLesson,
-		planUnitPath,
-		preparePathLesson,
-		generateLearnRealization,
-		generatePrintRealization,
-		regeneratePathLesson,
-		restorePathVersion
-	} from '$lib/api/units';
 	import TeachingSchedulePanel from '$lib/curriculum/units/components/TeachingSchedulePanel.svelte';
 	import UnitGroupsPanel from '$lib/curriculum/units/components/UnitGroupsPanel.svelte';
 	import LessonShapePanel from '$lib/curriculum/units/components/LessonShapePanel.svelte';
@@ -35,526 +13,90 @@
 		openPathLabel,
 		pathHasRealization
 	} from '$lib/curriculum/units/path-generation';
-	import type {
-		LessonMode,
-		KnowledgeType,
-		PathLesson,
-		PathVersionSummary,
-		PreparedLessonStatus,
-		ResourceComposition,
-		LessonShapePreview,
-		TeachingSchedule,
-		Unit,
-		UnitGroups,
-		UnitPath,
-		MergeCriticResult
-	} from '$lib/types/units';
-	import type { NativePathKind } from '$lib/curriculum/units/path-generation';
+	import { createUnitWorkspace } from '$lib/curriculum/units/unit-workspace.svelte';
+	import { createLearnPathJobState } from '$lib/learn/jobs/path-job-state';
+	import { createPrintPathJobState } from '$lib/print/jobs/path-job-state';
+	import type { LessonMode } from '$lib/types/units';
 
-	const unitId = $derived(page.params.id ?? '');
-	let unit = $state<Unit | null>(null);
-	let path = $state<UnitPath | null>(null);
-	let selectedId = $state<string | null>(null);
-	let loading = $state(true);
-	let busy = $state<string | null>(null);
-	let error = $state<string | null>(null);
-	let tabError = $state<string | null>(null);
-	let lessonMode = $state<LessonMode>('first_exposure');
-	let shape = $state<LessonShapePreview | null>(null);
-	let misconceptionCount = $state(1);
-	let preparation = $state<PreparedLessonStatus | null>(null);
-	let history = $state<PathVersionSummary[]>([]);
-	let historyLoaded = $state(false);
-	let viewedVersion = $state<UnitPath | null>(null);
-	let schedule = $state<TeachingSchedule | null>(null);
-	let scheduleLoaded = $state(false);
-	let groups = $state<UnitGroups | null>(null);
-	let groupsLoaded = $state(false);
-	let compositions = $state<ResourceComposition[]>([]);
-	let resourcesLoaded = $state(false);
-	let selectedGroupIds = $state<string[]>([]);
-	let activeView = $state<'path' | 'schedule' | 'groups' | 'results' | 'resources' | 'history'>('path');
-	let restoreReason = $state('Restore this version as a new editable draft.');
-	let pendingAction = $state<{ label: string; description: string; run: () => Promise<void> } | null>(null);
-	let regenerationReason = $state('The lesson changed after preparation.');
-	let editTitle = $state('');
-	let editObjective = $state('');
-	let editMustEstablish = $state('');
-	let editExclusions = $state('');
-	let chatMessage = $state('');
-	let chatBusy = $state(false);
-	let chatUnavailable = $state(false);
-	let chatNote = $state<string | null>(null);
-	let showVersions = $state(false);
-	let showShapeDebug = $state(false);
-	let shapeError = $state<string | null>(null);
-	let dismissedSuggestions = $state<string[]>([]);
-	let mergeDraft = $state<{
-		hintKey: string;
-		lessonAId: string;
-		lessonBId: string;
-		lessonALabel: string;
-		lessonBLabel: string;
-		objectiveA: string;
-		objectiveB: string;
-		title: string;
-		objective: string;
-		mustEstablish: string;
-		knowledgeType: KnowledgeType | '';
-	} | null>(null);
+	const printJob = createPrintPathJobState();
+	const learnJob = createLearnPathJobState();
+	const ws = createUnitWorkspace(() => page.params.id ?? '', { printJob, learnJob });
 	const debugMode = import.meta.env.DEV;
+	const unitId = $derived(page.params.id ?? '');
 
-	const mergeSuggestions = $derived(
-		(path?.merge_critic_results ?? []).filter((row) => row.source === 'deterministic')
-	);
-	const mergeDraftValid = $derived(
-		Boolean(
-			mergeDraft &&
-				mergeDraft.title.trim() &&
-				mergeDraft.objective.trim().length >= 3 &&
-				lines(mergeDraft.mustEstablish).length >= 1 &&
-				mergeDraft.knowledgeType
-		)
-	);
-
-	const selected = $derived(path?.lessons.find((lesson) => lesson.id === selectedId) ?? null);
-	const canLockIn = $derived(Boolean(path && path.lessons.length > 0 && path.status !== 'approved'));
-	const planningFailed = $derived(Boolean(unit && !unit.active_path_version_id && !path));
-	const canStartFresh = $derived(
-		Boolean(
-			preparation &&
-				!preparation.stale &&
-				preparation.workflow_stage === 'failed_terminal' &&
-				preparation.can_regenerate
-		)
-	);
-
-	function lines(value: string): string[] {
-		return value.split('\n').map((item) => item.trim()).filter(Boolean);
-	}
-
-	function plannerInput(current: Unit) {
-		return {
-			topic: current.topic,
-			subject: current.subject,
-			grade_level: current.grade_level,
-			destination_objective: current.destination_objective,
-			starting_knowledge: current.starting_knowledge,
-			curriculum_context: current.curriculum_context,
-			class_notes: current.class_notes
-		};
-	}
-
-	function dependencySentences(lesson: PathLesson | null): string[] {
-		if (!lesson || !path) return [];
-		const sentences: string[] = [];
-		for (const prerequisiteId of lesson.prerequisites) {
-			const prerequisite = path.lessons.find((candidate) => candidate.id === prerequisiteId);
-			if (prerequisite) sentences.push(`needs lesson ${prerequisite.position + 1}`);
-		}
-		return sentences;
-	}
-
-	function fillEditor(lesson: PathLesson): void {
-		editTitle = lesson.title;
-		editObjective = lesson.objective;
-		editMustEstablish = lesson.must_establish.join('\n');
-		editExclusions = lesson.exclusions.join('\n');
-	}
-
-	function selectLesson(lesson: PathLesson): void {
-		selectedId = lesson.id;
-		fillEditor(lesson);
-		shape = null;
-		shapeError = null;
-		preparation = null;
-		showShapeDebug = false;
-	}
-
-	function suggestionKey(row: MergeCriticResult): string {
-		return `${row.lesson_a}:${row.lesson_b}`;
-	}
-
-	function openMergeReview(row: MergeCriticResult): void {
-		if (!path) return;
-		const lessonA = path.lessons.find((lesson) => lesson.id === row.lesson_a);
-		const lessonB = path.lessons.find((lesson) => lesson.id === row.lesson_b);
-		if (!lessonA || !lessonB) return;
-		const sameType = lessonA.primary_knowledge_type === lessonB.primary_knowledge_type;
-		mergeDraft = {
-			hintKey: suggestionKey(row),
-			lessonAId: lessonA.id,
-			lessonBId: lessonB.id,
-			lessonALabel: `Lesson ${lessonA.position + 1}`,
-			lessonBLabel: `Lesson ${lessonB.position + 1}`,
-			objectiveA: lessonA.objective,
-			objectiveB: lessonB.objective,
-			title: `${lessonA.title} + ${lessonB.title}`,
-			objective: '',
-			mustEstablish: [...new Set([...lessonA.must_establish, ...lessonB.must_establish])].join('\n'),
-			knowledgeType: sameType ? lessonA.primary_knowledge_type : ''
-		};
-	}
-
-	function cancelMergeReview(): void {
-		mergeDraft = null;
-	}
-
-	async function confirmMergeReview(): Promise<void> {
-		if (!path || !mergeDraft || !mergeDraftValid) return;
-		const lessonA = path.lessons.find((lesson) => lesson.id === mergeDraft!.lessonAId);
-		const lessonB = path.lessons.find((lesson) => lesson.id === mergeDraft!.lessonBId);
-		if (!lessonA || !lessonB || !mergeDraft.knowledgeType) return;
-		const draft = mergeDraft;
-		await act('merge-suggestion', async () => {
-			const result = await mergePathLessons(
-				unitId,
-				path as UnitPath,
-				[lessonA, lessonB],
-				[lessonA.id, lessonB.id],
-				{
-					title: draft.title.trim(),
-					objective: draft.objective.trim(),
-					must_establish: lines(draft.mustEstablish),
-					knowledge_type: draft.knowledgeType as KnowledgeType
-				}
-			);
-			path = result.path;
-			dismissedSuggestions = [...dismissedSuggestions, draft.hintKey];
-			mergeDraft = null;
-			const merged =
-				path.lessons.find((lesson) => lesson.id === result.merged_lesson_id) ?? path.lessons[0];
-			if (merged) selectLesson(merged);
-		});
-	}
-
-	async function ensurePreparationStatus(): Promise<void> {
-		if (!selected) return;
-		try {
-			const next = await getPreparedLessonStatus(unitId, selected.id);
-			preparation = next;
-			if (!next.stale && next.workflow_stage === 'failed_terminal') {
-				regenerationReason = 'The previous generation did not finish.';
-			}
-		} catch (err) {
-			preparation = null;
-			error = err instanceof Error ? err.message : 'Could not load preparation status.';
-		}
-	}
-
-	async function ensureShape(): Promise<void> {
-		if (!selected) return;
-		try {
-			shape = await getLessonShape(unitId, selected.id, lessonMode, misconceptionCount);
-			shapeError = null;
-		} catch (err) {
-			shape = null;
-			shapeError = err instanceof Error ? err.message : 'Could not load this lesson shape.';
-		}
-	}
-
-	async function updateShapeSettings(mode: LessonMode, count: number): Promise<void> {
-		if (!selected) return;
-		lessonMode = mode;
-		misconceptionCount = count;
-		shape = null;
-		await ensureShape();
-	}
-
-	async function updateShapeRevision(revision: number): Promise<void> {
-		if (!selected) return;
-		selected.revision = revision;
-		await ensurePreparationStatus();
-	}
-
-	async function load(options: { preserveSelection?: boolean } = {}): Promise<void> {
-		loading = true;
-		error = null;
-		try {
-			unit = await getUnit(unitId);
-			if (unit.active_path_version_id) {
-				path = await getUnitPath(unitId);
-			} else {
-				path = null;
-			}
-			if (path?.lessons.length) {
-				const target = options.preserveSelection
-					? path.lessons.find((lesson) => lesson.id === selectedId) ?? path.lessons[0]
-					: path.lessons[0];
-				selectLesson(target);
-			} else {
-				selectedId = null;
-			}
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Could not load the unit workspace.';
-		} finally {
-			loading = false;
-		}
-	}
-
-	async function openTab(view: typeof activeView): Promise<void> {
-		activeView = view;
-		tabError = null;
-		if (!unit) return;
-		try {
-			if (view === 'groups' && !groupsLoaded) {
-				groups = await getUnitGroups(unitId);
-				selectedGroupIds = groups.groups.map((group) => group.id);
-				groupsLoaded = true;
-			} else if (view === 'schedule' && !scheduleLoaded) {
-				schedule = await getTeachingSchedule(unitId);
-				scheduleLoaded = true;
-			} else if (view === 'resources' && !resourcesLoaded) {
-				if (!groupsLoaded) {
-					groups = await getUnitGroups(unitId);
-					selectedGroupIds = groups.groups.map((group) => group.id);
-					groupsLoaded = true;
-				}
-				if (!scheduleLoaded) {
-					schedule = await getTeachingSchedule(unitId);
-					scheduleLoaded = true;
-				}
-				compositions = await listUnitResources(unitId);
-				resourcesLoaded = true;
-			} else if (view === 'history' && !historyLoaded) {
-				history = await getPathHistory(unitId);
-				historyLoaded = true;
-			} else if (view === 'results' && !groupsLoaded) {
-				groups = await getUnitGroups(unitId);
-				selectedGroupIds = groups.groups.map((group) => group.id);
-				groupsLoaded = true;
-			}
-		} catch (err) {
-			tabError = err instanceof Error ? err.message : 'Could not load this tab.';
-		}
-	}
-
-	async function act(label: string, action: () => Promise<unknown>, reload = true): Promise<void> {
-		busy = label;
-		error = null;
-		try {
-			await action();
-			if (reload) await load({ preserveSelection: true });
-		} catch (err) {
-			const message = err instanceof Error ? err.message : 'That change did not go through.';
-			error = message;
-			if (isApiError(err) && err.status === 409) {
-				await load({ preserveSelection: true });
-				error = message;
-			}
-		} finally {
-			busy = null;
-		}
-	}
-
-	async function planOrReplan(replan: boolean): Promise<void> {
-		if (!unit) return;
-		await act(replan ? 'replan' : 'plan', async () => {
-			path = await planUnitPath(unitId, plannerInput(unit as Unit), replan, path ?? undefined);
-			unit = await getUnit(unitId);
-			historyLoaded = false;
-			if (path.lessons.length) selectLesson(path.lessons[0]);
-		}, false);
-	}
-
-	async function saveLesson(event: SubmitEvent): Promise<void> {
-		event.preventDefault();
-		if (!selected) return;
-		await act('save', () => patchPathLesson(unitId, path as UnitPath, selected, {
-			title: editTitle.trim(), objective: editObjective.trim(),
-			must_establish: lines(editMustEstablish), exclusions: lines(editExclusions)
-		}));
-	}
-
-	async function sendChatEdit(event: SubmitEvent): Promise<void> {
-		event.preventDefault();
-		if (!path || chatUnavailable || chatMessage.trim().length < 2) return;
-		chatBusy = true;
-		error = null;
-		chatNote = null;
-		try {
-			const result = await editUnitPathByChat(unitId, path, chatMessage.trim());
-			chatMessage = '';
-			chatNote = result.issues?.length ? result.issues.join(' ') : (result.note ?? null);
-			await load({ preserveSelection: true });
-		} catch (err) {
-			if (isApiError(err) && err.status === 404) {
-				chatUnavailable = true;
-			} else {
-				error = err instanceof Error ? err.message : 'Could not update the lessons from that message.';
-			}
-		} finally {
-			chatBusy = false;
-		}
-	}
-
-	async function prepare(pathKind: NativePathKind = 'print'): Promise<void> {
-		if (!selected) return;
-		await act('prepare', async () => {
-			if (!groupsLoaded) {
-				try {
-					groups = await getUnitGroups(unitId);
-					selectedGroupIds = groups.groups.map((group) => group.id);
-					groupsLoaded = true;
-				} catch {
-					selectedGroupIds = [];
-				}
-			}
-			// If preparation already exists, realize the chosen path from the
-			// approved Teaching Plan (no Studio re-approval, no path conversion).
-			const existingGenerationId = preparation?.generation_id || selected.pack_id;
-			if (existingGenerationId) {
-				try {
-					if (pathKind === 'learn') {
-						const result = await generateLearnRealization(
-							unitId,
-							path as UnitPath,
-							selected
-						);
-						const href =
-							result.open_href ||
-							(result.editable_lesson_id
-								? `/builder/${encodeURIComponent(result.editable_lesson_id)}`
-								: null);
-						if (href) {
-							window.location.href = href;
-							return;
-						}
-					} else if (pathKind === 'print') {
-						const result = await generatePrintRealization(
-							unitId,
-							path as UnitPath,
-							selected
-						);
-						const href = result.open_href || `/studio/print/${encodeURIComponent(result.output_id)}`;
-						window.location.href = href;
-						return;
-					}
-				} catch (err) {
-					// Teaching not approved yet — open existing prep in Studio for review
-					// (do not silently re-prepare a failed/stale pack).
-					if (isApiError(err) && err.status === 409) {
-						const qs =
-							pathKind === 'learn'
-								? `?generation_id=${encodeURIComponent(existingGenerationId)}&path=learn`
-								: `?generation_id=${encodeURIComponent(existingGenerationId)}`;
-						window.location.href = `/studio${qs}`;
-						return;
-					}
-					throw err;
-				}
-			}
-			const prepared = await preparePathLesson(
-				unitId,
-				path as UnitPath,
-				selected,
-				lessonMode,
-				selectedGroupIds
-			);
-			// Explicit path choice: Print → studio (queue/poll native worker);
-			// Learn → studio teaching review with path=learn. The print viewer
-			// at /studio/print/{id} is for a ready LectioDocument, not admission.
-			if (pathKind === 'print') {
-				window.location.href = `/studio?generation_id=${encodeURIComponent(prepared.generation_id)}`;
-			} else {
-				window.location.href = `/studio?generation_id=${encodeURIComponent(prepared.generation_id)}&path=learn`;
-			}
-		}, false);
-	}
-
-	async function regenerate(): Promise<void> {
-		if (!selected || regenerationReason.trim().length < 3) return;
-		await act('regenerate', async () => {
-			const prepared = await regeneratePathLesson(
-				unitId,
-				path as UnitPath,
-				selected,
-				lessonMode,
-				regenerationReason.trim(),
-				selectedGroupIds
-			);
-			window.location.href = `/studio?generation_id=${encodeURIComponent(prepared.generation_id)}`;
-		}, false);
-	}
-
-	async function viewVersion(version: PathVersionSummary): Promise<void> {
-		tabError = null;
-		try { viewedVersion = await getHistoricalPath(unitId, version.id); }
-		catch (err) { tabError = err instanceof Error ? err.message : 'Could not load path history.'; }
-	}
-
-	function confirmRestore(version: PathVersionSummary): void {
-		if (!path || version.id === path.id) return;
-		pendingAction = {
-			label: `Restore path v${version.version}`,
-			description: 'A new editable draft will be created. Nothing in history is deleted.',
-			run: () => act('restore', () => restorePathVersion(unitId, version.id, path as UnitPath, restoreReason))
-		};
-	}
-
-	async function runPendingAction(): Promise<void> {
-		const action = pendingAction;
-		pendingAction = null;
-		if (action) await action.run();
-	}
-
-	onMount(() => void load());
+	onMount(() => void ws.load());
+	onDestroy(() => ws.dispose());
 </script>
 
-<svelte:head><title>{unit ? `${unit.title} · Units` : 'Unit · Lectio'}</title></svelte:head>
+<svelte:head><title>{ws.unit ? `${ws.unit.title} · Units` : 'Unit · Lectio'}</title></svelte:head>
 
 <div class="unit-page">
-	{#if loading && !unit}
+	{#if ws.loading && !ws.unit}
 		<p class="loading" role="status">Loading unit…</p>
-	{:else if unit}
+	{:else if ws.unit}
 		<header class="unit-head">
-			<div><a href="/units" class="back">← Units</a><p class="eyebrow">{unit.subject} · {unit.grade_level}</p><h1>{unit.title}</h1><p>{unit.destination_objective}</p></div>
+			<div><a href="/units" class="back">← Units</a><p class="eyebrow">{ws.unit.subject} · {ws.unit.grade_level}</p><h1>{ws.unit.title}</h1><p>{ws.unit.destination_objective}</p></div>
 			<div class="head-actions">
-				{#if path}<span class:approved={path.status === 'approved'}>{path.status === 'approved' ? 'Locked in' : 'Draft'}</span>{/if}
-				<button class="secondary" type="button" disabled={busy !== null} onclick={() => planOrReplan(Boolean(path))}>{busy === 'replan' || busy === 'plan' ? 'Planning…' : path ? 'Replan the lessons' : 'Plan the lessons'}</button>
+				{#if ws.path}<span class:approved={ws.path.status === 'approved'}>{ws.path.status === 'approved' ? 'Locked in' : 'Draft'}</span>{/if}
+				<button class="secondary" type="button" disabled={ws.laneBusy('plan') || !ws.actionAllowed('plan')} onclick={() => ws.planOrReplan(Boolean(ws.path))}>{ws.laneBusy('plan') ? 'Planning…' : ws.path ? 'Replan the lessons' : 'Plan the lessons'}</button>
 			</div>
 		</header>
 
-		{#if error}<p class="error" role="alert">{error}</p>{/if}
+		{#if ws.error}<p class="error" role="alert">{ws.error}</p>{/if}
+		{#if ws.conflict}
+			<div class="conflict" role="alertdialog" aria-labelledby="conflict-title">
+				<p class="eyebrow">Revision conflict</p>
+				<h2 id="conflict-title">Your edits were kept</h2>
+				<p>{ws.conflict.message}</p>
+				<p class="hint">Another tab or session saved a newer revision. Reload to take the server version, or keep editing your local draft.</p>
+				<div class="conflict-actions">
+					<button type="button" class="secondary" onclick={() => ws.resolveEditConflict('keep_editing')}>Keep editing</button>
+					<button type="button" class="primary" onclick={() => ws.resolveEditConflict('reload_server')}>Reload from server</button>
+				</div>
+			</div>
+		{/if}
+		{#if ws.dirty}
+			<p class="dirty-hint" role="status">Unsaved lesson edits — progress updates will not overwrite them.</p>
+		{/if}
 
-		{#if !path}
+		{#if !ws.path}
 			<section class="empty">
-				{#if planningFailed}
+				{#if ws.planningFailed}
 					<p class="eyebrow">Planning did not finish</p>
 					<h2>This unit is saved as a draft</h2>
 					<p>Lesson planning did not complete. Nothing else was corrupted — try planning again on this same unit.</p>
-					<button class="primary" type="button" disabled={busy !== null} onclick={() => planOrReplan(false)}>{busy === 'plan' ? 'Planning your lessons…' : 'Try planning again'}</button>
+					<button class="primary" type="button" disabled={ws.laneBusy('plan')} onclick={() => ws.planOrReplan(false)}>{ws.laneBusy('plan') ? 'Planning your lessons…' : 'Try planning again'}</button>
 				{:else}
 					<p class="eyebrow">Destination saved</p>
 					<h2>Build your lessons</h2>
 					<p>This turns your destination into a numbered list of lessons.</p>
-					<button class="primary" type="button" disabled={busy !== null} onclick={() => planOrReplan(false)}>{busy === 'plan' ? 'Planning your lessons…' : 'Plan the lessons'}</button>
+					<button class="primary" type="button" disabled={ws.laneBusy('plan')} onclick={() => ws.planOrReplan(false)}>{ws.laneBusy('plan') ? 'Planning your lessons…' : 'Plan the lessons'}</button>
 				{/if}
 			</section>
 		{:else}
 			<nav class="view-tabs" aria-label="Unit workspace views">
-				<button type="button" class:active={activeView === 'path'} aria-current={activeView === 'path' ? 'page' : undefined} onclick={() => openTab('path')}>Lessons</button>
-				<button type="button" class:active={activeView === 'schedule'} aria-current={activeView === 'schedule' ? 'page' : undefined} onclick={() => openTab('schedule')}>Schedule</button>
-				<button type="button" class:active={activeView === 'groups'} aria-current={activeView === 'groups' ? 'page' : undefined} onclick={() => openTab('groups')}>Groups</button>
-				<button type="button" class:active={activeView === 'resources'} aria-current={activeView === 'resources' ? 'page' : undefined} onclick={() => openTab('resources')}>Resources</button>
-				<button type="button" class:active={activeView === 'results'} aria-current={activeView === 'results' ? 'page' : undefined} onclick={() => openTab('results')}>Results</button>
-				<button type="button" class:active={activeView === 'history'} aria-current={activeView === 'history' ? 'page' : undefined} onclick={() => openTab('history')}>History</button>
+				<button type="button" class:active={ws.activeView === 'path'} aria-current={ws.activeView === 'path' ? 'page' : undefined} onclick={() => ws.openTab('path')}>Lessons</button>
+				<button type="button" class:active={ws.activeView === 'schedule'} aria-current={ws.activeView === 'schedule' ? 'page' : undefined} onclick={() => ws.openTab('schedule')}>Schedule</button>
+				<button type="button" class:active={ws.activeView === 'groups'} aria-current={ws.activeView === 'groups' ? 'page' : undefined} onclick={() => ws.openTab('groups')}>Groups</button>
+				<button type="button" class:active={ws.activeView === 'resources'} aria-current={ws.activeView === 'resources' ? 'page' : undefined} onclick={() => ws.openTab('resources')}>Resources</button>
+				<button type="button" class:active={ws.activeView === 'results'} aria-current={ws.activeView === 'results' ? 'page' : undefined} onclick={() => ws.openTab('results')}>Results</button>
+				<button type="button" class:active={ws.activeView === 'history'} aria-current={ws.activeView === 'history' ? 'page' : undefined} onclick={() => ws.openTab('history')}>History</button>
 			</nav>
-			{#if tabError && activeView !== 'path'}
-				<p class="error" role="alert">{tabError}</p>
+			{#if ws.tabError && ws.activeView !== 'path'}
+				<p class="error" role="alert">{ws.tabError}</p>
 			{/if}
-			{#if activeView === 'path'}
-			{#if mergeSuggestions.some((row) => !dismissedSuggestions.includes(suggestionKey(row)))}
+			{#if ws.activeView === 'path'}
+			{#if ws.mergeSuggestions.some((row) => !ws.dismissedSuggestions.includes(ws.suggestionKey(row)))}
 				<section class="suggestions" aria-label="Lesson suggestions">
 					<p class="eyebrow">Suggestions</p>
 					<ul>
-						{#each mergeSuggestions as row (suggestionKey(row))}
-							{#if !dismissedSuggestions.includes(suggestionKey(row))}
+						{#each ws.mergeSuggestions as row (ws.suggestionKey(row))}
+							{#if !ws.dismissedSuggestions.includes(ws.suggestionKey(row))}
 								<li>
 									<p>{row.reason}</p>
 									<div class="suggestion-actions">
-										<button type="button" disabled={busy !== null} onclick={() => openMergeReview(row)}>Review merge</button>
-										<button type="button" class="ghost" disabled={busy !== null} onclick={() => { dismissedSuggestions = [...dismissedSuggestions, suggestionKey(row)]; }}>Dismiss</button>
+										<button type="button" disabled={ws.laneBusy('merge')} onclick={() => ws.openMergeReview(row)}>Review merge</button>
+										<button type="button" class="ghost" disabled={ws.laneBusy('merge')} onclick={() => { ws.dismissedSuggestions = [...ws.dismissedSuggestions, ws.suggestionKey(row)]; }}>Dismiss</button>
 									</div>
 								</li>
 							{/if}
@@ -562,84 +104,87 @@
 					</ul>
 				</section>
 			{/if}
-			{#if mergeDraft}
+			{#if ws.mergeDraft}
 				<section class="merge-editor" aria-label="Review merge">
-					<p class="eyebrow">Merge {mergeDraft.lessonALabel} + {mergeDraft.lessonBLabel}</p>
-					<label><span>Title</span><input bind:value={mergeDraft.title} /></label>
+					<p class="eyebrow">Merge {ws.mergeDraft.lessonALabel} + {ws.mergeDraft.lessonBLabel}</p>
+					<label><span>Title</span><input bind:value={ws.mergeDraft.title} /></label>
 					<div class="merge-source-objectives">
-						<p><strong>{mergeDraft.lessonALabel}:</strong> {mergeDraft.objectiveA}</p>
-						<p><strong>{mergeDraft.lessonBLabel}:</strong> {mergeDraft.objectiveB}</p>
+						<p><strong>{ws.mergeDraft.lessonALabel}:</strong> {ws.mergeDraft.objectiveA}</p>
+						<p><strong>{ws.mergeDraft.lessonBLabel}:</strong> {ws.mergeDraft.objectiveB}</p>
 					</div>
 					<label>
 						<span>Objective</span>
-						<textarea bind:value={mergeDraft.objective} placeholder="Write one capability that genuinely covers both lessons."></textarea>
+						<textarea bind:value={ws.mergeDraft.objective} placeholder="Write one capability that genuinely covers both lessons."></textarea>
 						<small>Write one capability that genuinely covers both lessons.</small>
 					</label>
-					<label><span>Must establish <small>one per line</small></span><textarea bind:value={mergeDraft.mustEstablish}></textarea></label>
+					<label><span>Must establish <small>one per line</small></span><textarea bind:value={ws.mergeDraft.mustEstablish}></textarea></label>
 					<label>
 						<span>Knowledge type</span>
-						<select bind:value={mergeDraft.knowledgeType}>
-							<option value="">Select a type</option>
-							<option value="factual">factual</option>
-							<option value="conceptual">conceptual</option>
-							<option value="procedural">procedural</option>
-							<option value="evaluative">evaluative</option>
+						<select bind:value={ws.mergeDraft.knowledgeType}>
+							<option value="">Choose…</option>
+							<option value="fact">Fact</option>
+							<option value="concept">Concept</option>
+							<option value="procedure">Procedure</option>
 						</select>
 					</label>
 					<div class="suggestion-actions">
-						<button type="button" class="ghost" disabled={busy !== null} onclick={cancelMergeReview}>Cancel</button>
-						<button class="primary" type="button" disabled={busy !== null || !mergeDraftValid} onclick={() => confirmMergeReview()}>Merge lessons</button>
+						<button type="button" class="ghost" disabled={ws.laneBusy('merge')} onclick={() => ws.cancelMergeReview()}>Cancel</button>
+						<button class="primary" type="button" disabled={ws.laneBusy('merge') || !ws.mergeDraftValid} onclick={() => ws.confirmMergeReview()}>Merge lessons</button>
 					</div>
 				</section>
 			{/if}
-			<section class="lock-in-bar">
-				<p>{path.lessons.length} {path.lessons.length === 1 ? 'lesson' : 'lessons'}</p>
-				{#if path.status !== 'approved'}
-					<div class="lock-in">
-						<button class="primary" type="button" disabled={busy !== null || !canLockIn} onclick={() => act('approve', async () => { path = await approveUnitPath(unitId, path as UnitPath); unit = await getUnit(unitId); }, false)}>{busy === 'approve' ? 'Locking it in…' : 'Looks good — lock it in'}</button>
+
+			{#if ws.path.status !== 'approved'}
+				<section class="lock-in-bar">
+					<div>
+						<p class="eyebrow">Ready to teach from?</p>
+						<p>Locking it in freezes this lesson route so Print and Learn can be generated from it.</p>
 					</div>
-				{/if}
-			</section>
+					<div class="lock-in">
+						<button class="primary" type="button" disabled={ws.laneBusy('approve') || !ws.canLockIn || !ws.actionAllowed('approve')} onclick={() => ws.approvePath()}>{ws.laneBusy('approve') ? 'Locking it in…' : 'Looks good — lock it in'}</button>
+					</div>
+				</section>
+			{/if}
 
 			<div class="workspace">
 				<aside class="path-list" aria-label="Your lessons">
 					<p class="eyebrow">Your lessons</p>
-					<ol>{#each path.lessons as lesson, index (lesson.id)}<li class:active={lesson.id === selectedId} class:skipped={lesson.skipped}><button type="button" onclick={() => selectLesson(lesson)}><span>{index + 1}</span><span><strong>{lesson.title}</strong>{#if dependencySentences(lesson).length}<small>{dependencySentences(lesson).join(' · ')}</small>{:else if lesson.pack_id}<small>prepared</small>{/if}</span></button></li>{/each}</ol>
+					<ol>{#each ws.path.lessons as lesson, index (lesson.id)}<li class:active={lesson.id === ws.selectedId} class:skipped={lesson.skipped}><button type="button" onclick={() => ws.selectLesson(lesson)}><span>{index + 1}</span><span><strong>{lesson.title}</strong>{#if ws.dependencySentences(lesson).length}<small>{ws.dependencySentences(lesson).join(' · ')}</small>{:else if lesson.pack_id}<small>prepared</small>{/if}</span></button></li>{/each}</ol>
 				</aside>
 
-				{#if selected}
+				{#if ws.selected}
 					<main class="inspector">
-						<div class="inspector-head"><div><p class="eyebrow">Lesson {selected.position + 1}</p><h2>{selected.title}</h2></div></div>
+						<div class="inspector-head"><div><p class="eyebrow">Lesson {ws.selected.position + 1}</p><h2>{ws.selected.title}</h2></div></div>
 
-						<form class="editor" onsubmit={saveLesson}>
-							<label><span>Title</span><input bind:value={editTitle} required /></label>
-							<label><span>What students will be able to do</span><textarea bind:value={editObjective} required></textarea></label>
-							<label><span>Must establish <small>one per line</small></span><textarea bind:value={editMustEstablish} required></textarea></label>
-							<button class="secondary" type="submit" disabled={busy !== null}>{busy === 'save' ? 'Saving…' : 'Save lesson changes'}</button>
+						<form class="editor" onsubmit={(e) => ws.saveLesson(e)}>
+							<label><span>Title</span><input bind:value={ws.editTitle} required /></label>
+							<label><span>What students will be able to do</span><textarea bind:value={ws.editObjective} required></textarea></label>
+							<label><span>Must establish <small>one per line</small></span><textarea bind:value={ws.editMustEstablish} required></textarea></label>
+							<button class="secondary" type="submit" disabled={ws.laneBusy('save') || !ws.actionAllowed('save')}>{ws.laneBusy('save') ? 'Saving…' : 'Save lesson changes'}</button>
 						</form>
 
-						<section class="dependencies"><div><p class="eyebrow">Before this lesson</p><h3>What earlier lessons it requires</h3></div>{#if dependencySentences(selected).length}<ul>{#each dependencySentences(selected) as sentence}<li>{sentence}</li>{/each}</ul>{:else}<p>Nothing — this can be the starting point.</p>{/if}</section>
+						<section class="dependencies"><div><p class="eyebrow">Before this lesson</p><h3>What earlier lessons it requires</h3></div>{#if ws.dependencySentences(ws.selected).length}<ul>{#each ws.dependencySentences(ws.selected) as sentence}<li>{sentence}</li>{/each}</ul>{:else}<p>Nothing — this can be the starting point.</p>{/if}</section>
 
 						{#if debugMode}
 							<section class="shape">
-								{#if !showShapeDebug}
-									<button class="text-button" type="button" onclick={() => { showShapeDebug = true; shapeError = null; void ensureShape(); }}>Show shape debug</button>
-								{:else if shape}
+								{#if !ws.showShapeDebug}
+									<button class="text-button" type="button" onclick={() => { ws.showShapeDebug = true; ws.shapeError = null; void ws.ensureShape(); }}>Show shape debug</button>
+								{:else if ws.shape}
 									<LessonShapePanel
 										{unitId}
-										{path}
-										lesson={selected}
-										{shape}
-										{lessonMode}
-										{misconceptionCount}
+										path={ws.path}
+										lesson={ws.selected}
+										shape={ws.shape}
+										lessonMode={ws.lessonMode}
+										misconceptionCount={ws.misconceptionCount}
 										{debugMode}
-										onsettings={updateShapeSettings}
-										onshape={(value) => (shape = value)}
-										onrevision={updateShapeRevision}
+										onsettings={(mode: LessonMode, count: number) => ws.updateShapeSettings(mode, count)}
+										onshape={(value) => (ws.shape = value)}
+										onrevision={(revision: number) => ws.updateShapeRevision(revision)}
 									/>
-								{:else if shapeError}
-									<p class="error" role="alert">{shapeError}</p>
-									<button class="text-button" type="button" onclick={() => { shapeError = null; void ensureShape(); }}>Retry shape</button>
+								{:else if ws.shapeError}
+									<p class="error" role="alert">{ws.shapeError}</p>
+									<button class="text-button" type="button" onclick={() => { ws.shapeError = null; void ws.ensureShape(); }}>Retry shape</button>
 								{:else}
 									<p>Loading this lesson's shape…</p>
 								{/if}
@@ -649,51 +194,60 @@
 						<section class="prepare">
 							<div>
 								<p class="eyebrow">Preparation</p>
-								<h3>{preparation?.workflow_stage ?? 'Ready when you are'}</h3>
+								<h3>{ws.preparation?.workflow_stage ?? 'Ready when you are'}</h3>
 								<p>{PATH_INDEPENDENCE_COPY}</p>
-								{#if preparation?.stale}
+								{#if ws.preparation?.stale}
 									<p>This lesson changed since it was last written and needs to be made again.</p>
 								{/if}
+								{#if ws.runStatus}
+									<p class="hint" role="status">
+										Run {ws.runStatus.status}
+										{#if ws.runStatus.completed_count != null && ws.runStatus.total_count != null}
+											· {ws.runStatus.completed_count}/{ws.runStatus.total_count}
+										{/if}
+									</p>
+								{/if}
 							</div>
-							{#if preparation?.stale && preparation?.can_regenerate}
-								<form class="regenerate" onsubmit={(event) => { event.preventDefault(); void regenerate(); }}>
-									<label><span>What changed</span><input bind:value={regenerationReason} minlength="3" maxlength="500" required /></label>
-									<button class="primary" type="submit" disabled={busy !== null || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Making it again…' : 'Make it again'}</button>
+							{#if ws.preparation?.stale && ws.preparation?.can_regenerate}
+								<form class="regenerate" onsubmit={(event) => { event.preventDefault(); void ws.regenerate(); }}>
+									<label><span>What changed</span><input bind:value={ws.regenerationReason} minlength="3" maxlength="500" required /></label>
+									<button class="primary" type="submit" disabled={ws.laneBusy('regenerate') || ws.regenerationReason.trim().length < 3 || !ws.actionAllowed('regenerate')}>{ws.laneBusy('regenerate') ? 'Making it again…' : 'Make it again'}</button>
 								</form>
-							{:else if canStartFresh}
-								<form class="regenerate" onsubmit={(event) => { event.preventDefault(); void regenerate(); }}>
+							{:else if ws.canStartFresh}
+								<form class="regenerate" onsubmit={(event) => { event.preventDefault(); void ws.regenerate(); }}>
 									<p>The previous generation cannot be retried. Start fresh to keep it as failure history and create a new generation.</p>
-									<label><span>Why start fresh</span><input bind:value={regenerationReason} minlength="3" maxlength="500" required /></label>
-									<button class="primary" type="submit" disabled={busy !== null || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Starting fresh…' : 'Start fresh'}</button>
+									<label><span>Why start fresh</span><input bind:value={ws.regenerationReason} minlength="3" maxlength="500" required /></label>
+									<button class="primary" type="submit" disabled={ws.laneBusy('regenerate') || ws.regenerationReason.trim().length < 3}>{ws.laneBusy('regenerate') ? 'Starting fresh…' : 'Start fresh'}</button>
 								</form>
-							{:else if preparation?.generation_id || (preparation?.realizations?.length ?? 0) > 0}
-								{@const prep = preparation}
+							{:else if ws.preparation?.generation_id || (ws.preparation?.realizations?.length ?? 0) > 0}
+								{@const prep = ws.preparation}
 								<div class="ready-actions">
 									{#if prep?.print_open_href}
 										<a class="primary link" href={prep.print_open_href}>{openPathLabel('print')}</a>
 									{:else if prep?.generation_id && pathHasRealization(prep, 'print')}
 										<a class="primary link" href={`/studio/print/${encodeURIComponent(prep.generation_id)}`}>{openPathLabel('print')}</a>
 									{:else if !pathHasRealization(prep, 'print')}
-										<button class="primary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={() => prepare('print')}>{busy === 'prepare' ? 'Generating Print…' : generatePathLabel('print')}</button>
+										<button class="primary" type="button" disabled={!ws.canGeneratePrint() || ws.laneBusy('print')} onclick={() => ws.prepare('print')}>{ws.laneBusy('print') ? 'Generating Print…' : generatePathLabel('print')}</button>
 									{/if}
 									{#if prep?.learn_open_href}
 										<a class="secondary link" href={prep.learn_open_href}>{openPathLabel('learn')}</a>
 									{:else if prep?.learn_output_id}
 										<a class="secondary link" href={`/studio?generation_id=${encodeURIComponent(prep.learn_output_id)}`}>{openPathLabel('learn')}</a>
 									{:else if !pathHasRealization(prep, 'learn')}
-										<button class="secondary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={() => prepare('learn')}>{busy === 'prepare' ? 'Generating Learn…' : generatePathLabel('learn')}</button>
+										<button class="secondary" type="button" disabled={!ws.canGenerateLearn() || ws.laneBusy('learn')} onclick={() => ws.prepare('learn')}>{ws.laneBusy('learn') ? 'Generating Learn…' : generatePathLabel('learn')}</button>
 									{/if}
 									{#if prep?.realizations?.some((row) => row.status === 'read_only')}
 										<p class="hint">A legacy output is read-only — generate an explicit Print or Learn realization from the Teaching Plan.</p>
 									{/if}
-									<button class="secondary" type="button" onclick={() => { void openTab('groups'); showVersions = true; }}>Make versions for my groups</button>
-									<button class="text-button" type="button" disabled={busy !== null} onclick={() => ensurePreparationStatus()}>Refresh status</button>
+									<button class="secondary" type="button" onclick={() => { void ws.openTab('groups'); ws.showVersions = true; }}>Make versions for my groups</button>
+									<button class="text-button" type="button" onclick={() => ws.ensurePreparationStatus()}>Refresh status</button>
+									<button class="text-button" type="button" onclick={() => ws.reconnectSubscription()}>Reconnect progress</button>
 								</div>
 							{:else}
 								<div class="ready-actions">
-									<button class="primary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={() => prepare('print')}>{busy === 'prepare' ? 'Generating Print…' : generatePathLabel('print')}</button>
-									<button class="secondary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={() => prepare('learn')}>{busy === 'prepare' ? 'Generating Learn…' : generatePathLabel('learn')}</button>
-									<button class="text-button" type="button" disabled={busy !== null} onclick={() => ensurePreparationStatus()}>Check preparation status</button>
+									<button class="primary" type="button" disabled={!ws.canGeneratePrint() || ws.laneBusy('print')} onclick={() => ws.prepare('print')}>{ws.laneBusy('print') ? 'Generating Print…' : generatePathLabel('print')}</button>
+									<button class="secondary" type="button" disabled={!ws.canGenerateLearn() || ws.laneBusy('learn')} onclick={() => ws.prepare('learn')}>{ws.laneBusy('learn') ? 'Generating Learn…' : generatePathLabel('learn')}</button>
+									<button class="text-button" type="button" onclick={() => ws.ensurePreparationStatus()}>Check preparation status</button>
 								</div>
 							{/if}
 						</section>
@@ -703,47 +257,47 @@
 
 			<section class="chat-edit" aria-label="Edit your lessons by chat">
 				<p class="eyebrow">Edit your lessons</p>
-				{#if chatUnavailable}
+				{#if ws.chatUnavailable}
 					<p class="chat-disabled">Editing lessons by chat isn't available yet — use the lesson tools above for now.</p>
 				{:else}
-					<form onsubmit={sendChatEdit}>
-						<input bind:value={chatMessage} placeholder="e.g. Combine lessons 2 and 3, or add something about fractions" disabled={chatBusy} />
-						<button class="primary" type="submit" disabled={chatBusy || chatMessage.trim().length < 2}>{chatBusy ? 'Updating…' : 'Send'}</button>
+					<form onsubmit={(e) => ws.sendChatEdit(e)}>
+						<input bind:value={ws.chatMessage} placeholder="e.g. Combine lessons 2 and 3, or add something about fractions" disabled={ws.laneBusy('chat')} />
+						<button class="primary" type="submit" disabled={ws.laneBusy('chat') || ws.chatMessage.trim().length < 2}>{ws.laneBusy('chat') ? 'Updating…' : 'Send'}</button>
 					</form>
-					{#if chatNote}<p class="chat-note">{chatNote}</p>{/if}
+					{#if ws.chatNote}<p class="chat-note">{ws.chatNote}</p>{/if}
 				{/if}
 			</section>
-			{:else if activeView === 'schedule'}
-				{#if schedule}
-					<TeachingSchedulePanel {unitId} {path} {schedule} onsaved={(saved) => (schedule = saved)} />
-				{:else if !tabError}
+			{:else if ws.activeView === 'schedule'}
+				{#if ws.schedule}
+					<TeachingSchedulePanel {unitId} path={ws.path} schedule={ws.schedule} onsaved={(saved) => (ws.schedule = saved)} />
+				{:else if !ws.tabError}
 					<p class="loading" role="status">Loading schedule…</p>
 				{/if}
-			{:else if activeView === 'groups'}
-				{#if groups}
-					<UnitGroupsPanel {unitId} {groups} onsaved={(saved) => { groups = saved; selectedGroupIds = saved.groups.map((group) => group.id); }} />
-				{:else if !tabError}
+			{:else if ws.activeView === 'groups'}
+				{#if ws.groups}
+					<UnitGroupsPanel {unitId} groups={ws.groups} onsaved={(saved) => { ws.groups = saved; ws.selectedGroupIds = saved.groups.map((group) => group.id); }} />
+				{:else if !ws.tabError}
 					<p class="loading" role="status">Loading groups…</p>
 				{/if}
-			{:else if activeView === 'results'}
-				{#if groups}
-					<LessonResultsPanel {unitId} {path} lessons={path.lessons} {groups} />
-				{:else if !tabError}
+			{:else if ws.activeView === 'results'}
+				{#if ws.groups}
+					<LessonResultsPanel {unitId} path={ws.path} lessons={ws.path.lessons} groups={ws.groups} />
+				{:else if !ws.tabError}
 					<p class="loading" role="status">Loading results…</p>
 				{/if}
-			{:else if activeView === 'resources'}
-				{#if groups && schedule}
-					<ResourceComposerPanel {unitId} {path} lessons={path.lessons} {groups} {schedule} {compositions} oncreated={(created) => (compositions = [created, ...compositions])} />
-				{:else if !tabError}
+			{:else if ws.activeView === 'resources'}
+				{#if ws.groups && ws.schedule}
+					<ResourceComposerPanel {unitId} path={ws.path} lessons={ws.path.lessons} groups={ws.groups} schedule={ws.schedule} compositions={ws.compositions} oncreated={(created) => (ws.compositions = [created, ...ws.compositions])} />
+				{:else if !ws.tabError}
 					<p class="loading" role="status">Loading resources…</p>
 				{/if}
-			{:else if activeView === 'history'}
+			{:else if ws.activeView === 'history'}
 				<section class="history-panel">
 					<div class="section-head"><div><p class="eyebrow">Lesson history</p><h2>Recoverable versions</h2></div><p>Structural edits create a new draft. Older routes remain available.</p></div>
-					{#if historyLoaded}
-						<div class="history-list">{#each history as version}<article class:current={version.id === path.id}><div><strong>v{version.version}</strong><span>{version.status}</span><small>{version.generated_by}</small></div><div class="history-actions"><button type="button" class="text-button" onclick={() => viewVersion(version)}>Inspect</button>{#if version.id !== path.id}<button type="button" class="text-button" onclick={() => confirmRestore(version)}>Restore</button>{/if}</div></article>{/each}</div>
-						{#if viewedVersion}<div class="history-preview"><div><strong>v{viewedVersion.version}</strong><span>{viewedVersion.status} · {viewedVersion.lessons.length} lessons</span></div><ol>{#each viewedVersion.lessons as lesson}<li>{lesson.title}</li>{/each}</ol><button type="button" class="text-button" onclick={() => (viewedVersion = null)}>Close preview</button></div>{/if}
-					{:else if !tabError}
+					{#if ws.historyLoaded}
+						<div class="history-list">{#each ws.history as version}<article class:current={version.id === ws.path.id}><div><strong>v{version.version}</strong><span>{version.status}</span><small>{version.generated_by}</small></div><div class="history-actions"><button type="button" class="text-button" onclick={() => ws.viewVersion(version)}>Inspect</button>{#if version.id !== ws.path.id}<button type="button" class="text-button" onclick={() => ws.confirmRestore(version)}>Restore</button>{/if}</div></article>{/each}</div>
+						{#if ws.viewedVersion}<div class="history-preview"><div><strong>v{ws.viewedVersion.version}</strong><span>{ws.viewedVersion.status} · {ws.viewedVersion.lessons.length} lessons</span></div><ol>{#each ws.viewedVersion.lessons as lesson}<li>{lesson.title}</li>{/each}</ol><button type="button" class="text-button" onclick={() => (ws.viewedVersion = null)}>Close preview</button></div>{/if}
+					{:else if !ws.tabError}
 						<p class="loading" role="status">Loading history…</p>
 					{/if}
 				</section>
@@ -752,28 +306,28 @@
 	{/if}
 </div>
 
-{#if showVersions && groups}
+{#if ws.showVersions && ws.groups}
 	<LessonVersionsPanel
 		{unitId}
-		{groups}
-		onsaved={(saved) => { groups = saved; selectedGroupIds = saved.groups.map((group) => group.id); }}
-		onclose={() => (showVersions = false)}
+		groups={ws.groups}
+		onsaved={(saved) => { ws.groups = saved; ws.selectedGroupIds = saved.groups.map((group) => group.id); }}
+		onclose={() => (ws.showVersions = false)}
 	/>
 {/if}
 
-{#if pendingAction}
+{#if ws.pendingAction}
 	<div class="confirm-backdrop" role="presentation">
 		<div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
-			<p class="eyebrow">Confirm structural change</p><h2 id="confirm-title">{pendingAction.label}</h2><p>{pendingAction.description}</p>
-			{#if pendingAction.label.startsWith('Restore')}<label><span>Recovery reason</span><input bind:value={restoreReason} minlength="3" required /></label>{/if}
-			<div><button type="button" class="secondary" onclick={() => (pendingAction = null)}>Cancel</button><button type="button" class="primary" disabled={busy !== null || (pendingAction.label.startsWith('Restore') && restoreReason.trim().length < 3)} onclick={runPendingAction}>Confirm</button></div>
+			<p class="eyebrow">Confirm structural change</p><h2 id="confirm-title">{ws.pendingAction.label}</h2><p>{ws.pendingAction.description}</p>
+			{#if ws.pendingAction.label.startsWith('Restore')}<label><span>Recovery reason</span><input bind:value={ws.restoreReason} minlength="3" required /></label>{/if}
+			<div><button type="button" class="secondary" onclick={() => (ws.pendingAction = null)}>Cancel</button><button type="button" class="primary" disabled={ws.laneBusy('restore') || (ws.pendingAction.label.startsWith('Restore') && ws.restoreReason.trim().length < 3)} onclick={() => ws.runPendingAction()}>Confirm</button></div>
 		</div>
 	</div>
 {/if}
 
 <style>
 	.unit-page { min-height: calc(100vh - 58px); padding: 38px 28px 80px; }
-	.unit-head, .view-tabs, .lock-in-bar, .history-panel, .workspace, .chat-edit, .empty, .error, .loading { max-width: 1180px; margin-inline: auto; }
+	.unit-head, .view-tabs, .lock-in-bar, .history-panel, .workspace, .chat-edit, .empty, .error, .loading, .conflict, .dirty-hint { max-width: 1180px; margin-inline: auto; }
 	.unit-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
 	.back { display: inline-block; margin-bottom: 18px; color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; }
 	.eyebrow { margin: 0 0 6px; color: var(--ink-3); font: 500 10px 'IBM Plex Mono', monospace; letter-spacing: .1em; text-transform: uppercase; }
@@ -851,7 +405,12 @@
 	.regenerate { display: grid; min-width: min(100%, 360px); gap: 8px; }
 	.regenerate button { justify-self: end; }
 	.prepare p:last-child { margin: 6px 0 0; color: var(--ink-2); font-size: 12px; }
-	.ready-actions { display: flex; align-items: center; gap: 8px; }
+	.ready-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+	.hint { margin: 6px 0 0; color: var(--ink-3); font-size: 12px; }
+	.dirty-hint { color: var(--amber); font-size: 12px; margin-bottom: 12px; }
+	.conflict { border: 1px solid #e2b9ae; border-radius: 10px; background: #f8e9e5; color: #873f30; margin-bottom: 18px; padding: 16px 18px; }
+	.conflict h2 { margin: 0; font: 500 22px Fraunces, Georgia, serif; color: inherit; }
+	.conflict-actions { display: flex; gap: 8px; margin-top: 12px; }
 	.empty { border: 1px dashed var(--rule); border-radius: 10px; padding: 54px 28px; text-align: center; }
 	.empty h2 { margin: 0; font: 500 28px Fraunces, Georgia, serif; }
 	.empty > p:last-of-type { max-width: 590px; margin: 12px auto 20px; color: var(--ink-2); font-size: 14px; line-height: 1.6; }

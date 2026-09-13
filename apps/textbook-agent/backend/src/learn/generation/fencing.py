@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import GenerationModel, NativeRealizationModel
-from print.generation.whole_lesson.states import (
+from infra.execution.leases import (
     DEFAULT_LEASE_SECONDS,
     ExecutionLease,
     LeaseLostError,

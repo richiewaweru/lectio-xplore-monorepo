@@ -43,7 +43,7 @@ from learn.generation.fencing import (
     empty_learn_execution_meta,
     write_learn_execution,
 )
-from print.generation.whole_lesson.states import ResumeDecision
+from infra.execution.leases import ResumeDecision
 
 
 class FakeProvider:

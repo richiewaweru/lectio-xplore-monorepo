@@ -31,12 +31,49 @@ from infra.execution.call_budget import (
     CallBudgetLedger,
 )
 from infra.execution.error_policy import classify_provider_error
+from infra.execution.progress import ProgressStore, TraceExporter, prompt_hash_for
 
 
 def stable_hash(payload: Any) -> str:
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
+
+def _extract_usage(
+    result: object | None,
+) -> tuple[int | None, int | None, float | None, str | None, str | None]:
+    """Pull token/cost/model metadata when present; unknown stays None (never 0)."""
+    if result is None:
+        return None, None, None, None, None
+    usage = None
+    model = None
+    provider_request_id = None
+    if isinstance(result, Mapping):
+        usage = result.get("usage")
+        model = result.get("model") or result.get("model_name")
+        provider_request_id = result.get("provider_request_id") or result.get("request_id")
+    else:
+        usage = getattr(result, "usage", None)
+        model = getattr(result, "model", None) or getattr(result, "model_name", None)
+        provider_request_id = getattr(result, "provider_request_id", None) or getattr(
+            result, "request_id", None
+        )
+    tokens_in = tokens_out = cost_usd = None
+    if isinstance(usage, Mapping):
+        if "tokens_in" in usage or "input_tokens" in usage or "prompt_tokens" in usage:
+            raw_in = usage.get("tokens_in", usage.get("input_tokens", usage.get("prompt_tokens")))
+            tokens_in = int(raw_in) if raw_in is not None else None
+        if "tokens_out" in usage or "output_tokens" in usage or "completion_tokens" in usage:
+            raw_out = usage.get(
+                "tokens_out", usage.get("output_tokens", usage.get("completion_tokens"))
+            )
+            tokens_out = int(raw_out) if raw_out is not None else None
+        if "cost_usd" in usage or "cost" in usage:
+            raw_cost = usage.get("cost_usd", usage.get("cost"))
+            cost_usd = float(raw_cost) if raw_cost is not None else None
+    return tokens_in, tokens_out, cost_usd, str(model) if model else None, (
+        str(provider_request_id) if provider_request_id else None
+    )
 
 def _coerce_json_object(raw: object) -> dict[str, Any]:
     if hasattr(raw, "model_dump"):
@@ -148,6 +185,11 @@ class AuthoringEngine:
     max_provider_calls: int = DEFAULT_MAX_PROVIDER_CALLS
     call_budget: CallBudget | None = None
     budget_ledger: CallBudgetLedger | None = None
+    # P04: optional durable progress / soft trace exporter (never blocks generation).
+    progress_store: ProgressStore | None = None
+    progress_run_id: str | None = None
+    progress_stage: str = "writing"
+    trace_exporter: TraceExporter | None = None
 
     async def execute(
         self,
@@ -460,6 +502,13 @@ class AuthoringEngine:
                 # Dispatch occurred (or ambiguous). Never release the slot as free.
                 budget.mark_ambiguous(reserved)
                 self._persist_budget(budget)
+                self._record_model_call(
+                    request=request,
+                    definition=definition,
+                    prompt=prompt,
+                    attempt=reserved,
+                    result=None,
+                )
                 last_classified = classify_provider_error(exc)
                 if not last_classified.retryable or attempts >= self.max_transport_attempts:
                     raise AuthoringEngineError(
@@ -479,8 +528,69 @@ class AuthoringEngine:
             else:
                 budget.mark_dispatched(reserved)
                 self._persist_budget(budget)
+                self._record_model_call(
+                    request=request,
+                    definition=definition,
+                    prompt=prompt,
+                    attempt=reserved,
+                    result=result,
+                )
                 return result, attempts
         raise AssertionError("unreachable provider retry state")
+
+    def _record_model_call(
+        self,
+        *,
+        request: AuthoringRequest,
+        definition: AuthoringDefinition,
+        prompt: str,
+        attempt: int,
+        result: object | None,
+    ) -> None:
+        store = self.progress_store
+        run_id = self.progress_run_id or request.trace_id or request.generation_id
+        if store is None or not run_id:
+            return
+        tokens_in, tokens_out, cost_usd, model, provider_request_id = _extract_usage(result)
+        policy = request.policy or {}
+        composition_mode = None
+        if isinstance(policy, Mapping):
+            raw_mode = policy.get("composition_mode")
+            composition_mode = str(raw_mode) if raw_mode is not None else None
+            policy_hash = (
+                str(policy.get("policy_hash"))
+                if policy.get("policy_hash") is not None
+                else None
+            )
+        else:
+            policy_hash = None
+        try:
+            store.ensure_run(
+                run_id,
+                path=definition.native_path,
+                owner_user_id=str((request.scoped_request or {}).get("user_id") or "system"),
+                stage=self.progress_stage,
+            )
+            store.record_model_call(
+                run_id,
+                path=definition.native_path,
+                stage=self.progress_stage,
+                item_id=request.work_order_id,
+                attempt=attempt,
+                model=model,
+                prompt_hash=prompt_hash_for(prompt),
+                policy_hash=policy_hash,
+                composition_mode=composition_mode,
+                tokens_in=tokens_in,
+                tokens_out=tokens_out,
+                cost_usd=cost_usd,
+                provider_request_id=provider_request_id,
+            )
+        except Exception:
+            # Observability must never halt authoring.
+            return
+        if self.trace_exporter is not None:
+            store.export_traces(run_id, self.trace_exporter)
 
     async def _parse_and_validate(
         self,

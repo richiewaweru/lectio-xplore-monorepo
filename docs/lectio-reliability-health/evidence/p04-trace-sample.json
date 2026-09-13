@@ -1,0 +1,17 @@
+{
+  "run_id": "sample",
+  "path": "learn",
+  "stage": "writing",
+  "item_id": "wo",
+  "attempt": 1,
+  "model": "fake",
+  "prompt_hash": "abc",
+  "policy_hash": "pol",
+  "composition_mode": "llm",
+  "tokens_in": null,
+  "tokens_out": null,
+  "cost_usd": null,
+  "provider_request_id": "req",
+  "usage_known": false,
+  "note": "Sanitized G17 sample: unknown usage remains null (never coerced to 0). No secrets."
+}

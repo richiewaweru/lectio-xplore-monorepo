@@ -8,7 +8,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from print.generation.whole_lesson.states import ResumeDecision
+from infra.execution.leases import ResumeDecision
 
 CHECKPOINT_SCHEMA_VERSION = 1
 

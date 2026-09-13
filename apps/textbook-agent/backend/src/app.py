@@ -42,6 +42,7 @@ from infra.telemetry.service import telemetry_monitor
 from infra.version import VERSION
 from learn.analytics.insight_service import router as learn_analytics_router
 from learn.authoring.builder.routes import router as builder_router
+from application.unit_lesson.progress_routes import router as realization_progress_router
 from learn.generation.units_routes import router as units_generation_router
 from learn.publishing.release_routes import router as learn_release_router
 from learn.runtime.runtime_routes import router as learn_runtime_router
@@ -318,6 +319,7 @@ def create_app() -> FastAPI:
     # D3: /api/v1/skeletons* retired (non-Unit HTTP)
     app.include_router(planning_router)
     app.include_router(units_generation_router)
+    app.include_router(realization_progress_router)
     # D3: /api/v1/legacy-units retired
     app.include_router(telemetry_router)
 
