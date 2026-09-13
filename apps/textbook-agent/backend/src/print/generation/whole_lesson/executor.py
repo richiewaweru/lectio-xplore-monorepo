@@ -4,23 +4,26 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import random
 import time
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from print.contracts.lectio_page import get_intent_catalogue, validate_document
+logger = logging.getLogger(__name__)
+
 from core.database.models import GenerationModel
 from core.database.session import async_session_factory
-from print.rendering.page_objects import WriterContext, WriterError, WriterOutcome, dispatch_writer_async
-from print.rendering.page_objects.document_assembly import (
-    assemble_document_v2,
-    assemble_section,
-    canonical_document_sha256,
-    reload_document,
-)
 from curriculum.approved_items import ApprovedItemRecord, approved_items_as_writer_records
+from print.contracts.lectio_page import get_intent_catalogue, validate_document
+from print.generation.catalogue_projections import build_form_candidate_map
+from print.generation.native_production import (
+    build_closed_print_production_plan_async,
+    compile_print_work_orders_for_form_plan,
+    selection_trace_payload,
+)
 from print.generation.whole_lesson.events import make_event
 from print.generation.whole_lesson.failure_injection import get_failure_injection
 from print.generation.whole_lesson.failure_policy import (
@@ -28,12 +31,6 @@ from print.generation.whole_lesson.failure_policy import (
     structured_error_from_exc,
 )
 from print.generation.whole_lesson.figure_ids import stable_figure_request_id
-from print.generation.native_production import (
-    build_closed_print_production_plan_async,
-    compile_print_work_orders_for_form_plan,
-    selection_trace_payload,
-)
-from print.generation.work_orders import PrintWorkOrder
 from print.generation.whole_lesson.form_agent import NoLegalFormCandidatesError
 from print.generation.whole_lesson.form_plan import FormPlan, coerce_form_plan
 from print.generation.whole_lesson.legality import (
@@ -42,10 +39,7 @@ from print.generation.whole_lesson.legality import (
     validate_legality_snapshot,
 )
 from print.generation.whole_lesson.packet import ImmutableLessonPacket
-from print.generation.catalogue_projections import build_form_candidate_map
 from print.generation.whole_lesson.repository import PageDocumentRepository
-from print.generation.whole_lesson.validation import validate_form_plan
-from print.resources.selection import NoCompatiblePrintCapabilityError
 from print.generation.whole_lesson.resolved_block_plan import (
     ResolvedBlockPlan,
     resolve_block_plans,
@@ -62,6 +56,21 @@ from print.generation.whole_lesson.states import (
     execution_key,
 )
 from print.generation.whole_lesson.teaching_plan import TeachingPlan
+from print.generation.whole_lesson.validation import validate_form_plan
+from print.generation.work_orders import PrintWorkOrder
+from print.rendering.page_objects import (
+    WriterContext,
+    WriterError,
+    WriterOutcome,
+    dispatch_writer_async,
+)
+from print.rendering.page_objects.document_assembly import (
+    assemble_document_v2,
+    assemble_section,
+    canonical_document_sha256,
+    reload_document,
+)
+from print.resources.selection import NoCompatiblePrintCapabilityError
 from v3_blueprint.planning.models import SectionBlockPlan
 
 
@@ -489,8 +498,8 @@ async def write_form_blocks(
                     variant_id=variant_id,
                     lease=lease,
                 )
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception:
+                logger.debug("streaming snapshot publish failed before section write", exc_info=True)
             return []
 
         block_semaphore = asyncio.Semaphore(MAX_WRITER_CONCURRENCY)
@@ -529,9 +538,9 @@ async def write_form_blocks(
             )
         except LeaseLostError:
             return [{"execution_key": "lease", "status": "lease_lost"}]
-        except Exception:  # noqa: BLE001
+        except Exception:
             # Streaming must not abort writer progress; final assembly still fences.
-            pass
+            logger.debug("streaming snapshot publish failed after section write", exc_info=True)
         return batch
 
     section_results = await asyncio.gather(
@@ -579,8 +588,8 @@ async def publish_streaming_snapshot(
             prior_id = str(existing.get("id") or "").strip()
             if prior_id:
                 stable_document_id = prior_id
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception:
+            logger.debug("could not reload existing document id for streaming snapshot", exc_info=True)
 
         sections_out = []
         answer_entries: list[dict[str, Any]] = []
@@ -752,8 +761,8 @@ async def assemble_from_db(
             prior_id = str(existing.get("id") or "").strip()
             if prior_id:
                 stable_document_id = prior_id
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception:
+            logger.debug("could not reload existing document id for final assembly", exc_info=True)
     document = assemble_document_v2(
         title=packet.lesson.objective[:80],
         sections=sections_out,

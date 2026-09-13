@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
 
@@ -19,7 +19,6 @@ from curriculum.teaching_plan.models import (
 from infra.authoring import AuthoringProviderCall
 from learn.generation.authoring_adapter import run_learn_work_order_authoring
 from learn.generation.preparation_context import LearnPreparationContext
-from learn.resources.native_policy import default_learn_policy, policy_version_and_hash
 
 # Eight core interaction kinds exercised by R04-G05 and envelope production.
 CORE_INTERACTIONS = (
@@ -342,8 +341,8 @@ def install_api_overrides(db_session_factory):
         name=R04_USER.name,
         picture_url=None,
         has_profile=True,
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
 
     async def override_current_user():

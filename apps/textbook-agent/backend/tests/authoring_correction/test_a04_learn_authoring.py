@@ -6,11 +6,11 @@ exercise interaction writers against approved items.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from learn.generation import native_production
-
 
 CORE_CONFIG: dict[str, dict[str, Any]] = {
     "choice": {

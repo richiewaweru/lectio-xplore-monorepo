@@ -3,18 +3,17 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
+from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 
 from app import app
-from core.auth.middleware import get_current_user
 from core.database.models import UserModel
 from core.dependencies import get_async_session
 from core.entities.user import User
 from curriculum.path_models import CanonicalPathPlan
 from curriculum.service import create_unit, persist_path_plan
 from curriculum.validation import PathPlanningError
-from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
-
 
 TEST_USER = User(
     id="chat-edit-owner",

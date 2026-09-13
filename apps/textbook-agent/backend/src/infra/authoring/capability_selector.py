@@ -6,7 +6,7 @@ import inspect
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 CapabilitySelectionErrorCode = Literal[
     "OUT_OF_SET",

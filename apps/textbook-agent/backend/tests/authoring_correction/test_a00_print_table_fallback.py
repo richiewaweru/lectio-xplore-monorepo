@@ -33,7 +33,7 @@ async def test_a00_table_llm_failure_surfaces_typed_failure_not_lit_leaf_stub() 
     """KNOWN_ANSWER_CASES print-table-failure: no fixed Lit/Covered leaf fallback."""
 
     class FailingProvider:
-        async def invoke(self, _call):  # noqa: ANN001
+        async def invoke(self, _call):
             raise AuthoringTransportError("simulated table provider timeout")
 
     with pytest.raises(AuthoringEngineError) as caught:

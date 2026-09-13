@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from fastapi import Depends, HTTPException, status
 
+from core.entities.user import User
 from infra.auth.middleware import get_current_user
 from infra.config import settings
-from core.entities.user import User
 
 
 def _beta_principals() -> set[str]:

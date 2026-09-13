@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from infra.authoring.models import (
     AuthoringDefinition,
@@ -64,7 +65,7 @@ def _policy_from_request(request: AuthoringRequest) -> PolicyDecision | None:
     if request.policy:
         try:
             return read_legacy_policy_snapshot({"policy": request.policy})
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
     return None
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -14,7 +14,6 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infra.auth.middleware import get_current_user
 from core.database.models import (
     EditableLessonModel,
     GenerationModel,
@@ -22,8 +21,9 @@ from core.database.models import (
     LessonProvenanceModel,
     PathLessonModel,
 )
-from infra.database.session import get_async_session
 from core.entities.user import User
+from infra.auth.middleware import get_current_user
+from infra.database.session import get_async_session
 from learn.publishing.publish_validation import (
     PublishValidationError,
     validate_publishable_lesson_document,
@@ -37,7 +37,7 @@ _MAX_RELEASE_ALLOC_ATTEMPTS = 8
 
 
 def _utc_naive_now() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def document_hash(document: dict[str, Any]) -> str:

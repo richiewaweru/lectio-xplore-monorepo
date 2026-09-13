@@ -7,10 +7,12 @@ import json
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
 import yaml
+from pydantic import ValidationError
 
 from contracts.lectio_page import validate_document
+from infra.authoring import AuthoringEngineError
+from print.generation.whole_lesson.figure_ids import stable_figure_request_id
 from print.rendering.page_objects import (
     WRITER_PROVIDER_OUTPUTS,
     ContentValidationError,
@@ -24,7 +26,6 @@ from print.rendering.page_objects.document_assembly import (
 )
 from print.rendering.page_objects.scripted_provider import ScriptedWriterProvider
 from print.rendering.page_objects.views import student_document, teacher_document
-from print.generation.whole_lesson.figure_ids import stable_figure_request_id
 from v3_blueprint.planning.models import PlannedBlock
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
@@ -155,6 +156,8 @@ async def test_permanently_invalid_raises() -> None:
                     "s1-prose": [
                         {"attempt": 1, "mode": "dict", "value": {"paragraphs": []}},
                         {"attempt": 2, "mode": "dict", "value": {"wrong": True}},
+                        # Shared document.writer budget: 1 initial + 2 repairs.
+                        {"attempt": 3, "mode": "dict", "value": {"wrong": True}},
                     ]
                 }
             }
@@ -176,12 +179,16 @@ async def test_permanently_invalid_raises() -> None:
         section_id="section-1",
         generation_id="gate9-perm-invalid",
     )
-    with pytest.raises(ContentValidationError):
+    with pytest.raises((AuthoringEngineError, ContentValidationError)) as caught:
         await dispatch_writer_async(ctx, provider=provider)
+    if isinstance(caught.value, AuthoringEngineError):
+        assert caught.value.code in {"REPAIR_EXHAUSTED", "INVALID_PAYLOAD"}
+    assert provider.call_count() == 3
 
 
 @pytest.mark.asyncio
 async def test_figure_missing_alt_then_valid() -> None:
+    """Missing alt_text is filled from caption (no LLM repair) while identity stays app-owned."""
     provider = ScriptedWriterProvider(
         scenarios={
             "figure_missing_alt_then_valid": {
@@ -196,10 +203,9 @@ async def test_figure_missing_alt_then_valid() -> None:
                                     "status": "pending",
                                     "request_id": "x",
                                 },
-                                "caption": "x",
+                                "caption": "Leaf under sunlight",
                             },
                         },
-                        {"attempt": 2, "mode": "valid"},
                     ]
                 }
             }
@@ -238,13 +244,13 @@ async def test_figure_missing_alt_then_valid() -> None:
     assert result.content["asset"]["status"] == "pending"
     assert result.request_id == expected_request_id
     assert result.content["asset"]["request_id"] == expected_request_id
-    assert provider.call_count() == 2
+    # Caption fills missing alt; identity fields are stripped/replaced by the app.
+    assert provider.call_count() == 1
     provider_output = provider.calls[-1].raw_result
-    assert hasattr(provider_output, "model_dump")
-    provider_payload = provider_output.model_dump(mode="json", exclude_none=True)
-    assert set(provider_payload["asset"]) == {"kind"}
-    assert "request_id" not in provider_payload["asset"]
-    assert "status" not in provider_payload["asset"]
+    assert isinstance(provider_output, dict)
+    assert "alt_text" not in provider_output
+    assert provider_output.get("asset", {}).get("request_id") == "x"
+    assert result.content["asset"]["request_id"] != "x"
 
 
 @pytest.mark.asyncio

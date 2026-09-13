@@ -7,13 +7,18 @@ mocks are labelled MOCK and limited to LLM/writer boundaries.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy import select
+from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
+from tests.planning.test_path_bridge import (
+    _fake_component_selector,
+    _fake_structural_planner,
+)
 
 from application.unit_lesson import prepare_path_lesson
 from application.unit_lesson.dual_native import (
@@ -51,13 +56,13 @@ from curriculum.teaching_plan.projections import (
     with_excluded_sentinels,
 )
 from infra.authoring import AuthoringProviderCall
+from infra.authoring.capability_selector import CapabilitySelection
 from learn.generation.native_execution import produce_learn_from_approved_teaching
+from learn.generation.native_production import package_contract_hash, teaching_plan_content_hash
+from learn.generation.native_selection import build_learn_selection_snapshot_async
 from learn.generation.preparation_context import learn_preparation_context_from_state
 from learn.generation.work_orders import build_learn_writer_request, compile_learn_work_orders
-from learn.generation.native_selection import build_learn_selection_snapshot_async
 from learn.resources.native_policy import default_learn_policy, policy_version_and_hash
-from learn.generation.native_production import teaching_plan_content_hash, package_contract_hash
-from infra.authoring.capability_selector import CapabilitySelection
 from print.contracts.lectio_page import validate_document
 from print.generation.whole_lesson.executor import execute_after_teaching_approval
 from print.generation.whole_lesson.failure_injection import (
@@ -76,11 +81,6 @@ from print.generation.whole_lesson.service import (
 from print.generation.whole_lesson.states import LeaseLostError
 from print.rendering.page_objects.document_assembly import reload_document
 from print.rendering.page_objects.models import WriterOutcome
-from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
-from tests.planning.test_path_bridge import (
-    _fake_component_selector,
-    _fake_structural_planner,
-)
 
 FIXTURE = "grade4-photosynthesis-path.json"
 ANSWER_PHRASE = "TEACHER_ONLY_ANSWER_LIGHT_REQUIRED"
@@ -273,7 +273,7 @@ class P08LearnMockProvider:
                             if depth == 0:
                                 teaching = _json.loads(call.prompt[start : index + 1])
                                 break
-            except Exception:
+            except Exception:  # noqa: BLE001
                 teaching = {}
             for section in teaching.get("sections") or []:
                 section_id = str(section.get("slot_id") or "")
@@ -471,7 +471,7 @@ def _draft_for_packet(packet, *, item_id: str | None) -> TeachingPlanDraft:
     )
 
 
-async def _fake_dispatch(ctx):  # noqa: ANN001
+async def _fake_dispatch(ctx):
     """MOCK Print writer outcomes — deterministic by object type."""
     planned = ctx.planned
     if planned.object == "figure":
@@ -663,7 +663,7 @@ async def _prepare_unit_generation(*, owner_suffix: str) -> tuple[str, str, str,
 async def _approve_shared_teaching(*, gid: str, item_id: str) -> int:
     """Run production teaching planner (MOCK LLM) and approve."""
 
-    async def _teaching_call(**_kwargs):  # noqa: ANN003
+    async def _teaching_call(**_kwargs):
         async with async_session_factory() as session:
             generation = await session.get(GenerationModel, gid)
             assert generation is not None
@@ -877,9 +877,8 @@ async def test_p08_i03_sentinels_scoped_repair_stale_lease() -> None:
     async with async_session_factory() as session:
         state = await load_shared_teaching_state(session, gid)
         _, learn_plan = await accept_shared_teaching_for_both(state)
-    from learn.generation.preparation_context import learn_preparation_context_from_state
 
-    prep = learn_preparation_context_from_state(state)
+    learn_preparation_context_from_state(state)
     _, policy_hash = policy_version_and_hash(default_learn_policy())
     snapshot = await build_learn_selection_snapshot_async(
         learn_plan,
@@ -970,7 +969,7 @@ async def test_p08_i03_sentinels_scoped_repair_stale_lease() -> None:
 
         def _age(_g: GenerationModel, st: dict) -> None:
             execution = dict(st.get("execution") or empty_execution_meta())
-            old = (datetime.now(timezone.utc) - timedelta(seconds=600)).isoformat()
+            old = (datetime.now(UTC) - timedelta(seconds=600)).isoformat()
             execution["worker_id"] = "worker-old"
             execution["lease_token"] = 7
             execution["heartbeat_at"] = old
@@ -1017,11 +1016,14 @@ async def test_p08_i04_teacher_edit_and_sibling_isolation() -> None:
         doc["title"] = edited_title
         edited = False
         for block in (doc.get("blocks") or {}).values():
-            if isinstance(block, dict) and isinstance(block.get("content"), dict):
-                if "body" in block["content"]:
-                    block["content"]["body"] = edited_body
-                    edited = True
-                    break
+            if (
+                isinstance(block, dict)
+                and isinstance(block.get("content"), dict)
+                and "body" in block["content"]
+            ):
+                block["content"]["body"] = edited_body
+                edited = True
+                break
         if not edited:
             for node in doc.get("nodes") or []:
                 if not isinstance(node, dict):
@@ -1037,7 +1039,7 @@ async def test_p08_i04_teacher_edit_and_sibling_isolation() -> None:
         assert edited, "expected an editable ordinary content surface on Learn document"
         lesson.document_json = doc
         lesson.title = edited_title
-        lesson.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        lesson.updated_at = datetime.now(UTC).replace(tzinfo=None)
 
         learn_row = await session.get(NativeRealizationModel, learn_result["realization_id"])
         assert learn_row is not None

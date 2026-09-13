@@ -6,7 +6,8 @@ import asyncio
 import hashlib
 import json
 import re
-from typing import Any, Literal, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -109,20 +110,24 @@ def validate_print_selection(
     actual_teaching_plan_hash: str | None = None,
 ) -> None:
     """Validate decisions against the EXACT candidate snapshot supplied to the provider."""
-    if expected_teaching_plan_id is not None:
-        if str(teaching_plan.teaching_plan_id or "") != expected_teaching_plan_id:
-            raise SelectionError(
-                "ALTERED_TEACHING_IDENTITY",
-                "teaching_plan_id does not match selection snapshot",
-                path="teaching_plan_id",
-            )
-    if expected_teaching_plan_revision is not None:
-        if int(teaching_plan.revision or 0) != int(expected_teaching_plan_revision):
-            raise SelectionError(
-                "ALTERED_TEACHING_IDENTITY",
-                "teaching_plan_revision does not match selection snapshot",
-                path="teaching_plan_revision",
-            )
+    if (
+        expected_teaching_plan_id is not None
+        and str(teaching_plan.teaching_plan_id or "") != expected_teaching_plan_id
+    ):
+        raise SelectionError(
+            "ALTERED_TEACHING_IDENTITY",
+            "teaching_plan_id does not match selection snapshot",
+            path="teaching_plan_id",
+        )
+    if (
+        expected_teaching_plan_revision is not None
+        and int(teaching_plan.revision or 0) != int(expected_teaching_plan_revision)
+    ):
+        raise SelectionError(
+            "ALTERED_TEACHING_IDENTITY",
+            "teaching_plan_revision does not match selection snapshot",
+            path="teaching_plan_revision",
+        )
     if (
         expected_teaching_plan_hash is not None
         and actual_teaching_plan_hash is not None

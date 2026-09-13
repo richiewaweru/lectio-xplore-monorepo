@@ -8,10 +8,10 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from pydantic_ai.exceptions import ModelAPIError
+from tests.planning.contract_fixtures import teaching_and_form
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
-from print.rendering.page_objects import WriterOutcome
 from print.generation.whole_lesson.executor import write_form_blocks
 from print.generation.whole_lesson.form_plan import FormPlan
 from print.generation.whole_lesson.packet import (
@@ -22,10 +22,13 @@ from print.generation.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
-from print.generation.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
+from print.generation.whole_lesson.repository import (
+    PageDocumentRepository,
+    empty_page_document_state,
+)
 from print.generation.whole_lesson.states import MAX_SECTION_CONCURRENCY, execution_key
 from print.generation.whole_lesson.teaching_plan import TeachingPlan
-from tests.planning.contract_fixtures import teaching_and_form
+from print.rendering.page_objects import WriterOutcome
 
 
 def _packet(slot_ids: list[str]) -> ImmutableLessonPacket:
@@ -99,7 +102,7 @@ async def test_section_parallel_respects_max_concurrency_and_canonical_order() -
     lock = asyncio.Lock()
     section_active: dict[str, int] = {}
 
-    async def _fake_dispatch(ctx):  # noqa: ANN001
+    async def _fake_dispatch(ctx):
         nonlocal active, peak
         section_id = ctx.section_id or "unknown"
         async with lock:
@@ -142,7 +145,7 @@ async def test_section_parallel_writes_six_sections() -> None:
     teaching, plan = _plans(6)
     gid = await _seed(teaching, plan)
 
-    async def _fake_dispatch(ctx):  # noqa: ANN001
+    async def _fake_dispatch(ctx):
         return WriterOutcome(
             block_id=ctx.planned.id,
             content={"paragraphs": [ctx.planned.brief]},
@@ -168,7 +171,7 @@ async def test_exhausted_provider_connection_remains_recoverable() -> None:
     teaching, plan = _plans(1)
     gid = await _seed(teaching, plan)
 
-    async def _connection_failure(_ctx):  # noqa: ANN001
+    async def _connection_failure(_ctx):
         raise ModelAPIError(model_name="deepseek-v4", message="Connection error.")
 
     with (

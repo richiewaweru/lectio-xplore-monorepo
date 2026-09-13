@@ -9,25 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infra.auth.middleware import get_current_user
-from core.capabilities import require_xplore_v2
-from core.database.models import (
-    GenerationModel,
-    LessonProvenanceModel,
-    PathLessonModel,
-    PathLessonPrerequisiteModel,
-    ResourceCompositionModel,
-    UnitGroupModel,
-    UnitModel,
-)
-from infra.dependencies import get_async_session
-from core.entities.user import User
-from infra.events import TraceClosedEvent, TraceRegisteredEvent, event_bus
-from infra.rate_limit import limiter
-from curriculum.agents import (
-    run_constructor,
-    run_path_planner,
-    run_plan_chat_edit,
+from application.projections import (
+    ProjectionUnavailable,
+    build_composition_payload,
+    composition_payload,
 )
 from application.unit_lesson import (
     PathPreparationBlocked,
@@ -46,24 +31,40 @@ from application.unit_lesson.realizations import (
     RealizationAdmissionError,
     RealizationReadOnlyError,
 )
+from core.capabilities import require_xplore_v2
+from core.database.models import (
+    GenerationModel,
+    LessonProvenanceModel,
+    PathLessonModel,
+    PathLessonPrerequisiteModel,
+    ResourceCompositionModel,
+    UnitGroupModel,
+    UnitModel,
+)
+from core.entities.user import User
+from curriculum.agents import (
+    run_constructor,
+    run_path_planner,
+    run_plan_chat_edit,
+)
 from curriculum.models import (
     ConstructorReadbackRequest,
-    InsertFoundationLessonRequest,
     GuardedMergePathLessonsRequest,
-    GuardedPrepareLessonRequest,
     GuardedPathLessonPatch,
+    GuardedPrepareLessonRequest,
     GuardedReorderPathLessonsRequest,
     GuardedSplitPathLessonRequest,
+    InsertFoundationLessonRequest,
     LessonActualWriteRequest,
-    MarksWriteRequest,
     MarkStartingKnowledgeRequest,
+    MarksWriteRequest,
     PathChatEditRequest,
     PathLessonMutationRequest,
     PathPlannerRequest,
     PathReplanRequest,
     PathVersionMutationRequest,
-    PrepareLessonRequest,
     PreparedLessonStatusResponse,
+    PrepareLessonRequest,
     RealizationStatusDTO,
     RegenerateLessonRequest,
     ResourceComposeRequest,
@@ -92,17 +93,6 @@ from curriculum.schedule import (
     write_groups,
     write_schedule,
 )
-from application.projections import (
-    ProjectionUnavailable,
-    build_composition_payload,
-    composition_payload,
-)
-from curriculum.shapes import (
-    decide_shape_deviation,
-    deviation_payload,
-    lesson_shape_payload,
-    request_shape_deviation,
-)
 from curriculum.service import (
     ConceptResolutionError,
     PathNotFoundError,
@@ -128,14 +118,23 @@ from curriculum.service import (
     split_lesson,
     update_unit,
 )
+from curriculum.shapes import (
+    decide_shape_deviation,
+    deviation_payload,
+    lesson_shape_payload,
+    request_shape_deviation,
+)
 from curriculum.validation import (
     PathApprovalBlocked,
     PathPlanningError,
     PathValidationError,
     plain_validation_message,
 )
+from infra.auth.middleware import get_current_user
+from infra.dependencies import get_async_session
+from infra.events import TraceClosedEvent, TraceRegisteredEvent, event_bus
+from infra.rate_limit import limiter
 from v3_blueprint.planning.persistence import load_chunked_state
-
 
 router = APIRouter(
     prefix="/api/v1/units",
@@ -401,7 +400,7 @@ async def get_unit(
 ) -> dict[str, object]:
     try:
         unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         _raise_http(exc)
     return _unit_payload(unit)
 
@@ -417,7 +416,7 @@ async def patch_unit(
         unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
         await update_unit(session, unit, request)
         await session.commit()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
     return _unit_payload(unit)
@@ -478,7 +477,7 @@ async def _plan_or_replan_unlocked(
         )
         await session.commit()
         return await _path_payload(session, version)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -613,7 +612,7 @@ async def post_path_chat_edit(
                 "path": await _path_payload(session, version),
                 "validation_messages": exc.errors or [str(exc)],
             }
-        except Exception:
+        except Exception:  # noqa: BLE001 - map domain errors to HTTP
             _raise_http(exc)
     except PathValidationError as exc:
         await session.rollback()
@@ -624,9 +623,9 @@ async def post_path_chat_edit(
                 "path": await _path_payload(session, version),
                 "validation_messages": [plain_validation_message(exc)],
             }
-        except Exception:
+        except Exception:  # noqa: BLE001 - map domain errors to HTTP
             _raise_http(exc)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -662,7 +661,7 @@ async def post_path_approve(
         await approve_path(session, version)
         await session.commit()
         return await _path_payload(session, version)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -677,7 +676,7 @@ async def get_active_path(
         unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
         version = await _active_version(session, unit)
         return await _path_payload(session, version)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         _raise_http(exc)
 
 
@@ -707,7 +706,7 @@ async def get_path_history(
             }
             for version in versions
         ]
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         _raise_http(exc)
 
 
@@ -722,7 +721,7 @@ async def get_historical_path(
         unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
         version = await get_path_version(session, unit_id=unit.id, version_id=version_id)
         return await _path_payload(session, version)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         _raise_http(exc)
 
 
@@ -754,7 +753,7 @@ async def post_path_version_restore(
         )
         await session.commit()
         return await _path_payload(session, restored)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -865,7 +864,7 @@ async def get_path_status(
             "counts": statuses,
             "lessons": lesson_states,
         }
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         _raise_http(exc)
 
 
@@ -879,7 +878,7 @@ async def get_teaching_schedule(
         unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
         version = await _active_version(session, unit)
         return await schedule_payload(session, version=version)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         _raise_http(exc)
 
 
@@ -901,7 +900,7 @@ async def put_teaching_schedule(
         payload = await write_schedule(session, version=version, request=request)
         await session.commit()
         return payload
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -922,7 +921,7 @@ async def post_teaching_schedule_suggestion(
             path_revision=request.path_revision,
         )
         return await suggest_schedule(session, version=version, request=request)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         _raise_http(exc)
 
 
@@ -935,7 +934,7 @@ async def get_unit_groups(
     try:
         unit = await get_owned_unit(session, unit_id=unit_id, owner_id=current_user.id)
         return await groups_payload(session, unit=unit)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         _raise_http(exc)
 
 
@@ -951,7 +950,7 @@ async def put_unit_groups(
         payload = await write_groups(session, unit=unit, request=request)
         await session.commit()
         return payload
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -984,7 +983,7 @@ async def patch_path_lesson(
             "path_version_id": version.id,
             "path_revision": version.revision,
         }
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -1019,7 +1018,7 @@ async def post_path_lesson_skip(
         await invalidate_path_approval(session, cloned)
         await session.commit()
         return await _path_payload(session, cloned)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -1060,7 +1059,7 @@ async def post_path_lesson_split(
             "source_lesson_id": copied.id,
             "part_ids": [part.id for part in parts],
         }
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -1109,7 +1108,7 @@ async def post_path_lessons_merge(
             "merged_lesson_id": merged.id,
             "source": merged.source,
         }
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -1151,7 +1150,7 @@ async def post_insert_foundation_lesson(
         await invalidate_path_approval(session, cloned)
         await session.commit()
         return await _path_payload(session, cloned)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -1174,7 +1173,7 @@ async def post_mark_starting_knowledge(
         await mark_starting_knowledge(session, unit=unit, knowledge=request.knowledge)
         await session.commit()
         return await _path_payload(session, version)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -1213,7 +1212,7 @@ async def post_path_lessons_reorder(
             "path": await _path_payload(session, cloned),
             "lesson_ids": [lesson.id for lesson in lessons],
         }
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -1256,7 +1255,7 @@ async def post_path_lesson_prepare(
             _close_planning_trace(trace_id)
         await session.commit()
         return response.model_dump(mode="json")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -1301,7 +1300,7 @@ async def post_path_lesson_regenerate(
             _close_planning_trace(trace_id)
         await session.commit()
         return {**response.model_dump(mode="json"), "regeneration_reason": body.reason}
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -1364,7 +1363,7 @@ async def get_path_lesson_status(
             can_regenerate=version.status == "approved" and not lesson.skipped,
             **realization_fields,
         ).model_dump(mode="json")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         _raise_http(exc)
 
 
@@ -1416,7 +1415,7 @@ async def post_path_lesson_realizations(
         }
     except HTTPException:
         raise
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -1446,7 +1445,7 @@ async def post_path_lesson_realization_retry(
         return to_identity(row).model_dump(mode="json")
     except HTTPException:
         raise
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -1472,7 +1471,7 @@ async def get_path_lesson_shape(
             lesson_mode=lesson_mode,
             misconception_count=misconception_count,
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         _raise_http(exc)
 
 
@@ -1489,7 +1488,7 @@ async def get_path_lesson_actual(
         )
         actual = await latest_actual(session, path_lesson_id=lesson.id)
         return actual_payload(actual) if actual else None
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         _raise_http(exc)
 
 
@@ -1521,7 +1520,7 @@ async def post_path_lesson_actual(
         )
         await session.commit()
         return actual_payload(actual)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -1554,7 +1553,7 @@ async def post_path_lesson_marks(
         )
         await session.commit()
         return payload
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -1576,7 +1575,7 @@ async def get_path_lesson_marks_summary(
             if group is None or group.unit_id != unit.id:
                 raise OutcomeValidationError("Marks group is not owned by this unit")
         return await marks_summary(session, lesson=lesson, group_id=group_id)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         _raise_http(exc)
 
 
@@ -1601,7 +1600,7 @@ async def post_path_lesson_shape_deviation(
         deviation = await request_shape_deviation(session, lesson=lesson, request=request)
         await session.commit()
         return deviation_payload(deviation)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -1638,7 +1637,7 @@ async def _decide_path_lesson_shape_deviation(
             **deviation_payload(deviation),
             "lesson_revision": lesson.revision,
         }
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -1702,7 +1701,7 @@ async def preview_unit_resource(
             request=body,
             persist=False,
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         _raise_http(exc)
 
 
@@ -1727,7 +1726,7 @@ async def compose_unit_resource(
         )
         await session.commit()
         return payload
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         await session.rollback()
         _raise_http(exc)
 
@@ -1746,7 +1745,7 @@ async def list_unit_compositions(
             .order_by(ResourceCompositionModel.created_at.desc())
         )
         return [composition_payload(row) for row in rows]
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         _raise_http(exc)
 
 
@@ -1763,5 +1762,5 @@ async def get_unit_composition(
         if row is None or row.unit_id != unit.id or row.owner_id != current_user.id:
             raise PathNotFoundError("Resource composition not found")
         return composition_payload(row)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         _raise_http(exc)

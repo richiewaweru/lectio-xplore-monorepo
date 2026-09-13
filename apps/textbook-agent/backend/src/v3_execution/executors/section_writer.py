@@ -5,21 +5,18 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from contracts.lectio import get_section_field_for_component
-
+from v3_execution.config.retries import V3_MAX_RETRIES
 from v3_execution.llm_helpers import run_json_agent
-from v3_execution.runtime.writer_schema import build_section_writer_output_schema
-from v3_execution.models import ExecutorOutcome, GeneratedComponentBlock
+from v3_execution.models import ExecutorOutcome, GeneratedComponentBlock, SectionWriterWorkOrder
 from v3_execution.prompts.section_writer import (
     build_section_writer_prompt,
     build_section_writer_retry_prompt,
 )
-from v3_execution.config.retries import V3_MAX_RETRIES
 from v3_execution.runtime import events
 from v3_execution.runtime.lectio_validation import validate_lectio_field_payload
 from v3_execution.runtime.retry_runner import run_with_retries
 from v3_execution.runtime.validation import validate_component_batch
-from v3_execution.models import SectionWriterWorkOrder
-
+from v3_execution.runtime.writer_schema import build_section_writer_output_schema
 
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
 

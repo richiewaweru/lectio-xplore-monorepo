@@ -3,16 +3,16 @@ from __future__ import annotations
 import json
 import uuid
 
+from core.llm.runner import RetryPolicy, run_llm
 from pydantic_ai import Agent
 
 from core.config import settings
-from core.llm.runner import RetryPolicy, run_llm
 from core.prompts import effective_prompt_text
 from print.http.v3_studio.dtos import V3InputForm, V3SignalSummary
-from print.http.v3_studio.prompts import _planner_index_block, build_v3_shared_prefix
+from print.http.v3_studio.prompts import build_v3_shared_prefix
 from v3_blueprint.planning.models import StructuralPlan
 from v3_blueprint.planning.validators import validate_structural_plan_roles
-from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
+from v3_execution.config import get_v3_model_settings, get_v3_slot
 from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 
 _CALLER = "v3_chunked_architect"
@@ -27,10 +27,18 @@ def _load_stage1_static_body() -> str:
 
 def build_stage1_system_prompt(*, path_prepared: bool = False) -> str:
     shared_prefix = build_v3_shared_prefix()
-    planner_block = _planner_index_block()
-
-    static_body = _load_stage1_static_body().replace(_PLANNER_INDEX_MARKER, planner_block)
-    prompt = f"{shared_prefix}{static_body}"
+    # Stage 1 is intent-only: do not inject the component palette.
+    static_body = _load_stage1_static_body().replace(_PLANNER_INDEX_MARKER, "")
+    # The shared structural-planner body still mentions the palette by name;
+    # neutralize those leftovers so Stage 1 cannot treat components as selectable.
+    static_body = static_body.replace("AVAILABLE COMPONENTS", "ALLOWED SECTION ROLES")
+    intent_rules = (
+        "\nSTAGE 1 INTENT RULES\n"
+        "- Plan teaching intent, section roles, purposes, and continuity only.\n"
+        "- Leave components empty. Never name Lectio component slugs.\n"
+        "- Do not choose page objects, layouts, or renderers.\n"
+    )
+    prompt = f"{shared_prefix}{intent_rules}{static_body}"
     if not path_prepared:
         return prompt
 
@@ -102,10 +110,19 @@ def build_stage1_user_message(
     skeleton_catalog: dict | None = None,
     previous_errors: list[str] | None = None,
 ) -> str:
+    intent_spec = _intent_resource_spec_payload(resource_spec)
+    roles: list[str] = []
+    raw_sections = (intent_spec.get("spec") or {}).get("sections") or {}
+    for group_name in ("required", "optional"):
+        for section in raw_sections.get(group_name) or []:
+            if isinstance(section, dict) and section.get("role"):
+                roles.append(str(section["role"]))
+    role_line = ", ".join(dict.fromkeys(roles)) if roles else "(none)"
     payload = (
         f"Signals JSON:\n{signals.model_dump_json(indent=2)}\n\n"
         f"Form JSON:\n{form.model_dump_json(indent=2)}\n\n"
-        f"RESOURCE SPEC JSON:\n{json.dumps(resource_spec, indent=2, sort_keys=True)}"
+        f"ACTIVE RESOURCE SPEC ROLES\n{role_line}\n\n"
+        f"RESOURCE SPEC JSON:\n{json.dumps(intent_spec, indent=2, sort_keys=True)}"
     )
     slots = skeleton_catalog.get("slots") if isinstance(skeleton_catalog, dict) else None
     if isinstance(slots, dict) and slots:
@@ -195,7 +212,7 @@ async def _call_stage1(
             f"\n[_CALL_STAGE1 ERROR]"
             f" generation_id={generation_id}"
             f" type={type(exc).__name__}"
-            f"\nmessage={str(exc)}"
+            f"\nmessage={exc!s}"
             f"\ntraceback:\n{tb}",
             flush=True,
         )

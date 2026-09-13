@@ -19,10 +19,10 @@ from v3_execution.prompts.section_writer import build_section_writer_prompt
 
 
 def test_stage1_and_stage2_prompts_share_stable_prefix() -> None:
+    build_v3_shared_prefix.cache_clear()
     prefix = build_v3_shared_prefix()
-
-    with patch("v3_blueprint.planning.structural_planner._planner_index_block", return_value="PLANNER BLOCK"):
-        assert build_stage1_system_prompt().startswith(prefix)
+    assert prefix
+    assert build_stage1_system_prompt().startswith(prefix)
     assert build_stage2_system_prompt().startswith(prefix)
 
 

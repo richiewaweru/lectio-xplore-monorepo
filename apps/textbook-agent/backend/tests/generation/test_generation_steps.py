@@ -9,6 +9,7 @@ import pytest
 from sqlalchemy import select
 
 from core.database.models import GenerationModel, GenerationStepModel, UserModel
+from v3_blueprint.planning.models import ComponentBrief, SectionBrief
 from v3_blueprint.planning.persistence import (
     fold,
     insert_step,
@@ -16,7 +17,6 @@ from v3_blueprint.planning.persistence import (
     persist_chunked_state,
     persist_section_brief,
 )
-from v3_blueprint.planning.models import ComponentBrief, SectionBrief
 
 
 async def _seed_generation(session, generation_id: str) -> None:
@@ -136,6 +136,8 @@ async def test_persist_section_brief_inserts_step_and_fold_loads(
 
 @pytest.mark.asyncio
 async def test_resume_rebuilds_only_missing_brief_steps(db_session) -> None:
+    from unittest.mock import AsyncMock, patch
+
     from print.http.v3_studio.dtos import V3InputForm, V3SignalSummary
     from v3_blueprint.planning.models import (
         AnchorSpec,
@@ -145,7 +147,6 @@ async def test_resume_rebuilds_only_missing_brief_steps(db_session) -> None:
         StructuralPlan,
     )
     from v3_blueprint.planning.persistence import resume_stage2
-    from unittest.mock import AsyncMock, patch
 
     generation_id = f"gen-{uuid.uuid4()}"
     await _seed_generation(db_session, generation_id)
@@ -229,7 +230,7 @@ async def test_resume_rebuilds_only_missing_brief_steps(db_session) -> None:
 
     called: list[str] = []
 
-    async def fake_run(**kwargs):  # noqa: ANN003
+    async def fake_run(**kwargs):
         section = kwargs["section"]
         called.append(section.id)
         return SectionBrief(

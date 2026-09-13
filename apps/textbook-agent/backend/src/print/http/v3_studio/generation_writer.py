@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import or_, select
@@ -22,7 +22,7 @@ from v3_review.models import CoherenceReport
 
 
 def _utc_now_naive() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _is_export_allowed(booklet_status: str) -> bool:
@@ -132,9 +132,12 @@ def _count_delivered_visuals(sections: list[dict[str, Any]]) -> int:
     delivered = 0
     for section in sections:
         diagram = section.get("diagram")
-        if isinstance(diagram, dict) and isinstance(diagram.get("image_url"), str):
-            if diagram.get("image_url"):
-                delivered += 1
+        if (
+            isinstance(diagram, dict)
+            and isinstance(diagram.get("image_url"), str)
+            and diagram.get("image_url")
+        ):
+            delivered += 1
     return delivered
 
 
@@ -246,7 +249,7 @@ def bump_document_version(document: dict[str, Any]) -> None:
         progress = {}
     document["progress"] = {
         **progress,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(UTC).isoformat(),
     }
 
 
@@ -416,7 +419,7 @@ class V3GenerationWriter:
                 document["progress"] = {
                     "stage": "failed",
                     "sections": dict(statuses) if isinstance(statuses, dict) else {},
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(UTC).isoformat(),
                 }
                 model.document_json = document
                 from v3_blueprint.planning.persistence import persist_chunked_state
@@ -856,7 +859,7 @@ class V3GenerationWriter:
                         section_id: "ready" if section_id in ready_ids else "failed"
                         for section_id in planned_ids
                     },
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(UTC).isoformat(),
                 }
                 model.document_json = document
                 model.report_json = report

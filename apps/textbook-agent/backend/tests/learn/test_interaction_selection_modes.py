@@ -8,9 +8,7 @@ import pytest
 
 from curriculum.teaching_plan.models import (
     LearnerActionBrief,
-    TeachingPlan,
     TeachingPlanBlock,
-    TeachingPlanSection,
 )
 from infra.authoring.capability_selector import CapabilitySelection
 from learn.generation.native_production import (
@@ -106,7 +104,7 @@ async def test_multi_candidate_rejects_illegal_pick() -> None:
     async def choose(_context: dict) -> CapabilitySelection:
         return CapabilitySelection(capability_id="choice", reason="illegal")
 
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         await _select_interaction_for_block(
             block,
             candidates_by_block={"b1": ["short-response", "numeric"]},

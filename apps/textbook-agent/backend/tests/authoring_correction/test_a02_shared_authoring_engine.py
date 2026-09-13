@@ -166,7 +166,7 @@ async def test_a02_print_and_learn_adapters_share_engine_with_own_schemas() -> N
     # Learn generate schemas author prompt/config/feedback (R01 envelope).
     assert learn_result.payload["config"]["correct_option_id"] == "air"
     assert [call.native_path for call in provider.calls] == ["print", "learn"]
-    assert [call.output_schema for call in provider.calls][0] != provider.calls[1].output_schema
+    assert next(call.output_schema for call in provider.calls) != provider.calls[1].output_schema
     assert all(
         "You author one already-selected educational capability" in call.prompt
         for call in provider.calls

@@ -7,14 +7,13 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
 
 from app import app
-from core.auth.middleware import get_current_user
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
 from core.entities.user import User
-from print.rendering.page_objects.document_assembly import persist_document_json
 from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ImmutableLessonPacket,
@@ -23,8 +22,11 @@ from print.generation.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
-from print.generation.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
-
+from print.generation.whole_lesson.repository import (
+    PageDocumentRepository,
+    empty_page_document_state,
+)
+from print.rendering.page_objects.document_assembly import persist_document_json
 
 TEST_USER = User(
     id="visual-route-owner",

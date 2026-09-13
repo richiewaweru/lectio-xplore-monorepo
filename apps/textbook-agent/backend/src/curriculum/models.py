@@ -4,7 +4,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-
 KnowledgeType = Literal["procedural", "conceptual", "factual", "evaluative"]
 GroupProfile = Literal["support", "core", "extension"]
 

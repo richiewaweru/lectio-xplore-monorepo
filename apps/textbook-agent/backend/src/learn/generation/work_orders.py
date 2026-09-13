@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any, Literal, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -13,7 +14,7 @@ from curriculum.teaching_plan.compatibility import (
     assert_action_compatible_with_sources,
 )
 from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
-from learn.generation.native_selection import LearnSelectionDecision, LearnSelectionSnapshot
+from learn.generation.native_selection import LearnSelectionSnapshot
 from learn.resources.selection import load_learn_writer_view
 
 REGISTERED_LEARN_VALIDATOR_REFS = frozenset(

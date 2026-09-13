@@ -7,7 +7,8 @@ Heuristics in ``document.heuristics`` remain a narrow emergency fallback.
 from __future__ import annotations
 
 import uuid
-from typing import Any, Literal, Mapping, Sequence
+from collections.abc import Mapping
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -288,6 +289,7 @@ async def compose_document_plan(
         ),
         provider=provider,
         max_repair_attempts=2,
+        max_transport_attempts=1,
     )
     try:
         result = await selected.execute(request, provider=provider)

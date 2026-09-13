@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -11,7 +11,7 @@ from curriculum.teaching_plan.models import TeachingPlan, TeachingRevisionRecord
 
 
 def _utcnow() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 class TeachingRevisionStore:
@@ -156,7 +156,7 @@ class TeachingRevisionStore:
         next_revision = self.current_revision()
         # If the latest approved revision equals next_revision - 0 wait:
         # after approve, current_revision is approved+1 (next pending slot).
-        record = self.record_draft(
+        self.record_draft(
             plan,
             preparation_hash=preparation_hash,
             revision=next_revision,

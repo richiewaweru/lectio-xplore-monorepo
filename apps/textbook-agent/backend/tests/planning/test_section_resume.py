@@ -7,10 +7,10 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from tests.planning.contract_fixtures import teaching_and_form
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
-from print.rendering.page_objects import WriterOutcome
 from print.generation.whole_lesson.executor import write_form_blocks
 from print.generation.whole_lesson.packet import (
     AnchorRecord,
@@ -20,9 +20,12 @@ from print.generation.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
-from print.generation.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
+from print.generation.whole_lesson.repository import (
+    PageDocumentRepository,
+    empty_page_document_state,
+)
 from print.generation.whole_lesson.states import execution_key
-from tests.planning.contract_fixtures import teaching_and_form
+from print.rendering.page_objects import WriterOutcome
 
 
 def _packet() -> ImmutableLessonPacket:
@@ -115,7 +118,7 @@ async def test_resume_skips_completed_sections() -> None:
     gid = await _seed(ready)
     written: list[str] = []
 
-    async def _fake_dispatch(ctx):  # noqa: ANN001
+    async def _fake_dispatch(ctx):
         written.append(ctx.planned.id)
         return WriterOutcome(
             block_id=ctx.planned.id,

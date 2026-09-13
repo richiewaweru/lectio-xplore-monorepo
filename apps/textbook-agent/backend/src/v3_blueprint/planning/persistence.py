@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
-from typing import Any, Mapping
+from typing import Any
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -586,13 +586,13 @@ async def resume_stage2(
         form_raw = context.get("form")
         resource_spec = context.get("resource_spec")
         if not isinstance(signals_raw, dict) or not isinstance(form_raw, dict):
-            raise ValueError(
+            raise TypeError(
                 "Cannot resume Stage 2: missing persisted signals/form context."
             )
         signals = V3SignalSummary(**signals_raw)
         form = V3InputForm(**form_raw)
         if not isinstance(resource_spec, dict):
-            raise ValueError(
+            raise TypeError(
                 "Cannot resume Stage 2: missing persisted resource_spec context."
             )
 
@@ -625,7 +625,7 @@ async def resume_stage2(
             persistence_lock = asyncio.Lock()
             briefs_by_id = {brief.section_id: brief for brief in completed_briefs}
 
-            async def run_section(section):  # noqa: ANN001
+            async def run_section(section):
                 # Parallel resume: plan-derived continuity only.
                 return await _run_stage2_section(
                     plan,

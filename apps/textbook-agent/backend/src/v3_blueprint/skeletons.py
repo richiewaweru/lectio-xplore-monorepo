@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
-import re
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
 import yaml
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from contracts.lectio import get_component_card
 
@@ -418,19 +418,18 @@ class SkeletonCatalog:
                     )
                 )
 
-        if support_level == "high" and knowledge_type == "procedural":
-            if "independent" in slots:
-                slots = ["model" if slot == "independent" else slot for slot in slots]
-                applied.append("support.high.extra_modelling")
-                structural_diff.append(
-                    SkeletonDiffEntry(
-                        operation="replace",
-                        slot_id="independent",
-                        replacement_slot="model",
-                        toggle_id="support.high.extra_modelling",
-                        explanation="Replace premature independent work with an additional worked model.",
-                    )
+        if support_level == "high" and knowledge_type == "procedural" and "independent" in slots:
+            slots = ["model" if slot == "independent" else slot for slot in slots]
+            applied.append("support.high.extra_modelling")
+            structural_diff.append(
+                SkeletonDiffEntry(
+                    operation="replace",
+                    slot_id="independent",
+                    replacement_slot="model",
+                    toggle_id="support.high.extra_modelling",
+                    explanation="Replace premature independent work with an additional worked model.",
                 )
+            )
 
         if support_level == "high" and "independent" in slots and "guided" in slots:
             slots.remove("independent")

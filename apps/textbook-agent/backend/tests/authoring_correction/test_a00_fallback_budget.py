@@ -7,20 +7,11 @@ from learn.resources.selection import derive_learn_block_candidates
 
 
 def test_a00_fallback_candidate_stays_excluded_when_budget_exhausted() -> None:
-    """KNOWN_ANSWER_CASES fallback-budget: candidate budget 0 remains excluded."""
+    """Document-primitive fallback must honor per-kind budgets (frozen v2)."""
     policy = default_learn_policy()
-    policy["offered_content"] = ["explanation-block"]
-    policy["offered_interactions"] = []
-    capabilities = [
-        {
-            "id": "explanation-block",
-            "kind": "content",
-            "availability": "available",
-            "supported_intents": ["emphasise"],
-            "supported_actions": ["read-explanation"],
-            "payload_schema": {"type": "object"},
-        }
-    ]
+    # Empty offered_content → shared document primitives are the content surface.
+    policy["offered_content"] = []
+    capabilities: list[dict] = []
 
     derived = derive_learn_block_candidates(
         block_id="b-budget",
@@ -28,17 +19,17 @@ def test_a00_fallback_candidate_stays_excluded_when_budget_exhausted() -> None:
         action=None,
         policy=policy,
         capabilities=capabilities,
-        remaining_budgets={"explanation-block": 0},
-        writer_view={
-            "explanation-block": {
-                "instructions": {"text": "Write explanatory prose."},
-                "payload_schema": {"type": "object"},
-                "required_inputs": ["brief"],
-                "modes": ["generate"],
-                "validator_refs": ["learn.payload_schema"],
-            }
+        remaining_budgets={
+            "paragraph": 0,
+            "heading": 0,
+            "list": 0,
+            "figure": 0,
+            "table": 0,
+            "callout": 0,
         },
+        writer_view={},
     )
 
     assert derived.content_candidates == ()
-    assert derived.excluded.get("explanation-block") == "budget_exhausted"
+    assert derived.excluded.get("paragraph") == "budget_exhausted"
+    assert derived.excluded.get("callout") == "budget_exhausted"

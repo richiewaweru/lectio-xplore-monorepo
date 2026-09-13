@@ -5,17 +5,16 @@ from pathlib import Path
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
+from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 
 from app import app, create_app
-from infra.auth.middleware import get_current_user
 from core.database.models import PathLessonModel, UserModel
-from infra.dependencies import get_async_session
 from core.entities.user import User
 from curriculum.models import UnitCreate
 from curriculum.routes import _path_planning_lock
-from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 from curriculum.service import approve_path, create_unit, persist_path_plan
-
+from infra.auth.middleware import get_current_user
+from infra.dependencies import get_async_session
 
 TEST_USER = User(
     id="path-route-owner",
@@ -191,6 +190,13 @@ async def test_unprepared_lesson_status_is_explicit_over_http(db_session_factory
         "stale": False,
         "can_prepare": True,
         "can_regenerate": False,
+        "realizations": [],
+        "print_output_id": None,
+        "print_realization_id": None,
+        "print_open_href": None,
+        "learn_output_id": None,
+        "learn_realization_id": None,
+        "learn_open_href": None,
     }
 
 

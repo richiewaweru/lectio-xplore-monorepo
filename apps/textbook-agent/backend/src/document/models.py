@@ -6,7 +6,6 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
-
 DOCUMENT_PRIMITIVE_KINDS = frozenset(
     {"paragraph", "heading", "list", "figure", "table", "callout"}
 )

@@ -6,9 +6,10 @@ learner-action vocabulary, Learn interaction candidates, Print treatments.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import yaml
 
@@ -35,7 +36,7 @@ def load_policy(name: str) -> dict[str, Any]:
     with path.open(encoding="utf-8") as handle:
         loaded = yaml.safe_load(handle)
     if not isinstance(loaded, dict):
-        raise ValueError(f"Policy {name} must be a mapping")
+        raise TypeError(f"Policy {name} must be a mapping")
     return loaded
 
 

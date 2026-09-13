@@ -10,7 +10,7 @@ from typing import Any
 
 async def record_skeleton_shadow(*_args: Any, **_kwargs: Any) -> None:
     """No-op — table and readers retired (D3/D4)."""
-    return None
+    return
 
 
 async def list_shadow_records(*_args: Any, **_kwargs: Any) -> list[Any]:

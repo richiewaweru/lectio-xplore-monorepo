@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from document.models import DOCUMENT_PRIMITIVE_KINDS
-from document.writer import write_document_primitive
+from document.writer import DocumentWriterError, write_document_primitive
+from infra.authoring import AuthoringEngineError
 from print.generation.document_form_map import PRINT_OBJECT_TO_PRIMITIVE
 from print.rendering.page_objects.models import WriterContext, WriterOutcome
 from print.rendering.page_objects.validation import UnsupportedObject
@@ -46,8 +48,13 @@ def document_node_to_print_content(object_id: str, node: Mapping[str, Any]) -> d
             "presentation": "standard",
         }
     if object_id == "aside" or kind == "callout":
+        from print.rendering.page_objects.registry import _rich_text_to_plain_text
+
         title = str(node.get("title") or node.get("tone") or "Note")
-        body = str(node.get("body") or node.get("text") or "").strip()
+        body = _rich_text_to_plain_text(node.get("body") or node.get("text") or "")
+        if not isinstance(body, str):
+            body = str(body or "")
+        body = body.strip()
         return {"label": title[:80] or "Note", "body": body or title}
     if object_id == "figure" or kind == "figure":
         caption = str(node.get("caption") or "").strip()
@@ -87,17 +94,37 @@ async def write_ordinary_via_shared_writer(
         "brief": ctx.planned.brief,
         "evidence": getattr(ctx.planned, "evidence", "") or "",
     }
-    node = await write_document_primitive(
-        kind=kind,
-        brief=ctx.planned.brief,
-        teaching_block=teaching_block,
-        lesson_context=lesson_context,
-        terminology=list(ctx.terminology),
-        allowed_facts=list(lesson_context.get("allowed_facts") or []),
-        teaching_block_id=ctx.planned.id,
-        provider=authoring,
-    )
+    try:
+        node = await write_document_primitive(
+            kind=kind,
+            brief=ctx.planned.brief,
+            teaching_block=teaching_block,
+            lesson_context=lesson_context,
+            terminology=list(ctx.terminology),
+            allowed_facts=list(lesson_context.get("allowed_facts") or []),
+            teaching_block_id=ctx.planned.id,
+            provider=authoring,
+        )
+    except DocumentWriterError as exc:
+        # Preserve typed authoring codes + validation errors for Print dispatch.
+        cause = exc.__cause__
+        errors = (
+            list(getattr(cause, "errors", []) or [])
+            if isinstance(cause, AuthoringEngineError)
+            else []
+        )
+        raise AuthoringEngineError(
+            str(exc.code),  # type: ignore[arg-type]
+            str(exc),
+            stage="document_writer",
+            errors=errors or None,
+        ) from exc
+    from print.rendering.page_objects.registry import _normalize_scalar_rich_text
+
     content = document_node_to_print_content(object_id, node)
+    content = _normalize_scalar_rich_text(object_id, content)  # type: ignore[assignment]
+    if not isinstance(content, dict):
+        raise UnsupportedObject(object_id)
     if object_id == "figure":
         return _figure_result_from_content(ctx, content)
     validated = validate_content(object_id, content)

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import pytest
+from tests.planning.path_helpers import four_lesson_draft
 
 from curriculum.agents import run_path_planner
 from curriculum.path_models import PathPlanDraft, PathPlannerRequest
 from curriculum.validation import PathPlanningError, normalize_path_plan_draft
-from tests.planning.path_helpers import four_lesson_draft
 
 
 def _request() -> PathPlannerRequest:

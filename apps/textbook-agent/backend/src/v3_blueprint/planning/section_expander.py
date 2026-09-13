@@ -3,19 +3,19 @@ from __future__ import annotations
 import json
 import uuid
 
+from core.llm.runner import RetryPolicy, run_llm
+from core.llm.types import ModelFamily
 from pydantic_ai import Agent
 from pydantic_ai.messages import CachePoint
 
 from contracts.lectio import get_component_card
 from core.config import settings
-from core.llm.runner import RetryPolicy, run_llm
-from core.llm.types import ModelFamily
 from core.prompts import effective_prompt_text
 from print.http.v3_studio.dtos import V3InputForm, V3SignalSummary
 from print.http.v3_studio.prompts import build_v3_shared_prefix
 from print.http.v3_studio.signal_map import summarise_form_supports
 from v3_blueprint.planning.models import SectionBrief, SectionPlan, StructuralPlan
-from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
+from v3_execution.config import get_v3_model_settings, get_v3_slot
 from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 
 _CALLER = "v3_chunked_architect"
@@ -247,7 +247,7 @@ async def _call_stage2_section(
             f" section_id={section.id}"
             f" elapsed={elapsed}s"
             f" type={type(exc).__name__}"
-            f"\nmessage={str(exc)}"
+            f"\nmessage={exc!s}"
             f"\n{traceback.format_exc()}",
             flush=True,
         )

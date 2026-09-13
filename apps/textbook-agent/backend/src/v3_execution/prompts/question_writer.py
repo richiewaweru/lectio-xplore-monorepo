@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from print.http.v3_studio.prompts import build_v3_shared_prefix
 from core.prompts import effective_prompt_text
-from v3_execution.prompts.formatting import format_source_of_truth
+from print.http.v3_studio.prompts import build_v3_shared_prefix
 from v3_execution.models import QuestionWriterWorkOrder
+from v3_execution.prompts.formatting import format_source_of_truth
 
 
 def _load_static_body() -> str:

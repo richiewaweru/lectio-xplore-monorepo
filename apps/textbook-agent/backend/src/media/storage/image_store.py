@@ -6,9 +6,9 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from uuid import uuid4
 
-from core.config import settings
 from core.storage.gcs_image_store import GCSImageStore as CoreGCSImageStore
 
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +151,7 @@ class LocalImageStore(ImageStore):
             probe_dir.mkdir(parents=True, exist_ok=True)
             probe_file.write_bytes(b"ok")
             probe_file.unlink(missing_ok=True)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             return False, f"local write failed at {self.base_path}: {type(exc).__name__}: {exc}"
 
         return True, f"local path writable at {self.base_path}"
@@ -217,7 +217,7 @@ class GCSImageStore(ImageStore):
                 },
             )
             return final_url
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.error(
                 "v3 visual gcs upload failed",
                 extra={

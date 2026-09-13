@@ -6,19 +6,19 @@ import json
 
 import pytest
 from sqlalchemy import select
-
-from core.database.models import GenerationModel, NativeRealizationModel
-from core.database.session import async_session_factory
-from curriculum.teaching_plan.consumers import assert_identical_consumer_handoffs
-from print.generation.whole_lesson.repository import PageDocumentRepository
-from print.rendering.page_objects.document_assembly import reload_document
-from print.contracts.lectio_page import validate_document
 from tests.print_learn.test_p08_integration_gates import (
     _approve_shared_teaching,
     _prepare_unit_generation,
     _run_learn,
     _run_print,
 )
+
+from core.database.models import GenerationModel, NativeRealizationModel
+from core.database.session import async_session_factory
+from curriculum.teaching_plan.consumers import assert_identical_consumer_handoffs
+from print.contracts.lectio_page import validate_document
+from print.generation.whole_lesson.repository import PageDocumentRepository
+from print.rendering.page_objects.document_assembly import reload_document
 
 
 @pytest.mark.asyncio

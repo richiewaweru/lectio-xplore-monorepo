@@ -1,0 +1,164 @@
+- generic [ref=f4e2]:
+  - banner [ref=f4e3]:
+    - navigation [ref=f4e4]:
+      - link "Lectio" [ref=f4e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=f4e8]:
+        - link "Home" [ref=f4e9] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=f4e11] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=f4e6]:
+    - generic [ref=f4e12]:
+      - generic [ref=f4e13]:
+        - generic [ref=f4e14]:
+          - button "View" [ref=f4e15]
+          - button "Edit" [active] [ref=f4e16]
+          - button "Save" [ref=f4e17]
+          - button "Reload" [ref=f4e18]
+          - button "Download PDF" [ref=f4e19]
+          - generic [ref=f4e20]: rev 4
+        - generic [ref=f4e97]:
+          - generic [ref=f4e98]:
+            - heading "Open attention on the seesaw and establish a reason to find out what makes it work." [level=3] [ref=f4e99]
+            - generic [ref=f4e100]:
+              - paragraph [ref=f4e101]: prose
+              - textbox "Prose" [ref=f4e102]: On a playground seesaw, one child pushes down on one end of the plank while the other end, carrying the second child, rises into the air. The plank does not stay flat and it does not float; it tilts, first one way and then the other. Watch what the moving plank does around the middle. The middle of the seesaw does not travel up and down with the ends — it stays in place, resting on its support, while everything on either side of it swings. That still point in the middle is what the whole plank turns on, and without it the plank would simply drop to the ground instead of tilting. So as you watch the two children rise and fall, ask yourself what exactly the plank is turning around, and notice that the movement only happens because something underneath the middle holds firm.
+          - generic [ref=f4e103]:
+            - heading "Build the three-part model of a lever and pin each part to a real position on the seesaw." [level=3] [ref=f4e104]
+            - generic [ref=f4e105]:
+              - paragraph [ref=f4e106]: prose
+              - textbox "Prose" [ref=f4e107]: "A lever has exactly three parts, and each one is a different place on the seesaw. The plank rests on a central support, and that support is the fulcrum. It is the point the plank balances on, so it stays in one spot while the two ends move up and down. The effort is the downward push one child makes on an end of the plank. That push is the force applied to the lever, and it happens at the pushing end, not at the support. The load is the child on the other end who is being lifted. This is the part the lever acts on, and it sits at the opposite end from the push. These are three different places on the seesaw: the central support, the end where the push is made, and the end where the other child is raised. Each has its own name because each does its own job in the lever."
+            - generic [ref=f4e108]:
+              - paragraph [ref=f4e109]: prose
+              - textbox "Prose" [ref=f4e110]: "A lever is a rigid bar that tilts around one fixed point instead of sliding or rolling along the ground. Because that bar tips rather than moves as a whole, a force applied at one place on the bar can act on something at a different place, and work that would be hard to do directly becomes easier. This is what makes a lever a simple machine: it is a tool that makes work easier by changing where and how a force, which is a push or a pull, is applied. The fixed point a lever turns around is called the fulcrum, and it is what separates the two ends that do move. The effort is the end of the bar where the push or pull is applied, and the load is the end that acts on the thing being moved. So the fulcrum stays still while the effort and the load swing up and down on either side of it, and telling these three parts apart is what lets you describe how any tilting bar is being used."
+          - generic [ref=f4e111]:
+            - heading "Set the three-part model beside the two beliefs that would misplace or deny it." [level=3] [ref=f4e112]
+            - generic [ref=f4e113]:
+              - paragraph [ref=f4e114]: choices
+              - paragraph [ref=f4e115]: A person uses a bottle opener to lift the metal cap off a glass bottle. The opener rests on the bottle's rim and pulls up on the cap when the handle is pressed. In this action, what is the fulcrum?
+              - generic [ref=f4e116]:
+                - text: a
+                - textbox "a" [ref=f4e117]: The point where the opener rests on the bottle's rim
+              - generic [ref=f4e118]:
+                - text: b
+                - textbox "b" [ref=f4e119]: The handle of the opener that is pressed down
+              - generic [ref=f4e120]:
+                - text: c
+                - textbox "c" [ref=f4e121]: The metal cap that is lifted off
+              - generic [ref=f4e122]:
+                - text: d
+                - textbox "d" [ref=f4e123]: The entire bottle opener, since it is one solid tool
+            - generic [ref=f4e124]:
+              - paragraph [ref=f4e125]: choices
+              - paragraph [ref=f4e126]: A child sits on one end of a seesaw. A teenager pushes down on the other end to raise the child. What are the effort and the load in this action?
+              - generic [ref=f4e127]:
+                - text: a
+                - textbox "a" [ref=f4e128]: "Effort: the teenager pushing down; load: the child being raised"
+              - generic [ref=f4e129]:
+                - text: b
+                - textbox "b" [ref=f4e130]: "Effort: the child sitting on the seesaw; load: the teenager pushing down"
+              - generic [ref=f4e131]:
+                - text: c
+                - textbox "c" [ref=f4e132]: "Effort: the central support; load: the child being raised"
+              - generic [ref=f4e133]:
+                - text: d
+                - textbox "d" [ref=f4e134]: "Effort: the whole seesaw; load: the child being raised"
+          - generic [ref=f4e135]:
+            - heading "Have the learner read the three parts off a lever they have not seen, so the objective is measured rather than rehearsed." [level=3] [ref=f4e136]
+            - generic [ref=f4e137]:
+              - paragraph [ref=f4e138]: choices
+              - paragraph [ref=f4e139]: A student presses down on one end of a seesaw while a friend sits on the other end. The raised bar pivots on a fixed support in the middle. Which part of this seesaw is the fulcrum?
+              - generic [ref=f4e140]:
+                - text: a
+                - textbox "a" [ref=f4e141]: The fixed support in the middle where the bar pivots
+              - generic [ref=f4e142]:
+                - text: b
+                - textbox "b" [ref=f4e143]: The end where the student presses down
+              - generic [ref=f4e144]:
+                - text: c
+                - textbox "c" [ref=f4e145]: The place where the friend's body touches the bar
+              - generic [ref=f4e146]:
+                - text: d
+                - textbox "d" [ref=f4e147]: The entire raised bar between both ends
+      - article [ref=f4e22]:
+        - generic [ref=f4e23]:
+          - heading "Identify a lever in everyday life and name its fulcrum, effort, and load" [level=1] [ref=f4e24]
+          - generic [ref=f4e25]:
+            - generic [ref=f4e26]: Student Name
+            - generic [ref=f4e27]: Date
+        - navigation "Contents" [ref=f4e28]:
+          - heading "Contents" [level=2] [ref=f4e29]
+          - generic [ref=f4e30]: Open attention on the seesaw and establish a reason to find out what makes it work.
+          - generic [ref=f4e32]: Build the three-part model of a lever and pin each part to a real position on the seesaw.
+          - generic [ref=f4e34]: Set the three-part model beside the two beliefs that would misplace or deny it.
+          - generic [ref=f4e36]: Have the learner read the three parts off a lever they have not seen, so the objective is measured rather than rehearsed.
+        - generic [ref=f4e39]:
+          - generic [ref=f4e40]:
+            - heading "Open attention on the seesaw and establish a reason to find out what makes it work." [level=2] [ref=f4e41]
+            - paragraph [ref=f4e42]: On a playground seesaw, one child pushes down on one end of the plank while the other end, carrying the second child, rises into the air. The plank does not stay flat and it does not float; it tilts, first one way and then the other. Watch what the moving plank does around the middle. The middle of the seesaw does not travel up and down with the ends — it stays in place, resting on its support, while everything on either side of it swings. That still point in the middle is what the whole plank turns on, and without it the plank would simply drop to the ground instead of tilting. So as you watch the two children rise and fall, ask yourself what exactly the plank is turning around, and notice that the movement only happens because something underneath the middle holds firm.
+          - generic [ref=f4e43]:
+            - heading "Build the three-part model of a lever and pin each part to a real position on the seesaw." [level=2] [ref=f4e44]
+            - paragraph [ref=f4e45]: A lever has exactly three parts, and each one is a different place on the seesaw. The plank rests on a central support, and that support is the fulcrum. It is the point the plank balances on, so it stays in one spot while the two ends move up and down.
+            - paragraph [ref=f4e46]: The effort is the downward push one child makes on an end of the plank. That push is the force applied to the lever, and it happens at the pushing end, not at the support.
+            - paragraph [ref=f4e47]: The load is the child on the other end who is being lifted. This is the part the lever acts on, and it sits at the opposite end from the push.
+            - paragraph [ref=f4e48]: "These are three different places on the seesaw: the central support, the end where the push is made, and the end where the other child is raised. Each has its own name because each does its own job in the lever."
+            - paragraph [ref=f4e49]: "A lever is a rigid bar that tilts around one fixed point instead of sliding or rolling along the ground. Because that bar tips rather than moves as a whole, a force applied at one place on the bar can act on something at a different place, and work that would be hard to do directly becomes easier. This is what makes a lever a simple machine: it is a tool that makes work easier by changing where and how a force, which is a push or a pull, is applied."
+            - paragraph [ref=f4e50]: The fixed point a lever turns around is called the fulcrum, and it is what separates the two ends that do move. The effort is the end of the bar where the push or pull is applied, and the load is the end that acts on the thing being moved. So the fulcrum stays still while the effort and the load swing up and down on either side of it, and telling these three parts apart is what lets you describe how any tilting bar is being used.
+          - generic [ref=f4e51]:
+            - heading "Set the three-part model beside the two beliefs that would misplace or deny it." [level=2] [ref=f4e52]
+            - generic [ref=f4e53]:
+              - paragraph [ref=f4e54]: A person uses a bottle opener to lift the metal cap off a glass bottle. The opener rests on the bottle's rim and pulls up on the cap when the handle is pressed. In this action, what is the fulcrum?
+              - generic [ref=f4e55]:
+                - generic [ref=f4e56]: a.
+                - text: The point where the opener rests on the bottle's rim
+              - generic [ref=f4e57]:
+                - generic [ref=f4e58]: b.
+                - text: The handle of the opener that is pressed down
+              - generic [ref=f4e59]:
+                - generic [ref=f4e60]: c.
+                - text: The metal cap that is lifted off
+              - generic [ref=f4e61]:
+                - generic [ref=f4e62]: d.
+                - text: The entire bottle opener, since it is one solid tool
+            - generic [ref=f4e63]:
+              - paragraph [ref=f4e64]: A child sits on one end of a seesaw. A teenager pushes down on the other end to raise the child. What are the effort and the load in this action?
+              - generic [ref=f4e65]:
+                - generic [ref=f4e66]: a.
+                - text: "Effort: the teenager pushing down; load: the child being raised"
+              - generic [ref=f4e67]:
+                - generic [ref=f4e68]: b.
+                - text: "Effort: the child sitting on the seesaw; load: the teenager pushing down"
+              - generic [ref=f4e69]:
+                - generic [ref=f4e70]: c.
+                - text: "Effort: the central support; load: the child being raised"
+              - generic [ref=f4e71]:
+                - generic [ref=f4e72]: d.
+                - text: "Effort: the whole seesaw; load: the child being raised"
+          - generic [ref=f4e73]:
+            - heading "Have the learner read the three parts off a lever they have not seen, so the objective is measured rather than rehearsed." [level=2] [ref=f4e74]
+            - generic [ref=f4e75]:
+              - paragraph [ref=f4e76]: A student presses down on one end of a seesaw while a friend sits on the other end. The raised bar pivots on a fixed support in the middle. Which part of this seesaw is the fulcrum?
+              - generic [ref=f4e77]:
+                - generic [ref=f4e78]: a.
+                - text: The fixed support in the middle where the bar pivots
+              - generic [ref=f4e79]:
+                - generic [ref=f4e80]: b.
+                - text: The end where the student presses down
+              - generic [ref=f4e81]:
+                - generic [ref=f4e82]: c.
+                - text: The place where the friend's body touches the bar
+              - generic [ref=f4e83]:
+                - generic [ref=f4e84]: d.
+                - text: The entire raised bar between both ends
+        - generic [ref=f4e85]:
+          - heading "Answer key" [level=2] [ref=f4e86]
+          - paragraph [ref=f4e88]:
+            - strong [ref=f4e89]: contrast-b1.
+            - text: a
+          - paragraph [ref=f4e91]:
+            - strong [ref=f4e92]: contrast-b2.
+            - text: a
+          - paragraph [ref=f4e94]:
+            - strong [ref=f4e95]: check-b1.
+            - text: a

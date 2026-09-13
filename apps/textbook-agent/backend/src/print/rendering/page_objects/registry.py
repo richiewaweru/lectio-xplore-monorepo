@@ -6,6 +6,21 @@ import json
 import uuid
 from typing import Any, Protocol
 
+from infra.authoring import (
+    AuthoringEngineError,
+    AuthoringProvider,
+    AuthoringProviderCall,
+    AuthoringTransportError,
+)
+from print.generation.document_form_map import (
+    PRIMITIVE_TO_PRINT_OBJECT,
+    PRINT_OBJECT_TO_PRIMITIVE,
+)
+from print.generation.whole_lesson.figure_ids import stable_figure_request_id
+from print.generation.work_orders import (
+    PrintWorkOrder,
+    build_print_work_order_from_planned_block,
+)
 from print.rendering.page_objects.assessment import assemble_choices, assemble_questions
 from print.rendering.page_objects.models import (
     FORM_OUTPUTS,
@@ -19,17 +34,6 @@ from print.rendering.page_objects.validation import (
     UnsupportedObject,
     validate_content,
 )
-from infra.authoring import (
-    AuthoringEngineError,
-    AuthoringProvider,
-    AuthoringProviderCall,
-    AuthoringTransportError,
-)
-from print.generation.work_orders import (
-    PrintWorkOrder,
-    build_print_work_order_from_planned_block,
-)
-from print.generation.document_form_map import PRINT_OBJECT_TO_PRIMITIVE
 
 
 def _assert_fixed_object(ctx: WriterContext, expected: str) -> None:
@@ -251,16 +255,136 @@ class WriterProvider(Protocol):
     ) -> object: ...
 
 
+def _document_writer_kind(capability_id: str) -> str | None:
+    prefix = "document-writer:"
+    if not capability_id.startswith(prefix):
+        return None
+    kind = capability_id[len(prefix) :]
+    return kind if kind in PRIMITIVE_TO_PRINT_OBJECT else None
+
+
+def _print_payload_to_document_primitive(kind: str, content: object) -> object:
+    """Adapt print-shaped scripted/LLM payloads to document.writer schemas."""
+    if not isinstance(content, dict):
+        return content
+    if content.get("kind") == kind:
+        return content
+
+    if kind == "paragraph":
+        paragraphs = content.get("paragraphs")
+        if isinstance(paragraphs, list) and paragraphs:
+            return {"kind": "paragraph", "text": str(paragraphs[0])}
+        if "text" in content:
+            return {"kind": "paragraph", "text": str(content.get("text") or "")}
+        # Empty/invalid print prose must not pass through unchanged — force schema miss.
+        return {"kind": "paragraph", "text": ""}
+
+    if kind == "heading":
+        paragraphs = content.get("paragraphs")
+        if isinstance(paragraphs, list) and paragraphs:
+            text = str(paragraphs[0])
+        else:
+            text = str(content.get("text") or "")
+        level = content.get("level", 2)
+        try:
+            level_int = int(level)
+        except (TypeError, ValueError):
+            level_int = 2
+        return {"kind": "heading", "text": text or " ", "level": level_int}
+
+    if kind == "list":
+        raw_items = content.get("items") or []
+        items: list[str] = []
+        for item in raw_items:
+            if isinstance(item, dict):
+                items.append(str(item.get("text") or ""))
+            else:
+                items.append(str(item))
+        ordered = content.get("ordered")
+        if ordered is None:
+            ordered = content.get("style") == "ordered"
+        return {"kind": "list", "ordered": bool(ordered), "items": items}
+
+    if kind == "table":
+        columns = content.get("columns") or []
+        if columns and isinstance(columns[0], dict):
+            headers = [str(col.get("label") or col.get("id") or "") for col in columns]
+            column_ids = [str(col.get("id") or "") for col in columns]
+        elif "headers" in content:
+            headers = [str(h) for h in (content.get("headers") or [])]
+            column_ids = []
+        else:
+            return content
+        rows_out: list[list[str]] = []
+        for row in content.get("rows") or []:
+            if isinstance(row, dict) and isinstance(row.get("cells"), dict):
+                cells = row["cells"]
+                if column_ids:
+                    rows_out.append([str(cells.get(cid, "")) for cid in column_ids])
+                else:
+                    rows_out.append([str(v) for v in cells.values()])
+            elif isinstance(row, (list, tuple)):
+                rows_out.append([str(cell) for cell in row])
+        payload: dict[str, Any] = {
+            "kind": "table",
+            "headers": headers,
+            "rows": rows_out,
+        }
+        caption = content.get("caption")
+        if caption:
+            payload["caption"] = str(caption)
+        return payload
+
+    if kind == "callout":
+        title = content.get("title")
+        if title is None:
+            title = content.get("label")
+        tone = str(content.get("tone") or "note")
+        if tone not in {"note", "warning", "tip", "important"}:
+            tone = "note"
+        raw_body = content.get("body")
+        plain_body = _rich_text_to_plain_text(raw_body)
+        if not isinstance(plain_body, str):
+            plain_body = str(plain_body or "")
+        payload = {
+            "kind": "callout",
+            "tone": tone,
+            "body": plain_body,
+        }
+        if title:
+            payload["title"] = str(title)
+        return payload
+
+    if kind == "figure":
+        caption = str(content.get("caption") or "").strip()
+        alt = str(
+            content.get("alt") or content.get("alt_text") or caption or "Figure"
+        ).strip()
+        return {
+            "kind": "figure",
+            "caption": caption or alt,
+            "alt": alt,
+        }
+
+    return content
+
+
 class _LegacyWriterAuthoringProvider:
     def __init__(self, inner: WriterProvider, *, ctx: WriterContext) -> None:
         self.inner = inner
         self.ctx = ctx
 
     async def invoke(self, call: AuthoringProviderCall) -> object:
-        output_model = WRITER_PROVIDER_OUTPUTS[call.capability_id]
+        document_kind = _document_writer_kind(call.capability_id)
+        lookup_id = (
+            PRIMITIVE_TO_PRINT_OBJECT[document_kind]  # type: ignore[index]
+            if document_kind is not None
+            else call.capability_id
+        )
+        output_model = WRITER_PROVIDER_OUTPUTS[lookup_id]
         try:
             result = await self.inner.write(
-                object_id=call.capability_id,
+                object_id=lookup_id,
                 section_id=self.ctx.section_id or "",
                 block_id=self.ctx.planned.id,
                 attempt=call.attempt,
@@ -271,6 +395,10 @@ class _LegacyWriterAuthoringProvider:
             raise AuthoringTransportError(str(exc)) from exc
         if hasattr(result, "model_dump"):
             result = result.model_dump(mode="json", exclude_none=True)
+        if document_kind is not None:
+            # Unwrap rich-text scalars on the Print shape, then map to document schema.
+            result = _normalize_scalar_rich_text(lookup_id, result)
+            return _print_payload_to_document_primitive(document_kind, result)
         return _normalize_scalar_rich_text(call.capability_id, result)
 
 

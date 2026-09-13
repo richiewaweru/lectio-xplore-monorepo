@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import pytest
+from core.llm.deepseek_schema import to_deepseek_strict_schema
 from pydantic import ValidationError
 
-from core.llm.deepseek_schema import to_deepseek_strict_schema
 from print.generation.whole_lesson.teaching_plan import (
     AnchorUsageEntry,
     TeachingPlanDraft,

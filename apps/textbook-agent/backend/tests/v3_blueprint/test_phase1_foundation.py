@@ -7,7 +7,6 @@ from v3_blueprint.compiler import BlueprintCompiler
 from v3_blueprint.models import ProductionBlueprint
 from v3_blueprint.validators import validate_blueprint_completeness
 
-
 EXAMPLE_FILENAMES = [
     "amara_compound_area.json",
     "david_parallel_circuits.json",

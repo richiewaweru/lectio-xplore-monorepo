@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -65,7 +65,7 @@ async def create_profile(
             detail="Profile already exists. Use PATCH to update.",
         )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     profile = TeacherProfile(
         id=str(uuid.uuid4()),
         user_id=current_user.id,
@@ -102,7 +102,7 @@ async def update_profile(
         {
             **existing.model_dump(mode="python"),
             **update_data,
-            "updated_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(UTC),
         }
     )
     return await profile_repo.update(updated)

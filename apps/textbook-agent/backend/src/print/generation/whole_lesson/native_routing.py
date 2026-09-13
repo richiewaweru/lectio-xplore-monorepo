@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from core.database.models import GenerationModel
 from print.generation.whole_lesson.states import NATIVE_STATUSES
@@ -54,6 +55,4 @@ def generation_is_native_whole_lesson(
         if status in NATIVE_STATUSES:
             return True
     stage = str(chunked.get("stage") or "")
-    if stage in NATIVE_STATUSES:
-        return True
-    return False
+    return stage in NATIVE_STATUSES

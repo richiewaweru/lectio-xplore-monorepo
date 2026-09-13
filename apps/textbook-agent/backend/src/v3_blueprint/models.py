@@ -4,7 +4,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-
 LessonMode = Literal[
     "first_exposure",  # learner meets concept for the first time
     "consolidation",  # revisiting known content to deepen or connect

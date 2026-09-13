@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,7 +44,7 @@ class SqlUserRepository(UserRepository):
         return self._to_entity(row) if row else None
 
     async def create(self, user: User) -> User:
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         model = UserModel(
             id=user.id or str(uuid.uuid4()),
             email=user.email,
@@ -64,7 +64,7 @@ class SqlUserRepository(UserRepository):
         model = result.scalar_one()
         model.name = user.name
         model.picture_url = user.picture_url
-        model.updated_at = datetime.utcnow()
+        model.updated_at = datetime.now(UTC).replace(tzinfo=None)
         await self._session.commit()
         updated = await self._load_user_model(model.id)
         return self._to_entity(updated)

@@ -12,8 +12,8 @@ from curriculum.teaching_plan.models import (
 )
 from document.composer import heuristic_compose_document_plan
 from print.generation.composition_bridge import (
-    composition_to_form_plan,
     build_print_production_from_composition,
+    composition_to_form_plan,
 )
 
 
@@ -58,7 +58,7 @@ def _plan() -> TeachingPlan:
 
 def test_composition_to_form_plan_maps_primitives_and_tasks() -> None:
     plan = _plan()
-    document_plan = heuristic_compose_document_plan(plan, path="print")
+    heuristic_compose_document_plan(plan, path="print")
     # Layer happens inside build_print_production_from_composition; exercise map via async.
     form_plan, snapshot, composition = asyncio.run(
         build_print_production_from_composition(

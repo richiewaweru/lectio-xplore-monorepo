@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infra.auth.middleware import get_current_user
+from application.unit_lesson.realizations import get_realization, resolve_by_path, to_identity
 from core.capabilities import require_xplore_v2
 from core.database.models import (
     EditableLessonModel,
@@ -19,16 +19,16 @@ from core.database.models import (
     PathVersionModel,
     UnitModel,
 )
-from infra.dependencies import get_async_session
 from core.entities.user import User
-from application.unit_lesson.realizations import get_realization, resolve_by_path, to_identity
-from learn.generation.units_dispatch import dispatch_units_generation, units_dispatch_task
+from curriculum.models import PathLessonMutationRequest, PathVersionMutationRequest
+from infra.auth.middleware import get_current_user
+from infra.dependencies import get_async_session
 from learn.authoring.builder.service import (
     ComponentLectioBuilderError,
     get_or_create_native_learn_builder_lesson,
 )
 from learn.generation.pipeline_dispatch import COMPONENT_LECTIO_RETIRED
-from curriculum.models import PathLessonMutationRequest, PathVersionMutationRequest
+from learn.generation.units_dispatch import dispatch_units_generation, units_dispatch_task
 from v3_blueprint.planning.persistence import load_chunked_state
 
 router = APIRouter(
@@ -47,7 +47,7 @@ class UnitsGenerationStatus(BaseModel):
     retryable: bool
     builder_id: str | None = None
     display_title: str | None = None
-    review_cards: list["UnitsReviewCard"] = Field(default_factory=list)
+    review_cards: list[UnitsReviewCard] = Field(default_factory=list)
     realization_id: str | None = None
     path: Literal["print", "learn"] | None = None
     open_href: str | None = None

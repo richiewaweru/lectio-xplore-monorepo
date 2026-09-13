@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from enum import Enum
-from typing import Any, Mapping
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -310,7 +311,7 @@ async def _run_items_under_lease(
     state = await load_chunked_state(generation_id)
     plan_raw = state.get("structural_plan")
     if not isinstance(plan_raw, dict):
-        raise RuntimeError("No structural plan available for item retry")
+        raise TypeError("No structural plan available for item retry")
     plan = adapt_legacy_structural_plan(
         plan_raw,
         source=f"generation:{generation_id}",
@@ -481,7 +482,7 @@ async def run_pre_worker_retry(
         }
     except LeaseLostError:
         raise
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         from print.generation.whole_lesson.repository import persist_native_failure_for_generation
 
         async with async_session_factory() as session:

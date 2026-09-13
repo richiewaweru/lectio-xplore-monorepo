@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 import pytest
+from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
+from tests.planning.path_helpers import sample_canonical_plan
 
 from app import app
-from core.auth.middleware import get_current_user
 from core.database.models import UserModel
 from core.dependencies import get_async_session
 from core.entities.user import User
 from curriculum.path_models import ConstructorOutput, PreparedLessonResponse
 from curriculum.validation import PathPlanningError
-from tests.planning.path_helpers import sample_canonical_plan
-
 
 TEST_USER = User(
     id="e2e-owner",

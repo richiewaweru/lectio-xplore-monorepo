@@ -15,8 +15,8 @@ This module only intersects IDs and budget constraints.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping
 
 from contracts.lectio import (
     MANUAL_ONLY_COMPONENT_IDS,
@@ -110,9 +110,7 @@ def _is_generation_excluded(component_id: str) -> bool:
     if component_id in MANUAL_ONLY_COMPONENT_IDS:
         return True
     card = get_component_card(component_id)
-    if not isinstance(card, dict):
-        return True
-    return False
+    return bool(not isinstance(card, dict))
 
 
 def _exclusion_reason(

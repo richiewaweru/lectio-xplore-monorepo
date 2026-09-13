@@ -8,7 +8,8 @@ selector (closed catalogue LLM selection).
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
 from document.composer import compose_document_plan
@@ -19,8 +20,11 @@ from print.generation.document_form_map import (
     PRIMITIVE_TO_PRINT_OBJECT,
     to_print_object,
 )
+from print.generation.native_production import (
+    package_contract_hash,
+    teaching_plan_content_hash,
+)
 from print.generation.selection_snapshot import (
-    PrintSelectionDecision,
     PrintSelectionSnapshot,
     snapshot_from_form_plan,
 )
@@ -29,14 +33,9 @@ from print.generation.task_treatments import (
     print_treatment_for_learner_action,
 )
 from print.generation.whole_lesson.form_plan import FormDecision, FormPlan
-from print.generation.work_orders import compile_print_work_orders
 from print.resources.native_policy import (
     default_print_policy,
     policy_version_and_hash,
-)
-from print.generation.native_production import (
-    package_contract_hash,
-    teaching_plan_content_hash,
 )
 
 

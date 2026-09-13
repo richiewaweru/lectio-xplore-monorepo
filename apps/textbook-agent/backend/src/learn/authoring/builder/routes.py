@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
@@ -13,12 +13,12 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infra.auth.jwt_handler import JWTHandler
-from infra.auth.middleware import get_current_user
-from infra.dependencies import get_gcs_image_store, get_jwt_handler, get_settings
+from contracts.lectio import get_component_registry_entry
 from core.database.models import EditableLessonModel, GenerationModel
-from infra.database.session import get_async_session
 from core.entities.user import User
+from infra.auth.middleware import get_current_user
+from infra.database.session import get_async_session
+from infra.dependencies import get_gcs_image_store
 from infra.rate_limit import limiter
 from infra.storage.gcs_image_store import GCSImageStore
 from learn.authoring.builder.service import (
@@ -27,9 +27,8 @@ from learn.authoring.builder.service import (
     get_or_create_native_learn_builder_lesson,
     validate_builder_document,
 )
-from learn.generation.pipeline_dispatch import COMPONENT_LECTIO_RETIRED
-from contracts.lectio import get_component_registry_entry
 from learn.generation.interaction_writer import validate_interaction_contract
+from learn.generation.pipeline_dispatch import COMPONENT_LECTIO_RETIRED
 
 router = APIRouter(prefix="/api/v1/builder", tags=["builder"])
 logger = logging.getLogger(__name__)
@@ -63,7 +62,7 @@ _ALLOWED_MEDIA_UPLOAD_MIME_TYPES: dict[str, str] = {
 
 
 def _utc_naive_now() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _clone_json_tree(value: dict[str, Any]) -> dict[str, Any]:

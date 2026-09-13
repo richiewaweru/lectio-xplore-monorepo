@@ -3,11 +3,11 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
 from pydantic_ai import PromptedOutput
 
 from app import app
-from core.auth.middleware import get_current_user
 from core.entities.user import User
 from core.events import TraceClosedEvent, TraceRegisteredEvent
 from core.llm import ModelFamily, ModelSpec
@@ -123,8 +123,8 @@ async def test_extract_signals_uses_prompted_output_for_deepseek_models() -> Non
         ),
         patch("print.http.v3_studio.agents.get_v3_slot", return_value="fast"),
         patch("print.http.v3_studio.agents.run_llm", new=AsyncMock(return_value=fake_result)),
+        pytest.raises(RuntimeError, match="unexpected output"),
     ):
-        with pytest.raises(RuntimeError, match="unexpected output"):
-            await extract_signals(type("Form", (), PAYLOAD)(), trace_id="signals-trace")
+        await extract_signals(type("Form", (), PAYLOAD)(), trace_id="signals-trace")
 
     assert isinstance(captured["output_type"], PromptedOutput)

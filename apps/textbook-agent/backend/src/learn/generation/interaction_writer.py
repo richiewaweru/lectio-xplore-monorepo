@@ -10,8 +10,9 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from infra.authoring import AuthoringEngine, AuthoringEngineError, AuthoringProvider
 from learn.generation.activity_authoring import ActivityAuthoringPlan, plan_activity_authoring
@@ -159,7 +160,7 @@ def _work_order_from_request(request: Mapping[str, Any]) -> LearnWorkOrder:
         raw_card = (load_learn_writer_view().get("capabilities") or {}).get(capability_id)
         if isinstance(raw_card, Mapping):
             card = dict(raw_card)
-    except Exception:
+    except Exception:  # noqa: BLE001
         card = {}
     from core.prompts.loader import effective_prompt_text, hash_prompt
 
@@ -190,7 +191,7 @@ def _work_order_from_request(request: Mapping[str, Any]) -> LearnWorkOrder:
             if isinstance(item, Mapping) and item.get("id"):
                 approved_ids.append(str(item["id"]))
             elif getattr(item, "id", None):
-                approved_ids.append(str(getattr(item, "id")))
+                approved_ids.append(str(item.id))
 
     return LearnWorkOrder(
         work_order_id=str(request.get("work_order_id") or f"learn::request::{capability_id}"),
@@ -202,8 +203,8 @@ def _work_order_from_request(request: Mapping[str, Any]) -> LearnWorkOrder:
         teaching_plan_revision=int(request.get("teaching_plan_revision") or 1),
         teaching_plan_hash=str(request.get("teaching_plan_hash") or "ad-hoc"),
         capability_contract_hash=contract_hash,
-        source_refs=list(str(item) for item in request.get("source_refs") or []),
-        dependency_ids=list(str(item) for item in request.get("dependency_ids") or []),
+        source_refs=[str(item) for item in request.get("source_refs") or []],
+        dependency_ids=[str(item) for item in request.get("dependency_ids") or []],
         expected_output_schema=dict(schema),
         field_guidance=dict(request.get("field_guidance") or card.get("field_guidance") or {}),
         authoring_definition=definition,

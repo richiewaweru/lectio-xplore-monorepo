@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from httpx import AsyncClient
 from sqlalchemy import select
-
-from learn.publishing.release_routes import document_hash
 from tests.remaining_fixes.r04_fixtures import (
     build_envelope_closed_production_document,
     install_api_overrides,
@@ -14,6 +11,8 @@ from tests.remaining_fixes.r04_fixtures import (
     r04_client,
     seed_r04_user,
 )
+
+from learn.publishing.release_routes import document_hash
 
 
 @pytest.fixture
@@ -36,11 +35,10 @@ async def test_r04_g02_publish_v1_builder_edit_v2_immutable(db_session_factory, 
     from core.database.models import LearnReleaseModel
 
     document = build_envelope_closed_production_document(title="R04 publish gate")
-    original_body = None
     for block in document["blocks"].values():
         content = block.get("content") if isinstance(block, dict) else None
         if isinstance(content, dict) and content.get("body"):
-            original_body = str(content["body"])
+            str(content["body"])
             break
     ix_prompt_before = None
     for block in document["blocks"].values():

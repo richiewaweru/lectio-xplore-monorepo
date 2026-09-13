@@ -1,19 +1,4 @@
-from __future__ import annotations
-
-import json
-from typing import Any
-
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import or_, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from core.capabilities import require_xplore_v2
-from core.database.models import GenerationModel, LearningPackModel
-from infra.dependencies import get_async_session
-from core.entities.user import User
-
-
-router = APIRouter(
+from __future__ import annotationsimport jsonfrom typing import Anyfrom fastapi import APIRouter, Depends, HTTPExceptionfrom sqlalchemy import or_, selectfrom sqlalchemy.ext.asyncio import AsyncSessionfrom core.capabilities import require_xplore_v2from core.database.models import GenerationModel, LearningPackModelfrom core.entities.user import Userfrom infra.dependencies import get_async_sessionrouter = APIRouter(
     prefix="/api/v1/legacy-units",
     tags=["units", "legacy-compatibility"],
     dependencies=[Depends(require_xplore_v2)],

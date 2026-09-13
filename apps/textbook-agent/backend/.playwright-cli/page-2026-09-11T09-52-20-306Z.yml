@@ -1,0 +1,59 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - navigation [ref=e4]:
+      - link "Lectio" [ref=e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=e6]:
+        - link "Home" [ref=e7] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=e9] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=e10]:
+    - main [ref=e11]:
+      - paragraph [ref=e12]: LearnDocument v2 editor
+      - generic [ref=e13]:
+        - generic [ref=e14]:
+          - generic [ref=e15]:
+            - generic [ref=e16]:
+              - generic [ref=e17]: Add node
+              - combobox "Add node kind" [ref=e18] [cursor=pointer]:
+                - option "paragraph" [selected]
+                - option "heading"
+                - option "list"
+                - option "figure"
+                - option "table"
+                - option "callout"
+            - button "Add" [ref=e19] [cursor=pointer]
+            - button "Delete" [disabled] [ref=e20]
+            - button "↑" [disabled] [ref=e21]
+            - button "↓" [disabled] [ref=e22]
+          - generic [ref=e23]:
+            - button "Save" [ref=e24] [cursor=pointer]
+            - button "Reload" [ref=e25] [cursor=pointer]
+            - link "Preview" [ref=e26] [cursor=pointer]:
+              - /url: /learn/lessons/00e20258-050c-4078-86c1-e0dcaaccfc22
+        - navigation "Lesson sections" [ref=e27]:
+          - button "All" [ref=e28] [cursor=pointer]
+          - 'button "Open attention on the juice recipe and make the reader''s question concrete: what does ''2 cups concentrate and 3 cups water'' actually tell you before you mix it?" [ref=e29] [cursor=pointer]'
+          - 'button "Build the core understanding: name the pairing as a ratio, state what a ratio compares, and then make the order claim visible by laying the recipe''s two quantities out in reading order and in reversed order." [ref=e30] [cursor=pointer]'
+          - button "Check whether the learner can use the ratio for the juice recipe and justify its meaning by the order of the two quantities." [active] [ref=e31] [cursor=pointer]
+        - generic [ref=e32]:
+          - button [ref=e77] [cursor=pointer]:
+            - 'heading "Check: Reading a Ratio in Order" [level=2] [ref=e79]'
+          - button [ref=e80] [cursor=pointer]:
+            - complementary [ref=e82]:
+              - paragraph [ref=e83]: Check Your Reading of the Ratio
+              - paragraph [ref=e84]: "A recipe writes a ratio as 2:3. Explain what this comparison means. In your explanation, name both quantities and the unit they are measured in, and use the order in which they are written to justify why 2:3 describes the mixture it does rather than a different one. Remember: if the reversed order described the same mixture, you would have no reason to prefer the written order — so account for the order, and do not treat 2:3 and 3:2 as interchangeable."
+          - button [ref=e116] [cursor=pointer]:
+            - generic [ref=e118]:
+              - paragraph [ref=e119]: A recipe mixes 2 cups of concentrate with 3 cups of water. Which statement correctly describes the ratio written as 2:3?
+              - radiogroup "A recipe mixes 2 cups of concentrate with 3 cups of water. Which statement correctly describes the ratio written as 2:3?" [ref=e120]:
+                - listitem [ref=e121]:
+                  - radio "2:3 compares 2 cups of concentrate to 3 cups of water, in that written order." [ref=e122]
+                - listitem [ref=e123]:
+                  - radio "2:3 compares 3 cups of water to 2 cups of concentrate." [ref=e124]
+                - listitem [ref=e125]:
+                  - radio "2:3 means the same as 3:2 because both quantities are in cups." [ref=e126]
+                - listitem [ref=e127]:
+                  - radio "2:3 compares 2 cups concentrate to the 5 total cups of mixture." [ref=e128]
+              - button "Check" [disabled] [ref=e129]

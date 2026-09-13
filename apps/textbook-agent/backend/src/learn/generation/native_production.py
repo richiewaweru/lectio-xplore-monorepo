@@ -10,8 +10,9 @@ import asyncio
 import hashlib
 import json
 import uuid
+from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
 from document.composer import compose_document_plan
@@ -345,7 +346,7 @@ async def produce_learn_document_from_teaching_async(
                 candidates_by_block[str(block_id)] = [
                     str(c) for c in (entry.get("interaction_candidates") or [])
                 ]
-    except Exception:
+    except Exception:  # noqa: BLE001
         candidates_by_block = {}
 
     document_plan = await compose_document_plan(

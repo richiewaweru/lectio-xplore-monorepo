@@ -13,9 +13,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.entities.user import User
 from infra.auth.middleware import get_current_user
 from infra.database.session import get_async_session
-from core.entities.user import User
 from learn.class_service import require_class_owner
 from learn.runtime_models import (
     ConceptEvidenceModel,

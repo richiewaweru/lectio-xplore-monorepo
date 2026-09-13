@@ -4,16 +4,17 @@ import asyncio
 import hashlib
 import inspect
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import Any
 
 from infra.authoring.models import (
     AuthoringDefinition,
     AuthoringEngineError,
     AuthoringMode,
+    AuthoringProvenance,
     AuthoringProvider,
     AuthoringProviderCall,
-    AuthoringProvenance,
     AuthoringRequest,
     AuthoringResult,
     AuthoringTransportError,
@@ -44,7 +45,7 @@ def _coerce_json_object(raw: object) -> dict[str, Any]:
             text = "\n".join(lines).strip()
         raw = json.loads(text)
     if not isinstance(raw, dict):
-        raise ValueError(f"expected JSON object, got {type(raw).__name__}")
+        raise TypeError(f"expected JSON object, got {type(raw).__name__}")
     return raw
 
 
@@ -95,11 +96,11 @@ class AuthoringRegistry:
     validators: dict[str, Validator] = field(default_factory=dict)
     converters: dict[str, Converter] = field(default_factory=dict)
 
-    def with_validator(self, ref: str, validator: Validator) -> "AuthoringRegistry":
+    def with_validator(self, ref: str, validator: Validator) -> AuthoringRegistry:
         self.validators[ref] = validator
         return self
 
-    def with_converter(self, ref: str, converter: Converter) -> "AuthoringRegistry":
+    def with_converter(self, ref: str, converter: Converter) -> AuthoringRegistry:
         self.converters[ref] = converter
         return self
 
@@ -111,9 +112,8 @@ class LLMAuthoringProvider:
     async def invoke(self, call: AuthoringProviderCall) -> Any:
         from v3_execution.llm_helpers import run_structured_agent
 
-        # Stage-local output repair lives here; AuthoringEngine also repairs on
-        # schema/validator failure. Zero output retries caused live compose/write
-        # to fail on the first malformed structured response.
+        # Nested SDK/output retries multiply the durable work-item call budget.
+        # AuthoringEngine owns repair attempts; each invoke is one counted call.
         try:
             return await run_structured_agent(
                 node_name=self.node_name,
@@ -122,12 +122,12 @@ class LLMAuthoringProvider:
                 system_prompt=call.prompt,
                 user_prompt="Return JSON only for the selected capability payload.",
                 output_schema=dict(call.output_schema),
-                repair_attempts=1,
-                retries={"output": 1},
+                repair_attempts=0,
+                retries={"output": 0},
             )
         except AuthoringTransportError:
             raise
-        except Exception as exc:  # noqa: BLE001 — map provider failures for engine retries
+        except Exception as exc:
             raise AuthoringTransportError(str(exc)) from exc
 
 

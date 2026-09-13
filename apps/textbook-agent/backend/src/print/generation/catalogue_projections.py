@@ -8,14 +8,18 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from print.contracts.lectio_page import (
     PAGE_OBJECT_IDS,
     get_intent_catalogue,
     get_object_catalogue,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -251,9 +255,51 @@ def project_writer_contract(
         writer_view = load_form_writer_view().get("forms") or {}
         writer_card = writer_view.get(object_id)
         if isinstance(writer_card, dict):
-            return writer_card  # type: ignore[return-value]
+            instructions = writer_card.get("instructions")
+            if isinstance(instructions, Mapping):
+                generation_guidance = str(instructions.get("text") or "")
+            elif isinstance(instructions, str):
+                generation_guidance = instructions
+            else:
+                writer_guidance = writer_card.get("writer_guidance")
+                if isinstance(writer_guidance, str):
+                    generation_guidance = writer_guidance
+                elif isinstance(writer_guidance, Mapping):
+                    generation_guidance = "\n".join(
+                        f"{key}: {value}" for key, value in writer_guidance.items()
+                    )
+                else:
+                    generation_guidance = ""
+            schema = writer_card.get("content_schema")
+            if not isinstance(schema, dict):
+                schema = writer_card.get("payload_schema")
+            if not isinstance(schema, dict):
+                schema = {}
+            capacity = (
+                writer_card.get("capacity")
+                if isinstance(writer_card.get("capacity"), dict)
+                else {}
+            )
+            validation = writer_card.get("negative_cases") or writer_card.get(
+                "validator_refs"
+            ) or []
+            failures = writer_card.get("failure_examples") or []
+            version = str(
+                writer_card.get("definition_version")
+                or writer_card.get("definition_hash")
+                or "unknown"
+            )
+            return WriterContractProjection(
+                object_id=object_id,
+                generation_guidance=generation_guidance,
+                content_schema=dict(schema),
+                capacity=dict(capacity),
+                object_validation=tuple(str(item) for item in validation),
+                failure_examples=tuple(str(item) for item in failures),
+                catalogue_version=version,
+            )
     except Exception:
-        pass
+        logger.debug("form writer view unavailable; falling back to object catalogue", exc_info=True)
 
     intents_doc = intent_catalogue or get_intent_catalogue()
     objects_doc = object_catalogue or get_object_catalogue()

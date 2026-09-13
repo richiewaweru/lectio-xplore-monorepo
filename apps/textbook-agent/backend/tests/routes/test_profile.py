@@ -1,17 +1,17 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
+from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
 
 from app import app
-from core.auth.middleware import get_current_user
 from core.dependencies import get_student_profile_repository
 from core.entities.student_profile import TeacherProfile
 from core.entities.user import User
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 TEST_USER = User(

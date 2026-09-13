@@ -1,0 +1,127 @@
+﻿[1msrc\core\policies\loader.py[0m[36m:[0m39[36m:[0m9[36m:[0m [1m[31mTRY004[0m Prefer `TypeError` exception for invalid type
+[1msrc\core\repositories\sql_student_profile_repo.py[0m[36m:[0m91[36m:[0m15[36m:[0m [1m[31mDTZ003[0m `datetime.datetime.utcnow()` used
+[1msrc\core\repositories\sql_student_profile_repo.py[0m[36m:[0m140[36m:[0m28[36m:[0m [1m[31mDTZ003[0m `datetime.datetime.utcnow()` used
+[1msrc\core\repositories\sql_user_repo.py[0m[36m:[0m47[36m:[0m15[36m:[0m [1m[31mDTZ003[0m `datetime.datetime.utcnow()` used
+[1msrc\core\repositories\sql_user_repo.py[0m[36m:[0m67[36m:[0m28[36m:[0m [1m[31mDTZ003[0m `datetime.datetime.utcnow()` used
+[1msrc\curriculum\routes.py[0m[36m:[0m403[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m419[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m480[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m615[36m:[0m16[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m626[36m:[0m16[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m628[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m664[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m679[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m709[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m724[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m756[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m867[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m881[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m903[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m924[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m937[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m953[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m986[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1021[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1062[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1111[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1153[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1176[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1215[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1258[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1303[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1366[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1418[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1448[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1474[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1491[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1523[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1556[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1578[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1603[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1640[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1704[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1729[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1748[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\routes.py[0m[36m:[0m1765[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\curriculum\teaching_plan\coverage.py[0m[36m:[0m49[36m:[0m17[36m:[0m [1m[31mPERF402[0m Use `list` or `list.copy` to create a copy of a list
+[1msrc\infra\auth\jwt_handler.py[0m[36m:[0m26[36m:[0m9[36m:[0m [1m[31mTRY203[0m Remove exception handler; error is immediately re-raised
+[1msrc\infra\auth\middleware.py[0m[36m:[0m31[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\infra\authoring\engine.py[0m[36m:[0m48[36m:[0m9[36m:[0m [1m[31mTRY004[0m Prefer `TypeError` exception for invalid type
+[1msrc\infra\authoring\prompts.py[0m[36m:[0m68[36m:[0m16[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\infra\authoring\validation.py[0m[36m:[0m52[36m:[0m5[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1msrc\infra\database\models.py[0m[36m:[0m634[36m:[0m22[36m:[0m [1m[31mRUF012[0m Mutable default value for class attribute
+[1msrc\infra\health\routes.py[0m[36m:[0m265[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\learn\authoring\builder\service.py[0m[36m:[0m152[36m:[0m9[36m:[0m [1m[31mTRY004[0m Prefer `TypeError` exception for invalid type
+[1msrc\learn\authoring\builder\service.py[0m[36m:[0m165[36m:[0m5[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1msrc\learn\contracts\lectio.py[0m[36m:[0m211[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\learn\generation\authoring_adapter.py[0m[36m:[0m473[36m:[0m9[36m:[0m [1m[31mTRY004[0m Prefer `TypeError` exception for invalid type
+[1msrc\learn\generation\authoring_adapter.py[0m[36m:[0m531[36m:[0m17[36m:[0m [1m[31mTRY004[0m Prefer `TypeError` exception for invalid type
+[1msrc\learn\generation\authoring_adapter.py[0m[36m:[0m536[36m:[0m9[36m:[0m [1m[31mTRY004[0m Prefer `TypeError` exception for invalid type
+[1msrc\learn\generation\canonical.py[0m[36m:[0m87[36m:[0m5[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1msrc\learn\generation\interaction_writer.py[0m[36m:[0m163[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\learn\generation\native_production.py[0m[36m:[0m349[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\learn\generation\native_selection.py[0m[36m:[0m555[36m:[0m5[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1msrc\learn\generation\native_selection.py[0m[36m:[0m562[36m:[0m5[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1msrc\learn\runtime\evaluation.py[0m[36m:[0m275[36m:[0m12[36m:[0m [1m[31mPLR0124[0m Name compared with itself, consider replacing `value == value`
+[1msrc\learn\runtime\runtime_service.py[0m[36m:[0m642[36m:[0m9[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1msrc\media\diagnostics\v3_image_pipeline_diagnostic.py[0m[36m:[0m266[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\media\storage\image_store.py[0m[36m:[0m154[36m:[0m16[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\print\generation\authoring_adapter.py[0m[36m:[0m262[36m:[0m5[36m:[0m [1m[31mTRY203[0m Remove exception handler; error is immediately re-raised
+[1msrc\print\generation\catalogue_projections.py[0m[36m:[0m256[36m:[0m5[36m:[0m [1m[31mS110[0m `try`-`except`-`pass` detected, consider logging the exception
+[1msrc\print\generation\catalogue_projections.py[0m[36m:[0m256[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\print\generation\page_projections.py[0m[36m:[0m30[36m:[0m13[36m:[0m [1m[31mPERF402[0m Use `list` or `list.copy` to create a copy of a list
+[1msrc\print\generation\selection_snapshot.py[0m[36m:[0m113[36m:[0m5[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1msrc\print\generation\selection_snapshot.py[0m[36m:[0m120[36m:[0m5[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1msrc\print\generation\whole_lesson\executor.py[0m[36m:[0m498[36m:[0m13[36m:[0m [1m[31mS110[0m `try`-`except`-`pass` detected, consider logging the exception
+[1msrc\print\generation\whole_lesson\executor.py[0m[36m:[0m538[36m:[0m9[36m:[0m [1m[31mS110[0m `try`-`except`-`pass` detected, consider logging the exception
+[1msrc\print\generation\whole_lesson\executor.py[0m[36m:[0m588[36m:[0m9[36m:[0m [1m[31mS110[0m `try`-`except`-`pass` detected, consider logging the exception
+[1msrc\print\generation\whole_lesson\executor.py[0m[36m:[0m761[36m:[0m9[36m:[0m [1m[31mS110[0m `try`-`except`-`pass` detected, consider logging the exception
+[1msrc\print\generation\whole_lesson\form_agent.py[0m[36m:[0m264[36m:[0m16[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\print\generation\whole_lesson\native_retry.py[0m[36m:[0m314[36m:[0m9[36m:[0m [1m[31mTRY004[0m Prefer `TypeError` exception for invalid type
+[1msrc\print\generation\whole_lesson\repository.py[0m[36m:[0m2207[36m:[0m13[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1msrc\print\generation\whole_lesson\teaching_agent.py[0m[36m:[0m749[36m:[0m17[36m:[0m [1m[31mPLW0127[0m Self-assignment of variable `previous_output`
+[1msrc\print\generation\whole_lesson\validation.py[0m[36m:[0m305[36m:[0m21[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1msrc\print\generation\whole_lesson\visual_dispatch.py[0m[36m:[0m627[36m:[0m16[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\print\generation\whole_lesson\visual_dispatch.py[0m[36m:[0m706[36m:[0m9[36m:[0m [1m[31mS110[0m `try`-`except`-`pass` detected, consider logging the exception
+[1msrc\print\generation\whole_lesson\visual_topology_recovery.py[0m[36m:[0m126[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\print\generation\whole_lesson\visual_topology_recovery.py[0m[36m:[0m426[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\print\http\v3_studio\generation_writer.py[0m[36m:[0m135[36m:[0m9[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1msrc\print\http\v3_studio\router.py[0m[36m:[0m439[36m:[0m12[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\print\http\v3_studio\router.py[0m[36m:[0m962[36m:[0m17[36m:[0m [1m[31mTRY401[0m Redundant exception object included in `logging.exception` call
+[1msrc\print\http\v3_studio\router.py[0m[36m:[0m1018[36m:[0m9[36m:[0m [1m[31mTRY004[0m Prefer `TypeError` exception for invalid type
+[1msrc\print\http\v3_studio\router.py[0m[36m:[0m1023[36m:[0m9[36m:[0m [1m[31mTRY004[0m Prefer `TypeError` exception for invalid type
+[1msrc\print\http\v3_studio\router.py[0m[36m:[0m1025[36m:[0m9[36m:[0m [1m[31mTRY004[0m Prefer `TypeError` exception for invalid type
+[1msrc\print\http\v3_studio\router.py[0m[36m:[0m1609[36m:[0m17[36m:[0m [1m[31mTRY401[0m Redundant exception object included in `logging.exception` call
+[1msrc\print\http\v3_studio\router.py[0m[36m:[0m1793[36m:[0m13[36m:[0m [1m[31mTRY004[0m Prefer `TypeError` exception for invalid type
+[1msrc\print\http\v3_studio\router.py[0m[36m:[0m1997[36m:[0m17[36m:[0m [1m[31mTRY401[0m Redundant exception object included in `logging.exception` call
+[1msrc\print\http\v3_studio\router.py[0m[36m:[0m3105[36m:[0m16[36m:[0m [1m[31mDTZ003[0m `datetime.datetime.utcnow()` used
+[1msrc\print\http\v3_studio\router.py[0m[36m:[0m3424[36m:[0m17[36m:[0m [1m[31mTRY401[0m Redundant exception object included in `logging.exception` call
+[1msrc\print\http\v3_studio\router.py[0m[36m:[0m3862[36m:[0m24[36m:[0m [1m[31mDTZ003[0m `datetime.datetime.utcnow()` used
+[1msrc\print\http\v3_studio\router.py[0m[36m:[0m3894[36m:[0m20[36m:[0m [1m[31mDTZ003[0m `datetime.datetime.utcnow()` used
+[1msrc\print\rendering\page_objects\registry.py[0m[36m:[0m108[36m:[0m9[36m:[0m [1m[31mF821[0m Undefined name `stable_figure_request_id`
+[1msrc\print\rendering\pdf\components\cover.py[0m[36m:[0m122[36m:[0m13[36m:[0m [1m[31mDTZ011[0m `datetime.date.today()` used
+[1msrc\print\rendering\pdf\v3_pack_pipeline_document.py[0m[36m:[0m55[36m:[0m16[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1msrc\print\resources\selection.py[0m[36m:[0m252[36m:[0m9[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1msrc\v3_blueprint\planning\persistence.py[0m[36m:[0m589[36m:[0m13[36m:[0m [1m[31mTRY004[0m Prefer `TypeError` exception for invalid type
+[1msrc\v3_blueprint\planning\persistence.py[0m[36m:[0m595[36m:[0m13[36m:[0m [1m[31mTRY004[0m Prefer `TypeError` exception for invalid type
+[1msrc\v3_blueprint\skeletons.py[0m[36m:[0m421[36m:[0m9[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1msrc\v3_execution\executors\item_executor.py[0m[36m:[0m183[36m:[0m25[36m:[0m [1m[31mF821[0m Undefined name `OutcomeClass`
+[1msrc\v3_execution\runtime\runner.py[0m[36m:[0m456[36m:[0m25[36m:[0m [1m[31mB023[0m Function definition does not bind loop variable `single_blueprint`
+[1msrc\v3_execution\runtime\stage2_lanes.py[0m[36m:[0m87[36m:[0m17[36m:[0m [1m[31mS112[0m `try`-`except`-`continue` detected, consider logging the exception
+[1mtests\authoring_correction\test_a05_selection.py[0m[36m:[0m41[36m:[0m65[36m:[0m [1m[31mF811[0m Redefinition of unused `policy_version_and_hash` from line 28: `policy_version_and_hash` redefined here
+[1mtests\generation\test_document_assembly_v2.py[0m[36m:[0m74[36m:[0m14[36m:[0m [1m[31mSIM115[0m Use a context manager for opening files
+[1mtests\generation\test_v3_chunked_lifecycle.py[0m[36m:[0m276[36m:[0m5[36m:[0m [1m[31mSIM117[0m Use a single `with` statement with multiple contexts instead of nested `with` statements
+[1mtests\generation\test_v3_signals.py[0m[36m:[0m107[36m:[0m5[36m:[0m [1m[31mSIM117[0m Use a single `with` statement with multiple contexts instead of nested `with` statements
+[1mtests\learn\test_interaction_selection_modes.py[0m[36m:[0m107[36m:[0m10[36m:[0m [1m[31mB017[0m Do not assert blind exception: `Exception`
+[1mtests\planning\test_contract_ownership.py[0m[36m:[0m346[36m:[0m10[36m:[0m [1m[31mB017[0m Do not assert blind exception: `Exception`
+[1mtests\planning\test_native_retry_lease_fencing.py[0m[36m:[0m310[36m:[0m20[36m:[0m [1m[31mRUF012[0m Mutable default value for class attribute
+[1mtests\planning\test_native_retry_lease_fencing.py[0m[36m:[0m394[36m:[0m20[36m:[0m [1m[31mRUF012[0m Mutable default value for class attribute
+[1mtests\planning\test_visual_topology_recovery.py[0m[36m:[0m55[36m:[0m32[36m:[0m [1m[31mRUF012[0m Mutable default value for class attribute
+[1mtests\planning\test_visual_topology_recovery.py[0m[36m:[0m56[36m:[0m26[36m:[0m [1m[31mRUF012[0m Mutable default value for class attribute
+[1mtests\planning\test_visual_topology_recovery.py[0m[36m:[0m57[36m:[0m31[36m:[0m [1m[31mRUF012[0m Mutable default value for class attribute
+[1mtests\print_learn\test_p08_integration_gates.py[0m[36m:[0m276[36m:[0m20[36m:[0m [1m[31mBLE001[0m Do not catch blind exception: `Exception`
+[1mtests\print_learn\test_p08_integration_gates.py[0m[36m:[0m1019[36m:[0m13[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1mtests\services\test_telemetry_service.py[0m[36m:[0m34[36m:[0m5[36m:[0m [1m[31mSIM117[0m Use a single `with` statement with multiple contexts instead of nested `with` statements
+[1mtests\v3_blueprint\planning\test_stage1_error_logging.py[0m[36m:[0m270[36m:[0m5[36m:[0m [1m[31mSIM117[0m Use a single `with` statement with multiple contexts instead of nested `with` statements
+[1mtests\v3_execution\test_phase02_item_observability.py[0m[36m:[0m229[36m:[0m19[36m:[0m [1m[31mRUF012[0m Mutable default value for class attribute
+Found 126 errors.

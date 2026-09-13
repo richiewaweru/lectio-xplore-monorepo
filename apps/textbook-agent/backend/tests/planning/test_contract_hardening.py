@@ -8,16 +8,21 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from pydantic import ValidationError
+from tests.planning.contract_fixtures import teaching_and_form
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
-from print.rendering.page_objects import WriterOutcome
-from print.generation.catalogue_projections import build_form_candidate_map, project_form_guidance
 from curriculum.llm_contract_errors import structured_output_errors
+from print.generation.catalogue_projections import build_form_candidate_map, project_form_guidance
 from print.generation.whole_lesson.executor import execute_after_teaching_approval
 from print.generation.whole_lesson.failure_policy import classify_failure
 from print.generation.whole_lesson.form_agent import NoLegalFormCandidatesError, run_form_planner
-from print.generation.whole_lesson.form_plan import FormDecision, FormPlan, FormPlanSection, coerce_form_plan
+from print.generation.whole_lesson.form_plan import (
+    FormDecision,
+    FormPlan,
+    FormPlanSection,
+    coerce_form_plan,
+)
 from print.generation.whole_lesson.legality import (
     LessonLegalityError,
     LessonLegalitySnapshot,
@@ -26,25 +31,29 @@ from print.generation.whole_lesson.legality import (
     validate_legality_snapshot,
 )
 from print.generation.whole_lesson.packet import (
-    ApprovedItemRef,
     AnchorRecord,
+    ApprovedItemRef,
     ImmutableLessonPacket,
     LessonIdentity,
     LessonLimits,
     ScopeContract,
     SlotRecord,
 )
-from print.generation.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
+from print.generation.whole_lesson.repository import (
+    PageDocumentRepository,
+    empty_page_document_state,
+)
 from print.generation.whole_lesson.teaching_agent import run_lesson_approach_planner
 from print.generation.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
 from print.generation.whole_lesson.teaching_plan import (
     AnchorUsageEntry,
+    LearnerActionBrief,
     TeachingPlan,
     TeachingPlanBlock,
     TeachingPlanSection,
 )
 from print.generation.whole_lesson.validation import validate_form_plan, validate_teaching_plan
-from tests.planning.contract_fixtures import teaching_and_form
+from print.rendering.page_objects import WriterOutcome
 
 
 def _packet() -> ImmutableLessonPacket:
@@ -221,7 +230,7 @@ def test_assessment_candidates_follow_approved_item_kind_and_keep_ownership() ->
         approved_items=approved_items,
     )
 
-    assert candidates["check-none"] == ("prose",)
+    assert candidates["check-none"] == ()
     assert candidates["check-open"] == ("questions",)
     assert candidates["check-mcq"] == ("choices",)
     assert candidates["check-many-mcq"] == ()
@@ -322,7 +331,10 @@ def _five_item_check_packet() -> ImmutableLessonPacket:
                 ApprovedItemRef(
                     id=f"approved-mcq-{index}",
                     card_id="card",
-                    stem=f"Approved question {index}",
+                    stem=(
+                        f"Why does light change a plant's ability to make food "
+                        f"(approved item {index})?"
+                    ),
                     options=[
                         {"key": "A", "text": "A"},
                         {"key": "B", "text": "B"},
@@ -367,6 +379,13 @@ def _check_plan(*, source_ids: list[str], invalid_context: bool = False) -> Teac
                             "tests the role of light directly."
                         ),
                         source_question_ids=source_ids,
+                        learner_action=LearnerActionBrief(
+                            action="select-one",
+                            target="approved multiple-choice item",
+                            purpose="Check causal understanding of light.",
+                            expected_evidence="Correct choice naming light's role",
+                            difficulty="guided",
+                        ),
                     )
                 ],
             )
@@ -389,7 +408,7 @@ async def test_teaching_multi_source_draft_repairs_to_one_approved_mcq() -> None
     payloads: list[dict[str, Any]] = []
     logical_attempts: list[int] = []
 
-    async def _fake_call(  # noqa: ANN001
+    async def _fake_call(
         *, prompt, user_payload, trace_id, generation_id, attempt_start=1
     ):
         payloads.append(user_payload)
@@ -467,11 +486,10 @@ async def test_teaching_multi_source_exhaustion_is_recoverable_output_failure() 
     with patch(
         "print.generation.whole_lesson.teaching_agent._call_teaching_model",
         new=model_call,
-    ):
-        with pytest.raises(
-            TeachingPlanOutputInvalidError, match="MCQ_SOURCE_CARDINALITY"
-        ) as raised:
-            await run_lesson_approach_planner(packet, legality=legality)
+    ), pytest.raises(
+        TeachingPlanOutputInvalidError, match="MCQ_SOURCE_CARDINALITY"
+    ) as raised:
+        await run_lesson_approach_planner(packet, legality=legality)
 
     assert model_call.await_count == 2
     assert raised.value.attempt_count == 2
@@ -524,18 +542,17 @@ async def test_form_planner_skips_llm_when_no_candidates() -> None:
     )
     called = {"n": 0}
 
-    async def _boom(*_a, **_k):  # noqa: ANN001
+    async def _boom(*_a, **_k):
         called["n"] += 1
         raise AssertionError("LLM must not be called")
 
     with patch(
         "print.generation.whole_lesson.form_agent._call_form_model",
         new=AsyncMock(side_effect=_boom),
-    ):
-        with pytest.raises(NoLegalFormCandidatesError) as exc:
-            await run_form_planner(
-                _packet(), teaching, legality=legality, generation_id=None
-            )
+    ), pytest.raises(NoLegalFormCandidatesError) as exc:
+        await run_form_planner(
+            _packet(), teaching, legality=legality, generation_id=None
+        )
     assert called["n"] == 0
     assert exc.value.block_ids == ["orient-b1"]
 
@@ -545,28 +562,27 @@ async def test_form_planner_skips_llm_when_required_visual_has_no_figure_candida
     packet = _packet().model_copy(deep=True)
     packet.slots[1].visual_required = True
     teaching, _ = teaching_and_form(
-        sections=[("explain", [("explain-b1", "show-structure", "prose")])]
+        sections=[("explain", [("explain-b1", "show-structure", "list")])]
     )
     legality = _make_snapshot(
         permitted_intents=["show-structure"],
         typical_by_slot={"explain": ["show-structure"]},
-        permitted_objects=["prose"],
-        compatible_objects_by_intent={"show-structure": ["prose"]},
+        permitted_objects=["list"],
+        compatible_objects_by_intent={"show-structure": ["list"]},
     )
     called = {"n": 0}
 
-    async def _boom(*_a, **_k):  # noqa: ANN001
+    async def _boom(*_a, **_k):
         called["n"] += 1
         raise AssertionError("LLM must not be called")
 
     with patch(
         "print.generation.whole_lesson.form_agent._call_form_model",
         new=AsyncMock(side_effect=_boom),
-    ):
-        with pytest.raises(NoLegalFormCandidatesError) as exc:
-            await run_form_planner(packet, teaching, legality=legality, generation_id=None)
+    ), pytest.raises(NoLegalFormCandidatesError) as exc:
+        await run_form_planner(packet, teaching, legality=legality, generation_id=None)
     assert called["n"] == 0
-    assert exc.value.block_ids == ["explain"]
+    assert exc.value.block_ids == ["explain-b1"]
 
 
 @pytest.mark.asyncio
@@ -575,7 +591,7 @@ async def test_teaching_schema_failure_gets_informed_repair() -> None:
     legality = build_lesson_legality_snapshot(packet)
     payloads: list[dict[str, Any]] = []
 
-    async def _fake_call(  # noqa: ANN001
+    async def _fake_call(
         *, prompt, user_payload, trace_id, generation_id, attempt_start=1
     ):
         payloads.append(user_payload)
@@ -673,7 +689,7 @@ async def test_form_schema_extra_intent_gets_informed_repair() -> None:
     payloads: list[dict[str, Any]] = []
     logical_attempts: list[int] = []
 
-    async def _fake_call(  # noqa: ANN001
+    async def _fake_call(
         *, prompt, user_payload, trace_id, generation_id, attempt_start=1
     ):
         payloads.append(user_payload)
@@ -728,7 +744,7 @@ def test_structured_output_errors_from_validation_error() -> None:
 
 @pytest.mark.asyncio
 async def test_resume_revalidates_legacy_fat_form_plan() -> None:
-    teaching, slim = teaching_and_form(
+    teaching, _slim = teaching_and_form(
         sections=[("orient", [("orient-b1", "orient", "prose")])]
     )
     packet = _packet()
@@ -797,10 +813,12 @@ async def test_resume_revalidates_legacy_fat_form_plan() -> None:
 
     form_calls = {"n": 0}
 
-    async def _fake_form(*_a, **_k):  # noqa: ANN001
+    async def _fake_form(*_a, **_k):
         form_calls["n"] += 1
-        from print.generation.whole_lesson.form_agent import FormPlanResult
-        from print.generation.whole_lesson.validation import ValidationReport
+        from print.generation.selection_snapshot import (
+            PrintSelectionDecision,
+            PrintSelectionSnapshot,
+        )
 
         # Return a legal list decision for the replan path.
         legal = FormPlan(
@@ -819,21 +837,23 @@ async def test_resume_revalidates_legacy_fat_form_plan() -> None:
                 )
             ]
         )
-        return FormPlanResult(
-            plan=legal,
-            validation=ValidationReport(ok=True, issues=[]),
-            qc=[],
-            prompt="p",
-            raw_response="{}",
-            form_guidance={
-                "catalogue_version": "test",
-                "projection_hash": "form-projection-test",
-            },
-            candidate_map={"orient-b1": ("list",)},
-            attempts=1,
-        )
+        snapshot = PrintSelectionSnapshot(
+            teaching_plan_id=str(getattr(teaching, "teaching_plan_id", "") or ""),
+            teaching_plan_revision=int(getattr(teaching, "revision", 1) or 1),
+            teaching_plan_hash="hash-test",
+            native_policy_hash="policy-test",
+            package_contract_hash="pkg-test",
+            candidate_map={"orient-b1": ["list"]},
+            decisions=[
+                PrintSelectionDecision(block_id="orient-b1", form_id="list")
+            ],
+        ).seal()
+        from print.generation.work_orders import compile_print_work_orders
 
-    async def _fake_dispatch(ctx):  # noqa: ANN001
+        orders = compile_print_work_orders(teaching_plan=teaching, snapshot=snapshot)
+        return legal, snapshot, orders
+
+    async def _fake_dispatch(ctx):
         return WriterOutcome(
             block_id=ctx.planned.id,
             content={"style": "unordered", "items": [{"text": "a"}]},
@@ -841,7 +861,7 @@ async def test_resume_revalidates_legacy_fat_form_plan() -> None:
         )
 
     with patch(
-        "print.generation.whole_lesson.executor.run_form_planner",
+        "print.generation.whole_lesson.executor.build_closed_print_production_plan_async",
         new=AsyncMock(side_effect=_fake_form),
     ), patch(
         "print.generation.whole_lesson.executor.dispatch_writer_async",
@@ -871,11 +891,9 @@ async def test_resume_revalidates_legacy_fat_form_plan() -> None:
         persisted = await PageDocumentRepository(
             session, gid
         ).load_page_generation_state()
-    assert persisted["catalogue"]["version"] == "test"
-    assert (
-        persisted["catalogue"]["form_projection_hash"]
-        == "form-projection-test"
-    )
+    # Closed production persists selection snapshot hash (no LLM form catalogue version).
+    assert persisted["catalogue"]["form_projection_hash"]
+    assert persisted.get("form_plan")
 
 
 @pytest.mark.asyncio
@@ -923,11 +941,11 @@ async def test_assemble_lesson_guidance_not_recalled_on_form_resume() -> None:
         "resource_specs.candidates", fromlist=["assemble_lesson_guidance"]
     ).assemble_lesson_guidance
 
-    def _counting(*args, **kwargs):  # noqa: ANN001
+    def _counting(*args, **kwargs):
         guidance_calls["n"] += 1
         return real(*args, **kwargs)
 
-    async def _fake_dispatch(ctx):  # noqa: ANN001
+    async def _fake_dispatch(ctx):
         return WriterOutcome(
             block_id=ctx.planned.id,
             content={"paragraphs": [ctx.planned.brief]},
@@ -938,7 +956,7 @@ async def test_assemble_lesson_guidance_not_recalled_on_form_resume() -> None:
         "print.generation.whole_lesson.legality.assemble_lesson_guidance",
         side_effect=_counting,
     ), patch(
-        "print.generation.whole_lesson.executor.run_form_planner",
+        "print.generation.whole_lesson.executor.build_closed_print_production_plan_async",
         new=AsyncMock(side_effect=AssertionError("must reuse form plan")),
     ), patch(
         "print.generation.whole_lesson.executor.dispatch_writer_async",
@@ -972,11 +990,11 @@ async def test_teaching_with_persisted_legality_does_not_reassemble() -> None:
     legality = build_lesson_legality_snapshot(packet)
     guidance_calls = {"n": 0}
 
-    def _counting(*args, **kwargs):  # noqa: ANN001
+    def _counting(*args, **kwargs):
         guidance_calls["n"] += 1
         raise AssertionError("assemble_lesson_guidance must not re-run")
 
-    async def _fake_call(  # noqa: ANN001
+    async def _fake_call(
         *, prompt, user_payload, trace_id, generation_id, attempt_start=1
     ):
         from print.generation.whole_lesson.teaching_plan import (
@@ -1050,7 +1068,7 @@ def test_build_lesson_legality_snapshot_calls_assemble_once() -> None:
         "resource_specs.candidates", fromlist=["assemble_lesson_guidance"]
     ).assemble_lesson_guidance
 
-    def _counting(*args, **kwargs):  # noqa: ANN001
+    def _counting(*args, **kwargs):
         calls["n"] += 1
         return real(*args, **kwargs)
 
@@ -1156,18 +1174,17 @@ async def test_explicit_empty_compatibility_skips_llm() -> None:
     )
     called = {"n": 0}
 
-    async def _boom(*_a, **_k):  # noqa: ANN001
+    async def _boom(*_a, **_k):
         called["n"] += 1
         raise AssertionError("LLM must not be called")
 
     with patch(
         "print.generation.whole_lesson.form_agent._call_form_model",
         new=AsyncMock(side_effect=_boom),
-    ):
-        with pytest.raises(NoLegalFormCandidatesError) as exc:
-            await run_form_planner(
-                _packet(), teaching, legality=legality, generation_id=None
-            )
+    ), pytest.raises(NoLegalFormCandidatesError) as exc:
+        await run_form_planner(
+            _packet(), teaching, legality=legality, generation_id=None
+        )
     assert called["n"] == 0
     assert exc.value.block_ids == ["explain-b1"]
 
@@ -1185,11 +1202,10 @@ async def test_form_planner_preserves_timeout_after_attempts_exhausted() -> None
     with patch(
         "print.generation.whole_lesson.form_agent._call_form_model",
         new=AsyncMock(side_effect=TimeoutError()),
-    ) as call:
-        with pytest.raises(TimeoutError):
-            await run_form_planner(
-                _packet(), teaching, legality=legality, generation_id=None
-            )
+    ) as call, pytest.raises(TimeoutError):
+        await run_form_planner(
+            _packet(), teaching, legality=legality, generation_id=None
+        )
 
     assert call.await_count == 2
 
@@ -1245,13 +1261,13 @@ async def test_resume_uses_persisted_compatibility_not_live_catalogue() -> None:
     guidance_calls = {"n": 0}
     seen_maps: list[dict[str, tuple[str, ...]]] = []
 
-    def _counting(*args, **kwargs):  # noqa: ANN001
+    def _counting(*args, **kwargs):
         guidance_calls["n"] += 1
         raise AssertionError("assemble_lesson_guidance must not re-run on resume")
 
     real_build = build_form_candidate_map
 
-    def _capture(teaching_plan, *, compatible_objects_by_intent, **kwargs):  # noqa: ANN001
+    def _capture(teaching_plan, *, compatible_objects_by_intent, **kwargs):
         result = real_build(
             teaching_plan,
             compatible_objects_by_intent=compatible_objects_by_intent,
@@ -1260,7 +1276,7 @@ async def test_resume_uses_persisted_compatibility_not_live_catalogue() -> None:
         seen_maps.append(result)
         return result
 
-    async def _fake_dispatch(ctx):  # noqa: ANN001
+    async def _fake_dispatch(ctx):
         return WriterOutcome(
             block_id=ctx.planned.id,
             content={"paragraphs": [ctx.planned.brief]},
@@ -1274,7 +1290,7 @@ async def test_resume_uses_persisted_compatibility_not_live_catalogue() -> None:
         "print.generation.whole_lesson.executor.build_form_candidate_map",
         side_effect=_capture,
     ), patch(
-        "print.generation.whole_lesson.executor.run_form_planner",
+        "print.generation.whole_lesson.executor.build_closed_print_production_plan_async",
         new=AsyncMock(side_effect=AssertionError("must reuse form plan")),
     ), patch(
         "print.generation.whole_lesson.executor.dispatch_writer_async",

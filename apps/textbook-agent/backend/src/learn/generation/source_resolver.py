@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Literal, Mapping, Sequence
+from typing import Any, Literal
 
 from curriculum.approved_items import approved_item_kind
 from curriculum.teaching_plan.compatibility import (
@@ -13,7 +14,6 @@ from curriculum.teaching_plan.compatibility import (
 )
 from infra.authoring import AuthoringEngineError
 from learn.generation.work_orders import LearnWorkOrder
-
 
 AuthoringMode = Literal["generate", "convert-approved"]
 

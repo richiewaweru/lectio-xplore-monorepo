@@ -7,18 +7,20 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
+
 from pydantic import BaseModel, ConfigDict
+
 
 class SectionHeaderContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     title: str
-    subtitle: Optional[str] = None
+    subtitle: str | None = None
     subject: str
-    section_number: Optional[str] = None
+    section_number: str | None = None
     grade_band: GradeBand
-    objectives: Optional[list[str]] = None
-    level_pills: Optional[list[LevelPill]] = None
+    objectives: list[str] | None = None
+    level_pills: list[LevelPill] | None = None
 class LevelPill(BaseModel):
     model_config = ConfigDict(extra='forbid')
     label: str
@@ -28,12 +30,12 @@ class HookHeroContent(BaseModel):
     headline: str
     body: str
     anchor: str
-    type: Optional[HookType] = None
-    image: Optional[HookImage] = None
-    svg_content: Optional[str] = None
-    quote_attribution: Optional[str] = None
-    question_options: Optional[list[str]] = None
-    data_point: Optional[HookHeroContentDataPoint] = None
+    type: HookType | None = None
+    image: HookImage | None = None
+    svg_content: str | None = None
+    quote_attribution: str | None = None
+    question_options: list[str] | None = None
+    data_point: HookHeroContentDataPoint | None = None
 class HookImage(BaseModel):
     model_config = ConfigDict(extra='forbid')
     url: str
@@ -42,7 +44,7 @@ class ExplanationContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     body: str
     emphasis: list[str]
-    callouts: Optional[list[ExplanationCallout]] = None
+    callouts: list[ExplanationCallout] | None = None
 class ExplanationCallout(BaseModel):
     model_config = ConfigDict(extra='forbid')
     type: Literal["remember", "insight", "sidenote", "warning", "exam-tip"]
@@ -50,20 +52,20 @@ class ExplanationCallout(BaseModel):
 class PracticeContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     problems: list[PracticeProblem]
-    hints_visible_default: Optional[bool] = None
-    solutions_available: Optional[bool] = None
-    label: Optional[str] = None
+    hints_visible_default: bool | None = None
+    solutions_available: bool | None = None
+    label: str | None = None
 class PracticeProblem(BaseModel):
     model_config = ConfigDict(extra='forbid')
     difficulty: Difficulty
-    problem_type: Optional[Literal["structured", "open"]] = None
+    problem_type: Literal["structured", "open"] | None = None
     question: str
     hints: list[PracticeHint]
-    solution: Optional[PracticeSolution] = None
-    writein_lines: Optional[float] = None
-    self_assess: Optional[bool] = None
-    context: Optional[str] = None
-    diagram: Optional[DiagramContent] = None
+    solution: PracticeSolution | None = None
+    writein_lines: float | None = None
+    self_assess: bool | None = None
+    context: str | None = None
+    diagram: DiagramContent | None = None
 class PracticeHint(BaseModel):
     model_config = ConfigDict(extra='forbid')
     level: HintLevel
@@ -72,20 +74,20 @@ class PracticeSolution(BaseModel):
     model_config = ConfigDict(extra='forbid')
     approach: str
     answer: str
-    worked: Optional[str] = None
+    worked: str | None = None
 class DiagramContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    media_id: Optional[str] = None
-    svg_content: Optional[str] = None
-    image_url: Optional[str] = None
+    media_id: str | None = None
+    svg_content: str | None = None
+    image_url: str | None = None
     caption: str
-    zoom_label: Optional[str] = None
+    zoom_label: str | None = None
     alt_text: str
-    callouts: Optional[list[DiagramCallout]] = None
-    figure_number: Optional[float] = None
-    figure_ref: Optional[str] = None
-    description: Optional[str] = None
-    width: Optional[Literal["full", "half", "third"]] = None
+    callouts: list[DiagramCallout] | None = None
+    figure_number: float | None = None
+    figure_ref: str | None = None
+    description: str | None = None
+    width: Literal["full", "half", "third"] | None = None
 class DiagramCallout(BaseModel):
     model_config = ConfigDict(extra='forbid')
     id: str
@@ -97,30 +99,30 @@ class WhatNextContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     body: str
     next: str
-    preview: Optional[str] = None
-    prerequisites: Optional[list[str]] = None
+    preview: str | None = None
+    prerequisites: list[str] | None = None
 class PrerequisiteContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    label: Optional[str] = None
+    label: str | None = None
     items: list[PrerequisiteItem]
 class PrerequisiteItem(BaseModel):
     model_config = ConfigDict(extra='forbid')
     concept: str
-    refresher: Optional[str] = None
+    refresher: str | None = None
 class DefinitionContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     term: str
     formal: str
     plain: str
-    etymology: Optional[str] = None
-    notation: Optional[str] = None
-    related_terms: Optional[list[str]] = None
-    symbol: Optional[str] = None
-    examples: Optional[list[str]] = None
+    etymology: str | None = None
+    notation: str | None = None
+    related_terms: list[str] | None = None
+    symbol: str | None = None
+    examples: list[str] | None = None
 class DefinitionFamilyContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     family_title: str
-    family_intro: Optional[str] = None
+    family_intro: str | None = None
     definitions: list[DefinitionContent]
 class WorkedExampleContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -128,44 +130,44 @@ class WorkedExampleContent(BaseModel):
     setup: str
     steps: list[WorkedStep]
     conclusion: str
-    method_label: Optional[str] = None
-    alternative: Optional[WorkedExampleContent] = None
-    answer: Optional[str] = None
-    alternatives: Optional[list[str]] = None
-    diagram: Optional[DiagramContent] = None
+    method_label: str | None = None
+    alternative: WorkedExampleContent | None = None
+    answer: str | None = None
+    alternatives: list[str] | None = None
+    diagram: DiagramContent | None = None
 class WorkedStep(BaseModel):
     model_config = ConfigDict(extra='forbid')
     label: str
     content: str
-    note: Optional[str] = None
-    formula: Optional[str] = None
-    diagram_ref: Optional[str] = None
+    note: str | None = None
+    formula: str | None = None
+    diagram_ref: str | None = None
 class ProcessContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     title: str
-    intro: Optional[str] = None
+    intro: str | None = None
     steps: list[ProcessStepItem]
-    checklist_mode: Optional[bool] = None
+    checklist_mode: bool | None = None
 class ProcessStepItem(BaseModel):
     model_config = ConfigDict(extra='forbid')
     number: float
     action: str
     detail: str
-    input: Optional[str] = None
-    output: Optional[str] = None
-    warning: Optional[str] = None
+    input: str | None = None
+    output: str | None = None
+    warning: str | None = None
 class DiagramCompareContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    before_media_id: Optional[str] = None
-    before_svg: Optional[str] = None
-    after_media_id: Optional[str] = None
-    after_svg: Optional[str] = None
-    before_image_url: Optional[str] = None
-    after_image_url: Optional[str] = None
+    before_media_id: str | None = None
+    before_svg: str | None = None
+    after_media_id: str | None = None
+    after_svg: str | None = None
+    before_image_url: str | None = None
+    after_image_url: str | None = None
     before_label: str
     after_label: str
-    before_details: Optional[list[str]] = None
-    after_details: Optional[list[str]] = None
+    before_details: list[str] | None = None
+    after_details: list[str] | None = None
     caption: str
     alt_text: str
 class DiagramSeriesContent(BaseModel):
@@ -176,58 +178,58 @@ class DiagramSeriesStep(BaseModel):
     model_config = ConfigDict(extra='forbid')
     step_label: str
     caption: str
-    media_id: Optional[str] = None
-    svg_content: Optional[str] = None
-    image_url: Optional[str] = None
+    media_id: str | None = None
+    svg_content: str | None = None
+    image_url: str | None = None
 class VideoEmbedContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     media_id: str
-    caption: Optional[str] = None
-    start_time: Optional[float] = None
-    end_time: Optional[float] = None
+    caption: str | None = None
+    start_time: float | None = None
+    end_time: float | None = None
     print_fallback: Literal["thumbnail", "qr-link", "hide"]
 class ImageBlockContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     media_id: str
-    caption: Optional[str] = None
+    caption: str | None = None
     alt_text: str
-    width: Optional[Literal["full", "half", "third"]] = None
-    alignment: Optional[Literal["left", "center", "right"]] = None
+    width: Literal["full", "half", "third"] | None = None
+    alignment: Literal["left", "center", "right"] | None = None
 class ComparisonGridContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     title: str
-    intro: Optional[str] = None
+    intro: str | None = None
     columns: list[ComparisonColumn]
     rows: list[ComparisonRow]
-    apply_prompt: Optional[str] = None
+    apply_prompt: str | None = None
 class ComparisonColumn(BaseModel):
     model_config = ConfigDict(extra='forbid')
     id: str
     title: str
     summary: str
-    badge: Optional[str] = None
-    detail: Optional[str] = None
-    highlight: Optional[bool] = None
+    badge: str | None = None
+    detail: str | None = None
+    highlight: bool | None = None
 class ComparisonRow(BaseModel):
     model_config = ConfigDict(extra='forbid')
     criterion: str
-    values: list[Union[str, ComparisonRowValuesItem]]
-    takeaway: Optional[str] = None
+    values: list[str | ComparisonRowValuesItem]
+    takeaway: str | None = None
 class TimelineContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     title: str
-    intro: Optional[str] = None
+    intro: str | None = None
     events: list[TimelineEvent]
-    closing_takeaway: Optional[str] = None
+    closing_takeaway: str | None = None
 class TimelineEvent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     id: str
-    era: Optional[str] = None
+    era: str | None = None
     year: str
     title: str
     summary: str
-    impact: Optional[str] = None
-    tags: Optional[list[str]] = None
+    impact: str | None = None
+    tags: list[str] | None = None
 class InsightStripContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     cells: list[InsightCell]
@@ -235,46 +237,46 @@ class InsightCell(BaseModel):
     model_config = ConfigDict(extra='forbid')
     label: str
     value: str
-    note: Optional[str] = None
-    highlight: Optional[bool] = None
+    note: str | None = None
+    highlight: bool | None = None
 class PitfallContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     misconception: str
     correction: str
-    label: Optional[str] = None
-    example: Optional[str] = None
-    severity: Optional[Literal["minor", "major"]] = None
-    examples: Optional[list[str]] = None
-    why: Optional[str] = None
+    label: str | None = None
+    example: str | None = None
+    severity: Literal["minor", "major"] | None = None
+    examples: list[str] | None = None
+    why: str | None = None
 class QuizContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     question: str
-    quiz_type: Optional[Literal["multiple-choice", "true-false"]] = None
+    quiz_type: Literal["multiple-choice", "true-false"] | None = None
     options: list[QuizOption]
     feedback_correct: str
     feedback_incorrect: str
-    show_explanations: Optional[bool] = None
+    show_explanations: bool | None = None
 class QuizOption(BaseModel):
     model_config = ConfigDict(extra='forbid')
     text: str
     correct: bool
     explanation: str
-    diagnoses: Optional[str] = None
+    diagnoses: str | None = None
 class AnswerKeyContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    label: Optional[str] = None
-    note: Optional[str] = None
+    label: str | None = None
+    note: str | None = None
     entries: list[AnswerKeyEntry]
 class AnswerKeyEntry(BaseModel):
     model_config = ConfigDict(extra='forbid')
     question_number: float
     question: str
     correct_answer: str
-    correct_key: Optional[str] = None
-    diagnostics: Optional[list[AnswerKeyDiagnostic]] = None
+    correct_key: str | None = None
+    diagnostics: list[AnswerKeyDiagnostic] | None = None
 class AnswerKeyDiagnostic(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    option_key: Optional[str] = None
+    option_key: str | None = None
     option_text: str
     misconception_id: str
     misconception_label: str
@@ -282,10 +284,10 @@ class ReflectionContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     prompt: str
     type: ReflectionType
-    space: Optional[float] = None
-    sentence_stem: Optional[str] = None
-    time_minutes: Optional[float] = None
-    pair_instruction: Optional[str] = None
+    space: float | None = None
+    sentence_stem: str | None = None
+    time_minutes: float | None = None
+    pair_instruction: str | None = None
 class GlossaryContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     terms: list[GlossaryTerm]
@@ -293,15 +295,15 @@ class GlossaryTerm(BaseModel):
     model_config = ConfigDict(extra='forbid')
     term: str
     definition: str
-    used_in: Optional[str] = None
-    pronunciation: Optional[str] = None
-    related: Optional[list[str]] = None
+    used_in: str | None = None
+    pronunciation: str | None = None
+    related: list[str] | None = None
 class SimulationContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     spec: InteractionSpec
-    html_content: Optional[str] = None
-    fallback_diagram: Optional[DiagramContent] = None
-    explanation: Optional[str] = None
+    html_content: str | None = None
+    fallback_diagram: DiagramContent | None = None
+    explanation: str | None = None
 class InteractionSpec(BaseModel):
     model_config = ConfigDict(extra='forbid')
     type: SimulationType
@@ -327,55 +329,55 @@ class InterviewContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     prompt: str
     audience: str
-    follow_up: Optional[str] = None
+    follow_up: str | None = None
 class CalloutBlockContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     variant: CalloutVariant
-    heading: Optional[str] = None
+    heading: str | None = None
     body: str
 class SummaryBlockContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    heading: Optional[str] = None
+    heading: str | None = None
     items: list[SummaryItem]
-    closing: Optional[str] = None
+    closing: str | None = None
 class SummaryItem(BaseModel):
     model_config = ConfigDict(extra='forbid')
     text: str
 class StudentTextboxContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     prompt: str
-    lines: Optional[float] = None
-    label: Optional[str] = None
+    lines: float | None = None
+    label: str | None = None
 class ShortAnswerContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     question: str
-    marks: Optional[float] = None
-    lines: Optional[float] = None
-    mark_scheme: Optional[str] = None
+    marks: float | None = None
+    lines: float | None = None
+    mark_scheme: str | None = None
 class FillInBlankContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    instruction: Optional[str] = None
+    instruction: str | None = None
     segments: list[FillInBlankSegment]
-    word_bank: Optional[list[Union[str, FillInBlankContentWordBankItem]]] = None
+    word_bank: list[str | FillInBlankContentWordBankItem] | None = None
 class FillInBlankSegment(BaseModel):
     model_config = ConfigDict(extra='forbid')
     text: str
     is_blank: bool
-    answer: Optional[str] = None
+    answer: str | None = None
 class SectionDividerContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     label: str
 class KeyFactContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     fact: str
-    formula: Optional[str] = None
-    context: Optional[str] = None
-    source: Optional[str] = None
+    formula: str | None = None
+    context: str | None = None
+    source: str | None = None
 class HookHeroContentDataPoint(BaseModel):
     model_config = ConfigDict(extra='forbid')
     value: str
     label: str
-    source: Optional[str] = None
+    source: str | None = None
 class ComparisonRowValuesItem(BaseModel):
     model_config = ConfigDict(extra='forbid')
     text: str
@@ -386,42 +388,42 @@ class SectionContent(BaseModel):
     model_config = ConfigDict(extra='forbid')
     section_id: str
     template_id: str
-    card_id: Optional[str] = None
-    varies_on: Optional[str] = None
-    header: Optional[SectionHeaderContent] = None
-    hook: Optional[HookHeroContent] = None
-    explanation: Optional[ExplanationContent] = None
-    practice: Optional[PracticeContent] = None
-    what_next: Optional[WhatNextContent] = None
-    prerequisites: Optional[PrerequisiteContent] = None
-    definition: Optional[DefinitionContent] = None
-    definition_family: Optional[DefinitionFamilyContent] = None
-    worked_example: Optional[WorkedExampleContent] = None
-    worked_examples: Optional[list[WorkedExampleContent]] = None
-    process: Optional[ProcessContent] = None
-    diagram: Optional[DiagramContent] = None
-    diagram_compare: Optional[DiagramCompareContent] = None
-    diagram_series: Optional[DiagramSeriesContent] = None
-    video_embed: Optional[VideoEmbedContent] = None
-    image_block: Optional[ImageBlockContent] = None
-    comparison_grid: Optional[ComparisonGridContent] = None
-    timeline: Optional[TimelineContent] = None
-    insight_strip: Optional[InsightStripContent] = None
-    pitfall: Optional[PitfallContent] = None
-    pitfalls: Optional[list[PitfallContent]] = None
-    quiz: Optional[QuizContent] = None
-    answer_key: Optional[AnswerKeyContent] = None
-    reflection: Optional[ReflectionContent] = None
-    glossary: Optional[GlossaryContent] = None
-    simulation: Optional[SimulationContent] = None
-    interview: Optional[InterviewContent] = None
-    callout: Optional[CalloutBlockContent] = None
-    summary: Optional[SummaryBlockContent] = None
-    student_textbox: Optional[StudentTextboxContent] = None
-    short_answer: Optional[ShortAnswerContent] = None
-    fill_in_blank: Optional[FillInBlankContent] = None
-    divider: Optional[SectionDividerContent] = None
-    key_fact: Optional[KeyFactContent] = None
+    card_id: str | None = None
+    varies_on: str | None = None
+    header: SectionHeaderContent | None = None
+    hook: HookHeroContent | None = None
+    explanation: ExplanationContent | None = None
+    practice: PracticeContent | None = None
+    what_next: WhatNextContent | None = None
+    prerequisites: PrerequisiteContent | None = None
+    definition: DefinitionContent | None = None
+    definition_family: DefinitionFamilyContent | None = None
+    worked_example: WorkedExampleContent | None = None
+    worked_examples: list[WorkedExampleContent] | None = None
+    process: ProcessContent | None = None
+    diagram: DiagramContent | None = None
+    diagram_compare: DiagramCompareContent | None = None
+    diagram_series: DiagramSeriesContent | None = None
+    video_embed: VideoEmbedContent | None = None
+    image_block: ImageBlockContent | None = None
+    comparison_grid: ComparisonGridContent | None = None
+    timeline: TimelineContent | None = None
+    insight_strip: InsightStripContent | None = None
+    pitfall: PitfallContent | None = None
+    pitfalls: list[PitfallContent] | None = None
+    quiz: QuizContent | None = None
+    answer_key: AnswerKeyContent | None = None
+    reflection: ReflectionContent | None = None
+    glossary: GlossaryContent | None = None
+    simulation: SimulationContent | None = None
+    interview: InterviewContent | None = None
+    callout: CalloutBlockContent | None = None
+    summary: SummaryBlockContent | None = None
+    student_textbox: StudentTextboxContent | None = None
+    short_answer: ShortAnswerContent | None = None
+    fill_in_blank: FillInBlankContent | None = None
+    divider: SectionDividerContent | None = None
+    key_fact: KeyFactContent | None = None
 
 CalloutVariant = Literal["info", "tip", "warning", "exam-tip", "remember"]
 Difficulty = Literal["warm", "medium", "cold", "extension"]

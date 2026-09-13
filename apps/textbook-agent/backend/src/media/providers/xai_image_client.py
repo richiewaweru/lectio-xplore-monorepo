@@ -9,7 +9,6 @@ import httpx
 from media.providers.image_client import ImageFormat, ImageGenerationResult, ImageSize
 from media.providers.openai_image_client import OpenAICompatibleImageClient
 
-
 _SIZE_TO_ASPECT: dict[str, str] = {
     "1024x1024": "1:1",
     "1024x768": "4:3",

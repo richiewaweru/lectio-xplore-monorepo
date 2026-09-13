@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import copy
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
 import pytest
@@ -16,21 +16,19 @@ from curriculum.teaching_plan.models import (
     LearnerActionBrief,
     TeachingPlan,
     TeachingPlanBlock,
-    TeachingPlanSection,
 )
 from infra.authoring import AuthoringProviderCall
 from infra.authoring.capability_selector import CapabilitySelection
 from learn.generation.authoring_adapter import run_learn_work_order_authoring
 from learn.generation.native_selection import build_learn_selection_snapshot_async
-from learn.generation.work_orders import compile_learn_work_orders
-from learn.resources.native_policy import default_learn_policy, policy_version_and_hash as learn_policy_hash
+from learn.resources.native_policy import default_learn_policy
+from learn.resources.native_policy import policy_version_and_hash as learn_policy_hash
 from learn.runtime.evaluation import (
     InteractionConfigError,
     InteractionResponseError,
     evaluate_sequence,
     is_complete,
 )
-
 
 _P07_PROVIDER_PAYLOADS = {
     "sequence": {
@@ -273,8 +271,8 @@ def _install_overrides(db_session_factory):
         name=USER.name,
         picture_url=None,
         has_profile=True,
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
 
     async def override_current_user():
@@ -962,7 +960,7 @@ async def test_p07_u05_aggregation_and_practice_separation(
 async def test_p07_u06_analytics_excludes_self_started_keeps_release(
     db_session_factory, _install_overrides, _seed_user
 ):
-    from core.database.models import LearnReleaseModel, LearningInstanceModel
+    from core.database.models import LearningInstanceModel, LearnReleaseModel
 
     document_a = _sequence_document(assessment_mode="graded")
     ix = _interaction_id(document_a)

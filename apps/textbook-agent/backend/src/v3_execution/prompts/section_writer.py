@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from print.http.v3_studio.prompts import build_v3_shared_prefix
 from core.prompts import effective_prompt_text
+from print.http.v3_studio.prompts import build_v3_shared_prefix
+from v3_execution.models import SectionWriterWorkOrder
 from v3_execution.prompts.formatting import (
     format_consistency_rules,
     format_source_of_truth,
     format_support_adaptations,
 )
-from v3_execution.models import SectionWriterWorkOrder
 
 _ORDER_CONTEXT_MARKER = "<!-- ORDER_CONTEXT -->"
 

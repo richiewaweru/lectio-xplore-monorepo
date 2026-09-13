@@ -5,18 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from sqlalchemy import select
-
-from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock, TeachingPlanSection
-from infra.authoring import AuthoringEngine, AuthoringProviderCall, AuthoringValidationError
-from learn.generation.authoring_adapter import (
-    build_learn_authoring_registry,
-    run_learn_authoring,
-)
-from learn.generation.native_selection import LearnSelectionDecision, LearnSelectionSnapshot
-from learn.generation.preparation_context import LearnPreparationContext
-from learn.generation.work_orders import compile_learn_work_orders
-from learn.resources.native_policy import default_learn_policy
 from tests.remaining_fixes.r04_fixtures import (
     build_envelope_closed_production_document,
     install_api_overrides,
@@ -25,6 +13,14 @@ from tests.remaining_fixes.r04_fixtures import (
     seed_r04_user,
 )
 
+from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock, TeachingPlanSection
+from infra.authoring import AuthoringEngine, AuthoringProviderCall
+from learn.generation.authoring_adapter import (
+    build_learn_authoring_registry,
+    run_learn_authoring,
+)
+from learn.generation.native_selection import LearnSelectionDecision, LearnSelectionSnapshot
+from learn.generation.work_orders import compile_learn_work_orders
 
 EVAP_FACT = (
     "Evaporation changes liquid water into water vapour and can occur below boiling point."
@@ -116,7 +112,7 @@ async def test_g19_saved_learn_document_retains_policy_identity(
             break
 
     async with await r04_client() as client:
-        lesson_id, release_id = await publish_lesson(client, document, title="Policy G19")
+        _lesson_id, release_id = await publish_lesson(client, document, title="Policy G19")
         reloaded = await client.get(f"/api/v1/learn/releases/{release_id}")
         assert reloaded.status_code == 200
         found = False

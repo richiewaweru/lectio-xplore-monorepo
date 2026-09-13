@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from print.generation.whole_lesson.form_plan import FormDecision, FormPlan, FormPlanSection
 from print.generation.whole_lesson.teaching_plan import (
+    AnchorUsageEntry,
     TeachingPlan,
     TeachingPlanBlock,
     TeachingPlanSection,
-    AnchorUsageEntry,
 )
 
 

@@ -8,7 +8,11 @@ from __future__ import annotations
 
 from typing import Literal
 
-from core.policies.loader import learn_defaults, learn_interaction_for_action, passive_learner_actions
+from core.policies.loader import (
+    learn_defaults,
+    learn_interaction_for_action,
+    passive_learner_actions,
+)
 from learn.interactions.registry import RETAINED_INTERACTIONS
 
 LearnRetainedInteraction = Literal[
@@ -42,7 +46,7 @@ def interaction_for_learner_action(action: str | None) -> LearnRetainedInteracti
 
 __all__ = [
     "ACTION_TO_LEARN_INTERACTION",
-    "LearnRetainedInteraction",
     "PASSIVE_LEARNER_ACTIONS",
+    "LearnRetainedInteraction",
     "interaction_for_learner_action",
 ]

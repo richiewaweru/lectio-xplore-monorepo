@@ -7,26 +7,28 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
 
 from app import app
-from core.auth.middleware import get_current_user
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
 from core.entities.user import User
-from print.rendering.page_objects.document_assembly import (
-    canonical_document_sha256,
-    persist_document_json,
-    reload_document,
-)
 from print.generation.whole_lesson.native_status import project_native_status
-from print.generation.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
+from print.generation.whole_lesson.repository import (
+    PageDocumentRepository,
+    empty_page_document_state,
+)
 from print.generation.whole_lesson.states import execution_key
 from print.generation.whole_lesson.visual_dispatch import (
     collect_pending_figure_dispatches,
     dispatch_and_patch_from_repo,
 )
-
+from print.rendering.page_objects.document_assembly import (
+    canonical_document_sha256,
+    persist_document_json,
+    reload_document,
+)
 
 TEST_USER = User(
     id="visual-fail-owner",

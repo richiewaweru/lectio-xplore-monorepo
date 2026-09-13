@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Callable, Mapping
 from copy import deepcopy
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Mapping
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,13 +19,13 @@ from print.generation.whole_lesson.states import (
     ACTIVE_STATUSES,
     CLAIMABLE_STATUSES,
     DEFAULT_LEASE_SECONDS,
-    ExecutionLease,
-    IllegalTransitionError,
     LEGAL_TRANSITIONS,
-    LeaseLostError,
     PRE_WORKER_RETRY_STATUSES,
     PRE_WORKER_WORK_KINDS,
     WORK_KIND_POST_APPROVAL,
+    ExecutionLease,
+    IllegalTransitionError,
+    LeaseLostError,
     assert_legal_transition,
     execution_key,
 )
@@ -53,14 +54,14 @@ async def _page_state_lock(generation_id: str) -> asyncio.Lock:
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _parse_iso(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return datetime.fromisoformat(value)
     except ValueError:
         return None
 
@@ -704,7 +705,7 @@ class PageDocumentRepository:
         def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
             status = str(generation.status or "")
             execution = dict(state.get("execution") or empty_execution_meta())
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             heartbeat = _parse_iso(execution.get("heartbeat_at"))
             lease = int(execution.get("lease_seconds") or lease_seconds)
             stale = heartbeat is None or heartbeat + timedelta(seconds=lease) < now
@@ -777,7 +778,7 @@ class PageDocumentRepository:
             if work_kind not in PRE_WORKER_WORK_KINDS:
                 raise _ClaimAbort()
 
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             heartbeat = _parse_iso(execution.get("heartbeat_at"))
             lease = int(execution.get("lease_seconds") or lease_seconds)
             stale = heartbeat is None or heartbeat + timedelta(seconds=lease) < now
@@ -971,7 +972,7 @@ class PageDocumentRepository:
             )
         try:
             snapshot = LessonLegalitySnapshot.model_validate(raw)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise LessonLegalityError(
                 f"lesson_legality snapshot invalid: {exc}",
                 code="LESSON_LEGALITY_INVALID",
@@ -1459,7 +1460,7 @@ class PageDocumentRepository:
                 )
             try:
                 persisted = reload_document(generation.document_json or {})
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 raise DocumentFenceError(f"cannot reload persisted document: {exc}") from exc
             locked_sha = canonical_document_sha256(persisted)
             if locked_sha != expected_document_sha256:
@@ -1515,11 +1516,11 @@ class PageDocumentRepository:
         hashes for the current document revision.
         """
         from core.database.session import async_session_factory
+        from print.contracts.lectio_page import validate_document
         from print.rendering.page_objects.document_assembly import (
             canonical_document_sha256,
             reload_document,
         )
-        from print.contracts.lectio_page import validate_document
 
         async with async_session_factory() as fresh:
             generation = await fresh.get(GenerationModel, self.generation_id)
@@ -1626,7 +1627,7 @@ class PageDocumentRepository:
 
             try:
                 document = reload_document(generation.document_json or {})
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 raise VisualRequestNotFound("Document not found") from exc
 
             block_execution = dict(state.get("block_execution") or {})
@@ -1870,7 +1871,10 @@ class PageDocumentRepository:
         figure assets are changed to failed/retryable, the document revision and
         reload proof are invalidated, and all upstream outcomes remain untouched.
         """
-        from print.rendering.page_objects.document_assembly import persist_document_json, reload_document
+        from print.rendering.page_objects.document_assembly import (
+            persist_document_json,
+            reload_document,
+        )
         from print.rendering.page_objects.visual_completion import apply_figure_asset_update
 
         box: list[dict[str, Any]] = []
@@ -2001,12 +2005,12 @@ class PageDocumentRepository:
         Marks unresolved figure assets as failed when request ids are provided or
         when no ids are given (mark all unresolved pending/generating figures).
         """
+        from print.generation.whole_lesson.failure_policy import structured_error_from_exc
         from print.rendering.page_objects.document_assembly import (
             persist_document_json,
             reload_document,
         )
         from print.rendering.page_objects.visual_completion import apply_figure_asset_update
-        from print.generation.whole_lesson.failure_policy import structured_error_from_exc
 
         error_message = (message or (str(exc).strip() if exc else "") or "visual dispatch failed")[
             :500
@@ -2199,11 +2203,14 @@ async def claim_next_native_job(
         if generation is None:
             continue
         generation_status = str(generation.status or "")
-        if generation_status in CLAIMABLE_STATUSES | ACTIVE_STATUSES:
-            if review_status and review_status not in {"approved", "queued"}:
-                # Legacy paths may omit review; require approved when present.
-                if review_status in {"pending", "rejected"}:
-                    continue
+        if (
+            generation_status in CLAIMABLE_STATUSES | ACTIVE_STATUSES
+            and review_status
+            and review_status not in {"approved", "queued"}
+            and review_status in {"pending", "rejected"}
+        ):
+            # Legacy paths may omit review; require approved when present.
+            continue
             if generation_status == "awaiting_teaching_approval":
                 continue
         lease = await repo.claim_execution(worker_id=worker_id, lease_seconds=lease_seconds)

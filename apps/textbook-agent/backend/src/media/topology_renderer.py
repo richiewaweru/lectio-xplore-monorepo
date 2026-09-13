@@ -19,7 +19,6 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from media.storage.image_store import ImageStore
 
-
 RENDERER_VERSION = "topology-renderer/1"
 BACKGROUND_VERSION = "low-frequency-background/1"
 FONT_VERSION = "dejavu-sans/2.37-1"
@@ -118,7 +117,7 @@ def _open_source(source: bytes | bytearray | Image.Image) -> Image.Image:
         try:
             image = Image.open(io.BytesIO(bytes(source)))
             image.load()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise TopologyAssetError("source asset is not a readable raster") from exc
     if image.width < 1 or image.height < 1:
         raise TopologyAssetError("source asset has no pixels")
@@ -251,7 +250,7 @@ def render_topology(topology: Any, source: bytes | bytearray | Image.Image, labe
         src = edge_map.get("source", edge_map.get("from_ref", edge_map.get("from")))
         dst = edge_map.get("target", edge_map.get("to_ref", edge_map.get("to")))
         _arrow(draw, positions[src], positions[dst])
-    for node_id, (x, y) in positions.items():
+    for (x, y) in positions.values():
         draw.ellipse((x - 42, y - 42, x + 42, y + 42), fill=(236, 245, 252, 255), outline=(38, 81, 116, 255), width=5)
         draw.ellipse((x - 12, y - 12, x + 12, y + 12), fill=(92, 155, 194, 255))
     font = _font(30)

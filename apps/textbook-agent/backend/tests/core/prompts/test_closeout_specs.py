@@ -5,7 +5,6 @@ from document.composer import _composer_definition
 from document.writer import _definition_for
 from document.writer_prompts import document_composer_prompt, document_writer_prompt
 
-
 CLOSEOUT_IDS = (
     "learner-action-policy",
     "document-composer",

@@ -7,18 +7,20 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from tests.planning.contract_fixtures import teaching_and_form
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
-from print.rendering.page_objects import WriterOutcome
-from print.rendering.page_objects.document_assembly import persist_document_json
-from print.rendering.page_objects.visual_completion import apply_figure_asset_update
-from print.generation.whole_lesson.executor import execute_after_teaching_approval, write_form_blocks
+from print.generation.whole_lesson.executor import (
+    execute_after_teaching_approval,
+    write_form_blocks,
+)
 from print.generation.whole_lesson.failure_injection import (
     configure_failure_injection,
     reset_failure_injection,
 )
 from print.generation.whole_lesson.form_plan import FormPlan
+from print.generation.whole_lesson.legality import build_lesson_legality_snapshot
 from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ImmutableLessonPacket,
@@ -27,12 +29,15 @@ from print.generation.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
-from print.generation.whole_lesson.legality import build_lesson_legality_snapshot
-from print.generation.whole_lesson.repository import PageDocumentRepository, empty_page_document_state
+from print.generation.whole_lesson.repository import (
+    PageDocumentRepository,
+    empty_page_document_state,
+)
 from print.generation.whole_lesson.states import execution_key
 from print.generation.whole_lesson.teaching_plan import TeachingPlan
-from tests.planning.contract_fixtures import teaching_and_form
-
+from print.rendering.page_objects import WriterOutcome
+from print.rendering.page_objects.document_assembly import persist_document_json
+from print.rendering.page_objects.visual_completion import apply_figure_asset_update
 
 ANSWER_PHRASE = "TEACHER_ONLY_ANSWER_PHRASE_42"
 
@@ -213,7 +218,7 @@ async def test_conceptual_resilience_then_assemble() -> None:
         enabled=True, generation_id=gid, fail_block_index=1, fail_once=True
     )
 
-    async def _fake_dispatch(ctx):  # noqa: ANN001
+    async def _fake_dispatch(ctx):
         return WriterOutcome(
             block_id=ctx.planned.id,
             content={"paragraphs": [ctx.planned.brief]},

@@ -5,16 +5,16 @@ import re
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from core.llm.runner import RetryPolicy, run_llm
+from core.llm.schema import SchemaSource, schema_source, validate_canonical_output
 from pydantic import BaseModel
 from pydantic_ai import Agent, PromptedOutput, StructuredDict, ToolOutput
 
 from core.config import settings
 from core.llm import ModelSpec, build_structured_model, is_deepseek_spec
-from core.llm.runner import RetryPolicy, run_llm
-from core.llm.schema import SchemaSource, schema_source, validate_canonical_output
+from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 from v3_execution.config.retries import V3_MAX_RETRIES
 from v3_execution.config.timeouts import V3_TIMEOUTS
-from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
 
 StructuredMode = Literal["strict_tool", "prompted_json"]
 

@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from core.policies.loader import (
     learner_action_aliases,
@@ -248,9 +249,13 @@ def derive_learn_block_candidates(
     # Ordinary content is owned by the shared document composer (six primitives).
     # When the native policy intentionally offers no legacy component ids, expose
     # document primitives so selection / interaction layering still has a legal
-    # content surface for every teaching block.
+    # content surface for every teaching block — still respecting per-kind budgets.
     if not content and not content_offered:
-        content = sorted(DOCUMENT_PRIMITIVE_KINDS)
+        for kind in sorted(DOCUMENT_PRIMITIVE_KINDS):
+            if kind in budgets and budgets[kind] <= 0:
+                excluded[kind] = "budget_exhausted"
+                continue
+            content.append(kind)
 
     return LearnBlockCandidates(
         block_id=block_id,

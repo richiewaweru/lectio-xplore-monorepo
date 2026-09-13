@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import copy
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
 import pytest
@@ -18,16 +18,18 @@ from curriculum.teaching_plan.models import (
     TeachingPlanBlock,
     TeachingPlanSection,
 )
+from infra.authoring.capability_selector import CapabilitySelection
+from learn.generation.authoring_adapter import run_learn_work_order_authoring
 from learn.generation.interaction_writer import (
     InteractionWriterError,
     validate_interaction_contract,
     write_interaction_from_work_order,
 )
-from learn.generation.authoring_adapter import run_learn_work_order_authoring
 from learn.generation.native_selection import (
     build_learn_selection_snapshot_async,
 )
-from infra.authoring.capability_selector import CapabilitySelection
+
+
 def ordered_block_ids(document: dict) -> list[str]:
     sections = document.get('sections') or []
     if sections and isinstance(sections[0], dict) and sections[0].get('block_ids'):
@@ -40,6 +42,7 @@ def block_component_sequence(document: dict) -> list[str]:
         str((document.get('blocks') or {}).get(bid, {}).get('component_id') or '')
         for bid in ordered_block_ids(document)
     ]
+from infra.authoring import AuthoringProviderCall
 from learn.generation.work_orders import compile_learn_work_orders
 from learn.publishing.publish_validation import (
     PublishValidationError,
@@ -47,8 +50,8 @@ from learn.publishing.publish_validation import (
     validate_publishable_lesson_document,
 )
 from learn.publishing.release_routes import document_hash, resolve_release_provenance
-from learn.resources.native_policy import default_learn_policy, policy_version_and_hash as learn_policy_hash
-from infra.authoring import AuthoringProviderCall
+from learn.resources.native_policy import default_learn_policy
+from learn.resources.native_policy import policy_version_and_hash as learn_policy_hash
 
 
 def _hand_built_lesson_from_orders(plan, orders, authored_results, *, lesson_id="doc-p06", title="P06", **_kwargs):
@@ -63,7 +66,7 @@ def _hand_built_lesson_from_orders(plan, orders, authored_results, *, lesson_id=
         if isinstance(result, dict):
             payload = dict(result.get("payload") or result)
         elif result is not None and hasattr(result, "payload"):
-            payload = dict(getattr(result, "payload") or {})
+            payload = dict(result.payload or {})
         block = blocks.get(bid)
         if block is None:
             block = {
@@ -688,9 +691,9 @@ def _sequence_lesson() -> dict:
 @pytest.fixture
 def _install_overrides(db_session_factory):
     from app import app
+    from core.entities.user import User
     from infra.auth.middleware import get_current_user
     from infra.database.session import get_async_session
-    from core.entities.user import User
 
     user = User(
         id=USER.id,
@@ -698,8 +701,8 @@ def _install_overrides(db_session_factory):
         name=USER.name,
         picture_url=None,
         has_profile=True,
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
     )
 
     async def override_current_user():

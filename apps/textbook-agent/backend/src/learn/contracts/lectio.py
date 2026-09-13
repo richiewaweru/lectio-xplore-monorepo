@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 import sys
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -73,7 +73,7 @@ def _contracts_dir() -> Path:
     return default
 
 
-@lru_cache(maxsize=None)
+@cache
 def _load_contract_raw(template_id: str) -> dict:
     path = _contracts_dir() / f"{template_id}.json"
     if not path.exists():
@@ -87,7 +87,7 @@ def _load_contract_raw(template_id: str) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-@lru_cache(maxsize=None)
+@cache
 def _load_field_map() -> dict[str, str]:
     path = _contracts_dir() / "component-field-map.json"
     if not path.exists():
@@ -98,7 +98,7 @@ def _load_field_map() -> dict[str, str]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-@lru_cache(maxsize=None)
+@cache
 def _load_component_registry() -> dict[str, dict]:
     path = _contracts_dir() / "component-registry.json"
     if not path.exists():
@@ -109,7 +109,7 @@ def _load_component_registry() -> dict[str, dict]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-@lru_cache(maxsize=None)
+@cache
 def _load_preset_registry() -> dict[str, dict]:
     path = _contracts_dir() / "preset-registry.json"
     if not path.exists():
@@ -120,7 +120,7 @@ def _load_preset_registry() -> dict[str, dict]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-@lru_cache(maxsize=None)
+@cache
 def _load_section_content_schema() -> dict:
     path = _contracts_dir() / "section-content-schema.json"
     if not path.exists():
@@ -131,7 +131,7 @@ def _load_section_content_schema() -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-@lru_cache(maxsize=None)
+@cache
 def _load_manifest() -> dict:
     path = _contracts_dir() / "manifest.json"
     if not path.exists():
@@ -142,7 +142,7 @@ def _load_manifest() -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-@lru_cache(maxsize=None)
+@cache
 def _load_lectio_content_contract() -> dict:
     """Load the unified Lectio content contract (lectio-content-contract.json)."""
     path = _contracts_dir() / "lectio-content-contract.json"
@@ -208,7 +208,7 @@ def get_component_schema_shape(component_id: str) -> dict | None:
                 )
             )
         return {"definition": def_name, "properties": properties}
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 

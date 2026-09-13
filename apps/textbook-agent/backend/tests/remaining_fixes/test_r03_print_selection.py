@@ -63,7 +63,7 @@ def _packet(plan: TeachingPlan) -> SimpleNamespace:
             subject="science",
         ),
         approved_items=[],
-        required_visual_slots=lambda: [],
+        required_visual_slots=list,
     )
 
 
@@ -137,7 +137,7 @@ async def test_r03_g02_print_invokes_selector_or_consumes_sealed_plan() -> None:
 async def test_r03_g02_sole_print_form_skips_selector() -> None:
     """Sole legal form per block avoids unnecessary selector call."""
     plan = _plan(brief="Summarise takeaways.", intent="summarise")
-    legality = _legality()
+    _legality()
     candidate_map = {"b-explain": ("prose",)}
     choose = RecordingChoose([])
     _, policy_hash = policy_version_and_hash(default_print_policy())

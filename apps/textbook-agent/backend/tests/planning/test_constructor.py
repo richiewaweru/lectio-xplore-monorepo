@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import pytest
+from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
 
 from app import app
-from core.auth.middleware import get_current_user
 from core.database.models import UserModel
 from core.dependencies import get_async_session
 from core.entities.user import User
@@ -13,7 +13,6 @@ from core.prompts import loader
 from curriculum.agents import run_constructor
 from curriculum.path_models import ConstructorOutput, UnitCreate
 from curriculum.service import create_unit
-
 
 CONSTRUCTOR_PROMPT_ID = "constructor"
 

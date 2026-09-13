@@ -3,15 +3,14 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
-from unittest.mock import MagicMock
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app import app
-from core.auth.middleware import get_current_user
 from core.database.models import (
     GenerationModel,
     LearningPackModel,
@@ -32,7 +31,11 @@ from v3_blueprint.planning.models import (
     SectionPlan,
     StructuralPlan,
 )
-from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state, persist_structural_plan
+from v3_blueprint.planning.persistence import (
+    load_chunked_state,
+    persist_chunked_state,
+    persist_structural_plan,
+)
 
 TEST_USER_A = User(
     id="v3-chunked-user-a",
@@ -227,6 +230,15 @@ def _reset_overrides():
 async def test_chunked_plan_start_is_quarantined_without_creating_rows() -> None:
     app.dependency_overrides[get_current_user] = _override_user_a
     await _ensure_user(TEST_USER_A)
+
+    async with async_session_factory() as session:
+        before_generation_ids = {
+            row.id for row in (await session.execute(select(GenerationModel))).scalars().all()
+        }
+        before_pack_ids = {
+            row.id for row in (await session.execute(select(LearningPackModel))).scalars().all()
+        }
+
     async with _client() as client:
         resp = await client.post("/api/v1/v3/chunked/plan/start", json=_chunked_start_payload())
 
@@ -234,8 +246,14 @@ async def test_chunked_plan_start_is_quarantined_without_creating_rows() -> None
     assert "approved path" in resp.json()["detail"]
 
     async with async_session_factory() as session:
-        assert (await session.execute(select(GenerationModel))).scalars().all() == []
-        assert (await session.execute(select(LearningPackModel))).scalars().all() == []
+        after_generation_ids = {
+            row.id for row in (await session.execute(select(GenerationModel))).scalars().all()
+        }
+        after_pack_ids = {
+            row.id for row in (await session.execute(select(LearningPackModel))).scalars().all()
+        }
+    assert after_generation_ids == before_generation_ids
+    assert after_pack_ids == before_pack_ids
 
 
 @pytest.mark.asyncio
@@ -244,7 +262,11 @@ async def test_chunked_events_route_streams_planning_events_and_keeps_generation
     await _ensure_user(TEST_USER_A)
     generation_id = str(uuid.uuid4())
 
-    from print.http.v3_studio.router import _ensure_chunked_generation_row, _ensure_chunked_stream, _ensure_generation_stream
+    from print.http.v3_studio.router import (
+        _ensure_chunked_generation_row,
+        _ensure_chunked_stream,
+        _ensure_generation_stream,
+    )
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -266,10 +288,11 @@ async def test_chunked_events_route_streams_planning_events_and_keeps_generation
     await chunked_queue.put('event: generation_warning\ndata: {"message":"warning"}\n\n')
     await chunked_queue.put(None)
 
-    async with _client() as client:
-        async with client.stream("GET", f"/api/v1/v3/chunked/{generation_id}/events") as resp:
-            assert resp.status_code == 200
-            payload = await resp.aread()
+    async with _client() as client, client.stream(
+        "GET", f"/api/v1/v3/chunked/{generation_id}/events"
+    ) as resp:
+        assert resp.status_code == 200
+        payload = await resp.aread()
 
     assert b"stage2_section_start" in payload
     assert b"generation_warning" in payload
@@ -1221,7 +1244,11 @@ async def test_chunked_approve_emits_stage2_progress_events() -> None:
     generation_id = str(uuid.uuid4())
     signals, form = _seed_context_models()
 
-    from print.http.v3_studio.router import _chunked_emit_event, _ensure_chunked_generation_row, _ensure_chunked_stream
+    from print.http.v3_studio.router import (
+        _chunked_emit_event,
+        _ensure_chunked_generation_row,
+        _ensure_chunked_stream,
+    )
 
     await _ensure_chunked_generation_row(
         generation_id=generation_id,
@@ -1242,7 +1269,7 @@ async def test_chunked_approve_emits_stage2_progress_events() -> None:
         resource_spec={"resource_type": "lesson", "depth": "standard", "spec": {}, "rendered": "x"},
     )
 
-    async def fake_stage2_pipeline(*, generation_id: str, user_id: str):  # noqa: ANN001
+    async def fake_stage2_pipeline(*, generation_id: str, user_id: str):
         _ = user_id
         await _chunked_emit_event(generation_id, "stage2_section_start", {"generation_id": generation_id, "section_id": "intro"})
         await _chunked_emit_event(generation_id, "stage2_section_retry", {"generation_id": generation_id, "section_id": "intro", "attempt": 2})

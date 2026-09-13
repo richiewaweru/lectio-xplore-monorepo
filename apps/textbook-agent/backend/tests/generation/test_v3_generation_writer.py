@@ -8,14 +8,16 @@ from sqlalchemy import delete, select
 from core.database.models import GenerationModel
 from core.database.session import async_session_factory
 from print.http.v3_studio.dtos import V3InputForm
-from print.http.v3_studio.generation_writer import V3GenerationWriter
-from print.http.v3_studio.generation_writer import _derive_persisted_booklet_status
-from print.http.v3_studio.router import _persist_regenerated_visual
+from print.http.v3_studio.generation_writer import (
+    V3GenerationWriter,
+    _derive_persisted_booklet_status,
+)
 from print.http.v3_studio.planning_artifact import (
     SCHEMA_VERSION,
     build_planning_artifact,
     parse_planning_artifact,
 )
+from print.http.v3_studio.router import _persist_regenerated_visual
 from v3_blueprint.models import ProductionBlueprint
 from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state
 

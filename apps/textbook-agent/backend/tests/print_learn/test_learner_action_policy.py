@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from tests.planning.test_prompt_no_object_leak import _packet as _prompt_packet
+
+from print.generation.catalogue_projections import project_teaching_guidance
 from print.generation.whole_lesson.prompt_render import render_teaching_prompt
 from print.generation.whole_lesson.teaching_agent import (
     _missing_check_practice_action_errors,
@@ -11,8 +14,6 @@ from print.generation.whole_lesson.teaching_plan import (
     TeachingPlanBlock,
     TeachingPlanSection,
 )
-from tests.planning.test_prompt_no_object_leak import _packet as _prompt_packet
-from print.generation.catalogue_projections import project_teaching_guidance
 
 
 def _block(**kwargs: object) -> TeachingPlanBlock:

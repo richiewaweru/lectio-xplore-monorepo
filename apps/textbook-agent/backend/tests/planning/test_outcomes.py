@@ -18,7 +18,6 @@ from core.database.models import (
     UnitModel,
     UserModel,
 )
-from curriculum.path_models import LessonActualWriteRequest, MarksWriteRequest
 from curriculum.outcomes import (
     OutcomeValidationError,
     StaleOutcomeError,
@@ -26,6 +25,7 @@ from curriculum.outcomes import (
     record_lesson_actual,
     record_marks,
 )
+from curriculum.path_models import LessonActualWriteRequest, MarksWriteRequest
 
 
 async def _seed_outcomes(db_session):

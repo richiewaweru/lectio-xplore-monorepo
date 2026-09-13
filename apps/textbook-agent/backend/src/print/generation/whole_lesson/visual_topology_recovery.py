@@ -13,8 +13,9 @@ import inspect
 import json
 import logging
 import time
-from datetime import datetime, timezone
-from typing import Any, Callable, Mapping
+from collections.abc import Callable, Mapping
+from datetime import UTC, datetime
+from typing import Any
 
 from print.generation.whole_lesson.repository import (
     PageDocumentRepository,
@@ -98,7 +99,7 @@ def topology_cache_key(
 
 
 def _utcnow() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 async def _call(fn: Callable[..., Any], **kwargs: Any) -> Any:
@@ -110,7 +111,9 @@ async def _call(fn: Callable[..., Any], **kwargs: Any) -> Any:
 
 async def _default_planner(**kwargs: Any) -> Any:
     try:
-        from print.generation.whole_lesson.visual_topology_planner import run_visual_topology_planner
+        from print.generation.whole_lesson.visual_topology_planner import (
+            run_visual_topology_planner,
+        )
     except Exception as exc:  # pragma: no cover - import contract guard
         raise TopologyRecoveryError("TOPOLOGY_PLANNER_UNAVAILABLE", str(exc)) from exc
     return await _call(run_visual_topology_planner, **kwargs)
@@ -120,7 +123,7 @@ def _validated_topology(raw: Any, *, source: str) -> dict[str, Any]:
     """Apply the planner-owned schema validator when available."""
     try:
         from print.generation.whole_lesson.visual_topology import validate_topology_plan
-    except Exception:
+    except Exception:  # noqa: BLE001
         validate_topology_plan = None
     if validate_topology_plan is None:
         if not isinstance(raw, Mapping) or not raw:
@@ -420,7 +423,7 @@ async def recover_flagged_visual_topology(
             raise
         topology = deterministic_topology_fallback(label_ids)
         fallback_used = True
-    except Exception:  # timeout/validation/provider text errors are retryable
+    except Exception:  # timeout/validation/provider text errors are retryable  # noqa: BLE001
         topology = deterministic_topology_fallback(label_ids)
         fallback_used = True
 

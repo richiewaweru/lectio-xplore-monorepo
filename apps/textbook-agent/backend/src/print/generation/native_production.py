@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from curriculum.teaching_plan.models import TeachingPlan
 from infra.authoring.capability_selector import ChooseFn
@@ -21,10 +22,10 @@ from print.generation.selection_snapshot import (
     form_plan_from_decisions,
     snapshot_from_form_plan,
 )
-from print.generation.work_orders import PrintWorkOrder, compile_print_work_orders
 from print.generation.whole_lesson.form_plan import FormPlan
 from print.generation.whole_lesson.legality import LessonLegalitySnapshot
 from print.generation.whole_lesson.packet import ImmutableLessonPacket
+from print.generation.work_orders import PrintWorkOrder, compile_print_work_orders
 from print.resources.native_policy import (
     default_print_policy,
     policy_version_and_hash,

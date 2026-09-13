@@ -9,9 +9,9 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from contracts.document import PipelineDocument, PipelineSectionManifestItem
 from core.config import Settings
-from print.rendering.pdf.runtime import pdf_export_telemetry
-from print.rendering.pdf.context import PDFGenerationContext
+from print.contracts.lectio_page import validate_document
 from print.rendering.pdf.cleanup import cleanup_files, ensure_temp_dir
 from print.rendering.pdf.components.answers import generate_answer_key_pdf
 from print.rendering.pdf.components.answers_v3 import generate_v3_answer_key_pdf
@@ -23,11 +23,10 @@ from print.rendering.pdf.components.assembly import (
 from print.rendering.pdf.components.cover import clean_cover_title, generate_cover_pdf
 from print.rendering.pdf.components.toc import generate_toc_pdf
 from print.rendering.pdf.config import PDFExportConfig
+from print.rendering.pdf.context import PDFGenerationContext
 from print.rendering.pdf.rendering.playwright import PDFRenderError, render_generation_pdf
+from print.rendering.pdf.runtime import pdf_export_telemetry
 from print.rendering.pdf.v3_pack_pipeline_document import build_pipeline_document_for_v3_pdf
-from contracts.document import PipelineDocument
-from print.contracts.lectio_page import validate_document
-from contracts.document import PipelineSectionManifestItem
 
 logger = logging.getLogger(__name__)
 
@@ -160,7 +159,7 @@ async def export_generation_pdf(
             ),
             timeout=timeout_s,
         )
-    except asyncio.TimeoutError as exc:
+    except TimeoutError as exc:
         duration_ms = int((time.perf_counter() - started) * 1000)
         _log_stage(
             "pdf_export",

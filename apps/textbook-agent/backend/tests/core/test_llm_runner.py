@@ -4,12 +4,12 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from core.llm.runner import RetryPolicy, TruncatedCompletionError, run_llm
+from core.llm.types import ModelFamily, ModelSlot, ModelSpec
 from pydantic import ValidationError
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 
 import core.events as core_events
-from core.llm.runner import RetryPolicy, TruncatedCompletionError, run_llm
-from core.llm.types import ModelFamily, ModelSlot, ModelSpec
 
 
 class _FakeAgent:

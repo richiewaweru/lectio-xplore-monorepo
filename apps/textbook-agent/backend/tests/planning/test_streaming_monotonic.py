@@ -6,13 +6,10 @@ import uuid
 from typing import Any
 
 import pytest
+from tests.planning.contract_fixtures import teaching_and_form
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
-from print.rendering.page_objects.document_assembly import (
-    canonical_document_sha256,
-    reload_document,
-)
 from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ImmutableLessonPacket,
@@ -26,7 +23,10 @@ from print.generation.whole_lesson.repository import (
     empty_page_document_state,
 )
 from print.generation.whole_lesson.states import execution_key
-from tests.planning.contract_fixtures import teaching_and_form
+from print.rendering.page_objects.document_assembly import (
+    canonical_document_sha256,
+    reload_document,
+)
 
 
 def _packet() -> ImmutableLessonPacket:

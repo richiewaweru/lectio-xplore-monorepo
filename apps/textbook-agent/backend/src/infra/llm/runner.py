@@ -1,22 +1,4 @@
-from __future__ import annotations
-
-import asyncio
-from dataclasses import dataclass
-from email.utils import parsedate_to_datetime
-import logging
-import random
-import time
-from typing import Any, Mapping
-
-from pydantic import ValidationError
-from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError, UserError
-
-import infra.events as core_events
-from infra.llm.cost import compute_cost_usd, extract_thinking_tokens, extract_usage
-from infra.llm.transport import effective_text_spec, endpoint_host
-from infra.llm.types import ModelFamily, ModelSlot, ModelSpec
-
-logger = logging.getLogger(__name__)
+from __future__ import annotationsimport asyncioimport loggingimport randomimport timefrom collections.abc import Mappingfrom dataclasses import dataclassfrom email.utils import parsedate_to_datetimefrom typing import Anyfrom pydantic import ValidationErrorfrom pydantic_ai.exceptions import ModelAPIError, ModelHTTPError, UserErrorimport infra.events as core_eventsfrom infra.llm.cost import compute_cost_usd, extract_thinking_tokens, extract_usagefrom infra.llm.transport import effective_text_spec, endpoint_hostfrom infra.llm.types import ModelFamily, ModelSlot, ModelSpeclogger = logging.getLogger(__name__)
 
 
 class TruncatedCompletionError(RuntimeError):

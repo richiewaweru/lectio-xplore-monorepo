@@ -1,0 +1,37 @@
+﻿.....FF..........FF.F..F..F...                                           [100%]
+================================== FAILURES ===================================
+E   AssertionError: assert 'callout' == 'callout-block'
+      
+      - callout-block
+      + callout
+C:\Projects\lectio\apps\textbook-agent\backend\tests\authoring_correction\test_a00_first_content_selection.py:46: AssertionError: assert 'callout' == 'callout-block'
+E   infra.authoring.models.AuthoringTransportError: simulated table provider timeout
+
+During handling of the above exception, another exception occurred:
+E   infra.authoring.models.AuthoringEngineError: NO_COMPATIBLE_CAPABILITY: provider transport attempts exhausted
+
+The above exception was the direct cause of the following exception:
+E   document.writer.DocumentWriterError: NO_COMPATIBLE_CAPABILITY: NO_COMPATIBLE_CAPABILITY: provider transport attempts exhausted
+C:\Projects\lectio\apps\textbook-agent\backend\src\document\writer.py:291: document.writer.DocumentWriterError: NO_COMPATIBLE_CAPABILITY: NO_COMPATIBLE_CAPABILITY: provider transport attempts exhausted
+E   AssertionError: provider called more often than scripted
+C:\Projects\lectio\apps\textbook-agent\backend\tests\authoring_correction\test_a03_print_authoring_migration.py:50: AssertionError: provider called more often than scripted
+E   AssertionError: provider called more often than scripted
+C:\Projects\lectio\apps\textbook-agent\backend\tests\authoring_correction\test_a03_print_authoring_migration.py:50: AssertionError: provider called more often than scripted
+E   AssertionError: provider called more often than scripted
+C:\Projects\lectio\apps\textbook-agent\backend\tests\authoring_correction\test_a03_print_authoring_migration.py:50: AssertionError: provider called more often than scripted
+E   AssertionError: assert 'explanation-block' in ['callout', 'figure', 'heading', 'list', 'paragraph', 'table']
+C:\Projects\lectio\apps\textbook-agent\backend\tests\authoring_correction\test_a05_selection.py:111: AssertionError: assert 'explanation-block' in ['callout', 'figure', 'heading', 'list', 'paragraph', 'table']
+E   AssertionError: assert ('callout', '...aph', 'table') == ()
+      
+      Left contains 6 more items, first extra item: 'callout'
+      Use -v to get more diff
+C:\Projects\lectio\apps\textbook-agent\backend\tests\authoring_correction\test_a05_selection.py:242: AssertionError: assert ('callout', '...aph', 'table') == ()
+=========================== short test summary info ===========================
+FAILED tests/authoring_correction/test_a00_first_content_selection.py::test_a00_explain_content_selection_is_semantic_not_first_candidate
+FAILED tests/authoring_correction/test_a00_print_table_fallback.py::test_a00_table_llm_failure_surfaces_typed_failure_not_lit_leaf_stub
+FAILED tests/authoring_correction/test_a03_print_authoring_migration.py::test_a03_g01_dispatch_writer_uses_package_instructions_and_schema
+FAILED tests/authoring_correction/test_a03_print_authoring_migration.py::test_a03_g02_table_failure_is_typed_and_never_returns_leaf_stub
+FAILED tests/authoring_correction/test_a03_print_authoring_migration.py::test_a03_g04_offline_print_forms_and_figure_lifecycle
+FAILED tests/authoring_correction/test_a05_selection.py::test_a05_g01_semantic_selector_and_sole_candidate
+FAILED tests/authoring_correction/test_a05_selection.py::test_a05_g04_fallback_cannot_restore_excluded_candidates
+7 failed, 23 passed, 4 warnings in 31.74s

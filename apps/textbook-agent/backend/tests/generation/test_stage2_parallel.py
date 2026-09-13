@@ -101,7 +101,7 @@ async def _run(plan: StructuralPlan) -> list[SectionBrief]:
 async def test_parallel_stage2_returns_briefs_in_plan_order_when_tasks_finish_out_of_order() -> None:
     plan = _plan()
 
-    async def fake_run(**kwargs):  # noqa: ANN003
+    async def fake_run(**kwargs):
         await asyncio.sleep({"one": 0, "two": 0.02, "three": 0.01}[kwargs["section"].id])
         return _brief(kwargs["section"].id)
 
@@ -123,7 +123,7 @@ async def test_parallel_stage2_dispatches_all_sections_in_one_wave_without_prior
     in_flight = 0
     max_in_flight = 0
 
-    async def fake_run(**kwargs):  # noqa: ANN003
+    async def fake_run(**kwargs):
         nonlocal in_flight, max_in_flight
         received_prior_briefs[kwargs["section"].id] = kwargs["prior_briefs"]
         in_flight += 1
@@ -169,7 +169,7 @@ async def test_parallel_stage2_isolates_section_exception_including_first() -> N
     events: list[tuple[str, dict]] = []
     persist_brief = AsyncMock()
 
-    async def fake_run(**kwargs):  # noqa: ANN003
+    async def fake_run(**kwargs):
         section_id = kwargs["section"].id
         if section_id == "one":
             raise RuntimeError("first boom")
@@ -209,12 +209,12 @@ async def test_parallel_stage2_isolates_section_exception_including_first() -> N
 
 
 @pytest.mark.asyncio
-async def test_stage2_uses_serial_invocation_order_when_parallel_flag_is_false(monkeypatch) -> None:  # noqa: ANN001
+async def test_stage2_uses_serial_invocation_order_when_parallel_flag_is_false(monkeypatch) -> None:
     plan = _plan()
     call_order: list[str] = []
     monkeypatch.setenv("V3_STAGE2_PARALLEL", "false")
 
-    async def fake_run(**kwargs):  # noqa: ANN003
+    async def fake_run(**kwargs):
         call_order.append(kwargs["section"].id)
         return _brief(kwargs["section"].id)
 
@@ -232,7 +232,7 @@ async def test_parallel_stage2_persists_each_brief_once() -> None:
     plan = _plan()
     persist_brief = AsyncMock()
 
-    async def fake_run(**kwargs):  # noqa: ANN003
+    async def fake_run(**kwargs):
         await asyncio.sleep({"one": 0, "two": 0.02, "three": 0.01}[kwargs["section"].id])
         return _brief(kwargs["section"].id)
 
@@ -266,7 +266,7 @@ async def test_resume_stage2_isolates_fan_out_exception() -> None:
     events: list[tuple[str, dict]] = []
     persist_brief = AsyncMock()
 
-    async def fake_run(**kwargs):  # noqa: ANN003
+    async def fake_run(**kwargs):
         section_id = kwargs["section"].id
         assert kwargs["prior_briefs"] == []
         if section_id == "two":
@@ -298,7 +298,7 @@ async def test_resume_stage2_isolates_fan_out_exception() -> None:
 
 
 @pytest.mark.asyncio
-async def test_stage2_always_calls_expander(monkeypatch) -> None:  # noqa: ANN001
+async def test_stage2_always_calls_expander(monkeypatch) -> None:
     plan = _plan()
     call_stage2 = AsyncMock(side_effect=lambda **kwargs: _brief(kwargs["section"].id))
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from tests.v3_blueprint.planning.test_intent_plan import SUBJECT_FIXTURES, _intent_plan_for_subject
 
 from contracts.lectio import get_component_card
 from v3_blueprint.planning.canonical_plan import build_canonical_execution_plan
@@ -13,7 +14,6 @@ from v3_blueprint.planning.work_orders import (
     build_component_contract_matrix,
     compile_exact_work_orders,
 )
-from tests.v3_blueprint.planning.test_intent_plan import SUBJECT_FIXTURES, _intent_plan_for_subject
 
 
 def test_component_contract_matrix_covers_planner_selectable() -> None:

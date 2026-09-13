@@ -11,11 +11,13 @@ from v3_blueprint.models import (
     ProductionBlueprint,
     QuestionPlanItem,
     RepairFocus,
-    SectionPlan as BlueprintSection,
     VisualFrameInstruction,
     VisualInstruction,
     VisualStrategyPlan,
     VoicePlan,
+)
+from v3_blueprint.models import (
+    SectionPlan as BlueprintSection,
 )
 from v3_blueprint.planning.models import (
     BlueprintAssemblyBlocked,

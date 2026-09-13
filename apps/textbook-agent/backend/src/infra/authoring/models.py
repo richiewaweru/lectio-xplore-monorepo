@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Literal, Mapping, Protocol
+from typing import Any, Literal, Protocol
 
 AuthoringMode = Literal["generate", "convert-approved"]
 AuthoringFailureCode = Literal[

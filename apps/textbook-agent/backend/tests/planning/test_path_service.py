@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import func, select
+from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 
 from core.database.models import (
     ConceptModel,
@@ -34,8 +35,6 @@ from curriculum.service import (
     split_lesson,
 )
 from curriculum.validation import PathApprovalBlocked
-from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
-
 
 FIXTURES = Path(__file__).resolve().parents[3] / "handoff" / "fixtures"
 
@@ -364,8 +363,9 @@ async def test_persist_maps_scope_and_compat_fields(db_session, owner) -> None:
 
 
 async def test_canonical_plan_from_version_empty_exclusions(db_session, owner) -> None:
-    from curriculum.path_models import CanonicalPathPlan, CanonicalPathScope
     from tests.planning.path_helpers import sample_canonical_plan
+
+    from curriculum.path_models import CanonicalPathPlan, CanonicalPathScope
 
     plan = sample_canonical_plan()
     plan = CanonicalPathPlan(

@@ -4,7 +4,6 @@ import pytest
 
 from core.prompts import loader
 
-
 EDITABLE_PROMPT_ID = "section-writer"
 LOCKED_PROMPT_ID = "quiz-items"
 USER_ID = "prompt-loader-user"

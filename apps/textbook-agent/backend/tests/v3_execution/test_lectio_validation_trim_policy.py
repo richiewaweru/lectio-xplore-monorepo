@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from v3_execution.models import DraftPack
 from v3_execution.runtime.lectio_validation import validate_section_content
 from v3_review.deterministic_checks import check_lectio_schema_validity
-from v3_execution.models import DraftPack
 
 
 def test_trim_allowlist_trims_explanation_emphasis_without_review_issue() -> None:

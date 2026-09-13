@@ -6,8 +6,8 @@ from media.diagnostics.v3_image_pipeline_diagnostic import (
     DiagnosticReport,
     ProbeResult,
     build_probe_work_order,
-    format_report,
     force_production_image_store,
+    format_report,
     run_gcs_probe,
 )
 from media.storage import image_store as image_store_module

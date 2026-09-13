@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from v3_execution.config.retries import V3_MAX_RETRIES
 from v3_execution.llm_helpers import run_structured_agent
 from v3_execution.models import (
     ExecutorOutcome,
@@ -11,10 +12,8 @@ from v3_execution.models import (
     QuestionWriterWorkOrder,
 )
 from v3_execution.prompts.question_writer import build_question_writer_prompt
-from v3_execution.config.retries import V3_MAX_RETRIES
 from v3_execution.runtime.retry_runner import run_with_retries
 from v3_execution.runtime.validation import validate_question_batch
-
 
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
 

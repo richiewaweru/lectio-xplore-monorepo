@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -96,7 +96,7 @@ class LearningPackRepository:
             if error is not None:
                 model.error = error
             if status in {"complete", "failed"}:
-                model.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+                model.completed_at = datetime.now(UTC).replace(tzinfo=None)
             await session.commit()
 
     async def generations_for_pack(self, pack_id: str) -> list[GenerationModel]:

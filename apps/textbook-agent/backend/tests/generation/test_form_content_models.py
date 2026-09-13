@@ -3,18 +3,17 @@
 from __future__ import annotations
 
 import pytest
+from core.llm.deepseek_schema import to_deepseek_strict_schema
 from pydantic import ValidationError
 
-from core.llm.deepseek_schema import to_deepseek_strict_schema
 from print.rendering.page_objects import (
     FORM_OUTPUTS,
-    WRITER_PROVIDER_OUTPUTS,
     GENERATED_FORM_IDS,
+    WRITER_PROVIDER_OUTPUTS,
     ContentValidationError,
     UnsupportedObject,
     validate_content,
 )
-
 
 VALID_FIXTURES: dict[str, dict] = {
     "prose": {"paragraphs": ["Light supplies energy for food making."]},

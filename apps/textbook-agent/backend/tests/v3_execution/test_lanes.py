@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from v3_execution.runtime.lanes import LaneOutcome, resolved_lane_limits, run_lane
 from v3_execution.config.concurrency import make_semaphores
+from v3_execution.runtime.lanes import LaneOutcome, resolved_lane_limits, run_lane
 
 
 @pytest.mark.asyncio
@@ -160,14 +160,14 @@ async def test_run_lane_records_budget_failure() -> None:
     assert outcome.failed_step == "budget"
 
 
-def test_stage2_parallel_false_forces_lane_concurrency_one(monkeypatch) -> None:  # noqa: ANN001
+def test_stage2_parallel_false_forces_lane_concurrency_one(monkeypatch) -> None:
     monkeypatch.setenv("V3_STAGE2_PARALLEL", "false")
     monkeypatch.setenv("V3_CONCURRENCY_LANE_MAX", "6")
     limits = resolved_lane_limits()
     assert limits["lane"] == 1
 
 
-def test_answer_key_concurrency_is_configurable(monkeypatch) -> None:  # noqa: ANN001
+def test_answer_key_concurrency_is_configurable(monkeypatch) -> None:
     monkeypatch.setenv("V3_CONCURRENCY_ANSWER_KEY_MAX", "3")
     semaphores = make_semaphores()
     assert semaphores["answer_key_generator"]._value == 3

@@ -7,11 +7,11 @@ visual executor, then attaches a resolvable asset_id onto the figure node.
 from __future__ import annotations
 
 import logging
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 from urllib.parse import urlsplit
 
 from core.prompts.loader import effective_prompt_text
-
 from v3_execution.executors.visual_executor import execute_visual
 from v3_execution.models import VisualGeneratorWorkOrder, VisualPlanItem
 
@@ -36,7 +36,7 @@ def _local_image_key(src: str) -> str | None:
         parts = [p for p in key.split("/") if p]
         if parts and not any(p in {".", ".."} for p in parts):
             return "/".join(parts)
-    if raw.startswith("http://") or raw.startswith("https://") or raw.startswith("data:"):
+    if raw.startswith(("http://", "https://", "data:")):
         return raw
     if raw.startswith("/"):
         return raw

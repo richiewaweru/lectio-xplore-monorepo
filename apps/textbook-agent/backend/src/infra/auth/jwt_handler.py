@@ -1,7 +1,6 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
-from jwt import PyJWTError
 
 
 class JWTHandler:
@@ -11,7 +10,7 @@ class JWTHandler:
         self._expire_minutes = expire_minutes
 
     def create_access_token(self, user_id: str, email: str) -> str:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=self._expire_minutes)
+        expire = datetime.now(UTC) + timedelta(minutes=self._expire_minutes)
         payload = {
             "sub": user_id,
             "email": email,
@@ -21,7 +20,4 @@ class JWTHandler:
 
     def decode_token(self, token: str) -> dict:
         """Decode and verify a JWT. Raises PyJWTError on failure."""
-        try:
-            return jwt.decode(token, self._secret, algorithms=[self._algorithm])
-        except PyJWTError:
-            raise
+        return jwt.decode(token, self._secret, algorithms=[self._algorithm])

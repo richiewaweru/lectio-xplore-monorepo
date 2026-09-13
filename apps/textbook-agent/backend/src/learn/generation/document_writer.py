@@ -9,7 +9,7 @@ can be updated; calling these functions raises.
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from typing import Any
 
 
 class StubWriterRetiredError(RuntimeError):

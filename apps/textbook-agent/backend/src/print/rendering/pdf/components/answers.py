@@ -7,8 +7,8 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
-from contracts.section_content_helpers import practice_problems, section_title
 from contracts.section_content import SectionContent
+from contracts.section_content_helpers import practice_problems, section_title
 
 
 @dataclass(slots=True)
@@ -72,7 +72,7 @@ def generate_answer_key_pdf(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     pdf = canvas.Canvas(str(output_path), pagesize=A4)
-    width, height = A4
+    _width, height = A4
     y = height - 28 * mm
 
     pdf.setTitle("Answer Key")

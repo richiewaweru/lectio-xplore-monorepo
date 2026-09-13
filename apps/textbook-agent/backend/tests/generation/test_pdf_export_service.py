@@ -150,17 +150,16 @@ async def test_native_v2_malformed_document_fails_closed_without_legacy_fallback
     with patch(
         "print.rendering.pdf.service.build_pipeline_document_for_v3_pdf",
         side_effect=AssertionError("malformed native document entered legacy adapter"),
-    ):
-        with pytest.raises(NativeDocumentContractError, match="LectioDocumentV2"):
-            await export_v3_studio_pdf(
-                generation_id="gen-native-bad",
-                user_id="user-1",
-                title="Native lesson",
-                subject="Science",
-                template_id="guided-concept-path",
-                document_json={"document_version": 2, "lectio_document": {"title": "Missing sections"}},
-                auth_token="token",
-                request=request,
-                settings=settings,
-                native_whole_lesson=True,
-            )
+    ), pytest.raises(NativeDocumentContractError, match="LectioDocumentV2"):
+        await export_v3_studio_pdf(
+            generation_id="gen-native-bad",
+            user_id="user-1",
+            title="Native lesson",
+            subject="Science",
+            template_id="guided-concept-path",
+            document_json={"document_version": 2, "lectio_document": {"title": "Missing sections"}},
+            auth_token="token",
+            request=request,
+            settings=settings,
+            native_whole_lesson=True,
+        )

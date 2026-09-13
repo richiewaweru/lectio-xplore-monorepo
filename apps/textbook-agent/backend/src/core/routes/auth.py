@@ -1,18 +1,18 @@
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from core.rate_limit import limiter
 from pydantic import BaseModel
 
 from core.auth.google_auth import verify_google_token
 from core.auth.jwt_handler import JWTHandler
+from core.auth.middleware import get_current_user
 from core.dependencies import get_jwt_handler, get_settings, get_user_repository
 from core.entities.user import User
 from core.ports.user_repository import UserRepository
-from core.auth.middleware import get_current_user
+from core.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ async def google_login(
     user = await user_repo.find_by_email(google_user.email)
 
     if user is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         user = await user_repo.create(
             User(
                 id=str(uuid.uuid4()),

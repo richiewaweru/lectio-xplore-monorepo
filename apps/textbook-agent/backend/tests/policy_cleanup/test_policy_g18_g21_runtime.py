@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import pytest
-
-from learn.runtime.evaluation import evaluate_interaction
 from tests.remaining_fixes.r04_fixtures import (
     install_api_overrides,
     publish_lesson,
     r04_client,
     seed_r04_user,
 )
+
+from learn.runtime.evaluation import evaluate_interaction
 
 
 def _short_response_document(

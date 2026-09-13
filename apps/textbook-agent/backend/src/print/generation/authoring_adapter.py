@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from infra.authoring import (
     AuthoringDefinition,
@@ -25,6 +26,7 @@ def _instruction_text(raw: Any) -> str:
 
 
 from core.prompts.loader import effective_prompt_text, hash_prompt
+
 
 def _definition_from_order(order: PrintWorkOrder) -> AuthoringDefinition:
     definition = dict(order.authoring_definition or {})
@@ -255,10 +257,7 @@ async def run_print_authoring(
         registry=build_print_authoring_registry(),
         provider=provider or LLMAuthoringProvider(),
     )
-    try:
-        result = await selected_engine.execute(request, provider=provider)
-    except AuthoringEngineError:
-        raise
+    result = await selected_engine.execute(request, provider=provider)
     updated_prov = type(result.provenance)(
         work_order_id=result.provenance.work_order_id,
         source_identities=result.provenance.source_identities,

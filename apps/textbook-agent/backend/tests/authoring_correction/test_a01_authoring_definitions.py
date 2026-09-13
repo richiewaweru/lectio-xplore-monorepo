@@ -6,8 +6,6 @@ import copy
 import json
 from pathlib import Path
 
-import pytest
-
 from curriculum.teaching_plan.models import (
     LearnerActionBrief,
     TeachingPlan,

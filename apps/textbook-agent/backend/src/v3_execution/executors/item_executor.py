@@ -5,27 +5,26 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any
 
+from core.llm.runner import RetryPolicy, run_llm
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 from pydantic_ai import Agent
 
-from core.llm.runner import RetryPolicy, run_llm
 from curriculum.llm_contract_errors import structured_output_errors
 from v3_blueprint.planning.models import ConceptCard, ItemOption, QuestionBrief
 from v3_execution.config import (
-    get_v3_model,
     get_v3_model_settings,
     get_v3_slot,
-    get_v3_spec,
 )
 from v3_execution.config.timeouts import V3_TIMEOUTS
 from v3_execution.executors.item_diagnostics import (
+    OutcomeClass,
     attempt_record,
     classify_item_failure,
     new_item_correlation_id,
 )
+from v3_execution.executors.item_errors import ItemGenerationOutputInvalidError
 from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 from v3_execution.prompts.item_prompt import build_item_messages, get_item_system_prompt
-from v3_execution.executors.item_errors import ItemGenerationOutputInvalidError
 
 ITEM_NODE = "v3_item_executor"
 # Transport + contract repair budget owned here (not raised for pass-rate gaming).
@@ -287,8 +286,8 @@ async def execute_items_with_diagnostics(
 
     assert last_exc is not None
     # Attach attempt journal on the exception for callers that catch and persist.
-    setattr(last_exc, "item_attempts", attempts)
-    setattr(last_exc, "item_correlation_id", cid)
+    last_exc.item_attempts = attempts
+    last_exc.item_correlation_id = cid
 
     exhausted = last_retryable and last_outcome_class in {"CONTRACT", "SEMANTIC"} and len(attempts) >= budget
     if exhausted:
@@ -296,8 +295,8 @@ async def execute_items_with_diagnostics(
             attempt_count=len(attempts),
             details=output_invalid_details or [str(last_exc)],
         )
-        setattr(typed, "item_attempts", attempts)
-        setattr(typed, "item_correlation_id", cid)
+        typed.item_attempts = attempts
+        typed.item_correlation_id = cid
         raise typed from last_exc
 
     raise last_exc

@@ -59,11 +59,9 @@ def _complete_run(tmp_path: Path) -> Path:
         path = run_dir / name
         if name in {"00-manifest.yaml", "22-writer-prompts", "23-writer-responses-raw"}:
             continue
-        if name.endswith(".json"):
+        if name.endswith((".json", ".jsonl")):
             path.write_text("{}\n", encoding="utf-8")
-        elif name.endswith(".jsonl"):
-            path.write_text("{}\n", encoding="utf-8")
-        elif name.endswith(".md") or name.endswith(".txt") or name.endswith(".csv"):
+        elif name.endswith((".md", ".txt", ".csv")):
             path.write_text("captured\n", encoding="utf-8")
     (run_dir / "29-persisted-generation-record.json").write_text(
         json.dumps(

@@ -7,7 +7,8 @@ snapshotting.
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from learn.contracts.lesson_document import validate_learn_document
 from learn.generation.interaction_writer import validate_interaction_contract

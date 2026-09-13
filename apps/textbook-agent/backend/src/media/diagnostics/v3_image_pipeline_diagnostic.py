@@ -152,7 +152,7 @@ async def run_gcs_probe(image_bytes: bytes, source: str) -> ProbeResult:
                 filename="diagnostic-image.png",
                 format="png",
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise VisualStageError.from_exception(stage="gcs_upload", exc=exc) from exc
         return ProbeResult(
             name="v3_gcs_upload_only",
@@ -263,7 +263,7 @@ async def run_diagnostic() -> DiagnosticReport:
             "base_url": spec.base_url,
             "api_key_env": spec.api_key_env,
         }
-    except Exception:
+    except Exception:  # noqa: BLE001
         provider_summary = {
             "provider": "unresolved",
             "model": None,
@@ -316,7 +316,7 @@ __all__ = [
     "DiagnosticReport",
     "ProbeResult",
     "build_probe_work_order",
-    "format_report",
     "force_production_image_store",
+    "format_report",
     "run_diagnostic",
 ]

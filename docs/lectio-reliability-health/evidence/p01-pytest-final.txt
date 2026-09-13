@@ -1,0 +1,3 @@
+RUFF_EXIT=0
+[1;32mAll checks passed![0m
+

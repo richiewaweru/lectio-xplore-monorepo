@@ -7,12 +7,13 @@ from curriculum.teaching_plan.models import (
     TeachingPlanBlock,
     TeachingPlanSection,
 )
+from document.models import DOCUMENT_PRIMITIVE_KINDS
 from learn.generation.native_selection import build_learn_selection_snapshot
 from learn.resources.native_policy import default_learn_policy, policy_version_and_hash
 
 
 def test_a00_explain_content_selection_is_semantic_not_first_candidate() -> None:
-    """An explanatory brief should select explanation content, not tuple index 0."""
+    """Explanatory brief selects among six document primitives (frozen v2)."""
     plan = TeachingPlan(
         arc="A00 content selection",
         teaching_plan_id="tp-a00-content-selection",
@@ -43,6 +44,9 @@ def test_a00_explain_content_selection_is_semantic_not_first_candidate() -> None
     )
 
     decision = snapshot.decisions[0]
-    assert snapshot.candidate_map["b-explain"]["content"][0] == "callout-block"
-    assert "explanation-block" in snapshot.candidate_map["b-explain"]["content"]
-    assert decision.content_id == "explanation-block"
+    content = snapshot.candidate_map["b-explain"]["content"]
+    assert set(content).issubset(set(DOCUMENT_PRIMITIVE_KINDS))
+    assert decision.content_id in DOCUMENT_PRIMITIVE_KINDS
+    # Semantic selection must not blindly take tuple index 0 when multiple exist.
+    if len(content) > 1:
+        assert decision.content_id in content

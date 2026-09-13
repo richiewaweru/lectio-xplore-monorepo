@@ -7,8 +7,9 @@ compose (LLM) → write ordinary primitives (LLM) → interaction writer → ass
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,7 +32,7 @@ from learn.resources.native_policy import default_learn_policy, policy_version_a
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _preparation_from_generation(

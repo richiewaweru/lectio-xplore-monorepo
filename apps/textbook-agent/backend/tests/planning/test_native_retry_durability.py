@@ -3,15 +3,21 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
+from tests.planning.test_native_retry_pre_worker import (
+    TEST_USER,
+    _seed_generation,
+    _teaching_ok,
+    _valid_result,
+)
 
 from app import app
-from core.auth.middleware import get_current_user
 from core.database.models import GenerationModel
 from core.database.session import async_session_factory
 from core.entities.user import User
@@ -29,12 +35,6 @@ from print.generation.whole_lesson.states import (
     LeaseLostError,
 )
 from print.generation.whole_lesson.worker import NativeExecutionWorker
-from tests.planning.test_native_retry_pre_worker import (
-    TEST_USER,
-    _seed_generation,
-    _teaching_ok,
-    _valid_result,
-)
 from v3_blueprint.planning.persistence import (
     merge_failed_card_records,
     merge_item_generation_summary,
@@ -52,7 +52,7 @@ def _client() -> AsyncClient:
 
 
 async def _age_heartbeat(generation_id: str, *, seconds_ago: int = 120) -> None:
-    stamp = (datetime.now(timezone.utc) - timedelta(seconds=seconds_ago)).isoformat()
+    stamp = (datetime.now(UTC) - timedelta(seconds=seconds_ago)).isoformat()
 
     async with async_session_factory() as session:
         repo = PageDocumentRepository(session, generation_id)
@@ -446,7 +446,7 @@ async def test_d07_worker_poll_discovers_abandoned_teaching() -> None:
             execution["pre_worker_retry_active"] = True
             execution["worker_id"] = None
             execution["heartbeat_at"] = (
-                datetime.now(timezone.utc) - timedelta(seconds=120)
+                datetime.now(UTC) - timedelta(seconds=120)
             ).isoformat()
             execution["lease_seconds"] = 30
             state["execution"] = execution
@@ -555,9 +555,8 @@ async def test_i01_integrated_teaching_accept_crash_reclaim() -> None:
     with patch(
         "print.generation.whole_lesson.service.run_and_persist_teaching_plan",
         new=AsyncMock(side_effect=TimeoutError("boom mid teaching")),
-    ):
-        with pytest.raises(TimeoutError):
-            await run_pre_worker_retry(lease=lease1)
+    ), pytest.raises(TimeoutError):
+        await run_pre_worker_retry(lease=lease1)
 
     # Re-accept after failure, then reclaim path via stale lease simulation on second accept.
     accepted2 = await accept_native_retry(gid, user_id=TEST_USER.id)

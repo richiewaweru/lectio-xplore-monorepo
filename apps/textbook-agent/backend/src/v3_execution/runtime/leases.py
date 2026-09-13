@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -27,7 +27,7 @@ class LeaseStore:
     now: datetime | None = None
 
     def _clock(self) -> datetime:
-        return self.now or datetime.now(timezone.utc)
+        return self.now or datetime.now(UTC)
 
     def claim(self, generation_id: str) -> LeaseRecord:
         current = self.leases.get(generation_id)

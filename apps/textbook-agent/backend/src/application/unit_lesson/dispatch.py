@@ -12,9 +12,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import ConceptCardModel, GenerationModel, LessonProvenanceModel
-from learn.generation.pipeline_dispatch import build_control_patch, select_default_pipeline
 from learn.generation.contracts import GenerationInputForm as V3InputForm
 from learn.generation.contracts import GenerationSignalSummary as V3SignalSummary
+from learn.generation.pipeline_dispatch import build_control_patch, select_default_pipeline
 from resource_specs.loader import get_spec
 from resource_specs.renderer import render_spec_for_prompt
 from v3_blueprint.planning.models import StructuralPlan, VariantSpec

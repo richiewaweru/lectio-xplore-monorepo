@@ -1,0 +1,14 @@
+﻿{
+    "email_domain":  "gmail.com",
+    "api":  "http://127.0.0.1:8000",
+    "browser_session":  "playwright-cli session=reliability",
+    "origin":  "http://127.0.0.1:5173",
+    "auth_me_status":  200,
+    "profile":  ".tmp/reliability-chrome-profile",
+    "served_frontend":  "native vite :5173",
+    "workspace_sha":  "a6b75e33d2a56452e05033a510f86db1566891b2",
+    "db_container":  "textbookagent-db-1 (healthy on 5432)",
+    "served_backend_version":  "1.0.0-beta.1",
+    "docker_compose_frontend_blocker":  "additional_contexts lectio path fixed to ../../packages/lectio-page; full compose build not required — native stack used for verification",
+    "user_id":  "2f297058-f6bc-47bf-9ffd-3208ad8246d4"
+}

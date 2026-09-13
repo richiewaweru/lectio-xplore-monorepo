@@ -11,7 +11,6 @@ from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
-from print.http.v3_studio.router import _run_chunked_stage2_pipeline
 from print.generation.whole_lesson.native_status import project_native_status
 from print.generation.whole_lesson.packet import (
     AnchorRecord,
@@ -23,6 +22,7 @@ from print.generation.whole_lesson.packet import (
 )
 from print.generation.whole_lesson.teaching_agent import run_lesson_approach_planner
 from print.generation.whole_lesson.teaching_plan import TeachingPlan
+from print.http.v3_studio.router import _run_chunked_stage2_pipeline
 from v3_blueprint.planning.models import (
     AnchorSpec,
     ComponentSlot,
@@ -483,9 +483,10 @@ async def test_deterministic_teaching_input_failure_is_terminal_without_provider
 
 
 async def _seed_planning_forms_without_form_plan() -> str:
+    from tests.planning.contract_fixtures import teaching_and_form
+
     from print.generation.whole_lesson.legality import build_lesson_legality_snapshot
     from print.generation.whole_lesson.repository import empty_page_document_state
-    from tests.planning.contract_fixtures import teaching_and_form
 
     gid = str(uuid.uuid4())
     user_id = f"user-{gid[:8]}"
@@ -550,7 +551,7 @@ async def test_injected_form_timeout_persists_through_worker_boundary() -> None:
             )
             assert lease is not None
         with patch(
-            "print.generation.whole_lesson.executor.run_form_planner",
+            "print.generation.whole_lesson.executor.build_closed_print_production_plan_async",
             new=_form_boom,
         ):
             async with async_session_factory() as session:

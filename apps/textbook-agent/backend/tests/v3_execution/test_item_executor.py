@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 
 import pytest
+from core.llm.deepseek_schema import to_deepseek_strict_schema
 from pydantic import ValidationError
 
 from v3_blueprint.planning.models import (
@@ -20,7 +21,6 @@ from v3_execution.executors.item_executor import (
     validate_item_result,
 )
 from v3_execution.prompts.item_prompt import build_item_messages
-from core.llm.deepseek_schema import to_deepseek_strict_schema
 
 
 def _card() -> ConceptCard:

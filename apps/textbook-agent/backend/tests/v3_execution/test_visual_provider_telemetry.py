@@ -6,9 +6,9 @@ from unittest.mock import patch
 import pytest
 
 import core.events as core_events
+from infra.telemetry.service import TelemetryMonitor
 from v3_execution.executors.visual_executor import execute_visual
 from v3_execution.models import VisualGeneratorWorkOrder, VisualPlanItem
-from infra.telemetry.service import TelemetryMonitor
 
 
 def _order() -> VisualGeneratorWorkOrder:
@@ -165,7 +165,7 @@ async def test_visual_ledger_event_uses_generation_lookup_for_user_attribution()
 
     monitor.configure(llm_call_repository_factory=load_repo)
     monitor._user_id_for_generation = lookup  # type: ignore[method-assign]
-    await monitor._handle_event(  # noqa: SLF001
+    await monitor._handle_event(
         {
             "type": "llm_call_succeeded",
             "trace_id": "native-visual:gen-1:req-1",

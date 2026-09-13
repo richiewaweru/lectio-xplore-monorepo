@@ -2,23 +2,23 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app import app
-from infra.auth.middleware import get_current_user
-from core.database.models import LearnReleaseModel, UserModel
-from infra.database.session import get_async_session
+from core.database.models import UserModel
 from core.entities.user import User
-from learn.runtime_models import LearnerAttemptModel, LearningInstanceModel
-from learn.runtime_service import classify_concept, rebuild_progress
+from infra.auth.middleware import get_current_user
+from infra.database.session import get_async_session
+from learn.runtime_models import LearnerAttemptModel
+from learn.runtime_service import classify_concept
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 TEACHER = User(

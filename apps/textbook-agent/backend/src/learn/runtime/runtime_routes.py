@@ -9,10 +9,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infra.auth.middleware import get_current_user
 from core.database.models import LearnReleaseModel
-from infra.database.session import get_async_session
 from core.entities.user import User
+from infra.auth.middleware import get_current_user
+from infra.database.session import get_async_session
 from learn.class_service import (
     accept_class_invite,
     add_learner_to_class,
@@ -21,7 +21,6 @@ from learn.class_service import (
     require_class_owner,
 )
 from learn.runtime_models import (
-    ConceptStateModel,
     LearnAssignmentModel,
     LearnAssignmentRecipientModel,
     LearnClassMembershipModel,

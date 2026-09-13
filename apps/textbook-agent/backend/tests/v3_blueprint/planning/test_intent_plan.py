@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+from learn.generation.contracts import GenerationInputForm as V3InputForm
+from learn.generation.contracts import GenerationSignalSummary as V3SignalSummary
 from resource_specs.loader import get_primary_spec
 from v3_blueprint.planning.models import (
     AnchorSpec,
+    ConceptCard,
     IntentPlan,
     IntentSectionPlan,
     LessonIntent,
     Misconception,
-    ConceptCard,
     QPlanItem,
     intent_plan_to_structural_plan,
 )
@@ -19,9 +21,6 @@ from v3_blueprint.planning.structural_planner import (
     build_stage1_user_message,
 )
 from v3_blueprint.planning.validators import validate_structural_plan
-from learn.generation.contracts import GenerationInputForm as V3InputForm
-from learn.generation.contracts import GenerationSignalSummary as V3SignalSummary
-
 
 LESSON_ROLES = ("orient", "build", "model", "practice", "close")
 

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from core.middleware.v2_audit import V2AuditMiddleware
 from fastapi import FastAPI, Request
 from httpx import ASGITransport, AsyncClient
 
 from core.middleware import v2_audit
-from core.middleware.v2_audit import V2AuditMiddleware
 
 
 class _Session:

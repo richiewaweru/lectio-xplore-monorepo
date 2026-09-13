@@ -6,7 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
-from planning.catalogue_projections import project_teaching_guidance
+from print.generation.catalogue_projections import project_teaching_guidance
 from resource_specs.candidates import assemble_lesson_guidance
 from resource_specs.loader import get_spec, load_all_specs
 from contracts.lectio_page import get_intent_catalogue, get_object_catalogue

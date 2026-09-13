@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from v3_execution.prompts.formatting import format_source_of_truth
 from v3_execution.models import VisualGeneratorWorkOrder
+from v3_execution.prompts.formatting import format_source_of_truth
 
 NO_CAPTION_TEXT_CONSTRAINT = (
     "Do not render any caption, title, sentence, or explanatory text inside the image. "
@@ -142,8 +142,8 @@ RESOURCE TYPE: {order.resource_type}
 
 __all__ = [
     "CLOSED_LABEL_TEXT_CONSTRAINT",
-    "NO_VISIBLE_TEXT_DIAGRAM_CONSTRAINT",
     "NO_CAPTION_TEXT_CONSTRAINT",
+    "NO_VISIBLE_TEXT_DIAGRAM_CONSTRAINT",
     "build_visual_prompt",
     "format_anchor_for_visual",
 ]

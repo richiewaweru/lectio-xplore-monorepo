@@ -9,7 +9,6 @@ from v3_execution.models import (
     GeneratedAnswerKeyBlock,
 )
 
-
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
 
 

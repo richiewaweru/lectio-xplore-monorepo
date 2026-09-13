@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -109,7 +109,7 @@ def _copy_document(document: dict[str, Any]) -> dict[str, Any]:
 
 def _builder_document(document: dict[str, Any], *, lesson_id: str) -> dict[str, Any]:
     normalized = _copy_document(document)
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     normalized["id"] = lesson_id
     if "title" in normalized:
         normalized["title"] = str(normalized["title"]).strip()
@@ -149,7 +149,7 @@ def _validate_document_generation(generation: GenerationModel, *, user_id: str) 
     ):
         raise ValueError("Generation is not marked as a native Learn document generation")
     if not isinstance(generation.document_json, dict):
-        raise ValueError("Completed generation has no document")
+        raise TypeError("Completed generation has no document")
     document = _copy_document(generation.document_json)
     version = document.get("version")
     if version == 2:
@@ -162,9 +162,11 @@ def _validate_document_generation(generation: GenerationModel, *, user_id: str) 
             assert_valid_lesson_document(document)
         except LessonDocumentValidationError as exc:
             raise ValueError(str(exc)) from exc
-    if document.get("source_generation_id") not in {generation.id, None}:
-        if document.get("source_generation_id") != generation.id:
-            raise ValueError("Document source_generation_id does not match the generation")
+    if (
+        document.get("source_generation_id") not in {generation.id, None}
+        and document.get("source_generation_id") != generation.id
+    ):
+        raise ValueError("Document source_generation_id does not match the generation")
     return document
 
 
@@ -195,8 +197,8 @@ async def get_or_create_native_learn_builder_lesson(
         title=str(document.get("title") or "Untitled lesson").strip() or "Untitled lesson",
         class_label=None,
         document_json=_builder_document(document, lesson_id=lesson_id),
-        created_at=datetime.now(timezone.utc).replace(tzinfo=None),
-        updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        created_at=datetime.now(UTC).replace(tzinfo=None),
+        updated_at=datetime.now(UTC).replace(tzinfo=None),
     )
     try:
         async with session.begin_nested():
@@ -228,11 +230,11 @@ async def get_or_create_component_lectio_builder_lesson(
 
 __all__ = [
     "ACTIVE_BUILDER_SOURCE_TYPES",
+    "DOCUMENT_SOURCE_TYPES",
     "BuilderDocumentValidationError",
     "ComponentLectioBuilderDocumentError",
     "ComponentLectioBuilderError",
     "ComponentLectioBuilderNotReadyError",
-    "DOCUMENT_SOURCE_TYPES",
     "assert_valid_builder_document",
     "get_or_create_component_lectio_builder_lesson",
     "get_or_create_native_learn_builder_lesson",

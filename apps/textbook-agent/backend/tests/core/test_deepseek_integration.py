@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import BaseModel
+from pydantic_ai import ToolOutput
 
 from core.config import settings
 from core.llm import ModelFamily, ModelSpec, build_structured_model
-from pydantic import BaseModel
-from pydantic_ai import ToolOutput
 from v3_execution.llm_helpers import prepare_structured_agent
 
 
@@ -32,9 +32,10 @@ async def test_live_deepseek_strict_typed_schema() -> None:
     monkeypatch.setenv("V3_FAST_API_KEY_ENV", "DEEPSEEK_API_KEY")
     monkeypatch.setenv("DEEPSEEK_STRUCTURED_MODE", "strict_tool")
 
-    from pydantic_ai import Agent
     from core.llm.runner import RetryPolicy, run_llm
-    from v3_execution.config import get_v3_slot, get_v3_model_settings
+    from pydantic_ai import Agent
+
+    from v3_execution.config import get_v3_model_settings, get_v3_slot
     from v3_execution.config.models import V3_SIGNAL_EXTRACTOR
 
     model, provider_output, structured_context, spec, _source = prepare_structured_agent(

@@ -8,6 +8,7 @@ lanes finish (reshape deferred item: move brief into run_lane).
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -37,6 +38,8 @@ from v3_execution.runtime.lanes import (
 )
 
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
+
+logger = logging.getLogger(__name__)
 
 
 def _brief_from_payload(payload: Any, *, section_id: str) -> SectionBrief:
@@ -84,7 +87,12 @@ async def run_stage2_lanes(
             if isinstance(raw, dict):
                 try:
                     existing_briefs[str(section_id)] = SectionBrief.model_validate(raw)
-                except Exception:  # noqa: BLE001
+                except Exception:
+                    logger.debug(
+                        "skipping invalid persisted section brief section_id=%s",
+                        section_id,
+                        exc_info=True,
+                    )
                     continue
 
     persistence_lock = asyncio.Lock()
@@ -93,7 +101,7 @@ async def run_stage2_lanes(
     resource_type = str(resource_spec.get("resource_type") or "lesson")
     blueprint_id = str(uuid.uuid4())
 
-    def _lane_factory_for(section) -> Callable[[], Awaitable[LaneOutcome]]:  # noqa: ANN001
+    def _lane_factory_for(section) -> Callable[[], Awaitable[LaneOutcome]]:
         part_id = section.id
 
         async def _factory() -> LaneOutcome:

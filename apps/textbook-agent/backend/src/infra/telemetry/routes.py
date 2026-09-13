@@ -1,13 +1,4 @@
-from __future__ import annotations
-
-from fastapi import APIRouter, Depends, Query
-
-from infra.auth.middleware import get_current_user
-from core.entities.user import User
-from infra.telemetry.dependencies import get_llm_call_repository
-from infra.telemetry.repositories.sql_llm_call_repo import SqlLLMCallRepository
-
-router = APIRouter(prefix="/api/v1", tags=["telemetry"])
+from __future__ import annotationsfrom fastapi import APIRouter, Depends, Queryfrom core.entities.user import Userfrom infra.auth.middleware import get_current_userfrom infra.telemetry.dependencies import get_llm_call_repositoryfrom infra.telemetry.repositories.sql_llm_call_repo import SqlLLMCallRepositoryrouter = APIRouter(prefix="/api/v1", tags=["telemetry"])
 
 
 @router.get("/telemetry/llm-usage")

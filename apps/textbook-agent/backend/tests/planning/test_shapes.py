@@ -3,17 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 
 from sqlalchemy import select
+from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 
 from core.database.models import PathLessonModel, UserModel
 from curriculum.path_models import ShapeDeviationCreateRequest
-from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 from curriculum.service import approve_path, create_unit, persist_path_plan
 from curriculum.shapes import (
     decide_shape_deviation,
     lesson_shape_payload,
     request_shape_deviation,
 )
-
 
 FIXTURE = (
     Path(__file__).resolve().parents[3]

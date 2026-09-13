@@ -1,31 +1,4 @@
-from __future__ import annotations
-
-from infra.telemetry.v3_trace.event_types import (
-    ANSWER_KEY_COMPLETED,
-    BOOKLET_STATUS_ASSIGNED,
-    BLUEPRINT_ADJUSTED,
-    BLUEPRINT_GENERATED,
-    BLUEPRINT_SNAPSHOT_SAVED,
-    COHERENCE_REVIEWED,
-    COHERENCE_REPORT_READY,
-    DRAFT_PACK_READY,
-    GENERATION_COMPLETED,
-    GENERATION_FAILED,
-    GENERATION_START_REQUESTED,
-    GENERATION_STARTED,
-    QUESTIONS_COMPLETED,
-    RESOURCE_FINALISED,
-    SECTION_COMPLETED,
-    SECTION_FAILED,
-    EXECUTION_SUMMARY_READY,
-    FINAL_PACK_READY,
-    VISUAL_COMPLETED,
-    VISUAL_FAILED,
-    WORK_ORDERS_COMPILED,
-)
-
-
-def project_report(events: list[dict]) -> dict:
+from __future__ import annotationsfrom infra.telemetry.v3_trace.event_types import (    ANSWER_KEY_COMPLETED,    BLUEPRINT_ADJUSTED,    BLUEPRINT_GENERATED,    BLUEPRINT_SNAPSHOT_SAVED,    BOOKLET_STATUS_ASSIGNED,    COHERENCE_REPORT_READY,    COHERENCE_REVIEWED,    DRAFT_PACK_READY,    EXECUTION_SUMMARY_READY,    FINAL_PACK_READY,    GENERATION_COMPLETED,    GENERATION_FAILED,    GENERATION_START_REQUESTED,    GENERATION_STARTED,    QUESTIONS_COMPLETED,    RESOURCE_FINALISED,    SECTION_COMPLETED,    SECTION_FAILED,    VISUAL_COMPLETED,    VISUAL_FAILED,    WORK_ORDERS_COMPILED,)def project_report(events: list[dict]) -> dict:
     report: dict = {
         "blueprint": None,
         "execution": {
@@ -43,10 +16,7 @@ def project_report(events: list[dict]) -> dict:
         event_type = event["event_type"]
         payload = event["payload"]
 
-        if event_type == BLUEPRINT_GENERATED:
-            report["blueprint"] = payload
-
-        elif event_type == BLUEPRINT_SNAPSHOT_SAVED:
+        if event_type == BLUEPRINT_GENERATED or event_type == BLUEPRINT_SNAPSHOT_SAVED:
             report["blueprint"] = payload
 
         elif event_type == BLUEPRINT_ADJUSTED:
@@ -54,10 +24,7 @@ def project_report(events: list[dict]) -> dict:
                 report["blueprint_adjustments"] = []
             report["blueprint_adjustments"].append(payload)
 
-        elif event_type == GENERATION_STARTED:
-            report["generation"] = payload
-
-        elif event_type == GENERATION_START_REQUESTED:
+        elif event_type == GENERATION_STARTED or event_type == GENERATION_START_REQUESTED:
             report["generation"] = payload
 
         elif event_type == WORK_ORDERS_COMPILED:
@@ -139,10 +106,7 @@ def project_report(events: list[dict]) -> dict:
                 "ok": payload["ok"],
             }
 
-        elif event_type == COHERENCE_REVIEWED:
-            report["review"] = payload
-
-        elif event_type == COHERENCE_REPORT_READY:
+        elif event_type == COHERENCE_REVIEWED or event_type == COHERENCE_REPORT_READY:
             report["review"] = payload
 
         elif event_type == FINAL_PACK_READY:

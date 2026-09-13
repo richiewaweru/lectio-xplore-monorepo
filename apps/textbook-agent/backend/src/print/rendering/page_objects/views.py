@@ -220,7 +220,7 @@ def render_document_pdf(doc: dict[str, Any], path: str | Path, *, audience: Audi
     output.parent.mkdir(parents=True, exist_ok=True)
 
     pdf = canvas.Canvas(str(output), pagesize=A4)
-    width, height = A4
+    _width, height = A4
     y = height - 24 * mm
     margin = 18 * mm
 

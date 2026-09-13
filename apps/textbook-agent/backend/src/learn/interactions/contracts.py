@@ -6,7 +6,8 @@ interactions-package surface for writers and future interaction-specific code.
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from learn.runtime.evaluation import (
     EvaluationResult,

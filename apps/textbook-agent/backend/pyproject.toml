@@ -64,6 +64,30 @@ addopts = "-m 'not integration and not postgres'"
 src = ["src", "tests"]
 line-length = 100
 
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI dependency/parameter defaults are immutable call sites, not mutable defaults.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.params.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+    "fastapi.Cookie",
+    "fastapi.Form",
+    "fastapi.File",
+    "fastapi.Security",
+    "Depends",
+    "Query",
+    "Path",
+    "Body",
+    "Header",
+    "Cookie",
+    "Form",
+    "File",
+    "Security",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",

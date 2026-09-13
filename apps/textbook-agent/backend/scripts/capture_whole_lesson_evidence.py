@@ -26,11 +26,11 @@ from core.database.models import (
 )
 from core.database.session import async_session_factory
 from print.rendering.page_objects.document_assembly import reload_document
-from planning.whole_lesson.native_routing import (
+from print.generation.whole_lesson.native_routing import (
     _document_contract_version,
     generation_is_native_whole_lesson,
 )
-from planning.whole_lesson.repository import PAGE_DOCUMENT_KEY, VISUAL_TOPOLOGY_KEY
+from print.generation.whole_lesson.repository import PAGE_DOCUMENT_KEY, VISUAL_TOPOLOGY_KEY
 from v3_blueprint.planning.persistence import load_chunked_state
 
 EVIDENCE_ROOT = Path(__file__).resolve().parents[4] / "docs" / "evidence" / "whole-lesson-runs"

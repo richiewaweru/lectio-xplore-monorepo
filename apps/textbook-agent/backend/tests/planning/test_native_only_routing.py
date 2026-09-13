@@ -9,9 +9,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi import HTTPException
 
-from print.http.v3_studio import router as studio_router
-from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
 from print.generation.whole_lesson.native_retry import NativeRetryConflict, NativeRetryTarget
+from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
+from print.http.v3_studio import router as studio_router
 
 
 def test_generation_is_native_from_context_flag() -> None:

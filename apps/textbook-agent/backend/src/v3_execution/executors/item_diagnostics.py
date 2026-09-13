@@ -6,10 +6,11 @@ import time
 import uuid
 from typing import Any, Literal
 
-from curriculum.llm_contract_errors import is_transport_error, structured_output_errors
-from print.generation.whole_lesson.failure_policy import classify_failure
 from pydantic import ValidationError
 from pydantic_ai.exceptions import UnexpectedModelBehavior
+
+from curriculum.llm_contract_errors import is_transport_error, structured_output_errors
+from print.generation.whole_lesson.failure_policy import classify_failure
 
 OutcomeClass = Literal["OK", "TRANSPORT", "TIMEOUT", "RATE_LIMIT", "CONTRACT", "SEMANTIC", "UNKNOWN"]
 

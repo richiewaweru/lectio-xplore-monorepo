@@ -4,10 +4,10 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from infra.auth.middleware import get_current_user
 from core.database.models import LearningPackModel
-from infra.database.session import async_session_factory
 from core.entities.user import User
+from infra.auth.middleware import get_current_user
+from infra.database.session import async_session_factory
 from learn.generation.canonical import canonical_document
 from learn.models import (
     CanonicalPackDocumentResponse,

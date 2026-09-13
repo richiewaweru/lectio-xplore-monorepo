@@ -10,6 +10,7 @@ import pytest
 from sqlalchemy import select
 
 from application.unit_lesson import prepare_path_lesson
+from core.database.models import PathLessonModel, UserModel
 from curriculum.path_models import PrepareLessonRequest
 from curriculum.service import approve_path, create_unit, persist_path_plan
 from curriculum.teaching_plan.compatibility import (
@@ -40,10 +41,8 @@ from curriculum.teaching_plan.projections import (
 )
 from curriculum.teaching_plan.revisions import TeachingRevisionStore
 from curriculum.teaching_plan.service import edit_teaching_plan, plan_shared_teaching
-from core.database.models import PathLessonModel, UserModel
 from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 from tests.planning.test_path_bridge import (
-    _fake_component_selector,
     _fake_structural_planner,
 )
 from v3_blueprint.planning.persistence import load_chunked_state
@@ -130,7 +129,6 @@ async def test_p02_s01_shared_prep_no_native_inventory_and_sentinels(db_session)
 def test_p02_s02_objective_refs_scope_and_code_owned_ids() -> None:
     """P02-S02: drift / invented refs / forbidden scope rejected; IDs code-owned."""
     from application.unit_lesson.prepare import (
-        PathPreparationBlocked,
         _normalize_page_concept_card_payload,
     )
     from v3_blueprint.planning.objective_ownership import (

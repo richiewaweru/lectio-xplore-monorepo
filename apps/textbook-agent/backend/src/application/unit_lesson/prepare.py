@@ -8,7 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -31,11 +31,12 @@ from core.database.models import (
     UnitModel,
     UnitScopeContractModel,
 )
+from curriculum.agents import run_component_selector, run_path_structural_planner
 from curriculum.models import (
     PathStructuralPagePlan,
     PathStructuralPlan,
-    PrepareLessonRequest,
     PreparedLessonResponse,
+    PrepareLessonRequest,
 )
 from curriculum.outcomes import actual_context_for_lessons
 from curriculum.schedule import selected_unit_groups
@@ -44,7 +45,6 @@ from curriculum.shapes import (
     deviation_payload,
     lesson_deviations,
 )
-from curriculum.agents import run_component_selector, run_path_structural_planner
 from curriculum.teaching_plan.instance_ids import (
     assert_unique_instance_ids,
     assign_slot_instance_ids,
@@ -68,7 +68,7 @@ from v3_blueprint.skeletons import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _preparation_key(*, version_id: str, lesson_id: str, revision: int) -> str:

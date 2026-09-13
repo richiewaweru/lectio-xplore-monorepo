@@ -71,6 +71,7 @@ def test_manual_lesson_persists_and_reloads_equal() -> None:
 def test_v2_path_does_not_import_section_content() -> None:
     import print.rendering.page_objects.document_assembly as mod
 
-    source = open(mod.__file__, encoding="utf-8").read()
+    with open(mod.__file__, encoding="utf-8") as handle:
+        source = handle.read()
     assert "SectionContent" not in source or "must not" in source
     assert "from contracts.section_content" not in source

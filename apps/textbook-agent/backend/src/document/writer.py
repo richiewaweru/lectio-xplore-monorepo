@@ -7,7 +7,8 @@ Figure writes caption/alt only; assets use the existing figure pipeline.
 from __future__ import annotations
 
 import uuid
-from typing import Any, Literal, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any, Literal
 
 from document.models import (
     DOCUMENT_PRIMITIVE_KINDS,
@@ -17,7 +18,6 @@ from document.models import (
     ListNode,
     ParagraphNode,
     TableNode,
-    document_node_adapter,
 )
 from document.writer_prompts import (
     document_writer_prompt,
@@ -145,9 +145,7 @@ def _looks_like_brief_copy(text: str, brief: str) -> bool:
     if a == b:
         return True
     # Near-verbatim copy of a long brief is also forbidden.
-    if len(b) >= 40 and (a.startswith(b[:40]) or b.startswith(a[:40])):
-        return True
-    return False
+    return bool(len(b) >= 40 and (a.startswith(b[:40]) or b.startswith(a[:40])))
 
 
 def _payload_quality_errors(kind: str, payload: Mapping[str, Any], *, brief: str) -> list[str]:
@@ -285,7 +283,9 @@ async def write_document_primitive(
             "document.writer_schema", _noop_validator
         ),
         provider=provider,
+        # Total provider dispatches for this work item: 1 initial + up to 2 repairs.
         max_repair_attempts=2,
+        max_transport_attempts=1,
     )
     try:
         result = await selected.execute(request, provider=provider)
@@ -296,39 +296,10 @@ async def write_document_primitive(
     payload["kind"] = kind
     quality = _payload_quality_errors(kind, payload, brief=brief)
     if quality:
-        # Stage-local retry once with stricter feedback via a second execute.
-        repair_request = AuthoringRequest(
-            work_order_id=f"{request.work_order_id}-repair",
-            definition=AuthoringDefinition(
-                capability_id=definition.capability_id,
-                native_path=definition.native_path,
-                modes=("generate",),
-                instructions=(
-                    definition.instructions
-                    + "\n\nPrevious attempt failed quality checks:\n- "
-                    + "\n- ".join(quality)
-                    + "\nRewrite learner-facing content. Do not copy the brief."
-                ),
-                payload_schema=definition.payload_schema,
-                required_inputs=definition.required_inputs,
-                validator_refs=definition.validator_refs,
-                definition_hash=definition.definition_hash,
-            ),
-            scoped_request=scoped,
-            inputs=request.inputs,
-            teaching_revision=request.teaching_revision,
-            source_identities=request.source_identities,
-            mode="generate",
-        )
-        try:
-            result = await selected.execute(repair_request, provider=provider)
-        except AuthoringEngineError as exc:
-            raise DocumentWriterError(exc.code, str(exc)) from exc
-        payload = dict(result.payload)
-        payload["kind"] = kind
-        quality = _payload_quality_errors(kind, payload, brief=brief)
-        if quality:
-            raise DocumentWriterError("INVALID_PAYLOAD", "; ".join(quality))
+        # Do not open a second AuthoringEngine.execute loop — that multiplies the
+        # call budget. Surface quality failure so the durable repair path (same
+        # work-item counter) can reserve another call explicitly.
+        raise DocumentWriterError("INVALID_PAYLOAD", "; ".join(quality))
 
     return _normalize_payload(
         kind,  # type: ignore[arg-type]

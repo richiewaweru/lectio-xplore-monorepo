@@ -18,20 +18,26 @@ from curriculum.teaching_plan.models import (
 from learn.generation.activity_authoring import plan_activity_authoring
 from learn.generation.native_selection import (
     LearnSelectionDecision,
-    SelectionError as LearnSelectionError,
     build_learn_selection_snapshot,
     rank_learn_interaction_candidates,
     select_learn_deterministically,
     select_learn_first_legal,
     validate_learn_selection,
 )
+from learn.generation.native_selection import (
+    SelectionError as LearnSelectionError,
+)
 from learn.generation.work_orders import (
     WriterRequestLeakError as LearnWriterLeakError,
+)
+from learn.generation.work_orders import (
     build_learn_writer_request,
     compile_learn_work_orders,
 )
 from learn.resources.native_policy import (
     default_learn_policy,
+)
+from learn.resources.native_policy import (
     policy_version_and_hash as learn_policy_hash,
 )
 from learn.resources.selection import (
@@ -41,22 +47,27 @@ from learn.resources.selection import (
 )
 from print.generation.selection_snapshot import (
     PrintSelectionDecision,
-    SelectionError as PrintSelectionError,
     build_print_selection_snapshot,
     validate_print_selection,
 )
+from print.generation.selection_snapshot import (
+    SelectionError as PrintSelectionError,
+)
 from print.generation.work_orders import (
     WriterRequestLeakError as PrintWriterLeakError,
+)
+from print.generation.work_orders import (
     build_print_writer_request,
     compile_print_work_orders,
     decisions_cover_teaching_plan,
 )
 from print.resources.native_policy import (
     default_print_policy,
+)
+from print.resources.native_policy import (
     policy_version_and_hash as print_policy_hash,
 )
 from print.resources.selection import (
-    NoCompatiblePrintCapabilityError,
     build_print_candidate_map,
     derive_print_block_candidates,
 )
@@ -428,10 +439,6 @@ def test_p04_n05_coverage_dependencies_and_assets() -> None:
 
     # Print coverage
     print_plan = plan
-    print_candidates = {
-        "b-up": ("prose",),
-        "b-dep": ("list",),
-    }
     decisions = [
         PrintSelectionDecision(block_id="b-up", form_id="prose"),
         PrintSelectionDecision(block_id="b-dep", form_id="list"),
@@ -460,7 +467,7 @@ def test_p04_n06_policy_change_shifts_eligibility_without_component_edits() -> N
         action="order-items",
         support="independent",
     )
-    plan = _plan(block, plan_id="tp-n06")
+    _plan(block, plan_id="tp-n06")
 
     baseline = derive_learn_block_candidates(
         block_id=block.id,

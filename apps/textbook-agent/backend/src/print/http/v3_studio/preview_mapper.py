@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from v3_blueprint.compiler import BlueprintCompiler
-from v3_execution.component_aliases import canonical_component_id
-
 from print.http.v3_studio.dtos import (
     BlueprintPreviewDTO,
     V3AnchorExampleDTO,
@@ -12,7 +9,9 @@ from print.http.v3_studio.dtos import (
     V3QuestionPlanDTO,
     V3SectionPlanItemDTO,
 )
+from v3_blueprint.compiler import BlueprintCompiler
 from v3_blueprint.models import ProductionBlueprint
+from v3_execution.component_aliases import canonical_component_id
 
 
 def _teacher_label_from_slug(slug: str) -> str:
