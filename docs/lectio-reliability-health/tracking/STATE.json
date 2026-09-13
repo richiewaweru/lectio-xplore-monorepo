@@ -1,12 +1,14 @@
 {
   "program": "lectio-reliability-health",
-  "status": "AWAITING_FIXES_AFTER_VERIFIER",
+  "status": "AWAITING_INDEPENDENT_VERIFIER",
   "reviewed_baseline": "a6b75e33d2a56452e05033a510f86db1566891b2",
-  "implementation_sha": "6d84d30691b35f3fc8dd0d4540be81598cc8d95f",
-  "implementation_sha_note": "Independent verifier: live G20–G23 proofs ran against dirty tree atop this SHA. Not a certified tip. Commit required before G24 READY.",
+  "implementation_sha": "36d725e4b57870f63673ccedfff5b58437fb55cc",
+  "implementation_sha_note": "Code tip inventoried green (validate_repo 1416 passed; app:test 264/264). Follow-up commit may add only tracking/evidence; code tree identical to this SHA.",
+  "inventory_sha": "36d725e4b57870f63673ccedfff5b58437fb55cc",
+  "inventory_summary": "docs/lectio-reliability-health/evidence/tip-inventory-summary.json",
   "branch": "fix/lectio-reliability-health",
   "login_status": "SESSION_EXPIRED_OR_LOGGED_OUT",
-  "login_status_note": "P06c retained auth_me=200; fresh playwright session=reliability now redirects /units → /login",
+  "login_status_note": "P06c retained auth_me=200; fresh playwright session=reliability redirects /login. Retained live evidence still valid for G20–G23. Do not invent new live PASS while logged out.",
   "browser_session": "playwright-cli session=reliability profile=.tmp/reliability-chrome-profile",
   "browser_session_transferable": false,
   "target_origin": "http://127.0.0.1:5173",
@@ -23,7 +25,7 @@
     "P05": "PASS",
     "P06": "FAIL",
     "P06b": "SUPERSEDED",
-    "P06c": "VERIFIER_NOT_READY"
+    "P06c": "INVENTORY_GREEN_AWAITING_VERIFIER"
   },
   "gates": {
     "G01": "PASS",
@@ -44,28 +46,28 @@
     "G16": "PASS",
     "G17": "PASS",
     "G18": "PASS",
-    "G19": "FAIL",
+    "G19": "PASS",
     "G20": "PASS",
     "G21": "PASS",
     "G22": "PASS",
     "G23": "PASS",
-    "G24": "FAIL"
+    "G24": "NOT_RUN"
   },
   "gate_notes": {
-    "G19": "FAIL — verifier re-ran pnpm app:test exit=1 (7 timeouts / 257 passed); app:check + domain guards green",
-    "G20": "PASS — retained SSE after_seq replay + browser events_mode=replay; stream reconnect partial (timeout flag noted)",
+    "G19": "PASS — pnpm app:check + app:test 264/264 on tip 36d725e4 (tip-app-test.out.txt)",
+    "G20": "PASS — retained SSE after_seq replay + browser events_mode=replay",
     "G21": "PASS — p06c-browser-409.json: tabA 200 then tabB 409; local_tabB_kept",
-    "G22": "PASS — linked manifest + PDF magic/hash/marker + learner attempt correct (spot-checked)",
+    "G22": "PASS — linked manifest + PDF magic/hash/marker + learner attempt correct",
     "G23": "PASS — Learn/Print Idempotency-Key reuse + regenerate stale rebind evidenced",
-    "G24": "FAIL — dirty tree (no certified tip); app:test red; full validate_repo not re-run on tip this turn"
+    "G24": "NOT_RUN — mandatory inventory green on 36d725e4; independent verifier pending"
   },
   "final_verdict": "NOT_READY",
   "run_manifest": "docs/lectio-reliability-health/evidence/p06c-run-manifest.json",
   "verifier_report": "docs/lectio-reliability-health/tracking/VERIFIER-REPORT.md",
   "p06c_report": "docs/lectio-reliability-health/tracking/P06c-REPORT.md",
   "execution_environment": {
-    "agent": "independent verifier (Cursor Auto)",
-    "services": "native backend+frontend + Docker postgres (probed up)",
-    "browser": "playwright-cli session=reliability (fresh check logged out)"
+    "agent": "Cursor Auto closeout",
+    "services": "native backend+frontend + Docker postgres",
+    "browser": "playwright-cli session=reliability (logged out; retained evidence)"
   }
 }

@@ -1,0 +1,20 @@
+{
+  "program": "lectio-reliability-health",
+  "phase": "P06c",
+  "inventory_sha": "36d725e4b57870f63673ccedfff5b58437fb55cc",
+  "recorded_at_utc": "2026-09-13T15:05:00Z",
+  "note": "Full 05_COMMANDS.md inventory on tip after ruff/__all__ sort + composition_bridge test alignment. validate_repo covers focused learn/print_learn suites.",
+  "commands": {
+    "pnpm contracts:check": {"exit": 0, "log": "tip-contracts-check.out.txt"},
+    "pnpm contracts:test": {"exit": 0, "log": "tip-contracts-test.out.txt"},
+    "pnpm page:check": {"exit": 0, "log": "tip-page-check.out.txt"},
+    "pnpm page:test": {"exit": 0, "log": "tip-page-test.out.txt"},
+    "pnpm app:check": {"exit": 0, "log": "tip-app-check.out.txt"},
+    "pnpm app:test": {"exit": 0, "log": "tip-app-test.out.txt", "detail": "264 passed / 264"},
+    "pnpm program:domain-guards": {"exit": 0, "log": "tip-domain-guards.out.txt"},
+    "check_architecture.py --format text": {"exit": 0, "log": "tip-architecture.out.txt"},
+    "pytest admission+reliability+composition_bridge": {"exit": 0, "log": "tip-reliability-pytest.out.txt"},
+    "validate_repo.py --scope backend": {"exit": 0, "log": "tip-validate-backend.out.txt", "detail": "1416 passed, 6 skipped, 1 deselected"}
+  },
+  "all_exit_zero": true
+}

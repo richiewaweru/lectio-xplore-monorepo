@@ -1,8 +1,8 @@
 {
   "program": "lectio-reliability-health",
   "phase": "P06c",
-  "implementation_sha": "6d84d30691b35f3fc8dd0d4540be81598cc8d95f",
-  "implementation_sha_note": "Live journey executed against dirty working tree including: composition_bridge soft-fail empty source_question_ids; failed_terminal prep non-reuse; regenerate marks realizations stale; admit rebinds stale rows; lesson status uses pack_id. Commit required before G24 READY.",
+  "implementation_sha": "36d725e4b57870f63673ccedfff5b58437fb55cc",
+  "implementation_sha_note": "Inventoried tip: composition_bridge soft-fail + bridge tests; failed_terminal non-reuse; regenerate stale rebind; Vitest suite-load timeouts; ruff __all__/import sort; retained P06c live evidence. Inventory: tip-inventory-summary.json (all exit 0).",
   "branch": "fix/lectio-reliability-health",
   "recorded_at_utc": "2026-09-13T13:35:00Z",
   "environment": {
@@ -116,5 +116,11 @@
     "G22": "PASS",
     "G23": "PASS",
     "G24": "PENDING_INDEPENDENT_VERIFIER"
+  },
+  "inventory": {
+    "sha": "36d725e4b57870f63673ccedfff5b58437fb55cc",
+    "summary": "tip-inventory-summary.json",
+    "validate_repo_backend_exit": 0,
+    "app_test_exit": 0
   }
 }

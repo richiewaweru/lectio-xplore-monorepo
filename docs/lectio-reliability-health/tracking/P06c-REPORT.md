@@ -22,22 +22,25 @@ See `docs/lectio-reliability-health/evidence/p06c-run-manifest.json`.
 
 | Gate | Verdict | Evidence |
 | --- | --- | --- |
+| G19 | PASS | `pnpm app:test` 264/264 on tip (`tip-app-test.out.txt`; also `p06c-app-test-fix.out.txt`) |
 | G20 | PASS | SSE replay/stream reconnect + browser `events_mode=replay` |
 | G21 | PASS | Browser competing PUT: 200 then 409; local TAB-B kept |
 | G22 | PASS | Full linked journey; PDF `p06c-print.pdf` (88405 bytes) marker extracted |
 | G23 | PASS | Learn+Print Idempotency-Key replay; regenerate recovery |
-| G24 | NOT_RUN | Independent verifier; dirty tree |
+| G24 | NOT_RUN | Inventory green on tip; independent verifier pending |
 
-## Artifacts
+## Focused tests added
 
-- `evidence/p06c-run-manifest.json`
-- `evidence/p06c-print.pdf` + `p06c-print-extracted.txt` + `p06c-pdf-meta.json`
-- `evidence/p06c-browser-409.json`
-- `evidence/p06c-learner-attempt.json` (attempt `434fa0b8-…` correct)
-- Screenshots: `p06c-print-studio.png`, `p06c-print-reloaded.png`
+- `uv run pytest tests/application/test_p02_admission_stages.py` — `test_g07_failed_terminal_prep_is_not_reused`, `test_g07_regenerate_stale_then_admit_rebinds_identity`
+- `tests/print_learn/test_composition_bridge.py` — bare choices without sources fall back to document; bound sources keep `choices`
+
+## Tip SHA (inventoried)
+
+`36d725e4b57870f63673ccedfff5b58437fb55cc`
+
+Inventory summary: `docs/lectio-reliability-health/evidence/tip-inventory-summary.json` — all listed commands exit 0, including `validate_repo.py --scope backend` (1416 passed).
 
 ## Remaining for READY
 
-1. Commit dirty reliability fixes to a tip SHA.
-2. Independent verifier per `prompts/02_VERIFIER.md` reruns command inventory and re-checks G01–G24.
-3. Do not merge until READY.
+1. Independent verifier per `prompts/02_VERIFIER.md`.
+2. Do not merge until READY.
