@@ -471,7 +471,7 @@ def _draft_for_packet(packet, *, item_id: str | None) -> TeachingPlanDraft:
     )
 
 
-async def _fake_dispatch(ctx):  # noqa: ANN001
+async def _fake_dispatch(ctx, **_kwargs):  # noqa: ANN001
     """MOCK Print writer outcomes — deterministic by object type."""
     planned = ctx.planned
     if planned.object == "figure":
