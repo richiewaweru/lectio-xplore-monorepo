@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pytest
 from sqlalchemy import select
-
 from tests.remaining_fixes.r04_fixtures import (
     build_envelope_sequence_document,
     correct_order,
@@ -12,8 +11,8 @@ from tests.remaining_fixes.r04_fixtures import (
     interaction_id,
     publish_lesson,
     r04_client,
-    seed_r04_user,
     section_id,
+    seed_r04_user,
 )
 
 

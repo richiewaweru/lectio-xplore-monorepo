@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from curriculum.teaching_plan.models import TeachingPlan
 
@@ -44,8 +45,7 @@ def instructional_coverage(plan: TeachingPlan | Mapping[str, Any]) -> dict[str, 
             action = learner.get("action") if isinstance(learner, dict) else None
             if action:
                 actions.append(str(action))
-            for sid in block_sources:
-                source_ids.append(sid)
+            source_ids.extend(block_sources)
             if intent in visual_intents:
                 visual_block_ids.append(bid)
 

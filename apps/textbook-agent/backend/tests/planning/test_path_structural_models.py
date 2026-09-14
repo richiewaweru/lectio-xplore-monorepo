@@ -13,9 +13,9 @@ matter and pull in opposite directions:
 from __future__ import annotations
 
 import pytest
+from core.llm.deepseek_schema import to_deepseek_strict_schema
 from pydantic import ValidationError
 
-from core.llm.deepseek_schema import to_deepseek_strict_schema
 from curriculum.path_models import (
     PathStructuralCard,
     PathStructuralPageCard,

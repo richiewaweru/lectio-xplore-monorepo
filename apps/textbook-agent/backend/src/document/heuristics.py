@@ -71,7 +71,7 @@ def choose_document_primitive(
         token in intent for token in ("defin", "explain", "clarif", "introduc", "summar")
     ):
         if _warning_like(brief, block.evidence or ""):
-            return "callout", f"define/explain with warning cues → callout"
+            return "callout", "define/explain with warning cues → callout"
         return "paragraph", f"define/explain intent {block.intent!r} → paragraph"
 
     if _warning_like(brief, block.evidence or ""):

@@ -1,0 +1,10 @@
+﻿
+> lectio-xplore-monorepo@ program:domain-guards C:\Projects\lectio
+> python tools/xplore-program/check_domain_boundaries.py --format text && python tools/xplore-program/check_backend_domain_boundaries.py --format text && python tools/xplore-program/check_frontend_store_boundaries.py --format text && python tools/xplore-program/check_zero_legacy.py && python -m pytest tools/xplore-program/tests/test_backend_domain_boundaries.py tools/xplore-program/tests/test_phase00_baseline.py tools/xplore-program/tests/test_frontend_store_boundaries.py -q
+
+Domain boundary check: PASS (0 violations)
+Backend domain boundary check: PASS (0 violations)
+Frontend store boundary check: PASS (0 violations)
+ZERO_LEGACY_GUARD PASS
+........                                                                 [100%]
+8 passed in 0.95s

@@ -6,7 +6,6 @@ import hashlib
 import json
 from pathlib import Path
 
-
 from contracts.lectio_page import (
     CATALOGUE_VERSION,
     PAGE_OBJECT_IDS,

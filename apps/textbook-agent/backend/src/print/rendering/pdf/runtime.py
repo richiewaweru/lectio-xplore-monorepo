@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from threading import Lock
 
@@ -25,7 +25,7 @@ def cleanup_stale_pdf_exports(*, path_value: str, retention_seconds: int) -> int
     if not temp_dir.exists():
         return 0
 
-    cutoff = datetime.now(timezone.utc).timestamp() - retention_seconds
+    cutoff = datetime.now(UTC).timestamp() - retention_seconds
     removed = 0
     for path in temp_dir.iterdir():
         try:

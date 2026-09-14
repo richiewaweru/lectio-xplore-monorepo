@@ -1,0 +1,13 @@
+﻿
+> lectio-xplore-monorepo@ page:check C:\Projects\lectio
+> pnpm --filter @lectio/page check
+
+apps/textbook-agent/frontend             | ΓÇëWARNΓÇë The field "pnpm.overrides" was found in C:\Projects\lectio\apps\textbook-agent\frontend/package.json. This will not take effect. You should configure "pnpm.overrides" at the root of the workspace instead.
+
+> @lectio/page@0.1.0-experimental.0 check C:\Projects\lectio\packages\lectio-page
+> svelte-kit sync && svelte-check --tsconfig ./tsconfig.json
+
+Loading svelte-check in workspace: c:\Projects\lectio\packages\lectio-page
+Getting Svelte diagnostics...
+
+svelte-check found 0 errors and 0 warnings

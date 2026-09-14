@@ -1,18 +1,17 @@
 from __future__ import annotations
 
-import base64
 import asyncio
+import base64
 import inspect
 import os
-from pathlib import Path
 from contextlib import contextmanager
+from pathlib import Path
 
 import httpx
 
 from media.providers.openai_image_client import OpenAICompatibleImageClient
 from media.providers.registry import get_image_client, load_image_provider_spec
 from media.providers.xai_image_client import XAIImageClient
-
 
 _IMAGE_ENV_KEYS = (
     "IMAGE_PROVIDER",

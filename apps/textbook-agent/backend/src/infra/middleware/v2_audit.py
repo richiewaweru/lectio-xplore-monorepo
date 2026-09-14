@@ -1,16 +1,4 @@
-from __future__ import annotations
-
-import logging
-from typing import Any
-
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-
-from core.database.models import V2AuditEventModel
-from infra.database.session import async_session_factory
-
-
-logger = logging.getLogger("audit.v2")
+from __future__ import annotationsimport loggingfrom typing import Anyfrom starlette.middleware.base import BaseHTTPMiddlewarefrom starlette.requests import Requestfrom core.database.models import V2AuditEventModelfrom infra.database.session import async_session_factorylogger = logging.getLogger("audit.v2")
 _MUTATION_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 

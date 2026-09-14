@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import patch
 
 import pytest
 
@@ -11,21 +10,17 @@ from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock, Tea
 from infra.authoring import AuthoringEngineError, AuthoringProviderCall
 from infra.authoring.policy_resolver import (
     LEGACY_ABSENT_VERSION,
-    POLICY_VERSION,
     resolve_authoring_policy,
-    with_assessment_fallback,
 )
 from learn.generation.authoring_adapter import (
-    build_learn_authoring_registry,
     run_learn_authoring,
 )
 from learn.generation.interaction_writer import write_interaction_from_request
 from learn.generation.native_selection import LearnSelectionDecision, LearnSelectionSnapshot
 from learn.generation.preparation_context import learn_preparation_context_from_state
 from learn.generation.work_orders import compile_learn_work_orders
-from learn.runtime.evaluation import evaluate_interaction
 from learn.resources.selection import load_learn_writer_view
-
+from learn.runtime.evaluation import evaluate_interaction
 
 EVAP_FACT = (
     "Evaporation changes liquid water into water vapour and can occur below boiling point."

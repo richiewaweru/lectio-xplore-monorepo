@@ -5,7 +5,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-
 # --- Generated blocks (proposal 2 Step 1)
 
 
@@ -277,7 +276,7 @@ class VisualPlanItem(BaseModel):
     frames: list[VisualFrameSpec] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def normalize_closed_labels(self) -> "VisualPlanItem":
+    def normalize_closed_labels(self) -> VisualPlanItem:
         if self.visual_style != "diagram_precision":
             return self
         labels: list[str] = []
@@ -406,10 +405,7 @@ __all__ = [
     "BookletStatus",
     "CompiledWorkOrders",
     "Correction",
-    "WriterMisconception",
     "DraftPack",
-    "SectionAssemblyDiagnostic",
-    "SectionAssemblyStatus",
     "ExecutionResult",
     "ExecutorOutcome",
     "GeneratedAnswerKeyBlock",
@@ -419,12 +415,15 @@ __all__ = [
     "LearnerProfileSpec",
     "QuestionWriterWorkOrder",
     "RegisterSpec",
+    "SectionAssemblyDiagnostic",
+    "SectionAssemblyStatus",
     "SectionWriterWorkOrder",
     "SourceOfTruthEntry",
     "VisualDependency",
     "VisualFrameSpec",
     "VisualGeneratorWorkOrder",
     "VisualPlanItem",
+    "WriterMisconception",
     "WriterQuestion",
     "WriterSection",
     "WriterSectionComponent",

@@ -15,7 +15,6 @@ from v3_execution.models import (
 )
 from v3_execution.runtime.lectio_validation import validate_section_content
 
-
 # Question-writer blocks become a Lectio practice bucket only when the plan
 # explicitly asks for the component that owns that bucket.
 PRACTICE_BUCKET_COMPONENTS = {"practice-stack"}

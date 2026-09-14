@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from core.policies.loader import passive_learner_actions
 from curriculum.approved_items import approved_item_kind
@@ -159,10 +160,16 @@ def _apply_approved_item_filter(
     *,
     source_question_ids: Sequence[str],
     approved_by_id: Mapping[str, Any],
+    intent: str | None = None,
 ) -> tuple[list[str], dict[str, str]]:
     """Assessment forms bind to teaching-owned items; never discard item IDs."""
     excluded: dict[str, str] = {}
     if not source_question_ids:
+        # check-understanding without approved sources has no legal Print form.
+        if intent == "check-understanding":
+            for object_id in legal:
+                excluded[object_id] = "assessment_form_without_source"
+            return [], excluded
         filtered = [
             object_id
             for object_id in legal
@@ -243,17 +250,14 @@ def derive_print_block_candidates(
         if intents and intent not in intents and card is not None:
             excluded[form_id] = "intent_unsupported"
             continue
-        if action:
-            if actions and action not in actions:
-                if not (
-                    action in PASSIVE_ACTIONS and actions.intersection(PASSIVE_ACTIONS)
-                ):
-                    excluded[form_id] = "action_unsupported"
-                    continue
-        if form_id in asset_required or bool((card or {}).get("requires_asset")):
-            if not assets:
-                excluded[form_id] = "asset_unavailable"
-                continue
+        if action and actions and action not in actions and not (
+            action in PASSIVE_ACTIONS and actions.intersection(PASSIVE_ACTIONS)
+        ):
+            excluded[form_id] = "action_unsupported"
+            continue
+        if (form_id in asset_required or bool((card or {}).get("requires_asset"))) and not assets:
+            excluded[form_id] = "asset_unavailable"
+            continue
         if form_id in budgets and budgets[form_id] <= 0:
             excluded[form_id] = "budget_exhausted"
             continue
@@ -266,6 +270,7 @@ def derive_print_block_candidates(
         legal,
         source_question_ids=tuple(source_question_ids or ()),
         approved_by_id=approved_by_id,
+        intent=intent,
     )
     excluded.update(item_excluded)
 

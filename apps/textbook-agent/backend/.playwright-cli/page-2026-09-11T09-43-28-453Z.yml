@@ -1,0 +1,88 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - navigation [ref=e4]:
+      - link "Lectio" [ref=e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=e8]:
+        - link "Home" [ref=e9] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=e11] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=e6]:
+    - generic [ref=e221]:
+      - generic [ref=e222]:
+        - generic [ref=e223]:
+          - link "← Units" [ref=e224] [cursor=pointer]:
+            - /url: /units
+          - paragraph [ref=e225]: Mathematics · Grade 6
+          - heading "Understanding Ratios" [level=1] [ref=e226]
+          - paragraph [ref=e227]: explain what a ratio is and use ratios to compare quantities in real-life situations such as recipes and groups
+        - generic [ref=e228]:
+          - generic [ref=e229]: Locked in
+          - button "Replan the lessons" [ref=e230] [cursor=pointer]
+      - navigation "Unit workspace views" [ref=e231]:
+        - button "Lessons" [ref=e232] [cursor=pointer]
+        - button "Schedule" [ref=e233] [cursor=pointer]
+        - button "Groups" [ref=e234] [cursor=pointer]
+        - button "Resources" [ref=e235] [cursor=pointer]
+        - button "Results" [ref=e236] [cursor=pointer]
+        - button "History" [ref=e237] [cursor=pointer]
+      - paragraph [ref=e239]: 3 lessons
+      - generic [ref=e240]:
+        - complementary "Your lessons" [ref=e241]:
+          - paragraph [ref=e242]: Your lessons
+          - list [ref=e243]:
+            - listitem [ref=e244]:
+              - button "1 Introducing Ratios prepared" [ref=e245]:
+                - generic [ref=e246]: "1"
+                - generic [ref=e247]:
+                  - strong [ref=e248]: Introducing Ratios
+                  - generic [ref=e249]: prepared
+            - listitem [ref=e250]:
+              - button "2 Ratios in Real‑life Comparisons needs lesson 1" [ref=e251]:
+                - generic [ref=e252]: "2"
+                - generic [ref=e253]:
+                  - strong [ref=e254]: Ratios in Real‑life Comparisons
+                  - generic [ref=e255]: needs lesson 1
+            - listitem [ref=e256]:
+              - button "3 Equivalent Ratios and Simple Scaling needs lesson 1" [ref=e257]:
+                - generic [ref=e258]: "3"
+                - generic [ref=e259]:
+                  - strong [ref=e260]: Equivalent Ratios and Simple Scaling
+                  - generic [ref=e261]: needs lesson 1
+        - main [ref=e262]:
+          - generic [ref=e264]:
+            - paragraph [ref=e265]: Lesson 1
+            - heading "Introducing Ratios" [level=2] [ref=e266]
+          - generic [ref=e267]:
+            - generic [ref=e268]:
+              - generic [ref=e269]: Title
+              - textbox "Title" [ref=e270]: Introducing Ratios
+            - generic [ref=e271]:
+              - generic [ref=e272]: What students will be able to do
+              - textbox "What students will be able to do" [ref=e273]: understand a ratio as a comparison of two quantities, write ratios in three forms, and distinguish part-to-part and part-to-whole comparisons.
+            - generic [ref=e274]:
+              - generic [ref=e275]: Must establish one per line
+              - textbox "Must establish one per line" [ref=e276]: explain that a ratio compares two quantities (e.g., 3 cats and 2 dogs). write a ratio in the forms a:b, a to b, and a/b. identify when a ratio compares one part to another part (part-to-part) or one part to the whole group (part-to-whole).
+            - button "Save lesson changes" [ref=e277] [cursor=pointer]
+          - generic [ref=e278]:
+            - generic [ref=e279]:
+              - paragraph [ref=e280]: Before this lesson
+              - heading "What earlier lessons it requires" [level=3] [ref=e281]
+            - paragraph [ref=e282]: Nothing — this can be the starting point.
+          - button "Show shape debug" [ref=e284] [cursor=pointer]
+          - generic [ref=e285]:
+            - generic [ref=e286]:
+              - paragraph [ref=e287]: Preparation
+              - heading "Ready when you are" [level=3] [ref=e288]
+              - paragraph [ref=e289]: Print and Learn are generated independently from the Teaching Plan.
+            - generic [ref=e290]:
+              - button "Generate Print" [ref=e291] [cursor=pointer]
+              - button "Generate Learn" [ref=e292] [cursor=pointer]
+              - button "Check preparation status" [ref=e293] [cursor=pointer]
+      - region "Edit your lessons by chat" [ref=e294]:
+        - paragraph [ref=e295]: Edit your lessons
+        - generic [ref=e296]:
+          - textbox "e.g. Combine lessons 2 and 3, or add something about fractions" [ref=e297]
+          - button "Send" [disabled] [ref=e298]
+  - generic [ref=e220]: Unit · Lectio

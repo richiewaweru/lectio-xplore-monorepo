@@ -7,15 +7,17 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app import app
-from core.auth.middleware import get_current_user
-from core.events import TraceClosedEvent, TraceRegisteredEvent
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
 from core.entities.user import User
+from core.events import TraceClosedEvent, TraceRegisteredEvent
+from infra.telemetry.v3_trace import event_types as trace_events
+from infra.telemetry.v3_trace.repository import V3TraceRepository
 from print.http.v3_studio import router as v3_router
 from print.http.v3_studio.dtos import V3InputForm
 from print.http.v3_studio.planning_artifact import (
@@ -23,10 +25,8 @@ from print.http.v3_studio.planning_artifact import (
     build_planning_artifact,
     parse_planning_artifact,
 )
-from print.http.v3_studio.session_store import v3_studio_store
 from print.http.v3_studio.router import _pump_sse_to_queue
-from infra.telemetry.v3_trace import event_types as trace_events
-from infra.telemetry.v3_trace.repository import V3TraceRepository
+from print.http.v3_studio.session_store import v3_studio_store
 
 TEST_USER_A = User(
     id="v3-studio-user-a",
@@ -205,19 +205,18 @@ async def test_v3_generation_events_emit_heartbeat_before_late_chunk() -> None:
 
     with patch.object(v3_router, "HEARTBEAT_SECONDS", 0.05):
         producer = asyncio.create_task(delayed_emit())
-        async with _client() as client:
-            async with client.stream(
-                "GET",
-                f"/api/v1/v3/generations/{generation_id}/events",
-            ) as resp:
-                assert resp.status_code == 200
-                chunks: list[bytes] = []
-                async for chunk in resp.aiter_bytes():
-                    chunks.append(chunk)
-                    joined = b"".join(chunks)
-                    if b": ping\n\n" in joined and b"component_ready" in joined:
-                        break
-                payload = b"".join(chunks)
+        async with _client() as client, client.stream(
+            "GET",
+            f"/api/v1/v3/generations/{generation_id}/events",
+        ) as resp:
+            assert resp.status_code == 200
+            chunks: list[bytes] = []
+            async for chunk in resp.aiter_bytes():
+                chunks.append(chunk)
+                joined = b"".join(chunks)
+                if b": ping\n\n" in joined and b"component_ready" in joined:
+                    break
+            payload = b"".join(chunks)
         await producer
 
     assert b": ping\n\n" in payload

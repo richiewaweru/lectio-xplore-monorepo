@@ -7,9 +7,6 @@ from typing import Any, TypeVar
 from pydantic import BaseModel
 from pydantic_ai import Agent
 
-from infra.authoring.capability_selector import CapabilitySelection
-from infra.config import settings
-from infra.llm.runner import RetryPolicy, run_llm
 from curriculum.llm_contract_errors import structured_output_errors as _schema_errors
 from curriculum.models import (
     CanonicalPathPlan,
@@ -20,6 +17,7 @@ from curriculum.models import (
     PathStructuralPagePlan,
     PathStructuralPlan,
 )
+from curriculum.planner_diagnostics import log_planner_attempt_failed
 from curriculum.prompts import (
     capability_selector_prompt,
     component_selector_prompt,
@@ -28,7 +26,6 @@ from curriculum.prompts import (
     path_structural_planner_prompt,
     plan_editor_prompt,
 )
-from curriculum.planner_diagnostics import log_planner_attempt_failed
 from curriculum.validation import (
     PathPlanningError,
     PathValidationError,
@@ -36,7 +33,10 @@ from curriculum.validation import (
     normalize_path_plan_draft,
     validate_canonical_path_plan,
 )
-from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
+from infra.authoring.capability_selector import CapabilitySelection
+from infra.config import settings
+from infra.llm.runner import RetryPolicy, run_llm
+from v3_execution.config import get_v3_model_settings, get_v3_slot
 from v3_execution.config.models import (
     NATIVE_CAPABILITY_SELECTOR,
     V2_COMPONENT_SELECTOR,
@@ -49,7 +49,6 @@ from v3_execution.llm_helpers import (
     NO_OUTPUT_RETRY,
     prepare_structured_agent,
 )
-
 
 OutputT = TypeVar("OutputT", bound=BaseModel)
 
@@ -139,7 +138,7 @@ async def run_path_planner(
                 user_payload=payload,
                 trace_id=f"{tid}:plan{attempt}",
             )
-        except Exception as exc:  # noqa: BLE001 - classified below
+        except Exception as exc:
             errors = _schema_errors(exc)
             previous_output = None
             log_planner_attempt_failed(
@@ -303,7 +302,7 @@ async def run_path_structural_planner(
                 user_payload=payload,
                 trace_id=f"{tid}:structural{attempt}",
             )
-        except Exception as exc:  # noqa: BLE001 - classified below, re-raised on attempt 2
+        except Exception as exc:
             errors = _schema_errors(exc)
             # Raw model text never escapes _run_structured, so there is no
             # previous output to echo on this branch. The pydantic messages are
@@ -423,7 +422,7 @@ async def run_plan_chat_edit(
                 user_payload=payload,
                 trace_id=f"{tid}:edit{attempt}",
             )
-        except Exception as exc:  # noqa: BLE001 - classified below
+        except Exception as exc:
             errors = _schema_errors(exc)
             previous_output = None
             log_planner_attempt_failed(

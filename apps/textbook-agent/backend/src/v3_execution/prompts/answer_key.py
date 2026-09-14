@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from v3_execution.prompts.formatting import format_source_of_truth
 from v3_execution.models import AnswerKeyExecutorWorkOrder
+from v3_execution.prompts.formatting import format_source_of_truth
 
 
 def build_answer_key_prompt(order: AnswerKeyExecutorWorkOrder) -> str:

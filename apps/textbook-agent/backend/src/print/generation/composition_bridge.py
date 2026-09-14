@@ -8,7 +8,8 @@ selector (closed catalogue LLM selection).
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
 from document.composer import compose_document_plan
@@ -19,8 +20,11 @@ from print.generation.document_form_map import (
     PRIMITIVE_TO_PRINT_OBJECT,
     to_print_object,
 )
+from print.generation.native_production import (
+    package_contract_hash,
+    teaching_plan_content_hash,
+)
 from print.generation.selection_snapshot import (
-    PrintSelectionDecision,
     PrintSelectionSnapshot,
     snapshot_from_form_plan,
 )
@@ -29,14 +33,9 @@ from print.generation.task_treatments import (
     print_treatment_for_learner_action,
 )
 from print.generation.whole_lesson.form_plan import FormDecision, FormPlan
-from print.generation.work_orders import compile_print_work_orders
 from print.resources.native_policy import (
     default_print_policy,
     policy_version_and_hash,
-)
-from print.generation.native_production import (
-    package_contract_hash,
-    teaching_plan_content_hash,
 )
 
 
@@ -84,6 +83,10 @@ def _layer_print_tasks(
             source_ids = list(getattr(block, "source_question_ids", None) or [])
             if treatment is None and source_ids:
                 treatment = "choices" if len(source_ids) == 1 else "questions"
+            # Never emit questions/choices without bound sources — PlannedBlock
+            # and writers require source_question_id(s). Fall back to document.
+            if treatment in {"questions", "choices"} and not source_ids:
+                treatment = None
             if treatment is not None:
                 decisions.append(
                     CompositionDecision(
@@ -164,6 +167,42 @@ def composition_to_form_plan(
     return FormPlan.model_validate({"sections": sections})
 
 
+def _ensure_required_visual_figures(
+    teaching_plan: TeachingPlan,
+    form_plan: FormPlan,
+    required_visual_slots: Sequence[str],
+) -> FormPlan:
+    """Force at least one figure in each packet-required visual slot."""
+    required = {str(slot) for slot in required_visual_slots if str(slot).strip()}
+    if not required:
+        return form_plan
+    sections: list[dict[str, Any]] = []
+    for section in form_plan.sections:
+        forms = list(section.forms)
+        if section.slot_id in required and not any(f.object == "figure" for f in forms):
+            rewrite_at = next(
+                (
+                    idx
+                    for idx, decision in enumerate(forms)
+                    if decision.object not in PRINT_TASK_TREATMENTS
+                ),
+                0 if forms else None,
+            )
+            if rewrite_at is not None and forms:
+                prior = forms[rewrite_at]
+                forms[rewrite_at] = prior.model_copy(
+                    update={
+                        "object": "figure",
+                        "reason": (
+                            f"{prior.reason}; forced figure for required visual "
+                            f"slot {section.slot_id!r}"
+                        ).strip("; "),
+                    }
+                )
+        sections.append({"slot_id": section.slot_id, "forms": forms})
+    return FormPlan.model_validate({"sections": sections})
+
+
 async def build_print_production_from_composition(
     *,
     teaching_plan: TeachingPlan,
@@ -172,6 +211,11 @@ async def build_print_production_from_composition(
     policy: Mapping[str, Any] | None = None,
     allow_heuristic_fallback: bool = True,
     candidate_map: Mapping[str, Sequence[str]] | None = None,
+    required_visual_slots: Sequence[str] | None = None,
+    budget_ledger: Any | None = None,
+    checkpoint_store: Any | None = None,
+    progress_store: Any | None = None,
+    progress_run_id: str | None = None,
 ) -> tuple[FormPlan, PrintSelectionSnapshot, CompositionPlan]:
     """Compose ordinary structure, layer Print tasks, emit FormPlan + snapshot."""
     body = dict(policy) if policy is not None else default_print_policy()
@@ -184,9 +228,16 @@ async def build_print_production_from_composition(
         provider=provider,
         engine=engine,
         allow_heuristic_fallback=allow_heuristic_fallback,
+        budget_ledger=budget_ledger,
+        checkpoint_store=checkpoint_store,
+        progress_store=progress_store,
+        progress_run_id=progress_run_id,
     )
     composition = _layer_print_tasks(teaching_plan, document_plan)
     form_plan = composition_to_form_plan(teaching_plan, composition)
+    form_plan = _ensure_required_visual_figures(
+        teaching_plan, form_plan, required_visual_slots or ()
+    )
 
     # Composition owns ordinary selection. Merge chosen objects (and the full
     # ordinary Print vocabulary) into the candidate map so FormPlan validation

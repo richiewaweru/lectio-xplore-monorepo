@@ -1,0 +1,8 @@
+{
+    "name":  "postgres-c01",
+    "exit":  0,
+    "command":  "uv run pytest tests/reliability/test_correction_pass.py -m postgres -q --tb=short",
+    "start":  "2026-09-13T23:28:04.4730388+03:00",
+    "end":  "2026-09-13T23:28:23.9628778+03:00",
+    "cwd":  "C:\\Projects\\lectio\\apps\\textbook-agent\\backend"
+}

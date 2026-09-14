@@ -4,14 +4,14 @@ from copy import deepcopy
 from enum import Enum
 
 import pytest
-from pydantic import BaseModel, Field
-
 from core.llm.deepseek_schema import (
     DeepSeekStrictSchemaError,
     to_deepseek_strict_schema,
     validate_deepseek_projection,
 )
 from core.llm.schema import SchemaSource, schema_fingerprint
+from pydantic import BaseModel, Field
+
 from curriculum.path_models import PathAnchor, PathStructuralPlan
 
 

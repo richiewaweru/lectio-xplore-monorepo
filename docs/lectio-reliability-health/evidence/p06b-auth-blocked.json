@@ -1,0 +1,4 @@
+﻿auth_status=BLOCKED
+reason=Playwright reopen wiped localStorage; Google sign-in not completed after >10min wait
+no_auth_bypass=true
+recorded_at_utc=2026-09-13T09:20:46.8682546+03:00

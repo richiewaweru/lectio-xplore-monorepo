@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import itertools
 import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from print.contracts.lectio_page import PAGE_OBJECT_IDS
 from curriculum.approved_items import approved_item_kind
+from print.contracts.lectio_page import PAGE_OBJECT_IDS
 from print.generation.page_blocks import validate_intent_departure
 from print.generation.whole_lesson.form_plan import FormPlan
 from print.generation.whole_lesson.packet import ImmutableLessonPacket
@@ -71,9 +72,7 @@ def _word_count(text: str) -> int:
 
 
 _ANCHOR_STOPWORDS = frozenset(
-    """a an and are as at be been but by for from has have how in into is it its of on
-    or over so than that the their them then there these they this to under until up
-    was were what when where which while who why with without would you your""".split()
+    ["a", "an", "and", "are", "as", "at", "be", "been", "but", "by", "for", "from", "has", "have", "how", "in", "into", "is", "it", "its", "of", "on", "or", "over", "so", "than", "that", "the", "their", "them", "then", "there", "these", "they", "this", "to", "under", "until", "up", "was", "were", "what", "when", "where", "which", "while", "who", "why", "with", "without", "would", "you", "your"]
 )
 
 
@@ -295,7 +294,7 @@ def validate_teaching_plan(
                         )
                     )
                     continue
-                if ref.startswith("scope.must_establish.") or ref.startswith("must-"):
+                if ref.startswith(("scope.must_establish.", "must-")):
                     mid = ref.split(".")[-1]
                     if mid in must_ids:
                         referenced_must.add(mid)
@@ -303,16 +302,19 @@ def validate_teaching_plan(
                     continue
                 if ref.startswith("anchor."):
                     aid = ref.split(".", 1)[-1]
-                    if aid != packet.anchor.id and ref != f"anchor.{packet.anchor.id}":
-                        if aid not in {packet.anchor.id, packet.anchor.description}:
-                            issues.append(
+                    if (
+                        aid != packet.anchor.id
+                        and ref != f"anchor.{packet.anchor.id}"
+                        and aid not in {packet.anchor.id, packet.anchor.description}
+                    ):
+                        issues.append(
                                 ValidationIssue(
                                     code="EVIDENCE_REF",
                                     message=f"unresolvable evidence_ref {ref!r}",
                                     path=f"{path}.evidence_refs",
                                 )
                             )
-                elif ref.startswith("item.") or ref.startswith("approved_item"):
+                elif ref.startswith(("item.", "approved_item")):
                     iid = ref.split(".")[-1]
                     if iid not in approved_ids:
                         issues.append(
@@ -775,7 +777,7 @@ def advisory_form_qc(form_plan: FormPlan) -> list[AdvisoryFinding]:
         findings.append(
             AdvisoryFinding(code="FIGURE_OVERUSE", message="more than two figure blocks")
         )
-    for a, b in zip(figure_idxs, figure_idxs[1:]):
+    for a, b in itertools.pairwise(figure_idxs):
         if b == a + 1:
             findings.append(
                 AdvisoryFinding(code="FIGURE_OVERUSE", message="consecutive figure blocks")

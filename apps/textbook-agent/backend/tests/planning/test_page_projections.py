@@ -6,10 +6,10 @@ import json
 from pathlib import Path
 
 from print.generation.page_projections import (
-    qc_committed_document,
     project_blocks_by_intent,
     project_student_blocks,
     project_teacher_blocks,
+    qc_committed_document,
 )
 
 FIXTURE = (
@@ -22,7 +22,13 @@ FIXTURE = (
 
 
 def test_v2_projections_do_not_read_legacy_component_fields() -> None:
-    source = Path(__file__).resolve().parents[2] / "src" / "planning" / "page_projections.py"
+    source = (
+        Path(__file__).resolve().parents[2]
+        / "src"
+        / "print"
+        / "generation"
+        / "page_projections.py"
+    )
     text = source.read_text(encoding="utf-8")
     for forbidden in ("definition_family", "comparison_grid", "worked_examples", "pitfalls"):
         assert forbidden not in text

@@ -1,0 +1,2 @@
+[  151526ms] [ERROR] Failed to load resource: the server responded with a status of 409 (Conflict) @ http://localhost:5173/api/v1/units/b67c0459-358e-4ee7-b6fc-59c39d3c5fd6/path/lessons/a6e1685b-884d-4159-acf0-226aed315ce4/realizations:generate-print:0
+[  231125ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://localhost:5173/api/v1/units/b67c0459-358e-4ee7-b6fc-59c39d3c5fd6/path/lessons/a6e1685b-884d-4159-acf0-226aed315ce4/realizations:generate-print:0

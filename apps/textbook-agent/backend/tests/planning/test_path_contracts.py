@@ -11,7 +11,6 @@ from pydantic import ValidationError
 from curriculum.path_models import CanonicalPathPlan, PathPlannerRequest
 from curriculum.prompts import prompt_text
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURES = REPO_ROOT / "handoff" / "fixtures"
 PROMPT_PACK = REPO_ROOT / "patch" / "20_PROMPT_PACK.md"

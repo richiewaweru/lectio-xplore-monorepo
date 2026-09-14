@@ -7,14 +7,13 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
 
 from app import app
-from core.auth.middleware import get_current_user
 from core.database.models import ConceptCardModel, GenerationModel, PackItemModel, UserModel
 from core.database.session import async_session_factory
 from core.entities.user import User
-from print.rendering.page_objects.document_assembly import persist_document_json
 from print.generation.whole_lesson.native_retry import (
     NativeRetryConflict,
     NativeRetryTarget,
@@ -33,20 +32,21 @@ from print.generation.whole_lesson.states import (
     WORK_KIND_PRE_WORKER_TEACHING,
     execution_key,
 )
+from print.rendering.page_objects.document_assembly import persist_document_json
 from v3_blueprint.planning.models import (
     AnchorSpec,
     ComponentSlot,
+    ItemOption,
     LessonIntent,
     QPlanItem,
+    QuestionBrief,
     SectionPlan,
     StructuralPlan,
 )
 from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state
 from v3_execution.executors.item_diagnostics import attempt_record
-from v3_execution.executors.item_executor import ItemGenerationResult, ItemGenerationRun
 from v3_execution.executors.item_errors import ItemGenerationOutputInvalidError
-from v3_blueprint.planning.models import ItemOption, QuestionBrief
-
+from v3_execution.executors.item_executor import ItemGenerationResult, ItemGenerationRun
 
 TEST_USER = User(
     id="native-retry-owner",
@@ -519,7 +519,7 @@ async def test_r02_teaching_retry_does_not_rerun_items() -> None:
             new=_teaching_ok,
         ),
         patch(
-            "print.generation.whole_lesson.executor.run_form_planner",
+            "print.generation.whole_lesson.executor.build_closed_print_production_plan_async",
             new=form_planner,
         ),
     ):
@@ -743,7 +743,7 @@ async def test_r06_visual_failure_not_owned_by_retry_native() -> None:
                     new=AsyncMock(side_effect=AssertionError("teaching")),
                 ),
                 patch(
-                    "print.generation.whole_lesson.executor.run_form_planner",
+                    "print.generation.whole_lesson.executor.build_closed_print_production_plan_async",
                     new=AsyncMock(side_effect=AssertionError("forms")),
                 ),
             ):
@@ -788,6 +788,8 @@ async def test_r07_error_aliases_clear_after_teaching_recovery() -> None:
 
 @pytest.mark.asyncio
 async def test_injected_form_timeout_retry_resumes_at_planning_forms() -> None:
+    from tests.planning.contract_fixtures import teaching_and_form
+
     from print.generation.whole_lesson.executor import execute_after_teaching_approval
     from print.generation.whole_lesson.failure_injection import (
         configure_failure_injection,
@@ -803,7 +805,6 @@ async def test_injected_form_timeout_retry_resumes_at_planning_forms() -> None:
         SlotRecord,
     )
     from print.generation.whole_lesson.worker import NativeExecutionWorker
-    from tests.planning.contract_fixtures import teaching_and_form
 
     packet = ImmutableLessonPacket(
         lesson=LessonIdentity(
@@ -857,7 +858,7 @@ async def test_injected_form_timeout_retry_resumes_at_planning_forms() -> None:
                 worker_id="form-retry-worker"
             )
             assert lease is not None
-        with patch("print.generation.whole_lesson.executor.run_form_planner", new=_form_boom):
+        with patch("print.generation.whole_lesson.executor.build_closed_print_production_plan_async", new=_form_boom):
             async with async_session_factory() as session:
                 with pytest.raises(TimeoutError):
                     await execute_after_teaching_approval(

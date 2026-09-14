@@ -14,12 +14,11 @@ from core.repositories.sql_user_repo import SqlUserRepository
 
 @asynccontextmanager
 async def _client():
-    async with app.router.lifespan_context(app):
-        async with AsyncClient(
-            transport=ASGITransport(app=app),
-            base_url="http://test",
-        ) as client:
-            yield client
+    async with app.router.lifespan_context(app), AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        yield client
 
 
 class TestGoogleAuthRoute:

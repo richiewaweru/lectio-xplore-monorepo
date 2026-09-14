@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from infra.authoring import AuthoringEngineError
+from print.generation.catalogue_projections import project_writer_contract
 from print.rendering.page_objects import (
     ContentValidationError,
     WriterContext,
@@ -12,7 +14,6 @@ from print.rendering.page_objects import (
 from print.rendering.page_objects.prompts import build_repair_prompt, build_writer_prompt
 from print.rendering.page_objects.registry import normalize_persisted_document_json
 from print.rendering.page_objects.scripted_provider import ScriptedWriterProvider
-from print.generation.catalogue_projections import project_writer_contract
 from v3_blueprint.planning.models import PlannedBlock
 
 
@@ -201,12 +202,20 @@ async def test_permanently_invalid_raises_validation() -> None:
                     "s1-prose": [
                         {"attempt": 1, "mode": "dict", "value": {"paragraphs": []}},
                         {"attempt": 2, "mode": "dict", "value": {"wrong": True}},
+                        {"attempt": 3, "mode": "dict", "value": {"wrong": True}},
                     ]
                 }
             }
         },
         scenario_name="permanently_invalid",
     )
-    with pytest.raises(ContentValidationError):
+    # Shared document.writer budget: 1 initial + 2 schema repairs.
+    # Print dispatch may surface REPAIR_EXHAUSTED as ContentValidationError when
+    # authoring errors carry field-level validation details.
+    with pytest.raises((AuthoringEngineError, ContentValidationError)) as caught:
         await dispatch_writer_async(_prose_ctx(), provider=provider)
-    assert provider.call_count() == 2
+    if isinstance(caught.value, AuthoringEngineError):
+        assert caught.value.code in {"REPAIR_EXHAUSTED", "INVALID_PAYLOAD"}
+    else:
+        assert "prose" in str(caught.value)
+    assert provider.call_count() == 3

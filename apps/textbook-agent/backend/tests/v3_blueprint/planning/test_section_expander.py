@@ -4,8 +4,8 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from core.llm.types import ModelFamily, ModelSpec
+
 from print.http.v3_studio.dtos import V3InputForm, V3SignalSummary
 from v3_blueprint.planning import section_expander
 from v3_blueprint.planning.models import (
@@ -147,21 +147,23 @@ async def test_call_stage2_section_omits_extended_cache_beta_header(monkeypatch:
     plan = _plan()
     section = plan.sections[0]
     brief = _brief()
+    spec = ModelSpec(
+        family=ModelFamily.OPENAI_COMPATIBLE,
+        model_name="deepseek-flash",
+        base_url="https://api.deepseek.com",
+    )
 
     with (
-        patch.object(section_expander, "Agent", return_value=MagicMock(name="agent")) as _agent,
-        patch.object(section_expander, "get_v3_model", return_value="model-name"),
+        patch.object(section_expander, "Agent", return_value=MagicMock(name="agent")),
         patch.object(
             section_expander,
-            "get_v3_spec",
-            return_value=ModelSpec(
-                family=ModelFamily.OPENAI_COMPATIBLE,
-                model_name="deepseek-flash",
-                base_url="https://api.deepseek.com",
-            ),
+            "prepare_structured_agent",
+            return_value=("model-name", SectionBrief, None, spec, "test"),
         ),
         patch.object(section_expander, "get_v3_slot", return_value="slot-name"),
-        patch.object(section_expander, "run_llm", new=AsyncMock(return_value=SimpleNamespace(output=brief))) as mock_run_llm,
+        patch.object(
+            section_expander, "run_llm", new=AsyncMock(return_value=SimpleNamespace(output=brief))
+        ) as mock_run_llm,
     ):
         result = await section_expander._call_stage2_section(
             plan=plan,
@@ -181,4 +183,5 @@ async def test_call_stage2_section_omits_extended_cache_beta_header(monkeypatch:
         "max_tokens": 16000,
         "extra_body": {"thinking": {"type": "disabled"}},
     }
+    assert "extra_headers" not in call_kwargs["model_settings"]
     assert len(call_kwargs["user_prompt"]) == 5

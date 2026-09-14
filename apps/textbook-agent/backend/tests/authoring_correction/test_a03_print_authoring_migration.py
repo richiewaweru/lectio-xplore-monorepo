@@ -4,6 +4,7 @@ import uuid
 from typing import Any
 
 import pytest
+from tests.planning.contract_fixtures import teaching_and_form
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
@@ -29,13 +30,11 @@ from print.generation.whole_lesson.repository import (
 from print.generation.whole_lesson.states import execution_key
 from print.generation.work_orders import build_print_work_order_from_planned_block
 from print.rendering.page_objects import (
-    ContentValidationError,
     WriterContext,
     WriterOutcome,
     dispatch_writer,
     dispatch_writer_async,
 )
-from tests.planning.contract_fixtures import teaching_and_form
 from v3_blueprint.planning.models import PlannedBlock
 
 
@@ -135,30 +134,35 @@ def _packet() -> ImmutableLessonPacket:
 @pytest.mark.asyncio
 async def test_a03_g01_dispatch_writer_uses_package_instructions_and_schema() -> None:
     ctx = _ctx("prose")
-    provider = CapturingProvider({"paragraphs": ["Light powers photosynthesis."]})
+    # Ordinary Print forms route through shared document.writer (paragraph schema).
+    provider = CapturingProvider(
+        {"kind": "paragraph", "text": "Light powers photosynthesis."}
+    )
 
     result = await dispatch_writer_async(ctx, provider=provider)
 
     assert result.content == {"paragraphs": ["Light powers photosynthesis."]}
-    assert provider.calls[0].work_order_id == ctx.print_work_order.work_order_id
-    assert provider.calls[0].output_schema == ctx.print_work_order.expected_output_schema
-    instruction_text = ctx.print_work_order.instructions["text"]
-    assert instruction_text[:80] in provider.calls[0].prompt
-    assert "You author one already-selected educational capability" in provider.calls[0].prompt
+    assert len(provider.calls) == 1
+    assert provider.calls[0].output_schema["required"] == ["kind", "text"]
+    assert "paragraph" in str(provider.calls[0].output_schema).lower()
+    # Correction pass C03: shared writer uses stable print-node composition IDs.
+    assert provider.calls[0].work_order_id == f"print-node:{ctx.planned.id}:paragraph"
+    assert ctx.print_work_order is not None
+    # Print package work-order identity remains distinct from the writer node id.
+    assert provider.calls[0].work_order_id != ctx.print_work_order.work_order_id
 
 
 @pytest.mark.asyncio
 async def test_a03_g02_table_failure_is_typed_and_never_returns_leaf_stub() -> None:
-    invalid_table = {
-        "columns": [{"id": "fraction", "label": "Fraction"}],
-        "rows": [],
-    }
-    provider = CapturingProvider(invalid_table, invalid_table)
+    # Shared writer validates document-primitive table schema (1 initial + 2 repairs).
+    invalid_table = {"kind": "table", "headers": ["fraction"], "rows": []}
+    provider = CapturingProvider(invalid_table, invalid_table, invalid_table)
 
-    with pytest.raises(ContentValidationError) as caught:
+    with pytest.raises(AuthoringEngineError) as caught:
         await dispatch_writer_async(_ctx("table"), provider=provider)
 
-    assert len(provider.calls) == 2
+    assert caught.value.code in {"REPAIR_EXHAUSTED", "INVALID_PAYLOAD"}
+    assert len(provider.calls) == 3
     assert "Lit leaf" not in str(caught.value)
     assert "Covered leaf" not in str(caught.value)
 
@@ -208,23 +212,35 @@ def test_a03_g03_approved_question_and_choice_conversion_is_exact() -> None:
 
 @pytest.mark.asyncio
 async def test_a03_g04_offline_print_forms_and_figure_lifecycle() -> None:
+    # Ordinary forms: document-primitive payloads (shared writer).
+    # worked-example remains Print-only authoring schema.
     cases = {
-        "prose": {"paragraphs": ["Plants use light energy."]},
-        "list": {"style": "unordered", "items": [{"text": "Light"}, {"text": "Leaves"}]},
-        "table": {
-            "columns": [{"id": "part", "label": "Part"}],
-            "rows": [{"cells": {"part": "leaf"}}],
+        "prose": {"kind": "paragraph", "text": "Plants use light energy."},
+        "list": {
+            "kind": "list",
+            "ordered": False,
+            "items": ["Light", "Leaves"],
         },
-        "aside": {"label": "Remember", "body": "Leaves make food."},
+        "table": {
+            "kind": "table",
+            "headers": ["Part"],
+            "rows": [["leaf"]],
+        },
+        "aside": {
+            "kind": "callout",
+            "tone": "note",
+            "title": "Remember",
+            "body": "Leaves make food.",
+        },
         "worked-example": {
             "problem": "A leaf is covered.",
             "steps": [{"text": "Compare light exposure."}],
             "answer": "The covered leaf makes less food.",
         },
         "figure": {
-            "asset": {"kind": "image"},
-            "alt_text": "Sunlight reaches a leaf.",
+            "kind": "figure",
             "caption": "Light and leaves",
+            "alt": "Sunlight reaches a leaf.",
         },
     }
     for object_id, payload in cases.items():
@@ -237,13 +253,11 @@ async def test_a03_g04_offline_print_forms_and_figure_lifecycle() -> None:
         else:
             assert result.status == "ready"
 
+    # Shared writer transport budget is 1 attempt (no nested transport retries).
     with pytest.raises(AuthoringEngineError):
         await dispatch_writer_async(
             _ctx("figure"),
-            provider=CapturingProvider(
-                AuthoringTransportError("brief failed"),
-                AuthoringTransportError("brief failed"),
-            ),
+            provider=CapturingProvider(AuthoringTransportError("brief failed")),
         )
 
 
@@ -325,7 +339,7 @@ async def test_a03_g05_retry_one_failed_block_preserves_siblings_and_order(monke
     gid, teaching, plan, packet = await _seed_retry_case()
     written: list[str] = []
 
-    async def fake_dispatch(ctx: WriterContext) -> WriterOutcome:
+    async def fake_dispatch(ctx: WriterContext, **_kwargs) -> WriterOutcome:
         assert ctx.print_work_order is not None
         assert ctx.print_work_order.block_id == "b-retry"
         assert len(ctx.print_work_order.capability_contract_hash) == 64

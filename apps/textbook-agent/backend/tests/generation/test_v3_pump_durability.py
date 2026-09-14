@@ -5,16 +5,16 @@ import uuid
 from unittest.mock import patch
 
 import pytest
+from core.auth.middleware import get_current_user
+from httpx import ASGITransport, AsyncClient
 
 from app import app
-from core.auth.middleware import get_current_user
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
 from core.entities.user import User
 from print.http.v3_studio import router as v3_router
 from print.http.v3_studio.generation_writer import V3GenerationWriter
 from print.http.v3_studio.router import _pump_sse_to_queue
-from httpx import ASGITransport, AsyncClient
 
 TEST_USER = User(
     id="v3-pump-user",

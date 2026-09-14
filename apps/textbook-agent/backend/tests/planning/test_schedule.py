@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import select
+from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 
 from core.database.models import (
     PathLessonModel,
@@ -32,8 +33,6 @@ from curriculum.service import (
     create_unit,
     persist_path_plan,
 )
-from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
-
 
 FIXTURE = (
     Path(__file__).resolve().parents[3]

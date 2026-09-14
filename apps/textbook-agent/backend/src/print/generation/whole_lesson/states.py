@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from enum import Enum
+from infra.execution.leases import (  # noqa: F401 — re-exported for Print callers
+    DEFAULT_LEASE_SECONDS,
+    ExecutionLease,
+    LeaseLostError,
+    ResumeDecision,
+)
 
 # writing_sections is the preferred writing stage; writing_blocks remains a
 # compatibility alias for in-flight leases and resume.
@@ -120,7 +124,6 @@ PRE_WORKER_WORK_KINDS = frozenset(
 )
 
 DEFAULT_VARIANT_ID = "everyone"
-DEFAULT_LEASE_SECONDS = 90
 HEARTBEAT_INTERVAL_SECONDS = 25
 MAX_SECTION_CONCURRENCY = 4
 # Within a single section, bound concurrent block writers.
@@ -130,27 +133,6 @@ DEFAULT_WORKER_POLL_SECONDS = 2.0
 
 class IllegalTransitionError(ValueError):
     pass
-
-
-class LeaseLostError(RuntimeError):
-    """Raised when a worker no longer owns the generation lease."""
-
-
-@dataclass(frozen=True)
-class ExecutionLease:
-    generation_id: str
-    worker_id: str
-    lease_token: int
-    stage: str
-
-
-class ResumeDecision(str, Enum):
-    SKIP_READY = "skip_ready"
-    SKIP_IN_FLIGHT = "skip_in_flight"
-    RUN_MISSING = "run_missing"
-    RETRY_FAILED = "retry_failed"
-    RETRY_ABANDONED = "retry_abandoned"
-    BLOCK_TERMINAL = "block_terminal"
 
 
 def assert_legal_transition(current: str, target: str) -> None:

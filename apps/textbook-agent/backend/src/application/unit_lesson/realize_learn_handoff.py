@@ -8,6 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from application.unit_lesson.realizations import RealizationPayloadConflictError
 from core.database.models import GenerationModel, LessonProvenanceModel, PathLessonModel
 from curriculum.teaching_plan.consumers import (
     TeachingRevisionNotApprovedError,
@@ -25,6 +26,7 @@ async def realize_learn_from_preparation(
     preparation_generation_id: str,
     user_id: str,
     path_lesson_id: str | None = None,
+    admission_request_key: str | None = None,
 ) -> dict[str, Any]:
     """Produce LearnDocument v2 from approved teaching on a preparation generation."""
     generation = await session.get(GenerationModel, preparation_generation_id)
@@ -67,16 +69,20 @@ async def realize_learn_from_preparation(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     plan_hash = teaching_plan_content_hash(teaching_plan)
-    result = await produce_learn_from_approved_teaching(
-        session,
-        teaching_plan=teaching_plan,
-        user_id=user_id,
-        path_lesson_id=lesson_id,
-        preparation_generation_id=preparation_generation_id,
-        pack_id=None,
-        title=str(teaching_plan.arc or "Learn lesson"),
-        subject=str(generation.subject or "science"),
-    )
+    try:
+        result = await produce_learn_from_approved_teaching(
+            session,
+            teaching_plan=teaching_plan,
+            user_id=user_id,
+            path_lesson_id=lesson_id,
+            preparation_generation_id=preparation_generation_id,
+            pack_id=None,
+            title=str(teaching_plan.arc or "Learn lesson"),
+            subject=str(generation.subject or "science"),
+            admission_request_key=admission_request_key,
+        )
+    except RealizationPayloadConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     editable_id = str(result.get("editable_lesson_id") or "")
     output_id = str(result.get("output_id") or "")
     return {
@@ -88,6 +94,7 @@ async def realize_learn_from_preparation(
         "teaching_plan_hash": plan_hash,
         "teaching_plan_revision": result.get("teaching_plan_revision"),
         "open_href": f"/builder/{editable_id}" if editable_id else None,
+        "replayed": bool(result.get("replayed")),
     }
 
 

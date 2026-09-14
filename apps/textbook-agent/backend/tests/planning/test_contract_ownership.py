@@ -4,16 +4,17 @@ from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
+from tests.planning.contract_fixtures import teaching_and_form
 
-from print.rendering.page_objects import WriterContext, WriterOutcome, dispatch_writer, validate_content
-from print.rendering.page_objects.document_assembly import assemble_section, assemble_document_v2
 from print.generation.catalogue_projections import build_form_candidate_map, project_form_guidance
+from print.generation.whole_lesson.form_agent import _repair_form_section_ownership
 from print.generation.whole_lesson.form_plan import (
     FormDecision,
     FormPlan,
     FormPlanSection,
     coerce_form_plan,
 )
+from print.generation.whole_lesson.legality import build_lesson_legality_snapshot
 from print.generation.whole_lesson.packet import (
     AnchorRecord,
     ImmutableLessonPacket,
@@ -22,12 +23,17 @@ from print.generation.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
-from print.generation.whole_lesson.legality import build_lesson_legality_snapshot
-from print.generation.whole_lesson.form_agent import _repair_form_section_ownership
 from print.generation.whole_lesson.prompt_render import build_form_planner_payload
 from print.generation.whole_lesson.resolved_block_plan import resolve_block_plans
 from print.generation.whole_lesson.validation import validate_form_plan
-from tests.planning.contract_fixtures import teaching_and_form
+from print.rendering.page_objects import (
+    WriterContext,
+    WriterOutcome,
+    dispatch_writer,
+    validate_content,
+)
+from print.rendering.page_objects.document_assembly import assemble_document_v2, assemble_section
+from print.rendering.page_objects.validation import ContentValidationError
 from v3_blueprint.planning.models import PlannedBlock
 
 
@@ -338,7 +344,7 @@ def test_writer_input_envelope_requires_brief_and_object_contract() -> None:
 
 
 def test_writer_rejects_wrong_content_type() -> None:
-    with pytest.raises(Exception):
+    with pytest.raises(ContentValidationError):
         validate_content("prose", {"items": [{"text": "nope"}]})
 
 

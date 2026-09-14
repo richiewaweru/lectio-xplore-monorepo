@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 
 from application.unit_lesson.realization_contracts import (
     DEFAULT_VARIANT_ID,
@@ -37,11 +38,10 @@ from core.database.models import (
     UserModel,
 )
 from curriculum.service import approve_path, create_unit, persist_path_plan
-from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 async def _prepared_lesson(db_session: AsyncSession, *, user_id: str) -> PathLessonModel:
@@ -302,7 +302,7 @@ async def test_p03_r04_shared_revision_marks_stale_keeps_snapshots(
     assert print_row.status == "stale"
 
     # Policy change invalidates only that path.
-    policy_version, policy_hash = policy_for("learn")
+    _policy_version, policy_hash = policy_for("learn")
     await mark_stale_for_policy_change(
         db_session,
         path="learn",

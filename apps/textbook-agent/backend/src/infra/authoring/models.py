@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Literal, Mapping, Protocol
+from typing import Any, Literal, Protocol
 
 AuthoringMode = Literal["generate", "convert-approved"]
 AuthoringFailureCode = Literal[
@@ -10,7 +11,9 @@ AuthoringFailureCode = Literal[
     "INCOMPATIBLE_APPROVED_ITEM",
     "INVALID_PAYLOAD",
     "NO_COMPATIBLE_CAPABILITY",
+    "PROVIDER_TRANSPORT_EXHAUSTED",
     "REPAIR_EXHAUSTED",
+    "BUDGET_EXHAUSTED",
     "POLICY_CONFLICT",
 ]
 

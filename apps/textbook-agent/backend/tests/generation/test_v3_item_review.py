@@ -4,11 +4,11 @@ import uuid
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app import app
-from core.auth.middleware import get_current_user
 from core.database.models import ConceptCardModel, PackItemModel, UserModel
 from core.database.session import async_session_factory
 from core.entities.user import User

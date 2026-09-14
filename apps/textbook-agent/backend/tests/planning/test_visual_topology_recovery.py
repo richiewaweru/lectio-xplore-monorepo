@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import ClassVar
 
 import pytest
 
@@ -52,9 +53,9 @@ def test_topology_identity_and_cache_fences_include_all_versions() -> None:
 
 
 class _FakeRepo:
-    records: dict[str, dict] = {}
-    events: list[dict] = []
-    completions: list[dict] = []
+    records: ClassVar[dict[str, dict]] = {}
+    events: ClassVar[list[dict]] = []
+    completions: ClassVar[list[dict]] = []
 
     def __init__(self, _session, _generation_id):
         pass

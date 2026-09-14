@@ -1,0 +1,12 @@
+{
+  "recorded_at_utc": "2026-09-13T18:58:00Z",
+  "origin": "http://127.0.0.1:5173",
+  "api": "http://127.0.0.1:8000",
+  "auth_me_status": 200,
+  "user_id": "2f297058-f6bc-47bf-9ffd-3208ad8246d4",
+  "email_domain": "gmail.com",
+  "browser_session": "playwright-cli session=reliability",
+  "profile": ".tmp/reliability-chrome-profile",
+  "starting_sha": "f386ab6893f3068af5db18a0a9d5898ed46b0bff",
+  "secrets_exported": false
+}

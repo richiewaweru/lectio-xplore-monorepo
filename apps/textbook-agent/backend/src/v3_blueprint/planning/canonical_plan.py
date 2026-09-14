@@ -9,9 +9,9 @@ from __future__ import annotations
 import hashlib
 import inspect
 import json
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Union
+from typing import Any, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 

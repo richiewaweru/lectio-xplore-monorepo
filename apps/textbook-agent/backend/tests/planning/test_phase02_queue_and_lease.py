@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,10 +42,24 @@ async def _seed_native_generation(
     state["teaching_review"] = {
         "status": "pending" if review_pending else "approved",
         "reviewed_by": None if review_pending else "teacher",
-        "reviewed_at": None if review_pending else datetime.now(timezone.utc).isoformat(),
+        "reviewed_at": None if review_pending else datetime.now(UTC).isoformat(),
         "revision": 1 if review_pending else 2,
         "teacher_note": None,
     }
+    if review_pending:
+        state["teaching_revisions"] = [
+            {
+                "teaching_plan_id": gid,
+                "revision": 1,
+                "status": "pending",
+                "plan": state["teaching_plan"],
+                "preparation_hash": "prep-test",
+                "created_at": datetime.now(UTC).isoformat(),
+                "approved_at": None,
+                "reviewed_by": None,
+                "teacher_note": None,
+            }
+        ]
     session.add(
         GenerationModel(
             id=gid,
@@ -178,7 +192,7 @@ async def test_failed_recoverable_is_parked_across_concurrent_worker_polls(
                     "lease_token": 7,
                     "attempt": 3,
                     "heartbeat_at": (
-                        datetime.now(timezone.utc) - timedelta(minutes=10)
+                        datetime.now(UTC) - timedelta(minutes=10)
                     ).isoformat(),
                     "lease_seconds": 30,
                     "last_error": {
@@ -243,8 +257,8 @@ async def test_stale_active_contention_one_winner(db_session_factory) -> None:
                 "worker_id": "old-worker",
                 "lease_token": 3,
                 "attempt": 1,
-                "claimed_at": (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat(),
-                "heartbeat_at": (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat(),
+                "claimed_at": (datetime.now(UTC) - timedelta(minutes=10)).isoformat(),
+                "heartbeat_at": (datetime.now(UTC) - timedelta(minutes=10)).isoformat(),
                 "lease_seconds": 90,
                 "last_error": None,
             }
@@ -289,7 +303,7 @@ async def test_fresh_heartbeat_prevents_reclaim(db_session_factory) -> None:
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 @pytest.mark.asyncio
@@ -309,7 +323,7 @@ async def test_stale_worker_write_rejected(db_session_factory) -> None:
         def _expire(_gen, state):
             execution = dict(state["execution"])
             execution["heartbeat_at"] = (
-                datetime.now(timezone.utc) - timedelta(minutes=10)
+                datetime.now(UTC) - timedelta(minutes=10)
             ).isoformat()
             state["execution"] = execution
 

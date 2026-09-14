@@ -1,15 +1,15 @@
 from __future__ import annotations
 
+import uuid
 from pathlib import Path
 from typing import Literal
-import uuid
 
+from core.llm.runner import RetryPolicy, run_llm
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent
 
 from core.config import settings
-from core.llm.runner import RetryPolicy, run_llm
-from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
+from v3_execution.config import get_v3_model_settings, get_v3_slot
 from v3_execution.config.models import V3_KNOWLEDGE_TYPE_CLASSIFIER
 from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 

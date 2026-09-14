@@ -112,6 +112,11 @@ export default defineConfig(({ mode }) => {
 			globals: true,
 			/** Threads pool can stall indefinitely on some Windows setups with SvelteKit/Vite. */
 			pool: 'forks',
+			/**
+			 * Debounce/waitFor Svelte tests need headroom under full-suite fork load.
+			 * Default 5s flakes on Windows even when assertions are correct (see G19).
+			 */
+			testTimeout: 15_000,
 			/** Avoid vitest-worker fetch timeouts when pre-bundling bits-ui (date-time utils) under pnpm. */
 			deps: {
 				optimizer: {

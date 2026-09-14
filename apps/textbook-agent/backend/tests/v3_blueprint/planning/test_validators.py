@@ -140,11 +140,17 @@ def test_validate_structural_plan_accepts_a_role_declared_by_skeleton_slot_id() 
     assert not any("role" in error for error in errors)
 
 
-def test_validate_structural_plan_warns_when_skeleton_roles_are_unavailable(caplog) -> None:
+def test_validate_structural_plan_warns_when_skeleton_roles_are_unavailable(monkeypatch) -> None:
     plan = _base_plan_with_components(
         components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")]
     )
     plan.sections[0].role = "invented_role"
+    warnings: list[str] = []
+
+    monkeypatch.setattr(
+        "v3_blueprint.planning.validators.log.warning",
+        lambda msg, *args, **_kwargs: warnings.append(msg % args if args else str(msg)),
+    )
 
     errors = validate_structural_plan(
         plan,
@@ -152,7 +158,7 @@ def test_validate_structural_plan_warns_when_skeleton_roles_are_unavailable(capl
     )
 
     assert not any("role" in error for error in errors)
-    assert "skeleton role validation unavailable" in caplog.text
+    assert any("skeleton role validation unavailable" in message for message in warnings)
 
 
 def test_validate_section_brief_catches_dropped_component() -> None:
@@ -178,7 +184,7 @@ def test_validate_section_brief_catches_dropped_component() -> None:
     assert any("missing briefs for planned components" in error for error in errors)
 
 
-def test_validate_section_brief_allows_overlong_content_intent(caplog) -> None:
+def test_validate_section_brief_allows_overlong_content_intent(monkeypatch) -> None:
     slug_a, _slug_b = _first_two_distinct_slugs()
     section = SectionPlan(
         id="model",
@@ -195,10 +201,14 @@ def test_validate_section_brief_allows_overlong_content_intent(caplog) -> None:
         question_briefs=[],
         visual_strategy=None,
     )
-    with caplog.at_level("INFO"):
-        errors = validate_section_brief(brief, section, [])
+    infos: list[str] = []
+    monkeypatch.setattr(
+        "v3_blueprint.planning.validators.log.info",
+        lambda msg, *args, **_kwargs: infos.append(msg % args if args else str(msg)),
+    )
+    errors = validate_section_brief(brief, section, [])
     assert errors == []
-    assert any("advisory max" in record.message for record in caplog.records)
+    assert any("advisory max" in message for message in infos)
 
 
 def test_validate_section_brief_allows_additional_component() -> None:
@@ -427,7 +437,7 @@ def test_structural_plan_rejects_arbitrary_unknown_fields() -> None:
         StructuralPlan.model_validate(payload)
 
 
-def test_legacy_structural_plan_adapter_maps_voice_and_logs(caplog) -> None:
+def test_legacy_structural_plan_adapter_maps_voice_and_logs(monkeypatch) -> None:
     plan = _base_plan_with_components(
         components=[ComponentSlot(slug="hook-hero", purpose="surface anchor")]
     )
@@ -437,13 +447,18 @@ def test_legacy_structural_plan_adapter_maps_voice_and_logs(caplog) -> None:
         "tone": "encouraging",
         "notation": "Use fraction bars.",
     }
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        "v3_blueprint.planning.models.log.warning",
+        lambda msg, *args, **_kwargs: warnings.append(msg % args if args else str(msg)),
+    )
 
     adapted = adapt_legacy_structural_plan(payload, source="fixture:legacy-plan")
 
     assert adapted.variant_spec().voice.register_name == "simple"
     assert adapted.variant_spec().voice.notation == "Use fraction bars."
-    assert "adapted legacy StructuralPlan top-level voice" in caplog.text
-    assert "source=fixture:legacy-plan" in caplog.text
+    assert any("adapted legacy StructuralPlan top-level voice" in message for message in warnings)
+    assert any("source=fixture:legacy-plan" in message for message in warnings)
 
 
 def test_validate_section_brief_rejects_series_with_too_few_frames() -> None:

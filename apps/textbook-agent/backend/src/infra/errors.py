@@ -18,7 +18,6 @@ class PipelineError(Exception):
 class NodeValidationError(PipelineError):
     """Raised when a node's input or output fails Pydantic validation."""
 
-    pass
 
 
 class ProviderConformanceError(Exception):

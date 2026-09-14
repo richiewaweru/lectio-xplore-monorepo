@@ -102,7 +102,7 @@ class TopologyLabelV1(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _placement_ref(self) -> "TopologyLabelV1":
+    def _placement_ref(self) -> TopologyLabelV1:
         if self.placement == "center" and self.ref is not None:
             raise ValueError("center labels cannot reference a node or edge")
         if self.placement != "center" and not self.ref:
@@ -275,7 +275,7 @@ def validate_topology_plan(
         if label.placement == "edge" and label.ref not in edge_set:
             issues.append(f"label {label.id} references unknown edge")
     if allowed_cues:
-        unknown = sorted(set(str(cue) for cue in plan.cues) - allowed_cues)
+        unknown = sorted({str(cue) for cue in plan.cues} - allowed_cues)
         if unknown:
             issues.append(f"cues outside persisted allowlist: {unknown}")
     if allowed_exclusions:

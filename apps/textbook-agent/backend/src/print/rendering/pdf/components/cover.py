@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from reportlab.lib.pagesizes import A4
@@ -119,7 +119,7 @@ def format_cover_date(date_label: str | None) -> str:
         if date_label.strip():
             return date_label.strip()
 
-    today = date.today()
+    today = datetime.now(UTC).date()
     return f"{today.day} {today.strftime('%B')} {today.year}"
 
 

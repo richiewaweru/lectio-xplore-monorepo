@@ -10,3 +10,7 @@ from importlib import import_module
 
 _mod = import_module("infra.health")
 sys.modules[__name__] = _mod
+
+# Keep core.health.routes and infra.health.routes as one module object.
+_routes = import_module("infra.health.routes")
+sys.modules[f"{__name__}.routes"] = _routes

@@ -1,17 +1,8 @@
-from __future__ import annotations
-
-import logging
-from datetime import datetime, timezone
-from typing import Any
-
-from infra.telemetry.v3_trace import event_types as et
-from infra.telemetry.v3_trace.repository import V3TraceRepository
-
-logger = logging.getLogger(__name__)
+from __future__ import annotationsimport loggingfrom datetime import UTC, datetimefrom typing import Anyfrom infra.telemetry.v3_trace import event_types as etfrom infra.telemetry.v3_trace.repository import V3TraceRepositorylogger = logging.getLogger(__name__)
 
 
 def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class V3TraceWriter:
@@ -401,7 +392,7 @@ class V3TraceWriter:
                     },
                 )
                 return
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.exception(
                     "v3 trace terminal write failed trace_id=%s generation_id=%s attempt=%s",
                     self.trace_id,
@@ -423,7 +414,7 @@ class V3TraceWriter:
                 event_type=event_type,
                 payload=payload,
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception(
                 "v3 trace checkpoint write failed trace_id=%s generation_id=%s event=%s",
                 self.trace_id,
@@ -438,7 +429,7 @@ class V3TraceWriter:
                 trace_id=self.trace_id,
                 report=self._report,
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception(
                 "v3 trace report update failed trace_id=%s generation_id=%s",
                 self.trace_id,

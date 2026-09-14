@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections import defaultdict
-from datetime import datetime, timezone
-from typing import Any
 import uuid
+from collections import defaultdict
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,7 +31,7 @@ class StaleOutcomeError(ValueError):
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def actual_payload(actual: LessonActualModel) -> dict[str, Any]:

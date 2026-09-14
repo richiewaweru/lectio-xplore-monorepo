@@ -14,6 +14,6 @@ def stable_figure_request_id(
     figure_prompt_version: str = FIGURE_PROMPT_VERSION,
 ) -> str:
     digest = hashlib.sha256(
-        f"{generation_id}:{block_id}:{figure_prompt_version}".encode("utf-8")
+        f"{generation_id}:{block_id}:{figure_prompt_version}".encode()
     ).hexdigest()
     return f"fig-req-{digest[:24]}"

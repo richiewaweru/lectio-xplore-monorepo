@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from infra.database.models import (  # noqa: F401
+from infra.database.models import (
     ConceptEvidenceModel,
     ConceptStateModel,
     LearnAssignmentModel,

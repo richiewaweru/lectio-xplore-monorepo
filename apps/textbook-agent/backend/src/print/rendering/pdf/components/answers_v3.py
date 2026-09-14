@@ -136,7 +136,7 @@ def generate_v3_answer_key_pdf(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     pdf = canvas.Canvas(str(output_path), pagesize=A4)
-    width, height = A4
+    _width, height = A4
     y = height - 28 * mm
 
     pdf.setTitle("Answer Key")

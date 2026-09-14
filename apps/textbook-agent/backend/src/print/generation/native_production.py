@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from curriculum.teaching_plan.models import TeachingPlan
 from infra.authoring.capability_selector import ChooseFn
@@ -21,10 +22,10 @@ from print.generation.selection_snapshot import (
     form_plan_from_decisions,
     snapshot_from_form_plan,
 )
-from print.generation.work_orders import PrintWorkOrder, compile_print_work_orders
 from print.generation.whole_lesson.form_plan import FormPlan
 from print.generation.whole_lesson.legality import LessonLegalitySnapshot
 from print.generation.whole_lesson.packet import ImmutableLessonPacket
+from print.generation.work_orders import PrintWorkOrder, compile_print_work_orders
 from print.resources.native_policy import (
     default_print_policy,
     policy_version_and_hash,
@@ -65,6 +66,10 @@ async def build_closed_print_production_plan_async(
     provider: Any | None = None,
     engine: Any | None = None,
     use_document_composition: bool = True,
+    budget_ledger: Any | None = None,
+    checkpoint_store: Any | None = None,
+    progress_store: Any | None = None,
+    progress_run_id: str | None = None,
 ) -> tuple[FormPlan, PrintSelectionSnapshot, list[PrintWorkOrder]]:
     """Build Print FormPlan from shared document composition (canonical).
 
@@ -115,6 +120,11 @@ async def build_closed_print_production_plan_async(
             policy=body,
             allow_heuristic_fallback=True,
             candidate_map=candidate_map,
+            required_visual_slots=list(packet.required_visual_slots()),
+            budget_ledger=budget_ledger,
+            checkpoint_store=checkpoint_store,
+            progress_store=progress_store,
+            progress_run_id=progress_run_id,
         )
         _ = choose  # catalogue choose unused when composition owns ordinary selection
     else:

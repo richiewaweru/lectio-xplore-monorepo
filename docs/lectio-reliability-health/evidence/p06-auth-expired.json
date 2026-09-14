@@ -1,0 +1,4 @@
+﻿implementation_sha=dbe3e651ea12c4fc0c9acb70a7dfe60d9c113eb1
+event=auth_session_lost
+recorded_at_utc=2026-09-13T01:12:25.8028493Z
+note=After second playwright-cli open to /studio/print/..., localStorage token/user absent; /units redirected to /login. No auth bypass attempted. Remaining live UI blocked.

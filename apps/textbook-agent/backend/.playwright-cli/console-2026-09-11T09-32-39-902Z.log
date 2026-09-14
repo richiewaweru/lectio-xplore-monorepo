@@ -1,0 +1,3 @@
+[   59139ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://localhost:5173/api/v1/builder/lessons/from-native-learn/80fc9064-0dce-4a8a-93de-4bedea3516cb:0
+[   59237ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/api/v1/builder/lessons/learn-out-f714f22eda7a:0
+[   59463ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://localhost:5173/api/v1/builder/lessons/from-native-learn/learn-out-f714f22eda7a:0

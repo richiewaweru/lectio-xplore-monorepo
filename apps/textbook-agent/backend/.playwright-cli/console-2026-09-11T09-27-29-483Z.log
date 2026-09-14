@@ -1,0 +1,20 @@
+[    3664ms] DataCloneError: Failed to execute 'structuredClone' on 'Window': #<Object> could not be cloned.
+
+	in <unknown>
+	in +page.svelte
+	in +layout.svelte
+	in root.svelte
+	in undefined
+
+    at PrintDocumentEditor (http://localhost:5173/src/lib/print/components/studio/PrintDocumentEditor.svelte:55:36)
+    at http://localhost:5173/node_modules/.vite/deps/chunk-JRELA2CJ.js?v=c0891cc7:310:56
+    at update_reaction (http://localhost:5173/node_modules/.vite/deps/chunk-DBQ5OVZ6.js?v=c0891cc7:4136:18)
+    at update_effect (http://localhost:5173/node_modules/.vite/deps/chunk-DBQ5OVZ6.js?v=c0891cc7:4284:21)
+    at create_effect (http://localhost:5173/node_modules/.vite/deps/chunk-DBQ5OVZ6.js?v=c0891cc7:3626:7)
+    at branch (http://localhost:5173/node_modules/.vite/deps/chunk-DBQ5OVZ6.js?v=c0891cc7:3802:10)
+    at http://localhost:5173/node_modules/.vite/deps/chunk-JRELA2CJ.js?v=c0891cc7:304:17
+    at update_reaction (http://localhost:5173/node_modules/.vite/deps/chunk-DBQ5OVZ6.js?v=c0891cc7:4136:18)
+    at update_effect (http://localhost:5173/node_modules/.vite/deps/chunk-DBQ5OVZ6.js?v=c0891cc7:4284:21)
+    at create_effect (http://localhost:5173/node_modules/.vite/deps/chunk-DBQ5OVZ6.js?v=c0891cc7:3626:7)
+[  113653ms] [ERROR] Failed to load resource: the server responded with a status of 429 () @ https://lh3.googleusercontent.com/a/ACg8ocL5dMV0ggK7DgMzMvog9sTZAq6EKapk7mAzBHErRpcCMrpg7g=s96-c:0
+[  177751ms] [ERROR] Failed to load resource: the server responded with a status of 409 (Conflict) @ http://localhost:5173/api/v1/v3/generations/8b855594-9577-44f1-8652-cf2a4dae699d/lectio-document:0

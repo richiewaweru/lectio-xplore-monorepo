@@ -104,7 +104,9 @@ def validate_structural_plan(
             else:
                 seen_fields[field] = comp.slug
 
-    # 3. visual_required=true sections have a visual-capable slug
+    # 3. visual_required=true sections have a visual-capable slug.
+    # Intent-stage plans leave components empty; defer this check until
+    # components are selected.
     visual_capable = {
         "diagram-block",
         "diagram-series",
@@ -113,7 +115,7 @@ def validate_structural_plan(
         "timeline-block",
     }
     for section in plan.sections:
-        if section.visual_required:
+        if section.visual_required and section.components:
             slugs = {c.slug for c in section.components}
             if not slugs.intersection(visual_capable):
                 errors.append(
@@ -121,6 +123,22 @@ def validate_structural_plan(
                     f"no visual-capable component. Add one of: "
                     f"{sorted(visual_capable)}"
                 )
+
+    # 3b. Section purposes must not name Lectio component slugs.
+    try:
+        from learn.contracts.lectio import _load_component_registry
+
+        known_slugs = set(_load_component_registry().keys())
+    except (ImportError, OSError, TypeError, ValueError, AttributeError, KeyError):
+        known_slugs = set(visual_capable) | {"hook-hero"}
+    for section in plan.sections:
+        purpose = section.purpose or ""
+        leaked = sorted(slug for slug in known_slugs if slug and slug in purpose)
+        if leaked:
+            errors.append(
+                f"Section '{section.id}' purpose must not name Lectio components: "
+                f"{leaked}"
+            )
 
     # 4. question_plan section_ids reference valid sections
     valid_section_ids = {s.id for s in plan.sections}
@@ -241,12 +259,11 @@ def validate_section_brief(
     if section_plan.visual_required and brief.visual_strategy:
         vs = brief.visual_strategy
         visual_slugs = {c.slug for c in section_plan.components}
-        if "diagram-series" in visual_slugs:
-            if len(vs.frames) < 2:
-                errors.append(
-                    f"Section '{section_plan.id}': diagram-series component "
-                    f"requires >= 2 frames in visual_strategy, got {len(vs.frames)}."
-                )
+        if "diagram-series" in visual_slugs and len(vs.frames) < 2:
+            errors.append(
+                f"Section '{section_plan.id}': diagram-series component "
+                f"requires >= 2 frames in visual_strategy, got {len(vs.frames)}."
+            )
         if vs.source_question_ids:
             bad_qids = set(vs.source_question_ids) - assigned_question_ids
             if bad_qids:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from print.http.v3_studio.dtos import V3InputForm
@@ -11,7 +11,7 @@ SCHEMA_VERSION = "v3_planning_artifact_v1"
 
 
 def _utc_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def build_planning_artifact(

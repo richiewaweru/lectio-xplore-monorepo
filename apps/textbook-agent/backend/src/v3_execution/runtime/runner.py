@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from copy import deepcopy
 from collections.abc import AsyncIterator, Awaitable, Callable
+from copy import deepcopy
 from typing import Any
 
-from core.events import event_bus
 from core.config import settings as app_settings
+from core.events import event_bus
 from infra.telemetry.v3_trace import event_types as trace_events
 from infra.telemetry.v3_trace.writer import V3TraceWriter
 from v3_blueprint.models import ProductionBlueprint
+from v3_blueprint.planning.persistence import insert_step
 from v3_execution.assembly.pack_builder import V3PackBuilder
 from v3_execution.assembly.section_builder import V3SectionBuilder
 from v3_execution.booklet_status import (
@@ -36,10 +37,8 @@ from v3_execution.models import (
     GeneratedQuestionBlock,
     GeneratedVisualBlock,
 )
-
 from v3_execution.runtime import events
 from v3_execution.runtime.lanes import resolved_lane_limits, run_lane
-from v3_blueprint.planning.persistence import insert_step
 from v3_review import coherence_report_to_generation_summary, run_coherence_review
 
 logger = logging.getLogger(__name__)
@@ -452,9 +451,9 @@ async def run_generation(
                     continue
                 single_blueprint = blueprint.model_copy(update={"sections": [section_plan]})
 
-                def _build_single_section():
+                def _build_single_section(blueprint=single_blueprint):
                     return assembler.build_sections(
-                        single_blueprint,
+                        blueprint,
                         result.component_blocks,
                         result.question_blocks,
                         result.visual_blocks,
@@ -543,8 +542,8 @@ async def run_generation(
                         part_id=part_id,
                         failed_step="budget",
                         warnings=[
-                            f"lane:{part_id}:budget exhausted "
-                            f"({lane_limits['budget_seconds']}s)"
+                            (f"lane:{part_id}:budget exhausted "
+                            f"({lane_limits['budget_seconds']}s)")
                         ],
                     )
 
@@ -659,7 +658,7 @@ async def run_generation(
                                     ],
                                 },
                             )
-                        except Exception:  # noqa: BLE001
+                        except Exception:
                             logger.warning(
                                 "visual checkpoint save failed",
                                 extra={
@@ -1061,7 +1060,7 @@ async def run_generation(
 
     try:
         return await asyncio.wait_for(_inner(), timeout=V3_TIMEOUTS["generation_total"])
-    except asyncio.TimeoutError:
+    except TimeoutError:
         timeout_message = (
             f"generation_total: exceeded {V3_TIMEOUTS['generation_total']}s cap"
         )

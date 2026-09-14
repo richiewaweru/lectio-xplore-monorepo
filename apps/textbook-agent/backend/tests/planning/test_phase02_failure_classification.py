@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-
 import httpx
 from pydantic import BaseModel, ValidationError
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
@@ -16,7 +14,7 @@ from print.generation.whole_lesson.teaching_errors import TeachingPlanOutputInva
 def test_transport_timeout_rate_limit_retryable() -> None:
     assert classify_failure(httpx.ConnectError("boom")).code == "TRANSPORT"
     assert classify_failure(httpx.ConnectError("boom")).retryable is True
-    assert classify_failure(asyncio.TimeoutError()).code == "TIMEOUT"
+    assert classify_failure(TimeoutError()).code == "TIMEOUT"
     req = httpx.Request("GET", "https://example.test")
     resp = httpx.Response(429, request=req)
     assert classify_failure(httpx.HTTPStatusError("rl", request=req, response=resp)).code == (

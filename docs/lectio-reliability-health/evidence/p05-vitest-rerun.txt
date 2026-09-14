@@ -1,0 +1,23 @@
+﻿node.exe : npm warn "src/lib/curriculum/units/unit-workspace.reliability.test.ts" is being parsed as a normal command 
+line argument.
+At C:\Program Files\nodejs\npm.ps1:16 char:5
++     & "$basedir/node$exe"  "$basedir/node_modules/npm/bin/npm-cli.js" ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn "src/l... line argument.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm warn Unknown cli config "--run". This will stop working in the next major version of npm.
+
+> frontend@1.0.0-beta.1 test
+> vitest run src/lib/curriculum/units/unit-workspace.reliability.test.ts
+
+
+ RUN  v3.2.7 C:/Projects/lectio/apps/textbook-agent/frontend
+
+ Γ£ô src/lib/curriculum/units/unit-workspace.reliability.test.ts (7 tests) 6ms
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  03:42:57
+   Duration  4.22s (transform 585ms, setup 0ms, collect 1.63s, tests 6ms, environment 1.82s, prepare 193ms)
+

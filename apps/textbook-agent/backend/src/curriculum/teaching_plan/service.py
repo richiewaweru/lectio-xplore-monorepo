@@ -7,7 +7,8 @@ bound at composition time so curriculum never imports print product modules.
 
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from curriculum.teaching_plan.consumers import accept_approved_teaching_revision
 from curriculum.teaching_plan.models import TeachingPlan

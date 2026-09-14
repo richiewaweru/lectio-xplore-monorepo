@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from v3_blueprint.planning.canonical_plan import CanonicalExecutionPlan
@@ -40,7 +40,7 @@ def assemble_lesson_document(
     Generation-runtime fields (plan_hash, pipeline, partial) stay out of this document.
     """
     gen_rev = plan.plan_revision if generator_revision is None else generator_revision
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     stamp = created_at or now
     generation_id = plan.generation_id or "lesson"
     resolved_template = template_id or plan.template_id

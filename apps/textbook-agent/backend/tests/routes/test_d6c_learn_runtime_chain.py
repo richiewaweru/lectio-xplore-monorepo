@@ -5,7 +5,7 @@ Uses current production semantics (including over-broad analytics LRN-007).
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -24,7 +24,7 @@ from infra.database.session import get_async_session
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 TEACHER = User(

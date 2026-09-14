@@ -9,6 +9,8 @@ from curriculum.prompts import (
     lesson_approach_planner_prompt,
     lesson_approach_planner_v1_prompt,
     page_writer_common_prompt,
+)
+from curriculum.prompts import (
     prompt_text as _curriculum_prompt_text,
 )
 

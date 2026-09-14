@@ -1,22 +1,21 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select
 
 from app import app
-from infra.auth.middleware import get_current_user
-from infra.dependencies import get_gcs_image_store
 from core.database.models import EditableLessonModel, GenerationModel, UserModel
-from infra.database.session import get_async_session
 from core.entities.user import User
+from infra.auth.middleware import get_current_user
+from infra.database.session import get_async_session
+from infra.dependencies import get_gcs_image_store
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 USER_A = User(

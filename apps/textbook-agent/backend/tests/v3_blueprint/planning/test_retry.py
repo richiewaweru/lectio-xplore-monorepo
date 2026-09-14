@@ -131,8 +131,8 @@ async def test_run_stage1_retries_current_output_validation_exhaustion(
     assert call_stage1.await_count == 2
     assert call_stage1.await_args_list[0].kwargs["previous_errors"] is None
     assert call_stage1.await_args_list[1].kwargs["previous_errors"] == [
-        "Stage 1 structured output could not be validated: "
-        "Exceeded maximum retries (1) for output validation"
+        ("Stage 1 structured output could not be validated: "
+        "Exceeded maximum retries (1) for output validation")
     ]
     persist_plan.assert_awaited_once()
 
@@ -207,8 +207,8 @@ async def test_structured_output_validation_exhaustion_returns_failed_placeholde
     assert call_stage2.await_count == 2
     assert brief._failed is True
     assert brief._errors == [
-        "Stage 2 structured output could not be validated: "
-        "Exceeded maximum retries (1) for output validation"
+        ("Stage 2 structured output could not be validated: "
+        "Exceeded maximum retries (1) for output validation")
     ]
 
 

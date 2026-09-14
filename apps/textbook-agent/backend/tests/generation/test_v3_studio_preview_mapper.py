@@ -6,9 +6,8 @@ from pathlib import Path
 import pytest
 
 from print.http.v3_studio.dtos import V3InputForm
-from v3_blueprint.models import ProductionBlueprint
-
 from print.http.v3_studio.preview_mapper import blueprint_to_preview_dto
+from v3_blueprint.models import ProductionBlueprint
 
 
 def _example_bp(name: str) -> ProductionBlueprint:

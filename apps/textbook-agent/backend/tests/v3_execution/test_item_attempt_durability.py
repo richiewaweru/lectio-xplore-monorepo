@@ -203,20 +203,19 @@ async def test_all_attempts_fail_persisted_after_stage_failure() -> None:
             for i in range(1, ITEM_MAX_ATTEMPTS + 1)
         ]
         exc = ValueError("item generation exhausted")
-        setattr(exc, "item_attempts", journal)
-        setattr(exc, "item_correlation_id", cid)
+        exc.item_attempts = journal
+        exc.item_correlation_id = cid
         raise exc
 
     with patch(
         "v3_execution.executors.item_executor.execute_items_with_diagnostics",
         new=_always_fail,
-    ):
-        with pytest.raises(ValueError, match="exhausted"):
-            await _generate_shared_pack_items(
-                generation_id=gid,
-                form=_form(),
-                plan=_plan(),
-            )
+    ), pytest.raises(ValueError, match="exhausted"):
+        await _generate_shared_pack_items(
+            generation_id=gid,
+            form=_form(),
+            plan=_plan(),
+        )
 
     state = await load_chunked_state(gid)
     item_gen = state.get("item_generation") or {}
@@ -247,20 +246,19 @@ async def test_transport_class_survives_persistence() -> None:
             )
         ]
         exc = TimeoutError("provider timed out")
-        setattr(exc, "item_attempts", journal)
-        setattr(exc, "item_correlation_id", cid)
+        exc.item_attempts = journal
+        exc.item_correlation_id = cid
         raise exc
 
     with patch(
         "v3_execution.executors.item_executor.execute_items_with_diagnostics",
         new=_transport_fail,
-    ):
-        with pytest.raises(TimeoutError):
-            await _generate_shared_pack_items(
-                generation_id=gid,
-                form=_form(),
-                plan=_plan(),
-            )
+    ), pytest.raises(TimeoutError):
+        await _generate_shared_pack_items(
+            generation_id=gid,
+            form=_form(),
+            plan=_plan(),
+        )
 
     state = await load_chunked_state(gid)
     persisted = (state.get("item_generation") or {}).get("attempts") or []

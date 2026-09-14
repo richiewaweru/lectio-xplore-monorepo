@@ -12,7 +12,6 @@ from contracts.lectio import (
 from v3_blueprint.models import ProductionBlueprint
 from v3_execution.component_aliases import canonical_component_id
 from v3_execution.models import DraftPack
-
 from v3_review.models import IssueCategory, RepairExecutor, ReviewIssue, Severity
 
 
@@ -319,9 +318,7 @@ def _section_has_visual_media(bucket: dict[str, Any]) -> bool:
         ):
             return True
     sim = bucket.get("simulation")
-    if isinstance(sim, dict) and (sim.get("html_fragment") or "").strip():
-        return True
-    return False
+    return bool(isinstance(sim, dict) and (sim.get("html_fragment") or "").strip())
 
 
 def check_planned_visuals_exist(

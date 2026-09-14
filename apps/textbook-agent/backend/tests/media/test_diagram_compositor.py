@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 import hashlib
-import io
 import inspect
+import io
 
 import pytest
 from PIL import Image
 
 from media.diagram_compositor import (
     COMPOSITOR_VERSION,
+    FONT_SHA256,
     FONT_VERSION,
     LAYOUT_VERSION,
     DiagramCompositionPreflightError,
-    FONT_SHA256,
     compose_diagram_precision,
     normalize_labels,
     preflight_diagram_labels,

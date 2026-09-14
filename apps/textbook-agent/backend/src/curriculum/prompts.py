@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 LESSON_APPROACH_PROMPT_V1 = "lesson-approach-planner-v1.txt"
 LESSON_APPROACH_PROMPT_V2 = "lesson-approach-planner-v2.txt"
 ACTIVE_LESSON_APPROACH_PROMPT = LESSON_APPROACH_PROMPT_V2

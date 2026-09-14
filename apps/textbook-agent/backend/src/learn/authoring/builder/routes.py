@@ -5,20 +5,30 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Header,
+    HTTPException,
+    Request,
+    Response,
+    UploadFile,
+    status,
+)
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infra.auth.jwt_handler import JWTHandler
-from infra.auth.middleware import get_current_user
-from infra.dependencies import get_gcs_image_store, get_jwt_handler, get_settings
+from contracts.lectio import get_component_registry_entry
 from core.database.models import EditableLessonModel, GenerationModel
-from infra.database.session import get_async_session
 from core.entities.user import User
+from infra.auth.middleware import get_current_user
+from infra.database.session import get_async_session
+from infra.dependencies import get_gcs_image_store
 from infra.rate_limit import limiter
 from infra.storage.gcs_image_store import GCSImageStore
 from learn.authoring.builder.service import (
@@ -27,9 +37,8 @@ from learn.authoring.builder.service import (
     get_or_create_native_learn_builder_lesson,
     validate_builder_document,
 )
-from learn.generation.pipeline_dispatch import COMPONENT_LECTIO_RETIRED
-from contracts.lectio import get_component_registry_entry
 from learn.generation.interaction_writer import validate_interaction_contract
+from learn.generation.pipeline_dispatch import COMPONENT_LECTIO_RETIRED
 
 router = APIRouter(prefix="/api/v1/builder", tags=["builder"])
 logger = logging.getLogger(__name__)
@@ -63,7 +72,7 @@ _ALLOWED_MEDIA_UPLOAD_MIME_TYPES: dict[str, str] = {
 
 
 def _utc_naive_now() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _clone_json_tree(value: dict[str, Any]) -> dict[str, Any]:
@@ -194,6 +203,8 @@ class BuilderLessonUpdateRequest(BaseModel):
     title: str | None = None
     class_label: str | None = None
     document: dict[str, Any] = Field(..., description="LessonDocument JSON payload")
+    # Optimistic concurrency: client must send the last known updated_at ISO string.
+    expected_updated_at: datetime | None = None
 
 
 class BuilderLessonListItem(BaseModel):
@@ -529,9 +540,29 @@ async def update_builder_lesson(
     body: BuilderLessonUpdateRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> BuilderLessonDetailResponse:
+    from application.unit_lesson.effect_keys import (
+        EffectPayloadConflictError,
+        payload_digest,
+        remember_effect,
+    )
+
     model = await _owned_lesson_or_404(session, lesson_id=lesson_id, user_id=current_user.id)
     _validate_lesson_document_shape(body.document)
+
+    if body.expected_updated_at is not None:
+        expected = body.expected_updated_at
+        if expected.tzinfo is not None:
+            expected = expected.replace(tzinfo=None)
+        current = model.updated_at
+        if current is not None and current.replace(microsecond=0) != expected.replace(
+            microsecond=0
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Lesson changed; reload before saving",
+            )
 
     now = _utc_naive_now()
     now_iso = now.isoformat()
@@ -546,12 +577,42 @@ async def update_builder_lesson(
         now_iso=now_iso,
         created_at_value=created_at_value if isinstance(created_at_value, str) else None,
     )
+    digest = payload_digest(
+        {
+            "title": title,
+            "class_label": body.class_label if "class_label" in body.model_fields_set else model.class_label,
+            "document": document_json,
+        }
+    )
+
+    effect = None
+    if idempotency_key:
+        try:
+            effect, created = await remember_effect(
+                session,
+                owner_user_id=current_user.id,
+                kind="builder_save",
+                resource_id=lesson_id,
+                request_key=idempotency_key,
+                payload_hash=digest,
+            )
+        except EffectPayloadConflictError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=str(exc),
+            ) from exc
+        if not created and effect.outcome_json:
+            # Replay committed outcome without mutating the lesson again.
+            await session.refresh(model)
+            return _to_detail(model)
 
     model.title = title
     if "class_label" in body.model_fields_set:
         model.class_label = _normalized_class_label(body.class_label)
     model.document_json = document_json
     model.updated_at = now
+    if effect is not None:
+        effect.outcome_json = {"lesson_id": lesson_id, "updated_at": now_iso}
     await session.commit()
     _log_builder_event(
         "lesson_saved",

@@ -1,0 +1,45 @@
+{
+  "unit_id": "907b1dab-11fd-49fc-ac23-060d45b446b8",
+  "lesson_id": "fc9e4f92-7a3e-495e-b4e7-d83052da222e",
+  "preparation_generation_id": "7fc2a387-b963-42ed-8fa7-b7a40a71cf0f",
+  "learn": {
+    "output_id": "learn-out-c33ae7530662",
+    "editable_lesson_id": "c0fc1c46-812f-4a59-abd6-879c11e87d2d",
+    "realization_id": "48b80b9e-1f11-4274-834b-eb758d02c69b",
+    "generate_status": 200,
+    "nodes": 16,
+    "unique_node_ids": 16,
+    "edited_node_id": "learn-node:explain-b1:paragraph:3",
+    "edit_marker": "T12-CORR-MARKER",
+    "save_status": 200,
+    "publish_status": 201,
+    "release_id": "41a2e657-203f-4e29-b948-a8ca97cef7eb",
+    "release_number": 1,
+    "learner_id": "28ad5ca5-3300-4e98-b150-18143abee613",
+    "instance_id": "9faa7898-546a-4eac-8b4c-2cb0070b9e78",
+    "attempt_status": 200,
+    "attempt_interaction_id": "learn-node:orient-b1:choice:13",
+    "attempt_outcome": "correct"
+  },
+  "print": {
+    "edited_generation_id": "7d2e4b2b-04bd-49f5-a860-2fe0d70c5ea9",
+    "edit_status": 200,
+    "edit_marker": "T12-PRINT-MARKER",
+    "document_revision_before": 8,
+    "document_revision_after": 9,
+    "pdf_export_status": 200,
+    "pdf_bytes": 232484,
+    "pdf_content_type": "application/pdf",
+    "contains_learn_marker": false,
+    "sibling_independent": true,
+    "queued_sibling_output_id": "7fc2a387-b963-42ed-8fa7-b7a40a71cf0f"
+  },
+  "recovery": {
+    "reconnect_learn_output_id": "learn-out-c33ae7530662",
+    "reconnect_print_output_id": "7fc2a387-b963-42ed-8fa7-b7a40a71cf0f"
+  },
+  "notes": [
+    "Earlier generate-learn failures (missing generation row, asyncio loop mismatch on sync interaction writer, colliding interaction checkpoint keys) were fixed in-code during the pass before the successful live run.",
+    "Auth required re-login after API restarts; persistent profile .tmp/reliability-chrome-profile retained."
+  ]
+}

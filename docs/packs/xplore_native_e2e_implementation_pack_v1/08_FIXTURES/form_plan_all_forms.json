@@ -1,0 +1,109 @@
+{
+  "lesson_id": "lesson-light-food-001",
+  "sections": [
+    {
+      "slot_id": "section-1",
+      "position": 0,
+      "title": "Why light matters",
+      "blocks": [
+        {
+          "id": "s1-prose",
+          "position": 0,
+          "intent": "orient",
+          "object": "prose",
+          "brief": "Connect the familiar observation that leaves face light to the idea that light supplies energy for making food.",
+          "placement": "main",
+          "source_question_ids": []
+        },
+        {
+          "id": "s1-aside",
+          "position": 1,
+          "intent": "warn",
+          "object": "aside",
+          "brief": "Correct the misconception that soil itself is plant food.",
+          "placement": "margin",
+          "source_question_ids": []
+        }
+      ]
+    },
+    {
+      "slot_id": "section-2",
+      "position": 1,
+      "title": "From light to food",
+      "blocks": [
+        {
+          "id": "s2-list",
+          "position": 0,
+          "intent": "sequence",
+          "object": "list",
+          "brief": "Give a short sequence: light reaches leaf, leaf uses light energy, plant makes food.",
+          "placement": "main",
+          "source_question_ids": []
+        },
+        {
+          "id": "s2-figure",
+          "position": 1,
+          "intent": "show-structure",
+          "object": "figure",
+          "brief": "Diagram sunlight reaching a leaf, with water and carbon dioxide entering and food being made.",
+          "placement": "spanning",
+          "source_question_ids": []
+        }
+      ]
+    },
+    {
+      "slot_id": "section-3",
+      "position": 2,
+      "title": "Evidence from a covered leaf",
+      "blocks": [
+        {
+          "id": "s3-table",
+          "position": 0,
+          "intent": "compare",
+          "object": "table",
+          "brief": "Compare a lit part of a leaf with a covered part and the evidence of food making.",
+          "placement": "main",
+          "source_question_ids": []
+        },
+        {
+          "id": "s3-worked",
+          "position": 1,
+          "intent": "model-thinking",
+          "object": "worked-example",
+          "brief": "Model how to reason from a controlled covered-leaf investigation to the conclusion that light is required.",
+          "placement": "main",
+          "source_question_ids": []
+        }
+      ]
+    },
+    {
+      "slot_id": "section-4",
+      "position": 3,
+      "title": "Check your understanding",
+      "blocks": [
+        {
+          "id": "s4-questions",
+          "position": 0,
+          "intent": "check-understanding",
+          "object": "questions",
+          "brief": "One open-response question explaining the role of light.",
+          "placement": "main",
+          "source_question_ids": [
+            "q-open-1"
+          ]
+        },
+        {
+          "id": "q-mcq-1",
+          "position": 1,
+          "intent": "diagnose-misconception",
+          "object": "choices",
+          "brief": "One multiple-choice question distinguishing food from raw materials.",
+          "placement": "main",
+          "source_question_ids": [
+            "q-mcq-1"
+          ]
+        }
+      ]
+    }
+  ]
+}

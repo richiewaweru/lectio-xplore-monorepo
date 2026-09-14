@@ -27,7 +27,7 @@ import hashlib
 import uuid
 from contextvars import ContextVar
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -69,7 +69,7 @@ class PromptManifestEntry:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def hash_prompt(text: str) -> str:
@@ -193,7 +193,7 @@ def bind_prompt_cache(cache: dict[str, str] | None):
     return _prompt_cache.set(cache)
 
 
-def reset_prompt_cache(token) -> None:  # noqa: ANN001
+def reset_prompt_cache(token) -> None:
     _prompt_cache.reset(token)
 
 

@@ -1,19 +1,4 @@
-from collections.abc import AsyncGenerator
-from functools import lru_cache
-
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from infra.auth.jwt_handler import JWTHandler
-from infra.config import Settings
-from infra.database.session import async_session_factory
-from core.ports.student_profile_repository import StudentProfileRepository
-from core.ports.user_repository import UserRepository
-from core.repositories.sql_student_profile_repo import SqlStudentProfileRepository
-from core.repositories.sql_user_repo import SqlUserRepository
-from infra.storage.gcs_image_store import GCSImageStore
-
-
-@lru_cache
+from collections.abc import AsyncGeneratorfrom functools import lru_cachefrom sqlalchemy.ext.asyncio import AsyncSessionfrom core.ports.student_profile_repository import StudentProfileRepositoryfrom core.ports.user_repository import UserRepositoryfrom core.repositories.sql_student_profile_repo import SqlStudentProfileRepositoryfrom core.repositories.sql_user_repo import SqlUserRepositoryfrom infra.auth.jwt_handler import JWTHandlerfrom infra.config import Settingsfrom infra.database.session import async_session_factoryfrom infra.storage.gcs_image_store import GCSImageStore@lru_cache
 def get_settings() -> Settings:
     return Settings()
 

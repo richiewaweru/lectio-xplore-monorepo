@@ -5,7 +5,6 @@ from pathlib import Path
 
 from v3_blueprint.models import ProductionBlueprint
 
-
 FIXTURE_DIR = Path(__file__).resolve().parent
 
 

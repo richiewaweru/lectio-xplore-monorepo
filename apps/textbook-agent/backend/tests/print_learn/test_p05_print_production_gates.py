@@ -13,13 +13,18 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
 from pypdf import PdfReader
 from sqlalchemy import select
+from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
+from tests.planning.test_path_bridge import (
+    _fake_component_selector,
+    _fake_structural_planner,
+)
 
 from app import app
 from application.unit_lesson import prepare_path_lesson
-from core.auth.middleware import get_current_user
 from core.database.models import (
     ConceptCardModel,
     GenerationModel,
@@ -61,11 +66,6 @@ from print.rendering.page_objects.views import (
     teacher_document,
 )
 from print.rendering.pdf.rendering.playwright import PDFRenderError
-from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
-from tests.planning.test_path_bridge import (
-    _fake_component_selector,
-    _fake_structural_planner,
-)
 
 FIXTURE = "grade4-photosynthesis-path.json"
 ANSWER_PHRASE = "TEACHER_ONLY_ANSWER_LIGHT_REQUIRED"
@@ -198,7 +198,7 @@ def _draft_for_packet(packet, *, item_id: str | None) -> TeachingPlanDraft:
     )
 
 
-async def _fake_dispatch(ctx):  # noqa: ANN001
+async def _fake_dispatch(ctx, **_kwargs):
     planned = ctx.planned
     if planned.object == "figure":
         return WriterOutcome(
@@ -405,7 +405,7 @@ async def _run_uninterrupted_print(
     item_id: str,
     fail_once: bool = False,
 ) -> dict:
-    async def _teaching_call(**_kwargs):  # noqa: ANN003
+    async def _teaching_call(**_kwargs):
         async with async_session_factory() as session:
             generation = await session.get(GenerationModel, gid)
             assert generation is not None
@@ -552,7 +552,7 @@ async def test_p05_p03_figure_position_and_missing_asset_tracked() -> None:
             if block.get("object") == "figure"
         ]
         assert figures, "expected at least one figure from closed selection"
-        section_id, figure = figures[0]
+        _section_id, figure = figures[0]
         assert isinstance(figure.get("position"), int)
         content = figure.get("content") or {}
         # Caption + alt_text are the schema-valid figure labels.
@@ -774,7 +774,7 @@ async def test_p05_p05_export_route_finishes_and_timeout_is_actionable(
         # Injected hang/timeout → actionable failure, no hung worker.
         monkeypatch.setattr(settings, "pdf_export_timeout_ms", 50)
 
-        async def _hang(*_a, **_k):  # noqa: ANN001
+        async def _hang(*_a, **_k):
             import asyncio
 
             await asyncio.sleep(10)
@@ -825,54 +825,53 @@ async def test_p05_p05_bounded_export_timeout_cleans_up(monkeypatch: pytest.Monk
     """Unit-level: export_generation_pdf applies pdf_export_timeout_ms."""
     import asyncio
 
+    from contracts.document import PipelineDocument
     from core.config import settings
     from print.rendering.pdf.context import PDFGenerationContext
     from print.rendering.pdf.service import PDFExportRequest, export_generation_pdf
-    from contracts.document import PipelineDocument
 
     monkeypatch.setattr(settings, "pdf_export_timeout_ms", 100)
 
-    async def _hang(**_kwargs):  # noqa: ANN003
+    async def _hang(**_kwargs):
         await asyncio.sleep(5)
         raise AssertionError("unreachable")
 
     with patch(
         "print.rendering.pdf.service.render_generation_pdf",
         new=AsyncMock(side_effect=_hang),
-    ):
-        with pytest.raises(PDFRenderError) as raised:
-            await export_generation_pdf(
-                generation=PDFGenerationContext(
-                    id="p05-timeout",
-                    user_id="u",
-                    subject="Science",
-                    context="Science",
-                    mode="v3",
-                    status="completed",
-                    requested_template_id="guided-concept-path",
-                    requested_preset_id="blue-classroom",
-                ),
-                document=PipelineDocument(
-                    generation_id="p05-timeout",
-                    subject="Science",
-                    context="Science",
-                    mode="v3",
-                    template_id="guided-concept-path",
-                    preset_id="blue-classroom",
-                    status="completed",
-                    section_manifest=[],
-                    sections=[],
-                ),
-                auth_token="token",
-                request=PDFExportRequest(
-                    school_name="School",
-                    teacher_name="Teacher",
-                    include_toc=False,
-                    include_answers=False,
-                    edition="student",
-                ),
-                settings=settings,
-            )
+    ), pytest.raises(PDFRenderError) as raised:
+        await export_generation_pdf(
+            generation=PDFGenerationContext(
+                id="p05-timeout",
+                user_id="u",
+                subject="Science",
+                context="Science",
+                mode="v3",
+                status="completed",
+                requested_template_id="guided-concept-path",
+                requested_preset_id="blue-classroom",
+            ),
+            document=PipelineDocument(
+                generation_id="p05-timeout",
+                subject="Science",
+                context="Science",
+                mode="v3",
+                template_id="guided-concept-path",
+                preset_id="blue-classroom",
+                status="completed",
+                section_manifest=[],
+                sections=[],
+            ),
+            auth_token="token",
+            request=PDFExportRequest(
+                school_name="School",
+                teacher_name="Teacher",
+                include_toc=False,
+                include_answers=False,
+                edition="student",
+            ),
+            settings=settings,
+        )
     assert raised.value.debug.get("code") == "PDF_EXPORT_TIMEOUT"
 
 
@@ -885,7 +884,7 @@ async def test_p05_p05_bounded_export_timeout_cleans_up(monkeypatch: pytest.Monk
 async def test_p05_p06_recoverable_writer_failure_preserves_siblings() -> None:
     gid, item_id, _ = await _prepare_unit_generation(owner_suffix="p06")
 
-    async def _teaching_call(**_kwargs):  # noqa: ANN003
+    async def _teaching_call(**_kwargs):
         async with async_session_factory() as session:
             generation = await session.get(GenerationModel, gid)
             assert generation is not None

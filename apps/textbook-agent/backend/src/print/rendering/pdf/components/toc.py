@@ -16,7 +16,7 @@ def generate_toc_pdf(
 ) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     pdf = canvas.Canvas(str(output_path), pagesize=A4)
-    width, height = A4
+    _width, height = A4
 
     pdf.setTitle("Table of Contents")
     pdf.setFont("Helvetica-Bold", 22)

@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infra.auth.middleware import get_current_user
+from application.unit_lesson.realizations import get_realization, resolve_by_path, to_identity
 from core.capabilities import require_xplore_v2
 from core.database.models import (
     EditableLessonModel,
@@ -19,16 +19,16 @@ from core.database.models import (
     PathVersionModel,
     UnitModel,
 )
-from infra.dependencies import get_async_session
 from core.entities.user import User
-from application.unit_lesson.realizations import get_realization, resolve_by_path, to_identity
-from learn.generation.units_dispatch import dispatch_units_generation, units_dispatch_task
+from curriculum.models import PathLessonMutationRequest, PathVersionMutationRequest
+from infra.auth.middleware import get_current_user
+from infra.dependencies import get_async_session
 from learn.authoring.builder.service import (
     ComponentLectioBuilderError,
     get_or_create_native_learn_builder_lesson,
 )
 from learn.generation.pipeline_dispatch import COMPONENT_LECTIO_RETIRED
-from curriculum.models import PathLessonMutationRequest, PathVersionMutationRequest
+from learn.generation.units_dispatch import dispatch_units_generation, units_dispatch_task
 from v3_blueprint.planning.persistence import load_chunked_state
 
 router = APIRouter(
@@ -47,7 +47,7 @@ class UnitsGenerationStatus(BaseModel):
     retryable: bool
     builder_id: str | None = None
     display_title: str | None = None
-    review_cards: list["UnitsReviewCard"] = Field(default_factory=list)
+    review_cards: list[UnitsReviewCard] = Field(default_factory=list)
     realization_id: str | None = None
     path: Literal["print", "learn"] | None = None
     open_href: str | None = None
@@ -447,6 +447,7 @@ async def generate_learn_realization(
     body: PathLessonMutationRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> dict[str, Any]:
     """Admit + execute LearnDocument v2 from an approved Teaching Plan.
 
@@ -483,6 +484,7 @@ async def generate_learn_realization(
             preparation_generation_id=prep_id,
             user_id=current_user.id,
             path_lesson_id=lesson.id,
+            admission_request_key=idempotency_key,
         )
         await session.commit()
     except HTTPException:
@@ -504,6 +506,7 @@ async def generate_print_realization(
     body: PathLessonMutationRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> dict[str, Any]:
     """Admit + queue Print from an approved Teaching Plan (no Studio re-approval)."""
     from application.unit_lesson.realize_print_handoff import realize_print_from_preparation
@@ -536,6 +539,7 @@ async def generate_print_realization(
             preparation_generation_id=prep_id,
             user_id=current_user.id,
             path_lesson_id=lesson.id,
+            admission_request_key=idempotency_key,
         )
         await session.commit()
     except HTTPException:

@@ -1,19 +1,4 @@
-from __future__ import annotations
-
-import os
-from typing import Any
-from urllib.parse import urlparse
-
-from pydantic_ai.models.anthropic import AnthropicModel
-from pydantic_ai.models.google import GoogleModel
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.models.test import TestModel
-from pydantic_ai.profiles.openai import OpenAIModelProfile
-
-from infra.llm.deepseek_schema import DeepSeekJsonSchemaTransformer
-from infra.llm.types import ModelFamily, ModelSpec
-
-DEEPSEEK_BETA_BASE_URL = "https://api.deepseek.com/beta"
+from __future__ import annotationsimport osfrom typing import Anyfrom urllib.parse import urlparsefrom pydantic_ai.models.anthropic import AnthropicModelfrom pydantic_ai.models.google import GoogleModelfrom pydantic_ai.models.openai import OpenAIChatModelfrom pydantic_ai.models.test import TestModelfrom pydantic_ai.profiles.openai import OpenAIModelProfilefrom infra.llm.deepseek_schema import DeepSeekJsonSchemaTransformerfrom infra.llm.types import ModelFamily, ModelSpecDEEPSEEK_BETA_BASE_URL = "https://api.deepseek.com/beta"
 StructuredMode = str  # "strict_tool" | "prompted_json"
 
 _OPENAI_COMPATIBLE_SYSTEMS = {
@@ -199,11 +184,7 @@ def describe_text_model(model: Any) -> ModelSpec | None:
         )
 
     if (
-        isinstance(model, GoogleModel)
-        or name == "GeminiModel"
-        or runtime_system in {"google", "google-gla", "google-vertex"}
-        or module.startswith("pydantic_ai.models.google")
-        or module.startswith("pydantic_ai.models.gemini")
+        isinstance(model, GoogleModel) or name == "GeminiModel" or runtime_system in {"google", "google-gla", "google-vertex"} or module.startswith(("pydantic_ai.models.google", "pydantic_ai.models.gemini"))
     ):
         return ModelSpec(
             family=ModelFamily.GOOGLE,

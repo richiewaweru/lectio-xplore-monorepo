@@ -15,6 +15,12 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from pypdf import PdfReader
 from sqlalchemy import select
+from tests.planning.contract_fixtures import teaching_and_form
+from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
+from tests.planning.test_path_bridge import (
+    _fake_component_selector,
+    _fake_structural_planner,
+)
 
 from application.unit_lesson import prepare_path_lesson
 from core.database.models import GenerationModel, PathLessonModel, UserModel
@@ -40,14 +46,7 @@ from print.rendering.page_objects.document_assembly import (
     reload_document,
 )
 from print.rendering.page_objects.views import render_document_pdf
-from tests.planning.contract_fixtures import teaching_and_form
-from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
-from tests.planning.test_path_bridge import (
-    _fake_component_selector,
-    _fake_structural_planner,
-)
 from v3_blueprint.planning.persistence import load_chunked_state
-
 
 FIXTURE = "grade4-photosynthesis-path.json"
 
@@ -95,7 +94,7 @@ def _plans_for_packet(packet, legality):
     return teaching_and_form(sections=sections)
 
 
-async def _fake_dispatch(ctx):  # noqa: ANN001
+async def _fake_dispatch(ctx, **_kwargs):
     if ctx.planned.object == "figure":
         return WriterOutcome(
             block_id=ctx.planned.id,

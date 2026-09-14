@@ -26,8 +26,7 @@ def project_teacher_blocks(document: dict[str, Any]) -> list[dict[str, Any]]:
     """Teacher projection: all blocks in document order."""
     out: list[dict[str, Any]] = []
     for section in document.get("sections", []):
-        for block in section.get("blocks", []):
-            out.append(block)
+        out.extend(section.get("blocks", []))
     return out
 
 

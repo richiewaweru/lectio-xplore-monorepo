@@ -3,8 +3,7 @@ import inspect
 import logging
 import os
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 from urllib.parse import urlsplit, urlunsplit
 from uuid import uuid4
 
@@ -15,46 +14,48 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from infra.config import settings
-from infra.rate_limit import limiter
-from media.storage.image_store import local_image_store_root
-from infra.database.migrations import upgrade_database
-from infra.database.session import engine
-from infra.errors import register_error_handlers
-from infra.health.routes import (
-    DependencyStatus,
-    configure_health_extensions,
-    router as health_router,
-)
-from infra.logging import configure_logging
-from infra.middleware.request_id import RequestIdMiddleware
-from infra.middleware.v2_audit import V2AuditMiddleware
-from print.rendering.pdf.runtime import cleanup_stale_pdf_exports
+from application.builder_print.routes import router as builder_print_router
+from application.unit_lesson.progress_routes import router as realization_progress_router
 from core.routes.auth import router as auth_router
 from core.routes.capabilities import router as capabilities_router
 from core.routes.profile import router as profile_router
 from core.routes.prompts import router as prompts_router
 from core.routes.shares import router as shares_router
+from curriculum.routes import router as planning_router
+from infra.config import settings
+from infra.database.migrations import upgrade_database
+from infra.database.session import async_session_factory, engine
+from infra.errors import register_error_handlers
+from infra.health.routes import (
+    DependencyStatus,
+    configure_health_extensions,
+)
+from infra.health.routes import (
+    router as health_router,
+)
+from infra.logging import configure_logging
+from infra.middleware.request_id import RequestIdMiddleware
+from infra.middleware.v2_audit import V2AuditMiddleware
+from infra.rate_limit import limiter
+from infra.telemetry import telemetry_router
+from infra.telemetry.dependencies import get_llm_call_repository
+from infra.telemetry.service import telemetry_monitor
 from infra.version import VERSION
+from learn.analytics.insight_service import router as learn_analytics_router
 from learn.authoring.builder.routes import router as builder_router
-from application.builder_print.routes import router as builder_print_router
+from learn.generation.units_routes import router as units_generation_router
 from learn.publishing.release_routes import router as learn_release_router
 from learn.runtime.runtime_routes import router as learn_runtime_router
-from learn.analytics.insight_service import router as learn_analytics_router
-from infra.database.session import async_session_factory
-from print.http.v3_studio.router import v3_studio_router
-from learn.generation.units_routes import router as units_generation_router
-from print.http.v3_studio.generation_writer import V3GenerationWriter
 from media.diagnostics.v3_image_pipeline_diagnostic import (
     ProbeResult,
     run_gcs_probe,
     run_grok_probe,
 )
-from curriculum.routes import router as planning_router
+from media.storage.image_store import local_image_store_root
+from print.http.v3_studio.generation_writer import V3GenerationWriter
+from print.http.v3_studio.router import v3_studio_router
+from print.rendering.pdf.runtime import cleanup_stale_pdf_exports
 from resource_specs.loader import initialize_registry as initialize_resource_registry
-from infra.telemetry import telemetry_router
-from infra.telemetry.dependencies import get_llm_call_repository
-from infra.telemetry.service import telemetry_monitor
 from v3_blueprint.skeletons import initialize_skeleton_catalog
 
 logger = logging.getLogger("uvicorn.error")
@@ -234,7 +235,7 @@ async def lifespan(app: FastAPI):
                 "Reconciled %d stale v3 generation(s) after restart",
                 stale_generations,
             )
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.exception("Stale v3 generation sweep failed at startup")
     initialize_resource_registry()
     initialize_skeleton_catalog()
@@ -244,7 +245,7 @@ async def lifespan(app: FastAPI):
         retention_seconds=settings.pdf_temp_retention_seconds,
     )
     app.state.instance_id = str(uuid4())
-    app.state.started_at = datetime.now(timezone.utc)
+    app.state.started_at = datetime.now(UTC)
     app.state.pipeline_architecture = "shell-pipeline-native-lectio"
     logger.info(
         "Runtime ready",
@@ -318,6 +319,7 @@ def create_app() -> FastAPI:
     # D3: /api/v1/skeletons* retired (non-Unit HTTP)
     app.include_router(planning_router)
     app.include_router(units_generation_router)
+    app.include_router(realization_progress_router)
     # D3: /api/v1/legacy-units retired
     app.include_router(telemetry_router)
 

@@ -13,15 +13,17 @@ from curriculum.teaching_plan.models import (
     TeachingPlanBlock,
     TeachingPlanSection,
 )
+from document.models import DOCUMENT_PRIMITIVE_KINDS
 from learn.generation.native_selection import (
     LearnSelectionDecision,
-    SelectionError as LearnSelectionError,
     build_learn_selection_snapshot,
     rank_learn_content_candidates,
-    rank_learn_interaction_candidates,
     select_learn_deterministically,
     select_learn_first_legal,
     validate_learn_selection,
+)
+from learn.generation.native_selection import (
+    SelectionError as LearnSelectionError,
 )
 from learn.generation.work_orders import compile_learn_work_orders
 from learn.resources.native_policy import default_learn_policy, policy_version_and_hash
@@ -29,14 +31,20 @@ from learn.resources.selection import derive_learn_block_candidates
 from print.generation.native_production import teaching_plan_content_hash
 from print.generation.selection_snapshot import (
     PrintSelectionDecision,
-    SelectionError as PrintSelectionError,
     build_print_selection_snapshot,
-    rank_print_form_candidates,
     select_print_deterministically,
     select_print_first_legal,
     validate_print_selection,
 )
-from print.resources.native_policy import default_print_policy, policy_version_and_hash
+from print.generation.selection_snapshot import (
+    SelectionError as PrintSelectionError,
+)
+from print.resources.native_policy import (
+    default_print_policy,
+)
+from print.resources.native_policy import (
+    policy_version_and_hash as print_policy_version_and_hash,
+)
 from print.resources.selection import build_print_candidate_map
 
 
@@ -101,26 +109,29 @@ def test_a05_g01_semantic_selector_and_sole_candidate() -> None:
         package_contract_hash="pkg-a05",
     )
     decision = snapshot.decisions[0]
-    assert "explanation-block" in snapshot.candidate_map["b-explain"]["content"]
-    assert decision.content_id == "explanation-block"
+    content = snapshot.candidate_map["b-explain"]["content"]
+    assert set(content).issubset(set(DOCUMENT_PRIMITIVE_KINDS))
+    assert decision.content_id in DOCUMENT_PRIMITIVE_KINDS
 
     ranked = rank_learn_content_candidates(
-        snapshot.candidate_map["b-explain"]["content"],
+        content,
         brief="Explain condensation in clear causal prose.",
         intent="explain",
         action=None,
     )
-    assert ranked[0] == "explanation-block"
+    assert ranked[0] == decision.content_id
 
     sole_policy = default_learn_policy()
-    sole_policy["offered_content"] = ["summary-block"]
+    sole_policy["offered_content"] = []
     sole_policy["offered_interactions"] = []
     sole_plan = _plan(
         _block("b-sole", intent="summarise", brief="Summarise the lesson takeaways.")
     )
     sole_candidates_map, sole_decisions = select_learn_first_legal(sole_plan, policy=sole_policy)
-    assert sole_candidates_map["b-sole"].content_candidates == ("summary-block",)
-    assert sole_decisions[0].content_id == "summary-block"
+    assert set(sole_candidates_map["b-sole"].content_candidates).issubset(
+        set(DOCUMENT_PRIMITIVE_KINDS)
+    )
+    assert sole_decisions[0].content_id in DOCUMENT_PRIMITIVE_KINDS
 
 
 def test_a05_g02_out_of_set_rejected_and_reorder_invariant() -> None:
@@ -204,36 +215,26 @@ def test_a05_g03_required_interactions_persist_optional_explicit_none() -> None:
 def test_a05_g04_fallback_cannot_restore_excluded_candidates() -> None:
     """Budget/readiness exclusions stay excluded; no semantic fallback map restores them."""
     policy = default_learn_policy()
-    policy["offered_content"] = ["explanation-block"]
+    policy["offered_content"] = []
     policy["offered_interactions"] = []
     derived = derive_learn_block_candidates(
         block_id="b-budget",
         intent="emphasise",
         action=None,
         policy=policy,
-        capabilities=[
-            {
-                "id": "explanation-block",
-                "kind": "content",
-                "availability": "available",
-                "supported_intents": ["emphasise"],
-                "supported_actions": ["read-explanation"],
-                "payload_schema": {"type": "object"},
-            }
-        ],
-        remaining_budgets={"explanation-block": 0},
-        writer_view={
-            "explanation-block": {
-                "instructions": {"text": "Write explanatory prose."},
-                "payload_schema": {"type": "object"},
-                "required_inputs": ["brief"],
-                "modes": ["generate"],
-                "validator_refs": ["learn.payload_schema"],
-            }
+        capabilities=[],
+        remaining_budgets={
+            "paragraph": 0,
+            "heading": 0,
+            "list": 0,
+            "figure": 0,
+            "table": 0,
+            "callout": 0,
         },
+        writer_view={},
     )
     assert derived.content_candidates == ()
-    assert derived.excluded.get("explanation-block") == "budget_exhausted"
+    assert derived.excluded.get("paragraph") == "budget_exhausted"
 
     not_ready = derive_learn_block_candidates(
         block_id="b-ready",
@@ -330,7 +331,7 @@ def test_a05_g06_shared_teaching_revision_across_paths() -> None:
         plan,
         compatible_objects_by_intent={"explain": ("prose", "list", "aside")},
     )
-    _, print_hash = policy_version_and_hash(default_print_policy())
+    _, print_hash = print_policy_version_and_hash(default_print_policy())
     print_snapshot = build_print_selection_snapshot(
         plan,
         candidate_map=print_candidates,

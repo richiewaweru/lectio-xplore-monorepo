@@ -1,0 +1,101 @@
+Prepared From Path Lesson
+School:
+P06C Reliability School
+Teacher:
+P06C Teacher
+Date:
+13 September 2026
+Student Name:
+
+Table of Contents
+1. Give the learner a reason to care and a concrete situation to hold.
+2. Build the idea itself. State it, ground it, make it usable.
+3. Put a case and a near-miss side by side. The learner must see the boundary of the idea, not just the idea.
+4. The shared diagnostic. Identical across every variant. Written from the card only, never from the prose above it.
+
+ViewEditSaveReloadDownload PDFrev 4
+Give the learner a reason to care and a concrete situation
+to hold.
+A torch is switched on, shining towards a wall. A hand is held between the torch and
+the wall. On the wall you can see a bright patch of light, and close to it a hand-
+shaped dark patch. Look at where the bright patch and the dark patch appear.
+Where is the dark patch on the wall? Before you read on, commit to where you think
+the dark patch will land.
+Build the idea itself. State it, ground it, make it usable.
+When a torch shines on a wall, its light travels in straight lines outward from the
+torch. If you hold your hand in front of the torch, the opaque hand stands in the path
+of those lines, so the light that would have reached one region of the wall never gets
+there. That region of the wall therefore receives no light and looks dark — this unlit
+region is the shadow. A shadow is not something the hand gives off or sends out; it
+is simply the place the light cannot reach because the hand is in the way. The
+shadow appears on the side of the hand away from the torch, because light can only
+be blocked downstream of its source.
+Follow the light in the torch–hand–wall arrangement. Light leaves the torch as rays
+travelling in straight lines towards the wall. The rays that meet the opaque hand stop
+there, because the hand blocks the light. The rays that pass beside the hand keep
+going in the same straight direction until they reach the wall. On the wall, immedi-
+ately beyond the hand and away from the torch, the place where the blocked rays
+would have landed stays unlit and appears as a dark region. That dark region takes
+the shape of the hand standing in the beam, so its outline matches the outline of the
+hand, and it sits on the far side of the hand from the torch.
+Put a case and a near-miss side by side. The learner must
+see the boundary of the idea, not just the idea.
+Same torch, same hand, same wall — only the hand's position changes whether the light is blocked.
+ARRANGEMENT WHERE THE HAND IS WHAT APPEARS ON
+THE WALL WHAT THE LIGHT DOES
+1
+
+ARRANGEMENT WHERE THE HAND IS WHAT APPEARS ON
+THE WALL WHAT THE LIGHT DOES
+Torch, hand and
+wall in line
+Held directly between
+the torch and the wall,
+in the light's straight-
+line path
+A dark, hand-
+shaped patch ap-
+pears on the wall
+beyond the hand
+Light travels in a straight
+line from the torch and the
+hand blocks it, so no light
+reaches that part of the
+wall
+Hand moved out
+of the beam
+Still in the room, but
+no longer standing in
+the beam between the
+torch and the wall
+No dark hand-
+shaped patch ap-
+pears anywhere on
+the wall
+Light travels in a straight
+line from the torch to the
+wall without being blocked,
+so the wall is lit as before
+During a demonstration, a lamp shines on a metal spoon from the right. A dark
+shape forms on the wall to the left of the spoon. Which statement best explains this
+dark shape?
+The shared diagnostic. Identical across every variant.
+Written from the card only, never from the prose above it.
+A student holds a flashlight on the left side of a wooden block and shines it toward
+the block. Where will the block's shadow appear?
+The spoon blocks the light traveling to the wall, so the light does not reach that
+area [P06C-PRINT-MARKER-20260913B]
+a.
+The spoon sends out its own shadow, which travels to the wallb.
+The light is blocked on the right side of the spoon, where the lamp touches itc.
+The wall absorbs all the light from the lamp in a dark patchd.
+On the right side of the block, away from the flashlighta.
+On the left side of the block, between the block and the flashlightb.
+All around the block, because the block gives off shadowc.
+Directly underneath the block, no matter how the beam is aimedd.
+2
+
+Answer key
+contrast-b2. a
+check-b1. a
+3

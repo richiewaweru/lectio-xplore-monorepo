@@ -72,7 +72,7 @@ async def run_lane(
             )
             blocks = payload.get("blocks") if payload else None
             return list(blocks) if isinstance(blocks, list) else []
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.warning(
                 "lane checkpoint lookup failed",
                 extra={"generation_id": generation_id, "part_id": part_id, "step": step},
@@ -95,7 +95,7 @@ async def run_lane(
                     ]
                 },
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.warning(
                 "lane checkpoint save failed",
                 extra={"generation_id": generation_id, "part_id": part_id, "step": step},

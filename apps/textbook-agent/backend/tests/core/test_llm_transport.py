@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from core.llm import ModelFamily, ModelSpec, build_model, build_structured_model
 from core.llm.transport import DEEPSEEK_BETA_BASE_URL, structured_base_url
+
+from core.llm import ModelFamily, ModelSpec, build_model, build_structured_model
 
 
 def test_structured_base_url_uses_beta_for_deepseek_strict() -> None:

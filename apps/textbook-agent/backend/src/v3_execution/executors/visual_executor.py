@@ -4,14 +4,13 @@ import hashlib
 import json
 import logging
 import os
+import time
 import traceback
 import uuid
-import time
 from collections.abc import Awaitable, Callable
 from typing import Any, Literal
 
 import core.events as core_events
-from media.qc.visual_qc import evaluate_visual_quality, visual_qc_enabled
 from media.diagram_compositor import (
     COMPOSITOR_VERSION,
     FONT_VERSION,
@@ -20,13 +19,12 @@ from media.diagram_compositor import (
     preflight_diagram_labels,
 )
 from media.providers.registry import get_image_client, load_image_provider_spec
-
+from media.qc.visual_qc import evaluate_visual_quality, visual_qc_enabled
+from v3_execution.config.retries import V3_MAX_RETRIES
 from v3_execution.models import ExecutorOutcome, GeneratedVisualBlock, VisualGeneratorWorkOrder
 from v3_execution.prompts.visual_executor import build_visual_prompt
-from v3_execution.config.retries import V3_MAX_RETRIES
 from v3_execution.runtime.retry_runner import run_with_retries
 from v3_execution.runtime.validation import validate_visual_block
-
 
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
 logger = logging.getLogger(__name__)
@@ -89,7 +87,7 @@ class VisualStageError(RuntimeError):
         super().__init__(self.to_error_message())
 
     @classmethod
-    def from_exception(cls, *, stage: str, exc: Exception) -> "VisualStageError":
+    def from_exception(cls, *, stage: str, exc: Exception) -> VisualStageError:
         if isinstance(exc, cls):
             return exc
         traceback_text = "".join(
@@ -164,7 +162,7 @@ async def _render_frame(
             canonical_labels = preflight_diagram_labels(
                 (1024, 1024), order.visual.labels_required
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise VisualStageError.from_exception(
                 stage="diagram_compositor_preflight",
                 exc=exc,
@@ -177,7 +175,7 @@ async def _render_frame(
 
     try:
         store = get_image_store()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise VisualStageError.from_exception(
             stage="gcs_upload",
             exc=exc,
@@ -265,7 +263,7 @@ async def _render_frame(
 
     try:
         client = get_image_client()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise VisualStageError.from_exception(
             stage="image_generation_api_call",
             exc=exc,
@@ -306,7 +304,7 @@ async def _render_frame(
     provider_started = time.perf_counter()
     try:
         image = await client.generate_image(prompt=prompt)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         core_events.event_bus.publish(
             event_trace_id,
             core_events.LLMCallFailedEvent(
@@ -375,7 +373,7 @@ async def _render_frame(
                 base_bytes,
                 order.visual.labels_required,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise VisualStageError.from_exception(
                 stage="diagram_compositor",
                 exc=exc,
@@ -485,7 +483,7 @@ async def _render_frame(
                         error_message=str(exc),
                     ),
                 )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise VisualStageError.from_exception(
             stage="gcs_upload",
             exc=exc,

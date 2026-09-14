@@ -1,0 +1,3315 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<script src="https://accounts.google.com/gsi/client" async defer></script>
+		<!--12qhfyh--><link rel="preconnect" href="https://fonts.googleapis.com" class="s-7IPF32Wcq3s8"/> <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" class="s-7IPF32Wcq3s8"/> <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&amp;family=IBM+Plex+Mono:wght@500&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet" class="s-7IPF32Wcq3s8"/><!----><title>Lectio</title>
+		<style data-sveltekit>/*! tailwindcss v4.3.3 | MIT License | https://tailwindcss.com */
+@layer properties;
+@layer theme, base, components, utilities;
+@layer theme {
+  :root, :host {
+    --font-sans: var(--font-sans);
+    --font-serif: var(--font-serif);
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+      "Courier New", monospace;
+    --color-red-50: oklch(97.1% 0.013 17.38);
+    --color-red-200: oklch(88.5% 0.062 18.334);
+    --color-red-700: oklch(50.5% 0.213 27.518);
+    --color-red-800: oklch(44.4% 0.177 26.899);
+    --color-amber-50: oklch(98.7% 0.022 95.277);
+    --color-amber-100: oklch(96.2% 0.059 95.617);
+    --color-amber-200: oklch(92.4% 0.12 95.746);
+    --color-amber-300: oklch(87.9% 0.169 91.605);
+    --color-amber-500: oklch(76.9% 0.188 70.08);
+    --color-amber-700: oklch(55.5% 0.163 48.998);
+    --color-amber-800: oklch(47.3% 0.137 46.201);
+    --color-amber-900: oklch(41.4% 0.112 45.904);
+    --color-amber-950: oklch(27.9% 0.077 45.635);
+    --color-emerald-100: oklch(95% 0.052 163.051);
+    --color-emerald-600: oklch(59.6% 0.145 163.225);
+    --color-emerald-900: oklch(37.8% 0.077 168.94);
+    --color-slate-500: oklch(55.4% 0.046 257.417);
+    --color-black: #000;
+    --spacing: 0.25rem;
+    --container-lg: 32rem;
+    --container-xl: 36rem;
+    --container-2xl: 42rem;
+    --container-3xl: 48rem;
+    --container-4xl: 56rem;
+    --container-5xl: 64rem;
+    --text-xs: 0.75rem;
+    --text-xs--line-height: calc(1 / 0.75);
+    --text-sm: 0.875rem;
+    --text-sm--line-height: calc(1.25 / 0.875);
+    --text-base: 1rem;
+    --text-base--line-height: calc(1.5 / 1);
+    --text-lg: 1.125rem;
+    --text-lg--line-height: calc(1.75 / 1.125);
+    --text-xl: 1.25rem;
+    --text-xl--line-height: calc(1.75 / 1.25);
+    --text-2xl: 1.5rem;
+    --text-2xl--line-height: calc(2 / 1.5);
+    --text-3xl: 1.875rem;
+    --text-3xl--line-height: calc(2.25 / 1.875);
+    --text-4xl: 2.25rem;
+    --text-4xl--line-height: calc(2.5 / 2.25);
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --tracking-tight: -0.025em;
+    --tracking-wide: 0.025em;
+    --leading-relaxed: 1.625;
+    --radius-2xl: 1rem;
+    --radius-3xl: 1.5rem;
+    --animate-spin: spin 1s linear infinite;
+    --animate-ping: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+    --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    --default-transition-duration: 150ms;
+    --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    --default-font-family: var(--font-sans);
+    --default-mono-font-family: var(--font-mono);
+  }
+}
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0 solid;
+  }
+  html, :host {
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    tab-size: 4;
+    font-family: var(--default-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");
+    font-feature-settings: var(--default-font-feature-settings, normal);
+    font-variation-settings: var(--default-font-variation-settings, normal);
+    -webkit-tap-highlight-color: transparent;
+  }
+  hr {
+    height: 0;
+    color: inherit;
+    border-top-width: 1px;
+  }
+  abbr:where([title]) {
+    -webkit-text-decoration: underline dotted;
+    text-decoration: underline dotted;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+  a {
+    color: inherit;
+    -webkit-text-decoration: inherit;
+    text-decoration: inherit;
+  }
+  b, strong {
+    font-weight: bolder;
+  }
+  code, kbd, samp, pre {
+    font-family: var(--default-mono-font-family, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+    font-feature-settings: var(--default-mono-font-feature-settings, normal);
+    font-variation-settings: var(--default-mono-font-variation-settings, normal);
+    font-size: 1em;
+  }
+  small {
+    font-size: 80%;
+  }
+  sub, sup {
+    font-size: 75%;
+    line-height: 0;
+    position: relative;
+    vertical-align: baseline;
+  }
+  sub {
+    bottom: -0.25em;
+  }
+  sup {
+    top: -0.5em;
+  }
+  table {
+    text-indent: 0;
+    border-color: inherit;
+    border-collapse: collapse;
+  }
+  :-moz-focusring:where(:not(iframe)) {
+    outline: auto;
+  }
+  progress {
+    vertical-align: baseline;
+  }
+  summary {
+    display: list-item;
+  }
+  ol, ul, menu {
+    list-style: none;
+  }
+  img, svg, video, canvas, audio, iframe, embed, object {
+    display: block;
+    vertical-align: middle;
+  }
+  img, video {
+    max-width: 100%;
+    height: auto;
+  }
+  button, input, select, optgroup, textarea, ::file-selector-button {
+    font: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    border-radius: 0;
+    background-color: transparent;
+    opacity: 1;
+  }
+  :where(select:is([multiple], [size])) optgroup {
+    font-weight: bolder;
+  }
+  :where(select:is([multiple], [size])) optgroup option {
+    padding-inline-start: 20px;
+  }
+  ::file-selector-button {
+    margin-inline-end: 4px;
+  }
+  ::placeholder {
+    opacity: 1;
+  }
+  @supports (not (-webkit-appearance: -apple-pay-button))  or (contain-intrinsic-size: 1px) {
+    ::placeholder {
+      color: currentcolor;
+      @supports (color: color-mix(in lab, red, red)) {
+        color: color-mix(in oklab, currentcolor 50%, transparent);
+      }
+    }
+  }
+  textarea {
+    resize: vertical;
+  }
+  ::-webkit-search-decoration {
+    -webkit-appearance: none;
+  }
+  ::-webkit-date-and-time-value {
+    min-height: 1lh;
+    text-align: inherit;
+  }
+  ::-webkit-datetime-edit {
+    display: inline-flex;
+  }
+  ::-webkit-datetime-edit-fields-wrapper {
+    padding: 0;
+  }
+  ::-webkit-datetime-edit, ::-webkit-datetime-edit-year-field, ::-webkit-datetime-edit-month-field, ::-webkit-datetime-edit-day-field, ::-webkit-datetime-edit-hour-field, ::-webkit-datetime-edit-minute-field, ::-webkit-datetime-edit-second-field, ::-webkit-datetime-edit-millisecond-field, ::-webkit-datetime-edit-meridiem-field {
+    padding-block: 0;
+  }
+  ::-webkit-calendar-picker-indicator {
+    line-height: 1;
+  }
+  :-moz-ui-invalid {
+    box-shadow: none;
+  }
+  button, input:where([type="button"], [type="reset"], [type="submit"]), ::file-selector-button {
+    appearance: button;
+  }
+  ::-webkit-inner-spin-button, ::-webkit-outer-spin-button {
+    height: auto;
+  }
+  [hidden]:where(:not([hidden="until-found"])) {
+    display: none !important;
+  }
+}
+@layer utilities {
+  .visible {
+    visibility: visible;
+  }
+  .absolute {
+    position: absolute;
+  }
+  .fixed {
+    position: fixed;
+  }
+  .relative {
+    position: relative;
+  }
+  .static {
+    position: static;
+  }
+  .sticky {
+    position: sticky;
+  }
+  .inset-0 {
+    inset: 0px;
+  }
+  .inset-2 {
+    inset: calc(var(--spacing) * 2);
+  }
+  .inset-4 {
+    inset: calc(var(--spacing) * 4);
+  }
+  .top-0 {
+    top: 0px;
+  }
+  .z-10 {
+    z-index: 10;
+  }
+  .z-50 {
+    z-index: 50;
+  }
+  .mx-auto {
+    margin-inline: auto;
+  }
+  .mt-1 {
+    margin-top: var(--spacing);
+  }
+  .mt-2 {
+    margin-top: calc(var(--spacing) * 2);
+  }
+  .mt-3 {
+    margin-top: calc(var(--spacing) * 3);
+  }
+  .mt-4 {
+    margin-top: calc(var(--spacing) * 4);
+  }
+  .mt-5 {
+    margin-top: calc(var(--spacing) * 5);
+  }
+  .mt-6 {
+    margin-top: calc(var(--spacing) * 6);
+  }
+  .mr-2 {
+    margin-right: calc(var(--spacing) * 2);
+  }
+  .mb-2 {
+    margin-bottom: calc(var(--spacing) * 2);
+  }
+  .mb-3 {
+    margin-bottom: calc(var(--spacing) * 3);
+  }
+  .mb-4 {
+    margin-bottom: calc(var(--spacing) * 4);
+  }
+  .ml-5 {
+    margin-left: calc(var(--spacing) * 5);
+  }
+  .block {
+    display: block;
+  }
+  .contents {
+    display: contents;
+  }
+  .flex {
+    display: flex;
+  }
+  .grid {
+    display: grid;
+  }
+  .hidden {
+    display: none;
+  }
+  .inline {
+    display: inline;
+  }
+  .table {
+    display: table;
+  }
+  .h-8 {
+    height: calc(var(--spacing) * 8);
+  }
+  .h-16 {
+    height: calc(var(--spacing) * 16);
+  }
+  .h-20 {
+    height: calc(var(--spacing) * 20);
+  }
+  .h-24 {
+    height: calc(var(--spacing) * 24);
+  }
+  .h-28 {
+    height: calc(var(--spacing) * 28);
+  }
+  .h-40 {
+    height: calc(var(--spacing) * 40);
+  }
+  .max-h-64 {
+    max-height: calc(var(--spacing) * 64);
+  }
+  .min-h-20 {
+    min-height: calc(var(--spacing) * 20);
+  }
+  .min-h-\[76px\] {
+    min-height: 76px;
+  }
+  .min-h-\[90px\] {
+    min-height: 90px;
+  }
+  .min-h-\[100px\] {
+    min-height: 100px;
+  }
+  .min-h-\[110px\] {
+    min-height: 110px;
+  }
+  .min-h-screen {
+    min-height: 100vh;
+  }
+  .w-8 {
+    width: calc(var(--spacing) * 8);
+  }
+  .w-16 {
+    width: calc(var(--spacing) * 16);
+  }
+  .w-20 {
+    width: calc(var(--spacing) * 20);
+  }
+  .w-full {
+    width: 100%;
+  }
+  .max-w-2xl {
+    max-width: var(--container-2xl);
+  }
+  .max-w-3xl {
+    max-width: var(--container-3xl);
+  }
+  .max-w-4xl {
+    max-width: var(--container-4xl);
+  }
+  .max-w-5xl {
+    max-width: var(--container-5xl);
+  }
+  .max-w-lg {
+    max-width: var(--container-lg);
+  }
+  .max-w-xl {
+    max-width: var(--container-xl);
+  }
+  .min-w-0 {
+    min-width: 0px;
+  }
+  .flex-1 {
+    flex: 1;
+  }
+  .flex-shrink {
+    flex-shrink: 1;
+  }
+  .border-collapse {
+    border-collapse: collapse;
+  }
+  .transform {
+    transform: var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,);
+  }
+  .animate-ping {
+    animation: var(--animate-ping);
+  }
+  .animate-pulse {
+    animation: var(--animate-pulse);
+  }
+  .animate-spin {
+    animation: var(--animate-spin);
+  }
+  .cursor-pointer {
+    cursor: pointer;
+  }
+  .resize {
+    resize: both;
+  }
+  .list-inside {
+    list-style-position: inside;
+  }
+  .list-disc {
+    list-style-type: disc;
+  }
+  .grid-cols-1 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+  .grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .flex-col {
+    flex-direction: column;
+  }
+  .flex-wrap {
+    flex-wrap: wrap;
+  }
+  .place-items-center {
+    place-items: center;
+  }
+  .items-baseline {
+    align-items: baseline;
+  }
+  .items-center {
+    align-items: center;
+  }
+  .items-start {
+    align-items: flex-start;
+  }
+  .justify-between {
+    justify-content: space-between;
+  }
+  .justify-center {
+    justify-content: center;
+  }
+  .justify-end {
+    justify-content: flex-end;
+  }
+  .gap-1 {
+    gap: var(--spacing);
+  }
+  .gap-2 {
+    gap: calc(var(--spacing) * 2);
+  }
+  .gap-3 {
+    gap: calc(var(--spacing) * 3);
+  }
+  .gap-4 {
+    gap: calc(var(--spacing) * 4);
+  }
+  :where(.space-y-1 > :not(:last-child)) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(var(--spacing) * var(--tw-space-y-reverse));
+    margin-block-end: calc(var(--spacing) * calc(1 - var(--tw-space-y-reverse)));
+  }
+  :where(.space-y-2 > :not(:last-child)) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(calc(var(--spacing) * 2) * var(--tw-space-y-reverse));
+    margin-block-end: calc(calc(var(--spacing) * 2) * calc(1 - var(--tw-space-y-reverse)));
+  }
+  :where(.space-y-3 > :not(:last-child)) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(calc(var(--spacing) * 3) * var(--tw-space-y-reverse));
+    margin-block-end: calc(calc(var(--spacing) * 3) * calc(1 - var(--tw-space-y-reverse)));
+  }
+  :where(.space-y-4 > :not(:last-child)) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(calc(var(--spacing) * 4) * var(--tw-space-y-reverse));
+    margin-block-end: calc(calc(var(--spacing) * 4) * calc(1 - var(--tw-space-y-reverse)));
+  }
+  :where(.space-y-5 > :not(:last-child)) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(calc(var(--spacing) * 5) * var(--tw-space-y-reverse));
+    margin-block-end: calc(calc(var(--spacing) * 5) * calc(1 - var(--tw-space-y-reverse)));
+  }
+  :where(.space-y-6 > :not(:last-child)) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(calc(var(--spacing) * 6) * var(--tw-space-y-reverse));
+    margin-block-end: calc(calc(var(--spacing) * 6) * calc(1 - var(--tw-space-y-reverse)));
+  }
+  :where(.space-y-8 > :not(:last-child)) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(calc(var(--spacing) * 8) * var(--tw-space-y-reverse));
+    margin-block-end: calc(calc(var(--spacing) * 8) * calc(1 - var(--tw-space-y-reverse)));
+  }
+  .overflow-auto {
+    overflow: auto;
+  }
+  .overflow-x-auto {
+    overflow-x: auto;
+  }
+  .rounded {
+    border-radius: 0.25rem;
+  }
+  .rounded-2xl {
+    border-radius: var(--radius-2xl);
+  }
+  .rounded-3xl {
+    border-radius: var(--radius-3xl);
+  }
+  .rounded-full {
+    border-radius: calc(infinity * 1px);
+  }
+  .rounded-lg {
+    border-radius: var(--radius);
+  }
+  .rounded-md {
+    border-radius: calc(var(--radius) - 2px);
+  }
+  .rounded-xl {
+    border-radius: calc(var(--radius) + 4px);
+  }
+  .border {
+    border-style: var(--tw-border-style);
+    border-width: 1px;
+  }
+  .border-2 {
+    border-style: var(--tw-border-style);
+    border-width: 2px;
+  }
+  .border-t {
+    border-top-style: var(--tw-border-style);
+    border-top-width: 1px;
+  }
+  .border-b {
+    border-bottom-style: var(--tw-border-style);
+    border-bottom-width: 1px;
+  }
+  .border-dashed {
+    --tw-border-style: dashed;
+    border-style: dashed;
+  }
+  .border-amber-200 {
+    border-color: var(--color-amber-200);
+  }
+  .border-amber-300\/60 {
+    border-color: color-mix(in srgb, oklch(87.9% 0.169 91.605) 60%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-amber-300) 60%, transparent);
+    }
+  }
+  .border-amber-300\/70 {
+    border-color: color-mix(in srgb, oklch(87.9% 0.169 91.605) 70%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-amber-300) 70%, transparent);
+    }
+  }
+  .border-amber-500\/40 {
+    border-color: color-mix(in srgb, oklch(76.9% 0.188 70.08) 40%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-amber-500) 40%, transparent);
+    }
+  }
+  .border-amber-500\/50 {
+    border-color: color-mix(in srgb, oklch(76.9% 0.188 70.08) 50%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-amber-500) 50%, transparent);
+    }
+  }
+  .border-amber-700\/50 {
+    border-color: color-mix(in srgb, oklch(55.5% 0.163 48.998) 50%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-amber-700) 50%, transparent);
+    }
+  }
+  .border-border {
+    border-color: var(--border);
+  }
+  .border-border\/30 {
+    border-color: var(--border);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--border) 30%, transparent);
+    }
+  }
+  .border-border\/40 {
+    border-color: var(--border);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--border) 40%, transparent);
+    }
+  }
+  .border-border\/50 {
+    border-color: var(--border);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--border) 50%, transparent);
+    }
+  }
+  .border-border\/60 {
+    border-color: var(--border);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--border) 60%, transparent);
+    }
+  }
+  .border-border\/70 {
+    border-color: var(--border);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--border) 70%, transparent);
+    }
+  }
+  .border-destructive\/20 {
+    border-color: var(--destructive);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--destructive) 20%, transparent);
+    }
+  }
+  .border-destructive\/30 {
+    border-color: var(--destructive);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--destructive) 30%, transparent);
+    }
+  }
+  .border-destructive\/40 {
+    border-color: var(--destructive);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--destructive) 40%, transparent);
+    }
+  }
+  .border-input {
+    border-color: var(--input);
+  }
+  .border-primary {
+    border-color: var(--primary);
+  }
+  .border-primary\/30 {
+    border-color: var(--primary);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--primary) 30%, transparent);
+    }
+  }
+  .border-red-200 {
+    border-color: var(--color-red-200);
+  }
+  .border-t-primary {
+    border-top-color: var(--primary);
+  }
+  .bg-amber-50 {
+    background-color: var(--color-amber-50);
+  }
+  .bg-amber-50\/60 {
+    background-color: color-mix(in srgb, oklch(98.7% 0.022 95.277) 60%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-amber-50) 60%, transparent);
+    }
+  }
+  .bg-amber-100 {
+    background-color: var(--color-amber-100);
+  }
+  .bg-background {
+    background-color: var(--background);
+  }
+  .bg-background\/50 {
+    background-color: var(--background);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--background) 50%, transparent);
+    }
+  }
+  .bg-background\/60 {
+    background-color: var(--background);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--background) 60%, transparent);
+    }
+  }
+  .bg-background\/70 {
+    background-color: var(--background);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--background) 70%, transparent);
+    }
+  }
+  .bg-background\/95 {
+    background-color: var(--background);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--background) 95%, transparent);
+    }
+  }
+  .bg-black\/50 {
+    background-color: color-mix(in srgb, #000 50%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-black) 50%, transparent);
+    }
+  }
+  .bg-card {
+    background-color: var(--card);
+  }
+  .bg-destructive\/5 {
+    background-color: var(--destructive);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--destructive) 5%, transparent);
+    }
+  }
+  .bg-emerald-100 {
+    background-color: var(--color-emerald-100);
+  }
+  .bg-muted {
+    background-color: var(--muted);
+  }
+  .bg-muted\/10 {
+    background-color: var(--muted);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--muted) 10%, transparent);
+    }
+  }
+  .bg-muted\/20 {
+    background-color: var(--muted);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--muted) 20%, transparent);
+    }
+  }
+  .bg-muted\/30 {
+    background-color: var(--muted);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--muted) 30%, transparent);
+    }
+  }
+  .bg-muted\/50 {
+    background-color: var(--muted);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--muted) 50%, transparent);
+    }
+  }
+  .bg-primary {
+    background-color: var(--primary);
+  }
+  .bg-primary\/10 {
+    background-color: var(--primary);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--primary) 10%, transparent);
+    }
+  }
+  .bg-primary\/15 {
+    background-color: var(--primary);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--primary) 15%, transparent);
+    }
+  }
+  .bg-primary\/35 {
+    background-color: var(--primary);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--primary) 35%, transparent);
+    }
+  }
+  .bg-red-50 {
+    background-color: var(--color-red-50);
+  }
+  .object-contain {
+    object-fit: contain;
+  }
+  .object-cover {
+    object-fit: cover;
+  }
+  .p-2 {
+    padding: calc(var(--spacing) * 2);
+  }
+  .p-3 {
+    padding: calc(var(--spacing) * 3);
+  }
+  .p-4 {
+    padding: calc(var(--spacing) * 4);
+  }
+  .p-5 {
+    padding: calc(var(--spacing) * 5);
+  }
+  .p-6 {
+    padding: calc(var(--spacing) * 6);
+  }
+  .px-2 {
+    padding-inline: calc(var(--spacing) * 2);
+  }
+  .px-3 {
+    padding-inline: calc(var(--spacing) * 3);
+  }
+  .px-4 {
+    padding-inline: calc(var(--spacing) * 4);
+  }
+  .py-0\.5 {
+    padding-block: calc(var(--spacing) * 0.5);
+  }
+  .py-1 {
+    padding-block: var(--spacing);
+  }
+  .py-1\.5 {
+    padding-block: calc(var(--spacing) * 1.5);
+  }
+  .py-2 {
+    padding-block: calc(var(--spacing) * 2);
+  }
+  .py-3 {
+    padding-block: calc(var(--spacing) * 3);
+  }
+  .py-4 {
+    padding-block: calc(var(--spacing) * 4);
+  }
+  .py-6 {
+    padding-block: calc(var(--spacing) * 6);
+  }
+  .py-8 {
+    padding-block: calc(var(--spacing) * 8);
+  }
+  .py-10 {
+    padding-block: calc(var(--spacing) * 10);
+  }
+  .py-16 {
+    padding-block: calc(var(--spacing) * 16);
+  }
+  .pt-3 {
+    padding-top: calc(var(--spacing) * 3);
+  }
+  .pt-4 {
+    padding-top: calc(var(--spacing) * 4);
+  }
+  .pt-6 {
+    padding-top: calc(var(--spacing) * 6);
+  }
+  .pb-2 {
+    padding-bottom: calc(var(--spacing) * 2);
+  }
+  .pb-3 {
+    padding-bottom: calc(var(--spacing) * 3);
+  }
+  .pb-6 {
+    padding-bottom: calc(var(--spacing) * 6);
+  }
+  .pb-10 {
+    padding-bottom: calc(var(--spacing) * 10);
+  }
+  .pb-16 {
+    padding-bottom: calc(var(--spacing) * 16);
+  }
+  .pl-5 {
+    padding-left: calc(var(--spacing) * 5);
+  }
+  .text-center {
+    text-align: center;
+  }
+  .text-left {
+    text-align: left;
+  }
+  .text-2xl {
+    font-size: var(--text-2xl);
+    line-height: var(--tw-leading, var(--text-2xl--line-height));
+  }
+  .text-3xl {
+    font-size: var(--text-3xl);
+    line-height: var(--tw-leading, var(--text-3xl--line-height));
+  }
+  .text-base {
+    font-size: var(--text-base);
+    line-height: var(--tw-leading, var(--text-base--line-height));
+  }
+  .text-lg {
+    font-size: var(--text-lg);
+    line-height: var(--tw-leading, var(--text-lg--line-height));
+  }
+  .text-sm {
+    font-size: var(--text-sm);
+    line-height: var(--tw-leading, var(--text-sm--line-height));
+  }
+  .text-xl {
+    font-size: var(--text-xl);
+    line-height: var(--tw-leading, var(--text-xl--line-height));
+  }
+  .text-xs {
+    font-size: var(--text-xs);
+    line-height: var(--tw-leading, var(--text-xs--line-height));
+  }
+  .text-\[11px\] {
+    font-size: 11px;
+  }
+  .leading-5 {
+    --tw-leading: calc(var(--spacing) * 5);
+    line-height: calc(var(--spacing) * 5);
+  }
+  .leading-6 {
+    --tw-leading: calc(var(--spacing) * 6);
+    line-height: calc(var(--spacing) * 6);
+  }
+  .leading-relaxed {
+    --tw-leading: var(--leading-relaxed);
+    line-height: var(--leading-relaxed);
+  }
+  .font-bold {
+    --tw-font-weight: var(--font-weight-bold);
+    font-weight: var(--font-weight-bold);
+  }
+  .font-medium {
+    --tw-font-weight: var(--font-weight-medium);
+    font-weight: var(--font-weight-medium);
+  }
+  .font-normal {
+    --tw-font-weight: var(--font-weight-normal);
+    font-weight: var(--font-weight-normal);
+  }
+  .font-semibold {
+    --tw-font-weight: var(--font-weight-semibold);
+    font-weight: var(--font-weight-semibold);
+  }
+  .tracking-\[0\.22em\] {
+    --tw-tracking: 0.22em;
+    letter-spacing: 0.22em;
+  }
+  .tracking-\[0\.24em\] {
+    --tw-tracking: 0.24em;
+    letter-spacing: 0.24em;
+  }
+  .tracking-tight {
+    --tw-tracking: var(--tracking-tight);
+    letter-spacing: var(--tracking-tight);
+  }
+  .tracking-wide {
+    --tw-tracking: var(--tracking-wide);
+    letter-spacing: var(--tracking-wide);
+  }
+  .whitespace-pre-wrap {
+    white-space: pre-wrap;
+  }
+  .text-amber-800 {
+    color: var(--color-amber-800);
+  }
+  .text-amber-900 {
+    color: var(--color-amber-900);
+  }
+  .text-amber-900\/80 {
+    color: color-mix(in srgb, oklch(41.4% 0.112 45.904) 80%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      color: color-mix(in oklab, var(--color-amber-900) 80%, transparent);
+    }
+  }
+  .text-amber-950 {
+    color: var(--color-amber-950);
+  }
+  .text-destructive {
+    color: var(--destructive);
+  }
+  .text-emerald-600 {
+    color: var(--color-emerald-600);
+  }
+  .text-emerald-900 {
+    color: var(--color-emerald-900);
+  }
+  .text-foreground {
+    color: var(--foreground);
+  }
+  .text-muted-foreground {
+    color: var(--muted-foreground);
+  }
+  .text-primary {
+    color: var(--primary);
+  }
+  .text-primary-foreground {
+    color: var(--primary-foreground);
+  }
+  .text-red-700 {
+    color: var(--color-red-700);
+  }
+  .text-red-800 {
+    color: var(--color-red-800);
+  }
+  .text-slate-500 {
+    color: var(--color-slate-500);
+  }
+  .capitalize {
+    text-transform: capitalize;
+  }
+  .uppercase {
+    text-transform: uppercase;
+  }
+  .italic {
+    font-style: italic;
+  }
+  .underline-offset-4 {
+    text-underline-offset: 4px;
+  }
+  .opacity-60 {
+    opacity: 60%;
+  }
+  .shadow-2xl {
+    --tw-shadow: 0 25px 50px -12px var(--tw-shadow-color, rgb(0 0 0 / 0.25));
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  .shadow-sm {
+    --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  .outline {
+    outline-style: var(--tw-outline-style);
+    outline-width: 1px;
+  }
+  .filter {
+    filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
+  }
+  .backdrop-blur {
+    --tw-backdrop-blur: blur(8px);
+    -webkit-backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
+    backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
+  }
+  .backdrop-filter {
+    -webkit-backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
+    backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
+  }
+  .transition {
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
+  .transition-all {
+    transition-property: all;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
+  .transition-colors {
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
+  .transition-opacity {
+    transition-property: opacity;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
+  .duration-500 {
+    --tw-duration: 500ms;
+    transition-duration: 500ms;
+  }
+  @media (hover: hover) {
+    .hover\:border-primary\/40:hover {
+      border-color: var(--primary);
+    }
+    @supports (color: color-mix(in lab, red, red)) {
+      .hover\:border-primary\/40:hover {
+        border-color: color-mix(in oklab, var(--primary) 40%, transparent);
+      }
+    }
+    .hover\:bg-amber-100:hover {
+      background-color: var(--color-amber-100);
+    }
+    .hover\:underline:hover {
+      text-decoration-line: underline;
+    }
+  }
+  .focus\:ring-2:focus {
+    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  .focus\:ring-ring:focus {
+    --tw-ring-color: var(--ring);
+  }
+  .focus\:outline-none:focus {
+    --tw-outline-style: none;
+    outline-style: none;
+  }
+  .disabled\:cursor-not-allowed:disabled {
+    cursor: not-allowed;
+  }
+  .disabled\:opacity-45:disabled {
+    opacity: 45%;
+  }
+  .disabled\:opacity-50:disabled {
+    opacity: 50%;
+  }
+  .disabled\:opacity-60:disabled {
+    opacity: 60%;
+  }
+  @supports (backdrop-filter: var(--tw)) {
+    .supports-\[backdrop-filter\]\:bg-background\/75 {
+      background-color: var(--background);
+    }
+    @supports (color: color-mix(in lab, red, red)) {
+      .supports-\[backdrop-filter\]\:bg-background\/75 {
+        background-color: color-mix(in oklab, var(--background) 75%, transparent);
+      }
+    }
+  }
+  @media (width >= 40rem) {
+    .sm\:col-span-2 {
+      grid-column: span 2 / span 2;
+    }
+    .sm\:grid-cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .sm\:flex-row {
+      flex-direction: row;
+    }
+    .sm\:flex-wrap {
+      flex-wrap: wrap;
+    }
+    .sm\:text-4xl {
+      font-size: var(--text-4xl);
+      line-height: var(--tw-leading, var(--text-4xl--line-height));
+    }
+    .sm\:text-base {
+      font-size: var(--text-base);
+      line-height: var(--tw-leading, var(--text-base--line-height));
+    }
+  }
+  @media (width >= 80rem) {
+    .xl\:grid-cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_AMS;
+  font-style: normal;
+  font-weight: 400;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_AMS-Regular.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_AMS-Regular.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_AMS-Regular.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_Caligraphic;
+  font-style: normal;
+  font-weight: 700;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Caligraphic-Bold.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Caligraphic-Bold.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Caligraphic-Bold.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_Caligraphic;
+  font-style: normal;
+  font-weight: 400;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Caligraphic-Regular.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Caligraphic-Regular.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Caligraphic-Regular.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_Fraktur;
+  font-style: normal;
+  font-weight: 700;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Fraktur-Bold.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Fraktur-Bold.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Fraktur-Bold.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_Fraktur;
+  font-style: normal;
+  font-weight: 400;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Fraktur-Regular.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Fraktur-Regular.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Fraktur-Regular.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_Main;
+  font-style: normal;
+  font-weight: 700;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Main-Bold.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Main-Bold.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Main-Bold.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_Main;
+  font-style: italic;
+  font-weight: 700;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Main-BoldItalic.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Main-BoldItalic.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Main-BoldItalic.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_Main;
+  font-style: italic;
+  font-weight: 400;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Main-Italic.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Main-Italic.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Main-Italic.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_Main;
+  font-style: normal;
+  font-weight: 400;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Main-Regular.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Main-Regular.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Main-Regular.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_Math;
+  font-style: italic;
+  font-weight: 700;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Math-BoldItalic.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Math-BoldItalic.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Math-BoldItalic.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_Math;
+  font-style: italic;
+  font-weight: 400;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Math-Italic.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Math-Italic.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Math-Italic.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: "KaTeX_SansSerif";
+  font-style: normal;
+  font-weight: 700;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_SansSerif-Bold.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_SansSerif-Bold.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_SansSerif-Bold.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: "KaTeX_SansSerif";
+  font-style: italic;
+  font-weight: 400;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_SansSerif-Italic.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_SansSerif-Italic.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_SansSerif-Italic.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: "KaTeX_SansSerif";
+  font-style: normal;
+  font-weight: 400;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_SansSerif-Regular.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_SansSerif-Regular.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_SansSerif-Regular.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_Script;
+  font-style: normal;
+  font-weight: 400;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Script-Regular.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Script-Regular.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Script-Regular.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_Size1;
+  font-style: normal;
+  font-weight: 400;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Size1-Regular.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Size1-Regular.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Size1-Regular.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_Size2;
+  font-style: normal;
+  font-weight: 400;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Size2-Regular.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Size2-Regular.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Size2-Regular.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_Size3;
+  font-style: normal;
+  font-weight: 400;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Size3-Regular.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Size3-Regular.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Size3-Regular.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_Size4;
+  font-style: normal;
+  font-weight: 400;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Size4-Regular.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Size4-Regular.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Size4-Regular.ttf) format("truetype");
+}
+@font-face {
+  font-display: block;
+  font-family: KaTeX_Typewriter;
+  font-style: normal;
+  font-weight: 400;
+  src: url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Typewriter-Regular.woff2) format("woff2"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Typewriter-Regular.woff) format("woff"),url(/@fs/C:/Projects/lectio/node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/fonts/KaTeX_Typewriter-Regular.ttf) format("truetype");
+}
+.katex {
+  font: normal 1.21em KaTeX_Main,Times New Roman,serif;
+  line-height: 1.2;
+  position: relative;
+  text-indent: 0;
+  text-rendering: auto;
+}
+.katex * {
+  -ms-high-contrast-adjust: none !important;
+  border-color: currentColor;
+}
+.katex .katex-version:after {
+  content: "0.16.47";
+}
+.katex .katex-mathml {
+  border: 0;
+  -webkit-clip-path: inset(50%);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+}
+.katex .katex-html>.newline {
+  display: block;
+}
+.katex .base {
+  position: relative;
+  white-space: nowrap;
+  width: -webkit-min-content;
+  width: -moz-min-content;
+  width: min-content;
+}
+.katex .base,.katex .strut {
+  display: inline-block;
+}
+.katex .textbf {
+  font-weight: 700;
+}
+.katex .textit {
+  font-style: italic;
+}
+.katex .textrm {
+  font-family: KaTeX_Main;
+}
+.katex .textsf {
+  font-family: KaTeX_SansSerif;
+}
+.katex .texttt {
+  font-family: KaTeX_Typewriter;
+}
+.katex .mathnormal {
+  font-family: KaTeX_Math;
+  font-style: italic;
+}
+.katex .mathit {
+  font-family: KaTeX_Main;
+  font-style: italic;
+}
+.katex .mathrm {
+  font-style: normal;
+}
+.katex .mathbf {
+  font-family: KaTeX_Main;
+  font-weight: 700;
+}
+.katex .boldsymbol {
+  font-family: KaTeX_Math;
+  font-style: italic;
+  font-weight: 700;
+}
+.katex .amsrm,.katex .mathbb,.katex .textbb {
+  font-family: KaTeX_AMS;
+}
+.katex .mathcal {
+  font-family: KaTeX_Caligraphic;
+}
+.katex .mathfrak,.katex .textfrak {
+  font-family: KaTeX_Fraktur;
+}
+.katex .mathboldfrak,.katex .textboldfrak {
+  font-family: KaTeX_Fraktur;
+  font-weight: 700;
+}
+.katex .mathtt {
+  font-family: KaTeX_Typewriter;
+}
+.katex .mathscr,.katex .textscr {
+  font-family: KaTeX_Script;
+}
+.katex .mathsf,.katex .textsf {
+  font-family: KaTeX_SansSerif;
+}
+.katex .mathboldsf,.katex .textboldsf {
+  font-family: KaTeX_SansSerif;
+  font-weight: 700;
+}
+.katex .mathitsf,.katex .mathsfit,.katex .textitsf {
+  font-family: KaTeX_SansSerif;
+  font-style: italic;
+}
+.katex .mainrm {
+  font-family: KaTeX_Main;
+  font-style: normal;
+}
+.katex .vlist-t {
+  border-collapse: collapse;
+  display: inline-table;
+  table-layout: fixed;
+}
+.katex .vlist-r {
+  display: table-row;
+}
+.katex .vlist {
+  display: table-cell;
+  position: relative;
+  vertical-align: bottom;
+}
+.katex .vlist>span {
+  display: block;
+  height: 0;
+  position: relative;
+}
+.katex .vlist>span>span {
+  display: inline-block;
+}
+.katex .vlist>span>.pstrut {
+  overflow: hidden;
+  width: 0;
+}
+.katex .vlist-t2 {
+  margin-right: -2px;
+}
+.katex .vlist-s {
+  display: table-cell;
+  font-size: 1px;
+  min-width: 2px;
+  vertical-align: bottom;
+  width: 2px;
+}
+.katex .vbox {
+  align-items: baseline;
+  display: inline-flex;
+  flex-direction: column;
+}
+.katex .hbox {
+  width: 100%;
+}
+.katex .hbox,.katex .thinbox {
+  display: inline-flex;
+  flex-direction: row;
+}
+.katex .thinbox {
+  max-width: 0;
+  width: 0;
+}
+.katex .msupsub {
+  text-align: left;
+}
+.katex .mfrac>span>span {
+  text-align: center;
+}
+.katex .mfrac .frac-line {
+  border-bottom-style: solid;
+  display: inline-block;
+  width: 100%;
+}
+.katex .hdashline,.katex .hline,.katex .mfrac .frac-line,.katex .overline .overline-line,.katex .rule,.katex .underline .underline-line {
+  min-height: 1px;
+}
+.katex .mspace {
+  display: inline-block;
+}
+.katex .smash {
+  display: inline;
+  line-height: 0;
+}
+.katex .clap,.katex .llap,.katex .rlap {
+  position: relative;
+  width: 0;
+}
+.katex .clap>.inner,.katex .llap>.inner,.katex .rlap>.inner {
+  position: absolute;
+}
+.katex .clap>.fix,.katex .llap>.fix,.katex .rlap>.fix {
+  display: inline-block;
+}
+.katex .llap>.inner {
+  right: 0;
+}
+.katex .clap>.inner,.katex .rlap>.inner {
+  left: 0;
+}
+.katex .clap>.inner>span {
+  margin-left: -50%;
+  margin-right: 50%;
+}
+.katex .rule {
+  border: 0 solid;
+  display: inline-block;
+  position: relative;
+}
+.katex .hline,.katex .overline .overline-line,.katex .underline .underline-line {
+  border-bottom-style: solid;
+  display: inline-block;
+  width: 100%;
+}
+.katex .hdashline {
+  border-bottom-style: dashed;
+  display: inline-block;
+  width: 100%;
+}
+.katex .sqrt>.root {
+  margin-left: .2777777778em;
+  margin-right: -.5555555556em;
+}
+.katex .fontsize-ensurer.reset-size1.size1,.katex .sizing.reset-size1.size1 {
+  font-size: 1em;
+}
+.katex .fontsize-ensurer.reset-size1.size2,.katex .sizing.reset-size1.size2 {
+  font-size: 1.2em;
+}
+.katex .fontsize-ensurer.reset-size1.size3,.katex .sizing.reset-size1.size3 {
+  font-size: 1.4em;
+}
+.katex .fontsize-ensurer.reset-size1.size4,.katex .sizing.reset-size1.size4 {
+  font-size: 1.6em;
+}
+.katex .fontsize-ensurer.reset-size1.size5,.katex .sizing.reset-size1.size5 {
+  font-size: 1.8em;
+}
+.katex .fontsize-ensurer.reset-size1.size6,.katex .sizing.reset-size1.size6 {
+  font-size: 2em;
+}
+.katex .fontsize-ensurer.reset-size1.size7,.katex .sizing.reset-size1.size7 {
+  font-size: 2.4em;
+}
+.katex .fontsize-ensurer.reset-size1.size8,.katex .sizing.reset-size1.size8 {
+  font-size: 2.88em;
+}
+.katex .fontsize-ensurer.reset-size1.size9,.katex .sizing.reset-size1.size9 {
+  font-size: 3.456em;
+}
+.katex .fontsize-ensurer.reset-size1.size10,.katex .sizing.reset-size1.size10 {
+  font-size: 4.148em;
+}
+.katex .fontsize-ensurer.reset-size1.size11,.katex .sizing.reset-size1.size11 {
+  font-size: 4.976em;
+}
+.katex .fontsize-ensurer.reset-size2.size1,.katex .sizing.reset-size2.size1 {
+  font-size: .8333333333em;
+}
+.katex .fontsize-ensurer.reset-size2.size2,.katex .sizing.reset-size2.size2 {
+  font-size: 1em;
+}
+.katex .fontsize-ensurer.reset-size2.size3,.katex .sizing.reset-size2.size3 {
+  font-size: 1.1666666667em;
+}
+.katex .fontsize-ensurer.reset-size2.size4,.katex .sizing.reset-size2.size4 {
+  font-size: 1.3333333333em;
+}
+.katex .fontsize-ensurer.reset-size2.size5,.katex .sizing.reset-size2.size5 {
+  font-size: 1.5em;
+}
+.katex .fontsize-ensurer.reset-size2.size6,.katex .sizing.reset-size2.size6 {
+  font-size: 1.6666666667em;
+}
+.katex .fontsize-ensurer.reset-size2.size7,.katex .sizing.reset-size2.size7 {
+  font-size: 2em;
+}
+.katex .fontsize-ensurer.reset-size2.size8,.katex .sizing.reset-size2.size8 {
+  font-size: 2.4em;
+}
+.katex .fontsize-ensurer.reset-size2.size9,.katex .sizing.reset-size2.size9 {
+  font-size: 2.88em;
+}
+.katex .fontsize-ensurer.reset-size2.size10,.katex .sizing.reset-size2.size10 {
+  font-size: 3.4566666667em;
+}
+.katex .fontsize-ensurer.reset-size2.size11,.katex .sizing.reset-size2.size11 {
+  font-size: 4.1466666667em;
+}
+.katex .fontsize-ensurer.reset-size3.size1,.katex .sizing.reset-size3.size1 {
+  font-size: .7142857143em;
+}
+.katex .fontsize-ensurer.reset-size3.size2,.katex .sizing.reset-size3.size2 {
+  font-size: .8571428571em;
+}
+.katex .fontsize-ensurer.reset-size3.size3,.katex .sizing.reset-size3.size3 {
+  font-size: 1em;
+}
+.katex .fontsize-ensurer.reset-size3.size4,.katex .sizing.reset-size3.size4 {
+  font-size: 1.1428571429em;
+}
+.katex .fontsize-ensurer.reset-size3.size5,.katex .sizing.reset-size3.size5 {
+  font-size: 1.2857142857em;
+}
+.katex .fontsize-ensurer.reset-size3.size6,.katex .sizing.reset-size3.size6 {
+  font-size: 1.4285714286em;
+}
+.katex .fontsize-ensurer.reset-size3.size7,.katex .sizing.reset-size3.size7 {
+  font-size: 1.7142857143em;
+}
+.katex .fontsize-ensurer.reset-size3.size8,.katex .sizing.reset-size3.size8 {
+  font-size: 2.0571428571em;
+}
+.katex .fontsize-ensurer.reset-size3.size9,.katex .sizing.reset-size3.size9 {
+  font-size: 2.4685714286em;
+}
+.katex .fontsize-ensurer.reset-size3.size10,.katex .sizing.reset-size3.size10 {
+  font-size: 2.9628571429em;
+}
+.katex .fontsize-ensurer.reset-size3.size11,.katex .sizing.reset-size3.size11 {
+  font-size: 3.5542857143em;
+}
+.katex .fontsize-ensurer.reset-size4.size1,.katex .sizing.reset-size4.size1 {
+  font-size: .625em;
+}
+.katex .fontsize-ensurer.reset-size4.size2,.katex .sizing.reset-size4.size2 {
+  font-size: .75em;
+}
+.katex .fontsize-ensurer.reset-size4.size3,.katex .sizing.reset-size4.size3 {
+  font-size: .875em;
+}
+.katex .fontsize-ensurer.reset-size4.size4,.katex .sizing.reset-size4.size4 {
+  font-size: 1em;
+}
+.katex .fontsize-ensurer.reset-size4.size5,.katex .sizing.reset-size4.size5 {
+  font-size: 1.125em;
+}
+.katex .fontsize-ensurer.reset-size4.size6,.katex .sizing.reset-size4.size6 {
+  font-size: 1.25em;
+}
+.katex .fontsize-ensurer.reset-size4.size7,.katex .sizing.reset-size4.size7 {
+  font-size: 1.5em;
+}
+.katex .fontsize-ensurer.reset-size4.size8,.katex .sizing.reset-size4.size8 {
+  font-size: 1.8em;
+}
+.katex .fontsize-ensurer.reset-size4.size9,.katex .sizing.reset-size4.size9 {
+  font-size: 2.16em;
+}
+.katex .fontsize-ensurer.reset-size4.size10,.katex .sizing.reset-size4.size10 {
+  font-size: 2.5925em;
+}
+.katex .fontsize-ensurer.reset-size4.size11,.katex .sizing.reset-size4.size11 {
+  font-size: 3.11em;
+}
+.katex .fontsize-ensurer.reset-size5.size1,.katex .sizing.reset-size5.size1 {
+  font-size: .5555555556em;
+}
+.katex .fontsize-ensurer.reset-size5.size2,.katex .sizing.reset-size5.size2 {
+  font-size: .6666666667em;
+}
+.katex .fontsize-ensurer.reset-size5.size3,.katex .sizing.reset-size5.size3 {
+  font-size: .7777777778em;
+}
+.katex .fontsize-ensurer.reset-size5.size4,.katex .sizing.reset-size5.size4 {
+  font-size: .8888888889em;
+}
+.katex .fontsize-ensurer.reset-size5.size5,.katex .sizing.reset-size5.size5 {
+  font-size: 1em;
+}
+.katex .fontsize-ensurer.reset-size5.size6,.katex .sizing.reset-size5.size6 {
+  font-size: 1.1111111111em;
+}
+.katex .fontsize-ensurer.reset-size5.size7,.katex .sizing.reset-size5.size7 {
+  font-size: 1.3333333333em;
+}
+.katex .fontsize-ensurer.reset-size5.size8,.katex .sizing.reset-size5.size8 {
+  font-size: 1.6em;
+}
+.katex .fontsize-ensurer.reset-size5.size9,.katex .sizing.reset-size5.size9 {
+  font-size: 1.92em;
+}
+.katex .fontsize-ensurer.reset-size5.size10,.katex .sizing.reset-size5.size10 {
+  font-size: 2.3044444444em;
+}
+.katex .fontsize-ensurer.reset-size5.size11,.katex .sizing.reset-size5.size11 {
+  font-size: 2.7644444444em;
+}
+.katex .fontsize-ensurer.reset-size6.size1,.katex .sizing.reset-size6.size1 {
+  font-size: .5em;
+}
+.katex .fontsize-ensurer.reset-size6.size2,.katex .sizing.reset-size6.size2 {
+  font-size: .6em;
+}
+.katex .fontsize-ensurer.reset-size6.size3,.katex .sizing.reset-size6.size3 {
+  font-size: .7em;
+}
+.katex .fontsize-ensurer.reset-size6.size4,.katex .sizing.reset-size6.size4 {
+  font-size: .8em;
+}
+.katex .fontsize-ensurer.reset-size6.size5,.katex .sizing.reset-size6.size5 {
+  font-size: .9em;
+}
+.katex .fontsize-ensurer.reset-size6.size6,.katex .sizing.reset-size6.size6 {
+  font-size: 1em;
+}
+.katex .fontsize-ensurer.reset-size6.size7,.katex .sizing.reset-size6.size7 {
+  font-size: 1.2em;
+}
+.katex .fontsize-ensurer.reset-size6.size8,.katex .sizing.reset-size6.size8 {
+  font-size: 1.44em;
+}
+.katex .fontsize-ensurer.reset-size6.size9,.katex .sizing.reset-size6.size9 {
+  font-size: 1.728em;
+}
+.katex .fontsize-ensurer.reset-size6.size10,.katex .sizing.reset-size6.size10 {
+  font-size: 2.074em;
+}
+.katex .fontsize-ensurer.reset-size6.size11,.katex .sizing.reset-size6.size11 {
+  font-size: 2.488em;
+}
+.katex .fontsize-ensurer.reset-size7.size1,.katex .sizing.reset-size7.size1 {
+  font-size: .4166666667em;
+}
+.katex .fontsize-ensurer.reset-size7.size2,.katex .sizing.reset-size7.size2 {
+  font-size: .5em;
+}
+.katex .fontsize-ensurer.reset-size7.size3,.katex .sizing.reset-size7.size3 {
+  font-size: .5833333333em;
+}
+.katex .fontsize-ensurer.reset-size7.size4,.katex .sizing.reset-size7.size4 {
+  font-size: .6666666667em;
+}
+.katex .fontsize-ensurer.reset-size7.size5,.katex .sizing.reset-size7.size5 {
+  font-size: .75em;
+}
+.katex .fontsize-ensurer.reset-size7.size6,.katex .sizing.reset-size7.size6 {
+  font-size: .8333333333em;
+}
+.katex .fontsize-ensurer.reset-size7.size7,.katex .sizing.reset-size7.size7 {
+  font-size: 1em;
+}
+.katex .fontsize-ensurer.reset-size7.size8,.katex .sizing.reset-size7.size8 {
+  font-size: 1.2em;
+}
+.katex .fontsize-ensurer.reset-size7.size9,.katex .sizing.reset-size7.size9 {
+  font-size: 1.44em;
+}
+.katex .fontsize-ensurer.reset-size7.size10,.katex .sizing.reset-size7.size10 {
+  font-size: 1.7283333333em;
+}
+.katex .fontsize-ensurer.reset-size7.size11,.katex .sizing.reset-size7.size11 {
+  font-size: 2.0733333333em;
+}
+.katex .fontsize-ensurer.reset-size8.size1,.katex .sizing.reset-size8.size1 {
+  font-size: .3472222222em;
+}
+.katex .fontsize-ensurer.reset-size8.size2,.katex .sizing.reset-size8.size2 {
+  font-size: .4166666667em;
+}
+.katex .fontsize-ensurer.reset-size8.size3,.katex .sizing.reset-size8.size3 {
+  font-size: .4861111111em;
+}
+.katex .fontsize-ensurer.reset-size8.size4,.katex .sizing.reset-size8.size4 {
+  font-size: .5555555556em;
+}
+.katex .fontsize-ensurer.reset-size8.size5,.katex .sizing.reset-size8.size5 {
+  font-size: .625em;
+}
+.katex .fontsize-ensurer.reset-size8.size6,.katex .sizing.reset-size8.size6 {
+  font-size: .6944444444em;
+}
+.katex .fontsize-ensurer.reset-size8.size7,.katex .sizing.reset-size8.size7 {
+  font-size: .8333333333em;
+}
+.katex .fontsize-ensurer.reset-size8.size8,.katex .sizing.reset-size8.size8 {
+  font-size: 1em;
+}
+.katex .fontsize-ensurer.reset-size8.size9,.katex .sizing.reset-size8.size9 {
+  font-size: 1.2em;
+}
+.katex .fontsize-ensurer.reset-size8.size10,.katex .sizing.reset-size8.size10 {
+  font-size: 1.4402777778em;
+}
+.katex .fontsize-ensurer.reset-size8.size11,.katex .sizing.reset-size8.size11 {
+  font-size: 1.7277777778em;
+}
+.katex .fontsize-ensurer.reset-size9.size1,.katex .sizing.reset-size9.size1 {
+  font-size: .2893518519em;
+}
+.katex .fontsize-ensurer.reset-size9.size2,.katex .sizing.reset-size9.size2 {
+  font-size: .3472222222em;
+}
+.katex .fontsize-ensurer.reset-size9.size3,.katex .sizing.reset-size9.size3 {
+  font-size: .4050925926em;
+}
+.katex .fontsize-ensurer.reset-size9.size4,.katex .sizing.reset-size9.size4 {
+  font-size: .462962963em;
+}
+.katex .fontsize-ensurer.reset-size9.size5,.katex .sizing.reset-size9.size5 {
+  font-size: .5208333333em;
+}
+.katex .fontsize-ensurer.reset-size9.size6,.katex .sizing.reset-size9.size6 {
+  font-size: .5787037037em;
+}
+.katex .fontsize-ensurer.reset-size9.size7,.katex .sizing.reset-size9.size7 {
+  font-size: .6944444444em;
+}
+.katex .fontsize-ensurer.reset-size9.size8,.katex .sizing.reset-size9.size8 {
+  font-size: .8333333333em;
+}
+.katex .fontsize-ensurer.reset-size9.size9,.katex .sizing.reset-size9.size9 {
+  font-size: 1em;
+}
+.katex .fontsize-ensurer.reset-size9.size10,.katex .sizing.reset-size9.size10 {
+  font-size: 1.2002314815em;
+}
+.katex .fontsize-ensurer.reset-size9.size11,.katex .sizing.reset-size9.size11 {
+  font-size: 1.4398148148em;
+}
+.katex .fontsize-ensurer.reset-size10.size1,.katex .sizing.reset-size10.size1 {
+  font-size: .2410800386em;
+}
+.katex .fontsize-ensurer.reset-size10.size2,.katex .sizing.reset-size10.size2 {
+  font-size: .2892960463em;
+}
+.katex .fontsize-ensurer.reset-size10.size3,.katex .sizing.reset-size10.size3 {
+  font-size: .337512054em;
+}
+.katex .fontsize-ensurer.reset-size10.size4,.katex .sizing.reset-size10.size4 {
+  font-size: .3857280617em;
+}
+.katex .fontsize-ensurer.reset-size10.size5,.katex .sizing.reset-size10.size5 {
+  font-size: .4339440694em;
+}
+.katex .fontsize-ensurer.reset-size10.size6,.katex .sizing.reset-size10.size6 {
+  font-size: .4821600771em;
+}
+.katex .fontsize-ensurer.reset-size10.size7,.katex .sizing.reset-size10.size7 {
+  font-size: .5785920926em;
+}
+.katex .fontsize-ensurer.reset-size10.size8,.katex .sizing.reset-size10.size8 {
+  font-size: .6943105111em;
+}
+.katex .fontsize-ensurer.reset-size10.size9,.katex .sizing.reset-size10.size9 {
+  font-size: .8331726133em;
+}
+.katex .fontsize-ensurer.reset-size10.size10,.katex .sizing.reset-size10.size10 {
+  font-size: 1em;
+}
+.katex .fontsize-ensurer.reset-size10.size11,.katex .sizing.reset-size10.size11 {
+  font-size: 1.1996142719em;
+}
+.katex .fontsize-ensurer.reset-size11.size1,.katex .sizing.reset-size11.size1 {
+  font-size: .2009646302em;
+}
+.katex .fontsize-ensurer.reset-size11.size2,.katex .sizing.reset-size11.size2 {
+  font-size: .2411575563em;
+}
+.katex .fontsize-ensurer.reset-size11.size3,.katex .sizing.reset-size11.size3 {
+  font-size: .2813504823em;
+}
+.katex .fontsize-ensurer.reset-size11.size4,.katex .sizing.reset-size11.size4 {
+  font-size: .3215434084em;
+}
+.katex .fontsize-ensurer.reset-size11.size5,.katex .sizing.reset-size11.size5 {
+  font-size: .3617363344em;
+}
+.katex .fontsize-ensurer.reset-size11.size6,.katex .sizing.reset-size11.size6 {
+  font-size: .4019292605em;
+}
+.katex .fontsize-ensurer.reset-size11.size7,.katex .sizing.reset-size11.size7 {
+  font-size: .4823151125em;
+}
+.katex .fontsize-ensurer.reset-size11.size8,.katex .sizing.reset-size11.size8 {
+  font-size: .578778135em;
+}
+.katex .fontsize-ensurer.reset-size11.size9,.katex .sizing.reset-size11.size9 {
+  font-size: .6945337621em;
+}
+.katex .fontsize-ensurer.reset-size11.size10,.katex .sizing.reset-size11.size10 {
+  font-size: .8336012862em;
+}
+.katex .fontsize-ensurer.reset-size11.size11,.katex .sizing.reset-size11.size11 {
+  font-size: 1em;
+}
+.katex .delimsizing.size1 {
+  font-family: KaTeX_Size1;
+}
+.katex .delimsizing.size2 {
+  font-family: KaTeX_Size2;
+}
+.katex .delimsizing.size3 {
+  font-family: KaTeX_Size3;
+}
+.katex .delimsizing.size4 {
+  font-family: KaTeX_Size4;
+}
+.katex .delimsizing.mult .delim-size1>span {
+  font-family: KaTeX_Size1;
+}
+.katex .delimsizing.mult .delim-size4>span {
+  font-family: KaTeX_Size4;
+}
+.katex .nulldelimiter {
+  display: inline-block;
+  width: .12em;
+}
+.katex .delimcenter,.katex .op-symbol {
+  position: relative;
+}
+.katex .op-symbol.small-op {
+  font-family: KaTeX_Size1;
+}
+.katex .op-symbol.large-op {
+  font-family: KaTeX_Size2;
+}
+.katex .accent>.vlist-t,.katex .op-limits>.vlist-t {
+  text-align: center;
+}
+.katex .accent .accent-body {
+  position: relative;
+}
+.katex .accent .accent-body:not(.accent-full) {
+  width: 0;
+}
+.katex .overlay {
+  display: block;
+}
+.katex .mtable .vertical-separator {
+  display: inline-block;
+  min-width: 1px;
+}
+.katex .mtable .arraycolsep {
+  display: inline-block;
+}
+.katex .mtable .col-align-c>.vlist-t {
+  text-align: center;
+}
+.katex .mtable .col-align-l>.vlist-t {
+  text-align: left;
+}
+.katex .mtable .col-align-r>.vlist-t {
+  text-align: right;
+}
+.katex .svg-align {
+  text-align: left;
+}
+.katex svg {
+  fill: currentColor;
+  stroke: currentColor;
+  display: block;
+  height: inherit;
+  position: absolute;
+  width: 100%;
+}
+.katex svg path {
+  stroke: none;
+}
+.katex svg {
+  fill-rule: nonzero;
+  fill-opacity: 1;
+  stroke-width: 1;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  stroke-miterlimit: 4;
+  stroke-dasharray: none;
+  stroke-dashoffset: 0;
+  stroke-opacity: 1;
+}
+.katex img {
+  border-style: none;
+  max-height: none;
+  max-width: none;
+  min-height: 0;
+  min-width: 0;
+}
+.katex .stretchy {
+  display: block;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+.katex .stretchy:after,.katex .stretchy:before {
+  content: "";
+}
+.katex .hide-tail {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+.katex .halfarrow-left {
+  left: 0;
+  overflow: hidden;
+  position: absolute;
+  width: 50.2%;
+}
+.katex .halfarrow-right {
+  overflow: hidden;
+  position: absolute;
+  right: 0;
+  width: 50.2%;
+}
+.katex .brace-left {
+  left: 0;
+  overflow: hidden;
+  position: absolute;
+  width: 25.1%;
+}
+.katex .brace-center {
+  left: 25%;
+  overflow: hidden;
+  position: absolute;
+  width: 50%;
+}
+.katex .brace-right {
+  overflow: hidden;
+  position: absolute;
+  right: 0;
+  width: 25.1%;
+}
+.katex .x-arrow-pad {
+  padding: 0 .5em;
+}
+.katex .cd-arrow-pad {
+  padding: 0 .55556em 0 .27778em;
+}
+.katex .mover,.katex .munder,.katex .x-arrow {
+  text-align: center;
+}
+.katex .boxpad {
+  padding: 0 .3em;
+}
+.katex .fbox,.katex .fcolorbox {
+  border: .04em solid;
+  box-sizing: border-box;
+}
+.katex .cancel-pad {
+  padding: 0 .2em;
+}
+.katex .cancel-lap {
+  margin-left: -.2em;
+  margin-right: -.2em;
+}
+.katex .sout {
+  border-bottom-style: solid;
+  border-bottom-width: .08em;
+}
+.katex .angl {
+  border-right: .049em solid;
+  border-top: .049em solid;
+  box-sizing: border-box;
+  margin-right: .03889em;
+}
+.katex .anglpad {
+  padding: 0 .03889em;
+}
+.katex .eqn-num:before {
+  content: "(" counter(katexEqnNo) ")";
+  counter-increment: katexEqnNo;
+}
+.katex .mml-eqn-num:before {
+  content: "(" counter(mmlEqnNo) ")";
+  counter-increment: mmlEqnNo;
+}
+.katex .mtr-glue {
+  width: 50%;
+}
+.katex .cd-vert-arrow {
+  display: inline-block;
+  position: relative;
+}
+.katex .cd-label-left {
+  display: inline-block;
+  position: absolute;
+  right: calc(50% + .3em);
+  text-align: left;
+}
+.katex .cd-label-right {
+  display: inline-block;
+  left: calc(50% + .3em);
+  position: absolute;
+  text-align: right;
+}
+.katex-display {
+  display: block;
+  margin: 1em 0;
+  text-align: center;
+}
+.katex-display>.katex {
+  display: block;
+  text-align: center;
+  white-space: nowrap;
+}
+.katex-display>.katex>.katex-html {
+  display: block;
+  position: relative;
+}
+.katex-display>.katex>.katex-html>.tag {
+  position: absolute;
+  right: 0;
+}
+.katex-display.leqno>.katex>.katex-html>.tag {
+  left: 0;
+  right: auto;
+}
+.katex-display.fleqn>.katex {
+  padding-left: 2em;
+  text-align: left;
+}
+body {
+  counter-reset: katexEqnNo mmlEqnNo;
+}
+.lectio-rich :is(p, ul, ol, blockquote, pre, table) {
+  margin-top: 0.6rem;
+}
+.lectio-rich :is(p, ul, ol, blockquote, pre, table):first-child {
+  margin-top: 0;
+}
+.lectio-rich ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  line-height: 1.75;
+}
+.lectio-rich ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+  line-height: 1.75;
+}
+.lectio-rich table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+.lectio-rich th {
+  background: var(--muted);
+  font-weight: 600;
+}
+.lectio-rich th, .lectio-rich td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  vertical-align: top;
+}
+.lectio-rich blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 0.75rem;
+  color: var(--muted-foreground);
+}
+.lectio-rich pre {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  background: var(--muted);
+  padding: 0.85rem 1rem;
+}
+.lectio-rich code {
+  border-radius: 0.4rem;
+  background: var(--muted);
+  padding: 0.1rem 0.35rem;
+}
+.lectio-rich pre code {
+  background: transparent;
+  padding: 0;
+}
+.math-error {
+  color: var(--destructive);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',	monospace;
+}
+:root {
+  --background: hsl(38, 52%, 96%);
+  --foreground: hsl(213, 37%, 17%);
+  --card: hsl(38, 40%, 98%);
+  --card-foreground: hsl(213, 37%, 17%);
+  --popover: hsl(38, 40%, 98%);
+  --popover-foreground: hsl(213, 37%, 17%);
+  --primary: hsl(213, 37%, 17%);
+  --primary-foreground: hsl(38, 52%, 96%);
+  --secondary: hsl(38, 30%, 92%);
+  --secondary-foreground: hsl(213, 37%, 17%);
+  --muted: hsl(38, 25%, 93%);
+  --muted-foreground: hsl(213, 20%, 46%);
+  --accent: hsl(24, 95%, 53%);
+  --accent-foreground: hsl(38, 52%, 96%);
+  --destructive: hsl(0, 72%, 51%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --border: hsl(38, 20%, 88%);
+  --input: hsl(38, 20%, 88%);
+  --ring: hsl(24, 95%, 53%);
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --rh-pad-card: var(--space-6);
+  --rh-pad-card-tight: var(--space-5);
+  --rh-pad-shell: var(--space-8);
+  --rh-gap-component: var(--space-4);
+  --rh-gap-component-tight: var(--space-3);
+  --rh-gap-section: var(--space-6);
+  --rh-gap-cluster: var(--space-4);
+  --rh-radius-outer: 1.75rem;
+  --rh-radius-card: 1.25rem;
+  --rh-radius-inner: 0.75rem;
+  --radius: var(--rh-radius-card);
+  --rh-eyebrow-size: 0.75rem;
+  --rh-eyebrow-weight: 600;
+  --rh-eyebrow-tracking: 0.22em;
+  --font-sans: 'Public Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Fraunces', ui-serif, Georgia, serif;
+}
+@layer base {
+  .lectio-runtime {
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .lectio-runtime :is(h1, h2, h3, h4) {
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+  .lectio-runtime p {
+    text-wrap: pretty;
+  }
+  .lectio-runtime .scrollbar-styled::-webkit-scrollbar {
+    width: 10px;
+  }
+  .lectio-runtime .scrollbar-styled::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .lectio-runtime .scrollbar-styled::-webkit-scrollbar-thumb {
+    background: hsl(213 37% 17% / 0.2);
+    border-radius: 9999px;
+  }
+  .lectio-runtime .scrollbar-styled::-webkit-scrollbar-thumb:hover {
+    background: hsl(213 37% 17% / 0.35);
+  }
+  .lectio-runtime .scrollbar-styled {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(213 37% 17% / 0.2) transparent;
+  }
+  .lectio-runtime .lectio-emphasis {
+    border-radius: 0.125rem;
+    background-color: hsl(24 95% 53% / 0.12);
+    padding-inline: 0.25rem;
+    font-weight: 600;
+    color: var(--foreground);
+  }
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .lectio-runtime .animate-step-reveal {
+    animation: fade-in-up 0.3s ease forwards;
+  }
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  .lectio-runtime .animate-scale-in {
+    animation: scale-in 0.2s ease-out forwards;
+  }
+}
+@layer utilities {
+  .lectio-runtime {
+    position: relative;
+    background-image: radial-gradient(ellipse 80% 60% at 5% 0%, hsl(24 95% 53% / 0.06) 0%, transparent 70%),	radial-gradient(ellipse 60% 50% at 95% 0%, hsl(213 37% 17% / 0.04) 0%, transparent 70%);
+  }
+  .lectio-runtime[data-lectio-preset='warm-paper'] {
+    background-image: radial-gradient(ellipse 80% 60% at 5% 0%, hsl(24 95% 53% / 0.08) 0%, transparent 70%),	radial-gradient(ellipse 60% 50% at 95% 0%, hsl(213 37% 17% / 0.05) 0%, transparent 70%);
+  }
+  .lectio-runtime[data-lectio-preset='warm-paper'] .lesson-shell {
+    border-color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 24px 80px rgba(27, 38, 59, 0.14);
+  }
+  .lectio-runtime[data-lectio-preset='warm-paper'] .glass-panel {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 248, 240, 0.82)),	rgba(255, 255, 255, 0.86);
+  }
+  .lectio-runtime[data-lectio-preset='blue-classroom'] {
+    --background: hsl(210, 60%, 98%);
+    --foreground: hsl(215, 46%, 18%);
+    --card: hsl(210, 56%, 99%);
+    --card-foreground: hsl(215, 46%, 18%);
+    --popover: hsl(210, 56%, 99%);
+    --popover-foreground: hsl(215, 46%, 18%);
+    --primary: hsl(211, 62%, 28%);
+    --primary-foreground: hsl(210, 40%, 98%);
+    --secondary: hsl(205, 100%, 96%);
+    --secondary-foreground: hsl(215, 46%, 18%);
+    --muted: hsl(208, 48%, 95%);
+    --muted-foreground: hsl(214, 20%, 43%);
+    --accent: hsl(198, 89%, 48%);
+    --accent-foreground: hsl(210, 40%, 98%);
+    --border: hsl(209, 35%, 86%);
+    --input: hsl(209, 35%, 86%);
+    --ring: hsl(198, 89%, 48%);
+    --shadow-warm: 0 28px 96px rgba(20, 51, 89, 0.16);
+    --shadow-warm-sm: 0 10px 34px rgba(20, 51, 89, 0.1);
+    background-image: radial-gradient(ellipse 78% 58% at 5% 0%, hsl(198 89% 48% / 0.08) 0%, transparent 70%),	radial-gradient(ellipse 70% 52% at 100% 0%, hsl(211 62% 28% / 0.08) 0%, transparent 68%);
+  }
+  .lectio-runtime[data-lectio-preset='blue-classroom'] .lesson-shell {
+    border-color: rgba(255, 255, 255, 0.75);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(243, 248, 255, 0.9)),	rgba(255, 255, 255, 0.9);
+    box-shadow: 0 28px 96px rgba(20, 51, 89, 0.14);
+  }
+  .lectio-runtime[data-lectio-preset='blue-classroom'] .lesson-shell::before {
+    background-image: linear-gradient(90deg, rgba(15, 23, 42, 0.055) 1px, transparent 1px),	linear-gradient(rgba(15, 23, 42, 0.055) 1px, transparent 1px);
+  }
+  .lectio-runtime[data-lectio-preset='blue-classroom'] .glass-panel {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.9)),	rgba(255, 255, 255, 0.92);
+    box-shadow: 0 26px 80px rgba(20, 51, 89, 0.16),	inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  }
+  .lectio-runtime[data-lectio-preset='blue-classroom'] .lectio-emphasis {
+    background-color: hsl(198 89% 48% / 0.14);
+    color: var(--primary);
+  }
+  .lectio-runtime[data-lectio-preset='calm-green'] {
+    --background: hsl(108, 28%, 97%);
+    --foreground: hsl(154, 28%, 20%);
+    --card: hsl(108, 24%, 99%);
+    --card-foreground: hsl(154, 28%, 20%);
+    --popover: hsl(108, 24%, 99%);
+    --popover-foreground: hsl(154, 28%, 20%);
+    --primary: hsl(154, 32%, 26%);
+    --primary-foreground: hsl(108, 33%, 98%);
+    --secondary: hsl(110, 28%, 92%);
+    --secondary-foreground: hsl(154, 28%, 20%);
+    --muted: hsl(111, 21%, 93%);
+    --muted-foreground: hsl(154, 14%, 38%);
+    --accent: hsl(145, 40%, 42%);
+    --accent-foreground: hsl(108, 33%, 98%);
+    --border: hsl(110, 18%, 84%);
+    --input: hsl(110, 18%, 84%);
+    --ring: hsl(145, 40%, 42%);
+    --shadow-warm: 0 26px 88px rgba(32, 72, 58, 0.13);
+    --shadow-warm-sm: 0 8px 30px rgba(32, 72, 58, 0.08);
+    background-image: radial-gradient(ellipse 76% 58% at 0% 0%, hsl(145 40% 42% / 0.08) 0%, transparent 68%),	radial-gradient(ellipse 72% 55% at 100% 0%, hsl(154 32% 26% / 0.07) 0%, transparent 70%);
+  }
+  .lectio-runtime[data-lectio-preset='calm-green'] .lesson-shell {
+    border-color: rgba(245, 251, 247, 0.82);
+    background: linear-gradient(180deg, rgba(252, 255, 252, 0.96), rgba(242, 249, 244, 0.9)),	rgba(255, 255, 255, 0.88);
+    box-shadow: 0 26px 88px rgba(32, 72, 58, 0.12);
+  }
+  .lectio-runtime[data-lectio-preset='calm-green'] .lesson-shell::before {
+    background-image: linear-gradient(90deg, rgba(28, 57, 46, 0.05) 1px, transparent 1px),	linear-gradient(rgba(28, 57, 46, 0.05) 1px, transparent 1px);
+  }
+  .lectio-runtime[data-lectio-preset='calm-green'] .glass-panel {
+    background: linear-gradient(180deg, rgba(253, 255, 252, 0.96), rgba(238, 247, 240, 0.9)),	rgba(250, 255, 251, 0.88);
+    box-shadow: 0 22px 72px rgba(32, 72, 58, 0.13),	inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  }
+  .lectio-runtime[data-lectio-preset='calm-green'] .lectio-emphasis {
+    background-color: hsl(145 40% 42% / 0.14);
+    color: var(--primary);
+  }
+  .lectio-runtime[data-lectio-preset='high-contrast-focus'] {
+    --background: hsl(42, 40%, 97%);
+    --foreground: hsl(220, 36%, 10%);
+    --card: hsl(0, 0%, 100%);
+    --card-foreground: hsl(220, 36%, 10%);
+    --popover: hsl(0, 0%, 100%);
+    --popover-foreground: hsl(220, 36%, 10%);
+    --primary: hsl(220, 46%, 10%);
+    --primary-foreground: hsl(52, 86%, 97%);
+    --secondary: hsl(45, 61%, 92%);
+    --secondary-foreground: hsl(220, 36%, 10%);
+    --muted: hsl(45, 24%, 92%);
+    --muted-foreground: hsl(220, 18%, 28%);
+    --accent: hsl(39, 96%, 46%);
+    --accent-foreground: hsl(220, 46%, 10%);
+    --border: hsl(220, 18%, 20%);
+    --input: hsl(220, 18%, 20%);
+    --ring: hsl(39, 96%, 46%);
+    --shadow-warm: 0 20px 64px rgba(15, 23, 42, 0.18);
+    --shadow-warm-sm: 0 6px 24px rgba(15, 23, 42, 0.12);
+    background-image: radial-gradient(ellipse 72% 48% at 0% 0%, hsl(39 96% 46% / 0.08) 0%, transparent 62%),	linear-gradient(180deg, hsl(42 40% 97%), hsl(48 33% 95%));
+  }
+  .lectio-runtime[data-lectio-preset='high-contrast-focus'] .lesson-shell {
+    border-color: rgba(15, 23, 42, 0.9);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 20px 64px rgba(15, 23, 42, 0.16);
+  }
+  .lectio-runtime[data-lectio-preset='high-contrast-focus'] .lesson-shell::before {
+    background-image: none;
+  }
+  .lectio-runtime[data-lectio-preset='high-contrast-focus'] .glass-panel {
+    border-color: rgba(15, 23, 42, 0.3);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.16),	inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+  .lectio-runtime[data-lectio-preset='high-contrast-focus'] .lectio-emphasis {
+    background-color: hsl(39 96% 46% / 0.18);
+    color: var(--primary);
+  }
+  .lectio-runtime[data-lectio-preset='minimal-light'] {
+    --background: hsl(210, 20%, 99%);
+    --foreground: hsl(215, 24%, 18%);
+    --card: hsl(0, 0%, 100%);
+    --card-foreground: hsl(215, 24%, 18%);
+    --popover: hsl(0, 0%, 100%);
+    --popover-foreground: hsl(215, 24%, 18%);
+    --primary: hsl(217, 30%, 22%);
+    --primary-foreground: hsl(210, 33%, 98%);
+    --secondary: hsl(210, 22%, 95%);
+    --secondary-foreground: hsl(215, 24%, 18%);
+    --muted: hsl(210, 16%, 94%);
+    --muted-foreground: hsl(217, 10%, 43%);
+    --accent: hsl(214, 44%, 47%);
+    --accent-foreground: hsl(210, 33%, 98%);
+    --border: hsl(214, 14%, 84%);
+    --input: hsl(214, 14%, 84%);
+    --ring: hsl(214, 44%, 47%);
+    --shadow-warm: 0 18px 54px rgba(15, 23, 42, 0.08);
+    --shadow-warm-sm: 0 6px 18px rgba(15, 23, 42, 0.05);
+    background-image: linear-gradient(180deg, hsl(210 20% 99%), hsl(210 18% 97%)),	radial-gradient(circle at 100% 0%, hsl(214 44% 47% / 0.05) 0%, transparent 32%);
+  }
+  .lectio-runtime[data-lectio-preset='minimal-light'] .lesson-shell {
+    border-color: rgba(214, 222, 232, 0.9);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 18px 54px rgba(15, 23, 42, 0.07);
+    backdrop-filter: blur(8px);
+  }
+  .lectio-runtime[data-lectio-preset='minimal-light'] .lesson-shell::before {
+    background-image: none;
+  }
+  .lectio-runtime[data-lectio-preset='minimal-light'] .glass-panel {
+    border-color: rgba(214, 222, 232, 0.8);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 250, 253, 0.95)),	rgba(255, 255, 255, 0.96);
+    box-shadow: 0 14px 42px rgba(15, 23, 42, 0.08),	inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(12px);
+  }
+  .lectio-runtime[data-lectio-preset='minimal-light'] .lectio-emphasis {
+    background-color: hsl(214 44% 47% / 0.12);
+    color: var(--primary);
+  }
+  .lesson-shell {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--rh-radius-outer);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 24px 80px rgba(27, 38, 59, 0.14);
+    backdrop-filter: blur(18px);
+  }
+  .lesson-shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: linear-gradient(90deg, rgba(15, 23, 42, 0.06) 1px, transparent 1px),	linear-gradient(rgba(15, 23, 42, 0.06) 1px, transparent 1px);
+    background-position: 0 0;
+    background-size: 24px 24px;
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.18), transparent 55%);
+  }
+  .glass-panel {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.68);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 248, 240, 0.82)),	rgba(255, 255, 255, 0.86);
+    box-shadow: 0 24px 70px rgba(27, 38, 59, 0.16),	inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(22px);
+  }
+  .glass-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.45), transparent 38%),	linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 55%);
+  }
+  .page-frame {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 80rem;
+    padding: var(--space-10) var(--space-4);
+  }
+  .rh-pad-card {
+    padding: var(--rh-pad-card);
+  }
+  .rh-pad-card-tight {
+    padding: var(--rh-pad-card-tight);
+  }
+  .rh-pad-shell {
+    padding: var(--rh-pad-shell);
+  }
+  .rh-gap-component > * + * {
+    margin-top: var(--rh-gap-component);
+  }
+  .rh-gap-component-tight > * + * {
+    margin-top: var(--rh-gap-component-tight);
+  }
+  .rh-gap-section > * + * {
+    margin-top: var(--rh-gap-section);
+  }
+  .rh-gap-cluster {
+    gap: var(--rh-gap-cluster);
+  }
+  .rh-radius-outer {
+    border-radius: var(--rh-radius-outer);
+  }
+  .rh-radius-card {
+    border-radius: var(--rh-radius-card);
+  }
+  .rh-radius-inner {
+    border-radius: var(--rh-radius-inner);
+  }
+  .eyebrow {
+    color: var(--accent);
+    font-size: var(--rh-eyebrow-size);
+    font-weight: var(--rh-eyebrow-weight);
+    letter-spacing: var(--rh-eyebrow-tracking);
+    text-transform: uppercase;
+  }
+}
+@media (max-width: 639px) {
+  :root {
+    --rh-pad-card: var(--space-5);
+    --rh-pad-card-tight: var(--space-4);
+    --rh-pad-shell: var(--space-6);
+  }
+}
+@media (min-width: 640px) {
+  .page-frame {
+    padding-inline: var(--space-6);
+  }
+}
+@media (min-width: 1024px) {
+  .page-frame {
+    padding-inline: var(--space-8);
+  }
+}
+@media print {
+  .document-toolbar,	.canvas-outline,	.palette-sidebar,	.palette-toggle-bar,	.mobile-palette-fab,	.media-manager-overlay,	.version-panel-overlay,	.share-dialog-overlay,	.builder-print-hidden,	.add-section-control {
+    display: none !important;
+  }
+  .block-card-chrome,	.block-label {
+    display: none !important;
+  }
+  .builder-shell {
+    background: white !important;
+    min-height: auto !important;
+  }
+  .builder-main {
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+  .block-card {
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .block-content {
+    padding: 0 !important;
+  }
+  .section-divider {
+    page-break-before: always;
+    break-before: page;
+  }
+  .section-divider-first {
+    page-break-before: avoid;
+    break-before: avoid;
+  }
+  .section-divider-actions {
+    display: none !important;
+  }
+}
+@property --tw-rotate-x {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-rotate-y {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-rotate-z {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-skew-x {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-skew-y {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-space-y-reverse {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+@property --tw-border-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
+}
+@property --tw-leading {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-font-weight {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-tracking {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-shadow-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+@property --tw-inset-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-inset-shadow-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-inset-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+@property --tw-ring-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-ring-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-inset-ring-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-inset-ring-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-ring-inset {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-ring-offset-width {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --tw-ring-offset-color {
+  syntax: "*";
+  inherits: false;
+  initial-value: #fff;
+}
+@property --tw-ring-offset-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-outline-style {
+  syntax: "*";
+  inherits: false;
+  initial-value: solid;
+}
+@property --tw-blur {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-brightness {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-contrast {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-grayscale {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-hue-rotate {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-invert {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-opacity {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-saturate {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-sepia {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-drop-shadow {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-drop-shadow-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-drop-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+@property --tw-drop-shadow-size {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-blur {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-brightness {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-contrast {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-grayscale {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-hue-rotate {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-invert {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-opacity {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-saturate {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-backdrop-sepia {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-duration {
+  syntax: "*";
+  inherits: false;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+@layer properties {
+  @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
+    *, ::before, ::after, ::backdrop {
+      --tw-rotate-x: initial;
+      --tw-rotate-y: initial;
+      --tw-rotate-z: initial;
+      --tw-skew-x: initial;
+      --tw-skew-y: initial;
+      --tw-space-y-reverse: 0;
+      --tw-border-style: solid;
+      --tw-leading: initial;
+      --tw-font-weight: initial;
+      --tw-tracking: initial;
+      --tw-shadow: 0 0 #0000;
+      --tw-shadow-color: initial;
+      --tw-shadow-alpha: 100%;
+      --tw-inset-shadow: 0 0 #0000;
+      --tw-inset-shadow-color: initial;
+      --tw-inset-shadow-alpha: 100%;
+      --tw-ring-color: initial;
+      --tw-ring-shadow: 0 0 #0000;
+      --tw-inset-ring-color: initial;
+      --tw-inset-ring-shadow: 0 0 #0000;
+      --tw-ring-inset: initial;
+      --tw-ring-offset-width: 0px;
+      --tw-ring-offset-color: #fff;
+      --tw-ring-offset-shadow: 0 0 #0000;
+      --tw-outline-style: solid;
+      --tw-blur: initial;
+      --tw-brightness: initial;
+      --tw-contrast: initial;
+      --tw-grayscale: initial;
+      --tw-hue-rotate: initial;
+      --tw-invert: initial;
+      --tw-opacity: initial;
+      --tw-saturate: initial;
+      --tw-sepia: initial;
+      --tw-drop-shadow: initial;
+      --tw-drop-shadow-color: initial;
+      --tw-drop-shadow-alpha: 100%;
+      --tw-drop-shadow-size: initial;
+      --tw-backdrop-blur: initial;
+      --tw-backdrop-brightness: initial;
+      --tw-backdrop-contrast: initial;
+      --tw-backdrop-grayscale: initial;
+      --tw-backdrop-hue-rotate: initial;
+      --tw-backdrop-invert: initial;
+      --tw-backdrop-opacity: initial;
+      --tw-backdrop-saturate: initial;
+      --tw-backdrop-sepia: initial;
+      --tw-duration: initial;
+    }
+  }
+}
+
+
+	:root {
+		--paper: #f7f8f6;
+		--surface: #ffffff;
+		--rule: #e3e6e1;
+		--ink: #16211c;
+		--ink-2: #5c6b63;
+		--ink-3: #8b978f;
+		--accent: #1c5d45;
+		--accent-soft: #e7f0ea;
+		--amber: #9a6b12;
+		--amber-soft: #fbf0da;
+	}
+
+	body {
+		margin: 0;
+		background: var(--paper);
+		color: var(--ink);
+		font-family: Inter, sans-serif;
+	}
+
+	.workspace-header.s-7IPF32Wcq3s8 {
+		position: sticky;
+		top: 0;
+		z-index: 20;
+		height: 58px;
+		box-sizing: border-box;
+		border-bottom: 1px solid var(--rule);
+		padding: 0 28px;
+		background: color-mix(in srgb, var(--paper) 94%, transparent);
+		backdrop-filter: blur(10px);
+	}
+
+	.workspace-nav.s-7IPF32Wcq3s8 {
+		display: flex;
+		height: 100%;
+		align-items: center;
+		justify-content: space-between;
+		margin: 0 auto;
+	}
+
+	.workspace-brand.s-7IPF32Wcq3s8 {
+		color: var(--ink);
+		font-family: Fraunces, Georgia, serif;
+		font-size: 20px;
+		font-weight: 600;
+		letter-spacing: -0.03em;
+		text-decoration: none;
+	}
+
+	.workspace-brand.s-7IPF32Wcq3s8 span:where(.s-7IPF32Wcq3s8) {
+		color: var(--accent);
+	}
+
+	.workspace-nav-end.s-7IPF32Wcq3s8 {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+	}
+
+	.workspace-links.s-7IPF32Wcq3s8 {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+
+	.workspace-links.s-7IPF32Wcq3s8 a:where(.s-7IPF32Wcq3s8) {
+		border-radius: 6px;
+		color: var(--ink-2);
+		font-size: 13px;
+		font-weight: 500;
+		padding: 7px 10px;
+		text-decoration: none;
+	}
+
+	.workspace-links.s-7IPF32Wcq3s8 a:where(.s-7IPF32Wcq3s8):hover,
+	.workspace-links.s-7IPF32Wcq3s8 a:where(.s-7IPF32Wcq3s8):focus-visible,
+	.workspace-links.s-7IPF32Wcq3s8 a[aria-current='page']:where(.s-7IPF32Wcq3s8) {
+		background: var(--accent-soft);
+		color: var(--accent);
+	}
+
+	.workspace-links.s-7IPF32Wcq3s8 a:where(.s-7IPF32Wcq3s8):focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
+	.workspace-avatar.s-7IPF32Wcq3s8 {
+		width: 30px;
+		height: 30px;
+		border-radius: 50%;
+		object-fit: cover;
+	}
+
+	.workspace-avatar-link.s-7IPF32Wcq3s8 {
+		display: inline-flex;
+		border-radius: 50%;
+	}
+
+	.workspace-avatar-link.s-7IPF32Wcq3s8:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 3px;
+	}
+
+	.workspace-initials.s-7IPF32Wcq3s8 {
+		display: grid;
+		place-items: center;
+		background: var(--accent);
+		color: var(--surface);
+		font: 600 11px Inter, sans-serif;
+	}
+
+	main.s-7IPF32Wcq3s8 {
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 1.5rem;
+	}
+
+	main.workspace-main.s-7IPF32Wcq3s8 {
+		max-width: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	@media (max-width: 640px) {
+		.workspace-header.s-7IPF32Wcq3s8 {
+			padding: 0 18px;
+		}
+
+		.workspace-links.s-7IPF32Wcq3s8 a:where(.s-7IPF32Wcq3s8) {
+			padding: 7px;
+		}
+
+		.workspace-links.s-7IPF32Wcq3s8 a:where(.s-7IPF32Wcq3s8):last-child {
+			display: none;
+		}
+	}
+ .s-7IPF32Wcq3s8{}
+/* Lectio v2 base print stylesheet
+   Positive page rules only. No !important. No override rules. No print-mode branches.
+   Requires: <html lang="..."> on the render root, or hyphens:auto silently does nothing. */
+
+@page { size: A4; margin: var(--page-margin, 18mm); }
+
+/* ── Page geometry ───────────────────────────────────────────
+   One measure for the whole document. Margin objects float inside it and
+   displace the line boxes beside them; text below returns to full measure.
+   There is no reserved gutter — --aside-width is the float's own width, not
+   page geometry. Nothing below may hardcode a millimetre value that depends
+   on these. */
+.lectio-document {
+  --page-width: 210mm;
+  --page-margin: 26mm;
+  --measure: calc(var(--page-width) - (2 * var(--page-margin)));  /* 158mm */
+  --aside-width: 46mm;
+  --aside-gap: 6mm;
+  --line: 16pt;
+}
+
+html { font-family: var(--lectio-body, sans-serif); }
+body {
+  margin: 0; color: #111;
+  font-size: 12pt; line-height: var(--line, 16pt);
+  orphans: 3; widows: 3; hyphens: auto;
+}
+
+/* flow-root so a trailing margin float cannot escape the document body. */
+.lectio-main { max-width: var(--measure); display: flow-root; }
+
+/* ── Front matter (FIX 1) ────────────────────────────────────
+   Cover, contents and running head are renderer furniture, not authored
+   page objects. They are derived from document metadata + section titles. */
+.lectio-cover { break-after: page; }
+.lectio-cover-title { font-size: 32pt; line-height: 40pt; margin: 0 0 var(--line); }
+.lectio-section-title {
+  font-size: 17pt;
+  line-height: 24pt;
+  margin-top: calc(var(--line) * 2);
+  margin-bottom: 8pt;
+  break-after: avoid;
+  clear: right;
+}
+.lectio-cover-subtitle { font-size: 14pt; line-height: 20pt; margin: 0 0 calc(var(--line) * 2); }
+.lectio-cover-fields { max-width: var(--measure); }
+.lectio-cover-field { border-bottom: .5pt solid #777; height: 22pt; margin-bottom: var(--line); }
+
+.lectio-contents { break-after: page; max-width: var(--measure); }
+.lectio-contents-entry { display: flex; justify-content: space-between; margin-bottom: 8pt; }
+
+/* ── Headings ────────────────────────────────────────────────
+   break-after:avoid does NOT chain in Chromium — it protects only the
+   immediately next element. .lectio-heading-binding is the real mechanism:
+   wrap heading + first following block in it. */
+h1, h2, h3 { break-after: avoid; margin: 0; color: inherit; clear: right; }
+h1 { font-size: 26pt; line-height: 32pt; margin-bottom: var(--line); }
+h2 { font-size: 17pt; line-height: 24pt; margin-top: calc(var(--line) * 2); margin-bottom: 8pt; }
+h3 { font-size: 13pt; line-height: var(--line); margin-top: calc(var(--line) * 1.5); margin-bottom: 8pt; }
+.lectio-heading-binding { break-inside: avoid; }
+
+/* ── Prose ───────────────────────────────────────────────────*/
+p { margin: 0 0 var(--line); }
+
+/* ── Margin placement ────────────────────────────────────────
+   Placement, not object identity. object-catalogue.v1.json permits margin
+   placement for `aside` and `list`; this class serves both. The float sits
+   inside the measure and displaces the line boxes beside it. */
+.lectio-block--margin {
+  float: right; clear: right;
+  width: var(--aside-width);
+  margin: 0 0 var(--line) var(--aside-gap);
+  break-inside: avoid;
+}
+
+/* ── Aside — only pedagogical border; technical hairlines OK elsewhere ─
+   Aside carries its rule and type size at either placement. */
+.lectio-aside {
+  padding-left: 3mm;
+  border-left: .75pt solid currentColor;
+  font-size: 10pt; line-height: 14pt;
+}
+
+/* ── List ────────────────────────────────────────────────────*/
+.lectio-list { margin: 0 0 var(--line); padding-left: 9mm; }
+.lectio-list > li { margin-bottom: 8pt; break-inside: avoid; }
+
+/* ── Table (FIX 4: span modifier) ────────────────────────────*/
+.lectio-table {
+  border-collapse: collapse; width: 100%; clear: right;
+  margin: 0 0 var(--line); font-size: 10.5pt;
+}
+/* --span is inert under a single measure. The authored intent
+   ("wider than body text") no longer has a referent. Resemanticising it as
+   "clears all floats" waits on the Placement reconciliation — see commit 5. */
+.lectio-table thead { display: table-header-group; }
+.lectio-table th, .lectio-table td { text-align: left; padding: 3pt 4pt; border-bottom: .5pt solid #777; }
+.lectio-table th { font-size: 9pt; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1pt solid #111; }
+.lectio-table tr { break-inside: avoid; }
+
+/* ── Figure (FIX 3: span derives from geometry) ──────────────*/
+.lectio-figure { width: 100%; clear: right; margin: 0 0 var(--line); break-inside: avoid; }
+/* --span is inert under a single measure. The authored intent
+   ("wider than body text") no longer has a referent. Resemanticising it as
+   "clears all floats" waits on the Placement reconciliation — see commit 5. */
+.lectio-figure img, .lectio-figure svg { display: block; max-width: 100%; height: auto; }
+.lectio-caption { margin-top: 4pt; font-size: 10pt; line-height: 14pt; }
+
+/* ── Worked example ──────────────────────────────────────────*/
+.lectio-step { position: relative; padding-left: 12mm; margin-bottom: var(--line); }
+.lectio-step-number { position: absolute; left: 0; font-weight: 700; }
+.lectio-step:last-child { break-before: avoid; }
+
+/* ── Questions (FIX 2: ruled lines must not be background images) ──
+   Chrome's print dialog defaults "Background graphics" to OFF, so a
+   repeating-linear-gradient silently disappears on teacher Ctrl+P.
+   Borders always render. Emit one .lectio-answer-line per required line. */
+.lectio-question { position: relative; padding-left: 9mm; margin-bottom: var(--line); break-inside: avoid; }
+.lectio-question-number { position: absolute; left: 0; font-weight: 700; }
+.lectio-question-marks { float: right; font-size: 10pt; }
+/* flow-root: without a BFC the full-width rules draw under a margin float. */
+.lectio-answer-lines { margin-top: 8pt; display: flow-root; }
+.lectio-answer-line { height: 18pt; border-bottom: .5pt solid #999; }
+
+/* ── Choices ─────────────────────────────────────────────────*/
+.lectio-choice { position: relative; padding-left: 9mm; margin-bottom: 8pt; break-inside: avoid; }
+.lectio-choice-letter { position: absolute; left: 0; font-weight: 700; }
+
+/* ── Answer key ──────────────────────────────────────────────*/
+.lectio-answer-key { break-before: page; clear: both; max-width: var(--measure); font-size: 10.5pt; line-height: 15pt; }
+.lectio-answer-key-entry { margin-bottom: var(--line); break-inside: avoid; }
+
+
+	.section-embed.s-N8r803aRZKnr {
+		display: grid;
+		gap: 8px;
+		padding: 12px 14px;
+		border: 1px solid var(--rule, #e5e7eb);
+		border-radius: 10px;
+		background: var(--surface, #fff);
+	}
+	.eyebrow.s-N8r803aRZKnr {
+		margin: 0;
+		font: 500 11px 'IBM Plex Mono', monospace;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--ink-3, #6b7280);
+	}
+	h3.s-N8r803aRZKnr {
+		margin: 0;
+		font-size: 1rem;
+	}
+	ul.s-N8r803aRZKnr {
+		margin: 0;
+		padding-left: 1.1rem;
+		font-size: 0.8rem;
+		color: var(--ink-2, #4b5563);
+	}
+	.muted.s-N8r803aRZKnr {
+		margin: 0;
+		font-size: 0.85rem;
+		color: var(--ink-3, #6b7280);
+	}
+ .s-N8r803aRZKnr{}
+/* Lectio v2 base print stylesheet
+   Positive page rules only. No !important. No override rules. No print-mode branches.
+   Requires: <html lang="..."> on the render root, or hyphens:auto silently does nothing. */
+
+@page { size: A4; margin: var(--page-margin, 18mm); }
+
+/* ── Page geometry ───────────────────────────────────────────
+   One measure for the whole document. Margin objects float inside it and
+   displace the line boxes beside them; text below returns to full measure.
+   There is no reserved gutter — --aside-width is the float's own width, not
+   page geometry. Nothing below may hardcode a millimetre value that depends
+   on these. */
+.lectio-document {
+  --page-width: 210mm;
+  --page-margin: 26mm;
+  --measure: calc(var(--page-width) - (2 * var(--page-margin)));  /* 158mm */
+  --aside-width: 46mm;
+  --aside-gap: 6mm;
+  --line: 16pt;
+}
+
+html { font-family: var(--lectio-body, sans-serif); }
+body {
+  margin: 0; color: #111;
+  font-size: 12pt; line-height: var(--line, 16pt);
+  orphans: 3; widows: 3; hyphens: auto;
+}
+
+/* flow-root so a trailing margin float cannot escape the document body. */
+.lectio-main { max-width: var(--measure); display: flow-root; }
+
+/* ── Front matter (FIX 1) ────────────────────────────────────
+   Cover, contents and running head are renderer furniture, not authored
+   page objects. They are derived from document metadata + section titles. */
+.lectio-cover { break-after: page; }
+.lectio-cover-title { font-size: 32pt; line-height: 40pt; margin: 0 0 var(--line); }
+.lectio-section-title {
+  font-size: 17pt;
+  line-height: 24pt;
+  margin-top: calc(var(--line) * 2);
+  margin-bottom: 8pt;
+  break-after: avoid;
+  clear: right;
+}
+.lectio-cover-subtitle { font-size: 14pt; line-height: 20pt; margin: 0 0 calc(var(--line) * 2); }
+.lectio-cover-fields { max-width: var(--measure); }
+.lectio-cover-field { border-bottom: .5pt solid #777; height: 22pt; margin-bottom: var(--line); }
+
+.lectio-contents { break-after: page; max-width: var(--measure); }
+.lectio-contents-entry { display: flex; justify-content: space-between; margin-bottom: 8pt; }
+
+/* ── Headings ────────────────────────────────────────────────
+   break-after:avoid does NOT chain in Chromium — it protects only the
+   immediately next element. .lectio-heading-binding is the real mechanism:
+   wrap heading + first following block in it. */
+h1, h2, h3 { break-after: avoid; margin: 0; color: inherit; clear: right; }
+h1 { font-size: 26pt; line-height: 32pt; margin-bottom: var(--line); }
+h2 { font-size: 17pt; line-height: 24pt; margin-top: calc(var(--line) * 2); margin-bottom: 8pt; }
+h3 { font-size: 13pt; line-height: var(--line); margin-top: calc(var(--line) * 1.5); margin-bottom: 8pt; }
+.lectio-heading-binding { break-inside: avoid; }
+
+/* ── Prose ───────────────────────────────────────────────────*/
+p { margin: 0 0 var(--line); }
+
+/* ── Margin placement ────────────────────────────────────────
+   Placement, not object identity. object-catalogue.v1.json permits margin
+   placement for `aside` and `list`; this class serves both. The float sits
+   inside the measure and displaces the line boxes beside it. */
+.lectio-block--margin {
+  float: right; clear: right;
+  width: var(--aside-width);
+  margin: 0 0 var(--line) var(--aside-gap);
+  break-inside: avoid;
+}
+
+/* ── Aside — only pedagogical border; technical hairlines OK elsewhere ─
+   Aside carries its rule and type size at either placement. */
+.lectio-aside {
+  padding-left: 3mm;
+  border-left: .75pt solid currentColor;
+  font-size: 10pt; line-height: 14pt;
+}
+
+/* ── List ────────────────────────────────────────────────────*/
+.lectio-list { margin: 0 0 var(--line); padding-left: 9mm; }
+.lectio-list > li { margin-bottom: 8pt; break-inside: avoid; }
+
+/* ── Table (FIX 4: span modifier) ────────────────────────────*/
+.lectio-table {
+  border-collapse: collapse; width: 100%; clear: right;
+  margin: 0 0 var(--line); font-size: 10.5pt;
+}
+/* --span is inert under a single measure. The authored intent
+   ("wider than body text") no longer has a referent. Resemanticising it as
+   "clears all floats" waits on the Placement reconciliation — see commit 5. */
+.lectio-table thead { display: table-header-group; }
+.lectio-table th, .lectio-table td { text-align: left; padding: 3pt 4pt; border-bottom: .5pt solid #777; }
+.lectio-table th { font-size: 9pt; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1pt solid #111; }
+.lectio-table tr { break-inside: avoid; }
+
+/* ── Figure (FIX 3: span derives from geometry) ──────────────*/
+.lectio-figure { width: 100%; clear: right; margin: 0 0 var(--line); break-inside: avoid; }
+/* --span is inert under a single measure. The authored intent
+   ("wider than body text") no longer has a referent. Resemanticising it as
+   "clears all floats" waits on the Placement reconciliation — see commit 5. */
+.lectio-figure img, .lectio-figure svg { display: block; max-width: 100%; height: auto; }
+.lectio-caption { margin-top: 4pt; font-size: 10pt; line-height: 14pt; }
+
+/* ── Worked example ──────────────────────────────────────────*/
+.lectio-step { position: relative; padding-left: 12mm; margin-bottom: var(--line); }
+.lectio-step-number { position: absolute; left: 0; font-weight: 700; }
+.lectio-step:last-child { break-before: avoid; }
+
+/* ── Questions (FIX 2: ruled lines must not be background images) ──
+   Chrome's print dialog defaults "Background graphics" to OFF, so a
+   repeating-linear-gradient silently disappears on teacher Ctrl+P.
+   Borders always render. Emit one .lectio-answer-line per required line. */
+.lectio-question { position: relative; padding-left: 9mm; margin-bottom: var(--line); break-inside: avoid; }
+.lectio-question-number { position: absolute; left: 0; font-weight: 700; }
+.lectio-question-marks { float: right; font-size: 10pt; }
+/* flow-root: without a BFC the full-width rules draw under a margin float. */
+.lectio-answer-lines { margin-top: 8pt; display: flow-root; }
+.lectio-answer-line { height: 18pt; border-bottom: .5pt solid #999; }
+
+/* ── Choices ─────────────────────────────────────────────────*/
+.lectio-choice { position: relative; padding-left: 9mm; margin-bottom: 8pt; break-inside: avoid; }
+.lectio-choice-letter { position: absolute; left: 0; font-weight: 700; }
+
+/* ── Answer key ──────────────────────────────────────────────*/
+.lectio-answer-key { break-before: page; clear: both; max-width: var(--measure); font-size: 10.5pt; line-height: 15pt; }
+.lectio-answer-key-entry { margin-bottom: var(--line); break-inside: avoid; }
+
+
+	.v3-patch-indicator.s-tQEWUtbezi1h {
+		animation: s-tQEWUtbezi1h-v3-patch-fade 2s ease forwards;
+	}
+	@keyframes s-tQEWUtbezi1h-v3-patch-fade {
+		0% {
+			opacity: 1;
+		}
+		70% {
+			opacity: 1;
+		}
+		100% {
+			opacity: 0;
+		}
+	}
+ .s-tQEWUtbezi1h{}
+
+	/* Technical hairline + hatch — greyscale-legible; no solid colour fill. */
+	.lectio-figure-fallback.s-IQovkzGnVB0s {
+		position: relative;
+		border: 0.5pt solid #777;
+		min-height: 40mm;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: transparent;
+		overflow: hidden;
+	}
+	.lectio-figure-hatch.s-IQovkzGnVB0s {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		pointer-events: none;
+	}
+	.lectio-figure-legend.s-IQovkzGnVB0s {
+		position: relative;
+		z-index: 1;
+		margin: 0;
+		padding: 4pt 8pt;
+		max-width: 90%;
+		text-align: center;
+		font-size: 9pt;
+		line-height: 1.3;
+		color: #111;
+		background: #fff;
+	}
+ .s-IQovkzGnVB0s{}</style>
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents"><!--[--><!--[0--><!--[--><!--[0--><header class="workspace-header s-7IPF32Wcq3s8"><nav class="workspace-nav s-7IPF32Wcq3s8"><a href="/" class="workspace-brand s-7IPF32Wcq3s8">Lect<span class="s-7IPF32Wcq3s8">i</span>o</a> <!--[-1--><!--]--></nav></header><!--]--> <main class="s-7IPF32Wcq3s8"><!--[-1--><p class="s-7IPF32Wcq3s8">Loading session...</p><!--]--></main><!--]--><!--]--> <!--[-1--><!--]--><!--]-->
+			
+			<script>
+				{
+					__sveltekit_dev = {
+						base: new URL(".", location).pathname.slice(0, -1),
+						env: {"PUBLIC_API_URL":"http://localhost:8000"}
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("/@fs/C:/Projects/lectio/node_modules/.pnpm/@sveltejs+kit@2.70.2_@svelt_3943896428ec1f1ecf833d5396b0611a/node_modules/@sveltejs/kit/src/runtime/client/entry.js"),
+						import("/@fs/C:/Projects/lectio/apps/textbook-agent/frontend/.svelte-kit/generated/client/app.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 20],
+							data: [null,null],
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
+	</body>
+</html>

@@ -43,9 +43,7 @@ class ExactWorkOrder(BaseModel):
 def _is_generatable(component_id: str, card: dict[str, Any]) -> bool:
     if card.get("writer_excluded") is True:
         return False
-    if component_id in {"image-block", "video-embed"}:
-        return False
-    return True
+    return component_id not in {"image-block", "video-embed"}
 
 
 def build_component_contract_matrix() -> list[dict[str, Any]]:

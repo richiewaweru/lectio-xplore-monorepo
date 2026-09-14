@@ -58,7 +58,7 @@ class NativeExecutionWorker:
             return
         try:
             await asyncio.wait_for(task, timeout=max(drain_seconds, 0.1))
-        except asyncio.TimeoutError:
+        except TimeoutError:
             task.cancel()
             try:
                 await task
@@ -71,13 +71,13 @@ class NativeExecutionWorker:
         while not self._stop.is_set():
             try:
                 claimed = await self._claim_one()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.exception("native worker claim failed worker_id=%s", self.worker_id)
                 claimed = None
             if claimed is None:
                 try:
                     await asyncio.wait_for(self._stop.wait(), timeout=self.poll_seconds)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     pass
                 continue
             self._busy = True
@@ -89,7 +89,7 @@ class NativeExecutionWorker:
                     claimed.generation_id,
                     self.worker_id,
                 )
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.exception(
                     "native worker job failed generation_id=%s worker_id=%s",
                     claimed.generation_id,
@@ -122,7 +122,7 @@ class NativeExecutionWorker:
                     lease.generation_id,
                 )
                 return
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.warning(
                     "native worker heartbeat failed generation_id=%s worker_id=%s",
                     lease.generation_id,
@@ -152,7 +152,7 @@ class NativeExecutionWorker:
                     await run_pre_worker_retry(lease=lease)
                 except LeaseLostError:
                     raise
-                except Exception:  # noqa: BLE001
+                except Exception:
                     # Failure already persisted inside run_pre_worker_retry.
                     logger.exception(
                         "pre-worker retry failed generation_id=%s worker_id=%s",
@@ -170,7 +170,7 @@ class NativeExecutionWorker:
                 )
         except LeaseLostError:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             await self._persist_failure(lease, exc)
             raise
         finally:
@@ -210,7 +210,7 @@ class NativeExecutionWorker:
                     )
         except LeaseLostError:
             return
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception(
                 "failed to persist worker failure generation_id=%s",
                 lease.generation_id,

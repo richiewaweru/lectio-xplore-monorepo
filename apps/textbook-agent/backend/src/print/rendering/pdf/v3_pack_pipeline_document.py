@@ -52,7 +52,7 @@ def build_pipeline_document_for_v3_pdf(
             keys = SectionContent.model_fields.keys()
             filtered = {k: v for k, v in item.items() if k in keys}
             validated_sections.append(SectionContent.model_validate(filtered))
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.warning(
                 "Skipping invalid V3 section for PDF assembly section_id=%s generation_id=%s: %s",
                 sid,

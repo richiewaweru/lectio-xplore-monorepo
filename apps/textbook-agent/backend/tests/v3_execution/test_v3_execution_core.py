@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import json
 import io
-import logging
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -10,7 +9,7 @@ import pytest
 from PIL import Image
 
 from contracts.lectio import get_section_field_for_component
-
+from media.qc.visual_qc import VisualQCVerdict
 from v3_blueprint.models import ProductionBlueprint
 from v3_execution.compile_orders import compile_execution_bundle
 from v3_execution.executors.visual_executor import _cache_key_for_visual, execute_visual
@@ -21,16 +20,14 @@ from v3_execution.models import (
     GeneratedQuestionBlock,
     GeneratedVisualBlock,
     QuestionWriterWorkOrder,
-    VisualGeneratorWorkOrder,
     VisualFrameSpec,
+    VisualGeneratorWorkOrder,
     VisualPlanItem,
     WriterQuestion,
 )
 from v3_execution.runtime import validation as v
 from v3_execution.runtime.runner import run_generation
-from v3_review.models import CoherenceReport
-from v3_review.models import ReviewIssue
-from media.qc.visual_qc import VisualQCVerdict
+from v3_review.models import CoherenceReport, ReviewIssue
 
 
 def _png_bytes(size: tuple[int, int] = (1024, 1024)) -> bytes:
@@ -178,7 +175,7 @@ async def test_runner_emits_skeleton_ready_before_component_events(
         _ = emit
         return []
 
-    async def noop_answer(order, emit, **_kwargs) -> GeneratedAnswerKeyBlock:  # noqa: ARG002
+    async def noop_answer(order, emit, **_kwargs) -> GeneratedAnswerKeyBlock:
         return GeneratedAnswerKeyBlock(
             answer_key_id="ak",
             style="answers_only",
@@ -567,9 +564,7 @@ async def test_execute_visual_stale_cache_copy_falls_back_to_generation(
             self.generated_uploads: list[bytes] = []
 
         async def image_exists(self, *, key: str) -> bool:
-            if key.startswith("images/cache/"):
-                return True
-            return False
+            return bool(key.startswith("images/cache/"))
 
         async def copy_image(self, *, source_key: str, destination_key: str):
             self.copied.append((source_key, destination_key))
@@ -1060,7 +1055,6 @@ async def test_diagram_precision_qc_exception_fails_closed_without_cache(
 @pytest.mark.asyncio
 async def test_execute_visual_preserves_stage_and_exception_type_on_failure(
     monkeypatch: pytest.MonkeyPatch,
-    caplog: pytest.LogCaptureFixture,
 ) -> None:
     order = VisualGeneratorWorkOrder(
         work_order_id="v-stage-fail",
@@ -1102,17 +1096,32 @@ async def test_execute_visual_preserves_stage_and_exception_type_on_failure(
     )
 
     captured: list[tuple[str, dict]] = []
+    log_records: list[SimpleNamespace] = []
 
     async def emit(event_type: str, payload: dict) -> None:
         captured.append((event_type, payload))
 
-    with caplog.at_level(logging.INFO):
-        blocks = await execute_visual(
-            order,
-            emit,
-            trace_id="trace",
-            generation_id="gen",
-        )
+    def _capture_error(msg: object, *args: object, **kwargs: object) -> None:
+        message = str(msg)
+        if args:
+            message = message % args
+        extra = kwargs.get("extra") if isinstance(kwargs.get("extra"), dict) else {}
+        entry = SimpleNamespace(message=message)
+        for key, value in extra.items():
+            setattr(entry, key, value)
+        log_records.append(entry)
+
+    monkeypatch.setattr(
+        "v3_execution.executors.visual_executor.logger.error",
+        _capture_error,
+    )
+
+    blocks = await execute_visual(
+        order,
+        emit,
+        trace_id="trace",
+        generation_id="gen",
+    )
 
     assert len(blocks) == 1
     failed = blocks[0]
@@ -1130,7 +1139,7 @@ async def test_execute_visual_preserves_stage_and_exception_type_on_failure(
 
     failure_log = next(
         record
-        for record in caplog.records
+        for record in log_records
         if record.message == "v3 visual failed block error_message set"
     )
     assert failure_log.visual_id == "vis-practice-1"
@@ -1246,7 +1255,7 @@ async def test_runner_with_stubbed_executors(monkeypatch: pytest.MonkeyPatch) ->
         await emit("visual_ready", {"visual_id": blk.visual_id})
         return [blk]
 
-    async def noop_answer(order, emit, **_kwargs) -> GeneratedAnswerKeyBlock:  # noqa: ARG002
+    async def noop_answer(order, emit, **_kwargs) -> GeneratedAnswerKeyBlock:
         return GeneratedAnswerKeyBlock(
             answer_key_id="ak",
             style="answers_only",
@@ -1379,7 +1388,7 @@ async def test_runner_emits_draft_status_updated_when_blocking_issues_remain(
         await emit("visual_ready", {"visual_id": blk.visual_id})
         return [blk]
 
-    async def noop_answer(order, emit, **_kwargs) -> GeneratedAnswerKeyBlock:  # noqa: ARG002
+    async def noop_answer(order, emit, **_kwargs) -> GeneratedAnswerKeyBlock:
         return GeneratedAnswerKeyBlock(
             answer_key_id="ak",
             style="answers_only",
@@ -1509,7 +1518,7 @@ async def test_runner_records_strategic_trace_checkpoints(
         await emit("visual_ready", {"visual_id": blk.visual_id})
         return [blk]
 
-    async def noop_answer(order, emit, **_kwargs) -> GeneratedAnswerKeyBlock:  # noqa: ARG002
+    async def noop_answer(order, emit, **_kwargs) -> GeneratedAnswerKeyBlock:
         return GeneratedAnswerKeyBlock(
             answer_key_id="ak",
             style="answers_only",

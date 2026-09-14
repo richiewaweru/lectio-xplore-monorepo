@@ -7,16 +7,16 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+from core.llm.runner import RetryPolicy, run_llm
 from pydantic_ai import Agent
 
-from core.llm.runner import RetryPolicy, run_llm
 from curriculum.llm_contract_errors import is_transport_error
 from print.generation.whole_lesson.visual_topology import (
     TopologyPlanV1,
     TopologyValidationError,
     validate_topology_plan,
 )
-from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
+from v3_execution.config import get_v3_model_settings, get_v3_slot
 from v3_execution.config.models import V3_VISUAL_TOPOLOGY_PLANNER
 from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 

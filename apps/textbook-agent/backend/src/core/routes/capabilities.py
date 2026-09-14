@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends
 
-from infra.auth.middleware import get_current_user
 from core.capabilities import xplore_v2_enabled_for
 from core.entities.user import User
-
+from infra.auth.middleware import get_current_user
 
 router = APIRouter(prefix="/api/v1/capabilities", tags=["capabilities"])
 

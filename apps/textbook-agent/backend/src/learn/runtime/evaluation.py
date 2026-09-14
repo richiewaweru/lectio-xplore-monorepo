@@ -6,9 +6,11 @@ divergent scoring is not allowed; golden tests pin shared semantics.
 
 from __future__ import annotations
 
+import math
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any
 
 
 class InteractionConfigError(ValueError):
@@ -270,8 +272,8 @@ def evaluate_numeric(
     )
 
 
-def _isfinite(value: float | int) -> bool:
-    return value == value and value not in (float("inf"), float("-inf"))
+def _isfinite(value: float) -> bool:
+    return math.isfinite(value)
 
 
 def evaluate_short_response(

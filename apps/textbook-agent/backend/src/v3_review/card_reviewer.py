@@ -3,17 +3,15 @@ from __future__ import annotations
 import json
 from typing import Any, Literal
 
+from core.llm.runner import run_llm
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent
 
-from core.llm.runner import run_llm
 from v3_blueprint.models import CardRubricPlan
 from v3_execution.config import (
     V3_CARD_QC,
-    get_v3_model,
     get_v3_model_settings,
     get_v3_slot,
-    get_v3_spec,
 )
 from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 

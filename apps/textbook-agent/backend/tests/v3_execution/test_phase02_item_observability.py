@@ -16,11 +16,11 @@ from v3_blueprint.planning.models import (
 from v3_execution.executors.item_diagnostics import classify_item_failure
 from v3_execution.executors.item_executor import (
     ITEM_MAX_ATTEMPTS,
-    ItemGenerationResult,
     ItemGenerationDraft,
+    ItemGenerationResult,
+    ItemQuestionDraft,
     execute_items_with_diagnostics,
     validate_item_result,
-    ItemQuestionDraft,
 )
 
 
@@ -131,9 +131,8 @@ async def test_i02_item_timeout_diagnostic() -> None:
     with patch(
         "v3_execution.executors.item_executor.run_llm",
         new=AsyncMock(side_effect=TimeoutError("provider timed out")),
-    ):
-        with pytest.raises(TimeoutError) as exc_info:
-            await execute_items_with_diagnostics(_card(), generation_id="gen-1")
+    ), pytest.raises(TimeoutError) as exc_info:
+        await execute_items_with_diagnostics(_card(), generation_id="gen-1")
     journal = getattr(exc_info.value, "item_attempts", [])
     assert journal
     assert journal[-1]["class"] == "TIMEOUT"
@@ -224,10 +223,12 @@ async def test_i07_repair_prompt_includes_validation_errors_and_allowed_ids() ->
 
 
 def test_i08_wrapped_unexpected_model_behavior_is_not_unknown_contract() -> None:
+    from typing import ClassVar
+
     from pydantic_ai.exceptions import UnexpectedModelBehavior
 
     class DummyToolRetry:
-        content = [
+        content: ClassVar[list] = [
             {"loc": ("items", 0), "msg": "Extra inputs are not permitted"},
         ]
 

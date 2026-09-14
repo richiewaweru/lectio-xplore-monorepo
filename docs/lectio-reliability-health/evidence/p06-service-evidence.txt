@@ -1,0 +1,11 @@
+﻿implementation_sha=dbe3e651ea12c4fc0c9acb70a7dfe60d9c113eb1
+recorded_at_utc=2026-09-13T00:53:06.3706793Z
+api_health={"status":"ok","timestamp":"2026-09-13T00:53:05.939499+00:00","version":"1.0.0-beta.1","instance_id":"8fdc55db-5bed-40fe-a170-2027b0d57085","started_at":"2026-09-13T00:48:25.565769+00:00","pipeline_architecture":"shell-pipeline-native-lectio"}
+frontend_status=200
+frontend_bytes=88904
+frontend_url=http://127.0.0.1:5173
+api_url=http://127.0.0.1:8000
+db=textbookagent-db-1 Up 47 hours (healthy)
+browser_session=playwright-cli session=reliability
+profile=.tmp/reliability-chrome-profile
+branch=fix/lectio-reliability-health

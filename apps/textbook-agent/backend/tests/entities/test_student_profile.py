@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from pydantic import ValidationError
 
@@ -9,7 +9,7 @@ from core.value_objects import GradeBand, TeacherRole
 
 class TestTeacherProfile:
     def test_valid_profile(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         profile = TeacherProfile(
             id="sp-1",
             user_id="u-1",
@@ -28,7 +28,7 @@ class TestTeacherProfile:
         assert len(profile.subjects) == 2
 
     def test_defaults(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         profile = TeacherProfile(
             id="sp-1",
             user_id="u-1",
@@ -42,7 +42,7 @@ class TestTeacherProfile:
         assert profile.delivery_preferences.brevity == "balanced"
 
     def test_rejects_invalid_delivery_preferences(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         try:
             TeacherProfile(
                 id="sp-1",
@@ -59,7 +59,7 @@ class TestTeacherProfile:
 
 class TestUser:
     def test_valid_user(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         user = User(
             id="u-1",
             email="test@example.com",
@@ -71,7 +71,7 @@ class TestUser:
         assert user.has_profile is False
 
     def test_user_with_profile(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         user = User(
             id="u-1",
             email="test@example.com",

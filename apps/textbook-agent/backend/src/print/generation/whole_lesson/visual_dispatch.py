@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-import logging
-from collections.abc import Mapping
-from typing import Any, Awaitable, Callable
 import hashlib
 import json
+import logging
 import time
+from collections.abc import Awaitable, Callable, Mapping
+from typing import Any
 from urllib.parse import urlsplit
 
+from print.generation.whole_lesson import visual_topology_recovery as topology_recovery
 from print.generation.whole_lesson.figure_ids import stable_figure_request_id
 from print.generation.whole_lesson.repository import PageDocumentRepository
-from print.generation.whole_lesson import visual_topology_recovery as topology_recovery
 from v3_execution.executors.visual_executor import execute_visual
 from v3_execution.models import VisualGeneratorWorkOrder, VisualPlanItem
 
@@ -395,7 +395,7 @@ async def dispatch_native_pending_visuals(
                 # Non-URL ready content still marks asset ready for document patching.
                 asset["src"] = src
                 asset["kind"] = "image"
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             asset_error = str(exc)[:500]
             asset = {
                 "status": "failed",
@@ -624,7 +624,7 @@ async def dispatch_and_patch_from_repo(
         try:
             recovered = await recover(**recover_kwargs)
             topology_results.append({"request_id": request_id, **recovered})
-        except Exception as exc:  # keep retryable visual state; never fall through
+        except Exception as exc:  # keep retryable visual state; never fall through  # noqa: BLE001
             topology_results.append(
                 {
                     "request_id": request_id,
@@ -703,6 +703,6 @@ async def dispatch_and_patch_from_repo(
         # Successful redispath of pending figures — drop prior visual last_error.
         try:
             await repo.clear_visual_last_error()
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception:
+            logger.debug("clear_visual_last_error failed after successful redispath", exc_info=True)
     return result

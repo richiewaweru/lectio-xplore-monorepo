@@ -1,0 +1,8 @@
+{
+    "name":  "reliability-admission",
+    "exit":  4,
+    "command":  "uv run pytest tests/reliability tests/admission -q --tb=line",
+    "start":  "2026-09-13T23:27:58.8539661+03:00",
+    "end":  "2026-09-13T23:28:04.4639727+03:00",
+    "cwd":  "C:\\Projects\\lectio\\apps\\textbook-agent\\backend"
+}

@@ -1,0 +1,26 @@
+{
+  "http": 200,
+  "body": {
+    "generation_id": "7206057e-5b25-4af8-9a77-40742213efac",
+    "path_lesson_id": "5901155d-8dfa-4e92-8285-0ab3170efd4d",
+    "objective": "Explain why a shadow appears when an opaque object blocks light, and describe the position of the shadow relative to the light source",
+    "objective_hash": "4711cf7bf87ce6e60c3f6e4c9dcec08e28992b509d5aa6fe7e764a22e2264cc2",
+    "skeleton_id": "conceptual.first_exposure",
+    "skeleton_version": 1,
+    "slots": [
+      "orient",
+      "explain",
+      "contrast",
+      "check"
+    ],
+    "section_roles": [
+      "orient",
+      "explain",
+      "contrast",
+      "check"
+    ],
+    "status": "awaiting_review",
+    "reused": false,
+    "regeneration_reason": "P06C Print failed_terminal; composition_bridge fix requires fresh preparation"
+  }
+}

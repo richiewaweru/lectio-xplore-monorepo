@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from document.models import DOCUMENT_PRIMITIVE_KINDS, DocumentNode, document_node_adapter
 

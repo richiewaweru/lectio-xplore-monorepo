@@ -8,7 +8,10 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from application.unit_lesson.realizations import admit_realization
+from application.unit_lesson.realizations import (
+    RealizationPayloadConflictError,
+    admit_realization,
+)
 from core.database.models import GenerationModel, LessonProvenanceModel, PathLessonModel
 from curriculum.teaching_plan.consumers import (
     TeachingRevisionNotApprovedError,
@@ -26,6 +29,7 @@ async def realize_print_from_preparation(
     preparation_generation_id: str,
     user_id: str,
     path_lesson_id: str | None = None,
+    admission_request_key: str | None = None,
 ) -> dict[str, Any]:
     """Queue native Print from approved teaching. Does not re-approve the plan."""
     generation = await session.get(GenerationModel, preparation_generation_id)
@@ -81,23 +85,29 @@ async def realize_print_from_preparation(
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
-    row, _created = await admit_realization(
-        session,
-        path_lesson_id=lesson_id,
-        path="print",
-        teaching_plan_id=str(teaching_plan.teaching_plan_id or ""),
-        teaching_plan_revision=int(teaching_plan.revision or 1),
-        teaching_plan_hash=plan_hash,
-        preparation_generation_id=preparation_generation_id,
-        pack_id=preparation_generation_id,
-        output_id=preparation_generation_id,
-    )
+    try:
+        row, created = await admit_realization(
+            session,
+            path_lesson_id=lesson_id,
+            path="print",
+            teaching_plan_id=str(teaching_plan.teaching_plan_id or ""),
+            teaching_plan_revision=int(teaching_plan.revision or 1),
+            teaching_plan_hash=plan_hash,
+            preparation_generation_id=preparation_generation_id,
+            pack_id=preparation_generation_id,
+            output_id=preparation_generation_id,
+            admission_request_key=admission_request_key,
+            admission_payload_hash=plan_hash,
+        )
+    except RealizationPayloadConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     status = str(generation.status or row.status or "queued")
     return {
         "status": status,
         "path": "print",
         "output_id": preparation_generation_id,
         "realization_id": row.id,
+        "realization_created": created,
         "teaching_plan_hash": plan_hash,
         "teaching_plan_revision": int(teaching_plan.revision or 1),
         "open_href": f"/studio/print/{preparation_generation_id}",

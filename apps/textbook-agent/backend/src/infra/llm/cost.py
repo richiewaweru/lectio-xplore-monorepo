@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any
 
-from infra.llm.types import ModelFamily, ModelSpec
 from infra.llm.transport import endpoint_host
+from infra.llm.types import ModelFamily, ModelSpec
 
 TOKEN_PRICE_USD_PER_1M_BY_MODEL: dict[str, tuple[float, float]] = {
     "anthropic:claude-haiku-4-5-20251001": (0.25, 1.25),

@@ -1,0 +1,5 @@
+﻿F5654F9CF2F2507EEFCDF12F9185C5D1322E80DAC6C752A284A82CCBA4FF4318 C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-units-authenticated.png
+1E266869045FA9958878817BE71822A49E7B160A3F64A6B52D9A15A10FDD9A1F C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-path-locked.png
+DB24E4C907465F987D33B8452CA923DFC599428C769CCD0AA68C1F1FEF341EDF C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-teaching-failed.png
+D4FF81F482CB41329E22C0C045A2DF5EAFA4A71C7F86E02C0C9E2FC0ACF4E18A C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-teaching-review.png
+E00A692C44E71224A147948A9EE7DBB42A31C8C9D7ABE1779792664D56BC5E7F C:\Projects\lectio\docs\lectio-reliability-health\evidence\p06-auth-expired-login.png

@@ -23,7 +23,6 @@ from curriculum.models import (
 )
 from curriculum.service import StalePathMutationError
 
-
 GROUP_TOGGLE_PROFILES: dict[str, dict[str, Any]] = {
     "support": {
         "support_level": "high",

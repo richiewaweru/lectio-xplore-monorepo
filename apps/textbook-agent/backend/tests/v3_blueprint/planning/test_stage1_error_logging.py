@@ -61,14 +61,14 @@ async def test_call_stage1_prints_traceback_and_reraises() -> None:
         patch.object(structural_planner, "build_stage1_system_prompt", return_value="prompt"),
         patch.object(structural_planner, "run_llm", new=AsyncMock(side_effect=error)),
         patch("builtins.print") as mock_print,
+        pytest.raises(RuntimeError, match="llm blew up"),
     ):
-        with pytest.raises(RuntimeError, match="llm blew up"):
-            await structural_planner._call_stage1(
-                signals,
-                form,
-                {"resource_type": "lesson"},
-                generation_id="gen-123",
-            )
+        await structural_planner._call_stage1(
+            signals,
+            form,
+            {"resource_type": "lesson"},
+            generation_id="gen-123",
+        )
 
     mock_print.assert_called_once()
     printed = mock_print.call_args.args[0]
@@ -215,15 +215,15 @@ async def test_run_stage1_with_retry_prints_attempt_exception_and_reraises() -> 
     with (
         patch.object(retry, "_call_stage1", new=AsyncMock(side_effect=error)),
         patch("builtins.print") as mock_print,
+        pytest.raises(ValueError, match="bad stage1"),
     ):
-        with pytest.raises(ValueError, match="bad stage1"):
-            await retry.run_stage1_with_retry(
-                signals,
-                form,
-                {"resource_type": "lesson"},
-                generation_id="gen-456",
-                trace_id="trace-456",
-            )
+        await retry.run_stage1_with_retry(
+            signals,
+            form,
+            {"resource_type": "lesson"},
+            generation_id="gen-456",
+            trace_id="trace-456",
+        )
 
     mock_print.assert_called_once()
     printed = mock_print.call_args.args[0]
@@ -269,28 +269,31 @@ async def test_call_stage1_rejects_role_outside_active_resource_spec() -> None:
         answer_key_style="brief_explanations",
     )
 
-    with patch.object(
-        structural_planner,
-        "run_llm",
-        new=AsyncMock(return_value=type("Result", (), {"output": invalid_plan})()),
-    ), patch.object(structural_planner, "build_stage1_system_prompt", return_value="prompt"):
-        with pytest.raises(ValueError, match="which is not a skeleton slot id"):
-            await structural_planner._call_stage1(
-                signals,
-                form,
-                {
-                    "resource_type": "lesson",
-                    "spec": {
-                        "required_roles": ["intro", "practice"],
-                        "optional_roles": ["summary"],
-                    },
+    with (
+        patch.object(
+            structural_planner,
+            "run_llm",
+            new=AsyncMock(return_value=type("Result", (), {"output": invalid_plan})()),
+        ),
+        patch.object(structural_planner, "build_stage1_system_prompt", return_value="prompt"),
+        pytest.raises(ValueError, match="which is not a skeleton slot id"),
+    ):
+        await structural_planner._call_stage1(
+            signals,
+            form,
+            {
+                "resource_type": "lesson",
+                "spec": {
+                    "required_roles": ["intro", "practice"],
+                    "optional_roles": ["summary"],
                 },
-                generation_id="gen-role-guard",
-                skeleton_catalog={
-                    "slots": {
-                        "intro": {"role": "intro"},
-                        "practice": {"role": "practice"},
-                        "summary": {"role": "summary"},
-                    }
-                },
-            )
+            },
+            generation_id="gen-role-guard",
+            skeleton_catalog={
+                "slots": {
+                    "intro": {"role": "intro"},
+                    "practice": {"role": "practice"},
+                    "summary": {"role": "summary"},
+                }
+            },
+        )

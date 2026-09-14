@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
 from print.generation.whole_lesson.states import DEFAULT_VARIANT_ID, NATIVE_STATUSES, execution_key
@@ -111,9 +112,8 @@ def visual_quality_summary(state: Mapping[str, Any]) -> dict[str, Any]:
                 asset_status == "failed"
                 or str(outcome.get("status") or "") in {"failed", "failed_recoverable"}
                 or visual_error
-            ):
-                if request_id:
-                    failed.append(request_id)
+            ) and request_id:
+                failed.append(request_id)
             qc = outcome.get("visual_qc")
             if not isinstance(qc, Mapping):
                 # Older successful completions archived the active QC verdict

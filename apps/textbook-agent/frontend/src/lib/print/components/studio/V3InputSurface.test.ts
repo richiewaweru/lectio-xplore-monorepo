@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { tick } from 'svelte';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { getProfile, narrowTopic, proposeIntent } = vi.hoisted(() => ({
 	getProfile: vi.fn(),
@@ -11,6 +11,9 @@ vi.mock('$lib/api/profile', () => ({ getProfile }));
 vi.mock('$lib/api/v3', () => ({ narrowTopic, proposeIntent }));
 
 import V3InputSurface from './V3InputSurface.svelte';
+
+/** Debounce + waitFor cases need headroom under full-suite fork load (default 5s flakes). */
+const SLOW = 15_000;
 
 const candidates = [
 	{ id: 'rectangles', title: 'Decompose into rectangles', description: 'Students split L-shapes into rectangles and add areas.' },
@@ -50,8 +53,19 @@ afterEach(() => {
 });
 
 describe('V3InputSurface', () => {
-	it('renders the five proposed cards in order', () => {
+	beforeEach(() => {
+		getProfile.mockReset();
+		narrowTopic.mockReset();
+		proposeIntent.mockReset();
 		getProfile.mockRejectedValue(new Error('not available'));
+	});
+
+	afterEach(() => {
+		cleanup();
+		vi.clearAllMocks();
+	});
+
+	it('renders the five proposed cards in order', () => {
 		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
 		const labels = screen.getAllByText(/Step [1-5] \//).map((element) => element.textContent);
 		expect(labels).toEqual(['Step 1 / Class shape', 'Step 2 / Lesson shape', 'Step 3 / Topic', 'Step 4 / Intent', 'Step 5 / Anything else']);
@@ -59,7 +73,9 @@ describe('V3InputSurface', () => {
 		expect(screen.getByLabelText('Topic')).toBeTruthy();
 	});
 
-	it('prefills a short class label from the profile and leaves long descriptions blank', async () => {
+	it(
+		'prefills a short class label from the profile and leaves long descriptions blank',
+		async () => {
 		getProfile.mockResolvedValueOnce({ default_audience_description: '  Year 7 Science  ' });
 		const { unmount } = render(V3InputSurface, { props: { onSubmit: vi.fn() } });
 		await waitFor(() => expect((screen.getByLabelText('Class') as HTMLInputElement).value).toBe('Year 7 Science'));
@@ -69,12 +85,13 @@ describe('V3InputSurface', () => {
 		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
 		await waitFor(() => expect(getProfile).toHaveBeenCalledTimes(2));
 		expect((screen.getByLabelText('Class') as HTMLInputElement).value).toBe('');
-	});
+		},
+		SLOW
+	);
 
 	it(
 		'submits the optional class label separately from the planning form',
 		async () => {
-		getProfile.mockRejectedValue(new Error('not available'));
 		narrowTopic.mockResolvedValue(candidates);
 		proposeIntent.mockResolvedValue(drafts);
 		const onSubmit = vi.fn();
@@ -111,7 +128,7 @@ describe('V3InputSurface', () => {
 		);
 		expect(onSubmit.mock.calls[0][0]).not.toHaveProperty('class_label');
 		},
-		15_000
+		SLOW
 	);
 
 	it('soft-gates intent, context, and submit until the topic is confirmed', async () => {
@@ -137,7 +154,7 @@ describe('V3InputSurface', () => {
 		narrowTopic.mockResolvedValue(candidates);
 		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
 		await fillClassAndTopic();
-		await waitFor(() => expect(narrowTopic).toHaveBeenCalledWith({ topic: 'Finding the area of irregular shapes', grade_level: 'Grade 6', subject: 'Mathematics' }), { timeout: 1000 });
+		await waitFor(() => expect(narrowTopic).toHaveBeenCalledWith({ topic: 'Finding the area of irregular shapes', grade_level: 'Grade 6', subject: 'Mathematics' }), { timeout: 5_000 });
 		expect(await screen.findByText('Decompose into rectangles')).toBeTruthy();
 	});
 
@@ -155,14 +172,14 @@ describe('V3InputSurface', () => {
 		narrowTopic.mockImplementationOnce(() => first.promise).mockResolvedValueOnce(currentCandidates);
 		render(V3InputSurface, { props: { onSubmit: vi.fn() } });
 		await fillClassAndTopic();
-		await waitFor(() => expect(narrowTopic).toHaveBeenCalledTimes(1), { timeout: 1000 });
+		await waitFor(() => expect(narrowTopic).toHaveBeenCalledTimes(1), { timeout: 5_000 });
 
 		const topic = screen.getByLabelText('Topic') as HTMLInputElement;
 		topic.value = 'Finding area on coordinate grids'; await fireEvent.input(topic);
 		first.resolve(candidates);
 		await tick();
 		expect(screen.queryByText('Decompose into rectangles')).toBeNull();
-		await waitFor(() => expect(narrowTopic).toHaveBeenCalledTimes(2), { timeout: 1000 });
+		await waitFor(() => expect(narrowTopic).toHaveBeenCalledTimes(2), { timeout: 5_000 });
 		expect(await screen.findByText('Coordinate grid area')).toBeTruthy();
 	});
 

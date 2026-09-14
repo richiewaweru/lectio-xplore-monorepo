@@ -8,8 +8,9 @@ v1.1 replaces the closed candidate fence with:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Mapping, Protocol
+from typing import Any, Protocol
 
 FIRST_SLICE_OBJECTS = frozenset(
     {"prose", "list", "table", "figure", "worked-example", "questions"}

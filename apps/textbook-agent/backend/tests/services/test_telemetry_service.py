@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
+from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
 
 from app import app
-from core.auth.middleware import get_current_user
 from core.dependencies import get_jwt_handler
 from core.entities.user import User
 from infra.telemetry.dependencies import get_llm_call_repository
@@ -15,7 +15,7 @@ from infra.telemetry.service import TelemetryMonitor
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 TEST_USER = User(
@@ -31,9 +31,11 @@ TEST_USER = User(
 
 @asynccontextmanager
 async def _client():
-    async with app.router.lifespan_context(app):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            yield client
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client,
+    ):
+        yield client
 
 
 class RecordingLLMCallRepo:
@@ -124,7 +126,7 @@ async def test_v3_recorder_registration_scopes_llm_events() -> None:
         subject="Mathematics",
         template_id="guided-concept-path",
     )
-    await monitor._handle_event(  # noqa: SLF001
+    await monitor._handle_event(
         {
             "type": "llm_call_succeeded",
             "generation_id": "telemetry-v3-finalize",
@@ -146,7 +148,7 @@ async def test_trace_registered_event_scopes_pre_generation_llm_events() -> None
         return repo
 
     monitor.configure(llm_call_repository_factory=load_llm_repo)
-    await monitor._handle_event(  # noqa: SLF001
+    await monitor._handle_event(
         {
             "type": "trace_registered",
             "trace_id": "studio-preflight-trace",
@@ -154,7 +156,7 @@ async def test_trace_registered_event_scopes_pre_generation_llm_events() -> None
             "source": "planning",
         }
     )
-    await monitor._handle_event(  # noqa: SLF001
+    await monitor._handle_event(
         {
             "type": "llm_call_failed",
             "trace_id": "studio-preflight-trace",
@@ -181,7 +183,7 @@ async def test_registered_parent_trace_scopes_derived_planning_call() -> None:
         return repo
 
     monitor.configure(llm_call_repository_factory=load_llm_repo)
-    await monitor._handle_event(  # noqa: SLF001
+    await monitor._handle_event(
         {
             "type": "trace_registered",
             "trace_id": "path-prepare:user-id:request-id",
@@ -189,7 +191,7 @@ async def test_registered_parent_trace_scopes_derived_planning_call() -> None:
             "source": "planning",
         }
     )
-    await monitor._handle_event(  # noqa: SLF001
+    await monitor._handle_event(
         {
             "type": "llm_call_succeeded",
             "trace_id": "path-prepare:user-id:request-id:structural1",
@@ -214,7 +216,7 @@ async def test_failed_llm_event_persists_retryable_and_error_class_in_existing_f
         return repo
 
     monitor.configure(llm_call_repository_factory=load_llm_repo)
-    await monitor._handle_event(  # noqa: SLF001
+    await monitor._handle_event(
         {
             "type": "trace_registered",
             "trace_id": "planning-trace-errors",
@@ -222,7 +224,7 @@ async def test_failed_llm_event_persists_retryable_and_error_class_in_existing_f
             "source": "planning",
         }
     )
-    await monitor._handle_event(  # noqa: SLF001
+    await monitor._handle_event(
         {
             "type": "llm_call_failed",
             "trace_id": "planning-trace-errors",
@@ -249,7 +251,7 @@ async def test_failed_llm_event_persists_inherent_retryability_at_final_attempt(
         return repo
 
     monitor.configure(llm_call_repository_factory=load_llm_repo)
-    await monitor._handle_event(  # noqa: SLF001
+    await monitor._handle_event(
         {
             "type": "trace_registered",
             "trace_id": "planning-trace-connection",
@@ -257,7 +259,7 @@ async def test_failed_llm_event_persists_inherent_retryability_at_final_attempt(
             "source": "planning",
         }
     )
-    await monitor._handle_event(  # noqa: SLF001
+    await monitor._handle_event(
         {
             "type": "llm_call_failed",
             "trace_id": "planning-trace-connection",
@@ -287,7 +289,7 @@ async def test_failed_llm_event_preserves_error_class_when_message_is_empty() ->
         return repo
 
     monitor.configure(llm_call_repository_factory=load_llm_repo)
-    await monitor._handle_event(  # noqa: SLF001
+    await monitor._handle_event(
         {
             "type": "trace_registered",
             "trace_id": "native-timeout-trace",
@@ -295,7 +297,7 @@ async def test_failed_llm_event_preserves_error_class_when_message_is_empty() ->
             "source": "native_generation",
         }
     )
-    await monitor._handle_event(  # noqa: SLF001
+    await monitor._handle_event(
         {
             "type": "llm_call_failed",
             "trace_id": "native-timeout-trace",

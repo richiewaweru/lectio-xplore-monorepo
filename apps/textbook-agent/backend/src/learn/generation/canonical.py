@@ -84,9 +84,11 @@ def canonical_document(generation: GenerationModel) -> dict[str, Any] | None:
         return None
     if document.get("id") != generation.id:
         return None
-    if document.get("source_generation_id") not in {generation.id, None}:
-        if document.get("source_generation_id") != generation.id:
-            return None
+    if (
+        document.get("source_generation_id") not in {generation.id, None}
+        and document.get("source_generation_id") != generation.id
+    ):
+        return None
     return document
 
 

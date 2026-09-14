@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import secrets
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import HTTPException
@@ -23,7 +23,7 @@ from learn.runtime_service import create_learner, start_learning_instance
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _invite_code() -> str:
@@ -291,11 +291,10 @@ async def ensure_assignment_instance(
             LearnAssignmentRecipientModel.learner_id == learner_id,
         )
     )
-    if existing_recipient is not None:
-        if existing_recipient.learning_instance_id:
-            return await session.get(
-                LearningInstanceModel, existing_recipient.learning_instance_id
-            )
+    if existing_recipient is not None and existing_recipient.learning_instance_id:
+        return await session.get(
+            LearningInstanceModel, existing_recipient.learning_instance_id
+        )
         # Recipient exists without instance — unusual; fall through carefully
 
     existing = await session.scalar(

@@ -6,7 +6,8 @@ added only when learner_action requires a response (Learn-owned action map).
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
 from document.composition import CompositionDecision, CompositionPlan

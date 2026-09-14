@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -14,7 +14,6 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infra.auth.middleware import get_current_user
 from core.database.models import (
     EditableLessonModel,
     GenerationModel,
@@ -22,8 +21,9 @@ from core.database.models import (
     LessonProvenanceModel,
     PathLessonModel,
 )
-from infra.database.session import get_async_session
 from core.entities.user import User
+from infra.auth.middleware import get_current_user
+from infra.database.session import get_async_session
 from learn.publishing.publish_validation import (
     PublishValidationError,
     validate_publishable_lesson_document,
@@ -37,7 +37,7 @@ _MAX_RELEASE_ALLOC_ATTEMPTS = 8
 
 
 def _utc_naive_now() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def document_hash(document: dict[str, Any]) -> str:
@@ -309,9 +309,34 @@ async def publish_learn_release(
     if existing is not None:
         return _to_response(existing, idempotent_replay=True)
 
-    # Optional idempotency key: store in title metadata is insufficient; treat as
-    # soft hint by re-checking hash after lock (above covers same-document clicks).
-    _ = body.idempotency_key or idempotency_key_header
+    effect_key = body.idempotency_key or idempotency_key_header
+    effect = None
+    if effect_key:
+        from application.unit_lesson.effect_keys import (
+            EffectPayloadConflictError,
+            remember_effect,
+        )
+
+        try:
+            effect, created = await remember_effect(
+                session,
+                owner_user_id=current_user.id,
+                kind="learn_publish",
+                resource_id=lesson.id,
+                request_key=effect_key,
+                payload_hash=digest,
+            )
+        except EffectPayloadConflictError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=str(exc),
+            ) from exc
+        if not created and isinstance(effect.outcome_json, dict):
+            prior_id = effect.outcome_json.get("release_id")
+            if prior_id:
+                prior = await session.get(LearnReleaseModel, prior_id)
+                if prior is not None:
+                    return _to_response(prior, idempotent_replay=True)
 
     last_error: Exception | None = None
     for _attempt in range(_MAX_RELEASE_ALLOC_ATTEMPTS):
@@ -342,6 +367,8 @@ async def publish_learn_release(
                 created_at=now,
             )
             session.add(release)
+            if effect is not None:
+                effect.outcome_json = {"release_id": release.id}
             await session.commit()
             await session.refresh(release)
             return _to_response(release)

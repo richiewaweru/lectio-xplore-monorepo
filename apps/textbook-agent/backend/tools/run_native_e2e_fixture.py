@@ -68,9 +68,9 @@ def load_yaml(path: Path) -> dict[str, Any]:
 
 def load_form_plan(path: Path):
     """Load pack fixture (possibly legacy fat) as ResolvedLessonPlan for writers."""
-    from planning.whole_lesson.form_plan import coerce_form_plan
-    from planning.whole_lesson.resolved_block_plan import resolve_block_plans
-    from planning.whole_lesson.teaching_plan import (
+    from print.generation.whole_lesson.form_plan import coerce_form_plan
+    from print.generation.whole_lesson.resolved_block_plan import resolve_block_plans
+    from print.generation.whole_lesson.teaching_plan import (
         AnchorUsageEntry,
         TeachingPlan,
         TeachingPlanBlock,
@@ -456,8 +456,8 @@ def project_status_timeline(
     document: dict[str, Any] | None,
     terminal_stage: str,
 ) -> list[dict[str, Any]]:
-    from planning.whole_lesson.native_status import project_native_status
-    from planning.whole_lesson.states import DEFAULT_VARIANT_ID, execution_key
+    from print.generation.whole_lesson.native_status import project_native_status
+    from print.generation.whole_lesson.states import DEFAULT_VARIANT_ID, execution_key
 
     form_plan_payload = {
         "sections": [

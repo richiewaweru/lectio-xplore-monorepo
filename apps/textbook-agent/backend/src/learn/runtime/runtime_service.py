@@ -6,7 +6,7 @@ import json
 import secrets
 import uuid
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import HTTPException
@@ -15,16 +15,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import LearnReleaseModel
 from learn.runtime.evaluation import (
+    InteractionConfigError,
+    InteractionResponseError,
     UnknownInteractionError,
     concept_bindings_from_contract,
     evaluate_interaction,
     find_interaction_in_document,
     is_complete,
     score_aggregation_of,
-)
-from learn.runtime.evaluation import (
-    InteractionConfigError,
-    InteractionResponseError,
 )
 from learn.runtime_models import (
     ConceptEvidenceModel,
@@ -55,7 +53,7 @@ CONCEPT_EMERGING_RATIO = 0.4
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def classify_concept(score_earned: float, score_possible: float) -> str:
@@ -641,9 +639,11 @@ async def rebuild_progress(session: AsyncSession, learning_instance_id: str) -> 
             score_possible=float(chosen.score_possible),
             feedback="",
         )
-        if is_complete(result, contract.get("completion") if contract else {"type": "submitted"}):
-            if interaction_id not in completed_interactions:
-                completed_interactions.append(interaction_id)
+        if (
+            is_complete(result, contract.get("completion") if contract else {"type": "submitted"})
+            and interaction_id not in completed_interactions
+        ):
+            completed_interactions.append(interaction_id)
 
     scores = score_split(list(attempts), contracts_by_interaction=contracts)
     score_earned = float(scores["graded"]["score_earned"])

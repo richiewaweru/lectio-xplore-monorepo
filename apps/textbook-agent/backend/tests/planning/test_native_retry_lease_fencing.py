@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta, timezone
-from typing import Any
+from datetime import UTC, datetime, timedelta
+from typing import Any, ClassVar
 from unittest.mock import patch
 
 import pytest
 from sqlalchemy import func, select
+from tests.planning.test_native_retry_pre_worker import (
+    TEST_USER,
+    _seed_generation,
+    _teaching_ok,
+    _valid_result,
+)
 
 from core.database.models import GenerationModel, PackItemModel
 from core.database.session import async_session_factory
@@ -18,12 +24,6 @@ from print.generation.whole_lesson.repository import (
     empty_execution_meta,
 )
 from print.generation.whole_lesson.states import LeaseLostError
-from tests.planning.test_native_retry_pre_worker import (
-    TEST_USER,
-    _seed_generation,
-    _teaching_ok,
-    _valid_result,
-)
 from v3_blueprint.planning.models import ItemOption, QuestionBrief
 from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state
 from v3_execution.executors.item_diagnostics import attempt_record
@@ -31,7 +31,7 @@ from v3_execution.executors.item_executor import ItemGenerationResult, ItemGener
 
 
 async def _age_heartbeat(generation_id: str, *, seconds_ago: int = 120) -> None:
-    stamp = (datetime.now(timezone.utc) - timedelta(seconds=seconds_ago)).isoformat()
+    stamp = (datetime.now(UTC) - timedelta(seconds=seconds_ago)).isoformat()
 
     async with async_session_factory() as session:
         repo = PageDocumentRepository(session, generation_id)
@@ -307,7 +307,7 @@ async def test_f03_stale_teaching_worker_cannot_persist_after_reclaim() -> None:
     class _FakeResult:
         plan = _FakePlan()
         validation = _FakeValidation()
-        qc: list = []
+        qc: ClassVar[list] = []
         prompt = "p"
         raw_response = "r"
         teaching_guidance = _FakeGuidance()
@@ -318,7 +318,7 @@ async def test_f03_stale_teaching_worker_cannot_persist_after_reclaim() -> None:
         return _FakeResult()
 
     with patch(
-        "print.generation.whole_lesson.service.run_lesson_approach_planner",
+        "print.generation.whole_lesson.service.plan_shared_teaching",
         new=_blocked_planner,
     ):
         task = asyncio.create_task(run_pre_worker_retry(lease=lease1))
@@ -391,7 +391,7 @@ async def test_f04_new_teaching_worker_wins_race() -> None:
     class _FakeResult:
         plan = _FakePlan()
         validation = _FakeValidation()
-        qc: list = []
+        qc: ClassVar[list] = []
         prompt = "p"
         raw_response = "r"
         teaching_guidance = _FakeGuidance()
@@ -415,7 +415,7 @@ async def test_f04_new_teaching_worker_wins_race() -> None:
         return _FakeResult2()
 
     with patch(
-        "print.generation.whole_lesson.service.run_lesson_approach_planner",
+        "print.generation.whole_lesson.service.plan_shared_teaching",
         new=_blocked_planner,
     ):
         task1 = asyncio.create_task(run_pre_worker_retry(lease=lease1))
@@ -429,7 +429,7 @@ async def test_f04_new_teaching_worker_wins_race() -> None:
         assert lease2 is not None
 
         with patch(
-            "print.generation.whole_lesson.service.run_lesson_approach_planner",
+            "print.generation.whole_lesson.service.plan_shared_teaching",
             new=_planner_w2,
         ):
             result2 = await run_pre_worker_retry(lease=lease2)
@@ -613,30 +613,15 @@ async def test_f07_current_worker_failure_diagnostics_still_persist() -> None:
 
     async def _timeout_items(card, **_k):
         exc = TimeoutError("provider timed out")
-        setattr(
-            exc,
-            "item_attempts",
-            [
-                attempt_record(
-                    correlation_id=f"item:{gid}:{card.id}",
-                    card_id=card.id,
-                    attempt=1,
-                    started_at=0.0,
-                    outcome_class="TIMEOUT",
-                    error="provider timed out",
-                    retryable=True,
-                )
-            ],
-        )
-        setattr(exc, "item_correlation_id", f"item:{gid}:{card.id}")
+        exc.item_attempts = [attempt_record(correlation_id=f"item:{gid}:{card.id}", card_id=card.id, attempt=1, started_at=0.0, outcome_class="TIMEOUT", error="provider timed out", retryable=True)]
+        exc.item_correlation_id = f"item:{gid}:{card.id}"
         raise exc
 
     with patch(
         "v3_execution.executors.item_executor.execute_items_with_diagnostics",
         new=_timeout_items,
-    ):
-        with pytest.raises(TimeoutError):
-            await run_pre_worker_retry(lease=lease)
+    ), pytest.raises(TimeoutError):
+        await run_pre_worker_retry(lease=lease)
 
     async with async_session_factory() as session:
         generation = await session.get(GenerationModel, gid)

@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import asyncio
-from copy import deepcopy
 import hashlib
 import json
 import logging
 import uuid
-from datetime import datetime
+from copy import deepcopy
+from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Response
+from core.auth.jwt_handler import JWTHandler
+from core.auth.middleware import get_current_user
+from core.llm.runner import RetryPolicy, run_llm
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
@@ -17,8 +20,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.background import BackgroundTask
 
-from core.auth.jwt_handler import JWTHandler
-from core.auth.middleware import get_current_user
+from application.unit_lesson import enforce_path_owned_card_objective
 from core.database.models import (
     ConceptCardModel,
     GenerationModel,
@@ -29,7 +31,63 @@ from core.database.models import (
 from core.database.session import async_session_factory
 from core.dependencies import get_jwt_handler, get_settings
 from core.entities.user import User
-from core.llm.runner import RetryPolicy, run_llm
+from core.events import TraceClosedEvent, TraceRegisteredEvent, event_bus
+from infra.telemetry.dependencies import get_v3_trace_repository
+from infra.telemetry.service import telemetry_monitor
+from infra.telemetry.v3_trace.repository import V3TraceRepository
+from infra.telemetry.v3_trace.writer import V3TraceWriter
+from print.http.v3_studio.agents import (
+    _validate_blueprint,
+    adjust_production_blueprint,
+    extract_signals,
+)
+from print.http.v3_studio.dtos import (
+    AdjustBlueprintRequest,
+    BlueprintPreviewDTO,
+    V3CardItemReviewDTO,
+    V3CardLibraryItemDTO,
+    V3ChunkedApproveRequest,
+    V3ChunkedPlanDTO,
+    V3ChunkedPlanStartRequest,
+    V3ChunkedPlanStateDTO,
+    V3ChunkedRegenerateRequest,
+    V3ChunkedRetrySectionRequest,
+    V3ChunkedStatusDTO,
+    V3ConceptCardDTO,
+    V3ConceptCardPatchRequest,
+    V3GenerateStartRequest,
+    V3GenerateStartResponse,
+    V3GenerationDetailDTO,
+    V3GenerationHistoryItemDTO,
+    V3InputForm,
+    V3PackItemDTO,
+    V3PackItemOptionDTO,
+    V3PackItemPatchRequest,
+    V3PackVariantDTO,
+    V3PdfExportRequest,
+    V3ProposeIntentRequest,
+    V3ProposeIntentResponse,
+    V3ReuseConceptCardRequest,
+    V3SignalSummary,
+    V3XplorePackDTO,
+)
+from print.http.v3_studio.generation_writer import V3GenerationWriter, bump_document_version
+from print.http.v3_studio.planning_artifact import build_planning_artifact
+from print.http.v3_studio.preview_mapper import blueprint_to_preview_dto
+from print.http.v3_studio.prompts import PROPOSE_INTENT_SYSTEM, build_propose_intent_user_prompt
+from print.http.v3_studio.session_store import v3_studio_store
+from print.rendering.pdf.cleanup import cleanup_files
+from print.rendering.pdf.components.answers_v3 import (
+    build_diagnostic_answer_key_content,
+)
+from print.rendering.pdf.rendering.playwright import PDFRenderError
+from print.rendering.pdf.service import (
+    NativeDocumentContractError,
+    PDFExportRequest,
+    export_v3_studio_pdf,
+)
+from resource_specs.loader import get_spec, list_spec_ids
+from resource_specs.renderer import render_spec_for_prompt
 from v3_blueprint.models import ProductionBlueprint
 from v3_blueprint.planning.assembler import assemble_blueprint
 from v3_blueprint.planning.models import (
@@ -53,13 +111,14 @@ from v3_blueprint.planning.persistence import (
 from v3_blueprint.planning.retry import (
     run_stage1_with_retry,
 )
-from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
-from v3_execution.config.timeouts import V3_TIMEOUTS
-from v3_execution.config.policy import ship_with_holes_enabled
 from v3_execution.compile_orders import compile_execution_bundle
-from v3_execution.executors.visual_executor import execute_visual
+from v3_execution.config import get_v3_model_settings, get_v3_slot
+from v3_execution.config.policy import ship_with_holes_enabled
+from v3_execution.config.timeouts import V3_TIMEOUTS
 from v3_execution.executors.item_executor import ItemGenerationResult, execute_items
 from v3_execution.executors.section_writer import execute_section
+from v3_execution.executors.visual_executor import execute_visual
+from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 from v3_execution.models import (
     Correction,
     GeneratedComponentBlock,
@@ -68,66 +127,6 @@ from v3_execution.models import (
     VisualGeneratorWorkOrder,
 )
 from v3_execution.runtime.runner import sse_event_stream
-
-from print.http.v3_studio.agents import (
-    _validate_blueprint,
-    adjust_production_blueprint,
-    extract_signals,
-)
-from print.rendering.pdf.cleanup import cleanup_files
-from print.rendering.pdf.rendering.playwright import PDFRenderError
-from print.rendering.pdf.service import (
-    NativeDocumentContractError,
-    PDFExportRequest,
-    export_v3_studio_pdf,
-)
-from print.rendering.pdf.components.answers_v3 import (
-    build_diagnostic_answer_key_content,
-)
-from print.http.v3_studio.dtos import (
-    AdjustBlueprintRequest,
-    BlueprintPreviewDTO,
-    V3ChunkedApproveRequest,
-    V3ChunkedPlanDTO,
-    V3ChunkedPlanStartRequest,
-    V3ChunkedPlanStateDTO,
-    V3ChunkedRegenerateRequest,
-    V3ChunkedRetrySectionRequest,
-    V3ChunkedStatusDTO,
-    V3CardItemReviewDTO,
-    V3CardLibraryItemDTO,
-    V3ConceptCardDTO,
-    V3ConceptCardPatchRequest,
-    V3ReuseConceptCardRequest,
-    V3GenerationDetailDTO,
-    V3GenerationHistoryItemDTO,
-    V3PackItemDTO,
-    V3PackItemOptionDTO,
-    V3PackItemPatchRequest,
-    V3PackVariantDTO,
-    V3XplorePackDTO,
-    V3GenerateStartRequest,
-    V3GenerateStartResponse,
-    V3InputForm,
-    V3PdfExportRequest,
-    V3ProposeIntentRequest,
-    V3ProposeIntentResponse,
-    V3SignalSummary,
-)
-from print.http.v3_studio.prompts import PROPOSE_INTENT_SYSTEM, build_propose_intent_user_prompt
-from application.unit_lesson import enforce_path_owned_card_objective
-from resource_specs.loader import get_spec, list_spec_ids
-from resource_specs.renderer import render_spec_for_prompt
-from print.http.v3_studio.preview_mapper import blueprint_to_preview_dto
-from print.http.v3_studio.generation_writer import V3GenerationWriter, bump_document_version
-from print.http.v3_studio.planning_artifact import build_planning_artifact
-from print.http.v3_studio.session_store import v3_studio_store
-from infra.telemetry.dependencies import get_v3_trace_repository
-from infra.telemetry.service import telemetry_monitor
-from infra.telemetry.v3_trace.repository import V3TraceRepository
-from infra.telemetry.v3_trace.writer import V3TraceWriter
-from core.events import TraceClosedEvent, TraceRegisteredEvent, event_bus
-from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 from v3_review.card_reviewer import review_card_content
 
 logger = logging.getLogger(__name__)
@@ -437,7 +436,7 @@ def _build_chunked_resource_spec(
             "spec": spec.model_dump(mode="json"),
             "rendered": rendered,
         }
-    except Exception:
+    except Exception:  # noqa: BLE001
         return {
             "resource_type": resource_type,
             "depth": depth,
@@ -956,11 +955,10 @@ async def _start_generation_from_chunked_blueprint(
                 preserved_ready_sections=preserved_ready_sections,
             )
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception:
         logger.exception(
-            "chunked generation start failed generation_id=%s error=%s",
+            "chunked generation start failed generation_id=%s",
             generation_id,
-            str(exc)[:400],
         )
         await _chunked_emit_event(
             generation_id,
@@ -1016,14 +1014,14 @@ def _decode_chunked_context(
 ) -> tuple[V3SignalSummary, V3InputForm, dict[str, Any]]:
     context = state.get("context")
     if not isinstance(context, dict):
-        raise ValueError("Chunked context is missing.")
+        raise TypeError("Chunked context is missing.")
     signals_raw = context.get("signals")
     form_raw = context.get("form")
     resource_spec = context.get("resource_spec")
     if not isinstance(signals_raw, dict) or not isinstance(form_raw, dict):
-        raise ValueError("Chunked context is incomplete.")
+        raise TypeError("Chunked context is incomplete.")
     if not isinstance(resource_spec, dict):
-        raise ValueError("Chunked resource_spec is missing.")
+        raise TypeError("Chunked resource_spec is missing.")
     return (
         V3SignalSummary.model_validate(signals_raw),
         V3InputForm.model_validate(form_raw),
@@ -1147,13 +1145,13 @@ async def _attempt_chunked_assembly(
             f"\n[EXECUTION STARTED] generation_id={generation_id}",
             flush=True,
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         import traceback
 
         print(
             f"\n[EXECUTION START FAILED] generation_id={generation_id}"
             f" type={type(exc).__name__}"
-            f"\nmessage={str(exc)}"
+            f"\nmessage={exc!s}"
             f"\n{traceback.format_exc()}",
             flush=True,
         )
@@ -1262,7 +1260,7 @@ async def _generate_shared_pack_items(
             results.append(run.result)
             attempts_journal.extend(run.attempts)
             await _flush_attempts(new_attempts=list(run.attempts))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             journal = list(getattr(exc, "item_attempts", []) or [])
             attempts_journal.extend(journal)
             failed_row = {
@@ -1464,7 +1462,7 @@ async def _run_chunked_stage2_pipeline(
         try:
             writer = V3GenerationWriter(async_session_factory)
             await writer.record_prompt_hashes(generation_id, prompt_hashes)
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception(
                 "Failed to stamp prompt hashes generation_id=%s", generation_id
             )
@@ -1492,7 +1490,7 @@ async def _run_chunked_stage2_pipeline(
         variant_raw = state.get("variant_spec")
         if isinstance(variant_raw, dict):
             plan = plan.with_variant(VariantSpec.model_validate(variant_raw))
-        signals, form, resource_spec = _decode_chunked_context(state)
+        _signals, form, _resource_spec = _decode_chunked_context(state)
         display_title = state.get("display_title")
         if not isinstance(display_title, str) or not display_title.strip():
             display_title = form.topic
@@ -1594,20 +1592,19 @@ async def _run_chunked_stage2_pipeline(
             },
         )
         return
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         import traceback
 
         print(
             f"\n[STAGE2 PIPELINE ERROR] generation_id={generation_id}"
             f" type={type(exc).__name__}"
-            f"\nmessage={str(exc)}"
+            f"\nmessage={exc!s}"
             f"\n{traceback.format_exc()}",
             flush=True,
         )
         logger.exception(
-            "chunked stage2 pipeline failed generation_id=%s error=%s",
+            "chunked stage2 pipeline failed generation_id=%s",
             generation_id,
-            str(exc)[:400],
         )
         # Prefer native atomic failure sync when this generation is native whole-lesson.
         failure_state: dict[str, Any] = {}
@@ -1791,7 +1788,7 @@ async def _run_pack_variant_pipeline(
         state = await load_chunked_state(coordinator_id)
         plan_raw = state.get("structural_plan")
         if not isinstance(plan_raw, dict):
-            raise ValueError("Coordinator structural plan is missing")
+            raise TypeError("Coordinator structural plan is missing")
         plan = adapt_legacy_structural_plan(
             plan_raw,
             source=f"coordinator:{coordinator_id}",
@@ -1839,7 +1836,7 @@ async def _run_pack_variant_pipeline(
                 "execution_started": bool(tasks),
             },
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception(
             "pack variant fan-out failed coordinator_id=%s",
             coordinator_id,
@@ -1981,21 +1978,19 @@ async def post_chunked_plan_start(
                 "errors": exc.errors,
             },
         ) from exc
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         import traceback
         tb = traceback.format_exc()
         print(
             f"\n[CHUNKED STAGE1 ERROR] generation_id={generation_id}\n"
             f"type={type(exc).__name__}\n"
-            f"message={str(exc)}\n"
+            f"message={exc!s}\n"
             f"traceback:\n{tb}",
             flush=True,
         )
         logger.exception(
-            "chunked stage1 failed generation_id=%s type=%s error=%s",
+            "chunked stage1 failed generation_id=%s",
             generation_id,
-            type(exc).__name__,
-            str(exc)[:800],
         )
         await persist_chunked_state(
             generation_id,
@@ -2022,7 +2017,7 @@ async def get_chunked_plan(
     await _load_owned_generation(generation_id, current_user.id)
     try:
         state = await load_chunked_state(generation_id)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status_code=404, detail="Chunked state not found") from exc
     full_state = _normalize_chunked_state(generation_id, state)
     if full_state.structural_plan is None:
@@ -2047,7 +2042,7 @@ async def get_chunked_plan_status(
     model = await _load_owned_generation(generation_id, current_user.id)
     try:
         state = await load_chunked_state(generation_id)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(status_code=404, detail="Chunked state not found") from exc
     return _normalize_chunked_status(
         generation_id,
@@ -2078,7 +2073,7 @@ async def get_chunked_generation_events(
                         queue.get(),
                         timeout=HEARTBEAT_SECONDS,
                     )
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     yield ": ping\n\n"
                     continue
                 if chunk is None:
@@ -2138,9 +2133,7 @@ async def get_card_library(
     if needle:
         cards = [
             card for card in cards
-            if needle in " ".join(
-                [card.slug, card.title, card.objective]
-            ).casefold()
+            if needle in f"{card.slug} {card.title} {card.objective}".casefold()
         ]
     unique: list[ConceptCardModel] = []
     seen: set[str] = set()
@@ -2442,7 +2435,7 @@ async def _load_item_reviews(
                     elif option.diagnoses in coverage:
                         coverage[option.diagnoses] += 1
                 prefix = f"{pack_id}:"
-                question_id = row.id[len(prefix):] if row.id.startswith(prefix) else row.id
+                question_id = row.id.removeprefix(prefix)
                 item_dtos.append(
                     V3PackItemDTO(
                         id=row.id,
@@ -3105,7 +3098,7 @@ async def _pump_sse_to_queue(
     preserved_ready_sections: list[dict[str, Any]] | None = None,
 ) -> None:
     def _utc_iso() -> str:
-        return datetime.utcnow().isoformat() + "Z"
+        return datetime.now(UTC).replace(tzinfo=None).isoformat() + "Z"
 
     def _section_ids_from_pack(pack: dict[str, Any]) -> list[str]:
         sections = pack.get("sections")
@@ -3282,7 +3275,7 @@ async def _pump_sse_to_queue(
                 error_type="generation_pump_failure",
                 error_code="v3_generation_pump_failure",
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception(
                 "v3 pump failure snapshot write failed generation_id=%s",
                 generation_id,
@@ -3310,7 +3303,7 @@ async def _pump_sse_to_queue(
                         generation_id,
                         event_type=event_type,
                     )
-                except Exception:  # noqa: BLE001
+                except Exception:
                     logger.exception(
                         "v3 generation writer failed generation_id=%s event_type=%s",
                         generation_id,
@@ -3320,7 +3313,7 @@ async def _pump_sse_to_queue(
     except asyncio.CancelledError:
         pump_failure = "Generation stopped before it finished."
         raise
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         pump_failure = f"{type(exc).__name__}: {str(exc)[:400] or repr(exc)}"
         logger.exception(
             "v3 generation pump crashed generation_id=%s",
@@ -3419,12 +3412,11 @@ async def post_v3_generate_start(
             user_id=current_user.id,
             artifact=artifact,
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception(
-            "v3 generation start failed generation_id=%s trace_id=%s error=%s",
+            "v3 generation start failed generation_id=%s trace_id=%s",
             body.generation_id,
             trace_id,
-            str(exc)[:400],
         )
         raise HTTPException(
             status_code=500,
@@ -3572,7 +3564,7 @@ async def get_v3_generation_events(
                         queue.get(),
                         timeout=HEARTBEAT_SECONDS,
                     )
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     yield ": ping\n\n"
                     continue
                 if chunk is None:
@@ -3650,8 +3642,8 @@ async def get_v3_generation_document(
             "sections": [],
         }
     document_json = await _with_shared_pack_assessment(model, document_json)
-    from print.generation.whole_lesson.native_status import visual_quality_summary
     from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
+    from print.generation.whole_lesson.native_status import visual_quality_summary
     chunked_state = dict(model.chunked_state_json or {})
     if generation_is_native_whole_lesson(chunked_state, model):
         document_json = {
@@ -3862,7 +3854,7 @@ def _single_component_order(
         *selected.corrections,
         Correction(
             text=teacher_instruction.strip(),
-            created_at=datetime.utcnow().isoformat() + "Z",
+            created_at=datetime.now(UTC).replace(tzinfo=None).isoformat() + "Z",
             applied_in_generation=generation_id,
         ),
     ]
@@ -3894,7 +3886,7 @@ def _card_section_orders(
     orders: list[SectionWriterWorkOrder] = []
     correction = Correction(
         text=correction_hint.strip(),
-        created_at=datetime.utcnow().isoformat() + "Z",
+        created_at=datetime.now(UTC).replace(tzinfo=None).isoformat() + "Z",
         applied_in_generation=generation_id,
     )
     for order in bundle.section_orders:
@@ -4406,7 +4398,7 @@ async def post_v3_export_pdf(
                 "message": str(exc),
             },
         ) from exc
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         debug: dict[str, Any] = {}
         if isinstance(exc, PDFRenderError):
             debug = exc.debug
@@ -4418,7 +4410,7 @@ async def post_v3_export_pdf(
                 error=error_message,
                 debug=debug,
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception(
                 "Failed to persist PDF failure status generation_id=%s",
                 generation_id,
@@ -4442,7 +4434,7 @@ async def post_v3_export_pdf(
                 "answer_key_entry_count": entry_count,
             },
         )
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.exception(
             "Failed to persist PDF completion status generation_id=%s",
             generation_id,
@@ -4579,8 +4571,8 @@ async def post_lesson_approach_approve(
     path: str | None = Query(default=None),
 ) -> JSONResponse:
     await _load_owned_generation(generation_id, current_user.id)
-    from print.generation.whole_lesson.service import approve_teaching_and_queue
     from print.generation.whole_lesson.repository import PageDocumentRepository
+    from print.generation.whole_lesson.service import approve_teaching_and_queue
 
     requested_path = (path or getattr(body, "path", None) or "print").strip().lower()
     if requested_path not in {"print", "learn"}:
@@ -4653,6 +4645,7 @@ async def post_lesson_approach_approve(
 async def post_realize_learn(
     generation_id: str,
     current_user: User = Depends(get_current_user),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> dict[str, Any]:
     """Generate Learn from an approved Teaching Plan on this preparation generation.
 
@@ -4667,6 +4660,7 @@ async def post_realize_learn(
                 session,
                 preparation_generation_id=generation_id,
                 user_id=current_user.id,
+                admission_request_key=idempotency_key,
             )
             await session.commit()
         except HTTPException:
@@ -4683,6 +4677,7 @@ async def post_realize_learn(
 async def post_realize_print(
     generation_id: str,
     current_user: User = Depends(get_current_user),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> dict[str, Any]:
     """Queue Print from an approved Teaching Plan on this preparation generation."""
     await _load_owned_generation(generation_id, current_user.id)
@@ -4694,6 +4689,7 @@ async def post_realize_print(
                 session,
                 preparation_generation_id=generation_id,
                 user_id=current_user.id,
+                admission_request_key=idempotency_key,
             )
             await session.commit()
         except HTTPException:
@@ -4737,10 +4733,10 @@ async def patch_page_block(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     await _load_owned_generation(generation_id, current_user.id)
-    from print.rendering.page_objects.document_assembly import reload_document
+    from contracts.lectio_page import validate_document
     from print.generation.whole_lesson.events import make_event
     from print.generation.whole_lesson.repository import PageDocumentRepository
-    from contracts.lectio_page import validate_document
+    from print.rendering.page_objects.document_assembly import reload_document
 
     async with async_session_factory() as session:
         generation = await session.get(GenerationModel, generation_id)
@@ -4817,10 +4813,10 @@ async def put_lectio_document(
 ) -> dict[str, Any]:
     """Replace the native LectioDocument v2 with optimistic revision control."""
     await _load_owned_generation(generation_id, current_user.id)
-    from print.rendering.page_objects.document_assembly import persist_document_json
+    from contracts.lectio_page import validate_document
     from print.generation.whole_lesson.events import make_event
     from print.generation.whole_lesson.repository import PageDocumentRepository
-    from contracts.lectio_page import validate_document
+    from print.rendering.page_objects.document_assembly import persist_document_json
 
     async with async_session_factory() as session:
         generation = await session.get(GenerationModel, generation_id)
@@ -4890,7 +4886,7 @@ async def post_figure_visual_callback(
             VisualCompletionInvariantError,
         ) as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             from print.rendering.page_objects.visual_completion import VisualCompletionError
 
             if isinstance(exc, VisualCompletionError):
@@ -4940,7 +4936,7 @@ async def post_visuals_retry(
                 await repo.reopen_flagged_visuals()
                 generation = await session.get(GenerationModel, generation_id)
                 status = str(generation.status or "") if generation else status
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 from print.generation.whole_lesson.repository import VisualCompletionStateError
 
                 if isinstance(exc, VisualCompletionStateError):
@@ -4956,7 +4952,7 @@ async def post_visuals_retry(
                 session=session,
                 generation_id=generation_id,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             await repo.persist_visual_dispatch_failure(exc=exc)
             raise HTTPException(
                 status_code=502,
@@ -4994,11 +4990,11 @@ async def post_retry_native(
     Visual failures must use /visuals/retry.
     """
     model = await _load_owned_generation(generation_id, current_user.id)
-    from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
     from print.generation.whole_lesson.native_retry import (
         NativeRetryConflict,
         accept_native_retry,
     )
+    from print.generation.whole_lesson.native_routing import generation_is_native_whole_lesson
     from v3_blueprint.planning.persistence import load_chunked_state
 
     state = await load_chunked_state(generation_id)

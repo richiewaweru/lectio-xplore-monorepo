@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 import pytest
+from core.auth.middleware import get_current_user
 from httpx import ASGITransport, AsyncClient
+from tests.planning.path_helpers import overlapping_pair_plan, sample_canonical_plan
 
 from app import app
-from core.auth.middleware import get_current_user
 from core.database.models import UserModel
 from core.dependencies import get_async_session
 from core.entities.user import User
 from curriculum.path_models import PreparedLessonResponse
 from curriculum.validation import adjacent_merge_hints
-from tests.planning.path_helpers import overlapping_pair_plan, sample_canonical_plan
-
 
 TEST_USER = User(
     id="optional-flow-owner",

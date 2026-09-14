@@ -4,17 +4,6 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
-from print.rendering.pdf.cleanup import cleanup_files, ensure_temp_dir
-from print.rendering.pdf.components.answers import (
-    extract_answer_entries,
-    generate_answer_key_pdf,
-)
-from print.rendering.pdf.components.cover import (
-    clean_cover_title,
-    format_cover_date,
-    generate_cover_pdf,
-)
-from print.rendering.pdf.components.toc import generate_toc_pdf
 from contracts.document import PipelineSectionManifestItem
 from contracts.section_content import (
     ExplanationContent,
@@ -31,6 +20,17 @@ from contracts.section_content import (
     WorkedExampleContent,
     WorkedStep,
 )
+from print.rendering.pdf.cleanup import cleanup_files, ensure_temp_dir
+from print.rendering.pdf.components.answers import (
+    extract_answer_entries,
+    generate_answer_key_pdf,
+)
+from print.rendering.pdf.components.cover import (
+    clean_cover_title,
+    format_cover_date,
+    generate_cover_pdf,
+)
+from print.rendering.pdf.components.toc import generate_toc_pdf
 
 
 def _section() -> SectionContent:

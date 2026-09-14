@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 import re
 import tomllib
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -34,12 +34,7 @@ def test_bootstrap_environment_loads_missing_values_without_overwriting_existing
 ) -> None:
     env_file = tmp_path / ".env"
     env_file.write_text(
-        "\n".join(
-            [
-                "ANTHROPIC_API_KEY=file-anthropic-key",
-                "PIPELINE_FAST_PROVIDER=openai_compatible",
-            ]
-        )
+        "ANTHROPIC_API_KEY=file-anthropic-key\nPIPELINE_FAST_PROVIDER=openai_compatible"
         + "\n",
         encoding="utf-8",
     )
@@ -66,12 +61,7 @@ def test_bootstrap_environment_resolves_relative_backend_local_paths(
     contracts_dir.mkdir()
     env_file = tmp_path / ".env"
     env_file.write_text(
-        "\n".join(
-            [
-                "LECTIO_CONTRACTS_DIR=./contracts",
-                "DATABASE_URL=sqlite+aiosqlite:///./textbook_agent.db",
-            ]
-        )
+        "LECTIO_CONTRACTS_DIR=./contracts\nDATABASE_URL=sqlite+aiosqlite:///./textbook_agent.db"
         + "\n",
         encoding="utf-8",
     )

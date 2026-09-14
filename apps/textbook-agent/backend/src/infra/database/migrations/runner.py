@@ -1,14 +1,4 @@
-from __future__ import annotations
-
-from pathlib import Path
-
-from alembic import command
-from alembic.config import Config
-
-from infra.config import settings
-
-
-def _alembic_config() -> Config:
+from __future__ import annotationsfrom pathlib import Pathfrom alembic import commandfrom alembic.config import Configfrom infra.config import settingsdef _alembic_config() -> Config:
     backend_root = Path(__file__).resolve().parents[4]
     config_path = backend_root / "alembic.ini"
     config = Config(str(config_path))

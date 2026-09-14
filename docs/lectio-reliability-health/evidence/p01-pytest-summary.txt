@@ -1,0 +1,93 @@
+﻿...............FFF..........FF.F..F..F.......................F.......... [  5%]
+......FFFFFFF........................................................... [ 10%]
+..............................................................FFFF..FF.. [ 15%]
+...................EE..........F........................................ [ 20%]
+........................................................................ [ 25%]
+FFF.F................................................................... [ 31%]
+....................FFFF...............F.....F..FF...F...FF........F.... [ 36%]
+.................................................FF.......F...F.F....... [ 41%]
+..FFFFFF................F................................F.............. [ 46%]
+........................................................................ [ 51%]
+............................................................F........F.. [ 56%]
+.................................................F...F......FF.......... [ 62%]
+........................................................................ [ 67%]
+........................................................................ [ 72%]
+....................................................................s... [ 77%]
+.....................F.................................................. [ 82%]
+.........................F.FFF..........F......F....E.E........E........ [ 87%]
+........................................................................ [ 93%]
+.............................................................E.......... [ 98%]
+........................                                                 [100%]
+=========================== short test summary info ===========================
+FAILED tests/authoring_correction/test_a00_fallback_budget.py::test_a00_fallback_candidate_stays_excluded_when_budget_exhausted
+FAILED tests/authoring_correction/test_a00_first_content_selection.py::test_a00_explain_content_selection_is_semantic_not_first_candidate
+FAILED tests/authoring_correction/test_a00_print_table_fallback.py::test_a00_table_llm_failure_surfaces_typed_failure_not_lit_leaf_stub
+FAILED tests/authoring_correction/test_a03_print_authoring_migration.py::test_a03_g01_dispatch_writer_uses_package_instructions_and_schema
+FAILED tests/authoring_correction/test_a03_print_authoring_migration.py::test_a03_g02_table_failure_is_typed_and_never_returns_leaf_stub
+FAILED tests/authoring_correction/test_a03_print_authoring_migration.py::test_a03_g04_offline_print_forms_and_figure_lifecycle
+FAILED tests/authoring_correction/test_a05_selection.py::test_a05_g01_semantic_selector_and_sole_candidate
+FAILED tests/authoring_correction/test_a05_selection.py::test_a05_g04_fallback_cannot_restore_excluded_candidates
+FAILED tests/config/test_settings_bootstrap.py::test_gcs_image_store_uses_service_account_json_and_base_url
+FAILED tests/core/health/test_health_routes.py::TestHealthRoutes::test_deep_and_ready_share_health_shape_when_healthy
+FAILED tests/core/health/test_health_routes.py::TestHealthRoutes::test_readiness_returns_503_when_database_unreachable
+FAILED tests/core/health/test_health_routes.py::TestHealthRoutes::test_readiness_returns_200_when_event_bus_is_degraded
+FAILED tests/core/health/test_health_routes.py::TestHealthRoutes::test_readiness_returns_degraded_when_image_dependencies_are_not_ready
+FAILED tests/core/health/test_health_routes.py::TestHealthRoutes::test_readiness_includes_generation_summary
+FAILED tests/core/health/test_health_routes.py::TestHealthRoutes::test_image_probe_returns_200_when_probe_succeeds
+FAILED tests/core/health/test_health_routes.py::TestHealthRoutes::test_image_probe_returns_503_when_probe_fails
+FAILED tests/generation/test_native_all_forms_e2e.py::test_all_valid_out_of_order_e2e_flow
+FAILED tests/generation/test_native_all_forms_e2e.py::test_invalid_json_then_valid_repair
+FAILED tests/generation/test_native_all_forms_e2e.py::test_permanently_invalid_raises
+FAILED tests/generation/test_native_all_forms_e2e.py::test_figure_missing_alt_then_valid
+FAILED tests/generation/test_native_all_forms_e2e.py::test_expected_fixture_still_validates
+FAILED tests/generation/test_native_pdf_exports.py::test_student_and_teacher_pdf_exports
+FAILED tests/generation/test_v3_chunked_lifecycle.py::test_chunked_plan_start_is_quarantined_without_creating_rows
+FAILED tests/generation/test_writer_repair.py::test_repair_includes_prior_output_and_errors
+FAILED tests/generation/test_writer_repair.py::test_invalid_json_then_valid_repairs
+FAILED tests/generation/test_writer_repair.py::test_rich_text_document_is_unwrapped_for_plain_aside_body
+FAILED tests/generation/test_writer_repair.py::test_permanently_invalid_raises_validation
+FAILED tests/planning/test_catalogue_projections.py::test_writer_contract_is_single_object
+FAILED tests/planning/test_chat_edit.py::test_chat_edit_persists_valid_minimal_plan
+FAILED tests/planning/test_chat_edit.py::test_chat_edit_reports_validation_messages_without_persisting
+FAILED tests/planning/test_chat_edit.py::test_chat_edit_rejects_stale_path_revision
+FAILED tests/planning/test_constructor.py::test_constructor_readback_route_returns_llm_output
+FAILED tests/planning/test_contract_hardening.py::test_assessment_candidates_follow_approved_item_kind_and_keep_ownership
+FAILED tests/planning/test_contract_hardening.py::test_teaching_multi_source_draft_repairs_to_one_approved_mcq
+FAILED tests/planning/test_contract_hardening.py::test_missing_assessment_source_is_repaired_before_validation
+FAILED tests/planning/test_contract_hardening.py::test_form_planner_skips_llm_when_required_visual_has_no_figure_candidate
+FAILED tests/planning/test_contract_hardening.py::test_resume_revalidates_legacy_fat_form_plan
+FAILED tests/planning/test_contract_hardening.py::test_assemble_lesson_guidance_not_recalled_on_form_resume
+FAILED tests/planning/test_contract_hardening.py::test_resume_uses_persisted_compatibility_not_live_catalogue
+FAILED tests/planning/test_native_retry_lease_fencing.py::test_f03_stale_teaching_worker_cannot_persist_after_reclaim
+FAILED tests/planning/test_native_retry_lease_fencing.py::test_f04_new_teaching_worker_wins_race
+FAILED tests/planning/test_native_retry_pre_worker.py::test_r02_teaching_retry_does_not_rerun_items
+FAILED tests/planning/test_native_retry_pre_worker.py::test_r06_visual_failure_not_owned_by_retry_native
+FAILED tests/planning/test_native_retry_pre_worker.py::test_injected_form_timeout_retry_resumes_at_planning_forms
+FAILED tests/planning/test_optional_path_actions_flow.py::test_baseline_create_plan_approve_prepare
+FAILED tests/planning/test_optional_path_actions_flow.py::test_hints_do_not_block_approve_prepare
+FAILED tests/planning/test_optional_path_actions_flow.py::test_hint_merge_then_prepare
+FAILED tests/planning/test_optional_path_actions_flow.py::test_insert_foundation_then_prepare
+FAILED tests/planning/test_optional_path_actions_flow.py::test_mark_starting_knowledge_then_prepare
+FAILED tests/planning/test_optional_path_actions_flow.py::test_insert_foundation_stale_revision_is_recoverable
+FAILED tests/planning/test_page_projections.py::test_v2_projections_do_not_read_legacy_component_fields
+FAILED tests/planning/test_path_routes.py::test_unprepared_lesson_status_is_explicit_over_http
+FAILED tests/planning/test_phase02_queue_and_lease.py::test_approve_queues_without_executing
+FAILED tests/planning/test_phase02_resume_and_assembly.py::test_form_plan_reused_when_persisted
+FAILED tests/planning/test_pre_worker_failure_sync.py::test_injected_form_timeout_persists_through_worker_boundary
+FAILED tests/planning/test_prompt_resources.py::test_lesson_approach_prompt_checksums_are_authoritative
+FAILED tests/planning/test_simplified_flow_e2e.py::test_create_plan_approve_prepare_smoke
+FAILED tests/planning/test_simplified_flow_e2e.py::test_recoverable_planning_failure_retries_same_unit
+FAILED tests/services/test_telemetry_service.py::test_llm_usage_route_scopes_to_authenticated_user
+FAILED tests/v3_blueprint/planning/test_intent_plan.py::test_same_general_lesson_spec_across_four_subjects
+FAILED tests/v3_blueprint/planning/test_intent_plan.py::test_stage1_user_message_strips_component_catalogue
+FAILED tests/v3_blueprint/planning/test_intent_plan.py::test_stage1_prompt_forbids_component_choice
+FAILED tests/v3_blueprint/planning/test_intent_plan.py::test_intent_purpose_rejecting_component_names
+FAILED tests/v3_blueprint/planning/test_section_expander.py::test_call_stage2_section_omits_extended_cache_beta_header
+FAILED tests/v3_blueprint/planning/test_stage1_error_logging.py::test_call_stage1_rejects_role_outside_active_resource_spec
+ERROR tests/generation/test_playwright_rendering.py::test_log_print_snapshot_emits_diagnostics_and_failures
+ERROR tests/generation/test_playwright_rendering.py::test_log_print_snapshot_skips_missing_root
+ERROR tests/v3_blueprint/planning/test_validators.py::test_validate_structural_plan_warns_when_skeleton_roles_are_unavailable
+ERROR tests/v3_blueprint/planning/test_validators.py::test_validate_section_brief_allows_overlong_content_intent
+ERROR tests/v3_blueprint/planning/test_validators.py::test_legacy_structural_plan_adapter_maps_voice_and_logs
+ERROR tests/v3_execution/test_v3_execution_core.py::test_execute_visual_preserves_stage_and_exception_type_on_failure
+65 failed, 1320 passed, 6 skipped, 1 deselected, 11 warnings, 6 errors in 611.79s (0:10:11)

@@ -1,0 +1,20 @@
+P01 repo health — final validation (2026-09-13)
+
+Commands:
+  uv run ruff check src/ tests/     → exit 0
+  uv run pytest -q --tb=no --disable-warnings -p no:logging
+    (run in shards covering full collection; all shards exit 0)
+
+Ruff: All checks passed. EXIT=0
+
+Pytest shards (full collection = 1392 tests / 1 deselected):
+  A authoring/config/core/services/document: 140 passed, EXIT=0
+  B planning:                               484 passed, 3 skipped, EXIT=0
+  C generation:                             206 passed, EXIT=0
+  D remaining dirs:                         510 passed, 2 skipped, EXIT=0
+  root scripts:                              50 passed, 1 skipped, EXIT=0
+
+Totals: 1390 passed, 6 skipped, 1 deselected, 0 failed
+Combined pytest exit: 0
+
+Prior baseline (p01-pytest-summary.txt): 65 failed, 1320 passed, 6 skipped, 6 errors

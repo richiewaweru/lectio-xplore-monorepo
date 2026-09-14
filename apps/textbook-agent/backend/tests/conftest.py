@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import secrets
 import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
 
 _TEST_DB_DIR = Path(tempfile.gettempdir()) / "textbook-agent-pytest"
 _TEST_DB_DIR.mkdir(parents=True, exist_ok=True)
@@ -27,8 +29,8 @@ os.environ.setdefault("V3_VISUAL_QC_ENABLED", "false")
 os.environ.setdefault("V3_IMAGE_CACHE_ENABLED", "false")
 os.environ.setdefault("V2_SKELETON_SHADOW_ENABLED", "false")
 
-from core.database.models import Base  # noqa: E402
-from core.database.session import engine as runtime_engine  # noqa: E402
+from core.database.models import Base
+from core.database.session import engine as runtime_engine
 
 
 async def _create_runtime_schema() -> None:
@@ -46,6 +48,84 @@ def pytest_configure(config) -> None:
         "markers",
         "postgres: tests requiring a real PostgreSQL instance",
     )
+
+
+class _LogCaptureFixture:
+    """Minimal caplog stand-in for runs with ``-p no:logging``."""
+
+    def __init__(self) -> None:
+        self.records: list[logging.LogRecord] = []
+        self._handler: logging.Handler | None = None
+        self._level = logging.NOTSET
+        self._logger_name: str | None = None
+        self._prev_levels: dict[str, int] = {}
+
+    @property
+    def text(self) -> str:
+        return "\n".join(record.getMessage() for record in self.records)
+
+    def set_level(self, level: int | str, logger: str | None = None) -> None:
+        resolved = logging._checkLevel(level)  # type: ignore[attr-defined]
+        self._level = resolved
+        self._logger_name = logger
+        target = logging.getLogger(logger)
+        self._prev_levels[target.name] = target.level
+        target.setLevel(resolved)
+        if self._handler is not None:
+            self._handler.setLevel(resolved)
+
+    @contextmanager
+    def at_level(self, level: int | str, logger: str | None = None) -> Iterator[None]:
+        target = logging.getLogger(logger)
+        previous = target.level
+        resolved = logging._checkLevel(level)  # type: ignore[attr-defined]
+        target.setLevel(resolved)
+        previous_handler = None
+        if self._handler is not None:
+            previous_handler = self._handler.level
+            self._handler.setLevel(resolved)
+        try:
+            yield
+        finally:
+            target.setLevel(previous)
+            if self._handler is not None and previous_handler is not None:
+                self._handler.setLevel(previous_handler)
+
+    def _install(self) -> None:
+        handler = _CapturingHandler(self)
+        handler.setLevel(self._level if self._level != logging.NOTSET else logging.DEBUG)
+        logging.getLogger().addHandler(handler)
+        self._handler = handler
+
+    def _uninstall(self) -> None:
+        if self._handler is not None:
+            logging.getLogger().removeHandler(self._handler)
+            self._handler = None
+        for name, level in self._prev_levels.items():
+            logging.getLogger(name).setLevel(level)
+        self._prev_levels.clear()
+
+
+class _CapturingHandler(logging.Handler):
+    def __init__(self, fixture: _LogCaptureFixture) -> None:
+        super().__init__()
+        self.fixture = fixture
+
+    def emit(self, record: logging.LogRecord) -> None:
+        # Match pytest LogCaptureFixture: expose `.message` on records.
+        record.message = record.getMessage()
+        self.fixture.records.append(record)
+
+
+@pytest.fixture
+def caplog() -> Iterator[_LogCaptureFixture]:
+    """Provide caplog even when pytest's logging plugin is disabled."""
+    fixture = _LogCaptureFixture()
+    fixture._install()
+    try:
+        yield fixture
+    finally:
+        fixture._uninstall()
 
 
 @pytest.fixture

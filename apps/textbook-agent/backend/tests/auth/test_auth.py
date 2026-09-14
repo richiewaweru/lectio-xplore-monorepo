@@ -1,5 +1,4 @@
 import pytest
-
 from core.auth.jwt_handler import JWTHandler
 
 

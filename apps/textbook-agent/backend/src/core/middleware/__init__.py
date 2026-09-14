@@ -10,3 +10,7 @@ from importlib import import_module
 
 _mod = import_module("infra.middleware")
 sys.modules[__name__] = _mod
+
+for _sub in ("v2_audit", "request_id"):
+    _loaded = import_module(f"infra.middleware.{_sub}")
+    sys.modules[f"{__name__}.{_sub}"] = _loaded

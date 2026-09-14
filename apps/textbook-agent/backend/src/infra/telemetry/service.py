@@ -1,18 +1,4 @@
-from __future__ import annotations
-
-import asyncio
-import logging
-from dataclasses import dataclass
-from typing import Any
-
-from sqlalchemy import select
-
-from core.database.models import GenerationModel
-from infra.database.session import async_session_factory
-from infra.events import event_bus
-from infra.telemetry.repositories.sql_llm_call_repo import SqlLLMCallRepository
-
-logger = logging.getLogger(__name__)
+from __future__ import annotationsimport asyncioimport loggingfrom dataclasses import dataclassfrom typing import Anyfrom sqlalchemy import selectfrom core.database.models import GenerationModelfrom infra.database.session import async_session_factoryfrom infra.events import event_busfrom infra.telemetry.repositories.sql_llm_call_repo import SqlLLMCallRepositorylogger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -66,7 +52,7 @@ class TelemetryMonitor:
         if self._queue is not None:
             try:
                 await asyncio.wait_for(self._queue.join(), timeout=5.0)
-            except (asyncio.TimeoutError, TimeoutError):
+            except TimeoutError:
                 logger.warning("Telemetry monitor shutdown timed out while draining events")
         self._task.cancel()
         try:

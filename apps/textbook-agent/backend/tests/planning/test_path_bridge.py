@@ -6,7 +6,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import select
+from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 
+from application.unit_lesson import enforce_path_owned_card_objective, prepare_path_lesson
 from core.database.models import (
     ConceptCardModel,
     GenerationModel,
@@ -15,7 +17,7 @@ from core.database.models import (
     PathLessonModel,
     UserModel,
 )
-from application.unit_lesson import enforce_path_owned_card_objective, prepare_path_lesson
+from curriculum.outcomes import record_lesson_actual
 from curriculum.path_models import (
     ComponentSelection,
     GroupVoice,
@@ -29,11 +31,9 @@ from curriculum.path_models import (
     UnitGroupInput,
     UnitGroupsWriteRequest,
 )
-from curriculum.outcomes import record_lesson_actual
 from curriculum.schedule import write_groups
 from curriculum.service import approve_path, create_unit, persist_path_plan
 from curriculum.shapes import decide_shape_deviation, request_shape_deviation
-from tests.planning.path_helpers import load_canonical_plan, unit_create_from_fixture
 from v3_blueprint.planning.objective_ownership import hash_path_objective
 from v3_blueprint.planning.persistence import load_chunked_state, persist_chunked_state
 

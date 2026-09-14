@@ -10,8 +10,9 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from infra.authoring import AuthoringEngine, AuthoringEngineError, AuthoringProvider
 from learn.generation.activity_authoring import ActivityAuthoringPlan, plan_activity_authoring
@@ -159,7 +160,7 @@ def _work_order_from_request(request: Mapping[str, Any]) -> LearnWorkOrder:
         raw_card = (load_learn_writer_view().get("capabilities") or {}).get(capability_id)
         if isinstance(raw_card, Mapping):
             card = dict(raw_card)
-    except Exception:
+    except Exception:  # noqa: BLE001
         card = {}
     from core.prompts.loader import effective_prompt_text, hash_prompt
 
@@ -190,7 +191,7 @@ def _work_order_from_request(request: Mapping[str, Any]) -> LearnWorkOrder:
             if isinstance(item, Mapping) and item.get("id"):
                 approved_ids.append(str(item["id"]))
             elif getattr(item, "id", None):
-                approved_ids.append(str(getattr(item, "id")))
+                approved_ids.append(str(item.id))
 
     return LearnWorkOrder(
         work_order_id=str(request.get("work_order_id") or f"learn::request::{capability_id}"),
@@ -202,8 +203,8 @@ def _work_order_from_request(request: Mapping[str, Any]) -> LearnWorkOrder:
         teaching_plan_revision=int(request.get("teaching_plan_revision") or 1),
         teaching_plan_hash=str(request.get("teaching_plan_hash") or "ad-hoc"),
         capability_contract_hash=contract_hash,
-        source_refs=list(str(item) for item in request.get("source_refs") or []),
-        dependency_ids=list(str(item) for item in request.get("dependency_ids") or []),
+        source_refs=[str(item) for item in request.get("source_refs") or []],
+        dependency_ids=[str(item) for item in request.get("dependency_ids") or []],
         expected_output_schema=dict(schema),
         field_guidance=dict(request.get("field_guidance") or card.get("field_guidance") or {}),
         authoring_definition=definition,
@@ -221,7 +222,7 @@ def _work_order_from_request(request: Mapping[str, Any]) -> LearnWorkOrder:
     )
 
 
-def write_interaction_from_request(
+async def write_interaction_from_request_async(
     request: Mapping[str, Any],
     *,
     interaction_id: str | None = None,
@@ -230,12 +231,13 @@ def write_interaction_from_request(
     provider: AuthoringProvider | None = None,
     engine: AuthoringEngine | None = None,
     mode: str | None = None,
+    budget_ledger: Any | None = None,
+    checkpoint_store: Any | None = None,
+    durable_persist_hook: Any | None = None,
+    progress_store: Any | None = None,
+    progress_run_id: str | None = None,
 ) -> dict[str, Any]:
-    """Author one interaction through the shared engine.
-
-    Generate mode requires a configured provider or engine. Convert-approved mode
-    is deterministic, but still goes through the engine converter and validators.
-    """
+    """Async interaction authoring — safe to await from the running event loop."""
     order = _work_order_from_request(request)
     approved_items_raw = request.get("approved_items") or []
     approved_items = [
@@ -252,7 +254,9 @@ def write_interaction_from_request(
             request.get("brief") or order.brief or order.intent or "Learn objective"
         ).strip()
     allowed_facts_raw = request.get("allowed_facts")
-    if not isinstance(allowed_facts_raw, Sequence) or isinstance(allowed_facts_raw, (str, bytes)):
+    if not isinstance(allowed_facts_raw, Sequence) or isinstance(
+        allowed_facts_raw, (str, bytes)
+    ):
         allowed_facts = None
     else:
         allowed_facts = list(allowed_facts_raw)
@@ -265,47 +269,142 @@ def write_interaction_from_request(
     selected_engine = engine or AuthoringEngine(
         registry=build_learn_authoring_registry(),
         provider=provider,
+        budget_ledger=budget_ledger,
+        progress_store=progress_store,
+        progress_run_id=progress_run_id,
+        progress_stage="interaction",
+        durable_persist_hook=durable_persist_hook,
     )
+    if durable_persist_hook is not None and getattr(
+        selected_engine, "durable_persist_hook", None
+    ) is None:
+        selected_engine.durable_persist_hook = durable_persist_hook
+    if budget_ledger is not None and getattr(selected_engine, "budget_ledger", None) is None:
+        selected_engine.budget_ledger = budget_ledger
+    checkpoint_key = f"interaction:{interaction_id or order.work_order_id}"
+    compat = None
     try:
-        result = _run_sync(
-            run_learn_authoring(
-                order,
-                provider=provider,
-                engine=selected_engine,
-                lesson_context=lesson_context,
-                allowed_facts=allowed_facts,
-                terminology=terminology,
-                approved_items=approved_items,
-                mode=mode,
-                requested_knowledge_policy=(
-                    str(request["requested_knowledge_policy"])
-                    if request.get("requested_knowledge_policy")
-                    else None
+        if checkpoint_store is not None:
+            from infra.execution.checkpoints import CheckpointCompatibility, content_hash
+
+            compat = CheckpointCompatibility(
+                teaching_revision=int(order.teaching_plan_revision or 1),
+                input_hash=content_hash(
+                    {
+                        "capability_id": order.capability_id,
+                        "brief": order.brief,
+                        "intent": order.intent,
+                        "action": getattr(order, "action", None),
+                        "allowed_facts": allowed_facts or [],
+                        "terminology": terminology or [],
+                        "interaction_id": interaction_id or order.work_order_id,
+                        "block_id": getattr(order, "block_id", None),
+                    }
                 ),
-                requested_assessment_policy=(
-                    str(request["requested_assessment_policy"])
-                    if request.get("requested_assessment_policy")
-                    else None
-                ),
+                definition_hash=str(order.capability_id or ""),
+                composition_identity=str(interaction_id or order.work_order_id),
             )
+            prior = checkpoint_store.get(checkpoint_key)
+            if prior is not None and prior.status == "ready" and prior.payload is not None:
+                checkpoint_store.decide_resume(checkpoint_key, compatibility=compat)
+                return dict(prior.payload)
+            checkpoint_store.begin(checkpoint_key, compatibility=compat)
+
+        result = await run_learn_authoring(
+            order,
+            provider=provider,
+            engine=selected_engine,
+            lesson_context=lesson_context,
+            allowed_facts=allowed_facts,
+            terminology=terminology,
+            approved_items=approved_items,
+            mode=mode,
+            requested_knowledge_policy=(
+                str(request["requested_knowledge_policy"])
+                if request.get("requested_knowledge_policy")
+                else None
+            ),
+            requested_assessment_policy=(
+                str(request["requested_assessment_policy"])
+                if request.get("requested_assessment_policy")
+                else None
+            ),
         )
         from learn.generation.source_resolver import resolve_learn_work_order_sources
 
-        resolved = resolve_learn_work_order_sources(order, approved_items, forced_mode=mode)
+        resolved = resolve_learn_work_order_sources(
+            order, approved_items, forced_mode=mode
+        )
         contract = interaction_contract_from_authoring_result(
             order,
             result,
             interaction_id=interaction_id,
             assessment_mode=assessment_mode,
             concept_refs=concept_refs,
-            approved_item=resolved.primary_item if result.mode == "convert-approved" else None,
+            approved_item=(
+                resolved.primary_item if result.mode == "convert-approved" else None
+            ),
         )
+        if checkpoint_store is not None and compat is not None:
+            checkpoint_store.commit(
+                checkpoint_key,
+                payload=dict(contract),
+                compatibility=compat,
+            )
     except Exception as exc:
+        if checkpoint_store is not None:
+            try:
+                checkpoint_store.mark_ambiguous(checkpoint_key)
+            except Exception:
+                logger = __import__("logging").getLogger(__name__)
+                logger.debug(
+                    "interaction checkpoint mark_ambiguous failed", exc_info=True
+                )
         raise _as_writer_error(exc) from exc
     errors = validate_interaction_contract(contract)
     if errors:
         raise InteractionWriterError("CONTRACT_INVALID", "; ".join(errors))
     return contract
+
+
+def write_interaction_from_request(
+    request: Mapping[str, Any],
+    *,
+    interaction_id: str | None = None,
+    assessment_mode: str = "practice",
+    concept_refs: Sequence[Mapping[str, Any]] | None = None,
+    provider: AuthoringProvider | None = None,
+    engine: AuthoringEngine | None = None,
+    mode: str | None = None,
+    budget_ledger: Any | None = None,
+    checkpoint_store: Any | None = None,
+    durable_persist_hook: Any | None = None,
+    progress_store: Any | None = None,
+    progress_run_id: str | None = None,
+) -> dict[str, Any]:
+    """Author one interaction through the shared engine.
+
+    Generate mode requires a configured provider or engine. Convert-approved mode
+    is deterministic, but still goes through the engine converter and validators.
+    Sync entry for tests; prefer ``write_interaction_from_request_async`` under
+    a running event loop so durable persist hooks stay on the same loop.
+    """
+    return _run_sync(
+        write_interaction_from_request_async(
+            request,
+            interaction_id=interaction_id,
+            assessment_mode=assessment_mode,
+            concept_refs=concept_refs,
+            provider=provider,
+            engine=engine,
+            mode=mode,
+            budget_ledger=budget_ledger,
+            checkpoint_store=checkpoint_store,
+            durable_persist_hook=durable_persist_hook,
+            progress_store=progress_store,
+            progress_run_id=progress_run_id,
+        )
+    )
 
 
 def write_interaction_from_work_order(

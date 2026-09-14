@@ -17,7 +17,6 @@ from learn.generation.authoring_adapter import run_learn_authoring
 from learn.generation.native_selection import LearnSelectionDecision, LearnSelectionSnapshot
 from learn.generation.work_orders import compile_learn_work_orders
 
-
 SENTINEL = "UNRELATED_SOURCE_MUST_NOT_LEAK"
 
 

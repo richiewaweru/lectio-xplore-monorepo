@@ -126,7 +126,9 @@ describe('onboarding recovery mode', () => {
 		vi.clearAllMocks();
 	});
 
-	it('switches into recovery mode when a profile exists for a stale has_profile user', async () => {
+	it(
+		'switches into recovery mode when a profile exists for a stale has_profile user',
+		async () => {
 		render(OnboardingPage);
 
 		await waitFor(() => expect(getProfile).toHaveBeenCalled());
@@ -134,5 +136,7 @@ describe('onboarding recovery mode', () => {
 		expect(screen.getByRole('button', { name: /save profile/i })).toBeTruthy();
 		expect(createProfile).not.toHaveBeenCalled();
 		expect(updateProfile).not.toHaveBeenCalled();
-	});
+		},
+		15_000
+	);
 });

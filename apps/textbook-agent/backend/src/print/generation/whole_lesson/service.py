@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import ConceptCardModel, GenerationModel
 from curriculum.approved_items import ItemPoolEmptyError, load_approved_item_records
+from curriculum.teaching_plan.service import (
+    bind_shared_teaching_runner,
+    plan_shared_teaching,
+)
 from print.generation.whole_lesson.events import make_event
 from print.generation.whole_lesson.legality import (
     build_lesson_legality_snapshot,
@@ -21,10 +26,6 @@ from print.generation.whole_lesson.packet_builder import (
 )
 from print.generation.whole_lesson.repository import PageDocumentRepository
 from print.generation.whole_lesson.teaching_agent import run_lesson_approach_planner
-from curriculum.teaching_plan.service import (
-    bind_shared_teaching_runner,
-    plan_shared_teaching,
-)
 from v3_blueprint.planning.persistence import load_chunked_state
 
 # Composition root: bind Print-owned planner without curriculum importing print.

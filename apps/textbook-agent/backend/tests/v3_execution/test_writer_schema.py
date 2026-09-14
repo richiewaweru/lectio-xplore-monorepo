@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 from v3_execution.models import (
     SectionWriterWorkOrder,
     SourceOfTruthEntry,

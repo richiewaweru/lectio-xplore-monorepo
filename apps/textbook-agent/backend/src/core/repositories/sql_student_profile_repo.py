@@ -1,10 +1,10 @@
 import json
 import logging
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import StudentProfileModel
@@ -88,7 +88,7 @@ class SqlStudentProfileRepository(StudentProfileRepository):
         return self._to_entity(row) if row else None
 
     async def create(self, profile: TeacherProfile) -> TeacherProfile:
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         model = StudentProfileModel(
             id=profile.id or str(uuid.uuid4()),
             user_id=profile.user_id,
@@ -137,7 +137,7 @@ class SqlStudentProfileRepository(StudentProfileRepository):
         model.planning_goals = profile.planning_goals
         model.school_or_org_name = profile.school_or_org_name
         model.delivery_preferences = profile.delivery_preferences.model_dump_json()
-        model.updated_at = datetime.utcnow()
+        model.updated_at = datetime.now(UTC).replace(tzinfo=None)
         _apply_legacy_profile_defaults(model)
         try:
             await self._session.commit()

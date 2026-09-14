@@ -1,0 +1,8 @@
+{
+    "name":  "page-check",
+    "exit":  0,
+    "command":  "pnpm page:check",
+    "start":  "2026-09-13T22:53:59.3315614+03:00",
+    "end":  "2026-09-13T22:55:02.8593758+03:00",
+    "cwd":  "C:\\Projects\\lectio"
+}

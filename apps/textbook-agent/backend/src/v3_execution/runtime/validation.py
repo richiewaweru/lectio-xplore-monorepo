@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 from contracts.lectio import get_section_field_for_component
-
 from v3_execution.models import (
     GeneratedComponentBlock,
     GeneratedQuestionBlock,
@@ -16,7 +15,7 @@ from v3_execution.models import (
 
 def _image_url_valid(url: str) -> bool:
     u = url.strip().lower()
-    return u.startswith("http://") or u.startswith("https://")
+    return u.startswith(("http://", "https://"))
 
 
 def check_anchor_units_present(
@@ -104,12 +103,10 @@ def validate_visual_block(
     if (
         block.status not in {"failed", "omitted_quality"}
         and block.mode in {"diagram", "image", "diagram_series", "diagram_compare"}
-    ):
-        if not block.image_url or not _image_url_valid(block.image_url):
-            errors.append("image_url not a valid hosted URL")
-    if block.mode == "simulation":
-        if not block.html_content and not block.fallback_image_url:
-            errors.append("simulation requires html_content or fallback_image_url")
+    ) and (not block.image_url or not _image_url_valid(block.image_url)):
+        errors.append("image_url not a valid hosted URL")
+    if block.mode == "simulation" and not block.html_content and not block.fallback_image_url:
+        errors.append("simulation requires html_content or fallback_image_url")
     return errors
 
 

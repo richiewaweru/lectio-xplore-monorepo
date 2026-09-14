@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import pytest
+from tests.planning.path_helpers import (
+    four_lesson_draft,
+    sample_canonical_plan,
+    unit_create_from_fixture,
+)
 
 from core.database.models import UnitScopeContractModel, UserModel
 from curriculum.path_models import PathPlanDraft, PathScopeDraft
-from print.generation.page_blocks import PageBlockPlanError, validate_intent_departure
 from curriculum.service import canonical_plan_from_version, create_unit, persist_path_plan
 from curriculum.validation import normalize_path_plan_draft
+from print.generation.page_blocks import PageBlockPlanError, validate_intent_departure
 from print.generation.whole_lesson.legality import (
     LessonLegalitySnapshot,
     legality_hash,
@@ -22,7 +27,6 @@ from print.generation.whole_lesson.packet import (
     ScopeContract,
     SlotRecord,
 )
-from tests.planning.path_helpers import four_lesson_draft, sample_canonical_plan, unit_create_from_fixture
 
 
 @pytest.fixture

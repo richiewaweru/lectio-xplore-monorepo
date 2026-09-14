@@ -1,0 +1,50 @@
+{
+  "program": "lectio-reliability-health-correction-pass",
+  "status": "READY",
+  "starting_sha": "f386ab6893f3068af5db18a0a9d5898ed46b0bff",
+  "implementation_sha": "working-tree-on-f386ab68-unccommitted",
+  "branch": "fix/lectio-reliability-health",
+  "auth": {
+    "status": "AUTHENTICATED",
+    "auth_me": 200,
+    "user_id": "2f297058-f6bc-47bf-9ffd-3208ad8246d4",
+    "email_domain": "gmail.com",
+    "browser_session": "reliability",
+    "profile": ".tmp/reliability-chrome-profile"
+  },
+  "live_spend_cap": "modest",
+  "phases": {
+    "C00": "PASS",
+    "C01": "PASS",
+    "C02": "PASS",
+    "C03": "PASS",
+    "C04": "PASS",
+    "C05": "PASS",
+    "C06": "PASS"
+  },
+  "experiments": {
+    "T01": "PASS",
+    "T02": "PASS",
+    "T03": "PASS",
+    "T04": "PASS",
+    "T05": "PASS",
+    "T06": "PASS",
+    "T07": "PASS",
+    "T08": "PASS",
+    "T09": "PASS",
+    "T10": "PASS",
+    "T11": "PASS",
+    "T12": "PASS"
+  },
+  "evidence": {
+    "auth": "evidence/c00-auth.json",
+    "pytest": "evidence/c05-correction-pytest-final.txt",
+    "t12": "evidence/t12-live-manifest.json",
+    "c06_commands": "evidence/c06-commands/"
+  },
+  "final_verdict": "READY",
+  "limitations": [
+    "Implementation remains uncommitted working tree on top of starting SHA f386ab68; pin docs to that base + dirty correction-pass diff until an evidence commit is requested.",
+    "T01–T11 use production entrypoint-shaped unit/integration tests with provider doubles; T12 is the live provider journey."
+  ]
+}

@@ -5,11 +5,11 @@ import logging
 import os
 from collections.abc import Awaitable, Callable
 
+from core.llm.runner import TruncatedCompletionError
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
-from print.http.v3_studio.dtos import V3InputForm, V3SignalSummary
 from core.config import settings
-from core.llm.runner import TruncatedCompletionError
+from print.http.v3_studio.dtos import V3InputForm, V3SignalSummary
 from v3_blueprint.planning.models import (
     SectionBrief,
     SectionPlan,
@@ -163,7 +163,6 @@ async def run_stage2(
     generation_id: str | None = None,
     trace_id: str | None = None,
 ) -> list[SectionBrief]:
-    from core.config import settings
 
     print(
         f"\n[STAGE2 START] generation_id={generation_id}"
@@ -424,7 +423,7 @@ async def _run_section_with_retry(
                 f" section_id={section.id}"
                 f" attempt={attempt}"
                 f" type={type(exc).__name__}"
-                f"\nmessage={str(exc)}"
+                f"\nmessage={exc!s}"
                 f"\n{traceback.format_exc()}",
                 flush=True,
             )
@@ -439,7 +438,7 @@ async def _run_section_with_retry(
                 f" section_id={section.id}"
                 f" attempt={attempt}"
                 f" type={type(exc).__name__}"
-                f"\nmessage={str(exc)}"
+                f"\nmessage={exc!s}"
                 f"\n{traceback.format_exc()}",
                 flush=True,
             )

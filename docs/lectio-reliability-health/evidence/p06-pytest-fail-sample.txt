@@ -1,0 +1,33 @@
+﻿F                                                                        [100%]
+================================== FAILURES ===================================
+______________ test_p08_i01_uninterrupted_dual_path_no_plan_swap ______________
+src\document\writer.py:321: in write_document_primitive
+    result = await selected.execute(
+src\infra\authoring\engine.py:205: in execute
+    self._validate_registered_refs(definition, provenance)
+src\infra\authoring\engine.py:419: in _validate_registered_refs
+    raise AuthoringEngineError(
+E   infra.authoring.models.AuthoringEngineError: MISSING_AUTHORING_DEFINITION: unknown validator ref(s): document.writer_schema
+
+The above exception was the direct cause of the following exception:
+tests\print_learn\test_p08_integration_gates.py:773: in test_p08_i01_uninterrupted_dual_path_no_plan_swap
+    learn_result = await _run_learn(gid=gid, user_id=user_id, path_lesson_id=lesson_id)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\print_learn\test_p08_integration_gates.py:739: in _run_learn
+    result = await produce_learn_from_approved_teaching(
+src\learn\generation\native_execution.py:276: in produce_learn_from_approved_teaching
+    production = await produce_learn_document_from_teaching_async(
+src\learn\generation\native_production.py:399: in produce_learn_document_from_teaching_async
+    node = await write_document_primitive(
+src\document\writer.py:329: in write_document_primitive
+    raise DocumentWriterError(exc.code, str(exc)) from exc
+E   document.writer.DocumentWriterError: MISSING_AUTHORING_DEFINITION: MISSING_AUTHORING_DEFINITION: unknown validator ref(s): document.writer_schema
+============================== warnings summary ===============================
+src\contracts\generation_manifest.py:6
+  C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+    class GenerationFieldContract(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/print_learn/test_p08_integration_gates.py::test_p08_i01_uninterrupted_dual_path_no_plan_swap
+1 failed, 1 warning in 15.25s

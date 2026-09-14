@@ -7,7 +7,11 @@ from contracts.lectio import get_section_field_for_component
 from v3_blueprint.models import ProductionBlueprint
 from v3_execution.assembly.section_builder import V3SectionBuilder
 from v3_execution.component_aliases import canonical_component_id
-from v3_execution.models import GeneratedComponentBlock, GeneratedQuestionBlock, GeneratedVisualBlock
+from v3_execution.models import (
+    GeneratedComponentBlock,
+    GeneratedQuestionBlock,
+    GeneratedVisualBlock,
+)
 
 
 def _load_example(filename: str) -> ProductionBlueprint:

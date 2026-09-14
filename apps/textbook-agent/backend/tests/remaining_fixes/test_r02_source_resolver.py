@@ -12,12 +12,16 @@ from curriculum.teaching_plan.models import (
     TeachingPlanBlock,
     TeachingPlanSection,
 )
-from infra.authoring import AuthoringEngine, AuthoringEngineError, AuthoringProviderCall, AuthoringRequest
+from infra.authoring import (
+    AuthoringEngine,
+    AuthoringEngineError,
+    AuthoringProviderCall,
+    AuthoringRequest,
+)
 from learn.generation.authoring_adapter import run_learn_authoring
 from learn.generation.native_selection import LearnSelectionDecision, LearnSelectionSnapshot
 from learn.generation.source_resolver import resolve_learn_work_order_sources
 from learn.generation.work_orders import compile_learn_work_orders
-
 
 SENTINEL = "UNRELATED_SOURCE_MUST_NOT_LEAK"
 

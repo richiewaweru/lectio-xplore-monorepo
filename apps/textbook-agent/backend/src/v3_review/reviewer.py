@@ -7,6 +7,7 @@ from typing import Any
 from v3_blueprint.models import ProductionBlueprint
 from v3_execution.models import DraftPack
 from v3_execution.runtime import events as v3_events
+from v3_review.card_reviewer import CardQCResult, review_card_content
 from v3_review.deterministic_checks import (
     check_anchor_facts,
     check_answer_key_entries,
@@ -26,8 +27,12 @@ from v3_review.deterministic_checks import (
     check_visual_text_references,
     check_visuals_attach_to_valid_targets,
 )
-from v3_review.models import CoherenceReport, ReviewIssue, derive_coherence_status, refresh_issue_counts
-from v3_review.card_reviewer import CardQCResult, review_card_content
+from v3_review.models import (
+    CoherenceReport,
+    ReviewIssue,
+    derive_coherence_status,
+    refresh_issue_counts,
+)
 
 EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
 

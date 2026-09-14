@@ -7,18 +7,17 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
+from core.llm.runner import RetryPolicy, run_llm
 from pydantic_ai import Agent
 
 from core.config import settings
-from core.llm.runner import RetryPolicy, run_llm
+from curriculum.llm_contract_errors import is_transport_error, structured_output_errors
+from curriculum.planner_diagnostics import log_planner_attempt_failed
 from print.generation.catalogue_projections import (
     build_form_candidate_map,
     project_form_guidance,
 )
-from curriculum.llm_contract_errors import is_transport_error, structured_output_errors
-from curriculum.planner_diagnostics import log_planner_attempt_failed
-from print.generation.whole_lesson.form_plan import FormPlan
-from print.generation.whole_lesson.form_plan import FormPlanSection
+from print.generation.whole_lesson.form_plan import FormPlan, FormPlanSection
 from print.generation.whole_lesson.legality import LessonLegalitySnapshot
 from print.generation.whole_lesson.packet import ImmutableLessonPacket
 from print.generation.whole_lesson.prompt_render import (
@@ -31,7 +30,7 @@ from print.generation.whole_lesson.validation import (
     advisory_form_qc,
     validate_form_plan,
 )
-from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
+from v3_execution.config import get_v3_model_settings, get_v3_slot
 from v3_execution.config.models import V2_FORM_PLANNER
 from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 
@@ -163,17 +162,17 @@ async def run_form_planner(
     if empty_candidates:
         raise NoLegalFormCandidatesError(sorted(empty_candidates))
     required_visual_slots = set(packet.required_visual_slots())
-    missing_visual_candidates = [
-        section.slot_id
-        for section in teaching_plan.sections
-        if section.slot_id in required_visual_slots
-        and not any(
-            "figure" in set(candidate_map.get(block.id, ()))
+    missing_visual_candidates = sorted(
+        {
+            block.id
+            for section in teaching_plan.sections
+            if section.slot_id in required_visual_slots
             for block in section.blocks
-        )
-    ]
+            if "figure" not in set(candidate_map.get(block.id, ()))
+        }
+    )
     if required_visual_slots and missing_visual_candidates:
-        raise NoLegalFormCandidatesError(sorted(missing_visual_candidates))
+        raise NoLegalFormCandidatesError(missing_visual_candidates)
 
     # Descriptive guidance only for already-legal object IDs.
     legal_object_ids = {
@@ -262,7 +261,7 @@ async def run_form_planner(
                 repair_attached=attempt == 2,
                 will_retry=attempt == 1,
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             last_error = exc
             if is_transport_error(exc):
                 repair_errors = []

@@ -1,0 +1,46 @@
+- generic [ref=f5e2]:
+  - banner [ref=f5e3]:
+    - navigation [ref=f5e4]:
+      - link "Lectio" [ref=f5e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=f5e8]:
+        - link "Home" [ref=f5e9] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=f5e11] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=f5e6]:
+    - main [ref=f5e12]:
+      - paragraph [ref=f5e13]: LearnDocument v2 editor
+      - generic [ref=f5e14]:
+        - generic [ref=f5e15]:
+          - generic [ref=f5e16]:
+            - generic [ref=f5e17]:
+              - generic [ref=f5e18]: Add node
+              - combobox "Add node kind" [ref=f5e19] [cursor=pointer]:
+                - option "paragraph" [selected]
+                - option "heading"
+                - option "list"
+                - option "figure"
+                - option "table"
+                - option "callout"
+            - button "Add" [ref=f5e20] [cursor=pointer]
+            - button "Delete" [disabled] [ref=f5e21]
+            - button "↑" [disabled] [ref=f5e22]
+            - button "↓" [disabled] [ref=f5e23]
+          - generic [ref=f5e24]:
+            - button "Save" [ref=f5e25] [cursor=pointer]
+            - button "Reload" [ref=f5e26] [cursor=pointer]
+            - link "Preview" [ref=f5e27] [cursor=pointer]:
+              - /url: /learn/lessons/fa90ae02-8365-4714-a2a3-ee3c8a71b1ad
+        - status [ref=f5e146]: Saved
+        - navigation "Lesson sections" [ref=f5e28]:
+          - button "All" [ref=f5e29] [cursor=pointer]
+          - button "Open attention on the seesaw and establish a reason to find out what makes it work." [ref=f5e30] [cursor=pointer]
+          - button "Build the three-part model of a lever and pin each part to a real position on the seesaw." [ref=f5e31] [cursor=pointer]
+          - button "Set the three-part model beside the two beliefs that would misplace or deny it." [ref=f5e32] [cursor=pointer]
+          - button "Have the learner read the three parts off a lever they have not seen, so the objective is measured rather than rehearsed." [ref=f5e33] [cursor=pointer]
+        - generic [ref=f5e34]:
+          - button [ref=f5e139] [cursor=pointer]:
+            - heading "Reading the Parts of a Lever You Haven't Seen Before" [level=2] [ref=f5e141]
+          - button [ref=f5e142] [cursor=pointer]:
+            - paragraph [ref=f5e144]: Think about a wheelbarrow being lifted and pushed forward rather than a seesaw. In this tool, identify which part is the fulcrum, which part is the effort, and which part is the load, then say which part is which. Explain how you decided where each of the three parts belongs so that all three are matched to the correct place.

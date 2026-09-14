@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from document.models import DOCUMENT_PRIMITIVE_KINDS
 from print.generation.document_form_map import (
+    PRIMITIVE_TO_PRINT_OBJECT,
     PRINT_OBJECT_TO_PRIMITIVE,
     PRINT_ONLY_OBJECTS,
-    PRIMITIVE_TO_PRINT_OBJECT,
     is_ordinary_document_object,
     to_document_primitive,
     to_print_object,

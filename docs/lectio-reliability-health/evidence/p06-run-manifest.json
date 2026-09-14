@@ -1,0 +1,223 @@
+{
+  "program": "lectio-reliability-health",
+  "phase": "P06",
+  "implementation_sha": "dbe3e651ea12c4fc0c9acb70a7dfe60d9c113eb1",
+  "branch": "fix/lectio-reliability-health",
+  "recorded_at_utc": "2026-09-13T01:12:30Z",
+  "environment": {
+    "frontend": "http://127.0.0.1:5173",
+    "api": "http://127.0.0.1:8000",
+    "api_health": {
+      "status": "ok",
+      "version": "1.0.0-beta.1",
+      "instance_id": "8fdc55db-5bed-40fe-a170-2027b0d57085",
+      "started_at": "2026-09-13T00:48:25.565769+00:00",
+      "pipeline_architecture": "shell-pipeline-native-lectio"
+    },
+    "db": "textbookagent-db-1 healthy",
+    "browser_session": "playwright-cli session=reliability",
+    "profile": ".tmp/reliability-chrome-profile",
+    "secrets_exported": false
+  },
+  "auth": {
+    "initial_auth_me_status": 200,
+    "user_id": "2f297058-f6bc-47bf-9ffd-3208ad8246d4",
+    "email_domain": "gmail.com",
+    "later_session_lost": true,
+    "auth_bypass_attempted": false,
+    "evidence": [
+      "evidence/p06-auth.json",
+      "evidence/p06-units-authenticated.png",
+      "evidence/p06-auth-expired.json",
+      "evidence/p06-auth-expired-login.png"
+    ]
+  },
+  "steps": [
+    {
+      "id": "S00_services",
+      "method": "API/UI",
+      "result": "PASS",
+      "notes": "API /health 200; FE 200 after Vite restart; SHA stamped"
+    },
+    {
+      "id": "S01_auth",
+      "method": "UI",
+      "result": "PASS",
+      "notes": "Bearer localStorage token; GET /api/v1/auth/me 200"
+    },
+    {
+      "id": "S02_fresh_unit",
+      "method": "UI",
+      "result": "PASS",
+      "provider_label": "REAL_PROVIDER",
+      "unit_id": "11d9ef38-d434-4551-9c35-00b6e38e667f",
+      "title": "How Shadows Form",
+      "notes": "Constructor readback + That's right; path planned with 4 lessons"
+    },
+    {
+      "id": "S03_path_approve",
+      "method": "UI",
+      "result": "PASS",
+      "path_version_id": "29254425-3c22-474a-897b-ad2582ebff97",
+      "path_revision": 2,
+      "path_status": "approved",
+      "lesson_id": "9e735480-6b97-42f0-be18-17ad0946c4a7",
+      "lesson_revision": 1,
+      "evidence": ["evidence/p06-path-locked.png"]
+    },
+    {
+      "id": "S04_prepare_learn",
+      "method": "UI",
+      "result": "PASS",
+      "provider_label": "REAL_PROVIDER",
+      "generation_id": "be21db50-bc04-4d60-9426-6fa98f1934fa",
+      "notes": "Generate Learn → studio structural review"
+    },
+    {
+      "id": "S05_structural_approve",
+      "method": "UI",
+      "result": "PASS",
+      "notes": "Review concepts clicked; stage progressed to teaching planning"
+    },
+    {
+      "id": "S06_teaching_first_fail",
+      "method": "API",
+      "result": "FAIL_THEN_RECOVERED",
+      "provider_label": "REAL_PROVIDER",
+      "error_type": "MODEL_OUTPUT_INVALID",
+      "stage": "failed_recoverable",
+      "next_action": "retry_teaching",
+      "error_summary": "lesson approach planner invalid output after 2 attempts (INTENT_LEGALITY / EVIDENCE_REF)",
+      "evidence": ["evidence/p06-teaching-failed.png"]
+    },
+    {
+      "id": "S07_teaching_retry",
+      "method": "API",
+      "result": "PASS",
+      "provider_label": "REAL_PROVIDER",
+      "endpoint": "POST /api/v1/v3/generations/{gid}/retry-native",
+      "http_status": 202,
+      "notes": "accepted work_kind=pre_worker_teaching_retry; reached awaiting_teaching_approval teaching_rev=1 then UI showed Approve"
+    },
+    {
+      "id": "S08_teaching_approve",
+      "method": "UI",
+      "result": "PASS",
+      "provider_label": "REAL_PROVIDER",
+      "teaching_review_revision_observed": 2,
+      "teaching_review_status": "approved",
+      "evidence": ["evidence/p06-teaching-review.png"],
+      "notes": "UI Approve teaching plan; subsequent approve API with wrong rev returned 409 as expected for stale/mismatch"
+    },
+    {
+      "id": "S09_learn_compose",
+      "method": "API/UI",
+      "result": "FAIL",
+      "provider_label": "REAL_PROVIDER",
+      "endpoints": [
+        "POST /api/v1/v3/generations/{gid}/realize-learn",
+        "POST /api/v1/units/{uid}/path/lessons/{lid}/realizations:generate-learn"
+      ],
+      "http_status": 500,
+      "error": "NO_COMPATIBLE_CAPABILITY: provider transport attempts exhausted",
+      "notes": "Blocks Builder edit/publish/attempt portion of G22"
+    },
+    {
+      "id": "S10_print_admit",
+      "method": "API",
+      "result": "PARTIAL",
+      "provider_label": "REAL_PROVIDER",
+      "http_status": 200,
+      "status": "queued",
+      "output_id": "be21db50-bc04-4d60-9426-6fa98f1934fa",
+      "realization_id": "e5fb39e8-4ca6-4c2b-909f-beeecbd14866",
+      "teaching_plan_hash": "40015f71197a76b815bb981eb9f00dd978dc6dbd0a3b53d5f068da1ad8d8d9a3",
+      "teaching_plan_revision": 1,
+      "notes": "Sibling Print admission created realization from same preparation id"
+    },
+    {
+      "id": "S11_print_generation",
+      "method": "API",
+      "result": "FAIL",
+      "provider_label": "REAL_PROVIDER",
+      "chunked_stage": "failed_terminal",
+      "error": "no legal form candidates for blocks: ['check-b1', 'contrast-b1', 'contrast-b2', 'explain-b1', 'explain-b2', 'orient-b1', 'orient-b2']",
+      "lectio_document_http": 500,
+      "notes": "No editable Print document; no marker edit, 409, or PDF retain possible"
+    },
+    {
+      "id": "S12_session_lost",
+      "method": "UI",
+      "result": "BLOCKED",
+      "notes": "Second playwright-cli open to print URL left localStorage empty; redirected to /login. Stopped; no auth bypass."
+    },
+    {
+      "id": "S13_builder_publish_attempt",
+      "method": "UI/API",
+      "result": "NOT_RUN",
+      "notes": "Blocked by S09 Learn composition failure"
+    },
+    {
+      "id": "S14_print_edit_409_pdf",
+      "method": "UI/API",
+      "result": "NOT_RUN",
+      "notes": "Blocked by S11 Print generation failure and later auth loss"
+    },
+    {
+      "id": "S15_reconnect_repeat_admission_full",
+      "method": "UI/API",
+      "result": "PARTIAL",
+      "notes": "Teaching retry-native recovery observed (S07). Full reconnect/SSE/repeat-admission idempotency after auth loss not completed."
+    }
+  ],
+  "injected_failures": [],
+  "real_provider_failures": [
+    {
+      "step": "S06_teaching_first_fail",
+      "label": "REAL_PROVIDER",
+      "error_type": "MODEL_OUTPUT_INVALID"
+    },
+    {
+      "step": "S09_learn_compose",
+      "label": "REAL_PROVIDER",
+      "error": "NO_COMPATIBLE_CAPABILITY"
+    },
+    {
+      "step": "S11_print_generation",
+      "label": "REAL_PROVIDER",
+      "error": "no legal form candidates / failed_terminal"
+    }
+  ],
+  "artifacts": [
+    "evidence/p06-service-evidence.txt",
+    "evidence/p06-auth.json",
+    "evidence/p06-units-authenticated.png",
+    "evidence/p06-unit-readback.png",
+    "evidence/p06-path-locked.png",
+    "evidence/p06-studio-structural.png",
+    "evidence/p06-teaching-failed.png",
+    "evidence/p06-teaching-review.png",
+    "evidence/p06-print-failed.png",
+    "evidence/p06-auth-expired.json",
+    "evidence/p06-auth-expired-login.png",
+    "evidence/p06-artifact-hashes.txt",
+    "evidence/p06-commands-inventory.txt",
+    "evidence/p06-run-manifest.json"
+  ],
+  "missing_required_g22_artifacts": [
+    "learn_editable_lesson_id",
+    "learn_document_hash_before_after",
+    "release_id",
+    "instance_id",
+    "attempt_id",
+    "print_document_revision_before_after",
+    "pdf_binary",
+    "pdf_extracted_marker_text",
+    "stale_409_screenshot"
+  ],
+  "gate_assessment": {
+    "G22": "FAIL",
+    "G23": "FAIL",
+    "G24": "NOT_RUN"
+  }
+}

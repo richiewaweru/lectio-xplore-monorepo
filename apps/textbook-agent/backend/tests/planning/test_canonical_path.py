@@ -8,6 +8,7 @@ from pathlib import Path
 
 import jsonschema
 import pytest
+from tests.planning.path_helpers import four_lesson_draft
 
 from curriculum.path_models import PathPlanDraft, PathPlannerRequest
 from curriculum.validation import (
@@ -18,8 +19,6 @@ from curriculum.validation import (
     slugify,
     validate_canonical_path_plan,
 )
-from tests.planning.path_helpers import four_lesson_draft
-
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCHEMA_PATH = REPO_ROOT / "patch" / "schemas" / "path-plan.schema.json"

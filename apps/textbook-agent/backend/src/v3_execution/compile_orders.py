@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import re
 import logging
+import re
 
-from v3_blueprint.models import ProductionBlueprint, QuestionPlanItem
-from v3_blueprint.compiler import BlueprintCompiler
-
-from v3_execution.component_aliases import canonical_component_id
 from contracts.lectio import _EXTERNAL_FIELDS, get_section_field_for_component
+from print.http.v3_studio.signal_map import derive_support_adaptations
+from v3_blueprint.compiler import BlueprintCompiler
+from v3_blueprint.models import ProductionBlueprint, QuestionPlanItem
+from v3_execution.component_aliases import canonical_component_id
 from v3_execution.models import (
     AnswerKeyExecutorWorkOrder,
     AnswerKeyPlanSpec,
@@ -26,7 +26,6 @@ from v3_execution.models import (
     WriterSection,
     WriterSectionComponent,
 )
-from print.http.v3_studio.signal_map import derive_support_adaptations
 
 logger = logging.getLogger(__name__)
 

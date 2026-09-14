@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
+from core.health.routes import DependencyStatus, GenerationSummary
 from fastapi.testclient import TestClient
 
 from app import create_app
 from core.database.models import GenerationModel, UserModel
 from core.health import routes as health_routes
-from core.health.routes import DependencyStatus, GenerationSummary
 
 
 def _dependency_by_name(payload: dict, name: str) -> dict:
@@ -101,7 +101,16 @@ class TestHealthRoutes:
         assert ready_payload["status"] == "ok"
         assert deep_payload["version"] == ready_payload["version"]
         assert deep_payload["instance_id"] == ready_payload["instance_id"]
-        assert deep_payload["dependencies"] == ready_payload["dependencies"]
+        # Latency is measured per call; compare durable dependency identity/status only.
+        deep_deps = [
+            {k: d[k] for k in ("name", "status", "detail") if k in d}
+            for d in deep_payload["dependencies"]
+        ]
+        ready_deps = [
+            {k: d[k] for k in ("name", "status", "detail") if k in d}
+            for d in ready_payload["dependencies"]
+        ]
+        assert deep_deps == ready_deps
         assert deep_payload["generations"] == ready_payload["generations"]
         assert _dependency_by_name(deep_payload, "gemini_image")["status"] == "ok"
         assert _dependency_by_name(deep_payload, "image_store")["status"] == "ok"
@@ -364,7 +373,7 @@ class TestHealthRoutes:
         assert _dependency_by_name(payload, "gemini_image_probe")["status"] == "unreachable"
 
     async def test_generation_summary_counts_rows_from_database(self, db_session):
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         db_session.add(
             UserModel(
                 id="user-1",

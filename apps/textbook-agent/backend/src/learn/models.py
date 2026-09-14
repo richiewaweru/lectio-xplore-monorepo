@@ -4,7 +4,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
 PackStatus = Literal["pending", "running", "complete", "failed"]
 ResourcePhase = Literal[
     "pending",

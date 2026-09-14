@@ -16,7 +16,6 @@ from learn.generation.native_selection import LearnSelectionDecision, LearnSelec
 from learn.generation.work_orders import compile_learn_work_orders
 from learn.runtime.evaluation import evaluate_interaction
 
-
 PLANNING_BRIEF = "Create a distance calculation using speed and time"
 SCOPED_FACTS = [
     "Speed v equals 5 m/s.",

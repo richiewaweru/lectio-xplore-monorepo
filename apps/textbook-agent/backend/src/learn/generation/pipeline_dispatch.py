@@ -10,7 +10,7 @@ Authority for:
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from core.config import GenerationPipeline, settings
@@ -40,7 +40,7 @@ def pipeline_control_payload(pipeline: GenerationPipeline) -> dict[str, Any]:
     return {
         "pipeline": pipeline,
         "pipeline_version": PIPELINE_VERSION,
-        "selected_at": datetime.now(timezone.utc).isoformat(),
+        "selected_at": datetime.now(UTC).isoformat(),
     }
 
 

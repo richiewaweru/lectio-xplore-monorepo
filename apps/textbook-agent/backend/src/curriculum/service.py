@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import itertools
+from datetime import UTC, datetime
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,10 +15,10 @@ from core.database.models import (
     UnitScopeContractModel,
 )
 from curriculum.models import (
+    CanonicalLessonPart,
     CanonicalPathLesson,
     CanonicalPathPlan,
     CanonicalPathScope,
-    CanonicalLessonPart,
     MergePathLessonsRequest,
     PathLessonPatch,
     ReorderPathLessonsRequest,
@@ -48,7 +49,7 @@ class StalePathMutationError(RuntimeError):
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 async def create_unit(session: AsyncSession, *, owner_id: str, request: UnitCreate) -> UnitModel:
@@ -606,7 +607,7 @@ async def split_lesson(
                 prerequisite_lesson_id=prerequisite_id,
             )
         )
-    for prior, current in zip(parts, parts[1:], strict=False):
+    for prior, current in itertools.pairwise(parts):
         session.add(
             PathLessonPrerequisiteModel(
                 path_lesson_id=current.id,

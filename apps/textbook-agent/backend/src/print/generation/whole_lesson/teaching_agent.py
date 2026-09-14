@@ -8,16 +8,16 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
+from core.llm.runner import RetryPolicy, run_llm
 from pydantic_ai import Agent
 
 from core.config import settings
-from core.llm.runner import RetryPolicy, run_llm
 from curriculum.approved_items import approved_item_kind
+from curriculum.llm_contract_errors import is_transport_error, structured_output_errors
 from print.generation.catalogue_projections import (
     TeachingGuidanceProjection,
     project_teaching_guidance,
 )
-from curriculum.llm_contract_errors import is_transport_error, structured_output_errors
 from print.generation.whole_lesson.legality import (
     LessonLegalitySnapshot,
     build_lesson_legality_snapshot,
@@ -35,7 +35,6 @@ from print.generation.whole_lesson.teaching_plan import (
     TeachingPlanDraft,
     materialize_teaching_plan,
 )
-from print.resources.selection import _form_cards
 from print.generation.whole_lesson.validation import (
     ValidationReport,
     advisory_teaching_qc,
@@ -43,7 +42,8 @@ from print.generation.whole_lesson.validation import (
     anchor_terms,
     validate_teaching_plan,
 )
-from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
+from print.resources.selection import _form_cards
+from v3_execution.config import get_v3_model_settings, get_v3_slot
 from v3_execution.config.models import V2_LESSON_APPROACH_PLANNER
 from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 
@@ -126,14 +126,14 @@ def _missing_order_learner_action_errors(
     ]
     if not preferred_blocks:
         return [
-            "TEACHING_MISSING_ORDER_ACTION: objective requires reconstructing an "
+            ("TEACHING_MISSING_ORDER_ACTION: objective requires reconstructing an "
             "ordered sequence, but no sequence/practise-guided block exists to own "
-            "an order-items learner_action."
+            "an order-items learner_action.")
         ]
     return [
-        "TEACHING_MISSING_ORDER_ACTION: objective requires reconstructing an "
+        ("TEACHING_MISSING_ORDER_ACTION: objective requires reconstructing an "
         "ordered sequence, but no sequence/practise-guided block declares "
-        "learner_action.action='order-items'. Do not leave Learn to invent Sequence."
+        "learner_action.action='order-items'. Do not leave Learn to invent Sequence.")
     ]
 
 
@@ -290,7 +290,6 @@ _STOPWORDS = frozenset(
         "each",
         "every",
         "also",
-        "into",
         "over",
         "under",
         "between",
@@ -396,11 +395,7 @@ def _repair_incompatible_assessment_sources(
                 continue
             kinds = {approved_item_kind(by_id[sid]) for sid in block.source_question_ids}
             forms = _assessment_forms_for_intent(block.intent)
-            if kinds == {"multiple_choice"} and "choices" not in forms:
-                block.source_question_ids = []
-            elif kinds == {"open_response"} and "questions" not in forms:
-                block.source_question_ids = []
-            elif len(kinds) > 1:
+            if kinds == {"multiple_choice"} and "choices" not in forms or kinds == {"open_response"} and "questions" not in forms or len(kinds) > 1:
                 block.source_question_ids = []
 
 
@@ -751,7 +746,6 @@ async def run_lesson_approach_planner(
             if is_transport_error(exc):
                 # Provider/backoff retry — do not invent contract repair context.
                 repair_errors = []
-                previous_output = previous_output
             elif is_recognized_teaching_output_error(exc):
                 repair_errors = structured_output_errors(exc)
                 output_invalid_details = repair_errors

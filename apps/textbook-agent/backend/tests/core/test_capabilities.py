@@ -3,11 +3,10 @@ from __future__ import annotations
 from httpx import ASGITransport, AsyncClient
 
 from app import app
-from infra.auth.middleware import get_current_user
 from core.capabilities import xplore_v2_enabled_for
-from infra.config import settings
 from core.entities.user import User
-
+from infra.auth.middleware import get_current_user
+from infra.config import settings
 
 TEST_USER = User(
     id="beta-user",

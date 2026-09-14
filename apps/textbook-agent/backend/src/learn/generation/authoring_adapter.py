@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from infra.authoring import (
     AuthoringDefinition,
@@ -36,7 +37,6 @@ from learn.runtime.evaluation import (
     evaluate_sequence,
     evaluate_short_response,
 )
-
 
 _DEFAULT_FEEDBACK = {
     "correct": "Correct.",
@@ -470,7 +470,7 @@ def _convert_numeric(
     item = _approved(request)
     value = _get(item, "value", "answer", "correct_key")
     if not isinstance(value, (int, float)) or isinstance(value, bool):
-        raise ValueError("numeric approved item requires a numeric value")
+        raise TypeError("numeric approved item requires a numeric value")
     payload: dict[str, Any] = {
         "value": value,
         "tolerance": _get(item, "tolerance") or 0,
@@ -528,12 +528,12 @@ def _convert_classify(
         pairs = []
         for entry in mapping:
             if not isinstance(entry, Mapping):
-                raise ValueError("classify mapping entries must be objects")
+                raise TypeError("classify mapping entries must be objects")
             left = _get(entry, "left", "item", "id")
             right = _get(entry, "right", "category", "category_id")
             pairs.append({"left": str(left), "right": category_by_name.get(str(right), str(right))})
     else:
-        raise ValueError("classify approved item requires mapping")
+        raise TypeError("classify approved item requires mapping")
     return {"categories": categories, "pairs": pairs}
 
 

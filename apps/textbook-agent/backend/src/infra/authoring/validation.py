@@ -49,9 +49,10 @@ def _type_errors(
         if not _json_type_matches(expected, value):
             return [AuthoringValidationError(path, f"expected {expected}")]
         return []
-    if isinstance(expected, list):
-        if not any(_json_type_matches(str(item), value) for item in expected):
-            return [AuthoringValidationError(path, f"expected one of {expected}")]
+    if isinstance(expected, list) and not any(
+        _json_type_matches(str(item), value) for item in expected
+    ):
+        return [AuthoringValidationError(path, f"expected one of {expected}")]
     return []
 
 

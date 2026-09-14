@@ -6,8 +6,9 @@ The model cannot authorize fallbacks or choose grading policy.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Literal, Mapping, Sequence
+from typing import Any, Literal
 
 from infra.authoring.models import AuthoringEngineError
 
@@ -553,13 +554,13 @@ def knowledge_instruction_block(decision: PolicyDecision) -> str:
 
 
 __all__ = [
+    "LEGACY_ABSENT_VERSION",
+    "POLICY_VERSION",
     "AssessmentPolicy",
     "ExecutedEvaluationMode",
     "ExecutedKnowledgeMode",
     "InputAvailability",
     "KnowledgePolicy",
-    "LEGACY_ABSENT_VERSION",
-    "POLICY_VERSION",
     "PolicyDecision",
     "assessment_defaults_for_capability",
     "classify_input_availability",

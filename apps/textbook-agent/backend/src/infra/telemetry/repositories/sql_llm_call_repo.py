@@ -1,16 +1,4 @@
-from __future__ import annotations
-
-from typing import Any
-from uuid import uuid4
-
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-
-from core.database.models import LLMCallModel
-from infra.telemetry.dtos.usage import LLMUsageBreakdownItem, LLMUsageResponse
-
-
-class SqlLLMCallRepository:
+from __future__ import annotationsfrom typing import Anyfrom uuid import uuid4from sqlalchemy import func, selectfrom sqlalchemy.ext.asyncio import AsyncSession, async_sessionmakerfrom core.database.models import LLMCallModelfrom infra.telemetry.dtos.usage import LLMUsageBreakdownItem, LLMUsageResponseclass SqlLLMCallRepository:
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         self._session_factory = session_factory
 

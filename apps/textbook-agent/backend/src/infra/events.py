@@ -120,10 +120,10 @@ class TraceClosedEvent(BaseModel):
 
 __all__ = [
     "EventBus",
+    "LLMCallFailedEvent",
     "LLMCallStartedEvent",
     "LLMCallSucceededEvent",
-    "LLMCallFailedEvent",
-    "TraceRegisteredEvent",
     "TraceClosedEvent",
+    "TraceRegisteredEvent",
     "event_bus",
 ]

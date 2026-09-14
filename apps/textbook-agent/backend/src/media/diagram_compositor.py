@@ -16,7 +16,6 @@ from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
-
 COMPOSITOR_VERSION = "diagram-compositor/4"
 FONT_VERSION = "dejavu-sans/2.37-1"
 FONT_SHA256 = "7da195a74c55be f988d0d48f9508bd5d849425c1770dba5d7bfc6ce9ed848954".replace(" ", "")
@@ -136,7 +135,7 @@ def _open_image(image_bytes: bytes | bytearray | Image.Image) -> Image.Image:
         try:
             image = Image.open(io.BytesIO(bytes(image_bytes)))
             image.load()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise DiagramCompositionPreflightError(
                 "diagram image bytes are not a readable raster"
             ) from exc
@@ -318,14 +317,14 @@ def _canonical_png(image: Image.Image) -> bytes:
 
 __all__ = [
     "COMPOSITOR_VERSION",
-    "FONT_VERSION",
     "FONT_SHA256",
+    "FONT_VERSION",
     "LAYOUT_VERSION",
-    "MIN_FONT_SIZE",
     "MAX_BAND_HEIGHT_PX",
     "MAX_BAND_HEIGHT_RATIO",
-    "CompositionMetadata",
+    "MIN_FONT_SIZE",
     "ComposedRaster",
+    "CompositionMetadata",
     "DiagramCompositionPreflightError",
     "compose_diagram_precision",
     "labels_digest",

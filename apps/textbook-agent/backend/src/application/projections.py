@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from copy import deepcopy
-from datetime import datetime, timezone
 import hashlib
 import json
-from typing import Any
 import uuid
+from copy import deepcopy
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,9 +23,8 @@ from core.database.models import (
     UnitGroupModel,
     UnitModel,
 )
-from print.rendering.pdf.components.answers_v3 import build_diagnostic_answer_key_content
 from curriculum.path_models import ResourceComposeRequest
-
+from print.rendering.pdf.components.answers_v3 import build_diagnostic_answer_key_content
 
 TEMPLATE_VERSION = "resource-projection.v1"
 ASSESSMENT_PROJECTIONS = {"quiz", "answer_key", "unit_exam"}
@@ -40,7 +39,7 @@ class ProjectionUnavailable(ValueError):
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _document_hash(document: dict[str, Any]) -> str:

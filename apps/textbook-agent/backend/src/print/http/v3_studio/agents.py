@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import uuid
 
+from core.llm.runner import RetryPolicy, run_llm
 from pydantic_ai import Agent
 
-from core.llm.runner import RetryPolicy, run_llm
 from print.http.v3_studio.dtos import ProductionBlueprintEnvelope, V3InputForm, V3SignalSummary
 from print.http.v3_studio.prompts import ADJUST_SYSTEM, SIGNAL_SYSTEM
 from v3_blueprint.compiler import BlueprintCompiler
 from v3_blueprint.models import ProductionBlueprint
-from v3_execution.config import get_v3_model, get_v3_model_settings, get_v3_slot, get_v3_spec
+from v3_execution.config import get_v3_model_settings, get_v3_slot
 from v3_execution.config.timeouts import V3_TIMEOUTS
 from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
 

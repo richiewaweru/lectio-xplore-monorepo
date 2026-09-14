@@ -6,7 +6,8 @@ response become Print-only task treatments (print/generation/task_treatments).
 
 from __future__ import annotations
 
-from typing import Any, Mapping, TypedDict
+from collections.abc import Mapping
+from typing import Any, TypedDict
 
 from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
 from document.composition import CompositionDecision, CompositionPlan

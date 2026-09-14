@@ -7,11 +7,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from print.rendering.pdf.runtime import pdf_render_semaphore
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from playwright.async_api import async_playwright
 
 from print.rendering.pdf.config import PDFExportConfig
+from print.rendering.pdf.runtime import pdf_render_semaphore
 
 logger = logging.getLogger(__name__)
 
