@@ -1,65 +1,15 @@
 # Learner Action Policy
 
-You are deciding **when a learner should actively do something** inside a lesson.
+You decide **when a learner should actively do something** inside a lesson, but
+you operate inside a closed task contract supplied by the application.
 
-A learner action is not limited to tests. It is an intentional moment where learner behavior improves the teaching sequence or reveals useful information.
-
-## Use a learner action when it materially helps one of these jobs
-
-### Retrieve
-Ask the learner to recall something that should already be available before new teaching depends on it.
-
-### Predict
-Ask the learner to commit to an expectation before an explanation, demonstration, or result makes that expectation meaningful.
-
-### Discriminate
-Ask the learner to distinguish examples/non-examples, causes/effects, categories, cases, or representations when the boundary itself matters.
-
-### Classify or organize
-Ask the learner to group, match, order, sequence, or connect items when doing so builds the underlying structure.
-
-### Apply
-Ask the learner to use the idea on a new case rather than merely reread the explanation.
-
-### Surface a misconception
-Ask for a response when the learner's likely wrong belief matters to the next teaching move.
-
-### Articulate reasoning
-Ask for a short explanation, number, step, or conclusion when producing the response strengthens understanding.
-
-### Check readiness / understanding
-Ask for evidence when the next part of the lesson depends on whether the learner can use what was just taught.
-
-## Do not add an action merely because
-
-- this is a Learn lesson;
-- the previous block was explanatory;
-- the UI would otherwise look passive;
-- the same evidence was already collected;
-- the action does not change or strengthen the teaching sequence;
-- reading, observing, or following a worked example is genuinely better.
-
-## Density
-
-Prefer a few purposeful actions over constant interruption. Do not automatically add an interaction after every explanation.
-
-A substantial lesson will often benefit from actions at more than one point, but the sequence should feel like teaching, not a quiz stream.
-
-## Relationship to sections
-
-Learner actions may occur in any section. They are common in check/practice, but can also be valuable before explanation, during explanation, during misconception work, examples, transfer/application, or reflection.
-
-Do not infer `check = always action` or `explain = never action`.
-
-## Evidence
-
-`expected_evidence` describes what the action reveals or strengthens. It may be a prediction, current belief, correct classification, recalled fact, application, explanation, calculation, sequence, or mastery evidence.
-
-The learner does not need to be correct for every action to be worthwhile.
+A learner action is path-agnostic task meaning. It must be realizable by both
+Learn and Print from the same approved source ownership. Never invent a task,
+source, identifier, capability, or rendering form.
 
 ## Closed action vocabulary
 
-`action` must be exactly one of these ids (from `learner-actions.yaml`):
+`action` is a closed enum. It must be exactly one of:
 
 **Response-bearing**
 - `select-one`
@@ -72,27 +22,68 @@ The learner does not need to be correct for every action to be worthwhile.
 - `enter-number`
 - `enter-text`
 
-**Passive** (optional; usually omit the action entirely)
+**Passive**
 - `compare-without-response`
 - `read-explanation`
 
-Do **not** invent action ids. In particular, do not emit `describe-in-own-words`.
-For a short written or “in your own words” response, use `enter-text` and put the
-phrasing in `target` / `purpose` — **only when the block does not bind
-approved multiple-choice sources**.
+Do not invent synonyms such as `describe-in-own-words`. For a written response,
+use `enter-text` only when the exact bound approved source lists `enter-text` in
+its `allowed_actions`.
 
-### Action ↔ approved-source compatibility
+## Exact source contract
 
-When a block binds approved assessment sources, the action must match their form:
+The input contains `assessment_source_policy.approved_sources`. Each record gives:
 
-- multiple-choice sources → `select-one` or `select-many` only
-- open-response / constructed sources → `enter-text`, `enter-number`,
-  `complete-missing-values`, `order-items`, `match-pairs`, or `classify-items`
+- `approved_item_id`: copy this exact string when binding the source;
+- `kind`: fixed upstream; never reinterpret it;
+- `stem`: read-only context for choosing the relevant approved item;
+- `allowed_actions`: the complete legal response actions for that source;
+- `evidence_ref`: copy this exact string if you cite the item as evidence.
 
-Never bind `enter-text` (or other open actions) to multiple-choice sources.
-If the check/practice owns MC items and you want written articulation, either
-keep the MC action (`select-one` / `select-many`) or omit the MC source binding
-and use `enter-text` without those sources.
+Rules:
+
+1. Never construct, prefix, concatenate, shorten, or otherwise edit an ID.
+2. Never construct an evidence ref. Copy one of `allowed_evidence_refs` verbatim.
+3. If a block binds `source_question_ids`, its `learner_action.action` must be
+   one of that exact source record's `allowed_actions`.
+4. A response-bearing `learner_action` must own an approved compatible source in
+   the current shared Print+Learn contract. Do not create an unbound response task.
+5. A block that owns an approved source must state the learner action that source
+   is meant to realize. Do not attach a source to a null learner action.
+6. Each approved item may be owned by at most one teaching block.
+7. When `required_assessment_slots` is non-empty, approved sources may be bound
+   only inside those exact slots. Do not move a check item into guided or
+   independent practice just because the item is available.
+8. If no compatible approved source belongs in a block, keep the block passive:
+   use `learner_action: null` (or a passive action when genuinely useful). Never
+   invent a new source to satisfy a desired interaction.
+
+### Source compatibility
+
+The per-source `allowed_actions` field is authoritative. In general:
+
+- multiple-choice → `select-one` / `select-many`
+- open-response → `enter-text`, `enter-number`, `complete-missing-values`,
+  `order-items`, `reconstruct-order`, `match-pairs`, `classify-items`
+
+Do not infer beyond the supplied source record.
+
+## When an action is useful
+
+Within those constraints, use a learner action when it materially helps a real
+teaching job: retrieve prior knowledge, predict, discriminate, classify or
+organize, apply, surface a misconception, articulate reasoning, or check
+understanding.
+
+Do not add an action merely because this is a Learn lesson, because a section is
+called check/practice, because the UI would otherwise look passive, or because
+an interaction would be engaging. Prefer a few purposeful actions over constant
+interruption. Reading, observing, or following a worked example can legitimately
+remain passive.
+
+Learner actions may occur in any section **only when upstream task ownership
+allows it**. Section names do not override `required_assessment_slots` or exact
+source ownership.
 
 ## Output contract
 
@@ -108,6 +99,7 @@ When an action is warranted, describe only semantic learner behavior:
 }
 ```
 
-Never name Learn interaction types, Print treatments, page objects, layouts, components, or renderers.
+Never name Learn interaction types, Print treatments, page objects, layouts,
+components, renderers, or any identifier that was not supplied exactly.
 
-When no intentional learner action is worthwhile, output `null`.
+When no legal intentional learner action is available, output `null`.

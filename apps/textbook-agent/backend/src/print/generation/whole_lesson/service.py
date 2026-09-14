@@ -42,6 +42,29 @@ def slot_ids_from_structural_plan(plan_raw: Mapping[str, Any] | dict[str, Any] |
     )
 
 
+def assessment_slots_from_structural_plan(
+    plan_raw: Mapping[str, Any] | dict[str, Any] | None,
+) -> list[str]:
+    """Return structural slots that explicitly own planned assessment items.
+
+    The structural question plan is upstream truth. Teaching may choose the
+    assessment intent and pedagogy inside these slots, but it may not move an
+    approved question into a different slot merely because an item is available.
+    """
+    plan = plan_raw or {}
+    known_slots = set(slot_ids_from_structural_plan(plan))
+    out: list[str] = []
+    for item in plan.get("question_plan") or []:
+        if not isinstance(item, Mapping):
+            continue
+        slot_id = str(item.get("section_id") or "").strip()
+        if not slot_id or (known_slots and slot_id not in known_slots):
+            continue
+        if slot_id not in out:
+            out.append(slot_id)
+    return out
+
+
 async def _concept_card_for_generation(
     session: AsyncSession, generation: GenerationModel
 ) -> ConceptCardModel | None:
@@ -114,6 +137,9 @@ async def build_packet_for_generation(
         for section in (plan_raw.get("sections") or [])
         if isinstance(section, dict) and (section.get("role") or section.get("id"))
     }
+    required_assessment_slots = assessment_slots_from_structural_plan(
+        plan_raw if isinstance(plan_raw, dict) else {}
+    )
     return build_lesson_packet(
         path_lesson_id=str(context.get("path_lesson_id") or generation.id),
         subject=str(generation.subject or context.get("subject") or "General"),
@@ -147,6 +173,7 @@ async def build_packet_for_generation(
         approved_items=items,
         slot_ids=slot_ids or CONCEPTUAL_FIRST_EXPOSURE_SLOTS,
         visual_required_by_slot=visual_required_by_slot,
+        required_assessment_slots=required_assessment_slots,
     )
 
 

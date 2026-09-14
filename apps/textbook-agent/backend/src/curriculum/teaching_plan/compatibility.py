@@ -4,16 +4,19 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from core.policies.loader import (
+    canonical_non_passive_actions,
+    resolve_learner_action,
+)
 from curriculum.approved_items import approved_item_kind
 
-# Actions that require a closed multiple-choice source when an approved item is bound.
+# Closed response families. Aliases are canonicalized through learner-actions.yaml
+# before comparison, so this module cannot drift from the policy vocabulary.
 _MCQ_ACTIONS = frozenset({"select-one", "select-many"})
-# Actions that require open / constructed response when an approved item is bound.
 _OPEN_ACTIONS = frozenset(
     {
         "enter-text",
         "enter-number",
-        "produce-extended-response",
         "complete-missing-values",
         "order-items",
         "match-pairs",
@@ -32,6 +35,35 @@ class ActionSourceIncompatibleError(ValueError):
         super().__init__(f"{self.code}: {message}")
 
 
+def _canonical_action(action: str) -> str:
+    return str(resolve_learner_action(action) or action).strip()
+
+
+def response_bearing_action(action: str | None) -> bool:
+    """Return True only for a canonical response-bearing learner action."""
+    if not action:
+        return False
+    canonical = str(resolve_learner_action(action) or action).strip()
+    return canonical in canonical_non_passive_actions()
+
+
+def allowed_actions_for_source_kind(
+    kind: Literal["multiple_choice", "open_response"],
+) -> tuple[str, ...]:
+    """Exact learner-action vocabulary legal for a typed approved source.
+
+    The teaching planner receives this projection verbatim. It must choose from
+    this set instead of inferring compatibility from prose.
+    """
+    if kind == "multiple_choice":
+        return tuple(sorted(_MCQ_ACTIONS))
+    return tuple(sorted(_OPEN_ACTIONS))
+
+
+def allowed_actions_for_source_item(item: Any) -> tuple[str, ...]:
+    return allowed_actions_for_source_kind(approved_item_kind(item))
+
+
 def assert_action_compatible_with_sources(
     *,
     action: str,
@@ -44,31 +76,44 @@ def assert_action_compatible_with_sources(
     """
     if not source_items:
         return
+    original_action = action
+    action = _canonical_action(action)
     kinds = [approved_item_kind(item) for item in source_items]
     if action in _MCQ_ACTIONS:
         if any(kind != "multiple_choice" for kind in kinds):
             raise ActionSourceIncompatibleError(
-                f"action {action!r} requires multiple-choice sources; got {kinds}"
+                f"action {original_action!r} requires multiple-choice sources; got {kinds}"
             )
         return
     if action in _OPEN_ACTIONS:
         if any(kind != "open_response" for kind in kinds):
             raise ActionSourceIncompatibleError(
-                f"action {action!r} is incompatible with multiple-choice sources; "
+                f"action {original_action!r} is incompatible with multiple-choice sources; "
                 f"got {kinds}. Reauthoring requires a versioned task revision."
             )
         return
     # Passive / unknown actions must not bind assessment sources.
     raise ActionSourceIncompatibleError(
-        f"action {action!r} cannot bind approved assessment sources"
+        f"action {original_action!r} cannot bind approved assessment sources"
     )
 
 
 def expected_source_kind_for_action(
     action: str,
 ) -> Literal["multiple_choice", "open_response"] | None:
-    if action in _MCQ_ACTIONS:
+    canonical = _canonical_action(action)
+    if canonical in _MCQ_ACTIONS:
         return "multiple_choice"
-    if action in _OPEN_ACTIONS:
+    if canonical in _OPEN_ACTIONS:
         return "open_response"
     return None
+
+
+__all__ = [
+    "ActionSourceIncompatibleError",
+    "allowed_actions_for_source_item",
+    "allowed_actions_for_source_kind",
+    "assert_action_compatible_with_sources",
+    "expected_source_kind_for_action",
+    "response_bearing_action",
+]

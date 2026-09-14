@@ -14,6 +14,10 @@ from pydantic_ai import Agent
 from core.config import settings
 from curriculum.approved_items import approved_item_kind
 from curriculum.llm_contract_errors import is_transport_error, structured_output_errors
+from curriculum.teaching_plan.compatibility import (
+    allowed_actions_for_source_item,
+    response_bearing_action,
+)
 from print.generation.catalogue_projections import (
     TeachingGuidanceProjection,
     project_teaching_guidance,
@@ -100,10 +104,11 @@ def _missing_order_learner_action_errors(
     plan: TeachingPlan,
     packet: ImmutableLessonPacket,
 ) -> list[str]:
-    """Fail closed when ordering is required but teaching omitted learner_action.
+    """Legacy diagnostic retained for tests/tools.
 
-    Learn must not invent Sequence downstream. The model must emit the action
-    through the teaching repair loop.
+    The production planner no longer forces a response action merely because an
+    objective contains ordering language. A shared response task now requires an
+    approved source so Learn and Print preserve the same task meaning.
     """
     if not _objective_requires_order_reconstruction(plan, packet):
         return []
@@ -115,8 +120,6 @@ def _missing_order_learner_action_errors(
     )
     if has_order_action:
         return []
-    # Ordering ownership belongs on sequence / guided-practice blocks, not on
-    # every check-understanding assessment block.
     preferred = ("sequence", "practise-guided")
     preferred_blocks = [
         block
@@ -162,9 +165,11 @@ _PASSIVE_EVIDENCE_MARKERS = (
 
 
 def _missing_check_practice_action_errors(plan: TeachingPlan) -> list[str]:
-    """Fail closed when evidence-bearing check/practice blocks omit learner_action.
+    """Legacy diagnostic retained for tests/tools.
 
-    Legitimate passive blocks (read/observe/worked-example follow) stay allowed.
+    Production uses ``_task_source_contract_errors`` instead: practice may be
+    genuinely passive, while every response-bearing task must have exact source
+    ownership that both Learn and Print can preserve.
     """
     errors: list[str] = []
     for section in plan.sections:
@@ -183,6 +188,43 @@ def _missing_check_practice_action_errors(plan: TeachingPlan) -> list[str]:
                 "check/practice but learner_action is null. Either declare a "
                 "path-agnostic action or make the block genuinely passive."
             )
+    return errors
+
+
+def _task_source_contract_errors(plan: TeachingPlan) -> list[str]:
+    """Enforce one shared task contract before the Learn/Print fork.
+
+    Today Print questions/choices are convert-approved only. Therefore a shared
+    response-bearing learner action must own approved source IDs, and any block
+    that owns approved sources must state the learner action that both paths
+    will realize. This avoids Learn-only interactions and Print silently
+    dropping the response task.
+    """
+    errors: list[str] = []
+    for section in plan.sections:
+        for block in section.blocks:
+            action = (
+                str(block.learner_action.action or "").strip()
+                if block.learner_action is not None
+                else None
+            )
+            has_sources = bool(block.source_question_ids)
+            if has_sources and block.learner_action is None:
+                errors.append(
+                    "TEACHING_SOURCE_MISSING_ACTION: "
+                    f"block {block.id!r} owns approved source_question_ids but "
+                    "learner_action is null. Choose an action allowed by the bound "
+                    "source record."
+                )
+                continue
+            if action and response_bearing_action(action) and not has_sources:
+                errors.append(
+                    "TEACHING_UNBOUND_RESPONSE_ACTION: "
+                    f"block {block.id!r} action={action!r} has no approved source. "
+                    "For the current shared Print+Learn contract, either bind an "
+                    "approved compatible source in a structurally planned assessment "
+                    "slot or make this block passive (learner_action=null/passive)."
+                )
     return errors
 
 
@@ -209,19 +251,21 @@ def _action_source_compatibility_errors(
             try:
                 assert_action_compatible_with_sources(action=action, source_items=items)
             except ActionSourceIncompatibleError as exc:
-                hint = ""
-                if action == "enter-text":
-                    hint = (
-                        " Prefer action='select-one' or 'select-many' when the "
-                        "block binds multiple-choice sources; keep enter-text "
-                        "only when sources are open_response or unbound."
-                    )
-                errors.append(f"{exc}{hint}")
+                allowed = sorted(
+                    {
+                        candidate
+                        for item in items
+                        for candidate in allowed_actions_for_source_item(item)
+                    }
+                )
+                errors.append(
+                    f"{exc} Use only allowed_actions={allowed} for these exact sources."
+                )
     return errors
 
 
 def _unknown_learner_action_errors(plan: TeachingPlan) -> list[str]:
-    """Fail closed when learner_action.action is outside learner-actions.yaml."""
+    """Defensive check for legacy plans; new structured output uses a closed enum."""
     from core.policies.loader import is_known_learner_action, known_learner_actions
 
     legal = ", ".join(sorted(known_learner_actions()))
@@ -233,18 +277,10 @@ def _unknown_learner_action_errors(plan: TeachingPlan) -> list[str]:
             action = str(block.learner_action.action or "").strip()
             if is_known_learner_action(action):
                 continue
-            hint = ""
-            if action == "describe-in-own-words":
-                hint = (
-                    " Use action='enter-text' (only without multiple-choice "
-                    "source binding) and put 'describe in own words' in "
-                    "target/purpose; if the block owns MC sources, use "
-                    "select-one or select-many instead."
-                )
             errors.append(
                 "TEACHING_UNKNOWN_LEARNER_ACTION: "
                 f"block {block.id!r} learner_action.action={action!r} is not in "
-                f"learner-actions.yaml. Legal actions: {legal}.{hint}"
+                f"learner-actions.yaml. Legal actions: {legal}."
             )
     return errors
 
@@ -345,12 +381,7 @@ def _repair_briefs_missing_anchor_grounding(
     plan: TeachingPlan,
     packet: ImmutableLessonPacket,
 ) -> None:
-    """Append owned vocabulary when a brief fails BRIEF_NO_ANCHOR_OR_TERM.
-
-    Writers are steered to name the anchor in prose; models sometimes omit every
-    owned token. Prefer terminology / must_establish / anchor description words
-    over synthetic ids (ids remain a validator escape hatch, not the repair).
-    """
+    """Append owned vocabulary when a brief fails BRIEF_NO_ANCHOR_OR_TERM."""
     terminology = {term.lower() for term in packet.scope.terminology}
     anchor_vocabulary = anchor_terms(packet.anchor.description or "")
     if not terminology and packet.scope.must_establish:
@@ -374,15 +405,32 @@ def _repair_briefs_missing_anchor_grounding(
             block.brief = f"{block.brief.rstrip()} Use owned terms: {ground}."
 
 
+def _repair_sources_outside_structural_slots(
+    plan: TeachingPlan,
+    packet: ImmutableLessonPacket,
+) -> None:
+    """Keep assessment ownership in the slots selected by structural planning."""
+    required = set(packet.required_assessment_slots)
+    if not required:
+        return
+    for section in plan.sections:
+        if section.slot_id in required:
+            continue
+        for block in section.blocks:
+            # Structural question planning is authoritative. Optional teaching
+            # blocks cannot steal a source reserved for the planned check/practice.
+            block.source_question_ids = []
+
+
 def _repair_incompatible_assessment_sources(
     plan: TeachingPlan,
     packet: ImmutableLessonPacket,
 ) -> None:
     """Drop source bindings that cannot survive closed Print selection.
 
-    MC items require ``choices``; open-response items require ``questions``.
-    When the intent does not support the matching form, clear sources so
-    non-assessment forms (e.g. worked-example) remain selectable.
+    Action incompatibility is intentionally NOT silently repaired here: if a
+    required source is MCQ and the model chose enter-text, the repair loop must
+    change the action, not mutate approved assessment meaning.
     """
     by_id = {item.id: item for item in packet.approved_items}
     for section in plan.sections:
@@ -395,7 +443,12 @@ def _repair_incompatible_assessment_sources(
                 continue
             kinds = {approved_item_kind(by_id[sid]) for sid in block.source_question_ids}
             forms = _assessment_forms_for_intent(block.intent)
-            if kinds == {"multiple_choice"} and "choices" not in forms or kinds == {"open_response"} and "questions" not in forms or len(kinds) > 1:
+            incompatible_kind = (
+                (kinds == {"multiple_choice"} and "choices" not in forms)
+                or (kinds == {"open_response"} and "questions" not in forms)
+                or len(kinds) > 1
+            )
+            if incompatible_kind:
                 block.source_question_ids = []
 
 
@@ -404,10 +457,12 @@ def _repair_missing_assessment_sources(
     packet: ImmutableLessonPacket,
     assessment_intents: set[str],
 ) -> list[str]:
-    """Bind unused approved cards only on kind + concept/purpose overlap.
+    """Bind approved items without guessing or moving structural ownership.
 
-    Never guess with pool.pop(0). When an assessment-owning block still lacks a
-    compatible source, return a structured repair request for the model.
+    If structural planning named assessment slots, only those slots may consume
+    approved items and each such slot must own one compatible source. Otherwise
+    legacy check/diagnose intents remain required while other assessment-capable
+    intents are optional.
     """
     bind_intents = {
         "check-understanding",
@@ -419,6 +474,7 @@ def _repair_missing_assessment_sources(
         "transfer",
         "evaluate",
     } & set(assessment_intents)
+    required_intents = {"check-understanding", "diagnose-misconception"}
 
     used = {
         source_id
@@ -439,45 +495,83 @@ def _repair_missing_assessment_sources(
         "evaluate",
     )
 
-    ordered_blocks = []
-    for intent_name in priority:
-        for section in plan.sections:
+    def _ordered_candidates(section: Any) -> list[Any]:
+        out: list[Any] = []
+        for intent_name in priority:
             for block in section.blocks:
-                if block.intent == intent_name and not block.source_question_ids:
-                    ordered_blocks.append(block)
-    for section in plan.sections:
+                if block.intent == intent_name and block.intent in bind_intents:
+                    out.append(block)
         for block in section.blocks:
-            if (
-                block not in ordered_blocks
-                and block.intent in bind_intents
-                and not block.source_question_ids
-            ):
-                ordered_blocks.append(block)
+            if block.intent in bind_intents and block not in out:
+                out.append(block)
+        return out
 
     ownership_errors: list[str] = []
-    for block in ordered_blocks:
-        if block.intent not in bind_intents:
-            continue
-        match = None
-        for item in available:
-            if item.id in used:
+    required_slots = list(dict.fromkeys(packet.required_assessment_slots))
+    if required_slots:
+        sections_by_id = {section.slot_id: section for section in plan.sections}
+        for slot_id in required_slots:
+            section = sections_by_id.get(slot_id)
+            if section is None:
+                ownership_errors.append(
+                    "TEACHING_MISSING_ASSESSMENT_OWNERSHIP: structural assessment "
+                    f"slot {slot_id!r} is missing from the teaching plan."
+                )
                 continue
-            if _assessment_item_compatible_with_block(
-                block=block, item=item, packet=packet
-            ):
-                match = item
-                break
-        if match is None:
-            ownership_errors.append(
-                "TEACHING_MISSING_ASSESSMENT_OWNERSHIP: block "
-                f"{block.id!r} intent={block.intent!r} requires an approved "
-                "assessment source whose kind matches legal forms and whose stem "
-                "overlaps the block brief/objective/owned vocabulary. Do not guess "
-                "an unrelated item."
-            )
-            continue
-        block.source_question_ids = [match.id]
-        used.add(match.id)
+            if any(block.source_question_ids for block in section.blocks):
+                continue
+            match_block = None
+            match_item = None
+            for block in _ordered_candidates(section):
+                for item in available:
+                    if item.id in used:
+                        continue
+                    if _assessment_item_compatible_with_block(
+                        block=block, item=item, packet=packet
+                    ):
+                        match_block = block
+                        match_item = item
+                        break
+                if match_item is not None:
+                    break
+            if match_block is None or match_item is None:
+                ownership_errors.append(
+                    "TEACHING_MISSING_ASSESSMENT_OWNERSHIP: structural assessment "
+                    f"slot {slot_id!r} requires one approved source on an eligible "
+                    "assessment block. Use only the provided approved_sources; do not "
+                    "move the task to another slot or invent an item."
+                )
+                continue
+            match_block.source_question_ids = [match_item.id]
+            used.add(match_item.id)
+        return ownership_errors
+
+    # Legacy packets without an upstream question-plan slot contract.
+    for section in plan.sections:
+        for block in _ordered_candidates(section):
+            if block.source_question_ids:
+                continue
+            match = None
+            for item in available:
+                if item.id in used:
+                    continue
+                if _assessment_item_compatible_with_block(
+                    block=block, item=item, packet=packet
+                ):
+                    match = item
+                    break
+            if match is not None:
+                block.source_question_ids = [match.id]
+                used.add(match.id)
+                continue
+            if block.intent in required_intents:
+                ownership_errors.append(
+                    "TEACHING_MISSING_ASSESSMENT_OWNERSHIP: block "
+                    f"{block.id!r} intent={block.intent!r} requires an approved "
+                    "assessment source whose kind matches legal forms and whose stem "
+                    "overlaps the block brief/objective/owned vocabulary. Do not guess "
+                    "an unrelated item."
+                )
     return ownership_errors
 
 
@@ -498,7 +592,7 @@ def _assessment_source_policy(
     packet: ImmutableLessonPacket,
     snapshot: LessonLegalitySnapshot,
 ) -> dict[str, Any]:
-    """Project validator-owned assessment facts into both planner attempts."""
+    """Project exact validator-owned assessment facts into every planner attempt."""
     assessment_intents = sorted(
         intent_id
         for intent_id, objects in snapshot.compatible_objects_by_intent.items()
@@ -508,16 +602,26 @@ def _assessment_source_policy(
         {
             "approved_item_id": item.id,
             "kind": approved_item_kind(item),
+            "stem": item.stem,
+            "allowed_actions": list(allowed_actions_for_source_item(item)),
+            "evidence_ref": f"item.{item.id}",
         }
         for item in packet.approved_items
     ]
+    required_slots = list(packet.required_assessment_slots)
     return {
         "eligible_intents": assessment_intents,
+        "required_assessment_slots": required_slots,
         "approved_sources": approved_sources,
         "rules": {
-            "selection_is_optional": True,
+            "copy_ids_verbatim": True,
+            "copy_evidence_refs_verbatim": True,
+            "action_must_be_from_bound_source_allowed_actions": True,
+            "response_action_requires_approved_source": True,
+            "source_requires_learner_action": True,
             "multiple_choice_ids_per_block": "0_or_1",
             "source_only_on_eligible_intent": True,
+            "source_only_in_required_assessment_slots": bool(required_slots),
             "reuse_across_blocks": "forbidden",
             "item_kind_is_fixed_upstream": True,
         },
@@ -630,14 +734,17 @@ async def run_lesson_approach_planner(
                         "instruction": (
                             "Return the complete corrected TeachingPlan JSON. "
                             "Change only fields required to satisfy these errors. "
-                            "Use only intents listed under slot_intent_policy for each slot."
-                            " For the check-understanding block, when approved "
-                            "items exist, include at least one approved "
-                            "source_question_id. For a "
-                            "multiple-choice assessment block, select exactly one "
-                            "approved item ID; never group IDs or reuse an ID. Attach it "
-                            "only to an assessment_source_policy eligible intent. Remove "
-                            "forbidden terminology and use only allowed_evidence_refs."
+                            "Use only intents listed under slot_intent_policy for each slot. "
+                            "Treat assessment_source_policy as a closed contract: copy "
+                            "approved_item_id and evidence_ref strings verbatim; never "
+                            "construct or concatenate IDs. Bind sources only inside "
+                            "required_assessment_slots when that list is non-empty. Every "
+                            "bound source must have a learner_action whose action appears "
+                            "in that source's allowed_actions. Do not emit an unbound "
+                            "response-bearing learner_action. Keep optional guided or "
+                            "independent practice passive when no structurally planned "
+                            "approved source belongs there. Remove forbidden terminology "
+                            "and use only allowed_evidence_refs."
                         ),
                         "previous_output": previous_output,
                         "validation_errors": repair_errors,
@@ -675,20 +782,25 @@ async def run_lesson_approach_planner(
                     )
                 )
                 continue
+
+            # Deterministic normalization happens before semantic errors are
+            # collected, so repaired state does not carry stale pre-repair errors.
             _repair_briefs_missing_anchor_grounding(plan, packet)
-            ownership_errors = _missing_order_learner_action_errors(plan, packet)
-            ownership_errors.extend(_missing_check_practice_action_errors(plan))
-            ownership_errors.extend(_unknown_learner_action_errors(plan))
-            ownership_errors.extend(_action_source_compatibility_errors(plan, packet))
+            _repair_sources_outside_structural_slots(plan, packet)
             _repair_incompatible_assessment_sources(plan, packet)
-            ownership_errors.extend(
-                _repair_missing_assessment_sources(
-                    plan,
-                    packet,
-                    set(assessment_source_policy["eligible_intents"]),
-                )
+            ownership_errors = _repair_missing_assessment_sources(
+                plan,
+                packet,
+                set(assessment_source_policy["eligible_intents"]),
             )
             _repair_invalid_evidence_refs(plan, packet)
+
+            # Now validate the normalized plan. These errors describe the state
+            # the second LLM attempt actually needs to change.
+            ownership_errors.extend(_unknown_learner_action_errors(plan))
+            ownership_errors.extend(_task_source_contract_errors(plan))
+            ownership_errors.extend(_action_source_compatibility_errors(plan, packet))
+
             validation = validate_teaching_plan(
                 plan,
                 packet,

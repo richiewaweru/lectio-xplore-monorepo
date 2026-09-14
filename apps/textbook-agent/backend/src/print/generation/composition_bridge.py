@@ -1,9 +1,7 @@
 """Bridge shared document composition → Print FormPlan (ordinary content + tasks).
 
-Ordinary forms are chosen by ``document.composer`` (LLM) then mapped to Print
-catalogue object ids. Learner-response blocks use Print-only task treatments.
-FormPlan remains a Print layout carrier — it is no longer the ordinary-content
-selector (closed catalogue LLM selection).
+Every downstream choice is constrained by the exact candidate map derived before
+this bridge. The composer may narrow that set; it must never widen it.
 """
 
 from __future__ import annotations
@@ -16,10 +14,7 @@ from document.composer import compose_document_plan
 from document.composition import CompositionDecision, CompositionPlan
 from document.models import DOCUMENT_PRIMITIVE_KINDS
 from infra.authoring import AuthoringEngine, AuthoringProvider
-from print.generation.document_form_map import (
-    PRIMITIVE_TO_PRINT_OBJECT,
-    to_print_object,
-)
+from print.generation.document_form_map import to_document_primitive, to_print_object
 from print.generation.native_production import (
     package_contract_hash,
     teaching_plan_content_hash,
@@ -27,16 +22,15 @@ from print.generation.native_production import (
 from print.generation.selection_snapshot import (
     PrintSelectionSnapshot,
     snapshot_from_form_plan,
+    validate_print_selection,
 )
 from print.generation.task_treatments import (
     PRINT_TASK_TREATMENTS,
     print_treatment_for_learner_action,
 )
 from print.generation.whole_lesson.form_plan import FormDecision, FormPlan
-from print.resources.native_policy import (
-    default_print_policy,
-    policy_version_and_hash,
-)
+from print.generation.whole_lesson.validation import validate_form_plan
+from print.resources.native_policy import default_print_policy, policy_version_and_hash
 
 
 def _as_plan(plan: TeachingPlan | Mapping[str, Any]) -> TeachingPlan:
@@ -51,63 +45,121 @@ def _action_for(block: TeachingPlanBlock) -> str | None:
     return str(block.learner_action.action or "").strip() or None
 
 
+def _exact_candidate_map(
+    plan: TeachingPlan,
+    candidate_map: Mapping[str, Sequence[str]] | None,
+) -> dict[str, tuple[str, ...]]:
+    if candidate_map is None:
+        raise ValueError(
+            "candidate_map is required for closed Print composition; refusing to "
+            "derive or widen presentation capabilities after teaching approval"
+        )
+    out: dict[str, tuple[str, ...]] = {}
+    for section in plan.sections:
+        for block in section.blocks:
+            if block.id not in candidate_map:
+                raise ValueError(
+                    f"closed Print candidate map missing teaching block {block.id!r}"
+                )
+            out[block.id] = tuple(
+                dict.fromkeys(str(item) for item in candidate_map[block.id] if str(item))
+            )
+    return out
+
+
+def _ordinary_kinds_by_block(
+    plan: TeachingPlan,
+    candidate_map: Mapping[str, Sequence[str]],
+    *,
+    required_visual_slots: Sequence[str] = (),
+) -> dict[str, tuple[str, ...]]:
+    """Project exact Print object candidates into the six shared primitives."""
+    out: dict[str, tuple[str, ...]] = {}
+    by_slot: dict[str, list[str]] = {}
+    for section in plan.sections:
+        by_slot[str(section.slot_id)] = []
+        for block in section.blocks:
+            kinds: list[str] = []
+            for object_id in candidate_map.get(block.id, ()):
+                primitive = to_document_primitive(str(object_id))
+                if primitive and primitive not in kinds:
+                    kinds.append(primitive)
+            out[block.id] = tuple(kinds)
+            by_slot[str(section.slot_id)].append(block.id)
+
+    # A required visual is also a closed contract: choose one block in that slot
+    # that already has `figure` in its upstream candidate set and restrict it to
+    # figure. Never inject figure where upstream legality excluded it.
+    for slot_id in (str(item) for item in required_visual_slots if str(item).strip()):
+        candidate_blocks = [
+            block_id for block_id in by_slot.get(slot_id, ()) if "figure" in out[block_id]
+        ]
+        if not candidate_blocks:
+            raise ValueError(
+                f"required visual slot {slot_id!r} has no upstream-legal figure candidate"
+            )
+        chosen = candidate_blocks[0]
+        out[chosen] = ("figure",)
+    return out
+
+
 def _layer_print_tasks(
     plan: TeachingPlan,
     document_plan: CompositionPlan,
+    *,
+    candidate_map: Mapping[str, Sequence[str]],
 ) -> CompositionPlan:
-    """Replace/override ordinary nodes for blocks that need Print task treatments.
-
-    One decision per teaching block for FormPlan compatibility: if the block
-    requires a response surface, emit print_task; otherwise keep first document
-    choice for that block (extra document nodes from multi-node composition are
-    preserved as additional forms when they share the same block — FormPlan
-    historically is 1:1, so we emit the primary document node + task separately
-    only when task replaces content for that block).
-    """
+    """Layer task treatments only when they remain inside the exact shortlist."""
     by_block_docs: dict[str, list[CompositionDecision]] = {}
     for decision in document_plan.decisions:
-        if decision.lane != "document":
-            continue
-        by_block_docs.setdefault(decision.teaching_block_id, []).append(decision)
+        if decision.lane == "document":
+            by_block_docs.setdefault(decision.teaching_block_id, []).append(decision)
 
     decisions: list[CompositionDecision] = []
     for section in plan.sections:
         section_id = str(section.slot_id or "")
         for block in section.blocks:
+            allowed = {str(item) for item in candidate_map.get(block.id, ())}
             action = _action_for(block)
             intent = (block.intent or "").strip().lower().replace("_", "-")
+            source_ids = list(block.source_question_ids or [])
             treatment = print_treatment_for_learner_action(action, intent=intent)
-            # Assessment ownership: source_question_ids may only ride on
-            # questions/choices PlannedBlocks. Prefer an assessment treatment
-            # when the teaching block owns item IDs even without an action.
-            source_ids = list(getattr(block, "source_question_ids", None) or [])
+
+            # Legacy records can carry source ownership without learner_action;
+            # keep them readable, but never guess outside the typed source form.
             if treatment is None and source_ids:
-                treatment = "choices" if len(source_ids) == 1 else "questions"
-            # Never emit questions/choices without bound sources — PlannedBlock
-            # and writers require source_question_id(s). Fall back to document.
+                treatment = "choices" if len(source_ids) == 1 and "choices" in allowed else "questions"
             if treatment in {"questions", "choices"} and not source_ids:
                 treatment = None
+
             if treatment is not None:
+                if treatment not in allowed:
+                    raise ValueError(
+                        f"Print task {treatment!r} for block {block.id!r} is outside "
+                        f"the closed candidate set {sorted(allowed)}"
+                    )
                 decisions.append(
                     CompositionDecision(
                         teaching_block_id=block.id,
                         kind=treatment,
                         lane="print_task",
                         reason=(
-                            f"learner_action {action!r} → Print task {treatment!r}"
+                            f"learner_action {action!r} → upstream-legal Print task {treatment!r}"
                             if action
-                            else f"source_question_ids → Print task {treatment!r}"
+                            else f"approved source → upstream-legal Print task {treatment!r}"
                         ),
                         section_id=section_id or None,
                     )
                 )
                 continue
+
             docs = by_block_docs.get(block.id) or []
-            if docs:
-                decisions.extend(docs)
-            else:
-                # Composer omitted this block — fall through empty; caller validates.
-                pass
+            if not docs:
+                raise ValueError(
+                    f"closed Print composition has no legal realization for block {block.id!r}"
+                )
+            decisions.extend(docs)
+
     return CompositionPlan(
         path="print",
         teaching_plan_id=document_plan.teaching_plan_id or plan.teaching_plan_id,
@@ -125,7 +177,7 @@ def composition_to_form_plan(
     plan: TeachingPlan,
     composition: CompositionPlan,
 ) -> FormPlan:
-    """Map composition decisions to Print FormPlan objects (no raw page-object LLM pick)."""
+    """Map already-closed composition decisions to one Print object per block."""
     by_block: dict[str, list[CompositionDecision]] = {}
     for decision in composition.decisions:
         by_block.setdefault(decision.teaching_block_id, []).append(decision)
@@ -137,13 +189,10 @@ def composition_to_form_plan(
             choices = by_block.get(block.id) or []
             if not choices:
                 raise ValueError(f"composition missing decision for block {block.id!r}")
-            # FormPlan is 1 object per block — use the primary (first) decision.
             primary = choices[0]
             if primary.lane == "document":
                 if primary.kind not in DOCUMENT_PRIMITIVE_KINDS:
                     raise ValueError(f"illegal document kind {primary.kind!r}")
-                # PlannedBlock forbids standalone `heading` objects — section
-                # titles own headings. Collapse to prose for Print assembly.
                 object_id = (
                     "prose"
                     if primary.kind == "heading"
@@ -167,42 +216,6 @@ def composition_to_form_plan(
     return FormPlan.model_validate({"sections": sections})
 
 
-def _ensure_required_visual_figures(
-    teaching_plan: TeachingPlan,
-    form_plan: FormPlan,
-    required_visual_slots: Sequence[str],
-) -> FormPlan:
-    """Force at least one figure in each packet-required visual slot."""
-    required = {str(slot) for slot in required_visual_slots if str(slot).strip()}
-    if not required:
-        return form_plan
-    sections: list[dict[str, Any]] = []
-    for section in form_plan.sections:
-        forms = list(section.forms)
-        if section.slot_id in required and not any(f.object == "figure" for f in forms):
-            rewrite_at = next(
-                (
-                    idx
-                    for idx, decision in enumerate(forms)
-                    if decision.object not in PRINT_TASK_TREATMENTS
-                ),
-                0 if forms else None,
-            )
-            if rewrite_at is not None and forms:
-                prior = forms[rewrite_at]
-                forms[rewrite_at] = prior.model_copy(
-                    update={
-                        "object": "figure",
-                        "reason": (
-                            f"{prior.reason}; forced figure for required visual "
-                            f"slot {section.slot_id!r}"
-                        ).strip("; "),
-                    }
-                )
-        sections.append({"slot_id": section.slot_id, "forms": forms})
-    return FormPlan.model_validate({"sections": sections})
-
-
 async def build_print_production_from_composition(
     *,
     teaching_plan: TeachingPlan,
@@ -217,10 +230,16 @@ async def build_print_production_from_composition(
     progress_store: Any | None = None,
     progress_run_id: str | None = None,
 ) -> tuple[FormPlan, PrintSelectionSnapshot, CompositionPlan]:
-    """Compose ordinary structure, layer Print tasks, emit FormPlan + snapshot."""
+    """Compose and realize Print strictly inside the upstream candidate snapshot."""
     body = dict(policy) if policy is not None else default_print_policy()
     _, policy_hash = policy_version_and_hash(body)
     plan_hash = teaching_plan_content_hash(teaching_plan)
+    cmap = _exact_candidate_map(teaching_plan, candidate_map)
+    ordinary = _ordinary_kinds_by_block(
+        teaching_plan,
+        cmap,
+        required_visual_slots=required_visual_slots or (),
+    )
 
     document_plan = await compose_document_plan(
         teaching_plan,
@@ -228,36 +247,38 @@ async def build_print_production_from_composition(
         provider=provider,
         engine=engine,
         allow_heuristic_fallback=allow_heuristic_fallback,
+        allowed_kinds_by_block=ordinary,
         budget_ledger=budget_ledger,
         checkpoint_store=checkpoint_store,
         progress_store=progress_store,
         progress_run_id=progress_run_id,
     )
-    composition = _layer_print_tasks(teaching_plan, document_plan)
-    form_plan = composition_to_form_plan(teaching_plan, composition)
-    form_plan = _ensure_required_visual_figures(
-        teaching_plan, form_plan, required_visual_slots or ()
+    composition = _layer_print_tasks(
+        teaching_plan,
+        document_plan,
+        candidate_map=cmap,
     )
+    form_plan = composition_to_form_plan(teaching_plan, composition)
 
-    # Composition owns ordinary selection. Merge chosen objects (and the full
-    # ordinary Print vocabulary) into the candidate map so FormPlan validation
-    # does not reject composer choices that were outside the closed catalogue
-    # shortlist for a block.
-    ordinary_objects = tuple(sorted(PRIMITIVE_TO_PRINT_OBJECT.values()))
-    task_objects = tuple(sorted(PRINT_TASK_TREATMENTS))
-    cmap: dict[str, tuple[str, ...]] = {}
-    if candidate_map:
-        cmap = {str(k): tuple(str(x) for x in v) for k, v in candidate_map.items()}
-    for section in form_plan.sections:
-        for decision in section.forms:
-            prior = list(cmap.get(decision.block_id, ()))
-            merged = list(
-                dict.fromkeys(
-                    [*prior, decision.object, *ordinary_objects, *task_objects]
-                )
-            )
-            cmap[decision.block_id] = tuple(merged)
+    report = validate_form_plan(
+        form_plan,
+        teaching_plan,
+        candidate_map=cmap,
+        required_visual_slots=set(required_visual_slots or ()),
+    )
+    if not report.ok:
+        details = "; ".join(f"{issue.code}: {issue.message}" for issue in report.issues if issue.blocking)
+        raise ValueError(f"closed Print form plan failed validation: {details}")
 
+    validate_print_selection(
+        teaching_plan=teaching_plan,
+        decisions=form_plan,
+        candidate_map=cmap,
+        expected_teaching_plan_id=str(teaching_plan.teaching_plan_id or ""),
+        expected_teaching_plan_revision=int(teaching_plan.revision or 1),
+        expected_teaching_plan_hash=plan_hash,
+        actual_teaching_plan_hash=plan_hash,
+    )
     snapshot = snapshot_from_form_plan(
         teaching_plan=teaching_plan,
         form_plan=form_plan,

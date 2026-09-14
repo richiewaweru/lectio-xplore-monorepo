@@ -1,8 +1,4 @@
-"""Native Learn production: Teaching Plan → compose → write → LearnDocument v2.
-
-Production path uses the shared LLM document composer and writer. Brief-copy
-stubs are not used. Interactions go through ``interaction_writer``.
-"""
+"""Native Learn production: approved Teaching Plan → closed compose → write → LearnDocument v2."""
 
 from __future__ import annotations
 
@@ -19,6 +15,7 @@ from typing import Any
 from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
 from document.composer import compose_document_plan
 from document.composition import CompositionDecision, CompositionPlan
+from document.models import DOCUMENT_PRIMITIVE_KINDS
 from document.writer import write_document_primitive
 from infra.authoring import AuthoringEngine, AuthoringProvider
 from infra.authoring.capability_selector import ChooseFn
@@ -30,25 +27,15 @@ from learn.generation.preparation_context import (
     LearnPreparationContext,
     lesson_context_from_preparation,
 )
-from learn.interactions.action_map import (
-    ACTION_TO_LEARN_INTERACTION,
-    PASSIVE_LEARNER_ACTIONS,
-    interaction_for_learner_action,
-)
+from learn.interactions.action_map import PASSIVE_LEARNER_ACTIONS
 from learn.interactions.registry import RETAINED_INTERACTIONS
-from learn.resources.native_policy import (
-    default_learn_policy,
-)
-from learn.resources.selection import (
-    build_learn_candidate_map,
-    load_learn_selection_view,
-)
+from learn.resources.native_policy import default_learn_policy
+from learn.resources.selection import build_learn_candidate_map, load_learn_selection_view
 
 logger = logging.getLogger(__name__)
 
 
 def teaching_plan_content_hash(plan: TeachingPlan | Mapping[str, Any]) -> str:
-    """Stable hash of teaching meaning (identity fields excluded from body hash)."""
     if isinstance(plan, TeachingPlan):
         payload = plan.model_dump(mode="json")
     else:
@@ -81,7 +68,10 @@ def _block_lookup(plan: TeachingPlan) -> dict[str, TeachingPlanBlock]:
     return {block.id: block for section in plan.sections for block in section.blocks}
 
 
-def _realized_sections(plan: TeachingPlan, nodes: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+def _realized_sections(
+    plan: TeachingPlan,
+    nodes: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
     block_to_section: dict[str, str] = {}
     sections: list[dict[str, Any]] = []
     for index, section in enumerate(plan.sections):
@@ -108,11 +98,11 @@ def _realized_sections(plan: TeachingPlan, nodes: Sequence[Mapping[str, Any]]) -
 
 
 def _section_lookup(plan: TeachingPlan) -> dict[str, str]:
-    out: dict[str, str] = {}
-    for section in plan.sections:
-        for block in section.blocks:
-            out[block.id] = str(section.slot_id or "")
-    return out
+    return {
+        block.id: str(section.slot_id or "")
+        for section in plan.sections
+        for block in section.blocks
+    }
 
 
 def _action_for(block: TeachingPlanBlock) -> str | None:
@@ -126,21 +116,25 @@ def _legal_interaction_candidates(
     *,
     candidates_by_block: Mapping[str, Sequence[str]] | None = None,
 ) -> list[str]:
-    """Closed legal interaction kinds for a block (runtime shortlist ∩ retained).
+    """Return the exact retained shortlist; an explicit empty set stays empty.
 
-    Falls back to YAML learn-action-map candidates when no runtime shortlist.
+    YAML is a compatibility fallback only when no runtime shortlist exists at
+    all for the block. A runtime entry is authoritative even when empty.
     """
     from core.policies.loader import learn_candidates_for_action
 
     action = _action_for(block)
-    runtime = list(candidates_by_block.get(block.id, ()) if candidates_by_block else ())
-    runtime = [c for c in runtime if c in RETAINED_INTERACTIONS]
-    if runtime:
-        return runtime
-    yaml_candidates = [
-        c for c in learn_candidates_for_action(action) if c in RETAINED_INTERACTIONS
+    if candidates_by_block is not None and block.id in candidates_by_block:
+        return [
+            str(candidate)
+            for candidate in candidates_by_block[block.id]
+            if str(candidate) in RETAINED_INTERACTIONS
+        ]
+    return [
+        candidate
+        for candidate in learn_candidates_for_action(action)
+        if candidate in RETAINED_INTERACTIONS
     ]
-    return yaml_candidates
 
 
 async def _llm_select_interaction(
@@ -149,7 +143,6 @@ async def _llm_select_interaction(
     block: TeachingPlanBlock,
     choose: ChooseFn | None = None,
 ) -> str:
-    """Bounded LLM pick among legal candidates using interaction-selection.md."""
     from core.prompts.loader import effective_prompt_text
     from infra.authoring.capability_selector import (
         CapabilitySelection,
@@ -203,31 +196,27 @@ async def _select_interaction_for_block(
     candidates_by_block: Mapping[str, Sequence[str]] | None = None,
     choose: ChooseFn | None = None,
 ) -> tuple[str | None, str | None]:
-    """Derive retained interaction and truthful selection_mode.
-
-    Returns (kind, selection_mode). Modes:
-    - deterministic_single: exactly one legal candidate, no LLM
-    - policy_default: YAML default with no multi-candidate shortlist, no LLM
-    - llm_multi_candidate: 2+ legal candidates, bounded LLM via interaction-selection.md
-    """
+    """Choose only inside the runtime closed set when one was supplied."""
     action = _action_for(block)
     if not action or action in PASSIVE_LEARNER_ACTIONS:
         return None, None
-    mapped = interaction_for_learner_action(action) or ACTION_TO_LEARN_INTERACTION.get(
-        action
-    )
     legal = _legal_interaction_candidates(
         block, candidates_by_block=candidates_by_block
     )
     if len(legal) == 1:
         return legal[0], "deterministic_single"
     if len(legal) >= 2:
-        chosen = await _llm_select_interaction(
-            legal=legal, block=block, choose=choose
+        return (
+            await _llm_select_interaction(legal=legal, block=block, choose=choose),
+            "llm_multi_candidate",
         )
-        return chosen, "llm_multi_candidate"
-    if mapped:
-        return mapped, "policy_default"
+    # Explicit runtime emptiness is a contract failure, not permission to reopen
+    # the YAML/default map.
+    if candidates_by_block is not None and block.id in candidates_by_block:
+        raise ValueError(
+            f"required learner action {action!r} for block {block.id!r} has an "
+            "explicit empty Learn interaction candidate set"
+        )
     return None, None
 
 
@@ -238,16 +227,13 @@ async def _layer_learn_interactions(
     candidates_by_block: Mapping[str, Sequence[str]] | None = None,
     choose: ChooseFn | None = None,
 ) -> CompositionPlan:
-    """Append learn_interaction decisions after ordinary document composition."""
     section_map = _section_lookup(plan)
     decisions = list(document_plan.decisions)
-    seen_blocks: set[str] = set()
-    for block in (b for s in plan.sections for b in s.blocks):
-        if block.id in seen_blocks:
-            continue
-        seen_blocks.add(block.id)
+    for block in (block for section in plan.sections for block in section.blocks):
         interaction, mode = await _select_interaction_for_block(
-            block, candidates_by_block=candidates_by_block, choose=choose
+            block,
+            candidates_by_block=candidates_by_block,
+            choose=choose,
         )
         if interaction is None:
             continue
@@ -279,7 +265,6 @@ async def _layer_learn_interactions(
 
 
 def _assert_unique_node_ids(nodes: Sequence[Mapping[str, Any]]) -> None:
-    """Reject documents with colliding node ids before persist/publish (C03)."""
     seen: dict[str, int] = {}
     for index, node in enumerate(nodes):
         nid = str(node.get("id") or "").strip()
@@ -313,6 +298,32 @@ def _interaction_node_from_contract(
     }
 
 
+def _approved_item_index(items: Sequence[Any] | None) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for item in items or ():
+        if isinstance(item, Mapping):
+            item_id = str(item.get("id") or "")
+        else:
+            item_id = str(getattr(item, "id", "") or "")
+        if not item_id:
+            continue
+        if item_id in out:
+            raise ValueError(f"duplicate approved item id {item_id!r}")
+        out[item_id] = item
+    return out
+
+
+def _items_for_block(block: TeachingPlanBlock, index: Mapping[str, Any]) -> list[Any]:
+    items: list[Any] = []
+    for item_id in block.source_question_ids:
+        if item_id not in index:
+            raise ValueError(
+                f"approved source {item_id!r} for Learn block {block.id!r} is missing"
+            )
+        items.append(index[item_id])
+    return items
+
+
 async def produce_learn_document_from_teaching_async(
     *,
     teaching_plan: TeachingPlan,
@@ -333,11 +344,7 @@ async def produce_learn_document_from_teaching_async(
     durable_persist_hook: Any | None = None,
     on_item_committed: Any | None = None,
 ) -> dict[str, Any]:
-    """Production LearnDocument v2: compose → write → assemble.
-
-    Requires a provider for real learner-facing writing. Composition may fall
-    back to heuristics only when explicitly allowed and the composer fails.
-    """
+    """Production LearnDocument v2 with exact candidate/source provenance."""
     prep = preparation_context or LearnPreparationContext(
         objective=str(teaching_plan.arc or title or "").strip(),
     )
@@ -352,26 +359,26 @@ async def produce_learn_document_from_teaching_async(
         "objective": lesson_ctx.get("objective") or teaching_plan.arc,
     }
 
-    # Candidate map for interaction selection (closed legal set per block).
-    candidates_by_block: dict[str, list[str]] = {}
-    try:
-        candidate_map = build_learn_candidate_map(
-            teaching_plan,
-            available_asset_ids=available_asset_ids,
-            policy=default_learn_policy(),
-            fail_on_empty_required=False,
-        )
-        for block_id, entry in (candidate_map or {}).items():
-            if hasattr(entry, "interaction_candidates"):
-                candidates_by_block[str(block_id)] = [
-                    str(c) for c in entry.interaction_candidates
-                ]
-            elif isinstance(entry, Mapping):
-                candidates_by_block[str(block_id)] = [
-                    str(c) for c in (entry.get("interaction_candidates") or [])
-                ]
-    except Exception:  # noqa: BLE001
-        candidates_by_block = {}
+    # Build once and fail closed. Swallowing this error would reopen YAML defaults
+    # and erase the exact shortlist derived from intent/action/policy constraints.
+    candidate_map = build_learn_candidate_map(
+        teaching_plan,
+        available_asset_ids=available_asset_ids,
+        policy=default_learn_policy(),
+        fail_on_empty_required=True,
+    )
+    interaction_candidates: dict[str, list[str]] = {
+        str(block_id): [str(item) for item in entry.interaction_candidates]
+        for block_id, entry in candidate_map.items()
+    }
+    ordinary_candidates: dict[str, list[str]] = {
+        str(block_id): [
+            str(item)
+            for item in entry.content_candidates
+            if str(item) in DOCUMENT_PRIMITIVE_KINDS
+        ]
+        for block_id, entry in candidate_map.items()
+    }
 
     document_plan = await compose_document_plan(
         teaching_plan,
@@ -379,6 +386,7 @@ async def produce_learn_document_from_teaching_async(
         provider=provider,
         engine=engine,
         allow_heuristic_fallback=allow_heuristic_composition_fallback,
+        allowed_kinds_by_block=ordinary_candidates,
         budget_ledger=budget_ledger,
         checkpoint_store=checkpoint_store,
         progress_store=progress_store,
@@ -387,12 +395,14 @@ async def produce_learn_document_from_teaching_async(
     composition = await _layer_learn_interactions(
         teaching_plan,
         document_plan,
-        candidates_by_block=candidates_by_block,
+        candidates_by_block=interaction_candidates,
     )
 
     blocks = _block_lookup(teaching_plan)
+    approved_index = _approved_item_index(approved_items)
     nodes: list[dict[str, Any]] = []
-    doc_decisions = [d for d in composition.decisions if d.lane == "document"]
+    doc_decisions = [decision for decision in composition.decisions if decision.lane == "document"]
+
     for index, decision in enumerate(composition.decisions):
         block = blocks.get(decision.teaching_block_id)
         if block is None:
@@ -404,16 +414,16 @@ async def produce_learn_document_from_teaching_async(
         if decision.lane == "document":
             neighbours: list[dict[str, Any]] = []
             if decision in doc_decisions:
-                di = doc_decisions.index(decision)
+                position = doc_decisions.index(decision)
                 neighbours = [
                     {
-                        "kind": d.kind,
-                        "role": d.role,
-                        "teaching_block_id": d.teaching_block_id,
-                        "reason": d.reason,
+                        "kind": neighbour.kind,
+                        "role": neighbour.role,
+                        "teaching_block_id": neighbour.teaching_block_id,
+                        "reason": neighbour.reason,
                     }
-                    for i, d in enumerate(doc_decisions)
-                    if i != di and abs(i - di) <= 2
+                    for other_position, neighbour in enumerate(doc_decisions)
+                    if other_position != position and abs(other_position - position) <= 2
                 ]
             teaching_block_payload = {
                 "id": block.id,
@@ -438,7 +448,6 @@ async def produce_learn_document_from_teaching_async(
                 work_order_id=item_id,
                 budget_ledger=budget_ledger,
                 checkpoint_store=checkpoint_store,
-                # C03: unique within block — include decision index (same as work_order_id).
                 node_id=item_id,
                 progress_store=progress_store,
                 progress_run_id=progress_run_id,
@@ -447,20 +456,18 @@ async def produce_learn_document_from_teaching_async(
             )
             if decision.kind == "figure" and not node.get("asset_id"):
                 required_slots = {
-                    str(s).strip()
-                    for s in (lesson_ctx.get("required_visual_slots") or [])
-                    if str(s).strip()
+                    str(slot).strip()
+                    for slot in (lesson_ctx.get("required_visual_slots") or [])
+                    if str(slot).strip()
                 }
                 section_id = str(decision.section_id or "").strip()
-                visual_required = bool(
-                    section_id and section_id in required_slots
-                ) or bool(lesson_ctx.get("visual_required"))
+                visual_required = bool(section_id and section_id in required_slots) or bool(
+                    lesson_ctx.get("visual_required")
+                )
                 try:
                     node = await attach_figure_asset(
                         node,
-                        generation_id=str(
-                            source_generation_id or lesson_id or "learn-figure"
-                        ),
+                        generation_id=str(source_generation_id or lesson_id or "learn-figure"),
                         teaching_block=teaching_block_payload,
                         lesson_context=lesson_ctx,
                         budget_ledger=budget_ledger,
@@ -476,14 +483,14 @@ async def produce_learn_document_from_teaching_async(
                     node.pop("media_status", None)
                     node.pop("media_error", None)
                     node["asset_id"] = None
-                    logger.warning(
-                        "optional learn figure skipped for %s: %s",
-                        node.get("id"),
-                        exc,
-                    )
+                    logger.warning("optional learn figure skipped for %s: %s", node.get("id"), exc)
             nodes.append(node)
         elif decision.lane == "learn_interaction":
-            action = _action_for(block)
+            selected_items = _items_for_block(block, approved_index)
+            if block.learner_action is not None and not selected_items:
+                raise ValueError(
+                    f"Learn interaction block {block.id!r} has no exact approved source"
+                )
             contract = await write_interaction_from_request_async(
                 {
                     "capability_id": decision.kind,
@@ -492,14 +499,16 @@ async def produce_learn_document_from_teaching_async(
                     "section_id": decision.section_id or "section",
                     "brief": brief,
                     "intent": block.intent,
-                    "action": action,
+                    "action": _action_for(block),
                     "evidence": block.evidence or "",
                     "teaching_plan_id": teaching_plan.teaching_plan_id or "teaching-plan",
                     "teaching_plan_revision": int(teaching_plan.revision or 1),
+                    "teaching_plan_hash": teaching_plan_content_hash(teaching_plan),
+                    "source_refs": list(block.source_question_ids),
                     "lesson_context": lesson_ctx,
                     "allowed_facts": list(prep.allowed_facts or []),
                     "terminology": list(prep.terminology or []),
-                    "approved_items": list(approved_items or []),
+                    "approved_items": selected_items,
                 },
                 interaction_id=item_id,
                 provider=provider,
@@ -510,25 +519,24 @@ async def produce_learn_document_from_teaching_async(
                 progress_store=progress_store,
                 progress_run_id=progress_run_id,
             )
-            nodes.append(
-                _interaction_node_from_contract(
-                    contract,
-                    teaching_block_id=block.id,
-                    node_id=item_id,
-                )
+            node = _interaction_node_from_contract(
+                contract,
+                teaching_block_id=block.id,
+                node_id=item_id,
             )
+            nodes.append(node)
         else:
             raise ValueError(
                 f"unsupported Learn composition lane {decision.lane!r} "
                 f"for block {decision.teaching_block_id!r}"
             )
+
         if on_item_committed is not None:
-            maybe = on_item_committed(item_id, node if decision.lane == "document" else nodes[-1])
+            maybe = on_item_committed(item_id, nodes[-1])
             if inspect.isawaitable(maybe):
                 await maybe
 
     _assert_unique_node_ids(nodes)
-
     document = assemble_learn_document(
         nodes,
         {
@@ -567,7 +575,6 @@ def produce_learn_document_from_teaching(
     approved_items: Sequence[Any] | None = None,
     allow_heuristic_composition_fallback: bool = True,
 ) -> dict[str, Any]:
-    """Sync wrapper around the async LearnDocument v2 production path."""
     return _run_sync(
         produce_learn_document_from_teaching_async(
             teaching_plan=teaching_plan,

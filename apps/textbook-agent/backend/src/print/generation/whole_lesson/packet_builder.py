@@ -59,6 +59,7 @@ def build_lesson_packet(
     approved_items: tuple[ApprovedItemRecord, ...] | list[ApprovedItemRecord],
     slot_ids: tuple[str, ...] = CONCEPTUAL_FIRST_EXPOSURE_SLOTS,
     visual_required_by_slot: Mapping[str, bool] | None = None,
+    required_assessment_slots: list[str] | tuple[str, ...] | None = None,
 ) -> ImmutableLessonPacket:
     catalog = load_skeleton_catalog()
     slots: list[SlotRecord] = []
@@ -119,6 +120,13 @@ def build_lesson_packet(
         for record in approved_items
     ]
 
+    known_slots = set(slot_ids)
+    assessment_slots = [
+        str(slot_id)
+        for slot_id in dict.fromkeys(required_assessment_slots or ())
+        if str(slot_id) in known_slots
+    ]
+
     return ImmutableLessonPacket(
         lesson=LessonIdentity(
             path_lesson_id=path_lesson_id,
@@ -138,6 +146,7 @@ def build_lesson_packet(
         prior_established=prior,
         approved_items=items,
         slots=slots,
+        required_assessment_slots=assessment_slots,
         limits=LessonLimits(),
         resource_id="lesson",
     )

@@ -99,6 +99,10 @@ class ImmutableLessonPacket(BaseModel):
     prior_established: list[PriorEstablishedEntry] = Field(default_factory=list)
     approved_items: list[ApprovedItemRef] = Field(default_factory=list)
     slots: list[SlotRecord] = Field(default_factory=list)
+    # Structural question planning owns where approved assessment items may be
+    # consumed. Keeping this in the immutable packet prevents the Teaching LLM
+    # from moving a cold check into guided practice simply because it sees an item.
+    required_assessment_slots: list[str] = Field(default_factory=list)
     limits: LessonLimits = Field(default_factory=LessonLimits)
     resource_id: str = "lesson"
 
@@ -109,7 +113,7 @@ class ImmutableLessonPacket(BaseModel):
         return tuple(slot.slot_id for slot in self.slots if slot.visual_required)
 
     def planner_payload(self) -> dict[str, Any]:
-        """Subset visible to the teaching planner (IDs, not invented content)."""
+        """Subset visible to the teaching planner (fixed identities only)."""
         return {
             "lesson": self.lesson.model_dump(mode="json"),
             "scope": self.scope.model_dump(mode="json"),
@@ -118,6 +122,7 @@ class ImmutableLessonPacket(BaseModel):
             "prior_established": [p.model_dump(mode="json") for p in self.prior_established],
             "slots": [s.model_dump(mode="json") for s in self.slots],
             "required_visual_slots": list(self.required_visual_slots()),
+            "required_assessment_slots": list(self.required_assessment_slots),
             "approved_item_ids": self.approved_item_ids(),
             "limits": self.limits.model_dump(mode="json"),
         }

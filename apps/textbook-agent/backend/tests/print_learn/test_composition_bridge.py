@@ -1,8 +1,10 @@
-"""Composition bridge: shared composer → Print FormPlan."""
+"""Composition bridge: shared composer → closed Print FormPlan."""
 
 from __future__ import annotations
 
 import asyncio
+
+import pytest
 
 from curriculum.teaching_plan.models import (
     LearnerActionBrief,
@@ -47,7 +49,7 @@ def _plan() -> TeachingPlan:
                             target="stomata",
                             purpose="check",
                             expected_evidence="correct choice",
-                            difficulty="guided",  # type: ignore[arg-type]
+                            difficulty="guided",
                         ),
                     ),
                 ],
@@ -56,49 +58,78 @@ def _plan() -> TeachingPlan:
     )
 
 
-def test_composition_to_form_plan_maps_primitives_and_tasks() -> None:
+def test_print_bridge_requires_upstream_candidate_map() -> None:
     plan = _plan()
-    # Without bound assessment sources, select-one must not emit bare choices.
-    plan.sections[0].blocks[1].source_question_ids = []
-    heuristic_compose_document_plan(plan, path="print")
+    with pytest.raises(ValueError, match="candidate_map is required"):
+        asyncio.run(
+            build_print_production_from_composition(
+                teaching_plan=plan,
+                provider=None,
+                allow_heuristic_fallback=True,
+            )
+        )
+
+
+def test_composition_stays_inside_exact_ordinary_candidates() -> None:
+    plan = _plan()
+    plan.sections[0].blocks[1].learner_action = None
     form_plan, snapshot, composition = asyncio.run(
         build_print_production_from_composition(
             teaching_plan=plan,
             provider=None,
             allow_heuristic_fallback=True,
+            candidate_map={
+                "s1-b1": ["prose"],
+                "s1-b2": ["list"],
+            },
         )
     )
-    assert form_plan.sections[0].forms[0].object in {"prose", "heading", "list", "figure", "table", "aside"}
-    assert form_plan.sections[0].forms[1].object in {"prose", "heading", "list", "figure", "table", "aside"}
+    assert [item.object for item in form_plan.sections[0].forms] == ["prose", "list"]
+    assert snapshot.candidate_map == {"s1-b1": ["prose"], "s1-b2": ["list"]}
     assert composition.path == "print"
-    assert snapshot.decisions[1].form_id != "choices"
-    assert all(d.reason for d in form_plan.sections[0].forms)
 
 
-def test_composition_to_form_plan_keeps_choices_when_source_bound() -> None:
+def test_composition_keeps_choices_only_when_source_and_candidate_are_bound() -> None:
     plan = _plan()
     plan.sections[0].blocks[1].source_question_ids = ["q-stomata-1"]
-    heuristic_compose_document_plan(plan, path="print")
     form_plan, snapshot, composition = asyncio.run(
         build_print_production_from_composition(
             teaching_plan=plan,
             provider=None,
             allow_heuristic_fallback=True,
+            candidate_map={
+                "s1-b1": ["prose"],
+                "s1-b2": ["choices"],
+            },
         )
     )
-    assert form_plan.sections[0].forms[0].object in {"prose", "heading", "list", "figure", "table", "aside"}
+    assert form_plan.sections[0].forms[0].object == "prose"
     assert form_plan.sections[0].forms[1].object == "choices"
     assert composition.path == "print"
     assert snapshot.decisions[1].form_id == "choices"
-    assert all(d.reason for d in form_plan.sections[0].forms)
+    assert snapshot.candidate_map["s1-b2"] == ["choices"]
+
+
+def test_print_bridge_rejects_task_outside_closed_candidate_set() -> None:
+    plan = _plan()
+    plan.sections[0].blocks[1].source_question_ids = ["q-stomata-1"]
+    with pytest.raises(ValueError, match="outside the closed candidate set"):
+        asyncio.run(
+            build_print_production_from_composition(
+                teaching_plan=plan,
+                provider=None,
+                allow_heuristic_fallback=True,
+                candidate_map={
+                    "s1-b1": ["prose"],
+                    "s1-b2": ["prose"],
+                },
+            )
+        )
 
 
 def test_composition_to_form_plan_rejects_unknown_block() -> None:
     plan = _plan()
     empty = heuristic_compose_document_plan(plan, path="print")
     empty.decisions.clear()
-    try:
+    with pytest.raises(ValueError, match="missing decision"):
         composition_to_form_plan(plan, empty)
-        assert False, "expected ValueError"
-    except ValueError as exc:
-        assert "missing decision" in str(exc)
