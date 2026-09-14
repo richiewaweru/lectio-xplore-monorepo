@@ -111,4 +111,17 @@ Skipped per request. Closest automated stand-ins:
 3. Reliability hardening present — **yes**
 4–11. Learn/Print generation, editors, PDF, actions, figures, IDs — **covered by automated gates; live E2E deferred**
 12. Important gates green or documented non-blocking — **yes**
-13–14. Obsolete branch cleanup after `main` smoke — **follow-up phase**
+13–14. Obsolete branch cleanup after `main` smoke — **done**
+
+## Promotion
+
+- `main` pushed at `9b2a37fc` (`cebb61f2..9b2a37fc`).
+- Smoke from `main`: domain guards PASS; dual-path + reliability suite (excluding flaky T04) PASS.
+- Deleted after unique-commit proof (`main..<branch>` empty):  
+  `fix/document-overhaul-correction`, `fix/generation-spec-closeout`, `fix/treasure-joe-final-cleanup`, `fix/lectio-reliability-health`, `integration/lectio-current` (local + remote where applicable).
+
+Repository truth is now:
+
+```text
+main
+```
