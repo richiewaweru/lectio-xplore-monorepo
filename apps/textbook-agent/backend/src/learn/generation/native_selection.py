@@ -6,7 +6,8 @@ import asyncio
 import hashlib
 import json
 import re
-from typing import Any, Literal, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -141,9 +142,9 @@ def rank_learn_content_candidates(
     """Rank closed content shortlist by package guidance and clear intent hints."""
     if not content_ids:
         return []
+    from curriculum.teaching_plan.models import TeachingPlanBlock
     from document.heuristics import choose_document_primitive
     from document.models import DOCUMENT_PRIMITIVE_KINDS
-    from curriculum.teaching_plan.models import TeachingPlanBlock
 
     view = selection_view if selection_view is not None else load_learn_selection_view()
     by_id: dict[str, Mapping[str, Any]] = {}
@@ -181,13 +182,9 @@ def rank_learn_content_candidates(
             intent_bonus = 2
         elif capability_id == "explanation-block" and any(
             token in lowered for token in ("explain", "causal", "prose", "why")
-        ):
-            intent_bonus = 3
-        elif capability_id == "definition-card" and any(
+        ) or capability_id == "definition-card" and any(
             token in lowered for token in ("define", "definition", "term")
-        ):
-            intent_bonus = 3
-        elif capability_id == "summary-block" and any(
+        ) or capability_id == "summary-block" and any(
             token in lowered for token in ("summar", "takeaway", "recap")
         ):
             intent_bonus = 3

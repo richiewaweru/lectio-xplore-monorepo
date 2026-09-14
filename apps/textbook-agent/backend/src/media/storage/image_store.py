@@ -6,9 +6,9 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from uuid import uuid4
 
-from core.config import settings
 from core.storage.gcs_image_store import GCSImageStore as CoreGCSImageStore
 
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +217,7 @@ class GCSImageStore(ImageStore):
                 },
             )
             return final_url
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.error(
                 "v3 visual gcs upload failed",
                 extra={

@@ -8,9 +8,7 @@ import pytest
 
 from curriculum.teaching_plan.models import (
     LearnerActionBrief,
-    TeachingPlan,
     TeachingPlanBlock,
-    TeachingPlanSection,
 )
 from infra.authoring.capability_selector import CapabilitySelection
 from learn.generation.native_production import (

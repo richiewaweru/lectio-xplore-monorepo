@@ -83,11 +83,11 @@ class CompositionPlan(BaseModel):
 
 __all__ = [
     "COMPARE_INTENTS",
-    "CompositionDecision",
-    "CompositionPlan",
     "DEFINE_INTENTS",
     "DOCUMENT_PRIMITIVE_KINDS",
-    "DocumentPrimitiveKind",
     "LIST_INTENTS",
     "VISUAL_INTENTS",
+    "CompositionDecision",
+    "CompositionPlan",
+    "DocumentPrimitiveKind",
 ]
