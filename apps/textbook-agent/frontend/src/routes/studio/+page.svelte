@@ -817,8 +817,15 @@
 			const learnPath =
 				new URL(window.location.href).searchParams.get('path') === 'learn';
 			const contractVersion = Number(structuralPlan.document_contract_version ?? 1);
-			// Shared Units preparation stays on contract v1 until a path admits.
-			// Learn still needs Review concepts to generate the teaching plan.
+			// Shared Unit preparations use contract v1 until Learn or Print
+			// realization happens. They must first pass through Teaching Plan review.
+			if (contractVersion === 1) {
+				const next = await approveChunkedPlan(generationId, {
+					display_title: displayTitle.trim()
+				});
+				await applyChunkedState(next, { pollImmediately: true });
+				return;
+			}
 			if (contractVersion === 2 || learnPath) {
 				const next = await approveChunkedPlan(generationId, { display_title: displayTitle.trim() });
 				if (learnPath) {
