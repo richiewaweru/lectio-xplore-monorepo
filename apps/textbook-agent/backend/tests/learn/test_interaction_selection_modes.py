@@ -1,15 +1,12 @@
-"""Truthful Learn interaction selection modes (Treasure Joe Phase B)."""
+"""Truthful Learn interaction selection modes."""
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
-from curriculum.teaching_plan.models import (
-    LearnerActionBrief,
-    TeachingPlanBlock,
-)
+from curriculum.teaching_plan.models import LearnerActionBrief, TeachingPlanBlock
 from infra.authoring.capability_selector import CapabilitySelection
 from learn.generation.native_production import (
     _legal_interaction_candidates,
@@ -26,7 +23,7 @@ def _block(
     learner = None
     if action is not None:
         learner = LearnerActionBrief(
-            action=action,
+            action=action,  # type: ignore[arg-type]
             target="the taught idea",
             purpose="check understanding",
             expected_evidence="learner responds correctly",
@@ -45,9 +42,7 @@ def _block(
 @pytest.mark.asyncio
 async def test_single_candidate_is_deterministic_without_llm() -> None:
     block = _block(action="select-one")
-    choose = AsyncMock(
-        side_effect=AssertionError("LLM must not be called for one candidate")
-    )
+    choose = AsyncMock(side_effect=AssertionError("LLM must not be called"))
     kind, mode = await _select_interaction_for_block(
         block,
         candidates_by_block={"b1": ["choice"]},
@@ -59,23 +54,15 @@ async def test_single_candidate_is_deterministic_without_llm() -> None:
 
 
 @pytest.mark.asyncio
-async def test_yaml_default_without_shortlist_is_policy_default() -> None:
+async def test_explicit_empty_runtime_shortlist_does_not_reopen_yaml_default() -> None:
     block = _block(action="select-one")
-
-    def _empty_legal(*_a, **_k):
-        return []
-
-    with patch(
-        "learn.generation.native_production._legal_interaction_candidates",
-        side_effect=_empty_legal,
-    ):
-        kind, mode = await _select_interaction_for_block(
+    assert _legal_interaction_candidates(block, candidates_by_block={"b1": []}) == []
+    with pytest.raises(ValueError, match="explicit empty Learn interaction candidate set"):
+        await _select_interaction_for_block(
             block,
-            candidates_by_block=None,
+            candidates_by_block={"b1": []},
             choose=AsyncMock(side_effect=AssertionError("no LLM")),
         )
-    assert kind == "choice"
-    assert mode == "policy_default"
 
 
 @pytest.mark.asyncio
@@ -94,7 +81,7 @@ async def test_multi_candidate_uses_bounded_llm_and_validates() -> None:
     )
     assert kind == "short-response"
     assert mode == "llm_multi_candidate"
-    assert calls, "expected LLM choose invocation"
+    assert calls
 
 
 @pytest.mark.asyncio
@@ -115,19 +102,15 @@ async def test_multi_candidate_rejects_illegal_pick() -> None:
 @pytest.mark.asyncio
 async def test_interaction_selection_prompt_not_loaded_for_single_candidate() -> None:
     block = _block(action="order-items")
-    with patch(
-        "core.prompts.loader.effective_prompt_text",
-        side_effect=AssertionError("must not load interaction-selection for hashing"),
-    ):
-        kind, mode = await _select_interaction_for_block(
-            block,
-            candidates_by_block={"b1": ["sequence"]},
-        )
+    kind, mode = await _select_interaction_for_block(
+        block,
+        candidates_by_block={"b1": ["sequence"]},
+    )
     assert kind == "sequence"
     assert mode == "deterministic_single"
 
 
-def test_yaml_candidates_used_when_runtime_shortlist_absent() -> None:
+def test_yaml_candidates_used_only_when_runtime_shortlist_absent() -> None:
     block = _block(action="select-many")
     legal = _legal_interaction_candidates(block, candidates_by_block=None)
     assert legal == ["multi-select"]

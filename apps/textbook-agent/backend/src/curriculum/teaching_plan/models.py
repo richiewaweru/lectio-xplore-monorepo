@@ -7,18 +7,33 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 Difficulty = Literal["guided", "independent"]
+LearnerActionId = Literal[
+    "select-one",
+    "select-many",
+    "complete-missing-values",
+    "classify-items",
+    "match-pairs",
+    "order-items",
+    "reconstruct-order",
+    "enter-number",
+    "enter-text",
+    "compare-without-response",
+    "read-explanation",
+]
 
 
 class LearnerActionBrief(BaseModel):
     """Path-agnostic learner-task meaning — never a native component or form id.
 
     Minimum semantic fields only. Provenance (approved item ids, stimulus deps)
-    lives on the TeachingPlanBlock, not here.
+    lives on the TeachingPlanBlock, not here. ``action`` is a closed enum so
+    structured-output providers cannot invent vocabulary that downstream paths
+    do not understand.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    action: str = Field(min_length=1)
+    action: LearnerActionId
     target: str = Field(
         min_length=1,
         description="What the learner acts on (concept, items, structure) — not a UI id.",
@@ -46,6 +61,7 @@ class TeachingPlanBlock(BaseModel):
     departure_reason: str | None = None
     source_question_ids: list[str] = Field(
         default_factory=list,
+        max_length=6,
         description=(
             "Approved assessment-item ownership. Leave empty for a non-assessment "
             "block. A multiple-choice source must be the only ID in this array."
@@ -58,9 +74,13 @@ class TeachingPlanBlock(BaseModel):
     learner_action: LearnerActionBrief | None = None
 
     @model_validator(mode="after")
-    def _normalize_departure(self) -> TeachingPlanBlock:
+    def _normalize_and_check_provenance(self) -> TeachingPlanBlock:
         if self.departure_reason is not None and not self.departure_reason.strip():
             self.departure_reason = None
+        if len(self.source_question_ids) != len(set(self.source_question_ids)):
+            raise ValueError("source_question_ids must not contain duplicates")
+        if len(self.evidence_refs) != len(set(self.evidence_refs)):
+            raise ValueError("evidence_refs must not contain duplicates")
         return self
 
 
@@ -119,6 +139,7 @@ class TeachingPlanDraftBlock(BaseModel):
     departure_reason: str | None = None
     source_question_ids: list[str] = Field(
         default_factory=list,
+        max_length=6,
         description=(
             "Approved assessment-item ownership. Leave empty for a non-assessment "
             "block. A multiple-choice source must be the only ID in this array."
@@ -129,6 +150,14 @@ class TeachingPlanDraftBlock(BaseModel):
         description="Stimulus or content asset ids this block's learner task depends on.",
     )
     learner_action: LearnerActionBrief | None = None
+
+    @model_validator(mode="after")
+    def _reject_duplicate_refs(self) -> TeachingPlanDraftBlock:
+        if len(self.source_question_ids) != len(set(self.source_question_ids)):
+            raise ValueError("source_question_ids must not contain duplicates")
+        if len(self.evidence_refs) != len(set(self.evidence_refs)):
+            raise ValueError("evidence_refs must not contain duplicates")
+        return self
 
 
 class TeachingPlanDraftSection(BaseModel):
@@ -209,3 +238,19 @@ def materialize_teaching_plan(
             for slot_id, section in zip(slot_ids, draft.sections, strict=True)
         ],
     )
+
+
+__all__ = [
+    "AnchorUsageEntry",
+    "Difficulty",
+    "LearnerActionBrief",
+    "LearnerActionId",
+    "TeachingPlan",
+    "TeachingPlanBlock",
+    "TeachingPlanDraft",
+    "TeachingPlanDraftBlock",
+    "TeachingPlanDraftSection",
+    "TeachingPlanSection",
+    "TeachingRevisionRecord",
+    "materialize_teaching_plan",
+]
