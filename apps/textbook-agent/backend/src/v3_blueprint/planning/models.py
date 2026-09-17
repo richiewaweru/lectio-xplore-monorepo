@@ -80,14 +80,23 @@ class PlannedBlock(BaseModel):
     role: str | None = None
     placement: Placement = "main"
     source_question_ids: list[str] = Field(default_factory=list)
+    task_mode: Literal["none", "formative", "assessment"] = "none"
 
     @model_validator(mode="after")
     def first_slice_rules(self) -> PlannedBlock:
         if self.object == "heading":
             raise ValueError("section.title owns the generated section heading")
-        if self.object == "questions" and not 1 <= len(self.source_question_ids) <= 6:
+        if (
+            self.object == "questions"
+            and self.task_mode != "formative"
+            and not 1 <= len(self.source_question_ids) <= 6
+        ):
             raise ValueError("questions block requires 1..6 source_question_ids")
-        if self.object == "choices" and len(self.source_question_ids) != 1:
+        if (
+            self.object == "choices"
+            and self.task_mode != "formative"
+            and len(self.source_question_ids) != 1
+        ):
             raise ValueError("choices block requires exactly one source_question_id")
         if self.object not in {"questions", "choices"} and self.source_question_ids:
             raise ValueError("source_question_ids belong only to assessment blocks")

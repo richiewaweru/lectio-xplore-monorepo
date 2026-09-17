@@ -9,10 +9,25 @@ from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.unit_lesson.realizations import admit_realization
-from core.database.models import EditableLessonModel, GenerationModel
+from core.database.models import (
+    ConceptCardModel,
+    EditableLessonModel,
+    GenerationModel,
+)
+from curriculum.agents import run_lesson_sourcebook_writer, run_shared_task_writer
+from curriculum.approved_items import load_approved_item_records
+from curriculum.lesson_sourcebook.models import LessonSourcebook
+from curriculum.lesson_sourcebook.validation import build_content_bindings, validate_sourcebook
+from curriculum.shared_tasks import (
+    SharedTaskSpec,
+    build_shared_task_registry,
+    validate_shared_tasks,
+)
+from curriculum.shared_tasks.service import teaching_plan_hash
 from curriculum.teaching_plan.models import TeachingPlan
 from infra.authoring import AuthoringEngine, AuthoringProvider, LLMAuthoringProvider
 from infra.authoring.capability_selector import ChooseFn
@@ -143,9 +158,87 @@ async def produce_learn_from_approved_teaching(
     """
     _ = choose  # closed-selection choose is unused on the v2 compose path
     prep = preparation_context
+    prep_generation = await session.get(GenerationModel, preparation_generation_id)
+    raw_state = (
+        prep_generation.chunked_state_json
+        if prep_generation is not None
+        and isinstance(prep_generation.chunked_state_json, dict)
+        else {}
+    )
     if prep is None:
-        prep_generation = await session.get(GenerationModel, preparation_generation_id)
         prep = _preparation_from_generation(prep_generation)
+
+    # Unit callers intentionally pass only the approved Teaching Plan. The
+    # exact approved-item payload still belongs to the preparation revision,
+    # so recover it from that revision-bound packet before Learn writes an
+    # assessment interaction. This keeps source ownership intact without
+    # making callers duplicate the packet lookup.
+    if approved_items is None:
+        packet = raw_state.get("shared_preparation_packet")
+        if not isinstance(packet, dict):
+            page_state = raw_state.get("page_document_v2")
+            packet = page_state.get("lesson_packet") if isinstance(page_state, dict) else None
+        if isinstance(packet, dict) and isinstance(packet.get("approved_items"), list):
+            approved_items = packet["approved_items"]
+        if approved_items is None:
+            # Preparation packets can be created before approved PackItem rows
+            # are attached (the normal Unit workflow does exactly this). Load
+            # the current approved source records by the revision's pack/card
+            # ownership rather than manufacturing assessment content.
+            pack_ids = {
+                str(value).strip()
+                for value in (pack_id, preparation_generation_id)
+                if str(value or "").strip()
+            }
+            records: list[Any] = []
+            for candidate_pack_id in pack_ids:
+                cards = (
+                    await session.scalars(
+                        select(ConceptCardModel)
+                        .where(ConceptCardModel.pack_id == candidate_pack_id)
+                        .order_by(ConceptCardModel.id.asc())
+                    )
+                ).all()
+                for card in cards:
+                    records.extend(
+                        await load_approved_item_records(
+                            session=session,
+                            concept_card=card,
+                            require_nonempty=False,
+                        )
+                    )
+            if records:
+                approved_items = records
+
+    plan_hash = teaching_plan_content_hash(teaching_plan)
+    smart = raw_state.get("smart_lesson")
+    lesson_sourcebook: LessonSourcebook | None = None
+    shared_tasks: list[SharedTaskSpec] | None = None
+    if isinstance(smart, dict):
+        raw_sourcebook = smart.get("lesson_sourcebook")
+        if isinstance(raw_sourcebook, dict):
+            try:
+                lesson_sourcebook = LessonSourcebook.model_validate(raw_sourcebook)
+                # Repair older Print artifacts that stamped a selection hash
+                # instead of the canonical Teaching Plan content hash.
+                if lesson_sourcebook.teaching_plan_hash != plan_hash:
+                    lesson_sourcebook = lesson_sourcebook.model_copy(
+                        update={"teaching_plan_hash": plan_hash}
+                    )
+            except Exception:  # noqa: BLE001
+                lesson_sourcebook = None
+        raw_tasks = smart.get("shared_tasks")
+        if isinstance(raw_tasks, list):
+            try:
+                shared_tasks = [SharedTaskSpec.model_validate(item) for item in raw_tasks]
+            except Exception:  # noqa: BLE001
+                shared_tasks = None
+    if lesson_sourcebook is None:
+        lesson_sourcebook = LessonSourcebook(
+            teaching_plan_id=str(teaching_plan.teaching_plan_id or "teaching-plan"),
+            teaching_plan_revision=int(teaching_plan.revision or 1),
+            teaching_plan_hash=plan_hash,
+        )
 
     body = dict(policy) if policy is not None else default_learn_policy()
     _, policy_hash = policy_version_and_hash(body)
@@ -333,6 +426,95 @@ async def produce_learn_from_approved_teaching(
     selected_provider = provider or LLMAuthoringProvider(node_name="v3_block_writer_fast")
     selected_engine = engine
 
+    # The Learn fork must never fall back to an incomplete task envelope that
+    # was produced by an older preparation attempt.  Re-author the shared
+    # semantic artifacts before any Learn block writer is dispatched, then
+    # persist them on the revision-bound preparation generation so Print and
+    # Learn share the same sourcebook/task identities.
+    expected_hashes = {
+        plan_hash,
+        teaching_plan_hash(teaching_plan),
+    }
+    sourcebook_identity_ok = (
+        lesson_sourcebook is not None
+        and lesson_sourcebook.teaching_plan_id
+        == str(teaching_plan.teaching_plan_id or "teaching-plan")
+        and lesson_sourcebook.teaching_plan_revision
+        == int(teaching_plan.revision or 1)
+        and lesson_sourcebook.teaching_plan_hash in expected_hashes
+    )
+    sourcebook_errors = (
+        validate_sourcebook(lesson_sourcebook)
+        if lesson_sourcebook is not None and sourcebook_identity_ok
+        else ["missing or stale lesson sourcebook"]
+    )
+    task_errors = validate_shared_tasks(
+        teaching_plan,
+        shared_tasks or [],
+        sourcebook=lesson_sourcebook,
+    )
+    smart_artifacts_refreshed = False
+    if not sourcebook_identity_ok or sourcebook_errors or task_errors:
+        approved_map: dict[str, Any] = {}
+        for item in approved_items or []:
+            if isinstance(item, Mapping):
+                item_id = str(item.get("id") or item.get("item_id") or "").strip()
+                if item_id:
+                    approved_map[item_id] = dict(item)
+            else:
+                item_id = str(getattr(item, "id", "") or "").strip()
+                if item_id:
+                    to_dict = getattr(item, "to_dict", None)
+                    approved_map[item_id] = (
+                        to_dict() if callable(to_dict) else item
+                    )
+        if provider is not None and not isinstance(provider, LLMAuthoringProvider):
+            # Contract/integration tests inject a deterministic provider. Keep
+            # those tests offline and deterministic while still exercising the
+            # same complete task ownership and response-shape checks.
+            lesson_sourcebook = LessonSourcebook(
+                teaching_plan_id=str(teaching_plan.teaching_plan_id or "teaching-plan"),
+                teaching_plan_revision=int(teaching_plan.revision or 1),
+                teaching_plan_hash=teaching_plan_hash(teaching_plan),
+            )
+            shared_tasks = build_shared_task_registry(
+                teaching_plan,
+                approved_items=approved_map,
+            )
+        else:
+            lesson_sourcebook = await run_lesson_sourcebook_writer(teaching_plan)
+            shared_tasks = await run_shared_task_writer(
+                teaching_plan,
+                sourcebook=lesson_sourcebook,
+                approved_items=approved_map,
+            )
+        if prep_generation is not None:
+            prep_state = dict(prep_generation.chunked_state_json or {})
+            prep_smart = dict(prep_state.get("smart_lesson") or {})
+            prep_smart.update(
+                {
+                    "teaching_plan_id": str(teaching_plan.teaching_plan_id or ""),
+                    "teaching_plan_revision": int(teaching_plan.revision or 1),
+                    "teaching_plan_hash": plan_hash,
+                    "lesson_sourcebook": lesson_sourcebook.model_dump(mode="json"),
+                    "shared_tasks": [task.model_dump(mode="json") for task in shared_tasks],
+                }
+            )
+            prep_state["smart_lesson"] = prep_smart
+            prep_generation.chunked_state_json = prep_state
+            await session.flush()
+            smart_artifacts_refreshed = True
+
+    if smart_artifacts_refreshed:
+        # The reliability hook uses an independent session. Commit the
+        # revision-bound preparation envelope first so SQLite integration
+        # fixtures do not hold a writer lock while the heartbeat starts.
+        await session.commit()
+        realization = await session.get(type(realization), realization.id)
+        assert realization is not None
+        generation = await session.get(GenerationModel, output_id)
+        assert generation is not None
+
     async def _on_item_committed(_item_id: str, _node: dict[str, Any]) -> None:
         await _durable_persist()
 
@@ -348,6 +530,8 @@ async def produce_learn_from_approved_teaching(
             preparation_context=prep,
             available_asset_ids=available_asset_ids,
             approved_items=approved_items,
+            shared_tasks=shared_tasks,
+            lesson_sourcebook=lesson_sourcebook,
             allow_heuristic_composition_fallback=heuristic_fallback,
             budget_ledger=budget_ledger,
             checkpoint_store=checkpoint_store,
@@ -381,16 +565,21 @@ async def produce_learn_from_approved_teaching(
                     progress_store=progress,
                     progress_run_id=realization.id,
                 )
+            # The generation execution ledger still uses the historical
+            # ``failed`` value, but the public realization contract is
+            # deliberately stricter.  Surface a retryable realization state
+            # here so the status endpoint can serialize the failed attempt
+            # instead of raising a validation error and masking the failure.
             progress.sync_from_db(
                 realization.id,
                 path="learn",
                 owner_user_id=user_id,
-                status="failed",
+                status="failed_recoverable",
                 realization_revision=int(realization.realization_revision or 1),
                 teaching_plan_revision=int(teaching_plan.revision or 1),
                 stage="failed",
             )
-            realization.status = "failed"
+            realization.status = "failed_recoverable"
             await session.commit()
         except Exception:
             logger.debug("learn failure persist skipped", exc_info=True)
@@ -409,6 +598,9 @@ async def produce_learn_from_approved_teaching(
     validate_publishable_lesson_document(document)
 
     plan_hash = str(production["teaching_plan_hash"])
+    sourcebook = production.get("lesson_sourcebook")
+    shared_tasks = production.get("shared_tasks") or []
+    coherence_report = production.get("coherence_report")
     generation = await session.get(GenerationModel, output_id)
     assert generation is not None
     # Fenced commit: expired / cancelled workers cannot publish.
@@ -427,6 +619,22 @@ async def produce_learn_from_approved_teaching(
         else "llm"
     )
     generation.document_json = document
+    existing_smart = (
+        dict((generation.chunked_state_json or {}).get("smart_lesson") or {})
+        if isinstance(generation.chunked_state_json, dict)
+        else {}
+    )
+    bindings = build_content_bindings(
+        teaching_plan,
+        sourcebook=sourcebook,
+        tasks=shared_tasks,
+    )
+    reports = dict(existing_smart.get("coherence_reports") or {})
+    reports["learn"] = (
+        coherence_report.model_dump(mode="json")
+        if hasattr(coherence_report, "model_dump")
+        else coherence_report
+    )
     generation.chunked_state_json = {
         **dict(generation.chunked_state_json or {}),
         "shared_preparation": False,
@@ -451,6 +659,34 @@ async def produce_learn_from_approved_teaching(
             ),
         },
         "form_prompt": "learn_document_v2_compose_write",
+        "smart_lesson": {
+            **existing_smart,
+            "teaching_plan_id": str(teaching_plan.teaching_plan_id or ""),
+            "teaching_plan_revision": int(teaching_plan.revision or 1),
+            "teaching_plan_hash": plan_hash,
+            "flow_choice": dict(
+                existing_smart.get("flow_choice")
+                or (generation.chunked_state_json or {}).get("flow_choice")
+                or raw_state.get("flow_choice")
+                or {}
+            ),
+            "lesson_sourcebook": (
+                sourcebook.model_dump(mode="json")
+                if hasattr(sourcebook, "model_dump")
+                else sourcebook
+            ),
+            "shared_tasks": [
+                task.model_dump(mode="json")
+                if hasattr(task, "model_dump")
+                else dict(task)
+                for task in shared_tasks
+            ],
+            "teaching_content_bindings": [
+                binding.model_dump(mode="json") for binding in bindings
+            ],
+            "coherence_reports": reports,
+            "repair_events": list(existing_smart.get("repair_events") or []),
+        },
     }
     progress.sync_from_db(
         realization.id,
@@ -498,6 +734,44 @@ async def produce_learn_from_approved_teaching(
     realization.status = "ready"
     realization.output_id = output_id
     realization.teaching_plan_hash = plan_hash
+    # Keep the preparation revision as the durable cross-path evidence
+    # envelope. Print may have already persisted its report; Learn adds its
+    # own report without replacing that sibling-path evidence.
+    preparation = await session.get(GenerationModel, preparation_generation_id)
+    if preparation is not None:
+        preparation_state = dict(preparation.chunked_state_json or {})
+        preparation_smart = dict(preparation_state.get("smart_lesson") or {})
+        preparation_reports = dict(
+            preparation_smart.get("coherence_reports") or {}
+        )
+        preparation_reports["learn"] = (
+            coherence_report.model_dump(mode="json")
+            if hasattr(coherence_report, "model_dump")
+            else coherence_report
+        )
+        preparation_state["smart_lesson"] = {
+            **preparation_smart,
+            "teaching_plan_id": str(teaching_plan.teaching_plan_id or ""),
+            "teaching_plan_revision": int(teaching_plan.revision or 1),
+            "teaching_plan_hash": plan_hash,
+            "lesson_sourcebook": (
+                sourcebook.model_dump(mode="json")
+                if hasattr(sourcebook, "model_dump")
+                else sourcebook
+            ),
+            "shared_tasks": [
+                task.model_dump(mode="json")
+                if hasattr(task, "model_dump")
+                else dict(task)
+                for task in shared_tasks
+            ],
+            "teaching_content_bindings": [
+                binding.model_dump(mode="json") for binding in bindings
+            ],
+            "coherence_reports": preparation_reports,
+            "repair_events": list(preparation_smart.get("repair_events") or []),
+        }
+        preparation.chunked_state_json = preparation_state
     await session.flush()
 
     return {

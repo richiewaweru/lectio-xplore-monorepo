@@ -1,0 +1,94 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - navigation [ref=e4]:
+      - link "Lectio" [ref=e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=e29]:
+        - link "Home" [ref=e30] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=e32] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=e6]:
+    - generic [ref=e277]:
+      - generic [ref=e278]:
+        - generic [ref=e279]:
+          - link "← Units" [ref=e280] [cursor=pointer]:
+            - /url: /units
+          - paragraph [ref=e281]: Science · Grade 5
+          - heading "Covered Leaf and Food Making" [level=1] [ref=e282]
+          - paragraph [ref=e283]: explain why a covered leaf cannot make food even when it is watered
+        - generic [ref=e284]:
+          - generic [ref=e285]: Draft
+          - button "Replan the lessons" [ref=e286] [cursor=pointer]
+      - navigation "Unit workspace views" [ref=e287]:
+        - button "Lessons" [ref=e288] [cursor=pointer]
+        - button "Schedule" [ref=e289] [cursor=pointer]
+        - button "Groups" [ref=e290] [cursor=pointer]
+        - button "Resources" [ref=e291] [cursor=pointer]
+        - button "Results" [ref=e292] [cursor=pointer]
+        - button "History" [ref=e293] [cursor=pointer]
+      - generic [ref=e294]:
+        - paragraph [ref=e295]: 4 lessons
+        - button "Looks good — lock it in" [ref=e297] [cursor=pointer]
+      - generic [ref=e298]:
+        - complementary "Your lessons" [ref=e299]:
+          - paragraph [ref=e300]: Your lessons
+          - list [ref=e301]:
+            - listitem [ref=e302]:
+              - button "1 Plants make their own food" [ref=e303]:
+                - generic [ref=e304]: "1"
+                - strong [ref=e306]: Plants make their own food
+            - listitem [ref=e307]:
+              - button "2 What plants need to make food needs lesson 1" [ref=e308]:
+                - generic [ref=e309]: "2"
+                - generic [ref=e310]:
+                  - strong [ref=e311]: What plants need to make food
+                  - generic [ref=e312]: needs lesson 1
+            - listitem [ref=e313]:
+              - button "3 The leaf captures light energy needs lesson 1 · needs lesson 2" [ref=e314]:
+                - generic [ref=e315]: "3"
+                - generic [ref=e316]:
+                  - strong [ref=e317]: The leaf captures light energy
+                  - generic [ref=e318]: needs lesson 1 · needs lesson 2
+            - listitem [ref=e319]:
+              - button "4 When a leaf is covered needs lesson 3" [ref=e320]:
+                - generic [ref=e321]: "4"
+                - generic [ref=e322]:
+                  - strong [ref=e323]: When a leaf is covered
+                  - generic [ref=e324]: needs lesson 3
+        - main [ref=e325]:
+          - generic [ref=e327]:
+            - paragraph [ref=e328]: Lesson 1
+            - heading "Plants make their own food" [level=2] [ref=e329]
+          - generic [ref=e330]:
+            - generic [ref=e331]:
+              - generic [ref=e332]: Title
+              - textbox "Title" [ref=e333]: Plants make their own food
+            - generic [ref=e334]:
+              - generic [ref=e335]: What students will be able to do
+              - textbox "What students will be able to do" [ref=e336]: Explain that plants produce their own food using light, rather than absorbing food from the soil.
+            - generic [ref=e337]:
+              - generic [ref=e338]: Must establish one per line
+              - textbox "Must establish one per line" [ref=e339]: Plants make their own food through photosynthesis. Food for the plant is a sugar (glucose), not soil nutrients. The leaf is the main organ where food is made.
+            - button "Save lesson changes" [ref=e340] [cursor=pointer]
+          - generic [ref=e341]:
+            - generic [ref=e342]:
+              - paragraph [ref=e343]: Before this lesson
+              - heading "What earlier lessons it requires" [level=3] [ref=e344]
+            - paragraph [ref=e345]: Nothing — this can be the starting point.
+          - button "Show shape debug" [ref=e347] [cursor=pointer]
+          - generic [ref=e348]:
+            - generic [ref=e349]:
+              - paragraph [ref=e350]: Preparation
+              - heading "Ready when you are" [level=3] [ref=e351]
+              - paragraph [ref=e352]: Print and Learn are generated independently from the Teaching Plan.
+            - generic [ref=e353]:
+              - button "Generate Print" [disabled] [ref=e354]
+              - button "Generate Learn" [disabled] [ref=e355]
+              - button "Check preparation status" [ref=e356] [cursor=pointer]
+      - region "Edit your lessons by chat" [ref=e357]:
+        - paragraph [ref=e358]: Edit your lessons
+        - generic [ref=e359]:
+          - textbox "e.g. Combine lessons 2 and 3, or add something about fractions" [ref=e360]
+          - button "Send" [disabled] [ref=e361]
+  - generic [ref=e28]: Unit · Lectio

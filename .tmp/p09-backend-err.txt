@@ -1,0 +1,191 @@
+INFO:     Will watch for changes in these directories: ['C:\\Projects\\lectio\\apps\\textbook-agent\\backend']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [27544] using WatchFiles
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [21876]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'scripts\run_p09_salvage_attempts_a.py', 'scripts\run_p09_export_pdfs.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [21876]
+WARNING:  WatchFiles detected changes in 'scripts\run_p09_salvage_attempts_a.py', 'scripts\run_p09_export_pdfs.py'. Reloading...
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [37320]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [37320]
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+WARNING:  WatchFiles detected changes in 'scripts\run_p09_export_pdfs.py'. Reloading...
+INFO:     Started server process [36808]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [36808]
+WARNING:  WatchFiles detected changes in 'scripts\run_p09_export_pdfs.py'. Reloading...
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [33440]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'src\print\generation\whole_lesson\teaching_agent.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [33440]
+WARNING:  WatchFiles detected changes in 'src\print\generation\whole_lesson\teaching_agent.py'. Reloading...
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [33960]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [33960]
+WARNING:  WatchFiles detected changes in 'src\learn\generation\native_selection.py'. Reloading...
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [46936]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [46936]
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [25068]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'src\learn\generation\work_orders.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [25068]
+WARNING:  WatchFiles detected changes in 'scripts\run_p09_salvage_attempts_a.py', 'src\learn\generation\work_orders.py'. Reloading...
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [22744]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [22744]
+WARNING:  WatchFiles detected changes in 'scripts\run_p09_salvage_attempts_a.py'. Reloading...
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [12188]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [12188]
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [16884]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'scripts\run_p09_live_campaign.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [16884]
+WARNING:  WatchFiles detected changes in 'scripts\run_p09_v05_failure_recovery.py', 'scripts\run_p09_live_campaign.py'. Reloading...
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [45044]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [45044]
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+WARNING:  WatchFiles detected changes in 'scripts\run_p09_v05_failure_recovery.py'. Reloading...
+INFO:     Started server process [6832]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [6832]
+WARNING:  WatchFiles detected changes in 'scripts\run_p09_v05_failure_recovery.py'. Reloading...
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [34388]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [34388]
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+WARNING:  WatchFiles detected changes in 'scripts\run_p09_v05_failure_recovery.py'. Reloading...
+INFO:     Started server process [38472]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [38472]
+WARNING:  WatchFiles detected changes in 'scripts\run_p09_v05_failure_recovery.py'. Reloading...
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [35260]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 7 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [35260]
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [9740]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.

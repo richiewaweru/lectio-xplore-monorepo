@@ -1,0 +1,67 @@
+﻿packages/lectio-learn/src\test\lectio.test.ts:6:import ExplanationBlock from '$lib/components/lectio/ExplanationBlock.svelte';
+packages/lectio-learn/src\test\lectio.test.ts:890:		const explanation = render(ExplanationBlock, { props: { content: calculusSection.explanation! } });
+packages/lectio-learn/src\routes\components\+page.svelte:12:		ExplanationBlock,
+packages/lectio-learn/src\routes\components\+page.svelte:184:									<ExplanationBlock content={preview.content} />
+apps/textbook-agent/backend/src\document\composition.py:50:        "ExplanationBlock",
+packages/lectio-learn/src\lib\templates\EnrichedLearningPath.svelte:8:		ExplanationBlock,
+packages/lectio-learn/src\lib\templates\EnrichedLearningPath.svelte:72:				<ExplanationBlock content={section.explanation} />
+apps/textbook-agent/backend/src\learn\generation\pipeline_dispatch.py:24:_HISTORICAL_PIPELINE_MARKERS = frozenset({"v3_studio", "component_lectio"})
+apps/textbook-agent/backend/src\learn\generation\pipeline_dispatch.py:29:    "component_lectio retired; use learn document path"
+packages/lectio-learn/src\lib\templates\diagram-led\README.md:31:- ExplanationBlock
+packages/lectio-learn/src\lib\schema\validate.ts:198:			w.push(warn('ExplanationBlock', 'body exceeds 350 words'));
+packages/lectio-learn/src\lib\schema\validate.ts:200:			w.push(warn('ExplanationBlock', 'emphasis max 3 items'));
+packages/lectio-learn/src\lib\schema\validate.ts:203:				w.push(warn('ExplanationBlock', 'callouts max 3'));
+packages/lectio-learn/src\lib\schema\validate.ts:206:					w.push(warn(`ExplanationBlock callout ${i + 1}`, 'text exceeds 60 words'));
+packages/lectio-learn/src\lib\templates\diagram-led\layout.svelte:8:		ExplanationBlock,
+packages/lectio-learn/src\lib\templates\diagram-led\layout.svelte:65:			<ExplanationBlock content={section.explanation} />
+packages/lectio-learn/src\lib\templates\concept-compact\README.md:31:- ExplanationBlock
+apps/textbook-agent/backend/src\learn\authoring\builder\service.py:29:_RETIRED_COMPONENT_SOURCE = "component_lectio"
+apps/textbook-agent/backend/src\learn\authoring\builder\service.py:218:async def get_or_create_component_lectio_builder_lesson(
+apps/textbook-agent/backend/src\learn\authoring\builder\service.py:237:    "get_or_create_component_lectio_builder_lesson",
+apps/textbook-agent/backend/src\learn\authoring\builder\routes.py:46:_RETIRED_SOURCES = {"v3_generation", "v3_studio", "legacy", "legacy_unit", "component_lectio"}
+apps/textbook-agent/backend/src\learn\authoring\builder\routes.py:52:    "code": "component_lectio_retired",
+apps/textbook-agent/backend/src\learn\authoring\builder\routes.py:184:        "component_lectio",
+apps/textbook-agent/backend/src\learn\authoring\builder\routes.py:363:                if body.source_type == "component_lectio"
+apps/textbook-agent/backend/src\learn\authoring\builder\routes.py:369:    if body.source_type == "component_lectio":
+apps/textbook-agent/backend/src\learn\authoring\builder\routes.py:428:async def open_component_lectio_builder_lesson(
+packages/lectio-learn/src\lib\templates\concept-compact\layout.svelte:5:		ExplanationBlock,
+packages/lectio-learn/src\lib\templates\concept-compact\layout.svelte:46:		<ExplanationBlock content={section.explanation} />
+packages/lectio-learn/src\lib\templates\compare-and-apply\layout.svelte:6:		ExplanationBlock,
+packages/lectio-learn/src\lib\templates\compare-and-apply\layout.svelte:44:		<ExplanationBlock content={section.explanation} />
+packages/lectio-learn/src\lib\templates\classification\layout.svelte:6:		ExplanationBlock,
+packages/lectio-learn/src\lib\templates\classification\layout.svelte:44:		<ExplanationBlock content={section.explanation} />
+packages/lectio-learn/src\lib\templates\interactive-lab\README.md:40:- ExplanationBlock
+packages/lectio-learn/src\lib\templates\interactive-lab\layout.svelte:6:		ExplanationBlock,
+packages/lectio-learn/src\lib\templates\interactive-lab\layout.svelte:49:		<ExplanationBlock content={section.explanation} />
+packages/lectio-learn/src\lib\templates\GuidedConceptPath.svelte:7:		ExplanationBlock,
+packages/lectio-learn/src\lib\templates\GuidedConceptPath.svelte:55:				<ExplanationBlock content={section.explanation} />
+packages/lectio-learn/src\lib\templates\guided-concept-path\README.md:31:- ExplanationBlock
+packages/lectio-learn/src\lib\templates\guided-discovery\README.md:39:- ExplanationBlock
+packages/lectio-learn/src\lib\templates\guided-concept-path\layout.svelte:10:		ExplanationBlock,
+packages/lectio-learn/src\lib\templates\guided-concept-path\layout.svelte:110:				<ExplanationBlock content={section.explanation} />
+packages/lectio-learn/src\lib\templates\guided-discovery\layout.svelte:6:		ExplanationBlock,
+packages/lectio-learn/src\lib\templates\guided-discovery\layout.svelte:50:				<ExplanationBlock content={section.explanation} />
+packages/lectio-learn/src\lib\templates\formal-track\README.md:30:- ExplanationBlock
+packages/lectio-learn/src\lib\index.ts:5:	ExplanationBlock,
+packages/lectio-learn/src\lib\templates\formal-track\layout.svelte:5:		ExplanationBlock,
+packages/lectio-learn/src\lib\templates\formal-track\layout.svelte:50:		<ExplanationBlock content={section.explanation} />
+packages/lectio-learn/src\lib\templates\procedure\README.md:37:- ExplanationBlock
+packages/lectio-learn/src\lib\templates\procedure\layout.svelte:5:		ExplanationBlock,
+packages/lectio-learn/src\lib\templates\procedure\layout.svelte:48:		<ExplanationBlock content={section.explanation} />
+packages/lectio-learn/src\lib\templates\open-canvas\layout.svelte:5:		ExplanationBlock,
+packages/lectio-learn/src\lib\templates\open-canvas\layout.svelte:68:		<ExplanationBlock content={section.explanation} />
+packages/lectio-learn/src\lib\templates\low-load\README.md:31:- ExplanationBlock
+packages/lectio-learn/src\lib\templates\low-load\layout.svelte:5:		ExplanationBlock,
+packages/lectio-learn/src\lib\templates\low-load\layout.svelte:43:		<ExplanationBlock content={section.explanation} />
+packages/lectio-learn/src\lib\lectio\components\explanation-block\metadata.ts:5:	registryKey: 'ExplanationBlock',
+packages/lectio-learn/src\lib\lectio\components\explanation-block\metadata.ts:7:	name: 'ExplanationBlock',
+packages/lectio-learn/src\lib\lectio\components\explanation-block\Component.svelte:2:	import Inner from '$lib/components/lectio/ExplanationBlock.svelte';
+apps/textbook-agent/backend/src\infra\database\models.py:686:            postgresql_where=(Column("source_type") == "component_lectio"),
+apps/textbook-agent/backend/src\infra\database\models.py:687:            sqlite_where=(Column("source_type") == "component_lectio"),
+packages/lectio-learn/src\lib\components\lectio\index.ts:4:export { default as ExplanationBlock } from './ExplanationBlock.svelte';
+packages/lectio-learn/src\lib\templates\visual-led\layout.svelte:8:		ExplanationBlock,
+packages/lectio-learn/src\lib\templates\visual-led\layout.svelte:60:		<ExplanationBlock content={section.explanation} />
+packages/lectio-learn/src\lib\templates\timeline\README.md:35:- ExplanationBlock
+packages/lectio-learn/src\lib\templates\visual-led\README.md:32:- ExplanationBlock
+packages/lectio-learn/src\lib\templates\timeline\layout.svelte:5:		ExplanationBlock,
+packages/lectio-learn/src\lib\templates\timeline\layout.svelte:47:		<ExplanationBlock content={section.explanation} />

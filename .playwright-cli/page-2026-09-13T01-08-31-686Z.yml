@@ -1,0 +1,70 @@
+- generic [ref=f7e2]:
+  - banner [ref=f7e3]:
+    - navigation [ref=f7e4]:
+      - link "Lectio" [ref=f7e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=f7e6]:
+        - link "Home" [ref=f7e7] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=f7e9] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=f7e10]:
+    - generic [ref=f7e11]:
+      - generic [ref=f7e13]:
+        - generic [ref=f7e14]: Studio
+        - button "Start over" [ref=f7e15]
+      - generic [ref=f7e16]:
+        - generic [ref=f7e17]:
+          - paragraph [ref=f7e18]: Lesson approach
+          - heading "Review the teaching plan" [level=2] [ref=f7e19]
+          - paragraph [ref=f7e20]: Approve the pedagogical arc before forms and writers run. Read the last brief first.
+        - generic [ref=f7e21]:
+          - heading "Arc" [level=3] [ref=f7e22]
+          - paragraph [ref=f7e23]: The lesson opens on a torch shining past a hand held between it and a wall, asking why the dark shape lands where it does. It builds the target idea that light leaves the torch in straight lines, so the hand meets and blocks those lines and leaves an unlit region of wall behind it, then sets that account side by side with the belief that light bends around the hand into the open space and the belief that the hand gives off a shadow of its own. It closes by asking the learner to explain the same hand-and-torch shadow through straight-line light rather than through bending or an emitted shadow.
+        - generic [ref=f7e24]:
+          - heading "Anchor usage" [level=3] [ref=f7e25]
+          - list [ref=f7e26]:
+            - listitem [ref=f7e27]: "orient: Presents the torch, the hand held between torch and wall, and the crisp shadow on the wall as the concrete case that opens attention, without explaining it yet."
+            - listitem [ref=f7e28]: "explain: Uses the same hand-and-torch setup to show the straight paths leaving the torch, being met and blocked by the hand, and the unlit wall region that results."
+            - listitem [ref=f7e29]: "contrast: Sets the straight-line blocking in the hand-and-torch setup beside the prediction that light bends around the hand into the open space, and beside the prediction that the hand gives off a shadow, showing only the straight-line account matches the crisp shadow on the wall."
+            - listitem [ref=f7e30]: "check: Tests the objective on the same hand-and-torch case, checking that the learner explains the shadow through straight-line light rather than through bending or an emitted shadow."
+        - paragraph [ref=f7e31]: "Focused misconceptions: M1, M2"
+        - article [ref=f7e32]:
+          - heading "check" [level=3] [ref=f7e33]
+          - paragraph [ref=f7e34]: Check whether the learner explains a shadow on the same torch, hand, and wall case through straight-line light from the source rather than through bending or an emitted shadow.
+          - generic [ref=f7e35]:
+            - paragraph [ref=f7e36]: check-b1 · check-understanding
+            - paragraph [ref=f7e37]: "Check the objective on the torch, hand, and wall case: the learner must explain that light travels in straight lines from the torch and that the hand blocks those lines, leaving the wall behind the hand unlit and so casting the shadow. The check is on the straight-line explanation of the shadow, not on shadow size and not on how shadows are produced in other settings."
+        - article [ref=f7e38]:
+          - heading "contrast" [level=3] [ref=f7e39]
+          - paragraph [ref=f7e40]: Set the straight-line account side by side with the belief that light bends around the hand into the open space, and with the belief that the hand gives off a shadow of its own, showing which account the crisp shadow supports.
+          - generic [ref=f7e41]:
+            - paragraph [ref=f7e42]: contrast-b2 · diagnose-misconception
+            - paragraph [ref=f7e43]: "Name the second belief directly: that the shadow is something the hand gives off and drops onto the wall, like a dark substance the object produces. Test it on the same torch, hand, and wall case: if the hand emitted a shadow, the dark region would sit wherever the hand is and would travel with the hand regardless of the light. What is actually observed is that the dark region lies on the wall opposite the torch, directly behind the hand along the straight light paths, and that removing the torch removes the shadow even though the hand is unchanged. So the shadow is the region of wall the straight paths never reached. Do not treat this as a careless slip; it is a held model and these observations are the evidence against it."
+            - paragraph [ref=f7e44]: "Departure: As with M1, this is not a legitimate competing account to contrast but a held wrong model, so the slot needs diagnosis of the belief rather than a neutral side-by-side comparison."
+          - generic [ref=f7e45]:
+            - paragraph [ref=f7e46]: contrast-b1 · diagnose-misconception
+            - paragraph [ref=f7e47]: "Name the belief directly: that light bends around the hand because there is open space on the other side, which would let some light reach behind the hand and soften or fill the shadow. Test it against the observed case: a crisp shadow appears on the wall directly behind the hand, and the wall region behind the hand stays unlit. If light bent around the hand into the open space, that region would be lit instead. Do not treat the bending account as simply a slip; it is a held model, and the crisp shadow is the evidence that rules it out."
+            - paragraph [ref=f7e48]: "Departure: The slot's typical work is contrasting a case with a near-miss, but M1 is not a legitimate alternative account — it is a held wrong model. Naming and testing it as a held belief, not contrasting it as an equally valid option, is what the misconception requires."
+        - article [ref=f7e49]:
+          - heading "explain" [level=3] [ref=f7e50]
+          - paragraph [ref=f7e51]: Build the target idea that light leaves a source in straight lines and that a shadow is the region those lines never reach because the hand meets them first.
+          - generic [ref=f7e52]:
+            - paragraph [ref=f7e53]: explain-b2 · show-structure
+            - paragraph [ref=f7e54]: "Show the arrangement for the same torch, hand, and wall case: the light source, the straight paths leaving it toward the wall, the hand standing across some of those paths, and the wall divided into a lit region and a dark region behind the hand. Label the source, the straight light paths, the hand as the object that blocks them, and the shadow as the unlit region. The relationship the learner must notice is that every part of the wall that is dark lies directly behind the hand along the straight paths from the source. Do not show any path that curves around the hand."
+          - generic [ref=f7e55]:
+            - paragraph [ref=f7e56]: explain-b1 · explain-cause
+            - paragraph [ref=f7e57]: "State the mechanism on the torch, hand, and wall case: light leaves the torch and travels in straight lines, so the hand is met by those lines and blocks them. The wall behind the hand therefore receives no light where the hand stands in the way, and that unlit wall region is the shadow. Keep the cause-and-result chain explicit and use the same torch, hand, and wall throughout. Do not mention bending light around the hand yet, and do not discuss how shadow size changes with distance."
+        - article [ref=f7e58]:
+          - heading "orient" [level=3] [ref=f7e59]
+          - paragraph [ref=f7e60]: Open attention on the torch, hand, and wall shadow and surface what learners already know about light from a source reaching a surface.
+          - generic [ref=f7e61]:
+            - paragraph [ref=f7e62]: orient-b2 · activate-prior-knowledge
+            - paragraph [ref=f7e63]: "Prompt recall of two prerequisites: light comes from a source and we see objects because light reaches our eyes, and a shadow is the dark area that appears when light cannot reach a surface. Use the torch and wall only as the setting for this recall. Do not explain why the hand blocks the light, and do not name straight lines yet."
+          - generic [ref=f7e64]:
+            - paragraph [ref=f7e65]: orient-b1 · orient
+            - paragraph [ref=f7e66]: "Begin with the concrete case: a torch is shining, a hand is held between the torch and the wall, and a crisp shadow of the hand appears on the wall. Ask what the learner notices about where the dark shape is and where the lit part of the wall is. Do not yet say anything about straight lines, paths, or why the shadow appears; the puzzle is left open."
+        - generic [ref=f7e67]:
+          - button "Approving…" [disabled] [ref=f7e71]
+          - button "Reject" [disabled] [ref=f7e69]
+  - generic [ref=f7e70]: Lectio

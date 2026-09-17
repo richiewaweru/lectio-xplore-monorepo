@@ -16,6 +16,7 @@ import {
 	updateListItems as updateListItemsInDoc,
 	updateNodeText as updateNodeTextInDoc,
 	updateTable as updateTableInDoc,
+	updateInteraction as updateInteractionInDoc,
 	type AddableKind
 } from './document-state';
 import type {
@@ -48,6 +49,14 @@ export interface LearnDocumentStore {
 	updateTable: (
 		nodeId: string,
 		patch: { headers?: string[]; rows?: string[][]; caption?: string }
+	) => boolean;
+	updateInteraction: (
+		nodeId: string,
+		patch: {
+			prompt?: string;
+			config?: Record<string, unknown>;
+			feedback?: Record<string, unknown> | string | null;
+		}
 	) => boolean;
 	moveNodeUp: (nodeId: string) => boolean;
 	moveNodeDown: (nodeId: string) => boolean;
@@ -125,6 +134,10 @@ export function createLearnDocumentStore(): LearnDocumentStore {
 		updateTable(nodeId, patch) {
 			if (!document) return false;
 			return apply(updateTableInDoc(document, nodeId, patch));
+		},
+		updateInteraction(nodeId, patch) {
+			if (!document) return false;
+			return apply(updateInteractionInDoc(document, nodeId, patch));
 		},
 		moveNodeUp(nodeId: string) {
 			if (!document) return false;

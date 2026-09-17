@@ -1,0 +1,49 @@
+﻿
+> frontend@1.0.0-beta.1 build C:\Projects\lectio\apps\textbook-agent\frontend
+> vite build
+
+vite v7.3.6 building ssr environment for production...
+transforming...
+node.exe : 11:30:09 PM [vite-plugin-svelte] 
+C:/Projects/lectio/packages/lectio-learn/dist/components/lectio/CalloutBlock.svelte:51:2 Unused CSS selector 
+".callout:not(.callout--aside)"
+At C:\Program Files\nodejs\pnpm.ps1:16 char:5
++     & "$basedir/node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs"  ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (11:30:09 PM [vi...allout--aside)":String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+https://svelte.dev/e/css_unused_selector
+49: <style>
+50:   @media print {
+51:     .callout:not(.callout--aside) {
+                                     ^
+52:       border: 1.5px solid #ccc;
+53:       border-left: 4px solid var(--rh-print-accent, #1e3a5f);
+11:30:09 PM [vite-plugin-svelte] 
+C:/Projects/lectio/packages/lectio-learn/dist/components/lectio/CalloutBlock.svelte:58:2 Unused CSS selector 
+".callout__heading"
+https://svelte.dev/e/css_unused_selector
+56:     }
+57: 
+58:     .callout__heading {
+                         ^
+59:       font-weight: 700;
+60:       font-size: 0.8em;
+Γ£ô 357 modules transformed.
+Γ£ù Build failed in 21.79s
+error during build:
+[vite:load-fallback] Could not load C:\Projects\lectio\apps\textbook-agent\frontend\src\lib/studio/v3-booklet 
+(imported by src/routes/builder/[id]/+page.svelte): ENOENT: no such file or directory, open 
+'C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\studio\v3-booklet'
+    at async open (node:internal/fs/promises:639:25)
+    at async Object.readFile (node:internal/fs/promises:1243:14)
+    at async Object.handler (file:///C:/Projects/lectio/node_modules/.pnpm/vite@7.3.6_@types+node@24.1_f9c9b2d4ab4057c5
+d14c98ec7d9cf2aa/node_modules/vite/dist/node/chunks/config.js:33249:21)
+    at async PluginDriver.hookFirstAndGetPlugin 
+(file:///C:/Projects/lectio/node_modules/.pnpm/rollup@4.62.4/node_modules/rollup/dist/es/shared/node-entry.js:22669:28)
+    at async 
+file:///C:/Projects/lectio/node_modules/.pnpm/rollup@4.62.4/node_modules/rollup/dist/es/shared/node-entry.js:21655:33
+    at async Queue.work 
+(file:///C:/Projects/lectio/node_modules/.pnpm/rollup@4.62.4/node_modules/rollup/dist/es/shared/node-entry.js:22897:32)
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.

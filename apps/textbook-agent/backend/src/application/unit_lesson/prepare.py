@@ -32,7 +32,9 @@ from core.database.models import (
     UnitScopeContractModel,
 )
 from curriculum.agents import run_component_selector, run_path_structural_planner
+from curriculum.flow_validation import validate_flow_choice
 from curriculum.models import (
+    FlowChoice,
     PathStructuralPagePlan,
     PathStructuralPlan,
     PreparedLessonResponse,
@@ -251,7 +253,7 @@ def _build_structural_plan(
         if shared_preparation:
             if instance_id is None or role is None:
                 raise PathPreparationBlocked(
-                    "Shared structural planner returned more sections than fixed skeleton slots"
+                    "Shared structural planner returned more sections than selected lesson slots"
                 )
             # Instance id is code-owned; role is the pedagogical slot type.
             section_payload["id"] = instance_id
@@ -321,11 +323,11 @@ def _build_structural_plan(
         lesson_mode=lesson_mode,
         lesson_intent=LessonIntent(
             goal=lesson.objective,
-            structure_rationale="Path objective and skeleton slots are fixed; content awaits teacher review.",
+        structure_rationale="Selected lesson flow is code-validated; content awaits teacher review.",
         ),
         anchor=AnchorSpec(
             example=_clip_advisory_text(generated.anchor.description, limit=100),
-            reuse_scope="Reuse this anchor across the fixed path lesson slots.",
+        reuse_scope="Reuse this anchor across the selected path lesson slots.",
         ),
         prior_knowledge=prior_knowledge,
         cards=[card],
@@ -501,7 +503,8 @@ async def prepare_path_lesson(
     blocking = _blocking_shape_message(preview.variants)
     if blocking:
         raise PathPreparationBlocked(blocking)
-    slot_roles = [slot.slot_id for slot in preview.variants[0].slots]
+    recommended_slots = [slot.slot_id for slot in preview.variants[0].slots]
+    slot_roles = list(recommended_slots)
     slot_instance_ids = assign_slot_instance_ids(slot_roles)
     possible_previews = [
         catalog.preview(
@@ -538,6 +541,19 @@ async def prepare_path_lesson(
                 "visual_required": slot.visual_required,
             }
         )
+    legal_slots = [
+        {
+            "slot_id": str(slot_id),
+            "role": str(slot.get("role") or slot_id),
+            "purpose": str(slot.get("purpose") or ""),
+            "locked": slot.get("locked") is True,
+            "visual_required": any(
+                item.slot_id == slot_id and item.visual_required
+                for item in preview.variants[0].slots
+            ),
+        }
+        for slot_id, slot in catalog.slots.items()
+    ]
     fixed_context = {
         "concept_id": lesson.concept_id,
         "title": lesson.title,
@@ -550,6 +566,15 @@ async def prepare_path_lesson(
         # print-native document contract as shared meaning.
         "native_whole_lesson": True,
         "slots": projected_slots,
+        "recommended_slots": recommended_slots,
+        "legal_slots": legal_slots,
+        "max_slots": catalog.max_slots,
+        "hard_constraints": {
+            "verification_required": True,
+            "required_visual_slots": [
+                item.slot_id for item in preview.variants[0].slots if item.visual_required
+            ],
+        },
         "scope_contract": scope_contract,
         "prior_established": prior_established,
         "prerequisites": prerequisites,
@@ -583,6 +608,28 @@ async def prepare_path_lesson(
         )
     else:
         generated = await structural_planner({**fixed_context, **provider_packet})
+    flow = FlowChoice(
+        recommended_slots=recommended_slots,
+        selected_slots=list(generated.selected_slots or recommended_slots),
+        rationale=str(generated.flow_rationale or ""),
+        departures=list(generated.flow_departures or []),
+    )
+    flow_errors = validate_flow_choice(
+        flow,
+        recommended_slots=recommended_slots,
+        legal_slots={item["slot_id"]: item for item in legal_slots},
+        max_slots=catalog.max_slots,
+        required_visual_slots=[
+            item.slot_id for item in preview.variants[0].slots if item.visual_required
+        ],
+    )
+    if flow_errors:
+        raise PathPreparationBlocked("Smart lesson flow is invalid: " + "; ".join(flow_errors))
+    slot_roles = list(flow.selected_slots)
+    slot_instance_ids = assign_slot_instance_ids(slot_roles)
+    visual_required_by_role = {
+        item.slot_id: item.visual_required for item in preview.variants[0].slots
+    }
     plan = _build_structural_plan(
         generated=generated,
         lesson=lesson,
@@ -593,10 +640,8 @@ async def prepare_path_lesson(
         selected_components={},
         shared_preparation=shared_preparation,
         visual_required_by_instance={
-            instance_id: slot.visual_required
-            for instance_id, slot in zip(
-                slot_instance_ids, preview.variants[0].slots, strict=True
-            )
+            instance_id: bool(visual_required_by_role.get(role, False))
+            for instance_id, role in zip(slot_instance_ids, slot_roles, strict=True)
         },
     )
     misconception_count = min(len(plan.cards[0].misconceptions), 3)
@@ -750,6 +795,7 @@ async def prepare_path_lesson(
         shared_preparation=True,
         path_plan_raw=generated.model_dump_json(indent=2),
         provider_packet=provider_packet,
+        flow_choice=flow.model_dump(mode="json"),
     )
     lesson.pack_id = generation_id
     await session.flush()

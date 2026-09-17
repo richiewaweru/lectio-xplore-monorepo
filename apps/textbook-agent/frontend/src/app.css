@@ -1,6 +1,16 @@
 @import 'tailwindcss';
 @import 'katex/dist/katex.min.css';
+@import '$lib/ui/tokens.css';
 @import '$lib/learn/theme/theme.css';
+
+html,
+body {
+	margin: 0;
+	min-height: 100%;
+	background: var(--paper);
+	color: var(--ink);
+	font-family: var(--font-sans);
+}
 
 /**
  * Print / Save as PDF: hide builder chrome; keep lesson content.

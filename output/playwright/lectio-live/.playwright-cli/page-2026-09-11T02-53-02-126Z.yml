@@ -1,0 +1,283 @@
+- generic [ref=f2e2]:
+  - banner [ref=f2e3]:
+    - navigation [ref=f2e4]:
+      - link "Lectio" [ref=f2e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=f2e6]:
+        - link "Home" [ref=f2e7] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=f2e9] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=f2e10]:
+    - generic [ref=f2e11]:
+      - generic [ref=f2e12]:
+        - generic [ref=f2e13]:
+          - paragraph [ref=f2e14]: Curriculum workspace
+          - heading "Units" [level=1] [ref=f2e15]
+          - paragraph [ref=f2e16]: Tell me what you're teaching, and I'll turn it into a numbered list of lessons.
+        - button "Close" [active] [ref=f2e212] [cursor=pointer]
+      - generic [ref=f2e214]:
+        - generic [ref=f2e216]:
+          - paragraph [ref=f2e217]: New unit
+          - heading "What are you teaching?" [level=2] [ref=f2e218]
+        - generic [ref=f2e219]:
+          - generic [ref=f2e220]:
+            - generic [ref=f2e221]: Subject
+            - combobox "Subject" [ref=f2e222]:
+              - option "Choose…" [selected]
+              - option "Mathematics"
+              - option "English Language Arts"
+              - option "Science"
+              - option "Biology"
+              - option "Chemistry"
+              - option "Physics"
+              - option "History"
+              - option "Geography"
+              - option "Economics"
+              - option "Computer Science"
+              - option "Art"
+              - option "Music"
+              - option "Physical Education"
+              - option "Other"
+          - generic [ref=f2e223]:
+            - generic [ref=f2e224]: Grade level
+            - combobox "Grade level" [ref=f2e225]:
+              - option "Choose…" [selected]
+              - option "Kindergarten"
+              - option "Grade 1"
+              - option "Grade 2"
+              - option "Grade 3"
+              - option "Grade 4"
+              - option "Grade 5"
+              - option "Grade 6"
+              - option "Grade 7"
+              - option "Grade 8"
+              - option "Grade 9"
+              - option "Grade 10"
+              - option "Grade 11"
+              - option "Grade 12"
+        - generic [ref=f2e226]:
+          - generic [ref=f2e227]: What are you teaching? Anything I should know about this class?
+          - textbox "What are you teaching? Anything I should know about this class?" [ref=f2e228]:
+            - /placeholder: e.g. Photosynthesis for my Grade 8 class — they know plants need light but not the chemistry.
+        - generic [ref=f2e229]:
+          - button "Cancel" [ref=f2e230] [cursor=pointer]
+          - button "Plan it" [disabled] [ref=f2e231]
+      - region "Your units" [ref=f2e18]:
+        - link "Photosynthesis draft Science · Grade 6 describe what plants need to make their own food and explain the process of photosynthesis in simple terms, without using the chemical equation Open →" [ref=f2e19] [cursor=pointer]:
+          - /url: /units/e087e8e9-1915-42b5-b728-2eaa473c3982
+          - generic [ref=f2e20]:
+            - generic [ref=f2e21]:
+              - heading "Photosynthesis" [level=2] [ref=f2e22]
+              - generic [ref=f2e23]: draft
+            - paragraph [ref=f2e24]: Science · Grade 6
+            - paragraph [ref=f2e25]: describe what plants need to make their own food and explain the process of photosynthesis in simple terms, without using the chemical equation
+          - generic [ref=f2e26]: Open →
+        - link "Why Plants Need Light approved Science · Grade 4 Explain why plants need light to make food Open →" [ref=f2e27] [cursor=pointer]:
+          - /url: /units/907b1dab-11fd-49fc-ac23-060d45b446b8
+          - generic [ref=f2e28]:
+            - generic [ref=f2e29]:
+              - heading "Why Plants Need Light" [level=2] [ref=f2e30]
+              - generic [ref=f2e31]: approved
+            - paragraph [ref=f2e32]: Science · Grade 4
+            - paragraph [ref=f2e33]: Explain why plants need light to make food
+          - generic [ref=f2e34]: Open →
+        - link "Why Plants Need Light approved Science · Grade 4 explain why plants need light to make food Open →" [ref=f2e35] [cursor=pointer]:
+          - /url: /units/a388f556-6876-4181-a1ef-8de7ce8a308f
+          - generic [ref=f2e36]:
+            - generic [ref=f2e37]:
+              - heading "Why Plants Need Light" [level=2] [ref=f2e38]
+              - generic [ref=f2e39]: approved
+            - paragraph [ref=f2e40]: Science · Grade 4
+            - paragraph [ref=f2e41]: explain why plants need light to make food
+          - generic [ref=f2e42]: Open →
+        - link "Understanding Ratios approved Mathematics · Grade 6 explain what a ratio is and use ratios to compare quantities in real-life situations such as recipes and groups Open →" [ref=f2e43] [cursor=pointer]:
+          - /url: /units/b67c0459-358e-4ee7-b6fc-59c39d3c5fd6
+          - generic [ref=f2e44]:
+            - generic [ref=f2e45]:
+              - heading "Understanding Ratios" [level=2] [ref=f2e46]
+              - generic [ref=f2e47]: approved
+            - paragraph [ref=f2e48]: Mathematics · Grade 6
+            - paragraph [ref=f2e49]: explain what a ratio is and use ratios to compare quantities in real-life situations such as recipes and groups
+          - generic [ref=f2e50]: Open →
+        - link "Why Plants Need Light approved Science · Grade 4 explain why plants need light to make food Open →" [ref=f2e51] [cursor=pointer]:
+          - /url: /units/ac03d8a4-789c-437f-806a-af2fc53af704
+          - generic [ref=f2e52]:
+            - generic [ref=f2e53]:
+              - heading "Why Plants Need Light" [level=2] [ref=f2e54]
+              - generic [ref=f2e55]: approved
+            - paragraph [ref=f2e56]: Science · Grade 4
+            - paragraph [ref=f2e57]: explain why plants need light to make food
+          - generic [ref=f2e58]: Open →
+        - link "Arms of Government approved History · Grade 6 identify the three arms of government (executive, legislature, judiciary) and describe what each one does Open →" [ref=f2e59] [cursor=pointer]:
+          - /url: /units/c51fba16-7349-4f65-a760-fe5bd48695e8
+          - generic [ref=f2e60]:
+            - generic [ref=f2e61]:
+              - heading "Arms of Government" [level=2] [ref=f2e62]
+              - generic [ref=f2e63]: approved
+            - paragraph [ref=f2e64]: History · Grade 6
+            - paragraph [ref=f2e65]: identify the three arms of government (executive, legislature, judiciary) and describe what each one does
+          - generic [ref=f2e66]: Open →
+        - link "The Water Cycle approved Science · Grade 6 describe the water cycle and draw a clear labelled diagram showing evaporation, condensation, precipitation, collection, and the movement of water through the water cycle Open →" [ref=f2e67] [cursor=pointer]:
+          - /url: /units/ff30f847-dad2-4ab7-8335-b88a35c2b18a
+          - generic [ref=f2e68]:
+            - generic [ref=f2e69]:
+              - heading "The Water Cycle" [level=2] [ref=f2e70]
+              - generic [ref=f2e71]: approved
+            - paragraph [ref=f2e72]: Science · Grade 6
+            - paragraph [ref=f2e73]: describe the water cycle and draw a clear labelled diagram showing evaporation, condensation, precipitation, collection, and the movement of water through the water cycle
+          - generic [ref=f2e74]: Open →
+        - link "Equivalent Fractions approved Mathematics · Grade 6 explain how equivalent fractions represent the same value using visual models, multiplication, and division Open →" [ref=f2e75] [cursor=pointer]:
+          - /url: /units/db0df44c-27b3-406c-a734-1640fc1ffdff
+          - generic [ref=f2e76]:
+            - generic [ref=f2e77]:
+              - heading "Equivalent Fractions" [level=2] [ref=f2e78]
+              - generic [ref=f2e79]: approved
+            - paragraph [ref=f2e80]: Mathematics · Grade 6
+            - paragraph [ref=f2e81]: explain how equivalent fractions represent the same value using visual models, multiplication, and division
+          - generic [ref=f2e82]: Open →
+        - link "Supply and Demand approved Economics · Grade 8 explain how changes in supply or demand shift market price and quantity, using clear real-world examples Open →" [ref=f2e83] [cursor=pointer]:
+          - /url: /units/499eaa28-3a21-48f7-a5f8-0856b2d01dec
+          - generic [ref=f2e84]:
+            - generic [ref=f2e85]:
+              - heading "Supply and Demand" [level=2] [ref=f2e86]
+              - generic [ref=f2e87]: approved
+            - paragraph [ref=f2e88]: Economics · Grade 8
+            - paragraph [ref=f2e89]: explain how changes in supply or demand shift market price and quantity, using clear real-world examples
+          - generic [ref=f2e90]: Open →
+        - link "Claims and Evidence approved English Language Arts · Grade 7 identify a writer's claim and distinguish the evidence that directly supports it from unrelated details Open →" [ref=f2e91] [cursor=pointer]:
+          - /url: /units/d960d1e7-2003-479b-9eb5-b572ad306894
+          - generic [ref=f2e92]:
+            - generic [ref=f2e93]:
+              - heading "Claims and Evidence" [level=2] [ref=f2e94]
+              - generic [ref=f2e95]: approved
+            - paragraph [ref=f2e96]: English Language Arts · Grade 7
+            - paragraph [ref=f2e97]: identify a writer's claim and distinguish the evidence that directly supports it from unrelated details
+          - generic [ref=f2e98]: Open →
+        - link "The Water Cycle approved Science · Grade 6 explain evaporation, condensation, precipitation, and collection, and describe how water moves through the cycle Open →" [ref=f2e99] [cursor=pointer]:
+          - /url: /units/14ce12b0-cf4f-413a-9c4b-8ea5beb69968
+          - generic [ref=f2e100]:
+            - generic [ref=f2e101]:
+              - heading "The Water Cycle" [level=2] [ref=f2e102]
+              - generic [ref=f2e103]: approved
+            - paragraph [ref=f2e104]: Science · Grade 6
+            - paragraph [ref=f2e105]: explain evaporation, condensation, precipitation, and collection, and describe how water moves through the cycle
+          - generic [ref=f2e106]: Open →
+        - link "Photosynthesis approved Science · Grade 7 describe the process of photosynthesis and identify its inputs and outputs Open →" [ref=f2e107] [cursor=pointer]:
+          - /url: /units/30e51fd9-8985-4ba2-a85e-e755294c91b9
+          - generic [ref=f2e108]:
+            - generic [ref=f2e109]:
+              - heading "Photosynthesis" [level=2] [ref=f2e110]
+              - generic [ref=f2e111]: approved
+            - paragraph [ref=f2e112]: Science · Grade 7
+            - paragraph [ref=f2e113]: describe the process of photosynthesis and identify its inputs and outputs
+          - generic [ref=f2e114]: Open →
+        - link "Plants as Producers approved Science · Grade 4 recognize that plants are producers that make their own food using light Open →" [ref=f2e115] [cursor=pointer]:
+          - /url: /units/a86457a2-fc8e-42b8-baeb-4b072f52b186
+          - generic [ref=f2e116]:
+            - generic [ref=f2e117]:
+              - heading "Plants as Producers" [level=2] [ref=f2e118]
+              - generic [ref=f2e119]: approved
+            - paragraph [ref=f2e120]: Science · Grade 4
+            - paragraph [ref=f2e121]: recognize that plants are producers that make their own food using light
+          - generic [ref=f2e122]: Open →
+        - link "Plants as Producers approved Science · Grade 4 recognize that plants are producers that make their own food using light Open →" [ref=f2e123] [cursor=pointer]:
+          - /url: /units/be92127f-5efc-40b7-89d8-df8636fc5700
+          - generic [ref=f2e124]:
+            - generic [ref=f2e125]:
+              - heading "Plants as Producers" [level=2] [ref=f2e126]
+              - generic [ref=f2e127]: approved
+            - paragraph [ref=f2e128]: Science · Grade 4
+            - paragraph [ref=f2e129]: recognize that plants are producers that make their own food using light
+          - generic [ref=f2e130]: Open →
+        - link "Plants as Producers approved Science · Grade 4 recognize that plants are producers that make their own food using light Open →" [ref=f2e131] [cursor=pointer]:
+          - /url: /units/6bd648fa-644f-4a14-be3b-caa32a7f27f9
+          - generic [ref=f2e132]:
+            - generic [ref=f2e133]:
+              - heading "Plants as Producers" [level=2] [ref=f2e134]
+              - generic [ref=f2e135]: approved
+            - paragraph [ref=f2e136]: Science · Grade 4
+            - paragraph [ref=f2e137]: recognize that plants are producers that make their own food using light
+          - generic [ref=f2e138]: Open →
+        - link "Plants as Producers approved Science · Grade 4 recognize that plants are producers that make their own food using light Open →" [ref=f2e139] [cursor=pointer]:
+          - /url: /units/a1c26c7c-17db-4791-a5fe-07fff95bcb18
+          - generic [ref=f2e140]:
+            - generic [ref=f2e141]:
+              - heading "Plants as Producers" [level=2] [ref=f2e142]
+              - generic [ref=f2e143]: approved
+            - paragraph [ref=f2e144]: Science · Grade 4
+            - paragraph [ref=f2e145]: recognize that plants are producers that make their own food using light
+          - generic [ref=f2e146]: Open →
+        - link "Plants as Producers approved Science · Grade 4 recognize that plants are producers and make their own food using light Open →" [ref=f2e147] [cursor=pointer]:
+          - /url: /units/a06d6744-7619-46b2-9b26-65f80116007b
+          - generic [ref=f2e148]:
+            - generic [ref=f2e149]:
+              - heading "Plants as Producers" [level=2] [ref=f2e150]
+              - generic [ref=f2e151]: approved
+            - paragraph [ref=f2e152]: Science · Grade 4
+            - paragraph [ref=f2e153]: recognize that plants are producers and make their own food using light
+          - generic [ref=f2e154]: Open →
+        - link "Plants as Producers approved Science · Grade 4 recognize that plants are producers that make their own food using light Open →" [ref=f2e155] [cursor=pointer]:
+          - /url: /units/58023448-f680-4ce0-8bd0-9ee9236a9d45
+          - generic [ref=f2e156]:
+            - generic [ref=f2e157]:
+              - heading "Plants as Producers" [level=2] [ref=f2e158]
+              - generic [ref=f2e159]: approved
+            - paragraph [ref=f2e160]: Science · Grade 4
+            - paragraph [ref=f2e161]: recognize that plants are producers that make their own food using light
+          - generic [ref=f2e162]: Open →
+        - link "The Water Cycle approved Science · Grade 5 explain how water changes between liquid, vapor, and droplets, and trace the path of water through evaporation, condensation, precipitation, and collection Open →" [ref=f2e163] [cursor=pointer]:
+          - /url: /units/c4a5c5c8-331f-4103-96b6-88f0bec34107
+          - generic [ref=f2e164]:
+            - generic [ref=f2e165]:
+              - heading "The Water Cycle" [level=2] [ref=f2e166]
+              - generic [ref=f2e167]: approved
+            - paragraph [ref=f2e168]: Science · Grade 5
+            - paragraph [ref=f2e169]: explain how water changes between liquid, vapor, and droplets, and trace the path of water through evaporation, condensation, precipitation, and collection
+          - generic [ref=f2e170]: Open →
+        - link "Balanced and Unbalanced Forces approved Physics · Grade 8 explain how net force affects motion and identify balanced versus unbalanced forces using everyday examples like pushing a box and tug-of-war Open →" [ref=f2e171] [cursor=pointer]:
+          - /url: /units/f8930065-83cd-411b-b1b3-fecb018dc929
+          - generic [ref=f2e172]:
+            - generic [ref=f2e173]:
+              - heading "Balanced and Unbalanced Forces" [level=2] [ref=f2e174]
+              - generic [ref=f2e175]: approved
+            - paragraph [ref=f2e176]: Physics · Grade 8
+            - paragraph [ref=f2e177]: explain how net force affects motion and identify balanced versus unbalanced forces using everyday examples like pushing a box and tug-of-war
+          - generic [ref=f2e178]: Open →
+        - link "Cellular Respiration approved Biology · Grade 8 explain how cells release usable energy from glucose using oxygen, producing carbon dioxide, water, and ATP Open →" [ref=f2e179] [cursor=pointer]:
+          - /url: /units/634ad420-4b63-40c3-bad2-23392d340630
+          - generic [ref=f2e180]:
+            - generic [ref=f2e181]:
+              - heading "Cellular Respiration" [level=2] [ref=f2e182]
+              - generic [ref=f2e183]: approved
+            - paragraph [ref=f2e184]: Biology · Grade 8
+            - paragraph [ref=f2e185]: explain how cells release usable energy from glucose using oxygen, producing carbon dioxide, water, and ATP
+          - generic [ref=f2e186]: Open →
+        - link "Solving One-Step Equations approved Mathematics · Grade 8 solve one-step equations such as x + 7 = 12, 3x = 18, and x/4 = 5 using inverse operations and check the answer Open →" [ref=f2e187] [cursor=pointer]:
+          - /url: /units/d9769650-7e27-4047-b03c-9c4a8d2bd913
+          - generic [ref=f2e188]:
+            - generic [ref=f2e189]:
+              - heading "Solving One-Step Equations" [level=2] [ref=f2e190]
+              - generic [ref=f2e191]: approved
+            - paragraph [ref=f2e192]: Mathematics · Grade 8
+            - paragraph [ref=f2e193]: solve one-step equations such as x + 7 = 12, 3x = 18, and x/4 = 5 using inverse operations and check the answer
+          - generic [ref=f2e194]: Open →
+        - link "Photosynthesis approved Science · Grade 8 Explain photosynthesis, draw and label a diagram showing light energy, water, and carbon dioxide as inputs, glucose and oxygen as outputs, and describe chlorophyll's role. Open →" [ref=f2e195] [cursor=pointer]:
+          - /url: /units/33d92ec4-82bc-4138-a6ae-139a132089ee
+          - generic [ref=f2e196]:
+            - generic [ref=f2e197]:
+              - heading "Photosynthesis" [level=2] [ref=f2e198]
+              - generic [ref=f2e199]: approved
+            - paragraph [ref=f2e200]: Science · Grade 8
+            - paragraph [ref=f2e201]: Explain photosynthesis, draw and label a diagram showing light energy, water, and carbon dioxide as inputs, glucose and oxygen as outputs, and describe chlorophyll's role.
+          - generic [ref=f2e202]: Open →
+        - link "By the end of the lesson, students can compare the major causes of the Indust… approved History · Grade 8 By the end of the lesson, students can compare the major causes of the Industrial Revolution and explain the causal links between them. Open →" [ref=f2e203] [cursor=pointer]:
+          - /url: /units/9fe6c488-3f29-48d7-a9df-4f5ab12f1844
+          - generic [ref=f2e204]:
+            - generic [ref=f2e205]:
+              - heading "By the end of the lesson, students can compare the major causes of the Indust…" [level=2] [ref=f2e206]
+              - generic [ref=f2e207]: approved
+            - paragraph [ref=f2e208]: History · Grade 8
+            - paragraph [ref=f2e209]: By the end of the lesson, students can compare the major causes of the Industrial Revolution and explain the causal links between them.
+          - generic [ref=f2e210]: Open →
+  - generic [ref=f2e211]: Units · Lectio

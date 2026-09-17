@@ -219,6 +219,11 @@ def _work_order_from_request(request: Mapping[str, Any]) -> LearnWorkOrder:
         support_level=request.get("support_level") if isinstance(request.get("support_level"), str) else None,
         authoring_mode="approved_item" if approved_ids else "new",
         approved_item_ids=approved_ids,
+        shared_task=(
+            dict(request["shared_task"])
+            if isinstance(request.get("shared_task"), Mapping)
+            else None
+        ),
     )
 
 
@@ -238,6 +243,13 @@ async def write_interaction_from_request_async(
     progress_run_id: str | None = None,
 ) -> dict[str, Any]:
     """Async interaction authoring — safe to await from the running event loop."""
+    # The provider-call budget is per logical interaction work item.  A
+    # capability (for example ``choice``) may legitimately appear more than
+    # once in one lesson, so falling back to capability alone would make
+    # unrelated tasks consume one another's retry budget.
+    if not request.get("work_order_id") and interaction_id:
+        request = dict(request)
+        request["work_order_id"] = f"learn::interaction::{interaction_id}"
     order = _work_order_from_request(request)
     approved_items_raw = request.get("approved_items") or []
     approved_items = [

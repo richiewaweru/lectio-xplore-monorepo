@@ -16,7 +16,13 @@ const mocks = vi.hoisted(() => ({
 	regeneratePathLesson: vi.fn(), editUnitPathByChat: vi.fn()
 }));
 
-vi.mock('$app/state', () => ({ page: { params: { id: 'unit-1' } } }));
+vi.mock('$app/state', () => ({
+	page: {
+		params: { id: 'unit-1' },
+		url: new URL('http://localhost/units/unit-1')
+	}
+}));
+vi.mock('$app/navigation', () => ({ goto: vi.fn(() => Promise.resolve()) }));
 vi.mock('$lib/api/units', () => mocks);
 
 import UnitPage from './+page.svelte';
@@ -119,7 +125,7 @@ describe('/units/[id]', () => {
 		mocks.getUnitGroups.mockRejectedValue(new Error('groups unavailable'));
 		render(UnitPage);
 		await screen.findByDisplayValue('Plant inputs');
-		await fireEvent.click(screen.getByRole('button', { name: 'Groups' }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Learning Groups' }));
 		expect(await screen.findByText('groups unavailable')).toBeTruthy();
 		await fireEvent.click(screen.getByRole('button', { name: 'Lessons' }));
 		expect(screen.getByDisplayValue('Plant inputs')).toBeTruthy();
@@ -228,8 +234,7 @@ describe('/units/[id]', () => {
 	});
 
 	it('prepare does not preflight lesson shape', async () => {
-		const locationStub = { href: '' };
-		vi.stubGlobal('location', locationStub);
+		const { goto } = await import('$app/navigation');
 		mocks.preparePathLesson.mockResolvedValue({
 			generation_id: 'gen-1',
 			path_lesson_id: lessonOne.id,
@@ -243,17 +248,15 @@ describe('/units/[id]', () => {
 			reused: false
 		});
 		render(UnitPage);
-		await screen.findByRole('button', { name: 'Generate Print' });
-		await fireEvent.click(screen.getByRole('button', { name: 'Generate Print' }));
+		await screen.findByRole('button', { name: 'Prepare Lesson' });
+		await fireEvent.click(screen.getByRole('button', { name: 'Prepare Lesson' }));
 		await waitFor(() => expect(mocks.preparePathLesson).toHaveBeenCalled());
 		expect(mocks.getLessonShape).not.toHaveBeenCalled();
 		expect(mocks.preparePathLesson.mock.calls[0][4]).toEqual(['group-core']);
-		expect(locationStub.href).toContain('gen-1');
-		vi.unstubAllGlobals();
+		expect(goto).toHaveBeenCalledWith(expect.stringContaining('/lessons/lesson-1/plan'));
 	});
 
 	it('prepare still runs when groups load fails', async () => {
-		vi.stubGlobal('location', { href: '' });
 		mocks.getUnitGroups.mockRejectedValue(new Error('groups unavailable'));
 		mocks.preparePathLesson.mockResolvedValue({
 			generation_id: 'gen-2',
@@ -268,11 +271,10 @@ describe('/units/[id]', () => {
 			reused: false
 		});
 		render(UnitPage);
-		await fireEvent.click(await screen.findByRole('button', { name: 'Generate Print' }));
+		await fireEvent.click(await screen.findByRole('button', { name: 'Prepare Lesson' }));
 		await waitFor(() => expect(mocks.preparePathLesson).toHaveBeenCalled());
 		expect(mocks.getLessonShape).not.toHaveBeenCalled();
 		expect(mocks.preparePathLesson.mock.calls[0][4]).toEqual([]);
-		vi.unstubAllGlobals();
 	});
 
 	it('edits the lessons from the chat input', async () => {
@@ -294,13 +296,11 @@ describe('/units/[id]', () => {
 		expect(mocks.approveUnitPath).toHaveBeenCalled();
 	});
 
-	it('shows Generate Print without requiring mount-time shape fetch', async () => {
+	it('shows Open Lesson and Prepare Lesson without requiring mount-time shape fetch', async () => {
 		render(UnitPage);
-		expect(await screen.findByRole('button', { name: 'Generate Print' })).toBeTruthy();
-		expect(screen.getByRole('button', { name: 'Generate Learn' })).toBeTruthy();
-		expect(
-			screen.getByText('Print and Learn are generated independently from the Teaching Plan.')
-		).toBeTruthy();
+		expect(await screen.findByRole('link', { name: 'Open Lesson' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Prepare Lesson' })).toBeTruthy();
+		expect(screen.getByText(/Plan · Learn · Print/)).toBeTruthy();
 		expect(mocks.getLessonShape).not.toHaveBeenCalled();
 	});
 
@@ -312,15 +312,14 @@ describe('/units/[id]', () => {
 			print_open_href: '/studio/print/generation-1'
 		});
 		render(UnitPage);
-		await screen.findByRole('button', { name: 'Check preparation status' });
-		await fireEvent.click(screen.getByRole('button', { name: 'Check preparation status' }));
+		await screen.findByRole('button', { name: 'Refresh status' });
+		await fireEvent.click(screen.getByRole('button', { name: 'Refresh status' }));
 		await waitFor(() => expect(mocks.getPreparedLessonStatus).toHaveBeenCalled());
 		expect(await screen.findByRole('link', { name: 'Open Print' })).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'Open Learn' })).toBeTruthy();
 	});
 
 	it('starts a fresh generation for a non-stale terminal native run', async () => {
-		const locationStub = { href: '' };
-		vi.stubGlobal('location', locationStub);
 		mocks.getPreparedLessonStatus.mockResolvedValue({
 			path_lesson_id: lessonOne.id, lesson_revision: 1, generation_id: 'generation-terminal',
 			generation_status: 'failed', workflow_stage: 'failed_terminal', objective_hash: 'hash-1',
@@ -335,18 +334,14 @@ describe('/units/[id]', () => {
 		});
 
 		render(UnitPage);
-		await fireEvent.click(await screen.findByRole('button', { name: 'Check preparation status' }));
-		const startFresh = await screen.findByRole('button', { name: 'Start fresh' });
-		expect(screen.getByText(/cannot be retried/)).toBeTruthy();
-		expect(screen.queryByRole('link', { name: 'Open review' })).toBeNull();
-		await fireEvent.click(startFresh);
+		await fireEvent.click(await screen.findByRole('button', { name: 'Refresh status' }));
+		expect(await screen.findByText(/cannot be continued/)).toBeTruthy();
+		const reason = screen.getByLabelText(/Why start fresh/i);
+		await fireEvent.input(reason, { target: { value: 'Need a clean retry after failure.' } });
+		await fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
-		await waitFor(() => expect(mocks.regeneratePathLesson).toHaveBeenCalledWith(
-			'unit-1', expect.objectContaining({ id: 'path-1' }), expect.objectContaining({ id: 'lesson-1' }),
-			'first_exposure', 'The previous generation did not finish.', []
-		));
-		expect(locationStub.href).toContain('generation-fresh');
-		vi.unstubAllGlobals();
+		await waitFor(() => expect(mocks.regeneratePathLesson).toHaveBeenCalled());
+		expect(mocks.regeneratePathLesson.mock.calls[0][4]).toBe('Need a clean retry after failure.');
 	});
 
 	it('does not offer start fresh when terminal regeneration is not permitted', async () => {
@@ -357,40 +352,36 @@ describe('/units/[id]', () => {
 		});
 
 		render(UnitPage);
-		await fireEvent.click(await screen.findByRole('button', { name: 'Check preparation status' }));
+		await fireEvent.click(await screen.findByRole('button', { name: 'Refresh status' }));
 		await waitFor(() => expect(mocks.getPreparedLessonStatus).toHaveBeenCalled());
-		expect(screen.queryByRole('button', { name: 'Start fresh' })).toBeNull();
-		expect(screen.getByRole('button', { name: 'Generate Print' })).toBeTruthy();
-		expect(screen.getByRole('button', { name: 'Generate Learn' })).toBeTruthy();
+		expect(screen.queryByText(/cannot be continued/)).toBeNull();
+		expect(screen.getByRole('link', { name: 'Open Lesson' })).toBeTruthy();
 	});
 
-	it('realizes Print from an existing preparation without Studio admission', async () => {
-		const locationStub = { href: '' };
-		vi.stubGlobal('location', locationStub);
+	it('prepares Print via lesson workspace when Teaching Plan is ready', async () => {
 		mocks.generatePrintRealization.mockResolvedValue({
 			output_id: 'print-gen-9',
 			open_href: '/studio/print/print-gen-9'
 		});
+		mocks.getPreparedLessonStatus.mockResolvedValue({
+			path_lesson_id: lessonOne.id, lesson_revision: 1, generation_id: 'generation-1',
+			generation_status: 'ready', workflow_stage: 'ready', objective_hash: 'hash-1',
+			stale: false, can_prepare: false, can_regenerate: true
+		});
 		render(UnitPage);
-		await fireEvent.click(await screen.findByRole('button', { name: /Plant outputs/ }));
-		await fireEvent.click(screen.getByRole('button', { name: 'Generate Print' }));
-		await waitFor(() => expect(mocks.generatePrintRealization).toHaveBeenCalled());
-		expect(mocks.preparePathLesson).not.toHaveBeenCalled();
-		expect(locationStub.href).toBe('/studio/print/print-gen-9');
-		vi.unstubAllGlobals();
+		await fireEvent.click(await screen.findByRole('button', { name: 'Refresh status' }));
+		expect(await screen.findByRole('link', { name: 'Open Print' })).toBeTruthy();
 	});
 
-	it('opens Studio review when Learn realization needs Teaching Plan approval', async () => {
-		const locationStub = { href: '' };
-		vi.stubGlobal('location', locationStub);
-		mocks.generateLearnRealization.mockRejectedValue(new ApiError(409, 'Approve first'));
+	it('opens Plan workspace when Learn realization needs Teaching Plan approval', async () => {
+		mocks.getPreparedLessonStatus.mockResolvedValue({
+			path_lesson_id: lessonOne.id, lesson_revision: 1, generation_id: 'generation-1',
+			generation_status: 'awaiting_teaching_approval', workflow_stage: 'awaiting_teaching_approval',
+			objective_hash: 'hash-1', stale: false, can_prepare: false, can_regenerate: true
+		});
 		render(UnitPage);
-		await fireEvent.click(await screen.findByRole('button', { name: /Plant outputs/ }));
-		await fireEvent.click(screen.getByRole('button', { name: 'Generate Learn' }));
-		await waitFor(() => expect(mocks.generateLearnRealization).toHaveBeenCalled());
-		expect(mocks.preparePathLesson).not.toHaveBeenCalled();
-		expect(locationStub.href).toContain('/studio?generation_id=');
-		expect(locationStub.href).toContain('path=learn');
-		vi.unstubAllGlobals();
+		await fireEvent.click(await screen.findByRole('button', { name: 'Refresh status' }));
+		expect(await screen.findByRole('link', { name: 'Open Lesson' })).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'Open Learn' })).toBeTruthy();
 	});
 });

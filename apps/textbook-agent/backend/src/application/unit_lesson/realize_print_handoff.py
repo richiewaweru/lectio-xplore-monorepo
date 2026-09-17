@@ -81,6 +81,7 @@ async def realize_print_from_preparation(
             status="approved",
             expected_revision=expected_revision,
             queue=True,
+            allow_retry_from_failure=True,
         )
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc

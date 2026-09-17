@@ -8,6 +8,8 @@
       "purpose": "Let a learner choose the one correct option from a closed set.",
       "cognitive_job": "discriminate the correct idea from plausible alternatives",
       "supported_intents": [
+        "orient",
+        "activate-prior-knowledge",
         "check-understanding",
         "diagnose-misconception",
         "practise-independent"
@@ -40,6 +42,7 @@
       "purpose": "Let a learner choose every option that satisfies the prompt.",
       "cognitive_job": "apply a membership rule across several candidates",
       "supported_intents": [
+        "activate-prior-knowledge",
         "check-understanding",
         "classify",
         "practise-independent"
@@ -194,6 +197,9 @@
       "cognitive_job": "apply a category membership rule",
       "supported_intents": [
         "classify",
+        "compare",
+        "contrast",
+        "name-parts",
         "check-understanding",
         "practise-guided"
       ],

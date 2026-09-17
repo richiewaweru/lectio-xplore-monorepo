@@ -1,0 +1,150 @@
+﻿
+> lectio-xplore-monorepo@ app:test C:\Projects\lectio
+> pnpm --dir apps/textbook-agent/frontend test
+
+
+> frontend@1.0.0-beta.1 test C:\Projects\lectio\apps\textbook-agent\frontend
+> vitest run
+
+
+ RUN  v3.2.7 C:/Projects/lectio/apps/textbook-agent/frontend
+
+ Γ¥» src/lib/learn/authoring/builder/components/canvas/print-chrome.test.ts (1 test | 1 failed) 118ms
+   ├ù builder generation chrome print isolation > keeps progress and issue text behind the print-hidden class 106ms
+     ΓåÆ ENOENT: no such file or directory, open 'C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\builder\components\canvas\BlockCanvas.svelte'
+ Γ¥» src/lib/lectio-lockfile-sync.test.ts (1 test | 1 failed) 150ms
+   ├ù lectio lockfile sync > keeps package.json, package-lock.json, and pnpm-lock.yaml on the same lectio version 148ms
+     ΓåÆ expected undefined to be truthy
+ Γ£ô src/lib/api/client.test.ts (2 tests) 102ms
+node.exe : stderr | src/lib/api/v3.test.ts > connectV3StudioGenerationStream > closes generation SSE on error without 
+retrying
+At C:\Program Files\nodejs\pnpm.ps1:16 char:5
++     & "$basedir/node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs"  ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (stderr | src/li...ithout retrying:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[v3 generation stream] closed; document polling remains active Error: drop-1
+    at C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\api\v3.test.ts:205:26
+    at Proxy.assertThrows (file:///C:/Projects/lectio/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:2767:5)
+    at Proxy.methodWrapper 
+(file:///C:/Projects/lectio/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)
+    at Proxy.<anonymous> 
+(file:///C:/Projects/lectio/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1088:12)
+    at Proxy.overwritingMethodWrapper 
+(file:///C:/Projects/lectio/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1735:33)
+    at Proxy.<anonymous> 
+(file:///C:/Projects/lectio/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1420:16)
+    at Proxy.<anonymous> 
+(file:///C:/Projects/lectio/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1029:14)
+    at Proxy.methodWrapper 
+(file:///C:/Projects/lectio/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)
+    at C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\api\v3.test.ts:205:48
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+ Γ£ô src/lib/api/v3.test.ts (14 tests) 251ms
+ Γ£ô src/lib/print/generation/generation-poller.test.ts (2 tests) 70ms
+ Γ£ô src/routes/login/page.test.ts (1 test) 4834ms
+   Γ£ô login page env guidance > shows a clear missing-config message when the Google client id is missing  4822ms
+ Γ£ô src/lib/shared/stores/auth.test.ts (3 tests) 32ms
+ Γ£ô src/lib/learn/authoring/workspace/lesson-state.test.ts (3 tests) 49ms
+ Γ£ô src/routes/page.test.ts (1 test) 2004ms
+   Γ£ô root route session resume > redirects a resumed authenticated session away from the root route  1997ms
+ Γ£ô src/routes/onboarding/page.test.ts (1 test) 2466ms
+   Γ£ô onboarding recovery mode > switches into recovery mode when a profile exists for a stale has_profile user  2464ms
+ Γ£ô src/lib/learn/authoring/builder/streaming/generation-stream.test.ts (7 tests) 94ms
+ Γ£ô src/lib/no-vendor-lectio-imports.test.ts (1 test) 411ms
+   Γ£ô frontend vendor import guard > does not import vendored lectio paths from frontend source or tests  407ms
+ Γ£ô src/lib/components/ProfileSetup.test.ts (2 tests) 1221ms
+   Γ£ô ProfileSetup > renders teacher-facing sections and submits the default teacher profile shape  943ms
+ Γ£ô src/routes/units/page.test.ts (8 tests) 2809ms
+   Γ£ô /units > loads only v2 units and does not call legacy wrappers  864ms
+   Γ£ô /units > asks the clarifying question first when the constructor returns one  586ms
+   Γ£ô /units > does not ask clarification when clarifying_question is the sentinel "null"  487ms
+ Γ£ô src/routes/units/[id]/page.test.ts (16 tests) 5888ms
+   Γ£ô /units/[id] > initial load fetches only unit and active path  325ms
+   Γ£ô /units/[id] > selecting a lesson does not fetch shape or preparation status  805ms
+   Γ£ô /units/[id] > keeps lessons view when an optional tab endpoint fails  400ms
+   Γ£ô /units/[id] > does not show merge questions or open assumptions in the default lessons view  327ms
+   Γ£ô /units/[id] > shows deterministic merge suggestions without blocking lock-in  1069ms
+   Γ£ô /units/[id] > requires knowledge type when merge sources differ  684ms
+   Γ£ô /units/[id] > prepare does not preflight lesson shape  383ms
+   Γ£ô /units/[id] > starts a fresh generation for a non-stale terminal native run  438ms
+ Γ£ô src/lib/curriculum/units/components/LessonShapePanel.test.ts (2 tests) 1422ms
+   Γ£ô LessonShapePanel > shows canonical and declared variants with exact explanations and blocking issues  983ms
+   Γ£ô LessonShapePanel > requests and separately approves a teacher deviation  436ms
+ Γ£ô src/lib/curriculum/units/components/ResourceComposerPanel.test.ts (2 tests) 1621ms
+   Γ£ô ResourceComposerPanel > offers all projections and creates from approved selections  1482ms
+ Γ£ô src/routes/settings/page.test.ts (2 tests) 1239ms
+   Γ£ô /settings > renders the existing profile summary and edit entry point  1120ms
+ Γ£ô src/lib/curriculum/units/components/TeachingSchedulePanel.test.ts (2 tests) 1422ms
+   Γ£ô TeachingSchedulePanel > moves only a period boundary through an accessible control and preserves path order  1298ms
+ Γ£ô src/lib/components/workspace/NewLessonSplitButton.test.ts (1 test) 692ms
+   Γ£ô NewLessonSplitButton native destination > exposes one native lesson destination without legacy menu actions  687ms
+ Γ£ô src/lib/curriculum/units/components/LessonResultsPanel.test.ts (1 test) 1192ms
+   Γ£ô LessonResultsPanel > records only aggregate option counts and labels summaries advisory  1182ms
+ Γ£ô src/lib/print/components/studio/V3InputSurface.test.ts (16 tests) 22864ms
+   Γ£ô V3InputSurface > renders the five proposed cards in order  629ms
+   Γ£ô V3InputSurface > prefills a short class label from the profile and leaves long descriptions blank  316ms
+   Γ£ô V3InputSurface > submits the optional class label separately from the planning form  2188ms
+   Γ£ô V3InputSurface > soft-gates intent, context, and submit until the topic is confirmed  1732ms
+   Γ£ô V3InputSurface > narrows a valid topic from input after the debounce  929ms
+   Γ£ô V3InputSurface > discards an in-flight narrowing result when the topic changes  1446ms
+   Γ£ô V3InputSurface > shows inline chip descriptions and limits selection to four  1668ms
+   Γ£ô V3InputSurface > prefills the editable intent fields only after explicit topic confirmation  1394ms
+   Γ£ô V3InputSurface > can confirm an empty candidate result and skip selected suggestions  2319ms
+   Γ£ô V3InputSurface > gates and preserves drafts when a confirmed topic changes, then restores the original chips without calls  1768ms
+   Γ£ô V3InputSurface > preserves edited drafts and offers guarded refresh after reconfirming a new topic  2454ms
+   Γ£ô V3InputSurface > silently regenerates untouched drafts after reconfirming a new topic  1799ms
+   Γ£ô V3InputSurface > treats manual drafts without a generated baseline as teacher edits  2032ms
+   Γ£ô V3InputSurface > discards an in-flight intent response when the confirmed topic changes  1044ms
+   Γ£ô V3InputSurface > shows a stale refresh pill and confirms before overwriting edits  1035ms
+ Γ£ô src/lib/learn/student/StudentStageNav.test.ts (1 test) 642ms
+   Γ£ô StudentStageNav > renders ordered stage tabs and compact phone nav  639ms
+ Γ£ô src/lib/print/components/studio/V3BookletIssuesPanel.test.ts (1 test) 881ms
+   Γ£ô V3BookletIssuesPanel > renders a flagged image and regenerates it with the editable QC hint  879ms
+ Γ£ô src/lib/print/components/studio/V3PlanActions.test.ts (2 tests) 808ms
+   Γ£ô V3PlanActions > calls approve and recovery handlers  756ms
+ Γ£ô src/lib/components/PrintSectionLink.test.ts (4 tests) 146ms
+ Γ£ô src/routes/dashboard/page.test.ts (1 test) 95ms
+ Γ£ô src/lib/learn/authoring/builder/components/media/DiagramUploader.test.ts (2 tests) 256ms
+ Γ£ô src/lib/print/components/studio/V3PlanPreview.test.ts (1 test) 260ms
+ Γ£ô src/lib/print/components/studio/V3PlanningState.test.ts (1 test) 296ms
+ Γ£ô src/lib/api/units.test.ts (9 tests) 88ms
+ Γ£ô src/lib/print/generation/viewer-state.test.ts (9 tests) 42ms
+ Γ£ô src/routes/lessons/page.test.ts (1 test) 104ms
+ Γ£ô src/lib/print/studio/v3-booklet.test.ts (8 tests) 14ms
+ Γ£ô src/lib/api/errors.test.ts (2 tests) 35ms
+ Γ£ô src/lib/parse-section.test.ts (2 tests) 22ms
+ Γ£ô src/routes/workspace-shell-styles.test.ts (4 tests) 15ms
+ Γ£ô src/lib/print/generation/live-stream.test.ts (10 tests) 34ms
+ Γ£ô src/lib/api/config.test.ts (9 tests) 15ms
+ Γ£ô src/lib/print/studio/v3-canvas.test.ts (6 tests) 17ms
+ Γ£ô src/lib/print/studio/v3-print-canvas.test.ts (5 tests) 18ms
+ Γ£ô src/lib/print/studio/v3-pack-to-lectio-document.test.ts (8 tests) 30ms
+ Γ£ô src/lib/shared/auth/routing.test.ts (7 tests) 166ms
+ Γ£ô src/lib/learn/authoring/builder/visual-regeneration.test.ts (3 tests) 12ms
+ Γ£ô src/lib/shared/auth/google.test.ts (3 tests) 18ms
+ Γ£ô src/lib/learn/authoring/builder/api/pack-items.test.ts (3 tests) 40ms
+ Γ£ô src/lib/api/capabilities.test.ts (1 test) 20ms
+ Γ£ô src/lib/theme-import-guard.test.ts (1 test) 6ms
+ Γ£ô src/routes/studio/print/[id]/page.test.ts (2 tests) 7ms
+ Γ£ô src/lib/print/stores/v3-studio.svelte.test.ts (1 test) 43ms
+ Γ£ô src/lib/learn/authoring/builder/components/toolbar/DocumentToolbar.test.ts (5 tests) 703ms
+   Γ£ô DocumentToolbar > toggles print preview from toolbar action  524ms
+ Γ£ô src/lib/learn/authoring/builder/components/canvas/BuilderVisualIssueAction.test.ts (1 test) 1307ms
+   Γ£ô BuilderVisualIssueAction > regenerates the flagged image with the edited hint and then requests a snapshot poll  1304ms
+ Γ£ô src/lib/learn/authoring/builder/components/canvas/VisualRegeneratePopover.test.ts (3 tests) 1444ms
+   Γ£ô VisualRegeneratePopover > prefills the correction hint and makes one regeneration request  1313ms
+ Γ£ô src/lib/learn/authoring/builder/components/canvas/diagram-media-fields.test.ts (3 tests) 27ms
+ Γ£ô src/lib/shared/settings/flags.test.ts (1 test) 24ms
+ Γ£ô src/lib/api/profile.test.ts (1 test) 58ms
+ Γ£ô src/lib/learn/authoring/builder/utils/media-utils.test.ts (3 tests) 28ms
+ Γ£ô src/lib/print/generation/error-messages.test.ts (6 tests) 26ms
+ Γ£ô src/lib/learn/authoring/builder/adapters/from-structural-plan.test.ts (1 test) 46ms
+ Γ£ô src/lib/learn/authoring/builder/utils/page-estimate.test.ts (3 tests) 12ms
+ Γ£ô src/lib/print/studio/document-version.test.ts (3 tests) 29ms
+11:29:01 PM [vite-plugin-svelte] C:/Projects/lectio/packages/lectio-learn/dist/components/lectio/CalloutBlock.svelte:51:2 Unused CSS selector ".callout:not(.callout--aside)"
+https://svelte.dev/e/css_unused_selector
+11:29:02 PM [vite-plugin-svelte] C:/Projects/lectio/packages/lectio-learn/dist/components/lectio/CalloutBlock.svelte:58:2 Unused CSS selector ".callout__heading"
+https://svelte.dev/e/css_unused_selector

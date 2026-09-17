@@ -12,6 +12,7 @@ from typing import Any
 from core.policies.loader import passive_learner_actions
 from curriculum.approved_items import approved_item_kind
 from print.contracts.lectio_page import get_object_catalogue, lectio_page_contracts_dir
+from print.generation.task_treatments import print_treatment_for_learner_action
 from print.resources.native_policy import (
     default_print_policy,
     forms_requiring_assets,
@@ -161,10 +162,16 @@ def _apply_approved_item_filter(
     source_question_ids: Sequence[str],
     approved_by_id: Mapping[str, Any],
     intent: str | None = None,
+    task_mode: str = "none",
 ) -> tuple[list[str], dict[str, str]]:
     """Assessment forms bind to teaching-owned items; never discard item IDs."""
     excluded: dict[str, str] = {}
     if not source_question_ids:
+        # Formative response tasks are authored from SharedTaskSpec and do not
+        # require an approved assessment item. Keep their response treatment
+        # inside the already-closed Print shortlist.
+        if task_mode == "formative":
+            return list(legal), excluded
         # check-understanding without approved sources has no legal Print form.
         if intent == "check-understanding":
             for object_id in legal:
@@ -210,6 +217,7 @@ def derive_print_block_candidates(
     form_cards: Mapping[str, Mapping[str, Any]] | None = None,
     writer_view: Mapping[str, Mapping[str, Any]] | None = None,
     source_question_ids: Sequence[str] | None = None,
+    task_mode: str = "none",
     approved_items: Sequence[Any] | None = None,
     remaining_budgets: Mapping[str, int] | None = None,
 ) -> PrintBlockCandidates:
@@ -250,9 +258,10 @@ def derive_print_block_candidates(
         if intents and intent not in intents and card is not None:
             excluded[form_id] = "intent_unsupported"
             continue
+        formative_treatment = print_treatment_for_learner_action(action, intent=intent)
         if action and actions and action not in actions and not (
             action in PASSIVE_ACTIONS and actions.intersection(PASSIVE_ACTIONS)
-        ):
+        ) and not (task_mode == "formative" and formative_treatment == form_id):
             excluded[form_id] = "action_unsupported"
             continue
         if (form_id in asset_required or bool((card or {}).get("requires_asset"))) and not assets:
@@ -271,6 +280,7 @@ def derive_print_block_candidates(
         source_question_ids=tuple(source_question_ids or ()),
         approved_by_id=approved_by_id,
         intent=intent,
+        task_mode=task_mode,
     )
     excluded.update(item_excluded)
 
@@ -307,6 +317,17 @@ def build_print_candidate_map(
                 for item in compatible_objects_by_intent.get(block.intent, ())
                 if item
             )
+            # Formative SharedTaskSpec responses are path-neutral. If the
+            # historical legality snapshot predates the generic Print
+            # treatment for a Learn action (for example classify-items →
+            # questions), admit only that exact mapped treatment; never widen
+            # the block to an unrelated form.
+            if str(getattr(block, "task_mode", "none")) == "formative":
+                mapped = print_treatment_for_learner_action(
+                    action, intent=str(block.intent or "")
+                )
+                if mapped and mapped not in package:
+                    package = (*package, mapped)
             derived = derive_print_block_candidates(
                 block_id=block.id,
                 intent=block.intent,
@@ -316,6 +337,7 @@ def build_print_candidate_map(
                 policy=body,
                 form_cards=cards,
                 source_question_ids=getattr(block, "source_question_ids", ()) or (),
+                task_mode=str(getattr(block, "task_mode", "none")),
                 approved_items=approved_items,
             )
             if fail_on_empty_required and not derived.candidates:

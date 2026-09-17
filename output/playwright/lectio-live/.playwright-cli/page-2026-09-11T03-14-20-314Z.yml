@@ -1,0 +1,72 @@
+- generic [ref=f3e2]:
+  - banner [ref=f3e3]:
+    - navigation [ref=f3e4]:
+      - link "Lectio" [ref=f3e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=f3e8]:
+        - link "Home" [ref=f3e9] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=f3e11] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=f3e6]:
+    - generic [ref=f3e12]:
+      - generic [ref=f3e14]:
+        - generic [ref=f3e15]: Studio
+        - button "Start over" [ref=f3e16]
+      - generic [ref=f3e63]:
+        - generic [ref=f3e70]:
+          - paragraph [ref=f3e71]: Expanding section briefs one by oneâ€¦
+          - paragraph [ref=f3e72]: Expanding section briefs and validating each section
+        - paragraph [ref=f3e73]: Designing your lesson…
+        - generic [ref=f3e74]:
+          - generic [ref=f3e75]: orient
+          - generic [ref=f3e76]: explain
+          - generic [ref=f3e77]: contrast
+          - generic [ref=f3e78]: check
+        - generic [ref=f3e79]:
+          - status [ref=f3e80]: Writing your resource...
+          - generic [ref=f3e81]:
+            - generic [ref=f3e82]:
+              - generic [ref=f3e83]:
+                - 'heading "Why Levers Matter: The Seesaw in Front of You" [level=3] [ref=f3e84]'
+                - paragraph
+              - article [ref=f3e85]:
+                - paragraph [ref=f3e86]: guided-concept-path
+                - 'heading "Why Levers Matter: The Seesaw in Front of You" [level=3] [ref=f3e87]'
+                - paragraph [ref=f3e88]: No merged fields yet.
+              - group [ref=f3e89]:
+                - generic "Inspect section" [ref=f3e90] [cursor=pointer]
+            - generic [ref=f3e91]:
+              - generic [ref=f3e92]:
+                - 'heading "What Makes a Lever: Fulcrum, Effort, and Load" [level=3] [ref=f3e93]'
+                - paragraph
+              - article [ref=f3e94]:
+                - paragraph [ref=f3e95]: guided-concept-path
+                - 'heading "What Makes a Lever: Fulcrum, Effort, and Load" [level=3] [ref=f3e96]'
+                - paragraph [ref=f3e97]: No merged fields yet.
+              - group [ref=f3e98]:
+                - generic "Inspect section" [ref=f3e99] [cursor=pointer]
+            - generic [ref=f3e100]:
+              - generic [ref=f3e101]:
+                - 'heading "Levers Versus Near-Levers: Spotting the Fixed Pivot" [level=3] [ref=f3e102]'
+                - paragraph
+              - article [ref=f3e103]:
+                - paragraph [ref=f3e104]: guided-concept-path
+                - 'heading "Levers Versus Near-Levers: Spotting the Fixed Pivot" [level=3] [ref=f3e105]'
+                - paragraph [ref=f3e106]: No merged fields yet.
+              - group [ref=f3e107]:
+                - generic "Inspect section" [ref=f3e108] [cursor=pointer]
+            - generic [ref=f3e109]:
+              - generic [ref=f3e110]:
+                - 'heading "Check: Finding the Fulcrum, Effort, and Load" [level=3] [ref=f3e111]'
+                - paragraph
+              - generic [ref=f3e112]:
+                - heading "Practice" [level=4] [ref=f3e113]
+                - generic [ref=f3e114]: cold Waiting...
+              - article [ref=f3e115]:
+                - paragraph [ref=f3e116]: guided-concept-path
+                - 'heading "Check: Finding the Fulcrum, Effort, and Load" [level=3] [ref=f3e117]'
+                - paragraph [ref=f3e118]: No merged fields yet.
+              - group [ref=f3e119]:
+                - generic "Inspect section" [ref=f3e120] [cursor=pointer]
+  - generic [ref=f3e62]: Lectio

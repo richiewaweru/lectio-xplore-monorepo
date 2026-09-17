@@ -1,0 +1,4 @@
+[    3215ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/favicon.ico:0
+[    3817ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:5173/api/v1/units/303c8455-6812-4918-90d6-0503af082f2a:0
+[    4305ms] [ERROR] Failed to load resource: the server responded with a status of 403 () @ https://accounts.google.com/gsi/button?theme=outline&size=large&width=320&text=signin_with&is_fedcm_supported=true&client_id=265820548539-9b5snae65fvovp4tk5vebehe73f718sa.apps.googleusercontent.com&iframe_id=gsi_625857_504560&cas=c3dkv0VLy%2F2zOzC%2BpGUuzhO%2BwySz8gS%2FimxcxOcOruY:0
+[    4547ms] [ERROR] [GSI_LOGGER]: The given origin is not allowed for the given client ID. @ https://ssl.gstatic.com/_/gsi/_/js/k=gsi.gsi.en_GB.WVJ-XT8ub3A.O/am=AAAAAIIAbBME/d=1/rs=AF0KOtUVdydvg6a2XhWjKI2vYRLDpu5bTw/m=credential_button_library:87

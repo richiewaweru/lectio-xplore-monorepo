@@ -17,7 +17,13 @@ logger = logging.getLogger(__name__)
 
 from core.database.models import GenerationModel, NativeRealizationModel
 from core.database.session import async_session_factory
+from curriculum.agents import run_lesson_sourcebook_writer, run_shared_task_writer
 from curriculum.approved_items import ApprovedItemRecord, approved_items_as_writer_records
+from curriculum.lesson_review.service import build_coherence_report
+from curriculum.lesson_sourcebook.models import LessonSourcebook
+from curriculum.lesson_sourcebook.validation import build_content_bindings, validate_sourcebook
+from curriculum.shared_tasks import build_shared_task_registry, validate_shared_tasks
+from curriculum.shared_tasks.service import teaching_plan_hash
 from infra.execution.call_budget import CallBudgetLedger
 from infra.execution.checkpoints import CheckpointStore
 from infra.execution.progress import default_progress_store
@@ -27,6 +33,7 @@ from print.generation.native_production import (
     build_closed_print_production_plan_async,
     compile_print_work_orders_for_form_plan,
     selection_trace_payload,
+    teaching_plan_content_hash,
 )
 from print.generation.whole_lesson.events import make_event
 from print.generation.whole_lesson.failure_injection import get_failure_injection
@@ -882,6 +889,89 @@ async def execute_after_teaching_approval(
 
     # Durable budgets / checkpoints / progress (P03–P04 product wiring).
     prior_state = dict(generation.chunked_state_json or {}) if generation else {}
+    smart_state = dict(
+        state.get("smart_lesson") or prior_state.get("smart_lesson") or {}
+    )
+    plan_hash = teaching_plan_content_hash(teaching_plan) if teaching_plan is not None else ""
+    sourcebook: LessonSourcebook | None = None
+    task_registry = []
+    if smart_state.get("teaching_plan_hash") == plan_hash:
+        raw_sourcebook = smart_state.get("lesson_sourcebook")
+        if isinstance(raw_sourcebook, dict):
+            try:
+                sourcebook = LessonSourcebook.model_validate(raw_sourcebook)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("discarding invalid persisted sourcebook: %s", exc)
+        raw_tasks = smart_state.get("shared_tasks")
+        if isinstance(raw_tasks, list):
+            try:
+                from curriculum.shared_tasks.models import SharedTaskSpec
+
+                task_registry = [SharedTaskSpec.model_validate(item) for item in raw_tasks]
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("discarding invalid persisted shared tasks: %s", exc)
+    smart_artifacts_reusable = False
+    if teaching_plan is not None and sourcebook is not None:
+        expected_hashes = {
+            plan_hash,
+            teaching_plan_hash(teaching_plan),
+        }
+        sourcebook_identity_ok = (
+            sourcebook.teaching_plan_id == str(teaching_plan.teaching_plan_id or "")
+            and sourcebook.teaching_plan_revision == int(teaching_plan.revision or 1)
+            and sourcebook.teaching_plan_hash in expected_hashes
+        )
+        sourcebook_errors = validate_sourcebook(sourcebook)
+        task_errors = validate_shared_tasks(
+            teaching_plan,
+            task_registry,
+            sourcebook=sourcebook,
+        )
+        smart_artifacts_reusable = (
+            sourcebook_identity_ok and not sourcebook_errors and not task_errors
+        )
+        if not smart_artifacts_reusable:
+            logger.info(
+                "regenerating non-reusable smart artifacts: sourcebook=%s tasks=%s",
+                sourcebook_errors,
+                task_errors,
+            )
+            sourcebook = None
+            task_registry = []
+    if teaching_plan is not None and not smart_artifacts_reusable:
+        # Author the semantic curriculum artifacts once before either native
+        # path forks. Retries reuse the revision-bound persisted artifacts.
+        sourcebook = await run_lesson_sourcebook_writer(
+            teaching_plan,
+            trace_id=f"sourcebook:{generation_id}",
+        )
+        task_registry = await run_shared_task_writer(
+            teaching_plan,
+            sourcebook=sourcebook,
+            approved_items={
+                item["id"]: item for item in _packet_item_records(packet)
+            },
+            trace_id=f"shared-tasks:{generation_id}",
+        )
+        await repo.mutate_state(
+            expected_statuses={"planning_forms"},
+            worker_id=wid,
+            lease_token=ltok,
+            mutation=lambda _generation, state: state.update(
+                {
+                    "smart_lesson": {
+                        **smart_state,
+                        "teaching_plan_id": str(teaching_plan.teaching_plan_id or ""),
+                        "teaching_plan_revision": int(teaching_plan.revision or 1),
+                        "teaching_plan_hash": plan_hash,
+                        "lesson_sourcebook": sourcebook.model_dump(mode="json"),
+                        "shared_tasks": [
+                            task.model_dump(mode="json") for task in task_registry
+                        ],
+                    }
+                }
+            ),
+        )
     budget_ledger = CallBudgetLedger()
     raw_ledger = prior_state.get("call_budget_ledger")
     if isinstance(raw_ledger, dict) and raw_ledger:
@@ -1059,6 +1149,8 @@ async def execute_after_teaching_approval(
                 packet=packet,
                 legality=legality,
                 use_document_composition=True,
+                shared_tasks=task_registry,
+                lesson_sourcebook=sourcebook,
                 budget_ledger=budget_ledger,
                 checkpoint_store=checkpoint_store,
                 progress_store=progress,
@@ -1207,7 +1299,16 @@ async def execute_after_teaching_approval(
         form_plan=form_plan,
         packet=packet,
         teaching_plan=teaching_plan,
-        work_orders=orders if "orders" in locals() else None,
+        work_orders=(
+            orders
+            if "orders" in locals()
+            else compile_print_work_orders_for_form_plan(
+                teaching_plan=teaching_plan,
+                form_plan=form_plan,
+                shared_tasks=task_registry,
+                lesson_sourcebook=sourcebook,
+            )
+        ),
         lease=lease,
         budget_ledger=budget_ledger,
         checkpoint_store=checkpoint_store,
@@ -1328,6 +1429,60 @@ async def execute_after_teaching_approval(
             await r.release_execution(
                 worker_id=lease.worker_id, lease_token=lease.lease_token
             )
+        if realization is not None and terminal in {"ready", "completed"}:
+            realization.status = "ready"
+            realization.error_summary = None
+        if not task_registry:
+            task_registry = build_shared_task_registry(
+                teaching_plan,
+                approved_items={item.id: item for item in packet.approved_items},
+            )
+        report = build_coherence_report(
+            path="print",
+            plan=teaching_plan,
+            tasks=task_registry,
+            output={"document": assembled["document"]},
+        )
+        if sourcebook is None:
+            sourcebook = LessonSourcebook(
+                teaching_plan_id=str(teaching_plan.teaching_plan_id or "teaching-plan"),
+                teaching_plan_revision=int(teaching_plan.revision or 1),
+                # The sourcebook is a teaching artifact, so its identity must be
+                # the canonical plan hash even when a previously persisted form
+                # plan is being resumed and no fresh selection snapshot exists.
+                teaching_plan_hash=teaching_plan_content_hash(teaching_plan),
+            )
+        persisted_generation = await session.get(GenerationModel, generation_id)
+        if persisted_generation is not None:
+            root_state = dict(persisted_generation.chunked_state_json or {})
+            prior_smart = dict(root_state.get("smart_lesson") or {})
+            prior_reports = dict(prior_smart.get("coherence_reports") or {})
+            # The smart-lesson persistence checkpoint must not resurrect the
+            # pre-assembly stage from a stale ORM snapshot. The Units planner
+            # reads this outer stage to decide whether the approved revision
+            # is ready for either realization path.
+            root_state["stage"] = str(persisted_generation.status or terminal)
+            root_state["smart_lesson"] = {
+                "teaching_plan_id": str(teaching_plan.teaching_plan_id or ""),
+                "teaching_plan_revision": int(teaching_plan.revision or 1),
+                "teaching_plan_hash": teaching_plan_content_hash(teaching_plan),
+                "flow_choice": root_state.get("flow_choice"),
+                "lesson_sourcebook": sourcebook.model_dump(mode="json"),
+                "shared_tasks": [task.model_dump(mode="json") for task in task_registry],
+                "teaching_content_bindings": [
+                    binding.model_dump(mode="json")
+                    for binding in build_content_bindings(
+                        teaching_plan, sourcebook=sourcebook, tasks=task_registry
+                    )
+                ],
+                "coherence_reports": {
+                    **prior_reports,
+                    "print": report.model_dump(mode="json"),
+                },
+                "repair_events": list(prior_smart.get("repair_events") or []),
+            }
+            persisted_generation.chunked_state_json = root_state
+            await session.commit()
         return {
             "status": terminal,
             "form_plan": form_plan.model_dump(mode="json"),

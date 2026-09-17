@@ -1,0 +1,7 @@
+2026/09/13-16:16:04.150 8ec0 Reusing MANIFEST C:\Projects\lectio\.tmp\reliability-chrome-profile\Default\IndexedDB\http_127.0.0.1_5173.indexeddb.leveldb/MANIFEST-000001
+2026/09/13-16:16:04.151 8ec0 Recovering log #3
+2026/09/13-16:16:04.153 8ec0 Reusing old log C:\Projects\lectio\.tmp\reliability-chrome-profile\Default\IndexedDB\http_127.0.0.1_5173.indexeddb.leveldb/000003.log 
+2026/09/13-16:16:06.194 8920 Level-0 table #5: started
+2026/09/13-16:16:06.199 8920 Level-0 table #5: 39414 bytes OK
+2026/09/13-16:16:06.201 8920 Delete type=0 #3
+2026/09/13-16:16:06.202 8920 Manual compaction at level-0 from (begin) .. (end); will stop at (end)

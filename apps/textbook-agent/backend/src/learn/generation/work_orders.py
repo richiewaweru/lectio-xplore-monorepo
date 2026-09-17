@@ -62,6 +62,7 @@ class LearnWorkOrder(BaseModel):
     support_level: str | None = None
     authoring_mode: Literal["new", "approved_item"] = "new"
     approved_item_ids: list[str] = Field(default_factory=list)
+    shared_task: dict[str, Any] | None = None
 
 
 class WriterRequestLeakError(AssertionError):
@@ -309,6 +310,7 @@ def build_learn_writer_request(
         "allowed_facts": list(allowed_facts or []),
         "terminology": list(terminology or []),
         "authoring_mode": order.authoring_mode,
+        "shared_task": order.shared_task,
     }
     if order.authoring_mode == "approved_item" and approved_item is not None:
         allowed_keys = (

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "subsystems": [
+    {
+      "name": "planning",
+      "classification": "MIGRATE_AND_DELETE",
+      "paths": [],
+      "inbound_imports": [],
+      "outbound_imports": [],
+      "mounted_routes": [],
+      "frontend_consumers": [],
+      "workers_startup": [],
+      "database_dependencies": [],
+      "telemetry_dependencies": [],
+      "config_dependencies": [],
+      "tests": [],
+      "docs": [],
+      "target_owners": [],
+      "retirement_order": 1,
+      "blockers": []
+    }
+  ]
+}

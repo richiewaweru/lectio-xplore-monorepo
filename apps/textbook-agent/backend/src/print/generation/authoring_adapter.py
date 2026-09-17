@@ -62,6 +62,7 @@ def _input_map(
             "brief": order.brief,
             "intent": order.intent,
             "action": order.action,
+            "task_mode": order.task_mode,
             "evidence": order.evidence,
         },
         "form_selection_decision": {"form_id": order.form_id, "placement": order.placement},
@@ -69,6 +70,9 @@ def _input_map(
         "allowed_facts": list(allowed_facts or []),
         "terminology": list(terminology or []),
         "approved_assessment_items": list(approved_items or []),
+        "sourcebook_refs": list(order.sourcebook_refs),
+        "sourcebook_entries": list(order.sourcebook_entries),
+        "shared_task": dict(order.shared_task) if order.shared_task else None,
     }
 
 

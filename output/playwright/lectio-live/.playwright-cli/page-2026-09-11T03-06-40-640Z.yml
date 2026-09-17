@@ -1,0 +1,77 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - navigation [ref=e4]:
+      - link "Lectio" [ref=e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=e8]:
+        - link "Home" [ref=e9] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=e11] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=e6]:
+    - generic [ref=e221]:
+      - generic [ref=e222]:
+        - generic [ref=e223]:
+          - link "← Units" [ref=e224] [cursor=pointer]:
+            - /url: /units
+          - paragraph [ref=e225]: Science · Grade 6
+          - heading "Levers as Simple Machines" [level=1] [ref=e226]
+          - paragraph [ref=e227]: identify a lever in everyday life and name its fulcrum, effort, and load
+        - generic [ref=e228]:
+          - generic [ref=e229]: Locked in
+          - button "Replan the lessons" [ref=e230] [cursor=pointer]
+      - navigation "Unit workspace views" [ref=e231]:
+        - button "Lessons" [ref=e232] [cursor=pointer]
+        - button "Schedule" [ref=e233] [cursor=pointer]
+        - button "Groups" [ref=e234] [cursor=pointer]
+        - button "Resources" [ref=e235] [cursor=pointer]
+        - button "Results" [ref=e236] [cursor=pointer]
+        - button "History" [ref=e237] [cursor=pointer]
+      - paragraph [ref=e239]: 1 lesson
+      - generic [ref=e240]:
+        - complementary "Your lessons" [ref=e241]:
+          - paragraph [ref=e242]: Your lessons
+          - list [ref=e243]:
+            - listitem [ref=e244]:
+              - 'button "1 Levers in Everyday Life: Fulcrum, Effort, and Load prepared" [ref=e245]':
+                - generic [ref=e246]: "1"
+                - generic [ref=e247]:
+                  - strong [ref=e248]: "Levers in Everyday Life: Fulcrum, Effort, and Load"
+                  - generic [ref=e249]: prepared
+        - main [ref=e250]:
+          - generic [ref=e252]:
+            - paragraph [ref=e253]: Lesson 1
+            - 'heading "Levers in Everyday Life: Fulcrum, Effort, and Load" [level=2] [ref=e254]'
+          - generic [ref=e255]:
+            - generic [ref=e256]:
+              - generic [ref=e257]: Title
+              - textbox "Title" [ref=e258]: "Levers in Everyday Life: Fulcrum, Effort, and Load"
+            - generic [ref=e259]:
+              - generic [ref=e260]: What students will be able to do
+              - textbox "What students will be able to do" [ref=e261]: Identify a lever in everyday life and name its fulcrum, effort, and load
+            - generic [ref=e262]:
+              - generic [ref=e263]: Must establish one per line
+              - textbox "Must establish one per line" [ref=e264]: A lever is a simple machine that turns around a fixed point. The fulcrum is the fixed point a lever turns around. The effort is the push or pull applied to the lever. The load is the object or resistance the lever moves. Everyday tools such as a seesaw or crowbar act as levers with a fulcrum, effort, and load.
+            - button "Save lesson changes" [ref=e265] [cursor=pointer]
+          - generic [ref=e266]:
+            - generic [ref=e267]:
+              - paragraph [ref=e268]: Before this lesson
+              - heading "What earlier lessons it requires" [level=3] [ref=e269]
+            - paragraph [ref=e270]: Nothing — this can be the starting point.
+          - button "Show shape debug" [ref=e272] [cursor=pointer]
+          - generic [ref=e273]:
+            - generic [ref=e274]:
+              - paragraph [ref=e275]: Preparation
+              - heading "awaiting_review" [level=3] [ref=e287]
+              - paragraph [ref=e277]: Print and Learn are generated independently from the Teaching Plan.
+            - generic [ref=e288]:
+              - button "Generate Print" [ref=e289] [cursor=pointer]
+              - button "Generate Learn" [ref=e290] [cursor=pointer]
+              - button "Make versions for my groups" [ref=e291] [cursor=pointer]
+              - button "Refresh status" [ref=e292] [cursor=pointer]
+      - region "Edit your lessons by chat" [ref=e282]:
+        - paragraph [ref=e283]: Edit your lessons
+        - generic [ref=e284]:
+          - textbox "e.g. Combine lessons 2 and 3, or add something about fractions" [ref=e285]
+          - button "Send" [disabled] [ref=e286]
+  - generic [ref=e220]: Unit · Lectio

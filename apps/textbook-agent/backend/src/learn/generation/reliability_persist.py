@@ -13,6 +13,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.exc import OperationalError
 
 from core.database.models import GenerationModel
 from core.database.session import async_session_factory
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 LEARN_HEARTBEAT_INTERVAL_SECONDS = 25.0
 
 
-async def persist_learn_reliability_state(
+async def _persist_learn_reliability_state_once(
     *,
     generation_id: str,
     budget_ledger: CallBudgetLedger | None = None,
@@ -95,6 +96,25 @@ async def persist_learn_reliability_state(
             "checkpoints": len(payload.get("checkpoint_store") or {}),
             "heartbeat_at": (payload.get("learn_execution") or {}).get("heartbeat_at"),
         }
+
+
+async def persist_learn_reliability_state(
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """Persist reliability state, retrying transient SQLite writer contention.
+
+    Production uses Postgres row locks, while the offline integration suite
+    intentionally uses SQLite.  The heartbeat and the provider budget hook can
+    legitimately overlap there; retry the whole short transaction instead of
+    turning that transient lock into a generation failure.
+    """
+    for attempt in range(4):
+        try:
+            return await _persist_learn_reliability_state_once(**kwargs)
+        except OperationalError as exc:
+            if "database is locked" not in str(exc).lower() or attempt == 3:
+                raise
+            await asyncio.sleep(0.1 * (2**attempt))
 
 
 def make_budget_persist_hook(

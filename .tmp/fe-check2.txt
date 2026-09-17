@@ -1,0 +1,12 @@
+﻿
+> lectio-xplore-monorepo@ app:check C:\Projects\lectio
+> pnpm --dir apps/textbook-agent/frontend check
+
+
+> frontend@1.0.0-beta.1 check C:\Projects\lectio\apps\textbook-agent\frontend
+> svelte-kit sync && svelte-check --tsconfig ./tsconfig.json
+
+Loading svelte-check in workspace: c:\Projects\lectio\apps\textbook-agent\frontend
+Getting Svelte diagnostics...
+
+svelte-check found 0 errors and 0 warnings

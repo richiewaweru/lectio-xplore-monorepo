@@ -33,6 +33,7 @@ from application.unit_lesson.realizations import (
 )
 from core.capabilities import require_xplore_v2
 from core.database.models import (
+    EditableLessonModel,
     GenerationModel,
     LessonProvenanceModel,
     PathLessonModel,
@@ -330,6 +331,17 @@ async def _realization_status_fields(
     learn_row = await resolve_by_path(session, path_lesson_id=path_lesson_id, path="learn")
     print_id = to_identity(print_row) if print_row else None
     learn_id = to_identity(learn_row) if learn_row else None
+    learn_open_href = learn_id.open_href if learn_id else None
+    if learn_row is not None and learn_row.output_id:
+        editable = await session.scalar(
+            select(EditableLessonModel)
+            .where(EditableLessonModel.source_generation_id == learn_row.output_id)
+            .order_by(EditableLessonModel.created_at.desc())
+        )
+        if editable is not None:
+            # The Learn workspace loads editable lessons with GET; expose the
+            # concrete builder id once the native output has been materialized.
+            learn_open_href = f"/builder/{editable.id}"
     return {
         "realizations": dtos,
         "print_realization_id": print_id.realization_id if print_id else None,
@@ -337,7 +349,7 @@ async def _realization_status_fields(
         "print_output_id": print_id.output_id if print_id else None,
         "learn_output_id": learn_id.output_id if learn_id else None,
         "print_open_href": print_id.open_href if print_id else None,
-        "learn_open_href": learn_id.open_href if learn_id else None,
+        "learn_open_href": learn_open_href,
     }
 
 

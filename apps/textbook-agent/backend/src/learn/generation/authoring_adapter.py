@@ -127,6 +127,7 @@ def _input_map(
         "allowed_facts": list(allowed_facts or []),
         "terminology": list(terminology or []),
         "learner_action": order.action,
+        "shared_task": order.shared_task,
         "approved_items_when_converting": list(approved_items or []),
     }
 

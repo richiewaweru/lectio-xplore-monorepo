@@ -110,6 +110,25 @@ def test_composition_keeps_choices_only_when_source_and_candidate_are_bound() ->
     assert snapshot.candidate_map["s1-b2"] == ["choices"]
 
 
+def test_composition_maps_formative_response_to_print_treatment_without_source() -> None:
+    """Formative shared tasks still need a faithful paper treatment."""
+    plan = _plan()
+    plan.sections[0].blocks[1].task_mode = "formative"
+    form_plan, snapshot, _composition = asyncio.run(
+        build_print_production_from_composition(
+            teaching_plan=plan,
+            provider=None,
+            allow_heuristic_fallback=True,
+            candidate_map={
+                "s1-b1": ["prose"],
+                "s1-b2": ["choices"],
+            },
+        )
+    )
+    assert form_plan.sections[0].forms[1].object == "choices"
+    assert snapshot.decisions[1].form_id == "choices"
+
+
 def test_print_bridge_rejects_task_outside_closed_candidate_set() -> None:
     plan = _plan()
     plan.sections[0].blocks[1].source_question_ids = ["q-stomata-1"]

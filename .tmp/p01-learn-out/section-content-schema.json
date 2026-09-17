@@ -1,0 +1,1723 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/SectionContent",
+  "definitions": {
+    "SectionContent": {
+      "type": "object",
+      "properties": {
+        "section_id": {
+          "type": "string"
+        },
+        "template_id": {
+          "type": "string"
+        },
+        "card_id": {
+          "type": "string"
+        },
+        "varies_on": {
+          "type": "string"
+        },
+        "header": {
+          "$ref": "#/definitions/SectionHeaderContent"
+        },
+        "hook": {
+          "$ref": "#/definitions/HookHeroContent"
+        },
+        "explanation": {
+          "$ref": "#/definitions/ExplanationContent"
+        },
+        "practice": {
+          "$ref": "#/definitions/PracticeContent"
+        },
+        "what_next": {
+          "$ref": "#/definitions/WhatNextContent"
+        },
+        "prerequisites": {
+          "$ref": "#/definitions/PrerequisiteContent"
+        },
+        "definition": {
+          "$ref": "#/definitions/DefinitionContent"
+        },
+        "definition_family": {
+          "$ref": "#/definitions/DefinitionFamilyContent"
+        },
+        "worked_example": {
+          "$ref": "#/definitions/WorkedExampleContent"
+        },
+        "worked_examples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkedExampleContent"
+          }
+        },
+        "process": {
+          "$ref": "#/definitions/ProcessContent"
+        },
+        "diagram": {
+          "$ref": "#/definitions/DiagramContent"
+        },
+        "diagram_compare": {
+          "$ref": "#/definitions/DiagramCompareContent"
+        },
+        "diagram_series": {
+          "$ref": "#/definitions/DiagramSeriesContent"
+        },
+        "video_embed": {
+          "$ref": "#/definitions/VideoEmbedContent"
+        },
+        "image_block": {
+          "$ref": "#/definitions/ImageBlockContent"
+        },
+        "comparison_grid": {
+          "$ref": "#/definitions/ComparisonGridContent"
+        },
+        "timeline": {
+          "$ref": "#/definitions/TimelineContent"
+        },
+        "insight_strip": {
+          "$ref": "#/definitions/InsightStripContent"
+        },
+        "pitfall": {
+          "$ref": "#/definitions/PitfallContent"
+        },
+        "pitfalls": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PitfallContent"
+          }
+        },
+        "quiz": {
+          "$ref": "#/definitions/QuizContent"
+        },
+        "answer_key": {
+          "$ref": "#/definitions/AnswerKeyContent"
+        },
+        "reflection": {
+          "$ref": "#/definitions/ReflectionContent"
+        },
+        "glossary": {
+          "$ref": "#/definitions/GlossaryContent"
+        },
+        "simulation": {
+          "$ref": "#/definitions/SimulationContent"
+        },
+        "interview": {
+          "$ref": "#/definitions/InterviewContent"
+        },
+        "callout": {
+          "$ref": "#/definitions/CalloutBlockContent"
+        },
+        "summary": {
+          "$ref": "#/definitions/SummaryBlockContent"
+        },
+        "student_textbox": {
+          "$ref": "#/definitions/StudentTextboxContent"
+        },
+        "short_answer": {
+          "$ref": "#/definitions/ShortAnswerContent"
+        },
+        "fill_in_blank": {
+          "$ref": "#/definitions/FillInBlankContent"
+        },
+        "divider": {
+          "$ref": "#/definitions/SectionDividerContent"
+        },
+        "key_fact": {
+          "$ref": "#/definitions/KeyFactContent"
+        }
+      },
+      "required": [
+        "section_id",
+        "template_id"
+      ],
+      "additionalProperties": false
+    },
+    "SectionHeaderContent": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "subtitle": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "section_number": {
+          "type": "string"
+        },
+        "grade_band": {
+          "$ref": "#/definitions/GradeBand"
+        },
+        "objectives": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "level_pills": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LevelPill"
+          }
+        }
+      },
+      "required": [
+        "title",
+        "subject",
+        "grade_band"
+      ],
+      "additionalProperties": false
+    },
+    "GradeBand": {
+      "type": "string",
+      "enum": [
+        "primary",
+        "secondary",
+        "advanced"
+      ]
+    },
+    "LevelPill": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "variant": {
+          "type": "string",
+          "enum": [
+            "all",
+            "warm",
+            "medium",
+            "cold"
+          ]
+        }
+      },
+      "required": [
+        "label",
+        "variant"
+      ],
+      "additionalProperties": false
+    },
+    "HookHeroContent": {
+      "type": "object",
+      "properties": {
+        "headline": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "anchor": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/HookType"
+        },
+        "image": {
+          "$ref": "#/definitions/HookImage"
+        },
+        "svg_content": {
+          "type": "string"
+        },
+        "quote_attribution": {
+          "type": "string"
+        },
+        "question_options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "data_point": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "value",
+            "label"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "headline",
+        "body",
+        "anchor"
+      ],
+      "additionalProperties": false
+    },
+    "HookType": {
+      "type": "string",
+      "enum": [
+        "prose",
+        "quote",
+        "question",
+        "data-point"
+      ]
+    },
+    "HookImage": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "alt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "alt"
+      ],
+      "additionalProperties": false
+    },
+    "ExplanationContent": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "emphasis": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "callouts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ExplanationCallout"
+          }
+        }
+      },
+      "required": [
+        "body",
+        "emphasis"
+      ],
+      "additionalProperties": false
+    },
+    "ExplanationCallout": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "remember",
+            "insight",
+            "sidenote",
+            "warning",
+            "exam-tip"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "PracticeContent": {
+      "type": "object",
+      "properties": {
+        "problems": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PracticeProblem"
+          }
+        },
+        "hints_visible_default": {
+          "type": "boolean"
+        },
+        "solutions_available": {
+          "type": "boolean"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "problems"
+      ],
+      "additionalProperties": false
+    },
+    "PracticeProblem": {
+      "type": "object",
+      "properties": {
+        "difficulty": {
+          "$ref": "#/definitions/Difficulty"
+        },
+        "problem_type": {
+          "type": "string",
+          "enum": [
+            "structured",
+            "open"
+          ]
+        },
+        "question": {
+          "type": "string"
+        },
+        "hints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PracticeHint"
+          }
+        },
+        "solution": {
+          "$ref": "#/definitions/PracticeSolution"
+        },
+        "writein_lines": {
+          "type": "number"
+        },
+        "self_assess": {
+          "type": "boolean"
+        },
+        "context": {
+          "type": "string"
+        },
+        "diagram": {
+          "$ref": "#/definitions/DiagramContent"
+        }
+      },
+      "required": [
+        "difficulty",
+        "question",
+        "hints"
+      ],
+      "additionalProperties": false
+    },
+    "Difficulty": {
+      "type": "string",
+      "enum": [
+        "warm",
+        "medium",
+        "cold",
+        "extension"
+      ]
+    },
+    "PracticeHint": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "$ref": "#/definitions/HintLevel"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "level",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "HintLevel": {
+      "type": "number",
+      "enum": [
+        1,
+        2,
+        3
+      ]
+    },
+    "PracticeSolution": {
+      "type": "object",
+      "properties": {
+        "approach": {
+          "type": "string"
+        },
+        "answer": {
+          "type": "string"
+        },
+        "worked": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "approach",
+        "answer"
+      ],
+      "additionalProperties": false
+    },
+    "DiagramContent": {
+      "type": "object",
+      "properties": {
+        "media_id": {
+          "type": "string"
+        },
+        "svg_content": {
+          "type": "string"
+        },
+        "image_url": {
+          "type": "string"
+        },
+        "caption": {
+          "type": "string"
+        },
+        "zoom_label": {
+          "type": "string"
+        },
+        "alt_text": {
+          "type": "string"
+        },
+        "callouts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DiagramCallout"
+          }
+        },
+        "figure_number": {
+          "type": "number"
+        },
+        "figure_ref": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "width": {
+          "type": "string",
+          "enum": [
+            "full",
+            "half",
+            "third"
+          ]
+        }
+      },
+      "required": [
+        "caption",
+        "alt_text"
+      ],
+      "additionalProperties": false
+    },
+    "DiagramCallout": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "label": {
+          "type": "string"
+        },
+        "explanation": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "x",
+        "y",
+        "label",
+        "explanation"
+      ],
+      "additionalProperties": false
+    },
+    "WhatNextContent": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "next": {
+          "type": "string"
+        },
+        "preview": {
+          "type": "string"
+        },
+        "prerequisites": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "body",
+        "next"
+      ],
+      "additionalProperties": false
+    },
+    "PrerequisiteContent": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PrerequisiteItem"
+          }
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "PrerequisiteItem": {
+      "type": "object",
+      "properties": {
+        "concept": {
+          "type": "string"
+        },
+        "refresher": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "concept"
+      ],
+      "additionalProperties": false
+    },
+    "DefinitionContent": {
+      "type": "object",
+      "properties": {
+        "term": {
+          "type": "string"
+        },
+        "formal": {
+          "type": "string"
+        },
+        "plain": {
+          "type": "string"
+        },
+        "etymology": {
+          "type": "string"
+        },
+        "notation": {
+          "type": "string"
+        },
+        "related_terms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "term",
+        "formal",
+        "plain"
+      ],
+      "additionalProperties": false
+    },
+    "DefinitionFamilyContent": {
+      "type": "object",
+      "properties": {
+        "family_title": {
+          "type": "string"
+        },
+        "family_intro": {
+          "type": "string"
+        },
+        "definitions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DefinitionContent"
+          }
+        }
+      },
+      "required": [
+        "family_title",
+        "definitions"
+      ],
+      "additionalProperties": false
+    },
+    "WorkedExampleContent": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "setup": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkedStep"
+          }
+        },
+        "conclusion": {
+          "type": "string"
+        },
+        "method_label": {
+          "type": "string"
+        },
+        "alternative": {
+          "$ref": "#/definitions/WorkedExampleContent"
+        },
+        "answer": {
+          "type": "string"
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "diagram": {
+          "$ref": "#/definitions/DiagramContent"
+        }
+      },
+      "required": [
+        "title",
+        "setup",
+        "steps",
+        "conclusion"
+      ],
+      "additionalProperties": false
+    },
+    "WorkedStep": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "formula": {
+          "type": "string"
+        },
+        "diagram_ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "content"
+      ],
+      "additionalProperties": false
+    },
+    "ProcessContent": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "intro": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProcessStepItem"
+          }
+        },
+        "checklist_mode": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "title",
+        "steps"
+      ],
+      "additionalProperties": false
+    },
+    "ProcessStepItem": {
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": "number"
+        },
+        "action": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "warning": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "number",
+        "action",
+        "detail"
+      ],
+      "additionalProperties": false
+    },
+    "DiagramCompareContent": {
+      "type": "object",
+      "properties": {
+        "before_media_id": {
+          "type": "string"
+        },
+        "before_svg": {
+          "type": "string"
+        },
+        "after_media_id": {
+          "type": "string"
+        },
+        "after_svg": {
+          "type": "string"
+        },
+        "before_image_url": {
+          "type": "string"
+        },
+        "after_image_url": {
+          "type": "string"
+        },
+        "before_label": {
+          "type": "string"
+        },
+        "after_label": {
+          "type": "string"
+        },
+        "before_details": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "after_details": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "caption": {
+          "type": "string"
+        },
+        "alt_text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "before_label",
+        "after_label",
+        "caption",
+        "alt_text"
+      ],
+      "additionalProperties": false
+    },
+    "DiagramSeriesContent": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "diagrams": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DiagramSeriesStep"
+          }
+        }
+      },
+      "required": [
+        "title",
+        "diagrams"
+      ],
+      "additionalProperties": false
+    },
+    "DiagramSeriesStep": {
+      "type": "object",
+      "properties": {
+        "step_label": {
+          "type": "string"
+        },
+        "caption": {
+          "type": "string"
+        },
+        "media_id": {
+          "type": "string"
+        },
+        "svg_content": {
+          "type": "string"
+        },
+        "image_url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "step_label",
+        "caption"
+      ],
+      "additionalProperties": false
+    },
+    "VideoEmbedContent": {
+      "type": "object",
+      "properties": {
+        "media_id": {
+          "type": "string"
+        },
+        "caption": {
+          "type": "string"
+        },
+        "start_time": {
+          "type": "number"
+        },
+        "end_time": {
+          "type": "number"
+        },
+        "print_fallback": {
+          "type": "string",
+          "enum": [
+            "thumbnail",
+            "qr-link",
+            "hide"
+          ]
+        }
+      },
+      "required": [
+        "media_id",
+        "print_fallback"
+      ],
+      "additionalProperties": false
+    },
+    "ImageBlockContent": {
+      "type": "object",
+      "properties": {
+        "media_id": {
+          "type": "string"
+        },
+        "caption": {
+          "type": "string"
+        },
+        "alt_text": {
+          "type": "string"
+        },
+        "width": {
+          "type": "string",
+          "enum": [
+            "full",
+            "half",
+            "third"
+          ]
+        },
+        "alignment": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
+        }
+      },
+      "required": [
+        "media_id",
+        "alt_text"
+      ],
+      "additionalProperties": false
+    },
+    "ComparisonGridContent": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "intro": {
+          "type": "string"
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ComparisonColumn"
+          }
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ComparisonRow"
+          }
+        },
+        "apply_prompt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "columns",
+        "rows"
+      ],
+      "additionalProperties": false
+    },
+    "ComparisonColumn": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "badge": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "highlight": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "summary"
+      ],
+      "additionalProperties": false
+    },
+    "ComparisonRow": {
+      "type": "object",
+      "properties": {
+        "criterion": {
+          "type": "string"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "takeaway": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "criterion",
+        "values"
+      ],
+      "additionalProperties": false
+    },
+    "TimelineContent": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "intro": {
+          "type": "string"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TimelineEvent"
+          }
+        },
+        "closing_takeaway": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "events"
+      ],
+      "additionalProperties": false
+    },
+    "TimelineEvent": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "era": {
+          "type": "string"
+        },
+        "year": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "impact": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "year",
+        "title",
+        "summary"
+      ],
+      "additionalProperties": false
+    },
+    "InsightStripContent": {
+      "type": "object",
+      "properties": {
+        "cells": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InsightCell"
+          }
+        }
+      },
+      "required": [
+        "cells"
+      ],
+      "additionalProperties": false
+    },
+    "InsightCell": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "highlight": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "label",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "PitfallContent": {
+      "type": "object",
+      "properties": {
+        "misconception": {
+          "type": "string"
+        },
+        "correction": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "example": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "minor",
+            "major"
+          ]
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "why": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "misconception",
+        "correction"
+      ],
+      "additionalProperties": false
+    },
+    "QuizContent": {
+      "type": "object",
+      "properties": {
+        "question": {
+          "type": "string"
+        },
+        "quiz_type": {
+          "type": "string",
+          "enum": [
+            "multiple-choice",
+            "true-false"
+          ]
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/QuizOption"
+          }
+        },
+        "feedback_correct": {
+          "type": "string"
+        },
+        "feedback_incorrect": {
+          "type": "string"
+        },
+        "show_explanations": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "question",
+        "options",
+        "feedback_correct",
+        "feedback_incorrect"
+      ],
+      "additionalProperties": false
+    },
+    "QuizOption": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "correct": {
+          "type": "boolean"
+        },
+        "explanation": {
+          "type": "string"
+        },
+        "diagnoses": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "correct",
+        "explanation"
+      ],
+      "additionalProperties": false
+    },
+    "AnswerKeyContent": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AnswerKeyEntry"
+          }
+        }
+      },
+      "required": [
+        "entries"
+      ],
+      "additionalProperties": false
+    },
+    "AnswerKeyEntry": {
+      "type": "object",
+      "properties": {
+        "question_number": {
+          "type": "number"
+        },
+        "question": {
+          "type": "string"
+        },
+        "correct_answer": {
+          "type": "string"
+        },
+        "correct_key": {
+          "type": "string"
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AnswerKeyDiagnostic"
+          }
+        }
+      },
+      "required": [
+        "question_number",
+        "question",
+        "correct_answer"
+      ],
+      "additionalProperties": false
+    },
+    "AnswerKeyDiagnostic": {
+      "type": "object",
+      "properties": {
+        "option_key": {
+          "type": "string"
+        },
+        "option_text": {
+          "type": "string"
+        },
+        "misconception_id": {
+          "type": "string"
+        },
+        "misconception_label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "option_text",
+        "misconception_id",
+        "misconception_label"
+      ],
+      "additionalProperties": false
+    },
+    "ReflectionContent": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/ReflectionType"
+        },
+        "space": {
+          "type": "number"
+        },
+        "sentence_stem": {
+          "type": "string"
+        },
+        "time_minutes": {
+          "type": "number"
+        },
+        "pair_instruction": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "prompt",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "ReflectionType": {
+      "type": "string",
+      "enum": [
+        "open",
+        "pair-share",
+        "sentence-stem",
+        "timed",
+        "connect",
+        "predict",
+        "transfer"
+      ]
+    },
+    "GlossaryContent": {
+      "type": "object",
+      "properties": {
+        "terms": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/GlossaryTerm"
+          }
+        }
+      },
+      "required": [
+        "terms"
+      ],
+      "additionalProperties": false
+    },
+    "GlossaryTerm": {
+      "type": "object",
+      "properties": {
+        "term": {
+          "type": "string"
+        },
+        "definition": {
+          "type": "string"
+        },
+        "used_in": {
+          "type": "string"
+        },
+        "pronunciation": {
+          "type": "string"
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "term",
+        "definition"
+      ],
+      "additionalProperties": false
+    },
+    "SimulationContent": {
+      "type": "object",
+      "properties": {
+        "spec": {
+          "$ref": "#/definitions/InteractionSpec"
+        },
+        "html_content": {
+          "type": "string"
+        },
+        "fallback_diagram": {
+          "$ref": "#/definitions/DiagramContent"
+        },
+        "explanation": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "spec"
+      ],
+      "additionalProperties": false
+    },
+    "InteractionSpec": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/SimulationType"
+        },
+        "goal": {
+          "type": "string"
+        },
+        "anchor_content": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "context": {
+          "$ref": "#/definitions/InteractionContext"
+        },
+        "dimensions": {
+          "$ref": "#/definitions/InteractionDimensions"
+        },
+        "print_translation": {
+          "type": "string",
+          "enum": [
+            "static_midstate",
+            "static_diagram",
+            "hide"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "goal",
+        "anchor_content",
+        "context",
+        "dimensions",
+        "print_translation"
+      ],
+      "additionalProperties": false
+    },
+    "SimulationType": {
+      "type": "string"
+    },
+    "InteractionContext": {
+      "type": "object",
+      "properties": {
+        "learner_level": {
+          "type": "string"
+        },
+        "template_id": {
+          "type": "string"
+        },
+        "color_mode": {
+          "type": "string",
+          "enum": [
+            "light",
+            "dark"
+          ]
+        },
+        "accent_color": {
+          "type": "string"
+        },
+        "surface_color": {
+          "type": "string"
+        },
+        "font_mono": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "learner_level",
+        "template_id",
+        "color_mode",
+        "accent_color",
+        "surface_color",
+        "font_mono"
+      ],
+      "additionalProperties": false
+    },
+    "InteractionDimensions": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "string"
+        },
+        "height": {
+          "type": "number"
+        },
+        "resizable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "resizable"
+      ],
+      "additionalProperties": false
+    },
+    "InterviewContent": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string"
+        },
+        "audience": {
+          "type": "string"
+        },
+        "follow_up": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "prompt",
+        "audience"
+      ],
+      "additionalProperties": false
+    },
+    "CalloutBlockContent": {
+      "type": "object",
+      "properties": {
+        "variant": {
+          "$ref": "#/definitions/CalloutVariant"
+        },
+        "heading": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "variant",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "CalloutVariant": {
+      "type": "string",
+      "enum": [
+        "info",
+        "tip",
+        "warning",
+        "exam-tip",
+        "remember"
+      ]
+    },
+    "SummaryBlockContent": {
+      "type": "object",
+      "properties": {
+        "heading": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SummaryItem"
+          }
+        },
+        "closing": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "SummaryItem": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "StudentTextboxContent": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string"
+        },
+        "lines": {
+          "type": "number"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "prompt"
+      ],
+      "additionalProperties": false
+    },
+    "ShortAnswerContent": {
+      "type": "object",
+      "properties": {
+        "question": {
+          "type": "string"
+        },
+        "marks": {
+          "type": "number"
+        },
+        "lines": {
+          "type": "number"
+        },
+        "mark_scheme": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "additionalProperties": false
+    },
+    "FillInBlankContent": {
+      "type": "object",
+      "properties": {
+        "instruction": {
+          "type": "string"
+        },
+        "segments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FillInBlankSegment"
+          }
+        },
+        "word_bank": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "word": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "word"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        }
+      },
+      "required": [
+        "segments"
+      ],
+      "additionalProperties": false
+    },
+    "FillInBlankSegment": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "is_blank": {
+          "type": "boolean"
+        },
+        "answer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "is_blank"
+      ],
+      "additionalProperties": false
+    },
+    "SectionDividerContent": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "KeyFactContent": {
+      "type": "object",
+      "properties": {
+        "fact": {
+          "type": "string"
+        },
+        "formula": {
+          "type": "string"
+        },
+        "context": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "fact"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

@@ -50,12 +50,12 @@ COMPOSER_SCHEMA: dict[str, Any] = {
                 "properties": {
                     "id": {"type": "string", "minLength": 1},
                     "teaching_block_id": {"type": "string", "minLength": 1},
-                    "section_id": {"type": "string"},
+                    "section_id": {"anyOf": [{"type": "string"}, {"type": "null"}]},
                     "kind": {
                         "type": "string",
                         "enum": sorted(DOCUMENT_PRIMITIVE_KINDS),
                     },
-                    "role": {"type": "string"},
+                    "role": {"anyOf": [{"type": "string"}, {"type": "null"}]},
                     "reason": {"type": "string", "minLength": 1},
                 },
             },

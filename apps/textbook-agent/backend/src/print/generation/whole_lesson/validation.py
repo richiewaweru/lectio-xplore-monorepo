@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from curriculum.approved_items import approved_item_kind
+from curriculum.teaching_plan.compatibility import response_bearing_action
 from print.contracts.lectio_page import PAGE_OBJECT_IDS
 from print.generation.page_blocks import validate_intent_departure
 from print.generation.whole_lesson.form_plan import FormPlan
@@ -315,7 +316,11 @@ def validate_teaching_plan(
                                 )
                             )
                 elif ref.startswith(("item.", "approved_item")):
-                    iid = ref.split(".")[-1]
+                    # Approved item ids are revision-bound and may contain a
+                    # dot suffix (for example ``...i1``).  Strip only the
+                    # evidence namespace prefix; splitting on every dot
+                    # truncates the actual id and rejects valid sources.
+                    iid = ref.removeprefix("item.")
                     if iid not in approved_ids:
                         issues.append(
                             ValidationIssue(
@@ -346,21 +351,39 @@ def validate_teaching_plan(
                         )
                     )
                 seen_source_question_ids.add(qid)
-            if (
-                block.intent == "check-understanding"
-                and packet.approved_items
-                and not block.source_question_ids
-            ):
+            if block.task_mode == "assessment" and not block.source_question_ids:
                 issues.append(
                     ValidationIssue(
                         code="ASSESSMENT_SOURCE_REQUIRED",
                         message=(
-                            "an assessment intent with approved items must own one "
-                            "or more approved source_question_ids"
+                            "an assessment task must own one or more approved "
+                            "source_question_ids"
                         ),
                         path=f"{path}.source_question_ids",
                     )
                 )
+            if block.task_mode == "formative" and block.source_question_ids:
+                issues.append(
+                    ValidationIssue(
+                        code="FORMATIVE_SOURCE_FORBIDDEN",
+                        message="formative tasks cannot own approved assessment sources",
+                        path=f"{path}.source_question_ids",
+                    )
+                )
+            if (
+                block.task_mode == "none"
+                and not block.source_question_ids
+                and block.learner_action is not None
+            ):
+                action = str(block.learner_action.action)
+                if response_bearing_action(action):
+                    issues.append(
+                        ValidationIssue(
+                            code="TASK_MODE_REQUIRED",
+                            message="response-bearing actions require formative or assessment task_mode",
+                            path=f"{path}.task_mode",
+                        )
+                    )
             if (
                 block.source_question_ids
                 and assessment_intents is not None
@@ -678,12 +701,22 @@ def validate_form_plan(
                             path=path,
                         )
                     )
-            if decision.object == "questions" and not teaching.source_question_ids:
+            # Formative response tasks are owned by SharedTaskSpec rather than
+            # approved assessment items, so their Print question treatment is
+            # valid without source_question_ids. Assessment questions retain
+            # the approved-source ownership requirement.
+            if (
+                decision.object == "questions"
+                and not teaching.source_question_ids
+                and teaching.task_mode != "formative"
+            ):
                 issues.append(
                     ValidationIssue(
                         code="QUESTION_IDS",
                         message=(
-                            "questions object requires teaching source_question_ids"
+                            "questions object requires teaching source_question_ids "
+                            f"unless task_mode is formative (block={teaching.id!r}, "
+                            f"task_mode={teaching.task_mode!r})"
                         ),
                         path=path,
                     )

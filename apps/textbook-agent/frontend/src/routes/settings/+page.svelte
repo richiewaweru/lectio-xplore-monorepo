@@ -5,6 +5,7 @@
 	import { getOnboardingRoute } from '$lib/shared/auth/routing';
 	import ProfileSummary from '$lib/components/workspace/ProfileSummary.svelte';
 	import type { TeacherProfile } from '$lib/types';
+	import { PageHeader, Card, InlineError } from '$lib/ui';
 
 	let profile = $state<TeacherProfile | null>(null);
 	let errorMessage = $state<string | null>(null);
@@ -20,63 +21,54 @@
 
 <svelte:head><title>Settings · Lectio</title></svelte:head>
 
-<div class="settings-page">
-	<a class="back-link" href="/units">← Units</a>
-	<header>
-		<p class="eyebrow">Settings</p>
-		<h1>Teacher profile</h1>
-		<p><a href="/settings/prompts">How lessons get written →</a></p>
-	</header>
-	{#if errorMessage}
-		<p class="error" role="alert">{errorMessage}</p>
-	{:else if profile}
-		<ProfileSummary {profile} onEdit={() => goto(getOnboardingRoute({ edit: true }))} />
-	{:else}
-		<p role="status">Loading your profile…</p>
-	{/if}
+<PageHeader title="Settings" description="Teaching profile, preferences, and advanced AI instructions." />
+
+<div class="settings-grid">
+	<Card padding="md">
+		<h2>Teaching Profile</h2>
+		<p>Subject context, grade bands, and classroom defaults.</p>
+		{#if errorMessage}
+			<InlineError message={errorMessage} />
+		{:else if profile}
+			<ProfileSummary {profile} onEdit={() => goto(getOnboardingRoute({ edit: true }))} />
+		{:else}
+			<p class="muted">Loading your profile…</p>
+		{/if}
+	</Card>
+
+	<Card padding="md" href="/settings/prompts">
+		<h2>AI Instructions</h2>
+		<p>Advanced prompt customization for how lessons get written. Keep this separate from everyday teaching settings.</p>
+		<span class="cta">Open advanced prompts →</span>
+	</Card>
+
+	<Card padding="md">
+		<h2>Account</h2>
+		<p>Signed in with Google. Profile picture and name come from your account.</p>
+	</Card>
 </div>
 
 <style>
-	.settings-page {
+	.settings-grid {
 		display: grid;
-		gap: 1.5rem;
-		max-width: 860px;
-		margin: 0 auto;
-		color: var(--ink);
+		gap: var(--space-4);
 	}
-
-	.back-link {
-		justify-self: start;
+	h2 {
+		margin: 0 0 0.35rem;
+		font-size: 1.05rem;
+	}
+	p {
+		margin: 0 0 1rem;
 		color: var(--ink-2);
-		font-size: 0.9rem;
-		text-decoration: none;
+		font-size: 0.875rem;
+		line-height: 1.45;
 	}
-
-	.back-link:hover {
+	.cta {
 		color: var(--accent);
-		text-decoration: underline;
-		text-underline-offset: 0.2em;
+		font-size: 0.875rem;
+		font-weight: 550;
 	}
-
-	.back-link:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 3px;
-	}
-
-	.eyebrow {
-		margin: 0 0 0.3rem;
-		color: var(--ink-3);
-		font-size: 0.78rem;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-	}
-
-	h1 {
-		margin: 0;
-		color: var(--ink);
-	}
-
-	.error {
-		color: var(--amber);
+	.muted {
+		color: var(--ink-2);
 	}
 </style>

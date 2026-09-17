@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from pydantic import ValidationError
@@ -113,7 +114,11 @@ def validate_answer_key_integrity(
         }
         entry = next(e for e in answer_entries if str(e.get("question_id")) == block_id)
         answer = str(entry.get("answer") or "")
-        if answer not in letters:
+        # ``choices`` is also the closed Print treatment for a SharedTaskSpec
+        # select-many response.  Its answer key is a comma-separated set of
+        # option letters; accept that set while retaining strict membership.
+        answer_letters = [part for part in re.split(r"[,\s]+", answer) if part]
+        if not answer_letters or any(part not in letters for part in answer_letters):
             raise AnswerKeyIntegrityError(
                 f"MCQ answer {answer!r} not in options {sorted(letters)} for {block_id!r}"
             )

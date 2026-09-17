@@ -12,6 +12,10 @@ from collections.abc import Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
+from curriculum.lesson_review.service import build_coherence_report
+from curriculum.lesson_sourcebook.models import LessonSourcebook
+from curriculum.shared_tasks import SharedTaskSpec, build_shared_task_registry
+from curriculum.shared_tasks.validation import assert_task_preserved
 from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
 from document.composer import compose_document_plan
 from document.composition import CompositionDecision, CompositionPlan
@@ -336,6 +340,8 @@ async def produce_learn_document_from_teaching_async(
     preparation_context: LearnPreparationContext | None = None,
     available_asset_ids: Sequence[str] | None = None,
     approved_items: Sequence[Any] | None = None,
+    shared_tasks: Sequence[SharedTaskSpec] | None = None,
+    lesson_sourcebook: LessonSourcebook | None = None,
     allow_heuristic_composition_fallback: bool = True,
     budget_ledger: Any | None = None,
     checkpoint_store: Any | None = None,
@@ -357,6 +363,10 @@ async def produce_learn_document_from_teaching_async(
         **lesson_ctx,
         "teaching_plan_revision": teaching_plan.revision,
         "objective": lesson_ctx.get("objective") or teaching_plan.arc,
+        "sourcebook_entries": [
+            entry.model_dump(mode="json")
+            for entry in (lesson_sourcebook.entries if lesson_sourcebook else [])
+        ],
     }
 
     # Build once and fail closed. Swallowing this error would reopen YAML defaults
@@ -400,6 +410,11 @@ async def produce_learn_document_from_teaching_async(
 
     blocks = _block_lookup(teaching_plan)
     approved_index = _approved_item_index(approved_items)
+    task_registry = list(shared_tasks) if shared_tasks is not None else build_shared_task_registry(
+        teaching_plan,
+        approved_items=approved_index,
+    )
+    tasks_by_block = {task.teaching_block_id: task for task in task_registry}
     nodes: list[dict[str, Any]] = []
     doc_decisions = [decision for decision in composition.decisions if decision.lane == "document"]
 
@@ -430,6 +445,7 @@ async def produce_learn_document_from_teaching_async(
                 "intent": block.intent,
                 "brief": block.brief,
                 "evidence": block.evidence,
+                "sourcebook_refs": list(block.sourcebook_refs),
             }
             node = await write_document_primitive(
                 kind=decision.kind,
@@ -438,6 +454,12 @@ async def produce_learn_document_from_teaching_async(
                 lesson_context=lesson_ctx,
                 evidence=block.evidence,
                 allowed_facts=prep.allowed_facts,
+                sourcebook_entries=[
+                    entry
+                    for entry in lesson_ctx.get("sourcebook_entries") or []
+                    if not block.sourcebook_refs
+                    or str(entry.get("id") or "") in set(block.sourcebook_refs)
+                ],
                 terminology=prep.terminology,
                 neighbour_summaries=neighbours,
                 teaching_block_id=block.id,
@@ -486,10 +508,13 @@ async def produce_learn_document_from_teaching_async(
                     logger.warning("optional learn figure skipped for %s: %s", node.get("id"), exc)
             nodes.append(node)
         elif decision.lane == "learn_interaction":
-            selected_items = _items_for_block(block, approved_index)
-            if block.learner_action is not None and not selected_items:
+            task = tasks_by_block.get(block.id)
+            if task is None:
+                raise ValueError(f"Learn interaction block {block.id!r} has no SharedTaskSpec")
+            selected_items = _items_for_block(block, approved_index) if task.mode == "assessment" else []
+            if task.mode == "assessment" and not selected_items:
                 raise ValueError(
-                    f"Learn interaction block {block.id!r} has no exact approved source"
+                    f"Learn assessment block {block.id!r} has no exact approved source"
                 )
             contract = await write_interaction_from_request_async(
                 {
@@ -509,6 +534,7 @@ async def produce_learn_document_from_teaching_async(
                     "allowed_facts": list(prep.allowed_facts or []),
                     "terminology": list(prep.terminology or []),
                     "approved_items": selected_items,
+                    "shared_task": task.model_dump(mode="json"),
                 },
                 interaction_id=item_id,
                 provider=provider,
@@ -519,11 +545,17 @@ async def produce_learn_document_from_teaching_async(
                 progress_store=progress_store,
                 progress_run_id=progress_run_id,
             )
+            # SharedTaskSpec owns the student-facing task meaning. A writer
+            # may shape the envelope and feedback, but it cannot paraphrase
+            # the task prompt into a different instructional request.
+            contract = dict(contract)
+            contract["prompt"] = task.prompt
             node = _interaction_node_from_contract(
                 contract,
                 teaching_block_id=block.id,
                 node_id=item_id,
             )
+            assert_task_preserved({"prompt": contract.get("prompt")}, task)
             nodes.append(node)
         else:
             raise ValueError(
@@ -554,10 +586,20 @@ async def produce_learn_document_from_teaching_async(
             "sections": _realized_sections(teaching_plan, nodes),
         },
     )
+    coherence_report = build_coherence_report(
+        path="learn",
+        plan=teaching_plan,
+        tasks=task_registry,
+        sourcebook=lesson_sourcebook,
+        output={"document": document.model_dump(mode="json") if hasattr(document, "model_dump") else document},
+    )
     return {
         "composition_plan": composition,
         "document": document,
         "teaching_plan_hash": teaching_plan_content_hash(teaching_plan),
+        "lesson_sourcebook": lesson_sourcebook,
+        "shared_tasks": task_registry,
+        "coherence_report": coherence_report,
     }
 
 
@@ -573,6 +615,7 @@ def produce_learn_document_from_teaching(
     preparation_context: LearnPreparationContext | None = None,
     available_asset_ids: Sequence[str] | None = None,
     approved_items: Sequence[Any] | None = None,
+    lesson_sourcebook: LessonSourcebook | None = None,
     allow_heuristic_composition_fallback: bool = True,
 ) -> dict[str, Any]:
     return _run_sync(
@@ -587,6 +630,7 @@ def produce_learn_document_from_teaching(
             preparation_context=preparation_context,
             available_asset_ids=available_asset_ids,
             approved_items=approved_items,
+            lesson_sourcebook=lesson_sourcebook,
             allow_heuristic_composition_fallback=allow_heuristic_composition_fallback,
         )
     )

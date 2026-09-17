@@ -192,14 +192,7 @@ def _missing_check_practice_action_errors(plan: TeachingPlan) -> list[str]:
 
 
 def _task_source_contract_errors(plan: TeachingPlan) -> list[str]:
-    """Enforce one shared task contract before the Learn/Print fork.
-
-    Today Print questions/choices are convert-approved only. Therefore a shared
-    response-bearing learner action must own approved source IDs, and any block
-    that owns approved sources must state the learner action that both paths
-    will realize. This avoids Learn-only interactions and Print silently
-    dropping the response task.
-    """
+    """Enforce shared task ownership while separating formative from assessment."""
     errors: list[str] = []
     for section in plan.sections:
         for block in section.blocks:
@@ -217,13 +210,32 @@ def _task_source_contract_errors(plan: TeachingPlan) -> list[str]:
                     "source record."
                 )
                 continue
-            if action and response_bearing_action(action) and not has_sources:
+            response_bearing = bool(action and response_bearing_action(action))
+            if block.task_mode == "none" and response_bearing and not has_sources:
                 errors.append(
                     "TEACHING_UNBOUND_RESPONSE_ACTION: "
-                    f"block {block.id!r} action={action!r} has no approved source. "
-                    "For the current shared Print+Learn contract, either bind an "
-                    "approved compatible source in a structurally planned assessment "
-                    "slot or make this block passive (learner_action=null/passive)."
+                    f"block {block.id!r} has response-bearing action={action!r} "
+                    "without an explicit formative task or approved assessment source."
+                )
+            if block.task_mode == "formative" and not response_bearing:
+                errors.append(
+                    f"TEACHING_FORMATIVE_ACTION_REQUIRED: block {block.id!r} must "
+                    "have a response-bearing learner_action."
+                )
+            if block.task_mode == "formative" and has_sources:
+                errors.append(
+                    f"TEACHING_FORMATIVE_SOURCE_FORBIDDEN: block {block.id!r} "
+                    "cannot own approved assessment sources."
+                )
+            if block.task_mode == "assessment" and not has_sources:
+                errors.append(
+                    f"TEACHING_ASSESSMENT_SOURCE_REQUIRED: block {block.id!r} "
+                    "must own an approved source_question_id."
+                )
+            if has_sources and block.task_mode not in {"none", "assessment"}:
+                errors.append(
+                    f"TEACHING_SOURCE_REQUIRES_ASSESSMENT: block {block.id!r} "
+                    "approved sources require task_mode=assessment."
                 )
     return errors
 
@@ -620,6 +632,10 @@ def _assessment_source_policy(
             "response_action_requires_approved_source": True,
             "source_requires_learner_action": True,
             "multiple_choice_ids_per_block": "0_or_1",
+            # Retain the historical projection for downstream diagnostics;
+            # the authoritative mode-specific rules above still distinguish
+            # formative tasks from assessment ownership.
+            "selection_is_optional": True,
             "source_only_on_eligible_intent": True,
             "source_only_in_required_assessment_slots": bool(required_slots),
             "reuse_across_blocks": "forbidden",

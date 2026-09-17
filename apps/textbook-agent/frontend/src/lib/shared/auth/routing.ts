@@ -1,6 +1,14 @@
 import { isApiError } from '$lib/api/errors';
 import type { User } from '$lib/types';
 
+/** Public / learner routes that must not bounce to Google login. */
+export function isPublicLearnerPath(path: string): boolean {
+	if (path === '/join' || path.startsWith('/join/')) return true;
+	if (path.startsWith('/learn/home/')) return true;
+	if (path.startsWith('/learn/instances/')) return true;
+	return false;
+}
+
 export function resolveLandingRoute(user: User | null): '/login' | '/onboarding' | '/units' {
 	if (!user) {
 		return '/login';
@@ -34,6 +42,10 @@ export function shouldRedirectToOnboarding(user: User | null, path: string): boo
 		return false;
 	}
 
+	if (isPublicLearnerPath(path)) {
+		return false;
+	}
+
 	const safePaths = ['/login', '/onboarding', '/studio'];
 	if (path.startsWith('/studio/print/')) {
 		return false;
@@ -43,7 +55,10 @@ export function shouldRedirectToOnboarding(user: User | null, path: string): boo
 
 export function resolveShellRedirect(user: User | null, path: string): string | null {
 	if (!user) {
-		return path.startsWith('/login') ? null : '/login';
+		if (path.startsWith('/login') || isPublicLearnerPath(path)) {
+			return null;
+		}
+		return '/login';
 	}
 
 	if (path === '/') {

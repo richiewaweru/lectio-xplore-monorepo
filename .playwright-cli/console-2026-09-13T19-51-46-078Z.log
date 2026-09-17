@@ -1,0 +1,5 @@
+[    3275ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/favicon.ico:0
+[  148733ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/realizations/7d2e4b2b-04bd-49f5-a860-2fe0d70c5ea9/events/stream:0
+[  148745ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/realizations/7d2e4b2b-04bd-49f5-a860-2fe0d70c5ea9/status:0
+[  189746ms] [ERROR] Failed to load resource: the server responded with a status of 409 (Conflict) @ http://127.0.0.1:5173/api/v1/units/907b1dab-11fd-49fc-ac23-060d45b446b8/path/lessons/fc9e4f92-7a3e-495e-b4e7-d83052da222e/realizations:generate-learn:0
+[  232022ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/generations/null:0

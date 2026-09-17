@@ -134,3 +134,27 @@ def document_writer_prompt() -> str:
     from core.prompts import effective_prompt_text
 
     return effective_prompt_text("document-writer")
+
+
+def lesson_sourcebook_writer_prompt() -> str:
+    from core.prompts import effective_prompt_text
+
+    return effective_prompt_text("lesson-sourcebook-writer")
+
+
+def shared_task_writer_prompt() -> str:
+    from core.prompts import effective_prompt_text
+
+    return effective_prompt_text("shared-task-writer")
+
+
+def whole_lesson_coherence_reviewer_prompt() -> str:
+    from core.prompts import effective_prompt_text
+
+    return effective_prompt_text("whole-lesson-coherence-reviewer")
+
+
+def targeted_lesson_repair_prompt() -> str:
+    from core.prompts import effective_prompt_text
+
+    return effective_prompt_text("targeted-lesson-repair")

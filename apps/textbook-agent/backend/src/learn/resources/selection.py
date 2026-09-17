@@ -221,7 +221,12 @@ def derive_learn_block_candidates(
             continue
 
         intents = {str(item) for item in (record.get("supported_intents") or [])}
-        if intent not in intents:
+        intent_aliases = {intent}
+        if intent == "practice":
+            intent_aliases.add("practise-guided")
+        elif intent == "practise-guided":
+            intent_aliases.add("practice")
+        if not intent_aliases.intersection(intents):
             excluded[capability_id] = "intent_unsupported"
             continue
 

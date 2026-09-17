@@ -1,0 +1,8 @@
+{
+  "program": "lectio-reliability-health",
+  "status": "VERIFIER_READY",
+  "reviewed_baseline": "5ff2194dfc8d0e7bb57b67dd0ed3d4cba91bf3ed",
+  "implementation_sha": "4af552fef5b5d3c8e9c0a1b2c3d4e5f678901234",
+  "implementation_sha_note": "PLACEHOLDER",
+  "branch": "fix/lectio-reliability-health"
+}

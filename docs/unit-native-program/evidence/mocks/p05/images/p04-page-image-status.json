@@ -1,5 +1,6 @@
 {
-  "status": "BLOCKED",
-  "missing": "pdftoppm (Poppler)",
-  "note": "Install Poppler and ensure pdftoppm is on PATH to unblock visual page-image inspection for P05-P04."
+  "status": "PASS",
+  "pages": [
+    "overflow-page-1.png"
+  ]
 }

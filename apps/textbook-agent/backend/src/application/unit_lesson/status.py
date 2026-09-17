@@ -52,13 +52,14 @@ async def try_reuse_existing_preparation(
         raise PathPreparationBlocked(
             "Existing preparation predates the resumable workflow; regenerate it explicitly"
         ) from exc
-    # Terminal failed/cancelled preparations cannot be reopened. Returning
+    # Failed/cancelled preparations cannot be reopened. Returning
     # None lets a normal Prepare create a fresh native run instead of
     # resurfacing a generation with no legal transitions (e.g. Print
     # failed_terminal after form-plan validation).
     gen_status = str(generation.status or "").strip().lower()
     chunked_stage = str(state.get("stage") or "").strip().lower()
-    if gen_status in {"failed_terminal", "cancelled"} or chunked_stage in {
+    if gen_status in {"failed_recoverable", "failed_terminal", "cancelled"} or chunked_stage in {
+        "failed_recoverable",
         "failed_terminal",
         "cancelled",
     }:

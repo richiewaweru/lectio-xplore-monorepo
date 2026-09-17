@@ -1,0 +1,25 @@
+﻿module app routes 20
+Route /openapi.json openapi
+Route /docs swagger_ui_html
+Route /docs/oauth2-redirect swagger_ui_redirect
+Route /redoc redoc_html
+Mount /images images
+_IncludedRouter None None
+_IncludedRouter None None
+_IncludedRouter None None
+_IncludedRouter None None
+_IncludedRouter None None
+_IncludedRouter None None
+_IncludedRouter None None
+_IncludedRouter None None
+_IncludedRouter None None
+_IncludedRouter None None
+_IncludedRouter None None
+_IncludedRouter None None
+_IncludedRouter None None
+_IncludedRouter None None
+_IncludedRouter None None
+gen router routes 1
+generation.routes 1 [None]
+curriculum.routes 41
+v3 44 ['/v3/signals', '/v3/narrow', '/v3/propose-intent', '/v3/chunked/plan/start', '/v3/chunked/{generation_id}/plan']

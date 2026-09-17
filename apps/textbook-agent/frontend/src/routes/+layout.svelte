@@ -3,9 +3,10 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { fromStore } from 'svelte/store';
-	import { resolveShellRedirect } from '$lib/shared/auth/routing';
+	import { isPublicLearnerPath, resolveShellRedirect } from '$lib/shared/auth/routing';
 	import { fetchCurrentUser } from '$lib/api/shared/auth';
 	import { authInitialized, authIsAuthenticated, authUser, bootstrapAuth } from '$lib/shared/stores/auth';
+	import { AppShell } from '$lib/ui';
 
 	let { children } = $props();
 	const initialized = fromStore(authInitialized);
@@ -17,8 +18,13 @@
 	);
 	const isBuilderPrintRoute = $derived(page.url.pathname.startsWith('/builder/print/'));
 	const isPrintShellRoute = $derived(isStudioPrintRoute || isBuilderPrintRoute);
-	const isUnitsRoute = $derived(page.url.pathname.startsWith('/units'));
-	const isWorkspaceRoute = $derived(isUnitsRoute);
+	const isLearnerChrome = $derived(isPublicLearnerPath(page.url.pathname));
+	const isLoginOrOnboarding = $derived(
+		page.url.pathname.startsWith('/login') || page.url.pathname.startsWith('/onboarding')
+	);
+	const showTeacherShell = $derived(
+		!isPrintShellRoute && !isLearnerChrome && !isLoginOrOnboarding && authed.current
+	);
 
 	onMount(() => {
 		void bootstrapAuth(fetchCurrentUser);
@@ -44,173 +50,43 @@
 	<title>Lectio</title>
 </svelte:head>
 
-{#if !isPrintShellRoute}
-	<header class="workspace-header">
-		<nav class="workspace-nav">
-			<a href={authed.current ? '/units' : '/'} class="workspace-brand">Lect<span>i</span>o</a>
-			{#if authed.current && user.current}
-				<div class="workspace-links" aria-label="Workspace">
-					<a href="/units" aria-current={isUnitsRoute ? 'page' : undefined}>Home</a>
-				</div>
-				<div class="workspace-nav-end">
-					<a class="workspace-avatar-link" href="/settings" aria-label="Settings">
-						{#if user.current.picture_url}
-							<img src={user.current.picture_url} alt="" class="workspace-avatar" />
-						{:else}
-							<span class="workspace-avatar workspace-initials" title={user.current.name ?? user.current.email}>
-								{(user.current.name ?? user.current.email).slice(0, 2).toUpperCase()}
-							</span>
-						{/if}
-					</a>
-				</div>
-			{/if}
-		</nav>
-	</header>
+{#if !initialized.current && !isPrintShellRoute}
+	<p class="boot">Loading session…</p>
+{:else if showTeacherShell}
+	<AppShell user={user.current} pathname={page.url.pathname}>
+		<main class="app-main">
+			{@render children()}
+		</main>
+	</AppShell>
+{:else}
+	<main class="bare-main" class:print={isPrintShellRoute}>
+		{@render children()}
+	</main>
 {/if}
 
-<main class:workspace-main={isWorkspaceRoute}>
-	{#if initialized.current || isPrintShellRoute}
-		{@render children()}
-	{:else}
-		<p>Loading session...</p>
-	{/if}
-</main>
-
 <style>
-	:global(:root) {
-		--paper: #f7f8f6;
-		--surface: #ffffff;
-		--rule: #e3e6e1;
-		--ink: #16211c;
-		--ink-2: #5c6b63;
-		--ink-3: #8b978f;
-		--accent: #1c5d45;
-		--accent-soft: #e7f0ea;
-		--amber: #9a6b12;
-		--amber-soft: #fbf0da;
-	}
-
-	:global(body) {
-		margin: 0;
-		background: var(--paper);
-		color: var(--ink);
-		font-family: Inter, sans-serif;
-	}
-
-	.workspace-header {
-		position: sticky;
-		top: 0;
-		z-index: 20;
-		height: 58px;
-		box-sizing: border-box;
-		border-bottom: 1px solid var(--rule);
-		padding: 0 28px;
-		background: color-mix(in srgb, var(--paper) 94%, transparent);
-		backdrop-filter: blur(10px);
-	}
-
-	.workspace-nav {
-		display: flex;
-		height: 100%;
-		align-items: center;
-		justify-content: space-between;
-		margin: 0 auto;
-	}
-
-	.workspace-brand {
-		color: var(--ink);
-		font-family: Fraunces, Georgia, serif;
-		font-size: 20px;
-		font-weight: 600;
-		letter-spacing: -0.03em;
-		text-decoration: none;
-	}
-
-	.workspace-brand span {
-		color: var(--accent);
-	}
-
-	.workspace-nav-end {
-		display: flex;
-		align-items: center;
-		gap: 14px;
-	}
-
-	.workspace-links {
-		display: flex;
-		align-items: center;
-		gap: 4px;
-	}
-
-	.workspace-links a {
-		border-radius: 6px;
+	.boot {
+		padding: 2rem;
 		color: var(--ink-2);
-		font-size: 13px;
-		font-weight: 500;
-		padding: 7px 10px;
-		text-decoration: none;
 	}
-
-	.workspace-links a:hover,
-	.workspace-links a:focus-visible,
-	.workspace-links a[aria-current='page'] {
-		background: var(--accent-soft);
-		color: var(--accent);
-	}
-
-	.workspace-links a:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-
-	.workspace-avatar {
-		width: 30px;
-		height: 30px;
-		border-radius: 50%;
-		object-fit: cover;
-	}
-
-	.workspace-avatar-link {
-		display: inline-flex;
-		border-radius: 50%;
-	}
-
-	.workspace-avatar-link:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 3px;
-	}
-
-	.workspace-initials {
-		display: grid;
-		place-items: center;
-		background: var(--accent);
-		color: var(--surface);
-		font: 600 11px Inter, sans-serif;
-	}
-
-	main {
+	.app-main {
+		padding: var(--space-6) var(--space-8);
 		max-width: 1200px;
-		margin: 0 auto;
-		padding: 1.5rem;
 	}
-
-	main.workspace-main {
+	.bare-main {
+		min-height: 100vh;
+		padding: var(--space-6);
+		max-width: 720px;
+		margin: 0 auto;
+	}
+	.bare-main.print {
 		max-width: none;
 		margin: 0;
 		padding: 0;
 	}
-
-	@media (max-width: 640px) {
-		.workspace-header {
-			padding: 0 18px;
-		}
-
-		.workspace-links a {
-			padding: 7px;
-		}
-
-		.workspace-links a:last-child {
-			display: none;
+	@media (max-width: 860px) {
+		.app-main {
+			padding: var(--space-4);
 		}
 	}
 </style>

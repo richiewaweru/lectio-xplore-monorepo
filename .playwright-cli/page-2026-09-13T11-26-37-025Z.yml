@@ -1,0 +1,64 @@
+- generic [ref=f2e2]:
+  - banner [ref=f2e3]:
+    - navigation [ref=f2e4]:
+      - link "Lectio" [ref=f2e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=f2e6]:
+        - link "Home" [ref=f2e7] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=f2e9] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=f2e10]:
+    - generic [ref=f2e11]:
+      - generic [ref=f2e13]:
+        - generic [ref=f2e14]: Studio
+        - button "Start over" [ref=f2e15]
+      - generic [ref=f2e16]:
+        - generic [ref=f2e17]:
+          - paragraph [ref=f2e18]: Structural plan
+          - heading "Explain why a shadow appears when an opaque object blocks light, and describe the position of the shadow relative to the light source" [level=2] [ref=f2e19]
+          - paragraph [ref=f2e20]: Path objective and skeleton slots are fixed; content awaits teacher review.
+          - paragraph [ref=f2e21]: "Anchor: A child standing between a bright lamp and a wall, where their body blocks the lamp light and a dar…"
+          - paragraph [ref=f2e22]: "Reuse: Reuse this anchor across the fixed path lesson slots."
+        - generic [ref=f2e23]:
+          - heading "Section sequence" [level=3] [ref=f2e24]
+          - list [ref=f2e25]:
+            - listitem [ref=f2e26]:
+              - generic [ref=f2e27]:
+                - paragraph [ref=f2e28]: 1. A dark shape on the wall
+                - generic [ref=f2e29]: orient
+              - paragraph [ref=f2e30]: No visual required
+              - list
+            - listitem [ref=f2e31]:
+              - generic [ref=f2e32]:
+                - paragraph [ref=f2e33]: 2. Light blocked, shape cast
+                - generic [ref=f2e34]: explain
+              - paragraph [ref=f2e35]: No visual required
+              - paragraph [ref=f2e36]: Having noticed the dark shape on the wall, we now ask what has to be true for it to appear there at all.
+              - list
+            - listitem [ref=f2e37]:
+              - generic [ref=f2e38]:
+                - paragraph [ref=f2e39]: 3. Blocked light versus passing light
+                - generic [ref=f2e40]: contrast
+              - paragraph [ref=f2e41]: No visual required
+              - paragraph [ref=f2e42]: With the mechanism stated, we now push against the tempting wrong stories about where a shadow comes from and which sid…
+              - list
+            - listitem [ref=f2e43]:
+              - generic [ref=f2e44]:
+                - paragraph [ref=f2e45]: 4. Check what you now believe
+                - generic [ref=f2e46]: check
+              - paragraph [ref=f2e47]: No visual required
+              - paragraph [ref=f2e48]: The boundary cases above separate a blocked-light region from the object that blocks it; this check probes whether that…
+              - list
+        - generic [ref=f2e49]:
+          - heading "Question arc" [level=3] [ref=f2e50]
+          - list [ref=f2e51]:
+            - listitem [ref=f2e52]: q-check-1 → check (cold)
+      - generic [ref=f2e53]:
+        - generic [ref=f2e54]: Lesson title
+        - textbox "Lesson title" [ref=f2e55]: How a shadow forms when an object blocks light
+      - generic [ref=f2e57]:
+        - button "Review concepts" [ref=f2e58]
+        - button "Adjust (regenerate with note)" [ref=f2e59]
+        - button "Regenerate" [ref=f2e60]
+  - generic [ref=f2e61]: Lectio

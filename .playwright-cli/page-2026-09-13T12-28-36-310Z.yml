@@ -1,0 +1,159 @@
+- generic [ref=f5e2]:
+  - banner [ref=f5e3]:
+    - navigation [ref=f5e4]:
+      - link "Lectio" [ref=f5e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=f5e6]:
+        - link "Home" [ref=f5e7] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=f5e9] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=f5e10]:
+    - main [ref=f5e11]:
+      - paragraph [ref=f5e12]: LearnDocument v2 editor
+      - generic [ref=f5e13]:
+        - generic [ref=f5e14]:
+          - generic [ref=f5e15]:
+            - generic [ref=f5e16]:
+              - generic [ref=f5e17]: Add node
+              - combobox "Add node kind" [ref=f5e18] [cursor=pointer]:
+                - option "paragraph" [selected]
+                - option "heading"
+                - option "list"
+                - option "figure"
+                - option "table"
+                - option "callout"
+            - button "Add" [ref=f5e19] [cursor=pointer]
+            - button "Delete" [ref=f5e20] [cursor=pointer]
+            - button "↑" [ref=f5e21] [cursor=pointer]
+            - button "↓" [ref=f5e22] [cursor=pointer]
+          - generic [ref=f5e23]:
+            - button "Save" [ref=f5e24] [cursor=pointer]
+            - button "Reload" [ref=f5e25] [cursor=pointer]
+            - link "Preview" [ref=f5e26] [cursor=pointer]:
+              - /url: /learn/lessons/065b0325-8e73-41d6-9cf0-8d9ccfa5ff6f
+        - status [ref=f5e178]: Saved
+        - navigation "Lesson sections" [ref=f5e27]:
+          - button "All" [ref=f5e28] [cursor=pointer]
+          - button "orient" [ref=f5e29] [cursor=pointer]
+          - button "explain" [ref=f5e30] [cursor=pointer]
+          - button "contrast" [ref=f5e31] [cursor=pointer]
+          - button "check" [ref=f5e32] [cursor=pointer]
+        - generic [ref=f5e33]:
+          - button [ref=f5e34] [cursor=pointer]:
+            - heading "A lamp, a child, and a wall" [level=2] [ref=f5e36]
+          - button [ref=f5e179] [cursor=pointer]:
+            - textbox "Paragraph text" [ref=f5e177]:
+              - /placeholder: Write a paragraph…
+              - text: A child stands between a bright lamp and a wall. The lamp is on one side of the child, and the wall is on the other. Somewhere in this scene, a dark patch appears. Where do you think the dark patch will appear — on the wall behind the child, on the lamp side of the child, or underneath the child? [P06C-BUILDER-EDIT-20260913]
+          - button [ref=f5e40] [cursor=pointer]:
+            - complementary [ref=f5e42]:
+              - paragraph [ref=f5e43]: Where will the dark patch land?
+              - paragraph [ref=f5e44]: "A child stands between a bright lamp and a wall. The lamp is on one side of the child, and the wall is on the other side. A dark patch appears somewhere in this scene. Before anything is explained, decide where you think the dark patch will appear: on the wall behind the child, on the lamp side of the child, or underneath the child."
+          - button [ref=f5e45] [cursor=pointer]:
+            - paragraph [ref=f5e47]: Think back to what you already know about light. Light leaves a source, such as a lamp, and travels outward in straight lines. In the scene with the lamp, the child and the wall, light spreads out from the lamp in every direction, and each straight line of light carries on in the same direction as it travels toward the child and the wall. Notice how the light from the lamp fans out as it goes — each ray keeps to its own straight path rather than bending or curving on the way.
+          - button [ref=f5e48] [cursor=pointer]:
+            - figure "Light rays travelling in straight lines from the lamp, spreading outward toward the child and the wall." [ref=f5e50]:
+              - img "A bright lamp on the left of a room sends straight lines of light outward in a fan shape. The straight lines travel across the space toward a child standing in the middle and continue toward the wall on the right." [ref=f5e51]
+          - button [ref=f5e54] [cursor=pointer]:
+            - paragraph [ref=f5e56]: "Picture the lamp, the child, and the wall again. The lamp's light travels in straight lines toward the child and the wall behind them. Because the child's body is opaque, it blocks all the light that hits it. So the straight-line light that would have reached the part of the wall directly behind the child never gets there — it is stopped at the child. The shadow is simply that region on the wall where light was blocked. It is not an object or substance the child gives off, and the child does nothing to make it: the shadow is what is missing from the light on the far side of the child from the lamp."
+          - button [ref=f5e57] [cursor=pointer]:
+            - complementary [ref=f5e59]:
+              - paragraph [ref=f5e60]: A shadow is missing light, not something the child gives off
+              - paragraph [ref=f5e61]: "Follow the straight-line rays from the lamp toward the child. The child's body is opaque, so it blocks those rays — the light that would have reached the part of the wall behind the child never gets there. That dark region on the wall is the shadow: it is where light was blocked, on the far side of the child from the lamp. The child does nothing to create it and gives off no shadow substance; the shadow is simply what is missing from the light."
+          - button [ref=f5e62] [cursor=pointer]:
+            - figure "A lamp lights a child standing between the lamp and a wall. The lamp sits on the left, the opaque child stands in the middle, and the wall is on the right. Straight-line rays from the lamp stop at the child, so the dark shadow falls on the wall directly behind the child, on the side opposite the lamp, while the lit region on the wall is where rays pass the child and land." [ref=f5e64]:
+              - img "Diagram of a lamp on the left, an opaque child in the middle, and a wall on the right. Straight-line light rays travel from the lamp to the child and are blocked, producing a dark shadow on the wall directly behind the child and on the side opposite the lamp. The wall area reached by rays that pass the child is lit." [ref=f5e65]
+          - button [ref=f5e68] [cursor=pointer]:
+            - list [ref=f5e70]:
+              - listitem [ref=f5e71]: The lamp is the light source, placed on one side of the scene.
+              - listitem [ref=f5e72]: The child stands in the middle and is opaque, so light cannot pass through.
+              - listitem [ref=f5e73]: The wall is on the other side of the child, away from the lamp.
+              - listitem [ref=f5e74]: Straight-line rays from the lamp are stopped by the child and never reach the wall behind them.
+              - listitem [ref=f5e75]: The dark region on the wall directly behind the child is the shadow.
+              - listitem [ref=f5e76]: The lit region on the wall is where rays pass the child and land.
+              - listitem [ref=f5e77]: The shadow sits on the side of the child opposite the lamp, not beside or under the child.
+          - button [ref=f5e78] [cursor=pointer]:
+            - paragraph [ref=f5e80]: Compare two objects placed in exactly the same spot between the lamp and the wall. In the first case the child stands there. The child's body is opaque, so it blocks all the light travelling from the lamp, and a clear shadow falls on the wall on the far side of the child from the lamp. In the second case the child is replaced by a translucent sheet held in the same place. The sheet blocks only some of the light, so the shadow is faint rather than dark — but it is still on the wall opposite the lamp, in the same position as before. Swapping the child for the sheet does not move the shadow. What changes is how much light the material blocks, and so how dark the shadow appears.
+          - button [ref=f5e81] [cursor=pointer]:
+            - figure "Comparing the same lamp-and-wall setup with two different objects in the path of the light. Both shadows fall on the far side of the object from the lamp; only the material changes, so the shadow's darkness is the difference to read." [ref=f5e83]:
+              - table [ref=f5e84]:
+                - rowgroup [ref=f5e85]:
+                  - row [ref=f5e86]:
+                    - columnheader "Object in the lamp's path" [ref=f5e87]
+                    - columnheader "Material" [ref=f5e88]
+                    - columnheader "Light blocked" [ref=f5e89]
+                    - columnheader "Shadow on the wall opposite the lamp" [ref=f5e90]
+                - rowgroup [ref=f5e91]:
+                  - row [ref=f5e92]:
+                    - cell "Child" [ref=f5e93]
+                    - cell "Opaque" [ref=f5e94]
+                    - cell "All the light is blocked" [ref=f5e95]
+                    - cell "A clear, dark shadow" [ref=f5e96]
+                  - row [ref=f5e97]:
+                    - cell "Sheet" [ref=f5e98]
+                    - cell "Translucent" [ref=f5e99]
+                    - cell "Only some light is blocked" [ref=f5e100]
+                    - cell "A faint shadow" [ref=f5e101]
+          - button [ref=f5e103] [cursor=pointer]:
+            - complementary [ref=f5e105]:
+              - paragraph [ref=f5e106]: Pause and check your thinking
+              - paragraph [ref=f5e107]: "Before reading on, think about this claim: \"The child makes a shadow the way a lamp makes light.\" If you agree, you are treating the shadow as something the child produces straight away. The target idea is different: the child does not create a shadow. The child's body is opaque, so it blocks the light travelling in straight lines from the lamp. The shadow is not made by the child — it is the light that is missing on the wall on the far side of the child. Agreeing with the claim would show that you think the object gives off a shadow; rejecting it shows that you understand the shadow is the absence of light left when an opaque object blocks the rays."
+          - button [ref=f5e108] [cursor=pointer]:
+            - paragraph [ref=f5e110]: "The child is not like the lamp. A lamp is a light source — it gives out light — but the child gives out nothing. The child is opaque, so when light travelling in straight lines from the lamp reaches the child it is blocked. Beyond the child, on the far side from the lamp, that light never arrives, and the dark patch left where the light is missing is the shadow you see on the wall. The shadow is not something the child makes: it is the shape of the light that the child stops."
+          - button [ref=f5e111] [cursor=pointer]:
+            - complementary [ref=f5e113]:
+              - paragraph [ref=f5e114]: Which side does the dark patch land on?
+              - paragraph [ref=f5e115]: "Picture the same scene: a bright lamp on one side, the child standing between the lamp and the wall. Here is a claim to consider: \"The dark patch appears between the lamp and the child, on the lamp's side.\" Do you agree, disagree, or are you unsure? Notice which side you chose. Then check the target model: light travels in straight lines from the lamp, so it reaches the child and is blocked there. The light cannot bend around the child to reach the wall on the far side. Because the child blocks the straight-line light, the dark patch forms on the far side of the child, on the wall behind the child, opposite the lamp. It does not appear on the lamp's side, because that side of the child is still lit by the lamp."
+          - button [ref=f5e116] [cursor=pointer]:
+            - paragraph [ref=f5e118]: "Consider the claim: in the lamp-and-wall setup, the dark patch appears between the lamp and the child, on the lamp's side. If you agreed, or you were unsure, that is an important belief to examine. Light travels in a straight line from the lamp, and when it reaches the child — an opaque object — it is blocked. Because the light is stopped at the child, it cannot continue past to the wall on the far side, and that is exactly where the shadow lands: on the wall behind the child, opposite the lamp. So the dark patch does not appear on the lamp's side; it appears on the opposite side of the child from the lamp."
+          - button [ref=f5e119] [cursor=pointer]:
+            - 'heading "Apply the model: an opaque object between a lamp and a screen" [level=2] [ref=f5e121]'
+          - button [ref=f5e122] [cursor=pointer]:
+            - paragraph [ref=f5e124]: A lamp shines on one side of an opaque object, and a screen stands on the other side, directly opposite the lamp. Decide where the shadow will appear on the screen and why, then explain your choice using what light does when it meets an opaque object.
+          - button [ref=f5e125] [cursor=pointer]:
+            - generic [ref=f5e127]:
+              - paragraph [ref=f5e128]: A child stands between a bright lamp and a wall. Where will the dark patch appear?
+              - radiogroup "A child stands between a bright lamp and a wall. Where will the dark patch appear?" [ref=f5e129]:
+                - listitem [ref=f5e130]:
+                  - radio "On the wall behind the child" [ref=f5e131]
+                - listitem [ref=f5e132]:
+                  - radio "On the lamp side of the child" [ref=f5e133]
+                - listitem [ref=f5e134]:
+                  - radio "Underneath the child" [ref=f5e135]
+              - button "Check" [disabled] [ref=f5e136]
+          - button [ref=f5e137] [cursor=pointer]:
+            - generic [ref=f5e139]:
+              - paragraph [ref=f5e140]: A child stands between a bright lamp and a wall. Which statement best explains the dark patch on the wall?
+              - radiogroup "A child stands between a bright lamp and a wall. Which statement best explains the dark patch on the wall?" [ref=f5e141]:
+                - listitem [ref=f5e142]:
+                  - radio "The child blocks light, so the patch is the missing light on the far side." [ref=f5e143]
+                - listitem [ref=f5e144]:
+                  - radio "The child makes the dark patch the way a lamp makes light." [ref=f5e145]
+                - listitem [ref=f5e146]:
+                  - radio "The child pulls darkness from the lamp onto the wall." [ref=f5e147]
+              - button "Check" [disabled] [ref=f5e148]
+          - button [ref=f5e149] [cursor=pointer]:
+            - generic [ref=f5e151]:
+              - paragraph [ref=f5e152]: A child stands between a bright lamp and a wall. The child is opaque. Where does the dark patch (shadow) appear?
+              - radiogroup "A child stands between a bright lamp and a wall. The child is opaque. Where does the dark patch (shadow) appear?" [ref=f5e153]:
+                - listitem [ref=f5e154]:
+                  - radio "Between the lamp and the child, on the lamp's side" [ref=f5e155]
+                - listitem [ref=f5e156]:
+                  - radio "On the wall behind the child, on the far side from the lamp" [ref=f5e157]
+                - listitem [ref=f5e158]:
+                  - radio "All around the child, because light bends around them" [ref=f5e159]
+              - button "Check" [disabled] [ref=f5e160]
+          - button [ref=f5e161] [cursor=pointer]:
+            - generic [ref=f5e163]:
+              - paragraph [ref=f5e164]: A lamp shines on an opaque object standing in front of a screen. Where does the shadow appear on the screen, and why?
+              - radiogroup "A lamp shines on an opaque object standing in front of a screen. Where does the shadow appear on the screen, and why?" [ref=f5e165]:
+                - listitem [ref=f5e166]:
+                  - radio "On the far side of the object from the lamp, because the opaque object blocks the light travelling in straight lines." [ref=f5e167]
+                - listitem [ref=f5e168]:
+                  - radio "On the same side of the object as the lamp, because light bounces back from the object." [ref=f5e169]
+                - listitem [ref=f5e170]:
+                  - radio "Across the whole screen, because the object spreads the light out." [ref=f5e171]
+                - listitem [ref=f5e172]:
+                  - radio "Only around the edges of the object, because light curves around it." [ref=f5e173]
+              - button "Check" [disabled] [ref=f5e174]

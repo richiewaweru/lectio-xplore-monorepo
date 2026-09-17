@@ -1,0 +1,207 @@
+{"timestamp": "2026-09-08T07:04:54.150117+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-08T07:04:54.385182+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-09-08T07:04:54.385182+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-09-08T07:04:55.022821+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-09-08T07:04:55.041998+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-09-08T07:04:55.064010+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-09-08T07:04:55.085675+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-09-08T07:04:55.103296+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-09-08T07:04:55.125380+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-09-08T07:04:55.142117+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-09-08T07:04:55.142117+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready (primary=lesson): ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+{"timestamp": "2026-09-08T07:04:55.218093+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker started worker_id=native-004b5872d1c1"}
+ {"timestamp": "2026-09-08T07:14:15.993604+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker stopped worker_id=native-004b5872d1c1"}
+ {"timestamp": "2026-09-08T07:14:58.076534+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-08T07:14:58.512137+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-09-08T07:14:58.513137+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-09-08T07:14:59.337439+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-09-08T07:14:59.366643+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-09-08T07:14:59.403795+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-09-08T07:14:59.433933+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-09-08T07:14:59.454626+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-09-08T07:14:59.492688+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-09-08T07:14:59.521693+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-09-08T07:14:59.521693+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready (primary=lesson): ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+{"timestamp": "2026-09-08T07:14:59.679857+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker started worker_id=native-4cbcd8a7c6c1"}
+{"timestamp": "2026-09-08T07:14:59.781485+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker stopped worker_id=native-4cbcd8a7c6c1"}
+ {"timestamp": "2026-09-08T07:15:25.112617+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-08T07:15:25.220856+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-09-08T07:15:25.220856+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-09-08T07:15:25.942972+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-09-08T07:15:25.967839+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-09-08T07:15:25.989525+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-09-08T07:15:26.009880+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-09-08T07:15:26.025743+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-09-08T07:15:26.045750+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-09-08T07:15:26.062615+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-09-08T07:15:26.063871+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready (primary=lesson): ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+{"timestamp": "2026-09-08T07:15:26.132487+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker started worker_id=native-4bc81da150c5"}
+{"timestamp": "2026-09-08T07:15:26.251125+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker stopped worker_id=native-4bc81da150c5"}
+ {"timestamp": "2026-09-08T07:15:51.000673+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-08T07:15:51.186075+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-09-08T07:15:51.186075+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-09-08T07:15:51.592171+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-09-08T07:15:51.609272+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-09-08T07:15:51.621156+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-09-08T07:15:51.637986+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-09-08T07:15:51.652482+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-09-08T07:15:51.671532+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-09-08T07:15:51.688681+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-09-08T07:15:51.688681+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready (primary=lesson): ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+{"timestamp": "2026-09-08T07:15:51.731632+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker started worker_id=native-ce9d83ad667c"}
+ {"timestamp": "2026-09-08T07:18:17.808408+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker stopped worker_id=native-ce9d83ad667c"}
+ {"timestamp": "2026-09-08T07:19:08.896932+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-08T07:19:09.394179+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-09-08T07:19:09.394179+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-09-08T07:19:12.961655+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-09-08T07:19:13.006161+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-09-08T07:19:13.037480+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-09-08T07:19:13.077194+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-09-08T07:19:13.143851+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-09-08T07:19:13.174024+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-09-08T07:19:13.196615+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-09-08T07:19:13.197627+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready (primary=lesson): ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+{"timestamp": "2026-09-08T07:19:13.282502+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker started worker_id=native-239952051fba"}
+{"timestamp": "2026-09-08T07:19:13.544251+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker stopped worker_id=native-239952051fba"}
+ {"timestamp": "2026-09-08T07:19:46.154607+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-08T07:19:47.362101+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-09-08T07:19:47.362607+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-09-08T07:19:48.680143+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-09-08T07:19:48.711426+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-09-08T07:19:48.739828+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-09-08T07:19:48.767616+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-09-08T07:19:48.790786+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-09-08T07:19:48.817130+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-09-08T07:19:48.840623+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-09-08T07:19:48.840623+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready (primary=lesson): ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+{"timestamp": "2026-09-08T07:19:48.942515+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker started worker_id=native-b41858028b08"}
+{"timestamp": "2026-09-08T07:19:49.144669+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker stopped worker_id=native-b41858028b08"}
+{"timestamp": "2026-09-08T07:20:18.165970+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-08T07:20:18.249205+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-09-08T07:20:18.249762+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-09-08T07:20:18.729234+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-09-08T07:20:18.742103+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-09-08T07:20:18.757550+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-09-08T07:20:18.771757+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-09-08T07:20:18.786773+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-09-08T07:20:18.802720+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-09-08T07:20:18.815827+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-09-08T07:20:18.815827+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready (primary=lesson): ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+{"timestamp": "2026-09-08T07:20:18.864742+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker started worker_id=native-a897ae70a6f0"}
+ {"timestamp": "2026-09-08T07:22:46.630718+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker stopped worker_id=native-a897ae70a6f0"}
+ {"timestamp": "2026-09-08T07:23:23.957486+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-08T07:23:24.874332+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-09-08T07:23:24.874332+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-09-08T07:23:28.320911+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-09-08T07:23:28.344230+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-09-08T07:23:28.364272+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-09-08T07:23:28.386770+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-09-08T07:23:28.404948+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-09-08T07:23:28.426542+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-09-08T07:23:28.446984+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-09-08T07:23:28.446984+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready (primary=lesson): ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+{"timestamp": "2026-09-08T07:23:28.511624+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker started worker_id=native-4dd9a5460555"}
+{"timestamp": "2026-09-08T07:23:28.835930+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker stopped worker_id=native-4dd9a5460555"}
+ {"timestamp": "2026-09-08T07:24:04.940162+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-08T07:24:05.141292+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-09-08T07:24:05.141292+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-09-08T07:24:05.936564+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-09-08T07:24:05.951417+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-09-08T07:24:05.968361+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-09-08T07:24:05.986895+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-09-08T07:24:06.001313+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-09-08T07:24:06.018745+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-09-08T07:24:06.034119+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-09-08T07:24:06.034119+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready (primary=lesson): ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+{"timestamp": "2026-09-08T07:24:06.084508+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker started worker_id=native-acb78787b04e"}
+{"timestamp": "2026-09-08T07:24:06.197633+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker stopped worker_id=native-acb78787b04e"}
+{"timestamp": "2026-09-08T07:24:30.230038+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-08T07:24:30.323454+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-09-08T07:24:30.323454+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-09-08T07:24:30.734183+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-09-08T07:24:30.754860+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-09-08T07:24:30.771219+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-09-08T07:24:30.792379+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-09-08T07:24:30.808387+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-09-08T07:24:30.826528+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-09-08T07:24:30.845588+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-09-08T07:24:30.845588+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready (primary=lesson): ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+{"timestamp": "2026-09-08T07:24:30.910999+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker started worker_id=native-1fc65fea14d3"}
+ {"timestamp": "2026-09-08T07:28:21.450818+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker stopped worker_id=native-1fc65fea14d3"}
+ {"timestamp": "2026-09-08T07:29:12.869308+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-08T07:29:13.174957+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-09-08T07:29:13.174957+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-09-08T07:29:13.723361+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-09-08T07:29:13.737000+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-09-08T07:29:13.754985+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-09-08T07:29:13.776531+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-09-08T07:29:13.820299+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-09-08T07:29:13.842795+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-09-08T07:29:13.858861+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-09-08T07:29:13.858861+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready (primary=lesson): ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+{"timestamp": "2026-09-08T07:29:13.919667+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker started worker_id=native-641018ab3b85"}
+{"timestamp": "2026-09-08T07:29:14.032093+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker stopped worker_id=native-641018ab3b85"}
+ {"timestamp": "2026-09-08T07:29:36.015281+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-08T07:29:36.138881+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-09-08T07:29:36.138881+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-09-08T07:29:36.567091+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-09-08T07:29:36.582097+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-09-08T07:29:36.598253+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-09-08T07:29:36.614219+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-09-08T07:29:36.630750+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-09-08T07:29:36.649522+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-09-08T07:29:36.667956+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-09-08T07:29:36.667956+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready (primary=lesson): ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+{"timestamp": "2026-09-08T07:29:36.731049+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker started worker_id=native-8de4f552c41b"}
+{"timestamp": "2026-09-08T07:29:36.855369+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker stopped worker_id=native-8de4f552c41b"}
+ {"timestamp": "2026-09-08T07:30:06.411514+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-08T07:30:07.223212+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-09-08T07:30:07.223212+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-09-08T07:30:08.327886+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-09-08T07:30:08.347674+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-09-08T07:30:08.369684+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-09-08T07:30:08.396042+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-09-08T07:30:08.415888+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-09-08T07:30:08.439756+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-09-08T07:30:08.461824+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-09-08T07:30:08.461824+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready (primary=lesson): ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+{"timestamp": "2026-09-08T07:30:08.543927+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker started worker_id=native-3cdba85026f9"}
+{"timestamp": "2026-09-08T07:30:08.650799+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker stopped worker_id=native-3cdba85026f9"}
+ {"timestamp": "2026-09-08T07:30:35.447256+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-08T07:30:35.636983+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-09-08T07:30:35.637991+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-09-08T07:30:36.279388+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-09-08T07:30:36.296505+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-09-08T07:30:36.314161+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-09-08T07:30:36.333463+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-09-08T07:30:36.349716+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-09-08T07:30:36.363351+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-09-08T07:30:36.375384+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-09-08T07:30:36.376385+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready (primary=lesson): ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+{"timestamp": "2026-09-08T07:30:36.428760+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker started worker_id=native-55051753cad0"}
+{"timestamp": "2026-09-08T07:30:36.534834+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker stopped worker_id=native-55051753cad0"}
+ {"timestamp": "2026-09-08T07:31:00.662763+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-08T07:31:00.761241+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-09-08T07:31:00.761788+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-09-08T07:31:01.651454+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-09-08T07:31:01.665203+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-09-08T07:31:01.684572+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-09-08T07:31:01.699623+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-09-08T07:31:01.714226+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-09-08T07:31:01.730177+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-09-08T07:31:01.744069+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-09-08T07:31:01.744069+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready (primary=lesson): ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+{"timestamp": "2026-09-08T07:31:01.797322+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker started worker_id=native-b5a6c5b25a84"}
+{"timestamp": "2026-09-08T07:31:01.915252+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker stopped worker_id=native-b5a6c5b25a84"}
+{"timestamp": "2026-09-08T07:31:31.836666+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-08T07:31:32.725162+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Context impl PostgresqlImpl."}
+{"timestamp": "2026-09-08T07:31:32.728244+00:00", "level": "INFO", "logger": "alembic.runtime.migration", "message": "Will assume transactional DDL."}
+{"timestamp": "2026-09-08T07:31:34.441751+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: exit_ticket v1.0"}
+{"timestamp": "2026-09-08T07:31:34.485735+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: lesson v1.0"}
+{"timestamp": "2026-09-08T07:31:34.509938+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: mini_booklet v1.0"}
+{"timestamp": "2026-09-08T07:31:34.530567+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: practice_set v1.0"}
+{"timestamp": "2026-09-08T07:31:34.547200+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quick_explainer v1.0"}
+{"timestamp": "2026-09-08T07:31:34.566159+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: quiz v1.0"}
+{"timestamp": "2026-09-08T07:31:34.590137+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Loaded resource spec: worksheet v1.0"}
+{"timestamp": "2026-09-08T07:31:34.590137+00:00", "level": "INFO", "logger": "resource_specs.loader", "message": "Resource spec registry ready (primary=lesson): ['exit_ticket', 'lesson', 'mini_booklet', 'practice_set', 'quick_explainer', 'quiz', 'worksheet']"}
+{"timestamp": "2026-09-08T07:31:34.673624+00:00", "level": "INFO", "logger": "print.generation.whole_lesson.worker", "message": "Native execution worker started worker_id=native-8633da30a5f9"}

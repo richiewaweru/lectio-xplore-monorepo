@@ -27,7 +27,8 @@ section.
   prior_established what earlier lessons already taught, with IDs
   misconceptions    approved, with IDs. Zero to three. Never invent one.
   anchor            the concrete case, with ID. Chosen upstream.
-  slots             ordered, each with a fixed purpose and typical_intents
+  selected_slots    ordered, selected upstream for this exact objective
+  slots             selected slots, each with a fixed purpose and typical_intents
   visual_required   boolean per slot; true is an authoritative visual contract
   required_visual_slots supplied slots whose visual contract must be fulfilled
   approved_item_ids assessment items already written and approved, with IDs
@@ -52,6 +53,12 @@ section.
 You may choose an intent outside a slot's typical_intents when the concept
 calls for it. That is a normal, expected decision. It requires a
 departure_reason and nothing more.
+
+Before returning JSON, inspect every block: if its intent is not in that
+slot's typical_intents, write a concrete departure_reason that names the
+lesson-specific need and why the typical intent would be a worse fit. If its
+intent is typical, leave departure_reason empty. A non-typical intent without
+that field is invalid output and must be corrected before you return.
 
 ## VISUAL REQUIREMENTS
 
@@ -250,6 +257,12 @@ have not explained a decision. Write it again.
 You may attach an already-approved item to a teaching block only under the
 rules in `assessment_source_policy`.
 
+Every response-bearing learner action must declare `task_mode`:
+`formative` for a useful in-lesson task authored later as a SharedTaskSpec, or
+`assessment` for a formal task bound to an approved source. Use `none` only for
+passive actions. Formative tasks leave `source_question_ids` empty; assessment
+tasks require compatible approved ownership.
+
 For the current multiple-choice items, `source_question_ids` is either empty
 or a singleton array containing exactly one approved item ID. Select the one
 item that best checks the lesson objective. You do not need to use every
@@ -266,7 +279,7 @@ that later.
 
 ## PROHIBITIONS
 
-  Never change the objective, scope, anchor identity, slot set, or slot order.
+  Never change the objective, scope, anchor identity, selected slot set, or slot order.
   Never use an excluded intent.
   Never invent a misconception, or focus one not on the approved list.
   Never name a page object, format, or layout anywhere in your output.
@@ -301,6 +314,8 @@ JSON only. No preamble, no code fences, no commentary.
           "departure_reason": str | null,
           "source_question_ids": [str],
           "stimulus_dependencies": [str],
+          "task_mode": "none" | "formative" | "assessment",
+          "sourcebook_needs": [str],
           "learner_action": {
             "action": str,
             "target": str,
@@ -320,7 +335,7 @@ Learn capability/component ids, page object ids, or interaction kinds here.
 `stimulus_dependencies` and `source_question_ids` are block provenance, not
 part of learner-task meaning.
 
-Sections appear in skeleton order, one output section per supplied slot. Do not
+Sections appear in selected slot order, one output section per supplied slot. Do not
 output slot_id, block id, or position. The backend attaches the fixed slot id and
 mints `{slot_id}-b{n}` / 0-based positions from array order after your response.
 
@@ -343,5 +358,7 @@ one sentence what the previous section left the learner ready for.
   9. Is every focused misconception confronted somewhere?
  10. Did I use an atypical intent without a departure_reason, or give a
      departure_reason for a typical one? Both are errors.
- 11. Is every non-empty source_question_ids a singleton on an eligible
+  11. Does every response action have the correct task_mode, with formative
+      tasks unbound and assessment tasks source-owned?
+  12. Is every non-empty source_question_ids a singleton on an eligible
      assessment intent, with no item reused by another block?

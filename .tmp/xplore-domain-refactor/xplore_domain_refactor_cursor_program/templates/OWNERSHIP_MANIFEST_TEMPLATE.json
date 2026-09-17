@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "path": "apps/textbook-agent/backend/src/generation/component_lectio",
+      "ownership": "LEARN",
+      "target": "apps/textbook-agent/backend/src/learn/generation",
+      "reason": "Interactive lesson realization only",
+      "public_imports": [],
+      "risk": "medium"
+    }
+  ],
+  "allowed_ownership": [
+    "CURRICULUM",
+    "PRINT",
+    "LEARN",
+    "PLATFORM",
+    "REMOVE_LATER",
+    "NEEDS_SEAM_EXTRACTION"
+  ]
+}

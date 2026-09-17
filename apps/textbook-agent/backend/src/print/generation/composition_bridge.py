@@ -25,6 +25,7 @@ from print.generation.selection_snapshot import (
     validate_print_selection,
 )
 from print.generation.task_treatments import (
+    PASSIVE_LEARNER_ACTIONS,
     PRINT_TASK_TREATMENTS,
     print_treatment_for_learner_action,
 )
@@ -125,11 +126,32 @@ def _layer_print_tasks(
             source_ids = list(block.source_question_ids or [])
             treatment = print_treatment_for_learner_action(action, intent=intent)
 
+            # A passive model/demonstration block is still a Print task: its
+            # paper realization is the worked-example treatment even when the
+            # Teaching Plan intentionally has no learner action. The intent
+            # remains the teaching-owned signal; the treatment must already be
+            # present in the exact upstream candidate set.
+            if (
+                treatment is None
+                and not action
+                and intent in {"demonstrate", "model", "worked-example", "walkthrough"}
+                and "worked-example" in allowed
+            ):
+                treatment = "worked-example"
+
             # Legacy records can carry source ownership without learner_action;
             # keep them readable, but never guess outside the typed source form.
             if treatment is None and source_ids:
                 treatment = "choices" if len(source_ids) == 1 and "choices" in allowed else "questions"
-            if treatment in {"questions", "choices"} and not source_ids:
+            # Formative response tasks are authored as SharedTaskSpec records and
+            # intentionally have no approved assessment source. They still need the
+            # same paper treatment as Learn. Only task_mode=none may suppress a
+            # response treatment when no source is bound.
+            if (
+                treatment in {"questions", "choices"}
+                and not source_ids
+                and str(getattr(block, "task_mode", "none")) != "formative"
+            ):
                 treatment = None
 
             if treatment is not None:
@@ -155,6 +177,31 @@ def _layer_print_tasks(
 
             docs = by_block_docs.get(block.id) or []
             if not docs:
+                # Passive semantic actions still need an ordinary document
+                # realization. If the document composer omitted the block,
+                # recover only inside the exact upstream candidate set; never
+                # turn a response task into ordinary prose.
+                if action is None or action in PASSIVE_LEARNER_ACTIONS:
+                    ordinary = [
+                        to_document_primitive(candidate)
+                        for candidate in allowed
+                    ]
+                    ordinary = [kind for kind in ordinary if kind is not None]
+                    if ordinary:
+                        kind = ordinary[0]
+                        decisions.append(
+                            CompositionDecision(
+                                teaching_block_id=block.id,
+                                kind=kind,
+                                lane="document",
+                                reason=(
+                                    "passive teaching block → upstream-legal "
+                                    f"document primitive {kind!r}"
+                                ),
+                                section_id=section_id or None,
+                            )
+                        )
+                        continue
                 raise ValueError(
                     f"closed Print composition has no legal realization for block {block.id!r}"
                 )

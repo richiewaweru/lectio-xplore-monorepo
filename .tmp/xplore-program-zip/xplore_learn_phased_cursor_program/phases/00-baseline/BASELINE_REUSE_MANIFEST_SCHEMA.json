@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Xplore Baseline Reuse Manifest",
+  "type": "object",
+  "required": [
+    "captured_at",
+    "repos",
+    "subsystems",
+    "golden_paths"
+  ],
+  "properties": {
+    "captured_at": {
+      "type": "string"
+    },
+    "repos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "path",
+          "branch",
+          "sha",
+          "dirty"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "branch": {
+            "type": "string"
+          },
+          "sha": {
+            "type": "string"
+          },
+          "dirty": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "subsystems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "classification",
+          "canonical_path",
+          "evidence"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "classification": {
+            "enum": [
+              "REUSE_AS_IS",
+              "EXTEND",
+              "REFACTOR",
+              "REMOVE",
+              "NEW"
+            ]
+          },
+          "canonical_path": {
+            "type": "string"
+          },
+          "alternate_paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "golden_paths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "steps",
+          "commands",
+          "status"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "commands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

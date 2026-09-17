@@ -1,0 +1,8 @@
+[    8680ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/favicon.ico:0
+[    9010ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:5173/api/v1/units/907b1dab-11fd-49fc-ac23-060d45b446b8:0
+[    9428ms] [ERROR] Failed to load resource: the server responded with a status of 403 () @ https://accounts.google.com/gsi/button?theme=outline&size=large&width=320&text=signin_with&is_fedcm_supported=true&client_id=265820548539-9b5snae65fvovp4tk5vebehe73f718sa.apps.googleusercontent.com&iframe_id=gsi_369963_876247&cas=Ar7PNdlZz9VTBguV5w7DpC1KM9DZynUFHTdGzU5FT0o:0
+[    9686ms] [ERROR] [GSI_LOGGER]: The given origin is not allowed for the given client ID. @ https://ssl.gstatic.com/_/gsi/_/js/k=gsi.gsi.en_GB.WVJ-XT8ub3A.O/am=AAAAAIIATBME/d=1/rs=AF0KOtVkNVVA8LHIbpC7PjURRbu34aeIzQ/m=credential_button_library:87
+[   16554ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:5173/api/v1/units/907b1dab-11fd-49fc-ac23-060d45b446b8:0
+[   16580ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://127.0.0.1:5173/api/v1/units/907b1dab-11fd-49fc-ac23-060d45b446b8/path/lessons/undefined/realizations:0
+[   16605ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/units/907b1dab-11fd-49fc-ac23-060d45b446b8/lessons/undefined/realizations:0
+[   16633ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:5173/api/v1/units/907b1dab-11fd-49fc-ac23-060d45b446b8/path:0

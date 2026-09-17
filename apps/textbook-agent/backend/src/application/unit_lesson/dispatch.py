@@ -75,6 +75,7 @@ async def initialise_path_generation(
     shared_preparation: bool = False,
     path_plan_raw: str | None = None,
     provider_packet: dict[str, Any] | None = None,
+    flow_choice: dict[str, Any] | None = None,
 ) -> None:
     signals = V3SignalSummary(
         topic=topic,
@@ -127,6 +128,8 @@ async def initialise_path_generation(
         state["path_plan_raw"] = path_plan_raw
     if provider_packet is not None:
         state["shared_preparation_packet"] = provider_packet
+    if flow_choice is not None:
+        state["flow_choice"] = flow_choice
     if variants:
         state.update(
             {

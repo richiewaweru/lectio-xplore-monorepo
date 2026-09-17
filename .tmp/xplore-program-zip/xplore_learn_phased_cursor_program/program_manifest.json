@@ -1,0 +1,84 @@
+{
+  "program": "Xplore Learn Expansion",
+  "version": "1.0",
+  "phases": [
+    {
+      "number": "00",
+      "slug": "baseline",
+      "title": "Baseline + Reuse Inventory + Guardrails",
+      "prompt": "phases/00-baseline/CURSOR_PHASE_PROMPT.md"
+    },
+    {
+      "number": "01",
+      "slug": "consolidation",
+      "title": "Monorepo Consolidation + Product Boundaries",
+      "prompt": "phases/01-consolidation/CURSOR_PHASE_PROMPT.md"
+    },
+    {
+      "number": "02",
+      "slug": "learn-cleanup",
+      "title": "Component Lectio \u2192 Web-native @lectio/learn",
+      "prompt": "phases/02-learn-cleanup/CURSOR_PHASE_PROMPT.md"
+    },
+    {
+      "number": "03",
+      "slug": "learn-document-ui",
+      "title": "Learn Section Contract + Student Lesson Shell",
+      "prompt": "phases/03-learn-document-ui/CURSOR_PHASE_PROMPT.md"
+    },
+    {
+      "number": "04",
+      "slug": "interactions",
+      "title": "Interactive Component Foundation",
+      "prompt": "phases/04-interactions/CURSOR_PHASE_PROMPT.md"
+    },
+    {
+      "number": "05",
+      "slug": "publishing",
+      "title": "Student Preview + Explicit Immutable Publishing",
+      "prompt": "phases/05-publishing/CURSOR_PHASE_PROMPT.md"
+    },
+    {
+      "number": "06",
+      "slug": "runtime",
+      "title": "Runtime Persistence + LearningInstance Execution",
+      "prompt": "phases/06-runtime/CURSOR_PHASE_PROMPT.md"
+    },
+    {
+      "number": "07",
+      "slug": "evidence",
+      "title": "Concept Evidence + Simple Progress Classification",
+      "prompt": "phases/07-evidence/CURSOR_PHASE_PROMPT.md"
+    },
+    {
+      "number": "08",
+      "slug": "classes",
+      "title": "Classes + Enrollment + Invitations",
+      "prompt": "phases/08-classes/CURSOR_PHASE_PROMPT.md"
+    },
+    {
+      "number": "09",
+      "slug": "assignments",
+      "title": "Assignments + Rolling Distribution",
+      "prompt": "phases/09-assignments/CURSOR_PHASE_PROMPT.md"
+    },
+    {
+      "number": "10",
+      "slug": "student-product",
+      "title": "Student Home + Class + Lesson Product Flow",
+      "prompt": "phases/10-student-product/CURSOR_PHASE_PROMPT.md"
+    },
+    {
+      "number": "11",
+      "slug": "teacher-insight",
+      "title": "Teacher Analytics / Insight",
+      "prompt": "phases/11-teacher-insight/CURSOR_PHASE_PROMPT.md"
+    },
+    {
+      "number": "12",
+      "slug": "hardening",
+      "title": "End-to-End Hardening + Recorded Golden Runs",
+      "prompt": "phases/12-hardening/CURSOR_PHASE_PROMPT.md"
+    }
+  ]
+}

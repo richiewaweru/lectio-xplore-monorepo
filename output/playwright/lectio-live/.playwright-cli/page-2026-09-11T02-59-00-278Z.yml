@@ -1,0 +1,65 @@
+- generic [ref=f4e2]:
+  - banner [ref=f4e3]:
+    - navigation [ref=f4e4]:
+      - link "Lectio" [ref=f4e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=f4e6]:
+        - link "Home" [ref=f4e7] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=f4e9] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=f4e10]:
+    - generic [ref=f4e11]:
+      - generic [ref=f4e13]:
+        - generic [ref=f4e14]: Studio
+        - button "Start over" [ref=f4e15]
+      - generic [ref=f4e16]:
+        - generic [ref=f4e17]:
+          - paragraph [ref=f4e18]: Structural plan
+          - heading "Identify a lever in everyday life and name its fulcrum, effort, and load" [level=2] [ref=f4e19]
+          - paragraph [ref=f4e20]: Path objective and skeleton slots are fixed; content awaits teacher review.
+          - paragraph [ref=f4e21]: "Anchor: A seesaw in a playground: a plank balanced on a central support, one child pushing down on one end…"
+          - paragraph [ref=f4e22]: "Reuse: Reuse this anchor across the fixed path lesson slots."
+        - generic [ref=f4e23]:
+          - heading "Section sequence" [level=3] [ref=f4e24]
+          - list [ref=f4e25]:
+            - listitem [ref=f4e26]:
+              - generic [ref=f4e27]:
+                - paragraph [ref=f4e28]: "1. Why Levers Matter: The Seesaw in Front of You"
+                - generic [ref=f4e29]: orient
+              - paragraph [ref=f4e30]: No visual required
+              - list
+            - listitem [ref=f4e31]:
+              - generic [ref=f4e32]:
+                - paragraph [ref=f4e33]: "2. What Makes a Lever: Fulcrum, Effort, and Load"
+                - generic [ref=f4e34]: explain
+              - paragraph [ref=f4e35]: No visual required
+              - paragraph [ref=f4e36]: Having seen the seesaw pivot, we can now name the three parts that make it a lever and see the same pattern in tools li…
+              - list
+            - listitem [ref=f4e37]:
+              - generic [ref=f4e38]:
+                - paragraph [ref=f4e39]: "3. Levers Versus Near-Levers: Spotting the Fixed Pivot"
+                - generic [ref=f4e40]: contrast
+              - paragraph [ref=f4e41]: No visual required
+              - paragraph [ref=f4e42]: "Now that the three parts are named, we test the boundaries: a lever needs a fixed pivot, an applied effort, and a load…"
+              - list
+            - listitem [ref=f4e43]:
+              - generic [ref=f4e44]:
+                - paragraph [ref=f4e45]: "4. Check: Finding the Fulcrum, Effort, and Load"
+                - generic [ref=f4e46]: check
+              - paragraph [ref=f4e47]: No visual required
+              - paragraph [ref=f4e48]: Use the lever idea from the card to decide, in each situation, whether it is a lever and identify its fulcrum, effort,…
+              - list
+        - generic [ref=f4e49]:
+          - heading "Question arc" [level=3] [ref=f4e50]
+          - list [ref=f4e51]:
+            - listitem [ref=f4e52]: q-check-1 → check (cold)
+      - generic [ref=f4e53]:
+        - generic [ref=f4e54]: Lesson title
+        - textbox "Lesson title" [ref=f4e55]: "Levers in Everyday Life: Fulcrum, Effort, and Load"
+      - generic [ref=f4e57]:
+        - button "Review concepts" [active] [ref=f4e58]
+        - button "Adjust (regenerate with note)" [ref=f4e59]
+        - button "Regenerate" [ref=f4e60]
+      - alert [ref=f4e62]: Current lesson generation requires native document contract v2; legacy Builder conversion is unavailable.
+  - generic [ref=f4e61]: Lectio

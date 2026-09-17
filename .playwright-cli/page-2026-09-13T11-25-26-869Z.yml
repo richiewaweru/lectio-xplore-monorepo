@@ -1,0 +1,96 @@
+- generic [ref=f1e2]:
+  - banner [ref=f1e3]:
+    - navigation [ref=f1e4]:
+      - link "Lectio" [ref=f1e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=f1e8]:
+        - link "Home" [ref=f1e9] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=f1e11] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=f1e6]:
+    - generic [ref=f1e274]:
+      - generic [ref=f1e275]:
+        - generic [ref=f1e276]:
+          - link "← Units" [ref=f1e277] [cursor=pointer]:
+            - /url: /units
+          - paragraph [ref=f1e278]: Science · Grade 4
+          - heading "How Shadows Form" [level=1] [ref=f1e279]
+          - paragraph [ref=f1e280]: explain why a shadow appears when an object blocks light, and describe how the shadow changes when the light source moves closer or farther
+        - generic [ref=f1e281]:
+          - generic [ref=f1e282]: Draft
+          - button "Replan the lessons" [ref=f1e283] [cursor=pointer]
+      - navigation "Unit workspace views" [ref=f1e284]:
+        - button "Lessons" [ref=f1e285] [cursor=pointer]
+        - button "Schedule" [ref=f1e286] [cursor=pointer]
+        - button "Groups" [ref=f1e287] [cursor=pointer]
+        - button "Resources" [ref=f1e288] [cursor=pointer]
+        - button "Results" [ref=f1e289] [cursor=pointer]
+        - button "History" [ref=f1e290] [cursor=pointer]
+      - generic [ref=f1e291]:
+        - generic [ref=f1e292]:
+          - paragraph [ref=f1e293]: Ready to teach from?
+          - paragraph [ref=f1e294]: Locking it in freezes this lesson route so Print and Learn can be generated from it.
+        - button "Looks good — lock it in" [ref=f1e296] [cursor=pointer]
+      - generic [ref=f1e297]:
+        - complementary "Your lessons" [ref=f1e298]:
+          - paragraph [ref=f1e299]: Your lessons
+          - list [ref=f1e300]:
+            - listitem [ref=f1e301]:
+              - button "1 Light travels in straight lines from a source" [ref=f1e302]:
+                - generic [ref=f1e303]: "1"
+                - strong [ref=f1e305]: Light travels in straight lines from a source
+            - listitem [ref=f1e306]:
+              - button "2 Opaque, transparent and translucent materials needs lesson 1" [ref=f1e307]:
+                - generic [ref=f1e308]: "2"
+                - generic [ref=f1e309]:
+                  - strong [ref=f1e310]: Opaque, transparent and translucent materials
+                  - generic [ref=f1e311]: needs lesson 1
+            - listitem [ref=f1e312]:
+              - button "3 How a shadow forms when an object blocks light needs lesson 1 · needs lesson 2" [ref=f1e313]:
+                - generic [ref=f1e314]: "3"
+                - generic [ref=f1e315]:
+                  - strong [ref=f1e316]: How a shadow forms when an object blocks light
+                  - generic [ref=f1e317]: needs lesson 1 · needs lesson 2
+            - listitem [ref=f1e318]:
+              - button "4 How shadow size changes when the light source moves needs lesson 3" [ref=f1e319]:
+                - generic [ref=f1e320]: "4"
+                - generic [ref=f1e321]:
+                  - strong [ref=f1e322]: How shadow size changes when the light source moves
+                  - generic [ref=f1e323]: needs lesson 3
+        - main [ref=f1e324]:
+          - generic [ref=f1e326]:
+            - paragraph [ref=f1e327]: Lesson 1
+            - heading "Light travels in straight lines from a source" [level=2] [ref=f1e328]
+          - generic [ref=f1e329]:
+            - generic [ref=f1e330]:
+              - generic [ref=f1e331]: Title
+              - textbox "Title" [ref=f1e332]: Light travels in straight lines from a source
+            - generic [ref=f1e333]:
+              - generic [ref=f1e334]: What students will be able to do
+              - textbox "What students will be able to do" [ref=f1e335]: Describe how light travels from a source and identify everyday light sources
+            - generic [ref=f1e336]:
+              - generic [ref=f1e337]: Must establish one per line
+              - textbox "Must establish one per line" [ref=f1e338]: Light comes from a source and travels in straight lines Light sources emit light; objects that do not emit light are seen by reflected light Examples of light sources include the Sun, lamps, torches
+            - button "Save lesson changes" [ref=f1e339] [cursor=pointer]
+          - generic [ref=f1e340]:
+            - generic [ref=f1e341]:
+              - paragraph [ref=f1e342]: Before this lesson
+              - heading "What earlier lessons it requires" [level=3] [ref=f1e343]
+            - paragraph [ref=f1e344]: Nothing — this can be the starting point.
+          - button "Show shape debug" [ref=f1e346] [cursor=pointer]
+          - generic [ref=f1e347]:
+            - generic [ref=f1e348]:
+              - paragraph [ref=f1e349]: Preparation
+              - heading "Ready when you are" [level=3] [ref=f1e350]
+              - paragraph [ref=f1e351]: Print and Learn are generated independently from the Teaching Plan.
+            - generic [ref=f1e352]:
+              - button "Generate Print" [disabled] [ref=f1e353]
+              - button "Generate Learn" [disabled] [ref=f1e354]
+              - button "Check preparation status" [ref=f1e355] [cursor=pointer]
+      - region "Edit your lessons by chat" [ref=f1e356]:
+        - paragraph [ref=f1e357]: Edit your lessons
+        - generic [ref=f1e358]:
+          - textbox "e.g. Combine lessons 2 and 3, or add something about fractions" [ref=f1e359]
+          - button "Send" [disabled] [ref=f1e360]
+  - generic [ref=f1e236]: Unit · Lectio

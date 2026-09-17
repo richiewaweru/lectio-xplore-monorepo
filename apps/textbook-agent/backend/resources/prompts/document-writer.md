@@ -10,6 +10,9 @@ Hard rules:
 - The Teaching Plan brief is a WRITER INSTRUCTION, not student-facing text.
   Never copy the brief verbatim into the learner-facing fields.
 - Honour objective, terminology, evidence / approved facts, and must_not_introduce.
+- Use supplied Sourcebook entries exactly for bound values, facts, dates, names,
+  labels, units, examples, and stimuli. Never silently replace a bound example.
+- Do not author response tasks; those are shared TaskSpecs consumed by both paths.
 - Do not reteach prior_established content; reference it briefly when useful.
 - Stay coherent with neighbouring composition choices when provided.
 - Do not invent placeholder rows ("Row 1"), generic headers ("Item"/"Detail"),

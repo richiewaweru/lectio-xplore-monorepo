@@ -153,6 +153,58 @@ def test_generic_brief_fails_validation() -> None:
     assert "BRIEF_GENERIC" in codes or "BRIEF_TOO_SHORT" in codes or "BRIEF_NO_ANCHOR_OR_TERM" in codes
 
 
+def test_dotted_approved_item_evidence_ref_resolves() -> None:
+    """Revision-bound approved item ids keep their dotted item suffix."""
+    item_id = "pack-1:card-1.i1"
+    packet = ImmutableLessonPacket(
+        lesson=LessonIdentity(
+            path_lesson_id="l-dotted-item",
+            subject="Science",
+            grade_level="Grade 4",
+            objective="Explain why plants need light to make food.",
+            knowledge_type="conceptual",
+            lesson_mode="first_exposure",
+        ),
+        scope=ScopeContract(
+            must_establish=[ScopeEntry(id="must-1", statement="Light is required.")],
+            terminology=["light", "food", "plant"],
+        ),
+        anchor=AnchorRecord(id="anchor-1", description="Two plants by a window"),
+        approved_items=[
+            ApprovedItemRef(id=item_id, card_id="card-1", stem="Why did the leaf fail?", correct_key="A")
+        ],
+        slots=[SlotRecord(slot_id="check")],
+        limits=LessonLimits(),
+    )
+    plan = TeachingPlan(
+        arc="Use the window plants to explain why light matters, then check the claim.",
+        anchor_usage=[AnchorUsageEntry(slot_id="check", usage="check the light explanation")],
+        sections=[
+            TeachingPlanSection(
+                slot_id="check",
+                blocks=[
+                    TeachingPlanBlock(
+                        id="check-b1",
+                        position=0,
+                        intent="explain",
+                        brief="Explain why the plants by the window need light to make food.",
+                        evidence_refs=[f"item.{item_id}"],
+                        evidence="The approved item is the source-owned evidence for this check.",
+                    )
+                ],
+            )
+        ],
+    )
+    report = validate_teaching_plan(
+        plan,
+        packet,
+        permitted_intents={"explain"},
+        excluded_intents=set(),
+        typical_by_slot={"check": {"explain"}},
+    )
+    assert not any(issue.code == "EVIDENCE_REF" for issue in report.issues)
+
+
 def _slot_order_packet(slots: tuple[str, ...], *, knowledge_type: str = "conceptual") -> ImmutableLessonPacket:
     return ImmutableLessonPacket(
         lesson=LessonIdentity(
@@ -358,6 +410,7 @@ def test_assessment_intent_requires_approved_source_when_items_exist() -> None:
     packet = _slot_order_packet(("orient", "check"))
     plan = _slot_order_plan(("orient", "check"))
     plan.sections[1].blocks[0].intent = "check-understanding"
+    plan.sections[1].blocks[0].task_mode = "assessment"
 
     report = validate_teaching_plan(
         plan,

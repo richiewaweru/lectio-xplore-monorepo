@@ -1,0 +1,67 @@
+- generic [ref=f5e2]:
+  - banner [ref=f5e3]:
+    - navigation [ref=f5e4]:
+      - link "Lectio" [ref=f5e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=f5e8]:
+        - link "Home" [ref=f5e9] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=f5e11] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=f5e6]:
+    - generic [ref=f5e12]:
+      - generic [ref=f5e14]:
+        - generic [ref=f5e15]: Studio
+        - button "Start over" [ref=f5e16]
+      - generic [ref=f5e17]:
+        - generic [ref=f5e18]:
+          - paragraph [ref=f5e19]: Lesson approach
+          - heading "Review the teaching plan" [level=2] [ref=f5e20]
+          - paragraph [ref=f5e21]: Approve the pedagogical arc before forms and writers run. Read the last brief first.
+        - generic [ref=f5e22]:
+          - heading "Arc" [level=3] [ref=f5e23]
+          - paragraph [ref=f5e24]: "This lesson opens on a seesaw in a playground, where one child pushes down and the other end rises, and asks what the plank is tilting around. It pins the three parts of a lever — fulcrum, effort, load — to actual positions on that seesaw, then sets that model beside the two beliefs it is most likely to meet: that the pushing end is the fulcrum, and that only made tools like crowbars count. It closes by having the learner read the three parts off a lever they have not seen before."
+        - generic [ref=f5e25]:
+          - heading "Anchor usage" [level=3] [ref=f5e26]
+          - list [ref=f5e27]:
+            - listitem [ref=f5e28]: "orient: Open on the seesaw with one child pushing down on one end and the other end rising, and ask what the plank is tilting around — this is the reason to care."
+            - listitem [ref=f5e29]: "explain: Label the seesaw itself: the central support the plank balances on is the fulcrum, the downward push on one end is the effort, the child on the other end is the load."
+            - listitem [ref=f5e30]: "contrast: The seesaw holds the correct model while two near-misses are placed beside it: pointing at the pushing end and calling it the fulcrum, and claiming the seesaw does not count as a lever because it is not a made tool."
+            - listitem [ref=f5e31]: "check: The learner reads the three parts off a lever they have not seen before, so the seesaw must not be the case being diagnosed."
+        - paragraph [ref=f5e32]: "Focused misconceptions: M1, M3"
+        - article [ref=f5e33]:
+          - heading "check" [level=3] [ref=f5e34]
+          - paragraph [ref=f5e35]: Have the learner read the three parts off a lever they have not seen, so the objective is measured rather than rehearsed.
+          - generic [ref=f5e36]:
+            - paragraph [ref=f5e37]: check-b1 · check-understanding
+            - paragraph [ref=f5e38]: Have the learner identify the fulcrum, the effort, and the load on a lever they have not seen before, and name which part is which in that new case. The case must not be the seesaw. Correct reading means all three parts are assigned to the right places, not just that the words are recalled.
+        - article [ref=f5e39]:
+          - heading "contrast" [level=3] [ref=f5e40]
+          - paragraph [ref=f5e41]: Set the three-part model beside the two beliefs that would misplace or deny it.
+          - generic [ref=f5e42]:
+            - paragraph [ref=f5e43]: contrast-b2 · classify
+            - paragraph [ref=f5e44]: "Give the rule that makes something a lever: a rigid bar that tilts around a fixed point, with the push applied away from that point and the thing being moved on the other side. Sort by that rule: a seesaw, a bottle opener, and a crowbar all satisfy it and all have a fulcrum, an effort, and a load; a wheel rolling in a straight line does not tilt around a fixed point and is not a lever. Include the seesaw explicitly so it is not treated as an exception."
+          - generic [ref=f5e45]:
+            - paragraph [ref=f5e46]: contrast-b1 · diagnose-misconception
+            - paragraph [ref=f5e47]: "Put the correct reading beside the wrong one on the same seesaw. Correct: the fulcrum is the central support the plank balances on. Wrong: the fulcrum is the end where the first child pushes down, because that is where the action happens. Show that if the fulcrum were the pushing end, then the point the plank actually pivots around would be unnamed, and the plank would have to be tilting around a place where nothing is touching. Do not re-explain what the effort and load are."
+            - paragraph [ref=f5e48]: "Departure: diagnose-misconception is atypical for this slot: the slot's typical intents contrast two legitimate alternatives, but here one side is a held wrong belief about where the fulcrum is, which must be surfaced and tested rather than merely distinguished."
+        - article [ref=f5e49]:
+          - heading "explain" [level=3] [ref=f5e50]
+          - paragraph [ref=f5e51]: Build the three-part model of a lever and pin each part to a real position on the seesaw.
+          - generic [ref=f5e52]:
+            - paragraph [ref=f5e53]: explain-b2 · define
+            - paragraph [ref=f5e54]: "Define a lever as a rigid bar that tilts around a single fixed point, with the push applied at one place and the thing being moved at another. Distinguish the fulcrum from the effort and the load: the fulcrum is the point that does not move, while the effort and the load are the two ends that do. Do not discuss specific instruments or which objects qualify."
+          - generic [ref=f5e55]:
+            - paragraph [ref=f5e56]: explain-b1 · name-parts
+            - paragraph [ref=f5e57]: State that a lever has exactly three parts, and place each on the seesaw. The fulcrum is the central support the plank balances on. The effort is the downward push the first child makes on one end. The load is the child on the other end who is being lifted. Make clear that the three parts are three different places on the seesaw, not three names for the push. Do not yet say what happens when the pushing end is mistaken for the support.
+        - article [ref=f5e58]:
+          - heading "orient" [level=3] [ref=f5e59]
+          - paragraph [ref=f5e60]: Open attention on the seesaw and establish a reason to find out what makes it work.
+          - generic [ref=f5e61]:
+            - paragraph [ref=f5e62]: orient-b1 · orient
+            - paragraph [ref=f5e63]: Present one child pushing down on one end of a seesaw while the other end with the second child rises. Ask what the plank is tilting around, and let the learner notice that it only moves because something in the middle stays still and supports it. Do not name the fulcrum, the effort, or the load yet, and do not explain the mechanism.
+        - generic [ref=f5e64]:
+          - button "Approve teaching plan" [ref=f5e65]
+          - button "Reject" [ref=f5e66]
+      - alert [ref=f5e68]: approved teaching review requires queue=True
+  - generic [ref=f5e67]: Lectio

@@ -1,0 +1,66 @@
+INFO:     Will watch for changes in these directories: ['C:\\Projects\\lectio\\apps\\textbook-agent\\backend']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [10072] using WatchFiles
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [216]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+C:\Projects\lectio\apps\textbook-agent\backend\src\infra\llm\cost.py:153: PydanticAIDeprecationWarning: `AgentRunResult.usage` is no longer a method; access it as a property (drop the parentheses).
+  usage = usage_obj() if callable(usage_obj) else usage_obj
+WARNING:  WatchFiles detected changes in 'src\print\generation\whole_lesson\teaching_agent.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [216]
+WARNING:  WatchFiles detected changes in 'src\print\generation\whole_lesson\teaching_agent.py', 'scripts\run_p09_live_campaign.py'. Reloading...
+WARNING:  WatchFiles detected changes in 'src\print\generation\whole_lesson\teaching_agent.py'. Reloading...
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [19128]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [19128]
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [40412]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+C:\Projects\lectio\apps\textbook-agent\backend\src\infra\llm\cost.py:153: PydanticAIDeprecationWarning: `AgentRunResult.usage` is no longer a method; access it as a property (drop the parentheses).
+  usage = usage_obj() if callable(usage_obj) else usage_obj
+WARNING:  WatchFiles detected changes in 'src\print\generation\whole_lesson\teaching_agent.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [40412]
+WARNING:  WatchFiles detected changes in 'src\print\generation\whole_lesson\teaching_agent.py', 'scripts\run_p09_live_campaign.py'. Reloading...
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [20596]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [20596]
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [36064]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 6 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+C:\Projects\lectio\apps\textbook-agent\backend\src\infra\llm\cost.py:153: PydanticAIDeprecationWarning: `AgentRunResult.usage` is no longer a method; access it as a property (drop the parentheses).
+  usage = usage_obj() if callable(usage_obj) else usage_obj
+WARNING:  WatchFiles detected changes in 'src\infra\config.py'. Reloading...

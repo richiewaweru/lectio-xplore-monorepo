@@ -1,0 +1,93 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - navigation [ref=e4]:
+      - link "Lectio" [ref=e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=e6]:
+        - link "Home" [ref=e7] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=e9] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=e10]:
+    - generic [ref=e245]:
+      - generic [ref=e246]:
+        - generic [ref=e247]:
+          - link "← Units" [ref=e248] [cursor=pointer]:
+            - /url: /units
+          - paragraph [ref=e249]: Science · Grade 4
+          - heading "Why Plants Need Light" [level=1] [ref=e250]
+          - paragraph [ref=e251]: Explain why plants need light to make food
+        - generic [ref=e252]:
+          - generic [ref=e253]: Locked in
+          - button "Replan the lessons" [ref=e254] [cursor=pointer]
+      - navigation "Unit workspace views" [ref=e255]:
+        - button "Lessons" [ref=e256] [cursor=pointer]
+        - button "Schedule" [ref=e257] [cursor=pointer]
+        - button "Groups" [ref=e258] [cursor=pointer]
+        - button "Resources" [ref=e259] [cursor=pointer]
+        - button "Results" [ref=e260] [cursor=pointer]
+        - button "History" [ref=e261] [cursor=pointer]
+      - generic [ref=e262]:
+        - complementary "Your lessons" [ref=e263]:
+          - paragraph [ref=e264]: Your lessons
+          - list [ref=e265]:
+            - listitem [ref=e266]:
+              - button "1 Plants as Producers prepared" [ref=e267]:
+                - generic [ref=e268]: "1"
+                - generic [ref=e269]:
+                  - strong [ref=e270]: Plants as Producers
+                  - generic [ref=e271]: prepared
+            - listitem [ref=e272]:
+              - button "2 Leaves and Chlorophyll needs lesson 1" [ref=e273]:
+                - generic [ref=e274]: "2"
+                - generic [ref=e275]:
+                  - strong [ref=e276]: Leaves and Chlorophyll
+                  - generic [ref=e277]: needs lesson 1
+            - listitem [ref=e278]:
+              - button "3 The Process of Photosynthesis needs lesson 2" [ref=e279]:
+                - generic [ref=e280]: "3"
+                - generic [ref=e281]:
+                  - strong [ref=e282]: The Process of Photosynthesis
+                  - generic [ref=e283]: needs lesson 2
+            - listitem [ref=e284]:
+              - button "4 Why Light is Essential needs lesson 3" [ref=e285]:
+                - generic [ref=e286]: "4"
+                - generic [ref=e287]:
+                  - strong [ref=e288]: Why Light is Essential
+                  - generic [ref=e289]: needs lesson 3
+        - main [ref=e290]:
+          - generic [ref=e292]:
+            - paragraph [ref=e293]: Lesson 1
+            - heading "Plants as Producers" [level=2] [ref=e294]
+          - generic [ref=e295]:
+            - generic [ref=e296]:
+              - generic [ref=e297]: Title
+              - textbox "Title" [ref=e298]: Plants as Producers
+            - generic [ref=e299]:
+              - generic [ref=e300]: What students will be able to do
+              - textbox "What students will be able to do" [ref=e301]: Recognize that plants are producers that make their own food
+            - generic [ref=e302]:
+              - generic [ref=e303]: Must establish one per line
+              - textbox "Must establish one per line" [ref=e304]: Plants are living things that can produce their own food Plants are called producers Use one concrete classroom example.
+            - button "Save lesson changes" [ref=e305] [cursor=pointer]
+          - generic [ref=e306]:
+            - generic [ref=e307]:
+              - paragraph [ref=e308]: Before this lesson
+              - heading "What earlier lessons it requires" [level=3] [ref=e309]
+            - paragraph [ref=e310]: Nothing — this can be the starting point.
+          - button "Show shape debug" [ref=e312] [cursor=pointer]
+          - generic [ref=e313]:
+            - generic [ref=e314]:
+              - paragraph [ref=e315]: Preparation
+              - heading "Ready when you are" [level=3] [ref=e316]
+              - paragraph [ref=e317]: Print and Learn are generated independently from the Teaching Plan.
+            - generic [ref=e318]:
+              - button "Generate Print" [ref=e319] [cursor=pointer]
+              - button "Generate Learn" [ref=e320] [cursor=pointer]
+              - button "Check preparation status" [ref=e321] [cursor=pointer]
+      - region "Edit your lessons by chat" [ref=e322]:
+        - paragraph [ref=e323]: Edit your lessons
+        - generic [ref=e324]:
+          - textbox "e.g. Combine lessons 2 and 3, or add something about fractions" [ref=e325]
+          - button "Send" [disabled] [ref=e326]
+  - generic [ref=e12]: Unit · Lectio

@@ -1,0 +1,14 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - navigation [ref=e4]:
+      - link "Lectio" [ref=e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=e6]:
+        - link "Home" [ref=e7] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=e9] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=e10]:
+    - generic [ref=e13]:
+      - generic [ref=e14]: Studio
+      - button "Start over" [ref=e15]

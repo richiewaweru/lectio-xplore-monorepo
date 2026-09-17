@@ -1,0 +1,5 @@
+/docs
+/docs/oauth2-redirect
+/images
+/openapi.json
+/redoc

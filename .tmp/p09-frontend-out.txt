@@ -1,0 +1,16 @@
+
+> frontend@1.0.0-beta.1 dev C:\Projects\lectio\apps\textbook-agent\frontend
+> vite dev "--host" "127.0.0.1" "--port" "5173"
+
+
+  VITE v7.3.6  ready in 29448 ms
+
+  ➜  Local:   http://127.0.0.1:5173/
+10:13:31 AM [vite-plugin-svelte] C:/Projects/lectio/packages/lectio-learn/dist/components/lectio/CalloutBlock.svelte:51:2 Unused CSS selector ".callout:not(.callout--aside)"
+https://svelte.dev/e/css_unused_selector
+10:13:31 AM [vite-plugin-svelte] C:/Projects/lectio/packages/lectio-learn/dist/components/lectio/CalloutBlock.svelte:58:2 Unused CSS selector ".callout__heading"
+https://svelte.dev/e/css_unused_selector
+10:16:58 AM [vite-plugin-svelte] C:/Projects/lectio/packages/lectio-learn/dist/components/lectio/CalloutBlock.svelte:51:2 Unused CSS selector ".callout:not(.callout--aside)"
+https://svelte.dev/e/css_unused_selector
+10:16:59 AM [vite-plugin-svelte] C:/Projects/lectio/packages/lectio-learn/dist/components/lectio/CalloutBlock.svelte:58:2 Unused CSS selector ".callout__heading"
+https://svelte.dev/e/css_unused_selector

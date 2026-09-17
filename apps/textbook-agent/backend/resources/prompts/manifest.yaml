@@ -109,3 +109,27 @@ prompts:
     stage_label: Realizes Print treatments
     editable: false
     version: 1
+
+  - id: lesson-sourcebook-writer
+    file: lesson-sourcebook-writer.md
+    stage_label: Commits canonical lesson facts and examples
+    editable: false
+    version: 1
+
+  - id: shared-task-writer
+    file: shared-task-writer.md
+    stage_label: Authors shared learner tasks
+    editable: false
+    version: 1
+
+  - id: whole-lesson-coherence-reviewer
+    file: whole-lesson-coherence-reviewer.md
+    stage_label: Reviews whole-lesson coherence
+    editable: false
+    version: 1
+
+  - id: targeted-lesson-repair
+    file: targeted-lesson-repair.md
+    stage_label: Repairs one named lesson target
+    editable: false
+    version: 1

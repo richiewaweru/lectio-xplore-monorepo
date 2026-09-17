@@ -35,6 +35,10 @@ V2_FORM_PLANNER = "v2_form_planner"
 NATIVE_CAPABILITY_SELECTOR = "native_capability_selector"
 V3_CONSTRUCTOR = "v3_constructor"
 V3_VISUAL_TOPOLOGY_PLANNER = "v3_visual_topology_planner"
+V3_LESSON_SOURCEBOOK_WRITER = "v3_lesson_sourcebook_writer"
+V3_SHARED_TASK_WRITER = "v3_shared_task_writer"
+V3_WHOLE_LESSON_COHERENCE_REVIEWER = "v3_whole_lesson_coherence_reviewer"
+V3_TARGETED_LESSON_REPAIR = "v3_targeted_lesson_repair"
 
 V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V3_SIGNAL_EXTRACTOR: ModelSlot.FAST,
@@ -63,6 +67,10 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     NATIVE_CAPABILITY_SELECTOR: ModelSlot.FAST,
     V3_CONSTRUCTOR: ModelSlot.FAST,
     V3_VISUAL_TOPOLOGY_PLANNER: ModelSlot.STANDARD,
+    V3_LESSON_SOURCEBOOK_WRITER: ModelSlot.STANDARD,
+    V3_SHARED_TASK_WRITER: ModelSlot.FAST,
+    V3_WHOLE_LESSON_COHERENCE_REVIEWER: ModelSlot.STANDARD,
+    V3_TARGETED_LESSON_REPAIR: ModelSlot.FAST,
 }
 
 V3ReasoningLevel = Literal["low", "medium", "high"]
@@ -106,6 +114,10 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     NATIVE_CAPABILITY_SELECTOR: False,
     V3_CONSTRUCTOR: False,
     V3_VISUAL_TOPOLOGY_PLANNER: False,
+    V3_LESSON_SOURCEBOOK_WRITER: False,
+    V3_SHARED_TASK_WRITER: False,
+    V3_WHOLE_LESSON_COHERENCE_REVIEWER: False,
+    V3_TARGETED_LESSON_REPAIR: False,
 }
 
 V3_DEFAULT_SPECS: dict[ModelSlot, ModelSpec] = {
@@ -331,17 +343,21 @@ __all__ = [
     "V3_DEFAULT_SPECS",
     "V3_ITEM_EXECUTOR",
     "V3_KNOWLEDGE_TYPE_CLASSIFIER",
+    "V3_LESSON_SOURCEBOOK_WRITER",
     "V3_NARROW",
     "V3_NODE_REASONING",
     "V3_NODE_SLOTS",
     "V3_PROPOSE_INTENT",
     "V3_QUESTION_WRITER",
     "V3_SECTION_WRITER",
+    "V3_SHARED_TASK_WRITER",
     "V3_SIGNAL_EXTRACTOR",
     "V3_STAGE1_PLANNER",
     "V3_STAGE2_EXPANDER",
+    "V3_TARGETED_LESSON_REPAIR",
     "V3_VISUAL_QC",
     "V3_VISUAL_TOPOLOGY_PLANNER",
+    "V3_WHOLE_LESSON_COHERENCE_REVIEWER",
     "get_v3_model",
     "get_v3_model_settings",
     "get_v3_slot",

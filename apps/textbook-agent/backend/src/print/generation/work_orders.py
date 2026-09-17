@@ -38,6 +38,9 @@ class PrintWorkOrder(BaseModel):
     teaching_plan_hash: str
     capability_contract_hash: str
     source_refs: list[str] = Field(default_factory=list)
+    sourcebook_refs: list[str] = Field(default_factory=list)
+    sourcebook_entries: list[dict[str, Any]] = Field(default_factory=list)
+    shared_task: dict[str, Any] | None = None
     dependency_ids: list[str] = Field(default_factory=list)
     expected_output_schema: dict[str, Any] = Field(default_factory=dict)
     field_guidance: dict[str, Any] = Field(default_factory=dict)
@@ -49,6 +52,7 @@ class PrintWorkOrder(BaseModel):
     brief: str = ""
     intent: str = ""
     action: str | None = None
+    task_mode: str = "none"
     evidence: str = ""
 
 
@@ -142,6 +146,8 @@ def compile_print_work_orders(
     *,
     teaching_plan: TeachingPlan,
     snapshot: PrintSelectionSnapshot,
+    shared_tasks: Mapping[str, Any] | None = None,
+    sourcebook_entries: Mapping[str, Any] | None = None,
 ) -> list[PrintWorkOrder]:
     blocks = _block_index(teaching_plan)
     orders: list[PrintWorkOrder] = []
@@ -169,6 +175,19 @@ def compile_print_work_orders(
                 teaching_plan_hash=snapshot.teaching_plan_hash,
                 capability_contract_hash=_form_contract_hash(decision.form_id, card),
                 source_refs=list(block.source_question_ids or []),
+                sourcebook_refs=list(block.sourcebook_refs or []),
+                sourcebook_entries=[
+                    entry.model_dump(mode="json")
+                    if hasattr(entry, "model_dump")
+                    else dict(entry)
+                    for ref in (block.sourcebook_refs or [])
+                    for entry in ([sourcebook_entries.get(ref)] if sourcebook_entries and sourcebook_entries.get(ref) is not None else [])
+                ],
+                shared_task=(
+                    shared_tasks.get(block.id).model_dump(mode="json")
+                    if shared_tasks and block.id in shared_tasks and hasattr(shared_tasks.get(block.id), "model_dump")
+                    else (dict(shared_tasks[block.id]) if shared_tasks and block.id in shared_tasks else None)
+                ),
                 dependency_ids=deps,
                 expected_output_schema=dict(schema),
                 field_guidance=dict(guidance),
@@ -180,6 +199,7 @@ def compile_print_work_orders(
                 brief=block.brief,
                 intent=block.intent,
                 action=action,
+                task_mode=block.task_mode,
                 evidence=block.evidence,
             )
         )
@@ -224,6 +244,7 @@ def build_print_work_order_from_planned_block(
         brief=str(planned.brief or ""),
         intent=str(planned.intent or ""),
         action=None,
+        task_mode=str(getattr(planned, "task_mode", "none") or "none"),
         evidence=str(getattr(planned, "evidence", "") or ""),
     )
 
@@ -244,10 +265,14 @@ def build_print_writer_request(
         "brief": order.brief,
         "intent": order.intent,
         "action": order.action,
+        "task_mode": order.task_mode,
         "evidence": order.evidence,
         "teaching_plan_hash": order.teaching_plan_hash,
         "capability_contract_hash": order.capability_contract_hash,
         "source_refs": list(order.source_refs),
+        "sourcebook_refs": list(order.sourcebook_refs),
+        "sourcebook_entries": list(order.sourcebook_entries),
+        "shared_task": dict(order.shared_task) if order.shared_task else None,
         "dependency_ids": list(order.dependency_ids),
         "payload_schema": order.expected_output_schema,
         "field_guidance": order.field_guidance,

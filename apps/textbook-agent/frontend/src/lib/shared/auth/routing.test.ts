@@ -48,8 +48,15 @@ describe('auth routing helpers', () => {
 
 	it('resolves the root route to the correct post-bootstrap destination', () => {
 		expect(resolveShellRedirect(null, '/')).toBe('/login');
+		expect(resolveShellRedirect(null, '/join')).toBeNull();
+		expect(resolveShellRedirect(null, '/learn/home/abc')).toBeNull();
 		expect(resolveShellRedirect(baseUser, '/')).toBe('/onboarding');
 		expect(resolveShellRedirect({ ...baseUser, has_profile: true }, '/')).toBe('/units');
+	});
+
+	it('allows learner paths without forcing onboarding', () => {
+		expect(shouldRedirectToOnboarding(baseUser, '/join')).toBe(false);
+		expect(shouldRedirectToOnboarding(baseUser, '/learn/instances/x')).toBe(false);
 	});
 
 	it('detects onboarding edit mode and builds the edit route', () => {

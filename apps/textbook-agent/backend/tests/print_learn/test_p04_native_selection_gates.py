@@ -173,6 +173,36 @@ def test_p04_n01_compare_without_response_and_sequence() -> None:
     assert by_id["b-reconstruct"].interaction_id == "sequence"
 
 
+def test_p04_classify_items_is_legal_for_compare_intent() -> None:
+    candidates = derive_learn_block_candidates(
+        block_id="b-compare-classify",
+        intent="compare",
+        action="classify-items",
+    )
+
+    assert "classify" in candidates.interaction_candidates
+
+
+def test_p04_choice_is_legal_for_orient_select_one() -> None:
+    candidates = derive_learn_block_candidates(
+        block_id="b-orient-choice",
+        intent="orient",
+        action="select-one",
+    )
+
+    assert "choice" in candidates.interaction_candidates
+
+
+def test_p04_multi_select_is_legal_for_prior_knowledge() -> None:
+    candidates = derive_learn_block_candidates(
+        block_id="b-orient-multi",
+        intent="activate-prior-knowledge",
+        action="select-many",
+    )
+
+    assert "multi-select" in candidates.interaction_candidates
+
+
 # ---------------------------------------------------------------------------
 # P04-N02
 # ---------------------------------------------------------------------------

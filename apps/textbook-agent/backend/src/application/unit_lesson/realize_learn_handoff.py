@@ -17,6 +17,7 @@ from curriculum.teaching_plan.consumers import (
 )
 from learn.generation.native_execution import produce_learn_from_approved_teaching
 from learn.generation.native_production import teaching_plan_content_hash
+from print.generation.whole_lesson.repository import PageDocumentRepository
 from v3_blueprint.planning.persistence import load_chunked_state
 
 
@@ -53,10 +54,20 @@ async def realize_learn_from_preparation(
             detail="Cannot resolve path lesson for this preparation",
         )
 
+    # Native lesson approval is stored in the bounded page-document state.
+    # Learn must consume that exact envelope as well; reading only the outer
+    # generation blob loses teaching_review/teaching_revisions after Print-side
+    # approval and incorrectly reopens the approval gate.
     try:
-        state = await load_chunked_state(preparation_generation_id, session)
-    except ValueError:
-        state = dict(generation.chunked_state_json or {})
+        state = await PageDocumentRepository(
+            session, preparation_generation_id
+        ).load_page_generation_state()
+    except (KeyError, ValueError):
+        # Keep the legacy fallback for older non-native preparations.
+        try:
+            state = await load_chunked_state(preparation_generation_id, session)
+        except ValueError:
+            state = dict(generation.chunked_state_json or {})
 
     try:
         teaching_plan = accept_approved_teaching_revision(state, consumer="learn")

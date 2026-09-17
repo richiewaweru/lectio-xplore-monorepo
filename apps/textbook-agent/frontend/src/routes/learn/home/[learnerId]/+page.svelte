@@ -7,6 +7,7 @@
 
 	interface HomeInstance {
 		id: string;
+		title?: string;
 		learn_release_id: string;
 		assignment_id: string | null;
 		status: string;
@@ -58,13 +59,13 @@
 	{:else if error}
 		<p class="lede error">{error}</p>
 	{:else}
-		<h1>{displayName}</h1>
-		<p class="lede">Due soon · in progress · completed · classes</p>
+		<h1>Hi {displayName}</h1>
+		<p class="lede">Your lessons</p>
 
 		{#each [
-			{ key: 'due_soon', title: 'Due soon', items: buckets.due_soon },
-			{ key: 'in_progress', title: 'In progress', items: buckets.in_progress },
-			{ key: 'completed', title: 'Completed', items: buckets.completed }
+			{ key: 'due_soon', title: 'To do', items: buckets.due_soon, cta: 'Start' },
+			{ key: 'in_progress', title: 'In progress', items: buckets.in_progress, cta: 'Continue' },
+			{ key: 'completed', title: 'Completed', items: buckets.completed, cta: 'View outcome' }
 		] as section}
 			<section>
 				<p class="eyebrow">{section.title}</p>
@@ -72,13 +73,16 @@
 					{#each section.items as item (item.id)}
 						<li>
 							<a href={section.key === 'completed' ? `/learn/instances/${item.id}/outcome` : `/learn/instances/${item.id}`}>
-								<span class="status">{item.status}</span>
-								<strong>Release {item.learn_release_id.slice(0, 8)}</strong>
-								<span class="score">{item.score_earned}/{item.score_possible}</span>
+								<strong>{item.title || 'Lesson'}</strong>
+								{#if section.key === 'completed'}
+									<span class="score">{Math.round((item.score_earned / Math.max(item.score_possible, 1)) * 100)}%</span>
+								{:else}
+									<span class="cta">{section.cta} →</span>
+								{/if}
 							</a>
 						</li>
 					{:else}
-						<li class="empty">None.</li>
+						<li class="empty">Nothing here yet.</li>
 					{/each}
 				</ul>
 			</section>
@@ -148,10 +152,10 @@
 		text-decoration: none;
 		color: inherit;
 	}
-	.status {
+	.cta {
 		color: var(--accent);
-		font: 500 11px 'IBM Plex Mono', monospace;
-		text-transform: uppercase;
+		font-size: 0.8125rem;
+		font-weight: 550;
 	}
 	.score {
 		color: var(--ink-3);

@@ -12,6 +12,9 @@ import json
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from curriculum.lesson_review.service import build_coherence_report
+from curriculum.lesson_sourcebook.models import LessonSourcebook
+from curriculum.shared_tasks import SharedTaskSpec, build_shared_task_registry
 from curriculum.teaching_plan.models import TeachingPlan
 from infra.authoring.capability_selector import ChooseFn
 from print.generation.catalogue_projections import build_form_candidate_map
@@ -54,6 +57,24 @@ def package_contract_hash() -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+def build_print_coherence_report(
+    *,
+    teaching_plan: TeachingPlan,
+    output: Mapping[str, Any],
+    shared_tasks: Sequence[SharedTaskSpec] | None = None,
+    lesson_sourcebook: LessonSourcebook | None = None,
+):
+    """Review an assembled Print payload against the shared semantic contract."""
+    tasks = list(shared_tasks) if shared_tasks is not None else build_shared_task_registry(teaching_plan)
+    return build_coherence_report(
+        path="print",
+        plan=teaching_plan,
+        tasks=tasks,
+        sourcebook=lesson_sourcebook,
+        output=output,
+    )
+
+
 async def build_closed_print_production_plan_async(
     *,
     teaching_plan: TeachingPlan,
@@ -70,6 +91,8 @@ async def build_closed_print_production_plan_async(
     checkpoint_store: Any | None = None,
     progress_store: Any | None = None,
     progress_run_id: str | None = None,
+    shared_tasks: Sequence[SharedTaskSpec] | None = None,
+    lesson_sourcebook: LessonSourcebook | None = None,
 ) -> tuple[FormPlan, PrintSelectionSnapshot, list[PrintWorkOrder]]:
     """Build Print FormPlan from shared document composition (canonical).
 
@@ -147,8 +170,21 @@ async def build_closed_print_production_plan_async(
             required_visual_slots=set(packet.required_visual_slots()),
         )
         form_plan = form_plan_from_decisions(teaching_plan, snapshot.decisions)
+    approved_index = {
+        str(getattr(item, "id", None) or (item.get("id") if isinstance(item, Mapping) else "")): item
+        for item in packet.approved_items
+    }
+    task_registry = list(shared_tasks) if shared_tasks is not None else build_shared_task_registry(
+        teaching_plan,
+        approved_items=approved_index,
+    )
+    tasks_by_block = {task.teaching_block_id: task for task in task_registry}
+    sourcebook_index = lesson_sourcebook.by_id() if lesson_sourcebook is not None else {}
     orders = compile_print_work_orders(
-        teaching_plan=teaching_plan, snapshot=snapshot
+        teaching_plan=teaching_plan,
+        snapshot=snapshot,
+        shared_tasks=tasks_by_block,
+        sourcebook_entries=sourcebook_index,
     )
     return form_plan, snapshot, orders
 
@@ -161,6 +197,8 @@ def build_closed_print_production_plan(
     available_asset_ids: Sequence[str] | None = None,
     policy: Mapping[str, Any] | None = None,
     sealed_form_plan: FormPlan | None = None,
+    shared_tasks: Sequence[SharedTaskSpec] | None = None,
+    lesson_sourcebook: LessonSourcebook | None = None,
 ) -> tuple[FormPlan, PrintSelectionSnapshot, list[PrintWorkOrder]]:
     """Sync wrapper; executor should call the async variant."""
     import asyncio
@@ -173,6 +211,8 @@ def build_closed_print_production_plan(
             available_asset_ids=available_asset_ids,
             policy=policy,
             sealed_form_plan=sealed_form_plan,
+            shared_tasks=shared_tasks,
+            lesson_sourcebook=lesson_sourcebook,
         )
     )
 
@@ -182,6 +222,8 @@ def compile_print_work_orders_for_form_plan(
     teaching_plan: TeachingPlan,
     form_plan: FormPlan,
     policy: Mapping[str, Any] | None = None,
+    shared_tasks: Sequence[SharedTaskSpec] | None = None,
+    lesson_sourcebook: LessonSourcebook | None = None,
 ) -> list[PrintWorkOrder]:
     """Reconstruct selected work orders for a validated/reused Print form plan."""
     body = dict(policy) if policy is not None else default_print_policy()
@@ -199,7 +241,15 @@ def compile_print_work_orders_for_form_plan(
         native_policy_hash=policy_hash,
         package_contract_hash=package_contract_hash(),
     )
-    return compile_print_work_orders(teaching_plan=teaching_plan, snapshot=snapshot)
+    tasks = list(shared_tasks) if shared_tasks is not None else build_shared_task_registry(teaching_plan)
+    task_map = {task.teaching_block_id: task for task in tasks}
+    sourcebook_index = lesson_sourcebook.by_id() if lesson_sourcebook is not None else {}
+    return compile_print_work_orders(
+        teaching_plan=teaching_plan,
+        snapshot=snapshot,
+        shared_tasks=task_map,
+        sourcebook_entries=sourcebook_index,
+    )
 
 
 def selection_trace_payload(
@@ -216,6 +266,7 @@ def selection_trace_payload(
 __all__ = [
     "build_closed_print_production_plan",
     "build_closed_print_production_plan_async",
+    "build_print_coherence_report",
     "compile_print_work_orders_for_form_plan",
     "package_contract_hash",
     "produce_print_document_plan_from_teaching",

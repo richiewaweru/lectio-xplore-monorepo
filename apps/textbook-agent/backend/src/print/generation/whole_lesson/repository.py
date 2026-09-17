@@ -1067,6 +1067,7 @@ class PageDocumentRepository:
         reviewed_by: str | None = None,
         teacher_note: str | None = None,
         queue: bool = False,
+        allow_retry_from_failure: bool = False,
     ) -> dict[str, Any]:
         post_approval = {
             "queued",
@@ -1100,6 +1101,56 @@ class PageDocumentRepository:
                 )
             gen_status = str(generation.status or "")
             if status == "approved" and queue and gen_status in post_approval:
+                boxed.append(state)
+                return
+            if (
+                status == "approved"
+                and queue
+                and allow_retry_from_failure
+                and already_approved
+                and gen_status in {"failed_recoverable", "failed_terminal"}
+            ):
+                # A path realization may fail after the shared Teaching Plan
+                # was approved. Reopen only the explicitly requested Print
+                # worker from that immutable approval; Learn output and plan
+                # revision remain untouched.
+                generation.status = "queued"
+                state["stage"] = "queued"
+                prior_error = dict((state.get("execution") or {}).get("last_error") or {})
+                clear_generation_error_state(generation, state)
+                execution = dict(state.get("execution") or empty_execution_meta())
+                execution["heartbeat_at"] = _now()
+                execution["work_kind"] = WORK_KIND_POST_APPROVAL
+                state["execution"] = execution
+                block_execution = dict(state.get("block_execution") or {})
+                # A whole-document assembly failure can leave individually
+                # ready-looking block outputs that are no longer trustworthy
+                # (for example, an answer entry that violates the assembled
+                # choices contract).  Clear that stale snapshot on an
+                # explicit retry so the corrected writers rerun from the same
+                # immutable Teaching Plan.  Ordinary block/visual failures
+                # retain successful siblings and reopen only failed blocks.
+                if str(prior_error.get("type") or "") == "DocumentAssemblyError":
+                    state["block_execution"] = {}
+                else:
+                    state["block_execution"] = {
+                        key: value
+                        for key, value in block_execution.items()
+                        if str((value or {}).get("status") or "")
+                        not in {"failed", "failed_recoverable", "failed_terminal"}
+                    }
+                events = list(state.get("events") or [])
+                events.append(
+                    {
+                        **make_event(
+                            "print_realization_retry_queued",
+                            generation_id=self.generation_id,
+                            status="queued",
+                        ),
+                        "at": _now(),
+                    }
+                )
+                state["events"] = events[-500:]
                 boxed.append(state)
                 return
             if status == "approved" and not (queue and already_approved):

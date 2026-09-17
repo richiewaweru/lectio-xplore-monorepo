@@ -92,6 +92,19 @@ async def write_ordinary_via_shared_writer(
         ctx.planned.id,
     )
     lesson_context = dict(ctx.lesson_context or {})
+    order_entries = list(getattr(ctx.print_work_order, "sourcebook_entries", None) or [])
+    if order_entries:
+        lesson_context["sourcebook_entries"] = order_entries
+    sourcebook_entries = [
+        dict(entry)
+        for entry in (lesson_context.get("sourcebook_entries") or [])
+        if isinstance(entry, Mapping)
+        and (
+            not getattr(ctx.planned, "sourcebook_refs", None)
+            or str(entry.get("id") or "")
+            in set(getattr(ctx.planned, "sourcebook_refs", None) or [])
+        )
+    ]
     teaching_block = {
         "id": ctx.planned.id,
         "intent": getattr(ctx.planned, "intent", "") or "",
@@ -106,6 +119,7 @@ async def write_ordinary_via_shared_writer(
             lesson_context=lesson_context,
             terminology=list(ctx.terminology),
             allowed_facts=list(lesson_context.get("allowed_facts") or []),
+            sourcebook_entries=sourcebook_entries,
             teaching_block_id=ctx.planned.id,
             provider=authoring,
             budget_ledger=budget_ledger,

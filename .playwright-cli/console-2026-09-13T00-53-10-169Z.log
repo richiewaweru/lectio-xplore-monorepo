@@ -1,0 +1,32 @@
+[    1452ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/favicon.ico:0
+[   22104ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://127.0.0.1:5173/api/v1/auth/me:0
+[  400408ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/realizations/be21db50-bc04-4d60-9426-6fa98f1934fa/events/stream:0
+[  444283ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach:0
+[  495178ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach:0
+[  514575ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach:0
+[  534573ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach:0
+[  554148ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach:0
+[  573522ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach:0
+[  592882ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach:0
+[  612171ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach:0
+[  633593ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach:0
+[  651643ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach:0
+[  670109ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach:0
+[  688998ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach:0
+[  700993ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/retry:0
+[  701006ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach/retry:0
+[  701019ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/chunked/be21db50-bc04-4d60-9426-6fa98f1934fa/retry:0
+[  701031ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/chunked/be21db50-bc04-4d60-9426-6fa98f1934fa/retry-teaching:0
+[  701041ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/continue:0
+[  708133ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach:0
+[  729494ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach:0
+[  749363ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach:0
+[  928943ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/realize-learn:0
+[  951503ms] [ERROR] Failed to load resource: the server responded with a status of 409 (Conflict) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach/approve?path=learn:0
+[  984849ms] [ERROR] Failed to load resource: the server responded with a status of 409 (Conflict) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lesson-approach/approve?path=learn:0
+[ 1010881ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/realize-learn:0
+[ 1017314ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:5173/api/v1/units/11d9ef38-d434-4551-9c35-00b6e38e667f/path/lessons/9e735480-6b97-42f0-be18-17ad0946c4a7/realizations:generate-learn:0
+[ 1046199ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/health:0
+[ 1046234ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/providers:0
+[ 1046249ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/capabilities:0
+[ 1065993ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:5173/api/v1/v3/generations/be21db50-bc04-4d60-9426-6fa98f1934fa/lectio-document:0

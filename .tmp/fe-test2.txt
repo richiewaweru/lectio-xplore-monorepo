@@ -1,0 +1,1064 @@
+﻿
+> lectio-xplore-monorepo@ app:test C:\Projects\lectio
+> pnpm --dir apps/textbook-agent/frontend test
+
+
+> frontend@1.0.0-beta.1 test C:\Projects\lectio\apps\textbook-agent\frontend
+> vitest run
+
+
+ RUN  v3.2.7 C:/Projects/lectio/apps/textbook-agent/frontend
+
+ Γ¥» src/lib/learn/authoring/builder/components/canvas/print-chrome.test.ts (1 test | 1 failed) 18ms
+   ├ù builder generation chrome print isolation > keeps progress and issue text behind the print-hidden class 16ms
+     ΓåÆ ENOENT: no such file or directory, open 'C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\builder\components\canvas\BlockCanvas.svelte'
+ Γ¥» src/lib/lectio-lockfile-sync.test.ts (1 test | 1 failed) 49ms
+   ├ù lectio lockfile sync > keeps package.json, package-lock.json, and pnpm-lock.yaml on the same lectio version 47ms
+     ΓåÆ expected undefined to be truthy
+ Γ£ô src/lib/api/client.test.ts (2 tests) 47ms
+ Γ£ô src/lib/print/generation/generation-poller.test.ts (2 tests) 12ms
+node.exe : stderr | src/lib/api/v3.test.ts > connectV3StudioGenerationStream > closes generation SSE on error without 
+retrying
+At C:\Program Files\nodejs\pnpm.ps1:16 char:5
++     & "$basedir/node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs"  ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (stderr | src/li...ithout retrying:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[v3 generation stream] closed; document polling remains active Error: drop-1
+    at C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\api\v3.test.ts:205:26
+    at Proxy.assertThrows (file:///C:/Projects/lectio/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:2767:5)
+    at Proxy.methodWrapper 
+(file:///C:/Projects/lectio/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)
+    at Proxy.<anonymous> 
+(file:///C:/Projects/lectio/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1088:12)
+    at Proxy.overwritingMethodWrapper 
+(file:///C:/Projects/lectio/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1735:33)
+    at Proxy.<anonymous> 
+(file:///C:/Projects/lectio/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1420:16)
+    at Proxy.<anonymous> 
+(file:///C:/Projects/lectio/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1029:14)
+    at Proxy.methodWrapper 
+(file:///C:/Projects/lectio/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)
+    at C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\api\v3.test.ts:205:48
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+ Γ£ô src/lib/api/v3.test.ts (14 tests) 176ms
+ Γ£ô src/lib/print/studio/v3-document.test.ts (2 tests) 15ms
+ Γ£ô src/lib/print/studio/v3-stream-state.test.ts (5 tests) 23ms
+ Γ£ô src/lib/learn/authoring/workspace/lesson-state.test.ts (3 tests) 13ms
+ Γ£ô src/lib/shared/stores/auth.test.ts (3 tests) 12ms
+ Γ£ô src/lib/print/components/studio/LectioPageDocumentView.test.ts (1 test) 6ms
+ Γ£ô src/routes/login/page.test.ts (1 test) 282ms
+ Γ£ô src/routes/page.test.ts (1 test) 816ms
+   Γ£ô root route session resume > redirects a resumed authenticated session away from the root route  814ms
+ Γ£ô src/routes/onboarding/page.test.ts (1 test) 1083ms
+   Γ£ô onboarding recovery mode > switches into recovery mode when a profile exists for a stale has_profile user  1081ms
+ Γ£ô src/lib/print/components/studio/V3CanvasComponent.test.ts (2 tests) 240ms
+ Γ£ô src/lib/print/components/studio/V3CanvasSection.test.ts (5 tests) 1117ms
+   Γ£ô V3CanvasSection > shows a retryable failure card for failed sections  600ms
+ Γ£ô src/routes/builder/[id]/page.test.ts (12 tests) 1922ms
+   Γ£ô builder lesson route > shows not found state on 404  721ms
+stderr | src/routes/studio/page.test.ts > studio chunked URL resume > shows stage2 section pills updating from chunked 
+SSE events
+[chunked] section failed model [ 'boom' ]
+
+ Γ£ô src/routes/studio/page.test.ts (32 tests) 4296ms
+   Γ£ô studio chunked URL resume > hydrates plan review from generation_id query when plan is ready  731ms
+   Γ£ô studio chunked URL resume > surfaces assembly_blocked from status polling when stage2 SSE is silent  315ms
+   Γ£ô studio chunked URL resume > maps retry_native to its exact recovery action  332ms
+ Γ£ô src/lib/learn/authoring/builder/streaming/generation-stream.test.ts (7 tests) 29ms
+ Γ£ô src/routes/studio/generations/[id]/page.test.ts (8 tests) 1130ms
+   Γ£ô completed V3 generation page > shows parent lesson link for supplement generations  491ms
+ Γ£ô src/lib/no-vendor-lectio-imports.test.ts (1 test) 255ms
+ Γ£ô src/routes/units/page.test.ts (8 tests) 1462ms
+   Γ£ô /units > loads only v2 units and does not call legacy wrappers  563ms
+   Γ£ô /units > opens the native creation flow when linked with the new lesson action  314ms
+ Γ£ô src/routes/units/[id]/page.test.ts (16 tests) 2827ms
+   Γ£ô /units/[id] > initial load fetches only unit and active path  326ms
+   Γ£ô /units/[id] > selecting a lesson does not fetch shape or preparation status  467ms
+   Γ£ô /units/[id] > keeps lessons view when an optional tab endpoint fails  487ms
+ Γ£ô src/lib/components/ProfileSetup.test.ts (2 tests) 722ms
+   Γ£ô ProfileSetup > renders teacher-facing sections and submits the default teacher profile shape  563ms
+ Γ£ô src/lib/curriculum/units/components/LessonShapePanel.test.ts (2 tests) 773ms
+   Γ£ô LessonShapePanel > shows canonical and declared variants with exact explanations and blocking issues  560ms
+ Γ£ô src/lib/curriculum/units/components/ResourceComposerPanel.test.ts (2 tests) 1316ms
+   Γ£ô ResourceComposerPanel > offers all projections and creates from approved selections  1230ms
+ Γ£ô src/routes/settings/page.test.ts (2 tests) 558ms
+   Γ£ô /settings > renders the existing profile summary and edit entry point  521ms
+ Γ£ô src/lib/print/components/studio/V3InputSurface.test.ts (16 tests) 18102ms
+   Γ£ô V3InputSurface > renders the five proposed cards in order  478ms
+   Γ£ô V3InputSurface > prefills a short class label from the profile and leaves long descriptions blank  603ms
+   Γ£ô V3InputSurface > submits the optional class label separately from the planning form  1707ms
+   Γ£ô V3InputSurface > soft-gates intent, context, and submit until the topic is confirmed  1289ms
+   Γ£ô V3InputSurface > narrows a valid topic from input after the debounce  779ms
+   Γ£ô V3InputSurface > discards an in-flight narrowing result when the topic changes  1328ms
+   Γ£ô V3InputSurface > shows inline chip descriptions and limits selection to four  1077ms
+   Γ£ô V3InputSurface > prefills the editable intent fields only after explicit topic confirmation  855ms
+   Γ£ô V3InputSurface > can confirm an empty candidate result and skip selected suggestions  1619ms
+   Γ£ô V3InputSurface > gates and preserves drafts when a confirmed topic changes, then restores the original chips without calls  1273ms
+   Γ£ô V3InputSurface > preserves edited drafts and offers guarded refresh after reconfirming a new topic  1625ms
+   Γ£ô V3InputSurface > silently regenerates untouched drafts after reconfirming a new topic  1617ms
+   Γ£ô V3InputSurface > treats manual drafts without a generated baseline as teacher edits  2027ms
+   Γ£ô V3InputSurface > discards an in-flight intent response when the confirmed topic changes  826ms
+   Γ£ô V3InputSurface > shows a stale refresh pill and confirms before overwriting edits  931ms
+ Γ£ô src/lib/curriculum/units/components/TeachingSchedulePanel.test.ts (2 tests) 687ms
+   Γ£ô TeachingSchedulePanel > moves only a period boundary through an accessible control and preserves path order  540ms
+ Γ£ô src/lib/components/workspace/NewLessonSplitButton.test.ts (1 test) 306ms
+   Γ£ô NewLessonSplitButton native destination > exposes one native lesson destination without legacy menu actions  304ms
+ Γ£ô src/lib/curriculum/units/components/LessonResultsPanel.test.ts (1 test) 671ms
+   Γ£ô LessonResultsPanel > records only aggregate option counts and labels summaries advisory  668ms
+ Γ£ô src/lib/learn/student/StudentStageNav.test.ts (1 test) 296ms
+ Γ£ô src/lib/print/components/studio/V3BookletIssuesPanel.test.ts (1 test) 243ms
+ Γ£ô src/lib/print/components/studio/V3PlanActions.test.ts (2 tests) 321ms
+ Γ£ô src/lib/learn/authoring/builder/components/toolbar/DocumentToolbar.test.ts (5 tests) 311ms
+ Γ£ô src/lib/learn/authoring/builder/components/canvas/BuilderVisualIssueAction.test.ts (1 test) 723ms
+   Γ£ô BuilderVisualIssueAction > regenerates the flagged image with the edited hint and then requests a snapshot poll  707ms
+ Γ£ô src/lib/learn/authoring/builder/components/canvas/VisualRegeneratePopover.test.ts (3 tests) 847ms
+   Γ£ô VisualRegeneratePopover > prefills the correction hint and makes one regeneration request  706ms
+ Γ£ô src/routes/dashboard/page.test.ts (1 test) 56ms
+ Γ£ô src/lib/components/PrintSectionLink.test.ts (4 tests) 114ms
+ Γ£ô src/lib/learn/authoring/builder/components/media/DiagramUploader.test.ts (2 tests) 178ms
+ Γ£ô src/lib/api/units.test.ts (9 tests) 46ms
+ Γ£ô src/lib/print/components/studio/V3PlanPreview.test.ts (1 test) 133ms
+ Γ£ô src/lib/print/components/studio/V3PlanningState.test.ts (1 test) 142ms
+ Γ£ô src/lib/print/studio/v3-booklet.test.ts (8 tests) 13ms
+ Γ£ô src/routes/lessons/page.test.ts (1 test) 52ms
+ Γ£ô src/lib/print/generation/viewer-state.test.ts (9 tests) 59ms
+11:44:52 PM [vite-plugin-svelte] C:/Projects/lectio/packages/lectio-learn/dist/components/lectio/CalloutBlock.svelte:51:2 Unused CSS selector ".callout:not(.callout--aside)"
+https://svelte.dev/e/css_unused_selector
+11:44:52 PM [vite-plugin-svelte] C:/Projects/lectio/packages/lectio-learn/dist/components/lectio/CalloutBlock.svelte:58:2 Unused CSS selector ".callout__heading"
+https://svelte.dev/e/css_unused_selector
+ Γ£ô src/lib/api/errors.test.ts (2 tests) 20ms
+ Γ£ô src/lib/parse-section.test.ts (2 tests) 56ms
+ Γ£ô src/routes/workspace-shell-styles.test.ts (4 tests) 17ms
+ Γ£ô src/lib/print/generation/live-stream.test.ts (10 tests) 66ms
+ Γ£ô src/lib/api/config.test.ts (9 tests) 21ms
+ Γ£ô src/lib/print/studio/v3-canvas.test.ts (6 tests) 21ms
+ Γ£ô src/lib/print/studio/v3-print-canvas.test.ts (5 tests) 11ms
+ Γ£ô src/lib/print/studio/v3-pack-to-lectio-document.test.ts (8 tests) 17ms
+ Γ£ô src/lib/shared/auth/routing.test.ts (7 tests) 13ms
+ Γ£ô src/lib/learn/authoring/builder/visual-regeneration.test.ts (3 tests) 7ms
+ Γ£ô src/lib/shared/auth/google.test.ts (3 tests) 17ms
+ Γ£ô src/lib/learn/authoring/builder/api/pack-items.test.ts (3 tests) 25ms
+ Γ£ô src/lib/api/capabilities.test.ts (1 test) 109ms
+ Γ¥» src/lib/learn/authoring/builder/components/ai/ai-block-utils.test.ts (8 tests | 2 failed) 67ms
+   Γ£ô resolveBackendMode > maps { hasContent: false, hasNote: false, keepAsBasis: true } to fill 7ms
+   Γ£ô resolveBackendMode > maps { hasContent: false, hasNote: true, keepAsBasis: true } to custom 1ms
+   Γ£ô resolveBackendMode > maps { hasContent: true, hasNote: false, keepAsBasis: true } to improve 1ms
+   Γ£ô resolveBackendMode > maps { hasContent: true, hasNote: true, keepAsBasis: true } to improve 0ms
+   Γ£ô resolveBackendMode > maps { hasContent: true, hasNote: false, keepAsBasis: false } to custom 1ms
+   ├ù mergeAiContentWithEditableFields > updates only non-hidden edit-schema fields 44ms
+     ΓåÆ expected 'Existing title' to be 'AI title' // Object.is equality
+   ├ù mergeAiContentWithEditableFields > preserves current content when schema is unavailable 3ms
+     ΓåÆ vi.mocked(...).mockReturnValueOnce is not a function
+   Γ£ô mergeAiContentWithEditableFields > excludes teacher-provided media components from block AI 2ms
+ Γ¥» src/lib/learn/authoring/builder/issue-targeting.test.ts (8 tests | 1 failed) 66ms
+   Γ£ô Builder issue targeting > turns a question visual mismatch into a standalone rewrite instruction 20ms
+   Γ£ô Builder issue targeting > keeps other issue messages unchanged 1ms
+   Γ£ô Builder issue targeting > prefers a valid explicit AI-capable block target 1ms
+   Γ£ô Builder issue targeting > resolves component and generated-reference targets 6ms
+   Γ£ô Builder issue targeting > does not guess when a generated reference has zero or multiple matching blocks 3ms
+   Γ£ô Builder issue targeting > leaves section-level, missing, and manual-only targets advisory 3ms
+   Γ£ô Builder issue targeting > uses explicit then first visual block for visual editing 1ms
+   ├ù Builder issue targeting > keeps the checked-in regression fixture wired to repair and advisory behavior 25ms
+     ΓåÆ ENOENT: no such file or directory, open 'C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\builder\fixtures\block-ai-regression.json'
+ Γ¥» src/lib/learn/authoring/builder/adapters/from-generation.test.ts (6 tests | 1 failed) 110ms
+   Γ£ô v3PackToBuilderDocument > adapts a v3 pack into a builder lesson document 42ms
+   ├ù v3PackToBuilderDocument > keeps deterministic resource projections compatible with the builder contract 53ms
+     ΓåÆ expected [ ΓÇª(2) ] to include 'header-0'
+   Γ£ô v3PackToBuilderDocument > maps incomplete diagnostics into unresolved section issues 4ms
+   Γ£ô v3PackToBuilderDocument > matches dotted and numeric booklet issue targets to sections 1ms
+   Γ£ô v3PackToBuilderDocument > uses visual attachment targets and keeps unkeyed issues at document level 4ms
+   Γ£ô v3PackToBuilderDocument > preserves text repair targets from generation review issues 1ms
+ Γ£ô src/lib/learn/authoring/builder/stores/document-store-ops.test.ts (6 tests) 123ms
+ Γ¥» src/lib/components/LectioDocumentView.test.ts (5 tests | 2 failed) 2569ms
+   ├ù LectioDocumentView > wraps rendered sections in the shared Lectio runtime surface using the selected preset 1370ms
+     ΓåÆ Cannot read properties of undefined (reading 'trim')
+
+	in <unknown>
+	in TemplateShell.svelte
+	in layout.svelte
+	in LectioThemeSurface.svelte
+	in LectioDocumentView.svelte
+	in undefined
+
+   Γ£ô LectioDocumentView > renders pending placeholders when section slots include in-flight sections 67ms
+   Γ£ô LectioDocumentView > renders readable partial section content before completion  1016ms
+   ├ù LectioDocumentView > shows Open in Builder when completed and handler is provided 61ms
+     ΓåÆ Cannot read properties of undefined (reading 'trim')
+
+	in <unknown>
+	in TemplateShell.svelte
+	in layout.svelte
+	in LectioThemeSurface.svelte
+	in LectioDocumentView.svelte
+	in undefined
+
+   Γ£ô LectioDocumentView > does not show Open in Builder when generation is still running 51ms
+ Γ£ô src/routes/units/[id]/resources/[compositionId]/page.test.ts (1 test) 1917ms
+   Γ£ô /units/[id]/resources/[compositionId] > loads a saved projection into the Lectio resource surface  1915ms
+ Γ£ô src/routes/studio/print/[id]/page.test.ts (2 tests) 7ms
+ Γ£ô src/lib/theme-import-guard.test.ts (1 test) 44ms
+ Γ£ô src/lib/components/LectioDocumentView.package-smoke.test.ts (3 tests) 5850ms
+   Γ£ô LectioDocumentView package smoke > renders package hook, diagram-series, and diagram-compare images through the real Lectio package  4362ms
+   Γ£ô LectioDocumentView package smoke > renders package simulation payloads with live html and preserved fallback metadata  1114ms
+   Γ£ô LectioDocumentView package smoke > renders print-mode fallbacks for practice, short-answer, simulation, timeline, worked-example, and fill-in-blank  370ms
+ Γ£ô src/lib/api/profile.test.ts (1 test) 34ms
+ Γ£ô src/lib/learn/authoring/builder/components/canvas/diagram-media-fields.test.ts (3 tests) 15ms
+ Γ£ô src/lib/shared/settings/flags.test.ts (1 test) 31ms
+ Γ£ô src/lib/print/stores/v3-studio.svelte.test.ts (1 test) 21ms
+ Γ¥» src/lib/components/ProfileForm.test.ts (2 tests | 1 failed) 7386ms
+   ├ù ProfileForm template runtime selection > shows only the live preset and templates that support it, then opens the shared preview surface 5745ms
+     ΓåÆ Unable to find an element by: [data-testid="template-preview-surface"]
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<form[39m
+      [33mclass[39m=[32m"generation-form svelte-10n4vvz"[39m
+    [36m>[39m
+      [36m<section[39m
+        [33mclass[39m=[32m"briefing svelte-10n4vvz"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow svelte-10n4vvz"[39m
+          [36m>[39m
+            [0mGeneration Brief[0m
+          [36m</p>[39m
+          [0m [0m
+          [36m<h3[39m
+            [33mclass[39m=[32m"svelte-10n4vvz"[39m
+          [36m>[39m
+            [0mDescribe the lesson you want[0m
+          [36m</h3>[39m
+          [0m [0m
+          [36m<p[39m
+            [33mclass[39m=[32m"copy svelte-10n4vvz"[39m
+          [36m>[39m
+            [0mThe shell keeps profile data outside the generation flow. Here you are choosing the lesson
+					brief, and a fully wired Lectio template plus live preset.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+      [0m [0m
+      [36m<div[39m
+        [33mclass[39m=[32m"field-grid svelte-10n4vvz"[39m
+      [36m>[39m
+        [36m<label[39m
+          [33mclass[39m=[32m"svelte-10n4vvz"[39m
+        [36m>[39m
+          [0mSubject [0m
+          [36m<input[39m
+            [33mclass[39m=[32m"svelte-10n4vvz"[39m
+            [33mplaceholder[39m=[32m"e.g. calculus, ecosystems, thermodynamics"[39m
+            [33mrequired[39m=[32m""[39m
+            [33mtype[39m=[32m"text"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [0m [0m
+        [36m<label[39m
+          [33mclass[39m=[32m"wide svelte-10n4vvz"[39m
+        [36m>[39m
+          [0mContext [0m
+          [36m<textarea[39m
+            [33mclass[39m=[32m"svelte-10n4vvz"[39m
+            [33mplaceholder[39m=[32m"What should this generation teach, reinforce, or focus on?"[39m
+            [33mrequired[39m=[32m""[39m
+            [33mrows[39m=[32m"4"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [0m [0m
+        [36m<label[39m
+          [33mclass[39m=[32m"svelte-10n4vvz"[39m
+        [36m>[39m
+          [0mSections [0m
+          [36m<input[39m
+            [33mclass[39m=[32m"svelte-10n4vvz"[39m
+            [33mmax[39m=[32m"12"[39m
+            [33mmin[39m=[32m"1"[39m
+            [33mtype[39m=[32m"number"[39m
+          [36m/>[39m
+          [0m [0m
+          [36m<span[39m
+            [33mclass[39m=[32m"hint svelte-10n4vvz"[39m
+          [36m>[39m
+            [0mFour is the default. Use fewer for tighter passes, more for broader coverage.[0m
+          [36m</span>[39m
+        [36m</label>[39m
+      [36m</div>[39m
+      [0m [0m
+      [36m<section[39m
+        [33mclass[39m=[32m"selection-shell svelte-10n4vvz"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"selection-header svelte-10n4vvz"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow svelte-10n4vvz"[39m
+            [36m>[39m
+              [0mTemplate[0m
+            [36m</p>[39m
+            [0m [0m
+            [36m<h3[39m
+              [33mclass[39m=[32m"svelte-10n4vvz"[39m
+            [36m>[39m
+              [0mChoose the teaching structure[0m
+            [36m</h3>[39m
+            [0m [0m
+            [36m<p[39m
+              [33mclass[39m=[32m"selection-note svelte-10n4vvz"[39m
+            [36m>[39m
+              [0mTemplates shown here are already wired to the live Blue Classroom runtime.[0m
+            [36m</p>[39m
+          [36m</div>[39m
+          [0m [0m
+          [36m<div[39m
+            [33mclass[39m=[32m"selection-chip svelte-10n4vvz"[39m
+          [36m>[39m
+            [0mguided-concept-path[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [0m [0m
+        [36m<div[39m
+          [33mclass[39m=[32m"template-grid svelte-10n4vvz"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-haspopup[39m=[32m"dialog"[39m
+            [33maria-label[39m=[32m"Preview Guided Concept Path"[39m
+            [33mclass[39m=[32m"template-card svelte-10n4vvz selected"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"card-topline svelte-10n4vvz"[39m
+            [36m>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"template-id svelte-10n4vvz"[39m
+              [36m>[39m
+                [0mguided-concept-path[0m
+              [36m</p>[39m
+              [0m [0m
+              [36m<span[39m
+                [33mclass[39m=[32m"family svelte-10n4vvz"[39m
+              [36m>[39m
+                [0mguided concept[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [0m [0m
+            [36m<h4[39m
+              [33mclass[39m=[32m"svelte-10n4vvz"[39m
+            [36m>[39m
+              [0mGuided Concept Path[0m
+            [36m</h4>[39m
+            [0m [0m
+            [36m<p[39m
+              [33mclass[39m=[32m"template-description svelte-10n4vvz"[39m
+            [36m>[39m
+              [0mLead with felt need, then move steadily toward formal understanding and practice.[0m
+            [36m</p>[39m
+            [0m [0m
+            [36m<p[39m
+              [33mclass[39m=[32m"template-meta svelte-10n4vvz"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0mintroduce concept[0m
+              [36m</span>[39m
+              [0m [0m
+              [36m<span>[39m
+                [0mInteraction: medium[0m
+              [36m</span>[39m
+            [36m</p>[39m
+            [0m [0m
+            [36m<p[39m
+              [33mclass[39m=[32m"template-fit svelte-10n4vvz"[39m
+            [36m>[39m
+              [0mLearner fit: general, scaffolded[0m
+            [36m</p>[39m
+            [0m [0m
+            [36m<p[39m
+              [33mclass[39m=[32m"template-preview-cta svelte-10n4vvz"[39m
+            [36m>[39m
+              [0mClick to preview[0m
+            [36m</p>[39m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-haspopup[39m=[32m"dialog"[39m
+            [33maria-label[39m=[32m"Preview Visual Led"[39m
+            [33mclass[39m=[32m"template-card svelte-10n4vvz"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"card-topline svelte-10n4vvz"[39m
+            [36m>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"template-id svelte-10n4vvz"[39m
+              [36m>[39m
+                [0mvisual-led[0m
+              [36m</p>[39m
+              [0m [0m
+              [36m<span[39m
+                [33mclass[39m=[32m"family svelte-10n4vvz"[39m
+              [36m>[39m
+                [0mvisual exploratio...
+   Γ£ô ProfileForm template runtime selection > keeps the current request shape when the user previews before submitting  1638ms
+ Γ£ô src/lib/print/generation/error-messages.test.ts (6 tests) 15ms
+ Γ£ô src/lib/learn/authoring/builder/utils/media-utils.test.ts (3 tests) 9ms
+ Γ£ô src/lib/learn/authoring/builder/adapters/from-structural-plan.test.ts (1 test) 10ms
+ Γ£ô src/lib/print/studio/document-version.test.ts (3 tests) 10ms
+ Γ£ô src/lib/learn/authoring/builder/utils/page-estimate.test.ts (3 tests) 7ms
+ Γ£ô src/lib/learn/authoring/builder/components/palette/palette-overlay.test.ts (2 tests) 8ms
+ Γ£ô src/lib/learn/student/student-shell.test.ts (2 tests) 6ms
+ Γ¥» src/lib/learn/authoring/builder/components/ai/AiBlockAssist.test.ts (8 tests | 2 failed) 2904ms
+   ├ù AiBlockAssist > sends fill with FAST by default 1003ms
+     ΓåÆ expected 'Edit with AI' to be 'Generate content' // Object.is equality
+   ├ù AiBlockAssist > sends an empty block with an instruction as custom without existing content 1263ms
+     ΓåÆ expected "spy" to be called with arguments: [ ObjectContaining{ΓÇª}, 'token' ]
+
+Received: 
+
+  1st spy call:
+
+  [
+-   ObjectContaining {
+-     "existing_content": undefined,
+-     "mode": "custom",
++   {
++     "component_id": "explanation-block",
++     "context_blocks": [],
++     "existing_content": {
++       "body": "",
++     },
++     "focus": "Add a concise explanation.",
++     "grade_band": "secondary",
++     "lesson_id": "lesson-1",
++     "mode": "improve",
++     "model_tier": "FAST",
++     "section_id": "section-1",
++     "subject": "Science",
+      "teacher_note": "Add a concise explanation.",
+    },
+    "token",
+  ]
+
+
+Number of calls: 1
+
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"relative"[39m
+        [33mdata-ai-assist-root[39m=[32m""[39m
+      [36m>[39m
+        [36m<button[39m
+          [33mclass[39m=[32m"rounded-md p-1.5 text-violet-600 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40"[39m
+          [33mdata-testid[39m=[32m"ai-assist-trigger"[39m
+          [33mtitle[39m=[32m"Edit with AI"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"lucide-icon lucide lucide-sparkles"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"16"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"16"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"[39m
+            [36m>[39m
+              [0m[0m
+            [36m</path>[39m
+            [0m[0m
+            [36m<path[39m
+              [33md[39m=[32m"M20 2v4"[39m
+            [36m>[39m
+              [0m[0m
+            [36m</path>[39m
+            [0m[0m
+            [36m<path[39m
+              [33md[39m=[32m"M22 4h-4"[39m
+            [36m>[39m
+              [0m[0m
+            [36m</path>[39m
+            [0m[0m
+            [36m<circle[39m
+              [33mcx[39m=[32m"4"[39m
+              [33mcy[39m=[32m"20"[39m
+              [33mr[39m=[32m"2"[39m
+            [36m>[39m
+              [0m[0m
+            [36m</circle>[39m
+            [0m[0m
+            [0m[0m
+          [36m</svg>[39m
+          [0m [0m
+          [36m<span[39m
+            [33mclass[39m=[32m"sr-only"[39m
+          [36m>[39m
+            [0mEdit with AI[0m
+          [36m</span>[39m
+        [36m</button>[39m
+        [0m [0m
+      [36m</div>[39m
+      [0m[0m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+   Γ£ô AiBlockAssist > sends populated improve requests with current content and STANDARD tier  452ms
+   Γ£ô AiBlockAssist > keeps a populated block as improve when an optional instruction is supplied 40ms
+   Γ£ô AiBlockAssist > rewrites a populated block statelessly when the basis toggle is off 28ms
+   Γ£ô AiBlockAssist > retains the legacy radio UI when the feature flag is false 46ms
+   Γ£ô AiBlockAssist > opens a repair prefilled, editable, FAST, and sends no existing content 16ms
+   Γ£ô AiBlockAssist > does not resolve a repair when generation fails 18ms
+ Γ¥» src/lib/learn/authoring/builder/components/canvas/BlockCanvas.test.ts (2 tests | 2 failed) 31ms
+   ├ù BlockCanvas AI repair integration > opens an exact fixture repair with the QC instruction and resolves it after success 28ms
+     ΓåÆ ENOENT: no such file or directory, open 'C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\builder\fixtures\block-ai-regression.json'
+   ├ù BlockCanvas AI repair integration > reviews ambiguous and section-level issues without opening AI 2ms
+     ΓåÆ ENOENT: no such file or directory, open 'C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\builder\fixtures\block-ai-regression.json'
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ» Failed Suites 1 ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+
+ FAIL  src/lib/components/DiagramLedLayout.package.test.ts [ src/lib/components/DiagramLedLayout.package.test.ts ]
+Error: Cannot find module 'lectio'
+Require stack:
+- C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\components\DiagramLedLayout.package.test.ts
+ Γ¥» src/lib/components/DiagramLedLayout.package.test.ts:8:30
+      6| 
+      7| const require = createRequire(import.meta.url);
+      8| const LECTIO_ENTRY = require.resolve('lectio');
+       |                              ^
+      9| const LECTIO_ROOT = resolve(dirname(LECTIO_ENTRY), '..');
+     10| const DIAGRAM_LED_LAYOUT = resolve(LECTIO_ROOT, 'dist/templates/diagraΓÇª
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[1/14]ΓÄ»
+
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ» Failed Tests 13 ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»
+
+ FAIL  src/lib/lectio-lockfile-sync.test.ts > lectio lockfile sync > keeps package.json, package-lock.json, and 
+pnpm-lock.yaml on the same lectio version
+AssertionError: expected undefined to be truthy
+
+- Expected: 
+true
+
++ Received: 
+undefined
+
+ Γ¥» src/lib/lectio-lockfile-sync.test.ts:33:26
+     31|   const pnpmVersion = pnpmMatch?.[2];
+     32| 
+     33|   expect(packageVersion).toBeTruthy();
+       |                          ^
+     34|   expect(lockRootVersion).toBeTruthy();
+     35|   expect(lockInstalledVersion).toBeTruthy();
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[2/14]ΓÄ»
+
+ FAIL  src/lib/components/LectioDocumentView.test.ts > LectioDocumentView > wraps rendered sections in the shared 
+Lectio runtime surface using the selected preset
+ FAIL  src/lib/components/LectioDocumentView.test.ts > LectioDocumentView > shows Open in Builder when completed and 
+handler is provided
+TypeError: Cannot read properties of undefined (reading 'trim')
+
+	in <unknown>
+	in TemplateShell.svelte
+	in layout.svelte
+	in LectioThemeSurface.svelte
+	in LectioDocumentView.svelte
+	in undefined
+
+ Γ¥» words ../../../packages/lectio-learn/dist/schema/validate.js:4:17
+      2| // Prevents content from quietly overflowing components
+      3| function words(text) {
+      4|     return text.trim().split(/\s+/).filter(Boolean).length;
+       |                 ^
+      5| }
+      6| function comparisonValueText(value) {
+ Γ¥» validateSection ../../../packages/lectio-learn/dist/schema/validate.js:152:13
+ Γ¥» ../../../packages/lectio-learn/dist/templates/TemplateWarnings.svelte:10:43
+ Γ¥» update_reaction 
+../../../node_modules/.pnpm/svelte@5.56.8/node_modules/svelte/src/internal/client/runtime.js:259:16
+ Γ¥» execute_derived 
+../../../node_modules/.pnpm/svelte@5.56.8/node_modules/svelte/src/internal/client/reactivity/deriveds.js:370:27
+ Γ¥» update_derived 
+../../../node_modules/.pnpm/svelte@5.56.8/node_modules/svelte/src/internal/client/reactivity/deriveds.js:394:14
+ Γ¥» Module.get ../../../node_modules/.pnpm/svelte@5.56.8/node_modules/svelte/src/internal/client/runtime.js:692:18
+ Γ¥» ../../../packages/lectio-learn/dist/templates/TemplateWarnings.svelte:75:31
+ Γ¥» ../../../node_modules/.pnpm/svelte@5.56.8/node_modules/svelte/src/internal/client/dom/blocks/if.js:63:3
+ Γ¥» update_reaction 
+../../../node_modules/.pnpm/svelte@5.56.8/node_modules/svelte/src/internal/client/runtime.js:259:16
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[3/14]ΓÄ»
+
+ FAIL  src/lib/components/ProfileForm.test.ts > ProfileForm template runtime selection > shows only the live preset 
+and templates that support it, then opens the shared preview surface
+TestingLibraryElementError: Unable to find an element by: [data-testid="template-preview-surface"]
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<form[39m
+      [33mclass[39m=[32m"generation-form svelte-10n4vvz"[39m
+    [36m>[39m
+      [36m<section[39m
+        [33mclass[39m=[32m"briefing svelte-10n4vvz"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"eyebrow svelte-10n4vvz"[39m
+          [36m>[39m
+            [0mGeneration Brief[0m
+          [36m</p>[39m
+          [0m [0m
+          [36m<h3[39m
+            [33mclass[39m=[32m"svelte-10n4vvz"[39m
+          [36m>[39m
+            [0mDescribe the lesson you want[0m
+          [36m</h3>[39m
+          [0m [0m
+          [36m<p[39m
+            [33mclass[39m=[32m"copy svelte-10n4vvz"[39m
+          [36m>[39m
+            [0mThe shell keeps profile data outside the generation flow. Here you are choosing the lesson
+					brief, and a fully wired Lectio template plus live preset.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+      [0m [0m
+      [36m<div[39m
+        [33mclass[39m=[32m"field-grid svelte-10n4vvz"[39m
+      [36m>[39m
+        [36m<label[39m
+          [33mclass[39m=[32m"svelte-10n4vvz"[39m
+        [36m>[39m
+          [0mSubject [0m
+          [36m<input[39m
+            [33mclass[39m=[32m"svelte-10n4vvz"[39m
+            [33mplaceholder[39m=[32m"e.g. calculus, ecosystems, thermodynamics"[39m
+            [33mrequired[39m=[32m""[39m
+            [33mtype[39m=[32m"text"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [0m [0m
+        [36m<label[39m
+          [33mclass[39m=[32m"wide svelte-10n4vvz"[39m
+        [36m>[39m
+          [0mContext [0m
+          [36m<textarea[39m
+            [33mclass[39m=[32m"svelte-10n4vvz"[39m
+            [33mplaceholder[39m=[32m"What should this generation teach, reinforce, or focus on?"[39m
+            [33mrequired[39m=[32m""[39m
+            [33mrows[39m=[32m"4"[39m
+          [36m/>[39m
+        [36m</label>[39m
+        [0m [0m
+        [36m<label[39m
+          [33mclass[39m=[32m"svelte-10n4vvz"[39m
+        [36m>[39m
+          [0mSections [0m
+          [36m<input[39m
+            [33mclass[39m=[32m"svelte-10n4vvz"[39m
+            [33mmax[39m=[32m"12"[39m
+            [33mmin[39m=[32m"1"[39m
+            [33mtype[39m=[32m"number"[39m
+          [36m/>[39m
+          [0m [0m
+          [36m<span[39m
+            [33mclass[39m=[32m"hint svelte-10n4vvz"[39m
+          [36m>[39m
+            [0mFour is the default. Use fewer for tighter passes, more for broader coverage.[0m
+          [36m</span>[39m
+        [36m</label>[39m
+      [36m</div>[39m
+      [0m [0m
+      [36m<section[39m
+        [33mclass[39m=[32m"selection-shell svelte-10n4vvz"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"selection-header svelte-10n4vvz"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"eyebrow svelte-10n4vvz"[39m
+            [36m>[39m
+              [0mTemplate[0m
+            [36m</p>[39m
+            [0m [0m
+            [36m<h3[39m
+              [33mclass[39m=[32m"svelte-10n4vvz"[39m
+            [36m>[39m
+              [0mChoose the teaching structure[0m
+            [36m</h3>[39m
+            [0m [0m
+            [36m<p[39m
+              [33mclass[39m=[32m"selection-note svelte-10n4vvz"[39m
+            [36m>[39m
+              [0mTemplates shown here are already wired to the live Blue Classroom runtime.[0m
+            [36m</p>[39m
+          [36m</div>[39m
+          [0m [0m
+          [36m<div[39m
+            [33mclass[39m=[32m"selection-chip svelte-10n4vvz"[39m
+          [36m>[39m
+            [0mguided-concept-path[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [0m [0m
+        [36m<div[39m
+          [33mclass[39m=[32m"template-grid svelte-10n4vvz"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-haspopup[39m=[32m"dialog"[39m
+            [33maria-label[39m=[32m"Preview Guided Concept Path"[39m
+            [33mclass[39m=[32m"template-card svelte-10n4vvz selected"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"card-topline svelte-10n4vvz"[39m
+            [36m>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"template-id svelte-10n4vvz"[39m
+              [36m>[39m
+                [0mguided-concept-path[0m
+              [36m</p>[39m
+              [0m [0m
+              [36m<span[39m
+                [33mclass[39m=[32m"family svelte-10n4vvz"[39m
+              [36m>[39m
+                [0mguided concept[0m
+              [36m</span>[39m
+            [36m</div>[39m
+            [0m [0m
+            [36m<h4[39m
+              [33mclass[39m=[32m"svelte-10n4vvz"[39m
+            [36m>[39m
+              [0mGuided Concept Path[0m
+            [36m</h4>[39m
+            [0m [0m
+            [36m<p[39m
+              [33mclass[39m=[32m"template-description svelte-10n4vvz"[39m
+            [36m>[39m
+              [0mLead with felt need, then move steadily toward formal understanding and practice.[0m
+            [36m</p>[39m
+            [0m [0m
+            [36m<p[39m
+              [33mclass[39m=[32m"template-meta svelte-10n4vvz"[39m
+            [36m>[39m
+              [36m<span>[39m
+                [0mintroduce concept[0m
+              [36m</span>[39m
+              [0m [0m
+              [36m<span>[39m
+                [0mInteraction: medium[0m
+              [36m</span>[39m
+            [36m</p>[39m
+            [0m [0m
+            [36m<p[39m
+              [33mclass[39m=[32m"template-fit svelte-10n4vvz"[39m
+            [36m>[39m
+              [0mLearner fit: general, scaffolded[0m
+            [36m</p>[39m
+            [0m [0m
+            [36m<p[39m
+              [33mclass[39m=[32m"template-preview-cta svelte-10n4vvz"[39m
+            [36m>[39m
+              [0mClick to preview[0m
+            [36m</p>[39m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-haspopup[39m=[32m"dialog"[39m
+            [33maria-label[39m=[32m"Preview Visual Led"[39m
+            [33mclass[39m=[32m"template-card svelte-10n4vvz"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"card-topline svelte-10n4vvz"[39m
+            [36m>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"template-id svelte-10n4vvz"[39m
+              [36m>[39m
+                [0mvisual-led[0m
+              [36m</p>[39m
+              [0m [0m
+              [36m<span[39m
+                [33mclass[39m=[32m"family svelte-10n4vvz"[39m
+              [36m>[39m
+                [0mvisual exploratio...
+ Γ¥» Object.getElementError 
+../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:37:19
+ Γ¥» 
+../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ Γ¥» 
+../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ Γ¥» 
+../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ Γ¥» src/lib/components/ProfileForm.test.ts:95:17
+     93| 
+     94|   expect(screen.getByRole('dialog', { name: /guided concept path previΓÇª
+     95|   expect(screen.getByTestId('template-preview-surface').getAttribute('ΓÇª
+       |                 ^
+     96|    'blue-classroom'
+     97|   );
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[4/14]ΓÄ»
+
+ FAIL  src/lib/learn/authoring/builder/issue-targeting.test.ts > Builder issue targeting > keeps the checked-in 
+regression fixture wired to repair and advisory behavior
+Error: ENOENT: no such file or directory, open 
+'C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\builder\fixtures\block-ai-regression.json'
+ Γ¥» src/lib/learn/authoring/builder/issue-targeting.test.ts:126:30
+    124| 
+    125|  it('keeps the checked-in regression fixture wired to repair and advisΓÇª
+    126|   const fixture = JSON.parse(readFileSync(
+       |                              ^
+    127|    join(process.cwd(), 'src/lib/builder/fixtures/block-ai-regression.jΓÇª
+    128|    'utf8'
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[5/14]ΓÄ»
+
+ FAIL  src/lib/learn/authoring/builder/adapters/from-generation.test.ts > v3PackToBuilderDocument > keeps 
+deterministic resource projections compatible with the builder contract
+AssertionError: expected [ ΓÇª(2) ] to include 'header-0'
+ Γ¥» src/lib/learn/authoring/builder/adapters/from-generation.test.ts:76:38
+     74|   expect(lesson.source_generation_id).toBe('composition-1');
+     75|   expect(lesson.sections).toHaveLength(1);
+     76|   expect(Object.keys(lesson.blocks)).toContain('header-0');
+       |                                      ^
+     77|  });
+     78| 
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[6/14]ΓÄ»
+
+ FAIL  src/lib/learn/authoring/builder/components/canvas/BlockCanvas.test.ts > BlockCanvas AI repair integration > 
+opens an exact fixture repair with the QC instruction and resolves it after success
+Error: ENOENT: no such file or directory, open 
+'C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\builder\fixtures\block-ai-regression.json'
+ Γ¥» regressionDocument src/lib/learn/authoring/builder/components/canvas/BlockCanvas.test.ts:37:3
+     35| function regressionDocument(): LessonDocument {
+     36|  const fixture = JSON.parse(
+     37|   readFileSync(
+       |   ^
+     38|    join(process.cwd(), 'src/lib/builder/fixtures/block-ai-regression.jΓÇª
+     39|    'utf8'
+ Γ¥» src/lib/learn/authoring/builder/components/canvas/BlockCanvas.test.ts:65:22
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[7/14]ΓÄ»
+
+ FAIL  src/lib/learn/authoring/builder/components/canvas/BlockCanvas.test.ts > BlockCanvas AI repair integration > 
+reviews ambiguous and section-level issues without opening AI
+Error: ENOENT: no such file or directory, open 
+'C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\builder\fixtures\block-ai-regression.json'
+ Γ¥» regressionDocument src/lib/learn/authoring/builder/components/canvas/BlockCanvas.test.ts:37:3
+     35| function regressionDocument(): LessonDocument {
+     36|  const fixture = JSON.parse(
+     37|   readFileSync(
+       |   ^
+     38|    join(process.cwd(), 'src/lib/builder/fixtures/block-ai-regression.jΓÇª
+     39|    'utf8'
+ Γ¥» src/lib/learn/authoring/builder/components/canvas/BlockCanvas.test.ts:106:22
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[8/14]ΓÄ»
+
+ FAIL  src/lib/learn/authoring/builder/components/canvas/print-chrome.test.ts > builder generation chrome print 
+isolation > keeps progress and issue text behind the print-hidden class
+Error: ENOENT: no such file or directory, open 
+'C:\Projects\lectio\apps\textbook-agent\frontend\src\lib\builder\components\canvas\BlockCanvas.svelte'
+ Γ¥» src/lib/learn/authoring/builder/components/canvas/print-chrome.test.ts:7:18
+      5| describe('builder generation chrome print isolation', () => {
+      6|  it('keeps progress and issue text behind the print-hidden class', () ΓÇª
+      7|   const canvas = readFileSync(
+       |                  ^
+      8|    join(process.cwd(), 'src/lib/builder/components/canvas/BlockCanvas.ΓÇª
+      9|    'utf8'
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[9/14]ΓÄ»
+
+ FAIL  src/lib/learn/authoring/builder/components/ai/ai-block-utils.test.ts > mergeAiContentWithEditableFields > 
+updates only non-hidden edit-schema fields
+AssertionError: expected 'Existing title' to be 'AI title' // Object.is equality
+
+Expected: "AI title"
+Received: "Existing title"
+
+ Γ¥» src/lib/learn/authoring/builder/components/ai/ai-block-utils.test.ts:51:24
+     49|   const merged = mergeAiContentWithEditableFields('explanation-block',ΓÇª
+     50|   expect(merged.body).toBe('AI body');
+     51|   expect(merged.title).toBe('AI title');
+       |                        ^
+     52|   expect(merged.internal_note).toBe('Do not touch');
+     53|   expect(merged.unmodeled_extra).toBe('Keep me');
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[10/14]ΓÄ»
+
+ FAIL  src/lib/learn/authoring/builder/components/ai/ai-block-utils.test.ts > mergeAiContentWithEditableFields > 
+preserves current content when schema is unavailable
+TypeError: vi.mocked(...).mockReturnValueOnce is not a function
+ Γ¥» src/lib/learn/authoring/builder/components/ai/ai-block-utils.test.ts:58:28
+     56| 
+     57|  it('preserves current content when schema is unavailable', () => {
+     58|   vi.mocked(getEditSchema).mockReturnValueOnce(null);
+       |                            ^
+     59|   const current = { body: 'Current body', internal_note: 'Keep' };
+     60|   const generated = { body: 'AI body' };
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[11/14]ΓÄ»
+
+ FAIL  src/lib/learn/authoring/builder/components/ai/AiBlockAssist.test.ts > AiBlockAssist > sends fill with FAST by 
+default
+AssertionError: expected 'Edit with AI' to be 'Generate content' // Object.is equality
+
+Expected: "Generate content"
+Received: "Edit with AI"
+
+ Γ¥» src/lib/learn/authoring/builder/components/ai/AiBlockAssist.test.ts:46:73
+     44|  it('sends fill with FAST by default', async () => {
+     45|   renderAssist();
+     46|   expect(screen.getByTestId('ai-assist-trigger').getAttribute('title')ΓÇª
+       |                                                                         ^
+     47|   await fireEvent.click(screen.getByTestId('ai-assist-trigger'));
+     48|   await fireEvent.click(screen.getByTestId('ai-assist-generate'));
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[12/14]ΓÄ»
+
+ FAIL  src/lib/learn/authoring/builder/components/ai/AiBlockAssist.test.ts > AiBlockAssist > sends an empty block with 
+an instruction as custom without existing content
+AssertionError: expected "spy" to be called with arguments: [ ObjectContaining{ΓÇª}, 'token' ]
+
+Received: 
+
+  1st spy call:
+
+  [
+-   ObjectContaining {
+-     "existing_content": undefined,
+-     "mode": "custom",
++   {
++     "component_id": "explanation-block",
++     "context_blocks": [],
++     "existing_content": {
++       "body": "",
++     },
++     "focus": "Add a concise explanation.",
++     "grade_band": "secondary",
++     "lesson_id": "lesson-1",
++     "mode": "improve",
++     "model_tier": "FAST",
++     "section_id": "section-1",
++     "subject": "Science",
+      "teacher_note": "Add a concise explanation.",
+    },
+    "token",
+  ]
+
+
+Number of calls: 1
+
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"relative"[39m
+        [33mdata-ai-assist-root[39m=[32m""[39m
+      [36m>[39m
+        [36m<button[39m
+          [33mclass[39m=[32m"rounded-md p-1.5 text-violet-600 hover:bg-violet-50 disabled:cursor-not-allowed 
+disabled:opacity-40"[39m
+          [33mdata-testid[39m=[32m"ai-assist-trigger"[39m
+          [33mtitle[39m=[32m"Edit with AI"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33maria-hidden[39m=[32m"true"[39m
+            [33mclass[39m=[32m"lucide-icon lucide lucide-sparkles"[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"16"[39m
+            [33mstroke[39m=[32m"currentColor"[39m
+            [33mstroke-linecap[39m=[32m"round"[39m
+            [33mstroke-linejoin[39m=[32m"round"[39m
+            [33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 24"[39m
+            [33mwidth[39m=[32m"16"[39m
+            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+          [36m>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 
+1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 
+0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"[39m
+            [36m>[39m
+              [0m[0m
+            [36m</path>[39m
+            [0m[0m
+            [36m<path[39m
+              [33md[39m=[32m"M20 2v4"[39m
+            [36m>[39m
+              [0m[0m
+            [36m</path>[39m
+            [0m[0m
+            [36m<path[39m
+              [33md[39m=[32m"M22 4h-4"[39m
+            [36m>[39m
+              [0m[0m
+            [36m</path>[39m
+            [0m[0m
+            [36m<circle[39m
+              [33mcx[39m=[32m"4"[39m
+              [33mcy[39m=[32m"20"[39m
+              [33mr[39m=[32m"2"[39m
+            [36m>[39m
+              [0m[0m
+            [36m</circle>[39m
+            [0m[0m
+            [0m[0m
+          [36m</svg>[39m
+          [0m [0m
+          [36m<span[39m
+            [33mclass[39m=[32m"sr-only"[39m
+          [36m>[39m
+            [0mEdit with AI[0m
+          [36m</span>[39m
+        [36m</button>[39m
+        [0m [0m
+      [36m</div>[39m
+      [0m[0m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+ Γ¥» src/lib/learn/authoring/builder/components/ai/AiBlockAssist.test.ts:69:45
+     67|   await fireEvent.click(screen.getByTestId('ai-assist-generate'));
+
+ Test Files  10 failed | 72 passed (82)
+     68| 
+     69|   await waitFor(() => expect(generateBlock).toHaveBeenCalledWith(
+       |                                             ^
+     70|    expect.objectContaining({
+     71|     mode: 'custom',
+ Γ¥» runWithExpensiveErrorDiagnosticsDisabled 
+../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:47:12
+ Γ¥» checkCallback 
+../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ Γ¥» Timeout.checkRealTimersCallback 
+../../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+      Tests  13 failed | 333 passed (346)
+   Start at  23:39:35
+   Duration  394.03s (transform 305.41s, setup 0ms, collect 3900.28s, tests 64.14s, environment 688.96s, prepare 25.54s)
+
+ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»ΓÄ»[13/14]ΓÄ»
+
+ΓÇëELIFECYCLEΓÇë Test failed. See above for more details.
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.

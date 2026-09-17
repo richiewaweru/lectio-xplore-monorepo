@@ -10,8 +10,10 @@ from curriculum.teaching_plan.models import (
     TeachingPlanBlock,
     TeachingPlanSection,
 )
+from document.composition import CompositionPlan
 from document.heuristics import choose_document_primitive
 from document.models import DOCUMENT_PRIMITIVE_KINDS
+from print.generation.composition_bridge import _layer_print_tasks
 from print.generation.document_form_map import to_print_object
 from print.generation.document_realizer import (
     produce_print_document_plan_from_teaching,
@@ -154,6 +156,65 @@ def test_learner_task_maps_to_print_treatment() -> None:
     assert objects == ["choices", "questions", "worked-example"]
     assert all(f["lane"] == "print_task" for f in page_forms)
     assert set(objects) <= PRINT_TASK_TREATMENTS
+
+
+def test_passive_demonstration_maps_to_worked_example() -> None:
+    plan = _plan(
+        TeachingPlanBlock(
+            id="s1-b1",
+            position=0,
+            intent="demonstrate",
+            brief="Work the sample calculation.",
+            evidence="Correct worked steps.",
+            evidence_refs=[],
+        )
+    )
+    composition = _layer_print_tasks(
+        plan,
+        CompositionPlan(
+            path="print",
+            teaching_plan_id=plan.teaching_plan_id,
+            teaching_plan_revision=plan.revision,
+            composition_mode="llm",
+            decisions=[],
+        ),
+        candidate_map={"s1-b1": ("worked-example",)},
+    )
+    assert [(item.lane, item.kind) for item in composition.decisions] == [
+        ("print_task", "worked-example")
+    ]
+
+
+def test_passive_action_recovers_an_upstream_legal_document_primitive() -> None:
+    plan = _plan(
+        TeachingPlanBlock(
+            id="s1-b1",
+            position=0,
+            intent="orient",
+            brief="Compare the two anchor cases before naming the rule.",
+            evidence="The learner needs to inspect the cases before the explanation.",
+            evidence_refs=[],
+            learner_action=_action(
+                "compare-without-response",
+                target="the two anchor cases",
+                purpose="notice their meaningful difference",
+            ),
+        )
+    )
+    composition = _layer_print_tasks(
+        plan,
+        CompositionPlan(
+            path="print",
+            teaching_plan_id=plan.teaching_plan_id,
+            teaching_plan_revision=plan.revision,
+            composition_mode="llm",
+            decisions=[],
+        ),
+        candidate_map={"s1-b1": ("prose",)},
+    )
+    assert [(item.lane, item.kind) for item in composition.decisions] == [
+        ("document", "paragraph")
+    ]
 
 
 def test_document_realizer_has_no_learn_imports() -> None:

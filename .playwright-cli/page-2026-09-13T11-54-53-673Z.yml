@@ -1,0 +1,74 @@
+- generic [ref=f3e2]:
+  - banner [ref=f3e3]:
+    - navigation [ref=f3e4]:
+      - link "Lectio" [ref=f3e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=f3e8]:
+        - link "Home" [ref=f3e9] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=f3e11] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=f3e6]:
+    - generic [ref=f3e12]:
+      - generic [ref=f3e14]:
+        - generic [ref=f3e15]: Studio
+        - button "Start over" [ref=f3e16]
+      - generic [ref=f3e17]:
+        - generic [ref=f3e18]:
+          - paragraph [ref=f3e19]: Lesson approach
+          - heading "Review the teaching plan" [level=2] [ref=f3e20]
+          - paragraph [ref=f3e21]: Approve the pedagogical arc before forms and writers run. Read the last brief first.
+        - generic [ref=f3e22]:
+          - heading "Arc" [level=3] [ref=f3e23]
+          - paragraph [ref=f3e24]: The lesson opens on the child standing between the bright lamp and the wall and asks learners to commit to where the dark patch will land before anything is explained. It then builds the blocked-light mechanism — straight-line rays from the lamp are stopped by the opaque child, leaving a shadow on the wall on the far side of the child from the lamp — and closes by having each learner apply that model alone to a fresh opaque-object-and-lamp case.
+        - generic [ref=f3e25]:
+          - heading "Anchor usage" [level=3] [ref=f3e26]
+          - list [ref=f3e27]:
+            - listitem [ref=f3e28]: "orient: Introduce the child-lamp-wall scene as the concrete situation and elicit a commitment about where the dark patch appears."
+            - listitem [ref=f3e29]: "explain: Return to the child to follow straight-line rays from the lamp, show the opaque body stopping them, and locate the shadow on the wall opposite the lamp."
+            - listitem [ref=f3e30]: "contrast: Reuse the same lamp-and-wall setup with the child replaced by a translucent sheet so the learner sees that shadow strength depends on how much light is blocked, not on the object making a shadow."
+            - listitem [ref=f3e31]: "check: Present a new opaque-object-and-lamp case without the child scene, so the model is applied without the anchor in front of the learner."
+        - paragraph [ref=f3e32]: "Focused misconceptions: shadow-is-made-by-the-object, shadow-on-same-side-as-light"
+        - article [ref=f3e33]:
+          - heading "check" [level=3] [ref=f3e34]
+          - paragraph [ref=f3e35]: Have the learner independently apply the blocked-light and opposite-side model to a fresh opaque-object-and-lamp case, producing evidence that the objective has landed without the anchor scene in front of them.
+          - generic [ref=f3e36]:
+            - paragraph [ref=f3e37]: check-b1 · practise-independent
+            - paragraph [ref=f3e38]: "Present a new case that is not the child scene: an opaque object stands between a lamp and a screen, with the lamp on one side and the screen on the other. The learner must select the correct explanation of where the shadow appears and why, using the model that light travels in straight lines from the lamp, the opaque object blocks that light, and the shadow is the blocked-light region on the screen on the far side of the object from the lamp. Do not repeat the child scenario, and do not restate the model before the learner responds."
+        - article [ref=f3e39]:
+          - heading "contrast" [level=3] [ref=f3e40]
+          - paragraph [ref=f3e41]: "Put the opaque child and a translucent sheet in the same lamp-and-wall setup so the learner sees the boundary of the idea: a shadow is not a property of the object but a consequence of how much light it blocks. Confront the beliefs that the object makes the shadow and that the shadow lands on the lamp's side."
+          - generic [ref=f3e42]:
+            - paragraph [ref=f3e43]: contrast-b3 · diagnose-misconception
+            - paragraph [ref=f3e44]: "Surface the belief that the shadow falls on the same side of the object as the lamp. Reuse the lamp-and-wall setup and ask the learner to respond to the claim: 'The dark patch appears between the lamp and the child, on the lamp's side.' A learner holding the misconception will agree or be unsure; a learner holding the target model will place the shadow on the wall on the opposite side of the child from the lamp. Then restate the target: because light travels straight from the lamp past the child, it is stopped on the far side, so the shadow lands on the wall behind the child, opposite the lamp."
+            - paragraph [ref=f3e45]: "Departure: The contrast slot must show the boundary of the idea by placing the target case beside a near-miss; the same-side belief is the near-miss for the positional half of the objective and cannot be left untested."
+          - generic [ref=f3e46]:
+            - paragraph [ref=f3e47]: contrast-b2 · diagnose-misconception
+            - paragraph [ref=f3e48]: "Surface the belief that the object itself makes or gives off the shadow. Ask the learner to respond to the claim: 'The child makes a shadow the way a lamp makes light.' A learner holding the misconception will agree; a learner holding the target model will reject it because the shadow is the absence of light on the far side of the child, not something the child produces. Then state the target model: the child does not create a shadow, it blocks light, and the shadow is what is left missing on the wall."
+            - paragraph [ref=f3e49]: "Departure: The contrast slot's purpose is to place a case and a near-miss side by side so the learner sees the boundary of the idea; a held wrong belief about what produces a shadow is exactly that near-miss and must be surfaced, not merely flagged."
+          - generic [ref=f3e50]:
+            - paragraph [ref=f3e51]: contrast-b1 · compare
+            - paragraph [ref=f3e52]: "Keep the same lamp-and-wall setup. In the first case the child's opaque body blocks all the light, so a clear shadow falls on the wall opposite the lamp. In the second case the child is replaced by a translucent sheet held in the same place: some light passes through, so only a faint shadow appears, still on the wall opposite the lamp. Point out that the shadow's position does not move — it is still on the far side of the object from the lamp — and that what changes is how dark the shadow is, because the sheet blocks less light than the child."
+        - article [ref=f3e53]:
+          - heading "explain" [level=3] [ref=f3e54]
+          - paragraph [ref=f3e55]: "Build the target idea: a shadow is the region on the far side of an opaque object where light that would have reached the surface was blocked, and its position follows from the straight-line path from the source."
+          - generic [ref=f3e56]:
+            - paragraph [ref=f3e57]: explain-b2 · show-structure
+            - paragraph [ref=f3e58]: "Show the arrangement of the child-lamp-wall scene so the spatial relationship is visible: the lamp on one side, the opaque child in the middle, and the wall on the other side. Mark the region on the wall directly behind the child where the straight-line rays are stopped, and mark the lit region on the wall where rays pass the child and land. Label the three parts — lamp, child, wall — and label the dark region as the shadow. The relationship the learner must notice is that the shadow sits on the opposite side of the child from the lamp, not beside or under the child."
+          - generic [ref=f3e59]:
+            - paragraph [ref=f3e60]: explain-b1 · explain-cause
+            - paragraph [ref=f3e61]: "Return to the child-lamp-wall scene. Follow the straight-line rays leaving the lamp toward the child and state that the child's body is opaque, so the light that would have reached the part of the wall behind the child does not get there. State the target idea precisely: the shadow is the region on the wall where light was blocked, not an object or substance the child gives off. The child does nothing to make a shadow; the shadow is what is missing from the light on the far side of the child from the lamp."
+        - article [ref=f3e62]:
+          - heading "orient" [level=3] [ref=f3e63]
+          - paragraph [ref=f3e64]: Open attention with the child-lamp-wall scene, surface the learner's current expectation about where the dark patch lands, and pull forward that light travels in straight lines so the explanation has a foundation.
+          - generic [ref=f3e65]:
+            - paragraph [ref=f3e66]: orient-b2 · activate-prior-knowledge
+            - paragraph [ref=f3e67]: "Recall that light from a source such as a lamp travels in straight lines and spreads outward as it goes. Use the lamp in the child scene to make this concrete: light leaves the lamp and travels outward in straight lines toward the child and the wall. Do not yet say what happens when the light meets the child's body, and do not use the word shadow. The purpose is only to make the straight-line travel of light available for the next section."
+          - generic [ref=f3e68]:
+            - paragraph [ref=f3e69]: orient-b1 · orient
+            - paragraph [ref=f3e70]: "Present the concrete scene from the anchor: a child standing between a bright lamp and a wall, with the lamp on one side of the child and the wall on the other. Name only the three parts — lamp, child, wall — and state that a dark patch appears somewhere. Do not explain why the dark patch forms, do not yet call it a shadow, and do not say which side it falls on. Close by asking the learner to commit to where they think the dark patch will appear: on the wall behind the child, on the lamp side of the child, or underneath the child."
+        - generic [ref=f3e71]:
+          - button "Approve teaching plan" [ref=f3e72]
+          - button "Reject" [ref=f3e73]
+      - alert [ref=f3e75]: Exceeded maximum output retries (0)
+  - generic [ref=f3e74]: Lectio

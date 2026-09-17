@@ -44,6 +44,53 @@ def _normalize_choices_options(raw_options: list[Any]) -> list[dict[str, str]]:
     return options
 
 
+def _shared_task(ctx: WriterContext) -> dict[str, Any] | None:
+    order = ctx.print_work_order
+    raw = getattr(order, "shared_task", None) if order is not None else None
+    return dict(raw) if isinstance(raw, dict) else None
+
+
+def _shared_task_evaluation(task: dict[str, Any]) -> dict[str, Any]:
+    value = task.get("evaluation")
+    return dict(value) if isinstance(value, dict) else {}
+
+
+def _shared_task_answer_entry(
+    *,
+    question_id: str,
+    task: dict[str, Any],
+) -> dict[str, Any] | None:
+    evaluation = _shared_task_evaluation(task)
+    # Shared tasks use plural keys for select-many and a singular key for
+    # select-one.  Preserve those semantic keys in the Print answer key;
+    # falling back to expected_evidence here would turn a choice answer into
+    # prose that cannot be checked against the paper options.
+    correct_keys = evaluation.get("correct_keys")
+    if isinstance(correct_keys, list) and correct_keys:
+        answer = ",".join(str(item).strip() for item in correct_keys if str(item).strip())
+    else:
+        correct = evaluation.get("correct")
+        if isinstance(correct, list) and correct:
+            answer = ",".join(str(item).strip() for item in correct if str(item).strip())
+        else:
+            answer = evaluation.get("answer") or evaluation.get("correct_key")
+    expected = str(task.get("expected_evidence") or "").strip()
+    rubric = evaluation.get("rubric") or evaluation.get("criteria")
+    if answer is None and not expected and not rubric:
+        return None
+    entry: dict[str, Any] = {
+        "question_id": question_id,
+        "answer": str(answer if answer is not None else expected or "See rubric."),
+    }
+    if rubric:
+        entry["rubric"] = (
+            "; ".join(str(item) for item in rubric)
+            if isinstance(rubric, list)
+            else str(rubric)
+        )
+    return entry
+
+
 def _answer_entry_from_record(
     *,
     question_id: str,
@@ -71,8 +118,25 @@ def _answer_entry_from_record(
 def assemble_questions(ctx: WriterContext) -> WriterOutcome:
     """Deterministic assembler. Student content only — no options/correct_key."""
     _assert_fixed_object(ctx, "questions")
-    if not ctx.planned.source_question_ids:
-        raise WriterError("questions block requires source_question_ids")
+    task = _shared_task(ctx)
+    source_ids = tuple(ctx.planned.source_question_ids or ())
+    if not source_ids:
+        if ctx.planned.task_mode != "formative" or task is None:
+            raise WriterError("questions block requires source_question_ids or a formative SharedTaskSpec")
+        question_id = str(task.get("id") or ctx.planned.id)
+        prompt = str(task.get("prompt") or "").strip()
+        if not prompt:
+            raise WriterError("formative SharedTaskSpec requires a prompt")
+        response = task.get("response") if isinstance(task.get("response"), dict) else {}
+        item: dict[str, Any] = {"id": question_id, "prompt": prompt}
+        if response.get("answer_lines") is not None:
+            item["answer_lines"] = response["answer_lines"]
+        answer = _shared_task_answer_entry(question_id=question_id, task=task)
+        return WriterOutcome(
+            block_id=ctx.planned.id,
+            content={"items": [item]},
+            answer_entries=(answer,) if answer is not None else (),
+        )
     by_id = _records_by_id(ctx)
     items: list[dict[str, Any]] = []
     answer_entries: list[dict[str, Any]] = []
@@ -107,8 +171,28 @@ def assemble_questions(ctx: WriterContext) -> WriterOutcome:
 def assemble_choices(ctx: WriterContext) -> WriterOutcome:
     """Assemble one MCQ choices block from its exact teaching-owned item."""
     _assert_fixed_object(ctx, "choices")
+    task = _shared_task(ctx)
     by_id = _records_by_id(ctx)
     source_ids = tuple(ctx.planned.source_question_ids or ())
+    if not source_ids and ctx.planned.task_mode == "formative" and task is not None:
+        stem = str(task.get("prompt") or "").strip()
+        response = task.get("response") if isinstance(task.get("response"), dict) else {}
+        options = _normalize_choices_options(list(response.get("options") or []))
+        if not stem:
+            raise WriterError("formative SharedTaskSpec requires a prompt")
+        if len(options) < 2:
+            raise WriterError(
+                "formative SharedTaskSpec choices require at least two options; "
+                f"response={response!r}"
+            )
+        answer = _shared_task_answer_entry(question_id=ctx.planned.id, task=task)
+        if answer is None:
+            raise WriterError("formative SharedTaskSpec choices require an evaluation")
+        return WriterOutcome(
+            block_id=ctx.planned.id,
+            content={"stem": stem, "options": options},
+            answer_entries=(answer,),
+        )
     if len(source_ids) != 1:
         raise WriterError("choices block requires exactly one source_question_id")
     record = by_id.get(source_ids[0])

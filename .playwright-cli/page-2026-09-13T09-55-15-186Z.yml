@@ -1,0 +1,14 @@
+- generic [ref=f4e2]:
+  - banner [ref=f4e3]:
+    - navigation [ref=f4e4]:
+      - link "Lectio" [ref=f4e5] [cursor=pointer]:
+        - /url: /
+  - main [ref=f4e6]:
+    - generic [ref=f4e9]:
+      - heading "Textbook Agent" [level=1] [ref=f4e10]
+      - paragraph [ref=f4e11]: Sign in to set up your teacher workspace, plan lessons in Studio, and save reusable classroom defaults.
+      - generic [ref=f4e13]:
+        - button "Sign in with Google. Opens in new tab" [active] [ref=f4e15] [cursor=pointer]:
+          - generic [ref=f4e17]: Sign in with Google
+        - iframe
+      - paragraph [ref=f4e27]: Continue with your Google account using the button below.

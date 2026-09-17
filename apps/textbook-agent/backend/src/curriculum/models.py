@@ -404,6 +404,22 @@ class PathDeviationRequest(StrictModel):
     reason: str
 
 
+class FlowDeparture(StrictModel):
+    operation: Literal["insert", "remove", "replace", "reorder"]
+    from_slot: str | None = None
+    to_slot: str | None = None
+    reason: str = Field(min_length=1)
+
+
+class FlowChoice(StrictModel):
+    """Code-validated semantic lesson journey selected from the slot catalogue."""
+
+    recommended_slots: list[str] = Field(default_factory=list)
+    selected_slots: list[str] = Field(default_factory=list)
+    rationale: str = ""
+    departures: list[FlowDeparture] = Field(default_factory=list)
+
+
 # ── Structural planner prompt-facing contract ─────────────────────────────
 #
 # These models are the JSON schema the structural planner sees. They are
@@ -475,6 +491,9 @@ class PathStructuralPagePlan(StrictModel):
     anchor: PathAnchor
     cards: list[PathStructuralPageCard] = Field(default_factory=list, max_length=1)
     sections: list[PathStructuralPageSection] = Field(default_factory=list)
+    selected_slots: list[str] = Field(default_factory=list)
+    flow_rationale: str = ""
+    flow_departures: list[FlowDeparture] = Field(default_factory=list)
     deviation_request: PathDeviationRequest | None = None
     objective_concern: str | None = None
 
@@ -547,5 +566,8 @@ class PathStructuralPlan(StrictModel):
         description="Exactly one concept card, unless emitting objective_concern.",
     )
     sections: list[PathStructuralSection] = Field(default_factory=list)
+    selected_slots: list[str] = Field(default_factory=list)
+    flow_rationale: str = ""
+    flow_departures: list[FlowDeparture] = Field(default_factory=list)
     deviation_request: PathDeviationRequest | None = None
     objective_concern: str | None = None

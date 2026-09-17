@@ -1,0 +1,3 @@
+[    1644ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/favicon.ico:0
+[  595017ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/realizations/be21db50-bc04-4d60-9426-6fa98f1934fa/status:0
+[  595033ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/realizations/be21db50-bc04-4d60-9426-6fa98f1934fa/events/stream:0

@@ -1,0 +1,123 @@
+{
+  "pack": "lectio-smart-lesson-planning-pack",
+  "baseline_repo": "richiewaweru/lectio-xplore-monorepo",
+  "baseline_branch": "main",
+  "baseline_commit": "af7a3d46e684d9752c6e18034f9b86b322348936",
+  "files": [
+    {
+      "path": "00_READ_ME_FIRST.md",
+      "sha256": "bae45627c4759b69a1bf6b4e0a588e17b481cab2439241ddd3cc217b8a2eda7e",
+      "bytes": 3503
+    },
+    {
+      "path": "01_TARGET_ARCHITECTURE.md",
+      "sha256": "85be259afd1203cf2e08a3ec7d74618a831ea36e287d440f0091c38d22ffa1d5",
+      "bytes": 8371
+    },
+    {
+      "path": "02_CURRENT_TO_TARGET_MAP.md",
+      "sha256": "6fee186a26c6dda9418b012744cae410e850e6f8dc1d98f7dbd15acb7f571504",
+      "bytes": 5428
+    },
+    {
+      "path": "03_IMPLEMENTATION_PHASES.md",
+      "sha256": "cb1efcc48cbe6f3ec926278cfab4d76303a774febb82d2c05440381b2f0e278f",
+      "bytes": 6140
+    },
+    {
+      "path": "04_DATA_CONTRACTS.md",
+      "sha256": "57d424037c3c527b41f808c4c7ad6741c20f86c048c3d5efd8e78b89c46ef556",
+      "bytes": 3538
+    },
+    {
+      "path": "05_TEST_AND_LIVE_PROOF.md",
+      "sha256": "1dc58419303c61944a7fcdd75beb0588d508c44c7bb9e2142138e8492ae53f17",
+      "bytes": 5053
+    },
+    {
+      "path": "06_ACCEPTANCE_MATRIX.md",
+      "sha256": "beb85f834623c1bc8bf8285685beac58ff57a603cfa77915cfc32e4fbc9fe414",
+      "bytes": 2580
+    },
+    {
+      "path": "07_AGENT_START_PROMPT.md",
+      "sha256": "f4a46fca7198edce7f89c044b6e2bc4847b2b6dd3501b8521c6626cebbaca4e6",
+      "bytes": 2417
+    },
+    {
+      "path": "fixtures/cross-subject-live-matrix.yaml",
+      "sha256": "8d8f8cc3aae35cfc9a95ed16b0d632d6a9be032b4d6af06729b349aad136d3b3",
+      "bytes": 3204
+    },
+    {
+      "path": "patch-guidance/FILE_CHANGE_MAP.md",
+      "sha256": "cc2b9a30c5f1e7c0ebc08e8458c3837b317e8ae835d8519b5b13d4ea19f317b5",
+      "bytes": 4008
+    },
+    {
+      "path": "patch-guidance/PSEUDOCODE_DIFFS.md",
+      "sha256": "bfba6626a3030fee70688195416f82fdedf672895270249fba372f475a56e3da",
+      "bytes": 2956
+    },
+    {
+      "path": "prompts/NO_CHANGE_NOTES.md",
+      "sha256": "441fc4ce87a570e2d0fc260edad450773f3d446b10ab0fea4c42f992b56d6991",
+      "bytes": 848
+    },
+    {
+      "path": "prompts/document-writer-v2.md",
+      "sha256": "de9e621bbecd2ef38933506562812d70e8dc6f7a931275768020a3092fde82ba",
+      "bytes": 1688
+    },
+    {
+      "path": "prompts/interaction-writer-v2.md",
+      "sha256": "4a097e06999825bdcfb3b144f57435897c1e424f5f75cd28821c68c8f9fd40d8",
+      "bytes": 1180
+    },
+    {
+      "path": "prompts/learner-action-policy-v2.md",
+      "sha256": "fbf97d298d20066bc79f570c75af64d004a268ffd241877132928de7cd336b48",
+      "bytes": 2814
+    },
+    {
+      "path": "prompts/lesson-approach-planner-v3.md",
+      "sha256": "55ecdad14de29275d6e435822e7766a29c58a1f58e757de3be2a66bde036e0c3",
+      "bytes": 4965
+    },
+    {
+      "path": "prompts/lesson-flow-planner-v2.md",
+      "sha256": "168c1cd28dbafcad00a879d3138819cd698201ee6a3380d1bca919b975320089",
+      "bytes": 4534
+    },
+    {
+      "path": "prompts/lesson-sourcebook-writer-v1.md",
+      "sha256": "8acdf61f0fcfa6e1e6f6b00d9837dbee66935bd01a4fd5beb5d9cd4f653b0629",
+      "bytes": 2547
+    },
+    {
+      "path": "prompts/manifest-additions.yaml",
+      "sha256": "5af79d21bf7a2cd9bc10a4c60a23be3bee62c8e064d80990fbf5987e7a84abe4",
+      "bytes": 1738
+    },
+    {
+      "path": "prompts/print-realization-v2.md",
+      "sha256": "38ed26fffe8eaee76468dd4d7972f862af64049672c5d2c77a0e86e174bcb2c4",
+      "bytes": 1279
+    },
+    {
+      "path": "prompts/shared-task-writer-v1.md",
+      "sha256": "e800b5e4e73b7cfdf5ccdd9c84c2fcf0e6d8c1cfd0a5bb40221d45ca066b7888",
+      "bytes": 2133
+    },
+    {
+      "path": "prompts/targeted-lesson-repair-v1.md",
+      "sha256": "fcd3334b3408aaa6c3a53d144b777b31de17c4de4324860d4a1f897e70c8c05b",
+      "bytes": 1301
+    },
+    {
+      "path": "prompts/whole-lesson-coherence-reviewer-v1.md",
+      "sha256": "d6eebe9f807b8f75159491b11b2c2870394481cb155d2c760e321261a69e77f2",
+      "bytes": 2611
+    }
+  ]
+}

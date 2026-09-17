@@ -1,0 +1,13 @@
+{
+  "browser": {
+    "headless": false,
+    "launchOptions": {
+      "channel": "chrome",
+      "headless": false,
+      "args": ["--start-maximized"]
+    },
+    "contextOptions": {
+      "viewport": { "width": 1400, "height": 900 }
+    }
+  }
+}

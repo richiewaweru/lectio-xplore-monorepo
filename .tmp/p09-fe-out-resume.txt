@@ -1,0 +1,31 @@
+
+> frontend@1.0.0-beta.1 dev C:\Projects\lectio\apps\textbook-agent\frontend
+> vite dev "--host" "127.0.0.1" "--port" "5173"
+
+
+  VITE v7.3.6  ready in 9961 ms
+
+  ➜  Local:   http://127.0.0.1:5173/
+9:31:52 AM [vite-plugin-svelte] C:/Projects/lectio/packages/lectio-learn/dist/components/lectio/CalloutBlock.svelte:51:2 Unused CSS selector ".callout:not(.callout--aside)"
+https://svelte.dev/e/css_unused_selector
+9:31:52 AM [vite-plugin-svelte] C:/Projects/lectio/packages/lectio-learn/dist/components/lectio/CalloutBlock.svelte:58:2 Unused CSS selector ".callout__heading"
+https://svelte.dev/e/css_unused_selector
+9:34:05 AM [vite-plugin-svelte] C:/Projects/lectio/packages/lectio-learn/dist/components/lectio/CalloutBlock.svelte:51:2 Unused CSS selector ".callout:not(.callout--aside)"
+https://svelte.dev/e/css_unused_selector
+9:34:05 AM [vite-plugin-svelte] C:/Projects/lectio/packages/lectio-learn/dist/components/lectio/CalloutBlock.svelte:58:2 Unused CSS selector ".callout__heading"
+https://svelte.dev/e/css_unused_selector
+9:35:18 AM [vite] (client) ✨ new dependencies optimized: tailwind-merge, isomorphic-dompurify, katex, marked, lucide-svelte, qrcode, esm-env, zod, bits-ui
+9:35:18 AM [vite] (client) ✨ optimized dependencies changed. reloading
+9:36:41 AM [vite-plugin-svelte] C:/Projects/lectio/packages/lectio-learn/dist/components/lectio/CalloutBlock.svelte:51:2 Unused CSS selector ".callout:not(.callout--aside)"
+https://svelte.dev/e/css_unused_selector
+9:36:41 AM [vite-plugin-svelte] C:/Projects/lectio/packages/lectio-learn/dist/components/lectio/CalloutBlock.svelte:58:2 Unused CSS selector ".callout__heading"
+https://svelte.dev/e/css_unused_selector
+9:39:19 AM [vite] (client) hmr update /src/routes/studio/print/[id]/+page.svelte, /src/app.css
+9:39:19 AM [vite] (ssr) page reload src/routes/studio/print/[id]/+page.svelte
+9:39:19 AM [vite] (client) hmr update /src/routes/studio/print/[id]/+page.svelte, /src/app.css
+9:39:19 AM [vite] (ssr) page reload src/routes/studio/print/[id]/+page.svelte
+9:39:40 AM [vite] (client) hmr update /src/routes/studio/print/[id]/+page.svelte, /src/app.css
+9:39:40 AM [vite] (ssr) page reload src/routes/studio/print/[id]/+page.svelte
+9:39:44 AM [vite] (client) hmr update /src/routes/studio/print/[id]/+page.svelte, /src/app.css
+9:39:44 AM [vite] (ssr) page reload src/routes/studio/print/[id]/+page.svelte
+ ELIFECYCLE  Command failed with exit code 4294967295.

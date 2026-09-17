@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import LearnReleaseModel
 from core.entities.user import User
-from infra.auth.middleware import get_current_user
+from infra.auth.middleware import get_current_user, get_optional_user
 from infra.database.session import get_async_session
 from learn.class_service import (
     accept_class_invite,
@@ -120,6 +120,11 @@ class AddLearnerBody(BaseModel):
 class AcceptInviteBody(BaseModel):
     invite_code: str
     learner_id: str
+
+
+class JoinClassBody(BaseModel):
+    invite_code: str = Field(min_length=2, max_length=32)
+    display_name: str = Field(min_length=1, max_length=120)
 
 
 class CreateAssignmentBody(BaseModel):
@@ -290,7 +295,7 @@ async def api_passive_section_complete(
 @router.get("/instances/{instance_id}")
 async def api_get_instance(
     instance_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
     session: AsyncSession = Depends(get_async_session),
     x_learner_session: str | None = Header(default=None, alias="X-Learner-Session"),
 ) -> dict[str, Any]:
@@ -298,8 +303,10 @@ async def api_get_instance(
     instance = await session.get(LearningInstanceModel, instance_id)
     if instance is None:
         raise HTTPException(status_code=404, detail="LearningInstance not found")
+    if not x_learner_session and current_user is None:
+        raise HTTPException(status_code=401, detail="Authentication required")
     await assert_instance_access(
-        session, instance=instance, token=x_learner_session, require_session=False
+        session, instance=instance, token=x_learner_session, require_session=bool(x_learner_session)
     )
     progress = await session.scalar(
         select(LessonProgressModel).where(
@@ -558,11 +565,43 @@ async def api_accept_invite(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, Any]:
+    _ = current_user
     membership = await accept_class_invite(
         session, invite_code=body.invite_code, learner_id=body.learner_id
     )
     await session.commit()
     return {"membership_id": membership.id, "class_id": membership.class_id}
+
+
+@router.post("/classes/join")
+async def api_join_class(
+    body: JoinClassBody,
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, Any]:
+    """Public student join: create learner, accept invite, mint session token."""
+    class_row = await session.scalar(
+        select(LearnClassModel).where(LearnClassModel.invite_code == body.invite_code.strip())
+    )
+    if class_row is None:
+        raise HTTPException(status_code=404, detail="Invite not found")
+    learner = await create_learner(
+        session,
+        display_name=body.display_name,
+        created_by_teacher_id=None,
+    )
+    membership = await accept_class_invite(
+        session, invite_code=body.invite_code.strip(), learner_id=learner.id
+    )
+    sess = await create_learner_session(session, learner_id=learner.id)
+    await session.commit()
+    return {
+        "learner_id": learner.id,
+        "display_name": learner.display_name,
+        "class_id": membership.class_id,
+        "class_name": class_row.name,
+        "token": sess.token,
+        "session_id": sess.id,
+    }
 
 
 @router.post("/assignments")
@@ -597,16 +636,23 @@ async def api_create_assignment(
 @router.get("/learners/{learner_id}/home")
 async def api_learner_home(
     learner_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_optional_user),
     session: AsyncSession = Depends(get_async_session),
     x_learner_session: str | None = Header(default=None, alias="X-Learner-Session"),
 ) -> dict[str, Any]:
     learner = await session.get(LearnerIdentityModel, learner_id)
     if learner is None:
         raise HTTPException(status_code=404, detail="Learner not found")
-    await _optional_learner_guard(
-        session, learner_id=learner_id, x_learner_session=x_learner_session
-    )
+    if x_learner_session:
+        await require_learner_session_for(
+            session, token=x_learner_session, learner_id=learner_id
+        )
+    elif current_user is None:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    else:
+        await _optional_learner_guard(
+            session, learner_id=learner_id, x_learner_session=None
+        )
     instances = (
         await session.execute(
             select(LearningInstanceModel)
@@ -631,9 +677,19 @@ async def api_learner_home(
     in_progress = [i for i in instances if i.status == "active"]
     completed = [i for i in instances if i.status == "completed"]
 
-    def _inst(i: LearningInstanceModel) -> dict[str, Any]:
+    async def _inst(i: LearningInstanceModel) -> dict[str, Any]:
+        title = None
+        if i.assignment_id:
+            assignment = await session.get(LearnAssignmentModel, i.assignment_id)
+            if assignment is not None:
+                title = assignment.title
+        if not title:
+            release = await session.get(LearnReleaseModel, i.learn_release_id)
+            if release is not None:
+                title = getattr(release, "title", None) or "Lesson"
         return {
             "id": i.id,
+            "title": title or "Lesson",
             "learn_release_id": i.learn_release_id,
             "assignment_id": i.assignment_id,
             "status": i.status,
@@ -642,16 +698,21 @@ async def api_learner_home(
             "current_section_id": i.current_section_id,
         }
 
+    due_soon_out = [await _inst(i) for i in due_soon]
+    in_progress_out = [await _inst(i) for i in in_progress]
+    completed_out = [await _inst(i) for i in completed]
+    instances_out = [await _inst(i) for i in instances]
+
     return {
         "learner_id": learner_id,
         "display_name": learner.display_name,
         "buckets": {
-            "due_soon": [_inst(i) for i in due_soon],
-            "in_progress": [_inst(i) for i in in_progress],
-            "completed": [_inst(i) for i in completed],
+            "due_soon": due_soon_out,
+            "in_progress": in_progress_out,
+            "completed": completed_out,
             "classes": classes,
         },
-        "instances": [_inst(i) for i in instances],
+        "instances": instances_out,
         "classes": classes,
     }
 

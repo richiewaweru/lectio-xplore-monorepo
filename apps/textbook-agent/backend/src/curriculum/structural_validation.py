@@ -23,6 +23,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from curriculum.flow_validation import validate_flow_choice
+from curriculum.models import FlowChoice
 from curriculum.path_models import PathStructuralPagePlan, PathStructuralPlan
 
 
@@ -42,6 +44,8 @@ def validate_path_structural_result(
     *,
     expected_slots: list[str],
     expected_visual_required: Mapping[str, bool] | None = None,
+    legal_slots: Mapping[str, Mapping[str, object]] | None = None,
+    max_slots: int | None = None,
 ) -> list[str]:
     """Return contract violations. An empty list means the plan is usable.
 
@@ -63,11 +67,31 @@ def validate_path_structural_result(
             f"cards: expected exactly 1 concept card, got {len(plan.cards)}"
         )
 
+    selected_slots = list(plan.selected_slots or expected_slots)
+    if legal_slots is not None:
+        choice = FlowChoice(
+            recommended_slots=list(expected_slots),
+            selected_slots=selected_slots,
+            rationale=plan.flow_rationale,
+            departures=plan.flow_departures,
+        )
+        errors.extend(
+            validate_flow_choice(
+                choice,
+                recommended_slots=expected_slots,
+                legal_slots=legal_slots,
+                max_slots=max_slots or len(expected_slots),
+                required_visual_slots=[
+                    slot for slot, required in (expected_visual_required or {}).items() if required
+                ],
+            )
+        )
+
     if isinstance(plan, PathStructuralPagePlan):
-        if len(plan.sections) != len(expected_slots):
+        if len(plan.sections) != len(selected_slots):
             errors.append(
-                f"sections: expected {len(expected_slots)} semantic section payloads "
-                f"for {expected_slots}, got {len(plan.sections)}"
+                f"sections: expected {len(selected_slots)} semantic section payloads "
+                f"for {selected_slots}, got {len(plan.sections)}"
             )
         for index, section in enumerate(plan.sections):
             if not (section.title or "").strip():
@@ -79,21 +103,21 @@ def validate_path_structural_result(
     section_ids = [section.id for section in plan.sections]
     section_roles = [section.role for section in plan.sections]
 
-    if len(plan.sections) != len(expected_slots):
+    if len(plan.sections) != len(selected_slots):
         errors.append(
             f"sections: expected {len(expected_slots)} sections "
-            f"{expected_slots}, got {len(plan.sections)} {section_ids}"
+            f"{selected_slots}, got {len(plan.sections)} {section_ids}"
         )
     else:
-        if section_ids != expected_slots:
+        if section_ids != selected_slots:
             errors.append(
-                f"sections[].id: must equal the fixed slots in order "
-                f"{expected_slots}, got {section_ids}"
+                f"sections[].id: must equal selected slots in order "
+                f"{selected_slots}, got {section_ids}"
             )
-        if section_roles != expected_slots:
+        if section_roles != selected_slots:
             errors.append(
-                f"sections[].role: must equal the fixed slots in order "
-                f"{expected_slots}, got {section_roles}"
+                f"sections[].role: must equal selected slots in order "
+                f"{selected_slots}, got {section_roles}"
             )
 
     duplicates = sorted({sid for sid in section_ids if section_ids.count(sid) > 1})

@@ -1,0 +1,25 @@
+[     250ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/favicon.ico:0
+[  221041ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/learn/releases/41a2e657-203f-4e29-b948-a8ca97cef7eb/attempts:0
+[  221055ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/learn/lessons/c0fc1c46-812f-4a59-abd6-879c11e87d2d/attempts:0
+[  221069ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/learner/attempts:0
+[  222965ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/7fc2a387-b963-42ed-8fa7-b7a40a71cf0f/pdf:0
+[  297024ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/7fc2a387-b963-42ed-8fa7-b7a40a71cf0f/pdf:0
+[  297101ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://127.0.0.1:5173/api/v1/v3/generations/7fc2a387-b963-42ed-8fa7-b7a40a71cf0f/document:0
+[  326404ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://127.0.0.1:5173/api/v1/learn/instances:0
+[  326417ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/7d2e4b2b-04bd-49f5-a860-2fe0d70c5ea9/pdf:0
+[  326429ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/7d2e4b2b-04bd-49f5-a860-2fe0d70c5ea9/lectio-document.pdf:0
+[  326442ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/print/generations/7d2e4b2b-04bd-49f5-a860-2fe0d70c5ea9/pdf:0
+[  326451ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/studio/print/7d2e4b2b-04bd-49f5-a860-2fe0d70c5ea9/pdf:0
+[  326526ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/7fc2a387-b963-42ed-8fa7-b7a40a71cf0f/pdf:0
+[  326537ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/v3/generations/7fc2a387-b963-42ed-8fa7-b7a40a71cf0f/lectio-document.pdf:0
+[  326546ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/print/generations/7fc2a387-b963-42ed-8fa7-b7a40a71cf0f/pdf:0
+[  326557ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/studio/print/7fc2a387-b963-42ed-8fa7-b7a40a71cf0f/pdf:0
+[  396070ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://127.0.0.1:5173/api/v1/learn/instances/9faa7898-546a-4eac-8b4c-2cb0070b9e78/attempts:0
+[  396110ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://127.0.0.1:5173/api/v1/v3/generations/7d2e4b2b-04bd-49f5-a860-2fe0d70c5ea9/export/pdf:0
+[  396201ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://127.0.0.1:5173/api/v1/v3/generations/7d2e4b2b-04bd-49f5-a860-2fe0d70c5ea9/lectio-document:0
+[  396225ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://127.0.0.1:5173/api/v1/v3/generations/7d2e4b2b-04bd-49f5-a860-2fe0d70c5ea9/export/pdf:0
+[  459612ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/api/v1/learn/instances/9faa7898-546a-4eac-8b4c-2cb0070b9e78/attempts:0
+[  459916ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://127.0.0.1:5173/api/v1/v3/generations/7d2e4b2b-04bd-49f5-a860-2fe0d70c5ea9/export/pdf:0
+[  487529ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://127.0.0.1:5173/api/v1/learn/instances/9faa7898-546a-4eac-8b4c-2cb0070b9e78/attempts:0
+[  523504ms] [ERROR] Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) @ http://127.0.0.1:5173/api/v1/learn/instances/9faa7898-546a-4eac-8b4c-2cb0070b9e78/attempts:0
+[17893369ms] [LOG] [vite] server connection lost. Polling for restart... @ http://127.0.0.1:5173/@vite/client:864

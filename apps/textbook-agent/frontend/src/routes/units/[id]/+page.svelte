@@ -29,12 +29,10 @@
 	import LessonVersionsPanel from '$lib/curriculum/units/components/LessonVersionsPanel.svelte';
 	import LessonResultsPanel from '$lib/curriculum/units/components/LessonResultsPanel.svelte';
 	import ResourceComposerPanel from '$lib/curriculum/units/components/ResourceComposerPanel.svelte';
-	import {
-		PATH_INDEPENDENCE_COPY,
-		generatePathLabel,
-		openPathLabel,
-		pathHasRealization
-	} from '$lib/curriculum/units/path-generation';
+	import type { NativePathKind } from '$lib/curriculum/units/path-generation';
+	import { lessonWorkspaceHref, preparationLabel, preparationUiState, badgeToneForPrep } from '$lib/curriculum/lessons/lesson-context';
+	import { Badge } from '$lib/ui';
+	import { goto } from '$app/navigation';
 	import type {
 		LessonMode,
 		KnowledgeType,
@@ -49,7 +47,6 @@
 		UnitPath,
 		MergeCriticResult
 	} from '$lib/types/units';
-	import type { NativePathKind } from '$lib/curriculum/units/path-generation';
 
 	const unitId = $derived(page.params.id ?? '');
 	let unit = $state<Unit | null>(null);
@@ -124,7 +121,7 @@
 		Boolean(
 			preparation &&
 				!preparation.stale &&
-				preparation.workflow_stage === 'failed_terminal' &&
+				['failed_recoverable', 'failed_terminal'].includes(preparation.workflow_stage) &&
 				preparation.can_regenerate
 		)
 	);
@@ -169,6 +166,7 @@
 		shapeError = null;
 		preparation = null;
 		showShapeDebug = false;
+		void ensurePreparationStatus();
 	}
 
 	function suggestionKey(row: MergeCriticResult): string {
@@ -400,66 +398,45 @@
 					selectedGroupIds = [];
 				}
 			}
-			// If preparation already exists, realize the chosen path from the
-			// approved Teaching Plan (no Studio re-approval, no path conversion).
-			const existingGenerationId = preparation?.generation_id || selected.pack_id;
+			const currentPreparation =
+				preparation ?? (selected.pack_id ? await getPreparedLessonStatus(unitId, selected.id) : null);
+			preparation = currentPreparation;
+			const failedPreparation = Boolean(
+				currentPreparation &&
+				['failed_recoverable', 'failed_terminal'].includes(
+					currentPreparation.workflow_stage || currentPreparation.generation_status
+				)
+			);
+			const existingGenerationId = failedPreparation
+				? null
+				: currentPreparation?.generation_id || selected.pack_id;
 			if (existingGenerationId) {
 				try {
 					if (pathKind === 'learn') {
-						const result = await generateLearnRealization(
-							unitId,
-							path as UnitPath,
-							selected
-						);
-						const href =
-							result.open_href ||
-							(result.editable_lesson_id
-								? `/builder/${encodeURIComponent(result.editable_lesson_id)}`
-								: null);
-						if (href) {
-							window.location.href = href;
-							return;
-						}
-					} else if (pathKind === 'print') {
-						const result = await generatePrintRealization(
-							unitId,
-							path as UnitPath,
-							selected
-						);
-						const href = result.open_href || `/studio/print/${encodeURIComponent(result.output_id)}`;
-						window.location.href = href;
+						await generateLearnRealization(unitId, path as UnitPath, selected);
+						await goto(lessonWorkspaceHref(unitId, selected.id, 'learn'));
+						return;
+					}
+					if (pathKind === 'print') {
+						await generatePrintRealization(unitId, path as UnitPath, selected);
+						await goto(lessonWorkspaceHref(unitId, selected.id, 'print'));
 						return;
 					}
 				} catch (err) {
-					// Teaching not approved yet — open existing prep in Studio for review
-					// (do not silently re-prepare a failed/stale pack).
 					if (isApiError(err) && err.status === 409) {
-						const qs =
-							pathKind === 'learn'
-								? `?generation_id=${encodeURIComponent(existingGenerationId)}&path=learn`
-								: `?generation_id=${encodeURIComponent(existingGenerationId)}`;
-						window.location.href = `/studio${qs}`;
+						await goto(lessonWorkspaceHref(unitId, selected.id, 'plan'));
 						return;
 					}
 					throw err;
 				}
 			}
-			const prepared = await preparePathLesson(
-				unitId,
-				path as UnitPath,
-				selected,
-				lessonMode,
-				selectedGroupIds
-			);
-			// Explicit path choice: Print → studio (queue/poll native worker);
-			// Learn → studio teaching review with path=learn. The print viewer
-			// at /studio/print/{id} is for a ready LectioDocument, not admission.
-			if (pathKind === 'print') {
-				window.location.href = `/studio?generation_id=${encodeURIComponent(prepared.generation_id)}`;
-			} else {
-				window.location.href = `/studio?generation_id=${encodeURIComponent(prepared.generation_id)}&path=learn`;
-			}
+			await preparePathLesson(unitId, path as UnitPath, selected, lessonMode, selectedGroupIds);
+			await goto(lessonWorkspaceHref(unitId, selected.id, 'plan'));
 		}, false);
+	}
+
+	async function openLessonWorkspace(lesson: PathLesson): Promise<void> {
+		await goto(lessonWorkspaceHref(unitId, lesson.id, 'plan'));
 	}
 
 	async function regenerate(): Promise<void> {
@@ -473,7 +450,7 @@
 				regenerationReason.trim(),
 				selectedGroupIds
 			);
-			window.location.href = `/studio?generation_id=${encodeURIComponent(prepared.generation_id)}`;
+			await goto(lessonWorkspaceHref(unitId, selected.id, 'plan'));
 		}, false);
 	}
 
@@ -498,7 +475,23 @@
 		if (action) await action.run();
 	}
 
-	onMount(() => void load());
+	onMount(() => {
+		const tab = page.url?.searchParams?.get('tab') ?? null;
+		const map: Record<string, typeof activeView> = {
+			lessons: 'path',
+			path: 'path',
+			schedule: 'schedule',
+			groups: 'groups',
+			resources: 'resources',
+			evidence: 'results',
+			results: 'results',
+			history: 'history',
+			insights: 'results'
+		};
+		void load().then(() => {
+			if (tab && map[tab]) void openTab(map[tab]);
+		});
+	});
 </script>
 
 <svelte:head><title>{unit ? `${unit.title} · Units` : 'Unit · Lectio'}</title></svelte:head>
@@ -535,9 +528,9 @@
 			<nav class="view-tabs" aria-label="Unit workspace views">
 				<button type="button" class:active={activeView === 'path'} aria-current={activeView === 'path' ? 'page' : undefined} onclick={() => openTab('path')}>Lessons</button>
 				<button type="button" class:active={activeView === 'schedule'} aria-current={activeView === 'schedule' ? 'page' : undefined} onclick={() => openTab('schedule')}>Schedule</button>
-				<button type="button" class:active={activeView === 'groups'} aria-current={activeView === 'groups' ? 'page' : undefined} onclick={() => openTab('groups')}>Groups</button>
+				<button type="button" class:active={activeView === 'groups'} aria-current={activeView === 'groups' ? 'page' : undefined} onclick={() => openTab('groups')}>Learning Groups</button>
 				<button type="button" class:active={activeView === 'resources'} aria-current={activeView === 'resources' ? 'page' : undefined} onclick={() => openTab('resources')}>Resources</button>
-				<button type="button" class:active={activeView === 'results'} aria-current={activeView === 'results' ? 'page' : undefined} onclick={() => openTab('results')}>Results</button>
+				<button type="button" class:active={activeView === 'results'} aria-current={activeView === 'results' ? 'page' : undefined} onclick={() => openTab('results')}>Evidence</button>
 				<button type="button" class:active={activeView === 'history'} aria-current={activeView === 'history' ? 'page' : undefined} onclick={() => openTab('history')}>History</button>
 			</nav>
 			{#if tabError && activeView !== 'path'}
@@ -648,52 +641,41 @@
 
 						<section class="prepare">
 							<div>
-								<p class="eyebrow">Preparation</p>
-								<h3>{preparation?.workflow_stage ?? 'Ready when you are'}</h3>
-								<p>{PATH_INDEPENDENCE_COPY}</p>
+								<p class="eyebrow">Lesson workspace</p>
+								<h3>Plan · Learn · Print</h3>
+								<p>Open the lesson to review the plan and create Learn or Print materials.</p>
+								{#if preparation}
+									<p class="prep-badge">
+										<Badge tone={badgeToneForPrep(preparationUiState(preparation))}>
+											{preparationLabel(preparationUiState(preparation))}
+										</Badge>
+									</p>
+								{/if}
 								{#if preparation?.stale}
-									<p>This lesson changed since it was last written and needs to be made again.</p>
+									<p>This lesson changed since it was last prepared and needs attention.</p>
 								{/if}
 							</div>
 							{#if preparation?.stale && preparation?.can_regenerate}
 								<form class="regenerate" onsubmit={(event) => { event.preventDefault(); void regenerate(); }}>
 									<label><span>What changed</span><input bind:value={regenerationReason} minlength="3" maxlength="500" required /></label>
-									<button class="primary" type="submit" disabled={busy !== null || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Making it again…' : 'Make it again'}</button>
+									<button class="primary" type="submit" disabled={busy !== null || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Retrying…' : 'Retry'}</button>
 								</form>
 							{:else if canStartFresh}
 								<form class="regenerate" onsubmit={(event) => { event.preventDefault(); void regenerate(); }}>
-									<p>The previous generation cannot be retried. Start fresh to keep it as failure history and create a new generation.</p>
-									<label><span>Why start fresh</span><input bind:value={regenerationReason} minlength="3" maxlength="500" required /></label>
-									<button class="primary" type="submit" disabled={busy !== null || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Starting fresh…' : 'Start fresh'}</button>
+									<p>The previous attempt cannot be continued. Start again from the plan.</p>
+									<label><span>Why start fresh</span><input aria-label="Why start fresh" bind:value={regenerationReason} minlength="3" maxlength="500" required /></label>
+									<button class="primary" type="submit" disabled={busy !== null || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Starting…' : 'Retry'}</button>
 								</form>
-							{:else if preparation?.generation_id || (preparation?.realizations?.length ?? 0) > 0}
-								{@const prep = preparation}
-								<div class="ready-actions">
-									{#if prep?.print_open_href}
-										<a class="primary link" href={prep.print_open_href}>{openPathLabel('print')}</a>
-									{:else if prep?.generation_id && pathHasRealization(prep, 'print')}
-										<a class="primary link" href={`/studio/print/${encodeURIComponent(prep.generation_id)}`}>{openPathLabel('print')}</a>
-									{:else if !pathHasRealization(prep, 'print')}
-										<button class="primary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={() => prepare('print')}>{busy === 'prepare' ? 'Generating Print…' : generatePathLabel('print')}</button>
-									{/if}
-									{#if prep?.learn_open_href}
-										<a class="secondary link" href={prep.learn_open_href}>{openPathLabel('learn')}</a>
-									{:else if prep?.learn_output_id}
-										<a class="secondary link" href={`/studio?generation_id=${encodeURIComponent(prep.learn_output_id)}`}>{openPathLabel('learn')}</a>
-									{:else if !pathHasRealization(prep, 'learn')}
-										<button class="secondary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={() => prepare('learn')}>{busy === 'prepare' ? 'Generating Learn…' : generatePathLabel('learn')}</button>
-									{/if}
-									{#if prep?.realizations?.some((row) => row.status === 'read_only')}
-										<p class="hint">A legacy output is read-only — generate an explicit Print or Learn realization from the Teaching Plan.</p>
-									{/if}
-									<button class="secondary" type="button" onclick={() => { void openTab('groups'); showVersions = true; }}>Make versions for my groups</button>
-									<button class="text-button" type="button" disabled={busy !== null} onclick={() => ensurePreparationStatus()}>Refresh status</button>
-								</div>
 							{:else}
 								<div class="ready-actions">
-									<button class="primary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={() => prepare('print')}>{busy === 'prepare' ? 'Generating Print…' : generatePathLabel('print')}</button>
-									<button class="secondary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={() => prepare('learn')}>{busy === 'prepare' ? 'Generating Learn…' : generatePathLabel('learn')}</button>
-									<button class="text-button" type="button" disabled={busy !== null} onclick={() => ensurePreparationStatus()}>Check preparation status</button>
+									<a class="primary link" href={lessonWorkspaceHref(unitId, selected.id, 'plan')}>Open Lesson</a>
+									{#if !preparation?.generation_id}
+										<button class="secondary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={() => prepare('print')}>{busy === 'prepare' ? 'Preparing…' : 'Prepare Lesson'}</button>
+									{:else}
+										<a class="secondary link" href={lessonWorkspaceHref(unitId, selected.id, 'learn')}>Open Learn</a>
+										<a class="secondary link" href={lessonWorkspaceHref(unitId, selected.id, 'print')}>Open Print</a>
+									{/if}
+									<button class="text-button" type="button" disabled={busy !== null} onclick={() => ensurePreparationStatus()}>Refresh status</button>
 								</div>
 							{/if}
 						</section>
@@ -772,7 +754,7 @@
 {/if}
 
 <style>
-	.unit-page { min-height: calc(100vh - 58px); padding: 38px 28px 80px; }
+	.unit-page { min-height: 60vh; padding: 0 0 40px; }
 	.unit-head, .view-tabs, .lock-in-bar, .history-panel, .workspace, .chat-edit, .empty, .error, .loading { max-width: 1180px; margin-inline: auto; }
 	.unit-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
 	.back { display: inline-block; margin-bottom: 18px; color: var(--accent); font-size: 13px; font-weight: 600; text-decoration: none; }

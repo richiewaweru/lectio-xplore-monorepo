@@ -1,0 +1,242 @@
+INFO:     Will watch for changes in these directories: ['C:\\Projects\\lectio\\apps\\textbook-agent\\backend']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [42436] using WatchFiles
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [8156]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 7 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+C:\Projects\lectio\apps\textbook-agent\backend\src\infra\llm\cost.py:81: PydanticAIDeprecationWarning: `AgentRunResult.usage` is no longer a method; access it as a property (drop the parentheses).
+  usage = usage_obj() if callable(usage_obj) else usage_obj
+WARNING:  WatchFiles detected changes in 'src\print\generation\composition_bridge.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for connections to close. (CTRL+C to force quit)
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [8156]
+WARNING:  WatchFiles detected changes in 'tests\print_learn\test_print_document_align.py'. Reloading...
+Process SpawnProcess-2:
+Traceback (most recent call last):
+  File "C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\multiprocessing\process.py", line 314, in _bootstrap
+    self.run()
+  File "C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\multiprocessing\process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "C:\Projects\lectio\apps\textbook-agent\backend\.venv\Lib\site-packages\uvicorn\_subprocess.py", line 73, in subprocess_started
+    sys.stdin = os.fdopen(stdin_fileno)  # pragma: full coverage
+                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1031, in fdopen
+  File "<frozen codecs>", line 309, in __init__
+KeyboardInterrupt
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [4092]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 8 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+C:\Projects\lectio\apps\textbook-agent\backend\src\infra\llm\cost.py:81: PydanticAIDeprecationWarning: `AgentRunResult.usage` is no longer a method; access it as a property (drop the parentheses).
+  usage = usage_obj() if callable(usage_obj) else usage_obj
+WARNING:  WatchFiles detected changes in 'tests\print_learn\test_print_document_align.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [4092]
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [38676]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 7 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'tests\planning\test_teaching_validation.py', 'src\print\generation\whole_lesson\validation.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [38676]
+WARNING:  WatchFiles detected changes in 'tests\planning\test_teaching_validation.py'. Reloading...
+Process SpawnProcess-5:
+Traceback (most recent call last):
+  File "C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\multiprocessing\process.py", line 314, in _bootstrap
+    self.run()
+  File "C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\multiprocessing\process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "C:\Projects\lectio\apps\textbook-agent\backend\.venv\Lib\site-packages\uvicorn\_subprocess.py", line 73, in subprocess_started
+    sys.stdin = os.fdopen(stdin_fileno)  # pragma: full coverage
+                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1031, in fdopen
+  File "<frozen codecs>", line 309, in __init__
+KeyboardInterrupt
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [32168]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 7 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+C:\Projects\lectio\apps\textbook-agent\backend\src\infra\llm\cost.py:81: PydanticAIDeprecationWarning: `AgentRunResult.usage` is no longer a method; access it as a property (drop the parentheses).
+  usage = usage_obj() if callable(usage_obj) else usage_obj
+WARNING:  WatchFiles detected changes in 'tests\print_learn\test_print_document_align.py', 'src\print\generation\composition_bridge.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for connections to close. (CTRL+C to force quit)
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [32168]
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [17704]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 8 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+C:\Projects\lectio\apps\textbook-agent\backend\src\infra\llm\cost.py:81: PydanticAIDeprecationWarning: `AgentRunResult.usage` is no longer a method; access it as a property (drop the parentheses).
+  usage = usage_obj() if callable(usage_obj) else usage_obj
+C:\Projects\lectio\apps\textbook-agent\backend\src\infra\llm\cost.py:81: PydanticAIDeprecationWarning: `AgentRunResult.usage` is no longer a method; access it as a property (drop the parentheses).
+  usage = usage_obj() if callable(usage_obj) else usage_obj
+WARNING:  WatchFiles detected changes in 'src\application\unit_lesson\realize_learn_handoff.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17704]
+WARNING:  WatchFiles detected changes in 'src\print\generation\whole_lesson\executor.py', 'src\learn\generation\native_execution.py'. Reloading...
+Process SpawnProcess-8:
+Traceback (most recent call last):
+  File "C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\multiprocessing\process.py", line 314, in _bootstrap
+    self.run()
+  File "C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\multiprocessing\process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "C:\Projects\lectio\apps\textbook-agent\backend\.venv\Lib\site-packages\uvicorn\_subprocess.py", line 73, in subprocess_started
+    sys.stdin = os.fdopen(stdin_fileno)  # pragma: full coverage
+                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1031, in fdopen
+  File "<frozen codecs>", line 309, in __init__
+KeyboardInterrupt
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+WARNING:  WatchFiles detected changes in 'src\learn\generation\native_execution.py'. Reloading...
+INFO:     Started server process [26704]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 7 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [26704]
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [12460]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 7 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'src\learn\generation\native_production.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [12460]
+WARNING:  WatchFiles detected changes in 'src\learn\generation\native_execution.py'. Reloading...
+Process SpawnProcess-11:
+Traceback (most recent call last):
+  File "C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\multiprocessing\process.py", line 314, in _bootstrap
+    self.run()
+  File "C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\multiprocessing\process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "C:\Projects\lectio\apps\textbook-agent\backend\.venv\Lib\site-packages\uvicorn\_subprocess.py", line 76, in subprocess_started
+    config.configure_logging()
+  File "C:\Projects\lectio\apps\textbook-agent\backend\.venv\Lib\site-packages\uvicorn\config.py", line 372, in configure_logging
+    logging.config.dictConfig(self.log_config)
+  File "C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\logging\config.py", line 821, in dictConfig
+    def dictConfig(config):
+    
+KeyboardInterrupt
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [41964]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 7 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+C:\Projects\lectio\apps\textbook-agent\backend\src\infra\llm\cost.py:81: PydanticAIDeprecationWarning: `AgentRunResult.usage` is no longer a method; access it as a property (drop the parentheses).
+  usage = usage_obj() if callable(usage_obj) else usage_obj
+WARNING:  WatchFiles detected changes in 'src\learn\generation\native_execution.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [41964]
+WARNING:  WatchFiles detected changes in 'src\print\generation\whole_lesson\executor.py'. Reloading...
+Process SpawnProcess-13:
+Traceback (most recent call last):
+  File "C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\multiprocessing\process.py", line 314, in _bootstrap
+    self.run()
+  File "C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\multiprocessing\process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "C:\Projects\lectio\apps\textbook-agent\backend\.venv\Lib\site-packages\uvicorn\_subprocess.py", line 73, in subprocess_started
+    sys.stdin = os.fdopen(stdin_fileno)  # pragma: full coverage
+                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1031, in fdopen
+  File "<frozen codecs>", line 309, in __init__
+KeyboardInterrupt
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [27368]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 7 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'src\curriculum\routes.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [27368]
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [30632]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 7 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'src\print\generation\whole_lesson\validation.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for connections to close. (CTRL+C to force quit)
+INFO:     Waiting for background tasks to complete. (CTRL+C to force quit)
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [30632]
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [20652]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 7 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'src\learn\resources\selection.py', 'src\print\generation\whole_lesson\teaching_agent.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [20652]
+WARNING:  WatchFiles detected changes in 'src\learn\generation\native_production.py'. Reloading...
+Process SpawnProcess-17:
+Traceback (most recent call last):
+  File "C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\multiprocessing\process.py", line 314, in _bootstrap
+    self.run()
+  File "C:\Users\richi\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\Lib\multiprocessing\process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+  File "C:\Projects\lectio\apps\textbook-agent\backend\.venv\Lib\site-packages\uvicorn\_subprocess.py", line 73, in subprocess_started
+    sys.stdin = os.fdopen(stdin_fileno)  # pragma: full coverage
+                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen os>", line 1031, in fdopen
+  File "<frozen codecs>", line 309, in __init__
+KeyboardInterrupt
+C:\Projects\lectio\apps\textbook-agent\backend\src\contracts\generation_manifest.py:6: UserWarning: Field name "schema" in "GenerationFieldContract" shadows an attribute in parent "BaseModel"
+  class GenerationFieldContract(BaseModel):
+INFO:     Started server process [31424]
+INFO:     Waiting for application startup.
+WARNING:  Reconciled 7 stale v3 generation(s) after restart
+INFO:     Runtime ready
+INFO:     Application startup complete.
+C:\Projects\lectio\apps\textbook-agent\backend\src\infra\llm\cost.py:81: PydanticAIDeprecationWarning: `AgentRunResult.usage` is no longer a method; access it as a property (drop the parentheses).
+  usage = usage_obj() if callable(usage_obj) else usage_obj
+C:\Projects\lectio\apps\textbook-agent\backend\src\infra\llm\cost.py:81: PydanticAIDeprecationWarning: `AgentRunResult.usage` is no longer a method; access it as a property (drop the parentheses).
+  usage = usage_obj() if callable(usage_obj) else usage_obj

@@ -1,0 +1,204 @@
+﻿
+> lectio-xplore-monorepo@ app:check C:\Projects\lectio
+> pnpm --dir apps/textbook-agent/frontend check
+
+
+> frontend@1.0.0-beta.1 check C:\Projects\lectio\apps\textbook-agent\frontend
+> svelte-kit sync && svelte-check --tsconfig ./tsconfig.json
+
+Loading svelte-check in workspace: c:\Projects\lectio\apps\textbook-agent\frontend
+Getting Svelte diagnostics...
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\api\client.ts:3:59
+Error: Cannot find module './shared/config' or its corresponding type declarations. 
+import { authToken } from '$lib/shared/stores/auth';
+import { resolveClientApiBase, type ApiEnvironment } from './shared/config';
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\learn\authoring\builder\streaming\generation-stream.test.ts:8:8
+Error: Cannot find module './print/generation-stream' or its corresponding type declarations. 
+	isTerminalPackStatus
+} from './print/generation-stream';
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\learn\authoring\builder\streaming\generation-stream.test.ts:31:31
+Error: Parameter 'section' implicitly has an 'any' type. 
+		const merged = appendAbsentGenerationSections(local, adapted, plan);
+		expect(merged.sections.map((section) => section.id)).toEqual(['s1']);
+		expect(merged.blocks.b1?.content).toEqual({ body: 'Generated' });
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\learn\authoring\builder\streaming\generation-stream.test.ts:104:39
+Error: Parameter 'section' implicitly has an 'any' type. 
+		expect([...afterSection2.sections].sort((a, b) => a.position - b.position).map((section) => section.id)).toEqual(['s2', 's3']);
+		expect(afterSection2.sections.find((section) => section.id === 's3')).toBe(afterSection3.sections[0]);
+	});
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\learn\student\api\releases.ts:30:8
+Error: Expected 2 arguments, but got 1. 
+	});
+	await ensureOk(response);
+	return (await response.json()) as LearnReleaseRecord;
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\learn\student\api\releases.ts:36:8
+Error: Expected 2 arguments, but got 1. 
+	const response = await apiFetch(`/api/v1/learn/lessons/${lessonId}/releases`);
+	await ensureOk(response);
+	return (await response.json()) as LearnReleaseSummary[];
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\learn\student\api\releases.ts:42:8
+Error: Expected 2 arguments, but got 1. 
+	const response = await apiFetch(`/api/v1/learn/releases/${releaseId}`);
+	await ensureOk(response);
+	return (await response.json()) as LearnReleaseRecord;
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\print\components\studio\V3CanvasSection.test.ts:6:25
+Error: Cannot find module '../../../routes/studio/__fixtures__/MockGeneric.svelte' or its corresponding type declarations. 
+vi.mock('./V3CanvasComponent.svelte', async () => ({
+	default: (await import('../../../routes/studio/__fixtures__/MockGeneric.svelte')).default
+}));
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\print\components\studio\V3CanvasSection.test.ts:9:25
+Error: Cannot find module '../../../routes/studio/__fixtures__/MockGeneric.svelte' or its corresponding type declarations. 
+vi.mock('./V3CanvasVisual.svelte', async () => ({
+	default: (await import('../../../routes/studio/__fixtures__/MockGeneric.svelte')).default
+}));
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\print\components\studio\V3CanvasSection.test.ts:12:25
+Error: Cannot find module '../../../routes/studio/__fixtures__/MockGeneric.svelte' or its corresponding type declarations. 
+vi.mock('./V3LectioSectionEmbed.svelte', async () => ({
+	default: (await import('../../../routes/studio/__fixtures__/MockGeneric.svelte')).default
+}));
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\print\generation\generation-poller.test.ts:3:40
+Error: Cannot find module './print/generation-poller' or its corresponding type declarations. 
+
+import { createGenerationPoller } from './print/generation-poller';
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\builder\[id]\page.test.ts:329:47
+Error: ',' expected. 
+
+		expect(screen.queryByText(/print/generation update delayed/i)).toBeNull();
+	});
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\builder\[id]\page.test.ts:329:54
+Error: ',' expected. 
+
+		expect(screen.queryByText(/print/generation update delayed/i)).toBeNull();
+	});
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\builder\[id]\page.test.ts:329:47
+Error: Cannot find name 'update'. Did you mean 'Date'? 
+
+		expect(screen.queryByText(/print/generation update delayed/i)).toBeNull();
+	});
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\builder\[id]\page.test.ts:329:54
+Error: Cannot find name 'delayed'. 
+
+		expect(screen.queryByText(/print/generation update delayed/i)).toBeNull();
+	});
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\builder\[id]\page.test.ts:329:54
+Error: Expected 1-2 arguments, but got 3. 
+
+		expect(screen.queryByText(/print/generation update delayed/i)).toBeNull();
+	});
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\builder\[id]\page.test.ts:329:62
+Error: Cannot find name 'i'. 
+
+		expect(screen.queryByText(/print/generation update delayed/i)).toBeNull();
+	});
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\units\+page.svelte:260:58
+Error: 'readback' is possibly 'null'. (ts)
+					<div class="form-head">
+						<div><p class="eyebrow">One quick question</p><h2>{readback.clarifying_question?.trim()}</h2></div>
+					</div>
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\components\pack\PackGenerating.svelte:18:15
+Error: Property 'status' does not exist on type 'never'. (ts)
+			status = await getPackStatus(packId);
+			if (status.status === 'complete' || status.status === 'failed') {
+				if (timer) clearInterval(timer);
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\lib\components\pack\PackGenerating.svelte:18:47
+Error: Property 'status' does not exist on type 'never'. (ts)
+			status = await getPackStatus(packId);
+			if (status.status === 'complete' || status.status === 'failed') {
+				if (timer) clearInterval(timer);
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\learn\classes\+page.svelte:13:9
+Error: Expected 2 arguments, but got 1. (ts)
+		const response = await apiFetch('/api/v1/learn/classes');
+		await ensureOk(response);
+		classes = await response.json();
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\learn\classes\+page.svelte:33:9
+Error: Expected 2 arguments, but got 1. (ts)
+		});
+		await ensureOk(response);
+		name = '';
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\learn\classes\[classId]\+page.svelte:32:9
+Error: Expected 2 arguments, but got 1. (ts)
+		const response = await apiFetch(`/api/v1/learn/classes/${classId}`);
+		await ensureOk(response);
+		detail = await response.json();
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\learn\classes\[classId]\+page.svelte:56:9
+Error: Expected 2 arguments, but got 1. (ts)
+		});
+		await ensureOk(response);
+		newLearner = '';
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\learn\classes\[classId]\+page.svelte:73:9
+Error: Expected 2 arguments, but got 1. (ts)
+		});
+		await ensureOk(response);
+		assignTitle = '';
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\learn\classes\[classId]\insight\+page.svelte:18:10
+Error: Expected 2 arguments, but got 1. (ts)
+			const response = await apiFetch(`/api/v1/learn/analytics/classes/${classId}/overview`);
+			await ensureOk(response);
+			insight = await response.json();
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\learn\home\[learnerId]\+page.svelte:37:10
+Error: Expected 2 arguments, but got 1. (ts)
+			const response = await apiFetch(`/api/v1/learn/learners/${learnerId}/home`, { headers });
+			await ensureOk(response);
+			const body = await response.json();
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\learn\home\[learnerId]\classes\[classId]\+page.svelte:34:10
+Error: Expected 2 arguments, but got 1. (ts)
+			const homeResp = await apiFetch(`/api/v1/learn/learners/${learnerId}/home`, { headers });
+			await ensureOk(homeResp);
+			const home = await homeResp.json();
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\learn\instances\[instanceId]\+page.svelte:27:10
+Error: Expected 2 arguments, but got 1. (ts)
+			const response = await apiFetch(`/api/v1/learn/instances/${instanceId}`, { headers });
+			await ensureOk(response);
+			const instance = await response.json();
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\learn\instances\[instanceId]\+page.svelte:35:10
+Error: Expected 2 arguments, but got 1. (ts)
+			});
+			await ensureOk(releaseResp);
+			const release = await releaseResp.json();
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\learn\instances\[instanceId]\outcome\+page.svelte:25:10
+Error: Expected 2 arguments, but got 1. (ts)
+			const response = await apiFetch(`/api/v1/learn/instances/${instanceId}`, { headers });
+			await ensureOk(response);
+			const body = await response.json();
+
+c:\Projects\lectio\apps\textbook-agent\frontend\src\routes\learn\lessons\[id]\+page.svelte:24:20
+Error: Property 'title' does not exist on type 'ApiError'. (ts)
+			if (isApiError(err)) {
+				error = `${err.title}: ${err.detail}`;
+			} else {
+
+====================================
+svelte-check found 32 errors and 0 warnings in 16 files
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.

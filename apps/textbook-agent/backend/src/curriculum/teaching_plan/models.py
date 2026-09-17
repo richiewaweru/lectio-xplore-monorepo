@@ -7,6 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 Difficulty = Literal["guided", "independent"]
+TaskMode = Literal["none", "formative", "assessment"]
 LearnerActionId = Literal[
     "select-one",
     "select-many",
@@ -67,6 +68,9 @@ class TeachingPlanBlock(BaseModel):
             "block. A multiple-choice source must be the only ID in this array."
         ),
     )
+    task_mode: TaskMode = "none"
+    sourcebook_needs: list[str] = Field(default_factory=list)
+    sourcebook_refs: list[str] = Field(default_factory=list)
     stimulus_dependencies: list[str] = Field(
         default_factory=list,
         description="Stimulus or content asset ids this block's learner task depends on.",
@@ -81,6 +85,12 @@ class TeachingPlanBlock(BaseModel):
             raise ValueError("source_question_ids must not contain duplicates")
         if len(self.evidence_refs) != len(set(self.evidence_refs)):
             raise ValueError("evidence_refs must not contain duplicates")
+        if self.task_mode == "formative" and self.source_question_ids:
+            raise ValueError("formative tasks cannot own approved assessment sources")
+        if self.task_mode == "assessment" and self.learner_action is None:
+            raise ValueError("assessment tasks require a learner_action")
+        if self.task_mode == "assessment" and not self.source_question_ids:
+            raise ValueError("assessment tasks require approved source_question_ids")
         return self
 
 
@@ -145,6 +155,9 @@ class TeachingPlanDraftBlock(BaseModel):
             "block. A multiple-choice source must be the only ID in this array."
         ),
     )
+    task_mode: TaskMode = "none"
+    sourcebook_needs: list[str] = Field(default_factory=list)
+    sourcebook_refs: list[str] = Field(default_factory=list)
     stimulus_dependencies: list[str] = Field(
         default_factory=list,
         description="Stimulus or content asset ids this block's learner task depends on.",
@@ -157,6 +170,12 @@ class TeachingPlanDraftBlock(BaseModel):
             raise ValueError("source_question_ids must not contain duplicates")
         if len(self.evidence_refs) != len(set(self.evidence_refs)):
             raise ValueError("evidence_refs must not contain duplicates")
+        if self.task_mode == "formative" and self.source_question_ids:
+            raise ValueError("formative tasks cannot own approved assessment sources")
+        if self.task_mode == "assessment" and self.learner_action is None:
+            raise ValueError("assessment tasks require a learner_action")
+        if self.task_mode == "assessment" and not self.source_question_ids:
+            raise ValueError("assessment tasks require approved source_question_ids")
         return self
 
 
@@ -230,6 +249,9 @@ def materialize_teaching_plan(
                         departure_reason=block.departure_reason,
                         source_question_ids=list(block.source_question_ids),
                         stimulus_dependencies=list(block.stimulus_dependencies),
+                        task_mode=block.task_mode,
+                        sourcebook_needs=list(block.sourcebook_needs),
+                        sourcebook_refs=list(block.sourcebook_refs),
                         learner_action=block.learner_action,
                     )
                     for position, block in enumerate(section.blocks)
@@ -245,6 +267,7 @@ __all__ = [
     "Difficulty",
     "LearnerActionBrief",
     "LearnerActionId",
+    "TaskMode",
     "TeachingPlan",
     "TeachingPlanBlock",
     "TeachingPlanDraft",

@@ -51,6 +51,10 @@ def open_href_for(path: NativePath, *, output_id: str | None, status: str) -> st
 
 def to_identity(row: NativeRealizationModel) -> RealizationIdentity:
     path: NativePath = "print" if row.path == "print" else "learn"
+    # Older worker attempts persisted the broad generation status ``failed``.
+    # Keep those rows readable while exposing only the closed realization
+    # status vocabulary to API callers.
+    status = "failed_recoverable" if str(row.status) == "failed" else row.status
     return RealizationIdentity(
         realization_id=row.id,
         path=path,
@@ -63,7 +67,7 @@ def to_identity(row: NativeRealizationModel) -> RealizationIdentity:
         package_contract_version=row.package_contract_version,
         package_contract_hash=row.package_contract_hash,
         realization_revision=int(row.realization_revision),
-        status=row.status,  # type: ignore[arg-type]
+        status=status,  # type: ignore[arg-type]
         output_id=row.output_id,
         error_summary=row.error_summary,
         pack_id=row.pack_id,

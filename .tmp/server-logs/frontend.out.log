@@ -1,0 +1,167 @@
+
+> frontend@1.0.0-beta.1 dev C:\Projects\lectio\apps\textbook-agent\frontend
+> vite dev "--host" "127.0.0.1" "--port" "5173"
+
+
+  VITE v7.3.6  ready in 27947 ms
+
+  ➜  Local:   http://127.0.0.1:5173/
+  ➜  press h + enter to show help
+5:41:29 PM [vite-plugin-svelte] src/lib/learn/document/DocumentEditor.svelte:47:20 This reference only captures the initial value of `initialDocument`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally
+5:41:29 PM [vite-plugin-svelte] src/lib/learn/document/DocumentCanvas.svelte:115:2 noninteractive element cannot have nonnegative tabIndex value
+https://svelte.dev/e/a11y_no_noninteractive_tabindex
+5:41:29 PM [vite-plugin-svelte] src/lib/learn/document/editors/InteractionEditor.svelte:16:21 This reference only captures the initial value of `node`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+6:52:07 PM [vite-plugin-svelte] src/lib/print/components/studio/PrintDocumentEditor.svelte:25:50 This reference only captures the initial value of `initialDocument`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+6:52:07 PM [vite-plugin-svelte] src/lib/print/components/studio/PrintDocumentEditor.svelte:26:23 This reference only captures the initial value of `documentRevision`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally
+6:52:08 PM [vite-plugin-svelte] src/lib/print/components/studio/PrintDocumentEditor.svelte:25:50 This reference only captures the initial value of `initialDocument`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+6:52:08 PM [vite-plugin-svelte] src/lib/print/components/studio/PrintDocumentEditor.svelte:26:23 This reference only captures the initial value of `documentRevision`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally
+6:55:02 PM [vite] (client) hmr update /src/app.css, /src/routes/units/[id]/+page.svelte, /src/routes/units/[id]/lessons/[lessonId]/+layout.svelte, /src/routes/units/[id]/lessons/[lessonId]/plan/+page.svelte, /src/routes/units/[id]/lessons/[lessonId]/learn/+page.svelte, /src/routes/units/[id]/lessons/[lessonId]/print/+page.svelte
+6:55:02 PM [vite] (ssr) page reload src/lib/curriculum/lessons/lesson-context.ts
+6:55:20 PM [vite-plugin-svelte] src/lib/learn/document/DocumentEditor.svelte:47:20 This reference only captures the initial value of `initialDocument`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally
+6:55:20 PM [vite-plugin-svelte] src/lib/learn/document/DocumentCanvas.svelte:115:2 noninteractive element cannot have nonnegative tabIndex value
+https://svelte.dev/e/a11y_no_noninteractive_tabindex
+6:55:21 PM [vite-plugin-svelte] src/lib/learn/document/editors/InteractionEditor.svelte:16:21 This reference only captures the initial value of `node`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+6:56:52 PM [vite] (client) hmr update /src/routes/units/[id]/lessons/[lessonId]/learn/+page.svelte, /src/app.css
+6:56:52 PM [vite] (ssr) page reload src/routes/units/[id]/lessons/[lessonId]/learn/+page.svelte
+6:57:44 PM [vite] (client) hmr update /src/routes/units/[id]/lessons/[lessonId]/learn/+page.svelte, /src/app.css
+6:57:44 PM [vite] (ssr) page reload src/routes/units/[id]/lessons/[lessonId]/learn/+page.svelte
+7:02:11 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/0.js
+7:02:11 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/1.js
+7:02:11 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/2.js
+7:02:11 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/3.js
+7:02:11 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/4.js
+7:02:11 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/6.js
+7:02:12 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/3.js
+7:02:12 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/4.js
+7:02:12 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/6.js
+7:02:12 PM [vite] (client) page reload .svelte-kit/generated/client/app.js
+7:02:12 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/21.js
+7:02:12 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/29.js
+7:02:12 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/30.js
+7:02:12 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/32.js
+7:02:12 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/33.js
+7:02:12 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/34.js
+7:02:12 PM [vite] (ssr) page reload .svelte-kit/generated/shared/error-template.js
+7:02:12 PM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+7:02:12 PM [vite] (client) page reload .svelte-kit/generated/client/matchers.js
+7:02:12 PM [vite] (client) page reload .svelte-kit/generated/root.js
+7:02:12 PM [vite] (ssr) page reload .svelte-kit/generated/root.js
+7:02:23 PM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
+7:47:03 PM [vite] (client) hmr update /src/routes/units/[id]/lessons/[lessonId]/plan/+page.svelte, /src/app.css
+7:47:03 PM [vite] (ssr) page reload src/routes/units/[id]/lessons/[lessonId]/plan/+page.svelte
+7:47:03 PM [vite] (client) hmr update /src/routes/units/[id]/lessons/[lessonId]/learn/+page.svelte, /src/app.css
+7:47:03 PM [vite] (ssr) page reload src/routes/units/[id]/lessons/[lessonId]/learn/+page.svelte
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/0.js
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/1.js
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/2.js
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/3.js
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/2.js
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/4.js
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/6.js
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/19.js
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/21.js
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/client/app.js
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/29.js
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/30.js
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/32.js
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/33.js
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/34.js
+7:47:21 PM [vite] (ssr) page reload .svelte-kit/generated/shared/error-template.js
+7:47:21 PM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/client/matchers.js
+7:47:21 PM [vite] (client) page reload .svelte-kit/generated/root.js
+7:47:21 PM [vite] (ssr) page reload .svelte-kit/generated/root.js
+7:47:21 PM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
+7:47:33 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/0.js
+7:47:33 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/1.js
+7:47:33 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/2.js
+7:47:33 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/3.js
+7:47:33 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/4.js
+7:47:33 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/6.js
+7:47:33 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/19.js
+7:47:33 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/21.js
+7:47:33 PM [vite] (client) page reload .svelte-kit/generated/client/app.js
+7:47:33 PM [vite] (ssr) page reload .svelte-kit/generated/shared/error-template.js
+7:47:33 PM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+7:47:33 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/29.js
+7:47:33 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/30.js
+7:47:33 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/32.js
+7:47:33 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/33.js
+7:47:33 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/34.js
+7:47:33 PM [vite] (client) page reload .svelte-kit/generated/client/matchers.js
+7:47:33 PM [vite] (client) page reload .svelte-kit/generated/root.js
+7:47:33 PM [vite] (ssr) page reload .svelte-kit/generated/root.js
+7:47:33 PM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
+7:48:05 PM [vite] (client) hmr update /src/routes/units/[id]/lessons/[lessonId]/plan/+page.svelte, /src/app.css
+7:48:05 PM [vite] (ssr) page reload src/routes/units/[id]/lessons/[lessonId]/plan/+page.svelte
+7:58:47 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/0.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/0.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/1.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/2.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/3.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/client/app.js
+7:58:48 PM [vite] (ssr) page reload .svelte-kit/generated/shared/error-template.js
+7:58:48 PM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/4.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/6.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/19.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/21.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/29.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/30.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/32.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/33.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/34.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/client/app.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/client/matchers.js
+7:58:48 PM [vite] (client) page reload .svelte-kit/generated/root.js
+7:58:48 PM [vite] (ssr) page reload .svelte-kit/generated/root.js
+7:58:48 PM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
+8:04:29 PM [vite] (client) hmr update /src/routes/units/[id]/lessons/[lessonId]/plan/+page.svelte, /src/app.css
+8:04:29 PM [vite] (ssr) page reload src/routes/units/[id]/lessons/[lessonId]/plan/+page.svelte
+8:16:39 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/0.js
+8:16:39 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/1.js
+8:16:39 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/2.js
+8:16:39 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/3.js
+8:16:39 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/4.js
+8:16:39 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/6.js
+8:16:39 PM [vite] (client) page reload .svelte-kit/generated/client/app.js
+8:16:39 PM [vite] (ssr) page reload .svelte-kit/generated/shared/error-template.js
+8:16:39 PM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+8:16:39 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/19.js
+8:16:39 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/21.js
+8:16:39 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/29.js
+8:16:39 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/30.js
+8:16:39 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/32.js
+8:16:39 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/33.js
+8:16:39 PM [vite] (client) page reload .svelte-kit/generated/client/nodes/34.js
+8:16:39 PM [vite] (client) page reload .svelte-kit/generated/client/matchers.js
+8:16:39 PM [vite] (client) page reload .svelte-kit/generated/root.js
+8:16:39 PM [vite] (ssr) page reload .svelte-kit/generated/root.js
+8:16:39 PM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
+8:20:41 PM [vite] .env changed, restarting server...
+8:20:42 PM [vite] server restarted.
+8:21:04 PM [vite-plugin-svelte] src/lib/learn/document/DocumentCanvas.svelte:115:2 noninteractive element cannot have nonnegative tabIndex value
+https://svelte.dev/e/a11y_no_noninteractive_tabindex
+8:21:05 PM [vite-plugin-svelte] src/lib/print/components/studio/PrintDocumentEditor.svelte:25:50 This reference only captures the initial value of `initialDocument`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+8:21:05 PM [vite-plugin-svelte] src/lib/print/components/studio/PrintDocumentEditor.svelte:26:23 This reference only captures the initial value of `documentRevision`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally
+8:21:06 PM [vite-plugin-svelte] src/lib/learn/document/editors/InteractionEditor.svelte:16:21 This reference only captures the initial value of `node`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+8:21:07 PM [vite-plugin-svelte] src/lib/print/components/studio/PrintDocumentEditor.svelte:25:50 This reference only captures the initial value of `initialDocument`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+8:21:07 PM [vite-plugin-svelte] src/lib/print/components/studio/PrintDocumentEditor.svelte:26:23 This reference only captures the initial value of `documentRevision`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally
+8:21:07 PM [vite-plugin-svelte] src/lib/learn/document/DocumentCanvas.svelte:115:2 noninteractive element cannot have nonnegative tabIndex value
+https://svelte.dev/e/a11y_no_noninteractive_tabindex
+8:21:08 PM [vite-plugin-svelte] src/lib/learn/document/editors/InteractionEditor.svelte:16:21 This reference only captures the initial value of `node`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+ ELIFECYCLE  Command failed with exit code 4294967295.

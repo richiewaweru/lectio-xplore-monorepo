@@ -11,7 +11,7 @@ from sqlalchemy import select
 from app import app
 from core.database.models import UserModel
 from core.entities.user import User
-from infra.auth.middleware import get_current_user
+from infra.auth.middleware import get_current_user, get_optional_user
 from infra.database.session import get_async_session
 from learn.runtime_models import LearnerAttemptModel
 from learn.runtime_service import classify_concept
@@ -119,6 +119,7 @@ def _overrides(db_session_factory):
 
     app.dependency_overrides.clear()
     app.dependency_overrides[get_current_user] = override_user
+    app.dependency_overrides[get_optional_user] = override_user
     app.dependency_overrides[get_async_session] = override_session
     yield state
     app.dependency_overrides.clear()
@@ -329,6 +330,33 @@ async def test_classes_assignments_permissions_and_rolling(db_session_factory, _
         insight = await client.get(f"/api/v1/learn/classes/{class_id}/insight")
         assert insight.status_code == 200
         assert insight.json()["class_id"] == class_id
+
+
+@pytest.mark.asyncio
+async def test_public_join_class_mints_session(_overrides):
+    async with await _client() as client:
+        created = await client.post("/api/v1/learn/classes", json={"name": "Join Me"})
+        assert created.status_code == 200
+        invite = created.json()["invite_code"]
+        class_id = created.json()["id"]
+
+        join = await client.post(
+            "/api/v1/learn/classes/join",
+            json={"invite_code": invite, "display_name": "Jordan"},
+        )
+        assert join.status_code == 200, join.text
+        body = join.json()
+        assert body["class_id"] == class_id
+        assert body["class_name"] == "Join Me"
+        assert body["learner_id"]
+        assert body["token"]
+
+        home = await client.get(
+            f"/api/v1/learn/learners/{body['learner_id']}/home",
+            headers={"X-Learner-Session": body["token"]},
+        )
+        assert home.status_code == 200
+        assert home.json()["display_name"] == "Jordan"
 
 
 def test_concept_classification_thresholds():

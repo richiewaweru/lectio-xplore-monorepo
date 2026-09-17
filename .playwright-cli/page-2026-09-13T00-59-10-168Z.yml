@@ -1,0 +1,90 @@
+- generic [ref=f3e2]:
+  - banner [ref=f3e3]:
+    - navigation [ref=f3e4]:
+      - link "Lectio" [ref=f3e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=f3e6]:
+        - link "Home" [ref=f3e7] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=f3e9] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=f3e10]:
+    - generic [ref=f3e11]:
+      - generic [ref=f3e12]:
+        - generic [ref=f3e13]:
+          - link "← Units" [ref=f3e14] [cursor=pointer]:
+            - /url: /units
+          - paragraph [ref=f3e15]: Science · Grade 5
+          - heading "How Shadows Form" [level=1] [ref=f3e16]
+          - paragraph [ref=f3e17]: explain why shadows form when light is blocked by an opaque object
+        - generic [ref=f3e18]:
+          - generic [ref=f3e19]: Locked in
+          - button "Replan the lessons" [ref=f3e20] [cursor=pointer]
+      - navigation "Unit workspace views" [ref=f3e21]:
+        - button "Lessons" [ref=f3e22] [cursor=pointer]
+        - button "Schedule" [ref=f3e23] [cursor=pointer]
+        - button "Groups" [ref=f3e24] [cursor=pointer]
+        - button "Resources" [ref=f3e25] [cursor=pointer]
+        - button "Results" [ref=f3e26] [cursor=pointer]
+        - button "History" [ref=f3e27] [cursor=pointer]
+      - generic [ref=f3e34]:
+        - complementary "Your lessons" [ref=f3e35]:
+          - paragraph [ref=f3e36]: Your lessons
+          - list [ref=f3e37]:
+            - listitem [ref=f3e38]:
+              - button "1 Light travels in straight lines" [ref=f3e39]:
+                - generic [ref=f3e40]: "1"
+                - strong [ref=f3e42]: Light travels in straight lines
+            - listitem [ref=f3e43]:
+              - button "2 Opaque objects block light needs lesson 1" [ref=f3e44]:
+                - generic [ref=f3e45]: "2"
+                - generic [ref=f3e46]:
+                  - strong [ref=f3e47]: Opaque objects block light
+                  - generic [ref=f3e48]: needs lesson 1
+            - listitem [ref=f3e49]:
+              - button "3 Why a shadow forms needs lesson 1 · needs lesson 2" [ref=f3e50]:
+                - generic [ref=f3e51]: "3"
+                - generic [ref=f3e52]:
+                  - strong [ref=f3e53]: Why a shadow forms
+                  - generic [ref=f3e54]: needs lesson 1 · needs lesson 2
+            - listitem [ref=f3e55]:
+              - button "4 Changing shadows needs lesson 3" [ref=f3e56]:
+                - generic [ref=f3e57]: "4"
+                - generic [ref=f3e58]:
+                  - strong [ref=f3e59]: Changing shadows
+                  - generic [ref=f3e60]: needs lesson 3
+        - main [ref=f3e61]:
+          - generic [ref=f3e63]:
+            - paragraph [ref=f3e64]: Lesson 1
+            - heading "Light travels in straight lines" [level=2] [ref=f3e65]
+          - generic [ref=f3e66]:
+            - generic [ref=f3e67]:
+              - generic [ref=f3e68]: Title
+              - textbox "Title" [ref=f3e69]: Light travels in straight lines
+            - generic [ref=f3e70]:
+              - generic [ref=f3e71]: What students will be able to do
+              - textbox "What students will be able to do" [ref=f3e72]: Explain that light travels in straight lines from a source and that this explains how shadows are cast.
+            - generic [ref=f3e73]:
+              - generic [ref=f3e74]: Must establish one per line
+              - textbox "Must establish one per line" [ref=f3e75]: light leaves a source and travels in straight lines light cannot bend around an object on its own a shadow appears where light is blocked from reaching a surface
+            - button "Save lesson changes" [ref=f3e76] [cursor=pointer]
+          - generic [ref=f3e77]:
+            - generic [ref=f3e78]:
+              - paragraph [ref=f3e79]: Before this lesson
+              - heading "What earlier lessons it requires" [level=3] [ref=f3e80]
+            - paragraph [ref=f3e81]: Nothing — this can be the starting point.
+          - button "Show shape debug" [ref=f3e83] [cursor=pointer]
+          - generic [ref=f3e84]:
+            - generic [ref=f3e85]:
+              - paragraph [ref=f3e86]: Preparation
+              - heading "Ready when you are" [level=3] [ref=f3e87]
+              - paragraph [ref=f3e88]: Print and Learn are generated independently from the Teaching Plan.
+            - generic [ref=f3e89]:
+              - button "Generate Print" [ref=f3e90] [cursor=pointer]
+              - button "Generate Learn" [ref=f3e91] [cursor=pointer]
+              - button "Check preparation status" [ref=f3e92] [cursor=pointer]
+      - region "Edit your lessons by chat" [ref=f3e93]:
+        - paragraph [ref=f3e94]: Edit your lessons
+        - generic [ref=f3e95]:
+          - textbox "e.g. Combine lessons 2 and 3, or add something about fractions" [ref=f3e96]
+          - button "Send" [disabled] [ref=f3e97]

@@ -1,0 +1,3 @@
+[   25838ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:5173/api/v1/v3/generations/8a890460-7324-4927-8a90-33aa7da5baa3/realize-learn:0
+[ 1083440ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:5173/api/v1/v3/generations/8a890460-7324-4927-8a90-33aa7da5baa3/realize-learn:0
+[ 1382487ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:5173/api/v1/v3/generations/8a890460-7324-4927-8a90-33aa7da5baa3/realize-learn:0

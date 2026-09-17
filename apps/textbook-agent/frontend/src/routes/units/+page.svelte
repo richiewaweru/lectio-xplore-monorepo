@@ -327,7 +327,7 @@
 </div>
 
 <style>
-	.units-page { min-height: calc(100vh - 58px); padding: 54px 28px 80px; }
+	.units-page { min-height: 60vh; padding: 0 0 40px; }
 	.page-head, .create-card, .unit-list, .empty, .status, .error { max-width: 960px; margin-inline: auto; }
 	.page-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 34px; }
 	.capability-unavailable { max-width: 680px; margin: 12vh auto 0; padding: 34px; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); }

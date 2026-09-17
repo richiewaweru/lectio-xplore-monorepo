@@ -1,0 +1,8 @@
+[    1301ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/images/learn-out-f714f22eda7a/node-2abcd1288cf3/learn-fig-learn-out-f714f22eda7a-node-2abcd1288cf3.png:0
+[    1373ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/images/learn-out-f714f22eda7a/node-2591bcf904ed/learn-fig-learn-out-f714f22eda7a-node-2591bcf904ed.png:0
+[ 6690506ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://localhost:5173/src/app.css?t=1789104418378:0
+[ 6690507ms] [ERROR] [vite] Failed to reload /src/app.css. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:808
+[ 6692865ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:5173/src/app.css?t=1789104419593:0
+[ 6692865ms] [ERROR] [vite] Failed to reload /src/app.css. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:808
+[ 6692866ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5173/@vite/client:864
+[ 8211959ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:5173/learn/lessons/80fc9064-0dce-4a8a-93de-4bedea3516cb:0

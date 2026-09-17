@@ -14,6 +14,7 @@
 	import CalloutEditor from './editors/CalloutEditor.svelte';
 	import FigureEditor from './editors/FigureEditor.svelte';
 	import TableEditor from './editors/TableEditor.svelte';
+	import InteractionEditor from './editors/InteractionEditor.svelte';
 
 	interface Props {
 		document: LearnDocument;
@@ -44,6 +45,14 @@
 			nodeId: string,
 			patch: { headers?: string[]; rows?: string[][]; caption?: string }
 		) => void;
+		onUpdateInteraction?: (
+			nodeId: string,
+			patch: {
+				prompt?: string;
+				config?: Record<string, unknown>;
+				feedback?: Record<string, unknown> | string | null;
+			}
+		) => void;
 	}
 
 	let {
@@ -59,7 +68,8 @@
 		onUpdateHeading = undefined,
 		onUpdateCallout = undefined,
 		onUpdateFigure = undefined,
-		onUpdateTable = undefined
+		onUpdateTable = undefined,
+		onUpdateInteraction = undefined
 	}: Props = $props();
 
 	const nodes = $derived(document.nodes ?? []);
@@ -156,6 +166,13 @@
 							onChange={(patch) => onUpdateTable?.(node.id, patch)}
 						/>
 					{/if}
+				</div>
+			{:else if editable && selected && node.kind === 'interaction'}
+				<div class="editor-pane" data-testid="node-editor" data-kind="interaction">
+					<InteractionEditor
+						{node}
+						onChange={(patch) => onUpdateInteraction?.(node.id, patch)}
+					/>
 				</div>
 			{:else if node.kind === 'interaction'}
 				<InteractionNodeRenderer

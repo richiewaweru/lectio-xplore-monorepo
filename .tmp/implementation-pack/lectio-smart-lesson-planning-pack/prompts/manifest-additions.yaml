@@ -1,0 +1,62 @@
+# Suggested prompt manifest changes. Adapt to the repository's canonical manifest schema.
+
+prompts:
+  - id: lesson-flow-planner
+    file: lesson-flow-planner-v2.md
+    stage_label: Chooses the lesson teaching journey
+    editable: false
+    version: 2
+
+  - id: lesson-approach-planner
+    file: lesson-approach-planner-v3.md
+    stage_label: Plans teaching moves and shared learner actions
+    editable: false
+    version: 3
+
+  - id: learner-action-policy
+    file: learner-action-policy-v2.md
+    stage_label: Distinguishes formative and assessment learner tasks
+    editable: false
+    version: 2
+
+  - id: lesson-sourcebook-writer
+    file: lesson-sourcebook-writer-v1.md
+    stage_label: Commits canonical lesson facts and examples
+    editable: false
+    version: 1
+
+  - id: shared-task-writer
+    file: shared-task-writer-v1.md
+    stage_label: Authors shared learner tasks before the Print Learn fork
+    editable: false
+    version: 1
+
+  - id: document-writer
+    file: document-writer-v2.md
+    stage_label: Writes sourcebook-bound ordinary content
+    editable: false
+    version: 2
+
+  - id: interaction-writer
+    file: interaction-writer-v2.md
+    stage_label: Realizes shared tasks as Learn interactions
+    editable: false
+    version: 2
+
+  - id: print-realization
+    file: print-realization-v2.md
+    stage_label: Realizes shared content and tasks on paper
+    editable: false
+    version: 2
+
+  - id: whole-lesson-coherence-reviewer
+    file: whole-lesson-coherence-reviewer-v1.md
+    stage_label: Reviews assembled lesson coherence
+    editable: false
+    version: 1
+
+  - id: targeted-lesson-repair
+    file: targeted-lesson-repair-v1.md
+    stage_label: Repairs one named lesson target
+    editable: false
+    version: 1

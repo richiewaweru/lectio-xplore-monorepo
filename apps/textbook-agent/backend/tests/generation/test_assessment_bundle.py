@@ -185,3 +185,43 @@ def test_assemble_choices_uses_exact_source_question_among_many_records() -> Non
     assert result.content["stem"] == "Second?"
     assert result.answer_entries[0]["question_id"] == "check-b1"
     assert result.answer_entries[0]["answer"] == "B"
+
+
+def test_formative_shared_multi_select_preserves_option_keys_for_print() -> None:
+    ctx = WriterContext(
+        planned=PlannedBlock.model_validate(
+            {
+                "id": "orient-b2",
+                "position": 0,
+                "intent": "activate-prior-knowledge",
+                "object": "choices",
+                "task_mode": "formative",
+                "evidence": "recall",
+                "brief": "Recall light premises.",
+            }
+        ),
+        print_work_order=type(
+            "Order",
+            (),
+            {
+                "shared_task": {
+                    "prompt": "Which statements are true?",
+                    "response": {
+                        "type": "select-many",
+                        "options": [
+                            {"key": "a", "text": "Light travels."},
+                            {"key": "b", "text": "Objects block light."},
+                            {"key": "c", "text": "Light bends around objects."},
+                        ],
+                    },
+                    "evaluation": {"correct_keys": ["a", "b"]},
+                    "expected_evidence": "a and b",
+                }
+            },
+        )(),
+    )
+
+    result = assemble_choices(ctx)
+
+    assert result.content["stem"] == "Which statements are true?"
+    assert result.answer_entries[0]["answer"] == "a,b"

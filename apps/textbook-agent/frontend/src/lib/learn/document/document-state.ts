@@ -178,6 +178,28 @@ export function updateTable(
 	return replaceNode(doc, nodeId, next);
 }
 
+export function updateInteraction(
+	doc: LearnDocument,
+	nodeId: string,
+	patch: {
+		prompt?: string;
+		config?: Record<string, unknown>;
+		feedback?: Record<string, unknown> | string | null;
+	}
+): LearnDocument | null {
+	const index = findNodeIndex(doc, nodeId);
+	if (index < 0) return null;
+	const node = doc.nodes[index];
+	if (node.kind !== 'interaction') return null;
+	const next = {
+		...node,
+		prompt: patch.prompt !== undefined ? patch.prompt : node.prompt,
+		config: patch.config !== undefined ? { ...(node.config ?? {}), ...patch.config } : node.config,
+		feedback: patch.feedback !== undefined ? patch.feedback : node.feedback
+	};
+	return replaceNode(doc, nodeId, next);
+}
+
 export function reorderNode(
 	doc: LearnDocument,
 	nodeId: string,

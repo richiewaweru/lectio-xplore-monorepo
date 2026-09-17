@@ -1,0 +1,97 @@
+- generic [ref=f6e2]:
+  - banner [ref=f6e3]:
+    - navigation [ref=f6e4]:
+      - link "Lectio" [ref=f6e5] [cursor=pointer]:
+        - /url: /units
+      - generic "Workspace" [ref=f6e6]:
+        - link "Home" [ref=f6e7] [cursor=pointer]:
+          - /url: /units
+      - link "Settings" [ref=f6e9] [cursor=pointer]:
+        - /url: /settings
+  - main [ref=f6e10]:
+    - main [ref=f6e11]:
+      - paragraph [ref=f6e12]: LearnDocument v2 editor
+      - generic [ref=f6e13]:
+        - generic [ref=f6e14]:
+          - generic [ref=f6e15]:
+            - generic [ref=f6e16]:
+              - generic [ref=f6e17]: Add node
+              - combobox "Add node kind" [ref=f6e18] [cursor=pointer]:
+                - option "paragraph" [selected]
+                - option "heading"
+                - option "list"
+                - option "figure"
+                - option "table"
+                - option "callout"
+            - button "Add" [ref=f6e19] [cursor=pointer]
+            - button "Delete" [ref=f6e20] [cursor=pointer]
+            - button "↑" [ref=f6e21] [cursor=pointer]
+            - button "↓" [ref=f6e22] [cursor=pointer]
+          - generic [ref=f6e23]:
+            - button "Save" [ref=f6e24] [cursor=pointer]
+            - button "Reload" [ref=f6e25] [cursor=pointer]
+            - link "Preview" [ref=f6e26] [cursor=pointer]:
+              - /url: /learn/lessons/80fc9064-0dce-4a8a-93de-4bedea3516cb
+        - generic [ref=f6e27]:
+          - button [active] [ref=f6e28] [cursor=pointer]:
+            - textbox "Paragraph text" [ref=f6e146]:
+              - /placeholder: Write a paragraph…
+              - text: "Picture a seesaw in a playground. One child presses down hard on their end of the plank, and the other end — with the second child sitting on it — lifts up into the air. The plank tips back and forth, but it never slides away or floats off. Watch the middle: something there stays put and holds the plank up while the two ends move. As you read on, keep asking yourself what the plank is tilting around, and why it can only tip at all because that one spot in the centre stays still."
+          - button [ref=f6e31] [cursor=pointer]:
+            - complementary [ref=f6e109]:
+              - paragraph [ref=f6e110]: What is the plank moving around?
+              - paragraph [ref=f6e111]: "One child pushes down hard on one end of the seesaw plank. The other end, with the second child on it, rises into the air. But the plank does not float or slide away — it stays in place and tilts. Watch the middle of the seesaw: something there never lifts off the ground, no matter which end goes up or down. Before you go on, look at the plank and ask yourself: what is it tilting around? And what would happen to the tilt if that still point in the middle were not there?"
+          - button [ref=f6e36] [cursor=pointer]:
+            - heading "Naming the Three Parts of a Lever on the Seesaw" [level=2] [ref=f6e38]
+          - button [ref=f6e39] [cursor=pointer]:
+            - list [ref=f6e41]:
+              - listitem [ref=f6e42]: A lever has exactly three parts, and on a seesaw each one sits at a different place on the plank.
+              - listitem [ref=f6e43]: The fulcrum is the central support the plank balances on.
+              - listitem [ref=f6e44]: The effort is the downward push the first child makes on one end of the seesaw.
+              - listitem [ref=f6e45]: The load is the child on the other end, the one being lifted.
+          - button [ref=f6e46] [cursor=pointer]:
+            - 'figure "The seesaw has three separate labelled positions: the fulcrum at the central support the plank balances on, the effort at the end where the first child pushes down, and the load at the other end where the second child is being lifted." [ref=f6e48]':
+              - 'img "A seesaw in a playground with one child seated at each end of a plank balanced on a central support. Labels mark three distinct places: fulcrum at the central support, effort at the end where the first child pushes down, and load at the end where the second child is lifted." [ref=f6e49]'
+          - button [ref=f6e51] [cursor=pointer]:
+            - paragraph [ref=f6e53]: "A lever is a rigid bar that tilts around a single fixed point. The push or pull from a force is applied at one place on the bar, while the thing being moved sits at another place. The fixed point is the fulcrum: it stays still as the bar turns. The effort is the push or pull applied to the lever, and the load is the object or resistance the lever moves. Fulcrum, effort, and load are therefore three different positions on the same bar, not three names for the push."
+          - button [ref=f6e54] [cursor=pointer]:
+            - complementary [ref=f6e56]:
+              - paragraph [ref=f6e57]: The point that stays still
+              - paragraph [ref=f6e58]: "A lever is a rigid bar that tilts around a single fixed point. The fulcrum is that fixed point — it does not move. The effort and the load are the two ends that do move: you apply the effort at one place to move the load at another."
+          - button [ref=f6e59] [cursor=pointer]:
+            - heading "Is the fulcrum where the pushing happens?" [level=2] [ref=f6e61]
+          - button [ref=f6e62] [cursor=pointer]:
+            - figure "Two readings of the same seesaw, set side by side" [ref=f6e113]:
+              - table [ref=f6e114]:
+                - rowgroup [ref=f6e115]:
+                  - row [ref=f6e116]:
+                    - columnheader "Reading of the seesaw" [ref=f6e117]
+                    - columnheader "What it says the fulcrum is" [ref=f6e118]
+                    - columnheader "What follows for the seesaw" [ref=f6e119]
+                - rowgroup [ref=f6e120]:
+                  - row [ref=f6e121]:
+                    - cell "Correct reading" [ref=f6e122]
+                    - cell "The central support the plank balances on" [ref=f6e123]
+                    - cell "The plank swings around a point that is actually touching and holding it up." [ref=f6e124]
+                  - row [ref=f6e125]:
+                    - cell "Pushing-end reading" [ref=f6e126]
+                    - cell "The end where the first child pushes down, because that is where the action happens" [ref=f6e127]
+                    - cell "The point the plank genuinely pivots around is left unnamed, and the plank would be tilting around a place where nothing is touching." [ref=f6e128]
+          - button [ref=f6e81] [cursor=pointer]:
+            - complementary [ref=f6e131]:
+              - paragraph [ref=f6e132]: Check where the fulcrum really is
+              - paragraph [ref=f6e133]: "Both readings put a fulcrum on the same seesaw, but only one names the point the plank actually turns around. Correct reading: the fulcrum is the central support the plank balances on. Pushing-end reading: the fulcrum is the end where the first child pushes down, because that is where the action happens. If the pushing end were the fulcrum, then the point the plank really pivots around would have no name at all, and the plank would be tilting around a place where nothing is touching. The end where a child pushes down is where the force acts, not where the plank turns. Before you name a fulcrum, point to the place the plank balances on."
+          - button [ref=f6e86] [cursor=pointer]:
+            - paragraph [ref=f6e135]: "Something counts as a lever when a rigid bar tilts around a fixed point: the push is applied away from that point, and the object being moved sits on the other side. A seesaw fits this rule exactly — the plank tilts around its centre, one child's push is the effort, and the child on the other end is the load — so it is a lever in its own right, not an exception. A bottle opener and a crowbar meet the same rule: each is a rigid bar turning around a fixed point, with effort applied away from it and the load on the opposite side, giving each a fulcrum, an effort, and a load. A wheel rolling in a straight line does not tilt around a fixed point, so it fails the rule and is not a lever."
+          - button [ref=f6e89] [cursor=pointer]:
+            - list [ref=f6e137]:
+              - listitem [ref=f6e138]: A lever is a rigid bar that tilts around a fixed point, with the push applied away from that point and the thing being moved on the other side.
+              - listitem [ref=f6e139]: "A seesaw is a lever: the plank tilts on its fixed point, one child pushes down away from that point, and the other child is the load being moved on the other side."
+              - listitem [ref=f6e140]: "A bottle opener is a lever: the bar tilts on its fixed point, the hand pushes down away from that point, and the bottle cap is the load being moved on the other side."
+              - listitem [ref=f6e141]: "A crowbar is a lever: the bar tilts on its fixed point, the hand pushes down away from that point, and the object being pried is the load being moved on the other side."
+              - listitem [ref=f6e142]: "A wheel rolling in a straight line is not a lever: it does not tilt around a fixed point, so it does not fit the rule."
+          - button [ref=f6e97] [cursor=pointer]:
+            - paragraph [ref=f6e148]: You have met a lever on the seesaw and sorted some everyday tools into levers and non-levers. Now read the picture below, which shows a lever you have not seen before. For that new case, work out which part is the fulcrum, which part is the effort, and which part is the load, and name each one in its place. A correct reading means you have put all three parts where they belong — not just that you can say the three words.
+          - button [ref=f6e100] [cursor=pointer]:
+            - figure "A gardener presses down on the handle of a wheelbarrow to lift a bag of soil off the ground. The wheel at the front is the fulcrum, the gardener's downward push on the handle is the effort, and the bag of soil resting in the tray is the load." [ref=f6e102]:
+              - 'img "A wheelbarrow holding a bag of soil: the wheel at the front acts as the fulcrum, the gardener''s hands pushing down on the handles apply the effort, and the bag of soil in the tray is the load." [ref=f6e103]'

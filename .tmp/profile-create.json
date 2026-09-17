@@ -1,0 +1,21 @@
+{
+  "teacher_role": "teacher",
+  "subjects": ["science"],
+  "default_grade_band": "middle",
+  "default_audience_description": "Grade 7 science",
+  "curriculum_framework": "",
+  "classroom_context": "",
+  "planning_goals": "lesson_generation",
+  "school_or_org_name": "",
+  "delivery_preferences": {
+    "tone": "supportive",
+    "reading_level": "standard",
+    "explanation_style": "balanced",
+    "example_style": "everyday",
+    "brevity": "balanced",
+    "use_visuals": true,
+    "optimise_for_print": false,
+    "emphasise_practice": true,
+    "keep_compact": false
+  }
+}

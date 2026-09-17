@@ -55,6 +55,18 @@ def test_valid_integrity_passes() -> None:
     validate_answer_key_integrity(_blocks(), _valid_entries())
 
 
+def test_multi_select_choice_answer_accepts_a_set_of_option_letters() -> None:
+    blocks = _blocks()
+    blocks[1]["content"]["options"].append({"letter": "D", "text": "Air"})
+    validate_answer_key_integrity(
+        blocks,
+        [
+            {"question_id": "q-open-1", "answer": "Light is required."},
+            {"question_id": "q-mcq-1", "answer": "B, D"},
+        ],
+    )
+
+
 def test_orphan_answer_rejected() -> None:
     entries = _valid_entries() + [{"question_id": "unknown-q", "answer": "X"}]
     with pytest.raises(AnswerKeyIntegrityError, match="orphan"):

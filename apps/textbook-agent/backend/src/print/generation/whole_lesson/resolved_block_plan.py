@@ -22,6 +22,7 @@ class ResolvedBlockPlan(BaseModel):
     evidence_refs: list[str] = Field(default_factory=list)
     departure_reason: str | None = None
     source_question_ids: list[str] = Field(default_factory=list)
+    task_mode: str = "none"
     object: str = Field(min_length=1)
     placement: Placement = "main"
     reason: str = ""
@@ -40,6 +41,7 @@ class ResolvedBlockPlan(BaseModel):
             # Never mask teaching-owned item IDs. PlannedBlock validation rejects
             # an incompatible form decision instead of silently dropping ownership.
             source_question_ids=list(self.source_question_ids),
+            task_mode=self.task_mode,
         )
 
 
@@ -85,6 +87,7 @@ def _join_block(
         evidence_refs=list(teaching.evidence_refs),
         departure_reason=teaching.departure_reason,
         source_question_ids=list(teaching.source_question_ids),
+        task_mode=teaching.task_mode,
         object=decision.object,
         placement=decision.placement,
         reason=decision.reason,

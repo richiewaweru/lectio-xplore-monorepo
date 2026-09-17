@@ -1,0 +1,90 @@
+version: 1
+purpose: "Prove the planner generalises beyond maths/science and does not force one lesson recipe."
+
+lessons:
+  - id: math-slope
+    subject: Mathematics
+    grade: "7-8"
+    objective: "Explain slope as a constant rate of change and calculate slope from two points."
+    lesson_mode: first_exposure
+    expected_characteristics:
+      - concrete or visual relationship before/with formal definition
+      - conceptual understanding plus a modelled calculation
+      - guided learner calculation
+      - misconception distinction between constant rate and constant value
+
+  - id: biology-cell-membrane
+    subject: Biology
+    grade: "7-9"
+    objective: "Explain how the cell membrane helps maintain a stable internal environment."
+    lesson_mode: first_exposure
+    expected_characteristics:
+      - phenomenon or case
+      - mechanism explanation
+      - diagram/structure where helpful
+      - apply mechanism to a new case
+
+  - id: history-source-comparison
+    subject: History
+    grade: "9-10"
+    objective: "Compare two primary-source accounts of the same event and justify which claims each source can support."
+    lesson_mode: first_exposure
+    expected_characteristics:
+      - encounter sources early
+      - contextualise evidence
+      - genuine comparison
+      - justified claim rather than single-answer recall
+
+  - id: literature-metaphor
+    subject: Literature
+    grade: "8-10"
+    objective: "Interpret how a metaphor changes the meaning or tone of a passage."
+    lesson_mode: first_exposure
+    expected_characteristics:
+      - encounter passage before exhaustive explanation
+      - interpretation and evidence
+      - compare plausible readings or a near-miss
+      - short analytical response
+
+  - id: language-past-tense
+    subject: Language Learning
+    grade: "beginner-intermediate"
+    objective: "Recognise and produce the target past-tense pattern in short everyday sentences."
+    lesson_mode: first_exposure
+    expected_characteristics:
+      - language in context
+      - pattern noticing
+      - concise explanation
+      - supported then less-supported production
+
+  - id: programming-loop
+    subject: Computer Science
+    grade: "introductory"
+    objective: "Trace a for-loop and write a loop that accumulates a running total."
+    lesson_mode: first_exposure
+    expected_characteristics:
+      - code/problem encounter
+      - trace/model execution
+      - guided modification
+      - independent small construction
+
+  - id: geography-capitals
+    subject: Geography
+    grade: "6-7"
+    objective: "Identify and retrieve the capitals of a bounded set of East African countries."
+    lesson_mode: first_exposure
+    expected_characteristics:
+      - organising structure
+      - retrieval practice
+      - avoid overlong causal explanation
+
+  - id: economics-policy
+    subject: Economics
+    grade: "upper-secondary"
+    objective: "Evaluate two policy responses to rising urban transport congestion using stated criteria."
+    lesson_mode: first_exposure
+    expected_characteristics:
+      - criteria before judgement
+      - competing cases
+      - evidence comparison
+      - defensible conclusion rather than one predetermined answer
