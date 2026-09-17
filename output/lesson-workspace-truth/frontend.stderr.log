@@ -1,0 +1,13 @@
+
+[1;31m[404] GET /favicon.ico[0m
+8:06:12 AM [vite] (ssr) Error when evaluating SSR module /@fs/C:/Projects/lectio/node_modules/.pnpm/@sveltejs+kit@2.70.2_@svelt_3943896428ec1f1ecf833d5396b0611a/node_modules/@sveltejs/kit/src/runtime/server/index.js: transport invoke timed out after 60000ms (data: {"type":"custom","event":"vite:invoke","data":{"name":"fetchModule","id":"send:ET7mc-70QpE753V69FaGM","data":["/.svelte-kit/generated/server/internal.js","C:/Projects/lectio/node_modules/.pnpm/@sveltejs+kit@2.70.2_@svelt_3943896428ec1f1ecf833d5396b0611a/node_modules/@sveltejs/kit/src/runtime/server/index.js",{"cached":true,"startOffset":2}]}})
+      at reviveInvokeError (file:///C:/Projects/lectio/node_modules/.pnpm/vite@7.3.6_@types+node@24.1_f9c9b2d4ab4057c5d14c98ec7d9cf2aa/node_modules/vite/dist/node/module-runner.js:475:14)
+      at Object.invoke (file:///C:/Projects/lectio/node_modules/.pnpm/vite@7.3.6_@types+node@24.1_f9c9b2d4ab4057c5d14c98ec7d9cf2aa/node_modules/vite/dist/node/module-runner.js:549:11)
+      at runNextTicks (node:internal/process/task_queues:65:5)
+      at process.processTimers (node:internal/timers:546:9)
+      at async SSRCompatModuleRunner.getModuleInformation (file:///C:/Projects/lectio/node_modules/.pnpm/vite@7.3.6_@types+node@24.1_f9c9b2d4ab4057c5d14c98ec7d9cf2aa/node_modules/vite/dist/node/module-runner.js:1086:7)
+      at async request (file:///C:/Projects/lectio/node_modules/.pnpm/vite@7.3.6_@types+node@24.1_f9c9b2d4ab4057c5d14c98ec7d9cf2aa/node_modules/vite/dist/node/module-runner.js:1103:83)
+      at async eval (C:\Projects\lectio\node_modules\.pnpm\@sveltejs+kit@2.70.2_@svelt_3943896428ec1f1ecf833d5396b0611a\node_modules\@sveltejs\kit\src\runtime\server\index.js:7:1)
+      at async ESModulesEvaluator.runInlinedModule (file:///C:/Projects/lectio/node_modules/.pnpm/vite@7.3.6_@types+node@24.1_f9c9b2d4ab4057c5d14c98ec7d9cf2aa/node_modules/vite/dist/node/module-runner.js:913:3)
+      at async SSRCompatModuleRunner.directRequest (file:///C:/Projects/lectio/node_modules/.pnpm/vite@7.3.6_@types+node@24.1_f9c9b2d4ab4057c5d14c98ec7d9cf2aa/node_modules/vite/dist/node/module-runner.js:1146:59)
+      at async SSRCompatModuleRunner.directRequest (file:///C:/Projects/lectio/node_modules/.pnpm/vite@7.3.6_@types+node@24.1_f9c9b2d4ab4057c5d14c98ec7d9cf2aa/node_modules/vite/dist/node/chunks/config.js:15184:22)

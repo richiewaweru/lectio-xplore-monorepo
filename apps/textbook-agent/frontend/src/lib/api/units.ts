@@ -19,6 +19,7 @@ import type {
 	PathVersionSummary,
 	PreparedLesson,
 	PreparedLessonStatus,
+	LessonIssuesResponse,
 	ResourceComposeInput,
 	ResourceComposition,
 	SkeletonPreview,
@@ -414,6 +415,35 @@ export function getPreparedLessonStatus(unitId: string, lessonId: string): Promi
 	return jsonRequest(
 		`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons/${encodeURIComponent(lessonId)}/status`,
 		'Could not load lesson preparation status.'
+	);
+}
+
+export function getLessonIssues(
+	unitId: string,
+	lessonId: string,
+	path: 'learn' | 'print'
+): Promise<LessonIssuesResponse> {
+	const query = new URLSearchParams({ path });
+	return jsonRequest(
+		`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons/${encodeURIComponent(lessonId)}/issues?${query}`,
+		'Could not load lesson issues.'
+	);
+}
+
+export function retryLessonRealization(
+	unitId: string,
+	path: UnitPath,
+	lesson: PathLesson,
+	realizationId: string
+): Promise<Record<string, unknown>> {
+	return jsonRequest(
+		`/api/v1/units/${encodeURIComponent(unitId)}/path/lessons/${encodeURIComponent(lesson.id)}/realizations/${encodeURIComponent(realizationId)}:retry`,
+		'Could not retry the lesson realization.',
+		{
+			method: 'POST',
+			headers: jsonHeaders,
+			body: JSON.stringify({ path_version_id: path.id, path_revision: path.revision })
+		}
 	);
 }
 

@@ -48,6 +48,7 @@ from curriculum.agents import (
     run_path_planner,
     run_plan_chat_edit,
 )
+from curriculum.lesson_review import collect_lesson_issues
 from curriculum.models import (
     ConstructorReadbackRequest,
     GuardedMergePathLessonsRequest,
@@ -1374,6 +1375,81 @@ async def get_path_lesson_status(
             can_regenerate=version.status == "approved" and not lesson.skipped,
             **realization_fields,
         ).model_dump(mode="json")
+    except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
+        _raise_http(exc)
+
+
+@router.get("/{unit_id}/path/lessons/{lesson_id}/issues")
+async def get_path_lesson_issues(
+    unit_id: str,
+    lesson_id: str,
+    path: Literal["learn", "print"] = Query(...),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    """Return one canonical, path-filtered issue projection for the workspace."""
+    try:
+        _unit, _version, lesson = await _owned_version_and_lesson(
+            session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
+        )
+        realization = await resolve_by_path(
+            session, path_lesson_id=lesson.id, path=path
+        )
+        preparation = (
+            await session.get(GenerationModel, lesson.pack_id) if lesson.pack_id else None
+        )
+        output = (
+            await session.get(GenerationModel, realization.output_id)
+            if realization is not None and realization.output_id
+            else None
+        )
+        states = [
+            state
+            for state in (
+                preparation.chunked_state_json if preparation is not None else None,
+                output.chunked_state_json if output is not None else None,
+                preparation.report_json if preparation is not None else None,
+                output.report_json if output is not None else None,
+            )
+            if isinstance(state, dict)
+        ]
+        documents = [
+            document
+            for document in (
+                preparation.document_json if preparation is not None else None,
+                output.document_json if output is not None else None,
+            )
+            if isinstance(document, dict)
+        ]
+        booklet_issues: list[object] = []
+        for document in documents:
+            raw_issues = document.get("booklet_issues")
+            if isinstance(raw_issues, list):
+                booklet_issues.extend(raw_issues)
+            nested = document.get("document")
+            if isinstance(nested, dict) and isinstance(nested.get("booklet_issues"), list):
+                booklet_issues.extend(nested["booklet_issues"])
+        errors = [
+            error
+            for error in (
+                output.error if output is not None else None,
+                preparation.error if preparation is not None else None,
+            )
+            if isinstance(error, str) and error.strip()
+        ]
+        response = collect_lesson_issues(
+            path=path,
+            realization=(
+                to_identity(realization).model_dump(mode="json")
+                if realization is not None
+                else None
+            ),
+            states=states,
+            documents=documents,
+            booklet_issues=booklet_issues,
+            generation_errors=errors,
+        )
+        return response.model_dump(mode="json")
     except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
         _raise_http(exc)
 

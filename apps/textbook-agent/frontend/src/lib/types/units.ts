@@ -215,6 +215,50 @@ export interface PreparedLessonStatus {
 	learn_open_href?: string | null;
 }
 
+export type ArtifactPath = 'learn' | 'print';
+export type ArtifactUiState = 'not_created' | 'preparing' | 'ready' | 'needs_attention' | 'failed';
+
+export interface LessonArtifactUi {
+	path: ArtifactPath;
+	exists: boolean;
+	state: ArtifactUiState;
+	realizationId: string | null;
+	outputId: string | null;
+	openHref: string | null;
+	errorSummary: string | null;
+}
+
+export type LessonIssueSeverity = 'info' | 'warning' | 'error';
+export type LessonIssueCategory =
+	| 'coherence'
+	| 'media'
+	| 'figure'
+	| 'interaction'
+	| 'document'
+	| 'realization'
+	| 'assessment'
+	| 'contract'
+	| 'other';
+
+export interface LessonIssue {
+	id: string;
+	path: ArtifactPath | 'shared';
+	severity: LessonIssueSeverity;
+	category: LessonIssueCategory;
+	code: string;
+	message: string;
+	target_id?: string | null;
+	repairable: boolean;
+	repair_action?: string | null;
+	source: string;
+}
+
+export interface LessonIssuesResponse {
+	path: ArtifactPath;
+	issues: LessonIssue[];
+	counts: { info: number; warning: number; error: number };
+}
+
 export interface SkeletonSlotPreview {
 	slot_id: string;
 	role: string;

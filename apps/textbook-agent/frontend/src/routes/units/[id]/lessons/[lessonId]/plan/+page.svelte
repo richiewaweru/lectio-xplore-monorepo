@@ -6,6 +6,7 @@
 		preparePathLesson,
 		generateLearnRealization,
 		generatePrintRealization,
+		retryLessonRealization,
 		getPreparedLessonStatus
 	} from '$lib/api/units';
 	import {
@@ -23,7 +24,8 @@
 	import { Button, ProgressSteps, InlineError, Card } from '$lib/ui';
 	import {
 		lessonWorkspaceHref,
-		resolvePlanGenerationId
+		resolvePlanGenerationId,
+		lessonArtifactUi
 	} from '$lib/curriculum/lessons/lesson-context';
 	import V3PlanPreview from '$lib/print/components/studio/V3PlanPreview.svelte';
 	import V3PlanActions from '$lib/print/components/studio/V3PlanActions.svelte';
@@ -59,6 +61,8 @@
 	const lesson = $derived(ctx.lesson);
 	const preparation = $derived(ctx.preparation);
 	const generationId = $derived(resolvePlanGenerationId(preparation));
+	const learnArtifact = $derived(lessonArtifactUi(preparation, 'learn'));
+	const printArtifact = $derived(lessonArtifactUi(preparation, 'print'));
 
 	const steps = [
 		{ id: 'structural', label: 'Structural plan' },
@@ -161,6 +165,11 @@
 				stage === 'completed' ||
 				stage === 'awaiting_visuals'
 			) {
+				try {
+					lessonApproach = await getLessonApproach(gid);
+				} catch {
+					/* The approved-plan shell remains visible if the detail fetch is unavailable. */
+				}
 				phase = 'approved';
 				stopPoll();
 				return;
@@ -331,6 +340,24 @@
 		}
 	}
 
+	async function retryArtifact(artifact: typeof learnArtifact) {
+		if (!path || !lesson || !artifact.realizationId) return;
+		busy = artifact.path;
+		error = null;
+		try {
+			await retryLessonRealization(unitId, path, lesson, artifact.realizationId);
+			await ctx.refreshPreparation();
+		} catch (err) {
+			error = friendly(err);
+		} finally {
+			busy = null;
+		}
+	}
+
+	function artifactTitle(pathName: 'learn' | 'print'): string {
+		return pathName === 'learn' ? 'Learn' : 'Print';
+	}
+
 	$effect(() => {
 		const gid = generationId;
 		if (gid && phase === 'idle') {
@@ -438,18 +465,62 @@
 			{/if}
 		</section>
 	{:else if phase === 'approved'}
-		<Card padding="lg">
-			<h3>Teaching plan approved</h3>
-			<p>What would you like to create?</p>
-			<div class="actions">
-				<Button busy={busy === 'learn'} onclick={() => void createLearn()}>
-					{busy === 'learn' ? 'Creating Learn…' : 'Create Learn'}
-				</Button>
-				<Button variant="secondary" busy={busy === 'print'} onclick={() => void createPrint()}>
-					{busy === 'print' ? 'Creating Print…' : 'Create Print'}
-				</Button>
+		<section class="approved">
+			<Card padding="lg">
+				<h3>Teaching plan approved</h3>
+				{#if teachingReview}
+					<div class="teaching-plan">
+						{#each Object.entries(teachingReview) as [key, value]}
+							{#if key !== 'revision' && key !== 'status' && typeof value === 'string' && value.trim()}
+								<details open={['objective', 'purpose', 'pedagogical_arc'].includes(key)}>
+									<summary>{key.replaceAll('_', ' ')}</summary>
+									<p>{value}</p>
+								</details>
+							{:else if key !== 'revision' && key !== 'status' && Array.isArray(value) && value.length}
+								<details>
+									<summary>{key.replaceAll('_', ' ')}</summary>
+									<ul>{#each value as item}<li>{typeof item === 'string' ? item : JSON.stringify(item)}</li>{/each}</ul>
+								</details>
+							{/if}
+						{/each}
+					</div>
+				{/if}
+			</Card>
+			<div class="outputs">
+				<p class="eyebrow">Outputs</p>
+				{#each [learnArtifact, printArtifact] as artifact}
+					<Card padding="md">
+						<div class="output-head">
+							<div>
+								<h3>{artifactTitle(artifact.path)}</h3>
+								<p class="status-line">{artifact.state === 'not_created' ? 'Not created' : artifact.state.replaceAll('_', ' ')}</p>
+							</div>
+							{#if artifact.state === 'ready'}<span class="ready">Ready</span>{/if}
+						</div>
+						{#if artifact.state === 'not_created'}
+							<p>Create this output from the approved teaching plan.</p>
+							<Button
+								variant={artifact.path === 'learn' ? 'primary' : 'secondary'}
+								busy={busy === artifact.path}
+								onclick={() => void (artifact.path === 'learn' ? createLearn() : createPrint())}
+							>
+								{busy === artifact.path ? `Creating ${artifactTitle(artifact.path)}…` : `Create ${artifactTitle(artifact.path)}`}
+							</Button>
+						{:else if artifact.state === 'preparing'}
+							<p>This output is being prepared. You can view its status in the workspace.</p>
+							<a class="link" href={lessonWorkspaceHref(unitId, lessonId, artifact.path)}>View {artifactTitle(artifact.path)}</a>
+						{:else}
+							<p>{artifact.errorSummary || 'This output exists but needs attention.'}</p>
+							<div class="actions">
+								{#if artifact.openHref}<a class="link" href={artifact.openHref}>Open {artifactTitle(artifact.path)}</a>{/if}
+								<a class="link" href={lessonWorkspaceHref(unitId, lessonId, artifact.path)}>Issues</a>
+								{#if artifact.realizationId && path && lesson}<Button variant="secondary" busy={busy === artifact.path} onclick={() => void retryArtifact(artifact)}>Retry</Button>{/if}
+							</div>
+						{/if}
+					</Card>
+				{/each}
 			</div>
-		</Card>
+		</section>
 	{/if}
 </div>
 
@@ -504,6 +575,44 @@
 		flex-wrap: wrap;
 		gap: var(--space-2);
 		margin-top: var(--space-3);
+	}
+	.approved,
+	.outputs {
+		display: grid;
+		gap: var(--space-4);
+	}
+	.outputs {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	.output-head {
+		display: flex;
+		justify-content: space-between;
+		gap: var(--space-3);
+	}
+	.output-head h3 {
+		margin-bottom: 0.25rem;
+	}
+	.status-line {
+		margin: 0;
+		text-transform: capitalize;
+	}
+	.ready {
+		color: var(--success);
+		font-size: 0.8125rem;
+		font-weight: 600;
+	}
+	.teaching-plan {
+		display: grid;
+		gap: var(--space-2);
+	}
+	.teaching-plan details {
+		border-top: 1px solid var(--rule);
+		padding-top: var(--space-2);
+	}
+	@media (max-width: 720px) {
+		.outputs {
+			grid-template-columns: 1fr;
+		}
 	}
 	.note {
 		display: grid;

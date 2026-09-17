@@ -1,0 +1,93 @@
+
+> frontend@1.0.0-beta.1 dev C:\Projects\lectio\apps\textbook-agent\frontend
+> vite dev "--" "--host=127.0.0.1" "--port=5173"
+
+
+  VITE v7.3.6  ready in 6938 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+7:50:08 AM [vite] (client) hmr update /src/app.css
+7:50:08 AM [vite] (ssr) page reload src/lib/curriculum/lessons/lesson-context.ts
+7:50:08 AM [vite] (client) hmr update /src/app.css
+7:50:08 AM [vite] (ssr) page reload src/lib/curriculum/lessons/lesson-context.test.ts
+7:50:08 AM [vite] (client) hmr update /src/app.css
+7:50:08 AM [vite] (ssr) page reload src/lib/curriculum/lessons/lesson-context.ts
+7:52:08 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/0.js
+7:52:08 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/1.js
+7:52:08 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/4.js
+7:52:08 AM [vite] (client) page reload .svelte-kit/generated/client/app.js
+7:52:08 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/21.js
+7:52:08 AM [vite] (ssr) page reload .svelte-kit/generated/shared/error-template.js
+7:52:08 AM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+7:52:08 AM [vite] (client) page reload .svelte-kit/generated/client/matchers.js
+7:52:09 AM [vite] (client) page reload .svelte-kit/generated/root.js
+7:52:09 AM [vite] (ssr) page reload .svelte-kit/generated/root.js
+7:52:09 AM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
+7:54:02 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/0.js
+7:54:02 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/1.js
+7:54:02 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/4.js
+7:54:02 AM [vite] (client) page reload .svelte-kit/generated/client/app.js
+7:54:02 AM [vite] (ssr) page reload .svelte-kit/generated/shared/error-template.js
+7:54:02 AM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+7:54:02 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/21.js
+7:54:02 AM [vite] (client) page reload .svelte-kit/generated/client/app.js
+7:54:02 AM [vite] (client) page reload .svelte-kit/generated/client/matchers.js
+7:54:02 AM [vite] (client) page reload .svelte-kit/generated/root.js
+7:54:02 AM [vite] (ssr) page reload .svelte-kit/generated/root.js
+7:54:03 AM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
+7:57:38 AM [vite] (client) hmr update /src/app.css
+7:57:38 AM [vite] (ssr) page reload src/routes/units/[id]/lessons/[lessonId]/+layout.svelte
+7:57:56 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/0.js
+7:57:56 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/1.js
+7:57:56 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/4.js
+7:57:57 AM [vite] (client) page reload .svelte-kit/generated/client/app.js
+7:57:57 AM [vite] (ssr) page reload .svelte-kit/generated/shared/error-template.js
+7:57:57 AM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+7:57:57 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/21.js
+7:57:57 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/0.js
+7:57:57 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/1.js
+7:57:57 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/4.js
+7:57:57 AM [vite] (client) page reload .svelte-kit/generated/client/app.js
+7:57:57 AM [vite] (client) page reload .svelte-kit/generated/client/matchers.js
+7:57:57 AM [vite] (ssr) page reload .svelte-kit/generated/shared/error-template.js
+7:57:57 AM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+7:57:57 AM [vite] (client) page reload .svelte-kit/generated/root.js
+7:57:57 AM [vite] (ssr) page reload .svelte-kit/generated/root.js
+7:57:57 AM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
+7:57:57 AM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
+7:58:16 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/0.js
+7:58:16 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/1.js
+7:58:16 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/4.js
+7:58:16 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/21.js
+7:58:16 AM [vite] (client) page reload .svelte-kit/generated/client/app.js
+7:58:16 AM [vite] (ssr) page reload .svelte-kit/generated/shared/error-template.js
+7:58:16 AM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+7:58:16 AM [vite] (client) page reload .svelte-kit/generated/client/matchers.js
+7:58:16 AM [vite] (client) page reload .svelte-kit/generated/root.js
+7:58:16 AM [vite] (ssr) page reload .svelte-kit/generated/root.js
+7:58:16 AM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
+7:58:32 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/0.js
+7:58:32 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/1.js
+7:58:32 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/4.js
+7:58:32 AM [vite] (client) page reload .svelte-kit/generated/client/app.js
+7:58:32 AM [vite] (ssr) page reload .svelte-kit/generated/shared/error-template.js
+7:58:32 AM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+7:58:32 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/21.js
+7:58:32 AM [vite] (client) page reload .svelte-kit/generated/client/matchers.js
+7:58:32 AM [vite] (client) page reload .svelte-kit/generated/root.js
+7:58:32 AM [vite] (ssr) page reload .svelte-kit/generated/root.js
+7:58:32 AM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
+8:06:11 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/0.js
+8:06:15 AM [vite] (client) page reload .svelte-kit/generated/client/app.js
+8:06:15 AM [vite] (ssr) page reload .svelte-kit/generated/shared/error-template.js
+8:06:15 AM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+8:06:18 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/1.js
+8:06:18 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/4.js
+8:06:18 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/21.js
+8:06:18 AM [vite] (client) page reload .svelte-kit/generated/client/matchers.js
+8:06:18 AM [vite] (client) page reload .svelte-kit/generated/root.js
+8:06:18 AM [vite] (ssr) page reload .svelte-kit/generated/root.js
+8:07:38 AM [vite] (ssr) page reload .svelte-kit/generated/root.svelte
+ ELIFECYCLE  Command failed with exit code 4294967295.

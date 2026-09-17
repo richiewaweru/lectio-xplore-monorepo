@@ -7,7 +7,8 @@
 		preparationLabel,
 		preparationUiState,
 		badgeToneForPrep,
-		lessonWorkspaceHref
+		lessonWorkspaceHref,
+		lessonArtifactUi
 	} from '$lib/curriculum/lessons/lesson-context';
 	import { setContext } from 'svelte';
 
@@ -31,6 +32,19 @@
 	});
 
 	const prepState = $derived(preparationUiState(preparation));
+	const learnArtifact = $derived(lessonArtifactUi(preparation, 'learn'));
+	const printArtifact = $derived(lessonArtifactUi(preparation, 'print'));
+
+	function artifactTone(state: typeof learnArtifact.state): 'neutral' | 'ready' | 'attention' | 'info' {
+		if (state === 'ready') return 'ready';
+		if (state === 'needs_attention' || state === 'failed') return 'attention';
+		if (state === 'preparing') return 'info';
+		return 'neutral';
+	}
+
+	function artifactLabel(pathName: 'learn' | 'print', state: typeof learnArtifact.state): string {
+		return `${pathName === 'learn' ? 'Learn' : 'Print'} · ${state.replaceAll('_', ' ')}`;
+	}
 
 	setContext('lessonWorkspace', {
 		get unitId() {
@@ -50,6 +64,9 @@
 		},
 		get preparation() {
 			return preparation;
+		},
+		artifactState(path: 'learn' | 'print', loadError?: string | null) {
+			return lessonArtifactUi(preparation, path, loadError);
 		},
 		async refreshPreparation() {
 			if (!unitId || !lessonId) return;
@@ -115,7 +132,11 @@
 				<h1>{lesson.title}</h1>
 				<p class="objective">{lesson.objective}</p>
 			</div>
-			<Badge tone={badgeToneForPrep(prepState)}>{preparationLabel(prepState)}</Badge>
+			<div class="artifact-badges">
+				<Badge tone={badgeToneForPrep(prepState)}>{preparationLabel(prepState)}</Badge>
+				<Badge tone={artifactTone(learnArtifact.state)}>{artifactLabel('learn', learnArtifact.state)}</Badge>
+				<Badge tone={artifactTone(printArtifact.state)}>{artifactLabel('print', printArtifact.state)}</Badge>
+			</div>
 		</div>
 		<Tabs
 			active={activeTab}
@@ -161,6 +182,13 @@
 		align-items: flex-start;
 		gap: var(--space-4);
 		margin-bottom: var(--space-4);
+	}
+	.artifact-badges {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+		gap: var(--space-2);
+		max-width: 24rem;
 	}
 	.eyebrow {
 		margin: 0 0 0.25rem;
