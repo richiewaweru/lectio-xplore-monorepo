@@ -672,6 +672,8 @@
       "purpose": "Collect a short written answer, scored against declared accepted answers or read by a teacher.",
       "cognitive_job": "produce an answer in the learner’s own words",
       "supported_intents": [
+        "orient",
+        "activate-prior-knowledge",
         "check-understanding",
         "reflect",
         "evaluate",

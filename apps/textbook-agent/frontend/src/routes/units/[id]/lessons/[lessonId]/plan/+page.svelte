@@ -117,6 +117,23 @@
 				/* plan may not be ready */
 			}
 			const stage = String(status.stage ?? '');
+			// The preparation worker can retain a pre-approval pipeline stage after
+			// the path-neutral Learn approval has been persisted. The durable review
+			// record is authoritative, so hydrate it before interpreting the worker
+			// stage; otherwise the workspace can remain stuck on “Preparing”.
+			try {
+				lessonApproach = await getLessonApproach(gid);
+				const reviewStatus = String(
+					((lessonApproach.teaching_review || {}) as { status?: unknown }).status || ''
+				).toLowerCase();
+				if (reviewStatus === 'approved') {
+					phase = 'approved';
+					stopPoll();
+					return;
+				}
+			} catch {
+				/* Teaching plan may still be generating. */
+			}
 			// A failed Print/Learn realization must not erase the teacher's
 			// already-approved Teaching Plan. Keep the approval controls visible so
 			// the other fork can be retried from the same revision.

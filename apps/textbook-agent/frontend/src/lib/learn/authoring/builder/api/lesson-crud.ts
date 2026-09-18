@@ -65,6 +65,15 @@ export async function getBuilderLesson(id: string): Promise<BuilderLessonRecord>
 	return response.json() as Promise<BuilderLessonRecord>;
 }
 
+/** Materialize (or reopen) the editable lesson for a completed native output. */
+export async function openNativeLearnBuilderLesson(generationId: string): Promise<BuilderLessonRecord> {
+	const response = await apiFetch(`/api/v1/builder/lessons/from-native-learn/${encodeURIComponent(generationId)}`, {
+		method: 'POST'
+	});
+	await ensureOk(response, 'Failed to open native Learn lesson.');
+	return response.json() as Promise<BuilderLessonRecord>;
+}
+
 export async function updateBuilderLesson(
 	id: string,
 	request: UpdateBuilderLessonRequest

@@ -21,6 +21,10 @@ from infra.execution.leases import (
 )
 
 LEARN_EXECUTION_KEY = "learn_execution"
+# Learn authoring can involve several sequential provider calls. Keep the
+# ownership window comfortably above the heartbeat interval so a brief DB or
+# provider stall does not invalidate an otherwise recoverable run.
+LEARN_LEASE_SECONDS = 600
 
 
 class LearnCancelledError(RuntimeError):
@@ -54,7 +58,7 @@ def empty_learn_execution_meta() -> dict[str, Any]:
     return {
         "worker_id": None,
         "lease_token": 0,
-        "lease_seconds": DEFAULT_LEASE_SECONDS,
+        "lease_seconds": LEARN_LEASE_SECONDS,
         "heartbeat_at": None,
         "claimed_at": None,
         "cancelled": False,
@@ -114,7 +118,7 @@ async def claim_learn_execution(
     *,
     generation_id: str,
     worker_id: str,
-    lease_seconds: int = DEFAULT_LEASE_SECONDS,
+    lease_seconds: int = LEARN_LEASE_SECONDS,
 ) -> ExecutionLease | None:
     result = await session.execute(
         select(GenerationModel)
@@ -193,6 +197,51 @@ async def cancel_learn_execution(
     return execution
 
 
+async def fail_stale_learn_executions(
+    session: AsyncSession,
+    *,
+    now: datetime | None = None,
+) -> int:
+    """Reconcile Learn workers that lost their process after a restart.
+
+    Learn production runs synchronously inside the request that admitted them,
+    so a server restart can leave both the generation and realization rows in
+    ``running`` forever.  Expired leases are retryable and must be surfaced as
+    such instead of making the lesson status endpoint fail validation.
+    """
+    current = now or datetime.now(UTC)
+    result = await session.execute(
+        select(GenerationModel).where(GenerationModel.status == "running")
+    )
+    repaired = 0
+    for generation in result.scalars().all():
+        state = generation.chunked_state_json if isinstance(generation.chunked_state_json, dict) else {}
+        execution = state.get(LEARN_EXECUTION_KEY)
+        if not isinstance(execution, dict) or execution.get("status") != "running":
+            continue
+        heartbeat = _parse_iso(execution.get("heartbeat_at"))
+        lease_seconds = int(execution.get("lease_seconds") or DEFAULT_LEASE_SECONDS)
+        if heartbeat is not None and heartbeat + timedelta(seconds=lease_seconds) >= current:
+            continue
+        execution = dict(execution)
+        execution.update({"status": "failed", "worker_id": None, "heartbeat_at": None})
+        generation.chunked_state_json = {**state, LEARN_EXECUTION_KEY: execution}
+        generation.status = "failed"
+        realization = await session.scalar(
+            select(NativeRealizationModel).where(
+                NativeRealizationModel.output_id == generation.id,
+                NativeRealizationModel.path == "learn",
+            )
+        )
+        if realization is not None and realization.status == "running":
+            realization.status = "failed_recoverable"
+            realization.error_summary = "Learn execution interrupted; retry is available"
+        repaired += 1
+    if repaired:
+        await session.commit()
+    return repaired
+
+
 async def require_learn_lease(
     session: AsyncSession,
     *,
@@ -265,10 +314,12 @@ __all__ = [
     "assert_learn_commit_allowed",
     "assert_learn_dispatch_allowed",
     "cancel_learn_execution",
+    "fail_stale_learn_executions",
     "claim_learn_execution",
     "commit_learn_checkpoint",
     "empty_learn_execution_meta",
     "learn_execution_from_generation",
+    "LEARN_LEASE_SECONDS",
     "require_learn_lease",
     "write_learn_execution",
 ]

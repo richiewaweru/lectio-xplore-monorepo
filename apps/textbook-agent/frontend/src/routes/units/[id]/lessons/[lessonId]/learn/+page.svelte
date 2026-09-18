@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import { getBuilderLesson } from '$lib/learn/authoring/builder/api/lesson-crud';
+	import { getBuilderLesson, openNativeLearnBuilderLesson } from '$lib/learn/authoring/builder/api/lesson-crud';
 	import { isLearnDocument, type LearnDocument } from '$lib/learn/document/types';
 	import DocumentEditor from '$lib/learn/document/DocumentEditor.svelte';
 	import StudentLessonShell from '$lib/learn/student/StudentLessonShell.svelte';
@@ -70,8 +70,25 @@
 						release = releases.length ? releases[0] as LearnReleaseRecord : null;
 					}
 				} catch (err) {
-					loadError = err instanceof Error ? err.message : 'Learn preview could not be loaded.';
-					document = null;
+					// The realization status may still expose its native output id while
+					// the editable lesson has not been opened in Builder yet. Materialize
+					// it through the supported handoff endpoint, then use the returned
+					// editable id for all subsequent reads and writes.
+					if (ctx.preparation?.learn_open_href?.includes('/builder/from-native-learn/')) {
+						try {
+							const native = await openNativeLearnBuilderLesson(id);
+							builderLessonId = native.id;
+							document = native.document;
+							const releases = await listLearnReleases(native.id);
+							release = releases.length ? releases[0] as LearnReleaseRecord : null;
+						} catch (handoffErr) {
+							loadError = handoffErr instanceof Error ? handoffErr.message : 'Learn preview could not be loaded.';
+							document = null;
+						}
+					} else {
+						loadError = err instanceof Error ? err.message : 'Learn preview could not be loaded.';
+						document = null;
+					}
 				}
 			} else {
 				document = null;
@@ -105,7 +122,16 @@
 		if (!ctx.path || !ctx.lesson || !artifact.realizationId) return;
 		busy = 'retry';
 		try {
-			await retryLessonRealization(ctx.unitId, ctx.path, ctx.lesson, artifact.realizationId);
+			// Native Learn retries must re-enter the approved preparation handoff.
+			// The generic realization retry only rotates the output snapshot and
+			// leaves it queued; invoking the handoff creates the worker generation
+			// and runs the actual Learn producer.
+			const preparationGenerationId = ctx.preparation?.generation_id;
+			if (preparationGenerationId) {
+				await realizeLearnFromGeneration(preparationGenerationId);
+			} else {
+				await retryLessonRealization(ctx.unitId, ctx.path, ctx.lesson, artifact.realizationId);
+			}
 			await resolveAndLoad();
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Could not retry Learn.';

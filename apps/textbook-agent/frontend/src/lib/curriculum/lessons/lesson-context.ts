@@ -75,6 +75,11 @@ export function badgeToneForPrep(
 /** Extract builder lesson id from open href or learn_output_id when it looks like a builder id. */
 export function resolveBuilderLessonId(status: PreparedLessonStatus | null | undefined): string | null {
 	if (!status) return null;
+	// Native Learn realizations expose the concrete editable lesson separately
+	// from the immutable output id. Prefer it so the workspace loads the
+	// editable LearnDocument rather than treating the output generation as a
+	// builder lesson id.
+	if (status.builder_id) return status.builder_id;
 	const href = status.learn_open_href;
 	if (href) {
 		const native = href.match(/\/builder\/from-native-learn\/([^/?#]+)/);

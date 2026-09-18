@@ -1,0 +1,9 @@
+{"timestamp": "2026-09-17T21:31:44.033534+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+ {"timestamp": "2026-09-17T22:17:15.526095+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+ {"timestamp": "2026-09-17T22:18:06.872267+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+ {"timestamp": "2026-09-17T22:18:43.271547+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+ {"timestamp": "2026-09-17T22:34:39.511391+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+ {"timestamp": "2026-09-17T22:50:41.187608+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+  {"timestamp": "2026-09-17T22:53:11.706918+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+{"timestamp": "2026-09-17T22:53:28.249608+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}
+ {"timestamp": "2026-09-17T22:59:48.903908+00:00", "level": "DEBUG", "logger": "asyncio", "message": "Using proactor: IocpProactor"}

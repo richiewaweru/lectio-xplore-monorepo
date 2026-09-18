@@ -31,6 +31,7 @@ from application.unit_lesson.realizations import (
     RealizationAdmissionError,
     RealizationReadOnlyError,
 )
+from application.unit_lesson.realize_learn_handoff import realize_learn_from_preparation
 from core.capabilities import require_xplore_v2
 from core.database.models import (
     EditableLessonModel,
@@ -333,6 +334,7 @@ async def _realization_status_fields(
     print_id = to_identity(print_row) if print_row else None
     learn_id = to_identity(learn_row) if learn_row else None
     learn_open_href = learn_id.open_href if learn_id else None
+    builder_id = None
     if learn_row is not None and learn_row.output_id:
         editable = await session.scalar(
             select(EditableLessonModel)
@@ -340,6 +342,7 @@ async def _realization_status_fields(
             .order_by(EditableLessonModel.created_at.desc())
         )
         if editable is not None:
+            builder_id = editable.id
             # The Learn workspace loads editable lessons with GET; expose the
             # concrete builder id once the native output has been materialized.
             learn_open_href = f"/builder/{editable.id}"
@@ -347,6 +350,7 @@ async def _realization_status_fields(
         "realizations": dtos,
         "print_realization_id": print_id.realization_id if print_id else None,
         "learn_realization_id": learn_id.realization_id if learn_id else None,
+        "builder_id": builder_id,
         "print_output_id": print_id.output_id if print_id else None,
         "learn_output_id": learn_id.output_id if learn_id else None,
         "print_open_href": print_id.open_href if print_id else None,
@@ -1528,6 +1532,14 @@ async def post_path_lesson_realization_retry(
         row = await retry_realization(session, realization_id=realization_id)
         if row.path_lesson_id != lesson.id:
             raise HTTPException(status_code=404, detail="Realization not found for lesson")
+        if row.path == "learn" and row.preparation_generation_id:
+            # A queued Learn retry is not useful until it re-enters the same
+            # approved-preparation handoff used by initial creation.
+            await realize_learn_from_preparation(
+                session,
+                preparation_generation_id=row.preparation_generation_id,
+                user_id=current_user.id,
+            )
         await session.commit()
         return to_identity(row).model_dump(mode="json")
     except HTTPException:

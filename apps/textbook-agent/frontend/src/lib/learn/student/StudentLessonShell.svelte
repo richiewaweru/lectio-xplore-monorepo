@@ -9,6 +9,7 @@
 		/** Unused for v2 flat documents; kept for call-site compatibility. */
 		activeIndex?: number;
 		onActiveIndexChange?: (index: number) => void;
+		onSectionChange?: (sectionId: string) => void | Promise<void>;
 		/** Preview mode: same shell/interactions, never posts attempts. */
 		preview?: boolean;
 		attemptsByInteraction?: Map<string, StoredAttempt>;
@@ -19,7 +20,8 @@
 		document,
 		preview = false,
 		attemptsByInteraction = new Map(),
-		onSubmitAttempt = undefined
+		onSubmitAttempt = undefined,
+		onSectionChange = undefined
 	}: Props = $props();
 
 	const isV2 = $derived(isLearnDocument(document));
@@ -48,6 +50,7 @@
 					{preview}
 					{attemptsByInteraction}
 					{onSubmitAttempt}
+					onSectionChange={preview ? undefined : onSectionChange}
 				/>
 			</article>
 		</section>

@@ -363,6 +363,7 @@ class PreparedLessonStatusResponse(StrictModel):
     realizations: list[RealizationStatusDTO] = Field(default_factory=list)
     print_realization_id: str | None = None
     learn_realization_id: str | None = None
+    builder_id: str | None = None
     print_output_id: str | None = None
     learn_output_id: str | None = None
     print_open_href: str | None = None

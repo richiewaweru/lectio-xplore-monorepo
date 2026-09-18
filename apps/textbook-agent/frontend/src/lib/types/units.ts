@@ -209,6 +209,7 @@ export interface PreparedLessonStatus {
 	realizations?: RealizationStatus[];
 	print_realization_id?: string | null;
 	learn_realization_id?: string | null;
+	builder_id?: string | null;
 	print_output_id?: string | null;
 	learn_output_id?: string | null;
 	print_open_href?: string | null;

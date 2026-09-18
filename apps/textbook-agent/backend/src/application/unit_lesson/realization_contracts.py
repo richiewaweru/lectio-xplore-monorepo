@@ -14,6 +14,7 @@ from print.resources.native_policy import PRINT_NATIVE_POLICY_BODY
 NativePath = Literal["print", "learn"]
 RealizationStatus = Literal[
     "queued",
+    "running",
     "selecting",
     "writing",
     "validating",

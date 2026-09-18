@@ -1,0 +1,67 @@
+
+> frontend@1.0.0-beta.1 dev C:\Projects\lectio\apps\textbook-agent\frontend
+> vite dev "--host" "127.0.0.1"
+
+
+  VITE v7.3.6  ready in 40667 ms
+
+  ➜  Local:   http://127.0.0.1:5173/
+  ➜  press h + enter to show help
+12:41:42 AM [vite-plugin-svelte] src/lib/learn/document/DocumentEditor.svelte:47:20 This reference only captures the initial value of `initialDocument`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally
+12:41:43 AM [vite-plugin-svelte] src/lib/learn/document/DocumentCanvas.svelte:115:2 noninteractive element cannot have nonnegative tabIndex value
+https://svelte.dev/e/a11y_no_noninteractive_tabindex
+12:41:43 AM [vite-plugin-svelte] src/lib/learn/document/editors/InteractionEditor.svelte:16:21 This reference only captures the initial value of `node`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+12:41:45 AM [vite-plugin-svelte] src/lib/learn/document/DocumentEditor.svelte:47:20 This reference only captures the initial value of `initialDocument`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally
+12:41:45 AM [vite-plugin-svelte] src/lib/learn/document/DocumentCanvas.svelte:115:2 noninteractive element cannot have nonnegative tabIndex value
+https://svelte.dev/e/a11y_no_noninteractive_tabindex
+12:41:45 AM [vite-plugin-svelte] src/lib/learn/document/editors/InteractionEditor.svelte:16:21 This reference only captures the initial value of `node`. Did you mean to reference it inside a derived instead?
+https://svelte.dev/e/state_referenced_locally
+1:17:36 AM [vite] (client) hmr update /src/app.css
+1:17:36 AM [vite] (ssr) page reload src/lib/types/units.ts
+1:17:36 AM [vite] (client) hmr update /src/app.css, /src/routes/units/[id]/+page.svelte, /src/routes/units/[id]/lessons/[lessonId]/+layout.svelte, /src/routes/units/[id]/lessons/[lessonId]/plan/+page.svelte, /src/routes/units/[id]/lessons/[lessonId]/learn/+page.svelte
+1:17:36 AM [vite] (ssr) page reload src/lib/curriculum/lessons/lesson-context.ts
+1:21:46 AM [vite] (client) hmr update /src/app.css, /src/routes/units/[id]/lessons/[lessonId]/learn/+page.svelte, /src/lib/learn/document/DocumentEditor.svelte
+1:21:46 AM [vite] (ssr) page reload src/lib/learn/authoring/builder/api/lesson-crud.ts
+1:21:46 AM [vite] (client) hmr update /src/routes/units/[id]/lessons/[lessonId]/learn/+page.svelte, /src/app.css
+1:21:46 AM [vite] (ssr) page reload src/routes/units/[id]/lessons/[lessonId]/learn/+page.svelte
+1:24:37 AM [vite] (client) hmr update /src/routes/units/[id]/lessons/[lessonId]/plan/+page.svelte, /src/app.css
+1:24:37 AM [vite] (ssr) page reload src/routes/units/[id]/lessons/[lessonId]/plan/+page.svelte
+1:32:30 AM [vite] (client) hmr update /src/routes/units/[id]/lessons/[lessonId]/learn/+page.svelte, /src/app.css
+1:32:30 AM [vite] (ssr) page reload src/routes/units/[id]/lessons/[lessonId]/learn/+page.svelte
+2:15:37 AM [vite] (client) hmr update /src/routes/learn/instances/[instanceId]/+page.svelte, /src/routes/learn/instances/[instanceId]/+page.svelte?svelte&type=style&lang.css, /src/app.css
+2:15:37 AM [vite] (ssr) page reload src/routes/learn/instances/[instanceId]/+page.svelte
+2:20:04 AM [vite] (client) hmr update /src/lib/learn/student/OrderedDocumentList.svelte, /src/app.css
+2:20:04 AM [vite] (ssr) page reload src/lib/learn/student/OrderedDocumentList.svelte
+2:20:04 AM [vite] (client) hmr update /src/routes/learn/instances/[instanceId]/+page.svelte, /src/app.css
+2:20:04 AM [vite] (ssr) page reload src/routes/learn/instances/[instanceId]/+page.svelte
+2:20:04 AM [vite] (client) hmr update /src/lib/learn/student/StudentLessonShell.svelte, /src/app.css
+2:20:04 AM [vite] (ssr) page reload src/lib/learn/student/StudentLessonShell.svelte
+2:24:40 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/0.js
+2:24:40 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/1.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/3.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/4.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/7.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/18.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/3.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/4.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/8.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/11.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/15.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/17.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/21.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/23.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/29.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/30.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/32.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/33.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/app.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/nodes/18.js
+2:24:41 AM [vite] (ssr) page reload .svelte-kit/generated/shared/error-template.js
+2:24:41 AM [vite] (ssr) page reload .svelte-kit/generated/server/internal.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/client/matchers.js
+2:24:41 AM [vite] (client) page reload .svelte-kit/generated/root.js
+2:24:41 AM [vite] (ssr) page reload .svelte-kit/generated/root.js
+2:24:41 AM [vite] (ssr) page reload .svelte-kit/generated/root.svelte

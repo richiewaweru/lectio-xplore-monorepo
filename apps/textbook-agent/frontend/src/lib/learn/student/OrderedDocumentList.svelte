@@ -15,6 +15,7 @@
 		document: LearnDocument;
 		selectedNodeId?: string | null;
 		onSelectNode?: (nodeId: string) => void;
+		onSectionChange?: (sectionId: string) => void | Promise<void>;
 		/** Kept for API parity with OrderedBlockList; not embedded in nodes. */
 		attemptsByInteraction?: Map<string, InteractionAttemptState | StoredAttempt>;
 		preview?: boolean;
@@ -25,6 +26,7 @@
 		document,
 		selectedNodeId = null,
 		onSelectNode = undefined,
+		onSectionChange = undefined,
 		attemptsByInteraction = new Map(),
 		preview = false,
 		onSubmitAttempt = undefined
@@ -95,7 +97,10 @@
 					type="button"
 					class:active={activeSectionId === section.id}
 					title={section.title || section.id}
-					onclick={() => (activeSectionId = section.id)}
+					onclick={() => {
+						activeSectionId = section.id;
+						void onSectionChange?.(section.id);
+					}}
 				>
 					{section.id}
 				</button>

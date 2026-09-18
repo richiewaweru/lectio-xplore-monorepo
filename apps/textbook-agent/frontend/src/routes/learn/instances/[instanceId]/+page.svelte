@@ -20,6 +20,7 @@
 	let scoreLine = $state('');
 	let releaseId = $state<string | null>(null);
 	let attemptsByInteraction = $state(new Map<string, StoredAttempt>());
+	let completing = $state(false);
 
 	const instanceId = $derived(page.params.instanceId);
 
@@ -88,6 +89,41 @@
 			score_possible: result.score_possible
 		};
 	}
+
+	async function completeLesson() {
+		if (!instanceId || status === 'completed') return;
+		completing = true;
+		error = null;
+		try {
+			const token = localStorage.getItem('x-learner-session');
+			const headers: Record<string, string> = {};
+			if (token) headers['X-Learner-Session'] = token;
+			const response = await apiFetch(`/api/v1/learn/instances/${instanceId}/complete`, {
+				method: 'POST',
+				headers
+			});
+			await ensureOk(response, 'Could not complete the lesson.');
+			await refreshInstance();
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Could not complete the lesson.';
+		} finally {
+			completing = false;
+		}
+	}
+
+	async function markSectionVisited(sectionId: string) {
+		if (!instanceId) return;
+		const token = localStorage.getItem('x-learner-session');
+		const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+		if (token) headers['X-Learner-Session'] = token;
+		const response = await apiFetch(`/api/v1/learn/instances/${instanceId}/sections/complete`, {
+			method: 'POST',
+			headers,
+			body: JSON.stringify({ section_id: sectionId })
+		});
+		await ensureOk(response, 'Could not save section progress.');
+		await refreshInstance();
+	}
 </script>
 
 <main class="instance-page">
@@ -103,7 +139,21 @@
 	{:else if error}
 		<p class="lede error">{error}</p>
 	{:else if document}
-		<StudentLessonShell {document} {attemptsByInteraction} {onSubmitAttempt} />
+		<StudentLessonShell
+			{document}
+			{attemptsByInteraction}
+			{onSubmitAttempt}
+			onSectionChange={markSectionVisited}
+		/>
+		{#if status === 'completed'}
+			<p class="completion-state">Completed · <a href={`/learn/instances/${instanceId}/outcome`}>View outcome</a></p>
+		{:else}
+			<div class="completion-actions">
+				<button type="button" onclick={() => void completeLesson()} disabled={completing}>
+					{completing ? 'Completing…' : 'Complete lesson'}
+				</button>
+			</div>
+		{/if}
 	{/if}
 </main>
 
@@ -133,5 +183,28 @@
 	.lede.error {
 		color: var(--amber, #b45309);
 		padding: 0 18px;
+	}
+	.completion-actions,
+	.completion-state {
+		max-width: 1080px;
+		margin: 0 auto;
+		padding: 0 18px 40px;
+	}
+	.completion-actions button {
+		border: 1px solid var(--ink);
+		border-radius: 999px;
+		padding: 10px 16px;
+		color: var(--paper);
+		background: var(--ink);
+		font: inherit;
+		cursor: pointer;
+	}
+	.completion-actions button:disabled {
+		opacity: 0.6;
+		cursor: wait;
+	}
+	.completion-state {
+		color: var(--ink-2);
+		font-size: 14px;
 	}
 </style>

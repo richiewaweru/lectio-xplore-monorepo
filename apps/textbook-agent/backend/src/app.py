@@ -41,6 +41,7 @@ from infra.telemetry import telemetry_router
 from infra.telemetry.dependencies import get_llm_call_repository
 from infra.telemetry.service import telemetry_monitor
 from infra.version import VERSION
+from learn.generation.fencing import fail_stale_learn_executions
 from learn.analytics.insight_service import router as learn_analytics_router
 from learn.authoring.builder.routes import router as builder_router
 from learn.generation.units_routes import router as units_generation_router
@@ -237,6 +238,13 @@ async def lifespan(app: FastAPI):
             )
     except Exception:
         logger.exception("Stale v3 generation sweep failed at startup")
+    try:
+        async with async_session_factory() as session:
+            stale_learn = await fail_stale_learn_executions(session)
+        if stale_learn:
+            logger.warning("Reconciled %d stale Learn execution(s) after restart", stale_learn)
+    except Exception:
+        logger.exception("Stale Learn execution sweep failed at startup")
     initialize_resource_registry()
     initialize_skeleton_catalog()
     await telemetry_monitor.start()
