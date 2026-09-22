@@ -133,6 +133,7 @@ export interface V3ChunkedPlanState {
 	display_title?: string | null;
 	error?: string | null;
 	error_type?: string | null;
+	error_detail?: Record<string, unknown> | null;
 	visual_quality?: V3VisualQualitySummary | V3VisualQualitySummary[] | null;
 	inferred_lesson_mode: V3SignalSummary['inferred_lesson_mode'] | null;
 	lesson_mode_confidence: V3SignalSummary['lesson_mode_confidence'] | null;
@@ -162,6 +163,7 @@ export interface V3ChunkedStatus {
 	next_action: string | null;
 	error?: string | null;
 	error_type?: string | null;
+	error_detail?: Record<string, unknown> | null;
 	variant_generation_ids?: Record<string, string>;
 	document_version?: number | null;
 	document_exists?: boolean;
@@ -173,7 +175,6 @@ export interface V3ChunkedStatus {
 	blocks_failed?: number;
 	failed_section_ids?: string[];
 	failed_block_ids?: string[];
-	error_detail?: Record<string, unknown> | null;
 }
 
 export interface V3PackVariant {

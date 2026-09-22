@@ -57,7 +57,7 @@
 		</nav>
 		{#if user}
 			<div class="profile">
-				<a href="/settings" class="avatar-link" aria-label="Settings">
+				<a href="/settings" class="avatar-link" aria-label="Open account settings">
 					{#if user.picture_url}
 						<img src={user.picture_url} alt="" class="avatar" />
 					{:else}

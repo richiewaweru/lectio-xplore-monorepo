@@ -262,7 +262,7 @@ USER = SimpleNamespace(id="p07-user", email="p07@example.com", name="P07")
 def _install_overrides(db_session_factory):
     from app import app
     from core.entities.user import User
-    from infra.auth.middleware import get_current_user
+    from infra.auth.middleware import get_current_user, get_optional_user
     from infra.database.session import get_async_session
 
     user = User(
@@ -284,6 +284,7 @@ def _install_overrides(db_session_factory):
 
     app.dependency_overrides.clear()
     app.dependency_overrides[get_current_user] = override_current_user
+    app.dependency_overrides[get_optional_user] = override_current_user
     app.dependency_overrides[get_async_session] = override_session
     yield
     app.dependency_overrides.clear()

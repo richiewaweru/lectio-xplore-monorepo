@@ -55,10 +55,18 @@ async def realize_print_from_preparation(
             detail="Cannot resolve path lesson for this preparation",
         )
 
+    # Print and Learn must consume the same authoritative page-document state.
+    # The outer chunked wrapper also contains legacy pipeline metadata, but it
+    # does not expose the teaching-review ledger used for admission.
     try:
-        state = await load_chunked_state(preparation_generation_id, session)
-    except ValueError:
-        state = dict(generation.chunked_state_json or {})
+        state = await PageDocumentRepository(
+            session, preparation_generation_id
+        ).load_page_generation_state()
+    except (KeyError, ValueError):
+        try:
+            state = await load_chunked_state(preparation_generation_id, session)
+        except ValueError:
+            state = dict(generation.chunked_state_json or {})
 
     try:
         teaching_plan = accept_approved_teaching_revision(state, consumer="print")

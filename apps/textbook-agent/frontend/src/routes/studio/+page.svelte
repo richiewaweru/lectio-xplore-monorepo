@@ -817,14 +817,13 @@
 			const learnPath =
 				new URL(window.location.href).searchParams.get('path') === 'learn';
 			const contractVersion = Number(structuralPlan.document_contract_version ?? 1);
-			// Shared Unit preparations use contract v1 until Learn or Print
-			// realization happens. They must first pass through Teaching Plan review.
+			// Studio only owns native document contract v2 approval. Contract-v1
+			// structural plans belong to the Unit lesson workspace and must not be
+			// silently routed through the retired Builder/legacy approval path.
 			if (contractVersion === 1) {
-				const next = await approveChunkedPlan(generationId, {
-					display_title: displayTitle.trim()
-				});
-				await applyChunkedState(next, { pollImmediately: true });
-				return;
+				throw new Error(
+					'Current lesson generation requires native document contract v2; legacy Builder conversion is unavailable.'
+				);
 			}
 			if (contractVersion === 2 || learnPath) {
 				const next = await approveChunkedPlan(generationId, { display_title: displayTitle.trim() });

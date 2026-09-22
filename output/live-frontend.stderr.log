@@ -36,3 +36,37 @@ AggregateError [ECONNREFUSED]:
     at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
 
 [1;31m[404] GET /builder/from-native-learn/9fb742a1-8fc3-4e9e-bf1d-83e0634a80fd[0m
+
+[1;31m[404] GET /favicon.ico[0m
+
+[1;31m[404] GET /favicon.ico[0m
+1:09:34 PM [vite] http proxy error: /api/v1/auth/me
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+1:09:34 PM [vite] http proxy error: /api/v1/units/750b4add-90e0-429f-b9b1-b022f48d657d
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+1:10:52 PM [vite] http proxy error: /api/v1/auth/me
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+1:10:52 PM [vite] http proxy error: /api/v1/units/750b4add-90e0-429f-b9b1-b022f48d657d
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+1:12:08 PM [vite] http proxy error: /api/v1/auth/me
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)
+1:12:08 PM [vite] http proxy error: /api/v1/units/750b4add-90e0-429f-b9b1-b022f48d657d
+AggregateError [ECONNREFUSED]: 
+    at internalConnectMultiple (node:net:1139:18)
+    at afterConnectMultiple (node:net:1712:7)
+    at TCPConnectWrap.callbackTrampoline (node:internal/async_hooks:130:17)

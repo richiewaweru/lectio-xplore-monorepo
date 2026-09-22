@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 const root = process.cwd();
 const layout = readFileSync(join(root, 'src/routes/+layout.svelte'), 'utf8');
+const tokens = readFileSync(join(root, 'src/lib/ui/tokens.css'), 'utf8');
 const lessons = readFileSync(join(root, 'src/routes/lessons/+page.svelte'), 'utf8');
 const settings = readFileSync(join(root, 'src/routes/settings/+page.svelte'), 'utf8');
 const profileSummary = readFileSync(
@@ -25,12 +26,12 @@ const paletteTokens = [
 ];
 
 describe('workspace shell styling contract', () => {
-	it('owns the workspace palette and font loading in the root layout', () => {
+	it('owns the workspace palette and font loading in the shared shell', () => {
 		for (const token of paletteTokens) {
-			expect(layout.match(new RegExp(`--${token}:`, 'g'))).toHaveLength(1);
+			expect(tokens.match(new RegExp(`--${token}:`, 'g'))).toHaveLength(1);
 			expect(lessons).not.toContain(`--${token}:`);
 		}
-		expect(layout).toContain('font-family: Inter, sans-serif');
+		expect(tokens).toContain('--font-sans: Inter');
 		expect(layout).toContain('family=Fraunces');
 		expect(layout).toContain('family=IBM+Plex+Mono');
 		expect(layout).toContain('family=Inter');

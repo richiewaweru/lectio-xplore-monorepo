@@ -29,6 +29,14 @@ describe('lessonArtifactUi', () => {
 		expect(lessonArtifactUi(status, 'print')).toMatchObject({ exists: true, state: 'preparing', realizationId: 'print-r' });
 	});
 
+	it('does not call a queued realization ready just because it has an output id', () => {
+		const status = base({
+			print_output_id: 'queued-output',
+			realizations: [{ path: 'print', realization_id: 'print-r', output_id: 'queued-output', status: 'queued' } as never]
+		});
+		expect(lessonArtifactUi(status, 'print')).toMatchObject({ exists: true, state: 'preparing', outputId: 'queued-output' });
+	});
+
 	it('keeps failed and stale identity visible', () => {
 		const failed = base({ realizations: [{ path: 'learn', realization_id: 'r', output_id: 'o', status: 'failed_terminal', error_summary: 'bad document' } as never] });
 		expect(lessonArtifactUi(failed, 'learn')).toMatchObject({ exists: true, state: 'failed', outputId: 'o' });

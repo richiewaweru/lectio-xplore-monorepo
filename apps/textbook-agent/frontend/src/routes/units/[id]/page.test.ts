@@ -98,7 +98,7 @@ describe('/units/[id]', () => {
 	});
 	afterEach(cleanup);
 
-	it('initial load fetches only unit and active path', async () => {
+	it('initial load fetches unit, active path, and durable preparation status', async () => {
 		render(UnitPage);
 		expect(await screen.findByDisplayValue('Plant inputs')).toBeTruthy();
 		expect(mocks.getUnit).toHaveBeenCalled();
@@ -109,15 +109,16 @@ describe('/units/[id]', () => {
 		expect(mocks.getPathHistory).not.toHaveBeenCalled();
 		expect(mocks.getPathStatus).not.toHaveBeenCalled();
 		expect(mocks.getLessonShape).not.toHaveBeenCalled();
-		expect(mocks.getPreparedLessonStatus).not.toHaveBeenCalled();
+		expect(mocks.getPreparedLessonStatus).toHaveBeenCalledWith('unit-1', 'lesson-1');
 	});
 
-	it('selecting a lesson does not fetch shape or preparation status', async () => {
+	it('selecting a lesson does not fetch shape and refreshes durable preparation status', async () => {
 		render(UnitPage);
 		await screen.findByDisplayValue('Plant inputs');
 		await fireEvent.click(screen.getByRole('button', { name: /Plant outputs/ }));
 		expect(mocks.getLessonShape).not.toHaveBeenCalled();
-		expect(mocks.getPreparedLessonStatus).not.toHaveBeenCalled();
+		expect(mocks.getPreparedLessonStatus).toHaveBeenCalledWith('unit-1', 'lesson-1');
+		expect(mocks.getPreparedLessonStatus).toHaveBeenCalledWith('unit-1', 'lesson-2');
 		expect(screen.getByDisplayValue('Plant outputs')).toBeTruthy();
 	});
 

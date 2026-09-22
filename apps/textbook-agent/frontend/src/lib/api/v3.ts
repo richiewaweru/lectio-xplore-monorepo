@@ -185,6 +185,22 @@ export async function realizeLearnFromGeneration(
 	return res.json();
 }
 
+export async function realizePrintFromGeneration(
+	generationId: string
+): Promise<{
+	status: string;
+	path: string;
+	output_id: string;
+	open_href?: string | null;
+}> {
+	const res = await apiFetch(
+		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/realize-print`,
+		{ method: 'POST', headers: bearerHeaders() }
+	);
+	await ensureOk(res, 'Could not generate the Print lesson.');
+	return res.json();
+}
+
 export async function rejectLessonApproach(
 	generationId: string,
 	payload: { expected_revision: number; teacher_note?: string }

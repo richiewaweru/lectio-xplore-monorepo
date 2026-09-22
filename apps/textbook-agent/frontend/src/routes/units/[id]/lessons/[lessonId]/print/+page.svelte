@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+import { getContext, onDestroy, onMount } from 'svelte';
 	import LectioPageDocumentView from '$lib/print/components/studio/LectioPageDocumentView.svelte';
-	import PrintDocumentEditor from '$lib/print/components/studio/PrintDocumentEditor.svelte';
 	import { extractLectioDocumentV2 } from '$lib/print/studio/document-version';
 	import { downloadV3GenerationPdf } from '$lib/api/v3';
 	import { apiFetch } from '$lib/api/client';
@@ -10,7 +9,7 @@
 	import type { LessonIssue, PathLesson, PreparedLessonStatus, Unit, UnitPath } from '$lib/types/units';
 	import { Button, Dialog, InlineError, EmptyState, Tabs } from '$lib/ui';
 	import { lessonArtifactUi, lessonWorkspaceHref, resolvePrintGenerationId } from '$lib/curriculum/lessons/lesson-context';
-	import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte';
+import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte';
 
 	type Ctx = {
 		unitId: string;
@@ -23,7 +22,7 @@
 	};
 
 	const ctx = getContext<Ctx>('lessonWorkspace');
-	let tab = $state<'preview' | 'edit' | 'issues'>('preview');
+	let activeTab = $state<'preview' | 'issues'>('preview');
 	let generationId = $state<string | null>(null);
 	let pageDocumentV2 = $state<LectioDocument | null>(null);
 	let issues = $state<LessonIssue[]>([]);
@@ -35,7 +34,58 @@
 	let teacherName = $state('');
 	let includeAnswers = $state(true);
 	let edition = $state<'teacher' | 'student'>('teacher');
+	let pollTimer: ReturnType<typeof setTimeout> | null = null;
+	let pollAttempts = 0;
+	const MAX_PRINT_POLL_ATTEMPTS = 60;
 	const artifact = $derived(lessonArtifactUi(ctx.preparation, 'print', error));
+
+	function selectTab(id: string): void {
+		if (id === 'preview' || id === 'issues') activeTab = id;
+	}
+
+	function stopPolling(): void {
+		if (pollTimer !== null) {
+			clearTimeout(pollTimer);
+			pollTimer = null;
+		}
+	}
+
+	function printIsActive(): boolean {
+		const preparation = ctx.preparation;
+		const stage = String(preparation?.workflow_stage || preparation?.generation_status || '').toLowerCase();
+		const realization = preparation?.realizations?.find((row) => row.path === 'print');
+		const realizationStatus = String(realization?.status || '').toLowerCase();
+		return ['queued', 'planning_forms', 'writing_sections', 'writing_blocks', 'assembling'].includes(stage) || ['queued', 'planning_forms', 'writing_sections', 'writing_blocks', 'assembling'].includes(realizationStatus);
+	}
+
+	function schedulePoll(): void {
+		if (pollTimer !== null || pageDocumentV2 || !printIsActive()) return;
+		if (pollAttempts >= MAX_PRINT_POLL_ATTEMPTS) {
+			error = 'Print is still being prepared. Refresh to check again or retry the Print realization.';
+			return;
+		}
+		pollTimer = setTimeout(() => {
+			pollTimer = null;
+			void pollPrint();
+		}, 2000);
+	}
+
+	async function pollPrint(): Promise<void> {
+		pollAttempts += 1;
+		try {
+			await ctx.refreshPreparation();
+			generationId = resolvePrintGenerationId(ctx.preparation);
+			if (generationId) {
+				await loadDoc(generationId);
+				stopPolling();
+				error = null;
+				return;
+			}
+		} catch {
+			// Keep the concise loading state while the durable status is active.
+		}
+		schedulePoll();
+	}
 
 	async function loadIssues(): Promise<void> {
 		try {
@@ -54,6 +104,8 @@
 	}
 
 	async function resolve() {
+		stopPolling();
+		pollAttempts = 0;
 		loading = true;
 		error = null;
 		pageDocumentV2 = null;
@@ -65,6 +117,10 @@
 				catch (err) { error = err instanceof Error ? err.message : 'Print document is unavailable.'; }
 			}
 			await loadIssues();
+			if (!pageDocumentV2 && printIsActive()) {
+				error = 'Print is still being prepared.';
+				schedulePoll();
+			}
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Could not load Print.';
 		} finally {
@@ -106,24 +162,31 @@
 	}
 
 	onMount(() => void resolve());
+	onDestroy(stopPolling);
 </script>
 
 <div class="print-ws">
 	<header class="bar">
-		<Tabs active={tab} tabs={[{ id: 'preview', label: 'Preview' }, { id: 'edit', label: 'Edit' }, { id: 'issues', label: 'Issues' }]} onSelect={(id) => (tab = id as typeof tab)} />
+		<Tabs
+			active={activeTab}
+			tabs={[
+				{ id: 'preview', label: 'Preview' },
+				{ id: 'edit', label: 'Edit', href: generationId ? `/studio/print/${encodeURIComponent(generationId)}` : undefined },
+				{ id: 'issues', label: 'Issues' }
+			]}
+			onSelect={selectTab}
+		/>
 		{#if generationId && pageDocumentV2}<Button size="sm" onclick={() => (exportOpen = true)}>Download PDF</Button>{/if}
 	</header>
 	{#if error && artifact.state !== 'needs_attention'}<InlineError message={error} hint="You can retry or return to the plan." />{/if}
 	{#if loading}
 		<p class="muted">Loading Print…</p>
-	{:else if tab === 'issues'}
+	{:else if activeTab === 'issues'}
 		<LessonIssuesPanel {issues} onRetry={retryPrint} />
 	{:else if artifact.state === 'not_created'}
 		<EmptyState title="Print not created" description="Create a printable booklet from the approved teaching plan.">{#snippet actions()}<Button busy={busy === 'create'} onclick={() => void createPrint()}>{busy === 'create' ? 'Creating…' : 'Create Print'}</Button><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>
-	{:else if tab === 'preview'}
+	{:else if activeTab === 'preview'}
 		{#if pageDocumentV2}<div class="doc"><LectioPageDocumentView document={pageDocumentV2} edition="teacher" /></div>{:else}<EmptyState title="Print needs attention" description={error || 'The Print document is unavailable.'}>{#snippet actions()}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryPrint()}>Retry preview</Button>{/snippet}</EmptyState>{/if}
-	{:else if tab === 'edit'}
-		{#if generationId && pageDocumentV2}<PrintDocumentEditor {generationId} document={pageDocumentV2} />{:else}<EmptyState title="Print editor unavailable" description={error || 'The existing Print artifact cannot be loaded.'}>{#snippet actions()}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryPrint()}>Retry</Button>{/snippet}</EmptyState>{/if}
 	{/if}
 </div>
 

@@ -540,6 +540,25 @@ def test_p04_n06_policy_change_shifts_eligibility_without_component_edits() -> N
     assert print_after.excluded.get("prose") == "not_in_native_policy"
 
 
+def test_formative_shared_response_keeps_exact_mapped_print_treatment() -> None:
+    """Formative response actions survive an intent snapshot mismatch."""
+    block = _block(
+        "b-compare-choice",
+        intent="compare",
+        action="select-one",
+    )
+    block.task_mode = "formative"
+    plan = _plan(block, plan_id="tp-formative-compare")
+
+    candidates = build_print_candidate_map(
+        plan,
+        compatible_objects_by_intent={"compare": ("prose", "questions")},
+        fail_on_empty_required=True,
+    )
+
+    assert candidates["b-compare-choice"] == ("choices",)
+
+
 def test_p04_activity_authoring_rejects_incompatible_approved_type() -> None:
     """Incompatible approved task type → explicit error, not silent rewrite."""
     block = _block(

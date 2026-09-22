@@ -315,6 +315,49 @@ def test_p02_s05_incompatible_source_fails_without_rewrite() -> None:
         )
 
 
+def test_p02_legacy_approved_snapshot_is_normalized_for_both_consumers() -> None:
+    """Legacy approved page state must not reopen the approval gate."""
+    state = {
+        "teaching_plan": {
+            "arc": "Legacy arc.",
+            "sections": [
+                {
+                    "slot_id": "orient",
+                    "blocks": [
+                        {
+                            "id": "orient-b1",
+                            "position": 0,
+                            "intent": "orient",
+                            "brief": "Open the lesson.",
+                            "evidence": "Learner attends.",
+                            "variant": None,
+                        }
+                    ],
+                }
+            ],
+            "anchor_usage": [],
+        },
+        "teaching_review": {
+            "status": "approved",
+            "revision": 2,
+            "reviewed_at": "2026-08-19T13:51:36Z",
+            "reviewed_by": "teacher-1",
+            "teacher_note": "Approved",
+        },
+    }
+
+    store = TeachingRevisionStore(state)
+    assert len(store.list_revisions()) == 1
+    assert store.list_revisions()[0].status == "approved"
+    assert state["teaching_review"]["approved_revision"] == 1
+
+    print_plan = accept_approved_teaching_revision(state, consumer="print")
+    learn_plan = accept_approved_teaching_revision(state, consumer="learn")
+    assert print_plan.model_dump(mode="json") == learn_plan.model_dump(mode="json")
+    assert print_plan.teaching_plan_id == learn_plan.teaching_plan_id
+    assert print_plan.revision == learn_plan.revision == 1
+
+
 def test_p02_s06_edit_creates_revision_old_approved_readable() -> None:
     """P02-S06: teaching edit → new revision; old approved remains readable."""
     original = TeachingPlan(

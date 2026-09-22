@@ -32,6 +32,7 @@ from application.unit_lesson.realizations import (
     RealizationReadOnlyError,
 )
 from application.unit_lesson.realize_learn_handoff import realize_learn_from_preparation
+from application.unit_lesson.realize_print_handoff import realize_print_from_preparation
 from core.capabilities import require_xplore_v2
 from core.database.models import (
     EditableLessonModel,
@@ -1532,7 +1533,17 @@ async def post_path_lesson_realization_retry(
         row = await retry_realization(session, realization_id=realization_id)
         if row.path_lesson_id != lesson.id:
             raise HTTPException(status_code=404, detail="Realization not found for lesson")
-        if row.path == "learn" and row.preparation_generation_id:
+        if row.path == "print" and row.preparation_generation_id:
+            # Print is backed by the approved preparation generation.  Reopen
+            # that exact checkpoint so the worker resumes from durable native
+            # state; do not manufacture a sibling generation id.
+            await realize_print_from_preparation(
+                session,
+                preparation_generation_id=row.preparation_generation_id,
+                user_id=current_user.id,
+                path_lesson_id=lesson.id,
+            )
+        elif row.path == "learn" and row.preparation_generation_id:
             # A queued Learn retry is not useful until it re-enters the same
             # approved-preparation handoff used by initial creation.
             await realize_learn_from_preparation(

@@ -16,7 +16,7 @@ from curriculum.prompts import (
 from print.generation.whole_lesson.validation import SPATIAL_PROCESS_REPRESENTATION_INTENTS
 
 V1_SHA256 = "475b8b178f74c1397742b12002a324e18ae3e39a4fffd9e7a4c199713780a9cd"
-V2_SHA256 = "1e48a253a1be4cdc4c3f77b4a2d57a2662fdf2869db7a724af4fe15dac5b7e3d"
+V2_SHA256 = "d3a47826dcaef2a38e063e149f257982b0334968482f70b2db3282ed3725bc0c"
 
 
 def _sha256(text: str) -> str:

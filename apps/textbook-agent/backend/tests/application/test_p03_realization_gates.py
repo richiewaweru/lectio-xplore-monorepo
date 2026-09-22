@@ -213,6 +213,34 @@ async def test_p03_r02_print_retry_leaves_learn_and_plan(db_session: AsyncSessio
 
 
 @pytest.mark.asyncio
+async def test_p03_r02b_print_retry_without_override_keeps_preparation_output(
+    db_session: AsyncSession,
+) -> None:
+    """Product Print retries resume the preparation checkpoint, not a ghost id."""
+    lesson = await _prepared_lesson(db_session, user_id="p03-r02b")
+    rows = await request_outputs(
+        db_session,
+        path_lesson_id=lesson.id,
+        paths=["print"],
+        teaching_plan_id="tp-p03-r02b",
+        teaching_plan_revision=1,
+        teaching_plan_hash="hash-rev-1",
+        preparation_generation_id=lesson.pack_id,
+        pack_id=lesson.pack_id,
+    )
+    row = rows[0][0]
+    row.status = "failed_recoverable"
+    row.error_summary = "retryable print failure"
+    await db_session.flush()
+
+    retried = await retry_realization(db_session, realization_id=row.id)
+
+    assert retried.output_id == lesson.pack_id
+    assert retried.status == "queued"
+    assert retried.realization_revision == 2
+
+
+@pytest.mark.asyncio
 async def test_p03_r03_persisted_path_survives_default_change(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:

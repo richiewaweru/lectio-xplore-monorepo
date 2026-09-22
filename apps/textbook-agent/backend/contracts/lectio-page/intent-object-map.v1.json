@@ -27,8 +27,7 @@
     "name-parts": [
       "list",
       "table",
-      "figure",
-      "questions"
+      "figure"
     ],
     "classify": [
       "list",
@@ -241,7 +240,6 @@
     ],
     "questions": [
       "activate-prior-knowledge",
-      "name-parts",
       "classify",
       "compare",
       "sequence",
@@ -294,8 +292,7 @@
     "name-parts": [
       "list",
       "table",
-      "figure",
-      "questions"
+      "figure"
     ],
     "classify": [
       "list",

@@ -17,7 +17,9 @@
 		approveLessonApproach,
 		rejectLessonApproach,
 		regenerateChunkedPlan,
-		realizeLearnFromGeneration
+		realizeLearnFromGeneration,
+		realizePrintFromGeneration,
+		retryNativeGeneration
 	} from '$lib/api/v3';
 	import type { PathLesson, PreparedLessonStatus, Unit, UnitPath } from '$lib/types/units';
 	import type { V3ChunkedPlanState, V3StructuralPlan } from '$lib/types/v3';
@@ -27,6 +29,12 @@
 		resolvePlanGenerationId,
 		lessonArtifactUi
 	} from '$lib/curriculum/lessons/lesson-context';
+	import {
+		failureAllowsRetry,
+		isPlanGenerationActive,
+		isPlanGenerationFailure,
+		planFailureMessage
+	} from '$lib/curriculum/lessons/plan-status';
 	import V3PlanPreview from '$lib/print/components/studio/V3PlanPreview.svelte';
 	import V3PlanActions from '$lib/print/components/studio/V3PlanActions.svelte';
 
@@ -51,8 +59,9 @@
 	let structuralPlan = $state<V3StructuralPlan | null>(null);
 	let lessonApproach = $state<Record<string, unknown> | null>(null);
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
+	let hydrationInFlight = false;
 
-	type PlanPhase = 'idle' | 'structural' | 'teaching' | 'approved' | 'working';
+	type PlanPhase = 'idle' | 'structural' | 'teaching' | 'approved' | 'working' | 'failed_recoverable' | 'failed_terminal';
 	let phase = $state<PlanPhase>('idle');
 
 	const unitId = $derived(ctx.unitId);
@@ -94,6 +103,8 @@
 	}
 
 	async function hydrateFromGeneration(gid: string) {
+		if (hydrationInFlight) return;
+		hydrationInFlight = true;
 		error = null;
 		try {
 			const status = await getChunkedPlanStatus(gid);
@@ -104,8 +115,11 @@
 				section_briefs: {},
 				failed_sections: status.failed_sections ?? [],
 				blueprint_id: status.blueprint_id,
-				execution_started: status.execution_started,
+					execution_started: status.execution_started,
 				next_action: status.next_action,
+				error: status.error,
+				error_type: status.error_type,
+				error_detail: status.error_detail,
 				inferred_lesson_mode: null,
 				lesson_mode_confidence: null
 			};
@@ -152,6 +166,11 @@
 					/* keep the failure state below when teaching review is unavailable */
 				}
 			}
+			if (isPlanGenerationFailure(status)) {
+				phase = status.stage === 'failed_recoverable' ? 'failed_recoverable' : 'failed_terminal';
+				stopPoll();
+				return;
+			}
 			if (stage === 'awaiting_teaching_approval') {
 				lessonApproach = await getLessonApproach(gid);
 				const reviewStatus = String(
@@ -191,21 +210,18 @@
 				stopPoll();
 				return;
 			}
-			if (
-				stage.includes('writing') ||
-				stage.includes('generat') ||
-				stage === 'queued' ||
-				stage === 'stage2_running' ||
-				stage === 'blueprint_ready' ||
-				stage === 'planning_forms'
-			) {
+			if (isPlanGenerationActive(status)) {
 				phase = 'working';
+				if (!pollTimer) pollTimer = setInterval(() => void hydrateFromGeneration(gid), 2000);
 				return;
 			}
-			phase = 'working';
+			stopPoll();
+			phase = 'idle';
 		} catch (err) {
 			error = friendly(err);
 			phase = 'idle';
+		} finally {
+			hydrationInFlight = false;
 		}
 	}
 
@@ -347,9 +363,31 @@
 		busy = 'print';
 		error = null;
 		try {
-			await generatePrintRealization(unitId, path, lesson);
+			const gid = generationId;
+			if (gid) {
+				await realizePrintFromGeneration(gid);
+			} else {
+				await generatePrintRealization(unitId, path, lesson);
+			}
 			await ctx.refreshPreparation();
 			await goto(lessonWorkspaceHref(unitId, lessonId, 'print'));
+		} catch (err) {
+			error = friendly(err);
+		} finally {
+			busy = null;
+		}
+	}
+
+	async function retryFailedGeneration() {
+		if (!chunked || !failureAllowsRetry(chunked)) return;
+		busy = 'retry-generation';
+		error = null;
+		try {
+			await retryNativeGeneration(chunked.generation_id);
+			phase = 'working';
+			stopPoll();
+			pollTimer = setInterval(() => void hydrateFromGeneration(chunked!.generation_id), 2000);
+			await hydrateFromGeneration(chunked.generation_id);
 		} catch (err) {
 			error = friendly(err);
 		} finally {
@@ -415,6 +453,18 @@
 	{:else if phase === 'working'}
 		<Card padding="lg">
 			<p class="working">Preparing structure and teaching plan…</p>
+		</Card>
+	{:else if phase === 'failed_recoverable' || phase === 'failed_terminal'}
+		<Card padding="lg">
+			<h3>{phase === 'failed_recoverable' ? 'Lesson preparation needs a retry' : 'Lesson preparation failed'}</h3>
+			<p>{planFailureMessage(chunked ?? { stage: phase, error: null, error_detail: null })}</p>
+			{#if phase === 'failed_recoverable'}
+				<Button busy={busy === 'retry-generation'} onclick={() => void retryFailedGeneration()}>
+					{busy === 'retry-generation' ? 'Retrying…' : 'Retry'}
+				</Button>
+			{:else}
+				<p class="warn">This failure is terminal. Review the lesson inputs or regenerate the lesson from the unit workspace.</p>
+			{/if}
 		</Card>
 	{:else if phase === 'structural'}
 		<section class="stage">
@@ -526,6 +576,12 @@
 						{:else if artifact.state === 'preparing'}
 							<p>This output is being prepared. You can view its status in the workspace.</p>
 							<a class="link" href={lessonWorkspaceHref(unitId, lessonId, artifact.path)}>View {artifactTitle(artifact.path)}</a>
+						{:else if artifact.state === 'ready'}
+							<p>This output is ready to review and edit.</p>
+							<div class="actions">
+								{#if artifact.openHref}<a class="link" href={artifact.openHref}>Open {artifactTitle(artifact.path)}</a>{/if}
+								<a class="link" href={lessonWorkspaceHref(unitId, lessonId, artifact.path)}>View {artifactTitle(artifact.path)}</a>
+							</div>
 						{:else}
 							<p>{artifact.errorSummary || 'This output exists but needs attention.'}</p>
 							<div class="actions">

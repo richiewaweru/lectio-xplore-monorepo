@@ -148,7 +148,9 @@ export function lessonArtifactUi(
 			? 'failed'
 			: loadError || identity.errorSummary || status.stale || realizationStatus === 'stale'
 				? 'needs_attention'
-				: identity.outputId || identity.openHref || realizationStatus === 'published'
+				: ['queued', 'running', 'started', 'preparing', 'generating'].includes(realizationStatus)
+					? 'preparing'
+					: identity.outputId || identity.openHref || ['ready', 'completed', 'published', 'read_only'].includes(realizationStatus)
 					? 'ready'
 					: 'preparing';
 	return { path, exists, state, ...identity, errorSummary: loadError ?? identity.errorSummary };

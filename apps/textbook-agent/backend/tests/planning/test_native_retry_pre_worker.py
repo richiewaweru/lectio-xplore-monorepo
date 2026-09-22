@@ -858,7 +858,16 @@ async def test_injected_form_timeout_retry_resumes_at_planning_forms() -> None:
                 worker_id="form-retry-worker"
             )
             assert lease is not None
-        with patch("print.generation.whole_lesson.executor.build_closed_print_production_plan_async", new=_form_boom):
+        with (
+            patch(
+                "print.generation.whole_lesson.executor.build_closed_print_production_plan_async",
+                new=_form_boom,
+            ),
+            patch(
+                "print.generation.whole_lesson.executor.run_shared_task_writer",
+                return_value=[],
+            ),
+        ):
             async with async_session_factory() as session:
                 with pytest.raises(TimeoutError):
                     await execute_after_teaching_approval(

@@ -79,10 +79,10 @@
 		{#snippet breadcrumb()}
 			<a href="/classes">Classes</a>
 			<span>/</span>
-			<span>{detail.name}</span>
+			<span>{detail?.name ?? ''}</span>
 		{/snippet}
 		{#snippet actions()}
-			<Badge tone="info">Invite {detail.invite_code}</Badge>
+			<Badge tone="info">Invite {detail?.invite_code ?? ''}</Badge>
 		{/snippet}
 	</PageHeader>
 

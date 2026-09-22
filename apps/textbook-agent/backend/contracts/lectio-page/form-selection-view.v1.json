@@ -209,10 +209,9 @@
     {
       "id": "questions",
       "purpose": "Open prompts, marks, response guidance, answer-space specification.",
-        "supported_intents": [
-          "activate-prior-knowledge",
-          "name-parts",
-          "classify",
+      "supported_intents": [
+        "activate-prior-knowledge",
+        "classify",
         "compare",
         "sequence",
         "explain-cause",

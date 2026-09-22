@@ -9,9 +9,7 @@ responsible for a narrow, well-posed set of judgements. Make those well.
   concept_id           the capability being taught
   knowledge_type       already classified
   lesson_mode          determined by position in the path
-  recommended_slots[]  ordered recommendation from the skeleton.
-  legal_slots[]        closed legal slot vocabulary with purposes.
-  max_slots            hard upper bound; check/verification remains required.
+  slots[]              ordered, from the skeleton. count is final.
   scope_contract       must_establish, must_not_introduce, terminology
   prior_established    what earlier lessons have established
   anchor_carried       a named example from an earlier lesson, or null
@@ -90,8 +88,8 @@ Treat prior_established as known. Do not re-teach it. You may reference it.
 ## PROHIBITIONS
 
   Never change the objective.
-  Never invent a slot role, exceed max_slots, remove required visuals, or remove
-    the final verification/check capability.
+  Never add or remove a slot. If a slot is genuinely wrong for this objective,
+    emit a deviation_request and continue with the given slots.
   Never manufacture a misconception to reach a count.
   Never introduce excluded content.
   Never write item text.

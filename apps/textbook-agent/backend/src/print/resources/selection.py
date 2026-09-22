@@ -255,10 +255,21 @@ def derive_print_block_candidates(
         actions = set((card or {}).get("supported_actions") or ())
         if not intents and not actions:
             actions = set(fallback_actions.get(form_id) or ())
-        if intents and intent not in intents and card is not None:
+        # A formative SharedTaskSpec is path-neutral: its response action is
+        # the authoritative signal for the exact paper treatment.  The
+        # historical intent/object snapshot can legitimately omit that
+        # treatment (for example, compare + select-one maps to choices), but
+        # this exception admits only the already-mapped form, never an
+        # unrelated candidate.
+        formative_treatment = print_treatment_for_learner_action(action, intent=intent)
+        if (
+            intents
+            and intent not in intents
+            and card is not None
+            and not (task_mode == "formative" and formative_treatment == form_id)
+        ):
             excluded[form_id] = "intent_unsupported"
             continue
-        formative_treatment = print_treatment_for_learner_action(action, intent=intent)
         if action and actions and action not in actions and not (
             action in PASSIVE_ACTIONS and actions.intersection(PASSIVE_ACTIONS)
         ) and not (task_mode == "formative" and formative_treatment == form_id):

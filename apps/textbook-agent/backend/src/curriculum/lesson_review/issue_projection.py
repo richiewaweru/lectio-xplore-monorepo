@@ -8,8 +8,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from learn.contracts.lesson_document import validate_learn_document
-from print.contracts.lectio_page import validate_document as validate_print_document
+from contracts.lesson_document import validate_learn_document
+from contracts.lectio_page import validate_document as validate_print_document
 
 ArtifactPath = Literal["learn", "print"]
 IssuePath = Literal["learn", "print", "shared"]

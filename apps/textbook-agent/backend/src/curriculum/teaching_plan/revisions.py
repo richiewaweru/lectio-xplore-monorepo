@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import UTC, datetime
+import hashlib
+import json
 from typing import Any
 from uuid import uuid4
 
@@ -28,6 +30,87 @@ class TeachingRevisionStore:
         review.setdefault("revision", 1)
         review.setdefault("status", "pending")
         self._state["teaching_review"] = review
+        self._normalize_legacy_approved_snapshot()
+
+    def _normalize_legacy_approved_snapshot(self) -> None:
+        """Materialize the pre-ledger approved snapshot once and deterministically.
+
+        Older native generations persisted ``teaching_plan`` and an approved
+        ``teaching_review`` but predated the immutable ``teaching_revisions``
+        ledger. Treating those rows as pending makes the Plan UI and both
+        realization consumers disagree. The fallback is intentionally narrow:
+        it runs only for an approved review with a valid plan and no ledger,
+        and derives stable identity from the exact stored plan bytes.
+        """
+        if self._state.get("teaching_revisions"):
+            return
+        review = dict(self._state.get("teaching_review") or {})
+        if str(review.get("status") or "") != "approved":
+            return
+        raw_plan = self._state.get("teaching_plan")
+        if not isinstance(raw_plan, dict) or not raw_plan:
+            return
+
+        canonical = json.dumps(
+            {
+                "arc": raw_plan.get("arc"),
+                "sections": raw_plan.get("sections"),
+                "anchor_usage": raw_plan.get("anchor_usage"),
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        )
+        digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        plan_id = str(
+            self._state.get("teaching_plan_id")
+            or raw_plan.get("teaching_plan_id")
+            or f"legacy-teaching-{digest[:32]}"
+        )
+        approved_revision = int(
+            review.get("approved_revision")
+            or max(1, int(review.get("revision") or 1) - 1)
+        )
+        preparation_hash = str(
+            raw_plan.get("preparation_hash")
+            or (self._state.get("lesson_packet") or {}).get("preparation_hash")
+            or (self._state.get("catalogue") or {}).get("teaching_projection_hash")
+            or f"legacy-preparation-{digest}"
+        )
+        plan = deepcopy(raw_plan)
+        # The legacy native planner emitted an optional ``variant`` field on
+        # blocks. It is not part of the current closed TeachingPlan contract;
+        # remove only this retired compatibility field while importing an
+        # already-approved snapshot. New plans remain strict and extra fields
+        # still fail validation.
+        for section in plan.get("sections") or []:
+            for block in section.get("blocks") or []:
+                if isinstance(block, dict):
+                    block.pop("variant", None)
+        plan.update(
+            {
+                "teaching_plan_id": plan_id,
+                "revision": approved_revision,
+                "preparation_hash": preparation_hash,
+                "approval_status": "approved",
+            }
+        )
+        record = TeachingRevisionRecord(
+            teaching_plan_id=plan_id,
+            revision=approved_revision,
+            status="approved",
+            preparation_hash=preparation_hash,
+            plan=plan,
+            created_at=str(review.get("reviewed_at") or _utcnow()),
+            approved_at=str(review.get("reviewed_at") or _utcnow()),
+            reviewed_by=review.get("reviewed_by"),
+            teacher_note=review.get("teacher_note"),
+        )
+        self._state["teaching_plan_id"] = plan_id
+        review["approved_revision"] = approved_revision
+        self._state["teaching_review"] = review
+        self._state["teaching_plan"] = plan
+        self._state["teaching_revisions"] = [record.model_dump(mode="json")]
 
     @property
     def state(self) -> dict[str, Any]:

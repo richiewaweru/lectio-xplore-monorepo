@@ -196,9 +196,10 @@ async def test_unprepared_lesson_status_is_explicit_over_http(db_session_factory
         "print_realization_id": None,
         "print_open_href": None,
         "learn_output_id": None,
-        "learn_realization_id": None,
-        "learn_open_href": None,
-    }
+            "learn_realization_id": None,
+            "learn_open_href": None,
+			"builder_id": None,
+        }
 
 
 async def test_lesson_issues_projection_is_path_filtered_and_owned(db_session_factory) -> None:

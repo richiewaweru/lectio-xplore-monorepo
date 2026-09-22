@@ -21,6 +21,7 @@
 
 <svelte:head><title>Settings · Lectio</title></svelte:head>
 
+<a class="back-link" href="/units">← Units</a>
 <PageHeader title="Settings" description="Teaching profile, preferences, and advanced AI instructions." />
 
 <div class="settings-grid">
@@ -49,6 +50,16 @@
 </div>
 
 <style>
+	.back-link {
+		display: inline-block;
+		margin-bottom: var(--space-3);
+		color: var(--ink-2);
+		font-size: 0.875rem;
+		text-decoration: none;
+	}
+	.back-link:hover {
+		color: var(--ink);
+	}
 	.settings-grid {
 		display: grid;
 		gap: var(--space-4);

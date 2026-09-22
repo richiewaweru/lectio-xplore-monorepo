@@ -2,7 +2,6 @@
 	import { getContext, onMount } from 'svelte';
 	import { getBuilderLesson, openNativeLearnBuilderLesson } from '$lib/learn/authoring/builder/api/lesson-crud';
 	import { isLearnDocument, type LearnDocument } from '$lib/learn/document/types';
-	import DocumentEditor from '$lib/learn/document/DocumentEditor.svelte';
 	import StudentLessonShell from '$lib/learn/student/StudentLessonShell.svelte';
 	import { publishLearnRelease, listLearnReleases, type LearnReleaseRecord } from '$lib/learn/student/api/releases';
 	import { apiFetch } from '$lib/api/client';
@@ -25,7 +24,7 @@
 	};
 
 	const ctx = getContext<Ctx>('lessonWorkspace');
-	let tab = $state<'preview' | 'edit' | 'issues'>('preview');
+	let activeTab = $state<'preview' | 'issues'>('preview');
 	let document = $state<LearnDocument | null>(null);
 	let builderLessonId = $state<string | null>(null);
 	let loadError = $state<string | null>(null);
@@ -39,6 +38,10 @@
 	let assignClassId = $state('');
 	let assignMode = $state('rolling');
 	let assignStatus = $state<string | null>(null);
+
+	function selectTab(id: string): void {
+		if (id === 'preview' || id === 'issues') activeTab = id;
+	}
 
 	const artifact = $derived(lessonArtifactUi(ctx.preparation, 'learn', loadError));
 
@@ -183,7 +186,15 @@
 
 <div class="learn-ws">
 	<header class="bar">
-		<Tabs active={tab} tabs={[{ id: 'preview', label: 'Preview' }, { id: 'edit', label: 'Edit' }, { id: 'issues', label: 'Issues' }]} onSelect={(id) => (tab = id as typeof tab)} />
+		<Tabs
+			active={activeTab}
+			tabs={[
+				{ id: 'preview', label: 'Preview' },
+				{ id: 'edit', label: 'Edit', href: builderLessonId ? `/builder/${encodeURIComponent(builderLessonId)}` : undefined },
+				{ id: 'issues', label: 'Issues' }
+			]}
+			onSelect={selectTab}
+		/>
 		<div class="right">
 			{#if release}<Badge tone="ready">Published · Version {release.release_number}</Badge>{/if}
 			{#if assignStatus}<span class="ok">{assignStatus}</span>{/if}
@@ -194,16 +205,14 @@
 	{#if error}<InlineError message={error} />{/if}
 	{#if loading}
 		<p class="muted">Loading Learn lesson…</p>
-	{:else if tab === 'issues'}
+	{:else if activeTab === 'issues'}
 		<LessonIssuesPanel {issues} onRetry={retryLearn} />
 	{:else if artifact.state === 'not_created'}
 		<EmptyState title="Learn not created" description="Create an interactive Learn lesson from the approved teaching plan.">
 			{#snippet actions()}<Button busy={busy === 'create'} onclick={() => void createLearn()}>{busy === 'create' ? 'Creating…' : 'Create Learn'}</Button><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
 		</EmptyState>
-	{:else if tab === 'preview'}
+	{:else if activeTab === 'preview'}
 		{#if document}<StudentLessonShell {document} preview />{:else}<EmptyState title="Learn needs attention" description={loadError || 'The Learn preview is unavailable.'}>{#snippet actions()}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryLearn()}>Retry preview</Button>{/snippet}</EmptyState>{/if}
-	{:else if tab === 'edit'}
-		{#if builderLessonId && document}<DocumentEditor {document} lessonId={builderLessonId} previewHref={`/learn/lessons/${encodeURIComponent(builderLessonId)}`} />{:else}<EmptyState title="Builder unavailable" description={loadError || 'The existing Learn artifact has no editable document available.'}>{#snippet actions()}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryLearn()}>Retry</Button>{/snippet}</EmptyState>{/if}
 	{/if}
 </div>
 
