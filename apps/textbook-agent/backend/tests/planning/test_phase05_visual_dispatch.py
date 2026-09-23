@@ -14,7 +14,7 @@ from print.generation.whole_lesson.visual_dispatch import (
     figure_work_order_from_pending,
 )
 from v3_execution.models import ExecutorOutcome
-from v3_execution.prompts.visual_executor import build_visual_prompt
+from media.generation.prompt import build_visual_prompt
 from v3_execution.runtime.retry_runner import run_with_retries
 
 

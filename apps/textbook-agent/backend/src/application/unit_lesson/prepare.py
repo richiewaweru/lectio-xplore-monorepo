@@ -52,7 +52,7 @@ from curriculum.teaching_plan.instance_ids import (
     assign_slot_instance_ids,
 )
 from curriculum.teaching_plan.projections import project_shared_preparation_packet
-from v3_blueprint.planning.models import (
+from curriculum.planning.models import (
     AnchorSpec,
     ConceptCard,
     LessonIntent,
@@ -61,8 +61,8 @@ from v3_blueprint.planning.models import (
     StructuralPlan,
     VariantSpec,
 )
-from v3_blueprint.planning.objective_ownership import ObjectiveOwnership, ObjectiveOwnershipError
-from v3_blueprint.skeletons import (
+from curriculum.planning.objective_ownership import ObjectiveOwnership, ObjectiveOwnershipError
+from curriculum.planning.skeletons import (
     SkeletonPreviewRequest,
     SkeletonVariantPreview,
     load_skeleton_catalog,

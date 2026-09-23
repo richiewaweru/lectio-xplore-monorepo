@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from core.config import GenerationPipeline, settings
-from v3_blueprint.planning.persistence import persist_chunked_state
+from curriculum.planning.persistence import persist_chunked_state
 
 log = logging.getLogger(__name__)
 

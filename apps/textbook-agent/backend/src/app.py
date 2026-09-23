@@ -54,10 +54,11 @@ from media.diagnostics.v3_image_pipeline_diagnostic import (
 )
 from media.storage.image_store import local_image_store_root
 from print.http.v3_studio.generation_writer import V3GenerationWriter
+from application.unit_lesson.native_http import native_lesson_router
 from print.http.v3_studio.router import v3_studio_router
 from print.rendering.pdf.runtime import cleanup_stale_pdf_exports
 from resource_specs.loader import initialize_registry as initialize_resource_registry
-from v3_blueprint.skeletons import initialize_skeleton_catalog
+from curriculum.planning.skeletons import initialize_skeleton_catalog
 
 logger = logging.getLogger("uvicorn.error")
 __version__ = VERSION
@@ -327,6 +328,7 @@ def create_app() -> FastAPI:
     app.include_router(profile_router)
     app.include_router(prompts_router)
     # D3: /api/v1/packs retired (non-Unit)
+    app.include_router(native_lesson_router, prefix="/api/v1")
     app.include_router(v3_studio_router, prefix="/api/v1")
     # D3: /api/v1/skeletons* retired (non-Unit HTTP)
     app.include_router(planning_router)

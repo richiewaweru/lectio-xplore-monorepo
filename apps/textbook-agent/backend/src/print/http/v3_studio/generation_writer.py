@@ -422,7 +422,7 @@ class V3GenerationWriter:
                     "updated_at": datetime.now(UTC).isoformat(),
                 }
                 model.document_json = document
-                from v3_blueprint.planning.persistence import persist_chunked_state
+                from curriculum.planning.persistence import persist_chunked_state
 
                 await persist_chunked_state(
                     generation_id,
@@ -863,7 +863,7 @@ class V3GenerationWriter:
                 }
                 model.document_json = document
                 model.report_json = report
-                from v3_blueprint.planning.persistence import persist_chunked_state
+                from curriculum.planning.persistence import persist_chunked_state
 
                 await persist_chunked_state(model.id, chunked_update, session=session)
             if models:

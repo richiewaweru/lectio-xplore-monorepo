@@ -11,8 +11,7 @@ from PIL import Image
 from contracts.lectio import get_section_field_for_component
 from media.qc.visual_qc import VisualQCVerdict
 from v3_blueprint.models import ProductionBlueprint
-from v3_execution.compile_orders import compile_execution_bundle
-from v3_execution.executors.visual_executor import _cache_key_for_visual, execute_visual
+from media.generation.executor import _cache_key_for_visual, execute_visual
 from v3_execution.models import (
     ExecutorOutcome,
     GeneratedAnswerKeyBlock,
@@ -26,7 +25,6 @@ from v3_execution.models import (
     WriterQuestion,
 )
 from v3_execution.runtime import validation as v
-from v3_execution.runtime.runner import run_generation
 from v3_review.models import CoherenceReport, ReviewIssue
 
 
@@ -40,7 +38,7 @@ def _png_bytes(size: tuple[int, int] = (1024, 1024)) -> bytes:
 @pytest.fixture(autouse=True)
 def _disable_visual_qc_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "v3_execution.executors.visual_executor.visual_qc_enabled",
+        "media.generation.executor.visual_qc_enabled",
         lambda: False,
     )
 
@@ -55,64 +53,8 @@ def _load_v3_fixture(filename: str) -> dict:
     return json.loads(raw.read_text(encoding="utf-8"))
 
 
-def test_compile_execution_bundle() -> None:
-    bp = _load_example("amara_compound_area.json")
-    bundle = compile_execution_bundle(
-        bp,
-        generation_id="g1",
-        blueprint_id="b1",
-        template_id="guided-concept-path",
-    )
-    assert bundle.section_orders
-    assert bundle.question_orders
-    assert bundle.visual_orders
-    assert bundle.answer_key_order is not None
 
 
-@pytest.mark.asyncio
-async def test_runner_skips_all_ready_sections_and_preserves_them(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    blueprint = ProductionBlueprint.model_validate(_load_v3_fixture("gen_5aed3804_blueprint.json"))
-    pack = _load_v3_fixture("gen_5aed3804_pack.json")
-    preserved = pack["sections"]
-
-    async def forbidden(*_args: object, **_kwargs: object) -> list:
-        raise AssertionError("ready section executor must not run")
-
-    async def no_answer(*_args: object, **_kwargs: object) -> None:
-        return None
-
-    async def coherence(_blueprint, draft_pack, _emit, **_kwargs: object) -> CoherenceReport:
-        return CoherenceReport(
-            blueprint_id=draft_pack.blueprint_id,
-            generation_id=draft_pack.generation_id,
-            status="passed",
-            deterministic_passed=True,
-        )
-
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_section", forbidden)
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_questions", forbidden)
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_visual", forbidden)
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_answer_key", no_answer)
-    monkeypatch.setattr("v3_execution.runtime.runner.run_coherence_review", coherence)
-    captured: list[tuple[str, dict]] = []
-
-    async def emit(event_type: str, payload: dict) -> None:
-        captured.append((event_type, payload))
-
-    await run_generation(
-        blueprint=blueprint,
-        generation_id="resume-all-ready",
-        blueprint_id="resume-blueprint",
-        template_id="guided-concept-path",
-        emit_event=emit,
-        preserved_ready_sections=preserved,
-    )
-
-    draft = next(payload["pack"] for event, payload in captured if event == "draft_pack_ready")
-    assert draft["sections"] == preserved
-    assert any(event == "generation_complete" for event, _payload in captured)
 
 
 def test_visual_cache_key_is_stable_and_includes_constraints() -> None:
@@ -134,106 +76,6 @@ def test_visual_cache_key_is_stable_and_includes_constraints() -> None:
     assert same != _cache_key_for_visual(prompt="draw it", order=changed, model_name="grok")
 
 
-@pytest.mark.asyncio
-async def test_runner_emits_skeleton_ready_before_component_events(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    bp = _load_example("amara_compound_area.json")
-
-    async def stub_section(order, emit, **_: object) -> list[GeneratedComponentBlock]:
-        blocks: list[GeneratedComponentBlock] = []
-        for position, component in enumerate(order.section.components):
-            field = get_section_field_for_component(component.component_id) or "explanation"
-            block = GeneratedComponentBlock(
-                block_id=f"b-{component.component_id}",
-                section_id=order.section.id,
-                component_id=component.component_id,
-                section_field=field,
-                position=position,
-                data={"body": component.content_intent, "emphasis": []},
-                source_work_order_id=order.work_order_id,
-            )
-            await emit(
-                "component_ready",
-                {
-                    "component_id": block.component_id,
-                    "section_id": block.section_id,
-                    "section_field": block.section_field,
-                    "data": block.data,
-                },
-            )
-            blocks.append(block)
-        return blocks
-
-    async def stub_questions(order, emit, **_: object) -> list[GeneratedQuestionBlock]:
-        _ = order
-        await emit("question_ready", {"section_id": order.section_id})
-        return []
-
-    async def stub_visual(order, emit, **_kwargs) -> list[GeneratedVisualBlock]:
-        _ = order
-        _ = emit
-        return []
-
-    async def noop_answer(order, emit, **_kwargs) -> GeneratedAnswerKeyBlock:
-        return GeneratedAnswerKeyBlock(
-            answer_key_id="ak",
-            style="answers_only",
-            entries=[],
-            source_work_order_id="answer-key-main",
-        )
-
-    async def stub_coherence_review(
-        blueprint,
-        draft_pack,
-        emit_event,
-        **_kwargs: object,
-    ) -> CoherenceReport:
-        _ = blueprint
-        _ = emit_event
-        return CoherenceReport(
-            blueprint_id=draft_pack.blueprint_id,
-            generation_id=draft_pack.generation_id,
-            status="passed",
-            deterministic_passed=True,
-            issues=[],
-        )
-
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_section", stub_section)
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_questions", stub_questions)
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_visual", stub_visual)
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_answer_key", noop_answer)
-    monkeypatch.setattr("v3_execution.runtime.runner.run_coherence_review", stub_coherence_review)
-
-    captured: list[tuple[str, dict]] = []
-
-    async def capture(event_type: str, payload: dict) -> None:
-        captured.append((event_type, payload))
-
-    await run_generation(
-        blueprint=bp,
-        generation_id="g-skeleton",
-        blueprint_id="b-skeleton",
-        template_id="guided-concept-path",
-        emit_event=capture,
-        model_overrides=None,
-    )
-
-    event_types = [event for event, _payload in captured]
-    skeleton_idx = event_types.index("skeleton_ready")
-    assert event_types.index("work_orders_compiled") < skeleton_idx
-    assert skeleton_idx < event_types.index("component_ready")
-
-    skeleton_payload = captured[skeleton_idx][1]
-    pack = skeleton_payload["pack"]
-    expected_section_ids = [section.section_id for section in bp.sections]
-    assert skeleton_payload["section_count"] == len(expected_section_ids)
-    assert [section["section_id"] for section in pack["sections"]] == expected_section_ids
-    assert all(section["section_id"] for section in pack["sections"])
-    assert pack["status"] == "streaming_preview"
-    assert pack["sections"][0]["components"][0]["component_id"]
-    component_payload = next(payload for event, payload in captured if event == "component_ready")
-    assert component_payload["section_id"] in expected_section_ids
 
 
 def test_validate_visual_accepts_http_scheme() -> None:
@@ -336,10 +178,10 @@ async def test_execute_visual_series_sets_parent_visual_id(
         _ = max_retries
         return await attempt(False)
 
-    monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: StubClient())
+    monkeypatch.setattr("media.generation.executor.get_image_client", lambda: StubClient())
     monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: StubStore())
-    monkeypatch.setattr("v3_execution.executors.visual_executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
-    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", stub_run_with_retries)
+    monkeypatch.setattr("media.generation.executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
+    monkeypatch.setattr("media.generation.executor.run_with_retries", stub_run_with_retries)
 
     captured: list[tuple[str, dict]] = []
 
@@ -381,8 +223,8 @@ async def test_execute_visual_returns_failed_block_and_event_on_failure(
         _ = max_retries
         return ExecutorOutcome(ok=False, errors=["provider timeout"])
 
-    monkeypatch.setattr("v3_execution.executors.visual_executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
-    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", stub_run_with_retries)
+    monkeypatch.setattr("media.generation.executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
+    monkeypatch.setattr("media.generation.executor.run_with_retries", stub_run_with_retries)
 
     captured: list[tuple[str, dict]] = []
 
@@ -452,12 +294,12 @@ async def test_execute_visual_qc_accept_uploads_initial_image(
         _ = max_retries
         return await attempt(False)
 
-    monkeypatch.setattr("v3_execution.executors.visual_executor.visual_qc_enabled", lambda: True)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.evaluate_visual_quality", accept_qc)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: client)
+    monkeypatch.setattr("media.generation.executor.visual_qc_enabled", lambda: True)
+    monkeypatch.setattr("media.generation.executor.evaluate_visual_quality", accept_qc)
+    monkeypatch.setattr("media.generation.executor.get_image_client", lambda: client)
     monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: store)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
-    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", stub_run_with_retries)
+    monkeypatch.setattr("media.generation.executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
+    monkeypatch.setattr("media.generation.executor.run_with_retries", stub_run_with_retries)
 
     async def emit(_event_type: str, _payload: dict) -> None:
         return None
@@ -516,10 +358,10 @@ async def test_execute_visual_cache_hit_skips_provider_and_copies_cached_image(
         _ = max_retries
         return await attempt(False)
 
-    monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: StubClient())
+    monkeypatch.setattr("media.generation.executor.get_image_client", lambda: StubClient())
     monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: store)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
-    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", stub_run_with_retries)
+    monkeypatch.setattr("media.generation.executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
+    monkeypatch.setattr("media.generation.executor.run_with_retries", stub_run_with_retries)
 
     async def emit(_event_type: str, _payload: dict) -> None:
         return None
@@ -585,10 +427,10 @@ async def test_execute_visual_stale_cache_copy_falls_back_to_generation(
         _ = max_retries
         return await attempt(False)
 
-    monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: client)
+    monkeypatch.setattr("media.generation.executor.get_image_client", lambda: client)
     monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: store)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
-    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", stub_run_with_retries)
+    monkeypatch.setattr("media.generation.executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
+    monkeypatch.setattr("media.generation.executor.run_with_retries", stub_run_with_retries)
 
     async def emit(_event_type: str, _payload: dict) -> None:
         return None
@@ -651,10 +493,10 @@ async def test_execute_visual_cache_miss_uploads_generation_and_cache_objects(
         _ = max_retries
         return await attempt(False)
 
-    monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: StubClient())
+    monkeypatch.setattr("media.generation.executor.get_image_client", lambda: StubClient())
     monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: store)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
-    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", stub_run_with_retries)
+    monkeypatch.setattr("media.generation.executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
+    monkeypatch.setattr("media.generation.executor.run_with_retries", stub_run_with_retries)
 
     async def emit(_event_type: str, _payload: dict) -> None:
         return None
@@ -718,12 +560,12 @@ async def test_execute_visual_qc_flag_uploads_original_with_metadata_without_ret
         _ = max_retries
         return await attempt(False)
 
-    monkeypatch.setattr("v3_execution.executors.visual_executor.visual_qc_enabled", lambda: True)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.evaluate_visual_quality", flag_qc)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: client)
+    monkeypatch.setattr("media.generation.executor.visual_qc_enabled", lambda: True)
+    monkeypatch.setattr("media.generation.executor.evaluate_visual_quality", flag_qc)
+    monkeypatch.setattr("media.generation.executor.get_image_client", lambda: client)
     monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: StubStore())
-    monkeypatch.setattr("v3_execution.executors.visual_executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
-    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", stub_run_with_retries)
+    monkeypatch.setattr("media.generation.executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
+    monkeypatch.setattr("media.generation.executor.run_with_retries", stub_run_with_retries)
 
     async def emit(_event_type: str, _payload: dict) -> None:
         return None
@@ -779,12 +621,12 @@ async def test_execute_visual_qc_reject_keeps_rendered_asset_with_warning(
         _ = max_retries
         return await attempt(False)
 
-    monkeypatch.setattr("v3_execution.executors.visual_executor.visual_qc_enabled", lambda: True)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.evaluate_visual_quality", reject_qc)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: StubClient())
+    monkeypatch.setattr("media.generation.executor.visual_qc_enabled", lambda: True)
+    monkeypatch.setattr("media.generation.executor.evaluate_visual_quality", reject_qc)
+    monkeypatch.setattr("media.generation.executor.get_image_client", lambda: StubClient())
     monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: StubStore())
-    monkeypatch.setattr("v3_execution.executors.visual_executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
-    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", stub_run_with_retries)
+    monkeypatch.setattr("media.generation.executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
+    monkeypatch.setattr("media.generation.executor.run_with_retries", stub_run_with_retries)
 
     async def emit(_event_type: str, _payload: dict) -> None:
         return None
@@ -832,12 +674,12 @@ async def test_execute_visual_qc_error_fails_open(
         _ = max_retries
         return await attempt(False)
 
-    monkeypatch.setattr("v3_execution.executors.visual_executor.visual_qc_enabled", lambda: True)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.evaluate_visual_quality", qc_error)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: StubClient())
+    monkeypatch.setattr("media.generation.executor.visual_qc_enabled", lambda: True)
+    monkeypatch.setattr("media.generation.executor.evaluate_visual_quality", qc_error)
+    monkeypatch.setattr("media.generation.executor.get_image_client", lambda: StubClient())
     monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: StubStore())
-    monkeypatch.setattr("v3_execution.executors.visual_executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
-    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", stub_run_with_retries)
+    monkeypatch.setattr("media.generation.executor.load_image_provider_spec", lambda: SimpleNamespace(provider="stub", model_name="stub-model"))
+    monkeypatch.setattr("media.generation.executor.run_with_retries", stub_run_with_retries)
 
     async def emit(_event_type: str, _payload: dict) -> None:
         return None
@@ -897,13 +739,13 @@ async def test_diagram_precision_composes_before_qc_and_cache(monkeypatch: pytes
         _ = max_retries
         return await attempt(False)
 
-    monkeypatch.setattr("v3_execution.executors.visual_executor.visual_qc_enabled", lambda: True)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.evaluate_visual_quality", qc)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: Client())
+    monkeypatch.setattr("media.generation.executor.visual_qc_enabled", lambda: True)
+    monkeypatch.setattr("media.generation.executor.evaluate_visual_quality", qc)
+    monkeypatch.setattr("media.generation.executor.get_image_client", lambda: Client())
     monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: store)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", one_attempt)
+    monkeypatch.setattr("media.generation.executor.run_with_retries", one_attempt)
     monkeypatch.setattr(
-        "v3_execution.executors.visual_executor.load_image_provider_spec",
+        "media.generation.executor.load_image_provider_spec",
         lambda: SimpleNamespace(provider="stub", model_name="stub-model"),
     )
 
@@ -958,10 +800,10 @@ async def test_diagram_precision_flagged_upload_skips_shared_cache(monkeypatch: 
         _ = max_retries
         return await attempt(False)
 
-    monkeypatch.setattr("v3_execution.executors.visual_executor.visual_qc_enabled", lambda: True)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.evaluate_visual_quality", qc)
+    monkeypatch.setattr("media.generation.executor.visual_qc_enabled", lambda: True)
+    monkeypatch.setattr("media.generation.executor.evaluate_visual_quality", qc)
     monkeypatch.setattr(
-        "v3_execution.executors.visual_executor.get_image_client",
+        "media.generation.executor.get_image_client",
         lambda: SimpleNamespace(generate_image=lambda **_: None),
     )
 
@@ -969,11 +811,11 @@ async def test_diagram_precision_flagged_upload_skips_shared_cache(monkeypatch: 
         async def generate_image(self, *, prompt: str):
             return SimpleNamespace(bytes=base, format="png", mime_type="image/png")
 
-    monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: Client())
+    monkeypatch.setattr("media.generation.executor.get_image_client", lambda: Client())
     monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: store)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", one_attempt)
+    monkeypatch.setattr("media.generation.executor.run_with_retries", one_attempt)
     monkeypatch.setattr(
-        "v3_execution.executors.visual_executor.load_image_provider_spec",
+        "media.generation.executor.load_image_provider_spec",
         lambda: SimpleNamespace(provider="stub", model_name="stub-model"),
     )
 
@@ -1032,13 +874,13 @@ async def test_diagram_precision_qc_exception_fails_closed_without_cache(
         _ = max_retries
         return await attempt(False)
 
-    monkeypatch.setattr("v3_execution.executors.visual_executor.visual_qc_enabled", lambda: True)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.evaluate_visual_quality", qc_error)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.get_image_client", lambda: Client())
+    monkeypatch.setattr("media.generation.executor.visual_qc_enabled", lambda: True)
+    monkeypatch.setattr("media.generation.executor.evaluate_visual_quality", qc_error)
+    monkeypatch.setattr("media.generation.executor.get_image_client", lambda: Client())
     monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: store)
-    monkeypatch.setattr("v3_execution.executors.visual_executor.run_with_retries", one_attempt)
+    monkeypatch.setattr("media.generation.executor.run_with_retries", one_attempt)
     monkeypatch.setattr(
-        "v3_execution.executors.visual_executor.load_image_provider_spec",
+        "media.generation.executor.load_image_provider_spec",
         lambda: SimpleNamespace(provider="stub", model_name="stub-model"),
     )
 
@@ -1082,16 +924,16 @@ async def test_execute_visual_preserves_stage_and_exception_type_on_failure(
         return await attempt(False)
 
     monkeypatch.setattr(
-        "v3_execution.executors.visual_executor.get_image_client",
+        "media.generation.executor.get_image_client",
         lambda: StubClient(),
     )
     monkeypatch.setattr("media.storage.image_store.get_image_store", lambda: StubStore())
     monkeypatch.setattr(
-        "v3_execution.executors.visual_executor.load_image_provider_spec",
+        "media.generation.executor.load_image_provider_spec",
         lambda: SimpleNamespace(provider="stub", model_name="stub-model"),
     )
     monkeypatch.setattr(
-        "v3_execution.executors.visual_executor.run_with_retries",
+        "media.generation.executor.run_with_retries",
         stub_run_with_retries,
     )
 
@@ -1112,7 +954,7 @@ async def test_execute_visual_preserves_stage_and_exception_type_on_failure(
         log_records.append(entry)
 
     monkeypatch.setattr(
-        "v3_execution.executors.visual_executor.logger.error",
+        "media.generation.executor.logger.error",
         _capture_error,
     )
 
@@ -1169,445 +1011,8 @@ def test_validate_question_block_rejects_answer_drift() -> None:
     assert v.validate_question_block(block, order)
 
 
-@pytest.mark.asyncio
-async def test_runner_with_stubbed_executors(monkeypatch: pytest.MonkeyPatch) -> None:
-    bp = _load_example("amara_compound_area.json")
-
-    async def stub_section(order, emit, **_: object) -> list[GeneratedComponentBlock]:
-        blocks: list[GeneratedComponentBlock] = []
-        for position, component in enumerate(order.section.components):
-            field = get_section_field_for_component(component.component_id) or "explanation"
-            if field == "explanation":
-                payload = {"body": component.content_intent, "emphasis": []}
-            elif field == "worked_example":
-                payload = {
-                    "title": component.content_intent,
-                    "solution": [{"step": "", "latex": "", "explain": "", "diagramRef": []}],
-                    "answer": "",
-                }
-            elif field == "summary":
-                payload = {"paragraphs": [component.content_intent], "key_points": [], "cta": {}}
-            elif field == "hook":
-                payload = {
-                    "headline": component.content_intent,
-                    "body": component.content_intent,
-                    "anchor": "anchor",
-                }
-            elif field == "practice":
-                payload = {"introduction": "", "items": [], "footnote": "", "diagram": None}
-            else:
-                payload = {"detail": component.content_intent}
-            blk = GeneratedComponentBlock(
-                block_id=f"b-{component.component_id}",
-                section_id=order.section.id,
-                component_id=component.component_id,
-                section_field=field,
-                position=position,
-                data=payload,
-                source_work_order_id=order.work_order_id,
-            )
-            blocks.append(blk)
-            await emit(
-                "component_ready",
-                {
-                    "component_id": blk.component_id,
-                    "section_id": blk.section_id,
-                    "data": blk.data,
-                },
-            )
-        return blocks
-
-    async def stub_questions(
-        order,
-        emit,
-        **_: object,
-    ) -> list[GeneratedQuestionBlock]:
-        out: list[GeneratedQuestionBlock] = []
-        for question in order.questions:
-            out.append(
-                GeneratedQuestionBlock(
-                    question_id=question.id,
-                    section_id=order.section_id,
-                    difficulty=question.difficulty,
-                    data={
-                        "question": question.id,
-                        "difficulty": question.difficulty,
-                        "hints": [],
-                        "problem_type": "open",
-                    },
-                    expected_answer=question.expected_answer,
-                    source_work_order_id=order.work_order_id,
-                )
-            )
-        await emit("question_ready", {"section_id": order.section_id})
-        return out
-
-    async def stub_visual(order, emit, **_kwargs) -> list[GeneratedVisualBlock]:
-        blk = GeneratedVisualBlock(
-            visual_id=order.visual.id,
-            attaches_to=order.visual.attaches_to,
-            mode="diagram",
-            image_url="http://localhost/generated.png",
-            source_work_order_id=order.work_order_id,
-            caption="caption",
-            alt_text="caption",
-        )
-        await emit("visual_ready", {"visual_id": blk.visual_id})
-        return [blk]
-
-    async def noop_answer(order, emit, **_kwargs) -> GeneratedAnswerKeyBlock:
-        return GeneratedAnswerKeyBlock(
-            answer_key_id="ak",
-            style="answers_only",
-            entries=[{"question_id": q.id, "student_answer": q.expected_answer} for q in order.questions],
-            source_work_order_id=order.work_order_id,
-        )
-
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_section", stub_section)
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_questions", stub_questions)
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_visual", stub_visual)
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_answer_key", noop_answer)
-
-    async def stub_coherence_review(
-        blueprint,
-        draft_pack,
-        emit_event,
-        **_kwargs: object,
-    ) -> CoherenceReport:
-        _ = blueprint
-        _ = emit_event
-        return CoherenceReport(
-            blueprint_id=draft_pack.blueprint_id,
-            generation_id=draft_pack.generation_id,
-            status="passed",
-            deterministic_passed=True,
-            issues=[],
-        )
-
-    monkeypatch.setattr("v3_execution.runtime.runner.run_coherence_review", stub_coherence_review)
-
-    captured: list[tuple[str, dict]] = []
-
-    async def capture(event_type: str, payload: dict) -> None:
-        captured.append((event_type, payload))
-
-    result = await run_generation(
-        blueprint=bp,
-        generation_id="g-x",
-        blueprint_id="b-x",
-        template_id="guided-concept-path",
-        emit_event=capture,
-        model_overrides=None,
-    )
-
-    assert result.component_blocks
-    assert result.question_blocks
-    assert result.visual_blocks
-    assert result.answer_key
-    event_types = [event for event, _payload in captured]
-    assert "draft_pack_ready" in event_types
-    assert "final_pack_ready" in event_types
-    assert "resource_finalised" in event_types
-    assert "generation_complete" in event_types
-
-    draft_idx = event_types.index("draft_pack_ready")
-    final_idx = event_types.index("final_pack_ready")
-    resource_idx = event_types.index("resource_finalised")
-    complete_idx = event_types.index("generation_complete")
-    assert draft_idx < final_idx < resource_idx < complete_idx
-
-    draft_payload = next(payload for event, payload in captured if event == "draft_pack_ready")
-    assert isinstance(draft_payload.get("pack"), dict)
-    assert "draft_preview" not in draft_payload
-
-    final_payload = next(payload for event, payload in captured if event == "final_pack_ready")
-    assert isinstance(final_payload.get("pack"), dict)
 
 
-@pytest.mark.asyncio
-async def test_runner_emits_draft_status_updated_when_blocking_issues_remain(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    bp = _load_example("amara_compound_area.json")
-
-    async def stub_section(order, emit, **_: object) -> list[GeneratedComponentBlock]:
-        blocks: list[GeneratedComponentBlock] = []
-        for position, component in enumerate(order.section.components):
-            field = get_section_field_for_component(component.component_id) or "explanation"
-            blk = GeneratedComponentBlock(
-                block_id=f"b-{component.component_id}",
-                section_id=order.section.id,
-                component_id=component.component_id,
-                section_field=field,
-                position=position,
-                data={"body": component.content_intent, "emphasis": []},
-                source_work_order_id=order.work_order_id,
-            )
-            blocks.append(blk)
-            await emit(
-                "component_ready",
-                {
-                    "component_id": blk.component_id,
-                    "section_id": blk.section_id,
-                    "data": blk.data,
-                },
-            )
-        return blocks
-
-    async def stub_questions(order, emit, **_: object) -> list[GeneratedQuestionBlock]:
-        out: list[GeneratedQuestionBlock] = []
-        for question in order.questions:
-            out.append(
-                GeneratedQuestionBlock(
-                    question_id=question.id,
-                    section_id=order.section_id,
-                    difficulty=question.difficulty,
-                    data={
-                        "question": question.id,
-                        "difficulty": question.difficulty,
-                        "hints": [],
-                        "problem_type": "open",
-                    },
-                    expected_answer=question.expected_answer,
-                    source_work_order_id=order.work_order_id,
-                )
-            )
-        await emit("question_ready", {"section_id": order.section_id})
-        return out
-
-    async def stub_visual(order, emit, **_kwargs) -> list[GeneratedVisualBlock]:
-        blk = GeneratedVisualBlock(
-            visual_id=order.visual.id,
-            attaches_to=order.visual.attaches_to,
-            mode="diagram",
-            image_url="http://localhost/generated.png",
-            source_work_order_id=order.work_order_id,
-            caption="caption",
-            alt_text="caption",
-        )
-        await emit("visual_ready", {"visual_id": blk.visual_id})
-        return [blk]
-
-    async def noop_answer(order, emit, **_kwargs) -> GeneratedAnswerKeyBlock:
-        return GeneratedAnswerKeyBlock(
-            answer_key_id="ak",
-            style="answers_only",
-            entries=[{"question_id": q.id, "student_answer": q.expected_answer} for q in order.questions],
-            source_work_order_id=order.work_order_id,
-        )
-
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_section", stub_section)
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_questions", stub_questions)
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_visual", stub_visual)
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_answer_key", noop_answer)
-
-    async def stub_coherence_review(
-        blueprint,
-        draft_pack,
-        emit_event,
-        **_kwargs: object,
-    ) -> CoherenceReport:
-        _ = blueprint
-        _ = emit_event
-        issue = ReviewIssue(
-            severity="blocking",
-            category="missing_planned_content",
-            message="Blocking issue remains.",
-            suggested_repair_executor="section_writer",
-        )
-        return CoherenceReport(
-            blueprint_id=draft_pack.blueprint_id,
-            generation_id=draft_pack.generation_id,
-            status="failed",
-            deterministic_passed=False,
-            issues=[issue],
-            blocking_count=1,
-            major_count=0,
-            minor_count=0,
-        )
-
-    monkeypatch.setattr("v3_execution.runtime.runner.run_coherence_review", stub_coherence_review)
-
-    captured: list[tuple[str, dict]] = []
-
-    async def capture(event_type: str, payload: dict) -> None:
-        captured.append((event_type, payload))
-
-    await run_generation(
-        blueprint=bp,
-        generation_id="g-y",
-        blueprint_id="b-y",
-        template_id="guided-concept-path",
-        emit_event=capture,
-        model_overrides=None,
-    )
-
-    event_types = [event for event, _payload in captured]
-    assert "draft_pack_ready" in event_types
-    assert "draft_status_updated" in event_types
-    assert "final_pack_ready" not in event_types
-    assert "resource_finalised" in event_types
-    assert "generation_complete" in event_types
-
-    draft_idx = event_types.index("draft_pack_ready")
-    draft_status_idx = event_types.index("draft_status_updated")
-    resource_idx = event_types.index("resource_finalised")
-    complete_idx = event_types.index("generation_complete")
-    assert draft_idx < draft_status_idx < resource_idx < complete_idx
-
-    updated_payload = next(payload for event, payload in captured if event == "draft_status_updated")
-    assert isinstance(updated_payload.get("pack"), dict)
 
 
-@pytest.mark.asyncio
-async def test_runner_records_strategic_trace_checkpoints(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    bp = _load_example("amara_compound_area.json")
-
-    async def stub_section(order, emit, **_: object) -> list[GeneratedComponentBlock]:
-        blocks: list[GeneratedComponentBlock] = []
-        for position, component in enumerate(order.section.components):
-            field = get_section_field_for_component(component.component_id) or "explanation"
-            blk = GeneratedComponentBlock(
-                block_id=f"b-{component.component_id}",
-                section_id=order.section.id,
-                component_id=component.component_id,
-                section_field=field,
-                position=position,
-                data={"body": component.content_intent, "emphasis": []},
-                source_work_order_id=order.work_order_id,
-            )
-            blocks.append(blk)
-            await emit(
-                "component_ready",
-                {
-                    "component_id": blk.component_id,
-                    "section_id": blk.section_id,
-                    "data": blk.data,
-                },
-            )
-        return blocks
-
-    async def stub_questions(order, emit, **_: object) -> list[GeneratedQuestionBlock]:
-        out: list[GeneratedQuestionBlock] = []
-        for question in order.questions:
-            out.append(
-                GeneratedQuestionBlock(
-                    question_id=question.id,
-                    section_id=order.section_id,
-                    difficulty=question.difficulty,
-                    data={"question": question.id, "difficulty": question.difficulty, "hints": [], "problem_type": "open"},
-                    expected_answer=question.expected_answer,
-                    source_work_order_id=order.work_order_id,
-                )
-            )
-        await emit("question_ready", {"section_id": order.section_id})
-        return out
-
-    async def stub_visual(order, emit, **_kwargs) -> list[GeneratedVisualBlock]:
-        blk = GeneratedVisualBlock(
-            visual_id=order.visual.id,
-            attaches_to=order.visual.attaches_to,
-            mode="diagram",
-            image_url="http://localhost/generated.png",
-            source_work_order_id=order.work_order_id,
-            caption="caption",
-            alt_text="caption",
-        )
-        await emit("visual_ready", {"visual_id": blk.visual_id})
-        return [blk]
-
-    async def noop_answer(order, emit, **_kwargs) -> GeneratedAnswerKeyBlock:
-        return GeneratedAnswerKeyBlock(
-            answer_key_id="ak",
-            style="answers_only",
-            entries=[{"question_id": q.id, "student_answer": q.expected_answer} for q in order.questions],
-            source_work_order_id=order.work_order_id,
-        )
-
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_section", stub_section)
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_questions", stub_questions)
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_visual", stub_visual)
-    monkeypatch.setattr("v3_execution.runtime.runner.execute_answer_key", noop_answer)
-
-    async def stub_coherence_review(
-        blueprint,
-        draft_pack,
-        emit_event,
-        **_kwargs: object,
-    ) -> CoherenceReport:
-        _ = blueprint
-        _ = emit_event
-        issue = ReviewIssue(
-            severity="minor",
-            category="print_risk",
-            message="Minor warning remains.",
-            suggested_repair_executor="section_writer",
-        )
-        return CoherenceReport(
-            blueprint_id=draft_pack.blueprint_id,
-            generation_id=draft_pack.generation_id,
-            status="passed_with_warnings",
-            deterministic_passed=True,
-            issues=[issue],
-            minor_count=1,
-        )
-
-    monkeypatch.setattr("v3_execution.runtime.runner.run_coherence_review", stub_coherence_review)
-
-    class StubTraceWriter:
-        def __init__(self) -> None:
-            self.calls: list[str] = []
-
-        async def record_work_orders(self, **_kwargs):
-            self.calls.append("record_work_orders")
-
-        async def record_execution_summary(self, **_kwargs):
-            self.calls.append("record_execution_summary")
-
-        async def record_visual_completed(self, **_kwargs):
-            self.calls.append("record_visual_completed")
-
-        async def record_visual_failed(self, **_kwargs):
-            self.calls.append("record_visual_failed")
-
-        async def record_draft_pack(self, **_kwargs):
-            self.calls.append("record_draft_pack")
-
-        async def record_booklet_status(self, **_kwargs):
-            self.calls.append("record_booklet_status")
-
-        async def record_review_summary(self, **_kwargs):
-            self.calls.append("record_review_summary")
-
-        async def record_final_pack(self, **_kwargs):
-            self.calls.append("record_final_pack")
-
-        async def record_terminal(self, **_kwargs):
-            self.calls.append("record_terminal")
-
-    writer = StubTraceWriter()
-
-    async def capture(_event_type: str, _payload: dict) -> None:
-        return None
-
-    await run_generation(
-        blueprint=bp,
-        generation_id="g-trace",
-        blueprint_id="b-trace",
-        template_id="guided-concept-path",
-        emit_event=capture,
-        model_overrides=None,
-        trace_writer=writer,  # type: ignore[arg-type]
-    )
-
-    assert "record_work_orders" in writer.calls
-    assert "record_visual_completed" in writer.calls
-    assert "record_execution_summary" in writer.calls
-    assert "record_draft_pack" in writer.calls
-    assert "record_booklet_status" in writer.calls
-    assert "record_review_summary" in writer.calls
-    assert "record_final_pack" in writer.calls
-    assert writer.calls[-1] == "record_terminal"
 

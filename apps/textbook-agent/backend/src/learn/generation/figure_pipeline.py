@@ -13,8 +13,8 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from core.prompts.loader import effective_prompt_text
-from v3_execution.executors.visual_executor import execute_visual
-from v3_execution.models import VisualGeneratorWorkOrder, VisualPlanItem
+from media.generation.executor import execute_visual
+from media.generation.contracts import VisualGeneratorWorkOrder, VisualPlanItem
 
 logger = logging.getLogger(__name__)
 

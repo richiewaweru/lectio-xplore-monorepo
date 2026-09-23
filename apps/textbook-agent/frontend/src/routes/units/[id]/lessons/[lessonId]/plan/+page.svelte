@@ -12,14 +12,15 @@
 	import {
 		getChunkedPlan,
 		getChunkedPlanStatus,
-		getLessonApproach,
 		approveChunkedPlan,
+		regenerateChunkedPlan
+	} from '$lib/api/lesson-planning';
+	import {
+		getLessonApproach,
 		approveLessonApproach,
-		rejectLessonApproach,
-		regenerateChunkedPlan,
-		realizePrintFromGeneration,
-		retryNativeGeneration
-	} from '$lib/api/v3';
+		rejectLessonApproach
+	} from '$lib/api/teaching-plan';
+	import { realizePrintFromGeneration, retryNativeGeneration } from '$lib/api/realizations';
 	import type { PathLesson, PreparedLessonStatus, Unit, UnitPath } from '$lib/types/units';
 	import type { V3ChunkedPlanState, V3StructuralPlan } from '$lib/types/v3';
 	import { Button, ProgressSteps, InlineError, Card } from '$lib/ui';
@@ -33,8 +34,8 @@
 	import {
 		planFailureMessage
 	} from '$lib/curriculum/lessons/plan-status';
-	import V3PlanPreview from '$lib/print/components/studio/V3PlanPreview.svelte';
-	import V3PlanActions from '$lib/print/components/studio/V3PlanActions.svelte';
+	import StructuralPlanPreview from '$lib/curriculum/lessons/StructuralPlanPreview.svelte';
+	import StructuralPlanActions from '$lib/curriculum/lessons/StructuralPlanActions.svelte';
 	import TeachingPlanReview from '$lib/curriculum/lessons/TeachingPlanReview.svelte';
 	import {
 		canApproveTeachingPlan,
@@ -466,10 +467,10 @@
 			{#if structuralPlan || chunked}
 				<div class="preview-wrap">
 					{#if structuralPlan}
-						<V3PlanPreview plan={structuralPlan} />
+						<StructuralPlanPreview plan={structuralPlan} />
 					{/if}
 				</div>
-				<V3PlanActions
+				<StructuralPlanActions
 					isRunning={busy !== null || !ctx.statusFresh}
 					onApprove={() => void approveStructural()}
 					onRegenerate={(note) => void regenerateStructural(note)}

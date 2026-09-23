@@ -47,8 +47,7 @@ from curriculum.validation import (
 from infra.authoring.capability_selector import CapabilitySelection
 from infra.config import settings
 from infra.llm.runner import RetryPolicy, run_llm
-from v3_execution.config import get_v3_model_settings, get_v3_slot
-from v3_execution.config.models import (
+from infra.authoring.model_policy import (
     NATIVE_CAPABILITY_SELECTOR,
     V2_COMPONENT_SELECTOR,
     V2_PATH_CHAT_EDITOR,
@@ -57,8 +56,10 @@ from v3_execution.config.models import (
     V3_CONSTRUCTOR,
     V3_LESSON_SOURCEBOOK_WRITER,
     V3_SHARED_TASK_WRITER,
+    get_v3_model_settings,
+    get_v3_slot,
 )
-from v3_execution.llm_helpers import (
+from infra.authoring.structured_provider import (
     NO_OUTPUT_RETRY,
     prepare_structured_agent,
 )

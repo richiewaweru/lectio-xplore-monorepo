@@ -144,7 +144,7 @@ from infra.auth.middleware import get_current_user
 from infra.dependencies import get_async_session
 from infra.events import TraceClosedEvent, TraceRegisteredEvent, event_bus
 from infra.rate_limit import limiter
-from v3_blueprint.planning.persistence import load_chunked_state
+from curriculum.planning.persistence import load_chunked_state
 
 router = APIRouter(
     prefix="/api/v1/units",

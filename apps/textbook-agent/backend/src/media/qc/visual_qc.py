@@ -8,10 +8,9 @@ from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 from pydantic_ai.messages import BinaryContent
 
-from v3_execution.config import get_v3_model_settings, get_v3_slot
-from v3_execution.config.models import V3_VISUAL_QC
-from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
-from v3_execution.models import VisualGeneratorWorkOrder
+from infra.authoring.model_policy import V3_VISUAL_QC, get_v3_model_settings, get_v3_slot
+from infra.authoring.structured_provider import NO_OUTPUT_RETRY, prepare_structured_agent
+from media.generation.contracts import VisualGeneratorWorkOrder
 
 
 class VisualQCVerdict(BaseModel):

@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 if TYPE_CHECKING:
     from print.generation.work_orders import PrintWorkOrder
-    from v3_blueprint.planning.models import PlannedBlock
+    from curriculum.planning.models import PlannedBlock
 
 
 class WriterError(ValueError):

@@ -35,7 +35,7 @@ from learn.generation.fencing import LEARN_EXECUTION_KEY, empty_learn_execution_
 from learn.generation.native_execution import produce_learn_from_approved_teaching
 from learn.generation.native_production import teaching_plan_content_hash
 from print.generation.whole_lesson.repository import PageDocumentRepository
-from v3_blueprint.planning.persistence import load_chunked_state
+from curriculum.planning.persistence import load_chunked_state
 
 
 async def _load_preparation_for_update(

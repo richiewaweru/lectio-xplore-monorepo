@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from curriculum.agents import _run_structured
 from curriculum.models import FlowChoice
 from curriculum.prompts import whole_lesson_coherence_reviewer_prompt
-from v3_execution.config.models import V3_WHOLE_LESSON_COHERENCE_REVIEWER
+from infra.authoring.model_policy import V3_WHOLE_LESSON_COHERENCE_REVIEWER
 
 from .models import ReviewIssue
 

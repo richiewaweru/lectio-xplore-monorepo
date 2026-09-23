@@ -52,16 +52,6 @@ def test_writer_cannot_change_component_id() -> None:
         assert_writer_cannot_change_component(order, "explanation-block")
 
 
-def test_malformed_comparison_grid_fails_validation() -> None:
-    from v3_execution.runtime.lectio_validation import validate_lectio_field_payload
-
-    card = get_component_card("comparison-grid")
-    assert card is not None
-    _payload, errors = validate_lectio_field_payload(
-        "comparison_grid",
-        {"not_a_real_field": True},
-    )
-    assert errors, "malformed comparison_grid must produce validation errors"
 
 
 def test_prompt_inventory_lists_stage1_modified() -> None:

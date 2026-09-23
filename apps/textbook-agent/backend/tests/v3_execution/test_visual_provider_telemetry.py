@@ -7,7 +7,7 @@ import pytest
 
 import core.events as core_events
 from infra.telemetry.service import TelemetryMonitor
-from v3_execution.executors.visual_executor import execute_visual
+from media.generation.executor import execute_visual
 from v3_execution.models import VisualGeneratorWorkOrder, VisualPlanItem
 
 
@@ -53,17 +53,17 @@ async def test_visual_provider_attempt_emits_attributed_success_ledger_event(mon
     captured: list[dict] = []
     monkeypatch.setenv("V3_IMAGE_CACHE_ENABLED", "false")
     monkeypatch.setattr(
-        "v3_execution.executors.visual_executor.get_image_client", lambda: Client()
+        "media.generation.executor.get_image_client", lambda: Client()
     )
     monkeypatch.setattr(
         "media.storage.image_store.get_image_store", lambda: _Store()
     )
     monkeypatch.setattr(
-        "v3_execution.executors.visual_executor.load_image_provider_spec",
+        "media.generation.executor.load_image_provider_spec",
         lambda: SimpleNamespace(provider="xai", model_name="grok-imagine-image"),
     )
     monkeypatch.setattr(
-        "v3_execution.executors.visual_executor.run_with_retries", run_once
+        "media.generation.executor.run_with_retries", run_once
     )
 
     def publish(_trace_id: str, event) -> None:  # type: ignore[no-untyped-def]
@@ -108,17 +108,17 @@ async def test_visual_provider_failure_emits_retryable_error_class(monkeypatch) 
     captured: list[dict] = []
     monkeypatch.setenv("V3_IMAGE_CACHE_ENABLED", "false")
     monkeypatch.setattr(
-        "v3_execution.executors.visual_executor.get_image_client", lambda: Client()
+        "media.generation.executor.get_image_client", lambda: Client()
     )
     monkeypatch.setattr(
         "media.storage.image_store.get_image_store", lambda: _Store()
     )
     monkeypatch.setattr(
-        "v3_execution.executors.visual_executor.load_image_provider_spec",
+        "media.generation.executor.load_image_provider_spec",
         lambda: SimpleNamespace(provider="gemini", model_name="gemini-image"),
     )
     monkeypatch.setattr(
-        "v3_execution.executors.visual_executor.run_with_retries", run_once
+        "media.generation.executor.run_with_retries", run_once
     )
 
     def publish(_trace_id: str, event) -> None:  # type: ignore[no-untyped-def]

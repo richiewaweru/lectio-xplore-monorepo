@@ -14,7 +14,7 @@ from print.generation.selection_snapshot import PrintSelectionDecision, PrintSel
 from print.resources.selection import load_form_writer_view
 
 if TYPE_CHECKING:
-    from v3_blueprint.planning.models import PlannedBlock
+    from curriculum.planning.models import PlannedBlock
 
 REGISTERED_PRINT_VALIDATOR_REFS = frozenset(
     {

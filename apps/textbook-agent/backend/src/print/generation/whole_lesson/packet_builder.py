@@ -18,7 +18,7 @@ from print.generation.whole_lesson.packet import (
     ScopeEntry,
     SlotRecord,
 )
-from v3_blueprint.skeletons import load_skeleton_catalog
+from curriculum.planning.skeletons import load_skeleton_catalog
 
 CONCEPTUAL_FIRST_EXPOSURE_SLOTS = ("orient", "explain", "confront", "check")
 

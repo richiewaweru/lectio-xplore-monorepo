@@ -158,7 +158,7 @@ class LLMAuthoringProvider:
     async def invoke(self, call: AuthoringProviderCall) -> Any:
         from core.llm.runner import RetryPolicy
 
-        from v3_execution.llm_helpers import run_structured_agent
+        from infra.authoring.structured_provider import run_structured_agent
 
         # Return an unconstrained JSON object so AuthoringEngine can apply the
         # selected capability schema and own every semantic correction. One

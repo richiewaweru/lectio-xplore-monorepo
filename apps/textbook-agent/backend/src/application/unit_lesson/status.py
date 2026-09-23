@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from application.unit_lesson.contracts import PathPreparationBlocked
 from core.database.models import GenerationModel, LessonProvenanceModel, PathLessonModel
 from curriculum.models import PreparedLessonResponse, PrepareLessonRequest
-from v3_blueprint.planning.models import StructuralPlan
-from v3_blueprint.planning.persistence import load_chunked_state
+from curriculum.planning.models import StructuralPlan
+from curriculum.planning.persistence import load_chunked_state
 
 
 async def try_reuse_existing_preparation(

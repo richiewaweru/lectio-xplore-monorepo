@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from print.generation.whole_lesson.form_plan import FormDecision, FormPlan, Placement
 from print.generation.whole_lesson.teaching_plan import TeachingPlan, TeachingPlanBlock
-from v3_blueprint.planning.models import PlannedBlock, SectionBlockPlan
+from curriculum.planning.models import PlannedBlock, SectionBlockPlan
 
 
 class ResolvedBlockPlan(BaseModel):

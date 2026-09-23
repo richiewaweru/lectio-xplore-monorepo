@@ -577,11 +577,9 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 					}
 				} catch (err) {
 					if (isApiError(err) && err.status === 409) {
-						const qs =
-							pathKind === 'learn'
-								? `?generation_id=${encodeURIComponent(existingGenerationId)}&path=learn`
-								: `?generation_id=${encodeURIComponent(existingGenerationId)}`;
-						navigate(`/studio${qs}`);
+						navigate(
+							`/units/${encodeURIComponent(getUnitId())}/lessons/${encodeURIComponent(selected.id)}/plan`
+						);
 						return;
 					}
 					throw err;
@@ -595,13 +593,9 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 				selectedGroupIds
 			);
 			attachSubscription(getUnitId(), prepared.generation_id, 0);
-			if (pathKind === 'print') {
-				navigate(`/studio?generation_id=${encodeURIComponent(prepared.generation_id)}`);
-			} else {
-				navigate(
-					`/studio?generation_id=${encodeURIComponent(prepared.generation_id)}&path=learn`
-				);
-			}
+			navigate(
+				`/units/${encodeURIComponent(getUnitId())}/lessons/${encodeURIComponent(selected.id)}/plan`
+			);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Generation did not start.';
 		} finally {
@@ -626,7 +620,9 @@ export function createUnitWorkspace(unitIdOrGetter: string | (() => string), dep
 				selectedGroupIds
 			);
 			attachSubscription(getUnitId(), prepared.generation_id, 0);
-			navigate(`/studio?generation_id=${encodeURIComponent(prepared.generation_id)}`);
+			navigate(
+				`/units/${encodeURIComponent(getUnitId())}/lessons/${encodeURIComponent(selected.id)}/plan`
+			);
 		}, false);
 	}
 

@@ -3,7 +3,17 @@ from __future__ import annotations
 import json
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field
+
+from media.generation.contracts import (
+    ExecutorOutcome,
+    GeneratedVisualBlock,
+    SourceOfTruthEntry,
+    VisualDependency,
+    VisualFrameSpec,
+    VisualGeneratorWorkOrder,
+    VisualPlanItem,
+)
 
 # --- Generated blocks (proposal 2 Step 1)
 
@@ -41,39 +51,6 @@ class QuestionWriterOutput(BaseModel):
     items: dict[str, QuestionStemEntry]
 
 
-VisualMode = Literal["diagram", "diagram_series", "diagram_compare", "image", "simulation"]
-VisualStyle = Literal["diagram_precision", "illustration"]
-_VISUAL_STYLES = {"diagram_precision", "illustration"}
-
-
-class GeneratedVisualBlock(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    visual_id: str
-    attaches_to: str
-    frame_index: int | None = None
-    mode: VisualMode
-    image_url: str | None = None
-    html_content: str | None = None
-    fallback_image_url: str | None = None
-    caption: str | None = None
-    alt_text: str | None = None
-    source_work_order_id: str
-    component_id: str | None = None
-    parent_visual_id: str | None = None
-    status: Literal[
-        "ready",
-        "ready_with_quality_warning",
-        "failed",
-        "omitted_quality",
-        "flagged_quality",
-    ] = "ready"
-    error_message: str | None = None
-    qc_reasons: list[str] = Field(default_factory=list)
-    qc_correction_hint: str | None = None
-    qc_trace_id: str | None = None
-
-
 AnswerKeyStyle = Literal["answers_only", "brief_explanations", "full_working"]
 
 
@@ -98,20 +75,6 @@ class ExecutionResult(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
-# --- Executor outcome wrapper
-
-
-class ExecutorOutcome(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    ok: bool
-    blocks: list[Any] = Field(default_factory=list)
-    warnings: list[str] = Field(default_factory=list)
-    errors: list[str] = Field(default_factory=list)
-    retried: bool = False
-    retryable: bool = True
-
-
 # --- Work orders consumed by executors
 
 
@@ -132,14 +95,6 @@ class LearnerProfileSpec(BaseModel):
     reading_load: str = "moderate"
     language_support: str = "baseline"
     pacing: str = "standard"
-
-
-class SourceOfTruthEntry(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    key: str
-    text: str
-    unit_tokens: list[str] = Field(default_factory=list)
 
 
 class Correction(BaseModel):
@@ -248,72 +203,6 @@ class QuestionWriterWorkOrder(BaseModel):
     section_field: str | None = None
     purpose: str | None = None
     schema_summary: str | None = None
-    prior_validation_errors: list[str] = Field(default_factory=list)
-
-
-class VisualFrameSpec(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    description: str
-    must_show: list[str] = Field(default_factory=list)
-
-
-class VisualPlanItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    id: str
-    attaches_to: str
-    component_id: str | None = None
-    mode: VisualMode = "diagram"
-    visual_style: VisualStyle | None = None
-    purpose: str = ""
-    must_show: list[str] = Field(default_factory=list)
-    must_not_show: list[str] = Field(default_factory=list)
-    labels_required: list[str] = Field(default_factory=list)
-    uses_anchor_id: str | None = None
-    consistency_locks: list[str] = Field(default_factory=list)
-    print_requirements: list[str] = Field(default_factory=list)
-    frames: list[VisualFrameSpec] = Field(default_factory=list)
-
-    @model_validator(mode="after")
-    def normalize_closed_labels(self) -> VisualPlanItem:
-        if self.visual_style != "diagram_precision":
-            return self
-        labels: list[str] = []
-        seen: set[str] = set()
-        for raw in self.labels_required:
-            label = str(raw).strip()
-            folded = label.casefold()
-            if label and folded not in seen:
-                labels.append(label)
-                seen.add(folded)
-        self.labels_required = labels
-        return self
-
-    @field_validator("visual_style", mode="before")
-    @classmethod
-    def normalize_visual_style(cls, value: object) -> object:
-        if value is None:
-            return None
-        if isinstance(value, str) and value in _VISUAL_STYLES:
-            return value
-        return None
-
-
-VisualDependency = Literal["blueprint_only", "section_text", "question_text"]
-
-
-class VisualGeneratorWorkOrder(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    work_order_id: str
-    resource_type: str = "lesson"
-    dependency: VisualDependency = "blueprint_only"
-    visual: VisualPlanItem
-    source_of_truth: list[SourceOfTruthEntry] = Field(default_factory=list)
-    # Latest persisted QC correction to apply on the next attempt. This is
-    # prompt metadata only and must never be rendered inside the image.
-    qc_correction_hint: str | None = None
     prior_validation_errors: list[str] = Field(default_factory=list)
 
 

@@ -281,7 +281,7 @@ async def _model_backed_topology_qc(
 ) -> Mapping[str, Any]:
     """Classroom visual QC on the exact final raster bytes."""
     from media.qc.visual_qc import evaluate_topology_raster_quality
-    from v3_execution.models import VisualGeneratorWorkOrder, VisualPlanItem
+    from media.generation.contracts import VisualGeneratorWorkOrder, VisualPlanItem
 
     png = image_bytes
     if not isinstance(png, (bytes, bytearray)) or not png:

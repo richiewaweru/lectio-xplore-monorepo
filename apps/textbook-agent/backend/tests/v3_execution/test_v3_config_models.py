@@ -4,7 +4,6 @@ import pytest
 from pydantic_ai.models.openai import OpenAIChatModel
 
 from core.llm import ModelFamily, ModelSlot, ModelSpec, build_model
-from v3_execution.config.answer_key_node import effective_answer_key_node_name
 from v3_execution.config.models import (
     V2_FORM_PLANNER,
     V2_LESSON_APPROACH_PLANNER,
@@ -261,58 +260,7 @@ def test_build_model_sets_reasoning_content_profile_for_deepseek() -> None:
     assert model.profile.openai_chat_thinking_field == "reasoning_content"
 
 
-def test_answer_key_effective_node_fast_when_answers_present() -> None:
-    order = AnswerKeyExecutorWorkOrder(
-        work_order_id="w1",
-        questions=[
-            WriterQuestion(
-                id="q1",
-                difficulty="warm",
-                expected_answer="42",
-                expected_working="x=42",
-            )
-        ],
-        answer_key_plan=AnswerKeyPlanSpec(
-            style="full_working",
-            include_question_ids=["q1"],
-        ),
-    )
-    assert effective_answer_key_node_name(order) == V3_ANSWER_KEY_GENERATOR
 
 
-def test_answer_key_escalates_when_expected_missing() -> None:
-    order = AnswerKeyExecutorWorkOrder(
-        work_order_id="w1",
-        questions=[
-            WriterQuestion(
-                id="q1",
-                difficulty="warm",
-                expected_answer="",
-                expected_working=None,
-            )
-        ],
-        answer_key_plan=AnswerKeyPlanSpec(
-            style="answers_only",
-            include_question_ids=["q1"],
-        ),
-    )
-    assert effective_answer_key_node_name(order) == V3_ANSWER_KEY_GENERATOR_HEAVY
 
 
-def test_answer_key_escalates_full_working_without_working() -> None:
-    order = AnswerKeyExecutorWorkOrder(
-        work_order_id="w1",
-        questions=[
-            WriterQuestion(
-                id="q1",
-                difficulty="warm",
-                expected_answer="42",
-                expected_working=None,
-            )
-        ],
-        answer_key_plan=AnswerKeyPlanSpec(
-            style="full_working",
-            include_question_ids=["q1"],
-        ),
-    )
-    assert effective_answer_key_node_name(order) == V3_ANSWER_KEY_GENERATOR_HEAVY

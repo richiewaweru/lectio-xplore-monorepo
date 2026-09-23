@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict
 
 from curriculum.agents import _run_structured
 from curriculum.prompts import targeted_lesson_repair_prompt
-from v3_execution.config.models import V3_TARGETED_LESSON_REPAIR
+from infra.authoring.model_policy import V3_TARGETED_LESSON_REPAIR
 
 from .models import RepairEvent, RepairTarget
 

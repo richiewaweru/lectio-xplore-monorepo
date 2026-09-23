@@ -12,7 +12,7 @@ from contracts.lectio_page import validate_document
 from print.rendering.page_objects.models import WriterContext, WriterOutcome
 from print.rendering.page_objects.registry import dispatch_writer
 from print.rendering.page_objects.validation import validate_answer_key_integrity
-from v3_blueprint.planning.models import SectionBlockPlan
+from curriculum.planning.models import SectionBlockPlan
 
 
 class DocumentAssemblyError(ValueError):

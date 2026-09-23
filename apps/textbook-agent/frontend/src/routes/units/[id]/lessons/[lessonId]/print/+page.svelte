@@ -2,7 +2,7 @@
 import { getContext, onDestroy, onMount } from 'svelte';
 	import LectioPageDocumentView from '$lib/print/components/studio/LectioPageDocumentView.svelte';
 	import { extractLectioDocumentV2 } from '$lib/print/studio/document-version';
-	import { downloadV3GenerationPdf } from '$lib/api/v3';
+	import { downloadGenerationPdf } from '$lib/api/realizations';
 	import { apiFetch } from '$lib/api/client';
 	import { generatePrintRealization, getLessonIssues, retryLessonRealization } from '$lib/api/units';
 	import type { LectioDocument } from '@lectio/page/contract';
@@ -154,7 +154,7 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 		if (!generationId) return;
 		busy = 'pdf';
 		try {
-			await downloadV3GenerationPdf(generationId, { school_name: schoolName.trim() || 'School', teacher_name: teacherName.trim(), include_toc: false, include_answers: includeAnswers, edition });
+			await downloadGenerationPdf(generationId, { school_name: schoolName.trim() || 'School', teacher_name: teacherName.trim(), include_toc: false, include_answers: includeAnswers, edition });
 			exportOpen = false;
 		} catch (err) { error = err instanceof Error ? err.message : 'Could not download PDF.'; }
 		finally { busy = null; }

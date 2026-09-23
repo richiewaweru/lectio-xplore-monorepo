@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from v3_execution.models import VisualGeneratorWorkOrder, VisualPlanItem
-from v3_execution.prompts.visual_executor import build_visual_prompt
+from media.generation.prompt import build_visual_prompt
 
 
 def test_visual_prompt_includes_diagram_precision_style_requirements() -> None:

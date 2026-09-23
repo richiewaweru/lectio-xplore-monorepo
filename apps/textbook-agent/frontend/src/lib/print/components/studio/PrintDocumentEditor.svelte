@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { apiFetch } from '$lib/api/client';
-	import { downloadV3GenerationPdf } from '$lib/api/v3';
+	import { downloadGenerationPdf } from '$lib/api/realizations';
 	import type { LectioDocument } from '@lectio/page/contract';
 
 	let {
@@ -202,7 +202,7 @@
 		pdfBusy = true;
 		status = '';
 		try {
-			await downloadV3GenerationPdf(generationId, {
+			await downloadGenerationPdf(generationId, {
 				school_name: 'Lectio closeout',
 				teacher_name: 'Studio',
 				include_toc: false,

@@ -8,7 +8,7 @@ from typing import Any
 
 from print.generation.whole_lesson.states import LeaseLostError
 from print.generation.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
-from v3_execution.executors.item_errors import ItemGenerationOutputInvalidError
+from curriculum.items.errors import ItemGenerationOutputInvalidError
 
 try:
     import httpx
