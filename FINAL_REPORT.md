@@ -7,7 +7,7 @@ Status: `PASS`
 Branch: `codex/generation-stability`
 Implementation commit: `b9f7abb141404ee67e17205aa237ea570155c40b`.
 Acceptance-document commit: `75f3c5d8b3c63867e7edc9c6b32db2ebce307605`.
-Remote pushed: Yes, `origin/codex/generation-stability`; this report correction is a follow-up pushed commit.
+Remote pushed: Yes, `origin/codex/generation-stability`; this report correction is included in the current pushed HEAD.
 Starting commit: `57177e66ce6b1d1e89c0e912b77212c7e138365b`
 Date: 2026-09-23
 
@@ -160,5 +160,5 @@ Unrelated modified `.gitignore` and untracked `docs/architecture/generation-reli
 Remote: `origin` (`https://github.com/richiewaweru/lectio-xplore-monorepo.git`)
 Branch: `codex/generation-stability`
 Implementation SHA: `b9f7abb141404ee67e17205aa237ea570155c40b`.
-Pushed HEAD before this report correction: `75f3c5d8b3c63867e7edc9c6b32db2ebce307605`.
-This report correction is pushed as the next commit; its SHA is reported in the final delivery message.
+Acceptance-document commit: `75f3c5d8b3c63867e7edc9c6b32db2ebce307605`.
+Final pushed HEAD: the commit containing this report correction; verify with `git rev-parse HEAD` and `git ls-remote origin refs/heads/codex/generation-stability`.
