@@ -12,3 +12,4 @@ out/
 .svelte-kit/
 dist/
 .pytest_cache/
+.vercel
