@@ -3,7 +3,7 @@
 ## Repository
 - Branch: `chore/retire-v3-legacy`
 - Starting SHA: `6c765186975c690cd0559bfa6fe5fc50b00f4fb8`
-- Final SHA: `764ea21f0ce516e87f1bf5d7f1d43a53ff33e7ae`
+- Final SHA: `c833d24b9b9fc1b70f94614856fe5bc6d0f35360`
 - Date: 2026-09-24
 - Result: **PASS**
 
