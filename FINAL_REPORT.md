@@ -5,8 +5,9 @@
 Status: `PASS`
 
 Branch: `codex/generation-stability`
-Commit: `b9f7abb141404ee67e17205aa237ea570155c40b`.
-Remote pushed: Yes, `origin/codex/generation-stability`.
+Implementation commit: `b9f7abb141404ee67e17205aa237ea570155c40b`.
+Acceptance-document commit: `75f3c5d8b3c63867e7edc9c6b32db2ebce307605`.
+Remote pushed: Yes, `origin/codex/generation-stability`; this report correction is a follow-up pushed commit.
 Starting commit: `57177e66ce6b1d1e89c0e912b77212c7e138365b`
 Date: 2026-09-23
 
@@ -121,7 +122,7 @@ Preparation generation: `c88bbe41-4780-45ff-951c-a91eb98bf6ae`
 Teaching Plan ID: `a6719660-5307-4a71-9750-77b2ae5a151c`
 Teaching revision/hash: `1` / `b47708dba7f066ea62fec3483f291ea79b702b788eaf4148bcab624a1d91d5a2`
 Learn realization/output: `84bbd45c-ecad-4c05-89d7-a101be872b86` / `learn-out-6603dafebcb14015` (revision 3, ready)
-Learn editable lesson: `84c64909-ec6f-468d-85ff-2d6080247271`
+Learn editable lesson: `84c64909-ff6c-468d-85ff-2d6080247271`
 Print realization/output: `e6d86049-193a-4eb2-a330-fba603189e40` / `cf88fb9a-2ab0-49d6-8514-74afc6f4e0bf` (ready)
 
 Walkthrough: Visible Teaching Plan approval, two process-interruption recoveries, one explicit Learn retry, distinct Print creation, Learn document/interaction preview, Print preview/PDF action, and refresh of both ready outputs. Preview answer feedback was correct and did not save attempt state. The Learn worker success-commit defect was reproduced by DB state, fixed, regression-tested, and verified by the third live run.
@@ -158,4 +159,6 @@ Unrelated modified `.gitignore` and untracked `docs/architecture/generation-reli
 
 Remote: `origin` (`https://github.com/richiewaweru/lectio-xplore-monorepo.git`)
 Branch: `codex/generation-stability`
-Final task SHA: `b9f7abb141404ee67e17205aa237ea570155c40b` (pushed to `origin/codex/generation-stability`).
+Implementation SHA: `b9f7abb141404ee67e17205aa237ea570155c40b`.
+Pushed HEAD before this report correction: `75f3c5d8b3c63867e7edc9c6b32db2ebce307605`.
+This report correction is pushed as the next commit; its SHA is reported in the final delivery message.
