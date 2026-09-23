@@ -333,14 +333,17 @@ export type GenerateLearnResult = {
 	status: string;
 	path: 'learn';
 	output_id: string;
-	editable_lesson_id: string;
+	editable_lesson_id?: string | null;
 	realization_id?: string;
+	realization_revision?: number;
 	open_href?: string | null;
+	workspace_href?: string | null;
+	error_summary?: string | null;
 	teaching_plan_hash?: string;
 	teaching_plan_revision?: number;
 };
 
-/** Admit + execute Learn from an approved Teaching Plan (no Print conversion). */
+/** Admit a durable Learn run from an approved Teaching Plan (no Print conversion). */
 export function generateLearnRealization(
 	unitId: string,
 	path: UnitPath,

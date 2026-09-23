@@ -12,7 +12,9 @@ from tests.planning.contract_fixtures import teaching_and_form
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
+from curriculum.lesson_sourcebook.models import LessonSourcebook
 from curriculum.llm_contract_errors import structured_output_errors
+from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from print.generation.catalogue_projections import build_form_candidate_map, project_form_guidance
 from print.generation.whole_lesson.executor import execute_after_teaching_approval
 from print.generation.whole_lesson.failure_policy import classify_failure
@@ -860,9 +862,21 @@ async def test_resume_revalidates_legacy_fat_form_plan() -> None:
             status="ready",
         )
 
+    async def _fake_shared_tasks(plan, **kwargs):
+        # This resume test targets legacy-form revalidation. Supply deterministic
+        # code-owned task specs so it does not invoke the unrelated task authoring provider.
+        from curriculum.shared_tasks.service import build_shared_task_registry
+
+        return build_shared_task_registry(
+            plan, approved_items=kwargs.get("approved_items")
+        )
+
     with patch(
         "print.generation.whole_lesson.executor.build_closed_print_production_plan_async",
         new=AsyncMock(side_effect=_fake_form),
+    ), patch(
+        "print.generation.whole_lesson.executor.run_shared_task_writer",
+        new=AsyncMock(side_effect=_fake_shared_tasks),
     ), patch(
         "print.generation.whole_lesson.executor.dispatch_writer_async",
         new=AsyncMock(side_effect=_fake_dispatch),
@@ -1216,6 +1230,8 @@ async def test_resume_uses_persisted_compatibility_not_live_catalogue() -> None:
     teaching, plan = teaching_and_form(
         sections=[("orient", [("orient-b1", "orient", "prose")])]
     )
+    teaching.teaching_plan_id = "resume-test-plan"
+    teaching.revision = 1
     # Persist a narrow freeze: orient → prose only.
     legality = _make_snapshot(
         permitted_intents=["orient", "explain-cause"],
@@ -1233,6 +1249,19 @@ async def test_resume_uses_persisted_compatibility_not_live_catalogue() -> None:
     state["teaching_plan"] = teaching.model_dump(mode="json")
     state["form_plan"] = plan.model_dump(mode="json")
     state["form_validation"] = {"ok": True}
+    content_hash = teaching_plan_content_hash(teaching)
+    state["smart_lesson"] = {
+        "teaching_plan_id": teaching.teaching_plan_id,
+        "teaching_plan_revision": teaching.revision,
+        "teaching_plan_hash": content_hash,
+        "lesson_sourcebook": LessonSourcebook(
+            teaching_plan_id=teaching.teaching_plan_id,
+            teaching_plan_revision=teaching.revision,
+            teaching_plan_hash=content_hash,
+            entries=[],
+        ).model_dump(mode="json"),
+        "shared_tasks": [],
+    }
     async with async_session_factory() as session:
         session.add(UserModel(id=user_id, email=f"{user_id}@example.com", name="Test"))
         session.add(

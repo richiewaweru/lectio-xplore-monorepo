@@ -139,6 +139,7 @@ export interface V3ChunkedPlanState {
 	lesson_mode_confidence: V3SignalSummary['lesson_mode_confidence'] | null;
 	variants?: V3VariantSpec[];
 	variant_generation_ids?: Record<string, string>;
+	requested_realization_path?: 'learn' | 'print' | null;
 }
 
 export interface V3ChunkedPlan {
@@ -165,6 +166,7 @@ export interface V3ChunkedStatus {
 	error_type?: string | null;
 	error_detail?: Record<string, unknown> | null;
 	variant_generation_ids?: Record<string, string>;
+	requested_realization_path?: 'learn' | 'print' | null;
 	document_version?: number | null;
 	document_exists?: boolean;
 	sections_total?: number;

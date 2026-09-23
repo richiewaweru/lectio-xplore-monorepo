@@ -4,12 +4,27 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import UTC, datetime
-import hashlib
-import json
 from typing import Any
 from uuid import uuid4
 
+from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import TeachingPlan, TeachingRevisionRecord
+
+
+class TeachingRevisionConflictError(ValueError):
+    """Approval cannot bind to the exact current pending Teaching Plan bytes."""
+
+    code = "TEACHING_REVISION_CONFLICT"
+
+
+class TeachingRevisionContentError(ValueError):
+    """A persisted Teaching Plan snapshot is missing or diverges from its digest."""
+
+    code = "TEACHING_CONTENT_HASH_UNAVAILABLE"
+
+
+class TeachingRevisionContentMismatchError(TeachingRevisionContentError):
+    code = "TEACHING_CONTENT_HASH_MISMATCH"
 
 
 def _utcnow() -> str:
@@ -51,25 +66,24 @@ class TeachingRevisionStore:
         if not isinstance(raw_plan, dict) or not raw_plan:
             return
 
-        canonical = json.dumps(
-            {
-                "arc": raw_plan.get("arc"),
-                "sections": raw_plan.get("sections"),
-                "anchor_usage": raw_plan.get("anchor_usage"),
-            },
-            sort_keys=True,
-            separators=(",", ":"),
-            default=str,
-        )
-        digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        legacy_plan = deepcopy(raw_plan)
+        # Keep the legacy importer compatible with its retired optional field;
+        # new TeachingPlan records remain strict.
+        for section in legacy_plan.get("sections") or []:
+            for block in section.get("blocks") or []:
+                if isinstance(block, dict):
+                    block.pop("variant", None)
+        try:
+            digest = teaching_plan_content_hash(legacy_plan)
+        except (TypeError, ValueError):
+            return
         plan_id = str(
             self._state.get("teaching_plan_id")
             or raw_plan.get("teaching_plan_id")
             or f"legacy-teaching-{digest[:32]}"
         )
         approved_revision = int(
-            review.get("approved_revision")
-            or max(1, int(review.get("revision") or 1) - 1)
+            review.get("approved_revision") or max(1, int(review.get("revision") or 1) - 1)
         )
         preparation_hash = str(
             raw_plan.get("preparation_hash")
@@ -77,7 +91,7 @@ class TeachingRevisionStore:
             or (self._state.get("catalogue") or {}).get("teaching_projection_hash")
             or f"legacy-preparation-{digest}"
         )
-        plan = deepcopy(raw_plan)
+        plan = legacy_plan
         # The legacy native planner emitted an optional ``variant`` field on
         # blocks. It is not part of the current closed TeachingPlan contract;
         # remove only this retired compatibility field while importing an
@@ -100,6 +114,9 @@ class TeachingRevisionStore:
             revision=approved_revision,
             status="approved",
             preparation_hash=preparation_hash,
+            # Historical mutable state cannot prove the bytes at approval time.
+            # Consumers explicitly reject this hashless compatibility snapshot.
+            content_hash=None,
             plan=plan,
             created_at=str(review.get("reviewed_at") or _utcnow()),
             approved_at=str(review.get("reviewed_at") or _utcnow()),
@@ -146,9 +163,7 @@ class TeachingRevisionStore:
         revision: int | None = None,
     ) -> TeachingRevisionRecord:
         plan_payload = (
-            plan.model_dump(mode="json")
-            if isinstance(plan, TeachingPlan)
-            else dict(plan)
+            plan.model_dump(mode="json") if isinstance(plan, TeachingPlan) else dict(plan)
         )
         rev = revision if revision is not None else self.current_revision()
         plan_id = self.teaching_plan_id()
@@ -161,6 +176,7 @@ class TeachingRevisionStore:
             revision=rev,
             status="pending",
             preparation_hash=preparation_hash,
+            content_hash=teaching_plan_content_hash(plan_payload),
             plan=plan_payload,
             created_at=_utcnow(),
         )
@@ -182,20 +198,63 @@ class TeachingRevisionStore:
         self,
         *,
         expected_revision: int,
+        expected_content_hash: str | None = None,
         reviewed_by: str | None = None,
         teacher_note: str | None = None,
     ) -> TeachingRevisionRecord:
         current = self.current_revision()
         if expected_revision != current:
-            raise ValueError(
+            raise TeachingRevisionConflictError(
                 f"stale teaching revision: expected {expected_revision}, current {current}"
             )
         pending = self.get_revision(expected_revision)
         if pending is None:
-            raise ValueError(f"no teaching revision {expected_revision} to approve")
+            raise TeachingRevisionConflictError(
+                f"no teaching revision {expected_revision} to approve"
+            )
+        if pending.status != "pending":
+            raise TeachingRevisionConflictError(
+                f"teaching revision {expected_revision} is {pending.status!r}, not pending"
+            )
+        try:
+            pending_plan = TeachingPlan.model_validate(pending.plan)
+            mutable_plan = TeachingPlan.model_validate(self._state.get("teaching_plan") or {})
+            current_content_hash = teaching_plan_content_hash(pending_plan)
+            mutable_plan_hash = teaching_plan_content_hash(mutable_plan)
+        except (TypeError, ValueError) as exc:
+            raise TeachingRevisionConflictError(
+                "current Teaching Plan is invalid and cannot be approved"
+            ) from exc
+        if pending.content_hash and pending.content_hash != current_content_hash:
+            raise TeachingRevisionConflictError(
+                "pending Teaching Plan snapshot changed after its digest was recorded"
+            )
+        if mutable_plan_hash != current_content_hash:
+            raise TeachingRevisionConflictError(
+                "current Teaching Plan bytes differ from the pending revision snapshot"
+            )
+        for candidate in (pending_plan, mutable_plan):
+            if (
+                candidate.revision is not None
+                and candidate.revision != expected_revision
+            ) or (
+                candidate.teaching_plan_id
+                and candidate.teaching_plan_id != pending.teaching_plan_id
+            ):
+                raise TeachingRevisionConflictError(
+                    "Teaching Plan identity does not match the pending revision"
+                )
+        if expected_content_hash is not None and expected_content_hash != current_content_hash:
+            raise TeachingRevisionConflictError(
+                "displayed Teaching Plan content changed; reload the review before approving"
+            )
         approved = pending.model_copy(
             update={
                 "status": "approved",
+                "content_hash": current_content_hash,
+                "approval_hash_binding": (
+                    "submitted" if expected_content_hash is not None else "server_current_compat"
+                ),
                 "approved_at": _utcnow(),
                 "reviewed_by": reviewed_by,
                 "teacher_note": teacher_note,
@@ -267,3 +326,59 @@ def review_approved_revision(state: dict[str, Any]) -> int | None:
     review = state.get("teaching_review") or {}
     value = review.get("approved_revision")
     return int(value) if value is not None else None
+
+
+def teaching_plan_review_identity(state: dict[str, Any]) -> dict[str, Any]:
+    """Project pending and approved identities without inventing legacy hashes."""
+    normalized = TeachingRevisionStore(deepcopy(state))
+    review = dict(normalized.state.get("teaching_review") or {})
+    current_revision = int(review.get("revision") or 1)
+    approved_revision = review.get("approved_revision")
+    pending_hash: str | None = None
+    pending_verified = False
+    if str(review.get("status") or "").lower() == "pending":
+        pending = normalized.get_revision(current_revision)
+        if pending is not None and pending.status == "pending":
+            try:
+                pending_hash = teaching_plan_content_hash(pending.plan)
+                mutable_hash = teaching_plan_content_hash(
+                    normalized.state.get("teaching_plan") or {}
+                )
+                pending_verified = (
+                    not pending.content_hash or pending.content_hash == pending_hash
+                ) and mutable_hash == pending_hash
+                if not pending_verified:
+                    pending_hash = None
+            except (TypeError, ValueError):
+                pending_hash = None
+
+    approved_hash: str | None = None
+    approved_verified = False
+    approval_hash_binding: str | None = None
+    if approved_revision is not None:
+        approved = normalized.get_revision(int(approved_revision))
+        if approved is not None and approved.status == "approved":
+            approval_hash_binding = approved.approval_hash_binding
+            try:
+                actual = teaching_plan_content_hash(approved.plan)
+                approved_verified = bool(approved.content_hash and actual == approved.content_hash)
+                if approved_verified:
+                    approved_hash = approved.content_hash
+            except (TypeError, ValueError):
+                pass
+    return {
+        "revision": current_revision,
+        "pending_content_hash": pending_hash,
+        "pending_hash_verified": pending_verified,
+        "approved_revision": int(approved_revision) if approved_revision is not None else None,
+        "approved_content_hash": approved_hash,
+        "approved_hash_verified": approved_verified,
+        "approval_hash_binding": approval_hash_binding,
+        "recovery_action": (
+            "reprepare"
+            if approved_revision is not None
+            and not approved_verified
+            and str(review.get("status") or "").lower() != "pending"
+            else None
+        ),
+    }

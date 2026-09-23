@@ -26,6 +26,7 @@ from infra.authoring import (
     AuthoringEngineError,
     AuthoringProvider,
     AuthoringRequest,
+    AuthoringValidationError,
 )
 from infra.authoring.engine import AuthoringRegistry
 from infra.execution.call_budget import BudgetExhaustedError, CallBudget, CallBudgetLedger
@@ -180,13 +181,67 @@ def _composer_definition(*, path: Literal["print", "learn"]) -> AuthoringDefinit
         instructions=document_composer_prompt(),
         payload_schema=COMPOSER_SCHEMA,
         required_inputs=("teaching_plan", "allowed_kinds_by_block"),
-        validator_refs=("document.composer_schema",),
+        validator_refs=("document.composer_schema", "document.composer_semantics"),
         definition_hash=document_composer_prompt_hash(),
     )
 
 
 def _noop_validator(*_args: Any, **_kwargs: Any) -> list[Any]:
     return []
+
+
+def _composer_semantic_validator(
+    definition: AuthoringDefinition,
+    request: AuthoringRequest,
+    payload: Mapping[str, Any],
+) -> list[AuthoringValidationError]:
+    del definition
+    try:
+        parsed = ComposerOutput.model_validate(payload)
+    except ValidationError as exc:
+        return [AuthoringValidationError("", str(exc))]
+
+    plan_summary = request.inputs.get("teaching_plan")
+    sections = plan_summary.get("sections") if isinstance(plan_summary, Mapping) else None
+    known_blocks: set[str] = set()
+    for section in sections or []:
+        if not isinstance(section, Mapping):
+            continue
+        for block in section.get("blocks") or []:
+            if isinstance(block, Mapping) and block.get("id"):
+                known_blocks.add(str(block["id"]))
+    allowed_by_block = request.inputs.get("allowed_kinds_by_block")
+    allowed_by_block = allowed_by_block if isinstance(allowed_by_block, Mapping) else {}
+    errors: list[str] = []
+    seen_ids: set[str] = set()
+    covered_blocks: set[str] = set()
+    for node in parsed.nodes:
+        if node.id in seen_ids:
+            errors.append(f"duplicate composer node id {node.id!r}")
+        seen_ids.add(node.id)
+        block_id = node.teaching_block_id
+        if block_id not in known_blocks:
+            errors.append(f"composer referenced unknown teaching_block_id {block_id!r}")
+            continue
+        allowed = {str(kind) for kind in (allowed_by_block.get(block_id) or [])}
+        if node.kind not in allowed:
+            errors.append(
+                f"composer kind {node.kind!r} is outside allowed_kinds={sorted(allowed)} "
+                f"for teaching block {block_id!r}"
+            )
+            continue
+        covered_blocks.add(block_id)
+
+    for block_id, raw_allowed in allowed_by_block.items():
+        allowed = [str(kind) for kind in (raw_allowed or [])]
+        if allowed and str(block_id) not in covered_blocks:
+            errors.append(
+                f"composer omitted teaching block {block_id!r} despite "
+                f"non-empty allowed_kinds={allowed}"
+            )
+        if not allowed and str(block_id) in covered_blocks:
+            errors.append(f"composer emitted ordinary content for task-only block {block_id!r}")
+    return [AuthoringValidationError("", error) for error in errors]
 
 
 def _validate_composer_payload(
@@ -324,6 +379,7 @@ async def compose_document_plan(
     provider: AuthoringProvider | None = None,
     engine: AuthoringEngine | None = None,
     allow_heuristic_fallback: bool = True,
+    heuristic_only: bool = False,
     allowed_kinds_by_block: Mapping[str, Sequence[str]] | None = None,
     work_order_id: str | None = None,
     call_budget: CallBudget | None = None,
@@ -365,6 +421,7 @@ async def compose_document_plan(
         "allowed_kinds_by_block": {
             block_id: list(kinds) for block_id, kinds in closed.items()
         },
+        "composition_mode": "heuristic_only" if heuristic_only else "model",
     }
     compatibility = CheckpointCompatibility(
         teaching_revision=int(plan.revision or 1),
@@ -376,24 +433,39 @@ async def compose_document_plan(
     if checkpoint_store is not None:
         prior = checkpoint_store.get(checkpoint_key)
         if prior is not None and prior.status == "ready" and prior.payload is not None:
+            checkpoint_store.decide_resume(
+                checkpoint_key,
+                compatibility=compatibility,
+            )
             return CompositionPlan.model_validate(prior.payload)
 
-    if provider is None and engine is None:
-        if allow_heuristic_fallback:
-            return _budgeted_heuristic_fallback(
-                plan,
-                path=path,
-                allowed_kinds_by_block=closed,
-                call_budget=call_budget,
-                budget_ledger=budget_ledger,
-                work_order_id=order_id,
-                checkpoint_store=checkpoint_store,
-                compatibility=compatibility,
-                checkpoint_key=checkpoint_key,
+    if heuristic_only:
+        if not allow_heuristic_fallback:
+            raise DocumentComposerError(
+                "POLICY_CONFLICT",
+                "heuristic_only composition requires explicit heuristic fallback policy",
             )
+        if provider is not None or engine is not None:
+            raise DocumentComposerError(
+                "POLICY_CONFLICT",
+                "heuristic_only composition cannot be combined with a model provider",
+            )
+        return _budgeted_heuristic_fallback(
+            plan,
+            path=path,
+            allowed_kinds_by_block=closed,
+            call_budget=call_budget,
+            budget_ledger=budget_ledger,
+            work_order_id=order_id,
+            checkpoint_store=checkpoint_store,
+            compatibility=compatibility,
+            checkpoint_key=checkpoint_key,
+        )
+
+    if provider is None and engine is None:
         raise DocumentComposerError(
             "NO_PROVIDER",
-            "document composer requires an authoring provider",
+            "document composer requires an authoring provider; no semantic failure permits fallback",
         )
 
     request = AuthoringRequest(
@@ -402,6 +474,7 @@ async def compose_document_plan(
         scoped_request={
             "stage": "document_composition",
             "path": path,
+            "composition_mode": "heuristic_only" if heuristic_only else "model",
             "allowed_kinds_by_block": {
                 block_id: list(kinds) for block_id, kinds in closed.items()
             },
@@ -413,6 +486,7 @@ async def compose_document_plan(
         mode="generate",
         policy={
             "allow_heuristic_composition_fallback": allow_heuristic_fallback,
+            "composition_mode": "heuristic_only" if heuristic_only else "model",
             "closed_per_block_allowlists": True,
         },
     )
@@ -431,6 +505,10 @@ async def compose_document_plan(
         progress_run_id=progress_run_id,
         progress_stage="composition",
     )
+    selected.registry.validators.setdefault("document.composer_schema", _noop_validator)
+    selected.registry.validators.setdefault(
+        "document.composer_semantics", _composer_semantic_validator
+    )
     if checkpoint_store is not None:
         checkpoint_store.begin(checkpoint_key, compatibility=compatibility)
 
@@ -441,7 +519,7 @@ async def compose_document_plan(
             call_budget=call_budget,
         )
     except AuthoringEngineError as exc:
-        if allow_heuristic_fallback:
+        if allow_heuristic_fallback and exc.code in {"REPAIR_EXHAUSTED", "INVALID_PAYLOAD"}:
             return _budgeted_heuristic_fallback(
                 plan,
                 path=path,
@@ -455,28 +533,6 @@ async def compose_document_plan(
             )
         raise DocumentComposerError(exc.code, str(exc)) from exc
 
-    errors = _validate_composer_payload(
-        plan,
-        result.payload,
-        allowed_kinds_by_block=closed,
-    )
-    if errors:
-        if allow_heuristic_fallback:
-            return _budgeted_heuristic_fallback(
-                plan,
-                path=path,
-                allowed_kinds_by_block=closed,
-                call_budget=call_budget or selected.call_budget,
-                budget_ledger=budget_ledger or selected.budget_ledger,
-                work_order_id=order_id,
-                checkpoint_store=checkpoint_store,
-                compatibility=compatibility,
-                checkpoint_key=checkpoint_key,
-            )
-        raise DocumentComposerError(
-            "INVALID_COMPOSITION",
-            "; ".join(errors),
-        )
     composed = _decisions_from_composer(plan, result.payload, path=path)
     if checkpoint_store is not None:
         checkpoint_store.commit(

@@ -205,6 +205,8 @@ class TeachingRevisionRecord(BaseModel):
     revision: int = Field(ge=1)
     status: Literal["pending", "approved", "superseded", "rejected"]
     preparation_hash: str
+    content_hash: str | None = None
+    approval_hash_binding: Literal["submitted", "server_current_compat"] | None = None
     plan: dict[str, Any]
     created_at: str
     approved_at: str | None = None

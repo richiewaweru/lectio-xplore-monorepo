@@ -462,6 +462,10 @@ async def retry_realization(
         raise RealizationReadOnlyError(
             row.error_summary or "Read-only realization cannot be retried in place"
         )
+    if row.path == "print" and not new_output_id:
+        raise RealizationAdmissionError(
+            "Print retry requires a newly created detached output generation"
+        )
     # Snapshot fields that must remain stable across retry.
     pinned_path = row.path
     pinned_teaching_plan_id = row.teaching_plan_id
@@ -469,15 +473,8 @@ async def retry_realization(
     pinned_teaching_hash = row.teaching_plan_hash
 
     row.realization_revision = int(row.realization_revision) + 1
-    # Print is a realization of the preparation generation itself.  Unlike
-    # Learn, it does not create a second GenerationModel/output row.  A
-    # retry without an explicit output therefore must keep that durable
-    # checkpoint pointer; minting a UUID here produces an output id that the
-    # document endpoint can never resolve.
     if new_output_id is not None:
         row.output_id = new_output_id
-    elif row.path == "print" and row.preparation_generation_id:
-        row.output_id = row.preparation_generation_id
     else:
         row.output_id = str(uuid.uuid4())
     row.status = "queued"

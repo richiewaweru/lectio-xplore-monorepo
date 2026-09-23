@@ -10,6 +10,8 @@ import uuid
 from collections.abc import Mapping, Sequence
 from typing import Any, Literal
 
+from pydantic import ValidationError
+
 from document.models import (
     DOCUMENT_PRIMITIVE_KINDS,
     CalloutNode,
@@ -29,6 +31,7 @@ from infra.authoring import (
     AuthoringEngineError,
     AuthoringProvider,
     AuthoringRequest,
+    AuthoringValidationError,
 )
 from infra.authoring.engine import AuthoringRegistry
 from infra.execution.call_budget import CallBudget, CallBudgetLedger
@@ -192,9 +195,37 @@ def _definition_for(kind: DocumentPrimitiveKind) -> AuthoringDefinition:
         instructions=document_writer_prompt(),
         payload_schema=_PRIMITIVE_SCHEMAS[kind],
         required_inputs=("kind", "brief", "teaching_block"),
-        validator_refs=("document.writer_schema",),
+        validator_refs=("document.writer_schema", "document.writer_quality"),
         definition_hash=f"{document_writer_prompt_hash()}:{kind}",
     )
+
+
+def _document_quality_validator(
+    definition: AuthoringDefinition,
+    request: AuthoringRequest,
+    payload: Mapping[str, Any],
+) -> list[AuthoringValidationError]:
+    del definition
+    kind = str(request.inputs.get("kind") or "")
+    brief = str(request.inputs.get("brief") or "")
+    errors = _payload_quality_errors(kind, payload, brief=brief)
+    if not errors:
+        teaching_block = request.inputs.get("teaching_block")
+        teaching_block_id = (
+            str(teaching_block.get("id") or "validation-block")
+            if isinstance(teaching_block, Mapping)
+            else "validation-block"
+        )
+        try:
+            _normalize_payload(
+                kind,  # type: ignore[arg-type]
+                payload,
+                node_id="validation-node",
+                teaching_block_id=teaching_block_id,
+            )
+        except (ValidationError, DocumentWriterError, TypeError, ValueError) as exc:
+            errors.append(f"normalized document node is invalid: {exc}")
+    return [AuthoringValidationError("", error) for error in errors]
 
 
 def _normalize_payload(
@@ -333,6 +364,8 @@ async def write_document_primitive(
         progress_stage=progress_stage,
         durable_persist_hook=durable_persist_hook,
     )
+    selected.registry.validators.setdefault("document.writer_schema", _noop_validator)
+    selected.registry.validators.setdefault("document.writer_quality", _document_quality_validator)
     if durable_persist_hook is not None and getattr(selected, "durable_persist_hook", None) is None:
         selected.durable_persist_hook = durable_persist_hook
     if checkpoint_store is not None:
@@ -351,15 +384,6 @@ async def write_document_primitive(
 
     payload = dict(result.payload)
     payload["kind"] = kind
-    quality = _payload_quality_errors(kind, payload, brief=brief)
-    if quality:
-        # Do not open a second AuthoringEngine.execute loop — that multiplies the
-        # call budget. Surface quality failure so the durable repair path (same
-        # work-item counter) can reserve another call explicitly.
-        if checkpoint_store is not None:
-            checkpoint_store.mark_ambiguous(checkpoint_key)
-        raise DocumentWriterError("INVALID_PAYLOAD", "; ".join(quality))
-
     normalized = _normalize_payload(
         kind,  # type: ignore[arg-type]
         payload,

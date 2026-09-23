@@ -96,7 +96,8 @@ class ConstructorOutput(StrictModel):
     @field_validator("clarifying_question", mode="before")
     @classmethod
     def _normalize_clarifying_question_sentinels(
-        cls, value: str | None,
+        cls,
+        value: str | None,
     ) -> str | None:
         if value is None:
             return None
@@ -247,9 +248,7 @@ class ScheduleSuggestRequest(PathVersionMutationRequest):
 
 
 class ShapeDeviationCreateRequest(PathLessonMutationRequest):
-    lesson_mode: Literal[
-        "first_exposure", "consolidation", "repair", "retrieval", "transfer"
-    ]
+    lesson_mode: Literal["first_exposure", "consolidation", "repair", "retrieval", "transfer"]
     operation: Literal["insert", "remove", "replace", "reorder"]
     target_slot: str = Field(min_length=1, max_length=80)
     replacement_slot: str | None = Field(default=None, max_length=80)
@@ -350,12 +349,80 @@ class RealizationStatusDTO(StrictModel):
     open_href: str | None = None
 
 
+class WorkspaceErrorDTO(StrictModel):
+    code: str | None = None
+    error_type: str | None = None
+    failure_class: str | None = None
+    message: str | None = None
+    retryable: bool | None = None
+    stage: str | None = None
+    work_item_id: str | None = None
+    attempt: int | None = None
+    recovery_action: str | None = None
+
+
+class PreparationWorkspaceDTO(StrictModel):
+    state: Literal[
+        "not_started",
+        "planning",
+        "awaiting_review",
+        "approved",
+        "failed_recoverable",
+        "failed_terminal",
+    ]
+    review_kind: Literal["structural", "teaching_plan"] | None = None
+    generation_id: str | None = None
+    teaching_plan_id: str | None = None
+    approved_revision: int | None = None
+    approved_content_hash: str | None = None
+    approved_snapshot_verified: bool = False
+    stale: bool = False
+    legacy_ambiguous: bool = False
+    error: WorkspaceErrorDTO | None = None
+
+
+class ArtifactWorkspaceDTO(StrictModel):
+    state: Literal[
+        "not_created",
+        "queued",
+        "running",
+        "ready",
+        "failed_recoverable",
+        "failed_terminal",
+    ]
+    realization_id: str | None = None
+    output_id: str | None = None
+    open_href: str | None = None
+    stale: bool = False
+    legacy_ambiguous: bool = False
+    error: WorkspaceErrorDTO | None = None
+
+
+class LessonWorkspaceStateDTO(StrictModel):
+    preparation: PreparationWorkspaceDTO
+    learn: ArtifactWorkspaceDTO
+    print: ArtifactWorkspaceDTO
+    legacy_ambiguities: list[str] = Field(default_factory=list)
+
+
+class WorkerStatusDebugDTO(StrictModel):
+    debug_only: Literal[True] = True
+    generation_status: str
+    workflow_stage: str
+
+
 class PreparedLessonStatusResponse(StrictModel):
     path_lesson_id: str
     lesson_revision: int
     generation_id: str | None
-    generation_status: str
-    workflow_stage: str
+    generation_status: str = Field(
+        deprecated=True,
+        description="Compatibility only; use workspace for teacher-facing state.",
+    )
+    workflow_stage: str = Field(
+        deprecated=True,
+        description="Compatibility only; use workspace for teacher-facing state.",
+    )
     objective_hash: str
     stale: bool
     can_prepare: bool
@@ -368,6 +435,8 @@ class PreparedLessonStatusResponse(StrictModel):
     learn_output_id: str | None = None
     print_open_href: str | None = None
     learn_open_href: str | None = None
+    workspace: LessonWorkspaceStateDTO
+    worker_debug: WorkerStatusDebugDTO
 
 
 class MergeCriticResult(StrictModel):
@@ -527,9 +596,7 @@ class PathStructuralSection(BaseModel):
         ),
     )
     role: str = Field(
-        description=(
-            "Must ALSO equal slots[i].slot_id verbatim — not slots[i].role."
-        ),
+        description=("Must ALSO equal slots[i].slot_id verbatim — not slots[i].role."),
     )
     title: str = Field(description="Concise section title. Aim for ~80 chars (advisory).")
     card_id: str | None = Field(

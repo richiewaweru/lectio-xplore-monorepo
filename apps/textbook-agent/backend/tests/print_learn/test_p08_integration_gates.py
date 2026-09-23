@@ -273,7 +273,7 @@ class P08LearnMockProvider:
                             if depth == 0:
                                 teaching = _json.loads(call.prompt[start : index + 1])
                                 break
-            except Exception:
+            except _json.JSONDecodeError:
                 teaching = {}
             for section in teaching.get("sections") or []:
                 section_id = str(section.get("slot_id") or "")
@@ -782,6 +782,7 @@ async def test_p08_i01_uninterrupted_dual_path_no_plan_swap() -> None:
         state = await PageDocumentRepository(session, gid).load_page_generation_state()
         assert state.get("form_prompt") == "closed_print_selection"
         assert "selection_snapshot" in (state.get("form_raw") or "")
+        assert "heuristic fallback:" in (state.get("form_raw") or "")
         assert state.get("teaching_plan")
         handoffs = state.get("teaching_consumer_handoffs") or {}
         assert "print" in handoffs and "learn" in handoffs
@@ -1016,11 +1017,10 @@ async def test_p08_i04_teacher_edit_and_sibling_isolation() -> None:
         doc["title"] = edited_title
         edited = False
         for block in (doc.get("blocks") or {}).values():
-            if isinstance(block, dict) and isinstance(block.get("content"), dict):
-                if "body" in block["content"]:
-                    block["content"]["body"] = edited_body
-                    edited = True
-                    break
+            if isinstance(block, dict) and isinstance(block.get("content"), dict) and "body" in block["content"]:
+                block["content"]["body"] = edited_body
+                edited = True
+                break
         if not edited:
             for node in doc.get("nodes") or []:
                 if not isinstance(node, dict):

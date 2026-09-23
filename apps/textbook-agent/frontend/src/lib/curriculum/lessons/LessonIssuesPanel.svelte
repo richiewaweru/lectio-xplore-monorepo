@@ -4,9 +4,10 @@
 	interface Props {
 		issues?: LessonIssue[];
 		onRetry?: () => void | Promise<void>;
+		allowRetry?: boolean;
 	}
 
-	let { issues = [], onRetry }: Props = $props();
+	let { issues = [], onRetry, allowRetry = false }: Props = $props();
 	const attentionCount = $derived(issues.filter((issue) => issue.severity !== 'info').length);
 </script>
 
@@ -23,7 +24,7 @@
 				<li class:info={issue.severity === 'info'}>
 					<div class="issue-head"><span class="severity">{issue.severity}</span><strong>{issue.message}</strong></div>
 					<p>{issue.category} · {issue.code}{#if issue.target_id} · Target: {issue.target_id}{/if}</p>
-					{#if issue.repairable && onRetry}<button type="button" onclick={() => void onRetry?.()}>Retry</button>{/if}
+					{#if allowRetry && issue.repairable && onRetry}<button type="button" onclick={() => void onRetry?.()}>Retry</button>{/if}
 				</li>
 			{/each}
 		</ul>

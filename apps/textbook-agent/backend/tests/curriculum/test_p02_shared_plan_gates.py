@@ -185,9 +185,7 @@ def test_p02_s02_objective_refs_scope_and_code_owned_ids() -> None:
     with pytest.raises(ActionSourceIncompatibleError):
         assert_action_compatible_with_sources(
             action="order-items",
-            source_items=[
-                SimpleNamespace(id="mcq-1", options=[{"key": "A"}, {"key": "B"}])
-            ],
+            source_items=[SimpleNamespace(id="mcq-1", options=[{"key": "A"}, {"key": "B"}])],
         )
 
 
@@ -315,8 +313,8 @@ def test_p02_s05_incompatible_source_fails_without_rewrite() -> None:
         )
 
 
-def test_p02_legacy_approved_snapshot_is_normalized_for_both_consumers() -> None:
-    """Legacy approved page state must not reopen the approval gate."""
+def test_p02_legacy_approved_snapshot_is_readable_but_not_consumable_without_hash() -> None:
+    """Legacy approved state has no immutable hash and cannot start new work."""
     state = {
         "teaching_plan": {
             "arc": "Legacy arc.",
@@ -351,11 +349,14 @@ def test_p02_legacy_approved_snapshot_is_normalized_for_both_consumers() -> None
     assert store.list_revisions()[0].status == "approved"
     assert state["teaching_review"]["approved_revision"] == 1
 
-    print_plan = accept_approved_teaching_revision(state, consumer="print")
-    learn_plan = accept_approved_teaching_revision(state, consumer="learn")
-    assert print_plan.model_dump(mode="json") == learn_plan.model_dump(mode="json")
-    assert print_plan.teaching_plan_id == learn_plan.teaching_plan_id
-    assert print_plan.revision == learn_plan.revision == 1
+    from curriculum.teaching_plan.consumers import TeachingRevisionContentError
+
+    with pytest.raises(TeachingRevisionContentError) as error:
+        accept_approved_teaching_revision(state, consumer="print")
+    assert error.value.code == "TEACHING_CONTENT_HASH_UNAVAILABLE"
+    # The stored plan remains available for display/review even though a new
+    # realization cannot safely consume bytes that were never hash-bound.
+    assert state["teaching_plan"]["arc"] == "Legacy arc."
 
 
 def test_p02_s06_edit_creates_revision_old_approved_readable() -> None:
@@ -398,6 +399,7 @@ def test_p02_s06_edit_creates_revision_old_approved_readable() -> None:
     assert old is not None
     assert old.status in {"approved", "superseded"}
     assert old.plan["arc"] == "Original arc."
+    assert old.content_hash == approved.content_hash
     assert store.get_revision(2) is not None
     assert store.get_revision(2).plan["arc"] == "Edited arc after teacher change."
 

@@ -203,6 +203,7 @@ class V3ChunkedPlanStateDTO(BaseModel):
     lesson_mode_confidence: Literal["low", "high"] | None = None
     variants: list[V3VariantSpecDTO] = Field(default_factory=list)
     variant_generation_ids: dict[str, str] = Field(default_factory=dict)
+    requested_realization_path: str | None = None
 
 
 class V3ChunkedPlanDTO(BaseModel):
@@ -232,6 +233,7 @@ class V3ChunkedStatusDTO(BaseModel):
     error: str | None = None
     error_type: str | None = None
     variant_generation_ids: dict[str, str] = Field(default_factory=dict)
+    requested_realization_path: str | None = None
     # Native whole-lesson projection (optional; defaults keep legacy clients working).
     document_version: int | None = None
     document_exists: bool = False

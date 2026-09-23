@@ -49,8 +49,28 @@ import {
 	getV3GenerationBlueprint,
 	getV3GenerationDetail,
 	getV3Generations,
-	retryNativeVisuals
+	retryNativeVisuals,
+	approveLessonApproach
 } from './v3';
+
+describe('approveLessonApproach', () => {
+	it('submits the exact displayed revision and content hash', async () => {
+		apiFetchMock.mockResolvedValue({ ok: true, json: async () => ({ status: 'teaching_approved' }) });
+		await approveLessonApproach('generation-1', {
+			expected_revision: 4,
+			expected_content_hash: 'sha256-displayed-plan',
+			teacher_note: 'Approved',
+			path: 'learn'
+		});
+		const [url, init] = apiFetchMock.mock.calls[0] as unknown as [string, RequestInit];
+		expect(url).toContain('/generations/generation-1/lesson-approach/approve?path=learn');
+		expect(JSON.parse(String(init.body))).toEqual({
+			expected_revision: 4,
+			expected_content_hash: 'sha256-displayed-plan',
+			teacher_note: 'Approved'
+		});
+	});
+});
 
 describe('connectV3StudioGenerationStream', () => {
 	beforeEach(() => {

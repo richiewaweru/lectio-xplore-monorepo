@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -200,6 +201,52 @@ def _noop_validator(
 ) -> list[AuthoringValidationError]:
     del definition, request, payload
     return []
+
+
+def _interaction_envelope_validator(
+    definition: AuthoringDefinition,
+    request: AuthoringRequest,
+    payload: Mapping[str, Any],
+) -> list[AuthoringValidationError]:
+    if request.mode != "generate" or definition.capability_id not in _CORE_INTERACTION_ENVELOPE_IDS:
+        return []
+    prompt = str(payload.get("prompt") or "").strip()
+    feedback = payload.get("feedback")
+    config = payload.get("config")
+    if not isinstance(feedback, Mapping):
+        return [AuthoringValidationError("feedback", "feedback must be an object")]
+    if not isinstance(config, Mapping):
+        return [AuthoringValidationError("config", "config must be an object")]
+    feedback_errors = [
+        AuthoringValidationError(f"feedback.{key}", f"feedback.{key} must be non-empty")
+        for key in ("correct", "incorrect")
+        if not str(feedback.get(key) or "").strip()
+    ]
+    if feedback_errors:
+        return feedback_errors
+
+    from learn.generation.interaction_writer import validate_interaction_contract
+
+    candidate = {
+        "id": "validation-interaction",
+        "kind": definition.capability_id,
+        "prompt": prompt,
+        "assessment_mode": "practice",
+        "attempt_policy": dict(_DEFAULT_ATTEMPT_POLICY),
+        "feedback": dict(feedback),
+        "completion": dict(_DEFAULT_COMPLETION),
+        "config": _strip_trusted_config_fields(config),
+        "accessibility": {
+            "aria_label": prompt,
+            "narration": "optional",
+            "keyboard_operable": True,
+        },
+        "ai_config_rule": "config-only",
+    }
+    return [
+        AuthoringValidationError("", error)
+        for error in validate_interaction_contract(candidate)
+    ]
 
 
 def _validate_classify_config(
@@ -592,6 +639,7 @@ def build_learn_authoring_registry() -> AuthoringRegistry:
         )
         .with_validator("learn.quizContentToInteractionContract", _noop_validator)
         .with_validator("learn.fillBlankContentToInteractionContract", _noop_validator)
+        .with_validator("learn.interaction_envelope", _interaction_envelope_validator)
         .with_converter("learn.choice.approved_item_converter", _convert_choice)
         .with_converter("learn.multi-select.approved_item_converter", _convert_multi_select)
         .with_converter("learn.fill-blank.approved_item_converter", _convert_fill_blank)
@@ -675,6 +723,13 @@ async def run_learn_authoring(
     scoped_items = list(resolved.items) if selected_mode == "convert-approved" else []
     approved_item = resolved.primary_item
     definition = _definition_from_order(order, mode=selected_mode)
+    if order.lane == "interaction" and selected_mode == "generate":
+        definition = replace(
+            definition,
+            validator_refs=tuple(
+                dict.fromkeys((*definition.validator_refs, "learn.interaction_envelope"))
+            ),
+        )
     ctx = dict(lesson_context or {})
     unresolved = list(unresolved_fact_ids or ctx.get("unresolved_fact_ids") or [])
     referenced = list(referenced_fact_ids or ctx.get("referenced_fact_ids") or [])
@@ -742,6 +797,9 @@ async def run_learn_authoring(
     selected_engine = engine or AuthoringEngine(
         registry=build_learn_authoring_registry(),
         provider=provider or LLMAuthoringProvider(),
+    )
+    selected_engine.registry.validators.setdefault(
+        "learn.interaction_envelope", _interaction_envelope_validator
     )
     result = await selected_engine.execute(request, provider=provider)
     # Re-attach possibly updated policy (convert fallback) onto provenance.

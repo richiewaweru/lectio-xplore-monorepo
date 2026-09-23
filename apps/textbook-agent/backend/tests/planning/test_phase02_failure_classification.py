@@ -6,6 +6,7 @@ import httpx
 from pydantic import BaseModel, ValidationError
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 
+from infra.authoring.models import AuthoringEngineError
 from print.generation.whole_lesson.failure_policy import classify_failure, structured_error_from_exc
 from print.generation.whole_lesson.states import LeaseLostError, ResumeDecision, decide_resume
 from print.generation.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
@@ -65,6 +66,42 @@ def test_teaching_output_invalid_has_dedicated_recoverable_code() -> None:
     assert c.code == "MODEL_OUTPUT_INVALID"
     assert c.retryable is True
     assert c.repairable is False
+
+
+def test_print_provider_repair_transport_and_terminal_errors_stay_separate() -> None:
+    transport = classify_failure(
+        AuthoringEngineError(
+            "PROVIDER_TRANSPORT_EXHAUSTED",
+            "rate limit exhausted",
+            stage="provider",
+            retryable=True,
+        )
+    )
+    assert (transport.code, transport.retryable, transport.repairable) == (
+        "TRANSPORT", True, False
+    )
+
+    terminal = classify_failure(
+        AuthoringEngineError(
+            "PROVIDER_FAILURE",
+            "permanent_auth: invalid key",
+            stage="provider",
+        )
+    )
+    assert (terminal.code, terminal.retryable, terminal.repairable) == (
+        "PROVIDER_FAILURE", False, False
+    )
+
+    repair = classify_failure(
+        AuthoringEngineError(
+            "REPAIR_EXHAUSTED",
+            "structured output remained invalid",
+            stage="repair",
+        )
+    )
+    assert (repair.code, repair.retryable, repair.repairable) == (
+        "VALIDATION", True, False
+    )
 
 
 def test_validation_repairable_once() -> None:

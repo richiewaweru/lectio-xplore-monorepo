@@ -17,6 +17,7 @@ from core.database.models import (
     ConceptCardModel,
     EditableLessonModel,
     GenerationModel,
+    NativeRealizationModel,
 )
 from curriculum.agents import run_lesson_sourcebook_writer, run_shared_task_writer
 from curriculum.approved_items import load_approved_item_records
@@ -143,6 +144,7 @@ async def produce_learn_from_approved_teaching(
     admission_request_key: str | None = None,
     worker_id: str | None = None,
     allow_heuristic_composition_fallback: bool | None = None,
+    admitted_realization: NativeRealizationModel | None = None,
 ) -> dict[str, Any]:
     """Admit Learn realization, then run LearnDocument v2 production.
 
@@ -219,12 +221,6 @@ async def produce_learn_from_approved_teaching(
         if isinstance(raw_sourcebook, dict):
             try:
                 lesson_sourcebook = LessonSourcebook.model_validate(raw_sourcebook)
-                # Repair older Print artifacts that stamped a selection hash
-                # instead of the canonical Teaching Plan content hash.
-                if lesson_sourcebook.teaching_plan_hash != plan_hash:
-                    lesson_sourcebook = lesson_sourcebook.model_copy(
-                        update={"teaching_plan_hash": plan_hash}
-                    )
             except Exception:  # noqa: BLE001
                 lesson_sourcebook = None
         raw_tasks = smart.get("shared_tasks")
@@ -251,38 +247,47 @@ async def produce_learn_from_approved_teaching(
     )
 
     # Admit first with a durable output_id (or reuse an existing admission).
-    provisional_output_id = f"learn-out-{uuid.uuid4().hex[:12]}"
-    realization, created = await admit_realization(
-        session,
-        path_lesson_id=path_lesson_id,
-        path="learn",
-        teaching_plan_id=str(teaching_plan.teaching_plan_id or ""),
-        teaching_plan_revision=int(teaching_plan.revision or 1),
-        teaching_plan_hash=plan_hash,
-        preparation_generation_id=preparation_generation_id,
-        pack_id=pack_id or preparation_generation_id,
-        output_id=provisional_output_id,
-        native_policy_hash=policy_hash,
-        package_contract_hash=pkg_hash,
-        admission_request_key=admission_request_key,
-        admission_payload_hash=plan_hash,
-    )
-    if not created and realization.output_id:
-        # Failed prior runs keep stale checkpoints that can trip input_hash
-        # mismatches on resume. Mint a fresh output identity after failure.
+    provisional_output_id = f"learn-out-{uuid.uuid4().hex[:16]}"
+    if admitted_realization is not None:
+        realization = admitted_realization
+        created = False
+        if (
+            realization.path != "learn"
+            or realization.path_lesson_id != path_lesson_id
+            or realization.preparation_generation_id != preparation_generation_id
+            or realization.teaching_plan_id != str(teaching_plan.teaching_plan_id or "")
+            or int(realization.teaching_plan_revision) != int(teaching_plan.revision or 1)
+            or realization.teaching_plan_hash != plan_hash
+            or not realization.output_id
+        ):
+            raise ValueError("Admitted Learn realization does not match its pinned Teaching Plan")
+        output_id = str(realization.output_id)
+    else:
+        realization, created = await admit_realization(
+            session,
+            path_lesson_id=path_lesson_id,
+            path="learn",
+            teaching_plan_id=str(teaching_plan.teaching_plan_id or ""),
+            teaching_plan_revision=int(teaching_plan.revision or 1),
+            teaching_plan_hash=plan_hash,
+            preparation_generation_id=preparation_generation_id,
+            pack_id=pack_id or preparation_generation_id,
+            output_id=provisional_output_id,
+            native_policy_hash=policy_hash,
+            package_contract_hash=pkg_hash,
+            admission_request_key=admission_request_key,
+            admission_payload_hash=plan_hash,
+        )
+    if admitted_realization is None and not created and realization.output_id:
         if str(realization.status) in {
             "failed",
             "failed_terminal",
             "failed_recoverable",
             "cancelled",
         }:
-            output_id = provisional_output_id
-            realization.output_id = output_id
-            realization.status = "queued"
-            realization.error_summary = None
-        else:
-            output_id = str(realization.output_id)
-    else:
+            raise ValueError("Learn failure requires an explicit realization retry")
+        output_id = str(realization.output_id)
+    elif admitted_realization is None:
         output_id = provisional_output_id
         realization.output_id = output_id
     await session.flush()
@@ -540,7 +545,7 @@ async def produce_learn_from_approved_teaching(
             durable_persist_hook=_durable_persist,
             on_item_committed=_on_item_committed,
         )
-    except Exception:
+    except Exception as exc:
         stop_heartbeat.set()
         try:
             await asyncio.wait_for(heartbeat_task, timeout=2.0)
@@ -550,12 +555,26 @@ async def produce_learn_from_approved_teaching(
         try:
             generation = await session.get(GenerationModel, output_id)
             if generation is not None:
+                error_detail = {
+                    "code": "LEARN_EXECUTION_FAILED",
+                    "error_type": type(exc).__name__,
+                    "failure_class": "learn_execution",
+                    "message": str(exc)[:500] or "Learn document production failed.",
+                    "retryable": True,
+                    "stage": str(generation.status or "running"),
+                    "work_item_id": None,
+                    "attempt": int(realization.realization_revision or 1),
+                    "recovery_action": "retry",
+                }
                 execution = learn_execution_from_generation(generation)
                 execution["status"] = "failed"
                 # Drop ownership so a later resume can claim after crash/fail.
                 execution["worker_id"] = None
                 execution["heartbeat_at"] = None
                 write_learn_execution(generation, execution)
+                generation_state = dict(generation.chunked_state_json or {})
+                generation_state["error_detail"] = error_detail
+                generation.chunked_state_json = generation_state
                 await session.commit()
                 # Best-effort durable snapshot without ownership fence.
                 await persist_learn_reliability_state(
@@ -580,6 +599,7 @@ async def produce_learn_from_approved_teaching(
                 stage="failed",
             )
             realization.status = "failed_recoverable"
+            realization.error_summary = str(exc)[:500] or "Learn document production failed."
             await session.commit()
         except Exception:
             logger.debug("learn failure persist skipped", exc_info=True)

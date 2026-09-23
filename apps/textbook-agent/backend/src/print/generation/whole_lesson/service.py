@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import ConceptCardModel, GenerationModel
 from curriculum.approved_items import ItemPoolEmptyError, load_approved_item_records
+from curriculum.teaching_plan.revisions import teaching_plan_review_identity
 from curriculum.teaching_plan.service import (
     bind_shared_teaching_runner,
     plan_shared_teaching,
@@ -267,6 +268,7 @@ async def approve_teaching_and_queue(
     generation_id: str,
     *,
     expected_revision: int,
+    expected_content_hash: str | None = None,
     reviewed_by: str | None = None,
     teacher_note: str | None = None,
 ) -> dict[str, Any]:
@@ -278,6 +280,7 @@ async def approve_teaching_and_queue(
     state = await repo.save_teaching_review(
         status="approved",
         expected_revision=expected_revision,
+        expected_content_hash=expected_content_hash,
         reviewed_by=reviewed_by,
         teacher_note=teacher_note,
         queue=True,
@@ -287,6 +290,7 @@ async def approve_teaching_and_queue(
     return {
         "status": status,
         "teaching_review": state.get("teaching_review"),
+        "teaching_plan_identity": teaching_plan_review_identity(state),
         "queued": True,
     }
 
@@ -296,6 +300,7 @@ async def approve_teaching_and_execute(
     generation_id: str,
     *,
     expected_revision: int,
+    expected_content_hash: str | None = None,
     reviewed_by: str | None = None,
     teacher_note: str | None = None,
 ) -> dict[str, Any]:
@@ -304,6 +309,7 @@ async def approve_teaching_and_execute(
         session,
         generation_id,
         expected_revision=expected_revision,
+        expected_content_hash=expected_content_hash,
         reviewed_by=reviewed_by,
         teacher_note=teacher_note,
     )

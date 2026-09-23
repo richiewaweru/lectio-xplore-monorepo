@@ -11,6 +11,7 @@ from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior
 
 from core.database.models import GenerationModel, UserModel
 from core.database.session import async_session_factory
+from curriculum.workspace_projection import project_lesson_workspace
 from print.generation.whole_lesson.native_status import project_native_status
 from print.generation.whole_lesson.packet import (
     AnchorRecord,
@@ -409,6 +410,87 @@ async def test_teaching_boundary_persists_semantic_exhaustion_as_recoverable() -
         )
         assert projected is not None
         assert projected["next_action"] == "retry_teaching"
+
+
+@pytest.mark.asyncio
+async def test_teaching_repair_success_persists_only_valid_plan_and_waits_for_review(
+    monkeypatch,
+) -> None:
+    """The active persistence boundary records the repaired plan, never the invalid draft."""
+    from tests.planning.test_contract_hardening import (
+        _check_plan,
+        _five_item_check_packet,
+        _make_snapshot,
+    )
+
+    from curriculum.teaching_plan import service as teaching_service
+    from print.generation.whole_lesson import service as print_service
+
+    gid, _user_id = await _seed_native_pre_worker()
+    packet = _five_item_check_packet()
+    legality = _make_snapshot(
+        permitted_intents=["check-understanding"],
+        typical_by_slot={"check": ["check-understanding"]},
+        permitted_objects=["choices"],
+        compatible_objects_by_intent={"check-understanding": ["choices"]},
+    )
+    invalid = _check_plan(source_ids=packet.approved_item_ids(), invalid_context=True)
+    valid = _check_plan(source_ids=[packet.approved_item_ids()[2]])
+    calls = 0
+
+    async def fake_model(*, prompt, user_payload, trace_id, generation_id, attempt_start=1):
+        nonlocal calls
+        calls += 1
+        plan = invalid if calls == 1 else valid
+        return plan, plan.model_dump_json()
+
+    async def run_bound_planner(
+        selected_packet, *, legality=None, trace_id=None, generation_id=None, require_items=True
+    ):
+        return await run_lesson_approach_planner(
+            selected_packet,
+            legality=legality,
+            trace_id=trace_id,
+            generation_id=generation_id,
+            require_items=require_items,
+        )
+
+    monkeypatch.setattr(
+        print_service, "build_packet_for_generation", AsyncMock(return_value=packet)
+    )
+    monkeypatch.setattr(print_service, "build_lesson_legality_snapshot", lambda _packet: legality)
+    monkeypatch.setattr(print_service, "validate_legality_snapshot", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(teaching_service, "_shared_teaching_runner", run_bound_planner)
+
+    with patch(
+        "print.generation.whole_lesson.teaching_agent._call_teaching_model",
+        new=AsyncMock(side_effect=fake_model),
+    ):
+        async with async_session_factory() as session:
+            summary = await print_service.run_and_persist_teaching_plan(
+                session, gid, require_items=False
+            )
+
+    assert calls == 2
+    assert summary["teaching_plan"]["arc"] == valid.arc
+    async with async_session_factory() as session:
+        generation = await session.get(GenerationModel, gid)
+        assert generation is not None
+        persisted = dict((generation.chunked_state_json or {}).get("page_document_v2") or {})
+        plan = persisted.get("teaching_plan")
+        review = persisted.get("teaching_review") or {}
+        assert plan is not None and plan["arc"] == valid.arc
+        assert "cellular respiration" not in str(plan)
+        assert review.get("status") == "pending"
+        assert review.get("approved_revision") is None
+        workspace = project_lesson_workspace(
+            generation_id=gid,
+            generation_status=generation.status,
+            workflow_stage="awaiting_teaching_approval",
+            state=persisted,
+        )
+        assert workspace.preparation.state == "awaiting_review"
+        assert workspace.preparation.approved_snapshot_verified is False
 
 
 @pytest.mark.asyncio

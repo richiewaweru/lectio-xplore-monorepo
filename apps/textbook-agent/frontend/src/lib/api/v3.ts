@@ -4,6 +4,7 @@ import { get } from 'svelte/store';
 import { ensureOk } from '$lib/api/errors';
 import { apiFetch, buildApiUrl } from '$lib/api/client';
 import { authToken } from '$lib/shared/stores/auth';
+import type { LessonApproachView } from '$lib/curriculum/lessons/teaching-plan-review';
 import type {
 	BlueprintPreviewDTO,
 	V3ChunkedPlan,
@@ -139,18 +140,23 @@ export async function approveChunkedPlan(
 	return res.json() as Promise<V3ChunkedPlanState>;
 }
 
-export async function getLessonApproach(generationId: string): Promise<Record<string, unknown>> {
+export async function getLessonApproach(generationId: string): Promise<LessonApproachView> {
 	const res = await apiFetch(
 		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/lesson-approach`,
 		{ headers: bearerHeaders() }
 	);
 	await ensureOk(res, 'Could not load the lesson approach.');
-	return res.json() as Promise<Record<string, unknown>>;
+	return res.json() as Promise<LessonApproachView>;
 }
 
 export async function approveLessonApproach(
 	generationId: string,
-	payload: { expected_revision: number; teacher_note?: string; path?: 'print' | 'learn' }
+	payload: {
+		expected_revision: number;
+		expected_content_hash: string;
+		teacher_note?: string;
+		path?: 'print' | 'learn';
+	}
 ): Promise<Record<string, unknown>> {
 	const pathQuery = payload.path ? `?path=${encodeURIComponent(payload.path)}` : '';
 	const res = await apiFetch(
@@ -160,6 +166,7 @@ export async function approveLessonApproach(
 			headers: bearerHeaders(),
 			body: JSON.stringify({
 				expected_revision: payload.expected_revision,
+				expected_content_hash: payload.expected_content_hash,
 				teacher_note: payload.teacher_note
 			})
 		}
@@ -174,8 +181,11 @@ export async function realizeLearnFromGeneration(
 	status: string;
 	path: string;
 	output_id: string;
-	editable_lesson_id: string;
+	editable_lesson_id?: string | null;
 	open_href?: string | null;
+	workspace_href?: string | null;
+	realization_id?: string;
+	realization_revision?: number;
 }> {
 	const res = await apiFetch(
 		`/api/v1/v3/generations/${encodeURIComponent(generationId)}/realize-learn`,

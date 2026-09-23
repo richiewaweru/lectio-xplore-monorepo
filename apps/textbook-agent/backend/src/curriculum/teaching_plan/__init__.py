@@ -12,6 +12,7 @@ from curriculum.teaching_plan.consumers import (
     NativeTeachingConsumer,
     accept_approved_teaching_revision,
 )
+from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.instance_ids import assign_slot_instance_ids
 from curriculum.teaching_plan.models import (
     AnchorUsageEntry,
@@ -46,4 +47,5 @@ __all__ = [
     "assert_action_compatible_with_sources",
     "assign_slot_instance_ids",
     "materialize_teaching_plan",
+    "teaching_plan_content_hash",
 ]

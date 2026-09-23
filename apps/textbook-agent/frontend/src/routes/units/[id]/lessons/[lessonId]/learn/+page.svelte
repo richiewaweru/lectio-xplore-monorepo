@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onDestroy, onMount } from 'svelte';
 	import { getBuilderLesson, openNativeLearnBuilderLesson } from '$lib/learn/authoring/builder/api/lesson-crud';
 	import { isLearnDocument, type LearnDocument } from '$lib/learn/document/types';
 	import StudentLessonShell from '$lib/learn/student/StudentLessonShell.svelte';
@@ -9,8 +9,8 @@
 	import { getLessonIssues, retryLessonRealization, generateLearnRealization } from '$lib/api/units';
 	import type { LessonIssue, PathLesson, PreparedLessonStatus, Unit, UnitPath } from '$lib/types/units';
 	import { Button, Dialog, InlineError, EmptyState, Badge, Tabs } from '$lib/ui';
-	import { lessonArtifactUi, lessonWorkspaceHref, resolveBuilderLessonId } from '$lib/curriculum/lessons/lesson-context';
-	import { realizeLearnFromGeneration } from '$lib/api/v3';
+	import { lessonArtifactUi, lessonWorkspaceHref, resolveBuilderLessonId, preparationIsApprovedAndFresh } from '$lib/curriculum/lessons/lesson-context';
+	import { createSerializedPoll } from '$lib/curriculum/lessons/serialized-poll';
 	import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte';
 
 	type Ctx = {
@@ -20,6 +20,8 @@
 		path: UnitPath | null;
 		lesson: PathLesson | null;
 		preparation: PreparedLessonStatus | null;
+		statusFresh: boolean;
+		statusError: string | null;
 		refreshPreparation: () => Promise<void>;
 	};
 
@@ -59,7 +61,22 @@
 		loadError = null;
 		try {
 			await ctx.refreshPreparation();
-			const id = resolveBuilderLessonId(ctx.preparation) || builderLessonId;
+			const currentArtifact = lessonArtifactUi(ctx.preparation, 'learn');
+			if (currentArtifact.state === 'preparing') {
+				document = null;
+				builderLessonId = null;
+				loadError = null;
+				await loadIssues();
+				return;
+			}
+			if (currentArtifact.state === 'failed' || currentArtifact.state === 'needs_attention') {
+				document = null;
+				builderLessonId = null;
+				loadError = currentArtifact.errorSummary || 'Learn could not be created.';
+				await loadIssues();
+				return;
+			}
+			const id = resolveBuilderLessonId(ctx.preparation);
 			builderLessonId = id;
 			if (id) {
 				try {
@@ -77,7 +94,7 @@
 					// the editable lesson has not been opened in Builder yet. Materialize
 					// it through the supported handoff endpoint, then use the returned
 					// editable id for all subsequent reads and writes.
-					if (ctx.preparation?.learn_open_href?.includes('/builder/from-native-learn/')) {
+					if (ctx.preparation?.workspace?.learn.open_href?.includes('/builder/from-native-learn/')) {
 						try {
 							const native = await openNativeLearnBuilderLesson(id);
 							builderLessonId = native.id;
@@ -105,15 +122,45 @@
 		}
 	}
 
+	const statusPoll = createSerializedPoll(async () => {
+		try {
+			await ctx.refreshPreparation();
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Could not refresh Learn status.';
+			return false;
+		}
+		const currentArtifact = lessonArtifactUi(ctx.preparation, 'learn');
+		if (currentArtifact.state === 'ready') {
+			await resolveAndLoad();
+			return false;
+		}
+		if (
+			currentArtifact.state === 'failed' ||
+			currentArtifact.state === 'needs_attention' ||
+			currentArtifact.state === 'not_created'
+		) {
+			loadError = currentArtifact.errorSummary;
+			return false;
+		}
+		return true;
+	}, 1500);
+
+	function stopStatusPoll(): void {
+		statusPoll.stop();
+	}
+
+	function startStatusPoll(): void {
+		statusPoll.start();
+	}
+
 	async function createLearn() {
-		if (!ctx.path || !ctx.lesson || artifact.exists) return;
+		if (!ctx.path || !ctx.lesson || artifact.exists || !ctx.statusFresh || !preparationIsApprovedAndFresh(ctx.preparation)) return;
 		busy = 'create';
 		error = null;
 		try {
-			const gid = ctx.preparation?.generation_id;
-			if (gid) await realizeLearnFromGeneration(gid);
-			else await generateLearnRealization(ctx.unitId, ctx.path, ctx.lesson);
+			await generateLearnRealization(ctx.unitId, ctx.path, ctx.lesson);
 			await resolveAndLoad();
+			if (lessonArtifactUi(ctx.preparation, 'learn').state === 'preparing') startStatusPoll();
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Could not create Learn lesson.';
 		} finally {
@@ -122,20 +169,12 @@
 	}
 
 	async function retryLearn() {
-		if (!ctx.path || !ctx.lesson || !artifact.realizationId) return;
+		if (!ctx.statusFresh || !ctx.path || !ctx.lesson || !artifact.realizationId || !artifact.retryable) return;
 		busy = 'retry';
 		try {
-			// Native Learn retries must re-enter the approved preparation handoff.
-			// The generic realization retry only rotates the output snapshot and
-			// leaves it queued; invoking the handoff creates the worker generation
-			// and runs the actual Learn producer.
-			const preparationGenerationId = ctx.preparation?.generation_id;
-			if (preparationGenerationId) {
-				await realizeLearnFromGeneration(preparationGenerationId);
-			} else {
-				await retryLessonRealization(ctx.unitId, ctx.path, ctx.lesson, artifact.realizationId);
-			}
+			await retryLessonRealization(ctx.unitId, ctx.path, ctx.lesson, artifact.realizationId);
 			await resolveAndLoad();
+			if (lessonArtifactUi(ctx.preparation, 'learn').state === 'preparing') startStatusPoll();
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Could not retry Learn.';
 		} finally {
@@ -181,7 +220,13 @@
 		}
 	}
 
-	onMount(() => void resolveAndLoad());
+	onMount(() => {
+		void (async () => {
+			await resolveAndLoad();
+			if (lessonArtifactUi(ctx.preparation, 'learn').state === 'preparing') startStatusPoll();
+		})();
+	});
+	onDestroy(stopStatusPoll);
 </script>
 
 <div class="learn-ws">
@@ -203,16 +248,21 @@
 	</header>
 
 	{#if error}<InlineError message={error} />{/if}
+	{#if ctx.statusError}<InlineError message={`Lesson status is stale: ${ctx.statusError}`} hint="Refresh the lesson workspace before creating or retrying Learn." />{/if}
 	{#if loading}
 		<p class="muted">Loading Learn lesson…</p>
 	{:else if activeTab === 'issues'}
-		<LessonIssuesPanel {issues} onRetry={retryLearn} />
+		<LessonIssuesPanel {issues} onRetry={retryLearn} allowRetry={ctx.statusFresh && artifact.retryable} />
 	{:else if artifact.state === 'not_created'}
 		<EmptyState title="Learn not created" description="Create an interactive Learn lesson from the approved teaching plan.">
-			{#snippet actions()}<Button busy={busy === 'create'} onclick={() => void createLearn()}>{busy === 'create' ? 'Creating…' : 'Create Learn'}</Button><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
+			{#snippet actions()}<Button disabled={!ctx.statusFresh || !preparationIsApprovedAndFresh(ctx.preparation)} busy={busy === 'create'} onclick={() => void createLearn()}>{busy === 'create' ? 'Creating…' : 'Create Learn'}</Button><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
+		</EmptyState>
+	{:else if artifact.state === 'preparing'}
+		<EmptyState title="Learn is being created" description="This page will update when the Learn lesson is ready.">
+			{#snippet actions()}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}
 		</EmptyState>
 	{:else if activeTab === 'preview'}
-		{#if document}<StudentLessonShell {document} preview />{:else}<EmptyState title="Learn needs attention" description={loadError || 'The Learn preview is unavailable.'}>{#snippet actions()}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryLearn()}>Retry preview</Button>{/snippet}</EmptyState>{/if}
+		{#if document}<StudentLessonShell {document} preview />{:else}<EmptyState title="Learn needs attention" description={artifact.recoveryAction === 'reprepare' ? 'This Learn output is stale. Reprepare and review the lesson before creating another output.' : loadError || 'The Learn preview is unavailable.'}>{#snippet actions()}{#if ctx.statusFresh && artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryLearn()}>Retry Learn</Button>{/if}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>{/if}
 	{/if}
 </div>
 

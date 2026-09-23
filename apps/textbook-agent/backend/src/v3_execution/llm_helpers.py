@@ -207,6 +207,7 @@ async def run_structured_agent(
     repair_attempts: int = 0,
     retries: dict[str, int] | None = None,
     structured_mode: StructuredMode | None = None,
+    retry_policy: RetryPolicy | None = None,
 ) -> Any:
     spec = get_v3_spec(node_name)
     slot = get_v3_slot(node_name)
@@ -240,7 +241,8 @@ async def run_structured_agent(
         section_id=None,
         node=node_name,
         model_settings=effective_model_settings,
-        retry_policy=RetryPolicy(
+        retry_policy=retry_policy
+        or RetryPolicy(
             max_attempts=1 + V3_MAX_RETRIES.get(node_name.removeprefix("v3_"), 1),
             call_timeout_seconds=float(
                 V3_TIMEOUTS.get(_NODE_TIMEOUT_KEYS.get(node_name, "generation_total"), 120)

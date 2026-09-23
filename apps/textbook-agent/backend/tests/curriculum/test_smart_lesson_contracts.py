@@ -9,6 +9,7 @@ from curriculum.lesson_review import (
 from curriculum.lesson_sourcebook import LessonSourcebook, SourcebookEntry, build_content_bindings
 from curriculum.models import FlowChoice
 from curriculum.shared_tasks import build_shared_task_registry, validate_shared_tasks
+from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import TeachingPlan
 
 
@@ -58,12 +59,15 @@ def test_flow_choice_is_closed_and_keeps_final_check() -> None:
         max_slots=6,
     )
     choice = choice.model_copy(update={"selected_slots": ["check", "model"]})
-    assert any("last" in error for error in validate_flow_choice(
+    assert any(
+        "last" in error
+        for error in validate_flow_choice(
         choice,
         recommended_slots=["orient", "model", "check"],
         legal_slots={slot: {} for slot in ["orient", "model", "check"]},
         max_slots=6,
-    ))
+        )
+    )
 
 
 def test_formative_task_needs_no_approved_source_and_binds_once() -> None:
@@ -73,8 +77,16 @@ def test_formative_task_needs_no_approved_source_and_binds_once() -> None:
     sourcebook = LessonSourcebook(
         teaching_plan_id="plan-1",
         teaching_plan_revision=2,
-        teaching_plan_hash="hash-2",
-        entries=[SourcebookEntry(id="slope", type="quantitative_example", purpose="points", content={"points": [[1, 4], [3, 12]]}, provenance_refs=["canonical"])],
+        teaching_plan_hash=teaching_plan_content_hash(plan),
+        entries=[
+            SourcebookEntry(
+                id="slope",
+                type="quantitative_example",
+                purpose="points",
+                content={"points": [[1, 4], [3, 12]]},
+                provenance_refs=["canonical"],
+            )
+        ],
     )
     assert build_content_bindings(plan, sourcebook, tasks=tasks)[0].shared_task_id == tasks[0].id
 
@@ -108,6 +120,15 @@ def test_coherence_report_detects_slope_drift_and_parity() -> None:
 
 
 def test_stale_smart_artifacts_are_invalidated() -> None:
-    state = {"other": 1, "smart_lesson": {"teaching_plan_id": "plan-1", "teaching_plan_revision": 1, "teaching_plan_hash": "old"}}
-    updated = invalidate_stale_smart_artifacts(state, teaching_plan_id="plan-1", teaching_plan_revision=2, teaching_plan_hash="new")
+    state = {
+        "other": 1,
+        "smart_lesson": {
+            "teaching_plan_id": "plan-1",
+            "teaching_plan_revision": 1,
+            "teaching_plan_hash": "old",
+        },
+    }
+    updated = invalidate_stale_smart_artifacts(
+        state, teaching_plan_id="plan-1", teaching_plan_revision=2, teaching_plan_hash="new"
+    )
     assert updated == {"other": 1}

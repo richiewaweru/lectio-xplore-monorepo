@@ -8,7 +8,7 @@ import { getContext, onDestroy, onMount } from 'svelte';
 	import type { LectioDocument } from '@lectio/page/contract';
 	import type { LessonIssue, PathLesson, PreparedLessonStatus, Unit, UnitPath } from '$lib/types/units';
 	import { Button, Dialog, InlineError, EmptyState, Tabs } from '$lib/ui';
-	import { lessonArtifactUi, lessonWorkspaceHref, resolvePrintGenerationId } from '$lib/curriculum/lessons/lesson-context';
+import { lessonArtifactUi, lessonWorkspaceHref, resolvePrintGenerationId, preparationIsApprovedAndFresh } from '$lib/curriculum/lessons/lesson-context';
 import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte';
 
 	type Ctx = {
@@ -18,6 +18,8 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 		path: UnitPath | null;
 		lesson: PathLesson | null;
 		preparation: PreparedLessonStatus | null;
+		statusFresh: boolean;
+		statusError: string | null;
 		refreshPreparation: () => Promise<void>;
 	};
 
@@ -51,17 +53,14 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 	}
 
 	function printIsActive(): boolean {
-		const preparation = ctx.preparation;
-		const stage = String(preparation?.workflow_stage || preparation?.generation_status || '').toLowerCase();
-		const realization = preparation?.realizations?.find((row) => row.path === 'print');
-		const realizationStatus = String(realization?.status || '').toLowerCase();
-		return ['queued', 'planning_forms', 'writing_sections', 'writing_blocks', 'assembling'].includes(stage) || ['queued', 'planning_forms', 'writing_sections', 'writing_blocks', 'assembling'].includes(realizationStatus);
+		const state = ctx.preparation?.workspace?.print.state;
+		return state === 'queued' || state === 'running';
 	}
 
 	function schedulePoll(): void {
 		if (pollTimer !== null || pageDocumentV2 || !printIsActive()) return;
 		if (pollAttempts >= MAX_PRINT_POLL_ATTEMPTS) {
-			error = 'Print is still being prepared. Refresh to check again or retry the Print realization.';
+			error = 'Print is still being prepared. Refresh to check its progress.';
 			return;
 		}
 		pollTimer = setTimeout(() => {
@@ -129,7 +128,7 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 	}
 
 	async function createPrint() {
-		if (!ctx.path || !ctx.lesson || artifact.exists) return;
+		if (!ctx.path || !ctx.lesson || artifact.exists || !ctx.statusFresh || !preparationIsApprovedAndFresh(ctx.preparation)) return;
 		busy = 'create';
 		error = null;
 		try {
@@ -141,7 +140,7 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 	}
 
 	async function retryPrint() {
-		if (!ctx.path || !ctx.lesson || !artifact.realizationId) return;
+		if (!ctx.statusFresh || !ctx.path || !ctx.lesson || !artifact.realizationId || !artifact.retryable) return;
 		busy = 'retry';
 		try {
 			await retryLessonRealization(ctx.unitId, ctx.path, ctx.lesson, artifact.realizationId);
@@ -178,15 +177,16 @@ import LessonIssuesPanel from '$lib/curriculum/lessons/LessonIssuesPanel.svelte'
 		/>
 		{#if generationId && pageDocumentV2}<Button size="sm" onclick={() => (exportOpen = true)}>Download PDF</Button>{/if}
 	</header>
-	{#if error && artifact.state !== 'needs_attention'}<InlineError message={error} hint="You can retry or return to the plan." />{/if}
+	{#if error && artifact.state !== 'needs_attention' && artifact.state !== 'failed'}<InlineError message={error} hint={artifact.retryable ? 'You can retry or return to the plan.' : 'Refresh to check progress or return to the plan.'} />{/if}
+	{#if ctx.statusError}<InlineError message={`Lesson status is stale: ${ctx.statusError}`} hint="Refresh the lesson workspace before creating or retrying Print." />{/if}
 	{#if loading}
 		<p class="muted">Loading Print…</p>
 	{:else if activeTab === 'issues'}
-		<LessonIssuesPanel {issues} onRetry={retryPrint} />
+		<LessonIssuesPanel {issues} onRetry={retryPrint} allowRetry={ctx.statusFresh && artifact.retryable} />
 	{:else if artifact.state === 'not_created'}
-		<EmptyState title="Print not created" description="Create a printable booklet from the approved teaching plan.">{#snippet actions()}<Button busy={busy === 'create'} onclick={() => void createPrint()}>{busy === 'create' ? 'Creating…' : 'Create Print'}</Button><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>
+		<EmptyState title="Print not created" description="Create a printable booklet from the approved teaching plan.">{#snippet actions()}<Button disabled={!ctx.statusFresh || !preparationIsApprovedAndFresh(ctx.preparation)} busy={busy === 'create'} onclick={() => void createPrint()}>{busy === 'create' ? 'Creating…' : 'Create Print'}</Button><a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>
 	{:else if activeTab === 'preview'}
-		{#if pageDocumentV2}<div class="doc"><LectioPageDocumentView document={pageDocumentV2} edition="teacher" /></div>{:else}<EmptyState title="Print needs attention" description={error || 'The Print document is unavailable.'}>{#snippet actions()}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryPrint()}>Retry preview</Button>{/snippet}</EmptyState>{/if}
+		{#if pageDocumentV2}<div class="doc"><LectioPageDocumentView document={pageDocumentV2} edition="teacher" /></div>{:else}<EmptyState title="Print needs attention" description={artifact.recoveryAction === 'reprepare' ? 'This Print output is stale. Reprepare and review the lesson before creating another output.' : artifact.errorSummary || error || 'The Print document is unavailable.'}>{#snippet actions()}{#if ctx.statusFresh && artifact.retryable}<Button variant="secondary" busy={busy === 'retry'} onclick={() => void retryPrint()}>Retry Print</Button>{/if}<a class="link" href={lessonWorkspaceHref(ctx.unitId, ctx.lessonId, 'plan')}>Review plan</a>{/snippet}</EmptyState>{/if}
 	{/if}
 </div>
 

@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database.models import GenerationModel, UserModel
 from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock, TeachingPlanSection
 from document.composer import DocumentComposerError, compose_document_plan
-from document.writer import write_document_primitive
+from document.writer import DocumentWriterError, write_document_primitive
 from infra.authoring import (
     AuthoringDefinition,
     AuthoringEngine,
@@ -282,6 +282,57 @@ async def test_g10_selective_recovery_skips_ready_sibling() -> None:
     assert ready_a.payload == {"id": "a", "text": "done"}
 
 
+@pytest.mark.asyncio
+async def test_document_quality_failure_repairs_in_engine_and_only_then_commits() -> None:
+    brief = "Explain why leaves need light."
+    provider = FakeProvider(
+        {"kind": "paragraph", "text": brief},
+        {"kind": "paragraph", "text": "Light supplies energy for photosynthesis."},
+    )
+    ledger = CallBudgetLedger()
+    store = CheckpointStore()
+    node = await write_document_primitive(
+        kind="paragraph",
+        brief=brief,
+        teaching_block={"id": "quality-block", "brief": brief},
+        provider=provider,
+        work_order_id="node-quality-repair",
+        budget_ledger=ledger,
+        checkpoint_store=store,
+    )
+
+    assert node["text"] == "Light supplies energy for photosynthesis."
+    assert [call.is_repair for call in provider.calls] == [False, True]
+    budget = ledger.get_or_create("node-quality-repair")
+    assert budget.consumed == budget.dispatched_count == 2
+    checkpoint = store.get("node:node-quality-repair")
+    assert checkpoint is not None and checkpoint.status == "ready"
+
+
+@pytest.mark.asyncio
+async def test_document_quality_repair_exhaustion_never_commits_ready_checkpoint() -> None:
+    brief = "Explain why leaves need light."
+    provider = FakeProvider(
+        {"kind": "paragraph", "text": brief},
+        {"kind": "paragraph", "text": brief},
+        {"kind": "paragraph", "text": brief},
+    )
+    store = CheckpointStore()
+    with pytest.raises(DocumentWriterError) as caught:
+        await write_document_primitive(
+            kind="paragraph",
+            brief=brief,
+            teaching_block={"id": "quality-block", "brief": brief},
+            provider=provider,
+            work_order_id="node-quality-exhausted",
+            checkpoint_store=store,
+        )
+    assert caught.value.code == "REPAIR_EXHAUSTED"
+    assert len(provider.calls) == 3
+    checkpoint = store.get("node:node-quality-exhausted")
+    assert checkpoint is not None and checkpoint.status != "ready"
+
+
 def test_g10_media_assembly_export_selective_recovery() -> None:
     from infra.execution.checkpoints import selective_recovery_keys
 
@@ -376,13 +427,17 @@ async def test_g15_incompatible_checkpoint_and_budgeted_heuristic_fallback() -> 
         )
 
     ledger = CallBudgetLedger()
-    # Burn one slot so LLM failure + declared heuristic fallback fill the cap of 3.
-    budget = ledger.get_or_create("compose-fallback", max_calls=3)
-    budget.reserve()
-    budget.mark_dispatched(1)
-    ledger.persist(budget)
-
-    provider = FakeProvider(AuthoringTransportError("composer down"))
+    invalid_semantic = {
+        "nodes": [
+            {
+                "id": "unknown-node",
+                "teaching_block_id": "unknown-block",
+                "kind": "paragraph",
+                "reason": "unknown block is a semantic defect",
+            }
+        ]
+    }
+    provider = FakeProvider(invalid_semantic, invalid_semantic)
     plan = await compose_document_plan(
         _plan(),
         path="learn",
@@ -396,8 +451,9 @@ async def test_g15_incompatible_checkpoint_and_budgeted_heuristic_fallback() -> 
     resumed = ledger.get_or_create("compose-fallback")
     assert resumed.fallback_declared is True
     assert resumed.consumed == 3
+    assert provider.dispatches == 2
 
-    # Exhausted budget cannot take another fallback.
+    # Exhausted budget is visible and never converted into another fallback.
     with pytest.raises(DocumentComposerError) as caught:
         await compose_document_plan(
             _plan(),
@@ -408,6 +464,37 @@ async def test_g15_incompatible_checkpoint_and_budgeted_heuristic_fallback() -> 
             budget_ledger=ledger,
         )
     assert caught.value.code == "BUDGET_EXHAUSTED"
+
+
+@pytest.mark.asyncio
+async def test_composer_transport_and_missing_provider_never_use_quality_fallback() -> None:
+    ledger = CallBudgetLedger()
+    provider = FakeProvider(AuthoringTransportError("composer down"))
+    with pytest.raises(DocumentComposerError) as caught:
+        await compose_document_plan(
+            _plan(),
+            path="learn",
+            provider=provider,
+            allow_heuristic_fallback=True,
+            work_order_id="compose-transport",
+            budget_ledger=ledger,
+        )
+    assert caught.value.code == "PROVIDER_TRANSPORT_EXHAUSTED"
+    budget = ledger.get_or_create("compose-transport")
+    assert budget.consumed == 1
+    assert budget.fallback_declared is False
+
+    with pytest.raises(DocumentComposerError) as missing:
+        await compose_document_plan(
+            _plan(),
+            path="learn",
+            provider=None,
+            allow_heuristic_fallback=True,
+            work_order_id="compose-no-provider",
+            budget_ledger=ledger,
+        )
+    assert missing.value.code == "NO_PROVIDER"
+    assert ledger.get_or_create("compose-no-provider").consumed == 0
 
 
 @pytest.mark.asyncio

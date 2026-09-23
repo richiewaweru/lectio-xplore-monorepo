@@ -52,6 +52,18 @@ def classify_failure(exc: BaseException) -> FailureClassification:
     if AuthoringEngineError is not None and isinstance(exc, AuthoringEngineError):
         if exc.code in {"MISSING_AUTHORING_DEFINITION", "MISSING_AUTHORING_INPUT"}:
             return FailureClassification(code="CONTRACT", retryable=False, repairable=False)
+        if exc.code == "PROVIDER_TRANSPORT_EXHAUSTED":
+            return FailureClassification(
+                code="TRANSPORT", retryable=exc.retryable, repairable=False
+            )
+        if exc.code == "PROVIDER_FAILURE":
+            return FailureClassification(
+                code="PROVIDER_FAILURE", retryable=False, repairable=False
+            )
+        if exc.code == "BUDGET_EXHAUSTED":
+            return FailureClassification(
+                code="BUDGET_EXHAUSTED", retryable=False, repairable=False
+            )
         if exc.code in {"INVALID_PAYLOAD", "INCOMPATIBLE_APPROVED_ITEM", "REPAIR_EXHAUSTED"}:
             return FailureClassification(code="VALIDATION", retryable=True, repairable=False)
         if exc.code == "NO_COMPATIBLE_CAPABILITY":

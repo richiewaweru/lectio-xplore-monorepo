@@ -41,9 +41,9 @@ from infra.telemetry import telemetry_router
 from infra.telemetry.dependencies import get_llm_call_repository
 from infra.telemetry.service import telemetry_monitor
 from infra.version import VERSION
-from learn.generation.fencing import fail_stale_learn_executions
 from learn.analytics.insight_service import router as learn_analytics_router
 from learn.authoring.builder.routes import router as builder_router
+from learn.generation.fencing import fail_stale_learn_executions
 from learn.generation.units_routes import router as units_generation_router
 from learn.publishing.release_routes import router as learn_release_router
 from learn.runtime.runtime_routes import router as learn_runtime_router
@@ -265,13 +265,17 @@ async def lifespan(app: FastAPI):
         },
     )
     if settings.xplore_native_worker_enabled:
+        from learn.generation.worker import start_learn_worker
         from print.generation.whole_lesson.worker import start_native_worker
 
         await start_native_worker()
+        await start_learn_worker()
     yield
     if settings.xplore_native_worker_enabled:
+        from learn.generation.worker import stop_learn_worker
         from print.generation.whole_lesson.worker import stop_native_worker
 
+        await stop_learn_worker(drain_seconds=5.0)
         await stop_native_worker(drain_seconds=5.0)
     await telemetry_monitor.stop()
     telemetry_monitor.configure()

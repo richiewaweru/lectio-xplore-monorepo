@@ -93,7 +93,8 @@ describe('/units/[id]', () => {
 		mocks.getPreparedLessonStatus.mockResolvedValue({
 			path_lesson_id: lessonOne.id, lesson_revision: 1, generation_id: null,
 			generation_status: null, workflow_stage: 'unprepared', objective_hash: 'hash-1',
-			stale: false, can_prepare: true, can_regenerate: false
+			stale: false, can_prepare: true, can_regenerate: false,
+			workspace: { preparation: { state: 'not_started' }, learn: { state: 'not_created' }, print: { state: 'not_created' } }
 		});
 	});
 	afterEach(cleanup);
@@ -320,11 +321,26 @@ describe('/units/[id]', () => {
 		expect(screen.getByRole('link', { name: 'Open Learn' })).toBeTruthy();
 	});
 
+	it('surfaces failed status refresh instead of silently presenting cached state as current', async () => {
+		mocks.getPreparedLessonStatus.mockResolvedValueOnce({
+			path_lesson_id: lessonOne.id, lesson_revision: 1, generation_id: 'generation-1',
+			generation_status: 'ready', workflow_stage: 'ready', objective_hash: 'hash-1', stale: false,
+			can_prepare: false, can_regenerate: false,
+			workspace: { preparation: { state: 'approved', generation_id: 'generation-1', approved_snapshot_verified: true }, learn: { state: 'not_created' }, print: { state: 'not_created' } }
+		});
+		mocks.getPreparedLessonStatus.mockRejectedValueOnce(new Error('status service unavailable'));
+		render(UnitPage);
+		await screen.findByRole('button', { name: 'Refresh status' });
+		await fireEvent.click(screen.getByRole('button', { name: 'Refresh status' }));
+		expect(await screen.findByText(/Lesson status is stale: status service unavailable/)).toBeTruthy();
+	});
+
 	it('starts a fresh generation for a non-stale terminal native run', async () => {
 		mocks.getPreparedLessonStatus.mockResolvedValue({
 			path_lesson_id: lessonOne.id, lesson_revision: 1, generation_id: 'generation-terminal',
 			generation_status: 'failed', workflow_stage: 'failed_terminal', objective_hash: 'hash-1',
-			stale: false, can_prepare: false, can_regenerate: true
+			stale: false, can_prepare: false, can_regenerate: true,
+			workspace: { preparation: { state: 'failed_terminal', generation_id: 'generation-terminal', error: { retryable: false } }, learn: { state: 'not_created' }, print: { state: 'not_created' } }
 		});
 		mocks.regeneratePathLesson.mockResolvedValue({
 			generation_id: 'generation-fresh', path_lesson_id: lessonOne.id,

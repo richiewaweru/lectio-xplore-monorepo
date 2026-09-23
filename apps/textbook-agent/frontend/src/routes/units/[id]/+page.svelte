@@ -30,7 +30,7 @@
 	import LessonResultsPanel from '$lib/curriculum/units/components/LessonResultsPanel.svelte';
 	import ResourceComposerPanel from '$lib/curriculum/units/components/ResourceComposerPanel.svelte';
 	import type { NativePathKind } from '$lib/curriculum/units/path-generation';
-	import { lessonWorkspaceHref, preparationLabel, preparationUiState, badgeToneForPrep } from '$lib/curriculum/lessons/lesson-context';
+	import { lessonWorkspaceHref, preparationLabel, preparationUiState, badgeToneForPrep, canonicalPreparationState, preparationIsApprovedAndFresh } from '$lib/curriculum/lessons/lesson-context';
 	import { Badge } from '$lib/ui';
 	import { goto } from '$app/navigation';
 	import type {
@@ -60,6 +60,8 @@
 	let shape = $state<LessonShapePreview | null>(null);
 	let misconceptionCount = $state(1);
 	let preparation = $state<PreparedLessonStatus | null>(null);
+	let preparationFresh = $state(false);
+	let preparationError = $state<string | null>(null);
 	let history = $state<PathVersionSummary[]>([]);
 	let historyLoaded = $state(false);
 	let viewedVersion = $state<UnitPath | null>(null);
@@ -120,8 +122,9 @@
 	const canStartFresh = $derived(
 		Boolean(
 			preparation &&
-				!preparation.stale &&
-				['failed_recoverable', 'failed_terminal'].includes(preparation.workflow_stage) &&
+				preparationFresh &&
+				!preparation.workspace?.preparation?.stale &&
+				['failed_recoverable', 'failed_terminal'].includes(canonicalPreparationState(preparation)) &&
 				preparation.can_regenerate
 		)
 	);
@@ -165,6 +168,8 @@
 		shape = null;
 		shapeError = null;
 		preparation = null;
+		preparationFresh = false;
+		preparationError = null;
 		showShapeDebug = false;
 		void ensurePreparationStatus();
 	}
@@ -231,12 +236,14 @@
 		try {
 			const next = await getPreparedLessonStatus(unitId, selected.id);
 			preparation = next;
-			if (!next.stale && next.workflow_stage === 'failed_terminal') {
+			preparationFresh = true;
+			preparationError = null;
+			if (!next.workspace?.preparation?.stale && canonicalPreparationState(next) === 'failed_terminal') {
 				regenerationReason = 'The previous generation did not finish.';
 			}
 		} catch (err) {
-			preparation = null;
-			error = err instanceof Error ? err.message : 'Could not load preparation status.';
+			preparationFresh = false;
+			preparationError = err instanceof Error ? err.message : 'Could not load preparation status.';
 		}
 	}
 
@@ -388,6 +395,10 @@
 
 	async function prepare(pathKind: NativePathKind = 'print'): Promise<void> {
 		if (!selected) return;
+		if (!preparationFresh) {
+			preparationError = 'Refresh lesson status before creating an output.';
+			return;
+		}
 		await act('prepare', async () => {
 			if (!groupsLoaded) {
 				try {
@@ -401,16 +412,16 @@
 			const currentPreparation =
 				preparation ?? (selected.pack_id ? await getPreparedLessonStatus(unitId, selected.id) : null);
 			preparation = currentPreparation;
-			const failedPreparation = Boolean(
-				currentPreparation &&
-				['failed_recoverable', 'failed_terminal'].includes(
-					currentPreparation.workflow_stage || currentPreparation.generation_status
-				)
-			);
+			const prepState = canonicalPreparationState(currentPreparation);
+			const failedPreparation = ['failed_recoverable', 'failed_terminal'].includes(prepState);
 			const existingGenerationId = failedPreparation
 				? null
-				: currentPreparation?.generation_id || selected.pack_id;
+				: currentPreparation?.workspace?.preparation?.generation_id || null;
 			if (existingGenerationId) {
+				if (!preparationIsApprovedAndFresh(currentPreparation)) {
+					await goto(lessonWorkspaceHref(unitId, selected.id, 'plan'));
+					return;
+				}
 				try {
 					if (pathKind === 'learn') {
 						await generateLearnRealization(unitId, path as UnitPath, selected);
@@ -440,7 +451,7 @@
 	}
 
 	async function regenerate(): Promise<void> {
-		if (!selected || regenerationReason.trim().length < 3) return;
+		if (!preparationFresh || !selected || regenerationReason.trim().length < 3) return;
 		await act('regenerate', async () => {
 			const prepared = await regeneratePathLesson(
 				unitId,
@@ -644,33 +655,33 @@
 								<p class="eyebrow">Lesson workspace</p>
 								<h3>Plan · Learn · Print</h3>
 								<p>Open the lesson to review the plan and create Learn or Print materials.</p>
-								{#if preparation}
+				{#if preparation}
 									<p class="prep-badge">
 										<Badge tone={badgeToneForPrep(preparationUiState(preparation))}>
 											{preparationLabel(preparationUiState(preparation))}
 										</Badge>
 									</p>
 								{/if}
-								{#if preparation?.stale}
+								{#if preparation?.workspace?.preparation?.stale}
 									<p>This lesson changed since it was last prepared and needs attention.</p>
 								{/if}
 							</div>
-							{#if preparation?.stale && preparation?.can_regenerate}
+							{#if preparation?.workspace?.preparation?.stale && preparation?.can_regenerate}
 								<form class="regenerate" onsubmit={(event) => { event.preventDefault(); void regenerate(); }}>
 									<label><span>What changed</span><input bind:value={regenerationReason} minlength="3" maxlength="500" required /></label>
-									<button class="primary" type="submit" disabled={busy !== null || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Retrying…' : 'Retry'}</button>
+					<button class="primary" type="submit" disabled={!preparationFresh || busy !== null || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Retrying…' : 'Retry'}</button>
 								</form>
 							{:else if canStartFresh}
 								<form class="regenerate" onsubmit={(event) => { event.preventDefault(); void regenerate(); }}>
 									<p>The previous attempt cannot be continued. Start again from the plan.</p>
 									<label><span>Why start fresh</span><input aria-label="Why start fresh" bind:value={regenerationReason} minlength="3" maxlength="500" required /></label>
-									<button class="primary" type="submit" disabled={busy !== null || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Starting…' : 'Retry'}</button>
+					<button class="primary" type="submit" disabled={!preparationFresh || busy !== null || regenerationReason.trim().length < 3}>{busy === 'regenerate' ? 'Starting…' : 'Retry'}</button>
 								</form>
 							{:else}
 								<div class="ready-actions">
 									<a class="primary link" href={lessonWorkspaceHref(unitId, selected.id, 'plan')}>Open Lesson</a>
-									{#if !preparation?.generation_id}
-										<button class="secondary" type="button" disabled={path.status !== 'approved' || selected.skipped || busy !== null} onclick={() => prepare('print')}>{busy === 'prepare' ? 'Preparing…' : 'Prepare Lesson'}</button>
+									{#if canonicalPreparationState(preparation) === 'not_started'}
+										<button class="secondary" type="button" disabled={!preparationFresh || path.status !== 'approved' || selected.skipped || busy !== null} onclick={() => prepare('print')}>{busy === 'prepare' ? 'Preparing…' : 'Prepare Lesson'}</button>
 									{:else}
 										<a class="secondary link" href={lessonWorkspaceHref(unitId, selected.id, 'learn')}>Open Learn</a>
 										<a class="secondary link" href={lessonWorkspaceHref(unitId, selected.id, 'print')}>Open Print</a>
@@ -681,6 +692,7 @@
 						</section>
 					</main>
 				{/if}
+				{#if preparationError}<p class="error" role="alert">Lesson status is stale: {preparationError}</p>{/if}
 			</div>
 
 			<section class="chat-edit" aria-label="Edit your lessons by chat">

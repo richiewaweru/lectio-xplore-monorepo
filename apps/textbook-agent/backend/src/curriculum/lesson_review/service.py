@@ -9,6 +9,7 @@ from typing import Any
 from curriculum.lesson_sourcebook.models import LessonSourcebook
 from curriculum.shared_tasks.models import SharedTaskSpec
 from curriculum.shared_tasks.validation import validate_shared_tasks
+from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import TeachingPlan
 
 from .models import CoherenceReport, RepairTarget, ReviewIssue
@@ -85,7 +86,7 @@ def build_coherence_report(
         path=path,  # type: ignore[arg-type]
         teaching_plan_id=str(plan.teaching_plan_id or ""),
         teaching_plan_revision=int(plan.revision or 1),
-        teaching_plan_hash=str(plan.preparation_hash or ""),
+        teaching_plan_hash=teaching_plan_content_hash(plan),
         deterministic_issues=issues,
         semantic_issues=list(semantic_issues),
         reviewed=True,

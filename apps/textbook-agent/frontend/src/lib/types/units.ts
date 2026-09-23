@@ -199,8 +199,11 @@ export interface RealizationStatus {
 export interface PreparedLessonStatus {
 	path_lesson_id: string;
 	lesson_revision: number;
+	/** @deprecated Compatibility/debug only. Use workspace.preparation.generation_id. */
 	generation_id: string | null;
+	/** @deprecated Worker progress/debug only; never use for teacher-facing lifecycle. */
 	generation_status: string;
+	/** @deprecated Worker progress/debug only; never use for teacher-facing lifecycle. */
 	workflow_stage: string;
 	objective_hash: string;
 	stale: boolean;
@@ -214,6 +217,51 @@ export interface PreparedLessonStatus {
 	learn_output_id?: string | null;
 	print_open_href?: string | null;
 	learn_open_href?: string | null;
+	workspace?: {
+		preparation?: PreparationWorkspaceStatus;
+		learn: ArtifactWorkspaceStatus;
+		print: ArtifactWorkspaceStatus;
+		legacy_ambiguities?: string[];
+	};
+	worker_debug?: Record<string, unknown>;
+}
+
+export type PreparationWorkspaceState = 'not_started' | 'planning' | 'awaiting_review' | 'approved' | 'failed_recoverable' | 'failed_terminal';
+export type ReviewKind = 'structural' | 'teaching_plan';
+
+export interface PreparationWorkspaceStatus {
+	state: PreparationWorkspaceState;
+	review_kind?: ReviewKind | null;
+	generation_id?: string | null;
+	teaching_plan_id?: string | null;
+	approved_revision?: number | null;
+	approved_content_hash?: string | null;
+	approved_snapshot_verified?: boolean;
+	stale?: boolean;
+	legacy_ambiguous?: boolean;
+	error?: WorkspaceStateError | null;
+}
+
+export interface WorkspaceStateError {
+	code?: string | null;
+	error_type?: string | null;
+	failure_class?: string | null;
+	message?: string | null;
+	retryable?: boolean | null;
+	stage?: string | null;
+	work_item_id?: string | null;
+	attempt?: number | null;
+	recovery_action?: string | null;
+}
+
+export interface ArtifactWorkspaceStatus {
+	state: 'not_created' | 'queued' | 'running' | 'ready' | 'failed_recoverable' | 'failed_terminal';
+	realization_id?: string | null;
+	output_id?: string | null;
+	open_href?: string | null;
+	stale?: boolean;
+	legacy_ambiguous?: boolean;
+	error?: WorkspaceStateError | null;
 }
 
 export type ArtifactPath = 'learn' | 'print';
@@ -227,6 +275,9 @@ export interface LessonArtifactUi {
 	outputId: string | null;
 	openHref: string | null;
 	errorSummary: string | null;
+	retryable: boolean;
+	recoveryAction: string | null;
+	legacyAmbiguous: boolean;
 }
 
 export type LessonIssueSeverity = 'info' | 'warning' | 'error';

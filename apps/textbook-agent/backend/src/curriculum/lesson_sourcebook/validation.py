@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
+from curriculum.teaching_plan.models import TeachingPlan
+
 from .models import LessonSourcebook, TeachingContentBinding
 
 
 def build_content_bindings(
-    plan: object,
+    plan: TeachingPlan,
     sourcebook: LessonSourcebook,
     *,
     tasks: Iterable[object] = (),
@@ -14,7 +17,7 @@ def build_content_bindings(
     """Create immutable post-plan bindings without mutating the Teaching Plan."""
     plan_id = str(getattr(plan, "teaching_plan_id", None) or "teaching-plan")
     revision = int(getattr(plan, "revision", None) or 1)
-    plan_hash = str(getattr(plan, "preparation_hash", None) or sourcebook.teaching_plan_hash)
+    plan_hash = teaching_plan_content_hash(plan)
     task_by_block = {
         str(getattr(task, "teaching_block_id", "")): str(getattr(task, "id", ""))
         for task in tasks

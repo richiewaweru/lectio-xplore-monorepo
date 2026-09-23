@@ -10,18 +10,22 @@ const navigationMocks = vi.hoisted(() => ({
 
 const mocks = vi.hoisted(() => ({
 	approveChunkedPlan: vi.fn(),
+	approveLessonApproach: vi.fn(),
 	adjustBlueprint: vi.fn(),
 	connectV3ChunkedStream: vi.fn(() => vi.fn()),
 	connectV3StudioGenerationStream: vi.fn(() => vi.fn()),
 	getChunkedPlan: vi.fn(),
 	getChunkedPlanStatus: vi.fn(),
+	getLessonApproach: vi.fn(),
 	downloadV3GenerationPdf: vi.fn(),
 	fetchV3Document: vi.fn(),
 	getV3GenerationBlueprint: vi.fn(),
 	regenerateChunkedPlan: vi.fn(),
 	retryNativeGeneration: vi.fn(),
 	retryNativeVisuals: vi.fn(),
-	retryChunkedSection: vi.fn()
+	retryChunkedSection: vi.fn(),
+	rejectLessonApproach: vi.fn(),
+	realizeLearnFromGeneration: vi.fn()
 }));
 
 vi.mock('$app/navigation', () => ({
@@ -31,18 +35,22 @@ vi.mock('$app/navigation', () => ({
 
 vi.mock('$lib/api/v3', () => ({
 	approveChunkedPlan: mocks.approveChunkedPlan,
+	approveLessonApproach: mocks.approveLessonApproach,
 	adjustBlueprint: mocks.adjustBlueprint,
 	connectV3ChunkedStream: mocks.connectV3ChunkedStream,
 	connectV3StudioGenerationStream: mocks.connectV3StudioGenerationStream,
 	getChunkedPlan: mocks.getChunkedPlan,
 	getChunkedPlanStatus: mocks.getChunkedPlanStatus,
+	getLessonApproach: mocks.getLessonApproach,
 	downloadV3GenerationPdf: mocks.downloadV3GenerationPdf,
 	fetchV3Document: mocks.fetchV3Document,
 	getV3GenerationBlueprint: mocks.getV3GenerationBlueprint,
 	regenerateChunkedPlan: mocks.regenerateChunkedPlan,
 	retryNativeGeneration: mocks.retryNativeGeneration,
 	retryNativeVisuals: mocks.retryNativeVisuals,
-	retryChunkedSection: mocks.retryChunkedSection
+	retryChunkedSection: mocks.retryChunkedSection,
+	rejectLessonApproach: mocks.rejectLessonApproach,
+	realizeLearnFromGeneration: mocks.realizeLearnFromGeneration
 }));
 
 vi.mock('$lib/print/components/studio/V3PlanningState.svelte', async () => ({
@@ -88,6 +96,10 @@ describe('studio chunked URL resume', () => {
 		navigationMocks.goto.mockReset();
 		navigationMocks.replaceState.mockReset();
 		mocks.approveChunkedPlan.mockReset();
+		mocks.approveLessonApproach.mockReset();
+		mocks.getLessonApproach.mockReset();
+		mocks.rejectLessonApproach.mockReset();
+		mocks.realizeLearnFromGeneration.mockReset();
 		mocks.connectV3ChunkedStream.mockReset();
 		mocks.connectV3ChunkedStream.mockImplementation(() => vi.fn());
 		mocks.connectV3StudioGenerationStream.mockReset();
@@ -154,6 +166,95 @@ describe('studio chunked URL resume', () => {
 		expect(await screen.findByRole('button', { name: /adjust \(regenerate with note\)/i })).toBeTruthy();
 		expect(v3Studio.stage).toBe('skeleton');
 		expect(mocks.connectV3StudioGenerationStream).not.toHaveBeenCalled();
+	});
+
+	it('shows plan and review separately and submits the displayed hash in Studio', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=gen-teaching-review');
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'gen-teaching-review',
+			stage: 'awaiting_teaching_approval',
+			structural_plan: null,
+			section_briefs: {},
+			failed_sections: [],
+			blueprint_id: null,
+			execution_started: false,
+			next_action: 'review_teaching_plan'
+		});
+		const pending = {
+			teaching_plan: {
+				teaching_plan_id: 'tp-1', revision: 2, arc: 'Follow water through a plant.',
+				anchor_usage: [{ slot_id: 'orient', usage: 'Observe a covered leaf.' }],
+				misconception_focus_ids: ['water-cycle-order'],
+				sections: [{ slot_id: 'orient', specific_purpose: 'Connect observation to the question.', blocks: [{
+					id: 'b1', intent: 'orient', brief: 'Study the leaf.', evidence: 'A relevant observation.',
+					evidence_refs: ['source-1'], learner_action: { action: 'read-explanation', target: 'leaf', purpose: 'Notice water droplets.', expected_evidence: 'Explain the droplets.', difficulty: 'guided' }
+				}]}]
+			},
+			teaching_review: { status: 'pending', revision: 2, approved_revision: 1 },
+			teaching_plan_identity: { revision: 2, pending_content_hash: 'hash-displayed', pending_hash_verified: true, approved_revision: 1, approved_hash_verified: true, approved_content_hash: 'hash-old' },
+			teaching_qc: []
+		};
+		const approved = {
+			...pending,
+			teaching_review: { status: 'approved', revision: 3, approved_revision: 2 },
+			teaching_plan_identity: { revision: 3, pending_hash_verified: false, approved_revision: 2, approved_hash_verified: true, approved_content_hash: 'hash-displayed' }
+		};
+		mocks.getLessonApproach.mockImplementation(() =>
+			Promise.resolve(mocks.approveLessonApproach.mock.calls.length ? approved : pending)
+		);
+		mocks.approveLessonApproach.mockResolvedValue({
+			status: 'queued', path: 'print', output_id: 'print-output-2',
+			generation_id: 'print-output-2',
+			teaching_plan_identity: { approved_revision: 2, approved_content_hash: 'hash-displayed' }
+		});
+
+		render(StudioPage);
+		expect(await screen.findByText('Follow water through a plant.')).toBeTruthy();
+		expect(screen.getByRole('region', { name: 'Teaching plan content' })).toBeTruthy();
+		expect(screen.getByRole('complementary', { name: 'Review metadata' })).toBeTruthy();
+		expect(screen.getByText('Revision: 2')).toBeTruthy();
+		const approve = await screen.findByRole('button', { name: 'Approve teaching plan' });
+		expect(approve).not.toHaveProperty('disabled', true);
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'print-output-2', stage: 'queued', doc_version: null,
+			failed_sections: [], blueprint_id: null, execution_started: true,
+			next_action: null, requested_realization_path: 'print'
+		});
+		await fireEvent.click(approve);
+		await waitFor(() => expect(mocks.approveLessonApproach).toHaveBeenCalledWith('gen-teaching-review', {
+			expected_revision: 2, expected_content_hash: 'hash-displayed', teacher_note: 'Approved', path: 'print'
+		}));
+		await waitFor(() => expect(mocks.getLessonApproach.mock.calls.length).toBeGreaterThanOrEqual(2));
+		expect(await screen.findByText('Follow water through a plant.')).toBeTruthy();
+		expect(v3Studio.generationId).toBe('print-output-2');
+		expect(navigationMocks.replaceState).toHaveBeenCalledWith(
+			expect.stringContaining('generation_id=print-output-2'), expect.anything()
+		);
+		await waitFor(() => expect(mocks.getChunkedPlanStatus).toHaveBeenCalledWith('print-output-2'));
+	});
+
+	it('resumes and retries the detached Print output after refresh', async () => {
+		window.history.replaceState({}, '', '/studio?generation_id=print-output-2');
+		mocks.getChunkedPlanStatus.mockResolvedValue({
+			generation_id: 'print-output-2', stage: 'failed_recoverable', pack_id: null,
+			doc_version: null, failed_sections: [], blueprint_id: null, execution_started: true,
+			next_action: 'retry_native', error: 'Temporary failure', error_type: 'worker',
+			requested_realization_path: 'print'
+		});
+		mocks.getLessonApproach.mockResolvedValue({
+			teaching_plan: { teaching_plan_id: 'tp-1', revision: 2, arc: 'Follow water through a plant.', sections: [{
+				slot_id: 'orient', blocks: [{ id: 'b1', brief: 'Study the leaf.', evidence: 'A relevant observation.' }]
+			}] },
+			teaching_review: { status: 'approved', revision: 2, approved_revision: 2 },
+			teaching_plan_identity: { approved_revision: 2, approved_hash_verified: true, approved_content_hash: 'hash-approved' }
+		});
+		mocks.retryNativeGeneration.mockResolvedValue({});
+
+		render(StudioPage);
+		expect(await screen.findByText('Follow water through a plant.')).toBeTruthy();
+		expect(v3Studio.generationId).toBe('print-output-2');
+		await fireEvent.click(await screen.findByRole('button', { name: 'Retry generation' }));
+		await waitFor(() => expect(mocks.retryNativeGeneration).toHaveBeenCalledWith('print-output-2'));
 	});
 
 	it('reconnects stream for in-flight stage2 on URL resume', async () => {

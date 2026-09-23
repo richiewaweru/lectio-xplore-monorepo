@@ -2,21 +2,18 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from collections.abc import Mapping
 from typing import Any
 
+from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
 from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
 
 from .models import SharedTaskSpec
 
 
 def teaching_plan_hash(plan: TeachingPlan) -> str:
-    if plan.preparation_hash:
-        return plan.preparation_hash
-    raw = json.dumps(plan.model_dump(mode="json", exclude_none=True), sort_keys=True)
-    return hashlib.sha256(raw.encode()).hexdigest()
+    """Bind generated shared tasks to exact pedagogical plan content."""
+    return teaching_plan_content_hash(plan)
 
 
 def _response_contract(action: str) -> tuple[str, dict[str, Any], dict[str, Any]]:

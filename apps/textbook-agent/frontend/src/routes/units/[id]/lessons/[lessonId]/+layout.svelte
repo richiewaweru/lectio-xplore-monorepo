@@ -21,6 +21,8 @@
 	let path = $state<UnitPath | null>(null);
 	let lesson = $state<PathLesson | null>(null);
 	let preparation = $state<PreparedLessonStatus | null>(null);
+	let statusFresh = $state(false);
+	let statusError = $state<string | null>(null);
 	let error = $state<string | null>(null);
 	let loading = $state(true);
 
@@ -65,19 +67,31 @@
 		get preparation() {
 			return preparation;
 		},
+		get statusFresh() {
+			return statusFresh;
+		},
+		get statusError() {
+			return statusError;
+		},
 		artifactState(path: 'learn' | 'print', loadError?: string | null) {
 			return lessonArtifactUi(preparation, path, loadError);
 		},
 		async refreshPreparation() {
 			if (!unitId || !lessonId) return;
+			statusFresh = false;
 			try {
 				preparation = await getPreparedLessonStatus(unitId, lessonId);
-			} catch {
-				/* status may 404 before prepare */
+				statusFresh = true;
+				statusError = null;
+			} catch (err) {
+				statusError = err instanceof Error ? err.message : 'Could not refresh lesson status.';
+				throw err;
 			}
 		},
 		setPreparation(next: PreparedLessonStatus | null) {
 			preparation = next;
+			statusFresh = next !== null;
+			statusError = null;
 		}
 	});
 
@@ -93,8 +107,12 @@
 			} else {
 				try {
 					preparation = await getPreparedLessonStatus(unitId, lessonId);
-				} catch {
+					statusFresh = true;
+					statusError = null;
+				} catch (err) {
 					preparation = null;
+					statusFresh = false;
+					statusError = err instanceof Error ? err.message : 'Could not load lesson status.';
 				}
 			}
 		} catch (err) {
@@ -146,6 +164,7 @@
 				{ id: 'print', label: 'Print', href: lessonWorkspaceHref(unitId, lessonId, 'print') }
 			]}
 		/>
+		{#if statusError}<p class="status-error" role="alert">Lesson status could not be refreshed: {statusError}</p>{/if}
 	</header>
 	{@render children()}
 {/if}
@@ -157,6 +176,7 @@
 	.err {
 		color: var(--danger);
 	}
+	.status-error { margin: var(--space-2) 0 0; color: var(--danger); font-size: 0.875rem; }
 	.lesson-head {
 		margin-bottom: var(--space-2);
 	}

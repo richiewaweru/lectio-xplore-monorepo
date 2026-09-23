@@ -5,7 +5,7 @@ import inspect
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,7 +20,6 @@ from application.unit_lesson import (
     prepare_path_lesson,
     request_outputs,
     resolve_by_path,
-    retry_realization,
     to_identity,
 )
 from application.unit_lesson.realization_contracts import (
@@ -30,9 +29,12 @@ from application.unit_lesson.realization_contracts import (
 from application.unit_lesson.realizations import (
     RealizationAdmissionError,
     RealizationReadOnlyError,
+    get_realization,
 )
-from application.unit_lesson.realize_learn_handoff import realize_learn_from_preparation
-from application.unit_lesson.realize_print_handoff import realize_print_from_preparation
+from application.unit_lesson.realize_learn_handoff import retry_learn_realization
+from application.unit_lesson.realize_print_handoff import (
+    retry_print_realization,
+)
 from core.capabilities import require_xplore_v2
 from core.database.models import (
     EditableLessonModel,
@@ -133,6 +135,10 @@ from curriculum.validation import (
     PathPlanningError,
     PathValidationError,
     plain_validation_message,
+)
+from curriculum.workspace_projection import (
+    project_lesson_workspace,
+    workspace_state_from_layers,
 )
 from infra.auth.middleware import get_current_user
 from infra.dependencies import get_async_session
@@ -323,7 +329,12 @@ def _raise_http(exc: Exception) -> None:
 
 async def _realization_status_fields(
     session: AsyncSession, *, path_lesson_id: str
-) -> dict[str, object]:
+) -> tuple[
+    dict[str, object],
+    dict[str, object] | None,
+    dict[str, object] | None,
+    bool,
+]:
     rows = await list_realizations_for_lesson(session, path_lesson_id=path_lesson_id)
     identities = [to_identity(row) for row in rows]
     dtos = [
@@ -335,8 +346,16 @@ async def _realization_status_fields(
     print_id = to_identity(print_row) if print_row else None
     learn_id = to_identity(learn_row) if learn_row else None
     learn_open_href = learn_id.open_href if learn_id else None
+    learn_id_dict = learn_id.model_dump(mode="json") if learn_id else None
     builder_id = None
     if learn_row is not None and learn_row.output_id:
+        learn_output = await session.get(GenerationModel, learn_row.output_id)
+        if learn_output is not None and isinstance(learn_output.chunked_state_json, dict):
+            learn_error = learn_output.chunked_state_json.get("error_detail")
+            if isinstance(learn_error, dict):
+                if learn_id_dict is None:
+                    learn_id_dict = {}
+                learn_id_dict["error_detail"] = dict(learn_error)
         editable = await session.scalar(
             select(EditableLessonModel)
             .where(EditableLessonModel.source_generation_id == learn_row.output_id)
@@ -347,7 +366,11 @@ async def _realization_status_fields(
             # The Learn workspace loads editable lessons with GET; expose the
             # concrete builder id once the native output has been materialized.
             learn_open_href = f"/builder/{editable.id}"
-    return {
+    legacy_ambiguous = any(
+        str(getattr(row, "variant_id", "")) == "legacy-ambiguous" for row in rows
+    )
+    return (
+        {
         "realizations": dtos,
         "print_realization_id": print_id.realization_id if print_id else None,
         "learn_realization_id": learn_id.realization_id if learn_id else None,
@@ -356,7 +379,11 @@ async def _realization_status_fields(
         "learn_output_id": learn_id.output_id if learn_id else None,
         "print_open_href": print_id.open_href if print_id else None,
         "learn_open_href": learn_open_href,
-    }
+        },
+        learn_id_dict if learn_row is not None else None,
+        print_id.model_dump(mode="json") if print_id else None,
+        legacy_ambiguous,
+    )
 
 
 @router.post("/constructor/readback")
@@ -1334,10 +1361,19 @@ async def get_path_lesson_status(
         _unit, version, lesson = await _owned_version_and_lesson(
             session, unit_id=unit_id, lesson_id=lesson_id, owner_id=current_user.id
         )
-        realization_fields = await _realization_status_fields(
-            session, path_lesson_id=lesson.id
-        )
+        (
+            realization_fields,
+            learn_workspace,
+            print_workspace,
+            legacy_ambiguous,
+        ) = await _realization_status_fields(session, path_lesson_id=lesson.id)
         if not lesson.pack_id:
+            workspace = project_lesson_workspace(
+                generation_id=None,
+                learn_realization=learn_workspace,
+                print_realization=print_workspace,
+                legacy_ambiguous=legacy_ambiguous,
+            )
             return PreparedLessonStatusResponse(
                 path_lesson_id=lesson.id,
                 lesson_revision=lesson.revision,
@@ -1348,6 +1384,12 @@ async def get_path_lesson_status(
                 stale=False,
                 can_prepare=version.status == "approved" and not lesson.skipped,
                 can_regenerate=False,
+                workspace=workspace,
+                worker_debug={
+                    "debug_only": True,
+                    "generation_status": "unprepared",
+                    "workflow_stage": "unprepared",
+                },
                 **realization_fields,
             ).model_dump(mode="json")
         generation = await session.get(GenerationModel, lesson.pack_id)
@@ -1362,12 +1404,28 @@ async def get_path_lesson_status(
         )
         try:
             chunked = await load_chunked_state(generation.id, session)
-            workflow_stage = str(chunked.get("stage") or generation.status or "unknown")
+            worker_stage = str(chunked.get("stage") or generation.status or "unknown")
         except ValueError:
-            workflow_stage = str(generation.status or "unknown")
+            chunked = dict(generation.chunked_state_json or {})
+            worker_stage = str(generation.status or "unknown")
+        workspace_state = workspace_state_from_layers(chunked, None)
+        workflow_stage = "stale" if stale else worker_stage
         # Preparation pack_id is the status generation. Path-specific Print/Learn
         # output ids live on realizations and must not replace the prep link —
         # otherwise regenerate leaves status pointing at a superseded pack.
+        workspace = project_lesson_workspace(
+            generation_id=generation.id,
+            generation_status=str(generation.status or "unknown"),
+            workflow_stage=worker_stage,
+            generation_error=generation.error,
+            generation_error_code=generation.error_code,
+            generation_error_type=generation.error_type,
+            state=workspace_state,
+            stale=stale,
+            learn_realization=learn_workspace,
+            print_realization=print_workspace,
+            legacy_ambiguous=legacy_ambiguous,
+        )
         return PreparedLessonStatusResponse(
             path_lesson_id=lesson.id,
             lesson_revision=lesson.revision,
@@ -1378,6 +1436,12 @@ async def get_path_lesson_status(
             stale=stale,
             can_prepare=False,
             can_regenerate=version.status == "approved" and not lesson.skipped,
+            workspace=workspace,
+            worker_debug={
+                "debug_only": True,
+                "generation_status": str(generation.status or "unknown"),
+                "workflow_stage": worker_stage,
+            },
             **realization_fields,
         ).model_dump(mode="json")
     except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP
@@ -1520,6 +1584,7 @@ async def post_path_lesson_realization_retry(
     body: RealizationRetryBody,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
+    response: Response = None,
 ) -> dict[str, object]:
     """Retry one native realization without mutating the sibling path or shared plan."""
     try:
@@ -1530,29 +1595,26 @@ async def post_path_lesson_realization_retry(
             raise HTTPException(
                 status_code=409, detail="The unit path changed; reload before continuing"
             )
-        row = await retry_realization(session, realization_id=realization_id)
-        if row.path_lesson_id != lesson.id:
+        row = await get_realization(session, realization_id)
+        if row is None or row.path_lesson_id != lesson.id:
             raise HTTPException(status_code=404, detail="Realization not found for lesson")
-        if row.path == "print" and row.preparation_generation_id:
-            # Print is backed by the approved preparation generation.  Reopen
-            # that exact checkpoint so the worker resumes from durable native
-            # state; do not manufacture a sibling generation id.
-            await realize_print_from_preparation(
+        if row.path == "print":
+            result = await retry_print_realization(
                 session,
-                preparation_generation_id=row.preparation_generation_id,
-                user_id=current_user.id,
-                path_lesson_id=lesson.id,
-            )
-        elif row.path == "learn" and row.preparation_generation_id:
-            # A queued Learn retry is not useful until it re-enters the same
-            # approved-preparation handoff used by initial creation.
-            await realize_learn_from_preparation(
-                session,
-                preparation_generation_id=row.preparation_generation_id,
+                realization_id=row.id,
                 user_id=current_user.id,
             )
-        await session.commit()
-        return to_identity(row).model_dump(mode="json")
+            await session.commit()
+            return result
+        if row.path == "learn":
+            result = await retry_learn_realization(
+                session, realization_id=realization_id, user_id=current_user.id
+            )
+            await session.commit()
+            if response is not None and result.get("status") in {"queued", "running"}:
+                response.status_code = status.HTTP_202_ACCEPTED
+            return result
+        raise HTTPException(status_code=409, detail="Unknown realization path")
     except HTTPException:
         raise
     except Exception as exc:  # noqa: BLE001 - map domain errors to HTTP

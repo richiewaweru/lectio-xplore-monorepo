@@ -9,6 +9,12 @@
 	import V3Canvas from '$lib/print/components/studio/V3Canvas.svelte';
 	import V3BookletPackView from '$lib/print/components/studio/V3BookletPackView.svelte';
 	import V3BookletIssuesPanel from '$lib/print/components/studio/V3BookletIssuesPanel.svelte';
+	import TeachingPlanReview from '$lib/curriculum/lessons/TeachingPlanReview.svelte';
+	import {
+		canApproveTeachingPlan,
+		isVerifiedApprovedTeachingPlan,
+		type LessonApproachView
+	} from '$lib/curriculum/lessons/teaching-plan-review';
 
 	import {
 		approveChunkedPlan,
@@ -51,7 +57,7 @@
 
 	let pdfLoading = $state(false);
 	let recoveryBusy = $state(false);
-	let lessonApproach = $state<Record<string, unknown> | null>(null);
+	let lessonApproach = $state<LessonApproachView | null>(null);
 	let teachingApproveBusy = $state(false);
 	let pdfError = $state<string | null>(null);
 	let pdfOpen = $state(false);
@@ -232,6 +238,14 @@
 			resolved.stage === 'writing_blocks' ||
 			resolved.stage === 'assembling'
 		) {
+			if (resolved.requested_realization_path === 'print') {
+				try {
+					const approvedPlan = await getLessonApproach(resolved.generation_id);
+					lessonApproach = isVerifiedApprovedTeachingPlan(approvedPlan) ? approvedPlan : null;
+				} catch {
+					lessonApproach = null;
+				}
+			}
 			// Native whole-lesson: teacher approved; form planner + writers run server-side and
 			// persist a LectioDocumentV2. Keep a generating state and poll until the document lands.
 			disconnectActiveChunkedStream();
@@ -262,6 +276,14 @@
 			// Keep last-good streamed/final document visible alongside the error.
 			disconnectActiveChunkedStream();
 			displayTitle = resolved.display_title ?? displayTitle;
+			if (resolved.requested_realization_path === 'print') {
+				try {
+					const approvedPlan = await getLessonApproach(resolved.generation_id);
+					lessonApproach = isVerifiedApprovedTeachingPlan(approvedPlan) ? approvedPlan : null;
+				} catch {
+					lessonApproach = null;
+				}
+			}
 			await hydrateFromDocument(resolved.generation_id);
 			const detail =
 				typeof resolved.error === 'string' && resolved.error.trim()
@@ -368,7 +390,8 @@
 			inferred_lesson_mode: plan.inferred_lesson_mode,
 			lesson_mode_confidence: plan.lesson_mode_confidence,
 			variants: plan.variants,
-			variant_generation_ids: status.variant_generation_ids ?? plan.variant_generation_ids
+			variant_generation_ids: status.variant_generation_ids ?? plan.variant_generation_ids,
+			requested_realization_path: status.requested_realization_path
 		};
 	}
 
@@ -384,7 +407,8 @@
 			execution_started: status.execution_started,
 			next_action: status.next_action,
 			error: status.error,
-			error_type: status.error_type
+			error_type: status.error_type,
+			requested_realization_path: status.requested_realization_path
 		};
 	}
 
@@ -883,22 +907,38 @@
 
 	async function handleTeachingApproachApprove() {
 		const chunked = v3Studio.chunkedState;
-		if (!chunked || !lessonApproach) return;
+		const approach = lessonApproach;
+		if (!chunked || !approach || !canApproveTeachingPlan(approach)) return;
 		teachingApproveBusy = true;
 		v3Studio.error = null;
 		try {
-			const review = (lessonApproach.teaching_review || {}) as { revision?: number };
+			const review = approach.teaching_review!;
+			const pendingHash = approach.teaching_plan_identity!.pending_content_hash!;
 			const requestedPath =
 				new URL(window.location.href).searchParams.get('path') === 'learn'
 					? 'learn'
 					: 'print';
 			const approved = await approveLessonApproach(chunked.generation_id, {
-				expected_revision: Number(review.revision || 1),
+				expected_revision: review.revision!,
+				expected_content_hash: pendingHash,
 				teacher_note: 'Approved',
 				path: requestedPath
 			});
+			const refreshed = await getLessonApproach(chunked.generation_id);
+			lessonApproach = refreshed;
+			if (
+				!isVerifiedApprovedTeachingPlan(refreshed) ||
+				refreshed.teaching_plan_identity?.approved_revision !== review.revision ||
+				refreshed.teaching_plan_identity?.approved_content_hash !== pendingHash
+			) {
+				throw new Error('Approval was saved, but its Teaching Plan identity could not be verified. Reload the review.');
+			}
 			if (requestedPath === 'learn' || approved?.next === 'generate_learn' || approved?.path === 'learn') {
 				const body = await realizeLearnFromGeneration(chunked.generation_id);
+				if (body.workspace_href) {
+					window.location.href = body.workspace_href;
+					return;
+				}
 				const href =
 					body.open_href ||
 					(body.editable_lesson_id
@@ -909,7 +949,23 @@
 					return;
 				}
 			}
-			startGenerationPolling(chunked.generation_id, { immediate: true });
+			const printOutputId =
+				typeof approved?.output_id === 'string'
+					? approved.output_id
+					: typeof approved?.generation_id === 'string'
+						? approved.generation_id
+						: '';
+			if (!printOutputId || printOutputId === chunked.generation_id) {
+				throw new Error('Print was approved, but the detached output could not be verified. Reload the review.');
+			}
+			v3Studio.generationId = printOutputId;
+			setGenerationQuery(printOutputId);
+			v3Studio.chunkedState = {
+				...chunked,
+				generation_id: printOutputId,
+				requested_realization_path: 'print'
+			};
+			startGenerationPolling(printOutputId, { immediate: true });
 			v3Studio.stage = 'generating';
 		} catch (err) {
 			v3Studio.error = friendly(err);
@@ -1134,7 +1190,7 @@
 				</div>
 			{/if}
 		</div>
-		{:else if v3Studio.stage === 'teaching_review' && lessonApproach}
+		{:else if v3Studio.stage === 'teaching_review'}
 			<section class="mx-auto max-w-3xl space-y-6 px-4 py-8">
 				<header class="space-y-2">
 					<p class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lesson approach</p>
@@ -1143,68 +1199,20 @@
 						Approve the pedagogical arc before forms and writers run. Read the last brief first.
 					</p>
 				</header>
-				{#if lessonApproach.teaching_plan}
-					{@const plan = lessonApproach.teaching_plan as {
-						arc?: string;
-						anchor_usage?: Array<{ slot_id: string; usage: string }>;
-						misconception_focus_ids?: string[];
-						sections?: Array<{
-							slot_id: string;
-							specific_purpose?: string;
-							blocks?: Array<{
-								id: string;
-								intent: string;
-								brief: string;
-								evidence?: string;
-								departure_reason?: string | null;
-								source_question_ids?: string[];
-							}>;
-						}>;
-					}}
-					<div class="rounded-xl border border-border/70 bg-card p-4">
-						<h3 class="text-sm font-semibold">Arc</h3>
-						<p class="mt-2 text-sm leading-relaxed text-foreground">{plan.arc}</p>
-					</div>
-					{#if plan.anchor_usage}
-						<div class="rounded-xl border border-border/70 bg-card p-4">
-							<h3 class="text-sm font-semibold">Anchor usage</h3>
-							<ul class="mt-2 space-y-1 text-sm text-muted-foreground">
-								{#each plan.anchor_usage as entry (entry.slot_id)}
-									<li>
-										<span class="font-medium text-foreground">{entry.slot_id}:</span> {entry.usage}
-									</li>
-								{/each}
-							</ul>
-						</div>
-					{/if}
-					{#if plan.misconception_focus_ids?.length}
-						<p class="text-sm text-muted-foreground">
-							Focused misconceptions: {plan.misconception_focus_ids.join(', ')}
-						</p>
-					{/if}
-					{#each [...(plan.sections || [])].reverse() as section}
-						<article class="rounded-xl border border-border/70 bg-card p-4">
-							<h3 class="text-sm font-semibold uppercase tracking-wide">{section.slot_id}</h3>
-							{#if section.specific_purpose}
-								<p class="mt-1 text-sm text-muted-foreground">{section.specific_purpose}</p>
-							{/if}
-							{#each [...(section.blocks || [])].reverse() as block}
-								<div class="mt-3 border-t border-border/50 pt-3">
-									<p class="text-xs font-semibold text-muted-foreground">{block.id} · {block.intent}</p>
-									<p class="mt-1 text-sm text-foreground">{block.brief}</p>
-									{#if block.departure_reason}
-										<p class="mt-1 text-xs text-amber-800">Departure: {block.departure_reason}</p>
-									{/if}
-								</div>
-							{/each}
-						</article>
-					{/each}
+				{#if lessonApproach?.teaching_plan}
+					<TeachingPlanReview
+						plan={lessonApproach.teaching_plan}
+						review={lessonApproach.teaching_review ?? undefined}
+						identity={lessonApproach.teaching_plan_identity ?? undefined}
+					/>
+				{:else}
+					<p class="rounded-xl border border-border/70 bg-card p-4 text-sm text-muted-foreground">The Teaching Plan details are unavailable. Approval is disabled until the content can be loaded and verified.</p>
 				{/if}
-				{#if Array.isArray(lessonApproach.teaching_qc) && lessonApproach.teaching_qc.length}
+				{#if lessonApproach?.teaching_qc?.length}
 					<div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
 						<p class="font-semibold">Advisory warnings</p>
 						<ul class="mt-2 list-disc space-y-1 pl-5">
-							{#each lessonApproach.teaching_qc as finding}
+							{#each lessonApproach.teaching_qc ?? [] as finding}
 								<li>{(finding as { code?: string; message?: string }).code}: {(finding as { message?: string }).message}</li>
 							{/each}
 						</ul>
@@ -1213,7 +1221,7 @@
 				<div class="flex flex-wrap gap-3">
 					<button
 						class="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-						disabled={teachingApproveBusy}
+						disabled={teachingApproveBusy || !canApproveTeachingPlan(lessonApproach)}
 						onclick={handleTeachingApproachApprove}
 					>
 						{teachingApproveBusy ? 'Approving…' : 'Approve teaching plan'}
@@ -1282,6 +1290,16 @@
 			/>
 	{:else if v3Studio.stage === 'generating'}
 			<section class="mx-auto max-w-3xl space-y-4 px-4 py-16 text-center">
+				{#if lessonApproach && isVerifiedApprovedTeachingPlan(lessonApproach)}
+					<div class="mx-auto max-w-4xl space-y-3 text-left">
+						<h2 class="text-xl font-semibold text-foreground">Approved Teaching Plan</h2>
+						<TeachingPlanReview
+							plan={lessonApproach.teaching_plan!}
+							review={lessonApproach.teaching_review ?? undefined}
+							identity={lessonApproach.teaching_plan_identity ?? undefined}
+						/>
+					</div>
+				{/if}
 				{#if currentNativeRetryAction}
 					<h2 class="text-xl font-semibold text-foreground">Generation paused</h2>
 					<p class="text-sm text-muted-foreground">

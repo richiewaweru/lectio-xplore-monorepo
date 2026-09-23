@@ -12,6 +12,7 @@ AuthoringFailureCode = Literal[
     "INVALID_PAYLOAD",
     "NO_COMPATIBLE_CAPABILITY",
     "PROVIDER_TRANSPORT_EXHAUSTED",
+    "PROVIDER_FAILURE",
     "REPAIR_EXHAUSTED",
     "BUDGET_EXHAUSTED",
     "POLICY_CONFLICT",
@@ -149,3 +150,22 @@ class AuthoringEngineError(RuntimeError):
 
 class AuthoringTransportError(RuntimeError):
     """Retryable transport/provider boundary failure."""
+
+
+class AuthoringProviderOutputError(RuntimeError):
+    """Model returned structured output that the authoring engine can repair."""
+
+    def __init__(self, errors: list[str], *, previous_output: Any = None) -> None:
+        self.errors = [str(error) for error in errors if str(error).strip()]
+        if not self.errors:
+            self.errors = ["provider returned structured output that could not be parsed"]
+        self.previous_output = previous_output
+        super().__init__("; ".join(self.errors) or "structured output was invalid")
+
+
+class AuthoringProviderTerminalError(RuntimeError):
+    """Provider request failed permanently and must not enter semantic repair."""
+
+    def __init__(self, error_class: str, message: str) -> None:
+        self.error_class = error_class
+        super().__init__(message)

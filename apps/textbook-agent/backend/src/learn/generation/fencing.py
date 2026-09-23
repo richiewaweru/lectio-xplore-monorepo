@@ -309,17 +309,17 @@ async def commit_learn_checkpoint(
 
 __all__ = [
     "LEARN_EXECUTION_KEY",
+    "LEARN_LEASE_SECONDS",
     "LearnCancelledError",
     "LearnFenceError",
     "assert_learn_commit_allowed",
     "assert_learn_dispatch_allowed",
     "cancel_learn_execution",
-    "fail_stale_learn_executions",
     "claim_learn_execution",
     "commit_learn_checkpoint",
     "empty_learn_execution_meta",
+    "fail_stale_learn_executions",
     "learn_execution_from_generation",
-    "LEARN_LEASE_SECONDS",
     "require_learn_lease",
     "write_learn_execution",
 ]

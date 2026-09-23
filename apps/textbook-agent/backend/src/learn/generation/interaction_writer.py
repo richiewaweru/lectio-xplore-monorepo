@@ -357,6 +357,9 @@ async def write_interaction_from_request_async(
                 resolved.primary_item if result.mode == "convert-approved" else None
             ),
         )
+        errors = validate_interaction_contract(contract)
+        if errors:
+            raise InteractionWriterError("CONTRACT_INVALID", "; ".join(errors))
         if checkpoint_store is not None and compat is not None:
             checkpoint_store.commit(
                 checkpoint_key,
@@ -373,9 +376,6 @@ async def write_interaction_from_request_async(
                     "interaction checkpoint mark_ambiguous failed", exc_info=True
                 )
         raise _as_writer_error(exc) from exc
-    errors = validate_interaction_contract(contract)
-    if errors:
-        raise InteractionWriterError("CONTRACT_INVALID", "; ".join(errors))
     return contract
 
 

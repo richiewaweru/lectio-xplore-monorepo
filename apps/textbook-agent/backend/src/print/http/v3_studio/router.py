@@ -334,6 +334,11 @@ def _normalize_chunked_state(generation_id: str, state: dict[str, Any]) -> V3Chu
         variant_generation_ids=state.get("variant_generation_ids")
         if isinstance(state.get("variant_generation_ids"), dict)
         else {},
+        requested_realization_path=(
+            state.get("requested_realization_path")
+            if state.get("requested_realization_path") in {"learn", "print"}
+            else None
+        ),
     )
 
 
@@ -379,6 +384,7 @@ def _normalize_chunked_status(
             if isinstance(native.get("error_type"), str)
             else full_state.error_type,
             variant_generation_ids=full_state.variant_generation_ids,
+            requested_realization_path=full_state.requested_realization_path,
             document_version=native.get("document_version"),
             document_exists=bool(native.get("document_exists")),
             sections_total=int(native.get("sections_total") or 0),
@@ -409,6 +415,7 @@ def _normalize_chunked_status(
         error=full_state.error,
         error_type=full_state.error_type,
         variant_generation_ids=full_state.variant_generation_ids,
+        requested_realization_path=full_state.requested_realization_path,
     )
 
 
@@ -4515,6 +4522,7 @@ __all__ = ["v3_studio_router"]
 
 class LessonApproachApproveRequest(BaseModel):
     expected_revision: int = 1
+    expected_content_hash: str | None = None
     teacher_note: str | None = None
 
 
@@ -4552,12 +4560,15 @@ async def get_lesson_approach(
         state = await repo.load_page_generation_state()
     if not state.get("teaching_plan"):
         raise HTTPException(status_code=404, detail="Teaching plan not ready")
+    from curriculum.teaching_plan.revisions import teaching_plan_review_identity
+
     return {
         "generation_id": generation_id,
         "teaching_plan": state.get("teaching_plan"),
         "teaching_validation": state.get("teaching_validation"),
         "teaching_qc": state.get("teaching_qc"),
         "teaching_review": state.get("teaching_review"),
+        "teaching_plan_identity": teaching_plan_review_identity(state),
         "lesson_packet": state.get("lesson_packet"),
         "catalogue": state.get("catalogue"),
     }
@@ -4571,8 +4582,21 @@ async def post_lesson_approach_approve(
     path: str | None = Query(default=None),
 ) -> JSONResponse:
     await _load_owned_generation(generation_id, current_user.id)
+    if not str(body.expected_content_hash or "").strip():
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "TEACHING_CONTENT_HASH_REQUIRED",
+                "message": "Reload the Teaching Plan review and approve the displayed version.",
+                "recovery_action": "reload_review",
+            },
+        )
+    from application.unit_lesson.realize_print_handoff import realize_print_from_preparation
+    from curriculum.teaching_plan.revisions import (
+        TeachingRevisionConflictError,
+        TeachingRevisionContentError,
+    )
     from print.generation.whole_lesson.repository import PageDocumentRepository
-    from print.generation.whole_lesson.service import approve_teaching_and_queue
 
     requested_path = (path or getattr(body, "path", None) or "print").strip().lower()
     if requested_path not in {"print", "learn"}:
@@ -4590,6 +4614,7 @@ async def post_lesson_approach_approve(
                 state = await repo.save_teaching_review(
                     status="approved",
                     expected_revision=body.expected_revision,
+                    expected_content_hash=body.expected_content_hash,
                     reviewed_by=current_user.id,
                     teacher_note=body.teacher_note,
                     queue=False,
@@ -4605,6 +4630,8 @@ async def post_lesson_approach_approve(
                         "requested_realization_path": "learn",
                     }
                 await session.commit()
+                from curriculum.teaching_plan.revisions import teaching_plan_review_identity
+
                 return JSONResponse(
                     status_code=200,
                     content={
@@ -4613,30 +4640,60 @@ async def post_lesson_approach_approve(
                         "path": "learn",
                         "queued": False,
                         "next": "generate_learn",
+                        "teaching_plan_identity": teaching_plan_review_identity(state),
                     },
                 )
 
-            result = await approve_teaching_and_queue(
-                session,
-                generation_id,
+            repo = PageDocumentRepository(session, generation_id)
+            state = await repo.load_page_generation_state()
+            if not state.get("teaching_plan"):
+                raise HTTPException(status_code=409, detail="no teaching plan to approve")
+            state = await repo.save_teaching_review(
+                status="approved",
                 expected_revision=body.expected_revision,
+                expected_content_hash=body.expected_content_hash,
                 reviewed_by=current_user.id,
                 teacher_note=body.teacher_note,
+                queue=False,
+                commit=False,
             )
+            result = await realize_print_from_preparation(
+                session,
+                preparation_generation_id=generation_id,
+                user_id=current_user.id,
+                allow_standalone=True,
+            )
+            await session.commit()
         except HTTPException:
             raise
+        except (TeachingRevisionConflictError, TeachingRevisionContentError) as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": exc.code,
+                    "message": str(exc),
+                    "recovery_action": "reprepare"
+                    if isinstance(exc, TeachingRevisionContentError)
+                    else None,
+                },
+            ) from exc
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except Exception as exc:
             logger.exception("lesson approach approve failed generation_id=%s", generation_id)
             raise HTTPException(status_code=500, detail=str(exc)[:400]) from exc
+    from curriculum.teaching_plan.revisions import teaching_plan_review_identity
+
     return JSONResponse(
         status_code=202,
         content={
-            "generation_id": generation_id,
+            **result,
+            "generation_id": result.get("output_id"),
+            "preparation_generation_id": generation_id,
             "status": result.get("status") or "queued",
             "path": "print",
             "document_version": 2,
+            "teaching_plan_identity": teaching_plan_review_identity(state),
         },
     )
 
@@ -4646,8 +4703,9 @@ async def post_realize_learn(
     generation_id: str,
     current_user: User = Depends(get_current_user),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    response: Response = None,
 ) -> dict[str, Any]:
-    """Generate Learn from an approved Teaching Plan on this preparation generation.
+    """Admit Learn from an approved Teaching Plan on this preparation generation.
 
     Cross-domain handoff goes through application orchestration (not print→learn).
     """
@@ -4663,6 +4721,8 @@ async def post_realize_learn(
                 admission_request_key=idempotency_key,
             )
             await session.commit()
+            if response is not None and result.get("status") in {"queued", "running"}:
+                response.status_code = 202
         except HTTPException:
             await session.rollback()
             raise
@@ -4690,6 +4750,7 @@ async def post_realize_print(
                 preparation_generation_id=generation_id,
                 user_id=current_user.id,
                 admission_request_key=idempotency_key,
+                allow_standalone=True,
             )
             await session.commit()
         except HTTPException:

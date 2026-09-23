@@ -15,6 +15,8 @@ from infra.authoring.models import (
     AuthoringProvenance,
     AuthoringProvider,
     AuthoringProviderCall,
+    AuthoringProviderOutputError,
+    AuthoringProviderTerminalError,
     AuthoringRequest,
     AuthoringResult,
     AuthoringTransportError,
@@ -154,12 +156,14 @@ class LLMAuthoringProvider:
         self.node_name = node_name
 
     async def invoke(self, call: AuthoringProviderCall) -> Any:
+        from core.llm.runner import RetryPolicy
+
         from v3_execution.llm_helpers import run_structured_agent
 
-        # AuthoringEngine owns semantic repair attempts. Allow one pydantic-ai
-        # output retry for PromptedOutput wrapper/schema mismatches so a single
-        # bare-JSON reply (e.g. `{nodes:…}` without `{response:…}`) does not
-        # abort the whole Learn/Print compose as a fake capability miss.
+        # Return an unconstrained JSON object so AuthoringEngine can apply the
+        # selected capability schema and own every semantic correction. One
+        # helper call must equal one provider dispatch; retries belong to the
+        # engine where they are reserved against the work-item budget.
         try:
             return await run_structured_agent(
                 node_name=self.node_name,
@@ -167,22 +171,38 @@ class LLMAuthoringProvider:
                 generation_id=None,
                 system_prompt=call.prompt,
                 user_prompt="Return JSON only for the selected capability payload.",
-                output_schema=dict(call.output_schema),
+                output_type=dict[str, Any],
                 repair_attempts=0,
-                retries={"output": 1},
+                retries={"output": 0},
+                structured_mode="prompted_json",
+                retry_policy=RetryPolicy(max_attempts=1),
             )
         except AuthoringTransportError:
             raise
         except AuthoringEngineError:
             raise
         except Exception as exc:
-            from curriculum.llm_contract_errors import is_transport_error
+            from pydantic import ValidationError
+            from pydantic_ai.exceptions import UnexpectedModelBehavior
 
-            if is_transport_error(exc) or isinstance(exc, (TimeoutError, ConnectionError)):
+            from curriculum.llm_contract_errors import structured_output_errors
+            from infra.execution.error_policy import classify_provider_error
+
+            status_code = getattr(exc, "status_code", None)
+            response = getattr(exc, "response", None)
+            if status_code is None and response is not None:
+                status_code = getattr(response, "status_code", None)
+            classification = classify_provider_error(exc, status_code=status_code)
+            if classification.retryable:
                 raise AuthoringTransportError(str(exc)) from exc
-            # Preserve non-transport provider failures (schema/auth/output) so
-            # callers see the real class instead of a fake capability miss.
-            raise
+            if isinstance(exc, (ValidationError, UnexpectedModelBehavior)):
+                raise AuthoringProviderOutputError(
+                    structured_output_errors(exc)
+                ) from exc
+            raise AuthoringProviderTerminalError(
+                classification.error_class,
+                str(exc),
+            ) from exc
 
 
 @dataclass
@@ -520,6 +540,37 @@ class AuthoringEngine:
             )
             try:
                 result = await provider.invoke(call)
+            except AuthoringProviderOutputError as exc:
+                # The provider request completed but its structured payload was
+                # invalid. Count that dispatch, then let this engine own repair.
+                budget.mark_dispatched(reserved)
+                self._persist_budget(budget)
+                self._record_model_call(
+                    request=request,
+                    definition=definition,
+                    prompt=prompt,
+                    attempt=reserved,
+                    result=None,
+                )
+                return exc, attempts
+            except AuthoringProviderTerminalError as exc:
+                budget.mark_dispatched(reserved)
+                self._persist_budget(budget)
+                self._record_model_call(
+                    request=request,
+                    definition=definition,
+                    prompt=prompt,
+                    attempt=reserved,
+                    result=None,
+                )
+                raise AuthoringEngineError(
+                    "PROVIDER_FAILURE",
+                    f"{exc.error_class}: {exc}",
+                    stage="provider",
+                    retryable=False,
+                    provenance=provenance,
+                    transport_attempts=attempts,
+                ) from exc
             except AuthoringTransportError as exc:
                 # Dispatch occurred (or ambiguous). Never release the slot as free.
                 budget.mark_ambiguous(reserved)
@@ -623,6 +674,9 @@ class AuthoringEngine:
         request: AuthoringRequest,
         raw: object,
     ) -> tuple[dict[str, Any], list[AuthoringValidationError], object]:
+        if isinstance(raw, AuthoringProviderOutputError):
+            errors = [AuthoringValidationError("", error) for error in raw.errors]
+            return {}, errors, raw.previous_output
         try:
             payload = _coerce_json_object(raw)
         except (json.JSONDecodeError, ValueError) as exc:

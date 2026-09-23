@@ -8,9 +8,11 @@ from typing import Any
 import pytest
 
 from infra.authoring import AuthoringProviderCall
+from infra.execution.checkpoints import CheckpointStore
 from learn.generation.interaction_writer import (
     InteractionWriterError,
     write_interaction_from_request,
+    write_interaction_from_request_async,
 )
 
 
@@ -38,6 +40,96 @@ class ScriptedProvider:
     async def invoke(self, call: AuthoringProviderCall) -> Any:
         self.calls.append(call)
         return self.response
+
+
+class QueueProvider:
+    def __init__(self, *responses: Any) -> None:
+        self.responses = list(responses)
+        self.calls: list[AuthoringProviderCall] = []
+
+    async def invoke(self, call: AuthoringProviderCall) -> Any:
+        self.calls.append(call)
+        return self.responses.pop(0)
+
+
+@pytest.mark.asyncio
+async def test_interaction_envelope_repair_uses_engine_and_checkpoint_commits_after_validation() -> None:
+    provider = QueueProvider(
+        {
+            "prompt": "Choose the source of most plant biomass.",
+            "config": {
+                "options": [
+                    {"id": "air", "text": "Carbon dioxide"},
+                    {"id": "soil", "text": "Soil"},
+                ],
+                "correct_option_id": "air",
+            },
+            "feedback": {"correct": "", "incorrect": "Try again."},
+        },
+        {
+            "prompt": "Choose the source of most plant biomass.",
+            "config": {
+                "options": [
+                    {"id": "air", "text": "Carbon dioxide"},
+                    {"id": "soil", "text": "Soil"},
+                ],
+                "correct_option_id": "air",
+            },
+            "feedback": {"correct": "Correct.", "incorrect": "Try again."},
+        },
+    )
+    store = CheckpointStore()
+    contract = await write_interaction_from_request_async(
+        _request(
+            "choice",
+            "Choose the source of most plant biomass.",
+            action="select-one",
+            lesson_context={"objective": "Identify the source of plant biomass."},
+            allowed_facts=["Most plant biomass comes from carbon dioxide."],
+        ),
+        interaction_id="ix-p05-envelope",
+        provider=provider,
+        checkpoint_store=store,
+    )
+
+    assert contract["feedback"]["correct"] == "Correct."
+    assert [call.is_repair for call in provider.calls] == [False, True]
+    checkpoint = store.get("interaction:ix-p05-envelope")
+    assert checkpoint is not None and checkpoint.status == "ready"
+    assert checkpoint.payload == contract
+
+
+@pytest.mark.asyncio
+async def test_invalid_interaction_never_gets_ready_checkpoint() -> None:
+    invalid = {
+        "prompt": "Choose one.",
+        "config": {
+            "options": [{"id": "a", "text": "A"}, {"id": "b", "text": "B"}],
+            "correct_option_id": "a",
+        },
+        "feedback": {"correct": "", "incorrect": "Try again."},
+    }
+    provider = QueueProvider(invalid, invalid, invalid)
+    store = CheckpointStore()
+
+    with pytest.raises(InteractionWriterError) as caught:
+        await write_interaction_from_request_async(
+            _request(
+                "choice",
+                "Choose one.",
+                action="select-one",
+                lesson_context={"objective": "Choose the correct option."},
+                allowed_facts=["A scoped fact."],
+            ),
+            interaction_id="ix-p05-invalid",
+            provider=provider,
+            checkpoint_store=store,
+        )
+
+    assert caught.value.code == "REPAIR_EXHAUSTED"
+    assert len(provider.calls) == 3
+    checkpoint = store.get("interaction:ix-p05-invalid")
+    assert checkpoint is not None and checkpoint.status != "ready"
 
 
 def test_a00_numeric_uses_independent_answer_not_first_number() -> None:

@@ -176,9 +176,7 @@ async def test_unprepared_lesson_status_is_explicit_over_http(db_session_factory
     app.dependency_overrides[get_current_user] = _override_user
     await _install_session(db_session_factory)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.get(
-            f"/api/v1/units/{unit_id}/path/lessons/{lesson_id}/status"
-        )
+        response = await client.get(f"/api/v1/units/{unit_id}/path/lessons/{lesson_id}/status")
 
     assert response.status_code == 200
     assert response.json() == {
@@ -199,6 +197,44 @@ async def test_unprepared_lesson_status_is_explicit_over_http(db_session_factory
             "learn_realization_id": None,
             "learn_open_href": None,
 			"builder_id": None,
+        "workspace": {
+            "preparation": {
+                "state": "not_started",
+                "review_kind": None,
+                "generation_id": None,
+                "teaching_plan_id": None,
+                "approved_revision": None,
+                "approved_content_hash": None,
+                "approved_snapshot_verified": False,
+                "stale": False,
+                "legacy_ambiguous": False,
+                "error": None,
+            },
+            "learn": {
+                "state": "not_created",
+                "realization_id": None,
+                "output_id": None,
+                "open_href": None,
+                "stale": False,
+                "legacy_ambiguous": False,
+                "error": None,
+            },
+            "print": {
+                "state": "not_created",
+                "realization_id": None,
+                "output_id": None,
+                "open_href": None,
+                "stale": False,
+                "legacy_ambiguous": False,
+                "error": None,
+            },
+            "legacy_ambiguities": [],
+        },
+        "worker_debug": {
+            "debug_only": True,
+            "generation_status": "unprepared",
+            "workflow_stage": "unprepared",
+        },
         }
 
 
@@ -238,8 +274,16 @@ async def test_lesson_issues_projection_is_path_filtered_and_owned(db_session_fa
 
     assert learn.status_code == 200
     assert printed.status_code == 200
-    assert learn.json() == {"path": "learn", "issues": [], "counts": {"info": 0, "warning": 0, "error": 0}}
-    assert printed.json() == {"path": "print", "issues": [], "counts": {"info": 0, "warning": 0, "error": 0}}
+    assert learn.json() == {
+        "path": "learn",
+        "issues": [],
+        "counts": {"info": 0, "warning": 0, "error": 0},
+    }
+    assert printed.json() == {
+        "path": "print",
+        "issues": [],
+        "counts": {"info": 0, "warning": 0, "error": 0},
+    }
     assert missing.status_code == 404
 
 
@@ -341,10 +385,8 @@ async def test_history_restore_status_and_stale_edit_are_explicit(db_session_fac
     assert history.status_code == 200
     assert [item["status"] for item in history.json()] == ["draft", "superseded"]
     assert aggregate.status_code == 200
-    assert (
-        aggregate.json()["counts"]["unprepared"]
-        + aggregate.json()["counts"]["warning"]
-        == len(plan.lessons)
+    assert aggregate.json()["counts"]["unprepared"] + aggregate.json()["counts"]["warning"] == len(
+        plan.lessons
     )
     assert stale.status_code == 409
     assert "refresh" in stale.json()["detail"].lower()
@@ -580,12 +622,16 @@ async def test_lesson_actual_round_trip_is_revision_guarded_over_http(db_session
     app.dependency_overrides[get_current_user] = _override_user
     await _install_session(db_session_factory)
     payload = {
-        "path_version_id": version_id, "path_revision": path_revision,
-        "lesson_revision": lesson_revision, "actual_revision": 0,
-        "status": "partial", "pace": "slower",
+        "path_version_id": version_id,
+        "path_revision": path_revision,
+        "lesson_revision": lesson_revision,
+        "actual_revision": 0,
+        "status": "partial",
+        "pace": "slower",
         "established_concepts": ["Leaves use light."],
         "unresolved_misconceptions": ["soil-food"],
-        "anchor_used": "Leaf sample", "teacher_note": "Revisit next lesson.",
+        "anchor_used": "Leaf sample",
+        "teacher_note": "Revisit next lesson.",
     }
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         saved = await client.post(

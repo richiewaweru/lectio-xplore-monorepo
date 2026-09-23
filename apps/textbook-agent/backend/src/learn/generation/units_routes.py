@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -448,8 +448,9 @@ async def generate_learn_realization(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    response: Response = None,
 ) -> dict[str, Any]:
-    """Admit + execute LearnDocument v2 from an approved Teaching Plan.
+    """Admit a durable LearnDocument v2 run from an approved Teaching Plan.
 
     Requires shared preparation with an approved teaching revision. Does not
     convert Print artifacts and does not queue the Print worker.
@@ -487,6 +488,8 @@ async def generate_learn_realization(
             admission_request_key=idempotency_key,
         )
         await session.commit()
+        if response is not None and result.get("status") in {"queued", "running"}:
+            response.status_code = status.HTTP_202_ACCEPTED
     except HTTPException:
         await session.rollback()
         raise

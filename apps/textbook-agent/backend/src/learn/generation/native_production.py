@@ -16,6 +16,9 @@ from curriculum.lesson_review.service import build_coherence_report
 from curriculum.lesson_sourcebook.models import LessonSourcebook
 from curriculum.shared_tasks import SharedTaskSpec, build_shared_task_registry
 from curriculum.shared_tasks.validation import assert_task_preserved
+from curriculum.teaching_plan.content_hash import (
+    teaching_plan_content_hash as _canonical_teaching_plan_content_hash,
+)
 from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
 from document.composer import compose_document_plan
 from document.composition import CompositionDecision, CompositionPlan
@@ -40,17 +43,8 @@ logger = logging.getLogger(__name__)
 
 
 def teaching_plan_content_hash(plan: TeachingPlan | Mapping[str, Any]) -> str:
-    if isinstance(plan, TeachingPlan):
-        payload = plan.model_dump(mode="json")
-    else:
-        payload = dict(plan)
-    body = {
-        "arc": payload.get("arc"),
-        "sections": payload.get("sections"),
-        "anchor_usage": payload.get("anchor_usage"),
-    }
-    raw = json.dumps(body, sort_keys=True, separators=(",", ":"), default=str)
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    """Compatibility adapter to the curriculum-owned pedagogical digest."""
+    return _canonical_teaching_plan_content_hash(plan)
 
 
 def package_contract_hash() -> str:

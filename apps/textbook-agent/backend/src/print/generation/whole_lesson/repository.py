@@ -13,7 +13,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.database.models import GenerationModel
+from core.database.models import GenerationModel, NativeRealizationModel
 from print.generation.whole_lesson.events import make_event
 from print.generation.whole_lesson.states import (
     ACTIVE_STATUSES,
@@ -99,6 +99,46 @@ def _project_native_report_status(generation: GenerationModel) -> None:
     elif native_stage in _NATIVE_RUNNING_STAGES:
         report["process_status"] = "running"
     generation.report_json = report
+
+
+async def _sync_print_realization_status(
+    session: Any, generation: GenerationModel, state: Mapping[str, Any]
+) -> None:
+    """Mirror output-generation lifecycle onto its detached Print identity."""
+    generation_id = str(generation.id or "")
+    if not generation_id:
+        return
+    rows = await session.scalars(
+        select(NativeRealizationModel).where(
+            NativeRealizationModel.path == "print",
+            NativeRealizationModel.output_id == generation_id,
+            NativeRealizationModel.preparation_generation_id != generation_id,
+            NativeRealizationModel.status.notin_({"read_only", "stale"}),
+        )
+    )
+    status = str(generation.status or "").strip()
+    if status in {"ready", "completed", "published"}:
+        realization_status = "ready"
+    elif status == "queued":
+        realization_status = "queued"
+    elif status in {"failed_recoverable", "failed"}:
+        realization_status = "failed_recoverable"
+    elif status == "failed_terminal":
+        realization_status = "failed_terminal"
+    elif status in {"stale", "read_only"}:
+        realization_status = status
+    else:
+        realization_status = "running"
+    execution = state.get("execution") if isinstance(state, Mapping) else None
+    last_error = execution.get("last_error") if isinstance(execution, Mapping) else None
+    error_summary = (
+        str(last_error.get("message") or "")[:2000]
+        if isinstance(last_error, Mapping)
+        else None
+    )
+    for row in rows:
+        row.status = realization_status
+        row.error_summary = error_summary if realization_status.startswith("failed") else None
 
 
 def empty_execution_meta() -> dict[str, Any]:
@@ -345,6 +385,7 @@ class PageDocumentRepository:
         expected_statuses: set[str] | None = None,
         worker_id: str | None = None,
         lease_token: int | None = None,
+        commit: bool = True,
         mutation: Callable[[GenerationModel, dict[str, Any]], None],
     ) -> dict[str, Any]:
         """Row-locked page-document mutation. Correctness boundary for Phase 02."""
@@ -366,7 +407,11 @@ class PageDocumentRepository:
             mutation(generation, state)
             stage = str(generation.status or "") or None
             saved = self._write_page_state(generation, state, stage=stage)
-            await self.session.commit()
+            await _sync_print_realization_status(self.session, generation, saved)
+            if commit:
+                await self.session.commit()
+            else:
+                await self.session.flush()
             return saved
 
     def _assert_lease_on_state(
@@ -1064,10 +1109,12 @@ class PageDocumentRepository:
         *,
         status: str,
         expected_revision: int,
+        expected_content_hash: str | None = None,
         reviewed_by: str | None = None,
         teacher_note: str | None = None,
         queue: bool = False,
         allow_retry_from_failure: bool = False,
+        commit: bool = True,
     ) -> dict[str, Any]:
         post_approval = {
             "queued",
@@ -1082,7 +1129,12 @@ class PageDocumentRepository:
         boxed: list[dict[str, Any]] = []
 
         def _mut(generation: GenerationModel, state: dict[str, Any]) -> None:
-            from curriculum.teaching_plan.revisions import TeachingRevisionStore
+            from curriculum.teaching_plan.consumers import accept_approved_teaching_revision
+            from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
+            from curriculum.teaching_plan.revisions import (
+                TeachingRevisionConflictError,
+                TeachingRevisionStore,
+            )
 
             review = dict(state.get("teaching_review") or {})
             current_rev = int(review.get("revision") or 1)
@@ -1090,13 +1142,26 @@ class PageDocumentRepository:
             already_approved = (
                 str(review.get("status") or "") == "approved" and approved_rev is not None
             )
+            if status == "approved" and queue and already_approved:
+                if expected_revision != current_rev:
+                    raise TeachingRevisionConflictError(
+                        f"stale teaching revision: expected {expected_revision}, current {current_rev}"
+                    )
+                approved_plan = accept_approved_teaching_revision(
+                    deepcopy(state), consumer="print"
+                )
+                actual_hash = teaching_plan_content_hash(approved_plan)
+                if expected_content_hash is not None and expected_content_hash != actual_hash:
+                    raise TeachingRevisionConflictError(
+                        "displayed Teaching Plan content changed; reload the review before queuing"
+                    )
             # After Learn (or a prior Print) approval, review.revision is the
             # next pending slot, not the approved teaching revision. Queuing
             # Print must not require a new draft.
             if status == "approved" and queue and already_approved:
                 pass
             elif expected_revision != current_rev:
-                raise ValueError(
+                raise TeachingRevisionConflictError(
                     f"stale teaching revision: expected {expected_revision}, current {current_rev}"
                 )
             gen_status = str(generation.status or "")
@@ -1157,6 +1222,7 @@ class PageDocumentRepository:
                 store = TeachingRevisionStore(state)
                 store.approve(
                     expected_revision=expected_revision,
+                    expected_content_hash=expected_content_hash,
                     reviewed_by=reviewed_by,
                     teacher_note=teacher_note,
                 )
@@ -1209,7 +1275,7 @@ class PageDocumentRepository:
                 state["events"] = events[-500:]
             boxed.append(state)
 
-        await self.mutate_state(mutation=_mut)
+        await self.mutate_state(mutation=_mut, commit=commit)
         return boxed[-1] if boxed else await self.load_page_generation_state()
 
     async def save_form_plan(
@@ -2220,6 +2286,18 @@ async def claim_next_native_job(
         .limit(20)
     )
     for generation_id in list(pre_result.scalars().all()):
+        legacy_prep_link = await session.scalar(
+            select(NativeRealizationModel.id).where(
+                NativeRealizationModel.path == "print",
+                NativeRealizationModel.output_id == str(generation_id),
+                NativeRealizationModel.preparation_generation_id == str(generation_id),
+            )
+        )
+        if legacy_prep_link is not None:
+            # Old rows used the preparation itself as the Print output. Keep
+            # those records readable, but never let a worker mutate shared
+            # preparation through the new detached execution path.
+            continue
         repo = PageDocumentRepository(session, str(generation_id))
         state = await repo.load_page_generation_state()
         work_kind = (state.get("execution") or {}).get("work_kind")
@@ -2243,6 +2321,15 @@ async def claim_next_native_job(
     )
     for generation_id in list(result.scalars().all()):
         gid = str(generation_id)
+        legacy_prep_link = await session.scalar(
+            select(NativeRealizationModel.id).where(
+                NativeRealizationModel.path == "print",
+                NativeRealizationModel.output_id == gid,
+                NativeRealizationModel.preparation_generation_id == gid,
+            )
+        )
+        if legacy_prep_link is not None:
+            continue
         repo = PageDocumentRepository(session, gid)
         state = await repo.load_page_generation_state()
         if not state.get("teaching_plan") or not state.get("lesson_packet"):

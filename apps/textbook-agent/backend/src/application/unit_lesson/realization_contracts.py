@@ -68,9 +68,13 @@ def package_contract_for(path: NativePath) -> tuple[str, str]:
 
 
 def teaching_plan_hash(plan: dict[str, Any] | None, *, preparation_hash: str | None = None) -> str:
-    if preparation_hash:
-        return preparation_hash
-    return canonical_hash(plan or {})
+    """Legacy adapter; preparation input identity is never content identity."""
+    from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
+
+    _ = preparation_hash
+    if plan is None:
+        raise ValueError("Teaching Plan content is required for a content hash")
+    return teaching_plan_content_hash(plan)
 
 
 class RealizationIdentity(BaseModel):
