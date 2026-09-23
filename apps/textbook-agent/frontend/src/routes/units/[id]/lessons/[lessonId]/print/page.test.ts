@@ -3,12 +3,12 @@ import { cleanup, render, screen } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-	apiFetch: vi.fn(), downloadV3GenerationPdf: vi.fn(), getLessonIssues: vi.fn(),
+	apiFetch: vi.fn(), downloadGenerationPdf: vi.fn(), getLessonIssues: vi.fn(),
 	retryLessonRealization: vi.fn(), generatePrintRealization: vi.fn()
 }));
 
 vi.mock('$lib/api/client', () => ({ apiFetch: mocks.apiFetch }));
-vi.mock('$lib/api/v3', () => ({ downloadV3GenerationPdf: mocks.downloadV3GenerationPdf }));
+vi.mock('$lib/api/realizations', () => ({ downloadGenerationPdf: mocks.downloadGenerationPdf }));
 vi.mock('$lib/api/units', () => ({ getLessonIssues: mocks.getLessonIssues, retryLessonRealization: mocks.retryLessonRealization, generatePrintRealization: mocks.generatePrintRealization }));
 vi.mock('$lib/print/components/studio/LectioPageDocumentView.svelte', async () => ({ default: (await import('../../../../../studio/__fixtures__/MockGeneric.svelte')).default }));
 

@@ -11,7 +11,22 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from v3_blueprint.models import LessonMode, ProductionBlueprint, ResourceType
+LessonMode = Literal[
+    "first_exposure",
+    "consolidation",
+    "repair",
+    "retrieval",
+    "transfer",
+]
+ResourceType = Literal[
+    "lesson",
+    "mini_booklet",
+    "worksheet",
+    "quiz",
+    "exit_ticket",
+    "practice_set",
+    "quick_explainer",
+]
 
 
 class GenerationInputForm(BaseModel):
@@ -45,16 +60,9 @@ class GenerationSignalSummary(BaseModel):
     lesson_mode_confidence: Literal["low", "high"]
 
 
-class ProductionBlueprintEnvelope(BaseModel):
-    """Structured blueprint output shared by planning adapters."""
-
-    model_config = {"extra": "forbid"}
-
-    blueprint: ProductionBlueprint
-
-
 __all__ = [
     "GenerationInputForm",
     "GenerationSignalSummary",
-    "ProductionBlueprintEnvelope",
+    "LessonMode",
+    "ResourceType",
 ]

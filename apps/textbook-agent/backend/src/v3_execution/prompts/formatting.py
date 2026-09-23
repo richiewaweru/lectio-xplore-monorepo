@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from v3_execution.models import SourceOfTruthEntry
+from media.generation.contracts import SourceOfTruthEntry
 
 
 def format_source_of_truth(entries: list[SourceOfTruthEntry]) -> str:

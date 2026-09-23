@@ -226,7 +226,7 @@ def test_consumer_rejects_missing_approval_pointer_or_ledger_row() -> None:
 async def test_lesson_approach_get_separates_plan_review_and_identity(
     db_session_factory, monkeypatch
 ) -> None:
-    import print.http.v3_studio.router as studio_router
+    import application.unit_lesson.native_http as native_http
 
     state: dict = {}
     plan = _plan()
@@ -245,13 +245,13 @@ async def test_lesson_approach_get_separates_plan_review_and_identity(
         session.add(generation)
         await session.commit()
 
-    monkeypatch.setattr(studio_router, "async_session_factory", db_session_factory)
+    monkeypatch.setattr(native_http, "async_session_factory", db_session_factory)
     monkeypatch.setattr(
-        studio_router,
+        native_http,
         "_load_owned_generation",
         AsyncMock(return_value=generation),
     )
-    response = await studio_router.get_lesson_approach(
+    response = await native_http.get_lesson_approach(
         generation.id,
         User(
             id=generation.user_id,
@@ -275,15 +275,15 @@ async def test_lesson_approach_get_separates_plan_review_and_identity(
 async def test_active_lesson_approval_rejects_missing_content_hash(monkeypatch) -> None:
     from fastapi import HTTPException
 
-    import print.http.v3_studio.router as studio_router
+    import application.unit_lesson.native_http as native_http
     from core.entities.user import User
 
     monkeypatch.setattr(
-        studio_router,
+        native_http,
         "_load_owned_generation",
         AsyncMock(return_value=GenerationModel(id="missing-hash", user_id="teacher")),
     )
-    body = studio_router.LessonApproachApproveRequest(expected_revision=1)
+    body = native_http.LessonApproachApproveRequest(expected_revision=1)
     teacher = User(
         id="teacher",
         email="teacher@example.invalid",
@@ -293,7 +293,7 @@ async def test_active_lesson_approval_rejects_missing_content_hash(monkeypatch) 
     )
 
     with pytest.raises(HTTPException) as raised:
-        await studio_router.post_lesson_approach_approve("missing-hash", body, teacher)
+        await native_http.post_lesson_approach_approve("missing-hash", body, teacher)
 
     assert raised.value.status_code == 409
     assert raised.value.detail == {

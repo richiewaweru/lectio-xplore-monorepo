@@ -1,5 +1,3 @@
-from v3_execution.config.answer_key_node import effective_answer_key_node_name
-from v3_execution.config.concurrency import make_semaphores, resolved_concurrency_limits
 from v3_execution.config.models import (
     V3_BLOCK_WRITER_FAST,
     V3_BLOCK_WRITER_STANDARD,
@@ -38,11 +36,8 @@ __all__ = [
     "V3_VISUAL_QC",
     "V3_VISUAL_TOPOLOGY_PLANNER",
     "V3_WHOLE_LESSON_COHERENCE_REVIEWER",
-    "effective_answer_key_node_name",
     "get_v3_model",
     "get_v3_model_settings",
     "get_v3_slot",
     "get_v3_spec",
-    "make_semaphores",
-    "resolved_concurrency_limits",
 ]

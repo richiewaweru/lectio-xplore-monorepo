@@ -16,8 +16,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from v3_execution.config import get_v3_spec
-from v3_execution.config.models import V3_NODE_REASONING
+from infra.authoring.model_policy import V3_NODE_REASONING, get_v3_spec
 
 logger = logging.getLogger(__name__)
 

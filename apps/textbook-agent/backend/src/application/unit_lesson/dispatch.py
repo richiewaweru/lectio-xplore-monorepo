@@ -17,9 +17,9 @@ from learn.generation.contracts import GenerationSignalSummary as V3SignalSummar
 from learn.generation.pipeline_dispatch import build_control_patch, select_default_pipeline
 from resource_specs.loader import get_spec
 from resource_specs.renderer import render_spec_for_prompt
-from v3_blueprint.planning.models import StructuralPlan, VariantSpec
-from v3_blueprint.planning.objective_ownership import hash_path_objective
-from v3_blueprint.planning.persistence import (
+from curriculum.planning.models import StructuralPlan, VariantSpec
+from curriculum.planning.objective_ownership import hash_path_objective
+from curriculum.planning.persistence import (
     load_chunked_state,
     persist_chunked_state,
     persist_structural_plan,

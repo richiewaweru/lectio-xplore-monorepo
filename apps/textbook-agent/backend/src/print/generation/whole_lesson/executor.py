@@ -82,7 +82,7 @@ from print.rendering.page_objects.document_assembly import (
     reload_document,
 )
 from print.resources.selection import NoCompatiblePrintCapabilityError
-from v3_blueprint.planning.models import SectionBlockPlan
+from curriculum.planning.models import SectionBlockPlan
 
 
 class AssemblyError(RuntimeError):

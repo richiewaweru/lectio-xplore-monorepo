@@ -12,8 +12,8 @@ from core.config import _ENV_FILE, settings
 from media.providers.registry import get_image_client, load_image_provider_spec
 from media.storage import image_store as image_store_module
 from media.storage.image_store import GCSImageStore
-from v3_execution.executors.visual_executor import VisualStageError, execute_visual
-from v3_execution.models import VisualGeneratorWorkOrder, VisualPlanItem
+from media.generation.executor import VisualStageError, execute_visual
+from media.generation.contracts import VisualGeneratorWorkOrder, VisualPlanItem
 
 _FALLBACK_TEST_IMAGE = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WnVddcAAAAASUVORK5CYII="

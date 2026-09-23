@@ -17,8 +17,8 @@ from resource_specs.candidates import (
     resolve_block_candidates,
 )
 from resource_specs.loader import get_spec
-from v3_blueprint.planning.models import SectionBlockPlan
-from v3_blueprint.skeletons import load_skeleton_catalog
+from curriculum.planning.models import SectionBlockPlan
+from curriculum.planning.skeletons import load_skeleton_catalog
 
 FIRST_SLICE_OBJECTS = frozenset(
     {"prose", "list", "table", "figure", "worked-example", "questions"}

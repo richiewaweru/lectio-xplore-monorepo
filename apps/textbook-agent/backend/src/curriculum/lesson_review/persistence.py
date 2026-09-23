@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from v3_blueprint.planning.persistence import persist_chunked_state
+from curriculum.planning.persistence import persist_chunked_state
 
 from .models import CoherenceReport, RepairEvent
 

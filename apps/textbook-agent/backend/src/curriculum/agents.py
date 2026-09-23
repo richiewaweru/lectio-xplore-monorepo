@@ -4,7 +4,7 @@ import json
 import uuid
 from typing import Any, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
 from curriculum.lesson_sourcebook.models import (
@@ -36,7 +36,7 @@ from curriculum.prompts import (
 from curriculum.shared_tasks.models import SharedTaskDraft, SharedTaskSpec
 from curriculum.shared_tasks.service import teaching_plan_hash
 from curriculum.teaching_plan.compatibility import response_bearing_action
-from curriculum.teaching_plan.models import TeachingPlan
+from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
 from curriculum.validation import (
     PathPlanningError,
     PathValidationError,
@@ -47,8 +47,7 @@ from curriculum.validation import (
 from infra.authoring.capability_selector import CapabilitySelection
 from infra.config import settings
 from infra.llm.runner import RetryPolicy, run_llm
-from v3_execution.config import get_v3_model_settings, get_v3_slot
-from v3_execution.config.models import (
+from infra.authoring.model_policy import (
     NATIVE_CAPABILITY_SELECTOR,
     V2_COMPONENT_SELECTOR,
     V2_PATH_CHAT_EDITOR,
@@ -57,8 +56,10 @@ from v3_execution.config.models import (
     V3_CONSTRUCTOR,
     V3_LESSON_SOURCEBOOK_WRITER,
     V3_SHARED_TASK_WRITER,
+    get_v3_model_settings,
+    get_v3_slot,
 )
-from v3_execution.llm_helpers import (
+from infra.authoring.structured_provider import (
     NO_OUTPUT_RETRY,
     prepare_structured_agent,
 )
@@ -67,7 +68,10 @@ OutputT = TypeVar("OutputT", bound=BaseModel)
 
 
 class _SharedTaskDraftEnvelope(BaseModel):
-    tasks: list[SharedTaskDraft]
+    tasks: list[SharedTaskDraft] = Field(
+        default_factory=list,
+        description="Exactly one task draft for each supplied response block in the exact same order.",
+    )
 
 
 async def run_lesson_sourcebook_writer(
@@ -117,28 +121,83 @@ async def run_shared_task_writer(
     trace_id: str | None = None,
 ) -> list[SharedTaskSpec]:
     """Author task meaning once; code binds each draft to its block/revision."""
-    response_blocks = [
-        block
+    response_blocks_with_slot: list[tuple[str, TeachingPlanBlock]] = [
+        (section.slot_id, block)
         for section in plan.sections
         for block in section.blocks
         if block.learner_action is not None
         and response_bearing_action(block.learner_action.action)
     ]
+    if not response_blocks_with_slot:
+        return []
+
+    response_blocks = [block for _, block in response_blocks_with_slot]
+    block_descriptors = [
+        {
+            "block_id": block.id,
+            "slot_id": slot_id,
+            "learner_action": {
+                "action": block.learner_action.action,  # type: ignore[union-attr]
+                "purpose": block.learner_action.purpose,  # type: ignore[union-attr]
+                "target": block.learner_action.target,  # type: ignore[union-attr]
+                "expected_evidence": block.learner_action.expected_evidence,  # type: ignore[union-attr]
+                "difficulty": block.learner_action.difficulty,  # type: ignore[union-attr]
+            },
+            "task_mode": block.task_mode,
+            "source_question_ids": list(block.source_question_ids),
+            "sourcebook_refs": list(block.sourcebook_refs),
+            "evidence": block.evidence,
+            "brief": block.brief,
+            "intent": block.intent,
+        }
+        for slot_id, block in response_blocks_with_slot
+    ]
+
+    user_payload: dict[str, Any] = {
+        "teaching_plan": plan.model_dump(mode="json"),
+        "expected_task_count": len(response_blocks),
+        "response_blocks": block_descriptors,
+        "sourcebook": sourcebook.model_dump(mode="json") if sourcebook else None,
+        "approved_items": approved_items or {},
+    }
+
     draft = await _run_structured(
         node=V3_SHARED_TASK_WRITER,
         caller="v3_shared_task_writer",
         output_type=_SharedTaskDraftEnvelope,
         system_prompt=shared_task_writer_prompt(),
-        user_payload={
-            "teaching_plan": plan.model_dump(mode="json"),
-            "response_blocks": [block.id for block in response_blocks],
-            "sourcebook": sourcebook.model_dump(mode="json") if sourcebook else None,
-            "approved_items": approved_items or {},
-        },
+        user_payload=user_payload,
         trace_id=trace_id,
     )
+
     if len(draft.tasks) != len(response_blocks):
-        raise ValueError("shared task writer must return exactly one task per response-bearing block")
+        repair_payload = {
+            **user_payload,
+            "repair_context": {
+                "error": f"Task count mismatch: expected exactly {len(response_blocks)} tasks, but received {len(draft.tasks)} tasks.",
+                "expected_task_count": len(response_blocks),
+                "previous_invalid_output": draft.model_dump(mode="json"),
+                "instructions": (
+                    f"You returned {len(draft.tasks)} tasks, but there are {len(response_blocks)} response-bearing blocks. "
+                    f"You MUST return an array of EXACTLY {len(response_blocks)} task drafts corresponding 1-to-1 to each response block in order."
+                ),
+            },
+        }
+        draft = await _run_structured(
+            node=V3_SHARED_TASK_WRITER,
+            caller="v3_shared_task_writer_repair",
+            output_type=_SharedTaskDraftEnvelope,
+            system_prompt=shared_task_writer_prompt(),
+            user_payload=repair_payload,
+            trace_id=trace_id,
+        )
+
+    if len(draft.tasks) != len(response_blocks):
+        raise ValueError(
+            f"shared task writer must return exactly one task per response-bearing block: "
+            f"expected {len(response_blocks)}, got {len(draft.tasks)}"
+        )
+
     source_index = sourcebook.by_id() if sourcebook else {}
     approved_items = approved_items or {}
     tasks: list[SharedTaskSpec] = []

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database.models import PathLessonDeviationModel, PathLessonModel
 from curriculum.models import ShapeDeviationCreateRequest
-from v3_blueprint.skeletons import (
+from curriculum.planning.skeletons import (
     DeviationRequest,
     SkeletonPreviewRequest,
     load_skeleton_catalog,

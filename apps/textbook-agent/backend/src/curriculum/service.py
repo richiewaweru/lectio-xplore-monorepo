@@ -33,7 +33,7 @@ from curriculum.validation import (
     assert_concept_slugs_unique,
     concept_slug_for,
 )
-from v3_blueprint.planning.objective_ownership import hash_path_objective
+from curriculum.planning.objective_ownership import hash_path_objective
 
 
 class PathNotFoundError(LookupError):

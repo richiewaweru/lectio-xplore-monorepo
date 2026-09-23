@@ -302,8 +302,8 @@ async def _run_items_under_lease(
         _decode_chunked_context,
         _generate_shared_pack_items,
     )
-    from v3_blueprint.planning.models import VariantSpec, adapt_legacy_structural_plan
-    from v3_blueprint.planning.persistence import (
+    from curriculum.planning.models import VariantSpec, adapt_legacy_structural_plan
+    from curriculum.planning.persistence import (
         load_chunked_state,
         merge_item_generation_summary,
     )

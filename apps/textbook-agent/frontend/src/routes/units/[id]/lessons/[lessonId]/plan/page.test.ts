@@ -31,19 +31,23 @@ vi.mock('$lib/api/units', () => ({
 	retryLessonRealization: mocks.retryLessonRealization,
 	getPreparedLessonStatus: mocks.getPreparedLessonStatus
 }));
-vi.mock('$lib/api/v3', () => ({
+vi.mock('$lib/api/lesson-planning', () => ({
 	getChunkedPlan: mocks.getChunkedPlan,
 	getChunkedPlanStatus: mocks.getChunkedPlanStatus,
+	approveChunkedPlan: mocks.approveChunkedPlan,
+	regenerateChunkedPlan: mocks.regenerateChunkedPlan
+}));
+vi.mock('$lib/api/teaching-plan', () => ({
 	getLessonApproach: mocks.getLessonApproach,
 	approveLessonApproach: mocks.approveLessonApproach,
-	approveChunkedPlan: mocks.approveChunkedPlan,
-	rejectLessonApproach: mocks.rejectLessonApproach,
-	regenerateChunkedPlan: mocks.regenerateChunkedPlan,
+	rejectLessonApproach: mocks.rejectLessonApproach
+}));
+vi.mock('$lib/api/realizations', () => ({
 	realizeLearnFromGeneration: mocks.realizeLearnFromGeneration,
 	realizePrintFromGeneration: mocks.realizePrintFromGeneration,
 	retryNativeGeneration: mocks.retryNativeGeneration
 }));
-vi.mock('$lib/print/components/studio/V3PlanPreview.svelte', async () => ({
+vi.mock('$lib/curriculum/lessons/StructuralPlanPreview.svelte', async () => ({
 	default: (await import('../../../../../studio/__fixtures__/MockGeneric.svelte')).default
 }));
 

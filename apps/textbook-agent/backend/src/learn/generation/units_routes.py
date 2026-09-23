@@ -29,7 +29,7 @@ from learn.authoring.builder.service import (
 )
 from learn.generation.pipeline_dispatch import COMPONENT_LECTIO_RETIRED
 from learn.generation.units_dispatch import dispatch_units_generation, units_dispatch_task
-from v3_blueprint.planning.persistence import load_chunked_state
+from curriculum.planning.persistence import load_chunked_state
 
 router = APIRouter(
     prefix="/api/v1/units",

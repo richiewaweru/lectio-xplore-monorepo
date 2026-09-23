@@ -20,7 +20,7 @@ from print.generation.catalogue_projections import (
 from print.generation.whole_lesson.packet import ImmutableLessonPacket
 from print.resources.candidates import assemble_lesson_guidance
 from resource_specs.loader import get_spec
-from v3_blueprint.skeletons import load_skeleton_catalog
+from curriculum.planning.skeletons import load_skeleton_catalog
 
 
 class LessonLegalitySnapshot(BaseModel):

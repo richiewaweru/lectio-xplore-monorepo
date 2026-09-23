@@ -27,7 +27,7 @@ from print.generation.whole_lesson.packet_builder import (
 )
 from print.generation.whole_lesson.repository import PageDocumentRepository
 from print.generation.whole_lesson.teaching_agent import run_lesson_approach_planner
-from v3_blueprint.planning.persistence import load_chunked_state
+from curriculum.planning.persistence import load_chunked_state
 
 # Composition root: bind Print-owned planner without curriculum importing print.
 bind_shared_teaching_runner(run_lesson_approach_planner)

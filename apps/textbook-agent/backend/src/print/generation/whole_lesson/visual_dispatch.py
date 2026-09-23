@@ -13,8 +13,8 @@ from urllib.parse import urlsplit
 from print.generation.whole_lesson import visual_topology_recovery as topology_recovery
 from print.generation.whole_lesson.figure_ids import stable_figure_request_id
 from print.generation.whole_lesson.repository import PageDocumentRepository
-from v3_execution.executors.visual_executor import execute_visual
-from v3_execution.models import VisualGeneratorWorkOrder, VisualPlanItem
+from media.generation.executor import execute_visual
+from media.generation.contracts import VisualGeneratorWorkOrder, VisualPlanItem
 
 logger = logging.getLogger(__name__)
 

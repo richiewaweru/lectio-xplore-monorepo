@@ -30,9 +30,8 @@ from print.generation.whole_lesson.validation import (
     advisory_form_qc,
     validate_form_plan,
 )
-from v3_execution.config import get_v3_model_settings, get_v3_slot
-from v3_execution.config.models import V2_FORM_PLANNER
-from v3_execution.llm_helpers import NO_OUTPUT_RETRY, prepare_structured_agent
+from infra.authoring.model_policy import V2_FORM_PLANNER, get_v3_model_settings, get_v3_slot
+from infra.authoring.structured_provider import NO_OUTPUT_RETRY, prepare_structured_agent
 
 
 class NoLegalFormCandidatesError(RuntimeError):
