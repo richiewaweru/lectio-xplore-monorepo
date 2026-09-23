@@ -1,11 +1,11 @@
 # Generation Stability Runbook
 
-Current phase: P10 commit, push, and final report
-Overall status: IN PROGRESS
+Current phase: Complete
+Overall status: COMPLETE
 Orchestrator: Sol
 Implementer: Luna
 Starting commit: 57177e66ce6b1d1e89c0e912b77212c7e138365b
-Current commit: 57177e66ce6b1d1e89c0e912b77212c7e138365b (task changes ready for commit)
+Current task commit: b9f7abb141404ee67e17205aa237ea570155c40b (pushed to origin/codex/generation-stability)
 
 ## Progress
 
@@ -19,14 +19,14 @@ Current commit: 57177e66ce6b1d1e89c0e912b77212c7e138365b (task changes ready for
 - [x] P7 — Failure injection + concurrency proof (PASS — accepted by Sol)
 - [x] P8 — Native local application proof (live Learn/Print ready and refresh proof complete)
 - [x] P9 — Cleanup + compatibility (artifact/secrets audit and expanded tests complete)
-- [ ] P10 — Commit, push, final report
+- [x] P10 — Commit, push, final report (`b9f7abb141404ee67e17205aa237ea570155c40b`)
 
 ## Active task
 
 Owner: Luna
-Task: P10 — complete the acceptance record, review/stage task files only, commit, and push `codex/generation-stability`.
-Why: P8 live proof and P9 audit/regressions are complete; preserve unrelated user files while delivering the tested work.
-Expected evidence: exact changed-file/test record, hygiene scan, final commit SHA, and remote push result. Never include `.gitignore`, the diagnosis note, env files, or private runtime logs.
+Task: Complete.
+Why: P8 live proof, P9 cleanup/regressions, and P10 report/commit/push are complete.
+Evidence: Task-only commit pushed; remote SHA verified equal to local task commit. `.gitignore`, the diagnosis note, env files, and private runtime log were excluded.
 
 ### P2b progress checklist
 - [x] Render pedagogical Teaching Plan fields separately from review status/revision in Units and Studio
@@ -101,4 +101,4 @@ P10 acceptance checklist:
 - [x] Backend/frontend tests, frontend check/build, Ruff, architecture guard, and diff checks pass.
 - [x] No secrets, env files, database files, browser profiles, or private runtime logs are included.
 - [x] Unrelated `.gitignore` and diagnosis-note edits remain excluded.
-- [ ] Task-only commit/push and final SHA recorded.
+- [x] Task-only commit/push and final SHA recorded: `b9f7abb141404ee67e17205aa237ea570155c40b`.

@@ -109,7 +109,8 @@ Files changed: task code/tests, P8/P9 evidence, runbook/worklog, final report. N
 Next: P9 gates are complete; perform P10 task-only staging, final report, commit, and push.
 
 ### P10 — Push/report
-Status: In progress — acceptance checklist complete; task-only stage/commit/push and final SHA remain.
-Final HEAD:
-Remote branch: `origin/codex/generation-stability` (push pending).
-Final notes: Stage product/tests/evidence/runbook/report only. Preserve `.gitignore`, the pre-existing diagnosis note, and the private temp Uvicorn log.
+Status: PASS — task-only commit pushed and remote SHA verified.
+Final task commit: `b9f7abb141404ee67e17205aa237ea570155c40b`.
+Remote branch: `origin/codex/generation-stability`; `git ls-remote` matched the local task commit.
+Final report: [FINAL_REPORT.md](FINAL_REPORT.md).
+Final notes: 94 task-owned files committed. Modified `.gitignore` and untracked `docs/architecture/generation-reliability-diagnosis-2026-09-22.md` remain preserved and uncommitted. The private temp Uvicorn log remains outside the repository. No env, database, browser-profile, or generated CLI files were staged.

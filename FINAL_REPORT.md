@@ -5,8 +5,8 @@
 Status: `PASS`
 
 Branch: `codex/generation-stability`
-Commit: Task commit SHA is recorded in the delivery message after commit.
-Remote pushed: Pending P10 push.
+Commit: `b9f7abb141404ee67e17205aa237ea570155c40b`.
+Remote pushed: Yes, `origin/codex/generation-stability`.
 Starting commit: `57177e66ce6b1d1e89c0e912b77212c7e138365b`
 Date: 2026-09-23
 
@@ -158,4 +158,4 @@ Unrelated modified `.gitignore` and untracked `docs/architecture/generation-reli
 
 Remote: `origin` (`https://github.com/richiewaweru/lectio-xplore-monorepo.git`)
 Branch: `codex/generation-stability`
-Final SHA: To be recorded after the task commit and push.
+Final task SHA: `b9f7abb141404ee67e17205aa237ea570155c40b` (pushed to `origin/codex/generation-stability`).
