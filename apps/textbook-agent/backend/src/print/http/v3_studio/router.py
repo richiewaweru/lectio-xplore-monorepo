@@ -285,6 +285,9 @@ def _build_chunked_resource_spec(
 
 
 
+from application.unit_lesson.native_pipeline import _generate_shared_pack_items
+
+
 async def _ensure_chunked_generation_row(
     *,
     generation_id: str,
@@ -1087,6 +1090,13 @@ async def patch_pack_concept_card(
         misconceptions=deepcopy(card.misconceptions or []),
     )
     return dto
+
+
+def _item_row_teacher_edited(row: Any) -> bool:
+    return any(
+        isinstance(option, dict) and option.get("teacher_edited") is True
+        for option in (getattr(row, "options", None) or [])
+    )
 
 
 async def _load_item_reviews(
@@ -2320,35 +2330,3 @@ def _compact_trace(trace: dict[str, Any]) -> dict[str, Any]:
 __all__ = ["v3_studio_router"]
 
 # -- Whole-lesson teaching approach gate (native page documents) --------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

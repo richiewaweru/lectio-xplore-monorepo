@@ -36,7 +36,7 @@ from curriculum.prompts import (
 from curriculum.shared_tasks.models import SharedTaskDraft, SharedTaskSpec
 from curriculum.shared_tasks.service import teaching_plan_hash
 from curriculum.teaching_plan.compatibility import response_bearing_action
-from curriculum.teaching_plan.models import TeachingPlan
+from curriculum.teaching_plan.models import TeachingPlan, TeachingPlanBlock
 from curriculum.validation import (
     PathPlanningError,
     PathValidationError,

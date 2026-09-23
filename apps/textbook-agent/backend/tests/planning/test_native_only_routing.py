@@ -46,7 +46,7 @@ def test_generation_is_native_from_status() -> None:
 
 def test_legacy_stage2_pipeline_blocks_without_calling_resume() -> None:
     source = inspect.getsource(studio_router)
-    assert "LegacyBackHalfDisabled" in source
+    assert "resume_stage2" not in source
     assert "return await resume_stage2" not in source
 
 

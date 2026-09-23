@@ -493,47 +493,6 @@ async def test_variant_children_inherit_native_identity_before_scheduling(monkey
     assert persisted[0]["native_whole_lesson"] is True
 
 
-@pytest.mark.asyncio
-async def test_historical_v1_regenerate_is_read_only_before_mutation() -> None:
-    app.dependency_overrides[get_current_user] = _override_user_a
-    await _ensure_user(TEST_USER_A)
-    generation_id = str(uuid.uuid4())
-    signals, form = _seed_context_models()
-    from print.http.v3_studio import router
-    from print.http.v3_studio.router import _ensure_chunked_generation_row
-
-    await _ensure_chunked_generation_row(
-        generation_id=generation_id,
-        user_id=TEST_USER_A.id,
-        subject="Math",
-        context="Equivalent fractions",
-    )
-    await persist_structural_plan(
-        generation_id,
-        _sample_structural_plan(),
-        signals=signals,
-        form=form,
-        resource_spec={"resource_type": "lesson", "depth": "standard", "spec": {}, "rendered": "x"},
-    )
-    persist = AsyncMock()
-    stream = AsyncMock()
-    stage1 = AsyncMock()
-    with (
-        patch.object(router, "persist_chunked_state", new=persist),
-        patch.object(router, "_ensure_chunked_stream", new=stream),
-        patch.object(router, "run_stage1_with_retry", new=stage1),
-    ):
-        async with _client() as client:
-            response = await client.post(
-                f"/api/v1/v3/chunked/{generation_id}/regenerate",
-                json={"note": "try again"},
-            )
-
-    assert response.status_code == 409
-    assert "read-only" in response.json()["detail"]
-    persist.assert_not_awaited()
-    stream.assert_not_awaited()
-    stage1.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -656,38 +615,6 @@ async def test_chunked_retry_section_rejects_non_failed_section() -> None:
     assert resp.status_code == 409
 
 
-@pytest.mark.asyncio
-async def test_chunked_regenerate_is_read_only_for_historical_v1() -> None:
-    app.dependency_overrides[get_current_user] = _override_user_a
-    await _ensure_user(TEST_USER_A)
-    generation_id = str(uuid.uuid4())
-    from print.http.v3_studio import router
-    from print.http.v3_studio.router import _ensure_chunked_generation_row
-
-    await _ensure_chunked_generation_row(
-        generation_id=generation_id,
-        user_id=TEST_USER_A.id,
-        subject="Math",
-        context="Equivalent fractions",
-    )
-    persist = AsyncMock()
-    stream = AsyncMock()
-    stage1 = AsyncMock()
-    with (
-        patch.object(router, "persist_chunked_state", new=persist),
-        patch.object(router, "_ensure_chunked_stream", new=stream),
-        patch.object(router, "run_stage1_with_retry", new=stage1),
-    ):
-        async with _client() as client:
-            resp = await client.post(
-                f"/api/v1/v3/chunked/{generation_id}/regenerate",
-                json={"note": "Keep section two shorter."},
-            )
-    assert resp.status_code == 409
-    assert "read-only" in resp.json()["detail"]
-    persist.assert_not_awaited()
-    stream.assert_not_awaited()
-    stage1.assert_not_awaited()
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,8 @@
-# V3 Retirement Closeout Report
+# [SUPERSEDED] V3 Retirement Closeout Report
+
+> [!WARNING]
+> This template and preliminary status draft is **SUPERSEDED** by [10_FINAL_CLOSEOUT_REPORT.md](10_FINAL_CLOSEOUT_REPORT.md) and [07_RUNBOOK.md](07_RUNBOOK.md).
+> Please consult `10_FINAL_CLOSEOUT_REPORT.md` for the authoritative, fully green final convergence closeout record.
 
 ## Summary
 

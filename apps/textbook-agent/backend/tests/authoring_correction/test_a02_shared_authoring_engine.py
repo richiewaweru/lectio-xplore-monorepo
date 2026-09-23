@@ -330,6 +330,7 @@ async def test_a02_provenance_present_and_transport_retries_bounded() -> None:
 
 @pytest.mark.asyncio
 async def test_authoring_provider_uses_one_unmetered_retry_free_dispatch(monkeypatch) -> None:
+    import infra.authoring.structured_provider as structured_provider
     from v3_execution import llm_helpers
 
     calls: list[dict[str, Any]] = []
@@ -338,6 +339,7 @@ async def test_authoring_provider_uses_one_unmetered_retry_free_dispatch(monkeyp
         calls.append(kwargs)
         return {"paragraphs": ["Structured output is parsed by the engine."]}
 
+    monkeypatch.setattr(structured_provider, "run_structured_agent", one_dispatch)
     monkeypatch.setattr(llm_helpers, "run_structured_agent", one_dispatch)
     result = await LLMAuthoringProvider().invoke(
         AuthoringProviderCall(
@@ -408,20 +410,26 @@ async def test_llm_adapter_dispatches_match_budget_for_output_and_transport_erro
     import httpx
     from pydantic_ai.exceptions import UnexpectedModelBehavior
 
+    from core.llm import ModelFamily, ModelSpec
+    import infra.authoring.structured_provider as provider_mod
     from v3_execution import llm_helpers
 
-    spec = object()
-    monkeypatch.setattr(llm_helpers, "get_v3_spec", lambda _node: spec)
-    monkeypatch.setattr(llm_helpers, "get_v3_slot", lambda _node: "slot")
+    def set_run_llm(fn):
+        monkeypatch.setattr(provider_mod, "run_llm", fn)
+        monkeypatch.setattr(llm_helpers, "run_llm", fn)
+
+    spec = ModelSpec(family=ModelFamily.TEST, model_name="test-model")
+    monkeypatch.setattr(provider_mod, "get_v3_spec", lambda _node: spec)
+    monkeypatch.setattr(provider_mod, "get_v3_slot", lambda _node: "slot")
     monkeypatch.setattr(
-        llm_helpers, "get_v3_model_settings", lambda _node, base_settings=None: base_settings or {}
+        provider_mod, "get_v3_model_settings", lambda _node, base_settings=None: base_settings or {}
     )
     monkeypatch.setattr(
-        llm_helpers,
+        provider_mod,
         "prepare_structured_agent",
-        lambda **_kwargs: ("model", dict[str, Any], llm_helpers.StructuredCallContext(), spec, None),
+        lambda **_kwargs: ("model", dict[str, Any], provider_mod.StructuredCallContext(), spec, None),
     )
-    monkeypatch.setattr(llm_helpers, "Agent", lambda **_kwargs: object())
+    monkeypatch.setattr(provider_mod, "Agent", lambda **_kwargs: object())
 
     definition = AuthoringDefinition(
         capability_id="dispatch-count",
@@ -452,7 +460,7 @@ async def test_llm_adapter_dispatches_match_budget_for_output_and_transport_erro
             raise UnexpectedModelBehavior("provider returned invalid JSON")
         return SimpleNamespace(output={"ok": True})
 
-    monkeypatch.setattr(llm_helpers, "run_llm", malformed_then_valid)
+    set_run_llm(malformed_then_valid)
     ledger = CallBudgetLedger()
     engine = AuthoringEngine(
         provider=LLMAuthoringProvider(),
@@ -475,7 +483,7 @@ async def test_llm_adapter_dispatches_match_budget_for_output_and_transport_erro
         response = httpx.Response(429, request=httpx.Request("POST", "https://provider.invalid"))
         raise httpx.HTTPStatusError("rate limited", request=response.request, response=response)
 
-    monkeypatch.setattr(llm_helpers, "run_llm", rate_limited)
+    set_run_llm(rate_limited)
     transport_ledger = CallBudgetLedger()
     transport_engine = AuthoringEngine(
         provider=LLMAuthoringProvider(),
@@ -507,7 +515,7 @@ async def test_llm_adapter_dispatches_match_budget_for_output_and_transport_erro
         dispatches += 1
         raise TimeoutError("provider request timed out")
 
-    monkeypatch.setattr(llm_helpers, "run_llm", timed_out)
+    set_run_llm(timed_out)
     timeout_ledger = CallBudgetLedger()
     timeout_engine = AuthoringEngine(
         provider=LLMAuthoringProvider(),
@@ -537,7 +545,7 @@ async def test_llm_adapter_dispatches_match_budget_for_output_and_transport_erro
         dispatches += 1
         raise AssertionError("adapter programming defect")
 
-    monkeypatch.setattr(llm_helpers, "run_llm", programming_error)
+    set_run_llm(programming_error)
     programming_ledger = CallBudgetLedger()
     programming_engine = AuthoringEngine(
         provider=LLMAuthoringProvider(),
@@ -568,20 +576,26 @@ async def test_actual_dispatch_budget_covers_repeated_invalid_5xx_and_auth(monke
     import httpx
     from pydantic_ai.exceptions import UnexpectedModelBehavior
 
+    from core.llm import ModelFamily, ModelSpec
+    import infra.authoring.structured_provider as provider_mod
     from v3_execution import llm_helpers
 
-    spec = object()
-    monkeypatch.setattr(llm_helpers, "get_v3_spec", lambda _node: spec)
-    monkeypatch.setattr(llm_helpers, "get_v3_slot", lambda _node: "slot")
+    def set_run_llm(fn):
+        monkeypatch.setattr(provider_mod, "run_llm", fn)
+        monkeypatch.setattr(llm_helpers, "run_llm", fn)
+
+    spec = ModelSpec(family=ModelFamily.TEST, model_name="test-model")
+    monkeypatch.setattr(provider_mod, "get_v3_spec", lambda _node: spec)
+    monkeypatch.setattr(provider_mod, "get_v3_slot", lambda _node: "slot")
     monkeypatch.setattr(
-        llm_helpers, "get_v3_model_settings", lambda _node, base_settings=None: base_settings or {}
+        provider_mod, "get_v3_model_settings", lambda _node, base_settings=None: base_settings or {}
     )
     monkeypatch.setattr(
-        llm_helpers,
+        provider_mod,
         "prepare_structured_agent",
-        lambda **_kwargs: ("model", dict[str, Any], llm_helpers.StructuredCallContext(), spec, None),
+        lambda **_kwargs: ("model", dict[str, Any], provider_mod.StructuredCallContext(), spec, None),
     )
-    monkeypatch.setattr(llm_helpers, "Agent", lambda **_kwargs: object())
+    monkeypatch.setattr(provider_mod, "Agent", lambda **_kwargs: object())
 
     definition = AuthoringDefinition(
         capability_id="dispatch-failure-matrix",
@@ -602,7 +616,7 @@ async def test_actual_dispatch_budget_covers_repeated_invalid_5xx_and_auth(monke
         dispatches += 1
         raise UnexpectedModelBehavior("provider returned invalid JSON")
 
-    monkeypatch.setattr(llm_helpers, "run_llm", repeated_invalid)
+    set_run_llm(repeated_invalid)
     repeated_ledger = CallBudgetLedger()
     repeated_engine = AuthoringEngine(
         provider=LLMAuthoringProvider(), max_repair_attempts=2, budget_ledger=repeated_ledger
@@ -645,7 +659,7 @@ async def test_actual_dispatch_budget_covers_repeated_invalid_5xx_and_auth(monke
                 f"provider returned {status_code}", request=response.request, response=response
             )
 
-        monkeypatch.setattr(llm_helpers, "run_llm", provider_status)
+        set_run_llm(provider_status)
         ledger = CallBudgetLedger()
         engine = AuthoringEngine(
             provider=LLMAuthoringProvider(),

@@ -731,7 +731,7 @@ async def test_p03_print_approval_route_approves_source_and_returns_output_id(
     import json
     from unittest.mock import AsyncMock
 
-    import print.http.v3_studio.router as studio_router
+    import application.unit_lesson.native_http as native_http
     from core.entities.user import User
 
     async with db_session_factory() as setup:
@@ -743,9 +743,9 @@ async def test_p03_print_approval_route_approves_source_and_returns_output_id(
         generation_id = generation.id
         await setup.commit()
 
-    monkeypatch.setattr(studio_router, "async_session_factory", db_session_factory)
+    monkeypatch.setattr(native_http, "async_session_factory", db_session_factory)
     monkeypatch.setattr(
-        studio_router, "_load_owned_generation", AsyncMock(return_value=generation)
+        native_http, "_load_owned_generation", AsyncMock(return_value=generation)
     )
     teacher = User(
         id="p03-print-approval-route",
@@ -754,9 +754,9 @@ async def test_p03_print_approval_route_approves_source_and_returns_output_id(
         created_at="2026-09-23T00:00:00Z",
         updated_at="2026-09-23T00:00:00Z",
     )
-    response = await studio_router.post_lesson_approach_approve(
+    response = await native_http.post_lesson_approach_approve(
         generation_id,
-        studio_router.LessonApproachApproveRequest(
+        native_http.LessonApproachApproveRequest(
             expected_revision=1,
             expected_content_hash=teaching_plan_content_hash(plan),
             teacher_note="Approved",
@@ -919,7 +919,7 @@ async def test_p03_standalone_studio_print_approval_creates_distinct_output(
     import json
     from unittest.mock import AsyncMock
 
-    import print.http.v3_studio.router as studio_router
+    import application.unit_lesson.native_http as native_http
     from core.entities.user import User
 
     user_id = "p03-standalone-studio"
@@ -971,9 +971,9 @@ async def test_p03_standalone_studio_print_approval_creates_distinct_output(
         setup.add(source)
         await setup.commit()
 
-    monkeypatch.setattr(studio_router, "async_session_factory", db_session_factory)
+    monkeypatch.setattr(native_http, "async_session_factory", db_session_factory)
     monkeypatch.setattr(
-        studio_router, "_load_owned_generation", AsyncMock(return_value=source)
+        native_http, "_load_owned_generation", AsyncMock(return_value=source)
     )
     teacher = User(
         id=user_id,
@@ -982,9 +982,9 @@ async def test_p03_standalone_studio_print_approval_creates_distinct_output(
         created_at="2026-09-23T00:00:00Z",
         updated_at="2026-09-23T00:00:00Z",
     )
-    response = await studio_router.post_lesson_approach_approve(
+    response = await native_http.post_lesson_approach_approve(
         source.id,
-        studio_router.LessonApproachApproveRequest(
+        native_http.LessonApproachApproveRequest(
             expected_revision=1,
             expected_content_hash=teaching_plan_content_hash(plan),
             teacher_note="Approved",

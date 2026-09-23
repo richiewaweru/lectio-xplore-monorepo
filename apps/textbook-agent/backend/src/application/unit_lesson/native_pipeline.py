@@ -316,10 +316,7 @@ async def _generate_shared_pack_items(
     lease_token: int | None = None,
 ) -> dict[str, Any]:
     """Generate the pack's single diagnostic set from approved cards alone."""
-    from curriculum.items.generator import (
-        ITEM_MAX_ATTEMPTS,
-        execute_items_with_diagnostics,
-    )
+    import curriculum.items.generator as _item_gen
 
     async with async_session_factory() as session:
         generation = await session.get(GenerationModel, generation_id)
@@ -401,10 +398,10 @@ async def _generate_shared_pack_items(
             notation=notation,
         )
         try:
-            run = await execute_items_with_diagnostics(
+            run = await _item_gen.execute_items_with_diagnostics(
                 card,
                 generation_id=generation_id,
-                max_attempts=ITEM_MAX_ATTEMPTS,
+                max_attempts=_item_gen.ITEM_MAX_ATTEMPTS,
             )
             results.append(run.result)
             attempts_journal.extend(run.attempts)
@@ -453,7 +450,7 @@ async def _generate_shared_pack_items(
         "review_cards": review_cards,
         "attempts": attempts_journal,
         "failed_cards": failed_cards,
-        "retry_budget": ITEM_MAX_ATTEMPTS,
+        "retry_budget": _item_gen.ITEM_MAX_ATTEMPTS,
     }
 
 def _approved_card_for_items(
@@ -809,4 +806,3 @@ async def _run_chunked_stage2_pipeline(
             f"\n[STAGE2 PIPELINE DONE] generation_id={generation_id}",
             flush=True,
         )
-
