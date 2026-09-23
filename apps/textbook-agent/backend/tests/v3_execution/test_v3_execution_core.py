@@ -11,20 +11,15 @@ from PIL import Image
 from contracts.lectio import get_section_field_for_component
 from media.qc.visual_qc import VisualQCVerdict
 from v3_blueprint.models import ProductionBlueprint
+from media.generation.contracts import validate_visual_block
 from media.generation.executor import _cache_key_for_visual, execute_visual
 from v3_execution.models import (
     ExecutorOutcome,
-    GeneratedAnswerKeyBlock,
-    GeneratedComponentBlock,
-    GeneratedQuestionBlock,
     GeneratedVisualBlock,
-    QuestionWriterWorkOrder,
     VisualFrameSpec,
     VisualGeneratorWorkOrder,
     VisualPlanItem,
-    WriterQuestion,
 )
-from v3_execution.runtime import validation as v
 from v3_review.models import CoherenceReport, ReviewIssue
 
 
@@ -91,7 +86,7 @@ def test_validate_visual_accepts_http_scheme() -> None:
         image_url="ftp://bad",
         source_work_order_id="v1",
     )
-    errs = v.validate_visual_block(bad_scheme, order)
+    errs = validate_visual_block(bad_scheme, order)
     assert errs
 
     good = GeneratedVisualBlock(
@@ -101,7 +96,7 @@ def test_validate_visual_accepts_http_scheme() -> None:
         image_url="https://cdn.example/image.png",
         source_work_order_id="v1",
     )
-    assert not v.validate_visual_block(good, order)
+    assert not validate_visual_block(good, order)
 
 
 def test_validate_visual_accepts_diagram_compare_mode() -> None:
@@ -118,7 +113,7 @@ def test_validate_visual_accepts_diagram_compare_mode() -> None:
         source_work_order_id="v1",
     )
 
-    assert not v.validate_visual_block(block, order)
+    assert not validate_visual_block(block, order)
 
 
 def test_validate_visual_accepts_flagged_quality_with_image_url() -> None:
@@ -141,7 +136,7 @@ def test_validate_visual_accepts_flagged_quality_with_image_url() -> None:
         qc_reasons=["label is faint"],
     )
 
-    assert not v.validate_visual_block(block, order)
+    assert not validate_visual_block(block, order)
 
 
 @pytest.mark.asyncio
@@ -989,30 +984,3 @@ async def test_execute_visual_preserves_stage_and_exception_type_on_failure(
     assert failure_log.original_exception_type == "RuntimeError"
     assert "provider timeout" in failure_log.original_exception_message
     assert "RuntimeError: provider timeout" in failure_log.traceback
-
-
-def test_validate_question_block_rejects_answer_drift() -> None:
-    order = QuestionWriterWorkOrder(
-        work_order_id="q1",
-        section_id="practice",
-        questions=[
-            WriterQuestion(id="q1", difficulty="warm", expected_answer="nine"),
-        ],
-        source_of_truth=[],
-    )
-    block = GeneratedQuestionBlock(
-        question_id="q1",
-        section_id="practice",
-        difficulty="warm",
-        data={"question": "?"},
-        expected_answer="wrong",
-        source_work_order_id="q1",
-    )
-    assert v.validate_question_block(block, order)
-
-
-
-
-
-
-

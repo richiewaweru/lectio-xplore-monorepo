@@ -50,9 +50,6 @@ vi.mock('$lib/api/realizations', () => ({
 vi.mock('$lib/curriculum/lessons/StructuralPlanPreview.svelte', async () => ({
 	default: (await import('../../../../../studio/__fixtures__/MockGeneric.svelte')).default
 }));
-vi.mock('$lib/curriculum/lessons/StructuralPlanActions.svelte', async () => ({
-	default: (await import('../../../../../studio/__fixtures__/MockGeneric.svelte')).default
-}));
 
 import PlanPage from './+page.svelte';
 

@@ -10,7 +10,6 @@ from pydantic import ValidationError
 from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 from curriculum.llm_contract_errors import is_transport_error, structured_output_errors
-from print.generation.whole_lesson.failure_policy import classify_failure
 
 OutcomeClass = Literal["OK", "TRANSPORT", "TIMEOUT", "RATE_LIMIT", "CONTRACT", "SEMANTIC", "UNKNOWN"]
 
@@ -34,6 +33,8 @@ def classify_item_failure(exc: BaseException) -> tuple[OutcomeClass, bool]:
         )
     ):
         return "SEMANTIC", True
+    from print.generation.whole_lesson.failure_policy import classify_failure
+
     classification = classify_failure(exc)
     if classification.code == "TIMEOUT":
         return "TIMEOUT", True
