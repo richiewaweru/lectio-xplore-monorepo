@@ -86,10 +86,19 @@
 ## Phase 2A — enriched Teaching Plan contract and identity
 
 - Starting SHA: `b32a6044`.
+- Ending SHA for package 2A: `17626133`.
 - Implementation: explicit strict `TeachingPlanDraftV2` and v2 Teaching Plan fields for learner title, starting/target state, and section display title, entry/must-establish/avoid-repeat/bridge/exit state. V1 drafts and persisted approved snapshots remain readable; v1 serialization excludes v2-only defaults so their approval content identity is preserved. V2 materialization uses exact code-owned slot IDs and hashes all new pedagogical fields.
 - Tests: 81 focused contract, draft, approval/hash, shared-plan and consumer tests PASS; Ruff check/format PASS; `pnpm program:domain-guards` PASS (8 tests); architecture guard PASS (0 violations); `git diff --check` PASS. Fixed v1 content hash fixture remains `79121d3b333a001c5023de3f5d7959066002dd5615b62c9b9e9e11ac13013698`.
 - Failure proof: missing/blank/duplicate v2 state, malformed section bridge, invalid/duplicate/changed slot identity, and each new field changing the v2 hash. Semantic progression and target coverage remain Phase 2B planner QA.
 - Status: package PASS. Phase 2 remains IN PROGRESS pending planner prompt, validation, approval/review integration, and full phase gate.
+
+## Phase 2B — enriched shared planner output
+
+- Starting SHA: `17626133`.
+- Implementation: active shared planner structured output now requires `TeachingPlanDraftV2` and materializes v2 plans. The prompt requires learner title, starting/target state, section entry/must-establish/avoid-repeat/bridge/exit state, exact code-owned slot/block identities, and continuity self-checks while retaining source/assessment/visual policy. Two-attempt repair and existing model/provider infrastructure remain.
+- Tests: planner prompt/contract/V2 batch 77 PASS; pre-worker/V2/prompt batch 58 PASS; Print P05 production 7 PASS; Print/Learn P08 integration 5 PASS; targeted v1 rejection/V2 repair/code-owned identity PASS; Ruff PASS; `pnpm program:domain-guards` PASS (8 tests); architecture guard PASS (0 violations); `git diff --check` PASS.
+- Failure proof: v1-shaped or missing-continuity provider output rejects at the planner boundary; bounded repair remains two attempts; exact slot/block identity stays code-owned in production integration fixtures.
+- Status: package PASS. Phase 2 remains IN PROGRESS. Prompt self-checks and deterministic shape validation do not prove semantic progression, target coverage, or absence of duplicated responsibility; draft-level semantic QA and teacher review presentation are Phase 2C gates.
 
 ## Baseline
 - [x] branch recorded

@@ -16,7 +16,7 @@ from curriculum.prompts import (
 from print.generation.whole_lesson.validation import SPATIAL_PROCESS_REPRESENTATION_INTENTS
 
 V1_SHA256 = "475b8b178f74c1397742b12002a324e18ae3e39a4fffd9e7a4c199713780a9cd"
-V2_SHA256 = "d3a47826dcaef2a38e063e149f257982b0334968482f70b2db3282ed3725bc0c"
+V2_SHA256 = "cd7e35ee89d3650802a4df80436c9c782cc7b96acde10b1ec936810db079ffba"
 
 
 def _sha256(text: str) -> str:
@@ -50,3 +50,30 @@ def test_active_v2_prompt_requires_visual_teaching_jobs_without_object_ids() -> 
     assert "or `compare`" not in prompt
     for object_id in ("diagram-block", "figure-block", "section-writer"):
         assert object_id not in prompt
+
+
+def test_active_v2_prompt_requires_enriched_continuity_without_format_leaks() -> None:
+    prompt = lesson_approach_planner_prompt()
+    for field in (
+        "learner_title",
+        "starting_state",
+        "target_state",
+        "display_title",
+        "entry_state",
+        "must_establish",
+        "avoid_repeating",
+        "bridge_from_previous",
+        "exit_state",
+    ):
+        assert f'"{field}"' in prompt
+    assert '"contract_version": 2' in prompt
+    output_schema = prompt.split("## OUTPUT", 1)[1].split("## SELF-CHECK", 1)[0]
+    for primitive in (
+        '"prose"',
+        '"table"',
+        '"list"',
+        '"figure"',
+        '"worked-example"',
+        '"questions"',
+    ):
+        assert primitive not in output_schema

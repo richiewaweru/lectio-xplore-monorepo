@@ -50,6 +50,7 @@ from curriculum.teaching_plan.models import (
     TeachingPlanDraft,
     TeachingPlanDraftBlock,
     TeachingPlanDraftSection,
+    TeachingPlanDraftV2,
 )
 from curriculum.teaching_plan.projections import (
     assert_sentinels_absent,
@@ -451,7 +452,7 @@ def _draft_for_packet(packet, *, item_id: str | None) -> TeachingPlanDraft:
                 ],
             )
         )
-    return TeachingPlanDraft(
+    draft = TeachingPlanDraft(
         arc=(
             "Open on two plants that grew differently, isolate light as the cause, "
             + (
@@ -468,6 +469,34 @@ def _draft_for_packet(packet, *, item_id: str | None) -> TeachingPlanDraft:
         anchor_usage=anchors,
         misconception_focus_ids=[],
         sections=sections,
+    )
+    return TeachingPlanDraftV2(
+        learner_title="How light helps plants make food",
+        arc=draft.arc,
+        starting_state=["Learners can compare familiar plant growth conditions."],
+        target_state=["Learners can explain why plants need light to make food."],
+        anchor_usage=draft.anchor_usage,
+        misconception_focus_ids=draft.misconception_focus_ids,
+        sections=[
+            {
+                **section.model_dump(mode="json"),
+                "display_title": f"{slot.slot_id.title()} learning goal",
+                "entry_state": [
+                    "Learners are ready to connect plant growth to light."
+                    if index == 0
+                    else f"Learners can use what they established in {packet.slots[index - 1].slot_id}."
+                ],
+                "must_establish": [f"Establish the teaching goal for {slot.slot_id}."],
+                "avoid_repeating": [],
+                "bridge_from_previous": (
+                    None
+                    if index == 0
+                    else f"The prior section prepares learners for {slot.slot_id}."
+                ),
+                "exit_state": [f"Learners are ready for the next step after {slot.slot_id}."],
+            }
+            for index, (slot, section) in enumerate(zip(packet.slots, sections, strict=True))
+        ],
     )
 
 

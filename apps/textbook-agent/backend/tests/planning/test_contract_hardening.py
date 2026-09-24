@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from typing import Any
 from unittest.mock import AsyncMock, patch
@@ -15,6 +16,7 @@ from core.database.session import async_session_factory
 from curriculum.lesson_sourcebook.models import LessonSourcebook
 from curriculum.llm_contract_errors import structured_output_errors
 from curriculum.teaching_plan.content_hash import teaching_plan_content_hash
+from curriculum.teaching_plan.models import TeachingPlanDraftV2
 from print.generation.catalogue_projections import build_form_candidate_map, project_form_guidance
 from print.generation.whole_lesson.executor import execute_after_teaching_approval
 from print.generation.whole_lesson.failure_policy import classify_failure
@@ -47,13 +49,6 @@ from print.generation.whole_lesson.repository import (
 )
 from print.generation.whole_lesson.teaching_agent import run_lesson_approach_planner
 from print.generation.whole_lesson.teaching_errors import TeachingPlanOutputInvalidError
-from print.generation.whole_lesson.teaching_plan import (
-    AnchorUsageEntry,
-    LearnerActionBrief,
-    TeachingPlan,
-    TeachingPlanBlock,
-    TeachingPlanSection,
-)
 from print.generation.whole_lesson.validation import validate_form_plan, validate_teaching_plan
 from print.rendering.page_objects import WriterOutcome
 
@@ -356,41 +351,49 @@ def _five_item_check_packet() -> ImmutableLessonPacket:
     )
 
 
-def _check_plan(*, source_ids: list[str], invalid_context: bool = False) -> TeachingPlan:
+def _check_plan(
+    *, source_ids: list[str], invalid_context: bool = False
+) -> TeachingPlanDraftV2:
     forbidden = " through cellular respiration" if invalid_context else ""
     refs = ["approved_item_ids"] if invalid_context else ["lesson.objective"]
-    return TeachingPlan(
+    return TeachingPlanDraftV2(
+        learner_title="Why light matters to plant growth",
         arc="Use the two plants to check whether learners can explain why light matters.",
-        anchor_usage=[AnchorUsageEntry(slot_id="check", usage="Return to the two plants.")],
+        starting_state=["Learners can compare two plants grown under different conditions."],
+        target_state=["Learners can explain how light enables food production."],
+        anchor_usage=[{"slot_id": "check", "usage": "Return to the two plants."}],
         sections=[
-            TeachingPlanSection(
-                slot_id="check",
-                specific_purpose="Check causal understanding.",
-                blocks=[
-                    TeachingPlanBlock(
-                        id="check-b1",
-                        position=0,
-                        intent="check-understanding",
-                        brief=(
+            {
+                "display_title": "Explain the role of light",
+                "specific_purpose": "Check causal understanding.",
+                "entry_state": ["Learners have compared the plants."],
+                "must_establish": ["Light enables the plant to make food."],
+                "avoid_repeating": [],
+                "bridge_from_previous": None,
+                "exit_state": ["Learners can explain why light matters."],
+                "blocks": [
+                    {
+                        "intent": "check-understanding",
+                        "brief": (
                             "Return to the two plants and require learners to explain "
                             f"why light changes the plant's ability to make food{forbidden}."
                         ),
-                        evidence_refs=refs,
-                        evidence=(
+                        "evidence_refs": refs,
+                        "evidence": (
                             "The objective requires a causal explanation, so this check "
                             "tests the role of light directly."
                         ),
-                        source_question_ids=source_ids,
-                        learner_action=LearnerActionBrief(
-                            action="select-one",
-                            target="approved multiple-choice item",
-                            purpose="Check causal understanding of light.",
-                            expected_evidence="Correct choice naming light's role",
-                            difficulty="guided",
-                        ),
-                    )
+                        "source_question_ids": source_ids,
+                        "learner_action": {
+                            "action": "select-one",
+                            "target": "approved multiple-choice item",
+                            "purpose": "Check causal understanding of light.",
+                            "expected_evidence": "Correct choice naming light's role",
+                            "difficulty": "guided",
+                        },
+                    }
                 ],
-            )
+            }
         ],
     )
 
@@ -471,6 +474,84 @@ async def test_missing_assessment_source_is_repaired_before_validation() -> None
     assert result.plan.sections[0].blocks[0].source_question_ids == [
         packet.approved_items[0].id
     ]
+
+
+@pytest.mark.asyncio
+async def test_active_planner_rejects_v1_provider_shape_then_repairs_to_v2() -> None:
+    packet = _five_item_check_packet()
+    legality = _make_snapshot(
+        permitted_intents=["check-understanding"],
+        typical_by_slot={"check": ["check-understanding"]},
+        permitted_objects=["choices"],
+        compatible_objects_by_intent={"check-understanding": ["choices"]},
+    )
+    valid_v2 = _check_plan(source_ids=[packet.approved_items[0].id])
+    legacy_v1 = valid_v2.model_dump(mode="json")
+    for field in ("contract_version", "learner_title", "starting_state", "target_state"):
+        legacy_v1.pop(field, None)
+    for field in (
+        "display_title",
+        "entry_state",
+        "must_establish",
+        "avoid_repeating",
+        "bridge_from_previous",
+        "exit_state",
+    ):
+        legacy_v1["sections"][0].pop(field, None)
+    responses = [legacy_v1, valid_v2]
+
+    async def _fake_call(**_kwargs):
+        response = responses.pop(0)
+        raw = (
+            response.model_dump(mode="json")
+            if hasattr(response, "model_dump")
+            else response
+        )
+        return response, json.dumps(raw)
+
+    with patch(
+        "print.generation.whole_lesson.teaching_agent._call_teaching_model",
+        new=AsyncMock(side_effect=_fake_call),
+    ) as model_call:
+        result = await run_lesson_approach_planner(packet, legality=legality)
+
+    assert model_call.await_count == 2
+    assert result.plan.contract_version == 2
+    assert result.plan.learner_title == valid_v2.learner_title
+    assert result.plan.sections[0].slot_id == "check"
+    assert result.plan.sections[0].blocks[0].id == "check-b1"
+    assert result.plan.sections[0].blocks[0].source_question_ids == [
+        packet.approved_items[0].id
+    ]
+    assert len(result.attempts) == 2
+
+
+@pytest.mark.asyncio
+async def test_active_planner_bounds_missing_continuity_repair_to_two_attempts() -> None:
+    packet = _five_item_check_packet()
+    legality = _make_snapshot(
+        permitted_intents=["check-understanding"],
+        typical_by_slot={"check": ["check-understanding"]},
+        permitted_objects=["choices"],
+        compatible_objects_by_intent={"check-understanding": ["choices"]},
+    )
+    missing_continuity = _check_plan(
+        source_ids=[packet.approved_items[0].id]
+    ).model_dump(mode="json")
+    missing_continuity["sections"][0].pop("exit_state")
+    model_call = AsyncMock(
+        return_value=(missing_continuity, json.dumps(missing_continuity))
+    )
+
+    with patch(
+        "print.generation.whole_lesson.teaching_agent._call_teaching_model",
+        new=model_call,
+    ), pytest.raises(TeachingPlanOutputInvalidError) as raised:
+        await run_lesson_approach_planner(packet, legality=legality)
+
+    assert model_call.await_count == 2
+    assert raised.value.attempt_count == 2
+    assert any("exit_state" in detail for detail in raised.value.details)
 
 
 @pytest.mark.asyncio
@@ -609,52 +690,55 @@ async def test_teaching_schema_failure_gets_informed_repair() -> None:
                     }
                 ],
             )
-        from print.generation.whole_lesson.teaching_plan import (
-            AnchorUsageEntry,
-            TeachingPlanBlock,
-            TeachingPlanSection,
-        )
-
-        plan = TeachingPlan(
+        plan = TeachingPlanDraftV2(
+            learner_title="Why plants need light",
             arc="Orient then explain",
+            starting_state=["Learners know plants grow."],
+            target_state=["Learners can explain why plants need light."],
             anchor_usage=[
-                AnchorUsageEntry(slot_id="orient", usage="use"),
-                AnchorUsageEntry(slot_id="explain", usage="dev"),
+                {"slot_id": "orient", "usage": "use"},
+                {"slot_id": "explain", "usage": "dev"},
             ],
             sections=[
-                TeachingPlanSection(
-                    slot_id="orient",
-                    specific_purpose="Orient",
-                    blocks=[
-                        TeachingPlanBlock(
-                            id="orient-b1",
-                            position=0,
-                            intent="orient",
-                            brief=(
-                                "Open with anchor a1: two plants that differ "
-                                "only in light exposure so students notice the contrast."
+                {
+                    "display_title": "Notice the plant difference",
+                    "specific_purpose": "Orient",
+                    "entry_state": ["Learners know plants grow."],
+                    "must_establish": ["The plants differ in light exposure."],
+                    "avoid_repeating": [],
+                    "bridge_from_previous": None,
+                    "exit_state": ["Learners notice the contrast."],
+                    "blocks": [
+                        {
+                            "intent": "orient",
+                            "brief": (
+                                "Open with anchor a1: two plants that differ only in light "
+                                "exposure so students notice the contrast."
                             ),
-                            evidence="Anchor contrast between lit and dark plant.",
-                        )
+                            "evidence": "Anchor contrast between lit and dark plant.",
+                        }
                     ],
-                ),
-                TeachingPlanSection(
-                    slot_id="explain",
-                    specific_purpose="Explain",
-                    blocks=[
-                        TeachingPlanBlock(
-                            id="explain-b1",
-                            position=0,
-                            intent="explain-cause",
-                            brief=(
-                                "Explain that light is the differing condition "
-                                "causing growth differences for the plants shown "
-                                "in anchor a1 under otherwise equal care."
+                },
+                {
+                    "display_title": "Explain the role of light",
+                    "specific_purpose": "Explain",
+                    "entry_state": ["Learners notice the plant contrast."],
+                    "must_establish": ["Light enables plants to make food."],
+                    "avoid_repeating": [],
+                    "bridge_from_previous": "The contrast creates a question about light.",
+                    "exit_state": ["Learners can explain how light supports food production."],
+                    "blocks": [
+                        {
+                            "intent": "explain-cause",
+                            "brief": (
+                                "Explain that light is the differing condition causing "
+                                "growth differences for the plants shown in anchor a1 "
+                                "under otherwise equal care."
                             ),
-                            evidence="Covered leaf fails while lit leaf grows.",
-                        )
+                            "evidence": "Covered leaf fails while lit leaf grows.",
+                        }
                     ],
-                ),
+                },
             ],
         )
         return plan, plan.model_dump_json()
@@ -1011,52 +1095,55 @@ async def test_teaching_with_persisted_legality_does_not_reassemble() -> None:
     async def _fake_call(
         *, prompt, user_payload, trace_id, generation_id, attempt_start=1
     ):
-        from print.generation.whole_lesson.teaching_plan import (
-            AnchorUsageEntry,
-            TeachingPlanBlock,
-            TeachingPlanSection,
-        )
-
-        plan = TeachingPlan(
+        plan = TeachingPlanDraftV2(
+            learner_title="Why plants need light",
             arc="Orient then explain using the plant contrast.",
+            starting_state=["Learners know plants grow."],
+            target_state=["Learners can explain why plants need light."],
             anchor_usage=[
-                AnchorUsageEntry(slot_id="orient", usage="use"),
-                AnchorUsageEntry(slot_id="explain", usage="dev"),
+                {"slot_id": "orient", "usage": "use"},
+                {"slot_id": "explain", "usage": "dev"},
             ],
             sections=[
-                TeachingPlanSection(
-                    slot_id="orient",
-                    specific_purpose="Orient",
-                    blocks=[
-                        TeachingPlanBlock(
-                            id="orient-b1",
-                            position=0,
-                            intent="orient",
-                            brief=(
+                {
+                    "display_title": "Notice the plant difference",
+                    "specific_purpose": "Orient",
+                    "entry_state": ["Learners know plants grow."],
+                    "must_establish": ["The plants differ in light exposure."],
+                    "avoid_repeating": [],
+                    "bridge_from_previous": None,
+                    "exit_state": ["Learners notice the contrast."],
+                    "blocks": [
+                        {
+                            "intent": "orient",
+                            "brief": (
                                 "Open with anchor a1: two plants that differ "
                                 "only in light exposure so students notice the contrast."
                             ),
-                            evidence="Anchor contrast between lit and dark plant.",
-                        )
+                            "evidence": "Anchor contrast between lit and dark plant.",
+                        }
                     ],
-                ),
-                TeachingPlanSection(
-                    slot_id="explain",
-                    specific_purpose="Explain",
-                    blocks=[
-                        TeachingPlanBlock(
-                            id="explain-b1",
-                            position=0,
-                            intent="explain-cause",
-                            brief=(
+                },
+                {
+                    "display_title": "Explain the role of light",
+                    "specific_purpose": "Explain",
+                    "entry_state": ["Learners notice the plant contrast."],
+                    "must_establish": ["Light enables plants to make food."],
+                    "avoid_repeating": [],
+                    "bridge_from_previous": "The contrast creates a question about light.",
+                    "exit_state": ["Learners can explain how light supports food production."],
+                    "blocks": [
+                        {
+                            "intent": "explain-cause",
+                            "brief": (
                                 "Explain that light is the differing condition "
                                 "causing growth differences for the plants shown "
                                 "in anchor a1 under otherwise equal care."
                             ),
-                            evidence="Covered leaf fails while lit leaf grows.",
-                        )
+                            "evidence": "Covered leaf fails while lit leaf grows.",
+                        }
                     ],
-                ),
+                },
             ],
         )
         return plan, plan.model_dump_json()

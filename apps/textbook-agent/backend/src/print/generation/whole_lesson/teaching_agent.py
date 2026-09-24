@@ -18,6 +18,13 @@ from curriculum.teaching_plan.compatibility import (
     allowed_actions_for_source_item,
     response_bearing_action,
 )
+from curriculum.teaching_plan.models import TeachingPlanDraftV2
+from infra.authoring.model_policy import (
+    V2_LESSON_APPROACH_PLANNER,
+    get_v3_model_settings,
+    get_v3_slot,
+)
+from infra.authoring.structured_provider import NO_OUTPUT_RETRY, prepare_structured_agent
 from print.generation.catalogue_projections import (
     TeachingGuidanceProjection,
     project_teaching_guidance,
@@ -36,7 +43,6 @@ from print.generation.whole_lesson.teaching_errors import (
 )
 from print.generation.whole_lesson.teaching_plan import (
     TeachingPlan,
-    TeachingPlanDraft,
     materialize_teaching_plan,
 )
 from print.generation.whole_lesson.validation import (
@@ -47,8 +53,6 @@ from print.generation.whole_lesson.validation import (
     validate_teaching_plan,
 )
 from print.resources.selection import _form_cards
-from infra.authoring.model_policy import V2_LESSON_APPROACH_PLANNER, get_v3_model_settings, get_v3_slot
-from infra.authoring.structured_provider import NO_OUTPUT_RETRY, prepare_structured_agent
 
 
 @dataclass
@@ -654,10 +658,10 @@ async def _call_teaching_model(
     trace_id: str,
     generation_id: str | None,
     attempt_start: int = 1,
-) -> tuple[TeachingPlanDraft, str]:
+) -> tuple[TeachingPlanDraftV2, str]:
     model, provider_output, structured_context, spec, _source = prepare_structured_agent(
         node_name=V2_LESSON_APPROACH_PLANNER,
-        output_type=TeachingPlanDraft,
+        output_type=TeachingPlanDraftV2,
     )
     slot = get_v3_slot(V2_LESSON_APPROACH_PLANNER)
     system_prompt, _, _user = prompt.partition("\n\n## USER INPUT\n\n")
@@ -691,11 +695,11 @@ async def _call_teaching_model(
         if hasattr(raw, "model_dump_json")
         else json.dumps(raw, default=str)
     )
-    if isinstance(raw, TeachingPlanDraft):
+    if isinstance(raw, TeachingPlanDraftV2):
         return raw, raw_text
     if hasattr(raw, "model_dump"):
-        return TeachingPlanDraft.model_validate(raw.model_dump()), raw_text
-    return TeachingPlanDraft.model_validate(raw), raw_text
+        return TeachingPlanDraftV2.model_validate(raw.model_dump()), raw_text
+    return TeachingPlanDraftV2.model_validate(raw), raw_text
 
 
 async def run_lesson_approach_planner(
@@ -747,7 +751,9 @@ async def run_lesson_approach_planner(
                     **user_payload,
                     "repair": {
                         "instruction": (
-                            "Return the complete corrected TeachingPlan JSON. "
+                            "Return the complete corrected version 2 TeachingPlan JSON, "
+                            "including learner_title and every plan/section continuity "
+                            "field. Preserve code-owned slot and block identity. "
                             "Change only fields required to satisfy these errors. "
                             "Use only intents listed under slot_intent_policy for each slot. "
                             "Treat assessment_source_policy as a closed contract: copy "
@@ -774,6 +780,14 @@ async def run_lesson_approach_planner(
                 trace_id=f"{tid}:attempt{attempt}",
                 generation_id=generation_id,
                 attempt_start=attempt,
+            )
+            # Keep the active cutover fail-closed even if a provider adapter or
+            # test double returns a legacy v1 object instead of enforcing the
+            # requested structured schema itself.
+            draft = TeachingPlanDraftV2.model_validate(
+                draft.model_dump(mode="json")
+                if hasattr(draft, "model_dump")
+                else draft
             )
             previous_output = draft.model_dump(mode="json")
             try:
