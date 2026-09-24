@@ -40,6 +40,7 @@ V3_SHARED_TASK_WRITER = "v3_shared_task_writer"
 V3_WHOLE_LESSON_COHERENCE_REVIEWER = "v3_whole_lesson_coherence_reviewer"
 TEACHING_PLAN_SEMANTIC_REVIEWER = "teaching_plan_semantic_reviewer"
 SECTION_COMPOSER = "section_composer"
+SHARED_SECTION_WRITER = "shared_section_writer"
 V3_TARGETED_LESSON_REPAIR = "v3_targeted_lesson_repair"
 
 V3_NODE_SLOTS: dict[str, ModelSlot] = {
@@ -74,6 +75,7 @@ V3_NODE_SLOTS: dict[str, ModelSlot] = {
     V3_WHOLE_LESSON_COHERENCE_REVIEWER: ModelSlot.STANDARD,
     TEACHING_PLAN_SEMANTIC_REVIEWER: ModelSlot.STANDARD,
     SECTION_COMPOSER: ModelSlot.STANDARD,
+    SHARED_SECTION_WRITER: ModelSlot.STANDARD,
     V3_TARGETED_LESSON_REPAIR: ModelSlot.FAST,
 }
 
@@ -123,6 +125,7 @@ V3_NODE_REASONING: dict[str, V3NodeReasoningPolicy] = {
     V3_WHOLE_LESSON_COHERENCE_REVIEWER: False,
     TEACHING_PLAN_SEMANTIC_REVIEWER: False,
     SECTION_COMPOSER: False,
+    SHARED_SECTION_WRITER: False,
     V3_TARGETED_LESSON_REPAIR: False,
 }
 
@@ -334,6 +337,7 @@ def get_v3_model(node_name: str, *, model_overrides: dict | None = None):
 __all__ = [
     "NATIVE_CAPABILITY_SELECTOR",
     "SECTION_COMPOSER",
+    "SHARED_SECTION_WRITER",
     "TEACHING_PLAN_SEMANTIC_REVIEWER",
     "V2_COMPONENT_SELECTOR",
     "V2_FORM_PLANNER",

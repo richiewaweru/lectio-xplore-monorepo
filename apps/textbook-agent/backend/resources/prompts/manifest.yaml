@@ -128,6 +128,12 @@ prompts:
     editable: false
     version: 1
 
+  - id: shared-section-writer
+    file: shared-section-writer.md
+    stage_label: Writes shared lesson section content
+    editable: false
+    version: 1
+
   - id: whole-lesson-coherence-reviewer
     file: whole-lesson-coherence-reviewer.md
     stage_label: Reviews whole-lesson coherence

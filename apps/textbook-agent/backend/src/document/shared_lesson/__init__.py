@@ -29,6 +29,16 @@ from document.shared_lesson.models import (
     TaskAnchor,
     build_shared_lesson_document,
 )
+from document.shared_lesson.writer import (
+    SectionSource,
+    SectionTaskSummary,
+    SectionWriteResult,
+    SectionWriteValidationError,
+    SectionWriterDraft,
+    SectionWriterRequest,
+    validate_and_build_section,
+    write_section,
+)
 
 __all__ = [
     "CalloutNode",
@@ -45,6 +55,12 @@ __all__ = [
     "SharedSection",
     "SectionCompositionDraft",
     "SectionCompositionPlan",
+    "SectionSource",
+    "SectionTaskSummary",
+    "SectionWriteResult",
+    "SectionWriteValidationError",
+    "SectionWriterDraft",
+    "SectionWriterRequest",
     "TableNode",
     "TaskAnchor",
     "build_shared_lesson_document",
@@ -52,6 +68,8 @@ __all__ = [
     "compose_section",
     "shared_lesson_content_hash",
     "validate_and_build_composition",
+    "validate_and_build_section",
     "validate_composition_plan",
     "verify_shared_lesson_source",
+    "write_section",
 ]
