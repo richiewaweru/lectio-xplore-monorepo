@@ -1,5 +1,6 @@
 from infra.authoring.model_policy.models import (
     NATIVE_CAPABILITY_SELECTOR,
+    SECTION_COMPOSER,
     TEACHING_PLAN_SEMANTIC_REVIEWER,
     V2_COMPONENT_SELECTOR,
     V2_FORM_PLANNER,
@@ -28,6 +29,7 @@ from infra.authoring.model_policy.models import (
 
 __all__ = [
     "NATIVE_CAPABILITY_SELECTOR",
+    "SECTION_COMPOSER",
     "TEACHING_PLAN_SEMANTIC_REVIEWER",
     "V2_COMPONENT_SELECTOR",
     "V2_FORM_PLANNER",
