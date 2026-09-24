@@ -18,7 +18,17 @@
 - Local UI access: frontend dev server was down; restarted on `127.0.0.1:5173`. Its ignored local `.env` pointed `PUBLIC_API_URL` at `localhost:8001` while the backend listens on `127.0.0.1:8000`; corrected to `http://127.0.0.1:8000`. Same-origin proxy now returns the same authenticated `401` as the backend, instead of a proxy error. The in-app `/units` page now redirects to login rather than showing the 500. Google sign-in reports the local origin is not authorized for the configured client in an isolated browser.
 - Live current-flow smoke: pending; no live generation has been claimed.
 - Pack comparison: checked against current `main`; Teaching Plan hashing, shared tasks, six primitives, AuthoringEngine and three model slots exist; Learn and Print still invoke ordinary composition independently. No material SHA drift found.
-- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phase 1 PASS (additive generic runtime); Phase 2 IN PROGRESS; Phases 3–16 NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke; no phase is marked PASS without its own gate.
+- Phase status: Phase 0 IN PROGRESS (authenticated local smoke pending); Phases 1–2 PASS; Phase 3 contract and Phase 4 task meaning are in isolated parallel worktrees (not integrated or PASS); Phases 5–16 NOT STARTED. The external OAuth-origin setup remains open for the live Phase 0 smoke; no phase is marked PASS without its own gate.
+
+## Parallel work allocation
+
+| Stream | Owner | Isolated scope | Handoff gate |
+| --- | --- | --- | --- |
+| Phase 2 full verifier | Luna | Main worktree, read-only verification | Full script exits 0; Sol records phase decision. |
+| Phase 3A SharedLessonDocument contract | Luna | `shared-document-contract` worktree; new `document/shared_lesson/` contract and focused tests | Closed node/TaskAnchor/hash/lineage tests and guards; Sol cherry-picks after Phase 2 gate. |
+| Phase 4A shared task meaning | Luna | `shared-task-contract` worktree; `curriculum/shared_tasks/` and focused tests | Closed response/evaluation and action-coverage tests; Sol integrates after Phase 3 interface review. |
+
+The Phase 3 and Phase 4 streams preserve current `SharedTaskSpec` outer fields and do not edit each other's modules. Composer/writer and Learn/Print cutovers wait for integrated contracts. Sol owns the main runbook, cross-stream review, merge order, and phase PASS decisions.
 
 ## Phase 1A — generic runtime persistence
 
@@ -134,7 +144,9 @@
 - Starting SHA: `9be72b86`.
 - First `scripts/verify-phase.ps1 -Phase full` run: FAIL, exit 1 solely in backend pytest (1479 passed, 2 failed, 5 skipped, 2 deselected, 25 warnings). Page tests 64 PASS and page check PASS; frontend check 0 errors/5 existing warnings, frontend tests 227 PASS, frontend build PASS; PDF fixture and final diff check PASS. The two R04 tests import P08's mocked teaching helper, but P08's clean reviewer fixture was module-local. Those R04 tests unintentionally called the external reviewer, which emitted progression/target findings with invalid block IDs; the strict review contract correctly rejected them. Keep production validation unchanged; move the fake reviewer into the shared test helper and rerun.
 - Correction: P08's shared `_approve_shared_teaching` helper now scopes the clean reviewer fake alongside its planner fake; removed the module-local autouse fixture. Combined P08, both R04 regressions, and semantic-review tests 21 PASS (6 warnings); scoped Ruff and `git diff --check` PASS. Production reviewer and failure tests unchanged.
-- Status: IN PROGRESS. Full verifier rerun required before Phase 2 PASS.
+- Full verifier rerun from `0e47cac5`: `scripts/verify-phase.ps1 -Phase full` PASS, exit 0. Page tests 64 PASS and page check 0 errors/warnings; backend 1481 passed, 5 skipped, 2 deselected, 24 warnings; frontend check 0 errors/5 existing warnings, frontend tests 227 PASS, build PASS; PDF fixture 5 PDFs with page counts 6/6/5/5/5 PASS; final `git diff --check` PASS.
+- Post-gate: `pnpm program:domain-guards` PASS (0 violations, 8 guard tests); backend architecture guard 0 violations; applied local Alembic head `20260924_0044`; only this runbook was modified in the main worktree.
+- Phase 2 status: PASS. Active generated v2 Teaching Plans are structurally validated, semantically reviewed with bounded repair, shown completely to the teacher, approved against the displayed revision/content hash, and verifiable by consumers. Dormant field-level edit API has zero production callers and an executable guard. Production provider behavior still requires Phase 9 shadow quality proof.
 
 ## Baseline
 - [x] branch recorded
@@ -149,7 +161,7 @@
 ## Phases
 - [ ] 0 Baseline
 - [x] 1 Generic runtime (PASS: additive persistence and HTTP)
-- [ ] 2 Teaching Plan (IN PROGRESS)
+- [x] 2 Teaching Plan (PASS: v2 contract, semantic review, hash-bound approval, full gate)
 - [ ] 3 SharedDocument contract
 - [ ] 4 Shared tasks
 - [ ] 5 Section Composer
