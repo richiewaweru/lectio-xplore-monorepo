@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 from pydantic import ValidationError
+
 from curriculum.shared_tasks.models import SharedTaskSpec
 from curriculum.teaching_plan.models import TeachingPlanBlock, TeachingPlanSection
 from document.shared_lesson.composer import (
@@ -14,8 +15,8 @@ from document.shared_lesson.composer import (
 from document.shared_lesson.writer import (
     SectionSource,
     SectionTaskSummary,
-    SectionWriteValidationError,
     SectionWriterRequest,
+    SectionWriteValidationError,
     validate_and_build_section,
     write_section,
 )

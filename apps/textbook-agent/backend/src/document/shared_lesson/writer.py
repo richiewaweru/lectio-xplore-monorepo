@@ -317,9 +317,7 @@ def _check_learner_text(
 ) -> None:
     values = _node_text_values(node)
     required: list[str] = []
-    if isinstance(node, WrittenParagraph):
-        required.append(node.display.text)
-    elif isinstance(node, WrittenHeading):
+    if isinstance(node, (WrittenParagraph, WrittenHeading)):
         required.append(node.display.text)
     elif isinstance(node, WrittenList):
         required.extend(node.display.items)
@@ -475,6 +473,7 @@ def _request_payload(
 
 async def _default_provider(payload: dict[str, Any]) -> Any:
     from core.llm.runner import RetryPolicy
+
     from core.prompts import effective_prompt_text
     from infra.authoring.structured_provider import run_structured_agent
 

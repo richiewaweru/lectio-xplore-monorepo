@@ -226,8 +226,7 @@ def _env_override_node(node_name: str, *, base: ModelSpec) -> ModelSpec | None:
 def get_v3_slot(node_name: str) -> ModelSlot:
     if node_name not in V3_NODE_SLOTS:
         raise ValueError(
-            f"Unknown v3 node '{node_name}'. "
-            f"Expected one of: {', '.join(sorted(V3_NODE_SLOTS))}"
+            f"Unknown v3 node '{node_name}'. Expected one of: {', '.join(sorted(V3_NODE_SLOTS))}"
         )
     return V3_NODE_SLOTS[node_name]
 
@@ -252,10 +251,7 @@ def get_v3_model_settings(
         V3_NODE_REASONING.get(node_name, False),
     )
 
-    if (
-        spec.family == ModelFamily.OPENAI_COMPATIBLE
-        and spec.model_name.startswith("deepseek-")
-    ):
+    if spec.family == ModelFamily.OPENAI_COMPATIBLE and spec.model_name.startswith("deepseek-"):
         if isinstance(reasoning, str):
             settings["openai_reasoning_effort"] = reasoning
             settings["extra_body"] = {"thinking": {"type": "enabled"}}
@@ -294,8 +290,7 @@ def _reasoning_from_env(
     if value in {"low", "medium", "high"}:
         return value  # type: ignore[return-value]
     raise ValueError(
-        f"Invalid reasoning policy '{raw}' for {node_name}; "
-        "expected false, low, medium, or high"
+        f"Invalid reasoning policy '{raw}' for {node_name}; expected false, low, medium, or high"
     )
 
 
