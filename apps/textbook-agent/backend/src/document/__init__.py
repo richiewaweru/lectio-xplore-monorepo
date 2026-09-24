@@ -16,6 +16,15 @@ from document.models import (
     ParagraphNode,
     TableNode,
 )
+from document.shared_lesson import (
+    SharedLessonDocument,
+    SharedProvenance,
+    SharedSection,
+    TaskAnchor,
+    build_shared_lesson_document,
+    shared_lesson_content_hash,
+    verify_shared_lesson_source,
+)
 from document.validation import DocumentValidationError, validate_document_nodes
 from document.writer import write_document_primitive
 from document.writer_prompts import (
@@ -44,11 +53,18 @@ __all__ = [
     "HeadingNode",
     "ListNode",
     "ParagraphNode",
+    "SharedLessonDocument",
+    "SharedProvenance",
+    "SharedSection",
     "TableNode",
+    "TaskAnchor",
+    "build_shared_lesson_document",
     "compose_document_plan",
     "document_composer_prompt",
     "document_writer_prompt",
     "heuristic_compose_document_plan",
+    "shared_lesson_content_hash",
     "validate_document_nodes",
+    "verify_shared_lesson_source",
     "write_document_primitive",
 ]
